@@ -90,6 +90,8 @@ interface TicketInfoProps {
   itilCategory?: string;
   itilSubcategory?: string;
   renderProjectTaskActions?: (args: { ticket: ITicket; additionalAgents?: { user_id: string; name: string }[] }) => React.ReactNode;
+  /** Injected quick-invoice-a-ticket action (billing package). */
+  renderQuickInvoiceActions?: (args: { ticket: ITicket }) => React.ReactNode;
   onResolveAndClose?: () => void;
   resolveAndCloseDisabled?: boolean;
   additionalAgents?: { user_id: string; name: string }[];
@@ -145,6 +147,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   itilCategory,
   itilSubcategory,
   renderProjectTaskActions,
+  renderQuickInvoiceActions,
   onResolveAndClose,
   resolveAndCloseDisabled = false,
   additionalAgents,
@@ -481,6 +484,9 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   // Fetch board config when pending board changes
   useEffect(() => {
     const boardIdToFetch = pendingChanges.board_id;
+    // The ref below survives unmount, so it alone cannot tell a superseded
+    // fetch from one whose component is gone; this flag can.
+    let cancelled = false;
 
     const fetchPendingBoardConfig = async () => {
       if (boardIdToFetch && boardIdToFetch !== ticket.board_id) {
@@ -492,7 +498,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
         try {
           const data = await getTicketCategoriesByBoard(boardIdToFetch);
 
-          if (fetchingBoardIdRef.current === boardIdToFetch) {
+          if (!cancelled && fetchingBoardIdRef.current === boardIdToFetch) {
             if (isReturnedActionError(data)) {
               console.warn('Failed to fetch pending board config:', getErrorMessage(data));
               setPendingCategories([]);
@@ -521,7 +527,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             setIsLoadingBoardConfig(false);
           }
         } catch (error) {
-          if (fetchingBoardIdRef.current === boardIdToFetch) {
+          if (!cancelled && fetchingBoardIdRef.current === boardIdToFetch) {
             console.error('Failed to fetch pending board config:', error);
             setIsLoadingBoardConfig(false);
           }
@@ -535,6 +541,10 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     };
 
     fetchPendingBoardConfig();
+
+    return () => {
+      cancelled = true;
+    };
   }, [pendingChanges.board_id, ticket.board_id]);
 
   // Get ITIL categories from props (now includes both custom and ITIL)
@@ -593,11 +603,18 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
 
   // Separate useEffect for fetching categories based on board
   useEffect(() => {
+    // A board switch — or an unmount — supersedes whatever is still in flight.
+    // Without this guard a slow response for the previous board lands on the
+    // board the user has since selected, and a response that arrives after the
+    // component is gone updates a tree React has already discarded.
+    let cancelled = false;
+
     const fetchCategories = async () => {
       try {
         if (ticket.board_id) {
           // Fetch categories for the specific board
           const data = await getTicketCategoriesByBoard(ticket.board_id);
+          if (cancelled) return;
           if (isReturnedActionError(data)) {
             console.warn('Failed to fetch ticket categories:', getErrorMessage(data));
             setCategories([]);
@@ -630,6 +647,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
         } else {
           // If no board, fetch all categories and use custom categories
           const fetchedCategories = await getTicketCategories();
+          if (cancelled) return;
           if (isReturnedActionError(fetchedCategories)) {
             console.warn('Failed to fetch ticket categories:', getErrorMessage(fetchedCategories));
             setCategories([]);
@@ -656,6 +674,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
           });
         }
       } catch (error) {
+        if (cancelled) return;
         console.error('Failed to fetch categories:', error);
         // Set empty defaults on error
         setCategories([]);
@@ -669,6 +688,10 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     };
 
     fetchCategories();
+
+    return () => {
+      cancelled = true;
+    };
   }, [ticket.board_id]); // Re-fetch when board changes
 
   useEffect(() => {
@@ -1997,6 +2020,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
           {/* Save Changes Button - matching contracts behavior */}
           <div className="flex flex-wrap items-center gap-3 mt-6 pt-4 border-t border-gray-200">
             {renderProjectTaskActions?.({ ticket, additionalAgents })}
+            {renderQuickInvoiceActions?.({ ticket })}
             {onResolveAndClose ? (
               <Button
                 id={`${id}-resolve-and-close-button`}

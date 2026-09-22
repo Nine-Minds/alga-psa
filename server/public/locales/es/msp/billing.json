@@ -43,13 +43,14 @@
       "contractTemplates": "Plantillas de contrato",
       "invoicing": "Facturación",
       "invoiceLayouts": "Diseños de factura",
-      "taxRates": "Tasas de impuestos",
+      "taxRates": "Impuestos",
       "contractLinePresets": "Preajustes de línea de contrato",
       "billingCycles": "Ciclos de facturación",
       "servicePeriods": "Períodos de servicio",
       "usageTracking": "Seguimiento de uso",
       "reports": "Informes",
       "serviceTypes": "Tipos de servicio",
+      "serviceCategories": "Categorías de servicio",
       "serviceCatalog": "Servicios",
       "products": "Productos"
     }
@@ -141,6 +142,8 @@
   },
   "usage": {
     "bucketHoursOverview": "Resumen de las bolsas de horas",
+    "bucketLoadError": "No se pudieron cargar los saldos de las bolsas de horas. Vuelva a intentarlo para ver los saldos actuales.",
+    "retryBucketBalances": "Volver a cargar los saldos de horas",
     "usageRecords": "Registros de uso",
     "actions": {
       "addUsage": "Agregar uso",
@@ -211,6 +214,12 @@
       "updateError": "No se pudo actualizar el registro de uso",
       "deleteSuccess": "Registro de uso eliminado correctamente",
       "deleteError": "No se pudo eliminar el registro de uso"
+    },
+    "periodReport": "Informe de uso del período",
+    "periodAlreadyInvoiced": "Este período ya está facturado. Corríjalo mediante el proceso de ajuste de facturas.",
+    "periodFilter": {
+      "notice": "Mostrando el uso del período de servicio del {{start}} al {{end}}",
+      "clear": "Limpiar"
     }
   },
   "lineItem": {
@@ -381,7 +390,8 @@
       "execute": "Ejecutar",
       "createBatch": "Crear lote",
       "creating": "Creando...",
-      "cancelBatch": "Cancelar lote"
+      "cancelBatch": "Cancelar lote",
+      "retry": "Reintentar"
     },
     "states": {
       "loadingBatches": "Cargando lotes...",
@@ -408,7 +418,12 @@
         "invoiceStatuses": "Separados por comas (opcional), p.e. finalizado, publicado",
         "notes": "Notas opcionales"
       },
-      "defaultRealmLabel": "{{realmId}} (predeterminado)"
+      "defaultRealmLabel": "{{realmId}} (predeterminado)",
+      "loadingConnections": "Cargando conexiones contables...",
+      "connectionLoadError": "No se pudieron cargar las conexiones contables. Verifique la configuración de conexión e inténtelo de nuevo.",
+      "ambiguousRealm": "Su organización contable predeterminada está compartida por más de una conexión. Elija una conexión para continuar.",
+      "noXeroConnection": "No hay ninguna conexión de Xero disponible. Conecte Xero en la configuración contable para exportar.",
+      "noQboConnection": "No hay ninguna conexión de QuickBooks Online disponible. Conéctela en la configuración contable para exportar."
     },
     "detailDialog": {
       "title": "Lote de exportación contable",
@@ -432,7 +447,8 @@
       "createError": "No se pudo crear el lote de exportación",
       "executeError": "No se pudo ejecutar el lote",
       "cancelled": "Lote cancelado",
-      "cancelError": "No se pudo cancelar el lote"
+      "cancelError": "No se pudo cancelar el lote",
+      "realmRequired": "Elija una empresa contable conectada antes de crear la exportación."
     },
     "status": {
       "pending": "Pendiente",
@@ -666,7 +682,9 @@
     },
     "recurringRun": {
       "selectPeriods": "Seleccione al menos un período de facturación recurrente para generar.",
-      "invoicePermission": "Permiso denegado: se requiere permiso para crear o generar facturas"
+      "invoicePermission": "Permiso denegado: se requiere permiso para crear o generar facturas",
+      "monthEndCloseNotMaterialized": "No se materializaron períodos de servicio recurrentes para esta ventana de ejecución recurrente.",
+      "monthEndCloseNotEligible": "El período {{servicePeriod}} solo se puede cerrar a fin de mes, el {{finalCalendarDay}}. Solo los períodos de servicio a mes vencido que abarcan un mes natural completo pueden cerrarse de forma anticipada en su último día calendario."
     },
     "recurringServicePeriod": {
       "scheduleKeyRequiredInspect": "Se requiere una clave de calendario para inspeccionar los períodos de servicio recurrentes.",

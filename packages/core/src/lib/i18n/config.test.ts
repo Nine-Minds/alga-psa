@@ -66,6 +66,18 @@ describe('normalizeLocale', () => {
     expect(normalizeLocale(input)).toBe(expected);
   });
 
+  // en-AU shipped only to buy DD/MM dates; the country decides that now, so the
+  // two tenant preferences and one user preference still holding it normalise to
+  // 'en' on read rather than needing a migration.
+  it.each([
+    ['en-AU', 'en'],
+    ['en-au', 'en'],
+    ['en_AU', 'en'],
+    ['EN-AU', 'en'],
+  ])('collapses the retired en-AU tag from %s to its language', (input, expected) => {
+    expect(normalizeLocale(input)).toBe(expected);
+  });
+
   it.each([
     ['zh-Hans-CN', 'a language we do not ship'],
     ['klingon', 'nonsense'],
@@ -86,6 +98,7 @@ describe('normalizeLocale', () => {
 
   it('lets Accept-Language matching share the same rules', () => {
     expect(getBestMatchingLocale(['pt_BR'])).toBe('pt');
+    expect(getBestMatchingLocale(['en-AU', 'fr-CA'])).toBe('en');
     expect(getBestMatchingLocale(['zh-CN', 'fr-CA'])).toBe('fr');
     expect(getBestMatchingLocale(['zh-CN'])).toBe(LOCALE_CONFIG.defaultLocale);
   });

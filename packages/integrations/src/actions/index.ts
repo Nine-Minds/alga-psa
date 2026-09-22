@@ -240,6 +240,10 @@ export {
   type EntraSyncScheduleSettings,
 } from './integrations/entraActions';
 export {
+  runEntraConnectionDiagnostics,
+  runEntraClientAccessDiagnostics,
+} from './integrations/entraDiagnosticsActions';
+export {
   getTacticalRmmSettings,
   saveTacticalRmmConfiguration,
   testTacticalRmmConnection,
@@ -299,3 +303,12 @@ export {
 export {
   getTaxRegions
 } from './taxRegionActions';
+
+export {
+  getAssetRmmData,
+  refreshAssetRmmData,
+  triggerRmmReboot,
+  triggerRmmScript,
+  getAssetRemoteControlUrl,
+  type RmmCommandResult,
+} from './integrations/assetRmmActions';

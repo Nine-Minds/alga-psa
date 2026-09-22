@@ -14,6 +14,7 @@
         "manualEntryHelp": "Inserisci l'identificatore esattamente come appare nel tuo sistema contabile.",
         "metadataLabel": "Metadati (JSON)",
         "metadataPlaceholder": "Metadati opzionali in formato JSON",
+        "noKindOptions": "Nessun record utilizzabile di questo tipo è stato trovato nell’organizzazione collegata.",
         "realmIdLabel": "ID realm",
         "saveMapping": "Salva mappatura",
         "saving": "Salvataggio…",
@@ -77,7 +78,12 @@
         "noPermission": {
           "title": "Nessun accesso alle integrazioni contabili",
           "description": "Non disponi dell'autorizzazione per visualizzare o configurare le integrazioni contabili. Richiedi l'accesso a un amministratore."
-        }
+        },
+        "changeIntegration": "Scegli un’altra",
+        "currentIntegration": "Integrazione contabile",
+        "selectedAction": "Selezionata",
+        "reconnectRequired": "È necessario riconnettersi",
+        "settingsTitle": "Impostazioni di {{title}}"
       },
       "modules": {
         "tabs": {
@@ -1697,7 +1703,7 @@
             "label": "Teams"
           }
         },
-        "descriptionCe": "Gestisci profili Microsoft di proprietà del tenant per MSP SSO, accesso Microsoft e discovery dei domini di accesso.",
+        "descriptionCe": "Gestisci le registrazioni app Microsoft della tua azienda per la posta Outlook.",
         "descriptionEe": "Gestisci profili Microsoft di proprietà del tenant per MSP SSO, e-mail Outlook, sincronizzazione del calendario e Microsoft Teams.",
         "dialog": {
           "cancel": "Annulla",
@@ -1723,7 +1729,7 @@
         },
         "empty": {
           "createButton": "Crea profilo Microsoft",
-          "descriptionCe": "Crea prima un profilo con nome, poi collegalo esplicitamente ai flussi MSP SSO e di accesso per dominio.",
+          "descriptionCe": "Crea una registrazione app Microsoft per la posta Outlook.",
           "descriptionEe": "Crea prima un profilo con nome, poi collegalo esplicitamente a MSP SSO, e-mail Outlook, sincronizzazione del calendario e Teams.",
           "title": "Nessun profilo Microsoft ancora"
         },
@@ -1855,7 +1861,8 @@
           "credentialsReady": "Credenziali pronte",
           "credentialsRequired": "Credenziali richieste",
           "defaultConnected": "Azienda connessa",
-          "noCompany": "Nessuna azienda connessa"
+          "noCompany": "Nessuna azienda connessa",
+          "sharedApp": "App Intuit condivisa"
         },
         "callback": {
           "accessDenied": "L'accesso a QuickBooks è stato negato prima del completamento della connessione.",
@@ -1879,11 +1886,12 @@
         "connectSuccess": "QuickBooks connesso con successo. L'azienda connessa è ora il contesto QuickBooks live predefinito.",
         "connection": {
           "defaultCompany": "Azienda connessa",
-          "description": "Avvia OAuth solo dopo aver configurato le credenziali dell'app QuickBooks. La disconnessione rimuove i token di accesso QuickBooks memorizzati ma mantiene le credenziali dell'app di proprietà del tenant.",
-          "notConnected": "Nessuna azienda QuickBooks è ancora connessa. Salva le credenziali, quindi clicca su Connetti QuickBooks.",
+          "description": "«Collega QuickBooks» diventa disponibile quando è presente un'app Intuit (vedi la scheda «App Intuit» sopra). La disconnessione rimuove i token di accesso QuickBooks salvati ma conserva le credenziali dell'app Intuit di questo tenant.",
+          "notConnected": "Nessuna azienda QuickBooks è ancora collegata. Fai clic su «Collega QuickBooks» per accedere a Intuit e scegliere un'azienda.",
           "realmId": "ID realm: {{id}}",
           "title": "Connessione QuickBooks live",
-          "unknown": "sconosciuto"
+          "unknown": "sconosciuto",
+          "descriptionShared": "Fai clic su «Collega QuickBooks», accedi a Intuit e scegli l'azienda da collegare. Non serve configurare altro prima. La disconnessione rimuove i token di accesso QuickBooks salvati."
         },
         "credentialsSaved": "Credenziali QuickBooks salvate. Ora è possibile avviare il flusso OAuth QuickBooks.",
         "csvAvailableMiddle": "in questa stessa sezione Contabilità e gestisci le esportazioni da",
@@ -1900,7 +1908,7 @@
           "load": "Impossibile caricare le impostazioni QuickBooks.",
           "saveCredentials": "Impossibile salvare le credenziali QuickBooks."
         },
-        "howItWorksDescription": "Salva qui le credenziali dell'app QuickBooks, completa il flusso OAuth Intuit e AlgaPSA utilizzerà l'azienda QuickBooks connessa come contesto live predefinito per esportazioni e mappature.",
+        "howItWorksDescription": "Collega la tua azienda QuickBooks accedendo a Intuit; AlgaPSA la userà come contesto live predefinito per esportazioni e mappature. La scheda «App Intuit» qui sotto indica se la tua installazione fornisce già l'app usata per quell'accesso o se devi prima registrarne una.",
         "howItWorksTitle": "Come funziona QuickBooks live in questa release",
         "loading": "Caricamento impostazioni QuickBooks…",
         "mapping": {
@@ -1918,8 +1926,8 @@
         "requiredScopes": "Scope richiesti",
         "storedClientId": "Client ID memorizzato: {{value}}",
         "storedClientSecret": "Client secret memorizzato: {{value}}",
-        "tenantOauthDescription": "Tramite quale app Intuit si collega questo tenant. I secret non vengono mai restituiti al browser dopo il salvataggio.",
-        "tenantOauthTitle": "Credenziali dell’app Intuit",
+        "tenantOauthDescription": "AlgaPSA raggiunge QuickBooks tramite un'app Intuit: una registrazione sviluppatore su developer.intuit.com, non un'impostazione dentro QuickBooks o AlgaPSA. Questa scheda indica se ne è già disponibile una per te.",
+        "tenantOauthTitle": "App Intuit",
         "title": "QuickBooks Online",
         "automatedSalesTax": {
           "disabledMessage": "La modalità Automated Sales Tax è disattivata. Alga continua a calcolare l’imposta per questa azienda.",
@@ -1928,14 +1936,14 @@
           "label": "QuickBooks calcola l’imposta sulle vendite"
         },
         "credentialSource": {
-          "app": "Questa installazione fornisce un’app Intuit condivisa, quindi puoi collegare QuickBooks senza registrarne una. Compila i campi seguenti solo se vuoi che questo tenant usi una propria app Intuit.",
-          "none": "Non è ancora disponibile alcuna app Intuit. Registrane una nel portale Intuit Developer e incolla qui sotto client ID e secret: la guida alla configurazione spiega come fare.",
-          "tenant": "Questo tenant si collega tramite la propria app Intuit, con le credenziali salvate qui sotto."
+          "app": "Questa installazione fornisce un'app Intuit condivisa, quindi puoi collegare QuickBooks senza registrarne una. Salta questa scheda e fai clic su «Collega QuickBooks» qui sotto.",
+          "none": "Non è ancora disponibile alcuna app Intuit. Registrane una presso Intuit prima di poter collegare.",
+          "tenant": "Questo tenant si collega tramite la propria app Intuit, usando le credenziali salvate qui sotto. Per ruotare una chiave, incolla il nuovo valore e salva.",
+          "appTitle": "Nessuna credenziale necessaria"
         },
         "setupGuideLink": "Guida alla configurazione di QuickBooks",
         "noPermissionDescription": "Non disponi dell'autorizzazione per visualizzare o configurare le integrazioni contabili.",
-        "connectionsPermissionNotice": "Puoi visualizzare le impostazioni di QuickBooks, ma il salvataggio delle credenziali, la connessione e la disconnessione richiedono la capacità manage-connections. Chiedi a un amministratore di concederla."
-,
+        "connectionsPermissionNotice": "Puoi visualizzare le impostazioni di QuickBooks, ma il salvataggio delle credenziali, la connessione e la disconnessione richiedono la capacità manage-connections. Chiedi a un amministratore di concederla.",
         "disconnectPending": "QuickBooks è in fase di disconnessione. La sincronizzazione e le esportazioni sono in pausa finché la pulizia lato provider non è completata; la disconnessione continua a riprovare automaticamente.",
         "disconnectForceFinalized": "La disconnessione di QuickBooks è stata finalizzata forzatamente. Non è stato possibile confermare la pulizia lato provider, quindi le credenziali sono state rimosse localmente con un record di audit.",
         "disconnect": {
@@ -1946,6 +1954,19 @@
           "targetFailed": "richiede attenzione",
           "targetPending": "in sospeso",
           "failedPermanentDescription": "La pulizia lato provider ha riscontrato un errore permanente. Puoi riprovare oppure finalizzare forzatamente per rimuovere le credenziali memorizzate con un record di audit."
+        },
+        "registerSteps": {
+          "createApp": "Accedi su",
+          "createAppSuffix": "e crea un'app per QuickBooks Online and Payments con lo scope Accounting. Il tuo login QuickBooks funziona lì.",
+          "openKeys": "Apri la pagina «Keys & credentials» dell'app. Usa le chiavi Development se l'ambiente Intuit qui sotto indica Sandbox, oppure le chiavi Production se indica Produzione.",
+          "addRedirect": "Aggiungi l'URI di reindirizzamento mostrato qui sotto all'elenco degli URI di reindirizzamento dell'app, esattamente come visualizzato.",
+          "pasteKeys": "Copia Client ID e Client Secret da quella pagina nei due campi qui sotto, poi fai clic su «Salva credenziali QuickBooks».",
+          "connect": "Fai clic su «Collega QuickBooks» e accedi all'azienda QuickBooks che vuoi collegare."
+        },
+        "ownApp": {
+          "show": "Usa invece la tua app Intuit (avanzato)",
+          "hide": "Nascondi impostazioni app propria",
+          "intro": "Fallo solo se vuoi che questo tenant si autorizzi tramite un'app Intuit che controlli tu. Registra l'app come descritto nella guida di configurazione, poi incolla qui le sue chiavi. Finché entrambe non sono salvate, continua a essere usata l'app condivisa."
         }
       },
       "sync": {
@@ -1974,6 +1995,10 @@
         "syncNowSuccess": "Sincronizzazione completata correttamente.",
         "syncNowSkipped": "Sincronizzazione saltata: {{reason}}",
         "syncNowError": "Sincronizzazione non riuscita: {{error}}",
+        "connectionUnavailableProvider": "La connessione {{provider}} non è disponibile. Riconnetti per riprendere la sincronizzazione.",
+        "defaultRealmError": "Impossibile selezionare questa organizzazione. Riconnetti e riprova.",
+        "syncIncomplete": "La sincronizzazione è incompleta. Il cursore è stato conservato perché il provider ha restituito un insieme di modifiche parziale.",
+        "syncOperationsFailed": "Alcune operazioni contabili non sono riuscite. Esamina gli errori di sincronizzazione prima di riprovare.",
         "viewExceptionsLink": "Visualizza eccezioni",
         "autoApplyCreditsWarning": "QuickBooks è impostato per applicare automaticamente i crediti, in conflitto con le applicazioni dei crediti gestite da Alga: QuickBooks potrebbe applicare le note di credito esportate a un'altra fattura prima della sincronizzazione. In QuickBooks, vai su \"Account and Settings → Advanced → Automation\" e disattiva \"Automatically apply credits\".",
         "configTitle": "Configurazione della sincronizzazione",
@@ -1986,7 +2011,20 @@
         "noDefault": "Nessun valore predefinito",
         "saving": "Salvataggio…",
         "undepositedFunds": "Fondi non depositati (predefinito)",
-        "catalogLoadError": "Impossibile caricare le opzioni di configurazione della sincronizzazione QuickBooks."
+        "catalogLoadError": "Impossibile caricare le opzioni di configurazione della sincronizzazione QuickBooks.",
+        "healthCardTitleProvider": "Stato sincronizzazione {{provider}}",
+        "healthCardDescriptionProvider": "Stato e controlli della sincronizzazione contabile {{provider}}. Viene eseguita ogni 15 minuti.",
+        "refreshTokenExpiredProvider": "Token {{provider}} scaduto — riconnetti per riprendere la sincronizzazione.",
+        "refreshTokenExpiryProvider": "Il token {{provider}} scade il {{date}}",
+        "autoProvisionCustomersLabelProvider": "Crea automaticamente i clienti {{provider}}",
+        "connectedOrganisations": "Organizzazioni Xero",
+        "defaultOrganisationDescription": "L’organizzazione predefinita viene utilizzata per sincronizzazione, esportazioni e mappature.",
+        "outstandingItems": "Elementi in sospeso",
+        "outstandingItemsDescription": "Elementi che richiedono ancora una verifica o un altro tentativo di sincronizzazione.",
+        "outstandingItemsReconnect": "In tutte le organizzazioni collegate. Questi elementi vengono conservati fino alla riconnessione a Xero.",
+        "refreshTokenValidUntilProvider": "Autorizzazione {{provider}} valida fino al {{date}}. I token vengono rinnovati automaticamente.",
+        "syncSucceeded": "Sincronizzazione completata",
+        "syncStopped": "Sincronizzazione interrotta"
       },
       "itemImport": {
         "description": "Importa i prodotti e i servizi QuickBooks nel catalogo servizi Alga per l’azienda QuickBooks collegata. QuickBooks rimane la fonte autorevole per nomi, tariffe, SKU, descrizioni e costi; il metodo di fatturazione, l’unità di misura e il tipo di servizio vengono impostati qui e in seguito gestiti da Alga. Questo passaggio è facoltativo: ignoralo con Avanti.",
@@ -2774,6 +2812,52 @@
       }
     },
     "sso": {
+      "keycloak": {
+        "title": "Keycloak / OpenID Connect",
+        "description": "Consenti al personale di accedere tramite il tuo realm Keycloak. Gli utenti vengono associati per e-mail agli account AlgaPSA esistenti; Keycloak non crea mai utenti qui.",
+        "status": {
+          "configured": "Configurato",
+          "notConfigured": "Non configurato"
+        },
+        "actions": {
+          "refresh": "Aggiorna",
+          "save": "Verifica e salva",
+          "saving": "Verifica e salvataggio…",
+          "remove": "Rimuovi"
+        },
+        "setup": {
+          "redirectUri": "Crea un client OpenID Connect confidenziale nel tuo realm e consenti questo URI di reindirizzamento:",
+          "domainsEe": "Poi rivendica e verifica il dominio di accesso del personale in «Avanzate» in modo che le e-mail di quel dominio vengano indirizzate a questo realm.",
+          "domainsCe": "Poi aggiungi il dominio di accesso del personale in «Avanzate» in modo che le e-mail di quel dominio vengano indirizzate a questo realm.",
+          "issuer": "Emittente: {{issuer}}"
+        },
+        "fields": {
+          "url": "URL del server Keycloak",
+          "realm": "Realm",
+          "clientId": "ID client",
+          "clientSecret": "Segreto client",
+          "clientSecretKeep": "Lascia vuoto per mantenere {{masked}}"
+        },
+        "errors": {
+          "loadFailed": "Impossibile caricare le impostazioni Keycloak",
+          "saveFailed": "Impossibile salvare le impostazioni Keycloak",
+          "removeFailed": "Impossibile rimuovere le impostazioni Keycloak"
+        },
+        "toasts": {
+          "savedTitle": "Impostazioni Keycloak salvate",
+          "savedDescription": "Il realm ha risposto alla discovery OpenID e il personale può ora accedere con Keycloak.",
+          "saveFailedTitle": "Impossibile salvare le impostazioni Keycloak",
+          "removedTitle": "Impostazioni Keycloak rimosse",
+          "removedDescription": "L’accesso con Keycloak non è più offerto per questo tenant.",
+          "removeFailedTitle": "Impossibile rimuovere le impostazioni Keycloak"
+        },
+        "removeDialog": {
+          "title": "Rimuovere l’accesso con Keycloak?",
+          "message": "Il personale non vedrà più il pulsante Keycloak. L’accesso con password resta invariato.",
+          "confirm": "Rimuovi",
+          "cancel": "Annulla"
+        }
+      },
       "msp": {
         "actions": {
           "add": "Aggiungi",
@@ -3454,7 +3538,9 @@
           "saveCredentials": "Salva credenziali Xero",
           "saving": "Salvataggio…",
           "retryDisconnect": "Riprova disconnessione",
-          "forceFinalizeDisconnect": "Finalizza forzatamente"
+          "forceFinalizeDisconnect": "Finalizza forzatamente",
+          "disconnectAll": "Disconnetti tutte le organizzazioni Xero",
+          "replaceCredentials": "Sostituisci credenziali"
         },
         "badges": {
           "connectionExpired": "Connessione scaduta",
@@ -3483,14 +3569,22 @@
         "clientIdPlaceholder": "Incolla il tuo Xero Client ID di proprietà del tenant",
         "clientSecretLabel": "Segreto client Xero",
         "clientSecretPlaceholder": "Incolla il tuo Xero Client Secret di proprietà del tenant",
-        "connectSuccess": "Xero connesso con successo. La prima organizzazione connessa è ora il contesto Xero live predefinito.",
+        "connectSuccess": "Xero connesso. {{count}} organizzazioni collegate; {{organisation}} è quella predefinita per la sincronizzazione.",
         "connection": {
           "connectionId": "ID connessione: {{id}}",
           "defaultOrganisation": "Organizzazione predefinita",
           "description": "Avvia OAuth solo dopo aver configurato l'app Xero di proprietà del tenant. La disconnessione rimuove i token di accesso Xero memorizzati ma mantiene le credenziali dell'app di proprietà del tenant.",
           "notConnected": "Nessuna organizzazione Xero live è ancora connessa. Salva le credenziali, quindi clicca su Connetti Xero.",
           "title": "Connessione Xero live",
-          "unknown": "sconosciuto"
+          "unknown": "sconosciuto",
+          "defaultBadge": "Predefinita per la sincronizzazione",
+          "linkedOrganisations": "Organizzazioni collegate ({{count}})",
+          "multipleOrganisationScope": "Questa autorizzazione include {{count}} organizzazioni Xero. La riconnessione e la disconnessione si applicano a tutte.",
+          "reconnectRequiredBadge": "È necessario riconnettersi",
+          "organisationScope": "La riconnessione e la disconnessione si applicano a ogni organizzazione in questo elenco.",
+          "reconnectRequiredDescription": "La sincronizzazione e le esportazioni sono sospese. Riconnettiti una volta per riprenderle per tutte le {{count}} organizzazioni collegate.",
+          "reconnectRequiredTitle": "Connessione scaduta",
+          "singleOrganisationScope": "La riconnessione e la disconnessione si applicano a questa organizzazione Xero."
         },
         "credentialsSaved": "Credenziali Xero salvate. Ora è possibile avviare il flusso OAuth Xero live.",
         "csvAvailableMiddle": "in questa stessa sezione Contabilità e gestisci le esportazioni da",
@@ -3503,11 +3597,11 @@
           "load": "Impossibile caricare le impostazioni Xero.",
           "saveCredentials": "Impossibile salvare le credenziali Xero."
         },
-        "howItWorksDescription": "Salva qui un Xero Client ID e un Client Secret di proprietà del tenant, completa il flusso OAuth Xero, e AlgaPSA utilizzerà la prima organizzazione Xero connessa come contesto live predefinito.",
+        "howItWorksDescription": "Salva qui un Xero Client ID e un Client Secret di proprietà del tenant, completa il flusso OAuth Xero, e AlgaPSA utilizzerà l'organizzazione Xero selezionata come predefinita per esportazioni e sincronizzazione live.",
         "howItWorksTitle": "Come funziona Xero live in questa release",
         "loading": "Caricamento impostazioni Xero…",
         "mapping": {
-          "alert": "Articoli, conti di ricavo, aliquote fiscali e categorie di tracciamento di Xero vengono caricati dall'organizzazione connessa predefinita in modo che le esportazioni live possano continuare a utilizzare la prima connessione Xero memorizzata in v1.",
+          "alert": "Articoli, conti di ricavo, aliquote fiscali e categorie di tracciamento di Xero vengono caricati dall'organizzazione predefinita selezionata, e le mappature vengono salvate per quella connessione, così esportazioni e riconciliazione live usano la stessa organizzazione.",
           "descriptionPrefix": "Configura le mappature Xero live per l'organizzazione connessa predefinita. Queste mappature sono limitate a",
           "placeholderAlert": "Il gestore delle mappature diventa disponibile dopo la connessione della prima organizzazione Xero e la sua impostazione come contesto Xero live predefinito.",
           "placeholderDescription": "Connetti un'organizzazione Xero live prima di configurare le mappature di articoli e imposte Xero live.",
@@ -3520,7 +3614,7 @@
         "requiredScopes": "Scope richiesti",
         "scopeOverride": "Override della distribuzione (XERO_OAUTH_SCOPES)",
         "scopeOverrideInvalid": "L'override XERO_OAUTH_SCOPES è stato ignorato perché contiene voci non valide ({{scopes}}). Vengono invece utilizzati gli scope predefiniti.",
-        "scopeReconnectNote": "Questi scope si applicano alle nuove autorizzazioni. Una connessione esistente mantiene gli scope concessi originariamente. Per applicare l'insieme corrente, disconnetti e riconnetti Xero. Puoi anche rimuovere questa app da Connected apps in Xero per revocare le autorizzazioni precedenti.",
+        "scopeReconnectNote": "Questi scope si applicano alle nuove autorizzazioni. Una connessione esistente mantiene gli scope concessi originariamente. Per applicare l'insieme corrente, disconnetti e riconnetti Xero. L'aggiornamento del token mantiene i permessi esistenti; solo una nuova autorizzazione concede nuovi permessi. Puoi anche rimuovere questa app da Connected apps in Xero per revocare le autorizzazioni precedenti.",
         "storedClientId": "Client ID memorizzato: {{value}}",
         "storedClientSecret": "Client secret memorizzato: {{value}}",
         "tenantOauthDescription": "Incolla le credenziali dell'app Xero registrate per questo tenant. I valori segreti non vengono mai restituiti al browser dopo il salvataggio.",
@@ -3528,8 +3622,7 @@
         "title": "Xero",
         "xeroCsv": "Xero CSV",
         "noPermissionDescription": "Non disponi dell'autorizzazione per visualizzare o configurare le integrazioni contabili.",
-        "connectionsPermissionNotice": "Puoi visualizzare le impostazioni di Xero, ma il salvataggio delle credenziali, la connessione e la disconnessione richiedono la capacità manage-connections. Chiedi a un amministratore di concederla."
-,
+        "connectionsPermissionNotice": "Puoi visualizzare le impostazioni di Xero, ma il salvataggio delle credenziali, la connessione e la disconnessione richiedono la capacità manage-connections. Chiedi a un amministratore di concederla.",
         "disconnectPending": "Xero è in fase di disconnessione. La sincronizzazione e le esportazioni sono in pausa finché la pulizia lato provider non è completata; la disconnessione continua a riprovare automaticamente.",
         "disconnectForceFinalized": "La disconnessione di Xero è stata finalizzata forzatamente. Non è stato possibile confermare la pulizia lato provider, quindi le credenziali sono state rimosse localmente con un record di audit.",
         "disconnect": {
@@ -3540,8 +3633,14 @@
           "targetRevoked": "revocata",
           "targetFailed": "richiede attenzione",
           "targetPending": "in sospeso",
-          "failedPermanentDescription": "La pulizia lato provider ha riscontrato un errore permanente. Puoi riprovare oppure finalizzare forzatamente per rimuovere le credenziali memorizzate con un record di audit."
-        }
+          "failedPermanentDescription": "La pulizia lato provider ha riscontrato un errore permanente. Puoi riprovare oppure finalizzare forzatamente per rimuovere le credenziali memorizzate con un record di audit.",
+          "confirmDescription": "Questa operazione disconnette {{organisations}} e sospende la sincronizzazione e le esportazioni. Le credenziali dell’app Xero rimarranno salvate.",
+          "confirmTitle": "Disconnettere Xero da Alga PSA?",
+          "dangerDescription": "Interrompe la sincronizzazione e le esportazioni e rimuove tutte le {{count}} organizzazioni collegate. Le credenziali dell’app rimangono salvate.",
+          "dangerTitle": "Disconnetti Xero"
+        },
+        "connectNeedsAttention": "L’autorizzazione Xero è completata, ma la connessione richiede ancora attenzione. La sincronizzazione rimane sospesa.",
+        "credentialsStoredDescription": "L’ID client e il segreto client sono archiviati in modo sicuro."
       }
     },
     "stripe": {
@@ -3618,7 +3717,7 @@
         "label": "Google"
       },
       "microsoft": {
-        "descriptionCe": "MSP SSO, Microsoft sign-in, and login-domain discovery.",
+        "descriptionCe": "E-mail in entrata di Outlook per la registrazione app Microsoft della tua azienda.",
         "descriptionEe": "MSP SSO, Outlook email, calendar sync, and Teams.",
         "label": "Microsoft"
       },
@@ -3632,10 +3731,97 @@
         "disabled": "Disattivato",
         "notConfigured": "Non configurato"
       },
+      "setup": {
+        "configure": "Configura integrazione",
+        "selectedAction": "Selezionata",
+        "currentIntegration": "Integrazione telefonia",
+        "changeIntegration": "Scegli un’altra"
+      },
       "providers": {
         "teamsPhone": {
           "description": "Registra le chiamate di Teams Phone come interazioni al termine di ogni chiamata. Cronologia delle chiamate, non avviso a schermo in tempo reale.",
-          "prerequisite": "Configura prima l'integrazione Microsoft Teams: Teams Phone riusa il suo profilo Microsoft."
+          "prerequisite": "Configura prima l'integrazione Microsoft Teams: Teams Phone riusa il suo profilo Microsoft.",
+          "label": "Teams Phone"
+        },
+        "threecx": {
+          "label": "3CX",
+          "description": "Registra le chiamate 3CX come interazioni e riconosce i chiamanti nel client 3CX tramite il modello CRM.",
+          "permission": "È necessaria l’autorizzazione alle impostazioni di sistema per gestire l’integrazione 3CX.",
+          "endpoint": "URL di base dell’endpoint",
+          "copy": "Copia",
+          "apiKey": "Chiave API",
+          "rotate": "Ruota",
+          "fullKeyWarning": "Copia questa chiave ora — non verrà più mostrata.",
+          "download": "Scarica modello",
+          "tierRequired": "La telefonia 3CX richiede il piano Pro.",
+          "templateStale": "È disponibile un modello più recente. Scaricalo e caricalo di nuovo nella console 3CX.",
+          "pbx": {
+            "title": "API del centralino (3CX Enterprise/AI)",
+            "help": "Il pop-up chiamata, la chiamata con un clic, l'importazione dello storico e la sincronizzazione della rubrica usano le API Call Control e Configuration di 3CX, che richiedono una licenza 3CX Enterprise o AI (8SC+). Crea un'app API nella console di amministrazione 3CX in Integrazioni → API, attiva entrambi gli accessi ed elenca ogni interno da monitorare.",
+            "baseUrl": "Indirizzo del centralino",
+            "clientId": "ID client (interno dell'app API)",
+            "clientSecret": "Segreto client",
+            "replaceSecret": "Sostituisci",
+            "save": "Salva credenziali",
+            "test": "Prova connessione",
+            "clear": "Rimuovi",
+            "connected": "Connesso",
+            "granted": "concesso",
+            "notGranted": "non concesso",
+            "callControl": "Controllo chiamate",
+            "xapi": "API di configurazione",
+            "lastChecked": "Ultimo controllo",
+            "notConnectedHint": "Collega l'API del centralino qui sopra per usare questa funzione."
+          },
+          "extensions": {
+            "title": "Interni",
+            "sync": "Sincronizza dal centralino",
+            "lastSync": "Ultima sincronizzazione",
+            "empty": "Nessun interno sincronizzato finora.",
+            "dn": "Interno",
+            "pbxUser": "Utente del centralino",
+            "algaUser": "Utente AlgaPSA",
+            "unmapped": "Non associato",
+            "auto": "associato tramite e-mail"
+          },
+          "cdr": {
+            "title": "Importazione dello storico chiamate",
+            "help": "Legge ogni ora il registro chiamate del centralino e registra le chiamate esterne non ancora presenti.",
+            "lookback": "Giorni di storico alla prima esecuzione",
+            "lastRun": "Ultima esecuzione",
+            "added": "Record aggiunti"
+          },
+          "phonebook": {
+            "title": "Sincronizzazione rubrica",
+            "help": "Invia i contatti con numero di telefono alla rubrica aziendale 3CX e aggiunge ai contatti corrispondenti i numeri presenti solo nel centralino.",
+            "schedule": "Pianificazione della riconciliazione",
+            "daily": "Giornaliera",
+            "hourly": "Ogni ora",
+            "pushNow": "Invia ora",
+            "importNow": "Importa ora",
+            "lastPush": "Ultimo invio",
+            "lastImport": "Ultima importazione",
+            "countsLegend": "Conteggi: creati/aggiornati/eliminati/importati/saltati"
+          },
+          "queue": {
+            "title": "Contatti creati da 3CX",
+            "empty": "Nulla in attesa. Qui compaiono i contatti creati dal client 3CX senza un cliente corrispondente.",
+            "pendingBadge": "e-mail mancante",
+            "unmappedBadge": "senza cliente",
+            "company": "Azienda",
+            "chooseClient": "Scegli un cliente…",
+            "apply": "Applica",
+            "leaveWithoutClient": "Lascia senza cliente",
+            "complete": "Completa",
+            "dismiss": "Ignora",
+            "completeTitle": "Completa il contatto da 3CX",
+            "firstName": "Nome",
+            "lastName": "Cognome",
+            "email": "E-mail",
+            "number": "Numero di telefono",
+            "cancel": "Annulla",
+            "save": "Crea contatto"
+          }
         }
       },
       "subscriptionExpires": "L'abbonamento si rinnova entro",
@@ -3672,7 +3858,8 @@
         "assignTo": "Assegna a",
         "searchPlaceholder": "Cerca contatti e clienti…",
         "noTargets": "Nessun contatto o cliente corrispondente.",
-        "chooseTarget": "Assegna a un cliente…"
+        "chooseTarget": "Assegna a un cliente…",
+        "chatBadge": "Chat"
       },
       "forbidden": "Non hai il permesso di visualizzare le impostazioni di telefonia di questo tenant.",
       "paywall": {
@@ -3725,8 +3912,7 @@
       "notFound": "Mappatura non trovata. Aggiornare le mappature e riprovare.",
       "deleteFailed": "Impossibile eliminare la mappatura. Riprovare.",
       "invoiceCancelled": "La fattura è stata annullata e non può essere mappata all'integrazione contabile.",
-      "invoiceNotFound": "La fattura non esiste più e non può essere mappata all'integrazione contabile."
-,
+      "invoiceNotFound": "La fattura non esiste più e non può essere mappata all'integrazione contabile.",
       "scopeRequired": "Le ricerche di mappature richiedono un'integrazione, un tipo di entità e un ambito realm."
     },
     "qbo": {
@@ -3772,6 +3958,7 @@
       "enterpriseOnly": "L’integrazione con Xero è disponibile solo nella Enterprise Edition.",
       "viewPermission": "Vietato: non si dispone dell’autorizzazione per visualizzare le impostazioni dell’integrazione con Xero.",
       "organisationDisconnected": "L’organizzazione Xero selezionata non è più collegata. Ricollegare Xero e riprovare.",
+      "organisationAmbiguous": "L'organizzazione Xero predefinita salvata appartiene a più di una connessione. Scegli quale connessione è quella predefinita nelle impostazioni di contabilità.",
       "accounts": {
         "notConnected": "Collegare Xero prima di caricare i conti Xero.",
         "reconnect": "Ricollegare Xero prima di caricare i conti Xero.",
@@ -3807,6 +3994,23 @@
       "contactWithoutClient": "Nel sistema esiste già un contatto con questo indirizzo email senza assegnazione a un cliente",
       "emailOnAnotherClient": "Questa email è già associata a un altro cliente",
       "emailOnAnotherClientNamed": "Questa email è già associata a {{clientName}}"
+    }
+  },
+  "telephony": {
+    "incomingCall": {
+      "title": "Chiamata in arrivo",
+      "unknownCaller": "Chiamante sconosciuto",
+      "noNumber": "Nessun ID chiamante",
+      "extension": "Squilla l'interno {{dn}}",
+      "openTickets": "Ticket aperti",
+      "recentInteractions": "Interazioni recenti",
+      "openContact": "Apri contatto",
+      "openClient": "Apri cliente",
+      "newTicket": "Nuovo ticket",
+      "createContact": "Crea contatto",
+      "dismiss": "Ignora",
+      "answer": "Rispondi",
+      "answerFailed": "Il centralino non è riuscito a rispondere alla chiamata"
     }
   }
 }

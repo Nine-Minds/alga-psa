@@ -406,11 +406,17 @@
       "refreshing": "Refrescante...",
       "refreshData": "Atualizar dados",
       "rebootDevice": "Reinicializar dispositivo",
+      "rebooting": "Reiniciando...",
       "editAsset": "Editar recurso",
       "deleteAsset": "Excluir recurso"
     },
     "values": {
       "unknownClient": "Cliente desconhecido"
+    },
+    "reboot": {
+      "title": "Reiniciar o dispositivo?",
+      "message": "{{name}} será reiniciado imediatamente por meio do {{provider}}. Qualquer pessoa conectada perderá o trabalho não salvo.",
+      "confirm": "Reiniciar agora"
     }
   },
   "assetDetailTabs": {

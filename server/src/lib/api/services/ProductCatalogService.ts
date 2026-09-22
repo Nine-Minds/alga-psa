@@ -1,6 +1,7 @@
 import type { IService } from '@/interfaces/billing.interfaces';
 import { normalizeGtin } from '@alga-psa/core';
 import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
+import { splitServicePricesByEffectiveDate } from '@alga-psa/billing/models/service';
 import { ListOptions } from '../controllers/types';
 import { publishServiceCatalogSearchEvent } from './ServiceCatalogService';
 import { ConflictError, NotFoundError } from '../middleware/apiMiddleware';
@@ -159,10 +160,15 @@ export class ProductCatalogService extends BaseService<IService> {
       pricesByService[price.service_id].push(price);
     }
 
-    let products = productsData.map((service: any) => ({
-      ...service,
-      prices: pricesByService[service.service_id] || []
-    }));
+    // Current price per currency in `prices`; future-dated rows in
+    // `scheduled_prices` (same split as the service catalog and the model read
+    // paths) so an API consumer cannot read a not-yet-effective rate.
+    let products = productsData.map((service: any) => {
+      const { current, scheduled } = splitServicePricesByEffectiveDate(
+        pricesByService[service.service_id] || [],
+      );
+      return { ...service, prices: current, scheduled_prices: scheduled };
+    });
 
     // Post-filter by is_license if specified
     if (filters.is_license !== undefined) {
@@ -198,7 +204,8 @@ export class ProductCatalogService extends BaseService<IService> {
       .where('service_id', id)
       .select('*');
 
-    return { ...product, prices } as IService;
+    const { current, scheduled } = splitServicePricesByEffectiveDate(prices);
+    return { ...product, prices: current, scheduled_prices: scheduled } as IService;
   }
 
   async create(data: Partial<IService>, context: ServiceContext): Promise<IService> {
@@ -333,9 +340,12 @@ export class ProductCatalogService extends BaseService<IService> {
     tenant: string,
     prices: Array<{ currency_code: string; rate: number }>
   ): Promise<void> {
-    // Delete existing prices and insert new ones
+    // Replace the currently-effective window only; leave scheduled future rows
+    // in place so an ordinary product save cannot revoke a scheduled increase.
+    const today = new Date().toISOString().slice(0, 10);
     await tenantDb(knex, tenant).table('service_prices')
       .where('service_id', serviceId)
+      .where('effective_date', '<=', today)
       .delete();
 
     if (prices.length > 0) {
@@ -344,7 +354,8 @@ export class ProductCatalogService extends BaseService<IService> {
           service_id: serviceId,
           tenant,
           currency_code: p.currency_code,
-          rate: p.rate
+          rate: p.rate,
+          effective_date: '1970-01-01'
         }))
       );
     }

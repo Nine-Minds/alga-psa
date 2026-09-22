@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "suite": "workspace-db",
+  "revision": "7922859ee79f7f5006e053a27be5c4494bc9e43c",
+  "status": "passed",
+  "counts": {
+    "passed": 454,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "pending": 0
+  },
+  "source": {
+    "before": {
+      "revision": "7922859ee79f7f5006e053a27be5c4494bc9e43c",
+      "dirty": false,
+      "changes": []
+    },
+    "after": {
+      "revision": "7922859ee79f7f5006e053a27be5c4494bc9e43c",
+      "dirty": false,
+      "changes": []
+    }
+  },
+  "workingTreeDirty": false,
+  "selection": {
+    "mode": "full",
+    "filters": []
+  },
+  "failures": [],
+  "scope": "Complete canonical local workspace database lane",
+  "files": 60,
+  "durationSeconds": 375.21,
+  "discoveryStatus": "passed",
+  "services": "Fresh pgvector/pgvector:pg16 and redis:7-alpine containers, removed after completion",
+  "runtime": "Local Node 25.5.0; CI uses Node 22",
+  "limitations": [
+    "Local run does not prove native PR success or effective branch protection.",
+    "No Citus topology or previous-release upgrade coverage is established by this lane."
+  ],
+  "artifacts": [
+    {
+      "path": "test-results/workspace-db/evidence.json",
+      "sha256": "efd690f5f0cfb703388d1b506f8215f4372f774ec15a5332488ae391b8f79870"
+    },
+    {
+      "path": "test-results/workspace-db/discovery.json",
+      "sha256": "3b683b21bd3d17d44e999e4b374782985449634de78ad1aa5cc2ff0b15d21d44"
+    },
+    {
+      "path": "test-results/workspace-db/collected.json",
+      "sha256": "885d70f794716f9c6f67038984cbb2df2e30fe64e395ce04ee97103bca6a343a"
+    },
+    {
+      "path": "test-results/workspace-db/collected-tests.json",
+      "sha256": "809f25e7c33554bf28fa75d8ec1c9fdcde6d91922e75ad50e3d373553db5221a"
+    },
+    {
+      "path": "test-results/workspace-db/results.json",
+      "sha256": "19a29d7be6b1b3d4738337bb1888aee5dfa930c7e229b7108c6317329fe2b6a3"
+    },
+    {
+      "path": "/tmp/alga-workspace-db-full-7922859.log",
+      "sha256": "f749c34859dee3bc5e920a6cb627a1980580856efc4ec456ed0227620c7a552a"
+    }
+  ]
+}

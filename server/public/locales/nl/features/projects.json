@@ -122,7 +122,8 @@
       "taskType": "Type",
       "actions": "Acties"
     },
-    "unknownUser": "Onbekend"
+    "unknownUser": "Onbekend",
+    "searchSmart": "Projecten, taken en opmerkingen doorzoeken… Enter voor slim zoeken"
   },
   "quickAdd": {
     "title": "Nieuw project toevoegen",
@@ -1320,6 +1321,12 @@
       },
       "skip": "Overslaan",
       "creating": "Aanmaken..."
+    },
+    "discardConfirmation": {
+      "title": "Niet-opgeslagen sjabloon verwerpen?",
+      "message": "Uw sjabloon bevat niet-opgeslagen wijzigingen. Als u nu weggaat, gaan deze wijzigingen verloren.",
+      "keepEditing": "Doorgaan met bewerken",
+      "discard": "Sjabloon verwerpen"
     }
   },
   "documents": {
@@ -1865,5 +1872,29 @@
       "loadRecipient": "Ontvangersgegevens konden niet worden geladen",
       "sendFailed": "Statusupdate kon niet worden verstuurd"
     }
+  },
+  "smartSearch": {
+    "run": "Slim zoeken",
+    "runTitle": "Gefilterde projecten beoordelen op deze zoekopdracht",
+    "relevanceColumn": "Overeenkomst",
+    "relevance": "{{percent}}% overeenkomst",
+    "strong": "Sterke matches",
+    "possible": "Mogelijke matches",
+    "unlikely": "Onwaarschijnlijke matches",
+    "emptyBucketRunning": "Nog geen",
+    "emptyBucket": "Geen",
+    "scoring": "{{scored}} van {{total}} projecten beoordeeld",
+    "summary": "{{total}} projecten beoordeeld · {{strong}} sterk · {{possible}} mogelijk",
+    "cancelled": "Zoeken geannuleerd na {{scored}} van {{total}} projecten",
+    "errorTitle": "Slim zoeken gestopt",
+    "starting": "Slim zoeken wordt gestart…",
+    "rerun": "Filters gewijzigd. Opnieuw uitvoeren",
+    "retry": "Opnieuw proberen",
+    "cancel": "Annuleren",
+    "exit": "Terug naar lijst",
+    "notConfigured": "Slim zoeken is niet geconfigureerd op deze server",
+    "failedCount": "{{count}} projecten konden niet worden beoordeeld",
+    "unscored": "Niet beoordeeld",
+    "addOnRequired": "Slim zoeken vereist de AI-assistent-add-on"
   }
 }

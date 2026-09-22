@@ -122,7 +122,8 @@
       "taskType": "Tipo",
       "actions": "Azioni"
     },
-    "unknownUser": "Sconosciuto"
+    "unknownUser": "Sconosciuto",
+    "searchSmart": "Cerca progetti, attività e commenti… Invio per la ricerca intelligente"
   },
   "quickAdd": {
     "title": "Aggiungi nuovo progetto",
@@ -1320,6 +1321,12 @@
       },
       "skip": "Salta",
       "creating": "Creazione..."
+    },
+    "discardConfirmation": {
+      "title": "Scartare il modello non salvato?",
+      "message": "Il tuo modello contiene modifiche non salvate. Se esci ora, queste modifiche andranno perse.",
+      "keepEditing": "Continua a modificare",
+      "discard": "Scarta modello"
     }
   },
   "documents": {
@@ -1865,5 +1872,29 @@
       "loadRecipient": "Impossibile caricare le informazioni del destinatario",
       "sendFailed": "Impossibile inviare l’aggiornamento di stato"
     }
+  },
+  "smartSearch": {
+    "run": "Ricerca intelligente",
+    "runTitle": "Valuta i progetti filtrati rispetto a questa richiesta",
+    "relevanceColumn": "Corrispondenza",
+    "relevance": "{{percent}}% pertinente",
+    "strong": "Corrispondenze forti",
+    "possible": "Corrispondenze possibili",
+    "unlikely": "Corrispondenze improbabili",
+    "emptyBucketRunning": "Nessuna per ora",
+    "emptyBucket": "Nessuna",
+    "scoring": "{{scored}} progetti su {{total}} valutati",
+    "summary": "{{total}} progetti valutati · {{strong}} forti · {{possible}} possibili",
+    "cancelled": "Ricerca annullata dopo {{scored}} progetti su {{total}}",
+    "errorTitle": "Ricerca intelligente interrotta",
+    "starting": "Avvio della ricerca intelligente…",
+    "rerun": "I filtri sono cambiati. Esegui di nuovo",
+    "retry": "Riprova",
+    "cancel": "Annulla",
+    "exit": "Torna all’elenco",
+    "notConfigured": "La ricerca intelligente non è configurata su questo server",
+    "failedCount": "{{count}} progetti non sono stati valutati",
+    "unscored": "Non valutati",
+    "addOnRequired": "La ricerca intelligente richiede il componente aggiuntivo Assistente IA"
   }
 }

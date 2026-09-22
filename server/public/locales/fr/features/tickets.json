@@ -78,7 +78,8 @@
     "paused": "En pause",
     "allResponseStatuses": "Tous les statuts de réponse",
     "responseStatus": "Statut de réponse",
-    "board": "Filtrer par tableau"
+    "board": "Filtrer par tableau",
+    "searchSmart": "Rechercher des tickets et commentaires… Entrée pour la recherche intelligente"
   },
   "create": {
     "title": "Créer un ticket d'assistance",
@@ -297,12 +298,12 @@
     "deleteTimeEntryFailed": "Échec de la suppression de l'entrée de temps",
     "timeEntryDeleted": "Entrée de temps supprimée",
     "closeFailed": "Échec de la fermeture du ticket",
-    "scheduleVisitFailed": "Échec de l'ouverture du planificateur",
     "loadCommentsFailed": "Échec du chargement des commentaires",
     "updateTicketFailed": "Échec de la mise à jour du ticket",
     "errorWithMessage": "Erreur : {{message}}",
     "billingProfileUpdated": "Profil de facturation mis à jour",
-    "updateBillingProfileFailed": "Échec de la mise à jour du profil de facturation"
+    "updateBillingProfileFailed": "Échec de la mise à jour du profil de facturation",
+    "scheduleOpenFailed": "Impossible d’ouvrir le planificateur"
   },
   "conversation": {
     "comments": "Commentaires",
@@ -335,6 +336,8 @@
     "deleteUploadedImages": "Supprimer des images",
     "keepUploadedImages": "Conserver les images",
     "bundledUpdate": "Mise à jour groupée",
+    "bundledUpdateFrom": "Mise à jour groupée de {{number}}",
+    "systemAuthor": "Système",
     "clientSuffix": " (Client)",
     "internalCommentTooltip": "Commentaire interne",
     "resolutionCommentTooltip": "Commentaire de résolution",
@@ -571,7 +574,7 @@
     "bundleMasterLabel": "Sélectionner le ticket principal",
     "bundleMasterPlaceholder": "Sélectionnez le ticket principal...",
     "bundleSyncUpdates": "Synchroniser les mises à jour du maître vers les enfants (réponses publiques + modifications du workflow)",
-    "bundleSyncUpdatesHelp": "Les tickets enfants conservent leur statut actuel lorsqu'ils sont regroupés. Les champs de workflow sont verrouillés sur les enfants par défaut. Les notes internes restent sur le ticket principal.",
+    "bundleSyncUpdatesHelp": "Les tickets enfants conservent leur statut actuel lors du regroupement. Ensuite, la fermeture ou la réouverture du maître ferme ou rouvre tous les tickets enfants, et les modifications de statut, d’assigné et de priorité sur le maître s’appliquent aux enfants. Les champs de workflow sont verrouillés sur les enfants. Les notes internes restent sur le maître.",
     "bundleSelectAtLeastTwo": "Sélectionnez au moins deux tickets à regrouper.",
     "bundleSelectMaster": "Sélectionnez un ticket principal.",
     "bundleSuccess": "Tickets regroupés",
@@ -634,12 +637,16 @@
       "masterTicket": "Ticket principal",
       "selectMasterTicket": "Sélectionnez le ticket principal...",
       "syncUpdates": "Synchroniser les mises à jour du maître vers les enfants (réponses publiques + modifications du workflow)",
-      "syncUpdatesHelp": "Les tickets enfants conservent leur statut actuel lorsqu’ils sont regroupés. Les champs de workflow sont verrouillés sur les enfants par défaut. Les notes internes restent sur le maître.",
+      "syncUpdatesHelp": "Les tickets enfants conservent leur statut actuel lors du regroupement. Ensuite, la fermeture ou la réouverture du maître ferme ou rouvre tous les tickets enfants, et les modifications de statut, d’assigné et de priorité sur le maître s’appliquent aux enfants. Les champs de workflow sont verrouillés sur les enfants. Les notes internes restent sur le maître.",
       "childrenDescription": "Les enfants conservent leur statut actuel ; les champs de workflow sont verrouillés sur les enfants. Les réponses entrantes des enfants sont affichées ci-dessous en lecture seule.",
       "checkingMasters": "Vérification des regroupements existants...",
       "existingMasterSuffix": "(maître existant)",
       "existingMasterLocked": "Un ticket sélectionné est déjà un ticket principal. Il sera utilisé comme maître ; les autres seront ajoutés comme enfants.",
-      "multipleExistingMasters": "Plusieurs tickets sélectionnés sont déjà des tickets principaux ({{count}}). Dégroupez tous sauf un avant de regrouper."
+      "multipleExistingMasters": "Plusieurs tickets sélectionnés sont déjà des tickets principaux ({{count}}). Dégroupez tous sauf un avant de regrouper.",
+      "propagationSummary": "{{masters}} ticket(s) sélectionné(s) sont des maîtres en mode synchronisation ; cette modification fermera/rouvrira {{children}} ticket(s) enfants.",
+      "masterSummary": "{{children}} ticket(s) enfants",
+      "applyToChildren": "Appliquer aux enfants",
+      "mastersOnly": "Maîtres uniquement"
     },
     "auth": {
       "moveRequired": "Vous devez être connecté pour déplacer des tickets",
@@ -1076,7 +1083,8 @@
       "responseStateTrackingDisabled": "Suivi de l'état de réponse désactivé",
       "title": "Préférences d'affichage du ticket",
       "description": "Configurez la façon dont votre tableau de bord de tickets affiche les colonnes et les horodatages pour votre équipe.",
-      "dateTimeFormat": "Format date/heure",
+      "showWeekday": "Afficher le jour de la semaine dans les horodatages",
+      "countryDrivesFormat": "Le format de date et d'heure suit le pays de votre entreprise. Définissez-le dans Paramètres → Général.",
       "ticketListColumns": "Colonnes de la liste des tickets",
       "showTags": "Afficher les balises",
       "displayUnderTitle": "Afficher sous le titre",
@@ -1374,7 +1382,13 @@
       "alreadyBundled": "Le ticket est déjà regroupé : {{ticket}}",
       "masterAsChild": "Le ticket principal ne peut pas être aussi un ticket enfant.",
       "noChildren": "Aucun ticket enfant fourni.",
-      "childrenOnBundledChild": "Impossible d’ajouter des tickets enfants à un ticket enfant déjà regroupé."
+      "childrenOnBundledChild": "Impossible d’ajouter des tickets enfants à un ticket enfant déjà regroupé.",
+      "concurrent": "Un ou plusieurs tickets sélectionnés ont été regroupés simultanément. Actualisez la page et réessayez.",
+      "closedMasterChoiceRequired": "Le ticket principal de ce groupe est clôturé. Choisissez comment ajouter le ticket enfant : {{choices}}.",
+      "closedMasterChoiceNotAllowed": "Ce choix n’est pas autorisé pour ce ticket principal. Choisissez l’une des options suivantes : {{choices}}.",
+      "choiceOnOpenMaster": "Ce choix s’applique uniquement lorsque le ticket principal du groupe est clôturé.",
+      "closeRuleFailed": "Ce ticket ne peut pas encore être clôturé : {{reason}}",
+      "reopenUnavailable": "Le ticket principal ne peut pas être rouvert car aucun statut de ticket ouvert n’est configuré."
     },
     "ticket": {
       "validationDetails": "Veuillez corriger les informations du ticket : {{details}}",
@@ -1469,7 +1483,7 @@
   },
   "details": {
     "bundle": {
-      "childrenDescription": "Tickets enfants regroupés dans ce ticket maître",
+      "childrenDescription": "Les tickets enfants conservent leur statut actuel lors du regroupement. Ensuite, la fermeture ou la réouverture du maître ferme ou rouvre tous les tickets enfants, et les modifications de statut, d’assigné et de priorité sur le maître s’appliquent aux enfants. Les champs de workflow sont verrouillés sur les enfants. Les notes internes restent sur le maître.",
       "title": "Groupe",
       "masterBanner": "Ce ticket est le maître d'un groupe ({{count}} enfants). Mode : {{mode}}.",
       "multipleClients": "Plusieurs clients",
@@ -1481,7 +1495,33 @@
       "remove": "Retirer",
       "noChildren": "Aucun enfant dans ce groupe.",
       "addChildMultiClientMessage": "Cela ajoutera {{ticket}} d'un autre client au groupe. Confirmez que vous souhaitez continuer.",
-      "thisTicket": "ce ticket"
+      "thisTicket": "ce ticket",
+      "propagation": {
+        "closeTitle": "Fermer aussi {{count}} tickets enfants ?",
+        "reopenTitle": "Rouvrir aussi {{count}} tickets enfants ?",
+        "closeBody": "Ce maître est en mode synchronisation. Le fermer fermera aussi les {{count}} tickets enfants ouverts listés ci-dessous.",
+        "reopenBody": "Ce maître est en mode synchronisation. Le rouvrir rouvrira les {{count}} tickets enfants qu’il a fermés. Les enfants fermés indépendamment restent fermés.",
+        "stayClosedHeading": "Restent fermés (fermés indépendamment)",
+        "boardRulesNote": "Les règles de fermeture du tableau ne sont pas vérifiées sur les enfants.",
+        "closeConfirm": "Fermer le maître et {{count}} enfants",
+        "reopenConfirm": "Rouvrir le maître et {{count}} enfants",
+        "masterOnlyClose": "Fermer le maître uniquement",
+        "masterOnlyReopen": "Rouvrir le maître uniquement"
+      },
+      "openChildrenBadge": "{{count}} enfants ouverts",
+      "openChildrenBadgeShort": "{{count}} ouverts",
+      "childOpenStatus": "Ouvert",
+      "childClosedStatus": "Clôturé",
+      "closedMasterDialogTitle": "Le ticket principal de ce groupe est clôturé",
+      "closedMasterDialogIntro": "Le ticket principal est clôturé. Choisissez ce qui doit arriver au ticket enfant lors de son ajout.",
+      "keepClosedLabel": "Ajouter et laisser le ticket principal clôturé",
+      "keepClosedHelp": "Le ticket enfant reste ouvert avec sa propre horloge SLA. Le groupe sera signalé comme incohérent tant que le ticket enfant n’est pas résolu.",
+      "applyResolutionLabel": "Ajouter et appliquer la résolution du ticket principal à ce ticket enfant",
+      "applyResolutionHelp": "Clôture le ticket enfant avec le statut {{status}} et publie la résolution du ticket principal dans le ticket enfant sous forme de commentaire public.",
+      "applyResolutionHelpNoComment": "Clôture le ticket enfant avec le statut {{status}}. Le ticket principal n’a aucun commentaire de résolution public à publier.",
+      "reopenMasterLabel": "Ajouter et rouvrir le ticket principal",
+      "reopenMasterHelp": "Rouvre uniquement le ticket principal. Les tickets enfants déjà clôturés de ce groupe restent clôturés ; les notifications de réouverture et le SLA s’appliquent au ticket principal.",
+      "closedMasterGating": "Les règles de clôture du tableau n’autorisent pas de tickets enfants ouverts sous un ticket principal clôturé ; il n’est donc pas possible de laisser le ticket principal clôturé."
     },
     "autoClose": "Sera fermé automatiquement le {{date}} en l'absence de nouvelle activité.",
     "autoCloseWarned": "Le client a été prévenu."
@@ -1603,7 +1643,8 @@
       "additionalAgentsTooltip": "Agents supplémentaires :",
       "unknownAgent": "Agent inconnu",
       "category": "Catégorie",
-      "selectDestinationStatus": "Sélectionnez un statut pour le nouveau tableau avant de sauvegarder."
+      "selectDestinationStatus": "Sélectionnez un statut pour le nouveau tableau avant de sauvegarder.",
+      "viewSchedule": "Voir le planning"
     },
     "layout": {
       "grid": "Grille",
@@ -1631,7 +1672,6 @@
       "showLess": "Afficher moins",
       "contact": "Contact",
       "client": "Client",
-      "nextVisit": "Prochaine visite",
       "callsAndEmails": "Appels et e-mails",
       "call": "Appeler",
       "viewAll": "Voir tout",
@@ -1657,7 +1697,6 @@
       "billing": "Facturation",
       "couldNotLoad": "Impossible de charger cette tuile",
       "nothingScheduled": "Rien de planifié",
-      "scheduleVisit": "Planifier une visite",
       "scheduledWork": "Travail planifié",
       "scheduleDone": "terminé",
       "noCallsOrEmails": "Aucun appel ou e-mail enregistré",
@@ -1703,7 +1742,9 @@
         "approved": "Approuvé",
         "declined": "Refusé",
         "cancelled": "Annulé"
-      }
+      },
+      "scheduleTime": "Planifier du temps",
+      "openScheduleEntry": "Ouvrir l’entrée de planning"
     },
     "timeline": {
       "subtitle": "Réponses, temps et changements système au même endroit",
@@ -1726,6 +1767,9 @@
       "fieldChanged": "{{actor}} a modifié {{field}} : {{from}} → {{to}}",
       "fieldSet": "{{field}} défini sur {{to}}",
       "actorEvent": "{{actor}} · {{eventName}}",
+      "bundleStatusNotPropagated": "{{actor}} a modifié le statut du maître du lot (tickets enfants non mis à jour)",
+      "bundleStatusClosed": "{{actor}} a fermé le maître du lot et {{count}} tickets enfants",
+      "bundleStatusReopened": "{{actor}} a rouvert le maître du lot et {{count}} tickets enfants",
       "title": "Chronologie",
       "replyVisibility": "Visibilité de la réponse",
       "modeClient": "Client",
@@ -1786,7 +1830,8 @@
         "checklist_template_applied": "modèle de checklist appliqué",
         "close_rules_overridden": "règles de clôture outrepassées",
         "close_rules_bypassed": "règles de clôture contournées",
-        "auto_close_warning_sent": "avertissement de clôture automatique envoyé"
+        "auto_close_warning_sent": "avertissement de clôture automatique envoyé",
+        "bundle_child_added": "ticket enfant ajouté au lot"
       },
       "closeStatus": "Statut de fermeture",
       "noStatusChange": "Ne pas modifier le statut",
@@ -1802,5 +1847,103 @@
       "internalLabel": "Ne pas notifier non plus les agents et observateurs",
       "internalHelper": "Ignore aussi leurs e-mails et notifications dans l'application"
     }
+  },
+  "externalLinks": {
+    "title": "Liens externes",
+    "empty": "Aucun lien externe",
+    "loading": "Chargement des liens externes...",
+    "noUrl": "Aucune URL disponible pour cette référence",
+    "customSystemOption": "{{label}} (personnalisé)",
+    "actions": {
+      "add": "Ajouter un lien",
+      "edit": "Modifier",
+      "remove": "Supprimer",
+      "cancel": "Annuler",
+      "save": "Enregistrer",
+      "menu": "Actions du lien"
+    },
+    "relationship": {
+      "origin": "Origine",
+      "mirror": "Miroir",
+      "reference": "Référence"
+    },
+    "relationshipDescription": {
+      "origin": "Où ce ticket a commencé. Chaque ticket peut avoir un lien d’origine, qui définit son badge d’origine.",
+      "mirror": "Un autre enregistrement qui suit le même travail que ce ticket.",
+      "reference": "Informations complémentaires pour ce ticket."
+    },
+    "dialog": {
+      "addTitle": "Ajouter un lien externe",
+      "editTitle": "Modifier le lien externe",
+      "intro": "Ajouter un lien ne synchronise pas les données entre les systèmes."
+    },
+    "removeDialog": {
+      "title": "Supprimer le lien externe",
+      "message": "Supprimer ce lien externe du ticket ?"
+    },
+    "fields": {
+      "system": "Système",
+      "loadingSystems": "Chargement des systèmes...",
+      "selectSystem": "Sélectionner un système",
+      "externalId": "ID externe",
+      "externalIdPlaceholder": "p. ex. 42 ou 1234567890",
+      "realm": "Domaine",
+      "url": "URL",
+      "urlOptional": "Remplacement facultatif",
+      "urlRequired": "https://...",
+      "relationship": "Relation",
+      "originExistsHint": "Ce ticket possède déjà un lien d'origine.",
+      "actorGroup": "Personne ou compte (facultatif)",
+      "actorHint": "La personne ou le compte associé à l’enregistrement lié dans le système externe.",
+      "actorHandle": "Nom d’utilisateur ou identifiant",
+      "actorDisplay": "Nom affiché",
+      "builtInGroup": "Systèmes intégrés",
+      "customGroup": "Systèmes personnalisés",
+      "urlPreview": "Ouvre :",
+      "urlPreviewIncomplete": "Renseignez les champs ci-dessus pour prévisualiser le lien."
+    },
+    "errors": {
+      "ticketNotFound": "Ticket introuvable",
+      "commentNotFound": "Commentaire introuvable sur ce ticket",
+      "linkNotFound": "Lien externe introuvable",
+      "systemNotFound": "Système externe inconnu",
+      "externalIdRequired": "L'ID externe est obligatoire",
+      "invalidUrl": "L'URL doit être une URL http(s) valide",
+      "invalidRelationship": "Relation non valide",
+      "invalidEntityType": "Type d'entité non valide",
+      "originExists": "Cette entité possède déjà un lien d'origine",
+      "duplicateExternalLink": "Cet enregistrement externe est déjà lié",
+      "systemInUse": "Ce système externe est utilisé par des liens existants",
+      "systemInUseCount": "Ce système externe est utilisé par {{count}} lien(s)",
+      "invalidSystemKey": "Les clés des systèmes personnalisés doivent correspondre à custom:<slug> avec des lettres minuscules, des chiffres ou des traits de soulignement",
+      "systemLabelRequired": "Le libellé du système est obligatoire",
+      "permissionDenied": "Permission refusée : impossible de gérer les systèmes externes",
+      "systemRequired": "Choisissez un système externe.",
+      "urlRequired": "Une URL est requise pour les systèmes sans modèle d'URL."
+    }
+  },
+  "smartSearch": {
+    "run": "Recherche intelligente",
+    "runTitle": "Évaluer les tickets filtrés par rapport à cette requête",
+    "relevanceColumn": "Pertinence",
+    "relevance": "{{percent}}% pertinent",
+    "strong": "Correspondances fortes",
+    "possible": "Correspondances possibles",
+    "unlikely": "Correspondances improbables",
+    "emptyBucketRunning": "Aucune pour l’instant",
+    "emptyBucket": "Aucune",
+    "scoring": "{{scored}} tickets sur {{total}} évalués",
+    "summary": "{{total}} tickets évalués · {{strong}} fortes · {{possible}} possibles",
+    "cancelled": "Recherche annulée après {{scored}} tickets sur {{total}}",
+    "errorTitle": "La recherche intelligente s’est arrêtée",
+    "starting": "Démarrage de la recherche intelligente…",
+    "rerun": "Les filtres ont changé. Relancer",
+    "retry": "Réessayer",
+    "cancel": "Annuler",
+    "exit": "Retour à la liste",
+    "notConfigured": "La recherche intelligente n’est pas configurée sur ce serveur",
+    "failedCount": "{{count}} tickets n’ont pas pu être évalués",
+    "unscored": "Non évalués",
+    "addOnRequired": "La recherche intelligente nécessite le module complémentaire Assistant IA"
   }
 }

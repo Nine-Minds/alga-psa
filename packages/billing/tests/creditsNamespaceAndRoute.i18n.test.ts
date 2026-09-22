@@ -15,9 +15,9 @@ function readJson<T>(relativePath: string): T {
 }
 
 describe('MSP credits namespace and route i18n contract', () => {
-  it('T001: lang-pack validation passes for credits namespace across production and pseudo locales', () => {
+  it('T001: checked-in lang packs validate across production and pseudo locales', () => {
     const output = execSync(
-      'node scripts/generate-pseudo-locales.cjs && node scripts/validate-translations.cjs',
+      'node scripts/validate-translations.cjs',
       {
         cwd: path.resolve(__dirname, '../../..'),
         encoding: 'utf8',

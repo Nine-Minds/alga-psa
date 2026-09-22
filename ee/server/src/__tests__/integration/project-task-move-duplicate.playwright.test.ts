@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db/tenantDb';
 import { v4 as uuidv4 } from 'uuid';
 
 import { E2ETestContext } from '../utils/test-context-e2e';

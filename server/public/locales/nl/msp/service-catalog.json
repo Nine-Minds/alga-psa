@@ -31,7 +31,8 @@
       "advancedSettings": "Geavanceerde instellingen",
       "addNew": "Nieuw belastingtarief toevoegen",
       "add": "Belastingtarief toevoegen",
-      "update": "Belastingtarief bijwerken"
+      "update": "Belastingtarief bijwerken",
+      "cancel": "Annuleren"
     },
     "dialog": {
       "fields": {
@@ -39,7 +40,8 @@
         "startDate": "Startdatum *",
         "endDate": "Einddatum (optioneel)",
         "region": "Belastingregio *",
-        "percentage": "Belastingpercentage *"
+        "percentage": "Belastingpercentage *",
+        "active": "Actief"
       },
       "placeholders": {
         "loadingRegions": "Regio's laden...",
@@ -48,13 +50,43 @@
       },
       "addTitle": "Nieuw belastingtarief toevoegen",
       "editTitle": "Belastingtarief bewerken",
-      "description": "Voer de gegevens voor het belastingtarief in."
+      "description": "Voer de gegevens voor het belastingtarief in.",
+      "activeHint": "Inactieve tarieven worden genegeerd bij het belasten van facturen.",
+      "regionDescription": "Dit tarief geldt voor facturen die in {{region}} worden belast."
     },
     "title": "Belastingtarieven",
     "loading": "Belastingtarieven laden",
     "deleteEntity": {
       "fallback": "dit belastingtarief",
       "withRegion": "{{regionName}} belastingtarief"
+    },
+    "cap": {
+      "title": "Belastingplafond",
+      "label": "Belastingplafond ({{currencyCode}})",
+      "currency": "Valuta van het tarief",
+      "universal": "Alle factuurvaluta’s",
+      "optional": "Optioneel",
+      "noCap": "Geen plafond",
+      "clear": "Belastingplafond wissen",
+      "hint": "Maximale belasting van dit tarief per berekening. Laat leeg voor geen plafond. Voer 0 in om geen belasting te berekenen bij berekeningen die dit plafond gebruiken.",
+      "scopeTitle": "Hoe belastingplafonds werken",
+      "scope": "Een regionale berekening begrenst de bijdrage van elk tarief vóór het optellen, niet het regionale totaal. Berekeningen over een periode passen het plafond toe op elk tarief in elk datumsegment; meerdere segmenten kunnen samen het plafond overschrijden. Een factuur kan meerdere berekeningen bevatten. Dit is geen limiet per factuur, klant, project of gehele periode. Projectfactureringslimieten beperken factureerbare bedragen; belastingplafonds beperken de berekende belasting. Externe belastingaanbieders gebruiken hun eigen configuratie.",
+      "applicability": "Dit tarief geldt alleen voor facturen in {{currencyCode}}. Het wordt niet meer geselecteerd voor andere valuta’s.",
+      "composite": "Dit plafond geldt wanneer dit tarief bijdraagt aan een regionale berekening. Berekeningen op basis van componenten passen dit plafond niet toe.",
+      "legacy": "Valuta niet opgegeven · {{amount}} kleinste valuta-eenheden",
+      "legacyHelp": "Dit opgeslagen plafond geldt momenteel in de kleinste eenheden van elke factuurvaluta. Kies een valuta en bevestig het opgeslagen bedrag of voer een nieuw plafond in. Andere wijzigingen behouden de waarde; u kunt deze ook wissen zonder een valuta te kiezen.",
+      "resolve": "Opgeslagen bedrag in kleinste eenheden van {{currencyCode}} gebruiken",
+      "reenter": "Voer het plafond opnieuw in de nieuwe valuta in voordat u opslaat.",
+      "example": "Voorbeeld: {{amount}}; zonder scheidingstekens voor duizendtallen.",
+      "errors": {
+        "negative": "Voer een belastingplafond van nul of meer in.",
+        "precision": "Het plafond heeft meer decimalen dan deze valuta toestaat.",
+        "invalid": "Voer een bedrag in met het decimaalteken uit het voorbeeld, zonder tekens, scheidingstekens voor duizendtallen of valutasymbolen.",
+        "overflow": "Het plafond overschrijdt het maximaal ondersteunde bedrag.",
+        "currency": "Kies een ondersteunde valuta voordat u een belastingplafond instelt.",
+        "reenter": "Voer het plafond opnieuw in de nieuwe valuta in voordat u opslaat."
+      },
+      "compositeIndicator": "Alleen regionale berekeningen"
     }
   },
   "taxRateDetail": {
@@ -315,12 +347,17 @@
       "minimumUsage": {
         "placeholder": "0",
         "label": "Minimale gebruiksdrempel",
-        "help": "Minimaal factureerbaar gebruik per periode (0 voor geen minimum)",
-        "errorNegative": "Minimumverbruik kan niet negatief zijn"
+        "help": "Ondergrens toegepast op geregistreerd verbruik (0 voor geen minimum). Deze geldt alleen wanneer de periode een verbruiksrecord heeft — ook een expliciete nul — en creëert nooit zelfstandig kosten.",
+        "errorNegative": "Minimumverbruik kan niet negatief zijn",
+        "labelAdditive": "Minimum per registratie",
+        "labelPeriodTotal": "Minimum per periodeopgave",
+        "helpAdditive": "Ondergrens voor elke geregistreerde registratie (0 voor geen minimum). Deze geldt alleen als de periode een verbruiksregistratie heeft — ook een expliciete nul — en veroorzaakt nooit zelf een facturering.",
+        "helpPeriodTotal": "Ondergrens die eenmalig geldt voor het opgegeven aantal van de periode (0 voor geen minimum). Deze geldt alleen als een aantal is opgegeven — ook een expliciete nul — en veroorzaakt nooit zelf een facturering."
       },
       "enableTieredPricing": "Schakel gedifferentieerde prijzen in"
     },
     "title": "Op gebruik gebaseerde configuratie",
+    "recordDrivenNote": "Verbruiksdiensten worden gefactureerd op basis van het in Verbruiksregistratie geregistreerde verbruik per serviceperiode. Een periode zonder verbruiksrecord levert geen kosten op — registreer het verbruik (of een expliciete nul) per periode om deze service te factureren.",
     "tiers": {
       "title": "Prijsniveaus",
       "addTier": "Niveau toevoegen",
@@ -336,6 +373,18 @@
         "upperGreaterThanLower": "De bovengrens van het niveau moet groter zijn dan de ondergrens",
         "rateNegative": "Tierrentes kunnen niet negatief zijn"
       }
+    },
+    "measurementMode": {
+      "label": "Hoe wordt het verbruik gemeten?",
+      "additive": {
+        "label": "Verbruik registreren zodra het plaatsvindt",
+        "description": "Gedateerde registraties tellen op: registraties van 10 en 12 factureren 22. Het minimum en eventuele staffels gelden per registratie. De volgende periode begint zonder registraties."
+      },
+      "periodTotal": {
+        "label": "Per periode één aantal doorgeven",
+        "description": "Eén aantal per serviceperiode vervangt het vorige: 10 corrigeren naar 12 factureert 12, nooit 22. Het minimum en eventuele staffels gelden eenmalig voor dat aantal. De volgende periode begint zonder opgave — er wordt niets overgenomen."
+      },
+      "transitionNote": "Een wijziging van de modus geldt vanaf de volgende niet-gefactureerde serviceperiode. Al geregistreerde registraties of aantallen in een open periode moeten eerst worden gefactureerd of verwijderd."
     }
   },
   "rateTiers": {
@@ -396,12 +445,30 @@
         "label": "Factureringscyclus uitlijnen",
         "placeholder": "Selecteer uitlijning",
         "help": "Bepaalt hoe de dekking voor een gedeeltelijke periode wordt berekend wanneer de terugkerende vergoeding moet worden opgeschaald naar minder dan een volledige serviceperiode."
+      },
+      "unitRate": {
+        "label": "Eenheidstarief",
+        "placeholder": "0,00",
+        "help": "Tarief dat per plaats/eenheid in elke serviceperiode wordt gefactureerd."
       }
     },
     "options": {
       "start": "Begin van de factureringscyclus",
       "end": "Einde van de factureringscyclus",
       "prorated": "Proportionele dekking"
+    },
+    "pricingBasis": {
+      "label": "Hoe wordt deze dienst geprijsd?",
+      "bundle": {
+        "label": "Bundelprijs",
+        "description": "Het vaste totaal van de contractregel is wat wordt gefactureerd. Aantallen bij deze dienst verdelen alleen een deel van dat totaal voor rapportage — het zijn geen factureerbare plaatsen en wijzigen verandert het gefactureerde bedrag niet.",
+        "allocationNote": "Verdeelaantal: {{quantity}} — wordt gebruikt om het bundeltotaal te verdelen voor rapportage, niet gefactureerd als plaatsen."
+      },
+      "unit": {
+        "label": "Terugkerende plaatsen/eenheden",
+        "description": "Factureert aantal × eenheidstarief in elke periode, zonder dat een regeltotaal voorrang heeft. Hetzelfde aantal en tarief worden de volgende periode opnieuw gefactureerd totdat u een wijziging inplant. Een aantal van nul factureert nul.",
+        "summary": "{{quantity}} × {{rate}} (terugkerende plaatsen) = {{total}} per periode"
+      }
     }
   },
   "bucketConfig": {

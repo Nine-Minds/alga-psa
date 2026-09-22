@@ -1488,7 +1488,11 @@ it('parity: recurring due-work blocks uniquely assignable unassigned hourly time
 
   await expect(
     generateInvoiceForSelectionInput(blockedCandidate!.members[0]!.selectorInput),
-  ).rejects.toThrow('1 unapproved entry');
+  ).resolves.toEqual({
+    actionError: 'Blocked until approval: 1 unapproved entry.',
+    messageKey: 'msp/invoicing:automaticInvoices.executionRows.blockedUntilApproval',
+    messageParams: { count: '1' },
+  });
 }, HOOK_TIMEOUT);
 
 it('T047: DB-backed unresolved discovery hydrates only the billing period containing eligible non-contract time', async () => {
@@ -1731,7 +1735,11 @@ it('T003/T008/T017: mixed-charge recurring windows are blocked in full by matchi
 
   await expect(
     generateInvoiceForSelectionInput(fixedMember!.selectorInput),
-  ).rejects.toThrow('1 unapproved entry');
+  ).resolves.toEqual({
+    actionError: 'Blocked until approval: 1 unapproved entry.',
+    messageKey: 'msp/invoicing:automaticInvoices.executionRows.blockedUntilApproval',
+    messageParams: { count: '1' },
+  });
 }, HOOK_TIMEOUT);
 
 it('T009/T011: server-side guard re-checks approval state at generation time and windows transition from Needs Approval to Ready after approval', async () => {
@@ -1800,7 +1808,11 @@ it('T009/T011: server-side guard re-checks approval state at generation time and
 
   await expect(
     generateInvoiceForSelectionInput(readyMember!.selectorInput),
-  ).rejects.toThrow('1 unapproved entry');
+  ).resolves.toEqual({
+    actionError: 'Blocked until approval: 1 unapproved entry.',
+    messageKey: 'msp/invoicing:automaticInvoices.executionRows.blockedUntilApproval',
+    messageParams: { count: '1' },
+  });
 
   await tenantTable(db, tenantId, 'time_entries')
     .where({ tenant: tenantId, entry_id: mutableEntry.entry_id })
@@ -1895,7 +1907,7 @@ it('T071: usage recurring charges bill usage records that fall inside a contract
   }
 }, HOOK_TIMEOUT);
 
-it('T072: usage recurring charges with no usage inside the service period produce no recurring invoice line while preserving due-window identity', async () => {
+it('T072: usage recurring charges with no usage inside the service period refuse generation with a coded USAGE_RECORDS_MISSING failure and write nothing', async () => {
   setupCommonMocks({ tenantId, userId: 'contract-usage-empty-user', permissionCheck: () => true });
 
   const { contextLike } = await createClientWithRecurringCycles({
@@ -1940,13 +1952,31 @@ it('T072: usage recurring charges with no usage inside the service period produc
     windowEnd: '2025-03-08T00:00:00Z',
   });
 
-  const invoice = await generateInvoiceForSelectionInput(selectorInput);
-  expect(invoice).toMatchObject({
-    billing_cycle_id: null,
-    subtotal: 0,
-    total: 0,
+  // Usage billing is record-driven: neither seeded record falls inside the
+  // 2025-02-08 → 2025-03-07 service period, and "no eligible record" means
+  // missing usage — not zero. Generation refuses with the coded failure that
+  // routes the operator to record usage (or a zero-usage entry) instead of
+  // silently finalizing the window with a zero-total invoice.
+  const result = await generateInvoiceForSelectionInput(selectorInput);
+  expect(result).toMatchObject({
+    messageKey: 'msp/invoicing:manualInvoices.errors.USAGE_RECORDS_MISSING',
+    messageParams: {
+      services: 'Contract Usage Empty Service',
+      serviceIds: usageLine.serviceId,
+      periodStart: '2025-02-08',
+      periodEnd: '2025-03-07',
+    },
   });
-  expect(invoice?.invoice_charges ?? []).toHaveLength(0);
+  expect((result as { actionError?: string }).actionError).toContain(
+    'No eligible usage records for Contract Usage Empty Service',
+  );
+
+  // The refusal commits nothing: no invoice row exists for the client, so a
+  // retry after recording usage starts from a clean window.
+  const persistedInvoices = await tenantTable(db, tenantId, 'invoices')
+    .where({ tenant: tenantId, client_id: contextLike.clientId })
+    .select(['invoice_id']);
+  expect(persistedInvoices).toHaveLength(0);
 }, HOOK_TIMEOUT);
 
 it('T073: mixed recurring invoice generation can combine fixed, hourly, and usage content under one service-driven execution window when the commercial model requires it', async () => {
@@ -5236,7 +5266,12 @@ it('T156: generation reconciles before calculation, bills the newly covered entr
     usageDate: '2025-02-15',
     quantity: 3,
   });
-  const dueWork = await getAvailableRecurringDueWorkAction({ page: 1, pageSize: 20, searchTerm: 'Same-Run Reconciliation Client' });
+  // Replenishment now reaches today's rolling horizon. Select the historical
+  // fixture window explicitly rather than assuming it remains on the first page.
+  const dueWork = await getAvailableRecurringDueWorkAction({
+    page: 1, pageSize: 20, searchTerm: 'Same-Run Reconciliation Client',
+    dateRange: { from: '2025-02-01', to: '2025-03-01' },
+  });
   const dueRows = dueWork.invoiceCandidates.flatMap((candidate) => candidate.members);
   const dueRow = dueRows
     .find((row) => row.contractLineId === line.contractLineId
@@ -5303,7 +5338,12 @@ it('T157: preview and PO-overage calculation reconcile for pricing but roll back
     startTime: '2025-02-15T10:00:00.000Z',
     endTime: '2025-02-15T11:00:00.000Z',
   });
-  const dueWork = await getAvailableRecurringDueWorkAction({ page: 1, pageSize: 20, searchTerm: 'Rollback Reconciliation Client' });
+  // Replenishment now reaches today's rolling horizon. Select the historical
+  // fixture window explicitly rather than assuming it remains on the first page.
+  const dueWork = await getAvailableRecurringDueWorkAction({
+    page: 1, pageSize: 20, searchTerm: 'Rollback Reconciliation Client',
+    dateRange: { from: '2025-02-01', to: '2025-03-01' },
+  });
   const selectorInput = dueWork.invoiceCandidates.flatMap((candidate) => candidate.members)
     .find((row) => row.contractLineId === line.contractLineId
       && row.invoiceWindowStart === '2025-02-01'
@@ -5347,7 +5387,12 @@ it('T158: failed generation rolls back reconciliation and a corrected retry can 
     startTime: '2025-02-15T10:00:00.000Z',
     endTime: '2025-02-15T11:00:00.000Z',
   });
-  const dueWork = await getAvailableRecurringDueWorkAction({ page: 1, pageSize: 20, searchTerm: 'Failed Generation Retry Client' });
+  // Replenishment now reaches today's rolling horizon. Select the historical
+  // fixture window explicitly rather than assuming it remains on the first page.
+  const dueWork = await getAvailableRecurringDueWorkAction({
+    page: 1, pageSize: 20, searchTerm: 'Failed Generation Retry Client',
+    dateRange: { from: '2025-02-01', to: '2025-03-01' },
+  });
   const selectorInput = dueWork.invoiceCandidates.flatMap((candidate) => candidate.members)
     .find((row) => row.contractLineId === line.contractLineId
       && row.invoiceWindowStart === '2025-02-01'
@@ -5812,10 +5857,11 @@ async function createRecurringCatalogLine(
       service_id: serviceId,
       currency_code: 'USD',
       rate: options.baseRateCents,
+      effective_date: '1970-01-01',
       created_at: contextLike.db.fn.now(),
       updated_at: contextLike.db.fn.now()
     })
-    .onConflict(['tenant', 'service_id', 'currency_code'])
+    .onConflict(['tenant', 'service_id', 'currency_code', 'effective_date'])
     .merge({
       rate: options.baseRateCents,
       updated_at: contextLike.db.fn.now()
@@ -5858,10 +5904,11 @@ async function ensureUsdServicePrice(serviceId: string, rateCents: number): Prom
       service_id: serviceId,
       currency_code: 'USD',
       rate: rateCents,
+      effective_date: '1970-01-01',
       created_at: db.fn.now(),
       updated_at: db.fn.now()
     })
-    .onConflict(['tenant', 'service_id', 'currency_code'])
+    .onConflict(['tenant', 'service_id', 'currency_code', 'effective_date'])
     .merge({
       rate: rateCents,
       updated_at: db.fn.now()

@@ -265,7 +265,8 @@
         "technician": "Technicus",
         "ticket": "Ticket",
         "rating": "Beoordeling",
-        "comment": "Opmerking"
+        "comment": "Opmerking",
+        "project": "Project"
       },
       "fallbacks": {
         "unknown": "Onbekend",
@@ -312,7 +313,8 @@
         "technician": "Technicus",
         "rating": "Beoordeling",
         "comment": "Opmerking",
-        "ticket": "Ticket"
+        "ticket": "Ticket",
+        "subject": "Ticket / Project"
       },
       "fallbacks": {
         "unknownClient": "Onbekende klant",
@@ -342,7 +344,8 @@
         "unknownClient": "Onbekende klant",
         "ticket": "Ticket {{ticket}}",
         "noComment": "Geen opmerking achtergelaten.",
-        "assignedTo": "Toegewezen aan: {{name}}"
+        "assignedTo": "Toegewezen aan: {{name}}",
+        "project": "Project {{project}}"
       }
     }
   },
@@ -439,7 +442,8 @@
       "agent": "Medewerker",
       "technician": "Technicus",
       "submitted": "Ingediend",
-      "comment": "Opmerking"
+      "comment": "Opmerking",
+      "subject": "Ticket / Project"
     },
     "metrics": {
       "averageRating": "Gemiddelde beoordeling",

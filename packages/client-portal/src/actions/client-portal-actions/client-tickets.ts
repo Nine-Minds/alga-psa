@@ -1,9 +1,13 @@
 'use server'
+import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal ticket actions intentionally compose ticketing feature APIs for client-facing workflows. */
 
+import { registerAfterCommit } from '@alga-psa/db';
+import Comment from '@alga-psa/tickets/models/comment';
+import { reconcileCommentAttachments, filterReadableCommentAttachments, withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 import { validateData } from '@alga-psa/validation';
-import { COMMENT_RESPONSE_SOURCES, IComment, ITicket, ITicketListItem, ITicketWithDetails, TICKET_ORIGINS } from '@alga-psa/types';
+import { COMMENT_RESPONSE_SOURCES, IComment, IStatus, ITicket, ITicketListItem, ITicketWithDetails, TICKET_ORIGINS } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
 import { IUser } from '@alga-psa/types';
 import { z } from 'zod';
@@ -25,9 +29,9 @@ import {
   TICKET_ACTIVITY_SOURCE,
   writeTicketActivity,
 } from '@shared/lib/ticketActivity';
-import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
+import { maybeReopenBundleMasterFromChildReply, revertBundlePropagationForChild } from '@alga-psa/tickets/actions/ticketBundleUtils';
 import {
-  applyVisibilityBoardFilter,
+  applyTicketVisibilityFilter,
   getTicketOrigin,
   parseTicketStatusFilterValue,
 } from '@alga-psa/tickets/lib';
@@ -158,7 +162,7 @@ async function resolveVisibleTicket(
       't.client_id': visibility.clientId
     })
     .modify((queryBuilder: Knex.QueryBuilder) => {
-      applyVisibilityBoardFilter(queryBuilder, visibility.visibleBoardIds, 't.board_id');
+      applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id' });
     })
     .first();
 
@@ -261,7 +265,7 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
         't.client_id': visibility.clientId
       });
 
-      applyVisibilityBoardFilter(query, visibility.visibleBoardIds);
+      applyTicketVisibilityFilter(query, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id' });
 
     // Filter by status
     if (parsedStatusFilter.kind === 'all') {
@@ -346,7 +350,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
           't.client_id': visibility.clientId
         })
         .modify((ticketQuery: Knex.QueryBuilder) => {
-          applyVisibilityBoardFilter(ticketQuery, visibility.visibleBoardIds);
+          applyTicketVisibilityFilter(ticketQuery, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id' });
         })
         .first();
 
@@ -427,8 +431,12 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       // in buildTicketThreadTabState).
       const conversationsQuery = scopedDb.table('comments');
       scopedDb.tenantJoin(conversationsQuery, 'comment_threads as ct', 'comments.thread_id', 'ct.thread_id', { type: 'left' });
+      // Read-time bundle provenance. Only the source comment id is selected:
+      // a bundle can span clients, so the portal must never learn (or be able
+      // to follow a link to) the master ticket.
+      scopedDb.tenantJoin(conversationsQuery, 'ticket_bundle_mirrors as bm', 'comments.comment_id', 'bm.child_comment_id', { type: 'left' });
       conversationsQuery
-        .select('comments.*')
+        .select('comments.*', 'bm.source_comment_id as bundle_mirror_source_comment_id')
         .where({
           'comments.ticket_id': ticketId,
           'comments.is_internal': false,
@@ -459,7 +467,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
         linkedAssetsQuery
       ]);
 
-      return { ticket, conversations, documents, users, linkedAssets };
+      return { ticket, conversations, documents: await filterReadableCommentAttachments(trx, tenant, userId, documents), users, linkedAssets };
     }) as any;
 
     if (!result.ticket) {
@@ -539,13 +547,23 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
 
     const { entered_by_user_type, ...ticketWithoutCreatorType } = result.ticket as any;
 
+    const conversationsWithProvenance = (result.conversations as Array<Record<string, any>>).map((comment) => {
+      const { bundle_mirror_source_comment_id, ...commentRow } = comment;
+      return {
+        ...commentRow,
+        bundle_mirror_source: bundle_mirror_source_comment_id
+          ? { source_comment_id: bundle_mirror_source_comment_id }
+          : null,
+      };
+    });
+
     return {
       ...ticketWithoutCreatorType,
       ticket_origin: getTicketOrigin(result.ticket as any),
       entered_at: result.ticket.entered_at instanceof Date ? result.ticket.entered_at.toISOString() : result.ticket.entered_at,
       updated_at: result.ticket.updated_at instanceof Date ? result.ticket.updated_at.toISOString() : result.ticket.updated_at,
       closed_at: result.ticket.closed_at instanceof Date ? result.ticket.closed_at.toISOString() : result.ticket.closed_at,
-      conversations: result.conversations,
+      conversations: conversationsWithProvenance,
       documents: result.documents,
       // Linked assets joined from asset_associations; the type is broadened on
       // the consumer side via a small augmentation since ITicketWithDetails
@@ -565,7 +583,8 @@ export const addClientTicketComment = withAuth(async (
   ticketId: string,
   content: string,
   isInternal: boolean = false,
-  isResolution: boolean = false
+  isResolution: boolean = false,
+  parentCommentId?: string
 ): Promise<ClientTicketActionResult<boolean>> => {
   // Client portal contacts can never create internal notes/threads. Force the
   // flag server-side — the portal UI always passes false, but server actions
@@ -615,47 +634,24 @@ export const addClientTicketComment = withAuth(async (
         markdownContent = "[Error converting content to markdown]";
       }
 
-      // comments.thread_id is NOT NULL — generate IDs and create the thread row first.
-      const clientCommentIds = await trx.raw(
-        'SELECT gen_random_uuid() AS comment_id, gen_random_uuid() AS thread_id'
-      );
-      const clientGeneratedIds = clientCommentIds.rows?.[0] as
-        | { comment_id: string; thread_id: string }
-        | undefined;
-      if (!clientGeneratedIds?.comment_id || !clientGeneratedIds?.thread_id) {
-        throw new Error('Database UUID generation did not return comment/thread identifiers.');
+      if (parentCommentId) {
+        const parent = await tenantDb(trx, tenant).table('comments')
+          .where({ comment_id: parentCommentId, ticket_id: ticketId, is_internal: false, publish_state: 'published' })
+          .whereNull('deleted_at').forUpdate().first();
+        if (!parent) throw expectedClientTicketActionError('Parent comment not found');
       }
-      const clientNowIso = new Date().toISOString();
-
-      await tenantDb(trx, tenant).table('comment_threads').insert({
-        tenant,
-        thread_id: clientGeneratedIds.thread_id,
+      const commentId = await Comment.insert(trx, tenant, {
         ticket_id: ticketId,
-        project_task_id: null,
-        root_comment_id: clientGeneratedIds.comment_id,
-        is_internal: isInternal,
-        reply_count: 0,
-        last_activity_at: clientNowIso,
-        created_at: clientNowIso,
-        created_by: userId,
-      });
-
-      const [newComment] = await tenantDb(trx, tenant).table('comments').insert({
-        tenant,
-        comment_id: clientGeneratedIds.comment_id,
-        thread_id: clientGeneratedIds.thread_id,
-        ticket_id: ticketId,
+        parent_comment_id: parentCommentId,
         author_type: 'client',
         note: content,
-        is_internal: isInternal,
+        is_internal: false,
         is_resolution: isResolution,
-        metadata: JSON.stringify({
-          responseSource: COMMENT_RESPONSE_SOURCES.CLIENT_PORTAL,
-        }),
-        created_at: clientNowIso,
+        metadata: { responseSource: COMMENT_RESPONSE_SOURCES.CLIENT_PORTAL },
         user_id: userId,
-        markdown_content: markdownContent
-      }).returning('*');
+        markdown_content: markdownContent,
+      });
+      const newComment = await tenantDb(trx, tenant).table('comments').where({ comment_id: commentId }).first();
 
       if (!isInternal) {
         await tenantDb(trx, tenant).table('tickets')
@@ -668,7 +664,7 @@ export const addClientTicketComment = withAuth(async (
       }
 
       // Publish comment added event
-      await publishEvent({
+      await persistCommentPublication(trx, {
         eventType: 'TICKET_COMMENT_ADDED',
         payload: {
           tenantId: tenant,
@@ -683,7 +679,7 @@ export const addClientTicketComment = withAuth(async (
             isInternal
           }
         }
-      });
+      }, publishEvent);
 
       await publishTicketUpdate({
         tenantId: tenant,
@@ -782,6 +778,7 @@ export const updateClientTicketComment = withAuth(async (
           updated_at: new Date().toISOString()
           // Removed updated_by as it doesn't exist in the comments table
         });
+      await reconcileCommentAttachments(trx, tenant, commentId, userId);
 
       await publishTicketUpdate({
         tenantId: tenant,
@@ -796,6 +793,84 @@ export const updateClientTicketComment = withAuth(async (
     });
   } catch (error) {
     return expectedOrThrow(error, 'Failed to update comment:');
+  }
+});
+
+/**
+ * Portal-facing ticket status read. Returns only the statuses a client portal
+ * user is allowed to SET for the given board, preserving the board's ordering.
+ *
+ * Kept separate from the shared `getTicketStatuses` (15 MSP call sites) so MSP
+ * behavior cannot change based on caller identity. `currentStatusId` is always
+ * included even when it is not selectable, so a ticket parked in a restricted
+ * status still renders its current value instead of a blank picker.
+ */
+export const getClientPortalTicketStatuses = withAuth(async (
+  user,
+  { tenant },
+  boardId: string,
+  currentStatusId?: string | null
+): Promise<ClientTicketActionResult<IStatus[]>> => {
+  try {
+    const userId = clientPortalUserIdOrError(user);
+    if (typeof userId !== 'string') {
+      return userId;
+    }
+
+    const db = await getConnection(tenant);
+
+    const userForPermission = {
+      user_id: userId,
+      email: user.email,
+      user_type: 'client',
+      is_inactive: false,
+      tenant
+    } as IUser;
+    const canRead = await hasPermission(userForPermission, 'ticket', 'read', db);
+    if (!canRead) {
+      return permissionError('Insufficient permissions to view ticket statuses', 'common:errors.permissions.tickets.read');
+    }
+
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      const userRecord = await tenantDb(trx, tenant).table('users')
+        .where({
+          user_id: userId
+        })
+        .first();
+
+      if (!userRecord?.contact_id) {
+        throw expectedClientTicketActionError('User not associated with a contact');
+      }
+
+      const visibility = await getClientContactVisibilityContext(trx, tenant, userRecord.contact_id);
+      if (visibility.visibleBoardIds !== null && !visibility.visibleBoardIds.includes(boardId)) {
+        throw expectedClientTicketActionError(
+          'Ticket not found or access denied',
+          'client-portal:errors.tickets.notFoundOrDenied',
+        );
+      }
+
+      const query = tenantDb(trx, tenant).table<IStatus>('statuses')
+        .where({
+          board_id: boardId,
+          status_type: 'ticket',
+        })
+        .select('*')
+        .orderBy('order_number', 'asc')
+        .orderBy('name', 'asc');
+
+      if (currentStatusId) {
+        query.where((builder: Knex.QueryBuilder) => {
+          builder.where('portal_selectable', true).orWhere('status_id', currentStatusId);
+        });
+      } else {
+        query.where('portal_selectable', true);
+      }
+
+      return await query as IStatus[];
+    });
+  } catch (error) {
+    return expectedOrThrow(error, 'Failed to fetch client portal ticket statuses:');
   }
 });
 
@@ -855,10 +930,20 @@ export const updateTicketStatus = withAuth(async (
           status_type: 'ticket',
           board_id: ticket.board_id,
         })
-        .first('status_id', 'is_closed', 'name');
+        .first('status_id', 'is_closed', 'name', 'portal_selectable');
 
       if (!statusForBoard) {
         throw expectedClientTicketActionError('Selected status is not valid for the ticket board');
+      }
+
+      if (statusForBoard.portal_selectable === false) {
+        // Checked in the same lookup that proves board membership: there is one
+        // place a target status can be admitted from, and the rejection happens
+        // before any ticket mutation or event publication.
+        throw expectedClientTicketActionError(
+          'This status cannot be selected from the client portal',
+          'client-portal:errors.tickets.statusNotPortalSelectable',
+        );
       }
 
       // Get old status for change tracking
@@ -912,6 +997,15 @@ export const updateTicketStatus = withAuth(async (
           updated_at: occurredAt,
           updated_by: userId
         });
+
+      // A bundled child reopened from the portal has left the "closed by
+      // master" state. Revert its active propagation row in the same
+      // transaction so the ledger agrees with tickets.is_closed and a later
+      // master close cannot collide with a stale row on the per-child unique
+      // index. No-op when the child holds no active row.
+      if (isReopening && ticket.master_ticket_id) {
+        await revertBundlePropagationForChild(trx, tenant, ticketId, userId);
+      }
 
       const statusChanges = {
         status_id: {
@@ -1047,6 +1141,7 @@ export const deleteClientTicketComment = withAuth(async (user, { tenant }, comme
 
       await resolveVisibleTicket(trx, tenant, userRecord.contact_id, comment.ticket_id);
 
+      await withdrawCommentAttachments(trx, tenant, commentId);
       await tenantDb(trx, tenant).table('comments')
         .where({
           comment_id: commentId
@@ -1101,7 +1196,7 @@ export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticket
           client_id: visibility.clientId
         })
         .modify((queryBuilder: Knex.QueryBuilder) => {
-          applyVisibilityBoardFilter(queryBuilder, visibility.visibleBoardIds);
+          applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id' });
         })
         .first();
 
@@ -1117,12 +1212,13 @@ export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticket
       const documentsQuery = scopedDb.table('documents as d').select('d.*');
       scopedDb.tenantJoin(documentsQuery, 'document_associations as da', 'd.document_id', 'da.document_id');
 
-      return documentsQuery
+      const rows = await documentsQuery
         .where({
           'da.entity_id': ticketId,
           'da.entity_type': 'ticket',
           'd.is_client_visible': true,
-        }) as unknown as Promise<IDocument[]>;
+        });
+      return filterReadableCommentAttachments(trx, tenant, userId, rows) as Promise<IDocument[]>;
     });
 
     return documents;
@@ -1185,43 +1281,44 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
       })();
 
       const requestedBoardId = validatedData.board_id?.trim() || null;
-      let assignedBoardId: string | null = requestedBoardId;
 
       if (visibility.visibleBoardIds !== null && visibility.visibleBoardIds.length === 0) {
         throw expectedClientTicketActionError('Selected visibility group does not allow any boards');
       }
 
-      if (visibility.visibleBoardIds !== null) {
-        if (!requestedBoardId) {
-          assignedBoardId = visibility.visibleBoardIds[0] || null;
-        } else if (!visibility.visibleBoardIds.includes(requestedBoardId)) {
-          throw expectedClientTicketActionError(VISIBILITY_NOT_FOUND_ERROR);
-        }
+      if (
+        requestedBoardId &&
+        visibility.visibleBoardIds !== null &&
+        !visibility.visibleBoardIds.includes(requestedBoardId)
+      ) {
+        throw expectedClientTicketActionError(VISIBILITY_NOT_FOUND_ERROR);
       }
 
-      const resolvedBoard = !assignedBoardId
-        ? await tenantDb(trx, tenant).table('boards')
-            .where({
-              is_default: true,
-              is_inactive: false
-            })
-            .first()
-        : await tenantDb(trx, tenant).table('boards')
-            .where({
-              board_id: assignedBoardId,
-              is_inactive: false
-            })
-            .first();
+      // No board sent: prefer the tenant default when the contact may see it,
+      // otherwise the first active board they may see. Hidden boards are
+      // already subtracted from visibleBoardIds, so a hidden default never wins.
+      const boardCandidates = tenantDb(trx, tenant).table('boards')
+        .where({ is_inactive: false })
+        .modify((query) => {
+          if (requestedBoardId) {
+            query.where({ board_id: requestedBoardId });
+          } else if (visibility.visibleBoardIds !== null) {
+            query.whereIn('board_id', visibility.visibleBoardIds);
+          } else {
+            query.where({ is_default: true });
+          }
+        })
+        .orderBy([{ column: 'is_default', order: 'desc' }, 'display_order', 'board_name']);
+
+      const resolvedBoard = await boardCandidates.first();
 
       if (!resolvedBoard) {
         throw expectedClientTicketActionError(
-          assignedBoardId
+          requestedBoardId
             ? VISIBILITY_NOT_FOUND_ERROR
             : 'No default board configured for tickets'
         );
       }
-
-      assignedBoardId = resolvedBoard.board_id;
 
       // Fetch default status for tickets
       const defaultStatusId = await TicketModel.getDefaultStatusId(

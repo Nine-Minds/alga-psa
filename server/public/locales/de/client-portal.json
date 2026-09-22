@@ -681,7 +681,14 @@
       "fullAccess": "Vollzugriff",
       "cancel": "Abbrechen",
       "assignSuccess": "Kontaktzuweisung für die Sichtbarkeit aktualisiert",
-      "assignError": "Sichtbarkeitsgruppe konnte nicht zugewiesen werden"
+      "assignError": "Sichtbarkeitsgruppe konnte nicht zugewiesen werden",
+      "scopeLabel": "Ticketsichtbarkeit",
+      "scopeClient": "Alle Tickets dieses Kunden",
+      "scopeContact": "Nur eigene Tickets",
+      "scopeClientDescription": "Mitglieder sehen alle Tickets dieses Kunden auf den ausgewählten Boards.",
+      "scopeContactDescription": "Mitglieder sehen nur Tickets, bei denen sie als Kontakt eingetragen sind. Kundenadministratoren sehen alle Tickets auf den ausgewählten Boards, auch ohne Kontakt.",
+      "assignmentHelp": "Weisen Sie eine Gruppe zu, um Boards und Tickets einzuschränken, oder behalten Sie den vollständigen Kundenzugriff.",
+      "boardHiddenFromPortal": "Im Kundenportal ausgeblendet"
     },
     "messages": {
       "saveChanges": "Änderungen speichern",
@@ -976,7 +983,8 @@
     },
     "tickets": {
       "notFoundOrDenied": "Ticket nicht gefunden oder Zugriff verweigert",
-      "invalidData": "Ungültige Ticketdaten"
+      "invalidData": "Ungültige Ticketdaten",
+      "statusNotPortalSelectable": "Dieser Status kann im Kundenportal nicht ausgewählt werden"
     },
     "visibilityGroups": {
       "checkDetails": "Bitte überprüfen Sie die Angaben zur Sichtbarkeitsgruppe und versuchen Sie es erneut.",

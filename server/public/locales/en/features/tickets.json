@@ -86,7 +86,8 @@
     "paused": "Paused",
     "allResponseStatuses": "All Response Statuses",
     "responseStatus": "Response Status",
-    "board": "Filter by board"
+    "board": "Filter by board",
+    "searchSmart": "Search tickets and comments… Enter for smart search"
   },
   "create": {
     "title": "Create Support Ticket",
@@ -283,7 +284,6 @@
     "saveCommentFailed": "Failed to save comment changes",
     "updateDescriptionFailed": "Failed to update description",
     "prepareTimeEntryFailed": "An error occurred while preparing the time entry. Please try again.",
-    "scheduleVisitFailed": "Failed to open the scheduler",
     "updateContactFailed": "Failed to update contact",
     "updateClientFailed": "Failed to update client",
     "updateLocationFailed": "Failed to update location",
@@ -310,7 +310,8 @@
     "updateTicketFailed": "Failed to update ticket",
     "errorWithMessage": "Error: {{message}}",
     "billingProfileUpdated": "Billing profile updated",
-    "updateBillingProfileFailed": "Failed to update billing profile"
+    "updateBillingProfileFailed": "Failed to update billing profile",
+    "scheduleOpenFailed": "Failed to open the scheduler"
   },
   "conversation": {
     "comments": "Comments",
@@ -343,6 +344,8 @@
     "deleteUploadedImages": "Delete Images",
     "keepUploadedImages": "Keep Images",
     "bundledUpdate": "Bundled update",
+    "bundledUpdateFrom": "Bundled update from {{number}}",
+    "systemAuthor": "System",
     "clientSuffix": " (Client)",
     "internalCommentTooltip": "Internal Comment",
     "resolutionCommentTooltip": "Resolution Comment",
@@ -596,7 +599,7 @@
     "bundleMasterLabel": "Select Master Ticket",
     "bundleMasterPlaceholder": "Select master ticket...",
     "bundleSyncUpdates": "Sync updates from master to children (public replies + workflow changes)",
-    "bundleSyncUpdatesHelp": "Child tickets keep their current status when bundled. Workflow fields are locked on children by default. Internal notes stay on the master.",
+    "bundleSyncUpdatesHelp": "Children keep their current status when bundled. Afterwards, closing or reopening the master closes or reopens all children, and status, assignee and priority changes on the master apply to children. Workflow fields are locked on children. Internal notes stay on the master.",
     "bundleSelectAtLeastTwo": "Select at least two tickets to bundle.",
     "bundleSelectMaster": "Select a master ticket.",
     "bundleSuccess": "Tickets bundled",
@@ -659,12 +662,16 @@
       "masterTicket": "Select Master Ticket",
       "selectMasterTicket": "Select master ticket...",
       "syncUpdates": "Sync updates from master to children (public replies + workflow changes)",
-      "syncUpdatesHelp": "Child tickets keep their current status when bundled. Workflow fields are locked on children by default. Internal notes stay on the master.",
+      "syncUpdatesHelp": "Children keep their current status when bundled. Afterwards, closing or reopening the master closes or reopens all children, and status, assignee and priority changes on the master apply to children. Workflow fields are locked on children. Internal notes stay on the master.",
       "childrenDescription": "Children keep their current status; workflow fields are locked on children. Inbound child replies are surfaced below as view-only.",
       "checkingMasters": "Checking existing bundles...",
       "existingMasterSuffix": "(existing master)",
       "existingMasterLocked": "One selected ticket is already a bundle master. It will be used as the master; the others will be added as children.",
-      "multipleExistingMasters": "Multiple selected tickets are already bundle masters ({{count}}). Unbundle all but one before bundling."
+      "multipleExistingMasters": "Multiple selected tickets are already bundle masters ({{count}}). Unbundle all but one before bundling.",
+      "propagationSummary": "{{masters}} selected ticket(s) are sync-mode bundle masters; this change will close/reopen {{children}} child ticket(s).",
+      "masterSummary": "{{children}} child ticket(s)",
+      "applyToChildren": "Apply to children",
+      "mastersOnly": "Masters only"
     },
     "auth": {
       "moveRequired": "You must be logged in to move tickets",
@@ -1084,7 +1091,8 @@
       "responseStateTrackingDisabled": "Response state tracking disabled",
       "title": "Ticket Display Preferences",
       "description": "Configure how your Ticketing dashboard displays columns and timestamps for your team.",
-      "dateTimeFormat": "Date/Time Format",
+      "showWeekday": "Show weekday in timestamps",
+      "countryDrivesFormat": "Date and time format follows your company country. Set it under Settings → General.",
       "ticketListColumns": "Ticket List Columns",
       "showTags": "Show Tags",
       "displayUnderTitle": "Display under Title",
@@ -1382,7 +1390,13 @@
       "alreadyBundled": "Ticket is already bundled: {{ticket}}",
       "masterAsChild": "Master ticket cannot also be a child ticket.",
       "noChildren": "No child tickets provided.",
-      "childrenOnBundledChild": "Cannot add children to a bundled child ticket."
+      "childrenOnBundledChild": "Cannot add children to a bundled child ticket.",
+      "concurrent": "One or more selected tickets were bundled concurrently. Please refresh and try again.",
+      "closedMasterChoiceRequired": "This bundle's master is closed. Choose how to add the child: {{choices}}.",
+      "closedMasterChoiceNotAllowed": "That choice is not allowed for this master. Choose one of: {{choices}}.",
+      "choiceOnOpenMaster": "That choice only applies when the bundle master is closed.",
+      "closeRuleFailed": "This ticket cannot be closed yet: {{reason}}",
+      "reopenUnavailable": "The master cannot be reopened because no open ticket status is configured."
     },
     "ticket": {
       "validationDetails": "Please fix the ticket details: {{details}}",
@@ -1477,7 +1491,7 @@
   },
   "details": {
     "bundle": {
-      "childrenDescription": "Child tickets bundled in this master ticket",
+      "childrenDescription": "Children keep their current status when bundled. Afterwards, closing or reopening the master closes or reopens all children, and status, assignee and priority changes on the master apply to children. Workflow fields are locked on children. Internal notes stay on the master.",
       "title": "Bundle",
       "masterBanner": "This ticket is the master of a bundle ({{count}} children). Mode: {{mode}}.",
       "multipleClients": "Multiple clients",
@@ -1489,7 +1503,33 @@
       "remove": "Remove",
       "noChildren": "No children in this bundle.",
       "addChildMultiClientMessage": "This will add {{ticket}} from a different client into the bundle. Confirm you want to proceed.",
-      "thisTicket": "this ticket"
+      "thisTicket": "this ticket",
+      "propagation": {
+        "closeTitle": "Close {{count}} child tickets too?",
+        "reopenTitle": "Reopen {{count}} child tickets too?",
+        "closeBody": "This master is in sync mode. Closing it will also close the {{count}} open child ticket(s) listed below.",
+        "reopenBody": "This master is in sync mode. Reopening it will reopen the {{count}} child ticket(s) it closed. Children closed independently stay closed.",
+        "stayClosedHeading": "Stay closed (closed independently)",
+        "boardRulesNote": "Board close rules are not checked on children.",
+        "closeConfirm": "Close master and {{count}} children",
+        "reopenConfirm": "Reopen master and {{count}} children",
+        "masterOnlyClose": "Close master only",
+        "masterOnlyReopen": "Reopen master only"
+      },
+      "openChildrenBadge": "{{count}} open children",
+      "openChildrenBadgeShort": "{{count}} open",
+      "childOpenStatus": "Open",
+      "childClosedStatus": "Closed",
+      "closedMasterDialogTitle": "This bundle's master is closed",
+      "closedMasterDialogIntro": "The master is closed. Choose what should happen to the child when it is added.",
+      "keepClosedLabel": "Add and keep master closed",
+      "keepClosedHelp": "The child stays open with its own SLA clock. The bundle will show as inconsistent until the child is resolved.",
+      "applyResolutionLabel": "Add and apply the master's resolution to this child",
+      "applyResolutionHelp": "Closes the child with status {{status}} and posts the master's resolution to the child as a public comment.",
+      "applyResolutionHelpNoComment": "Closes the child with status {{status}}. The master has no public resolution comment to post.",
+      "reopenMasterLabel": "Add and reopen master",
+      "reopenMasterHelp": "Reopens only the master. Already-closed children in this bundle stay closed; reopen notifications and SLA apply to the master.",
+      "closedMasterGating": "The board's close rules do not allow open children under a closed master, so keeping the master closed is not an option."
     },
     "autoClose": "Will close automatically on {{date}} unless there's new activity.",
     "autoCloseWarned": "The customer has been warned."
@@ -1611,7 +1651,8 @@
       "responseWaitingOnClient": "Waiting on client",
       "responseNone": "No reply needed",
       "category": "Category",
-      "selectDestinationStatus": "Select a status for the new board before saving."
+      "selectDestinationStatus": "Select a status for the new board before saving.",
+      "viewSchedule": "View schedule"
     },
     "layout": {
       "grid": "Grid",
@@ -1639,7 +1680,6 @@
       "showLess": "Show less",
       "contact": "Contact",
       "client": "Client",
-      "nextVisit": "Next visit",
       "callsAndEmails": "Calls and emails",
       "call": "Call",
       "viewAll": "View all",
@@ -1667,7 +1707,6 @@
       "billing": "Billing",
       "couldNotLoad": "Could not load this tile",
       "nothingScheduled": "Nothing scheduled",
-      "scheduleVisit": "Schedule a visit",
       "scheduledWork": "Scheduled work",
       "scheduleDone": "done",
       "noCallsOrEmails": "No calls or emails logged",
@@ -1711,7 +1750,9 @@
         "approved": "Approved",
         "declined": "Declined",
         "cancelled": "Cancelled"
-      }
+      },
+      "scheduleTime": "Schedule time",
+      "openScheduleEntry": "Open schedule entry"
     },
     "timeline": {
       "subtitle": "Replies, time, and system changes in one place",
@@ -1759,7 +1800,8 @@
         "checklist_template_applied": "checklist template applied",
         "close_rules_overridden": "close rules overridden",
         "close_rules_bypassed": "close rules bypassed",
-        "auto_close_warning_sent": "auto-close warning sent"
+        "auto_close_warning_sent": "auto-close warning sent",
+        "bundle_child_added": "bundle child added"
       },
       "filterEverything": "Everything",
       "filterReplies": "Replies",
@@ -1780,6 +1822,9 @@
       "fieldChanged": "{{actor}} changed {{field}}: {{from}} → {{to}}",
       "fieldSet": "{{field}} set to {{to}}",
       "actorEvent": "{{actor}} · {{eventName}}",
+      "bundleStatusNotPropagated": "{{actor}} changed the bundle master status (children not updated)",
+      "bundleStatusClosed": "{{actor}} closed the bundle master and {{count}} child ticket(s)",
+      "bundleStatusReopened": "{{actor}} reopened the bundle master and {{count}} child ticket(s)",
       "title": "Timeline",
       "replyVisibility": "Reply visibility",
       "modeClient": "Client",
@@ -1802,5 +1847,103 @@
       "collapseActivity": "Collapse older activity",
       "replyingToComment": "Replying to {{name}}"
     }
+  },
+  "externalLinks": {
+    "title": "External links",
+    "empty": "No external links",
+    "loading": "Loading external links...",
+    "noUrl": "No URL available for this reference",
+    "customSystemOption": "{{label}} (custom)",
+    "actions": {
+      "add": "Add link",
+      "edit": "Edit",
+      "remove": "Remove",
+      "cancel": "Cancel",
+      "save": "Save",
+      "menu": "Link actions"
+    },
+    "relationship": {
+      "origin": "Origin",
+      "mirror": "Mirror",
+      "reference": "Reference"
+    },
+    "relationshipDescription": {
+      "origin": "Where this ticket started. Each ticket can have one origin link, which sets its origin badge.",
+      "mirror": "Another record tracking the same work as this ticket.",
+      "reference": "Supporting information for this ticket."
+    },
+    "dialog": {
+      "addTitle": "Add external link",
+      "editTitle": "Edit external link",
+      "intro": "Adding a link does not sync data between systems."
+    },
+    "removeDialog": {
+      "title": "Remove external link",
+      "message": "Remove this external link from the ticket?"
+    },
+    "fields": {
+      "system": "System",
+      "loadingSystems": "Loading systems...",
+      "selectSystem": "Select a system",
+      "externalId": "External ID",
+      "externalIdPlaceholder": "e.g. 42 or 1234567890",
+      "realm": "Realm",
+      "url": "URL",
+      "urlOptional": "Optional override",
+      "urlRequired": "https://...",
+      "relationship": "Relationship",
+      "originExistsHint": "This ticket already has an origin link.",
+      "actorGroup": "Person or account (optional)",
+      "actorHint": "The person or account associated with the linked record in the external system.",
+      "actorHandle": "Username or handle",
+      "actorDisplay": "Display name",
+      "builtInGroup": "Built-in systems",
+      "customGroup": "Custom systems",
+      "urlPreview": "Opens:",
+      "urlPreviewIncomplete": "Fill in the fields above to preview the link."
+    },
+    "errors": {
+      "ticketNotFound": "Ticket not found",
+      "commentNotFound": "Comment not found on this ticket",
+      "linkNotFound": "External link not found",
+      "systemNotFound": "Unknown external system",
+      "externalIdRequired": "External ID is required",
+      "invalidUrl": "URL must be a valid http(s) URL",
+      "invalidRelationship": "Invalid relationship",
+      "invalidEntityType": "Invalid entity type",
+      "originExists": "This entity already has an origin link",
+      "duplicateExternalLink": "That external record is already linked",
+      "systemInUse": "This external system is used by existing links",
+      "systemInUseCount": "This external system is used by {{count}} link(s)",
+      "invalidSystemKey": "Custom system keys must match custom:<slug> with lowercase letters, digits, or underscores",
+      "systemLabelRequired": "System label is required",
+      "permissionDenied": "Permission denied: Cannot manage external systems",
+      "systemRequired": "Choose an external system.",
+      "urlRequired": "A URL is required for systems without a URL template."
+    }
+  },
+  "smartSearch": {
+    "run": "Smart search",
+    "runTitle": "Score the filtered tickets against this query",
+    "relevanceColumn": "Match",
+    "relevance": "{{percent}}% relevant",
+    "strong": "Strong matches",
+    "possible": "Possible matches",
+    "unlikely": "Unlikely matches",
+    "emptyBucketRunning": "None yet",
+    "emptyBucket": "None",
+    "scoring": "Scored {{scored}} of {{total}} tickets",
+    "summary": "Scored {{total}} tickets · {{strong}} strong · {{possible}} possible",
+    "cancelled": "Search cancelled after {{scored}} of {{total}} tickets",
+    "errorTitle": "Smart search stopped",
+    "starting": "Starting smart search…",
+    "rerun": "Filters changed. Run again",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "exit": "Back to list",
+    "notConfigured": "Smart search is not configured on this server",
+    "failedCount": "{{count}} tickets could not be scored",
+    "unscored": "Could not be scored",
+    "addOnRequired": "Smart search requires the AI Assistant add-on"
   }
 }

@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "status": "local-behavior-passed",
+  "date": "2026-09-07",
+  "test": "e2e-tests/tests/msp-access-redirects.spec.ts",
+  "supersedes": "ee/server/src/__tests__/integration/msp-access-redirects.playwright.test.ts",
+  "runtime": {
+    "edition": "enterprise",
+    "browser": "headed Chromium",
+    "passed": 1,
+    "failed": 0,
+    "retries": 0,
+    "durationSeconds": 18.4,
+    "imageId": "sha256:2d3f0db9b006857afd4b5977a39e39e5c9bf29ec703201cf7d9d12a1abe4e88d",
+    "log": "/tmp/alga-portal-dashboard-redirect-browser-proxy.log"
+  },
+  "collection": {
+    "community": 24,
+    "enterprise": 28,
+    "errors": 0
+  },
+  "isolation": {
+    "database": "redirects_browser_82cc_test",
+    "source": "task-owned disposable visual database clone",
+    "credentials": "synthetic",
+    "cleanup": "Both temporary app/proxy containers removed and database dropped successfully"
+  },
+  "limitations": [
+    "Reused local production image; does not establish current candidate image provenance",
+    "Working-tree test validation, not native CI readiness",
+    "CE collected but not executed in this local run"
+  ]
+}

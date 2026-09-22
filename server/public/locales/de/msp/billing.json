@@ -43,13 +43,14 @@
       "contractTemplates": "Vertragsvorlagen",
       "invoicing": "Fakturierung",
       "invoiceLayouts": "Rechnungslayouts",
-      "taxRates": "Steuersätze",
+      "taxRates": "Steuern",
       "contractLinePresets": "Voreinstellungen für Vertragszeilen",
       "billingCycles": "Abrechnungszyklen",
       "servicePeriods": "Servicezeiträume",
       "usageTracking": "Nutzungsverfolgung",
       "reports": "Berichte",
       "serviceTypes": "Servicetypen",
+      "serviceCategories": "Servicekategorien",
       "serviceCatalog": "Dienste",
       "products": "Produkte"
     }
@@ -141,6 +142,8 @@
   },
   "usage": {
     "bucketHoursOverview": "Übersicht über Stundenkontingente",
+    "bucketLoadError": "Die Reststunden der Stundenkontingente konnten nicht geladen werden. Versuchen Sie es erneut, um die aktuellen Reststunden anzuzeigen.",
+    "retryBucketBalances": "Reststunden erneut laden",
     "usageRecords": "Nutzungsaufzeichnungen",
     "actions": {
       "addUsage": "Nutzung hinzufügen",
@@ -211,6 +214,12 @@
       "updateError": "Der Nutzungsdatensatz konnte nicht aktualisiert werden",
       "deleteSuccess": "Nutzungsdatensatz erfolgreich gelöscht",
       "deleteError": "Nutzungsdatensatz konnte nicht gelöscht werden"
+    },
+    "periodReport": "Nutzungsmeldung für den Zeitraum",
+    "periodAlreadyInvoiced": "Dieser Zeitraum ist bereits in Rechnung gestellt. Korrigieren Sie ihn über den Rechnungsanpassungsprozess.",
+    "periodFilter": {
+      "notice": "Nutzung für den Leistungszeitraum {{start}} bis {{end}} wird angezeigt",
+      "clear": "Zurücksetzen"
     }
   },
   "lineItem": {
@@ -381,7 +390,8 @@
       "execute": "Ausführen",
       "createBatch": "Stapel erstellen",
       "creating": "Erstellen...",
-      "cancelBatch": "Stapel stornieren"
+      "cancelBatch": "Stapel stornieren",
+      "retry": "Erneut versuchen"
     },
     "states": {
       "loadingBatches": "Stapel werden geladen...",
@@ -408,7 +418,12 @@
         "invoiceStatuses": "Komma-getrennt (optional), z.B. abgeschlossen, veröffentlicht",
         "notes": "Optionale Notizen"
       },
-      "defaultRealmLabel": "{{realmId}} (Standard)"
+      "defaultRealmLabel": "{{realmId}} (Standard)",
+      "loadingConnections": "Buchhaltungsverbindungen werden geladen...",
+      "connectionLoadError": "Buchhaltungsverbindungen konnten nicht geladen werden. Prüfen Sie Ihre Verbindungseinstellungen und versuchen Sie es erneut.",
+      "ambiguousRealm": "Ihre gespeicherte Standard-Buchhaltungsorganisation wird von mehr als einer Verbindung verwendet. Wählen Sie eine Verbindung, um fortzufahren.",
+      "noXeroConnection": "Es ist keine Xero-Verbindung verfügbar. Verbinden Sie Xero in den Buchhaltungseinstellungen, um zu exportieren.",
+      "noQboConnection": "Es ist keine QuickBooks Online-Verbindung verfügbar. Verbinden Sie sie in den Buchhaltungseinstellungen, um zu exportieren."
     },
     "detailDialog": {
       "title": "Buchhaltungsexportstapel",
@@ -432,7 +447,8 @@
       "createError": "Exportstapel konnte nicht erstellt werden",
       "executeError": "Batch konnte nicht ausgeführt werden",
       "cancelled": "Stapel storniert",
-      "cancelError": "Batch konnte nicht storniert werden"
+      "cancelError": "Batch konnte nicht storniert werden",
+      "realmRequired": "Wählen Sie ein verbundenes Buchhaltungsunternehmen, bevor Sie den Export erstellen."
     },
     "status": {
       "pending": "Ausstehend",
@@ -666,7 +682,9 @@
     },
     "recurringRun": {
       "selectPeriods": "Wählen Sie mindestens einen wiederkehrenden Abrechnungszeitraum zum Generieren aus.",
-      "invoicePermission": "Berechtigung verweigert: Berechtigung zum Erstellen oder Generieren von Rechnungen erforderlich"
+      "invoicePermission": "Berechtigung verweigert: Berechtigung zum Erstellen oder Generieren von Rechnungen erforderlich",
+      "monthEndCloseNotMaterialized": "Für dieses wiederkehrende Ausführungsfenster wurden keine wiederkehrenden Serviceperioden materialisiert.",
+      "monthEndCloseNotEligible": "Der Zeitraum {{servicePeriod}} kann nur zum Monatsende am {{finalCalendarDay}} abgeschlossen werden. Nur im Nachhinein abgerechnete Serviceperioden, die einen vollen Kalendermonat umfassen, können an ihrem letzten Kalendertag vorzeitig abgeschlossen werden."
     },
     "recurringServicePeriod": {
       "scheduleKeyRequiredInspect": "Zum Prüfen wiederkehrender Serviceperioden ist ein Zeitplanschlüssel erforderlich.",

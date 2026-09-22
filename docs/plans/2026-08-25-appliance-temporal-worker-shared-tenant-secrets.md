@@ -303,3 +303,21 @@ Deployment. Because the selector addition is delivered through `extraSelectorLab
 overlay rather than the default template, hosted Deployments (two-label selector) and the appliance
 Deployment (three-label selector) both upgrade in place without an immutable-selector migration
 failure.
+
+### Correction (2026-09-03): the worker writes to the store
+
+GitHub issue #3315 (fresh appliance, Entra contact sync) showed the D1 audit missed a write path.
+`DirectProviderAdapter` refreshes Entra OAuth tokens inside the worker and persists them through
+`saveEntraDirectTokenSet` / `saveEntraDirectRefreshToken` (`ee/server/src/lib/integrations/entra/auth/`):
+discovery rewrites the whole token set whenever the access token is near expiry, and every user sync
+stores the refresh token Microsoft rotates on redemption. With the read-only mount every sync failed
+with `EROFS`. With a writable mount it still failed: the image's non-root `temporal` user (UID 999)
+cannot write into the root-owned 0755 tenant directories alga-core creates, and `fsGroup` does not
+apply to hostPath volumes.
+
+Resolution (chart 0.1.4): the chart default is now `sharedTenantSecrets.readOnly: false`; the appliance
+overlay sets it explicitly and runs the worker as root (`securityContext.runAsUser: 0`), matching
+alga-core and email-service on the same host directory. T1 pins the writable mount and the root
+security context for the overlay. Separately, the stable release manifest still pinned worker image
+`84d3a55b` (2026-08-12), which predates the `/v1.0/users` fix in `907702138d`; re-pin it alongside this
+chart bump.

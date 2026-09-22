@@ -11,7 +11,7 @@ import type {
   ReconcileInput,
   RegisterInput,
   RegisterResult,
-} from './types';
+} from '@/lib/portal-domains/provisioner/types';
 
 /**
  * Hosted/cloud provisioner. Behavior-preserving extraction of what the server

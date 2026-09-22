@@ -16,6 +16,8 @@ import {
   isSupportedLocale,
   filterPseudoLocales,
 } from './config';
+import { formatDateValue } from './formatDateValue';
+import { useDateFormat } from '../dateFormat/useDateFormat';
 
 /**
  * Initialize i18next on the client side.
@@ -94,6 +96,8 @@ export type PreloadedNamespaceResources = Record<string, Record<string, unknown>
  * Merge server-embedded namespace resources into i18next so the HTTP backend
  * never fetches them. Safe to call before or after init (addResourceBundle is
  * idempotent with the merge flag).
+ *
+ * Locales are language codes, so a bundle is keyed by the locale itself.
  */
 function applyPreloadedResources(
   locale: SupportedLocale,
@@ -152,6 +156,14 @@ async function initI18n(
     return;
   }
 
+  // Seed only when the server actually embedded namespace data — an empty seed
+  // would mark the bundle as loaded and mask the real (fetched) translations
+  // with missing keys.
+  const hasPreloadedContent = preloaded && Object.keys(preloaded).length > 0;
+  const seededResources = hasPreloadedContent
+    ? { [resolvedLocale]: preloaded }
+    : undefined;
+
   await i18next
     .use(HttpBackend)
     .use(initReactI18next)
@@ -160,7 +172,7 @@ async function initI18n(
       lng: resolvedLocale,
       // Seed the route's namespaces so useTranslation() resolves them without a
       // network round-trip; the HTTP backend still covers anything not seeded.
-      resources: preloaded ? { [resolvedLocale]: preloaded } : undefined,
+      resources: seededResources,
       partialBundledLanguages: true,
       backend: {
         loadPath: '/locales/{{lng}}/{{ns}}.json',
@@ -371,20 +383,28 @@ export function detectClientLocale(
  * default locale, which at least stays deterministic rather than following
  * whatever the browser happens to be set to. `locale` is returned so callers
  * can pass it to module-scope helpers that have no hook of their own.
+ *
+ * `dateFormat` comes from the country, not the locale: digit order, separator
+ * and the 12/24h clock are the tenant's (or client's) country's, while the
+ * locale still supplies month and weekday names. Outside a DateFormatProvider
+ * it is the fixed system default, so provider-less trees stay deterministic.
  */
 export function useFormatters() {
   const context = useOptionalI18n();
   const locale = context?.locale ?? (LOCALE_CONFIG.defaultLocale as SupportedLocale);
+  const dateFormat = useDateFormat();
 
   return useMemo(() => ({
     locale,
+    dateFormat,
 
     formatDate: (
       date: Date | string,
       options?: Intl.DateTimeFormatOptions
     ) => {
-      const dateObj = typeof date === 'string' ? new Date(date) : date;
-      return new Intl.DateTimeFormat(locale, options).format(dateObj);
+      // Date-only strings are calendar dates and must not shift through the
+      // browser timezone; see formatDateValue.
+      return formatDateValue(date, locale, options, dateFormat);
     },
 
     formatNumber: (value: number, options?: Intl.NumberFormatOptions) => {
@@ -421,5 +441,5 @@ export function useFormatters() {
       }
       return rtf.format(Math.trunc(diff / 1000), 'second');
     },
-  }), [locale]);
+  }), [locale, dateFormat]);
 }

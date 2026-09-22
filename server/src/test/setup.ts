@@ -1,4 +1,9 @@
 import '@testing-library/jest-dom'
+// Next's programmatic entrypoint installs this during app.prepare(), but the
+// single-fork integration worker collects server-action modules before any app
+// is prepared. Ensure those modules snapshot Node's real AsyncLocalStorage
+// instead of permanently caching Next's throwing browser fallback.
+import 'next/dist/server/node-environment-baseline';
 import path from 'node:path';
 import { mkdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -62,6 +67,21 @@ afterEach(async () => {
   configure({ testIdAttribute: 'data-testid' });
   loadRootRtl()?.configure?.({ testIdAttribute: 'data-testid' });
 });
+
+// Testing Library's async utilities (waitFor/findBy*) default to a 1s timeout.
+// This single fork runs ~2700 files serially with v8 coverage instrumentation,
+// which stretches a render + effect settle well past 1s on CI runners — a
+// legitimately-passing waitFor then times out (a flake, not a real failure).
+// The scheduling/clients packages already raise this in their own setups for
+// the same reason; mirror it here so package component tests under the server
+// suite get the same headroom. Both RTL copies are configured (the 16.x copy
+// this file resolves and the hoisted 14.x root copy package tests resolve);
+// configure() merges, so the testIdAttribute reset above never clears it.
+if (typeof document !== 'undefined') {
+  const { configure } = await import('@testing-library/react');
+  configure({ asyncUtilTimeout: 10_000 });
+  loadRootRtl()?.configure?.({ asyncUtilTimeout: 10_000 });
+}
 
 // Edition-gated suites set EDITION / NEXT_PUBLIC_EDITION per test and not all
 // restore; in the shared fork a leaked edition flips later suites' code paths
@@ -232,13 +252,44 @@ global.ResizeObserver = class ResizeObserver {
   disconnect() {}
 };
 
-// Mock UI reflection hooks
-vi.mock('@alga-psa/ui/ui-reflection/useAutomationIdAndRegister', () => ({
-  useAutomationIdAndRegister: () => ({
-    automationIdProps: {},
-    updateMetadata: vi.fn(),
-  }),
-}));
+// jsdom does not implement scrollIntoView; components (e.g. scheduling's
+// AvailabilitySettings) call it inside requestAnimationFrame on selection
+// changes. Unstubbed, that rAF throws asynchronously AFTER the test settles,
+// and vitest reports it as an unhandled error that fails the whole run. The
+// packages' own vitest setups stub it, but under this single server suite only
+// this file's setup applies — and because the suite reuses one jsdom across
+// files with shuffled ordering, whether some earlier file happened to define it
+// was pure luck. Define it unconditionally so ordering can never expose the gap.
+if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = function scrollIntoView() {};
+}
+
+// Mock UI reflection hooks. The stubs sever registration (context/websocket)
+// but must stay faithful to the real hook's rendered-DOM contract: the real
+// useAutomationIdAndRegister always emits { id, 'data-automation-id' }
+// (overrideId || component.id || a useId-derived fallback), and component
+// tests locate elements via document.getElementById(...). Returning {}
+// here silently stripped ids from every @alga-psa/ui control under the
+// server suite while the packages' own vitest targets kept them.
+vi.mock('@alga-psa/ui/ui-reflection/useAutomationIdAndRegister', async () => {
+  const { useId } = await import('react');
+  return {
+    useAutomationIdAndRegister: (
+      component: { id?: string; type?: string },
+      _actionsOrShouldRegister?: unknown,
+      overrideId?: string
+    ) => {
+      const reactId = useId();
+      const finalId =
+        overrideId || component?.id || `${component?.type ?? 'component'}-${reactId}`;
+      return {
+        automationIdProps: { id: finalId, 'data-automation-id': finalId },
+        updateMetadata: vi.fn(),
+        updateActions: vi.fn(),
+      };
+    },
+  };
+});
 
 vi.mock('@alga-psa/ui/ui-reflection/useRegisterUIComponent', () => ({
   useRegisterUIComponent: () => vi.fn(),
@@ -310,20 +361,49 @@ const i18nMocks = vi.hoisted(() => {
     },
   };
 
+  // formatDate has to answer to the DateFormatProvider exactly as the real hook
+  // does. Digit order, separator and clock come from the tenant's COUNTRY, so a
+  // stub that hands 'en' straight to Intl silently rewrites every country-format
+  // assertion back to US order — a GB tenant's 13/08/2026 re-rendered as
+  // 08/13/2026, with the test failing for a reason that exists only in the mock.
+  // Delegating to the real formatDateValue also keeps digit width honest
+  // (production pads dd/MM; bare Intl does not).
+  const buildUseFormatters = async () => {
+    const { formatDateValue } = await import('@alga-psa/ui/lib/i18n/formatDateValue');
+    const { useDateFormat } = await import('@alga-psa/ui/lib/dateFormat/useDateFormat');
+    // Referential stability still matters (see mockFormatters): key the cache on
+    // the resolved format object, which DateFormatProvider already memoises.
+    const byFormat = new WeakMap<object, typeof mockFormatters>();
+
+    return () => {
+      const dateFormat = useDateFormat();
+      let formatters = byFormat.get(dateFormat);
+      if (!formatters) {
+        formatters = {
+          ...mockFormatters,
+          formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) =>
+            formatDateValue(date, 'en', options, dateFormat),
+        };
+        byFormat.set(dateFormat, formatters);
+      }
+      return formatters;
+    };
+  };
+
   return {
     mockT,
     mockI18n,
     mockUseTranslation: () => ({ t: mockT, i18n: mockI18n }),
     mockFormatters,
-    mockUseFormatters: () => mockFormatters,
+    buildUseFormatters,
     // Stable i18n context value used by useI18n/useOptionalI18n (locale-aware
     // shared components like DatePicker/CurrencyInput read this).
     mockI18nContext: { locale: 'en', t: mockT, i18n: mockI18n },
   };
 });
-vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+vi.mock('@alga-psa/ui/lib/i18n/client', async () => ({
   useTranslation: i18nMocks.mockUseTranslation,
-  useFormatters: i18nMocks.mockUseFormatters,
+  useFormatters: await i18nMocks.buildUseFormatters(),
   useI18n: () => i18nMocks.mockI18nContext,
   useOptionalI18n: () => i18nMocks.mockI18nContext,
   detectClientLocale: () => 'en',
@@ -442,11 +522,14 @@ vi.mock('@alga-psa/auth', async () => {
     getDeviceInfo: vi.fn(() => ({})),
     getLocationFromIp: vi.fn(async () => null),
     getSessionMaxAge: vi.fn(() => 60 * 60 * 24),
+    API_KEY_LAST_USED_WRITE_INTERVAL_MS: 60_000,
+    shouldTouchApiKeyLastUsed: vi.fn(() => true),
     ApiKeyService: {
       generateApiKey: vi.fn(() => 'test-api-key'),
       createApiKey: vi.fn(),
       validateApiKey: vi.fn(async () => null),
       deactivateApiKey: vi.fn(),
+      expireApiKeyAfter: vi.fn(),
       listUserApiKeys: vi.fn(async () => []),
       listAllApiKeys: vi.fn(async () => []),
     },

@@ -43,8 +43,12 @@ describe("billingEngine allocation and regression guards", () => {
     expect(source).toContain(
       '.whereIn("time_entries.service_id", configuredServiceIds)',
     );
+    // The additive usage record query is scoped to the line's additive
+    // services (period-total services bill through usage_period_totals and
+    // must never receive dated additive entries); the null-line allocation is
+    // still gated by unique service matches (T029).
     expect(source).toContain(
-      '.whereIn("usage_tracking.service_id", configuredServiceIds)',
+      '.whereIn("usage_tracking.service_id", additiveServiceIds)',
     );
   });
 

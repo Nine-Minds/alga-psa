@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "revision": "8b1cb1aad0ea430b31512f51dd15670ac86cf513",
+  "scope": "native-node-tooling",
+  "status": "passed",
+  "counts": {
+    "tests": 649,
+    "passed": 649,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "cancelled": 0
+  },
+  "files": 69,
+  "source": {
+    "before": {
+      "revision": "8b1cb1aad0ea430b31512f51dd15670ac86cf513",
+      "dirty": false,
+      "changes": []
+    },
+    "after": {
+      "revision": "8b1cb1aad0ea430b31512f51dd15670ac86cf513",
+      "dirty": false,
+      "changes": []
+    }
+  },
+  "reports": {
+    "test-results/node-tooling/evidence.json": "9e9c36cd2ee77649e63c9ce275f26f61b223358bc5e09a63b6a4f6ed6dce1945",
+    "test-results/node-tooling/events.jsonl": "261b1809982815b5c24276e1998cec60c15264547b0c14a468c8e668000fbe98",
+    "test-results/node-tooling/discovery.json": "3185fec9dfb3cd8f92546344a3f2fa7f91749d22647c40e27d6b660dc71b9c72"
+  },
+  "limitations": [
+    "Current-source GitHub inventory and readiness are still required."
+  ]
+}

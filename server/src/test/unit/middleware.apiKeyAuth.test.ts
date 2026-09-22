@@ -3,9 +3,20 @@ import { describe, expect, it } from 'vitest';
 import { shouldSkipApiKeyAuth } from 'server/src/middleware';
 
 describe('shouldSkipApiKeyAuth', () => {
+  it('lets recipient-bound attachment links authenticate in their session-aware handler', () => {
+    expect(shouldSkipApiKeyAuth('/api/ticket-comment-attachments/download')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/ticket-comment-attachments/download-malicious')).toBe(false);
+  });
   it('allows SCIM routes to perform Bearer authentication in the route handler', () => {
     expect(shouldSkipApiKeyAuth('/api/scim/v2/connection-id/Users')).toBe(true);
     expect(shouldSkipApiKeyAuth('/api/scim-malicious/v2/connection-id/Users')).toBe(false);
+  });
+
+  it('lets the smart ticket search stream authenticate its session in the route handler', () => {
+    expect(shouldSkipApiKeyAuth('/api/smart-search/ticket/stream')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/smart-search/project/stream')).toBe(true);
+    // Other ticket API routes still need an API key.
+    expect(shouldSkipApiKeyAuth('/api/tickets/123')).toBe(false);
   });
 
   it('allows the Teams package download route to use session auth', () => {
@@ -30,6 +41,14 @@ describe('shouldSkipApiKeyAuth', () => {
     expect(shouldSkipApiKeyAuth('/api/online-meetings/recordings/artifact-123')).toBe(true);
   });
 
+  it('allows 3CX CRM template routes (per-tenant Bearer ApiKey verified in the route)', () => {
+    expect(shouldSkipApiKeyAuth('/api/telephony/3cx/abc123def456/lookup')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/telephony/3cx/abc123def456/lookup-by-email')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/telephony/3cx/abc123def456/search')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/telephony/3cx/abc123def456/report-call')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/telephony/3cx-malicious/x/lookup')).toBe(false);
+  });
+
   it('allows public appointment calendar downloads from email links', () => {
     expect(shouldSkipApiKeyAuth('/api/calendar/appointment/2187d639-b796-4b0e-b760-8a2576bb435f.ics')).toBe(true);
   });
@@ -51,6 +70,27 @@ describe('shouldSkipApiKeyAuth', () => {
 
   it('allows ticket live token APIs to use MSP session auth', () => {
     expect(shouldSkipApiKeyAuth('/api/tickets/ticket-123/live-token')).toBe(true);
+  });
+
+  it('allows the Level.io webhook route (X-Alga-Webhook-Secret authenticated in-route)', () => {
+    expect(shouldSkipApiKeyAuth('/api/webhooks/levelio')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/levelio/')).toBe(true);
+  });
+
+  it('exempts the Level.io route exactly, never a prefixed or deeper sibling', () => {
+    expect(shouldSkipApiKeyAuth('/api/webhooks/levelioevil')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/levelio-extra')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/levelio.more')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/levelio/malicious')).toBe(false);
+  });
+
+  it('keeps sibling RMM + payment webhook routes and unrelated APIs gated', () => {
+    expect(shouldSkipApiKeyAuth('/api/webhooks/ninjaone')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/tacticalrmm')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/ai-gateway')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/stripe/payments')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/other-provider')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/instanceinfo')).toBe(false);
   });
 
   it('still requires an API key for unrelated API routes', () => {

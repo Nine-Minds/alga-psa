@@ -315,7 +315,8 @@
       "title": "Testo visibile al cliente",
       "subtitle": "Appare nel PDF, sotto i totali.",
       "notes": "Note per il cliente (opzionale)",
-      "terms": "Termini e condizioni (opzionale)"
+      "terms": "Termini e condizioni (opzionale)",
+      "termsPlaceholder": "Aggiungi termini, link e paragrafi…"
     },
     "moreDetails": {
       "title": "Altri dettagli",

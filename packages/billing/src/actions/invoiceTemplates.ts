@@ -25,7 +25,7 @@ import {
     type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 
-import { evaluateTemplateAst } from '../lib/invoice-template-ast/evaluator';
+import { evaluateTemplateAst, TemplateEvaluationError } from '../lib/invoice-template-ast/evaluator';
 import { INVOICE_TEMPLATE_BINDING_ALIASES } from '../lib/invoice-template-ast/bindingAliases';
 import { renderEvaluatedTemplateAst } from '../lib/invoice-template-ast/react-renderer';
 import { localizeTemplateAstForLocale } from '../lib/invoice-template-ast/i18nLabels';
@@ -36,6 +36,17 @@ const GLOBAL_TEMPLATE_LOOKUP = 'global-template-lookup';
 type InvoiceTemplateActionError = ActionMessageError | ActionPermissionError;
 
 function invoiceTemplateActionErrorFrom(error: unknown): InvoiceTemplateActionError | null {
+    // Missing/invalid template bindings are an authored-template state, not a
+    // server fault: surface the evaluator's diagnostic (e.g. which collection
+    // failed to resolve) instead of letting the preview collapse to a generic
+    // "Failed to render" message.
+    if (error instanceof TemplateEvaluationError) {
+        return actionError(
+            `Template data binding failed: ${error.message}`,
+            'msp/invoicing:errors.template.evaluationFailed',
+            { details: error.message },
+        );
+    }
     if (error instanceof Error) {
         if (error.message.startsWith('Permission denied')) {
             return permissionError(error.message);
@@ -452,12 +463,18 @@ export const renderTemplateOnServer = withAuth(async (
         );
         // Same seam the PDF path uses, so the on-screen preview is authoritative.
         const invoiceId = options?.invoiceId ?? null;
+        const pdfService = createPDFGenerationService(tenant);
         const recipientLocale = invoiceId
-          ? await createPDFGenerationService(tenant).resolveRenderLocale({ invoiceId })
+          ? await pdfService.resolveRenderLocale({ invoiceId })
           : null;
+        // With no concrete invoice this resolves the tenant default, which is
+        // what an unsent document would be dated in.
+        const dateFormat = await pdfService.resolveRenderCountry(invoiceId ? { invoiceId } : {});
         const localized = await localizeTemplateAstForLocale(templateAst, recipientLocale);
         const { html, css } = await renderEvaluatedTemplateAst(localized.ast, evaluation, {
           locale: localized.locale,
+          dateFormat,
+          t: localized.t,
         });
 
         console.log(`[Server Action] Successfully rendered template: ${templateId ?? 'inline-templateAst'}`);

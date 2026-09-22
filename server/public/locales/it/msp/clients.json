@@ -1477,7 +1477,18 @@
         "unavailable": "La creazione di riunioni Teams non è disponibile per questo tenant."
       },
       "loadFailed": "Impossibile caricare le opzioni di interazione. Riprova.",
-      "saveFailed": "Impossibile salvare l'interazione. Riprova."
+      "saveFailed": "Impossibile salvare l'interazione. Riprova.",
+      "schedule": {
+        "addToggle": "Aggiungi alla pianificazione",
+        "addHelp": "Una voce di pianificazione verrà aggiunta al tuo calendario AlgaPSA.",
+        "addHelpOthers": "Una voce di pianificazione verrà aggiunta ai calendari AlgaPSA degli utenti selezionati.",
+        "assigneesLabel": "Pianifica per",
+        "assigneesPlaceholder": "Seleziona utenti"
+      },
+      "assignedTo": {
+        "label": "Assegnato a",
+        "placeholder": "Seleziona utente"
+      }
     },
     "feed": {
       "addInteraction": "Aggiungi interazione",
@@ -1498,7 +1509,15 @@
       "allContacts": "Tutti i contatti",
       "allStatuses": "Tutti gli stati",
       "allUsers": "Tutti gli utenti",
-      "columns": { "type": "Tipo", "title": "Titolo", "client": "Cliente", "contact": "Contatto", "user": "Utente", "date": "Data", "status": "Stato" },
+      "columns": {
+        "type": "Tipo",
+        "title": "Titolo",
+        "client": "Cliente",
+        "contact": "Contatto",
+        "user": "Utente",
+        "date": "Data",
+        "status": "Stato"
+      },
       "empty": "Nessuna interazione corrisponde a questi filtri.",
       "loading": "Caricamento delle interazioni…",
       "openClient": "Apri cliente {{name}}",
@@ -1518,6 +1537,14 @@
       "statusPlaceholder": "Stato",
       "title": "Interazioni recenti",
       "statusesLoadFailed": "Impossibile caricare gli stati delle interazioni. Riprova."
+    },
+    "callArtifacts": {
+      "sectionTitle": "Registrazione e trascrizione della chiamata",
+      "viewTranscript": "Vedi trascrizione",
+      "downloadRecording": "Scarica registrazione",
+      "transcriptTitle": "Trascrizione della chiamata",
+      "loading": "Caricamento della trascrizione…",
+      "loadFailed": "Impossibile caricare la trascrizione."
     }
   },
   "clientDrawer": {
@@ -1773,7 +1800,9 @@
       "missingField": "Manca un campo obbligatorio dell’interazione.",
       "missingFieldNamed": "Manca un campo obbligatorio dell’interazione: {{field}}.",
       "referenceMissing": "L’interazione, il cliente, il contatto, l’utente, lo stato o il tipo selezionati non esistono più. Aggiornare la pagina e riprovare.",
-      "duplicate": "Esiste già un’interazione con questi dati."
+      "duplicate": "Esiste già un’interazione con questi dati.",
+      "scheduleAssignDenied": "Autorizzazione negata: non è possibile assegnare voci di pianificazione ad altri utenti.",
+      "scheduleUsersMissing": "Non è stato possibile trovare uno o più utenti assegnati."
     },
     "interactionType": {
       "notFound": "Tipo di interazione non trovato o non si dispone dell’accesso.",

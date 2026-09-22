@@ -69,9 +69,10 @@
       "servicePeriods": "Leistungszeiträume",
       "credits": "Gutschriften",
       "serviceTypes": "Servicetypen",
+      "serviceCategories": "Servicekategorien",
       "serviceCatalog": "Dienste",
       "products": "Produkte",
-      "taxRates": "Steuersätze",
+      "taxRates": "Steuern",
       "usageTracking": "Nutzungsverfolgung",
       "reports": "Berichte",
       "accountingExports": "Buchhaltungsexporte"
@@ -114,7 +115,8 @@
     "collapseSidebar": "Seitenleiste einklappen",
     "collapseSection": "{{section}} einklappen",
     "expandSection": "{{section}} ausklappen",
-    "appLogoAlt": "{{appName}}-Logo"
+    "appLogoAlt": "{{appName}}-Logo",
+    "poweredBy": "Bereitgestellt von"
   },
   "settings": {
     "sections": {

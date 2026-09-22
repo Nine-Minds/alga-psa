@@ -1620,6 +1620,11 @@ export function registerCrmActions(): void {
 
         const createdQuote = await Quote.create(tx.trx, tx.tenantId, {
           ...(parsedQuote as any),
+          // Carry the template's authored rich terms through the duplicate path.
+          // The workflow input schema stays string-only (FR11); the block column
+          // is copied internally so a template created with rich terms does not
+          // lose them.
+          terms_and_conditions_block: templateWithItems.terms_and_conditions_block ?? null,
           subtotal: 0,
           discount_total: 0,
           tax: 0,
@@ -1656,7 +1661,14 @@ export function registerCrmActions(): void {
             cost: item.cost ?? null,
             cost_currency: item.cost_currency ?? null,
             created_by: tx.actorUserId,
-          } as any);
+            // Preserve the authoritative quote-time catalog-description snapshot
+            // verbatim through the internal-only copy channel. This survives the
+            // template->quote copy even when the catalog FK was since deleted
+            // (service_id SET NULL): without it, create() would either recapture
+            // live catalog text (silently rewriting historical output) or, for a
+            // deleted catalog row, store null and lose the snapshot. The snapshot
+            // is never sourced from caller input.
+          } as any, { catalogDescriptionSnapshot: item.catalog_description ?? null });
         }
 
         const createdQuoteWithItems = await Quote.getById(tx.trx, tx.tenantId, createdQuote.quote_id);

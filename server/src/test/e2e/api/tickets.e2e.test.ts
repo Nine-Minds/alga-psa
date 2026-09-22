@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, beforeAll } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
 import { tenantDb } from '@alga-psa/db';
 import {
   setupE2ETestEnvironment,
@@ -10,11 +10,12 @@ import {
   createTestTickets,
   createTestTicketSet,
   createTicketsForPagination,
-  createTestTicketComment,
   createTicketTestData,
   createTicketCommentTestData
 } from '../utils/ticketTestData';
 import { 
+  ApiTestClient,
+  createTestApiKey,
   assertSuccess, 
   assertError, 
   buildQueryString,
@@ -113,12 +114,6 @@ describe('Ticket API E2E Tests', () => {
 
   afterAll(async () => {
     if (env) {
-      // Clean up any remaining test data - delete in order to respect foreign keys
-      await tenantTable('comments').delete();
-      await tenantTable('ticket_resources').delete();
-      await tenantTable('tickets').delete();
-      await tenantTable('team_members').where({ team_id: teamId }).delete();
-      await tenantTable('teams').where({ team_id: teamId }).delete();
       await env.cleanup();
     }
   });
@@ -262,6 +257,7 @@ describe('Ticket API E2E Tests', () => {
     describe('Update Ticket (PUT /api/v1/tickets/:id)', () => {
       it('should update a ticket', async () => {
         const ticket = await createTestTicket(env.db, env.tenant, {
+          client_id: env.clientId,
           title: 'Original Title',
           description: 'Original description',
           board_id: boardId,
@@ -294,6 +290,7 @@ describe('Ticket API E2E Tests', () => {
 
       it('persists serialized rich-text descriptions and returns render-friendly HTML on refetch', async () => {
         const ticket = await createTestTicket(env.db, env.tenant, {
+          client_id: env.clientId,
           title: 'Rich mobile description',
           description: 'Legacy plain description',
           board_id: boardId,
@@ -333,6 +330,7 @@ describe('Ticket API E2E Tests', () => {
 
       it('should validate update data', async () => {
         const ticket = await createTestTicket(env.db, env.tenant, {
+          client_id: env.clientId,
           board_id: boardId,
           status_id: statusIds.open,
           priority_id: priorityIds.medium
@@ -350,6 +348,7 @@ describe('Ticket API E2E Tests', () => {
     describe('Delete Ticket (DELETE /api/v1/tickets/:id)', () => {
       it('should delete a ticket', async () => {
         const ticket = await createTestTicket(env.db, env.tenant, {
+          client_id: env.clientId,
           title: 'To Delete',
           description: 'This ticket will be deleted',
           board_id: boardId,
@@ -438,6 +437,7 @@ describe('Ticket API E2E Tests', () => {
     it('should filter by assigned user', async () => {
       // Create ticket assigned to specific user
       await createTestTicket(env.db, env.tenant, {
+          client_id: env.clientId,
         title: 'Assigned Ticket',
         board_id: boardId,
         status_id: statusIds.open,
@@ -632,7 +632,7 @@ describe('Ticket API E2E Tests', () => {
 
     it('should add an internal comment', async () => {
       const commentData = createTicketCommentTestData({
-        comment: 'Internal note: Check with senior tech',
+        comment_text: 'Internal note: Check with senior tech',
         is_internal: true
       });
 
@@ -652,24 +652,28 @@ describe('Ticket API E2E Tests', () => {
         { comment_text: longComment, is_internal: true }
       );
       assertError(response, 400, 'VALIDATION_ERROR');
-      expect(response.data.error.message.toLowerCase()).toContain('too long');
+      expect(response.data.error.details).toEqual(expect.arrayContaining([
+        expect.objectContaining({ path: ['comment_text'], message: 'Comment text is too long (max 5000 characters)' }),
+      ]));
     });
 
     it('should list ticket comments', async () => {
-      // Create multiple comments
-      await createTestTicketComment(env.db, env.tenant, testTicket.ticket_id, env.userId, {
-        comment_text: 'First comment'
-      });
-      await createTestTicketComment(env.db, env.tenant, testTicket.ticket_id, env.userId, {
-        comment_text: 'Second comment',
-        is_internal: true
-      });
+      // Create through the API so fixtures use the application's thread model.
+      for (const data of [
+        { comment_text: 'First comment', is_internal: false },
+        { comment_text: 'Second comment', is_internal: true },
+      ]) {
+        assertSuccess(await env.apiClient.post(`${API_BASE}/${testTicket.ticket_id}/comments`, data), 201);
+      }
 
       const response = await env.apiClient.get(`${API_BASE}/${testTicket.ticket_id}/comments`);
       assertSuccess(response);
 
       expect(response.data.data).toBeInstanceOf(Array);
-      expect(response.data.data.length).toBeGreaterThanOrEqual(2);
+      expect(response.data.data).toEqual(expect.arrayContaining([
+        expect.objectContaining({ comment_text: 'First comment', is_internal: false }),
+        expect.objectContaining({ comment_text: 'Second comment', is_internal: true }),
+      ]));
     });
 
     it('should return 404 when adding comment to non-existent ticket', async () => {
@@ -687,6 +691,7 @@ describe('Ticket API E2E Tests', () => {
 
     beforeEach(async () => {
       testTicket = await createTestTicket(env.db, env.tenant, {
+          client_id: env.clientId,
         title: 'Ticket for Status Updates',
         board_id: boardId,
         status_id: statusIds.open,
@@ -1070,24 +1075,32 @@ describe('Ticket API E2E Tests', () => {
 
   describe('Create Ticket from Asset (POST /api/v1/tickets/from-asset)', () => {
     it('should create ticket from asset', async () => {
-      const assetId = uuidv4(); // In real test, this would be a real asset ID
-
+      const assetId = uuidv4();
+      await tenantTable('assets').insert({
+        tenant: env.tenant, asset_id: assetId, client_id: env.clientId,
+        asset_type: 'server', asset_tag: `API-${assetId}`, name: 'API test server', status: 'active',
+      });
       const ticketData = {
-        asset_id: assetId,
-        title: 'Issue with server',
-        description: 'Server is not responding',
-        priority_id: priorityIds.high,
-        client_id: env.clientId
+        asset_id: assetId, title: 'Issue with server', description: 'Server is not responding',
+        priority_id: priorityIds.high, client_id: env.clientId,
+        status_id: statusIds.open, board_id: boardId,
       };
-
-      const response = await env.apiClient.post(`${API_BASE}/from-asset`, ticketData);
-      
-      // This might return 404 if asset doesn't exist
-      if (response.status === 201) {
+      try {
+        const response = await env.apiClient.post(`${API_BASE}/from-asset`, ticketData);
         assertSuccess(response, 201);
-        expect(response.data.data.asset_id).toBe(assetId);
-      } else {
-        assertError(response, 404, 'NOT_FOUND');
+        expect(response.data.data).toMatchObject({ title: ticketData.title, client_id: env.clientId });
+        expect(await tenantTable('asset_associations').where({ asset_id: assetId, entity_type: 'ticket' }).first())
+          .toMatchObject({ entity_id: response.data.data.ticket_id });
+        const reopened = await env.apiClient.get(`${API_BASE}/${response.data.data.ticket_id}`);
+        assertSuccess(reopened);
+        expect(reopened.data.data.title).toBe(ticketData.title);
+
+        const before = await tenantTable('tickets').count('* as count').first();
+        assertError(await env.apiClient.post(`${API_BASE}/from-asset`, { ...ticketData, asset_id: uuidv4() }), 404, 'NOT_FOUND');
+        expect(await tenantTable('tickets').count('* as count').first()).toEqual(before);
+      } finally {
+        await tenantTable('asset_associations').where({ asset_id: assetId }).delete();
+        await tenantTable('assets').where({ asset_id: assetId }).delete();
       }
     });
   });
@@ -1123,27 +1136,78 @@ describe('Ticket API E2E Tests', () => {
     });
   });
 
+  async function clientWithPermissions(permissions: string[]) {
+    const userId = await createTestUserWithPermissions(env.db, env.tenant, permissions);
+    const key = await createTestApiKey(env.db, userId, env.tenant);
+    return new ApiTestClient({ baseUrl: env.apiClient['config'].baseUrl, apiKey: key.api_key });
+  }
+
+  function guardedTicketData() {
+    return { title: `Guarded ticket ${uuidv4()}`, client_id: env.clientId,
+      board_id: boardId, status_id: statusIds.open, priority_id: priorityIds.medium,
+      entered_by: env.userId };
+  }
+
   describe('Permissions', () => {
     it('should enforce read permissions for GET endpoints', async () => {
-      // This would require creating a user without read permissions
-      // For now, we'll skip this test as it requires RBAC setup
+      const ticket = await createTestTicket(env.db, env.tenant, guardedTicketData());
+      const denied = await clientWithPermissions([]);
+      assertError(await denied.get(API_BASE), 403);
+      assertError(await denied.get(`${API_BASE}/${ticket.ticket_id}`), 403);
+
+      const reader = await clientWithPermissions(['ticket:read']);
+      const response = await reader.get(`${API_BASE}/${ticket.ticket_id}`);
+      assertSuccess(response);
+      expect(response.data.data.ticket_id).toBe(ticket.ticket_id);
     });
 
     it('should enforce write permissions for POST/PUT/DELETE', async () => {
-      // This would require creating a user without write permissions
-      // For now, we'll skip this test as it requires RBAC setup
+      const data = guardedTicketData();
+      const ticket = await createTestTicket(env.db, env.tenant, data);
+      const reader = await clientWithPermissions(['ticket:read']);
+      assertSuccess(await reader.get(`${API_BASE}/${ticket.ticket_id}`));
+      const countBefore = await tenantTable('tickets').count('* as count').first();
+      assertError(await reader.post(API_BASE, { ...data, title: 'Forbidden creation' }), 403);
+      assertError(await reader.put(`${API_BASE}/${ticket.ticket_id}`, { title: 'Forbidden update' }), 403);
+      assertError(await reader.delete(`${API_BASE}/${ticket.ticket_id}`), 403);
+      const persisted = await tenantTable('tickets').where({ ticket_id: ticket.ticket_id }).first();
+      expect(persisted.title).toBe(data.title);
+      expect(await tenantTable('tickets').count('* as count').first()).toEqual(countBefore);
     });
 
     it('should enforce assignment permissions', async () => {
-      // Test that only certain roles can assign tickets
-      // Requires RBAC setup
+      const ticket = await createTestTicket(env.db, env.tenant, guardedTicketData());
+      const reader = await clientWithPermissions(['ticket:read']);
+      assertError(await reader.put(`${API_BASE}/${ticket.ticket_id}/assignment`, { assigned_to: secondaryUserId }), 403);
+      expect((await tenantTable('tickets').where({ ticket_id: ticket.ticket_id }).first()).assigned_to).toBeNull();
+
+      const editor = await clientWithPermissions(['ticket:read', 'ticket:update']);
+      const response = await editor.put(`${API_BASE}/${ticket.ticket_id}/assignment`, { assigned_to: secondaryUserId });
+      assertSuccess(response);
+      expect(response.data.data.assigned_to).toBe(secondaryUserId);
+      expect((await tenantTable('tickets').where({ ticket_id: ticket.ticket_id }).first()).assigned_to).toBe(secondaryUserId);
     });
   });
 
   describe('Multi-tenancy', () => {
     it('should isolate tickets by tenant', async () => {
-      // This would require creating another tenant and verifying isolation
-      // For now, we'll skip this test as it requires complex setup
+      const data = guardedTicketData();
+      const ticket = await createTestTicket(env.db, env.tenant, data);
+      const other = await setupE2ETestEnvironment();
+      try {
+        const list = await other.apiClient.get(API_BASE);
+        assertSuccess(list);
+        expect(list.data.data.map((entry: { ticket_id: string }) => entry.ticket_id)).not.toContain(ticket.ticket_id);
+        assertError(await other.apiClient.get(`${API_BASE}/${ticket.ticket_id}`), 404);
+        assertError(await other.apiClient.put(`${API_BASE}/${ticket.ticket_id}`, { title: 'Cross-tenant update' }), 404);
+        assertError(await other.apiClient.delete(`${API_BASE}/${ticket.ticket_id}`), 404);
+        expect((await tenantTable('tickets').where({ ticket_id: ticket.ticket_id }).first()).title).toBe(data.title);
+        const original = await env.apiClient.get(`${API_BASE}/${ticket.ticket_id}`);
+        assertSuccess(original);
+        expect(original.data.data.title).toBe(data.title);
+      } finally {
+        await other.cleanup();
+      }
     });
   });
 
@@ -1153,6 +1217,7 @@ describe('Ticket API E2E Tests', () => {
       const ticketIds = [];
       for (let i = 0; i < 3; i++) {
         const ticket = await createTestTicket(env.db, env.tenant, {
+          client_id: env.clientId,
           title: `Bulk Update Test ${i}`,
           board_id: boardId,
           status_id: statusIds.open,
@@ -1201,6 +1266,7 @@ describe('Ticket API E2E Tests', () => {
 
     it('should track ticket history', async () => {
       const ticket = await createTestTicket(env.db, env.tenant, {
+          client_id: env.clientId,
         title: 'History Test Ticket',
         board_id: boardId,
         status_id: statusIds.open,

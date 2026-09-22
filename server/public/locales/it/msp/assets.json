@@ -406,11 +406,17 @@
       "refreshing": "Aggiornamento in corso...",
       "refreshData": "Aggiorna dati",
       "rebootDevice": "Riavvia il dispositivo",
+      "rebooting": "Riavvio in corso...",
       "editAsset": "Modifica asset",
       "deleteAsset": "Elimina asset"
     },
     "values": {
       "unknownClient": "Cliente sconosciuto"
+    },
+    "reboot": {
+      "title": "Riavviare il dispositivo?",
+      "message": "{{name}} verrà riavviato immediatamente tramite {{provider}}. Chiunque sia connesso perderà il lavoro non salvato.",
+      "confirm": "Riavvia ora"
     }
   },
   "assetDetailTabs": {

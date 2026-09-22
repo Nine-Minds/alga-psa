@@ -1,4 +1,5 @@
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Invoice designer palette uses shared expression-authoring utilities to enumerate available template fields */
+import { useFeatureFlag } from '@alga-psa/ui/hooks/useFeatureFlag';
 import React, { useMemo, useState } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { type SharedExpressionPathOption } from '@alga-psa/workflows/expression-authoring';
@@ -116,6 +117,7 @@ const CompactPaletteRow: React.FC<CompactPaletteRowProps> = ({
         {onAdd && (
           <button
             type="button"
+            id={addAutomationId}
             className="h-5 w-5 shrink-0 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-[11px] font-semibold leading-none text-slate-600 dark:text-slate-400 transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 group-hover:border-blue-400 group-hover:bg-blue-50 dark:group-hover:bg-blue-900/30 group-hover:text-blue-700 dark:group-hover:text-blue-400 group-focus-within:border-blue-400 group-focus-within:bg-blue-50 dark:group-focus-within:bg-blue-900/30 group-focus-within:text-blue-700 dark:group-focus-within:text-blue-400"
             data-automation-id={addAutomationId}
             aria-label={addAriaLabel}
@@ -176,6 +178,7 @@ export const ComponentPalette: React.FC<PaletteProps> = ({
   onInsertTemplateVariable,
 }) => {
   const { t } = useTranslation('msp/invoicing');
+  const { enabled: releaseV16Enabled } = useFeatureFlag('release-v1-6-feature');
   const nodes = useInvoiceDesignerStore((state) => state.nodes);
   const documentKind = useMemo(() => resolveDesignerDocumentKind(nodes), [nodes]);
   const [activeTab, setActiveTab] = useState<'blocks' | 'presets' | 'fields' | 'outline'>('blocks');
@@ -200,13 +203,12 @@ export const ComponentPalette: React.FC<PaletteProps> = ({
   }, [normalizedQuery]);
 
   const filteredPresets = useMemo(() => {
-    if (!normalizedQuery) {
-      return LAYOUT_PRESETS;
-    }
     return LAYOUT_PRESETS.filter((preset) =>
+      (releaseV16Enabled || !['billed-time-by-ticket', 'billed-time-entries'].includes(preset.id)) &&
+      (!preset.documentKind || preset.documentKind === documentKind) &&
       `${preset.label} ${preset.description}`.toLowerCase().includes(normalizedQuery)
     );
-  }, [normalizedQuery]);
+  }, [normalizedQuery, documentKind, releaseV16Enabled]);
 
   const templateVariableGroups = useMemo(() => {
     const pathOptions = buildDocumentExpressionPathOptions({

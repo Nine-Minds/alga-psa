@@ -1,0 +1,69 @@
+{
+  "status": "API suite assigned to fresh-install CI; native execution and full green acceptance pending",
+  "baseline": {
+    "revision": "ac0b3cf9c0507a857e0f4dd9027d6adb792a96c6",
+    "workingTreeDirty": true,
+    "applicationImage": "sha256:2d3f0db9b006857afd4b5977a39e39e5c9bf29ec703201cf7d9d12a1abe4e88d",
+    "files": 19,
+    "counts": {
+      "passed": 297,
+      "failed": 35,
+      "skipped": 2,
+      "todo": 0,
+      "pending": 0
+    },
+    "discoveryUnmatched": 0,
+    "collectedTests": 332,
+    "result": "failed as expected from actual execution; not a green acceptance claim",
+    "logLocal": "/tmp/alga-api-assigned-baseline.log"
+  },
+  "runnerContract": {
+    "passed": 15,
+    "failed": 0,
+    "skipped": 0,
+    "durationSeconds": 40.55,
+    "logLocal": "/tmp/alga-api-runner-all-contracts.log"
+  },
+  "databaseProvisioning": {
+    "result": "Exact workflow Bash step executed successfully against temporary owned compose project alga-e2e-test on colima-alga-regression",
+    "markerVerified": "singleton=true, database_name=current_database(), non-null UUID",
+    "cleanup": "Temporary PostgreSQL container and network removed; no published ports or persistent data"
+  },
+  "approvalJourneys": {
+    "before": "Both explicit skips enabled; both failed403 because fixture had no time_entry/approve permission",
+    "repair": "Grant explicit permission in approval-only setup and assert persisted APPROVED state for both entries",
+    "after": {
+      "passed": 2,
+      "failed": 0,
+      "filteredOut": 39,
+      "durationSeconds": 1.65,
+      "logLocal": "/tmp/alga-api-approval-permission.log"
+    }
+  },
+  "remaining": [
+    "Native run of the assigned API suite on updated application images",
+    "Remaining actual API failures, including rebuilt acceptance for preceding repairs",
+    "Completion of all other original plan requirements"
+  ],
+  "finalCollection": {
+    "files": 19,
+    "cases": 334,
+    "logLocal": "/tmp/alga-api-assigned-collection-final.json"
+  },
+  "xeroLogger": {
+    "before": "HTTP500: missing NEXTAUTH_SECRET and unresolved marketing/lib, then opportunities/lib in development compilation",
+    "repair": "Synthetic test secret, explicit source mode, missing package aliases in both Next bundler configurations, capture child-server diagnostics",
+    "after": {
+      "passed": 1,
+      "failed": 0,
+      "durationSeconds": 23.45,
+      "logLocal": "/tmp/alga-xero-api-lane-after-v2.log"
+    },
+    "scope": "Actual webpack development server verified; production and Turbopack acceptance still require native builds"
+  },
+  "focusedTypes": {
+    "result": "passed",
+    "logLocal": "/tmp/alga-api-assignment-types-after.log",
+    "repairs": "Explicit array element types in time-entry and shared ticket fixtures; no runtime changes"
+  }
+}

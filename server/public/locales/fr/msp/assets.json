@@ -406,11 +406,17 @@
       "refreshing": "Rafraîchissant...",
       "refreshData": "Actualiser les données",
       "rebootDevice": "Redémarrer l'appareil",
+      "rebooting": "Redémarrage...",
       "editAsset": "Modifier l'actif",
       "deleteAsset": "Supprimer l'actif"
     },
     "values": {
       "unknownClient": "Client inconnu"
+    },
+    "reboot": {
+      "title": "Redémarrer l’appareil ?",
+      "message": "{{name}} va redémarrer immédiatement via {{provider}}. Toute personne connectée perdra son travail non enregistré.",
+      "confirm": "Redémarrer maintenant"
     }
   },
   "assetDetailTabs": {

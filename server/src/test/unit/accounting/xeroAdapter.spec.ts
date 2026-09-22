@@ -74,6 +74,9 @@ describe('XeroAdapter – spec validation scaffolding', () => {
     resolveServiceMapping: vi.fn(),
     resolveTaxCodeMapping: vi.fn()
   };
+  // Captures the transform-time evidence writes to accounting_export_lines
+  // (mapping_resolution.serviceTarget snapshots).
+  const lineUpdateSpy = vi.fn(async () => 1);
 
   const baseLine: MinimalLine = {
     line_id: 'line-1',
@@ -95,6 +98,7 @@ describe('XeroAdapter – spec validation scaffolding', () => {
   beforeEach(() => {
     mockResolver.resolveServiceMapping.mockReset();
     mockResolver.resolveTaxCodeMapping.mockReset();
+    lineUpdateSpy.mockClear();
     // Callable, chainable knex so the invoice-mapping lookup in transform() finds no
     // existing mapping (first() -> undefined) and proceeds to build a fresh payload.
     const knexSub: any = {
@@ -114,6 +118,7 @@ describe('XeroAdapter – spec validation scaffolding', () => {
       insert: () => knexQb,
       onConflict: () => knexQb,
       merge: async () => 1,
+      update: lineUpdateSpy,
     };
     const knexMock: any = () => knexQb;
     knexMock.raw = (sql: string) => ({ __raw: sql });
@@ -802,6 +807,166 @@ describe('XeroAdapter – spec validation scaffolding', () => {
 
     await expect(adapter.transform(context)).rejects.toMatchObject({
       code: 'XERO_CHARGE_MISSING_NET_AMOUNT'
+    });
+  });
+
+  function mockStandardLoads(adapter: XeroAdapter) {
+    vi.spyOn(adapter as any, 'loadInvoices').mockResolvedValue(
+      new Map([
+        [
+          INVOICE_ID,
+          {
+            invoice_id: INVOICE_ID,
+            invoice_number: 'INV-ACCT',
+            invoice_date: '2026-08-30',
+            due_date: '2026-09-13',
+            client_id: CLIENT_ID,
+            currency_code: 'AUD'
+          }
+        ]
+      ])
+    );
+    vi.spyOn(adapter as any, 'loadCharges').mockResolvedValue(
+      new Map([
+        [
+          CHARGE_ID,
+          {
+            item_id: CHARGE_ID,
+            invoice_id: INVOICE_ID,
+            service_id: 'svc-it-pro',
+            description: 'IT Professional Services',
+            quantity: 2,
+            unit_price: 10_000,
+            net_amount: 20_000,
+            total_price: 22_000,
+            tax_amount: 2_000,
+            tax_region: 'AU'
+          }
+        ]
+      ])
+    );
+    vi.spyOn(adapter as any, 'loadClients').mockResolvedValue({
+      clients: new Map([
+        [CLIENT_ID, { client_id: CLIENT_ID, client_name: 'EQUIT-like', billing_email: 'b@b' }]
+      ]),
+      mappings: new Map([
+        [
+          CLIENT_ID,
+          {
+            id: 'mapping-1',
+            integration_type: 'xero',
+            alga_entity_type: 'client',
+            alga_entity_id: CLIENT_ID,
+            external_entity_id: 'external-contact-equit',
+            metadata: { source: 'mapping_table' }
+          }
+        ]
+      ])
+    });
+  }
+
+  it('account-mode mapping sends AccountCode and no itemCode at all (alga0002321)', async () => {
+    const adapter = new XeroAdapter();
+    const context = buildContext([baseLine]);
+
+    // Org with zero Items: the service maps explicitly to revenue account 200.
+    mockResolver.resolveServiceMapping.mockResolvedValue({
+      external_entity_id: '200',
+      metadata: { xeroTargetKind: 'account' },
+      source: 'service'
+    });
+    mockResolver.resolveTaxCodeMapping.mockResolvedValue({
+      external_entity_id: 'OUTPUT',
+      metadata: null
+    });
+
+    mockStandardLoads(adapter);
+
+    const result = await adapter.transform(context);
+    const invoice = (result.documents[0].payload as Record<string, any>).invoice;
+    const line = invoice.lines[0];
+
+    expect(line.accountCode).toBe('200');
+    // Not '', not the account display name, not present at all.
+    expect(line.itemCode).toBeUndefined();
+    // Tax, quantity, and amount behavior are unchanged by account mode.
+    expect(line.taxType).toBe('OUTPUT');
+    expect(line.quantity).toBe(2);
+    expect(line.amountCents).toBe(20_000);
+    expect(invoice.lineAmountType).toBe('Exclusive');
+  });
+
+  it('snapshots the resolved target kind/code/realm into mapping_resolution evidence', async () => {
+    const adapter = new XeroAdapter();
+    const context = buildContext([baseLine]);
+
+    mockResolver.resolveServiceMapping.mockResolvedValue({
+      external_entity_id: '200',
+      metadata: { xeroTargetKind: 'account' },
+      source: 'service'
+    });
+    mockResolver.resolveTaxCodeMapping.mockResolvedValue({
+      external_entity_id: 'OUTPUT',
+      metadata: null
+    });
+
+    mockStandardLoads(adapter);
+    await adapter.transform(context);
+
+    expect(lineUpdateSpy).toHaveBeenCalledTimes(1);
+    const written = lineUpdateSpy.mock.calls[0][0] as Record<string, any>;
+    expect(JSON.parse(written.mapping_resolution)).toMatchObject({
+      serviceTarget: {
+        kind: 'account',
+        code: '200',
+        realm: 'realm-demo',
+        source: 'service'
+      }
+    });
+  });
+
+  it('legacy mapping without a target kind stays item mode — no silent account conversion', async () => {
+    const adapter = new XeroAdapter();
+    const context = buildContext([baseLine]);
+
+    // Legacy row: code 200 stored pre-account-mode, no xeroTargetKind. Even
+    // though a same-code account exists remotely, the exporter must keep item
+    // semantics (ItemCode=200) rather than guess.
+    mockResolver.resolveServiceMapping.mockResolvedValue({
+      external_entity_id: '200',
+      metadata: {},
+      source: 'service'
+    });
+    mockResolver.resolveTaxCodeMapping.mockResolvedValue({
+      external_entity_id: 'OUTPUT',
+      metadata: null
+    });
+
+    mockStandardLoads(adapter);
+    const result = await adapter.transform(context);
+    const line = (result.documents[0].payload as Record<string, any>).invoice.lines[0];
+
+    expect(line.itemCode).toBe('200');
+    expect(line.accountCode).toBeUndefined();
+
+    const written = lineUpdateSpy.mock.calls[0][0] as Record<string, any>;
+    expect(JSON.parse(written.mapping_resolution).serviceTarget.kind).toBe('item');
+  });
+
+  it('rejects an unrecognised stored target kind fail-closed', async () => {
+    const adapter = new XeroAdapter();
+    const context = buildContext([baseLine]);
+
+    mockResolver.resolveServiceMapping.mockResolvedValue({
+      external_entity_id: '200',
+      metadata: { xeroTargetKind: 'ledger' },
+      source: 'service'
+    });
+    mockResolver.resolveTaxCodeMapping.mockResolvedValue(null);
+
+    mockStandardLoads(adapter);
+    await expect(adapter.transform(context)).rejects.toMatchObject({
+      code: 'XERO_SERVICE_MAPPING_KIND_INVALID'
     });
   });
 });

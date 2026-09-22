@@ -30,6 +30,7 @@ import {
   TICKETS_LAST_ACTIVE_BOARD_SETTING,
 } from '../lib/boardTabs';
 import { shouldWriteTicketListUrl, TICKET_LIST_PATHNAME } from '../lib/ticketListUrlSync';
+import { normalizeAssignedToIds } from '../lib/ticketFilterUtils';
 import {
   buildBoardArrivalFilters,
   resolveTicketViewSettings,
@@ -107,6 +108,8 @@ function parseTicketListStateFromSearch(search: string, allowSlaStatusFilter = t
     ? (slaStatusRaw as ITicketListFilters['slaStatusFilter'])
     : undefined;
 
+  const assignedTo = normalizeAssignedToIds(params.get('assignedToIds'));
+
   const filters: Partial<ITicketListFilters> = {
     boardId: params.get('boardId') || undefined,
     boardIds: decodeCsvParam(params.get('boardIds')),
@@ -125,9 +128,9 @@ function parseTicketListStateFromSearch(search: string, allowSlaStatusFilter = t
       ? (params.get('bundleView') as ITicketListFilters['bundleView'])
       : 'bundled',
     tags: decodeCsvParam(params.get('tags')),
-    assignedToIds: decodeCsvParam(params.get('assignedToIds')),
+    assignedToIds: assignedTo.assignedToIds,
     assignedTeamIds: decodeCsvParam(params.get('assignedTeamIds')),
-    includeUnassigned: params.get('includeUnassigned') === 'true',
+    includeUnassigned: params.get('includeUnassigned') === 'true' || Boolean(assignedTo.includeUnassigned),
     dueDateFilter,
     dueDateFrom: params.get('dueDateFrom') || undefined,
     dueDateTo: params.get('dueDateTo') || undefined,
@@ -171,6 +174,8 @@ interface TicketingDashboardContainerProps {
   renderClientDetails?: React.ComponentProps<typeof TicketingDashboard>['renderClientDetails'];
   allowSlaStatusFilter?: boolean;
   useAlgaDeskQuickAddForm?: boolean;
+  /** Decided by the page's server component: every smart search gate passed for this caller. */
+  smartSearchAvailable?: boolean;
 }
 
 export default function TicketingDashboardContainer({
@@ -186,6 +191,7 @@ export default function TicketingDashboardContainer({
   renderClientDetails,
   allowSlaStatusFilter = true,
   useAlgaDeskQuickAddForm = false,
+  smartSearchAvailable = false,
 }: TicketingDashboardContainerProps) {
   const { t } = useTranslation('features/tickets');
   const initialStatusId = initialFilters?.statusId ?? TICKET_STATUS_FILTER_OPEN;
@@ -974,6 +980,7 @@ export default function TicketingDashboardContainer({
       canUpdateTickets={canUpdateTickets}
       onNavigateAway={markNavigatingAway}
         allowSlaStatusFilter={allowSlaStatusFilter}
+        smartSearchAvailable={smartSearchAvailable}
         useAlgaDeskQuickAddForm={useAlgaDeskQuickAddForm}
         viewPresentation={viewPresentation}
         onViewPresentationChange={handleViewPresentationChange}

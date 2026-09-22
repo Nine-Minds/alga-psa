@@ -10,6 +10,7 @@ import { evaluateTemplateAst, TemplateEvaluationError } from '../lib/invoice-tem
 import { localizeTemplateAstForLocale } from '../lib/invoice-template-ast/i18nLabels';
 import { renderEvaluatedTemplateAst } from '../lib/invoice-template-ast/react-renderer';
 import { validateTemplateAst } from '../lib/invoice-template-ast/schema';
+import { createPDFGenerationService } from '../services/pdfGenerationService';
 
 type AuthoritativePreviewInput = {
   workspace: DesignerWorkspaceSnapshot;
@@ -55,7 +56,7 @@ type AuthoritativePreviewResult = {
 };
 
 export const runAuthoritativeQuoteTemplatePreview = withAuth(
-  async (_user, _context, input: AuthoritativePreviewInput): Promise<AuthoritativePreviewResult> => {
+  async (_user, { tenant }, input: AuthoritativePreviewInput): Promise<AuthoritativePreviewResult> => {
     const hasWorkspaceNodes =
       Boolean(input?.workspace?.nodesById) &&
       typeof input.workspace.nodesById === 'object' &&
@@ -120,9 +121,15 @@ export const runAuthoritativeQuoteTemplatePreview = withAuth(
 
     try {
       const evaluation = evaluateTemplateAst(validation.ast, input.quoteData as unknown as Record<string, unknown>);
-      // Same seam the PDF path uses, so the preview is authoritative.
+      // Same seam the PDF path uses, so the preview is authoritative. There is
+      // no concrete quote here, so the country is the tenant's default.
       const localized = await localizeTemplateAstForLocale(validation.ast, input.locale);
-      const rendered = await renderEvaluatedTemplateAst(localized.ast, evaluation, { locale: localized.locale });
+      const dateFormat = await createPDFGenerationService(tenant).resolveRenderCountry({});
+      const rendered = await renderEvaluatedTemplateAst(localized.ast, evaluation, {
+        locale: localized.locale,
+        dateFormat,
+        t: localized.t,
+      });
       return {
         success: true,
         sourceHash,

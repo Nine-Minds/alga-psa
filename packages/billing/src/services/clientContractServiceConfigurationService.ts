@@ -269,6 +269,7 @@ export class ClientContractServiceConfigurationService {
           typeConfig = {
             config_id: baseConfig.config_id,
             base_rate: fixedConfig.base_rate != null ? Number(fixedConfig.base_rate) : null,
+            pricing_basis: fixedConfig.pricing_basis ?? null,
             tenant: this.tenant,
             created_at: fixedConfig.created_at,
             updated_at: fixedConfig.updated_at
@@ -335,6 +336,8 @@ export class ClientContractServiceConfigurationService {
             unit_of_measure: usageConfig.unit_of_measure,
             enable_tiered_pricing: Boolean(usageConfig.enable_tiered_pricing),
             minimum_usage: usageConfig.minimum_usage,
+            measurement_mode:
+              usageConfig.measurement_mode ?? 'additive',
             base_rate: usageConfig.base_rate != null ? Number(usageConfig.base_rate) : null,
             tenant: this.tenant,
             created_at: usageConfig.created_at,

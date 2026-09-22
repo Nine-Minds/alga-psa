@@ -8,10 +8,17 @@ import {
   withTransaction,
 } from '@alga-psa/db';
 import type { IInteraction } from '@alga-psa/types';
-import { createInteractionWithSideEffects } from '@alga-psa/clients/actions/interactionCreateHelper';
+import {
+  createInteractionWithSideEffects,
+  createInteractionScheduleEntry,
+  resolveScheduleAssignees,
+} from '@alga-psa/clients/actions/interactionCreateHelper';
+import { hasPermission } from '@alga-psa/auth/rbac';
+import { ForbiddenError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 import type {
   CreateInteractionApi,
   InteractionTypeResponse,
+  UpdateInteractionApi,
 } from '../schemas/interactionSchemas';
 
 export interface InteractionListOptions extends ListOptions {
@@ -22,9 +29,19 @@ export interface InteractionListOptions extends ListOptions {
   project_id?: string;
   user_id?: string;
   type_id?: string;
+  status_id?: string;
+  is_closed?: boolean;
   date_from?: string;
   date_to?: string;
   page_size?: number;
+}
+
+export interface InteractionStatusResponse {
+  status_id: string;
+  name: string;
+  is_closed: boolean;
+  is_default: boolean | null;
+  order_number: number | null;
 }
 
 export type InteractionApiRow = Omit<IInteraction, 'type_name'> & {
@@ -47,16 +64,32 @@ const FILTER_COLUMNS: Record<string, string> = {
   project_id: 'i.project_id',
   user_id: 'i.user_id',
   type_id: 'i.type_id',
+  status_id: 'i.status_id',
 };
 
 function applyInteractionFilters(
   query: Knex.QueryBuilder,
   options: InteractionListOptions,
+  scopedDb: ReturnType<typeof tenantDb>,
 ): Knex.QueryBuilder {
   for (const [filter, column] of Object.entries(FILTER_COLUMNS)) {
     const value = options[filter as keyof InteractionListOptions];
     if (typeof value === 'string' && value) {
       query.where(column, value);
+    }
+  }
+
+  if (typeof options.is_closed === 'boolean') {
+    const statusIds = scopedDb.table('statuses')
+      .select('status_id')
+      .where({ status_type: 'interaction', is_closed: options.is_closed });
+    if (options.is_closed) {
+      query.whereIn('i.status_id', statusIds);
+    } else {
+      // No status yet counts as open.
+      query.where((open: Knex.QueryBuilder) => {
+        open.whereNull('i.status_id').orWhereIn('i.status_id', statusIds);
+      });
     }
   }
 
@@ -119,9 +152,11 @@ export class InteractionService extends BaseService<InteractionApiRow> {
     const page = options.page ?? 1;
     const pageSize = options.page_size ?? options.limit ?? 25;
 
+    const scopedDb = tenantDb(knex, context.tenant);
     const dataQuery = applyInteractionFilters(
       buildHydratedInteractionQuery(knex, context.tenant),
       options,
+      scopedDb,
     )
       .orderBy('i.interaction_date', 'desc')
       .orderBy('i.interaction_id', 'desc')
@@ -129,8 +164,9 @@ export class InteractionService extends BaseService<InteractionApiRow> {
       .offset((page - 1) * pageSize);
 
     const countQuery = applyInteractionFilters(
-      tenantDb(knex, context.tenant).table('interactions as i'),
+      scopedDb.table('interactions as i'),
       options,
+      scopedDb,
     );
 
     const [data, countRow] = await Promise.all([
@@ -160,7 +196,18 @@ export class InteractionService extends BaseService<InteractionApiRow> {
   ): Promise<InteractionApiRow> {
     const knex = await this.getDbForContext(context);
     let publishSideEffects: (() => Promise<void>) | undefined;
+    let publishScheduleEntryCreated: (() => Promise<void>) | undefined;
     const input = data as CreateInteractionApi;
+    const assignedUserIds = resolveScheduleAssignees(context.userId, input.schedule_assigned_user_ids);
+    if (input.create_schedule_entry) {
+      if (!input.start_time || !Number.isFinite(new Date(input.start_time).getTime())) {
+        throw new ValidationError('start_time is required when creating a schedule entry');
+      }
+      if (assignedUserIds.some((id) => id !== context.userId) &&
+          (!context.user || !await hasPermission(context.user, 'user_schedule', 'update', knex))) {
+        throw new ForbiddenError('Permission denied to assign schedule entries to other users.');
+      }
+    }
 
     const interaction = await withTransaction(knex, async (trx) => {
       const interactionData: InteractionCreateHelperInput = {
@@ -185,11 +232,82 @@ export class InteractionService extends BaseService<InteractionApiRow> {
         interactionData,
       });
       publishSideEffects = result.publishSideEffects;
+      if (input.create_schedule_entry) {
+        try {
+          const scheduled = await createInteractionScheduleEntry({
+            tenant: context.tenant,
+            trx,
+            interaction: result.interaction,
+            assignedUserIds,
+            assignedByUserId: context.userId,
+          });
+          publishScheduleEntryCreated = scheduled?.publishScheduleEntryCreated;
+        } catch (error) {
+          if (error instanceof Error && /^Users .+ not found/.test(error.message)) {
+            throw new ValidationError('One or more assigned users could not be found.');
+          }
+          throw error;
+        }
+      }
       return result.interaction;
     });
 
     await publishSideEffects?.();
+    await publishScheduleEntryCreated?.();
     return interaction as InteractionApiRow;
+  }
+
+  async listStatuses(context: ServiceContext): Promise<InteractionStatusResponse[]> {
+    const knex = await this.getDbForContext(context);
+    const rows = await tenantDb(knex, context.tenant).table('statuses')
+      .where({ status_type: 'interaction' })
+      .select('status_id', 'name', 'is_closed', 'is_default', 'order_number')
+      .orderBy('order_number', 'asc')
+      .orderBy('name', 'asc');
+    return rows.map((row: Record<string, unknown>) => ({
+      status_id: String(row.status_id),
+      name: String(row.name),
+      is_closed: Boolean(row.is_closed),
+      is_default: row.is_default == null ? null : Boolean(row.is_default),
+      order_number: row.order_number == null ? null : Number(row.order_number),
+    }));
+  }
+
+  async updateStatusOrNotes(
+    interactionId: string,
+    data: UpdateInteractionApi,
+    context: ServiceContext,
+  ): Promise<InteractionApiRow> {
+    const knex = await this.getDbForContext(context);
+    const scopedDb = tenantDb(knex, context.tenant);
+
+    const existing = await scopedDb.table('interactions')
+      .where({ interaction_id: interactionId })
+      .select('interaction_id')
+      .first();
+    if (!existing) {
+      throw new NotFoundError('Interaction not found');
+    }
+
+    if (data.status_id) {
+      const status = await scopedDb.table('statuses')
+        .where({ status_id: data.status_id, status_type: 'interaction' })
+        .select('status_id')
+        .first();
+      if (!status) {
+        throw new ValidationError('status_id is not an interaction status');
+      }
+    }
+
+    const patch: Record<string, unknown> = {};
+    if (data.status_id !== undefined) patch.status_id = data.status_id;
+    if (data.notes !== undefined) patch.notes = data.notes;
+    await scopedDb.table('interactions').where({ interaction_id: interactionId }).update(patch);
+
+    const row = await buildHydratedInteractionQuery(knex, context.tenant)
+      .where('i.interaction_id', interactionId)
+      .first();
+    return normalizeInteractionRow(row as InteractionApiRow);
   }
 
   async listTypes(context: ServiceContext): Promise<InteractionTypeResponse[]> {

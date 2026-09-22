@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const shared = vi.hoisted(() => ({
   providers: [] as any[],
+  providerErrors: [] as Error[],
   syncCalls: [] as Array<{ entryId: string; providerId: string }>,
   deleteCalls: [] as Array<{ entryId: string; providerId: string; scope: string }>,
 }));
@@ -36,6 +37,8 @@ vi.mock('@alga-psa/email', () => ({
 vi.mock('@alga-psa/ee-calendar/lib/services/calendar/CalendarProviderService', () => ({
   CalendarProviderService: class {
     async getProviders() {
+      const error = shared.providerErrors.shift();
+      if (error) throw error;
       return shared.providers;
     }
   },
@@ -76,6 +79,7 @@ describe('enterprise calendarSyncSubscriber', () => {
     eventHandlers.clear();
     shared.syncCalls.length = 0;
     shared.deleteCalls.length = 0;
+    shared.providerErrors.length = 0;
     shared.providers = [
       {
         id: 'provider-1',
@@ -99,6 +103,30 @@ describe('enterprise calendarSyncSubscriber', () => {
     });
 
     expect(shared.syncCalls).toEqual([{ entryId: 'entry-1', providerId: 'provider-1' }]);
+  });
+
+  it('rejects a transient provider lookup failure so the event bus can redeliver it', async () => {
+    const subscriberModule = await import('@alga-psa/ee-calendar/event-bus');
+    shared.providerErrors.push(new Error(
+      'Knex: Timeout acquiring a connection. The pool is probably full.',
+    ));
+
+    await subscriberModule.registerCalendarSyncSubscriber();
+    const payload = {
+      entryId: 'entry-retry',
+      tenantId: 'tenant-1',
+      changes: { assignedUserIds: ['user-1'] },
+    };
+
+    await expect(publish('SCHEDULE_ENTRY_CREATED', payload)).rejects.toThrow(
+      'Timeout acquiring a connection',
+    );
+    expect(shared.syncCalls).toEqual([]);
+
+    await publish('SCHEDULE_ENTRY_CREATED', payload);
+    expect(shared.syncCalls).toEqual([
+      { entryId: 'entry-retry', providerId: 'provider-1' },
+    ]);
   });
 
   it('removes schedule entries from assigned calendars on delete events', async () => {

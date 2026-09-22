@@ -31,7 +31,7 @@ const translations = {
       'settings.display.columns.actions': 'Aktionen',
       'settings.display.responseStateTrackingTitle': 'Antwortstatus-Tracking',
       'settings.display.preferencesTitle': 'Darstellungseinstellungen für Tickets',
-      'settings.display.dateTimeFormat': 'Datum-/Zeitformat',
+      'settings.display.showWeekday': 'Wochentag in Zeitstempeln anzeigen',
       'settings.display.columnsTitle': 'Spalten der Ticketliste',
       'settings.display.showTags': 'Tags anzeigen',
       'settings.display.tagsUnderTitle': 'Unter dem Titel anzeigen',
@@ -224,7 +224,7 @@ const ticketingSettingsComponentMocks = vi.hoisted(() => async () => {
         <div data-testid="display-settings">
           <span>{t('settings.display.responseStateTrackingTitle', 'Response State Tracking')}</span>
           <span>{t('settings.display.preferencesTitle', 'Ticket Display Preferences')}</span>
-          <span>{t('settings.display.dateTimeFormat', 'Date/Time Format')}</span>
+          <span>{t('settings.display.showWeekday', 'Show weekday in timestamps')}</span>
           <span>{t('settings.display.columnsTitle', 'Ticket List Columns')}</span>
           <span>{t('settings.display.showTags', 'Show Tags')}</span>
           <span>{t('settings.display.tagsUnderTitle', 'Display under Title')}</span>
@@ -290,7 +290,7 @@ describe('/msp/settings ticketing i18n integration', () => {
     expect(screen.getByText('Aktionen')).toBeInTheDocument();
     expect(screen.getByText('Antwortstatus-Tracking')).toBeInTheDocument();
     expect(screen.getByText('Darstellungseinstellungen für Tickets')).toBeInTheDocument();
-    expect(screen.getByText('Datum-/Zeitformat')).toBeInTheDocument();
+    expect(screen.getByText('Wochentag in Zeitstempeln anzeigen')).toBeInTheDocument();
     expect(screen.getByText('Spalten der Ticketliste')).toBeInTheDocument();
     expect(screen.getByText('Tags anzeigen')).toBeInTheDocument();
     expect(screen.getByText('Unter dem Titel anzeigen')).toBeInTheDocument();

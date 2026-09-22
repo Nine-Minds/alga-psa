@@ -17,6 +17,13 @@ export const LOCALE_CONFIG = {
   /**
    * Array of supported locales
    * Add new languages here to enable them throughout the application
+   *
+   * Language only, deliberately. A region tag used to ride along here purely to
+   * buy DD/MM dates ('en-AU'), which coupled two unrelated decisions: it had no
+   * translation files of its own, and the next such entry ('en-GB') would have
+   * promised British spelling we do not ship. Date shape is now a function of
+   * the tenant's country — see countryDateFormat — so a locale names a language
+   * and nothing else.
    */
   supportedLocales: ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt', 'xx', 'yy'] as const,
 
@@ -75,15 +82,21 @@ export function isSupportedLocale(locale: string): locale is SupportedLocale {
  * check rejected all of them and the setting silently did nothing. Anything that
  * still does not name a shipped language returns null so callers can fall
  * through deliberately rather than guess.
+ *
+ * Every region tag now collapses to its language, `en-AU` included: the region
+ * used to survive here only so dates would read DD/MM, and that answer comes
+ * from the tenant's country instead. This is also what normalises the saved
+ * 'en-AU' preferences on read, so no stored value needs migrating.
  */
 export function normalizeLocale(value: unknown): SupportedLocale | null {
   if (typeof value !== 'string') return null;
 
   const trimmed = value.trim().toLowerCase();
   if (!trimmed) return null;
+
   if (isSupportedLocale(trimmed)) return trimmed;
 
-  // 'pt_BR' / 'pt-BR' / 'zh-Hans-CN' -> leading language subtag
+  // 'en-AU' / 'pt_BR' / 'zh-Hans-CN' -> leading language subtag
   const languagePart = trimmed.split(/[-_]/)[0];
   return isSupportedLocale(languagePart) ? languagePart : null;
 }
@@ -116,7 +129,7 @@ export const I18N_CONFIG = {
   interpolation: {
     escapeValue: false, // React already escapes values
   },
-  load: 'languageOnly' as const, // Don't load region-specific variants
+  load: 'languageOnly' as const, // Region tags in incoming headers reuse the language pack
   cleanCode: true,
   nonExplicitSupportedLngs: true,
 };
@@ -188,7 +201,7 @@ export const ROUTE_NAMESPACES = {
   '/msp/projects': ['common', 'msp/core', 'features/projects'],
   '/msp/billing/credits': ['common', 'msp/core', 'features/billing', 'msp/credits'],
   '/msp/reports': ['common', 'msp/core', 'msp/reports'],
-  '/msp/billing': ['common', 'msp/core', 'features/billing', 'msp/quotes', 'msp/reports', 'msp/billing', 'msp/contract-lines', 'msp/contracts', 'msp/invoicing'],
+  '/msp/billing': ['common', 'msp/core', 'features/billing', 'msp/quotes', 'msp/reports', 'msp/billing', 'msp/contract-lines', 'msp/contracts', 'msp/invoicing', 'msp/billing-settings'],
   '/msp/quote-approvals': ['common', 'msp/core', 'features/billing', 'msp/quotes'],
   '/msp/quote-document-templates': ['common', 'msp/core', 'features/billing', 'msp/quotes'],
   '/msp/inventory': ['common', 'msp/core', 'features/inventory'],

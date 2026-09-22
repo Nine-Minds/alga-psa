@@ -45,6 +45,8 @@ export { default as CountryPicker } from './CountryPicker';
 export * from './CreditExpirationBadge';
 export { default as CreditExpirationBadge } from './CreditExpirationBadge';
 export * from './CurrencyInput';
+export type { CurrencyPickerOption } from './CurrencyPicker';
+export { default as CurrencyPicker } from './CurrencyPicker';
 export type {
   SelectOption as CustomSelectOption,
   StyleProps as CustomSelectStyleProps,
@@ -123,6 +125,8 @@ export { default as Spinner } from './Spinner';
 export * from './SuccessDialog';
 export { default as SuccessDialog } from './SuccessDialog';
 export * from './Switch';
+export * from './SystemAvatar';
+export { default as SystemAvatar } from './SystemAvatar';
 export * from './SwitchWithLabel';
 export * from './Table';
 export * from './Tabs';

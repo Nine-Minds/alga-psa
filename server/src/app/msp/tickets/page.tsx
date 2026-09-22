@@ -4,11 +4,13 @@ import { getTicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDis
 import { getTeams, isTeamActionError } from '@alga-psa/teams/actions';
 import type { ITicketListFilters } from '@alga-psa/types';
 import MspTicketsPageClient from '@alga-psa/msp-composition/tickets/MspTicketsPageClient';
+import { getSmartSearchAvailability } from '@enterprise/lib/actions/smartSearchActions';
 import { findBoardById } from '@alga-psa/tickets/actions/board-actions/boardActions';
 import {
   isTicketStatusOpenFilter,
   TICKET_STATUS_FILTER_OPEN,
 } from '@alga-psa/tickets/lib';
+import { normalizeAssignedToIds } from '@alga-psa/tickets/lib/ticketFilterUtils';
 import {
   hasBoardFilterParam,
   hasTicketViewFilterParams,
@@ -61,6 +63,12 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
       const { redirect } = await import('next/navigation');
       redirect('/auth/signin?callbackUrl=%2Fmsp%2Ftickets');
     }
+
+    // Decided on the server so the Smart search affordance is right on first
+    // paint. The CE stub answers false; any failure hides it.
+    const smartSearchAvailable = await getSmartSearchAvailability('ticket')
+      .then((result) => result?.available === true)
+      .catch(() => false);
 
     // Await searchParams as required in Next.js 15
     const params = await searchParams;
@@ -145,9 +153,14 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
       filtersFromURL.tags = normalizeTags(params.tags);
     }
     if (params?.assignedToIds && typeof params.assignedToIds === 'string') {
-      const assignedToIds = params.assignedToIds.split(',').filter(id => id.trim().length > 0);
-      if (assignedToIds.length > 0) {
-        filtersFromURL.assignedToIds = assignedToIds;
+      // The CSV comes straight off the URL; only well-formed assignee ids may
+      // reach ticketListFiltersSchema (uuid array) or the list query throws.
+      const assignedTo = normalizeAssignedToIds(params.assignedToIds);
+      if (assignedTo.assignedToIds) {
+        filtersFromURL.assignedToIds = assignedTo.assignedToIds;
+      }
+      if (assignedTo.includeUnassigned) {
+        filtersFromURL.includeUnassigned = true;
       }
     }
     if (params?.assignedTeamIds && typeof params.assignedTeamIds === 'string') {
@@ -359,6 +372,7 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
           initialTeams={initialTeams}
           canUpdateTickets={canUpdateTickets}
           allowSlaStatusFilter={allowSlaStatusFilter}
+          smartSearchAvailable={smartSearchAvailable}
           useAlgaDeskQuickAddForm={useAlgaDeskQuickAddForm}
         />
       </div>

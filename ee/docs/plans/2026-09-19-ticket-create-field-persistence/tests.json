@@ -1,0 +1,70 @@
+[
+  {
+    "id": "T001",
+    "description": "Schema contract: parse a REST create body with all four fields and assert exact retention; table-test malformed URL and malformed classification UUIDs, plus rejection of explicit null/empty values. Validate response-schema retention and existing update acceptance boundaries.",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F005",
+      "F008",
+      "F009"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "DB-backed shared-model happy path against migrated schema: seed same-tenant classification rows, call TicketModel.createTicket with all four fields, and query the stored ticket to assert exact equality. Run through real final validation and insert.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F008"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "DB-backed shared-model compatibility: omit the four fields and assert null storage; also assert generated ticket identity/number, resolved default status, contact alias, assigned team, and description/attributes survive the mapping refactor.",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F007"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "DB-backed integrity guard: table-test each classification field with a UUID absent from the current tenant, including records present only in a second tenant; assert creation fails and the enclosing transaction leaves no ticket row.",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F008"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "HTTP API round trip against migrated DB: authenticated POST with URL and all three same-tenant UUIDs returns 201 and exact values; GET and a direct DB query agree. Then PUT a replacement URL and verify GET reflects it. Reuse the existing API harness and tenant-owned fixtures.",
+    "implemented": false,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F004",
+      "F005",
+      "F009"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Compile-time mapping contract: type-check the exhaustive handling declaration; use a focused type assertion or negative compile fixture to prove that a new unhandled CreateTicketInput key fails and an unknown mapped input key fails. Confirm generated row fields cannot be supplied via arbitrary request keys in an executable mapping/schema assertion.",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Generated OpenAPI contract: assert ticket-create properties include optional URL and three UUID fields with appropriate documentation; compare property formats to runtime request-schema cases without broad snapshot coverage.",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  }
+]

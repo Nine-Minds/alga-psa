@@ -1,3 +1,4 @@
+import { changeNotifications } from './contracts/notifications';
 import http from 'node:http';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -152,6 +153,7 @@ describe('msgraph call records', { shuffle: false }, () => {
 
     callRecordId = seeded.result.callRecord.id;
     const notification = notifications[before];
+    expect(changeNotifications.safeParse(notification).success).toBe(true);
     expect(notification.value[0].resource).toBe(`communications/callRecords('${callRecordId}')`);
     expect(notification.value[0].clientState).toBe('telephony-call-records:tenant-1:teams-phone:secret');
   });
@@ -206,7 +208,9 @@ describe('msgraph call records', { shuffle: false }, () => {
 
     // The per-call list endpoint is FICTION — real Graph has no such route,
     // and serving it is how endpoint bugs get validated locally.
-    expect((await fetch(`${adhocCall}/recordings`, { headers })).status).toBe(404);
+    const unsupportedList = await fetch(`${adhocCall}/recordings`, { headers });
+    expect(unsupportedList.status).toBe(501);
+    expect((await unsupportedList.json()).error.code).toBe('EmulatorUnsupportedOperation');
 
     // Nothing recorded yet is the normal case: empty getAll collections.
     expect((await (await fetch(getAll('getAllRecordings'), { headers })).json()).value).toEqual([]);

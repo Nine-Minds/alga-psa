@@ -475,6 +475,7 @@ export class ClientService extends BaseService<IClient> {
     await this.deleteFromTenantTableIfExists(trx, tenant, 'client_tax_settings', { client_id: clientId });
     await this.deleteFromTenantTableIfExists(trx, tenant, 'client_tax_rates', { client_id: clientId });
     await this.deleteFromTenantTableIfExists(trx, tenant, 'client_locations', { client_id: clientId });
+    await this.deleteFromTenantTableIfExists(trx, tenant, 'client_billing_profiles', { client_id: clientId });
     await this.deleteFromTenantTableIfExists(trx, tenant, 'client_payment_customers', { client_id: clientId });
     await this.deleteFromTenantTableIfExists(trx, tenant, 'tag_mappings', {
       tagged_type: 'client',

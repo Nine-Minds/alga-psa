@@ -1,0 +1,18 @@
+{
+  "status": "local_execution_verified_native_pending",
+  "baseRevision": "c5d608d6dee7b89f90dbe9e812ec2e639de52ac2",
+  "change": "Require existing native interpreter, run workflow and simulator parity suites in temporal-readiness discovery and collection",
+  "command": "node scripts/run-additional-workspace-tests.mjs temporal-readiness",
+  "result": {
+    "files": 6,
+    "passed": 60,
+    "failed": 0,
+    "skipped": 0
+  },
+  "log": "/tmp/alga-temporal-engine-readiness.log",
+  "limits": [
+    "Tests exercise workflow logic with activity/Temporal transport doubles, not live Temporal execution",
+    "No legacy email/redaction integration skips removed; those still require ports",
+    "Global inventory and full plan remain incomplete"
+  ]
+}

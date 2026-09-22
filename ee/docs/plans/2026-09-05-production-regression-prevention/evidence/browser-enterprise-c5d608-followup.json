@@ -1,0 +1,30 @@
+{
+  "status": "fixes_pending_native_verification",
+  "native": {
+    "job": 101637360622,
+    "browser_passed": 23,
+    "browser_failed": 1,
+    "api_passed": 334,
+    "api_failed": 1,
+    "log": "/tmp/alga-browser-ee-c5d608.log"
+  },
+  "calendar": {
+    "failure": "Slot click intercepted by real calendar event layer",
+    "change": "Click owning day column at visible noon slot coordinates without forced interaction",
+    "validation": "Playwright collection and TypeScript passed; browser execution pending"
+  },
+  "extension_api": {
+    "failure": "API client options.headers replaced assembled authentication headers when supplying x-tenant-id",
+    "change": "Normalize all HeadersInit variants and apply options before final assembled request headers",
+    "validation": {
+      "regressions_passed": 3,
+      "before_log": "/tmp/alga-api-header-before.log",
+      "after_log": "/tmp/alga-api-header-after.log",
+      "targeted_typescript": "passed"
+    }
+  },
+  "limits": [
+    "Native installed extension flow may reveal subsequent failures once authenticated",
+    "Calendar browser behavior remains unverified after locator correction"
+  ]
+}

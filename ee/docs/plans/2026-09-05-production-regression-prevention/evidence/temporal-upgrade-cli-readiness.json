@@ -1,0 +1,61 @@
+{
+  "status": "passed",
+  "counts": {
+    "passed": 192,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "pending": 0
+  },
+  "failures": [],
+  "source": {
+    "before": {
+      "revision": "9180b2a9c85aa46a26f6151c1d7053acd73ccaf6",
+      "dirty": true,
+      "changes": [
+        {
+          "status": " M",
+          "file": "ee/docs/plans/2026-09-05-production-regression-prevention/SCRATCHPAD.md"
+        },
+        {
+          "status": " M",
+          "file": "ee/temporal-workflows/vitest.readiness.config.ts"
+        },
+        {
+          "status": " M",
+          "file": "scripts/lib/test-discovery.mjs"
+        },
+        {
+          "status": "??",
+          "file": "ee/docs/plans/2026-09-05-production-regression-prevention/evidence/remaining-inventory.json"
+        }
+      ]
+    },
+    "after": {
+      "revision": "9180b2a9c85aa46a26f6151c1d7053acd73ccaf6",
+      "dirty": true,
+      "changes": [
+        {
+          "status": " M",
+          "file": "ee/docs/plans/2026-09-05-production-regression-prevention/SCRATCHPAD.md"
+        },
+        {
+          "status": " M",
+          "file": "ee/temporal-workflows/vitest.readiness.config.ts"
+        },
+        {
+          "status": " M",
+          "file": "scripts/lib/test-discovery.mjs"
+        },
+        {
+          "status": "??",
+          "file": "ee/docs/plans/2026-09-05-production-regression-prevention/evidence/remaining-inventory.json"
+        }
+      ]
+    }
+  },
+  "files": 26,
+  "limits": [
+    "Local execution; native run for this selection pending. CLI tests exercise argument rejection, not a database upgrade."
+  ]
+}

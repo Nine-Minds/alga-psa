@@ -122,7 +122,8 @@
       "taskType": "Type",
       "actions": "Actions"
     },
-    "unknownUser": "Inconnu"
+    "unknownUser": "Inconnu",
+    "searchSmart": "Rechercher des projets, tâches et commentaires… Entrée pour la recherche intelligente"
   },
   "quickAdd": {
     "title": "Ajouter un projet",
@@ -1320,6 +1321,12 @@
       },
       "skip": "Passer",
       "creating": "Création..."
+    },
+    "discardConfirmation": {
+      "title": "Abandonner le modèle non enregistré ?",
+      "message": "Votre modèle contient des modifications non enregistrées. Si vous quittez maintenant, ces modifications seront perdues.",
+      "keepEditing": "Continuer la modification",
+      "discard": "Abandonner le modèle"
     }
   },
   "documents": {
@@ -1865,5 +1872,29 @@
       "loadRecipient": "Échec du chargement des informations du destinataire",
       "sendFailed": "Échec de l’envoi du point d’avancement"
     }
+  },
+  "smartSearch": {
+    "run": "Recherche intelligente",
+    "runTitle": "Évaluer les projets filtrés par rapport à cette requête",
+    "relevanceColumn": "Pertinence",
+    "relevance": "{{percent}}% pertinent",
+    "strong": "Correspondances fortes",
+    "possible": "Correspondances possibles",
+    "unlikely": "Correspondances improbables",
+    "emptyBucketRunning": "Aucune pour l’instant",
+    "emptyBucket": "Aucune",
+    "scoring": "{{scored}} projets sur {{total}} évalués",
+    "summary": "{{total}} projets évalués · {{strong}} fortes · {{possible}} possibles",
+    "cancelled": "Recherche annulée après {{scored}} projets sur {{total}}",
+    "errorTitle": "La recherche intelligente s’est arrêtée",
+    "starting": "Démarrage de la recherche intelligente…",
+    "rerun": "Les filtres ont changé. Relancer",
+    "retry": "Réessayer",
+    "cancel": "Annuler",
+    "exit": "Retour à la liste",
+    "notConfigured": "La recherche intelligente n’est pas configurée sur ce serveur",
+    "failedCount": "{{count}} projets n’ont pas pu être évalués",
+    "unscored": "Non évalués",
+    "addOnRequired": "La recherche intelligente nécessite le module complémentaire Assistant IA"
   }
 }

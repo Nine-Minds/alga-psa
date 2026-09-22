@@ -69,9 +69,10 @@
       "servicePeriods": "Periodi di servizio",
       "credits": "Crediti",
       "serviceTypes": "Tipi di servizio",
+      "serviceCategories": "Categorie di servizio",
       "serviceCatalog": "Servizi",
       "products": "Prodotti",
-      "taxRates": "Aliquote fiscali",
+      "taxRates": "Imposte",
       "usageTracking": "Monitoraggio utilizzo",
       "reports": "Report",
       "accountingExports": "Esportazioni contabili"
@@ -114,7 +115,8 @@
     "collapseSidebar": "Comprimi barra laterale",
     "collapseSection": "Comprimi {{section}}",
     "expandSection": "Espandi {{section}}",
-    "appLogoAlt": "Logo {{appName}}"
+    "appLogoAlt": "Logo {{appName}}",
+    "poweredBy": "Basato su"
   },
   "settings": {
     "sections": {

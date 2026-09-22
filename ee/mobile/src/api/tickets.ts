@@ -43,6 +43,29 @@ export type TicketListItem = {
   entered_at?: string | null;
   closed_at?: string | null;
   tags?: TicketListTag[] | null;
+  /** Set on bundle children; the master's number rides along for the badge. */
+  master_ticket_id?: string | null;
+  bundle_master_ticket_number?: string | null;
+  /** Number of children bundled under this ticket (0 unless it is a master). */
+  bundle_child_count?: number | null;
+};
+
+export type TicketBundleMode = "link_only" | "sync_updates";
+
+export type TicketBundleMember = {
+  ticket_id: string;
+  ticket_number: string;
+  title: string;
+  status_id?: string | null;
+  client_id?: string | null;
+};
+
+export type TicketBundleView = {
+  role: "standalone" | "master" | "child";
+  master_ticket_id: string;
+  master: TicketBundleMember | null;
+  children: TicketBundleMember[];
+  settings: { mode: TicketBundleMode; reopen_on_child_reply: boolean } | null;
 };
 
 export type TicketRichAttributes = {
@@ -96,7 +119,17 @@ export type TicketComment = {
   thread_id?: string | null;
   parent_comment_id?: string | null;
   deleted_at?: string | null;
+  // Scheduled publication (web parity): 'scheduled' rows are withheld from
+  // clients until the publish job runs; 'canceled' rows are soft-deleted.
+  publish_state?: "published" | "scheduled" | "canceled" | null;
+  scheduled_publish_at?: string | null;
+  scheduled_publish_tz?: string | null;
+  published_at?: string | null;
 };
+
+export function isScheduledComment(comment: Pick<TicketComment, "publish_state">): boolean {
+  return comment.publish_state === "scheduled";
+}
 
 export type TicketStatus = {
   status_id: string;
@@ -127,6 +160,7 @@ export type ListTicketsParams = {
     priority_name?: string;
     status_ids?: string;
     updated_from?: string;
+    bundle_view?: "bundled" | "individual";
   };
 };
 
@@ -160,6 +194,20 @@ export function getTicketById(
   return client.request<SuccessResponse<TicketDetail>>({
     method: "GET",
     path: `/api/v1/tickets/${params.ticketId}`,
+    headers: {
+      "x-api-key": params.apiKey,
+    },
+  });
+}
+
+export function getTicketBundle(
+  client: ApiClient,
+  params: { apiKey: string; ticketId: string; signal?: AbortSignal },
+): Promise<ApiResult<SuccessResponse<TicketBundleView>>> {
+  return client.request<SuccessResponse<TicketBundleView>>({
+    method: "GET",
+    path: `/api/v1/tickets/${params.ticketId}/bundle`,
+    signal: params.signal,
     headers: {
       "x-api-key": params.apiKey,
     },
@@ -201,6 +249,8 @@ export function addTicketComment(
     is_internal: boolean;
     is_resolution?: boolean;
     parent_comment_id?: string;
+    scheduled_publish_at?: string;
+    scheduled_publish_tz?: string;
     auditHeaders?: Record<string, string | undefined>;
   },
 ): Promise<ApiResult<SuccessResponse<TicketComment>>> {
@@ -216,6 +266,23 @@ export function addTicketComment(
       is_internal: params.is_internal,
       ...(params.is_resolution ? { is_resolution: true } : {}),
       ...(params.parent_comment_id ? { parent_comment_id: params.parent_comment_id } : {}),
+      ...(params.scheduled_publish_at
+        ? { scheduled_publish_at: params.scheduled_publish_at, scheduled_publish_tz: params.scheduled_publish_tz }
+        : {}),
+    },
+  });
+}
+
+export function cancelScheduledTicketComment(
+  client: ApiClient,
+  params: { apiKey: string; ticketId: string; commentId: string; auditHeaders?: Record<string, string | undefined> },
+): Promise<ApiResult<SuccessResponse<{ comment_id: string; publish_state: "canceled" }>>> {
+  return client.request<SuccessResponse<{ comment_id: string; publish_state: "canceled" }>>({
+    method: "DELETE",
+    path: `/api/v1/tickets/${params.ticketId}/comments/${params.commentId}/schedule`,
+    headers: {
+      "x-api-key": params.apiKey,
+      ...params.auditHeaders,
     },
   });
 }
@@ -258,6 +325,12 @@ export function updateTicketStatus(
     apiKey: string;
     ticketId: string;
     status_id: string;
+    /**
+     * Sync-mode bundle masters only: true closes/reopens the affected child
+     * tickets, false changes the master only. Omit to receive a 409 with the
+     * affected children when the change crosses the open/closed boundary.
+     */
+    propagateToChildren?: boolean;
     notificationSuppression?: TicketNotificationSuppressionOptions;
     auditHeaders?: Record<string, string | undefined>;
   },
@@ -271,6 +344,9 @@ export function updateTicketStatus(
     },
     body: {
       status_id: params.status_id,
+      ...(params.propagateToChildren === undefined
+        ? {}
+        : { propagateToChildren: params.propagateToChildren }),
       ...params.notificationSuppression,
     },
   });

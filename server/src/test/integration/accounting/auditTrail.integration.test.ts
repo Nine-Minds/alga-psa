@@ -18,6 +18,14 @@ import {
 } from '@alga-psa/types';
 import { createTestService } from '../../../../test-utils/billingTestHelpers';
 
+// An explicit manual export target must resolve to a connected integration.
+// This suite has no live QBO OAuth setup, so declare realm-500 connected while
+// keeping the rest of the real client module intact.
+vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/integrations/lib/qbo/qboClientService')>()),
+  getStoredQboCredentialsMap: async () => ({ 'realm-500': { realmId: 'realm-500' } })
+}));
+
 const helpers = TestContext.createHelpers();
 const HOOK_TIMEOUT = 240_000;
 
@@ -189,6 +197,9 @@ describe('Accounting export audit trail integration', () => {
       alga_entity_type: 'service',
       alga_entity_id: serviceId,
       external_entity_id: 'QB-ITEM-DEFAULT',
+      // Mapping resolution is realm-exact: rows must carry the batch's
+      // target realm ('realm-500' below) or validation flags them missing.
+      external_realm_id: 'realm-500',
       sync_status: 'synced',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -203,6 +214,7 @@ describe('Accounting export audit trail integration', () => {
       alga_entity_type: 'client',
       alga_entity_id: ctx.clientId,
       external_entity_id: 'QB-CUST-DEFAULT',
+      external_realm_id: 'realm-500',
       sync_status: 'synced',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()

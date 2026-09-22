@@ -1,5 +1,6 @@
 import logger from '@alga-psa/core/logger';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { resolveTenantDefaultCountry } from '@alga-psa/tenancy/lib/tenantDefaultCountry';
 import type { CanonicalCallRecord, CallMatchResult, TelephonyCallRecordRow } from '../types';
 import { canonicalCallRecordSchema } from '../types';
 import { matchCallParty } from '../lib/callMatching';
@@ -18,6 +19,12 @@ export interface IngestCanonicalCallInput {
   knex?: any;
   /** Overrides the tenant's own-company country for imports/tests. */
   defaultCountryCode?: string | null;
+  /**
+   * Contact the provider already resolved for this call (3CX echoes the
+   * lookup's EntityId back on ReportCall). Wins over number matching when the
+   * contact exists and is active.
+   */
+  preferredContactId?: string | null;
 }
 
 export type IngestCanonicalCallOutcome =
@@ -95,6 +102,32 @@ async function resolvePendingCallIntent(input: {
   return eligible.length === 1 ? eligible[0] : null;
 }
 
+async function resolvePreferredContactMatch(
+  knex: any,
+  tenantId: string,
+  contactId: string | null | undefined,
+): Promise<CallMatchResult | null> {
+  if (!contactId) return null;
+
+  const contact = await tenantDb(knex, tenantId).table('contacts')
+    .where({ contact_name_id: contactId })
+    .first('contact_name_id', 'client_id', 'is_inactive');
+  if (!contact || contact.is_inactive === true) {
+    logger.info('[Telephony] Preferred contact is missing or inactive; falling back to number matching', {
+      tenantId,
+      contactId,
+    });
+    return null;
+  }
+
+  return {
+    status: 'matched',
+    contactId: contact.contact_name_id,
+    clientId: contact.client_id ?? null,
+    candidates: [],
+  };
+}
+
 /**
  * Idempotent ingestion of one canonical call.
  *
@@ -136,7 +169,8 @@ export async function ingestCanonicalCall(
   // The counterparty is whoever is not us: the caller on the way in, the callee
   // on the way out.
   const counterpartyE164 = call.direction === 'outbound' ? calleeE164 : callerE164;
-  const numberMatch = await matchCallParty({
+  const preferredMatch = await resolvePreferredContactMatch(knex, input.tenantId, input.preferredContactId);
+  const numberMatch = preferredMatch ?? await matchCallParty({
     knex,
     tenantId: input.tenantId,
     phoneNumber: counterpartyE164,
@@ -261,26 +295,27 @@ export async function ingestCanonicalCall(
 
 /**
  * Use the MSP's own default company location as the tenant-wide numbering
- * context. Both reads are tenant-scoped; placeholder/unsupported country codes
- * intentionally produce no default rather than silently assuming North America.
+ * context, via the shared tenancy resolver rather than a third copy of the
+ * same SQL.
+ *
+ * Two deliberate differences from the query this replaces: the shared resolver
+ * falls back through `is_default` then `is_billing_address` instead of
+ * requiring the strictly default location, and it validates the code against
+ * the `countries` reference table. Both make it slightly more permissive, which
+ * is what we want for number normalization — a tenant whose only active
+ * location is their billing address now gets a numbering context instead of
+ * none.
+ *
+ * `normalizeCountryCode` still guards the result, so a country libphonenumber
+ * does not support, or the 'XX' placeholder, produces no default rather than
+ * silently assuming North America.
  */
 export async function resolveTenantPhoneCountryCode(
   knex: any,
   tenantId: string,
 ): Promise<string | null> {
-  const db = tenantDb(knex, tenantId);
-  const tenantCompany = await db.table('tenant_companies')
-    .where({ is_default: true, deleted_at: null })
-    .first('client_id');
-  if (!tenantCompany?.client_id) {
-    return null;
-  }
-
-  const location = await db.table('client_locations')
-    .where({ client_id: tenantCompany.client_id, is_default: true, is_active: true })
-    .first('country_code');
-
-  return normalizeCountryCode(location?.country_code) ?? null;
+  const country = await resolveTenantDefaultCountry(knex, tenantId);
+  return normalizeCountryCode(country?.code) ?? null;
 }
 
 export interface CreateCallInteractionInput {

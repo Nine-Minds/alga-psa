@@ -31,7 +31,8 @@
       "advancedSettings": "Configuración avanzada",
       "addNew": "Agregar nueva tasa impositiva",
       "add": "Agregar tasa impositiva",
-      "update": "Actualizar tasa impositiva"
+      "update": "Actualizar tasa impositiva",
+      "cancel": "Cancelar"
     },
     "dialog": {
       "fields": {
@@ -39,7 +40,8 @@
         "startDate": "Fecha de inicio *",
         "endDate": "Fecha de finalización (opcional)",
         "region": "Región fiscal *",
-        "percentage": "Porcentaje de impuestos *"
+        "percentage": "Porcentaje de impuestos *",
+        "active": "Activa"
       },
       "placeholders": {
         "loadingRegions": "Cargando regiones...",
@@ -48,13 +50,43 @@
       },
       "addTitle": "Agregar nueva tasa impositiva",
       "editTitle": "Editar tasa impositiva",
-      "description": "Introduzca los detalles de la tasa impositiva."
+      "description": "Introduzca los detalles de la tasa impositiva.",
+      "activeHint": "Las tasas inactivas se ignoran al calcular los impuestos de las facturas.",
+      "regionDescription": "Esta tasa se aplica a las facturas con impuestos de {{region}}."
     },
     "title": "Tasas de impuestos",
     "loading": "Cargando tasas impositivas",
     "deleteEntity": {
       "fallback": "esta tasa impositiva",
       "withRegion": "{{regionName}} tasa impositiva"
+    },
+    "cap": {
+      "title": "Límite de impuesto",
+      "label": "Límite de impuesto ({{currencyCode}})",
+      "currency": "Moneda de la tasa",
+      "universal": "Todas las monedas de factura",
+      "optional": "Opcional",
+      "noCap": "Sin límite",
+      "clear": "Borrar límite de impuesto",
+      "hint": "Impuesto máximo de esta tasa por cálculo. Déjelo vacío para no aplicar límite. Introduzca 0 para no cobrar impuesto en los cálculos que usan este límite.",
+      "scopeTitle": "Cómo se aplican los límites de impuesto",
+      "scope": "Un cálculo regional limita la aportación de cada tasa antes de sumar los impuestos, no el total regional. Los cálculos por período aplican el límite a cada tasa en cada segmento de fechas; varios segmentos pueden superarlo en conjunto. Una factura puede incluir varios cálculos. No es un límite por factura, cliente, proyecto ni período completo. Los límites de facturación de proyectos limitan los importes facturables; los de impuesto limitan el impuesto calculado. Los proveedores fiscales externos usan su propia configuración.",
+      "applicability": "Esta tasa solo se aplica a facturas en {{currencyCode}}. Ya no se seleccionará para otras monedas.",
+      "composite": "Este límite se aplica cuando esta tasa contribuye a un cálculo regional. Los cálculos basados en componentes no aplican este límite.",
+      "legacy": "Moneda sin especificar · {{amount}} unidades mínimas",
+      "legacyHelp": "Este límite guardado se aplica actualmente en las unidades mínimas de cada moneda de factura. Seleccione una moneda y confirme que desea conservar el importe guardado o introduzca un nuevo límite. Otros cambios conservan el valor; también puede borrarlo sin elegir una moneda.",
+      "resolve": "Usar el importe guardado en unidades mínimas de {{currencyCode}}",
+      "reenter": "Vuelva a introducir el límite en la nueva moneda antes de guardar.",
+      "example": "Ejemplo: {{amount}}; sin separadores de miles.",
+      "errors": {
+        "negative": "Introduzca un límite de impuesto de cero o más.",
+        "precision": "El límite tiene más decimales de los que permite esta moneda.",
+        "invalid": "Introduzca un importe con el separador decimal del ejemplo, sin signos, separadores de miles ni símbolos de moneda.",
+        "overflow": "El límite supera el importe máximo admitido.",
+        "currency": "Seleccione una moneda admitida antes de establecer un límite de impuesto.",
+        "reenter": "Vuelva a introducir el límite en la nueva moneda antes de guardar."
+      },
+      "compositeIndicator": "Solo cálculos regionales"
     }
   },
   "taxRateDetail": {
@@ -315,12 +347,17 @@
       "minimumUsage": {
         "placeholder": "0",
         "label": "Umbral de uso mínimo",
-        "help": "Uso mínimo facturable por período (0 sin mínimo)",
-        "errorNegative": "El uso mínimo no puede ser negativo"
+        "help": "Mínimo aplicado al uso registrado (0 para sin mínimo). Solo se aplica cuando el período tiene un registro de uso — incluso un cero explícito — y nunca genera un cargo por sí solo.",
+        "errorNegative": "El uso mínimo no puede ser negativo",
+        "labelAdditive": "Mínimo por entrada",
+        "labelPeriodTotal": "Mínimo por informe de periodo",
+        "helpAdditive": "Suelo aplicado a cada entrada registrada (0 para no tener mínimo). Solo se aplica cuando el periodo tiene un registro de consumo — incluso un cero explícito — y nunca genera un cargo por sí mismo.",
+        "helpPeriodTotal": "Suelo aplicado una vez a la cantidad informada del periodo (0 para no tener mínimo). Solo se aplica cuando se informa una cantidad — incluso un cero explícito — y nunca genera un cargo por sí mismo."
       },
       "enableTieredPricing": "Habilitar precios escalonados"
     },
     "title": "Configuración basada en el uso",
+    "recordDrivenNote": "Los servicios por uso se facturan según el uso registrado en el seguimiento de uso para cada período de servicio. Un período sin registro de uso no genera cargo: registre el uso (o un cero explícito) en cada período para facturar este servicio.",
     "tiers": {
       "title": "Niveles de precios",
       "addTier": "Agregar nivel",
@@ -336,6 +373,18 @@
         "upperGreaterThanLower": "El límite superior del nivel debe ser mayor que el límite inferior",
         "rateNegative": "Las tasas de nivel no pueden ser negativas"
       }
+    },
+    "measurementMode": {
+      "label": "¿Cómo se mide el consumo?",
+      "additive": {
+        "label": "Registrar el consumo a medida que ocurre",
+        "description": "Las entradas con fecha se suman: entradas de 10 y 12 facturan 22. El mínimo y los tramos se aplican a cada entrada. El siguiente periodo empieza sin entradas."
+      },
+      "periodTotal": {
+        "label": "Informar una cantidad para cada periodo",
+        "description": "Una cantidad por periodo de servicio sustituye a la anterior: corregir 10 a 12 factura 12, nunca 22. El mínimo y los tramos se aplican una vez a esa cantidad. El siguiente periodo empieza sin informar — no se arrastra ninguna cantidad."
+      },
+      "transitionNote": "El cambio de modo se aplica a partir del siguiente periodo de servicio no facturado. Las entradas o cantidades ya registradas en un periodo abierto deben facturarse o eliminarse antes."
     }
   },
   "rateTiers": {
@@ -396,12 +445,30 @@
         "label": "Alineación del ciclo de facturación",
         "placeholder": "Seleccionar alineación",
         "help": "Controla cómo se calcula la cobertura del período parcial cuando la tarifa recurrente debe escalar a menos de un período de servicio completo."
+      },
+      "unitRate": {
+        "label": "Tarifa unitaria",
+        "placeholder": "0,00",
+        "help": "Tarifa facturada por cada puesto/unidad en cada periodo de servicio."
       }
     },
     "options": {
       "start": "Inicio del ciclo de facturación",
       "end": "Fin del ciclo de facturación",
       "prorated": "Cobertura proporcional"
+    },
+    "pricingBasis": {
+      "label": "¿Cómo se tarifica este servicio?",
+      "bundle": {
+        "label": "Precio de paquete",
+        "description": "Lo que se factura es el total fijo de la línea de contrato. Las cantidades de este servicio solo reparten una parte de ese total para los informes — no son puestos facturables y cambiarlas no cambia el importe facturado.",
+        "allocationNote": "Cantidad de reparto: {{quantity}} — se usa para repartir el total del paquete en los informes, no se factura como puestos."
+      },
+      "unit": {
+        "label": "Puestos/unidades recurrentes",
+        "description": "Factura cantidad × tarifa unitaria en cada periodo, sin que ningún total de línea tenga prioridad. La misma cantidad y tarifa vuelven a facturarse el periodo siguiente hasta que programes un cambio. Una cantidad de cero factura cero.",
+        "summary": "{{quantity}} × {{rate}} (puestos recurrentes) = {{total}} por periodo"
+      }
     }
   },
   "bucketConfig": {

@@ -3,6 +3,11 @@ import type { Page } from 'puppeteer';
 import type { Knex } from 'knex';
 
 import { createTenantKnex, runWithTenant, tenantDb, withTransaction } from '@alga-psa/db';
+import { countryDateFormat, type CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
+import {
+  resolveClientCountry,
+  resolveTenantDefaultCountry,
+} from '@alga-psa/tenancy/lib/tenantDefaultCountry';
 import type { DocumentAssociationEntityType, IDocument, TemplateAst } from '@alga-psa/types';
 import type { FileStore } from '@alga-psa/storage/types/storage';
 import { StorageProviderFactory, generateStoragePath, FileStoreModel } from '@alga-psa/storage';
@@ -159,24 +164,26 @@ export class PDFGenerationService {
     let templateVersion: number | null = null;
 
     // Resolved once, up front: the recipient's language decides the labels and
-    // the number/date/currency formatting in the same document, and is the
-    // locale recorded against the filed artifact.
+    // the number/currency formatting in the same document, and is the locale
+    // recorded against the filed artifact. Their COUNTRY decides how the dates
+    // in it are written, which is a different question with a different answer.
     const renderedLocale = await this.resolveRenderLocale(options);
+    const renderedDateFormat = await this.resolveRenderCountry(options);
 
     if (options.invoiceId) {
-      const result = await this.getInvoiceHtml(options.invoiceId, options.templateId, renderedLocale);
+      const result = await this.getInvoiceHtml(options.invoiceId, options.templateId, renderedLocale, renderedDateFormat);
       htmlContent = result.htmlContent;
       templateAst = result.templateAst;
       templateId = result.templateId;
       templateVersion = result.templateVersion;
     } else if (options.quoteId) {
-      const result = await this.getQuoteHtml({ quoteId: options.quoteId, templateAst: options.templateAst }, renderedLocale);
+      const result = await this.getQuoteHtml({ quoteId: options.quoteId, templateAst: options.templateAst }, renderedLocale, renderedDateFormat);
       htmlContent = result.htmlContent;
       templateAst = result.templateAst;
       templateId = result.templateId;
       templateVersion = result.templateVersion;
     } else if (options.salesOrderId) {
-      const result = await this.getSalesOrderHtml({ salesOrderId: options.salesOrderId, documentType: options.salesOrderDocumentType, templateAst: options.templateAst }, renderedLocale);
+      const result = await this.getSalesOrderHtml({ salesOrderId: options.salesOrderId, documentType: options.salesOrderDocumentType, templateAst: options.templateAst }, renderedLocale, renderedDateFormat);
       htmlContent = result.htmlContent;
       templateAst = result.templateAst;
       templateId = result.templateId;
@@ -648,6 +655,45 @@ export class PDFGenerationService {
   }
 
   /**
+   * The date shape a document is written in: digit order, separator and clock.
+   *
+   * Deliberately a separate resolution from the locale. The language a document
+   * speaks and the way its dates are written answer to different things — a UK
+   * client of a US MSP reads 30/09/2026 whether the invoice arrives in English
+   * or French — so the recipient client's own country decides, falling back to
+   * the tenant's, and finally to the fixed system default.
+   *
+   * Public for the same reason `resolveRenderLocale` is: the on-screen previews
+   * go through this exact seam, so what an MSP approves is what the client gets.
+   */
+  async resolveRenderCountry(options: {
+    invoiceId?: string;
+    quoteId?: string;
+    salesOrderId?: string;
+  }): Promise<CountryDateFormat> {
+    try {
+      return await runWithTenant(this.tenant, async () => {
+        const { knex } = await createTenantKnex();
+        const clientId =
+          options.invoiceId || options.quoteId || options.salesOrderId
+            ? await this.resolveRecipientClientId(knex, options)
+            : null;
+
+        const country = clientId
+          ? (await resolveClientCountry(knex, this.tenant, clientId))
+            ?? (await resolveTenantDefaultCountry(knex, this.tenant))
+          : await resolveTenantDefaultCountry(knex, this.tenant);
+
+        return countryDateFormat(country?.code ?? null);
+      });
+    } catch {
+      // A document dated in the wrong order is recoverable; one that fails to
+      // render is not.
+      return countryDateFormat(null);
+    }
+  }
+
+  /**
    * The locale this document was issued in: the billing contact's, else the
    * client's, else the tenant's. Recorded against the stored document so every
    * artifact answers "what language was this?".
@@ -720,8 +766,11 @@ export class PDFGenerationService {
         throw new Error('No invoice template AST available');
       }
 
+      const renderLocale = await this.resolveRenderLocale({ invoiceId: options.invoiceId });
       const enrichedData = await this.enrichWithTenantClient(knex, dbInvoiceData);
-      const invoiceViewModel = mapDbInvoiceToWasmViewModel(enrichedData);
+      // The service-period label is built here, in named months, so the mapper
+      // needs the recipient's language too.
+      const invoiceViewModel = mapDbInvoiceToWasmViewModel(enrichedData, renderLocale);
       if (!invoiceViewModel) {
         throw new Error(`Failed to map invoice ${options.invoiceId} to view model`);
       }
@@ -731,11 +780,13 @@ export class PDFGenerationService {
         invoiceViewModel as unknown as Record<string, unknown>,
         { bindingAliases: INVOICE_TEMPLATE_BINDING_ALIASES }
       );
-      const localized = await localizeTemplateAstForLocale(
-        templateAst,
-        await this.resolveRenderLocale({ invoiceId: options.invoiceId })
-      );
-      const rendered = await renderEvaluatedTemplateAst(localized.ast, evaluation, { locale: localized.locale });
+      const localized = await localizeTemplateAstForLocale(templateAst, renderLocale);
+      const dateFormat = await this.resolveRenderCountry({ invoiceId: options.invoiceId });
+      const rendered = await renderEvaluatedTemplateAst(localized.ast, evaluation, {
+        locale: localized.locale,
+        dateFormat,
+        t: localized.t,
+      });
       return { html: rendered.html, css: rendered.css, templateAst };
     });
   }
@@ -768,7 +819,12 @@ export class PDFGenerationService {
         templateAst,
         await this.resolveRenderLocale({ quoteId: options.quoteId })
       );
-      const rendered = await renderEvaluatedTemplateAst(localized.ast, evaluation, { locale: localized.locale });
+      const dateFormat = await this.resolveRenderCountry({ quoteId: options.quoteId });
+      const rendered = await renderEvaluatedTemplateAst(localized.ast, evaluation, {
+        locale: localized.locale,
+        dateFormat,
+        t: localized.t,
+      });
       return { html: rendered.html, css: rendered.css, templateAst };
     });
   }
@@ -801,7 +857,8 @@ export class PDFGenerationService {
   private async getInvoiceHtml(
     invoiceId: string,
     overrideTemplateId?: string,
-    locale?: string
+    locale?: string,
+    dateFormat?: CountryDateFormat
   ): Promise<{ htmlContent: string; templateAst: TemplateAst | null; templateId: string | null; templateVersion: number | null }> {
     return runWithTenant(this.tenant, async () => {
       const { knex } = await createTenantKnex();
@@ -835,7 +892,8 @@ export class PDFGenerationService {
       }
 
       const enrichedData = await this.enrichWithTenantClient(knex, dbInvoiceData);
-      const invoiceViewModel = mapDbInvoiceToWasmViewModel(enrichedData);
+      // Named-month service periods follow the recipient's language.
+      const invoiceViewModel = mapDbInvoiceToWasmViewModel(enrichedData, locale);
 
       if (!invoiceViewModel) {
         throw new Error(`Failed to map invoice ${invoiceId} to view model`);
@@ -875,6 +933,7 @@ export class PDFGenerationService {
         title: 'Invoice',
         knex,
         locale,
+        dateFormat,
       });
 
       return {
@@ -924,7 +983,8 @@ export class PDFGenerationService {
 
   private async getQuoteHtml(
     options: QuotePDFOptions,
-    locale?: string
+    locale?: string,
+    dateFormat?: CountryDateFormat
   ): Promise<{ htmlContent: string; templateAst: TemplateAst | null; templateId: string | null; templateVersion: number | null }> {
     return runWithTenant(this.tenant, async () => {
       const { knex } = await createTenantKnex();
@@ -959,6 +1019,7 @@ export class PDFGenerationService {
         title: `Quote ${quoteViewModel.quote_number ?? ''}`.trim(),
         knex,
         locale,
+        dateFormat,
       });
 
       return { htmlContent, templateAst, templateId, templateVersion: null };
@@ -969,7 +1030,8 @@ export class PDFGenerationService {
 
   private async getSalesOrderHtml(
     options: SalesOrderPDFOptions,
-    locale?: string
+    locale?: string,
+    dateFormat?: CountryDateFormat
   ): Promise<{ htmlContent: string; templateAst: TemplateAst | null; templateId: string | null; templateVersion: number | null }> {
     return runWithTenant(this.tenant, async () => {
       const { knex } = await createTenantKnex();
@@ -1008,6 +1070,7 @@ export class PDFGenerationService {
         title: `Sales Order ${viewModel.so_number ?? ''}`.trim(),
         knex,
         locale,
+        dateFormat,
       });
 
       return { htmlContent, templateAst, templateId, templateVersion };

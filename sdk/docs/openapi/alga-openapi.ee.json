@@ -80,6 +80,9 @@
       "name": "Email"
     },
     {
+      "name": "Email Templates"
+    },
+    {
       "name": "Extension Gateway"
     },
     {
@@ -120,6 +123,9 @@
     },
     {
       "name": "Mobile v1"
+    },
+    {
+      "name": "Notifications"
     },
     {
       "name": "Opportunities v1"
@@ -9159,6 +9165,43 @@
           "data"
         ]
       },
+      "ClientNotesResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "document": {
+                "description": "The linked notes document row, or null when the client has no notes."
+              },
+              "blockData": {
+                "description": "BlockNote block array for the notes body, or null."
+              },
+              "lastUpdated": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "ISO timestamp of the last notes update, or null."
+              }
+            },
+            "required": [
+              "lastUpdated"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "ClientNotesUpdateBody": {
+        "type": "object",
+        "properties": {
+          "blockData": {
+            "description": "Full BlockNote block array (or its JSON string). Replaces the existing notes document."
+          }
+        }
+      },
       "ContractLineIdParam": {
         "type": "object",
         "properties": {
@@ -10651,6 +10694,365 @@
           "tenant"
         ]
       },
+      "EmailTemplateNameParams": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Kebab-case template name, such as ticket-created or invoice-email."
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "EmailTemplateListQuery": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Filter to a single template name."
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "en",
+              "fr",
+              "es",
+              "de",
+              "nl",
+              "it",
+              "pl",
+              "pt",
+              "xx",
+              "yy"
+            ],
+            "description": "Filter to one language code."
+          },
+          "category": {
+            "type": "string",
+            "description": "Filter by notification category name."
+          },
+          "customized": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "description": "Filter to templates the tenant has customized (true) or not (false)."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        }
+      },
+      "EmailTemplateDetailQuery": {
+        "type": "object",
+        "properties": {
+          "language": {
+            "type": "string",
+            "enum": [
+              "en",
+              "fr",
+              "es",
+              "de",
+              "nl",
+              "it",
+              "pl",
+              "pt",
+              "xx",
+              "yy"
+            ],
+            "description": "Language code to read. Defaults to the first language the template exists in."
+          }
+        }
+      },
+      "EmailTemplateDeleteQuery": {
+        "type": "object",
+        "properties": {
+          "language": {
+            "type": "string",
+            "enum": [
+              "en",
+              "fr",
+              "es",
+              "de",
+              "nl",
+              "it",
+              "pl",
+              "pt",
+              "xx",
+              "yy"
+            ],
+            "description": "Language code whose tenant override is removed."
+          }
+        },
+        "required": [
+          "language"
+        ]
+      },
+      "EmailTemplateSummary": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Template name, shared by the system default and the tenant override."
+          },
+          "language_code": {
+            "type": "string",
+            "description": "Language code of this row."
+          },
+          "category": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Notification category the template belongs to."
+          },
+          "subject": {
+            "type": "string",
+            "description": "Subject line that would be sent today."
+          },
+          "is_customized": {
+            "type": "boolean",
+            "description": "Whether the tenant has an override for this name and language."
+          },
+          "system_template_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "tenant_template_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "updated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "When the tenant override was last written."
+          }
+        },
+        "required": [
+          "name",
+          "language_code",
+          "category",
+          "subject",
+          "is_customized",
+          "system_template_id",
+          "tenant_template_id",
+          "updated_at"
+        ],
+        "description": "One email template, system default and tenant override merged."
+      },
+      "EmailTemplateDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/EmailTemplateSummary"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "system": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "integer"
+                  },
+                  "subject": {
+                    "type": "string"
+                  },
+                  "html_content": {
+                    "type": "string"
+                  },
+                  "text_content": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "subject",
+                  "html_content",
+                  "text_content"
+                ],
+                "description": "The read-only system default."
+              },
+              "tenant": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "integer"
+                  },
+                  "subject": {
+                    "type": "string"
+                  },
+                  "html_content": {
+                    "type": "string"
+                  },
+                  "text_content": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "subject",
+                  "html_content",
+                  "text_content"
+                ],
+                "description": "The tenant override, when one exists."
+              },
+              "effective": {
+                "type": "object",
+                "properties": {
+                  "subject": {
+                    "type": "string"
+                  },
+                  "html_content": {
+                    "type": "string"
+                  },
+                  "text_content": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "subject",
+                  "html_content",
+                  "text_content"
+                ],
+                "description": "What actually ships: the override when present, otherwise the system default."
+              }
+            },
+            "required": [
+              "system",
+              "tenant",
+              "effective"
+            ]
+          }
+        ],
+        "description": "One email template, system default and tenant override merged."
+      },
+      "EmailTemplateEnvelope": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/EmailTemplateDetail"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "PaginatedEmailTemplateEnvelope": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EmailTemplateSummary"
+            }
+          },
+          "pagination": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "integer"
+              },
+              "limit": {
+                "type": "integer"
+              },
+              "total": {
+                "type": "integer"
+              },
+              "totalPages": {
+                "type": "integer"
+              },
+              "hasNext": {
+                "type": "boolean"
+              },
+              "hasPrev": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "page",
+              "limit",
+              "total",
+              "totalPages",
+              "hasNext",
+              "hasPrev"
+            ]
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data",
+          "pagination"
+        ]
+      },
+      "EmailTemplateUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "language_code": {
+            "type": "string",
+            "enum": [
+              "en",
+              "fr",
+              "es",
+              "de",
+              "nl",
+              "it",
+              "pl",
+              "pt",
+              "xx",
+              "yy"
+            ],
+            "description": "Language of the template being edited."
+          },
+          "subject": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 998,
+            "description": "New subject line. Supports {{variable}} placeholders."
+          },
+          "html_content": {
+            "type": "string",
+            "minLength": 1,
+            "description": "New HTML body. Supports {{variable}} placeholders."
+          },
+          "text_content": {
+            "type": "string",
+            "minLength": 1,
+            "description": "New plain-text body."
+          }
+        },
+        "required": [
+          "language_code"
+        ],
+        "description": "Fields to write onto the tenant override. At least one of subject, html_content or text_content is required."
+      },
       "ExtensionGatewayParams": {
         "type": "object",
         "properties": {
@@ -12046,6 +12448,212 @@
           "frequency",
           "start_date",
           "invoice_template"
+        ]
+      },
+      "TaxRateListQuery": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "sort": {
+            "type": "string",
+            "enum": [
+              "created_at",
+              "updated_at",
+              "region_code",
+              "tax_percentage",
+              "start_date",
+              "end_date",
+              "cap_amount",
+              "currency_code"
+            ],
+            "default": "created_at"
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "default": "desc"
+          },
+          "search": {
+            "type": "string"
+          },
+          "created_from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_to": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_to": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "is_active": {
+            "type": "string"
+          },
+          "region_code": {
+            "type": "string"
+          },
+          "effective_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              {
+                "type": "string",
+                "format": "date-time"
+              }
+            ]
+          }
+        }
+      },
+      "TaxRateListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "tax_rate_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "region_code": {
+                  "type": "string"
+                },
+                "tax_percentage": {
+                  "type": "number"
+                },
+                "description": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "start_date": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  ]
+                },
+                "end_date": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "cap_amount": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 9007199254740991,
+                  "description": "Tax cap in currency_code minor units; null is uncapped, zero charges zero on supported calculation paths."
+                },
+                "currency_code": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "updated_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "tenant": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "is_active": {
+                  "type": "boolean"
+                },
+                "is_composite": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "tax_rate_id",
+                "region_code",
+                "tax_percentage",
+                "cap_amount",
+                "currency_code",
+                "tenant"
+              ]
+            }
+          },
+          "pagination": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "number"
+              },
+              "limit": {
+                "type": "number"
+              },
+              "total": {
+                "type": "number"
+              },
+              "totalPages": {
+                "type": "number"
+              },
+              "hasNext": {
+                "type": "boolean"
+              },
+              "hasPrev": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "page",
+              "limit",
+              "total",
+              "totalPages",
+              "hasNext",
+              "hasPrev"
+            ]
+          },
+          "meta": {
+            "type": "object",
+            "properties": {}
+          }
+        },
+        "required": [
+          "data",
+          "pagination"
         ]
       },
       "KbArticle": {
@@ -15301,6 +15909,12 @@
               "null"
             ]
           },
+          "client_portal_visible": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
           "tenant": {
             "type": "string",
             "format": "uuid"
@@ -15319,6 +15933,7 @@
           "display_itil_urgency",
           "default_assigned_to",
           "enable_live_ticket_timer",
+          "client_portal_visible",
           "tenant"
         ]
       },
@@ -15394,6 +16009,9 @@
           },
           "enable_live_ticket_timer": {
             "type": "boolean"
+          },
+          "client_portal_visible": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -15447,6 +16065,9 @@
             "type": "boolean"
           },
           "enable_live_ticket_timer": {
+            "type": "boolean"
+          },
+          "client_portal_visible": {
             "type": "boolean"
           }
         },
@@ -15514,6 +16135,12 @@
               "null"
             ]
           },
+          "portal_selectable": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
           "tenant": {
             "type": "string",
             "format": "uuid"
@@ -15529,6 +16156,7 @@
           "item_type",
           "standard_status_id",
           "is_custom",
+          "portal_selectable",
           "tenant"
         ]
       },
@@ -15595,6 +16223,9 @@
           "icon": {
             "type": "string",
             "maxLength": 50
+          },
+          "portal_selectable": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -15628,6 +16259,9 @@
           "icon": {
             "type": "string",
             "maxLength": 50
+          },
+          "portal_selectable": {
+            "type": "boolean"
           }
         },
         "description": "Payload for updating a status. All fields are optional."
@@ -16510,6 +17144,13 @@
           },
           "rate": {
             "type": "number"
+          },
+          "effective_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Calendar date the price takes effect; the epoch when untagged."
           }
         },
         "required": [
@@ -16639,7 +17280,15 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ServicePrice"
-            }
+            },
+            "description": "Current price per currency (latest effective on or before today)."
+          },
+          "scheduled_prices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ServicePrice"
+            },
+            "description": "Future-dated prices that are not yet billed."
           }
         },
         "required": [
@@ -16741,6 +17390,13 @@
           },
           "rate": {
             "type": "number"
+          },
+          "effective_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Calendar date the price takes effect; the epoch when untagged."
           }
         },
         "required": [
@@ -16873,7 +17529,15 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ProductPrice"
-            }
+            },
+            "description": "Current price per currency (latest effective on or before today)."
+          },
+          "scheduled_prices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductPrice"
+            },
+            "description": "Future-dated prices that are not yet billed."
           }
         },
         "required": [
@@ -21199,6 +21863,11 @@
           "summary": {
             "type": "string"
           },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Optional link-out for the ticket; any URL accepted by the ticket create schema. Omit or supply a valid URL; null is rejected."
+          },
           "client_id": {
             "type": "string",
             "format": "uuid"
@@ -21214,6 +21883,86 @@
           "status_id": {
             "type": "string",
             "format": "uuid"
+          },
+          "severity_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Optional severity reference (same tenant); stored as a nullable UUID. Distinct from numeric itil_impact/itil_urgency; null is rejected."
+          },
+          "urgency_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Optional urgency reference (same tenant); stored as a nullable UUID. Distinct from numeric itil_impact/itil_urgency; null is rejected."
+          },
+          "impact_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Optional impact reference (same tenant); stored as a nullable UUID. Distinct from numeric itil_impact/itil_urgency; null is rejected."
+          },
+          "external_links": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "system": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Built-in system key or custom:<slug>."
+                },
+                "external_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Identifier of the record in the external system."
+                },
+                "external_parent_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "realm": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Repo, server, or workspace the record lives in."
+                },
+                "url": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uri",
+                  "description": "Explicit link-out; must be http(s)."
+                },
+                "relationship": {
+                  "type": "string",
+                  "enum": [
+                    "origin",
+                    "mirror",
+                    "reference"
+                  ]
+                },
+                "actor": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "additionalProperties": {}
+                },
+                "external_status": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "system",
+                "external_id"
+              ]
+            },
+            "description": "Ticket-level external references written in the same transaction as the ticket. A conflicting link rolls back the create."
           }
         }
       },
@@ -21293,6 +22042,10 @@
               "null"
             ]
           },
+          "propagateToChildren": {
+            "type": "boolean",
+            "description": "Sync-mode bundle masters only. When a status change would close or reopen child tickets, true propagates to the affected children and false changes the master only. Omit to receive 409 with the affected children."
+          },
           "suppressContactNotifications": {
             "type": "boolean",
             "description": "When true, suppresses customer-facing email and portal notifications for this operation."
@@ -21327,6 +22080,10 @@
               "string",
               "null"
             ]
+          },
+          "propagateToChildren": {
+            "type": "boolean",
+            "description": "Sync-mode bundle masters only. When a status change would close or reopen child tickets, true propagates to the affected children and false changes the master only. Omit to receive 409 with the affected children."
           },
           "suppressContactNotifications": {
             "type": "boolean",
@@ -21389,6 +22146,16 @@
             "type": "string",
             "format": "uuid"
           },
+          "scheduled_publish_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Withhold this client-visible comment until this future instant (ISO 8601). Requires scheduled_publish_tz; not allowed with is_internal or when replying into an internal thread."
+          },
+          "scheduled_publish_tz": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "IANA time zone the author scheduled in, e.g. America/New_York."
+          },
           "suppressContactNotifications": {
             "type": "boolean",
             "description": "When true, suppresses customer-facing email and portal notifications for this operation."
@@ -21401,7 +22168,7 @@
         "required": [
           "comment_text"
         ],
-        "description": "Comment to add. Silent flags suppress the comment notification while preserving the comment and audit history."
+        "description": "Comment to add. Silent flags suppress the comment notification while preserving the comment and audit history. Set scheduled_publish_at + scheduled_publish_tz to schedule a client-visible comment: it is stored with publish_state=scheduled, hidden from client-portal callers, and published by a background job."
       },
       "WorkV1CreateTagBody": {
         "type": "object",
@@ -21735,6 +22502,237 @@
         },
         "required": [
           "completed"
+        ]
+      },
+      "WorkV1TicketExternalLinkParams": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Ticket UUID."
+          },
+          "linkId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "External link UUID."
+          }
+        },
+        "required": [
+          "id",
+          "linkId"
+        ]
+      },
+      "WorkV1TicketExternalLinkCreateBody": {
+        "type": "object",
+        "properties": {
+          "entity_type": {
+            "type": "string",
+            "enum": [
+              "ticket",
+              "comment"
+            ],
+            "description": "Defaults to 'ticket'."
+          },
+          "comment_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Required when entity_type is 'comment'."
+          },
+          "system": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Built-in system key or custom:<slug>."
+          },
+          "external_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "external_parent_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "realm": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uri",
+            "description": "Optional explicit link-out; must be http(s)."
+          },
+          "relationship": {
+            "type": "string",
+            "enum": [
+              "origin",
+              "mirror",
+              "reference"
+            ]
+          },
+          "actor": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "handle": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "display_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "url": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uri"
+              }
+            }
+          },
+          "external_status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "external_updated_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "metadata": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "system",
+          "external_id"
+        ]
+      },
+      "WorkV1TicketExternalLinkUpdateBody": {
+        "type": "object",
+        "properties": {
+          "relationship": {
+            "type": "string",
+            "enum": [
+              "origin",
+              "mirror",
+              "reference"
+            ]
+          },
+          "url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uri"
+          },
+          "actor": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "handle": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "display_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "url": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uri"
+              }
+            }
+          },
+          "external_status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "external_updated_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "last_synced_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "metadata": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {}
+          }
+        }
+      },
+      "WorkV1TicketExternalLinkLookupQuery": {
+        "type": "object",
+        "properties": {
+          "system": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Registry key of the external system."
+          },
+          "external_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "External record identifier."
+          },
+          "external_parent_id": {
+            "type": "string",
+            "description": "Ticket-level external id, for comment-level records."
+          }
+        },
+        "required": [
+          "system",
+          "external_id"
         ]
       },
       "WorkV1TicketAgentParams": {
@@ -23737,6 +24735,18 @@
             "type": "string",
             "format": "uuid"
           },
+          "status_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "is_closed": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "description": "Filter by status closure; 'false' also matches interactions with no status."
+          },
           "date_from": {
             "type": "string",
             "format": "date-time"
@@ -23804,6 +24814,18 @@
           "interaction_date": {
             "type": "string",
             "format": "date-time"
+          },
+          "create_schedule_entry": {
+            "type": "boolean",
+            "description": "Also book an AlgaPSA calendar entry. Requires start_time; defaults to false."
+          },
+          "schedule_assigned_user_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Calendar assignees; omitted or empty defaults to the API key owner. Assigning others requires user_schedule:update."
           }
         },
         "required": [
@@ -24301,6 +25323,71 @@
           "data"
         ]
       },
+      "InteractionStatusListV1": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "status_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "is_closed": {
+                  "type": "boolean"
+                },
+                "is_default": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ]
+                },
+                "order_number": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "status_id",
+                "name",
+                "is_closed",
+                "is_default",
+                "order_number"
+              ]
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {}
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "UpdateInteractionBodyV1": {
+        "type": "object",
+        "properties": {
+          "status_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 10000
+          }
+        }
+      },
       "InteractionApiErrorV1": {
         "type": "object",
         "properties": {
@@ -24475,6 +25562,88 @@
           "error"
         ]
       },
+      "MobileThemeSeedTokensV1": {
+        "type": "object",
+        "properties": {
+          "background": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "card": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "surface": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "textPrimary": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "textSecondary": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "textMuted": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "border": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "borderStrong": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "primary": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "secondary": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "accent": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "sidebarBg": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "sidebarText": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "sidebarHover": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          },
+          "headerBg": {
+            "type": "string",
+            "description": "6-digit hex color, e.g. #8a4dea"
+          }
+        },
+        "required": [
+          "background",
+          "card",
+          "surface",
+          "textPrimary",
+          "textSecondary",
+          "textMuted",
+          "border",
+          "borderStrong",
+          "primary",
+          "secondary",
+          "accent",
+          "sidebarBg",
+          "sidebarText",
+          "sidebarHover",
+          "headerBg"
+        ]
+      },
       "MobileCapabilitiesSuccessV1": {
         "type": "object",
         "properties": {
@@ -24499,10 +25668,85 @@
                   "opportunities",
                   "opportunitiesCreate"
                 ]
+              },
+              "formatting": {
+                "type": "object",
+                "properties": {
+                  "country": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "order": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "day",
+                        "month",
+                        "year"
+                      ]
+                    }
+                  },
+                  "separator": {
+                    "type": "string"
+                  },
+                  "hour12": {
+                    "type": "boolean"
+                  },
+                  "datePattern": {
+                    "type": "string"
+                  },
+                  "dateTimePattern": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "country",
+                  "order",
+                  "separator",
+                  "hour12",
+                  "datePattern",
+                  "dateTimePattern"
+                ]
+              },
+              "theme": {
+                "type": "object",
+                "properties": {
+                  "pairId": {
+                    "type": "string",
+                    "description": "Tenant theme pair id, e.g. 'forest' or 'custom'."
+                  },
+                  "label": {
+                    "type": "string",
+                    "description": "English pair name; 'Custom' for a tenant-authored pair."
+                  },
+                  "light": {
+                    "$ref": "#/components/schemas/MobileThemeSeedTokensV1"
+                  },
+                  "dark": {
+                    "$ref": "#/components/schemas/MobileThemeSeedTokensV1"
+                  },
+                  "version": {
+                    "type": "string",
+                    "description": "Stable hash of pairId plus both token sets."
+                  }
+                },
+                "required": [
+                  "pairId",
+                  "label",
+                  "light",
+                  "dark",
+                  "version"
+                ],
+                "description": "Tenant theme pair the mobile app renders; always present, defaults to Alga."
               }
             },
             "required": [
-              "features"
+              "features",
+              "formatting",
+              "theme"
             ]
           }
         },
@@ -41426,6 +42670,337 @@
         }
       }
     },
+    "/api/v1/clients/{id}/notes": {
+      "get": {
+        "summary": "Get client notes",
+        "description": "Returns the BlockNote content of the client notes document (the rich-text notes shown on the client page), or null fields when no notes exist.",
+        "tags": [
+          "Clients"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "client",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Client notes content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientNotesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid client id or request payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or key user not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied for client resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Client not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected client notes failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update client notes",
+        "description": "Creates or replaces the BlockNote notes document linked to the client. Send the full block array; partial updates are not merged. Returns the document id.",
+        "tags": [
+          "Clients"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "client",
+          "x-rbac-action": "update"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClientNotesUpdateBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Notes saved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "document_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        }
+                      },
+                      "required": [
+                        "document_id"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid client id or request payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or key user not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied for client resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Client not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected client notes failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete client notes",
+        "description": "Unlinks the notes document from the client. Pass delete_document=true to also hard-delete the document and its block content.",
+        "tags": [
+          "Clients"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "client",
+          "x-rbac-action": "update"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "required": false,
+            "name": "delete_document",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Notes unlinked/deleted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "message"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid client id or request payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or key user not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied for client resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Client not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected client notes failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/contacts": {
       "get": {
         "summary": "List contacts",
@@ -45678,7 +47253,7 @@
       },
       "post": {
         "summary": "Receive Microsoft Graph email webhook",
-        "description": "Receives Microsoft Graph change notifications for monitored mailboxes. Standard session and API-key middleware are bypassed. The handler supports validation token echo, parses Microsoft notification batches, resolves provider and tenant by matching notification subscriptionId to microsoft_email_provider_config.webhook_subscription_id, validates clientState against the stored webhook_verification_token when configured, extracts message IDs, and enqueues pointer-only jobs into the unified inbound email queue. The tenantId in the Microsoft payload is informational and is not trusted for tenant resolution.",
+        "description": "Receives Microsoft Graph change notifications for monitored mailboxes. Standard session and API-key middleware are bypassed. The handler supports validation token echo, parses Microsoft notification batches, resolves provider and tenant by matching notification subscriptionId to microsoft_email_provider_config.webhook_subscription_id, requires a timing-safe clientState match against the stored webhook_verification_token, extracts message IDs, and enqueues pointer-only jobs into the unified inbound email queue. The tenantId in the Microsoft payload is informational and is not trusted for tenant resolution.",
         "tags": [
           "Email"
         ],
@@ -45823,6 +47398,436 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/EmailErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/email/templates": {
+      "get": {
+        "summary": "List email templates",
+        "description": "Returns every notification email template available to the tenant, with the system default and the tenant override merged into one row per name and language. Use is_customized to tell which templates the tenant has edited.",
+        "tags": [
+          "Email Templates",
+          "Notifications"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-header-required": true,
+          "x-rbac-resource": "settings",
+          "x-chat-callable": true,
+          "x-chat-display-name": "List Email Templates",
+          "x-chat-rbac-resource": "settings",
+          "x-chat-approval-required": false
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter to a single template name."
+            },
+            "required": false,
+            "description": "Filter to a single template name.",
+            "name": "name",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "en",
+                "fr",
+                "es",
+                "de",
+                "nl",
+                "it",
+                "pl",
+                "pt",
+                "xx",
+                "yy"
+              ],
+              "description": "Filter to one language code."
+            },
+            "required": false,
+            "description": "Filter to one language code.",
+            "name": "language",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by notification category name."
+            },
+            "required": false,
+            "description": "Filter by notification category name.",
+            "name": "category",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "description": "Filter to templates the tenant has customized (true) or not (false)."
+            },
+            "required": false,
+            "description": "Filter to templates the tenant has customized (true) or not (false).",
+            "name": "customized",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Email templates returned successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedEmailTemplateEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user lacks the settings read permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/email/templates/{name}": {
+      "get": {
+        "summary": "Get email template",
+        "description": "Returns one email template: the read-only system default, the tenant override when there is one, and the effective content that would be sent.",
+        "tags": [
+          "Email Templates",
+          "Notifications"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-header-required": true,
+          "x-rbac-resource": "settings",
+          "x-chat-callable": true,
+          "x-chat-display-name": "Get Email Template",
+          "x-chat-rbac-resource": "settings",
+          "x-chat-approval-required": false
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Kebab-case template name, such as ticket-created or invoice-email."
+            },
+            "required": true,
+            "description": "Kebab-case template name, such as ticket-created or invoice-email.",
+            "name": "name",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "en",
+                "fr",
+                "es",
+                "de",
+                "nl",
+                "it",
+                "pl",
+                "pt",
+                "xx",
+                "yy"
+              ],
+              "description": "Language code to read. Defaults to the first language the template exists in."
+            },
+            "required": false,
+            "description": "Language code to read. Defaults to the first language the template exists in.",
+            "name": "language",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Email template returned successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailTemplateEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user lacks the settings read permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No template with that name and language.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update email template",
+        "description": "Writes the tenant override for one template and language. The first write clones the system default, then applies the fields provided, so unspecified fields keep the standard content. System templates themselves are never modified.",
+        "tags": [
+          "Email Templates",
+          "Notifications"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-header-required": true,
+          "x-rbac-resource": "settings",
+          "x-chat-callable": true,
+          "x-chat-display-name": "Update Email Template",
+          "x-chat-rbac-resource": "settings",
+          "x-chat-approval-required": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Kebab-case template name, such as ticket-created or invoice-email."
+            },
+            "required": true,
+            "description": "Kebab-case template name, such as ticket-created or invoice-email.",
+            "name": "name",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "description": "Template fields to write.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailTemplateUpdateRequest"
+              },
+              "description": "Template fields to write."
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Email template updated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailTemplateEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user lacks the settings update permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No template with that name and language.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Reset email template",
+        "description": "Removes the tenant override for one template and language, so the standard template is used again. Other languages of the same template are untouched.",
+        "tags": [
+          "Email Templates",
+          "Notifications"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-header-required": true,
+          "x-rbac-resource": "settings",
+          "x-chat-callable": true,
+          "x-chat-display-name": "Reset Email Template",
+          "x-chat-rbac-resource": "settings",
+          "x-chat-approval-required": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Kebab-case template name, such as ticket-created or invoice-email."
+            },
+            "required": true,
+            "description": "Kebab-case template name, such as ticket-created or invoice-email.",
+            "name": "name",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "en",
+                "fr",
+                "es",
+                "de",
+                "nl",
+                "it",
+                "pl",
+                "pt",
+                "xx",
+                "yy"
+              ],
+              "description": "Language code whose tenant override is removed."
+            },
+            "required": true,
+            "description": "Language code whose tenant override is removed.",
+            "name": "language",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Tenant override removed successfully."
+          },
+          "401": {
+            "description": "Authentication failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user lacks the settings update permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The template is not customized for that language.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -49848,8 +51853,8 @@
     },
     "/api/v1/financial/tax/rates": {
       "get": {
-        "summary": "List financial tax rates (transaction list wiring)",
-        "description": "Route file currently maps to ApiFinancialController.list(), so the response is the generic financial transaction list rather than a tax-rate list.",
+        "summary": "List tax rates",
+        "description": "Returns tenant-scoped tax rates. cap_amount is a safe integer in currency_code minor units, or null for no cap; zero is intentional. A null currency applies to all invoice currencies, including unresolved legacy caps. Caps apply per rate contribution and per period segment, not to component-based composite calculations. Requires financial:read, billing:read and PSA product access. This route exposes GET only; no tax-rate mutation endpoints are added.",
         "tags": [
           "Financial"
         ],
@@ -49864,8 +51869,7 @@
           "x-tenant-header": "x-tenant-id (optional; otherwise tenant inferred from key)",
           "x-rbac-resource": "financial",
           "x-rbac-action": "read",
-          "x-route-to-controller-mismatch": true,
-          "x-controller-method": "ApiFinancialController.list()"
+          "x-controller-method": "ApiFinancialController.listTaxRates()"
         },
         "x-alga-products": [
           "psa"
@@ -49889,7 +51893,18 @@
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "created_at",
+                "updated_at",
+                "region_code",
+                "tax_percentage",
+                "start_date",
+                "end_date",
+                "cap_amount",
+                "currency_code"
+              ],
+              "default": "created_at"
             },
             "required": false,
             "name": "sort",
@@ -49901,7 +51916,8 @@
               "enum": [
                 "asc",
                 "desc"
-              ]
+              ],
+              "default": "desc"
             },
             "required": false,
             "name": "order",
@@ -49917,7 +51933,8 @@
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "date-time"
             },
             "required": false,
             "name": "created_from",
@@ -49925,7 +51942,8 @@
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "date-time"
             },
             "required": false,
             "name": "created_to",
@@ -49933,7 +51951,8 @@
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "date-time"
             },
             "required": false,
             "name": "updated_from",
@@ -49941,7 +51960,8 @@
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "date-time"
             },
             "required": false,
             "name": "updated_to",
@@ -49949,20 +51969,10 @@
           },
           {
             "schema": {
-              "type": "string",
-              "format": "uuid"
+              "type": "string"
             },
             "required": false,
-            "name": "client_id",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "required": false,
-            "name": "invoice_id",
+            "name": "is_active",
             "in": "query"
           },
           {
@@ -49970,128 +51980,24 @@
               "type": "string"
             },
             "required": false,
-            "name": "type",
+            "name": "region_code",
             "in": "query"
           },
           {
             "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "status",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "amount_min",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "amount_max",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "true",
-                "false"
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                },
+                {
+                  "type": "string",
+                  "format": "date-time"
+                }
               ]
             },
             "required": false,
-            "name": "include_expired",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ]
-            },
-            "required": false,
-            "name": "expiring_soon",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ]
-            },
-            "required": false,
-            "name": "has_remaining",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ]
-            },
-            "required": false,
-            "name": "has_expiration",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "date_from",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "date_to",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "day",
-                "week",
-                "month"
-              ]
-            },
-            "required": false,
-            "name": "group_by",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ]
-            },
-            "required": false,
-            "name": "include_projections",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "as_of_date",
+            "name": "effective_date",
             "in": "query"
           }
         ],
@@ -50101,7 +52007,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FinancialInvoiceApiPaginated"
+                  "$ref": "#/components/schemas/TaxRateListResponse"
                 }
               }
             }
@@ -50127,7 +52033,7 @@
             }
           },
           "403": {
-            "description": "financial:read permission denied.",
+            "description": "financial:read, billing:read or PSA product access denied.",
             "content": {
               "application/json": {
                 "schema": {
@@ -56577,7 +58483,7 @@
     "/api/v1/accounting-exports/xero-csv/client-export": {
       "get": {
         "summary": "Export clients as Xero Contacts CSV",
-        "description": "Generates a Xero Contacts import CSV from the tenant clients (optionally limited to clientIds). Returns a CSV file. Requires billing:manage.",
+        "description": "Generates a Xero Contacts import CSV from the tenant clients (optionally limited to clientIds). Returns a CSV file. Requires accounting_integrations:exports_execute.",
         "tags": [
           "Accounting Exports"
         ],
@@ -56588,8 +58494,8 @@
         ],
         "extensions": {
           "x-tenant-scoped": true,
-          "x-rbac-resource": "billing",
-          "x-rbac-action": "manage",
+          "x-rbac-resource": "accounting_integrations",
+          "x-rbac-action": "exports_execute",
           "x-response-content-type": "text/csv"
         },
         "x-alga-products": [
@@ -56664,7 +58570,7 @@
     "/api/v1/accounting-exports/xero-csv/client-import": {
       "post": {
         "summary": "Import Xero Contacts CSV",
-        "description": "Ingests a Xero Contacts CSV and matches/creates/updates clients. Accepts multipart file, JSON csvContent, or raw CSV. Supports preview mode and createNew/updateExisting/matchBy options. Requires billing:manage.",
+        "description": "Ingests a Xero Contacts CSV and matches/creates/updates clients. Accepts multipart file, JSON csvContent, or raw CSV. Supports preview mode and createNew/updateExisting/matchBy options. Requires accounting_integrations:exports_execute.",
         "tags": [
           "Accounting Exports"
         ],
@@ -56675,8 +58581,8 @@
         ],
         "extensions": {
           "x-tenant-scoped": true,
-          "x-rbac-resource": "billing",
-          "x-rbac-action": "manage",
+          "x-rbac-resource": "accounting_integrations",
+          "x-rbac-action": "exports_execute",
           "x-request-content-type": "multipart/form-data or application/json or text/csv"
         },
         "x-alga-products": [
@@ -56785,7 +58691,7 @@
     "/api/v1/accounting-exports/xero-csv/tax-import": {
       "post": {
         "summary": "Import Xero invoice tax CSV",
-        "description": "Ingests a Xero Invoice Details Report CSV, extracts per-invoice tax amounts, and updates the matching Alga invoices. Accepts multipart file, JSON csvContent, or raw CSV; supports preview mode. Requires billing:manage.",
+        "description": "Ingests a Xero Invoice Details Report CSV, extracts per-invoice tax amounts, and updates the matching Alga invoices. Accepts multipart file, JSON csvContent, or raw CSV; supports preview mode. Requires accounting_integrations:exports_execute.",
         "tags": [
           "Accounting Exports"
         ],
@@ -56796,8 +58702,8 @@
         ],
         "extensions": {
           "x-tenant-scoped": true,
-          "x-rbac-resource": "billing",
-          "x-rbac-action": "manage",
+          "x-rbac-resource": "accounting_integrations",
+          "x-rbac-action": "exports_execute",
           "x-request-content-type": "multipart/form-data or application/json or text/csv"
         },
         "x-alga-products": [
@@ -56874,7 +58780,7 @@
     "/api/v1/accounting-exports/{batchId}/download": {
       "get": {
         "summary": "Download an accounting export batch",
-        "description": "Regenerates and returns the export file (CSV/IIF) for a stored export batch using its registered adapter (xero_csv, quickbooks_desktop). Requires billing_settings:update.",
+        "description": "Regenerates and returns the export file (CSV/IIF) for a stored export batch using its registered adapter (xero_csv, quickbooks_desktop). Requires accounting_integrations:exports_execute.",
         "tags": [
           "Accounting Exports"
         ],
@@ -56885,8 +58791,8 @@
         ],
         "extensions": {
           "x-tenant-scoped": true,
-          "x-rbac-resource": "billing_settings",
-          "x-rbac-action": "update"
+          "x-rbac-resource": "accounting_integrations",
+          "x-rbac-action": "exports_execute"
         },
         "x-alga-products": [
           "psa"
@@ -88882,6 +90788,16 @@
               }
             }
           },
+          "409": {
+            "description": "Confirmation required: the status change would close or reopen child tickets of a sync-mode bundle master. Retry with propagateToChildren=true or false. The error details carry crossesBoundary and the affected/unaffected children.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Unexpected controller/service failure.",
             "content": {
@@ -89436,6 +91352,16 @@
               }
             }
           },
+          "409": {
+            "description": "Confirmation required: the status change would close or reopen child tickets of a sync-mode bundle master. Retry with propagateToChildren=true or false. The error details carry crossesBoundary and the affected/unaffected children.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Unexpected controller/service failure.",
             "content": {
@@ -89647,7 +91573,7 @@
       },
       "post": {
         "summary": "Create ticket bundle",
-        "description": "Bundles the given child tickets under ticket {id} as the master, with a sync mode of link_only or sync_updates.",
+        "description": "Bundles the given child tickets under ticket {id} as the master, with a sync mode of link_only or sync_updates. When the master is closed, on_closed_master selects the consequence: keep_closed (link only, the default), apply_resolution (close each child with the master's resolution), or reopen_master. Omitting it while the master is closed returns 409 naming the allowed choices; supplying it while the master is open returns 400.",
         "tags": [
           "Work Management v1"
         ],
@@ -89866,7 +91792,7 @@
     "/api/v1/tickets/{id}/bundle/children": {
       "post": {
         "summary": "Add bundle children",
-        "description": "Adds child tickets to the existing bundle mastered by {id}.",
+        "description": "Adds child tickets to the existing bundle mastered by {id}. When the master is closed, on_closed_master selects the consequence: keep_closed (link only, the default), apply_resolution (close each child with the master's resolution), or reopen_master. Omitting it while the master is closed returns 409 naming the allowed choices; supplying it while the master is open returns 400.",
         "tags": [
           "Work Management v1"
         ],
@@ -95580,6 +97506,115 @@
         }
       }
     },
+    "/api/v1/tickets/{id}/comments/{commentId}/schedule": {
+      "delete": {
+        "summary": "Cancel a scheduled comment",
+        "description": "Cancels a comment that was created with scheduled_publish_at and has not published yet. The row is retained with publish_state=canceled (soft-deleted) and its publication job is removed. Returns 400 for comments that are not scheduled.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "ticket",
+          "x-rbac-action": "update"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Ticket UUID."
+            },
+            "required": true,
+            "description": "Ticket UUID.",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Comment UUID."
+            },
+            "required": true,
+            "description": "Comment UUID.",
+            "name": "commentId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Scheduled comment canceled.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for ticket resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket or sub-resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/tickets/{id}/documents": {
       "get": {
         "summary": "List ticket documents",
@@ -96098,6 +98133,555 @@
         }
       }
     },
+    "/api/v1/tickets/{id}/external-links": {
+      "get": {
+        "summary": "List ticket external links",
+        "description": "Returns structured external-system references for the ticket, each with a resolved display label, icon, and link-out href.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "ticket",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "UUID path identifier from underlying resource tables."
+            },
+            "required": true,
+            "description": "UUID path identifier from underlying resource tables.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ticket external links.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for ticket resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket or sub-resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Add a ticket external link",
+        "description": "Adds a ticket-level external-system reference. Only one origin link is allowed per ticket. URL must be http(s).",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "ticket",
+          "x-rbac-action": "update"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "UUID path identifier from underlying resource tables."
+            },
+            "required": true,
+            "description": "UUID path identifier from underlying resource tables.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkV1TicketExternalLinkCreateBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "External link created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for ticket resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket or sub-resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tickets/{id}/external-links/{linkId}": {
+      "patch": {
+        "summary": "Update a ticket external link",
+        "description": "Updates mutable fields (relationship, url, actor, external status/timestamps, metadata) on a link belonging to the ticket.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "ticket",
+          "x-rbac-action": "update"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Ticket UUID."
+            },
+            "required": true,
+            "description": "Ticket UUID.",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "External link UUID."
+            },
+            "required": true,
+            "description": "External link UUID.",
+            "name": "linkId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkV1TicketExternalLinkUpdateBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "External link updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for ticket resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket or sub-resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Remove a ticket external link",
+        "description": "Removes a link belonging to the ticket and writes a ticket activity entry.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "ticket",
+          "x-rbac-action": "update"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Ticket UUID."
+            },
+            "required": true,
+            "description": "Ticket UUID.",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "External link UUID."
+            },
+            "required": true,
+            "description": "External link UUID.",
+            "name": "linkId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "External link removed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for ticket resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket or sub-resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tickets/by-external-link": {
+      "get": {
+        "summary": "Find a ticket by external link",
+        "description": "Returns the ticket and matching external link for a given system/external_id (and optional external_parent_id); 404 when no ticket carries it.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "ticket",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Registry key of the external system."
+            },
+            "required": true,
+            "description": "Registry key of the external system.",
+            "name": "system",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "External record identifier."
+            },
+            "required": true,
+            "description": "External record identifier.",
+            "name": "external_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Ticket-level external id, for comment-level records."
+            },
+            "required": false,
+            "description": "Ticket-level external id, for comment-level records.",
+            "name": "external_parent_id",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Matching ticket and link.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for ticket resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket or sub-resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/tickets/{id}/documents/{documentId}": {
       "get": {
         "summary": "Download a ticket document",
@@ -96293,6 +98877,224 @@
           },
           "500": {
             "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tickets/{id}/documents/{documentId}/thumbnail": {
+      "get": {
+        "summary": "Get a ticket document thumbnail image",
+        "description": "Serves the cached 200x200 cover-cropped JPEG thumbnail for an image, PDF, or video document attached to a ticket. Generated on first request for older uploads. Responds with an ETag and long-lived Cache-Control; honors If-None-Match with 304. Returns 404 for document types that have no thumbnail.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "ticket",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Ticket UUID."
+            },
+            "required": true,
+            "description": "Ticket UUID.",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Document UUID."
+            },
+            "required": true,
+            "description": "Document UUID.",
+            "name": "documentId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Binary thumbnail image (image/jpeg).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiSuccess"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (ETag matched If-None-Match).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiSuccess"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for ticket resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Document not found or has no thumbnail.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tickets/{id}/documents/{documentId}/preview": {
+      "get": {
+        "summary": "Get a ticket document preview image",
+        "description": "Serves the cached 800x600 fit-inside JPEG preview for an image, PDF, or video document attached to a ticket. Generated on first request for older uploads. Responds with an ETag and long-lived Cache-Control; honors If-None-Match with 304. Returns 404 for document types that have no preview.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "ticket",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Ticket UUID."
+            },
+            "required": true,
+            "description": "Ticket UUID.",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Document UUID."
+            },
+            "required": true,
+            "description": "Document UUID.",
+            "name": "documentId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Binary preview image (image/jpeg).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiSuccess"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (ETag matched If-None-Match).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiSuccess"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for ticket resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Document not found or has no preview.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure.",
             "content": {
               "application/json": {
                 "schema": {
@@ -107083,6 +109885,29 @@
           {
             "schema": {
               "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "status_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "description": "Filter by status closure; 'false' also matches interactions with no status."
+            },
+            "required": false,
+            "description": "Filter by status closure; 'false' also matches interactions with no status.",
+            "name": "is_closed",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
               "format": "date-time"
             },
             "required": false,
@@ -107149,7 +109974,7 @@
             }
           },
           "403": {
-            "description": "Interaction RBAC denied.",
+            "description": "Interaction RBAC or assignment to another user’s schedule denied.",
             "content": {
               "application/json": {
                 "schema": {
@@ -107182,6 +110007,7 @@
       },
       "post": {
         "summary": "Create an interaction",
+        "description": "Optionally creates a linked AlgaPSA calendar entry in the same transaction. Set create_schedule_entry and start_time; end_time defaults to start_time plus duration (or 30 minutes). schedule_assigned_user_ids defaults to the API key owner; booking other users requires user_schedule:update. This does not create a Teams meeting.",
         "tags": [
           "Interactions v1"
         ],
@@ -107241,7 +110067,7 @@
             }
           },
           "403": {
-            "description": "Interaction RBAC denied.",
+            "description": "Interaction RBAC or assignment to another user’s schedule denied.",
             "content": {
               "application/json": {
                 "schema": {
@@ -107336,7 +110162,196 @@
             }
           },
           "403": {
-            "description": "Interaction RBAC denied.",
+            "description": "Interaction RBAC or assignment to another user’s schedule denied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Interaction not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller or service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update an interaction status or notes",
+        "description": "Closes/reopens an interaction (status_id must be an interaction status) or replaces its notes. Title and timing are not editable here because they also re-sync the linked calendar entry.",
+        "tags": [
+          "Interactions v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate()",
+          "x-rbac-resource": "interaction"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateInteractionBodyV1"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated interaction.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionSuccessV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or query parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Interaction RBAC or assignment to another user’s schedule denied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Interaction not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller or service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interaction-statuses": {
+      "get": {
+        "summary": "List interaction statuses",
+        "description": "Tenant statuses of type interaction, in display order.",
+        "tags": [
+          "Interactions v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate()",
+          "x-rbac-resource": "interaction"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "responses": {
+          "200": {
+            "description": "Interaction statuses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionStatusListV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or query parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Interaction RBAC or assignment to another user’s schedule denied.",
             "content": {
               "application/json": {
                 "schema": {
@@ -107421,7 +110436,7 @@
             }
           },
           "403": {
-            "description": "Interaction RBAC denied.",
+            "description": "Interaction RBAC or assignment to another user’s schedule denied.",
             "content": {
               "application/json": {
                 "schema": {
@@ -109685,7 +112700,7 @@
     "/api/v1/mobile/me/capabilities": {
       "get": {
         "summary": "Get current mobile feature capabilities",
-        "description": "Returns tenant-product and RBAC-derived mobile feature availability for the authenticated API-key user.",
+        "description": "Returns tenant-product and RBAC-derived mobile feature availability, plus the country-derived date format, for the authenticated API-key user.",
         "tags": [
           "Mobile v1"
         ],

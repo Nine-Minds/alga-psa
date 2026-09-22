@@ -42,6 +42,7 @@ services:
       EMAIL_USERNAME: ${EMAIL_USERNAME:-noreply@example.com}
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       NEXTAUTH_SESSION_EXPIRES: ${NEXTAUTH_SESSION_EXPIRES:-86400}
+      TRUST_FORWARDED_HOST: ${TRUST_FORWARDED_HOST:-false}
       IMAP_WEBHOOK_SECRET: ${IMAP_WEBHOOK_SECRET:-}
     volumes:
       # Persist user-uploaded documents and generated files
@@ -126,6 +127,7 @@ services:
       EMAIL_USERNAME: ${EMAIL_USERNAME:-noreply@example.com}
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       NEXTAUTH_SESSION_EXPIRES: ${NEXTAUTH_SESSION_EXPIRES:-86400}
+      TRUST_FORWARDED_HOST: ${TRUST_FORWARDED_HOST:-false}
     volumes:
       - type: bind
         source: ./setup/config.ini

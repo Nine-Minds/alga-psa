@@ -154,13 +154,19 @@ const SurveyAnalyticsService = {
       type: 'left',
       rootTenantColumn: 'sr.tenant',
     });
+    db.tenantJoin(query, 'projects as p', 'sr.project_id', 'p.project_id', {
+      type: 'left', rootTenantColumn: 'sr.tenant',
+    });
     db.tenantJoin(query, `${CLIENTS_TABLE} as c`, 'sr.client_id', 'c.client_id', {
       type: 'left',
       rootTenantColumn: 'sr.tenant',
     });
-    db.tenantJoin(query, `${USERS_TABLE} as u`, 't.assigned_to', 'u.user_id', {
+    db.tenantJoin(query, `${USERS_TABLE} as u`, 'sr.tenant', 'u.tenant', {
+      on: join => { join.andOn(function () {
+        this.on('t.assigned_to', '=', 'u.user_id').orOn('p.assigned_to', '=', 'u.user_id');
+      }); },
       type: 'left',
-      rootTenantColumn: 't.tenant',
+      rootTenantColumn: 'sr.tenant',
     });
 
     const rows = await query
@@ -170,8 +176,10 @@ const SurveyAnalyticsService = {
         'sr.rating as rating',
         'sr.comment as comment',
         'sr.submitted_at as submitted_at',
-        't.ticket_id as ticket_id',
+        'sr.ticket_id as ticket_id',
         't.ticket_number as ticket_number',
+        'sr.project_id as project_id',
+        'p.project_number as project_number',
         'c.client_name as client_name',
         knex.raw("COALESCE(CONCAT(u.first_name, ' ', u.last_name), '') as technician_name")
       )
@@ -181,8 +189,10 @@ const SurveyAnalyticsService = {
 
     return rows.map((row) => ({
       responseId: row.response_id,
-      ticketId: row.ticket_id,
+      ticketId: row.ticket_id ?? null,
       ticketNumber: row.ticket_number ?? null,
+      projectId: row.project_id ?? null,
+      projectNumber: row.project_number ?? null,
       clientName: row.client_name ?? null,
       comment: row.comment ?? null,
       rating: typeof row.rating === 'number' ? row.rating : Number(row.rating ?? 0),
@@ -226,6 +236,9 @@ const SurveyAnalyticsService = {
       type: 'left',
       rootTenantColumn: 'sr.tenant',
     });
+    db.tenantJoin(responsesQuery, 'projects as p', 'sr.project_id', 'p.project_id', {
+      type: 'left', rootTenantColumn: 'sr.tenant',
+    });
     db.tenantJoin(responsesQuery, `${CLIENTS_TABLE} as c`, 'sr.client_id', 'c.client_id', {
       type: 'left',
       rootTenantColumn: 'sr.tenant',
@@ -234,9 +247,12 @@ const SurveyAnalyticsService = {
       type: 'left',
       rootTenantColumn: 'sr.tenant',
     });
-    db.tenantJoin(responsesQuery, `${USERS_TABLE} as u`, 't.assigned_to', 'u.user_id', {
+    db.tenantJoin(responsesQuery, `${USERS_TABLE} as u`, 'sr.tenant', 'u.tenant', {
+      on: join => { join.andOn(function () {
+        this.on('t.assigned_to', '=', 'u.user_id').orOn('p.assigned_to', '=', 'u.user_id');
+      }); },
       type: 'left',
-      rootTenantColumn: 't.tenant',
+      rootTenantColumn: 'sr.tenant',
     });
 
     responsesQuery
@@ -245,8 +261,10 @@ const SurveyAnalyticsService = {
         'sr.rating as rating',
         'sr.comment as comment',
         'sr.submitted_at as submitted_at',
-        't.ticket_id as ticket_id',
+        'sr.ticket_id as ticket_id',
         't.ticket_number as ticket_number',
+        'sr.project_id as project_id',
+        'p.project_number as project_number',
         'c.client_name as client_name',
         'ct.full_name as contact_name',
         knex.raw("COALESCE(CONCAT(u.first_name, ' ', u.last_name), '') as technician_name")
@@ -265,8 +283,10 @@ const SurveyAnalyticsService = {
 
     const items = rows.map((row) => ({
       responseId: row.response_id,
-      ticketId: row.ticket_id,
+      ticketId: row.ticket_id ?? null,
       ticketNumber: row.ticket_number ?? null,
+      projectId: row.project_id ?? null,
+      projectNumber: row.project_number ?? null,
       clientName: row.client_name ?? null,
       contactName: row.contact_name ?? null,
       rating: typeof row.rating === 'number' ? row.rating : Number(row.rating ?? 0),
@@ -458,7 +478,12 @@ function baseResponseQuery(knex: Knex, tenantId: string, filters?: SurveyDashboa
         rootTenantColumn: 'sr.tenant',
       }
     );
-    query.andWhere('t_filter.assigned_to', filters.technicianId);
+    tenantDb(knex, tenantId).tenantJoin(query, 'projects as p_filter', 'sr.project_id', 'p_filter.project_id', {
+      type: 'left', rootTenantColumn: 'sr.tenant',
+    });
+    query.andWhere(function () {
+      this.where('t_filter.assigned_to', filters.technicianId!).orWhere('p_filter.assigned_to', filters.technicianId!);
+    });
   }
 
   return query;

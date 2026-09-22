@@ -414,11 +414,17 @@
       "refreshing": "Odświeżanie...",
       "refreshData": "Odśwież dane",
       "rebootDevice": "Uruchom ponownie urządzenie",
+      "rebooting": "Ponowne uruchamianie...",
       "editAsset": "Edytuj zasób",
       "deleteAsset": "Usuń zasób"
     },
     "values": {
       "unknownClient": "Nieznany klient"
+    },
+    "reboot": {
+      "title": "Uruchomić ponownie urządzenie?",
+      "message": "{{name}} zostanie natychmiast uruchomione ponownie przez {{provider}}. Zalogowani użytkownicy utracą niezapisaną pracę.",
+      "confirm": "Uruchom ponownie teraz"
     }
   },
   "assetDetailTabs": {

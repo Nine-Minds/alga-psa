@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "scope": "Native UsageTracking component regression",
+  "before": {
+    "passed": 6,
+    "failed": 1,
+    "failure": "Bucket refresh rejection did not show an alert"
+  },
+  "after": {
+    "passed": 10,
+    "failed": 0,
+    "typecheck": "passed"
+  },
+  "behaviors": [
+    "Thrown and returned bucket-load failures clear stale balances",
+    "Scoped retry restores current balances without reloading usage or discarding filters",
+    "Late responses for a previous client do not replace the selected client result"
+  ],
+  "files": [
+    "packages/billing/src/components/billing-dashboard/UsageTracking.tsx",
+    "packages/billing/tests/UsageTracking.periodContextAndRequestId.test.tsx"
+  ],
+  "limits": [
+    "Action responses and child charts are mocked; real component state and user interactions execute.",
+    "Citus query correction and actual browser verification are separate."
+  ]
+}

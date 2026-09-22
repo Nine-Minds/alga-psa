@@ -78,7 +78,8 @@
     "paused": "Pausiert",
     "allResponseStatuses": "Alle Antwortstatus",
     "responseStatus": "Antwortstatus",
-    "board": "Nach Board filtern"
+    "board": "Nach Board filtern",
+    "searchSmart": "Tickets und Kommentare durchsuchen… Enter für intelligente Suche"
   },
   "create": {
     "title": "Support-Ticket erstellen",
@@ -297,12 +298,12 @@
     "deleteTimeEntryFailed": "Zeiteintrag konnte nicht gelöscht werden",
     "timeEntryDeleted": "Zeiteintrag gelöscht",
     "closeFailed": "Ticket konnte nicht geschlossen werden",
-    "scheduleVisitFailed": "Der Terminplaner konnte nicht geöffnet werden",
     "loadCommentsFailed": "Kommentare konnten nicht geladen werden",
     "updateTicketFailed": "Das Ticket konnte nicht aktualisiert werden",
     "errorWithMessage": "Fehler: {{message}}",
     "billingProfileUpdated": "Abrechnungsprofil aktualisiert",
-    "updateBillingProfileFailed": "Abrechnungsprofil konnte nicht aktualisiert werden"
+    "updateBillingProfileFailed": "Abrechnungsprofil konnte nicht aktualisiert werden",
+    "scheduleOpenFailed": "Der Planer konnte nicht geöffnet werden"
   },
   "conversation": {
     "comments": "Kommentare",
@@ -335,6 +336,8 @@
     "deleteUploadedImages": "Bilder löschen",
     "keepUploadedImages": "Bilder behalten",
     "bundledUpdate": "Gebündeltes Update",
+    "bundledUpdateFrom": "Gebündeltes Update von {{number}}",
+    "systemAuthor": "System",
     "clientSuffix": " (Kunde)",
     "internalCommentTooltip": "Interner Kommentar",
     "resolutionCommentTooltip": "Lösungskommentar",
@@ -571,7 +574,7 @@
     "bundleMasterLabel": "Hauptticket auswählen",
     "bundleMasterPlaceholder": "Hauptticket auswählen...",
     "bundleSyncUpdates": "Synchronisiere Aktualisierungen vom Hauptticket zu den Untertickets (öffentliche Antworten + Workflow-Änderungen)",
-    "bundleSyncUpdatesHelp": "Untertickets behalten beim Bündeln ihren aktuellen Status. Workflow-Felder sind bei Untertickets standardmäßig gesperrt. Interne Notizen bleiben auf dem Hauptticket.",
+    "bundleSyncUpdatesHelp": "Beim Bündeln behalten untergeordnete Tickets ihren aktuellen Status. Danach schließt oder öffnet das Schließen bzw. Wiederöffnen des Masters alle untergeordneten Tickets, und Status-, Bearbeiter- und Prioritätsänderungen am Master werden auf die untergeordneten Tickets angewendet. Workflow-Felder sind bei untergeordneten Tickets gesperrt. Interne Notizen verbleiben am Master.",
     "bundleSelectAtLeastTwo": "Wählen Sie mindestens zwei Tickets zum Bündeln aus.",
     "bundleSelectMaster": "Wählen Sie ein Hauptticket aus.",
     "bundleSuccess": "Tickets gebündelt",
@@ -634,12 +637,16 @@
       "masterTicket": "Hauptticket auswählen",
       "selectMasterTicket": "Hauptticket auswählen...",
       "syncUpdates": "Synchronisiere Aktualisierungen vom Hauptticket zu den Untertickets (öffentliche Antworten + Workflow-Änderungen)",
-      "syncUpdatesHelp": "Untertickets behalten beim Bündeln ihren aktuellen Status. Workflow-Felder sind bei Untertickets standardmäßig gesperrt. Interne Notizen bleiben auf dem Hauptticket.",
+      "syncUpdatesHelp": "Beim Bündeln behalten untergeordnete Tickets ihren aktuellen Status. Danach schließt oder öffnet das Schließen bzw. Wiederöffnen des Masters alle untergeordneten Tickets, und Status-, Bearbeiter- und Prioritätsänderungen am Master werden auf die untergeordneten Tickets angewendet. Workflow-Felder sind bei untergeordneten Tickets gesperrt. Interne Notizen verbleiben am Master.",
       "childrenDescription": "Untergeordnete behalten ihren aktuellen Status; Workflow-Felder sind bei untergeordneten Tickets gesperrt. Eingehende Antworten auf untergeordnete Tickets werden unten als schreibgeschützt angezeigt.",
       "checkingMasters": "Vorhandene Bündel werden geprüft...",
       "existingMasterSuffix": "(vorhandenes Hauptticket)",
       "existingMasterLocked": "Ein ausgewähltes Ticket ist bereits ein Hauptticket. Es wird als Hauptticket verwendet; die anderen werden als Untertickets hinzugefügt.",
-      "multipleExistingMasters": "Mehrere ausgewählte Tickets sind bereits Haupttickets ({{count}}). Heben Sie die Bündelung aller bis auf eines auf, bevor Sie die Tickets bündeln."
+      "multipleExistingMasters": "Mehrere ausgewählte Tickets sind bereits Haupttickets ({{count}}). Heben Sie die Bündelung aller bis auf eines auf, bevor Sie die Tickets bündeln.",
+      "propagationSummary": "{{masters}} ausgewählte(s) Ticket(s) sind Master im Synchronmodus; diese Änderung schließt/öffnet {{children}} untergeordnete(s) Ticket(s).",
+      "masterSummary": "{{children}} untergeordnete(s) Ticket(s)",
+      "applyToChildren": "Auf untergeordnete Tickets anwenden",
+      "mastersOnly": "Nur Master"
     },
     "auth": {
       "moveRequired": "Sie müssen angemeldet sein, um Tickets zu verschieben",
@@ -1076,7 +1083,8 @@
       "responseStateTrackingDisabled": "Antwortstatus-Tracking deaktiviert",
       "title": "Darstellungseinstellungen für Tickets",
       "description": "Konfigurieren Sie, wie Ihr Ticket-Dashboard Spalten und Zeitstempel für Ihr Team anzeigt.",
-      "dateTimeFormat": "Datum-/Zeitformat",
+      "showWeekday": "Wochentag in Zeitstempeln anzeigen",
+      "countryDrivesFormat": "Das Datums- und Zeitformat richtet sich nach dem Land Ihres Unternehmens. Legen Sie es unter Einstellungen → Allgemein fest.",
       "ticketListColumns": "Spalten der Ticketliste",
       "showTags": "Tags anzeigen",
       "displayUnderTitle": "Unter dem Titel anzeigen",
@@ -1374,7 +1382,13 @@
       "alreadyBundled": "Ticket ist bereits gebündelt: {{ticket}}",
       "masterAsChild": "Das Haupt-Ticket kann nicht zugleich ein untergeordnetes Ticket sein.",
       "noChildren": "Keine untergeordneten Tickets angegeben.",
-      "childrenOnBundledChild": "Einem gebündelten untergeordneten Ticket können keine untergeordneten Tickets hinzugefügt werden."
+      "childrenOnBundledChild": "Einem gebündelten untergeordneten Ticket können keine untergeordneten Tickets hinzugefügt werden.",
+      "concurrent": "Ein oder mehrere ausgewählte Tickets wurden gleichzeitig gebündelt. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "closedMasterChoiceRequired": "Das Haupt-Ticket dieses Bündels ist geschlossen. Wählen Sie, wie das Unterticket hinzugefügt werden soll: {{choices}}.",
+      "closedMasterChoiceNotAllowed": "Diese Auswahl ist für dieses Haupt-Ticket nicht zulässig. Wählen Sie eine der folgenden Optionen: {{choices}}.",
+      "choiceOnOpenMaster": "Diese Auswahl gilt nur, wenn das Haupt-Ticket des Bündels geschlossen ist.",
+      "closeRuleFailed": "Dieses Ticket kann noch nicht geschlossen werden: {{reason}}",
+      "reopenUnavailable": "Das Haupt-Ticket kann nicht wieder geöffnet werden, da kein offener Ticketstatus konfiguriert ist."
     },
     "ticket": {
       "validationDetails": "Bitte korrigieren Sie die Ticketangaben: {{details}}",
@@ -1469,7 +1483,7 @@
   },
   "details": {
     "bundle": {
-      "childrenDescription": "Untergeordnete Tickets, die in diesem Master-Ticket gebündelt sind",
+      "childrenDescription": "Beim Bündeln behalten untergeordnete Tickets ihren aktuellen Status. Danach schließt oder öffnet das Schließen bzw. Wiederöffnen des Masters alle untergeordneten Tickets, und Status-, Bearbeiter- und Prioritätsänderungen am Master werden auf die untergeordneten Tickets angewendet. Workflow-Felder sind bei untergeordneten Tickets gesperrt. Interne Notizen verbleiben am Master.",
       "title": "Bündel",
       "masterBanner": "Dieses Ticket ist das Hauptticket eines Bündels ({{count}} Untertickets). Modus: {{mode}}.",
       "multipleClients": "Mehrere Kunden",
@@ -1481,7 +1495,33 @@
       "remove": "Entfernen",
       "noChildren": "Keine Untertickets in diesem Bündel.",
       "addChildMultiClientMessage": "Dadurch wird {{ticket}} von einem anderen Kunden zum Bündel hinzugefügt. Bestätigen Sie, dass Sie fortfahren möchten.",
-      "thisTicket": "dieses Ticket"
+      "thisTicket": "dieses Ticket",
+      "propagation": {
+        "closeTitle": "{{count}} untergeordnete Tickets ebenfalls schließen?",
+        "reopenTitle": "{{count}} untergeordnete Tickets ebenfalls wiederöffnen?",
+        "closeBody": "Dieser Master ist im Synchronmodus. Beim Schließen werden auch die {{count}} unten aufgeführten offenen untergeordneten Tickets geschlossen.",
+        "reopenBody": "Dieser Master ist im Synchronmodus. Beim Wiederöffnen werden die {{count}} von ihm geschlossenen untergeordneten Tickets wieder geöffnet. Unabhängig geschlossene untergeordnete Tickets bleiben geschlossen.",
+        "stayClosedHeading": "Bleiben geschlossen (unabhängig geschlossen)",
+        "boardRulesNote": "Board-Schließregeln werden bei untergeordneten Tickets nicht geprüft.",
+        "closeConfirm": "Master und {{count}} untergeordnete Tickets schließen",
+        "reopenConfirm": "Master und {{count}} untergeordnete Tickets wiederöffnen",
+        "masterOnlyClose": "Nur Master schließen",
+        "masterOnlyReopen": "Nur Master wiederöffnen"
+      },
+      "openChildrenBadge": "{{count}} offene Untertickets",
+      "openChildrenBadgeShort": "{{count}} offen",
+      "childOpenStatus": "Offen",
+      "childClosedStatus": "Geschlossen",
+      "closedMasterDialogTitle": "Das Haupt-Ticket dieses Bündels ist geschlossen",
+      "closedMasterDialogIntro": "Das Haupt-Ticket ist geschlossen. Wählen Sie, was mit dem Unterticket beim Hinzufügen geschehen soll.",
+      "keepClosedLabel": "Hinzufügen und Haupt-Ticket geschlossen lassen",
+      "keepClosedHelp": "Das Unterticket bleibt mit eigener SLA-Uhr offen. Das Bündel wird als inkonsistent angezeigt, bis das Unterticket gelöst ist.",
+      "applyResolutionLabel": "Hinzufügen und die Lösung des Haupt-Tickets auf dieses Unterticket anwenden",
+      "applyResolutionHelp": "Schließt das Unterticket mit dem Status {{status}} und veröffentlicht die Lösung des Haupt-Tickets als öffentlichen Kommentar im Unterticket.",
+      "applyResolutionHelpNoComment": "Schließt das Unterticket mit dem Status {{status}}. Das Haupt-Ticket hat keinen öffentlichen Lösungskommentar zum Veröffentlichen.",
+      "reopenMasterLabel": "Hinzufügen und Haupt-Ticket wieder öffnen",
+      "reopenMasterHelp": "Öffnet nur das Haupt-Ticket wieder. Bereits geschlossene Untertickets in diesem Bündel bleiben geschlossen; Benachrichtigungen zur Wiedereröffnung und SLA gelten für das Haupt-Ticket.",
+      "closedMasterGating": "Die Abschlussregeln des Boards lassen keine offenen Untertickets unter einem geschlossenen Haupt-Ticket zu. Daher ist es nicht möglich, das Haupt-Ticket geschlossen zu lassen."
     },
     "autoClose": "Wird am {{date}} automatisch geschlossen, sofern keine neue Aktivität erfolgt.",
     "autoCloseWarned": "Der Kunde wurde benachrichtigt."
@@ -1603,7 +1643,8 @@
       "additionalAgentsTooltip": "Weitere Bearbeiter:",
       "unknownAgent": "Unbekannter Bearbeiter",
       "category": "Kategorie",
-      "selectDestinationStatus": "Wählen Sie vor dem Speichern einen Status für das neue Board aus."
+      "selectDestinationStatus": "Wählen Sie vor dem Speichern einen Status für das neue Board aus.",
+      "viewSchedule": "Zeitplan anzeigen"
     },
     "layout": {
       "grid": "Raster",
@@ -1631,7 +1672,6 @@
       "showLess": "Weniger anzeigen",
       "contact": "Kontakt",
       "client": "Kunde",
-      "nextVisit": "Nächster Besuch",
       "callsAndEmails": "Anrufe und E-Mails",
       "call": "Anrufen",
       "viewAll": "Alle anzeigen",
@@ -1657,7 +1697,6 @@
       "billing": "Abrechnung",
       "couldNotLoad": "Diese Kachel konnte nicht geladen werden",
       "nothingScheduled": "Nichts geplant",
-      "scheduleVisit": "Besuch planen",
       "scheduledWork": "Geplante Arbeit",
       "scheduleDone": "erledigt",
       "noCallsOrEmails": "Keine Anrufe oder E-Mails erfasst",
@@ -1703,7 +1742,9 @@
         "approved": "Genehmigt",
         "declined": "Abgelehnt",
         "cancelled": "Storniert"
-      }
+      },
+      "scheduleTime": "Zeit planen",
+      "openScheduleEntry": "Zeitplaneintrag öffnen"
     },
     "timeline": {
       "subtitle": "Antworten, Zeit und Systemänderungen an einem Ort",
@@ -1726,6 +1767,9 @@
       "fieldChanged": "{{actor}} hat {{field}} geändert: {{from}} → {{to}}",
       "fieldSet": "{{field}} auf {{to}} gesetzt",
       "actorEvent": "{{actor}} · {{eventName}}",
+      "bundleStatusNotPropagated": "{{actor}} hat den Master-Status des Bundles geändert (untergeordnete Tickets nicht aktualisiert)",
+      "bundleStatusClosed": "{{actor}} hat den Bundle-Master und {{count}} untergeordnete Tickets geschlossen",
+      "bundleStatusReopened": "{{actor}} hat den Bundle-Master und {{count}} untergeordnete Tickets wieder geöffnet",
       "title": "Zeitleiste",
       "replyVisibility": "Sichtbarkeit der Antwort",
       "modeClient": "Kunde",
@@ -1786,7 +1830,8 @@
         "checklist_template_applied": "checklistenvorlage angewendet",
         "close_rules_overridden": "schließregeln außer kraft gesetzt",
         "close_rules_bypassed": "schließregeln umgangen",
-        "auto_close_warning_sent": "automatische schließwarnung gesendet"
+        "auto_close_warning_sent": "automatische schließwarnung gesendet",
+        "bundle_child_added": "bündel-unterticket hinzugefügt"
       },
       "closeStatus": "Abschlussstatus",
       "noStatusChange": "Status nicht ändern",
@@ -1802,5 +1847,103 @@
       "internalLabel": "Auch Agenten und Beobachter nicht benachrichtigen",
       "internalHelper": "Überspringt auch deren E-Mails und In-App-Benachrichtigungen"
     }
+  },
+  "externalLinks": {
+    "title": "Externe Links",
+    "empty": "Keine externen Links",
+    "loading": "Externe Links werden geladen...",
+    "noUrl": "Für diese Referenz ist keine URL verfügbar",
+    "customSystemOption": "{{label}} (benutzerdefiniert)",
+    "actions": {
+      "add": "Link hinzufügen",
+      "edit": "Bearbeiten",
+      "remove": "Entfernen",
+      "cancel": "Abbrechen",
+      "save": "Speichern",
+      "menu": "Link-Aktionen"
+    },
+    "relationship": {
+      "origin": "Ursprung",
+      "mirror": "Spiegel",
+      "reference": "Referenz"
+    },
+    "relationshipDescription": {
+      "origin": "Wo dieses Ticket seinen Ursprung hat. Jedes Ticket kann einen Ursprungs-Link haben, der sein Ursprungs-Badge bestimmt.",
+      "mirror": "Ein weiterer Eintrag, der dieselbe Aufgabe wie dieses Ticket verfolgt.",
+      "reference": "Ergänzende Informationen zu diesem Ticket."
+    },
+    "dialog": {
+      "addTitle": "Externen Link hinzufügen",
+      "editTitle": "Externen Link bearbeiten",
+      "intro": "Das Hinzufügen eines Links synchronisiert keine Daten zwischen den Systemen."
+    },
+    "removeDialog": {
+      "title": "Externen Link entfernen",
+      "message": "Diesen externen Link vom Ticket entfernen?"
+    },
+    "fields": {
+      "system": "System",
+      "loadingSystems": "Systeme werden geladen...",
+      "selectSystem": "System auswählen",
+      "externalId": "Externe ID",
+      "externalIdPlaceholder": "z. B. 42 oder 1234567890",
+      "realm": "Bereich",
+      "url": "URL",
+      "urlOptional": "Optionale Überschreibung",
+      "urlRequired": "https://...",
+      "relationship": "Beziehung",
+      "originExistsHint": "Dieses Ticket hat bereits einen Ursprungs-Link.",
+      "actorGroup": "Person oder Konto (optional)",
+      "actorHint": "Die Person oder das Konto, die bzw. das mit dem verlinkten Eintrag im externen System verbunden ist.",
+      "actorHandle": "Benutzername oder Handle",
+      "actorDisplay": "Anzeigename",
+      "builtInGroup": "Integrierte Systeme",
+      "customGroup": "Benutzerdefinierte Systeme",
+      "urlPreview": "Öffnet:",
+      "urlPreviewIncomplete": "Füllen Sie die Felder oben aus, um den Link in der Vorschau zu sehen."
+    },
+    "errors": {
+      "ticketNotFound": "Ticket nicht gefunden",
+      "commentNotFound": "Kommentar auf diesem Ticket nicht gefunden",
+      "linkNotFound": "Externer Link nicht gefunden",
+      "systemNotFound": "Unbekanntes externes System",
+      "externalIdRequired": "Externe ID ist erforderlich",
+      "invalidUrl": "URL muss eine gültige http(s)-URL sein",
+      "invalidRelationship": "Ungültige Beziehung",
+      "invalidEntityType": "Ungültiger Entitätstyp",
+      "originExists": "Diese Entität hat bereits einen Ursprungs-Link",
+      "duplicateExternalLink": "Dieser externe Datensatz ist bereits verlinkt",
+      "systemInUse": "Dieses externe System wird von bestehenden Links verwendet",
+      "systemInUseCount": "Dieses externe System wird von {{count}} Link(s) verwendet",
+      "invalidSystemKey": "Benutzerdefinierte Systemschlüssel müssen custom:<slug> entsprechen",
+      "systemLabelRequired": "Systembezeichnung ist erforderlich",
+      "permissionDenied": "Zugriff verweigert",
+      "systemRequired": "Wählen Sie ein externes System.",
+      "urlRequired": "Für Systeme ohne URL-Vorlage ist eine URL erforderlich."
+    }
+  },
+  "smartSearch": {
+    "run": "Intelligente Suche",
+    "runTitle": "Gefilterte Tickets anhand dieser Anfrage bewerten",
+    "relevanceColumn": "Treffer",
+    "relevance": "{{percent}} % Übereinstimmung",
+    "strong": "Starke Treffer",
+    "possible": "Mögliche Treffer",
+    "unlikely": "Unwahrscheinliche Treffer",
+    "emptyBucketRunning": "Noch keine",
+    "emptyBucket": "Keine",
+    "scoring": "{{scored}} von {{total}} Tickets bewertet",
+    "summary": "{{total}} Tickets bewertet · {{strong}} stark · {{possible}} möglich",
+    "cancelled": "Suche nach {{scored}} von {{total}} Tickets abgebrochen",
+    "errorTitle": "Intelligente Suche gestoppt",
+    "starting": "Intelligente Suche wird gestartet…",
+    "rerun": "Filter geändert. Erneut ausführen",
+    "retry": "Erneut versuchen",
+    "cancel": "Abbrechen",
+    "exit": "Zurück zur Liste",
+    "notConfigured": "Die intelligente Suche ist auf diesem Server nicht konfiguriert",
+    "failedCount": "{{count}} Tickets konnten nicht bewertet werden",
+    "unscored": "Nicht bewertet",
+    "addOnRequired": "Die intelligente Suche erfordert das KI-Assistent-Add-on"
   }
 }

@@ -114,12 +114,17 @@ const billingCycleAlignmentPostInventoryRefs = new Set([
   // Prepaid balance alert subscriber integration test (feature/low-balance-alerts)
   // seeds billing_cycle_alignment in fixtures; landed after the pass-0 snapshot.
   'server/src/lib/eventBus/subscribers/prepaidBalanceAlertSubscriber.integration.test.ts',
-  'packages/reporting/src/actions/report-actions/deferred-revenue/deferredRevenueReport.integration.test.ts',
+  'packages/reporting/src/actions/report-actions/deferred-revenue/deferredRevenueReport.db.test.ts',
   'server/src/lib/api/openapi/routes/contractLines.ts',
   'server/src/lib/mcp/registry.generated.ts',
   'server/src/test/integration/contractLineBucketsMigration.integration.test.ts',
   'shared/workflow/runtime/actions/__tests__/businessOperations.time.db.test.ts',
   'shared/workflow/runtime/actions/businessOperations/crmWorkerDal.ts',
+  // Explicit usage-contract semantics work split ContractLines authoring into
+  // CreateCustomContractLineDialog and added the fixed pricing-basis coverage
+  // after the pass-0 snapshot.
+  'packages/billing/src/components/billing-dashboard/contracts/CreateCustomContractLineDialog.tsx',
+  'packages/billing/tests/ContractLineServiceForm.fixedPricingBasis.test.tsx',
 ]);
 
 // Files whose billing_cycle_alignment references were removed after the pass-0
@@ -128,6 +133,7 @@ const billingCycleAlignmentPostInventoryRefs = new Set([
 // createFixedPlanAssignment helper); the snapshot remains an accurate record
 // of its point in time.
 const billingCycleAlignmentPostInventoryRemovals = new Set([
+  'server/src/lib/repositories/contractLineRepository.ts',
   'server/src/test/infrastructure/billing/credits/creditApplication.test.ts',
 ]);
 
@@ -135,12 +141,39 @@ const billingCycleAlignmentPostInventoryRemovals = new Set([
 // pass-0 inventory snapshot was taken (recurring service-period ledger work
 // landed after the inventory was captured).
 const servicePeriodPostInventoryRefs = new Set([
+  'packages/billing/src/lib/billing/pricing/isPeriodAlreadyInvoiced.ts',
+  'shared/billingClients/resolveFixedLineRate.ts',
+  // Invoice ticket presentation (origin/main a81661446e) added template
+  // descriptors and behavioral coverage after this historical snapshot.
+  'packages/billing/src/lib/invoice-template-ast/collectionDescriptors.ts',
+  'server/src/test/integration/invoiceTicketProduction.integration.test.ts',
+  'server/src/test/unit/billing/invoiceTicketPresentation.test.ts',
+  // Explicit usage-contract measurement semantics (usage period totals, seat
+  // revisions, unit-pricing revisions) added persisted service-period readers
+  // and fixtures after the pass-0 snapshot.
+  'packages/billing/src/actions/contractLineUnitPricingActions.ts',
+  'packages/billing/src/components/billing-dashboard/UsagePeriodTotalQuickEntry.tsx',
+  'packages/billing/src/components/billing-dashboard/UsageTracking.tsx',
+  'packages/billing/src/lib/billing/seatRevisions.ts',
+  'packages/billing/src/lib/billing/usagePeriodTotalIdentity.ts',
+  'packages/billing/tests/automaticInvoices.duplicateIdentityDedupe.test.tsx',
+  'server/src/test/infrastructure/billing/invoices/contractQuantityUsageSemantics.test.ts',
+  // Calendar month-end close and grouped zero-dollar claims added persisted
+  // window readers and regression fixtures after the pass-0 snapshot.
+  'packages/billing/src/actions/calendarMonthEndCloseActions.db.test.ts',
+  'packages/billing/src/actions/groupedZeroDollarRecurringClaim.db.test.ts',
+  'packages/billing/src/actions/recurringBillingRunActions.ts',
+  'packages/billing/src/lib/billing/clientCadenceWindowMaterialization.ts',
+  'server/src/test/integration/billing/recurringInvoiceHistory.db.test.tsx',
+  'server/src/test/unit/billing/calendarMonthEndCloseActions.test.ts',
+  'server/src/test/unit/billing/calendarMonthEndClosePolicy.test.ts',
+  'shared/billingClients/calendarMonthEndClosePolicy.ts',
   'packages/billing/src/actions/billingAndTax.ts',
   'packages/billing/src/actions/billingCycleActions.ts',
   // Deferred-revenue reporting reads persisted service-period boundaries to
   // value prepaid bucket liability; it landed after the pass-0 snapshot.
   'packages/reporting/src/actions/report-actions/deferred-revenue/compose.test.ts',
-  'packages/reporting/src/actions/report-actions/deferred-revenue/deferredRevenueReport.integration.test.ts',
+  'packages/reporting/src/actions/report-actions/deferred-revenue/deferredRevenueReport.db.test.ts',
   'packages/reporting/src/actions/report-actions/deferred-revenue/fee.test.ts',
   'packages/reporting/src/actions/report-actions/deferred-revenue/fee.ts',
   'packages/reporting/src/actions/report-actions/deferred-revenue/loaders.ts',
@@ -182,7 +215,10 @@ const servicePeriodPostInventoryRefs = new Set([
   'packages/types/src/interfaces/contractSimulation.interfaces.ts',
   'packages/billing/src/components/billing-dashboard/AutomaticInvoices.tsx',
   'packages/billing/src/components/invoice-designer/inspector/TableEditorWidget.integration.test.tsx',
-  'packages/billing/src/components/invoice-designer/inspector/widgets/TableEditorWidget.tsx',
+  // Ticket-time designer bindings suite (feature/invoice-layouts-ticket-level-
+  // billed-time-details) landed after the pass-0 snapshot; it asserts the
+  // non-time tables keep their recurring service-period binding suggestions.
+  'packages/billing/tests/invoiceDesignerTicketTimeBindings.test.ts',
   // The designer field picker now generates its per-document-kind options from
   // the binding catalogs, so the invoice line-item options — including the
   // persisted service-period boundaries — are declared here; it landed after
@@ -195,6 +231,9 @@ const servicePeriodPostInventoryRefs = new Set([
   'packages/billing/tests/automaticInvoices.groupedParentRows.test.tsx',
   'packages/billing/tests/recurringApprovalBlockers.servicePeriodBoundary.test.ts',
   'packages/integrations/src/lib/xero/__tests__/xeroInvoiceMapping.test.ts',
+  // Two-way Xero reconciliation fixtures persist export-line service periods;
+  // this suite was introduced after the pass-0 snapshot.
+  'server/src/test/integration/accounting/xeroInboundReconciliation.integration.test.ts',
   'server/src/lib/api/services/InvoiceService.ts',
   // seedBillingChargeSources backs fabricated usage charges with usage_tracking
   // rows keyed off the charge's servicePeriodStart.
@@ -221,6 +260,10 @@ const servicePeriodPostInventoryRefs = new Set([
   'server/src/test/unit/billing/recurringBillingRunActions.test.ts',
   'server/src/test/unit/billing/recurringDueWorkReader.integration.test.ts',
   'server/src/test/unit/billing/recurringServicePeriodActions.test.ts',
+  // Tax-cap invoice regression coverage uses persisted service-period
+  // boundaries in recurring-charge fixtures; it landed after the snapshot.
+  'server/src/test/unit/billing/taxCapInvoiceCompute.test.ts',
+  'server/src/test/unit/billing/taxRateCaps.db.test.ts',
   'server/src/test/unit/billing/updateClientBillingSchedule.test.ts',
   // Credit draw-down policy suite (feature/credit-drawdown-policy-controls)
   // landed after the pass-0 snapshot and seeds invoice charges with persisted
@@ -242,6 +285,14 @@ const servicePeriodPostInventoryRefs = new Set([
   // snapshot; its baseline fixtures assert persisted service-period columns.
   'server/src/test/integration/billing/goldenOutput/baseline.json',
   'server/src/test/integration/billing/goldenOutput/goldenOutputBaseline.integration.test.ts',
+  // Contract-cadence replenishment regression suites landed after the pass-0
+  // snapshot and seed persisted service-period columns in their fixtures.
+  'server/src/test/infrastructure/billing/invoices/contractCadenceServicePeriodReplenishment.test.ts',
+  'server/src/test/infrastructure/billing/invoices/contractCadenceServicePeriodReplenishment.concurrency.test.ts',
+  // The replenishment coverage audit and its regression fixtures also read
+  // persisted boundaries and were added after the historical snapshot.
+  'packages/billing/src/actions/contractCadenceCoverageAudit.ts',
+  'server/src/test/infrastructure/billing/invoices/contractCadenceCoverageAudit.test.ts',
 ]);
 
 // Files whose persisted service-period field references were removed after the
@@ -288,15 +339,17 @@ describe('service-period-first billing plan artifacts', () => {
     ).filter((file) =>
       file !== 'packages/billing/src/lib/billing/billingEngine.ts'
       && !persistedReaderExclusions.has(file)
-      && !servicePeriodPostInventoryRefs.has(file)
     );
 
+    // Include post-snapshot readers in the equality check so additions remain
+    // accounted for and stale entries are detected when references move.
     expect(
-      inventory.periodFieldInventory.servicePeriodFieldRefs
-        .filter((file) => file !== 'packages/billing/src/lib/billing/billingEngine.ts')
-        .filter((file) => !servicePeriodPostInventoryRemovals.has(file))
-        .slice()
-        .sort()
+      [...new Set([
+        ...inventory.periodFieldInventory.servicePeriodFieldRefs
+          .filter((file) => file !== 'packages/billing/src/lib/billing/billingEngine.ts')
+          .filter((file) => !servicePeriodPostInventoryRemovals.has(file)),
+        ...servicePeriodPostInventoryRefs,
+      ])].sort()
     ).toEqual(outsideEngine);
   });
 

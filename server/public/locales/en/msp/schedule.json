@@ -26,7 +26,17 @@
     "loading": "Loading...",
     "errors": {
       "loadPermissions": "Failed to load user permissions",
-      "forbidden": "You do not have permission to view this schedule."
+      "forbidden": "You do not have permission to view this schedule.",
+      "moveFailed": "Failed to move schedule entry"
+    },
+    "schedulingFor": "Scheduling",
+    "selectSlotHint": "Drag to create, move or resize entries. Click an entry to edit.",
+    "readOnlyHint": "You can view this schedule, but need the schedule update permission to add or change entries.",
+    "workItemLegend": "This work item",
+    "schedulingForAgent": "Scheduling for {{name}}",
+    "otherWorkLegend": "Other work",
+    "workItemTypeLabel": {
+      "ticket": "Ticket"
     }
   },
   "calendar": {
@@ -279,8 +289,9 @@
         "placeholder": "Select approvers"
       },
       "teamSelect": {
-        "label": "Select Team",
-        "placeholder": "Select a team"
+        "label": "Filter technicians by team",
+        "placeholder": "All authorized technicians",
+        "help": "This filters the technician list only; booking availability belongs to the technician across every team."
       }
     },
     "feedback": {
@@ -319,16 +330,16 @@
     "userHours": {
       "roleManager": {
         "label": "Team Manager:",
-        "description": "You can configure availability settings for members of your team(s). The \"Configured Users\" table below shows all users with availability settings across the system."
+        "description": "You can configure booking availability only for authorized team members and direct reports. The table below follows the current team filter."
       },
       "roleAdmin": {
         "label": "Administrator:",
-        "description": "You can configure availability settings for any user in the system. The \"Configured Users\" table below shows all users with availability settings."
+        "description": "You can configure user-wide booking availability for any authorized technician. The table below follows the current team filter."
       },
       "userSelect": {
-        "label": "Select User to Configure",
+        "label": "Technician",
         "placeholderSelectTeamFirst": "Select a team first",
-        "placeholder": "Select a user to configure"
+        "placeholder": "Select a technician to configure"
       },
       "appointmentSettings": {
         "title": "Appointment Settings",
@@ -357,22 +368,31 @@
           "available": "Available",
           "startTime": "Start Time",
           "endTime": "End Time"
-        }
+        },
+        "availableFor": "{{day}} available",
+        "startTimeFor": "{{day}} start time",
+        "endTimeFor": "{{day}} end time"
       },
       "configuredUsers": {
         "title": "Configured Users",
-        "description": "Users with availability settings configured",
-        "empty": "No users configured yet",
+        "description": "Technicians with saved booking availability in the current filter",
+        "empty": "No technicians in this filter have saved booking availability yet",
         "columns": {
           "userName": "User Name",
           "status": "Status"
         },
         "status": {
           "configured": "Configured"
+        },
+        "actions": {
+          "edit": "Edit booking hours for {{name}}",
+          "delete": "Delete booking hours for {{name}}"
         }
       },
       "actions": {
-        "save": "Save User Hours"
+        "save": "Save User Hours",
+        "retry": "Retry",
+        "saving": "Saving..."
       },
       "feedback": {
         "selectUserError": "Please select a user",
@@ -384,7 +404,19 @@
       "deleteDialog": {
         "title": "Delete User Availability",
         "message": "Are you sure you want to delete availability settings for {{userName}}? This will remove all their configured working hours. This action cannot be undone."
-      }
+      },
+      "scope": {
+        "team": "Team filter:",
+        "allTeams": "All authorized technicians",
+        "technician": "Technician:",
+        "schedule": "Schedule:",
+        "loading": "Checking saved booking hours",
+        "saved": "Saved booking hours",
+        "partial": "Saved booking hours with unsaved defaults for missing days",
+        "draft": "Unsaved Monday–Friday 9:00 AM–5:00 PM template",
+        "explanation": "These booking hours are user-wide across teams. They do not inherit from the separate work schedule."
+      },
+      "loading": "Loading technician hours..."
     },
     "serviceRules": {
       "serviceSelect": {
@@ -531,7 +563,8 @@
       "appointmentRequest": "Appointment Request",
       "view": "View Entry",
       "edit": "Edit Entry",
-      "new": "New Entry"
+      "new": "New Entry",
+      "newForWorkItem": "Schedule {{name}}"
     },
     "alerts": {
       "privateEntryOnlyCreator": "This is a private entry. Only the creator can view or edit details."
@@ -556,7 +589,9 @@
       "privateEntry": "Private entry (not visible to other users)",
       "start": "Start *",
       "end": "End *",
-      "notes": "Notes"
+      "notes": "Notes",
+      "technician": "Technician",
+      "notesPlaceholder": "Anything the technician should know before starting"
     },
     "actions": {
       "cancel": "Cancel",
@@ -566,7 +601,11 @@
     },
     "workItem": {
       "adHocFallback": "Ad-hoc entry (no work item)",
-      "openDetails": "Details"
+      "openDetails": "Details",
+      "loading": "Loading work item…",
+      "openTicket": "Open ticket",
+      "openTask": "Open task",
+      "openInteraction": "Open interaction"
     },
     "appointmentRequest": {
       "approved": {
@@ -661,6 +700,19 @@
     },
     "errors": {
       "loadWorkItem": "Failed to load work item."
+    },
+    "teamsMeeting": {
+      "create": "Create Teams meeting",
+      "creating": "Creating Teams meeting…",
+      "join": "Join Teams Meeting",
+      "created": "Microsoft Teams meeting created",
+      "createFailed": "Failed to create Teams meeting",
+      "recurringUnsupported": "Teams meetings can only be added to standalone entries, not recurring series."
+    },
+    "duration": {
+      "minutes": "{{count}} min",
+      "hours": "{{count}} h",
+      "hoursMinutes": "{{hours}} h {{minutes}} min"
     }
   },
   "actions": {
@@ -714,5 +766,15 @@
       "graphThrottled": "Microsoft Graph is rate limiting recording downloads. Please try again shortly.",
       "graphHttpStatus": "Microsoft Graph returned HTTP {{status}} while downloading the Teams recording."
     }
+  },
+  "workItemEditor": {
+    "created": "Scheduled {{title}}",
+    "updated": "Schedule entry updated",
+    "deleted": "Schedule entry deleted",
+    "createFailed": "Failed to schedule this work",
+    "updateFailed": "Failed to update schedule entry",
+    "deleteFailed": "Failed to delete schedule entry",
+    "loadFailed": "Failed to load schedule entry",
+    "noPermission": "You need the schedule update permission to schedule work."
   }
 }

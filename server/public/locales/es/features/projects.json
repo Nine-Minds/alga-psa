@@ -122,7 +122,8 @@
       "taskType": "Tipo",
       "actions": "Acciones"
     },
-    "unknownUser": "Desconocido"
+    "unknownUser": "Desconocido",
+    "searchSmart": "Buscar proyectos, tareas y comentarios… Intro para búsqueda inteligente"
   },
   "quickAdd": {
     "title": "Agregar nuevo proyecto",
@@ -1320,6 +1321,12 @@
       },
       "skip": "Omitir",
       "creating": "Creando..."
+    },
+    "discardConfirmation": {
+      "title": "¿Descartar la plantilla sin guardar?",
+      "message": "Su plantilla tiene cambios sin guardar. Si sale ahora, esos cambios se perderán.",
+      "keepEditing": "Seguir editando",
+      "discard": "Descartar plantilla"
     }
   },
   "documents": {
@@ -1865,5 +1872,29 @@
       "loadRecipient": "No se pudo cargar la información del destinatario",
       "sendFailed": "No se pudo enviar la actualización de estado"
     }
+  },
+  "smartSearch": {
+    "run": "Búsqueda inteligente",
+    "runTitle": "Puntuar los proyectos filtrados según esta consulta",
+    "relevanceColumn": "Coincidencia",
+    "relevance": "{{percent}}% relevante",
+    "strong": "Coincidencias fuertes",
+    "possible": "Coincidencias posibles",
+    "unlikely": "Coincidencias improbables",
+    "emptyBucketRunning": "Ninguna todavía",
+    "emptyBucket": "Ninguna",
+    "scoring": "{{scored}} de {{total}} proyectos puntuados",
+    "summary": "{{total}} proyectos puntuados · {{strong}} fuertes · {{possible}} posibles",
+    "cancelled": "Búsqueda cancelada tras {{scored}} de {{total}} proyectos",
+    "errorTitle": "La búsqueda inteligente se detuvo",
+    "starting": "Iniciando búsqueda inteligente…",
+    "rerun": "Los filtros cambiaron. Ejecutar de nuevo",
+    "retry": "Reintentar",
+    "cancel": "Cancelar",
+    "exit": "Volver a la lista",
+    "notConfigured": "La búsqueda inteligente no está configurada en este servidor",
+    "failedCount": "No se pudieron puntuar {{count}} proyectos",
+    "unscored": "Sin puntuar",
+    "addOnRequired": "La búsqueda inteligente requiere el complemento Asistente de IA"
   }
 }

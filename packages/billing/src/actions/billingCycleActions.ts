@@ -513,7 +513,10 @@ function normalizeHistoryDate(value: unknown): string | null {
     return value;
   }
   if (value instanceof Date) {
-    return value.toISOString();
+    // These fields are database calendar dates, not event timestamps. Preserve
+    // that distinction across the action boundary so viewer timezones cannot
+    // move the invoice date to the previous day.
+    return value.toISOString().slice(0, 10);
   }
   return null;
 }

@@ -41,7 +41,10 @@ export * from './document-association.interface';
 export * from './document.interface';
 export * from './documentBlockContent.interface';
 export * from './drag.interfaces';
+export * from './diagnostics.interfaces';
+export * from './entraDiagnostics.interfaces';
 export * from './event.interfaces';
+export * from './externalSystem.interfaces';
 export * from './interaction.interfaces';
 export * from './invoice.interfaces';
 export * from './job';
@@ -77,6 +80,7 @@ export * from './ticketResource.interfaces';
 export * from './timeEntry.interfaces';
 export * from './hourBlock.interfaces';
 export * from './usage.interfaces';
+export * from './usagePeriod.interfaces';
 export * from './validation.interfaces';
 export * from './workItem.interfaces';
 

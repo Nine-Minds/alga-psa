@@ -26,13 +26,16 @@ const optimizedPathMocks = vi.hoisted(() => ({
   hasPermission: vi.fn(),
 }));
 vi.mock('@alga-psa/event-bus/publishers', () => eventMocks);
+vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 vi.mock('@alga-psa/auth', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@alga-psa/auth')>()),
   withAuth: (action: any) => (...args: any[]) => action(optimizedPathMocks.user, { tenant: optimizedPathMocks.tenant }, ...args),
+  hasPermission: (...args: any[]) => optimizedPathMocks.hasPermission(...args),
 }));
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: optimizedPathMocks.hasPermission }));
 vi.mock('@alga-psa/tickets/actions/ticketBundleUtils', () => ({
   maybeReopenBundleMasterFromChildReply: optimizedPathMocks.maybeReopenBundleMasterFromChildReply,
+  revertBundlePropagationForChild: vi.fn(),
 }));
 
 // Wire the core job-enqueue DI seam to the test doubles. Production registers a
@@ -366,6 +369,143 @@ describeDb('ticket client-portal ABAC (TicketService)', () => {
     contact_id: fixture.contactAId,
     clientId: fixture.clientAId,
     user_type: 'client' as const,
+  });
+
+  it('contact scope hides sibling and NULL tickets across REST list/search/detail and retains the admin board boundary', async () => {
+    const siblingId = uuidv4();
+    await db('contacts').insert({ tenant: fixture.tenantId, contact_name_id: siblingId, client_id: fixture.clientAId, full_name: 'Sibling', email: 'sibling@example.com' });
+    const added: string[] = [];
+    try {
+      for (const [title, contactId] of [['Sibling Ticket', siblingId], ['Unassigned Ticket', null]] as const) {
+        const ticket = await db.transaction((trx) => TicketModel.createTicket({
+          title, description: title, client_id: fixture.clientAId, contact_id: contactId,
+          board_id: fixture.boardVisibleId, status_id: fixture.statusId,
+          priority_id: fixture.priorityId, entered_by: fixture.internalUserId,
+        }, fixture.tenantId, trx));
+        added.push(ticket.ticket_id!);
+      }
+      await tenantRows('client_portal_visibility_groups', fixture.tenantId).where({ group_id: fixture.groupVisibleId }).update({ ticket_scope: 'contact' });
+      const service = createService();
+      const ctx = clientContext(fixture, clientA());
+      const page = await service.list({ page: 1, limit: 1 }, ctx);
+      expect(page.total).toBe(1);
+      expect(page.data.map((ticket: any) => ticket.ticket_id)).toEqual([fixture.ticketVisibleId]);
+      expect((await service.list({ page: 2, limit: 1 }, ctx)).data).toEqual([]);
+      expect((await service.search({ query: 'Ticket', include_closed: true } as any, ctx) as any[]).map((ticket) => ticket.ticket_id)).toEqual([fixture.ticketVisibleId]);
+      for (const id of [...added, fixture.ticketHiddenBoardId, fixture.ticketClientBId]) {
+        expect(await service.getById(id, ctx)).toBeNull();
+      }
+      // Execute the actual portal queries against the migrated schema as well.
+      optimizedPathMocks.hasPermission.mockResolvedValue(true);
+      optimizedPathMocks.tenant = fixture.tenantId;
+      optimizedPathMocks.user = { ...clientA(), tenant: fixture.tenantId };
+      const portal = await import('@alga-psa/client-portal/actions/client-portal-actions/client-tickets');
+      const dashboard = await import('@alga-psa/client-portal/actions/client-portal-actions/dashboard');
+      await runWithTenant(fixture.tenantId, async () => {
+        const tickets = await portal.getClientTickets('__status_filter__:all');
+        expect((tickets as any[]).map((ticket) => ticket.ticket_id)).toEqual([fixture.ticketVisibleId]);
+        expect(await portal.getClientTicketDetails(added[0])).toMatchObject({ actionError: 'Ticket not found or access denied' });
+        expect(await portal.getClientTicketDocuments(added[0])).toMatchObject({ actionError: 'Ticket not found or access denied' });
+        const ownDocuments = await portal.getClientTicketDocuments(fixture.ticketVisibleId);
+        expect(Array.isArray(ownDocuments)).toBe(true);
+        expect((ownDocuments as any[]).every((document) => document.is_client_visible === true)).toBe(true);
+        expect(await dashboard.getDashboardMetrics()).toMatchObject({ openTickets: 1 });
+        const activity = await dashboard.getRecentActivity();
+        expect(Array.isArray(activity)).toBe(true);
+        expect(JSON.stringify(activity)).not.toContain('Sibling Ticket');
+        expect(JSON.stringify(activity)).not.toContain('Unassigned Ticket');
+        expect(await portal.addClientTicketComment(added[0], 'denied')).toMatchObject({ actionError: 'Ticket not found or access denied' });
+        expect(await portal.updateTicketStatus(added[0], fixture.statusId)).toMatchObject({ actionError: 'Ticket not found or access denied' });
+        const optimized = await import('@alga-psa/tickets/actions/optimizedTicketActions');
+        const bundles = await import('@alga-psa/authorization/bundles/service');
+        // A redaction rule without an SQL facet forces the supported JS fallback.
+        // Partial selects must carry contact_name_id or even the caller's own row disappears.
+        const rulesSpy = vi.spyOn(bundles, 'resolveBundleNarrowingRulesForEvaluation').mockResolvedValue([
+          { id: 'redact', resource: 'ticket', action: 'read', constraintKey: 'hide_sensitive_fields', redactedFields: [] },
+        ]);
+        try {
+          const filters = { boardFilterState: 'all', statusId: '__status_filter__:all' } as any;
+          expect(await optimized.getAllMatchingTicketIds(filters)).toEqual([fixture.ticketVisibleId]);
+          expect(await optimized.getTicketBoardIds([fixture.ticketVisibleId, ...added])).toEqual([{ ticket_id: fixture.ticketVisibleId, board_id: fixture.boardVisibleId }]);
+          expect(await optimized.getAdjacentTicketIds(fixture.ticketVisibleId, filters)).toMatchObject({ currentPosition: 1, totalCount: 1, prevTicketId: null, nextTicketId: null });
+        } finally {
+          rulesSpy.mockRestore();
+        }
+
+      });
+      await tenantRows('contacts', fixture.tenantId).where({ contact_name_id: fixture.contactAId }).update({ is_client_admin: true });
+      await runWithTenant(fixture.tenantId, async () => {
+        expect((await portal.getClientTickets('__status_filter__:all') as any[])).toHaveLength(3);
+        expect(await portal.getClientTicketDetails(added[0])).toMatchObject({ ticket_id: added[0] });
+        expect(await dashboard.getDashboardMetrics()).toMatchObject({ openTickets: 3 });
+      });
+      expect((await service.list({ page: 1, limit: 10 }, ctx)).total).toBe(3);
+      for (const id of added) expect(await service.getById(id, ctx)).toBeTruthy();
+      expect(await service.getById(fixture.ticketHiddenBoardId, ctx)).toBeNull();
+    } finally {
+      await tenantRows('tickets', fixture.tenantId).whereIn('ticket_id', added).del();
+      await tenantRows('contacts', fixture.tenantId).where({ contact_name_id: siblingId }).del();
+      await tenantRows('contacts', fixture.tenantId).where({ contact_name_id: fixture.contactAId }).update({ is_client_admin: false });
+      await tenantRows('client_portal_visibility_groups', fixture.tenantId).where({ group_id: fixture.groupVisibleId }).update({ ticket_scope: 'client' });
+    }
+  });
+
+  it('executes contact/board predicates with both ticket aliases and matches kernel JS/SQL, including NULLs', async () => {
+    const { applyTicketVisibilityFilter } = await import('@alga-psa/tickets/lib');
+    const { compileRelationshipTemplateSql, evaluateRelationshipTemplate } = await import('@alga-psa/authorization/kernel');
+    const { createTicketRelationshipSqlAdapter } = await import('@alga-psa/tickets/lib/ticketAuthorizationSql');
+    const scope = { ticketScope: 'contact' as const, effectiveTicketScope: 'contact' as const, isClientAdmin: false, contactId: fixture.contactAId, clientId: fixture.clientAId, visibilityGroupId: fixture.groupVisibleId, visibleBoardIds: [fixture.boardVisibleId] };
+    for (const alias of ['t', 'tickets']) {
+      const query = db(alias === 't' ? 'tickets as t' : 'tickets').where({ [`${alias}.tenant`]: fixture.tenantId, [`${alias}.client_id`]: fixture.clientAId });
+      applyTicketVisibilityFilter(query, scope, { boardColumn: `${alias}.board_id`, contactColumn: `${alias}.contact_name_id` });
+      expect((await query.select(`${alias}.ticket_id`)).map((row) => row.ticket_id)).toEqual([fixture.ticketVisibleId]);
+    }
+    const subject = { tenant: fixture.tenantId, userId: fixture.clientUserAId, userType: 'client' as const };
+    const rows = await tenantRows('tickets', fixture.tenantId);
+    for (const effectiveTicketScope of ['client', 'contact'] as const) {
+      const contactVisibility = { ...scope, effectiveTicketScope };
+      const query = db('tickets as t').where({ 't.tenant': fixture.tenantId });
+      compileRelationshipTemplateSql(query, 'contact_visibility', { subject, contactVisibility, adapter: createTicketRelationshipSqlAdapter(db, fixture.tenantId) });
+      const sqlIds = (await query.select('t.ticket_id')).map((row) => row.ticket_id).sort();
+      const jsIds = rows.filter((row) => evaluateRelationshipTemplate('contact_visibility', { subject, resource: { type: 'ticket', action: 'read' }, contactVisibility, record: { clientId: row.client_id, boardId: row.board_id, contactId: row.contact_name_id } })).map((row) => row.ticket_id).sort();
+      expect(sqlIds).toEqual(jsIds);
+      expect(evaluateRelationshipTemplate('contact_visibility', { subject, resource: { type: 'ticket', action: 'read' }, contactVisibility, record: { clientId: fixture.clientAId, boardId: fixture.boardVisibleId, contactId: null } })).toBe(effectiveTicketScope === 'client');
+    }
+    expect((await tenantRows('client_portal_visibility_groups', fixture.tenantId).first()).ticket_scope).toBe('client');
+    await expect(tenantRows('client_portal_visibility_groups', fixture.tenantId).where({ group_id: fixture.groupVisibleId }).update({ ticket_scope: 'invalid' })).rejects.toThrow();
+  });
+
+  it('round-trips scope through both group action modules and preserves scope on legacy updates', async () => {
+    optimizedPathMocks.hasPermission.mockResolvedValue(true);
+    const portal = await import('@alga-psa/client-portal/actions/client-portal-actions/visibilityGroupActions');
+    const msp = await import('@alga-psa/clients/actions/contact-actions/contactActions');
+    const groupIds: string[] = [];
+    optimizedPathMocks.tenant = fixture.tenantId;
+    optimizedPathMocks.user = { ...clientA(), tenant: fixture.tenantId };
+    await tenantRows('contacts', fixture.tenantId).where({ contact_name_id: fixture.contactAId }).update({ is_client_admin: true });
+    try {
+      await runWithTenant(fixture.tenantId, async () => {
+        const created = await portal.createClientPortalVisibilityGroup({ name: 'Contact scope', ticketScope: 'contact', boardIds: [fixture.boardVisibleId] });
+        expect(created).toHaveProperty('group_id');
+        const id = (created as { group_id: string }).group_id;
+        groupIds.push(id);
+        expect(await portal.getClientPortalVisibilityGroup(id)).toMatchObject({ ticket_scope: 'contact' });
+        await portal.updateClientPortalVisibilityGroup(id, { name: 'Client scope', ticketScope: 'client', boardIds: [fixture.boardVisibleId] });
+        expect(await portal.getClientPortalVisibilityGroup(id)).toMatchObject({ ticket_scope: 'client' });
+        const mspCreated = await msp.createClientPortalVisibilityGroupForContact(fixture.contactAId, { name: 'MSP scope', ticketScope: 'contact', boardIds: [fixture.boardVisibleId] });
+        expect(mspCreated).toHaveProperty('group_id');
+        const mspId = (mspCreated as { group_id: string }).group_id;
+        groupIds.push(mspId);
+        await msp.updateClientPortalVisibilityGroupForContact(fixture.contactAId, mspId, { name: 'Legacy update', boardIds: [fixture.boardVisibleId] });
+        expect(await msp.getClientPortalVisibilityGroupById(fixture.contactAId, mspId)).toMatchObject({ ticket_scope: 'contact' });
+        await msp.updateClientPortalVisibilityGroupForContact(fixture.contactAId, mspId, { name: 'Changed scope', ticketScope: 'client', boardIds: [fixture.boardVisibleId] });
+        expect(await msp.getClientPortalVisibilityGroupById(fixture.contactAId, mspId)).toMatchObject({ ticket_scope: 'client' });
+      });
+    } finally {
+      await tenantRows('client_portal_visibility_group_boards', fixture.tenantId).whereIn('group_id', groupIds).del();
+      await tenantRows('client_portal_visibility_groups', fixture.tenantId).whereIn('group_id', groupIds).del();
+      await tenantRows('contacts', fixture.tenantId).where({ contact_name_id: fixture.contactAId }).update({ is_client_admin: false });
+    }
   });
 
   it('list returns only same-client tickets on visible boards, with an accurate total', async () => {
@@ -824,6 +964,8 @@ describeDb('ticket client-portal ABAC (TicketService)', () => {
     const scheduledJobId = uuidv4();
     optimizedPathMocks.user = { user_id: fixture.internalUserId, user_type: 'internal' };
     optimizedPathMocks.tenant = fixture.tenantId;
+    // createComment requires ticket:update before it touches the database.
+    optimizedPathMocks.hasPermission.mockResolvedValue(true);
     optimizedPathMocks.scheduleJobAt.mockResolvedValue({ jobId: scheduledJobId });
     optimizedPathMocks.maybeReopenBundleMasterFromChildReply.mockClear();
 

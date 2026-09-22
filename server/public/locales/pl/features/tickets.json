@@ -110,7 +110,8 @@
     "paused": "Wstrzymane",
     "allResponseStatuses": "Wszystkie statusy odpowiedzi",
     "responseStatus": "Status odpowiedzi",
-    "board": "Filtruj według tablicy"
+    "board": "Filtruj według tablicy",
+    "searchSmart": "Szukaj zgłoszeń i komentarzy… Enter dla inteligentnego wyszukiwania"
   },
   "create": {
     "title": "Utwórz zgłoszenie wsparcia",
@@ -339,12 +340,12 @@
     "pastedImageDeleteFailed_few": "Komentarz usunięto, ale nie udało się usunąć {{count}} wklejonych obrazów.",
     "pastedImageDeleteFailed_many": "Komentarz usunięto, ale nie udało się usunąć {{count}} wklejonych obrazów.",
     "closeFailed": "Nie udało się zamknąć zgłoszenia",
-    "scheduleVisitFailed": "Nie udało się otworzyć harmonogramu",
     "loadCommentsFailed": "Nie udało się wczytać komentarzy",
     "updateTicketFailed": "Nie udało się zaktualizować zgłoszenia",
     "errorWithMessage": "Błąd: {{message}}",
     "billingProfileUpdated": "Zaktualizowano profil rozliczeniowy",
-    "updateBillingProfileFailed": "Nie udało się zaktualizować profilu rozliczeniowego"
+    "updateBillingProfileFailed": "Nie udało się zaktualizować profilu rozliczeniowego",
+    "scheduleOpenFailed": "Nie udało się otworzyć planera"
   },
   "conversation": {
     "comments": "Komentarze",
@@ -377,6 +378,8 @@
     "deleteUploadedImages": "Usuń obrazy",
     "keepUploadedImages": "Zachowaj obrazy",
     "bundledUpdate": "Aktualizacja zbiorcza",
+    "bundledUpdateFrom": "Aktualizacja zbiorcza z {{number}}",
+    "systemAuthor": "System",
     "clientSuffix": " (Klient)",
     "internalCommentTooltip": "Komentarz wewnętrzny",
     "resolutionCommentTooltip": "Komentarz rozwiązania",
@@ -633,7 +636,7 @@
     "bundleMasterLabel": "Wybierz zgłoszenie nadrzędne",
     "bundleMasterPlaceholder": "Wybierz zgłoszenie nadrzędne...",
     "bundleSyncUpdates": "Synchronizuj aktualizacje z nadrzędnego do podrzędnych (publiczne odpowiedzi + zmiany workflow)",
-    "bundleSyncUpdatesHelp": "Zgłoszenia podrzędne zachowują obecny status po połączeniu. Pola workflow są domyślnie zablokowane dla zgłoszeń podrzędnych. Notatki wewnętrzne pozostają w zgłoszeniu nadrzędnym.",
+    "bundleSyncUpdatesHelp": "Zgłoszenia podrzędne zachowują obecny status po połączeniu. Następnie zamknięcie lub ponowne otwarcie zgłoszenia nadrzędnego zamyka lub ponownie otwiera wszystkie zgłoszenia podrzędne, a zmiany statusu, osoby przypisanej i priorytetu w zgłoszeniu nadrzędnym są stosowane do podrzędnych. Pola workflow są zablokowane dla zgłoszeń podrzędnych. Notatki wewnętrzne pozostają w zgłoszeniu nadrzędnym.",
     "bundleSelectAtLeastTwo": "Wybierz co najmniej dwa zgłoszenia do połączenia.",
     "bundleSelectMaster": "Wybierz zgłoszenie nadrzędne.",
     "bundleSuccess": "Zgłoszenia połączone",
@@ -706,12 +709,16 @@
       "masterTicket": "Wybierz zgłoszenie nadrzędne",
       "selectMasterTicket": "Wybierz zgłoszenie nadrzędne...",
       "syncUpdates": "Synchronizuj aktualizacje z nadrzędnego do podrzędnych (publiczne odpowiedzi + zmiany workflow)",
-      "syncUpdatesHelp": "Zgłoszenia podrzędne zachowują obecny status po połączeniu. Pola workflow są domyślnie zablokowane dla zgłoszeń podrzędnych. Notatki wewnętrzne pozostają w zgłoszeniu nadrzędnym.",
+      "syncUpdatesHelp": "Zgłoszenia podrzędne zachowują obecny status po połączeniu. Następnie zamknięcie lub ponowne otwarcie zgłoszenia nadrzędnego zamyka lub ponownie otwiera wszystkie zgłoszenia podrzędne, a zmiany statusu, osoby przypisanej i priorytetu w zgłoszeniu nadrzędnym są stosowane do podrzędnych. Pola workflow są zablokowane dla zgłoszeń podrzędnych. Notatki wewnętrzne pozostają w zgłoszeniu nadrzędnym.",
       "childrenDescription": "Podrzędne zachowują swój obecny status; pola workflow są zablokowane na zgłoszeniach podrzędnych. Odpowiedzi przychodzące na podrzędne są wyświetlane poniżej jako tylko do odczytu.",
       "checkingMasters": "Sprawdzanie istniejących połączeń...",
       "existingMasterSuffix": "(istniejące zgłoszenie nadrzędne)",
       "existingMasterLocked": "Jedno z wybranych zgłoszeń jest już zgłoszeniem nadrzędnym. Zostanie użyte jako nadrzędne; pozostałe zostaną dodane jako podrzędne.",
-      "multipleExistingMasters": "Wiele wybranych zgłoszeń jest już zgłoszeniami nadrzędnymi ({{count}}). Rozłącz wszystkie oprócz jednego przed łączeniem."
+      "multipleExistingMasters": "Wiele wybranych zgłoszeń jest już zgłoszeniami nadrzędnymi ({{count}}). Rozłącz wszystkie oprócz jednego przed łączeniem.",
+      "propagationSummary": "{{masters}} wybranych zgłoszeń to zgłoszenia nadrzędne w trybie synchronizacji; ta zmiana zamknie lub ponownie otworzy {{children}} zgłoszeń podrzędnych.",
+      "masterSummary": "{{children}} zgłoszeń podrzędnych",
+      "applyToChildren": "Zastosuj do podrzędnych",
+      "mastersOnly": "Tylko nadrzędne"
     },
     "auth": {
       "moveRequired": "Musisz być zalogowany, aby przenosić zgłoszenia",
@@ -1186,7 +1193,8 @@
       "responseStateTrackingDisabled": "Śledzenie stanu odpowiedzi wyłączone",
       "title": "Preferencje wyświetlania zgłoszeń",
       "description": "Skonfiguruj sposób wyświetlania kolumn i znaczników czasu na pulpicie zgłoszeń dla swojego zespołu.",
-      "dateTimeFormat": "Format daty i godziny",
+      "showWeekday": "Pokaż dzień tygodnia w znacznikach czasu",
+      "countryDrivesFormat": "Format daty i godziny zależy od kraju Twojej firmy. Ustaw go w Ustawienia → Ogólne.",
       "ticketListColumns": "Kolumny listy zgłoszeń",
       "showTags": "Pokaż tagi",
       "displayUnderTitle": "Wyświetl pod tytułem",
@@ -1508,7 +1516,13 @@
       "alreadyBundled": "Zgłoszenie jest już w pakiecie: {{ticket}}",
       "masterAsChild": "Zgłoszenie nadrzędne nie może być jednocześnie zgłoszeniem podrzędnym.",
       "noChildren": "Nie podano zgłoszeń podrzędnych.",
-      "childrenOnBundledChild": "Nie można dodać zgłoszeń podrzędnych do zgłoszenia podrzędnego należącego już do pakietu."
+      "childrenOnBundledChild": "Nie można dodać zgłoszeń podrzędnych do zgłoszenia podrzędnego należącego już do pakietu.",
+      "concurrent": "Co najmniej jedno z wybranych zgłoszeń zostało w tym samym czasie dodane do pakietu. Odśwież stronę i spróbuj ponownie.",
+      "closedMasterChoiceRequired": "Zgłoszenie nadrzędne tego pakietu jest zamknięte. Wybierz sposób dodania zgłoszenia podrzędnego: {{choices}}.",
+      "closedMasterChoiceNotAllowed": "Ta opcja nie jest dozwolona dla tego zgłoszenia nadrzędnego. Wybierz jedną z opcji: {{choices}}.",
+      "choiceOnOpenMaster": "Ta opcja ma zastosowanie tylko wtedy, gdy zgłoszenie nadrzędne pakietu jest zamknięte.",
+      "closeRuleFailed": "Tego zgłoszenia nie można jeszcze zamknąć: {{reason}}",
+      "reopenUnavailable": "Nie można ponownie otworzyć zgłoszenia nadrzędnego, ponieważ nie skonfigurowano żadnego otwartego statusu zgłoszenia."
     },
     "ticket": {
       "validationDetails": "Popraw dane zgłoszenia: {{details}}",
@@ -1603,7 +1617,7 @@
   },
   "details": {
     "bundle": {
-      "childrenDescription": "Zgłoszenia podrzędne zgrupowane w tym zgłoszeniu głównym",
+      "childrenDescription": "Zgłoszenia podrzędne zachowują obecny status po połączeniu. Następnie zamknięcie lub ponowne otwarcie zgłoszenia nadrzędnego zamyka lub ponownie otwiera wszystkie zgłoszenia podrzędne, a zmiany statusu, osoby przypisanej i priorytetu w zgłoszeniu nadrzędnym są stosowane do podrzędnych. Pola workflow są zablokowane dla zgłoszeń podrzędnych. Notatki wewnętrzne pozostają w zgłoszeniu nadrzędnym.",
       "title": "Pakiet",
       "masterBanner": "To zgłoszenie jest nadrzędnym w pakiecie ({{count}} podrzędnych). Tryb: {{mode}}.",
       "multipleClients": "Wielu klientów",
@@ -1615,7 +1629,33 @@
       "remove": "Usuń",
       "noChildren": "Brak podrzędnych w tym pakiecie.",
       "addChildMultiClientMessage": "Spowoduje to dodanie {{ticket}} od innego klienta do pakietu. Potwierdź, że chcesz kontynuować.",
-      "thisTicket": "to zgłoszenie"
+      "thisTicket": "to zgłoszenie",
+      "propagation": {
+        "closeTitle": "Zamknąć także {{count}} zgłoszeń podrzędnych?",
+        "reopenTitle": "Otworzyć ponownie także {{count}} zgłoszeń podrzędnych?",
+        "closeBody": "To zgłoszenie nadrzędne działa w trybie synchronizacji. Jego zamknięcie zamknie również {{count}} otwartych zgłoszeń podrzędnych wymienionych poniżej.",
+        "reopenBody": "To zgłoszenie nadrzędne działa w trybie synchronizacji. Ponowne otwarcie otworzy ponownie {{count}} zgłoszeń podrzędnych, które zostały przez nie zamknięte. Zgłoszenia podrzędne zamknięte niezależnie pozostaną zamknięte.",
+        "stayClosedHeading": "Pozostają zamknięte (zamknięte niezależnie)",
+        "boardRulesNote": "Reguły zamykania tablicy nie są sprawdzane dla zgłoszeń podrzędnych.",
+        "closeConfirm": "Zamknij nadrzędne i {{count}} podrzędnych",
+        "reopenConfirm": "Otwórz ponownie nadrzędne i {{count}} podrzędnych",
+        "masterOnlyClose": "Zamknij tylko nadrzędne",
+        "masterOnlyReopen": "Otwórz ponownie tylko nadrzędne"
+      },
+      "openChildrenBadge": "{{count}} otwartych podrzędnych",
+      "openChildrenBadgeShort": "{{count}} otwartych",
+      "childOpenStatus": "Otwarte",
+      "childClosedStatus": "Zamknięte",
+      "closedMasterDialogTitle": "Zgłoszenie nadrzędne tego pakietu jest zamknięte",
+      "closedMasterDialogIntro": "Zgłoszenie nadrzędne jest zamknięte. Wybierz, co ma się stać ze zgłoszeniem podrzędnym po dodaniu.",
+      "keepClosedLabel": "Dodaj i pozostaw zgłoszenie nadrzędne zamknięte",
+      "keepClosedHelp": "Zgłoszenie podrzędne pozostaje otwarte z własnym licznikiem SLA. Pakiet będzie oznaczony jako niespójny, dopóki zgłoszenie podrzędne nie zostanie rozwiązane.",
+      "applyResolutionLabel": "Dodaj i zastosuj rozwiązanie zgłoszenia nadrzędnego do tego zgłoszenia podrzędnego",
+      "applyResolutionHelp": "Zamyka zgłoszenie podrzędne ze statusem {{status}} i publikuje rozwiązanie zgłoszenia nadrzędnego w zgłoszeniu podrzędnym jako komentarz publiczny.",
+      "applyResolutionHelpNoComment": "Zamyka zgłoszenie podrzędne ze statusem {{status}}. Zgłoszenie nadrzędne nie ma publicznego komentarza z rozwiązaniem do opublikowania.",
+      "reopenMasterLabel": "Dodaj i otwórz ponownie zgłoszenie nadrzędne",
+      "reopenMasterHelp": "Otwiera ponownie tylko zgłoszenie nadrzędne. Już zamknięte zgłoszenia podrzędne w tym pakiecie pozostają zamknięte; powiadomienia o ponownym otwarciu i SLA dotyczą zgłoszenia nadrzędnego.",
+      "closedMasterGating": "Reguły zamykania tablicy nie zezwalają na otwarte zgłoszenia podrzędne w ramach zamkniętego zgłoszenia nadrzędnego, więc pozostawienie zgłoszenia nadrzędnego zamkniętego nie jest możliwe."
     },
     "autoClose": "Zostanie automatycznie zamknięte {{date}}, jeśli nie pojawi się nowa aktywność.",
     "autoCloseWarned": "Klient został powiadomiony."
@@ -1743,7 +1783,8 @@
       "additionalAgentsTooltip": "Dodatkowi agenci:",
       "unknownAgent": "Nieznany agent",
       "category": "Kategoria",
-      "selectDestinationStatus": "Wybierz status dla nowej tablicy przed zapisaniem."
+      "selectDestinationStatus": "Wybierz status dla nowej tablicy przed zapisaniem.",
+      "viewSchedule": "Zobacz harmonogram"
     },
     "layout": {
       "grid": "Siatka",
@@ -1771,7 +1812,6 @@
       "showLess": "Pokaż mniej",
       "contact": "Kontakt",
       "client": "Klient",
-      "nextVisit": "Następna wizyta",
       "callsAndEmails": "Połączenia i e-maile",
       "call": "Zadzwoń",
       "viewAll": "Zobacz wszystkie",
@@ -1797,7 +1837,6 @@
       "billing": "Rozliczenia",
       "couldNotLoad": "Nie udało się wczytać tego kafelka",
       "nothingScheduled": "Nic nie zaplanowano",
-      "scheduleVisit": "Zaplanuj wizytę",
       "scheduledWork": "Zaplanowane prace",
       "scheduleDone": "ukończono",
       "noCallsOrEmails": "Nie zarejestrowano połączeń ani e-maili",
@@ -1845,7 +1884,9 @@
         "approved": "Zatwierdzona",
         "declined": "Odrzucona",
         "cancelled": "Anulowana"
-      }
+      },
+      "scheduleTime": "Zaplanuj czas",
+      "openScheduleEntry": "Otwórz wpis harmonogramu"
     },
     "timeline": {
       "subtitle": "Odpowiedzi, czas i zmiany systemowe w jednym miejscu",
@@ -1868,6 +1909,9 @@
       "fieldChanged": "{{actor}} zmienił {{field}}: {{from}} → {{to}}",
       "fieldSet": "{{field}} ustawiono na {{to}}",
       "actorEvent": "{{actor}} · {{eventName}}",
+      "bundleStatusNotPropagated": "{{actor}} zmienił status zgłoszenia nadrzędnego w pakiecie (zgłoszenia podrzędne nie zostały zaktualizowane)",
+      "bundleStatusClosed": "{{actor}} zamknął zgłoszenie nadrzędne w pakiecie oraz {{count}} zgłoszeń podrzędnych",
+      "bundleStatusReopened": "{{actor}} ponownie otworzył zgłoszenie nadrzędne w pakiecie oraz {{count}} zgłoszeń podrzędnych",
       "title": "Oś czasu",
       "replyVisibility": "Widoczność odpowiedzi",
       "modeClient": "Klient",
@@ -1928,7 +1972,8 @@
         "checklist_template_applied": "zastosowano szablon listy kontrolnej",
         "close_rules_overridden": "nadpisano reguły zamykania",
         "close_rules_bypassed": "pominięto reguły zamykania",
-        "auto_close_warning_sent": "wysłano ostrzeżenie o automatycznym zamknięciu"
+        "auto_close_warning_sent": "wysłano ostrzeżenie o automatycznym zamknięciu",
+        "bundle_child_added": "dodano zgłoszenie podrzędne do pakietu"
       },
       "closeStatus": "Status zamknięcia",
       "noStatusChange": "Nie zmieniaj statusu",
@@ -1944,5 +1989,103 @@
       "internalLabel": "Nie powiadamiaj też agentów i obserwatorów",
       "internalHelper": "Pomija także ich e-maile i powiadomienia w aplikacji"
     }
+  },
+  "externalLinks": {
+    "title": "Łącza zewnętrzne",
+    "empty": "Brak łączy zewnętrznych",
+    "loading": "Ładowanie łączy zewnętrznych...",
+    "noUrl": "Brak adresu URL dla tego odwołania",
+    "customSystemOption": "{{label}} (niestandardowy)",
+    "actions": {
+      "add": "Dodaj łącze",
+      "edit": "Edytuj",
+      "remove": "Usuń",
+      "cancel": "Anuluj",
+      "save": "Zapisz",
+      "menu": "Działania łącza"
+    },
+    "relationship": {
+      "origin": "Źródło",
+      "mirror": "Kopia",
+      "reference": "Odwołanie"
+    },
+    "relationshipDescription": {
+      "origin": "Skąd pochodzi to zgłoszenie. Każde zgłoszenie może mieć jedno łącze źródłowe, które określa jego oznaczenie pochodzenia.",
+      "mirror": "Inny rekord śledzący tę samą pracę co to zgłoszenie.",
+      "reference": "Informacje pomocnicze dotyczące tego zgłoszenia."
+    },
+    "dialog": {
+      "addTitle": "Dodaj łącze zewnętrzne",
+      "editTitle": "Edytuj łącze zewnętrzne",
+      "intro": "Dodanie łącza nie synchronizuje danych między systemami."
+    },
+    "removeDialog": {
+      "title": "Usuń łącze zewnętrzne",
+      "message": "Usunąć to łącze zewnętrzne ze zgłoszenia?"
+    },
+    "fields": {
+      "system": "System",
+      "loadingSystems": "Ładowanie systemów...",
+      "selectSystem": "Wybierz system",
+      "externalId": "Identyfikator zewnętrzny",
+      "externalIdPlaceholder": "np. 42 lub 1234567890",
+      "realm": "Obszar",
+      "url": "URL",
+      "urlOptional": "Opcjonalne zastąpienie",
+      "urlRequired": "https://...",
+      "relationship": "Relacja",
+      "originExistsHint": "To zgłoszenie ma już łącze źródłowe.",
+      "actorGroup": "Osoba lub konto (opcjonalnie)",
+      "actorHint": "Osoba lub konto powiązane z połączonym rekordem w systemie zewnętrznym.",
+      "actorHandle": "Nazwa użytkownika lub identyfikator",
+      "actorDisplay": "Wyświetlana nazwa",
+      "builtInGroup": "Systemy wbudowane",
+      "customGroup": "Systemy niestandardowe",
+      "urlPreview": "Otwiera:",
+      "urlPreviewIncomplete": "Wypełnij powyższe pola, aby wyświetlić podgląd łącza."
+    },
+    "errors": {
+      "ticketNotFound": "Nie znaleziono zgłoszenia",
+      "commentNotFound": "Nie znaleziono komentarza w tym zgłoszeniu",
+      "linkNotFound": "Nie znaleziono łącza zewnętrznego",
+      "systemNotFound": "Nieznany system zewnętrzny",
+      "externalIdRequired": "Identyfikator zewnętrzny jest wymagany",
+      "invalidUrl": "Adres URL musi być prawidłowym adresem http(s)",
+      "invalidRelationship": "Nieprawidłowa relacja",
+      "invalidEntityType": "Nieprawidłowy typ encji",
+      "originExists": "Ta encja ma już łącze źródłowe",
+      "duplicateExternalLink": "Ten rekord zewnętrzny jest już połączony",
+      "systemInUse": "Ten system zewnętrzny jest używany przez istniejące łącza",
+      "systemInUseCount": "Ten system zewnętrzny jest używany przez {{count}} łącze/łączy",
+      "invalidSystemKey": "Klucze systemów niestandardowych muszą być zgodne z custom:<slug> przy użyciu małych liter, cyfr lub podkreśleń",
+      "systemLabelRequired": "Etykieta systemu jest wymagana",
+      "permissionDenied": "Odmowa dostępu: nie można zarządzać systemami zewnętrznymi",
+      "systemRequired": "Wybierz system zewnętrzny.",
+      "urlRequired": "Adres URL jest wymagany w przypadku systemów bez szablonu adresu URL."
+    }
+  },
+  "smartSearch": {
+    "run": "Inteligentne wyszukiwanie",
+    "runTitle": "Oceń przefiltrowane zgłoszenia względem tego zapytania",
+    "relevanceColumn": "Dopasowanie",
+    "relevance": "{{percent}}% trafności",
+    "strong": "Silne dopasowania",
+    "possible": "Możliwe dopasowania",
+    "unlikely": "Mało prawdopodobne dopasowania",
+    "emptyBucketRunning": "Jeszcze brak",
+    "emptyBucket": "Brak",
+    "scoring": "Oceniono {{scored}} z {{total}} zgłoszeń",
+    "summary": "Oceniono {{total}} zgłoszeń · {{strong}} silnych · {{possible}} możliwych",
+    "cancelled": "Wyszukiwanie anulowano po {{scored}} z {{total}} zgłoszeń",
+    "errorTitle": "Inteligentne wyszukiwanie zatrzymane",
+    "starting": "Uruchamianie inteligentnego wyszukiwania…",
+    "rerun": "Filtry się zmieniły. Uruchom ponownie",
+    "retry": "Ponów",
+    "cancel": "Anuluj",
+    "exit": "Wróć do listy",
+    "notConfigured": "Inteligentne wyszukiwanie nie jest skonfigurowane na tym serwerze",
+    "failedCount": "Nie udało się ocenić {{count}} zgłoszeń",
+    "unscored": "Nieocenione",
+    "addOnRequired": "Inteligentne wyszukiwanie wymaga dodatku Asystent AI"
   }
 }

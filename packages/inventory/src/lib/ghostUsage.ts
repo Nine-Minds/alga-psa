@@ -446,12 +446,14 @@ export async function upsertGhostUsageReview(
       updated_at: trx.fn.now(),
     })
     .onConflict(['tenant', 'ticket_id'])
+    // Citus rejects STABLE functions (trx.fn.now() → CURRENT_TIMESTAMP) inside
+    // ON CONFLICT DO UPDATE SET on distributed tables — must pass a literal.
     .merge({
       ai_classification: row.ai_classification,
       ai_confidence: row.ai_confidence,
       ai_reason: row.ai_reason,
       ai_model: row.ai_model,
-      updated_at: trx.fn.now(),
+      updated_at: new Date().toISOString(),
     });
 }
 

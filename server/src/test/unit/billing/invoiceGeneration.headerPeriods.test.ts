@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { Temporal } from '@js-temporal/polyfill';
 
 // Step 5 of the charge-attribution chain reads the client's default billing
 // profile from the database. These suites mock knex, so the read is stubbed —
@@ -418,5 +419,49 @@ describe('invoice generation header billing periods', () => {
       }),
       'user-1',
     );
+  });
+
+  it('T-EC6: an explicit invoiceDate override stamps invoice_date and the due-date input on the override date', async () => {
+    // The override is the tenant-local final calendar day the month-end close
+    // computed; the server host clock may read any other date and must not win.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-30T22:00:00.000Z'));
+    mocks.getDueDate.mockResolvedValue('2026-02-20');
+
+    await createInvoiceFromBillingResult(
+      recurringBillingResult,
+      'client-1',
+      '2026-02-01',
+      '2026-03-01',
+      'cycle-1',
+      'user-1',
+      { invoiceDate: '2026-01-31' },
+    );
+
+    expect(mocks.state.insertedInvoices[0].invoice_date).toBe('2026-01-31');
+    expect(mocks.getDueDate).toHaveBeenCalledWith('client-1', '2026-01-31');
+    vi.useRealTimers();
+  });
+
+  it('T-EC7: without an override the invoice is stamped on the server-host calendar date, unchanged', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-30T22:00:00.000Z'));
+    mocks.getDueDate.mockResolvedValue('2026-02-20');
+    // Temporal.Now.plainDateISO() resolves to the host's default timezone, so
+    // compute the expected date the same way the implementation does.
+    const expectedHostDate = Temporal.Now.plainDateISO().toString();
+
+    await createInvoiceFromBillingResult(
+      recurringBillingResult,
+      'client-1',
+      '2026-02-01',
+      '2026-03-01',
+      'cycle-1',
+      'user-1',
+    );
+
+    expect(mocks.state.insertedInvoices[0].invoice_date).toBe(expectedHostDate);
+    expect(mocks.getDueDate).toHaveBeenCalledWith('client-1', expectedHostDate);
+    vi.useRealTimers();
   });
 });

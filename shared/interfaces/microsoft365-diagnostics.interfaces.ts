@@ -1,34 +1,20 @@
-export type DiagnosticsStepStatus = 'pass' | 'warn' | 'fail' | 'skip';
+import type {
+  DiagnosticsStepStatus,
+  DiagnosticsStep,
+} from '@alga-psa/types';
 
-export interface DiagnosticsHttpMeta {
-  method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
-  url?: string;
-  path?: string;
-  resource?: string;
-  status?: number;
-  requestId?: string;
-  clientRequestId?: string;
-}
+export type {
+  DiagnosticsStepStatus,
+  DiagnosticsHttpMeta,
+  DiagnosticsErrorMeta,
+} from '@alga-psa/types';
 
-export interface DiagnosticsErrorMeta {
-  message: string;
-  status?: number;
-  code?: string;
-  requestId?: string;
-  clientRequestId?: string;
-  responseBody?: unknown;
-}
-
-export interface Microsoft365DiagnosticsStep {
-  id: string;
-  title: string;
-  status: DiagnosticsStepStatus;
-  startedAt: string;
-  durationMs: number;
-  http?: DiagnosticsHttpMeta;
-  data?: Record<string, unknown>;
-  error?: DiagnosticsErrorMeta;
-}
+/**
+ * Shared mirror of the canonical Microsoft 365 diagnostics contract in
+ * `@alga-psa/types`. The generic step envelope now lives in
+ * `diagnostics.interfaces`, so the email step is an alias of it.
+ */
+export type Microsoft365DiagnosticsStep = DiagnosticsStep;
 
 export interface Microsoft365DiagnosticsSummary {
   providerId: string;
@@ -58,4 +44,3 @@ export interface Microsoft365DiagnosticsOptions {
   requiredScopes?: string[];
   folderListTop?: number;
 }
-

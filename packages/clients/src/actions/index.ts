@@ -26,6 +26,7 @@ export * from './contact-actions';
 export * from './interactionActions';
 export * from './interactionTypeActions';
 export * from './onlineMeetingActions';
+export * from './interactionCallArtifactActions';
 export * from './contactAvatarActions';
 export * from './queryActions';
 export * from './entraClientSyncActions';

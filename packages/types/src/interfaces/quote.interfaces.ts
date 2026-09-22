@@ -33,6 +33,12 @@ export interface IQuoteItem extends TenantEntity {
   service_sku?: string | null;
   billing_method?: 'fixed' | 'hourly' | 'usage' | 'per_unit' | null;
   description: string;
+  /** Snapshot of the catalog item's description taken when the line was added
+   *  or its catalog selection changed. Null for custom/discount lines, for
+   *  catalog rows whose description was empty at capture time, and for rows
+   *  created before this column existed. Never refreshed from the catalog
+   *  after capture. */
+  catalog_description?: string | null;
   quantity: number;
   unit_price: number;
   cost?: number | null;
@@ -72,6 +78,13 @@ export interface IQuoteActivity extends TenantEntity {
   created_at?: ISO8601String;
 }
 
+/**
+ * Authored BlockNote block array backing rich Terms & Conditions.
+ * `quotes.terms_and_conditions` remains the flattened plain-text projection
+ * rendered when this is NULL.
+ */
+export type QuoteTermsBlockContent = Array<Record<string, unknown>>;
+
 export interface IQuote extends TenantEntity {
   quote_id: string;
   quote_number?: string | null;
@@ -94,6 +107,7 @@ export interface IQuote extends TenantEntity {
   internal_notes?: string | null;
   client_notes?: string | null;
   terms_and_conditions?: string | null;
+  terms_and_conditions_block?: QuoteTermsBlockContent | null;
   is_template: boolean;
   template_id?: string | null;
   converted_contract_id?: string | null;
@@ -152,6 +166,8 @@ export interface QuoteConversionPreviewItem {
 export interface QuoteConversionPreview {
   quote_id: string;
   available_actions: Array<'contract' | 'invoice' | 'both'>;
+  /** An existing sales order must be reconciled before creating the remaining invoice. */
+  invoice_error?: string | null;
   contract_items: QuoteConversionPreviewItem[];
   /** One-time items an invoice conversion would bill right now — mirrors the
    *  runtime exclusion of product lines already claimed by a sales order. */
@@ -197,6 +213,9 @@ export interface QuoteViewModelLineItem {
   service_sku?: string | null;
   billing_method?: 'fixed' | 'hourly' | 'usage' | 'per_unit' | null;
   description: string;
+  /** Quote-time snapshot of the catalog description; null when none was
+   *  captured (custom/discount lines, legacy rows, empty catalog text). */
+  catalog_description?: string | null;
   quantity: number;
   unit_price: number;
   total_price: number;
@@ -254,6 +273,9 @@ export interface QuoteViewModel {
   tax: number;
   total_amount: number;
   terms_and_conditions?: string | null;
+  terms_and_conditions_block?: QuoteTermsBlockContent | null;
+  /** Structured block when authored, otherwise the plain-text projection. */
+  terms_and_conditions_rich?: string | QuoteTermsBlockContent | null;
   client_notes?: string | null;
   client_id?: string | null;
   contact_id?: string | null;

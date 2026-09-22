@@ -699,6 +699,23 @@ const TABLE_INSPECTOR: DesignerInspectorSchema = {
   ],
 };
 
+const TOTALS_ROWS_INSPECTOR: DesignerInspectorSchema = {
+  panels: [
+    {
+      id: 'totals-rows',
+      title: 'Totals Rows',
+      fields: [
+        {
+          kind: 'widget',
+          id: 'totalsRows',
+          domId: 'designer-totals-rows-editor',
+          widget: 'totals-rows-editor',
+        },
+      ],
+    },
+  ],
+};
+
 export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerComponentSchema> = {
   document: {
     type: 'document',
@@ -777,6 +794,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
         'column',
         'container',
         'text',
+        'richText',
         'totals',
         'table',
         'dynamic-table',
@@ -810,6 +828,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     hierarchy: {
       allowedChildren: [
         'text',
+        'richText',
         'totals',
         'table',
         'dynamic-table',
@@ -850,6 +869,23 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     },
     inspector: mergeInspectorSchemas(COMMON_INSPECTOR, TEXT_INSPECTOR),
   },
+  richText: {
+    type: 'richText',
+    label: 'Rich Text',
+    description: 'Terms or copy authored as structured rich text (links, bold, paragraphs).',
+    category: 'Content',
+    defaults: {
+      size: { width: 320, height: 80 },
+      metadata: {
+        text: '',
+      },
+    },
+    hierarchy: {
+      allowedChildren: [],
+      allowedParents: ['column', 'container', 'section'],
+    },
+    inspector: mergeInspectorSchemas(COMMON_INSPECTOR, TEXT_INSPECTOR),
+  },
   totals: {
     type: 'totals',
     label: 'Totals',
@@ -867,7 +903,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       allowedChildren: [],
       allowedParents: ['page', 'column', 'container', 'section'],
     },
-    inspector: COMMON_INSPECTOR,
+    inspector: mergeInspectorSchemas(COMMON_INSPECTOR, TOTALS_ROWS_INSPECTOR),
   },
   table: {
     type: 'table',
@@ -1204,6 +1240,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     hierarchy: {
       allowedChildren: [
         'text',
+        'richText',
         'totals',
         'table',
         'dynamic-table',

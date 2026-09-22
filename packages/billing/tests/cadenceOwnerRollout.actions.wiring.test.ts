@@ -26,7 +26,7 @@ const financialSchemasSource = readFileSync(
   'utf8',
 );
 const serverContractLineRepositorySource = readFileSync(
-  new URL('../../../server/src/lib/repositories/contractLineRepository.ts', import.meta.url),
+  new URL('../src/repositories/contractLineRepository.ts', import.meta.url),
   'utf8',
 );
 const recurringAuthoringPolicySource = readFileSync(

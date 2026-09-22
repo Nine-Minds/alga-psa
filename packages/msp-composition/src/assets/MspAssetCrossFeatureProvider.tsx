@@ -7,6 +7,7 @@ import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { createTicketFromAsset } from '@alga-psa/tickets/actions/ticketActions';
 import { getAllBoards } from '@alga-psa/reference-data/actions/boardActions';
+import { getAssetRmmData, refreshAssetRmmData, triggerRmmReboot } from '@alga-psa/integrations/actions/integrations/assetRmmActions';
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
 import { useDrawer } from '@alga-psa/ui';
 import { toast } from 'react-hot-toast';
@@ -84,6 +85,7 @@ export function MspAssetCrossFeatureProvider({ children }: { children: ReactNode
       openTicketDetailsDrawer,
       createTicketFromAsset,
       getAllBoards,
+      rmm: { getAssetRmmData, refreshAssetRmmData, triggerRmmReboot },
     }),
     [renderQuickAddTicket, openTicketDetailsDrawer]
   );

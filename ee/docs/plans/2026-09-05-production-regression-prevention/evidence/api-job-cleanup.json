@@ -1,0 +1,17 @@
+{
+  "status": "local_database_verified_native_pending",
+  "native_job": 101624201400,
+  "finding": "Community API teardown failed jobs_tenant_user_id_foreign in four suites and one time-entry case",
+  "fix": "Delete tenant job_details then jobs before users",
+  "before": {
+    "failed": 1,
+    "log": "/tmp/alga-fixture-jobs-before.log"
+  },
+  "after": {
+    "passed": 1,
+    "failed": 0,
+    "log": "/tmp/alga-fixture-jobs-after.log"
+  },
+  "isolation": "Two fresh tenants in owned local application database; verifies other tenant rows remain",
+  "limitation": "Local application image is older; this verifies current test helper against real database, not current application build"
+}

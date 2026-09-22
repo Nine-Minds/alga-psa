@@ -190,7 +190,7 @@ describe('captureCallArtifacts', () => {
     expect(document.document_name).toBe('Call transcript - Inbound call from +1 (555) 123-4567');
     expect(document.is_client_visible).toBe(false);
     expect(table('document_block_content')).toHaveLength(1);
-    expect(table('document_associations').map((row) => row.entity_type).sort()).toEqual(['client', 'contact']);
+    expect(table('document_associations').map((row) => row.entity_type).sort()).toEqual(['client', 'contact', 'interaction']);
 
     const [artifact] = table('telephony_call_artifacts');
     expect(artifact).toMatchObject({
@@ -333,6 +333,90 @@ describe('captureCallArtifacts', () => {
     expect(call.artifact_fetch_attempts).toBe(1);
     expect(call.last_artifact_fetch_at).toEqual(NOW);
     expect(call.artifact_status).toBe('pending');
+  });
+
+  it('T166: a provider fetcher reporting unsupported settles the call to none at once', async () => {
+    seedCall({ provider: '3cx', organizer_user_id: null });
+    const teamsFetch = vi.fn(async () => [transcript]);
+
+    const outcome = await captureCallArtifacts(
+      { tenantId: TENANT, callRecordId: 'call-record-1' },
+      {
+        fetchArtifacts: teamsFetch,
+        providerFetchers: { '3cx': async () => ({ status: 'unsupported' }) },
+        now: () => NOW,
+      },
+    );
+
+    expect(outcome).toEqual({ status: 'skipped', reason: 'unsupported' });
+    expect(teamsFetch).not.toHaveBeenCalled();
+    expect(table('telephony_call_records')[0]).toMatchObject({ artifact_status: 'none', artifact_fetch_attempts: 1 });
+  });
+
+  it('T168/F103: a provider transcript is filed on the interaction and its summary appended to the notes', async () => {
+    seedCall({ provider: '3cx', organizer_user_id: null });
+    seedUser();
+    table('interactions').push({ tenant: TENANT, interaction_id: 'interaction-1', notes: 'Provider: 3cx' });
+    const fetcher = vi.fn(async () => ({
+      status: 'fetched' as const,
+      artifacts: [{ ...transcript, providerArtifactId: '42', summary: 'Laptop will not boot; replacement arranged.' }],
+      complete: true,
+    }));
+
+    const outcome = await captureCallArtifacts(
+      { tenantId: TENANT, callRecordId: 'call-record-1' },
+      { providerFetchers: { '3cx': fetcher }, now: () => NOW },
+    );
+
+    expect(fetcher).toHaveBeenCalledWith({ tenantId: TENANT, call: expect.objectContaining({ call_record_id: 'call-record-1' }) });
+    expect(outcome).toEqual({ status: 'captured', artifactStatus: 'ready', captured: 1 });
+    expect(table('telephony_call_artifacts')[0]).toMatchObject({ artifact_type: 'transcript', provider_artifact_id: '42' });
+    expect(table('document_associations').map((row) => row.entity_type).sort()).toEqual(['client', 'contact', 'interaction']);
+    expect(table('interactions')[0].notes).toBe('Provider: 3cx\n\nSummary: Laptop will not boot; replacement arranged.');
+
+    // A re-poll never appends the summary twice.
+    table('telephony_call_records')[0].artifact_status = 'pending';
+    table('telephony_call_records')[0].last_artifact_fetch_at = null;
+    await captureCallArtifacts({ tenantId: TENANT, callRecordId: 'call-record-1' }, { providerFetchers: { '3cx': fetcher }, now: () => NOW });
+    expect(table('interactions')[0].notes).toBe('Provider: 3cx\n\nSummary: Laptop will not boot; replacement arranged.');
+    expect(table('documents')).toHaveLength(1);
+  });
+
+  it('T169/T170: an untranscribed recording is stored but keeps the call pending inside the window', async () => {
+    seedCall({ provider: '3cx', organizer_user_id: null });
+    seedUser();
+    const download = vi.fn(async () => 'file-wav-1');
+
+    const outcome = await captureCallArtifacts(
+      { tenantId: TENANT, callRecordId: 'call-record-1' },
+      {
+        providerFetchers: {
+          '3cx': async () => ({ status: 'fetched', artifacts: [{ ...recording, providerArtifactId: '42' }], complete: false }),
+        },
+        downloadRecording: download,
+        loadSettings: async (_tenant, provider) => ({ downloadRecordings: provider === '3cx', exposeRecordingsInPortal: false }),
+        now: () => NOW,
+      },
+    );
+
+    expect(outcome).toEqual({ status: 'captured', artifactStatus: 'pending', captured: 1 });
+    expect(download).toHaveBeenCalledWith(expect.objectContaining({ actorUserId: 'user-system' }));
+    expect(table('telephony_call_artifacts')[0]).toMatchObject({ artifact_type: 'recording', provider_artifact_id: '42', file_id: 'file-wav-1' });
+    expect(table('telephony_call_records')[0]).toMatchObject({ artifact_status: 'pending', artifact_fetch_attempts: 1 });
+  });
+
+  it('T171: a provider call with nothing after the window settles to none', async () => {
+    seedCall({ provider: '3cx', organizer_user_id: null });
+
+    const outcome = await captureCallArtifacts(
+      { tenantId: TENANT, callRecordId: 'call-record-1' },
+      {
+        providerFetchers: { '3cx': async () => ({ status: 'fetched', artifacts: [] }) },
+        now: () => new Date('2026-08-24T18:00:00.000Z'),
+      },
+    );
+
+    expect(outcome).toEqual({ status: 'captured', artifactStatus: 'none', captured: 0 });
   });
 
   it('T075: the sweep work list is the calls still waiting on artifacts', async () => {

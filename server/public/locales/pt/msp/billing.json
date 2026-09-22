@@ -43,13 +43,14 @@
       "contractTemplates": "Modelos de contrato",
       "invoicing": "Faturamento",
       "invoiceLayouts": "Layouts de fatura",
-      "taxRates": "Taxas de imposto",
+      "taxRates": "Impostos",
       "contractLinePresets": "Predefinições de linha de contrato",
       "billingCycles": "Ciclos de cobrança",
       "servicePeriods": "Períodos de serviço",
       "usageTracking": "Rastreamento de uso",
       "reports": "Relatórios",
       "serviceTypes": "Tipos de serviço",
+      "serviceCategories": "Categorias de serviço",
       "serviceCatalog": "Serviços",
       "products": "Produtos"
     }
@@ -141,6 +142,8 @@
   },
   "usage": {
     "bucketHoursOverview": "Visão geral das horas de intervalo",
+    "bucketLoadError": "Não foi possível carregar os saldos dos pacotes de horas. Tente novamente para ver os saldos atuais.",
+    "retryBucketBalances": "Recarregar saldos dos pacotes de horas",
     "usageRecords": "Registros de uso",
     "actions": {
       "addUsage": "Adicionar uso",
@@ -211,6 +214,12 @@
       "updateError": "Falha ao atualizar o registro de uso",
       "deleteSuccess": "Registro de uso excluído com sucesso",
       "deleteError": "Falha ao excluir registro de uso"
+    },
+    "periodReport": "Informação de uso do período",
+    "periodAlreadyInvoiced": "Este período já foi faturado. Corrija-o pelo processo de ajuste de fatura.",
+    "periodFilter": {
+      "notice": "Exibindo o uso do período de serviço de {{start}} a {{end}}",
+      "clear": "Limpar"
     }
   },
   "lineItem": {
@@ -381,7 +390,8 @@
       "execute": "Executar",
       "createBatch": "Criar lote",
       "creating": "Criando...",
-      "cancelBatch": "Cancelar lote"
+      "cancelBatch": "Cancelar lote",
+      "retry": "Tentar novamente"
     },
     "states": {
       "loadingBatches": "Carregando lotes...",
@@ -408,7 +418,12 @@
         "invoiceStatuses": "Separados por vírgula (opcional), por ex. finalizado, postado",
         "notes": "Notas opcionais"
       },
-      "defaultRealmLabel": "{{realmId}} (padrão)"
+      "defaultRealmLabel": "{{realmId}} (padrão)",
+      "loadingConnections": "Carregando conexões contábeis...",
+      "connectionLoadError": "Não foi possível carregar as conexões contábeis. Verifique as configurações de conexão e tente novamente.",
+      "ambiguousRealm": "Sua organização contábil padrão salva é compartilhada por mais de uma conexão. Escolha uma conexão para continuar.",
+      "noXeroConnection": "Nenhuma conexão Xero disponível. Conecte o Xero nas configurações contábeis para exportar.",
+      "noQboConnection": "Nenhuma conexão QuickBooks Online disponível. Conecte-a nas configurações contábeis para exportar."
     },
     "detailDialog": {
       "title": "Lote de exportação contábil",
@@ -432,7 +447,8 @@
       "createError": "Falha ao criar lote de exportação",
       "executeError": "Falha ao executar lote",
       "cancelled": "Lote cancelado",
-      "cancelError": "Falha ao cancelar lote"
+      "cancelError": "Falha ao cancelar lote",
+      "realmRequired": "Escolha uma empresa contábil conectada antes de criar a exportação."
     },
     "status": {
       "pending": "Pendente",
@@ -666,7 +682,9 @@
     },
     "recurringRun": {
       "selectPeriods": "Selecione pelo menos um período de faturamento recorrente para gerar.",
-      "invoicePermission": "Permissão negada: é necessária permissão para criar ou gerar faturas"
+      "invoicePermission": "Permissão negada: é necessária permissão para criar ou gerar faturas",
+      "monthEndCloseNotMaterialized": "Os períodos de serviço recorrentes não foram materializados para esta janela de execução recorrente.",
+      "monthEndCloseNotEligible": "O período {{servicePeriod}} só pode ser fechado no fim do mês em {{finalCalendarDay}}. Somente períodos de serviço em atraso que abrangem um mês de calendário completo podem ser fechados antecipadamente em seu último dia de calendário."
     },
     "recurringServicePeriod": {
       "scheduleKeyRequiredInspect": "É necessária uma chave de agenda para inspecionar os períodos de serviço recorrentes.",

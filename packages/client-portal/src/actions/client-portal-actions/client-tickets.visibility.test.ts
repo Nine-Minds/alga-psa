@@ -7,7 +7,7 @@ const getConnectionMock = vi.fn();
 const withTransactionMock = vi.fn();
 const createTenantKnexMock = vi.fn();
 const getVisibilityContextMock = vi.fn();
-const applyVisibilityBoardFilterMock = vi.fn((query) => query);
+const applyTicketVisibilityFilterMock = vi.fn((query) => query);
 const createTicketWithRetryMock = vi.fn();
 const getDefaultStatusIdMock = vi.fn();
 const publishEventMock = vi.fn();
@@ -35,7 +35,7 @@ vi.mock('@alga-psa/db', () => ({
 }));
 
 vi.mock('@alga-psa/tickets/lib', () => ({
-  applyVisibilityBoardFilter: (...args: any[]) => applyVisibilityBoardFilterMock(...args),
+  applyTicketVisibilityFilter: (...args: any[]) => applyTicketVisibilityFilterMock(...args),
   getClientContactVisibilityContext: (...args: any[]) => getVisibilityContextMock(...args),
   getTicketOrigin: (ticket: any) => ticket?.ticket_origin ?? 'internal',
   // Mirrors @alga-psa/tickets/lib/ticketStatusFilter parseTicketStatusFilterValue.
@@ -87,6 +87,7 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
 
 vi.mock('@alga-psa/tickets/actions/ticketBundleUtils', () => ({
   maybeReopenBundleMasterFromChildReply: vi.fn(),
+  revertBundlePropagationForChild: vi.fn(),
 }));
 
 vi.mock('@alga-psa/tickets/lib/liveUpdates', () => ({
@@ -102,6 +103,21 @@ function makeConnection() {
   return Object.assign(vi.fn(), {
     raw: vi.fn(),
   });
+}
+
+/** Board lookup chain used by createClientTicket: where → modify → orderBy → first. */
+function makeBoardQuery(row: Record<string, unknown> | undefined) {
+  const builder: any = {
+    where: vi.fn(() => builder),
+    whereIn: vi.fn(() => builder),
+    modify: vi.fn((callback: (query: any) => void) => {
+      callback(builder);
+      return builder;
+    }),
+    orderBy: vi.fn(() => builder),
+    first: vi.fn().mockResolvedValue(row),
+  };
+  return builder;
 }
 
 function makeUserQuery(contactId = 'contact-1') {
@@ -123,7 +139,7 @@ function makeListBuilder(rows: any[]) {
 
 // Generic chain-/thenable query-builder stand-in. Every builder method returns the
 // same builder (so the SUT can chain arbitrarily), `modify` invokes its callback so
-// applyVisibilityBoardFilter is still recorded, and awaiting the builder resolves to
+// applyTicketVisibilityFilter is still recorded, and awaiting the builder resolves to
 // `result`. Used for the ticket_resources/comments/users subqueries the refactored
 // SUT builds via tenantDb(trx, tenant).table(...) and then awaits directly.
 function makeChainable(result: any = []) {
@@ -155,6 +171,7 @@ function makeDetailBuilder(ticket: any) {
 describe('client portal ticket visibility enforcement', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    applyTicketVisibilityFilterMock.mockImplementation((query) => query);
     currentUser = {
       user_id: 'client-user-1',
       user_type: 'client',
@@ -203,6 +220,9 @@ describe('client portal ticket visibility enforcement', () => {
     });
 
     getVisibilityContextMock.mockResolvedValue({
+      ticketScope: 'client',
+      effectiveTicketScope: 'client',
+      isClientAdmin: false,
       contactId: 'contact-1',
       clientId: 'client-1',
       visibilityGroupId: 'group-1',
@@ -212,9 +232,10 @@ describe('client portal ticket visibility enforcement', () => {
     const { getClientTickets } = await import('./client-tickets');
     await getClientTickets('all');
 
-    expect(applyVisibilityBoardFilterMock).toHaveBeenCalledWith(
+    expect(applyTicketVisibilityFilterMock).toHaveBeenCalledWith(
       ticketsBuilder,
-      ['board-1']
+      expect.objectContaining({ visibleBoardIds: ['board-1'] }),
+      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id' }
     );
   });
 
@@ -247,6 +268,9 @@ describe('client portal ticket visibility enforcement', () => {
     });
 
     getVisibilityContextMock.mockResolvedValue({
+      ticketScope: 'client',
+      effectiveTicketScope: 'client',
+      isClientAdmin: false,
       contactId: 'contact-1',
       clientId: 'client-1',
       visibilityGroupId: null,
@@ -256,9 +280,10 @@ describe('client portal ticket visibility enforcement', () => {
     const { getClientTickets } = await import('./client-tickets');
     await getClientTickets('all');
 
-    expect(applyVisibilityBoardFilterMock).toHaveBeenCalledWith(
+    expect(applyTicketVisibilityFilterMock).toHaveBeenCalledWith(
       ticketsBuilder,
-      null
+      expect.objectContaining({ visibleBoardIds: null }),
+      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id' }
     );
   });
 
@@ -293,11 +318,8 @@ describe('client portal ticket visibility enforcement', () => {
           }
 
           if (table === 'documents as d') {
-            return {
-              select: vi.fn().mockReturnThis(),
-              join: vi.fn().mockReturnThis(),
-              where: vi.fn().mockResolvedValue([]),
-            };
+            // Awaited as a builder; comment-attachment filtering runs on the resolved rows.
+            return makeChainable();
           }
 
           // Subqueries the detail SUT builds via tenantDb(trx, tenant).table(...):
@@ -332,6 +354,9 @@ describe('client portal ticket visibility enforcement', () => {
     });
 
     getVisibilityContextMock.mockResolvedValue({
+      ticketScope: 'client',
+      effectiveTicketScope: 'client',
+      isClientAdmin: false,
       contactId: 'contact-1',
       clientId: 'client-1',
       visibilityGroupId: 'group-1',
@@ -342,9 +367,10 @@ describe('client portal ticket visibility enforcement', () => {
     const ticket = await getClientTicketDetails('ticket-1');
 
     expect(ticket.ticket_id).toBe('ticket-1');
-    expect(applyVisibilityBoardFilterMock).toHaveBeenCalledWith(
+    expect(applyTicketVisibilityFilterMock).toHaveBeenCalledWith(
       expect.any(Object),
-      ['board-1']
+      expect.objectContaining({ visibleBoardIds: ['board-1'] }),
+      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id' }
     );
   });
 
@@ -367,11 +393,8 @@ describe('client portal ticket visibility enforcement', () => {
           }
 
           if (table === 'documents as d') {
-            return {
-              select: vi.fn().mockReturnThis(),
-              join: vi.fn().mockReturnThis(),
-              where: vi.fn().mockResolvedValue([]),
-            };
+            // Awaited as a builder; comment-attachment filtering runs on the resolved rows.
+            return makeChainable();
           }
 
           // Subqueries the detail SUT builds via tenantDb(trx, tenant).table(...):
@@ -406,6 +429,9 @@ describe('client portal ticket visibility enforcement', () => {
     });
 
     getVisibilityContextMock.mockResolvedValue({
+      ticketScope: 'client',
+      effectiveTicketScope: 'client',
+      isClientAdmin: false,
       contactId: 'contact-1',
       clientId: 'client-1',
       visibilityGroupId: 'group-1',
@@ -455,11 +481,8 @@ describe('client portal ticket visibility enforcement', () => {
           }
 
           if (table === 'documents as d') {
-            return {
-              select: vi.fn().mockReturnThis(),
-              join: vi.fn().mockReturnThis(),
-              where: vi.fn().mockResolvedValue([]),
-            };
+            // Awaited as a builder; comment-attachment filtering runs on the resolved rows.
+            return makeChainable();
           }
 
           if (
@@ -490,6 +513,9 @@ describe('client portal ticket visibility enforcement', () => {
     });
 
     getVisibilityContextMock.mockResolvedValue({
+      ticketScope: 'client',
+      effectiveTicketScope: 'client',
+      isClientAdmin: false,
       contactId: 'contact-1',
       clientId: 'client-1',
       visibilityGroupId: 'group-1',
@@ -546,6 +572,9 @@ describe('client portal ticket visibility enforcement', () => {
     });
 
     getVisibilityContextMock.mockResolvedValue({
+      ticketScope: 'client',
+      effectiveTicketScope: 'client',
+      isClientAdmin: false,
       contactId: 'contact-1',
       clientId: 'client-1',
       visibilityGroupId: 'group-1',
@@ -576,11 +605,7 @@ describe('client portal ticket visibility enforcement', () => {
         }
 
         if (table === 'boards') {
-          return {
-            where: vi.fn().mockReturnValue({
-              first: vi.fn().mockResolvedValue({ board_id: 'board-allowed' }),
-            }),
-          };
+          return makeBoardQuery({ board_id: 'board-allowed' });
         }
 
         if (table === 'tickets') {
@@ -601,6 +626,9 @@ describe('client portal ticket visibility enforcement', () => {
     });
 
     getVisibilityContextMock.mockResolvedValue({
+      ticketScope: 'client',
+      effectiveTicketScope: 'client',
+      isClientAdmin: false,
       contactId: 'contact-1',
       clientId: 'client-1',
       visibilityGroupId: 'group-1',
@@ -629,11 +657,7 @@ describe('client portal ticket visibility enforcement', () => {
         }
 
         if (table === 'boards') {
-          return {
-            where: vi.fn().mockReturnValue({
-              first: vi.fn().mockResolvedValue(undefined),
-            }),
-          };
+          return makeBoardQuery(undefined);
         }
 
         if (table === 'statuses') {
@@ -651,6 +675,9 @@ describe('client portal ticket visibility enforcement', () => {
     });
 
     getVisibilityContextMock.mockResolvedValue({
+      ticketScope: 'client',
+      effectiveTicketScope: 'client',
+      isClientAdmin: false,
       contactId: 'contact-1',
       clientId: 'client-1',
       visibilityGroupId: 'group-1',
@@ -679,11 +706,7 @@ describe('client portal ticket visibility enforcement', () => {
         }
 
         if (table === 'boards') {
-          return {
-            where: vi.fn().mockReturnValue({
-              first: vi.fn().mockResolvedValue({ board_id: 'board-open' }),
-            }),
-          };
+          return makeBoardQuery({ board_id: 'board-open' });
         }
 
         if (table === 'statuses') {
@@ -713,6 +736,9 @@ describe('client portal ticket visibility enforcement', () => {
     });
 
     getVisibilityContextMock.mockResolvedValue({
+      ticketScope: 'client',
+      effectiveTicketScope: 'client',
+      isClientAdmin: false,
       contactId: 'contact-1',
       clientId: 'client-1',
       visibilityGroupId: null,
@@ -746,3 +772,78 @@ describe('client portal ticket visibility enforcement', () => {
     expect(ticket.ticket_id).toBe('ticket-new');
   });
 });
+
+// Exercise the real predicate, not just its invocation, against sibling and
+// unassigned rows. The DB suite separately verifies the same column aliases.
+describe('contact-scoped portal enforcement', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    applyTicketVisibilityFilterMock.mockImplementation((query) => query);
+    currentUser = { user_id: 'u', user_type: 'client', email: 'u@example.com', tenant: 'tenant-1', contact_id: 'contact-1' };
+    hasPermissionMock.mockResolvedValue(true);
+    getConnectionMock.mockResolvedValue({ raw: vi.fn() });
+    createTenantKnexMock.mockResolvedValue({ knex: {} });
+  });
+
+  it.each(['client', 'contact'] as const)('list enforces %s scope, including NULL contacts', async (scope) => {
+    const { applyTicketVisibilityFilter } = await import('../../../../tickets/src/lib/clientPortalVisibility');
+    applyTicketVisibilityFilterMock.mockImplementation(applyTicketVisibilityFilter as any);
+    const rows = [
+      { ticket_id: 'own', client_id: 'client-1', contact_name_id: 'contact-1', board_id: 'board-1' },
+      { ticket_id: 'sibling', client_id: 'client-1', contact_name_id: 'contact-2', board_id: 'board-1' },
+      { ticket_id: 'null', client_id: 'client-1', contact_name_id: null, board_id: 'board-1' },
+      { ticket_id: 'other-board', client_id: 'client-1', contact_name_id: 'contact-1', board_id: 'board-2' },
+    ];
+    getVisibilityContextMock.mockResolvedValue({ ticketScope: scope, effectiveTicketScope: scope, isClientAdmin: false, contactId: 'contact-1', clientId: 'client-1', visibilityGroupId: 'g', visibleBoardIds: ['board-1'] });
+    withTransactionMock.mockImplementation(async (_db, callback) => callback(Object.assign((table: string) => {
+      if (table === 'users') return makeUserQuery();
+      if (table === 'tickets as t') return filteredTickets(rows);
+      return makeChainable([]);
+    }, { raw: vi.fn() })));
+    const { getClientTickets } = await import('./client-tickets');
+    const result = await getClientTickets('__status_filter__:all');
+    expect((result as any[]).map((ticket) => ticket.ticket_id)).toEqual(scope === 'contact' ? ['own'] : ['own', 'sibling', 'null']);
+  });
+
+  it.each(['detail', 'documents', 'comment', 'edit-comment', 'delete-comment', 'status'])('denies sibling direct-ID %s access before reading content or writing', async (path) => {
+    const { applyTicketVisibilityFilter } = await import('../../../../tickets/src/lib/clientPortalVisibility');
+    applyTicketVisibilityFilterMock.mockImplementation(applyTicketVisibilityFilter as any);
+    getVisibilityContextMock.mockResolvedValue({ ticketScope: 'contact', effectiveTicketScope: 'contact', isClientAdmin: false, contactId: 'contact-1', clientId: 'client-1', visibilityGroupId: 'g', visibleBoardIds: ['board-1'] });
+    const touched: string[] = [];
+    withTransactionMock.mockImplementation(async (_db, callback) => callback(Object.assign((table: string) => {
+      touched.push(table);
+      if (table === 'comments' && (path === 'edit-comment' || path === 'delete-comment')) return filteredTickets([{ comment_id: 'comment-1', ticket_id: 'sibling', user_id: 'u' }]);
+      if (table === 'users') return makeUserQuery();
+      if (table === 'tickets as t' || table === 'tickets') return filteredTickets([{ ticket_id: 'sibling', client_id: 'client-1', contact_name_id: 'contact-2', board_id: 'board-1' }]);
+      return makeChainable([]);
+    }, { raw: vi.fn() })));
+    const actions = await import('./client-tickets');
+    const result = path === 'detail' ? await actions.getClientTicketDetails('sibling')
+      : path === 'documents' ? await actions.getClientTicketDocuments('sibling')
+      : path === 'comment' ? await actions.addClientTicketComment('sibling', 'private')
+      : path === 'edit-comment' ? await actions.updateClientTicketComment('comment-1', { note: 'changed' })
+      : path === 'delete-comment' ? await actions.deleteClientTicketComment('comment-1')
+      : await actions.updateTicketStatus('sibling', 'status-2');
+    expect(result).toMatchObject({ actionError: 'Ticket not found or access denied' });
+    if (path === 'documents') expect(touched).not.toContain('documents as d');
+    expect(touched).not.toContain('statuses');
+  });
+});
+
+function filteredTickets(initial: any[]) {
+  let rows = initial;
+  let first = false;
+  const builder = makeChainable();
+  const field = (name: string) => name.split('.').pop()!;
+  builder.where = vi.fn((column: any, value?: any) => {
+    const conditions = typeof column === 'string' ? { [column]: value } : column;
+    if (conditions && typeof conditions === 'object') {
+      rows = rows.filter((row) => Object.entries(conditions).every(([key, val]) => row[field(key)] === val));
+    }
+    return builder;
+  });
+  builder.whereIn = vi.fn((column: string, values: any[]) => { rows = rows.filter((row) => values.includes(row[field(column)])); return builder; });
+  builder.first = vi.fn(() => { first = true; return builder; });
+  builder.then = (resolve: any, reject?: any) => Promise.resolve(first ? rows[0] : rows).then(resolve, reject);
+  return builder;
+}

@@ -30,7 +30,7 @@ import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { NotificationBell } from '@alga-psa/notifications/components/NotificationBell';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { IUserWithRoles } from '@alga-psa/types';
-import { menuItems, bottomMenuItems, MenuItem } from '@/config/menuConfig';
+import { menuItems, bottomMenuItems, settingsNavigationSections, MenuItem } from '@/config/menuConfig';
 import { getCurrentUser } from '@alga-psa/user-composition/actions/userQueryActions';
 import { useUserAvatar, useContactAvatar } from '@alga-psa/user-composition/hooks';
 import { checkAccountManagementPermission } from '@alga-psa/auth/actions/permission-actions';
@@ -161,7 +161,11 @@ export const getMenuItemNameByPath = (
     return t('header.breadcrumb.dashboard', { defaultValue: 'Dashboard' });
   }
 
-  const allMenuItems = [...menuItems, ...bottomMenuItems];
+  const allMenuItems = [
+    ...menuItems,
+    ...bottomMenuItems,
+    ...settingsNavigationSections.flatMap((section) => section.items),
+  ];
 
   const segments = path.split('/');
   const topLevelPath = segments.length > 1 ? '/' + segments[1] : '/';

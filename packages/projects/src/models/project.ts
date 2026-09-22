@@ -126,6 +126,47 @@ const ProjectModel = {
   },
 
   /**
+   * Projects by id with the same joins as getAll, in no particular order.
+   * Inactive projects are included: the caller already chose the ids.
+   */
+  getByIds: async (
+    knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
+    projectIds: string[]
+  ): Promise<IProject[]> => {
+    if (!tenant) {
+      throw new Error('Tenant context is required for getting projects by id');
+    }
+    if (projectIds.length === 0) {
+      return [];
+    }
+
+    try {
+      const db = tenantDb(knexOrTrx, tenant);
+      const query = tenantScopedTable(knexOrTrx, 'projects', tenant)
+        .select(
+          'projects.*',
+          'clients.client_name as client_name',
+          'users.first_name as assigned_to_first_name',
+          'users.last_name as assigned_to_last_name',
+          'contacts.full_name as contact_name',
+          's.name as status_name',
+          's.is_closed'
+        )
+        .whereIn('projects.project_id', projectIds);
+      db.tenantJoin(query, 'clients', 'projects.client_id', 'clients.client_id', { type: 'left' });
+      db.tenantJoin(query, 'users', 'projects.assigned_to', 'users.user_id', { type: 'left' });
+      db.tenantJoin(query, 'contacts', 'projects.contact_name_id', 'contacts.contact_name_id', { type: 'left' });
+      db.tenantJoin(query, 'statuses as s', 'projects.status', 's.status_id', { type: 'left' });
+
+      return (await query) as IProject[];
+    } catch (error) {
+      console.error('Error getting projects by id:', error);
+      throw error;
+    }
+  },
+
+  /**
    * Get a single project by ID.
    */
   getById: async (

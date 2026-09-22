@@ -1,4 +1,5 @@
 import { TicketMobileEditorRuntime } from "../../../packages/tickets/src/lib/ticketMobileEditorRuntime";
+import { applyEditorTheme } from "../src/features/ticketRichText/editorTheme";
 
 declare global {
   interface Window {
@@ -26,6 +27,13 @@ const runtime = new TicketMobileEditorRuntime({
 window.__ticketMobileEditorRuntime = runtime;
 window.__ticketMobileEditorHandleNativeMessage = (raw: unknown) => {
   try {
+    // Theme messages are a mobile-only concern; the shared runtime never sees them.
+    const decoded = typeof raw === "string" ? JSON.parse(raw) : raw;
+    if (decoded && typeof decoded === "object" && (decoded as { type?: unknown }).type === "set-theme") {
+      applyEditorTheme(document.documentElement, (decoded as { payload?: unknown }).payload);
+      return;
+    }
+
     runtime.handleMessage(raw);
   } catch (error) {
     window.ReactNativeWebView?.postMessage(

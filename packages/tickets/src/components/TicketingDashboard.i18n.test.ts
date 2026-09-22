@@ -44,6 +44,35 @@ describe('ticketing dashboard i18n wiring contract', () => {
     expect(source).toContain("t('dashboard.bundledToggle', 'Bundled')");
   });
 
+  it('T010d: wires the smart search affordance through features/tickets translations', () => {
+    const source = read('./TicketingDashboard.tsx');
+    const en = readJson<Record<string, unknown>>('../../../../server/public/locales/en/features/tickets.json');
+    const pseudo = readJson<Record<string, unknown>>('../../../../server/public/locales/xx/features/tickets.json');
+
+    expect(source).toContain("t('filters.searchSmart', 'Search tickets and comments… Enter for smart search')");
+    expect(source).toContain("t('smartSearch.run', 'Smart search')");
+    expect(source).toContain("t('smartSearch.runTitle', 'Score the filtered tickets against this query')");
+
+    for (const key of [
+      'filters.searchSmart',
+      'smartSearch.run',
+      'smartSearch.strong',
+      'smartSearch.possible',
+      'smartSearch.unlikely',
+      'smartSearch.scoring',
+      'smartSearch.cancel',
+      'smartSearch.exit',
+      'smartSearch.rerun',
+      'smartSearch.unscored',
+      'smartSearch.notConfigured',
+    ]) {
+      expect(typeof getLeaf(en, key), key).toBe('string');
+      const pseudoValue = getLeaf(pseudo, key);
+      expect(typeof pseudoValue, key).toBe('string');
+      expect(pseudoValue as string, key).toMatch(pseudoPattern('xx'));
+    }
+  });
+
   it('T010b: wires the View menu chrome through features/tickets translations', () => {
     // The density slider moved out of the toolbar and into the View menu, which
     // also owns columns and the save/reset default-view items. The keys are

@@ -30,6 +30,14 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import { getStoredQboCredentialsMap, QboClientService } from '../lib/qbo/qboClientService';
 import { getStoredXeroConnections, XeroClientService } from '../lib/xero/xeroClientService';
+import {
+  normalizeXeroConnectionSelection,
+  resolveXeroRealmAliasIds,
+} from '../lib/xero/xeroRealmIdentity';
+import {
+  readXeroServiceTargetKind,
+  XERO_SALES_ACCOUNT_TYPES,
+} from '../lib/xero/xeroServiceMappingTarget';
 
 const MAPPING_CACHE_TTL_MS = 30_000;
 
@@ -373,8 +381,14 @@ const QBO_REMOTE_ENTITY_TYPE: Record<string, string> = {
  * (`service` → Xero Item Code / `itemCode`, `tax_code` → Xero `TaxType`), which
  * is why validation matches on code rather than record id. Anything not listed
  * has no Xero counterpart on this surface and is rejected fail-closed.
+ *
+ * A `service` mapping resolves to two possible catalogs: the default is a Xero
+ * Item, but a mapping whose metadata carries `xeroTargetKind: 'account'` names
+ * a revenue account for account-code-only invoice lines instead. The kind is
+ * explicit metadata, never inferred — an Item Code and an Account Code can
+ * hold identical strings.
  */
-type XeroCatalogKind = 'item' | 'taxRate';
+type XeroCatalogKind = 'item' | 'taxRate' | 'account';
 const XERO_CATALOG_KIND: Record<string, XeroCatalogKind> = {
   service: 'item',
   tax_code: 'taxRate',
@@ -426,13 +440,27 @@ async function assertXeroRemoteEntityExists(
   tenant: string,
   algaEntityType: string,
   externalEntityId: string,
-  realm: string
+  realm: string,
+  metadata?: Record<string, unknown> | null
 ): Promise<void> {
-  const kind = XERO_CATALOG_KIND[algaEntityType];
+  let kind = XERO_CATALOG_KIND[algaEntityType];
   if (!kind) {
     throw new ExpectedExternalMappingError(
       `Mapping entity type ${algaEntityType} is not managed by the Xero mapping screen.`
     );
+  }
+
+  if (algaEntityType === 'service') {
+    // The declared target kind decides which catalog proves existence. It is
+    // read from explicit metadata only — a present-but-unrecognised value is
+    // rejected rather than defaulted, so garbage can never save as item mode.
+    const targetKind = readXeroServiceTargetKind(metadata);
+    if (targetKind === null) {
+      throw new ExpectedExternalMappingError(
+        'Xero service mappings must declare xeroTargetKind as "item" or "account".'
+      );
+    }
+    kind = targetKind === 'account' ? 'account' : 'item';
   }
 
   const wanted = externalEntityId.trim();
@@ -446,6 +474,36 @@ async function assertXeroRemoteEntityExists(
     if (!match || !isXeroRecordUsable(match.status)) {
       throw new ExpectedExternalMappingError(
         `Xero item ${externalEntityId} does not exist in the connected organisation.`
+      );
+    }
+    return;
+  }
+
+  if (kind === 'account') {
+    // Account mode sends the stored value as the invoice line AccountCode, so
+    // existence is proven by account Code only — an AccountID or display name
+    // would export verbatim and be rejected by Xero on every line.
+    if (!wanted) {
+      throw new ExpectedExternalMappingError('Xero account mappings require an account code.');
+    }
+    const accounts = await client.listAccounts();
+    const match = accounts.find((account) => (account.code ?? '').trim() === wanted);
+    if (!match) {
+      throw new ExpectedExternalMappingError(
+        `Xero account code ${externalEntityId} does not exist in the connected organisation. ` +
+          'Select the account by its code, not its display name.'
+      );
+    }
+    if (!isXeroRecordUsable(match.status)) {
+      throw new ExpectedExternalMappingError(
+        `Xero account ${externalEntityId} is archived or deleted in the connected organisation.`
+      );
+    }
+    const accountType = (match.type ?? '').toUpperCase();
+    if (!XERO_SALES_ACCOUNT_TYPES.has(accountType)) {
+      throw new ExpectedExternalMappingError(
+        `Xero account ${externalEntityId} (type ${match.type ?? 'unknown'}) is not a revenue account ` +
+          'Xero accepts on sales invoice lines.'
       );
     }
     return;
@@ -475,14 +533,15 @@ async function assertRemoteEntityExists(
   integrationType: string,
   algaEntityType: string,
   externalEntityId: string,
-  realm: string
+  realm: string,
+  metadata?: Record<string, unknown> | null
 ): Promise<void> {
   if (integrationType === 'quickbooks_online') {
     await assertQboRemoteEntityExists(tenant, algaEntityType, externalEntityId, realm);
     return;
   }
   if (integrationType === 'xero') {
-    await assertXeroRemoteEntityExists(tenant, algaEntityType, externalEntityId, realm);
+    await assertXeroRemoteEntityExists(tenant, algaEntityType, externalEntityId, realm, metadata);
     return;
   }
 }
@@ -653,6 +712,18 @@ export const getExternalEntityMappings = withAuth(async (
           query.andWhere(function () {
             this.whereNull('external_realm_id').orWhere('external_realm_id', '');
           });
+        } else if (integrationType === 'xero') {
+          // The UI addresses the canonical connection id, but pre-unification
+          // rows persist the organisation id. Accept the organisation id the
+          // connection uniquely owns so historical mappings stay visible and
+          // editable — never another organisation's rows. Exact key first.
+          const connections = await getStoredXeroConnections(tenant);
+          const aliasIds = resolveXeroRealmAliasIds(connections, externalRealmId);
+          const accepted = aliasIds.length > 0 ? aliasIds : [externalRealmId];
+          query.andWhere((builder) => builder.whereIn('external_realm_id', accepted));
+          if (accepted.length > 1) {
+            query.orderByRaw('CASE WHEN external_realm_id = ? THEN 0 ELSE 1 END', [externalRealmId]);
+          }
         } else {
           query.andWhere({ external_realm_id: externalRealmId });
         }
@@ -747,13 +818,41 @@ export const createExternalEntityMapping = withAuth(async (
           integration_type,
           alga_entity_type,
           external_entity_id,
-          normalizedRealm
+          normalizedRealm,
+          metadata ?? null
         );
       }
 
+      // A Xero mapping's identity group is the canonical connection id plus the
+      // organisation id it uniquely owns. Both the live-conflict check and the
+      // tombstone relink must consider the whole group: a canonical tombstone
+      // must never be relinked alongside a live historical sibling, and another
+      // organisation's tombstones must be left untouched.
+      let xeroAliasIds: string[] | null = null;
+      if (integration_type === 'xero' && normalizedRealm) {
+        const connections = await getStoredXeroConnections(tenant);
+        const resolved = resolveXeroRealmAliasIds(connections, normalizedRealm);
+        xeroAliasIds = resolved.length > 0 ? resolved : [normalizedRealm];
+      }
+
+      if (xeroAliasIds) {
+        const liveConflict = await tenantDb(trx, tenant)
+          .table<ExternalEntityMapping>('tenant_external_entity_mappings')
+          .where({ tenant, integration_type, alga_entity_type, alga_entity_id })
+          .whereNull('deleted_at')
+          .whereIn('external_realm_id', xeroAliasIds)
+          .first();
+        if (liveConflict) {
+          throw new ExpectedExternalMappingError(
+            'A mapping for this entity already exists for the connected Xero organisation. Edit the existing mapping instead.'
+          );
+        }
+      }
+
       // Relink: an earlier unlink tombstones the row; creating the same mapping
-      // again is the explicit relink choice, so restore the row in place.
-      const tombstoned = await tenantDb(trx, tenant)
+      // again is the explicit relink choice, so restore the row in place. The
+      // tombstone must belong to the requested organisation's identity group.
+      const tombstoneQuery = tenantDb(trx, tenant)
         .table<ExternalEntityMapping>('tenant_external_entity_mappings')
         .where({
           tenant,
@@ -761,8 +860,11 @@ export const createExternalEntityMapping = withAuth(async (
           alga_entity_type,
           alga_entity_id,
         })
-        .whereNotNull('deleted_at')
-        .first();
+        .whereNotNull('deleted_at');
+      if (xeroAliasIds) {
+        tombstoneQuery.whereIn('external_realm_id', xeroAliasIds);
+      }
+      const tombstoned = await tombstoneQuery.first();
 
       if (tombstoned) {
         const patch: Partial<ExternalEntityMapping> = {
@@ -987,19 +1089,30 @@ export const updateExternalEntityMapping = withAuth(async (
         await lockInvoicesForExternalSync(trx, tenant, [before.alga_entity_id, targetInvoiceId]);
       }
 
-      if (updatePayload.external_entity_id !== undefined) {
-        if (!updatePayload.external_entity_id) {
-          throw new ExpectedExternalMappingError('External entity id is required.');
-        }
-        if (before.external_realm_id) {
-          await assertRemoteEntityExists(
-            tenant,
-            before.integration_type,
-            before.alga_entity_type,
-            updatePayload.external_entity_id,
-            before.external_realm_id
-          );
-        }
+      if (updatePayload.external_entity_id !== undefined && !updatePayload.external_entity_id) {
+        throw new ExpectedExternalMappingError('External entity id is required.');
+      }
+      // Re-prove the remote target when the external id changes — and, for
+      // Xero, when metadata changes too: metadata carries the explicit
+      // item-vs-account target kind, and a kind flip re-points the same code
+      // at a different catalog. The effective (id, metadata) pair after this
+      // update is what must exist remotely.
+      const externalIdChanged = updatePayload.external_entity_id !== undefined;
+      const metadataChanged = updatePayload.metadata !== undefined;
+      if (
+        before.external_realm_id &&
+        (externalIdChanged || (metadataChanged && before.integration_type === 'xero'))
+      ) {
+        await assertRemoteEntityExists(
+          tenant,
+          before.integration_type,
+          before.alga_entity_type,
+          updatePayload.external_entity_id ?? before.external_entity_id,
+          before.external_realm_id,
+          (metadataChanged ? updatePayload.metadata : before.metadata) as
+            | Record<string, unknown>
+            | null
+        );
       }
       if (updatePayload.alga_entity_id !== undefined) {
         if (!updatePayload.alga_entity_id) {
@@ -1007,6 +1120,19 @@ export const updateExternalEntityMapping = withAuth(async (
         }
         await assertLocalEntityOwnership(trx, tenant, before.alga_entity_type, updatePayload.alga_entity_id);
       }
+
+      // Progressive identity migration: editing a pre-unification
+      // organisation-keyed mapping rewrites its realm to the owning connection
+      // id, so the canonical identity converges. A collision with an existing
+      // canonical row surfaces as the duplicate error below.
+      if (before.integration_type === 'xero' && before.external_realm_id) {
+        const connections = await getStoredXeroConnections(tenant);
+        const canonicalRealm = normalizeXeroConnectionSelection(connections, before.external_realm_id);
+        if (canonicalRealm && canonicalRealm !== before.external_realm_id) {
+          updatePayload.external_realm_id = canonicalRealm;
+        }
+      }
+
       updatePayload.updated_at = new Date().toISOString();
 
       const [after] = await db
@@ -1156,15 +1282,44 @@ export const deleteExternalEntityMapping = withAuth(async (
       }
 
       const now = new Date().toISOString();
-      const [after] = await db
+
+      // Unlink the whole canonical identity group for this entity, not just the
+      // selected row. A Xero entity can have a canonical connection-keyed row
+      // and a pre-unification organisation-keyed row at once; tombstoning only
+      // one would let the other resurface as a hidden export fallback.
+      let realmIds: string[] | null = before.external_realm_id
+        ? [before.external_realm_id]
+        : null;
+      if (before.integration_type === 'xero' && before.external_realm_id) {
+        const connections = await getStoredXeroConnections(tenant);
+        const resolved = resolveXeroRealmAliasIds(connections, before.external_realm_id);
+        realmIds = resolved.length > 0 ? resolved : [before.external_realm_id];
+      }
+
+      const tombstoneQuery = db
         .table<ExternalEntityMapping>('tenant_external_entity_mappings')
-        .where({ id: mappingId })
+        .where({
+          tenant,
+          integration_type: before.integration_type,
+          alga_entity_type: before.alga_entity_type,
+          alga_entity_id: before.alga_entity_id,
+        })
+        .whereNull('deleted_at');
+      if (realmIds && realmIds.length > 0) {
+        tombstoneQuery.whereIn('external_realm_id', realmIds);
+      } else {
+        tombstoneQuery.whereNull('external_realm_id');
+      }
+
+      const rows = await tombstoneQuery
         .update({
           deleted_at: now,
           sync_status: 'unlinked',
           updated_at: now,
         })
         .returning('*');
+
+      const after = rows.find((row) => row.id === mappingId) ?? rows[0];
 
       if (!after) {
         throw new ExpectedExternalMappingError('Unable to unlink mapping. Please try again.');

@@ -42,5 +42,30 @@ describe('deploymentProfile', () => {
         expect(caps.trustForwardedHost).toBe(false);
       }
     });
+
+    it('TRUST_FORWARDED_HOST switches on forwarded-host trust without the appliance profile', () => {
+      for (const value of ['true', 'TRUE', ' 1 ', 'yes']) {
+        const caps = resolveDeploymentCapabilities({ TRUST_FORWARDED_HOST: value });
+        expect(caps.trustForwardedHost).toBe(true);
+        expect(caps.portalDomain.provisioner).toBe('temporal');
+        expect(caps.microsoftOAuth.sharedApp).toBe(true);
+      }
+    });
+
+    it('ignores non-affirmative TRUST_FORWARDED_HOST values', () => {
+      for (const value of ['false', '0', 'no', '', undefined, 'nonsense']) {
+        expect(resolveDeploymentCapabilities({ TRUST_FORWARDED_HOST: value }).trustForwardedHost).toBe(false);
+      }
+    });
+
+    it('never lets TRUST_FORWARDED_HOST disable trust on the appliance', () => {
+      const caps = resolveDeploymentCapabilities({ DEPLOYMENT_PROFILE: 'appliance', TRUST_FORWARDED_HOST: 'false' });
+      expect(caps.trustForwardedHost).toBe(true);
+    });
+
+    it('maps the Microsoft OAuth app model from the profile', () => {
+      expect(resolveDeploymentCapabilities({}).microsoftOAuth.sharedApp).toBe(true);
+      expect(resolveDeploymentCapabilities({ DEPLOYMENT_PROFILE: 'appliance' }).microsoftOAuth.sharedApp).toBe(false);
+    });
   });
 });

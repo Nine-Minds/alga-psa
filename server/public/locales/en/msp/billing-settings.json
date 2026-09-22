@@ -226,12 +226,13 @@
       }
     },
     "regions": {
-      "title": "Manage Tax Regions",
+      "title": "Tax Regions and Rates",
       "loading": "Loading regions...",
       "fields": {
         "code": {
           "label": "Region Code",
-          "placeholder": "e.g., CA, NY, VAT-UK"
+          "placeholder": "e.g., CA, NY, VAT-UK",
+          "immutableHint": "The region code identifies this region to tax rates, clients and locations, so it cannot be changed."
         },
         "name": {
           "label": "Region Name",
@@ -268,6 +269,57 @@
         "update": "Failed to update tax region.",
         "activate": "Failed to activate tax region.",
         "deactivate": "Failed to deactivate tax region."
+      },
+      "search": {
+        "placeholder": "Search regions"
+      },
+      "columns": {
+        "region": "Region",
+        "currentRate": "Current rate",
+        "rates": "Rates"
+      },
+      "rateSummary": {
+        "noRates": "No rate",
+        "noCurrentRate": "No current rate",
+        "combined": "{{count}} combined",
+        "combinedHint": "{{count}} active rates apply today and are added together on invoices."
+      },
+      "empty": {
+        "title": "No tax regions yet",
+        "description": "Add a region for each place you charge tax, then give it a rate.",
+        "noMatch": "No regions match \"{{query}}\""
+      },
+      "a11y": {
+        "expand": "Show rates",
+        "collapse": "Hide rates"
+      },
+      "rates": {
+        "empty": "This region has no rates. Invoices taxed here will fail until one is added.",
+        "composite": "Composite",
+        "effectiveRange": "{{start}} to {{end}}",
+        "effectiveFrom": "{{start}} onward",
+        "deleteEntity": "the {{rate}} rate for {{region}}",
+        "columns": {
+          "rate": "Rate",
+          "description": "Description",
+          "effective": "Effective"
+        },
+        "status": {
+          "current": "Current",
+          "scheduled": "Scheduled",
+          "expired": "Expired",
+          "inactive": "Inactive"
+        },
+        "actions": {
+          "add": "Add rate",
+          "edit": "Edit",
+          "advanced": "Advanced settings",
+          "delete": "Delete"
+        },
+        "errors": {
+          "validateDeletion": "Failed to validate deletion. Please try again.",
+          "delete": "Failed to delete tax rate."
+        }
       }
     },
     "thresholds": {
@@ -506,6 +558,7 @@
   },
   "serviceCategories": {
     "title": "Service Categories",
+    "description": "Optional groups for your products. Categories drive the Category column and filter on the Products tab, and are separate from Service Types, which are required and used in reporting and time entry.",
     "dialog": {
       "addTitle": "Add Service Category",
       "editTitle": "Edit Service Category",
@@ -531,6 +584,11 @@
       "importFromStandard": "Import from Standard Categories",
       "create": "Create",
       "update": "Update"
+    },
+    "empty": {
+      "title": "No service categories yet",
+      "description": "Import the standard list to get started, or add your own. Categories are optional and only needed if you want to group products.",
+      "importPrimary": "Import Standard Service Categories"
     },
     "delete": {
       "message": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone."
@@ -635,6 +693,8 @@
     }
   },
   "serviceCatalog": {
+    "scheduledPriceBadge": "Next change {{date}}",
+    "scheduledPriceNotice": "A price change is scheduled for {{date}}. Saving here updates the current price and does not cancel the scheduled change.",
     "title": "Service Catalog Management",
     "loading": "Loading services",
     "dialog": {
@@ -713,6 +773,33 @@
       "cancel": "Cancel",
       "saveChanges": "Save Changes"
     },
+    "bulk": {
+      "selectedCount": "{{count}} selected",
+      "selectAll": "Select all services",
+      "clear": "Clear",
+      "actions": {
+        "activate": "Activate",
+        "deactivate": "Deactivate",
+        "delete": "Delete"
+      },
+      "deleteDialog": {
+        "title": "Delete Services",
+        "message": "Permanently delete {{count}} selected service(s)? Services still referenced by contracts or invoices are skipped. This cannot be undone."
+      },
+      "feedback": {
+        "activateSuccess": "{{count}} service(s) activated",
+        "activatePartial": "Activated {{count}} service(s); {{failed}} could not be activated",
+        "activateError": "Failed to activate {{count}} service(s)",
+        "deactivateSuccess": "{{count}} service(s) deactivated",
+        "deactivatePartial": "Deactivated {{count}} service(s); {{failed}} could not be deactivated",
+        "deactivateError": "Failed to deactivate {{count}} service(s)",
+        "deleteSuccess": "{{count}} service(s) deleted",
+        "deletePartial": "Deleted {{count}} service(s); {{failed}} could not be deleted",
+        "deletePartialBlocked": "Deleted {{count}} service(s); {{failed}} could not be deleted: {{names}}",
+        "deleteBlocked": "Could not delete {{count}} service(s) — still in use: {{names}}",
+        "deleteError": "Failed to delete {{count}} service(s)"
+      }
+    },
     "table": {
       "serviceName": "Service Name",
       "serviceType": "Service Type",
@@ -721,7 +808,11 @@
       "unit": "Unit",
       "taxRate": "Tax Rate",
       "nonTaxable": "Non-Taxable",
-      "thisService": "this service"
+      "thisService": "this service",
+      "contractUsage": "Contracts",
+      "contractUsageNone": "Not used",
+      "contractUsageOne": "Used on {{contracts}} contract",
+      "contractUsageMany": "Used on {{contracts}} contracts"
     },
     "errors": {
       "fetchServices": "Failed to fetch services",
@@ -748,6 +839,33 @@
       "restore": "Restore",
       "archive": "Archive",
       "delete": "Delete"
+    },
+    "bulk": {
+      "selectedCount": "{{count}} selected",
+      "selectAll": "Select all products",
+      "clear": "Clear",
+      "actions": {
+        "archive": "Archive",
+        "restore": "Restore",
+        "delete": "Delete"
+      },
+      "deleteDialog": {
+        "title": "Delete Products Permanently",
+        "message": "Permanently delete {{count}} selected product(s)? Products associated with existing data are skipped. This action cannot be undone."
+      },
+      "feedback": {
+        "archiveSuccess": "{{count}} product(s) archived",
+        "archivePartial": "Archived {{count}} product(s); {{failed}} could not be archived",
+        "archiveError": "Failed to archive {{count}} product(s)",
+        "restoreSuccess": "{{count}} product(s) restored",
+        "restorePartial": "Restored {{count}} product(s); {{failed}} could not be restored",
+        "restoreError": "Failed to restore {{count}} product(s)",
+        "deleteSuccess": "{{count}} product(s) deleted permanently",
+        "deletePartial": "Deleted {{count}} product(s); {{failed}} could not be deleted",
+        "deletePartialBlocked": "Deleted {{count}} product(s); {{failed}} could not be deleted: {{names}}",
+        "deleteBlocked": "Could not delete {{count}} product(s) — still in use: {{names}}",
+        "deleteError": "Failed to delete {{count}} product(s)"
+      }
     },
     "filters": {
       "searchPlaceholder": "Search by name, SKU, description...",
@@ -902,7 +1020,7 @@
         "loading": "Loading..."
       },
       "label": {
-        "label": "Label",
+        "label": "Category Label",
         "placeholder": "Optional freeform label"
       },
       "vendor": {
@@ -1175,7 +1293,10 @@
       "regionInvalid": "The selected tax region is no longer valid. Please refresh and choose another region.",
       "duplicate": "A tax rate already exists for this region and date range.",
       "missingField": "Missing required tax rate field.",
-      "missingFieldNamed": "Missing required tax rate field: {{field}}."
+      "missingFieldNamed": "Missing required tax rate field: {{field}}.",
+      "capInvalid": "Tax rate cap must be a non-negative safe whole number in minor units.",
+      "capCurrencyRequired": "Choose a rate currency before setting or changing a tax cap.",
+      "currencyInvalid": "Choose a supported rate currency."
     },
     "tax": {
       "defaultRequiresActiveRate": "Configure at least one active tax rate before creating default tax settings.",
@@ -1432,6 +1553,70 @@
     },
     "sections": {
       "userRates": "User rates"
+    }
+  },
+  "priceChangeRollout": {
+    "title": "Price change rollout",
+    "previewFailed": "Could not load the price-change preview.",
+    "skip": "Just save the price",
+    "apply": "Apply to inherited lines",
+    "applying": "Saving…",
+    "effectiveDate": "Effective date",
+    "effectiveDateHint": "Defaults to the next billing period boundary.",
+    "willChange": "Will change",
+    "noInheritedLines": "No inherited lines change at this date.",
+    "custom": "Won't change — custom",
+    "unreviewed": "Won't change — not yet classified",
+    "unreviewedAlert": "These lines bill unchanged until you review them.",
+    "reviewRates": "Review rates",
+    "excluded": "Excluded — already invoiced",
+    "none": "None.",
+    "totalMonthlyDelta": "Total monthly revenue delta",
+    "acrossAllInherited": "Across all {{lines}} inherited line(s).",
+    "applyFailed": "Could not apply the rollout. No changes were made.",
+    "skipFailed": "Could not save the price change.",
+    "columns": {
+      "client": "Client",
+      "contract": "Contract",
+      "line": "Line",
+      "current": "Current",
+      "new": "New",
+      "delta": "Delta",
+      "rateAtDate": "Rate at date"
+    },
+    "followsCatalog": "Follows the catalog",
+    "close": "Close",
+    "usageTitle": "Service usage"
+  },
+  "rateReview": {
+    "title": "Rate review",
+    "close": "Close",
+    "applySelected": "Apply selected",
+    "applying": "Applying…",
+    "previewFailed": "Could not load the rates for review.",
+    "applyFailed": "Could not apply the rate review. No changes were made.",
+    "intro": "Lines priced at exactly the catalog rate will not change on your next invoice. Lines that differ keep their current rate as a negotiated price.",
+    "applied": "Applied {{applied}} change(s).",
+    "refused": "{{refused}} row(s) were refused because they changed since the preview.",
+    "summary": "{{total}} unreviewed line(s): {{inherited}} exact match(es), {{custom}} negotiated, {{skipped}} skipped.",
+    "allClassified": "Every line has been classified. Nothing to review.",
+    "noService": "No service",
+    "columns": {
+      "contract": "Contract",
+      "currentRate": "Current rate",
+      "catalogRate": "Catalog rate",
+      "proposed": "Proposed",
+      "confidence": "Confidence"
+    },
+    "proposal": {
+      "inherited": "Follow the catalog",
+      "custom": "Keep as custom",
+      "unreviewed": "Leave unreviewed"
+    },
+    "confidence": {
+      "exact": "Exact match",
+      "differs": "Differs from catalog",
+      "needsDecision": "Needs a decision"
     }
   }
 }

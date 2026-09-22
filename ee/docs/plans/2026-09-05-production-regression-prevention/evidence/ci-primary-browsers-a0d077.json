@@ -1,0 +1,2053 @@
+{
+  "schemaVersion": 1,
+  "runId": "34308610232",
+  "testedRevision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+  "scope": "Primary production browser execution only",
+  "editions": [
+    {
+      "edition": "community",
+      "artifactId": 10088475208,
+      "jobId": 102335316021,
+      "counts": {
+        "passed": 42,
+        "failed": 0,
+        "flaky": 0,
+        "skipped": 0,
+        "interrupted": 0,
+        "missing": 0
+      },
+      "configuration": {
+        "edition": "community",
+        "buildFeatureFlags": "release-v1-6-feature:true",
+        "sourceRevision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+        "authentication": "real-credentials",
+        "serverLifecycle": "externally-started-production-build"
+      },
+      "source": {
+        "before": {
+          "revision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+          "dirty": false,
+          "changes": []
+        },
+        "after": {
+          "revision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+          "dirty": false,
+          "changes": []
+        }
+      },
+      "selection": {
+        "mode": "full",
+        "filters": []
+      },
+      "journeys": [
+        {
+          "identity": [
+            "e2e-tests/tests/inbound-email.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "built email service ingests MIME, preserves inline quotations, threads replies and deduplicates delivery"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 47678
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/invoice-designer-persistence.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "an administrator authors a billed-time date sort and reopens its persisted invoice layout"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 101023
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/invoice-generation.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "recurring usage generates one draft, finalizes and downloads the correct invoice without billing the same usage twice"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 20279
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/invoice-generation.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "a manual invoice preserves its entered number, finalizes and downloads without duplicate financial effects on retry"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 16540
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/invoice-ticket-ownership.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "authenticated invoice generation excludes foreign ticket snapshots from reads and downloaded PDF"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 9636
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/login.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "anonymous root navigation reaches sign-in and rejects an unknown account without a session"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 1942
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/login.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "real sign-in renders the dashboard and preserves the tenant session after reload"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 4614
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/login.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "a rejected password shows an actionable error and creates no session"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 1217
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/login.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "legacy integration settings links redirect before rendering and remain usable after reload"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 4395
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/microsoft-calendar.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "community does not expose personal calendar integration settings"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 3644
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/microsoft-mailbox.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "Microsoft mailbox OAuth receives a ticket, sends a UI reply through Graph and deduplicates callbacks"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 20222
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/microsoft-oauth-rejection.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "Microsoft email callback rejects missing code through the popup result"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 1666
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/microsoft-oauth-rejection.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "Microsoft email callback rejects missing state through the popup result"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 1035
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/microsoft-oauth-rejection.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "Microsoft email callback rejects malformed state through the popup result"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 1041
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/microsoft-oauth-rejection.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "Microsoft email callback rejects unsigned state through the popup result"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 976
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/microsoft-webhook-validation.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "Microsoft subscription validation echoes the opaque token: /api/calendar/webhooks/microsoft"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 18
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/microsoft-webhook-validation.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "Microsoft subscription validation echoes the opaque token: /api/email/webhooks/microsoft"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 115
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/microsoft-webhook-validation.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "Microsoft subscription validation echoes the opaque token: /api/teams/webhooks/recordings"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 55
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/microsoft-webhook-validation.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "Microsoft subscription validation echoes the opaque token: /api/telephony/webhooks/teams-calls"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 56
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/msp-access-redirects.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "an authenticated portal user reaches their dashboard from the MSP dashboard without a redirect loop"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 5932
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/portal-discovery.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "portal discovery validates email before submission and links to MSP sign-in"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 2133
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/portal-discovery.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "a tenant hint selects credential sign-in instead of organization discovery"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 1527
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/portal-discovery.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "unknown email receives generic confirmation and can restart discovery with its callback intact"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 1638
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/portal-discovery.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "anonymous portal dashboard access redirects to discovery with a return destination"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 1463
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/portal-identity.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "primary portal signs in with its own portal identity and cannot enter the MSP client page"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 6252
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/portal-identity.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "primary siblingPortal signs in with its own portal identity and cannot enter the MSP client page"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 6263
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/portal-identity.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "secondary portal signs in with its own portal identity and cannot enter the MSP client page"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 6289
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/portal-identity.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "valid portal credentials for another tenant are rejected by the requested tenant sign-in"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 1762
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/portal-ticket-roundtrip.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "portal ticket survives assignment, replies, resolution and reopening without exposing internal notes or another client\u2019s ticket"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 49416
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/qbo-export.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "community refuses the enterprise QuickBooks OAuth connection"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 18
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/server-rendered-locale.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "an explicit locale cookie outranks the browser language in server HTML and the browser"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 1013
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/server-rendered-locale.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "server-rendered de locale",
+              "returns translated HTML and preserves it in the browser without persisting a guessed locale"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 1011
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/server-rendered-locale.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "server-rendered fr locale",
+              "returns translated HTML and preserves it in the browser without persisting a guessed locale"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 948
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/server-rendered-locale.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "server-rendered en locale",
+              "returns translated HTML and preserves it in the browser without persisting a guessed locale"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 975
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/stripe-payment.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "community does not expose the enterprise invoice-payment webhook"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 56
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/tenant-identity.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "primary tenant admin sees its client after reload and cannot read another tenant's client"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 5863
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/tenant-identity.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "secondary tenant admin sees its client after reload and cannot read another tenant's client"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 5670
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/tenant-identity.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "a technician signs in with its own identity and can read its tenant client"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 3492
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/tenant-identity.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "a technician cannot elevate its own role through an administrator action"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 11230
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/time-approval-invoice.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "ticket time requires submission and approval before invoicing and cannot be billed twice"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 34762
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/usage-invoice-preview.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "Add Usage selects the usage line over an overlapping bucket and previews the persisted amount"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 18393
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/xero-export.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "community refuses the enterprise Xero OAuth connection"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 28
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "edition": "enterprise",
+      "artifactId": 10088747238,
+      "jobId": 102335315962,
+      "counts": {
+        "passed": 47,
+        "failed": 0,
+        "flaky": 0,
+        "skipped": 0,
+        "interrupted": 0,
+        "missing": 0
+      },
+      "configuration": {
+        "edition": "enterprise",
+        "buildFeatureFlags": "release-v1-6-feature:true",
+        "sourceRevision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+        "authentication": "real-credentials",
+        "serverLifecycle": "externally-started-production-build"
+      },
+      "source": {
+        "before": {
+          "revision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+          "dirty": false,
+          "changes": []
+        },
+        "after": {
+          "revision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+          "dirty": false,
+          "changes": []
+        }
+      },
+      "selection": {
+        "mode": "full",
+        "filters": []
+      },
+      "journeys": [
+        {
+          "identity": [
+            "e2e-tests/tests/inbound-email.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "built email service ingests MIME, preserves inline quotations, threads replies and deduplicates delivery"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 45652
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/invoice-designer-persistence.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "an administrator authors a billed-time date sort and reopens its persisted invoice layout"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 108281
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/invoice-generation.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "recurring usage generates one draft, finalizes and downloads the correct invoice without billing the same usage twice"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 20882
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/invoice-generation.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "a manual invoice preserves its entered number, finalizes and downloads without duplicate financial effects on retry"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 16036
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/invoice-ticket-ownership.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "authenticated invoice generation excludes foreign ticket snapshots from reads and downloaded PDF"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 9669
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/login.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "anonymous root navigation reaches sign-in and rejects an unknown account without a session"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 2242
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/login.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "real sign-in renders the dashboard and preserves the tenant session after reload"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 4852
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/login.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "a rejected password shows an actionable error and creates no session"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 1142
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/login.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "legacy integration settings links redirect before rendering and remain usable after reload"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 4540
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/microsoft-calendar.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "Microsoft calendar OAuth imports vendor events, exports UI edits and recovers from provider outage without losing remote linkage"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 34485
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/microsoft-calendar.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "Microsoft calendar OAuth imports vendor events, exports UI edits and recovers from permission denial without losing remote linkage"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 30628
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/microsoft-calendar.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "Microsoft calendar OAuth imports vendor events, exports UI edits and recovers from throttling without losing remote linkage"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 29757
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/microsoft-calendar.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "Microsoft calendar OAuth imports vendor events, exports UI edits and recovers from all-day throttling without losing remote linkage"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 29648
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/microsoft-mailbox.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "Microsoft mailbox OAuth receives a ticket, sends a UI reply through Graph and deduplicates callbacks"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 19956
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/microsoft-oauth-rejection.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "Microsoft email callback rejects missing code through the popup result"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 1722
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/microsoft-oauth-rejection.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "Microsoft email callback rejects missing state through the popup result"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 1013
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/microsoft-oauth-rejection.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "Microsoft email callback rejects malformed state through the popup result"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 1217
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/microsoft-oauth-rejection.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "Microsoft email callback rejects unsigned state through the popup result"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 983
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/microsoft-webhook-validation.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "Microsoft subscription validation echoes the opaque token: /api/calendar/webhooks/microsoft"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 70
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/microsoft-webhook-validation.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "Microsoft subscription validation echoes the opaque token: /api/email/webhooks/microsoft"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 109
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/microsoft-webhook-validation.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "Microsoft subscription validation echoes the opaque token: /api/teams/webhooks/recordings"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 109
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/microsoft-webhook-validation.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "Microsoft subscription validation echoes the opaque token: /api/telephony/webhooks/teams-calls"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 106
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/msp-access-redirects.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "an authenticated portal user reaches their dashboard from the MSP dashboard without a redirect loop"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 6012
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/portal-discovery.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "portal discovery validates email before submission and links to MSP sign-in"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 2154
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/portal-discovery.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "a tenant hint selects credential sign-in instead of organization discovery"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 1700
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/portal-discovery.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "unknown email receives generic confirmation and can restart discovery with its callback intact"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 1723
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/portal-discovery.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "anonymous portal dashboard access redirects to discovery with a return destination"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 1419
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/portal-identity.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "primary portal signs in with its own portal identity and cannot enter the MSP client page"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 6161
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/portal-identity.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "primary siblingPortal signs in with its own portal identity and cannot enter the MSP client page"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 6271
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/portal-identity.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "secondary portal signs in with its own portal identity and cannot enter the MSP client page"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 7166
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/portal-identity.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "valid portal credentials for another tenant are rejected by the requested tenant sign-in"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 1787
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/portal-ticket-roundtrip.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "portal ticket survives assignment, replies, resolution and reopening without exposing internal notes or another client\u2019s ticket"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 50555
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/qbo-export.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "QuickBooks OAuth and UI mapping export to the selected company and recover without duplicate invoices"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 33180
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/server-rendered-locale.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "an explicit locale cookie outranks the browser language in server HTML and the browser"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 1000
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/server-rendered-locale.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "server-rendered de locale",
+              "returns translated HTML and preserves it in the browser without persisting a guessed locale"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 1000
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/server-rendered-locale.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "server-rendered fr locale",
+              "returns translated HTML and preserves it in the browser without persisting a guessed locale"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 999
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/server-rendered-locale.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "server-rendered en locale",
+              "returns translated HTML and preserves it in the browser without persisting a guessed locale"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 967
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/stripe-payment.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "portal Checkout settles the invoice exactly once through signed webhook delivery and redelivery"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 5506
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/stripe-payment.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "declined and cancelled Checkout leaves the invoice unpaid and creates no payment ledger entry"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 4857
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/stripe-payment.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "Checkout creation failure offers a retry and recovers for the same unpaid invoice"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 4007
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/tenant-identity.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "primary tenant admin sees its client after reload and cannot read another tenant's client"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 6062
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/tenant-identity.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "secondary tenant admin sees its client after reload and cannot read another tenant's client"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 5708
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/tenant-identity.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "a technician signs in with its own identity and can read its tenant client"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 3646
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/tenant-identity.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "a technician cannot elevate its own role through an administrator action"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 12990
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/time-approval-invoice.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "ticket time requires submission and approval before invoicing and cannot be billed twice"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 35898
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/usage-invoice-preview.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "Add Usage selects the usage line over an overlapping bucket and previews the persisted amount"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 20913
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/xero-export.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "Xero OAuth and UI mapping export to the selected organisation and recover without duplicate invoices"
+            ]
+          ],
+          "required": true,
+          "observed": true,
+          "outcome": "expected",
+          "firstAttempt": "passed",
+          "retryCount": 0,
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed",
+              "durationMs": 26470
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "limits": [
+    "API, supported upgrade, Teams and overall readiness remain separate.",
+    "Candidate archives are not registry publication or deployment proof.",
+    "Latest local commits are not included in this run."
+  ]
+}

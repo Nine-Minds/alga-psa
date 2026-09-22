@@ -22,7 +22,10 @@
     "overdueCount": "Overdue {{count}}",
     "assignedTo": "Assigned to {{name}}",
     "ticketAccessibility": "Ticket {{number}}: {{title}}",
-    "createTicket": "New ticket"
+    "createTicket": "New ticket",
+    "bundledUnder": "Bundled → {{number}}",
+    "bundleMaster": "master",
+    "bundleCount": "Bundle · {{count}}"
   },
   "filters": {
     "title": "Filters",
@@ -72,7 +75,12 @@
     "pickAgent": "Pick specific agent…",
     "option24h": "24h",
     "option7d": "7d",
-    "option30d": "30d"
+    "option30d": "30d",
+    "bundles": "Bundles",
+    "bundled": "Bundled",
+    "individual": "Individual",
+    "bundledHint": "Bundled hides child tickets under their master, like the web list.",
+    "bundleIndividualLabel": "Bundles: Individual"
   },
   "quickFilters": {
     "myTickets": "My tickets",
@@ -160,6 +168,26 @@
       "contactPermission": "You don't have permission to update this ticket's contact.",
       "contactValidation": "Contact change was rejected by the server.",
       "contactGeneric": "Unable to update contact. Please try again."
+    },
+    "bundle": {
+      "master": "master",
+      "closeTitle": "Close {{count}} child ticket too?",
+      "reopenTitle": "Reopen {{count}} child ticket too?",
+      "closeDescription": "This bundle master is in sync mode. Closing it will also close {{count}} open child ticket(s). Board close rules are not checked on children.",
+      "reopenDescription": "This bundle master is in sync mode. Reopening it will reopen {{count}} child ticket(s) it closed. Independently closed children stay closed.",
+      "masterOnly": "Master only",
+      "closeWithChildren": "Close children too",
+      "reopenWithChildren": "Reopen children too",
+      "childBanner": "This ticket is bundled under {{number}}.",
+      "locked": "Status, priority and assignee are locked; work from the master ticket.",
+      "openMaster": "Open master ticket {{number}}",
+      "masterBanner": "Master of a bundle ({{count}} children).",
+      "mode": "Mode: {{mode}}",
+      "modes": {
+        "sync_updates": "Sync updates",
+        "link_only": "Link only"
+      },
+      "syncHint": "Status, priority and assignee changes flow to the children."
     }
   },
   "description": {
@@ -248,13 +276,33 @@
       "validation": "Comment was rejected by the server.",
       "generic": "Unable to send comment. Please try again.",
       "loadFailed": "Unable to load comments."
-    }
+    },
+    "sendLater": "Send later",
+    "scheduledFor": "Scheduled for {{when}}",
+    "scheduledForShort": "Scheduled",
+    "publishesAt": "Publishes {{when}}",
+    "scheduleTitle": "Schedule this comment",
+    "scheduleHelper": "The comment stays hidden from the client until the chosen time. Only client-visible comments can be scheduled.",
+    "scheduleDate": "Date",
+    "scheduleTime": "Time",
+    "scheduleConfirm": "Schedule",
+    "scheduleClear": "Send now instead",
+    "scheduleInPast": "Choose a time in the future.",
+    "scheduleInternalBlocked": "Internal comments can't be scheduled. Switch to Client to send later.",
+    "scheduled": "Scheduled",
+    "commentScheduled": "Comment scheduled",
+    "cancelScheduled": "Cancel scheduled comment",
+    "cancelScheduledTitle": "Cancel this scheduled comment?",
+    "cancelScheduledBody": "It will not be sent to the client.",
+    "cancelScheduledConfirm": "Cancel comment",
+    "cancelScheduledFailed": "Couldn't cancel the scheduled comment",
+    "scheduledCanceled": "Scheduled comment canceled"
   },
   "documents": {
     "title": "Documents",
     "attach": "Attach",
     "camera": "Camera",
-    "file": "File",
+    "file": "Files",
     "uploading": "Uploading attachment…",
     "empty": "No documents attached.",
     "unknownType": "Unknown type",
@@ -267,8 +315,19 @@
       "upload": "Unable to upload the document. Please try again.",
       "open": "Unable to open this document right now.",
       "cameraPermission": "Camera access is required to attach a photo.",
-      "delete": "Unable to delete the document. Please try again."
-    }
+      "delete": "Unable to delete the document. Please try again.",
+      "photosPermission": "Photo library access is required to attach photos.",
+      "preview": "Unable to load this image preview."
+    },
+    "photos": "Photos",
+    "uploadingProgress": "Uploading {{current}} of {{total}}…",
+    "uploadFailed": "Upload failed",
+    "retry": "Retry",
+    "dismiss": "Dismiss",
+    "share": "Share",
+    "previousImage": "Previous image",
+    "nextImage": "Next image",
+    "previewCounter": "{{current}} of {{total}}"
   },
   "materials": {
     "title": "Materials",
@@ -511,5 +570,26 @@
   "assets": {
     "title": "Linked devices",
     "error": "Couldn't load linked devices."
+  },
+  "callsEmails": {
+    "title": "Calls and emails",
+    "log": "Add",
+    "logInteraction": "Add call or email",
+    "empty": "No calls or emails logged",
+    "interaction": "Interaction",
+    "errors": {
+      "load": "Unable to load calls and emails."
+    },
+    "detail": {
+      "type": "Type",
+      "when": "When",
+      "scheduledFor": "Scheduled for",
+      "status": "Status",
+      "duration": "Duration",
+      "minutes": "{{count}} minutes",
+      "loggedBy": "Logged by",
+      "notes": "Notes",
+      "noNotes": "No notes"
+    }
   }
 }

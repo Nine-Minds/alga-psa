@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db/tenantDb';
 import {
   createTestTenant,
   type TenantTestData,

@@ -5,9 +5,10 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiBaseController, AuthenticatedApiRequest } from './ApiBaseController';
-import { TicketService } from '../services/TicketService';
+import { TicketService, type TicketDocumentVariant } from '../services/TicketService';
 import { 
-  createTicketSchema, updateTicketSchema, ticketListQuerySchema, ticketSearchSchema, ticketStatsResponseSchema, createTicketMaterialSchema, createTicketCommentSchema, updateTicketCommentSchema, updateTicketStatusSchema, updateTicketAssignmentSchema, createTicketFromAssetSchema, linkTicketAssetSchema, addTicketAgentSchema, assignTicketTeamSchema, removeTicketTeamSchema, createTicketChecklistItemSchema, updateTicketChecklistCompletionSchema
+  createTicketSchema, updateTicketSchema, ticketListQuerySchema, ticketSearchSchema, ticketStatsResponseSchema, createTicketMaterialSchema, createTicketCommentSchema, updateTicketCommentSchema, updateTicketStatusSchema, updateTicketAssignmentSchema, createTicketFromAssetSchema, linkTicketAssetSchema, addTicketAgentSchema, assignTicketTeamSchema, removeTicketTeamSchema, createTicketChecklistItemSchema, updateTicketChecklistCompletionSchema,
+  createExternalLinkSchema, updateExternalLinkSchema, externalLinkLookupQuerySchema,
 } from '../schemas/ticket';
 import { uuidSchema } from '../schemas/common';
 import { 
@@ -56,6 +57,13 @@ import {
   getTicketChecklistItems,
   setChecklistItemCompleted,
 } from '@alga-psa/tickets/actions/checklists/ticketChecklistActions';
+import {
+  addExternalLink,
+  findTicketByExternalLink,
+  getTicketExternalLinks,
+  removeExternalLink,
+  updateExternalLink,
+} from '@alga-psa/tickets/actions/externalLinks/externalLinkActions';
 
 // Resolve a read-authorization predicate that mirrors the global authorization
 // kernel for ticket:read. The built-in rules come from the same subject-aware
@@ -238,6 +246,18 @@ export class ApiTicketController extends ApiBaseController {
     return itemId;
   }
 
+  private extractExternalLinkId(req: NextRequest): string {
+    const segments = new URL(req.url).pathname.split('/');
+    const linksIndex = segments.indexOf('external-links');
+    const linkId = linksIndex >= 0 ? segments[linksIndex + 1] : undefined;
+    if (!linkId || !uuidSchema.safeParse(linkId).success) {
+      throw new ValidationError('Validation failed', [
+        { path: ['linkId'], message: 'A valid external link ID is required' },
+      ]);
+    }
+    return linkId;
+  }
+
   private buildTicketStatsFromAuthorizedRows(tickets: Record<string, any>[]) {
     const now = new Date();
     const startOfToday = new Date(now);
@@ -286,6 +306,7 @@ export class ApiTicketController extends ApiBaseController {
       tickets_by_priority: ticketsByPriority,
       tickets_by_category: ticketsByCategory,
       tickets_by_board: ticketsByBoard,
+      average_resolution_time: null,
       tickets_created_today: tickets.filter((ticket) => new Date(ticket.entered_at) >= startOfToday).length,
       tickets_created_this_week: tickets.filter((ticket) => new Date(ticket.entered_at) >= startOfWeek).length,
       tickets_created_this_month: tickets.filter((ticket) => new Date(ticket.entered_at) >= startOfMonth).length,
@@ -788,6 +809,164 @@ export class ApiTicketController extends ApiBaseController {
   }
 
   /**
+   * List external system links for a ticket.
+   */
+  getExternalLinks() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await this.runWithApiKeyContext(apiRequest, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.read || 'read');
+          const ticketId = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context.tenant);
+          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+
+          const links = await getTicketExternalLinks(ticketId);
+          if (isServerActionErrorResult(links)) {
+            return createServerActionErrorResponse(links);
+          }
+          return createSuccessResponse(links, 200, undefined, apiRequest);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Add a ticket- or comment-level external system link to a ticket.
+   * Supply `entity_type: 'comment'` and `comment_id` to attach the reference to
+   * one of the ticket's comments; otherwise the link is ticket-level.
+   */
+  createExternalLink() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await this.runWithApiKeyContext(apiRequest, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
+          const ticketId = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context.tenant);
+          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          const data = await this.validateData(apiRequest, createExternalLinkSchema);
+
+          const result = await addExternalLink({ ticket_id: ticketId, ...data });
+          if (isServerActionErrorResult(result)) {
+            return createServerActionErrorResponse(result);
+          }
+          return createSuccessResponse(result, 201, undefined, apiRequest);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Update mutable fields on an external link belonging to the authorized ticket.
+   */
+  updateExternalLink() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await this.runWithApiKeyContext(apiRequest, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
+          const ticketId = await this.extractIdFromPath(apiRequest);
+          const linkId = this.extractExternalLinkId(apiRequest);
+          const knex = await getConnection(apiRequest.context.tenant);
+          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          const data = await this.validateData(apiRequest, updateExternalLinkSchema);
+
+          const before = await getTicketExternalLinks(ticketId);
+          if (isServerActionErrorResult(before) || !before.some((link) => link.link_id === linkId)) {
+            throw new NotFoundError('External link not found');
+          }
+
+          const result = await updateExternalLink(linkId, data);
+          if (isServerActionErrorResult(result)) {
+            return createServerActionErrorResponse(result);
+          }
+          return createSuccessResponse(result, 200, undefined, apiRequest);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Remove an external link belonging to the authorized ticket.
+   */
+  deleteExternalLink() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await this.runWithApiKeyContext(apiRequest, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
+          const ticketId = await this.extractIdFromPath(apiRequest);
+          const linkId = this.extractExternalLinkId(apiRequest);
+          const knex = await getConnection(apiRequest.context.tenant);
+          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+
+          const before = await getTicketExternalLinks(ticketId);
+          if (isServerActionErrorResult(before) || !before.some((link) => link.link_id === linkId)) {
+            throw new NotFoundError('External link not found');
+          }
+
+          const result = await removeExternalLink(linkId);
+          if (isServerActionErrorResult(result)) {
+            return createServerActionErrorResponse(result);
+          }
+          return createSuccessResponse({ link_id: linkId }, 200, undefined, apiRequest);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Look up the ticket (and link) that carries a given external record.
+   * Dedupe primitive for inbound integrations.
+   */
+  findByExternalLink() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await this.runWithApiKeyContext(apiRequest, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.read || 'read');
+          const data = await this.validateQuery(apiRequest, externalLinkLookupQuerySchema);
+
+          const result = await findTicketByExternalLink({
+            system: data.system,
+            external_id: data.external_id,
+            external_parent_id: data.external_parent_id ?? null,
+          });
+          if (isServerActionErrorResult(result)) {
+            return createServerActionErrorResponse(result);
+          }
+          if (!result) {
+            throw new NotFoundError('No ticket found for that external link');
+          }
+
+          // Authorize against the resolved ticket before leaking any link data:
+          // a plain `ticket:read` grant is not enough for restricted principals.
+          const knex = await getConnection(apiRequest.context.tenant);
+          await this.assertTicketReadAllowed(apiRequest, result.ticket_id, knex);
+
+          return createSuccessResponse(result, 200, undefined, apiRequest);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
    * Get ticket documents
    */
   getDocuments() {
@@ -865,7 +1044,10 @@ export class ApiTicketController extends ApiBaseController {
             throw new ValidationError('Validation failed', validation.error.errors);
           }
 
-          const association = await this.ticketService.linkAsset(ticketId, validation.data, apiRequest.context!);
+          const { asset_id, relationship_type, notes } = validation.data;
+          const association = await this.ticketService.linkAsset(
+            ticketId, { asset_id, relationship_type, notes }, apiRequest.context!
+          );
 
           return createSuccessResponse(association, 201, undefined, apiRequest);
         });
@@ -1105,7 +1287,7 @@ export class ApiTicketController extends ApiBaseController {
             ]);
           }
 
-          const document = await this.ticketService.uploadTicketDocument(ticketId, file, apiRequest.context!);
+          const document = await this.ticketService.uploadTicketDocument(ticketId, file, apiRequest.context!, formData.get('commentAttachmentDraft') === 'true');
 
           return createSuccessResponse(document, 201, undefined, apiRequest);
         });
@@ -1149,6 +1331,54 @@ export class ApiTicketController extends ApiBaseController {
           headers.set('Content-Disposition', `attachment; filename="${encodeURIComponent(result.fileName)}"`);
           headers.set('Cache-Control', 'no-store');
 
+          return new NextResponse(new Uint8Array(result.buffer), { status: 200, headers });
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Serve a cached thumbnail or preview image for a ticket document
+   */
+  downloadDocumentVariant(variant: TicketDocumentVariant) {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.read || 'read');
+
+          const ticketId = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context!.tenant);
+          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+
+          const url = new URL(apiRequest.url || req.url);
+          const segments = url.pathname.split('/');
+          const docsIndex = segments.indexOf('documents');
+          const documentId = docsIndex >= 0 ? segments[docsIndex + 1] : undefined;
+
+          if (!documentId) {
+            throw new ValidationError('Validation failed', [
+              { path: ['documentId'], message: 'document ID is required' },
+            ]);
+          }
+
+          const result = await this.ticketService.downloadTicketDocumentVariant(ticketId, documentId, variant, apiRequest.context!);
+
+          const etag = `"${result.fileId}"`;
+          const headers = new Headers();
+          headers.set('Content-Type', result.mimeType);
+          headers.set('ETag', etag);
+          // Variants are immutable per file id: a regenerated preview gets a new id.
+          headers.set('Cache-Control', 'private, max-age=31536000, immutable');
+
+          if (req.headers.get('if-none-match') === etag) {
+            return new NextResponse(null, { status: 304, headers });
+          }
+
+          headers.set('Content-Length', String(result.buffer.length));
           return new NextResponse(new Uint8Array(result.buffer), { status: 200, headers });
         });
       } catch (error) {
@@ -1351,6 +1581,40 @@ export class ApiTicketController extends ApiBaseController {
           );
 
           return createSuccessResponse(comment, 201);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Cancel a scheduled comment before it publishes
+   */
+  cancelScheduledComment() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
+
+          const ticketId = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context!.tenant);
+          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+
+          const url = new URL(apiRequest.url || req.url);
+          const segments = url.pathname.split('/');
+          const commentsIndex = segments.indexOf('comments');
+          const commentId = commentsIndex >= 0 ? segments[commentsIndex + 1] : undefined;
+          if (!commentId || !uuidSchema.safeParse(commentId).success) {
+            throw new ValidationError('Validation failed', [
+              { path: ['commentId'], message: 'comment ID must be a valid UUID' },
+            ]);
+          }
+
+          const result = await this.ticketService.cancelScheduledComment(ticketId, commentId, apiRequest.context!);
+          return createSuccessResponse(result, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);
@@ -1780,6 +2044,7 @@ export class ApiTicketController extends ApiBaseController {
             masterTicketId,
             childTicketIds: data.child_ticket_ids,
             mode: data.mode,
+            onClosedMaster: data.on_closed_master,
           });
           return createSuccessResponse(result, 201, undefined, apiRequest);
         });
@@ -1822,6 +2087,7 @@ export class ApiTicketController extends ApiBaseController {
           const result = await this.ticketService.addBundleChildren(apiRequest.context, {
             masterTicketId,
             childTicketIds: data.child_ticket_ids,
+            onClosedMaster: data.on_closed_master,
           });
           return createSuccessResponse(result, 200, undefined, apiRequest);
         });

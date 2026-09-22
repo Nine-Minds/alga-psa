@@ -144,6 +144,11 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Ticket bundle mirrors (must be before comments due to FK on comments)
   'ticket_bundle_mirrors',
 
+  // Ticket comment attachment lifecycle (no FKs; rows reference comments,
+  // documents and tickets by id, so delete them before those tables)
+  'ticket_comment_attachment_challenges', 'ticket_comment_attachments',
+  'ticket_comment_email_deliveries',
+
   // Messages and comments
   // vectors and email_reply_tokens reference comments with NO ACTION, so they
   // must be deleted before comments to avoid FK violations.
@@ -163,7 +168,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'teams_integrations', 'microsoft_profiles',
 
   // Telephony (artifacts hang off call records; providers hold the subscription)
-  'telephony_call_artifacts', 'telephony_call_intents', 'telephony_call_records', 'telephony_providers',
+  'telephony_call_artifacts', 'telephony_call_intents', 'telephony_call_records', 'telephony_chat_records', 'telephony_providers',
 
   // Authorization bundles
   // assignments/rules must be deleted before revisions and bundles; revisions and
@@ -273,6 +278,10 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Appointment
   'appointment_requests',
 
+  // External references depend on tickets and their creating users. Purge them
+  // explicitly before either parent, along with the tenant's custom systems.
+  'external_entity_links', 'tenant_external_systems',
+
   // SLA leaf tables (must be before tickets, statuses, priorities, boards)
   // ticket_audit_logs sits with sla_audit_log: same shape, FKs to tickets/users,
   // delete before ticket/user rows are removed.
@@ -303,6 +312,11 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'credit_allocations', 'credit_tracking',
   // bucket_usage_unmappable_archive is a pure leaf (no FKs in or out — it has to
   // outlive whatever made a usage row unmappable), so it can drop anywhere.
+  // Usage semantics stores are FK-less leaves (they reference contract lines,
+  // clients, and configs by id only), as are the seat-pricing revision store
+  // and the per-tenant billing-semantics lock row.
+  'usage_period_total_requests', 'usage_period_totals', 'usage_measurement_revisions',
+  'contract_line_unit_pricing_revisions', 'billing_semantics_locks',
   'usage_tracking', 'bucket_usage', 'bucket_usage_unmappable_archive', 'recurring_service_periods', 'transactions',
   'accounting_export_errors', 'accounting_export_lines', 'accounting_export_batches',
   // Accounting sync engine (leaf tables: nothing references them)
@@ -442,8 +456,10 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'board_close_rules',
 
   // === LEVEL 5: Tickets and related ===
-  // Ticket bundle settings and entity links must be deleted BEFORE tickets
-  'ticket_bundle_settings', 'ticket_entity_links',
+  // Ticket bundle settings and entity links must be deleted BEFORE tickets.
+  // ticket_bundle_status_propagations FKs to tickets twice (master and child),
+  // so it belongs in the same pre-tickets group.
+  'ticket_bundle_settings', 'ticket_entity_links', 'ticket_bundle_status_propagations',
 
   // Tickets MUST be deleted BEFORE categories, statuses, etc that it references
   // AND BEFORE client_locations that tickets reference via location_id
@@ -1871,7 +1887,7 @@ export async function cancelTenantStripeSubscription(
     log.info('Found active subscription, canceling', { subscriptionExternalId });
 
     // Dynamically import Stripe to avoid issues in environments where it's not available
-    const { default: Stripe } = await import('stripe');
+    const { createWorkerStripeClient } = await import('../config/stripeClient.js');
     const { getSecretProviderInstance } = await import('@alga-psa/core/secrets');
 
     const secretProvider = await getSecretProviderInstance();
@@ -1885,10 +1901,7 @@ export async function cancelTenantStripeSubscription(
       return { canceled: false, error: 'Stripe secret key not configured' };
     }
 
-    const stripe = new Stripe(secretKey, {
-      apiVersion: '2024-12-18.acacia' as any,
-      typescript: true,
-    });
+    const stripe = createWorkerStripeClient(secretKey);
 
     // Cancel the subscription immediately
     const canceledSubscription = await stripe.subscriptions.cancel(subscriptionExternalId);

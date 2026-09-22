@@ -1,6 +1,85 @@
 /**
  * Utility functions for formatting values
  */
+import { CURRENCY_OPTIONS } from '../constants/currency';
+
+/** Shared ISO currency metadata, including currencies outside the usual picker shortlist. */
+export function supportedCurrencyCodes(): string[] {
+  const intl = Intl as typeof Intl & { supportedValuesOf?: (key: string) => string[] };
+  return intl.supportedValuesOf?.('currency') ?? [...CURRENCY_OPTIONS.map(option => option.value), 'BHD'];
+}
+
+export function isSupportedCurrency(code: string): boolean {
+  return supportedCurrencyCodes().includes(code);
+}
+
+export type MoneyInputErrorCode = 'currency' | 'negative' | 'precision' | 'invalid' | 'overflow';
+
+export class MoneyInputError extends Error {
+  constructor(public readonly code: MoneyInputErrorCode) {
+    super(code);
+    this.name = 'MoneyInputError';
+  }
+}
+
+function moneyLocale(locale: string): string {
+  return locale === 'xx' || locale === 'yy' ? 'en' : locale;
+}
+
+function decimalSeparator(locale: string): string {
+  return new Intl.NumberFormat(moneyLocale(locale)).formatToParts(1.1)
+    .find(part => part.type === 'decimal')?.value ?? '.';
+}
+
+/** Strict, ungrouped decimal text to minor units. Never round a user's input. */
+export function decimalTextToMinorUnits(text: string, currency: string, locale = 'en'): number | null {
+  const value = text.trim();
+  if (!value) return null;
+  if (!isSupportedCurrency(currency)) throw new MoneyInputError('currency');
+  if (value.startsWith('-')) throw new MoneyInputError('negative');
+  const separator = decimalSeparator(locale);
+  const parts = value.split(separator);
+  if (parts.length > 2 || !parts.every(part => /^\d+$/.test(part))) throw new MoneyInputError('invalid');
+  const digits = currencyFractionDigits(currency, moneyLocale(locale));
+  if (parts.length === 2 && (digits === 0 || parts[1].length > digits)) throw new MoneyInputError('precision');
+  // Bound the input before constructing a BigInt, including arbitrarily long leading zeros.
+  const integer = parts[0].replace(/^0+(?=\d)/, '');
+  if (integer.length > 16) throw new MoneyInputError('overflow');
+  const minor = BigInt(integer + (parts[1] ?? '').padEnd(digits, '0'));
+  if (minor > BigInt(Number.MAX_SAFE_INTEGER)) throw new MoneyInputError('overflow');
+  return Number(minor);
+}
+
+function exactMinorUnits(value: number | string): bigint {
+  if ((typeof value === 'string' && !/^\d+$/.test(value)) ||
+      (typeof value === 'number' && (!Number.isSafeInteger(value) || value < 0))) {
+    throw new MoneyInputError('invalid');
+  }
+  const minor = BigInt(value);
+  if (minor > BigInt(Number.MAX_SAFE_INTEGER)) throw new MoneyInputError('overflow');
+  return minor;
+}
+
+/** Exact editable major-unit text, including values at MAX_SAFE_INTEGER minor units. */
+export function minorUnitsToDecimalText(value: number | string, currency: string, locale = 'en'): string {
+  if (!isSupportedCurrency(currency)) throw new MoneyInputError('currency');
+  const digits = currencyFractionDigits(currency, moneyLocale(locale));
+  const text = exactMinorUnits(value).toString().padStart(digits + 1, '0');
+  return digits ? text.slice(0, -digits) + decimalSeparator(locale) + text.slice(-digits) : text;
+}
+
+/** Currency-code display without dividing a potentially maximum-safe number. */
+export function formatExactCurrencyFromMinorUnits(value: number | string, currency: string, locale = 'en'): string {
+  if (!isSupportedCurrency(currency)) throw new MoneyInputError('currency');
+  const digits = currencyFractionDigits(currency, moneyLocale(locale));
+  const minor = exactMinorUnits(value);
+  const scale = 10n ** BigInt(digits);
+  const fraction = (minor % scale).toString().padStart(digits, '0');
+  return new Intl.NumberFormat(moneyLocale(locale), {
+    style: 'currency', currency, currencyDisplay: 'code',
+    minimumFractionDigits: digits, maximumFractionDigits: digits,
+  }).formatToParts(minor / scale).map(part => part.type === 'fraction' ? fraction : part.value).join('');
+}
 
 /**
  * Format a number as currency
@@ -109,4 +188,3 @@ export function displayCountry(countryName?: unknown, countryCode?: unknown): st
   }
   return name || code;
 }
-
