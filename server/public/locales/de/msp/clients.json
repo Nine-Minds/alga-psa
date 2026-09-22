@@ -1869,5 +1869,14 @@
       "archived": "Dieses Abrechnungsprofil ist archiviert.",
       "selectionNotThisClient": "Eines der ausgewählten Abrechnungsprofile gehört nicht zu diesem Kunden."
     }
+  },
+  "clientDefaultTimeEntryServiceSettings": {
+    "title": "Default time-entry service",
+    "label": "Default time-entry service",
+    "placeholder": "Use tenant default",
+    "help": "Used for new ticket time entries for this client. Clear the selection to use the tenant default.",
+    "updatedSuccess": "Default time-entry service updated.",
+    "saveError": "Failed to save default time-entry service",
+    "loadError": "Failed to load default time-entry service"
   }
 }

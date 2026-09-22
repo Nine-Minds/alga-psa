@@ -5,7 +5,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ITimeEntry, ITimeEntryWithWorkItem, ITimePeriod, ITimePeriodView } from '@alga-psa/types';
 import { IExtendedWorkItem } from '@alga-psa/types';
 import { TaxRegion } from '@alga-psa/types';
-import { fetchClientTaxRateForWorkItem, fetchScheduleEntryForWorkItem, fetchServicesForTimeEntry, fetchTaxRegions } from '../../../../actions/timeEntryActions';
+import { fetchClientTaxRateForWorkItem, fetchScheduleEntryForWorkItem, fetchServicesForTimeEntry, fetchTaxRegions, resolveDefaultTicketTimeEntryService } from '../../../../actions/timeEntryActions';
 import { getClientIdForWorkItem } from '../../../../lib/contractLineDisambiguation';
 import { formatISO, parseISO } from 'date-fns';
 import { generateUUID } from '@alga-psa/core';
@@ -154,6 +154,34 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
         payload: { services, taxRegions },
       });
 
+      // New ticket entries default to the client/tenant configured service (if
+      // one resolves to a service still offered in the selector). Existing
+      // entries and an explicitly supplied service are never overwritten.
+      const serviceIds = new Set(services.map((service) => service.id));
+      let ticketDefaultServiceId = '';
+      if (workItem.type === 'ticket' && !existingEntries?.length && clientId) {
+        if (workItem.service_id && serviceIds.has(workItem.service_id)) {
+          ticketDefaultServiceId = workItem.service_id;
+        } else {
+          try {
+            const resolved = await resolveDefaultTicketTimeEntryService({
+              clientId,
+              effectiveDate: defaultStartTime ?? date,
+            });
+            if (
+              resolved &&
+              'serviceId' in resolved &&
+              resolved.serviceId &&
+              serviceIds.has(resolved.serviceId)
+            ) {
+              ticketDefaultServiceId = resolved.serviceId;
+            }
+          } catch (error) {
+            console.warn('Unable to resolve default ticket time entry service:', error);
+          }
+        }
+      }
+
       let newEntries: ITimeEntryWithNew[] = [];
 
       if (existingEntries?.length) {
@@ -173,7 +201,7 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
         const isBillable = workItem.is_billable === false ? false : true;
         const prefilledServiceId = workItem.type === 'project_task' && workItem.service_id
           ? workItem.service_id
-          : '';
+          : (workItem.type === 'ticket' ? ticketDefaultServiceId : '');
 
         console.log('Creating new time entry with defaults:', {
           isBillable,
@@ -245,11 +273,14 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
           created_at: formatISO(new Date()),
           updated_at: formatISO(new Date()),
           approval_status: 'DRAFT',
-          service_id: '',
+          service_id: workItem.type === 'ticket' ? ticketDefaultServiceId : '',
           tax_region: defaultTaxRegion || '',
           isNew: true,
           tempId: generateUUID(),
           client_id: clientId || undefined,
+          _isServicePrefilled: workItem.type === 'ticket' ? !!ticketDefaultServiceId : false,
+          _originalServiceId: workItem.type === 'ticket' && ticketDefaultServiceId ? ticketDefaultServiceId : null,
+          _serviceOverridden: false,
         }];
       }
 
