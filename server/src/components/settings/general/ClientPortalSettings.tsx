@@ -641,7 +641,7 @@ const ClientPortalSettings = () => {
                     <p className="text-sm text-gray-500 mt-2">
                       {t('clientPortal.branding.help.companyLogoWide', {
                         defaultValue:
-                          'Shown at the top of the expanded portal side panel, at 32px tall. Include your company name in the image — the panel stops printing it separately.',
+                          'Shown at the top of the expanded portal side panel, scaled to fit. Include your company name in the image — the panel stops printing it separately.',
                       })}
                     </p>
                   </div>
@@ -1021,20 +1021,20 @@ const ClientPortalSettings = () => {
                         className={`w-40 shrink-0 text-white py-3 ${sidebarTint ? '' : 'bg-slate-900'}`}
                         style={sidebarTint ? { backgroundColor: sidebarTint } : undefined}
                       >
-                        <div className="px-3 flex items-center gap-2">
+                        <div className="px-3 flex items-center gap-2 min-w-0">
                           {previewWideLogo ? (
-                            <img src={previewWideLogo} alt="Logo" className="h-6 w-auto max-w-full object-contain" />
+                            <img src={previewWideLogo} alt="Logo" className="h-9 w-auto max-w-full object-contain object-left" />
                           ) : (
                             <>
                               {previewSidebarLogo ? (
-                                <img src={previewSidebarLogo} alt="Logo" className="h-6 w-6 rounded-full object-contain bg-white/10" />
+                                <img src={previewSidebarLogo} alt="Logo" className="h-9 w-9 shrink-0 object-contain bg-white/10" />
                               ) : (
                                 <div
                                   className="h-6 w-6 rounded-full"
                                   style={{ backgroundColor: previewPrimary }}
                                 />
                               )}
-                              <span className="text-sm font-semibold truncate">
+                              <span className="text-sm font-semibold truncate min-w-0">
                                 {clientName || 'Your Client'}
                               </span>
                             </>

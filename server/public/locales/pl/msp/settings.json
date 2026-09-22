@@ -1212,7 +1212,7 @@
         "companyLogo": "Zalecane: PNG lub SVG, maks. 2 MB, przezroczyste tło",
         "companyLogoMsp": "To logo zastępuje również znak Alga w menu bocznym MSP.",
         "companyLogoDark": "Opcjonalnie. Używane w panelu bocznym portalu i w trybie ciemnym. Gdy pole jest puste, używane jest logo firmy.",
-        "companyLogoWide": "Wyświetlane u góry rozwiniętego panelu bocznego portalu, o wysokości 32 px. Umieść nazwę firmy na obrazie — panel przestanie wypisywać ją osobno.",
+        "companyLogoWide": "Wyświetlane u góry rozwiniętego panelu bocznego portalu, skalowane, aby pasowało. Umieść nazwę firmy na obrazie — panel przestanie wypisywać ją osobno.",
         "companyLogoWideDark": "Opcjonalne. Używane, dopóki tło panelu bocznego jest ciemne. W razie braku używane jest szerokie logo.",
         "primaryColor": "Używany dla przycisków, linków i wyróżnień",
         "secondaryColor": "Używany dla akcentów i akcji dodatkowych",

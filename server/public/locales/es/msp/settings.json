@@ -1206,7 +1206,7 @@
         "companyLogo": "Recomendado: PNG o SVG, máximo 2 MB, fondo transparente",
         "companyLogoMsp": "Este logotipo también sustituye la marca de Alga en el menú lateral MSP.",
         "companyLogoDark": "Opcional. Se usa en el panel lateral del portal y en las pantallas en modo oscuro. Si se deja vacío, se usa el logotipo de la empresa.",
-        "companyLogoWide": "Se muestra en la parte superior del panel lateral expandido del portal, con 32 px de alto. Incluya el nombre de su empresa en la imagen: el panel deja de escribirlo por separado.",
+        "companyLogoWide": "Se muestra en la parte superior del panel lateral expandido del portal, escalado para ajustarse. Incluya el nombre de su empresa en la imagen: el panel deja de escribirlo por separado.",
         "companyLogoWideDark": "Opcional. Se usa mientras el fondo del panel lateral sea oscuro. Recurre al logotipo ancho.",
         "primaryColor": "Se utiliza para botones, enlaces y elementos destacados",
         "secondaryColor": "Se utiliza para acentos y acciones secundarias",

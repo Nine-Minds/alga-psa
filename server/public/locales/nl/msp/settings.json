@@ -1206,7 +1206,7 @@
         "companyLogo": "Aanbevolen: PNG of SVG, maximaal 2 MB, transparante achtergrond",
         "companyLogoMsp": "Dit logo vervangt ook het Alga-merk in het MSP-zijmenu.",
         "companyLogoDark": "Optioneel. Wordt gebruikt in het zijpaneel van het portaal en in de donkere modus. Zonder logo wordt het bedrijfslogo gebruikt.",
-        "companyLogoWide": "Wordt bovenaan het uitgeklapte zijpaneel van het portaal getoond, 32 px hoog. Zet uw bedrijfsnaam in de afbeelding — het paneel schrijft die dan niet meer apart.",
+        "companyLogoWide": "Wordt bovenaan het uitgeklapte zijpaneel van het portaal getoond en geschaald om te passen. Zet uw bedrijfsnaam in de afbeelding — het paneel schrijft die dan niet meer apart.",
         "companyLogoWideDark": "Optioneel. Wordt gebruikt zolang de achtergrond van het zijpaneel donker is. Valt terug op het brede logo.",
         "primaryColor": "Wordt gebruikt voor knoppen, links en accenten",
         "secondaryColor": "Wordt gebruikt voor accenten en secundaire acties",

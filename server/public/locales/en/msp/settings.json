@@ -1206,7 +1206,7 @@
         "companyLogo": "Recommended: PNG or SVG, max 2MB, transparent background",
         "companyLogoMsp": "This logo also replaces the Alga mark in the MSP side menu.",
         "companyLogoDark": "Optional. Used on the portal side panel and dark mode screens. Falls back to the company logo when empty.",
-        "companyLogoWide": "Shown at the top of the expanded portal side panel, at 32px tall. Include your company name in the image — the panel stops printing it separately.",
+        "companyLogoWide": "Shown at the top of the expanded portal side panel, scaled to fit. Include your company name in the image — the panel stops printing it separately.",
         "companyLogoWideDark": "Optional. Used while the side panel background is dark. Falls back to the wide logo.",
         "primaryColor": "Used for buttons, links, and highlights",
         "secondaryColor": "Used for accents and secondary actions",
