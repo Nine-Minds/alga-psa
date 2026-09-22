@@ -1,4 +1,4 @@
-import { isPreviewableDocumentMimeType } from '@alga-psa/documents/lib/documentUtils';
+import { isPreviewableDocumentMimeType } from '@alga-psa/core';
 
 export interface DocumentViewUrlInput {
   document_id?: string | null;

@@ -7,19 +7,35 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 async function createDistFixture(files: Record<string, string>): Promise<string> {
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'workflow-worker-storage-validate-'));
+  const fixtureFiles = {
+    'node_modules/@alga-psa/storage/package.json': JSON.stringify({
+      type: 'module',
+      exports: {
+        './config/storage': './dist/config/storage.mjs',
+        './StorageProviderFactory': './dist/StorageProviderFactory.mjs',
+      },
+    }),
+    'node_modules/@alga-psa/storage/dist/index.mjs': 'export {};',
+    'node_modules/@alga-psa/storage/dist/config/storage.mjs': 'export {};',
+    'node_modules/@alga-psa/storage/dist/StorageProviderFactory.mjs': 'export {};',
+    ...files,
+  };
   await Promise.all(
-    Object.entries(files).map(async ([relPath, source]) => {
+    Object.entries(fixtureFiles).map(async ([relPath, source]) => {
       const absPath = path.join(tempRoot, relPath);
       await fs.mkdir(path.dirname(absPath), { recursive: true });
       await fs.writeFile(absPath, source, 'utf8');
     }),
+  );
+  await fs.copyFile(
+    fileURLToPath(new URL('../../scripts/validate-native-storage-imports.mjs', import.meta.url)),
+    path.join(tempRoot, 'validate-native-storage-imports.mjs'),
   );
   return tempRoot;
 }
 
 describe('validate-native-storage-imports', () => {
   const tempDirs: string[] = [];
-  const scriptPath = fileURLToPath(new URL('../../scripts/validate-native-storage-imports.mjs', import.meta.url));
 
   afterEach(async () => {
     while (tempDirs.length > 0) {
@@ -31,10 +47,11 @@ describe('validate-native-storage-imports', () => {
   });
 
   function run(distRoot: string, extraEnv: Record<string, string> = {}) {
-    return spawnSync(process.execPath, [scriptPath], {
+    return spawnSync(process.execPath, [path.join(distRoot, 'validate-native-storage-imports.mjs')], {
       cwd: process.cwd(),
       env: {
         ...process.env,
+        WORKFLOW_WORKER_STORAGE_DIST: path.join(distRoot, 'node_modules/@alga-psa/storage/dist'),
         WORKFLOW_WORKER_STORAGE_DIST_ROOT: path.join(distRoot, 'dist'),
         ...extraEnv,
       },
@@ -81,12 +98,27 @@ describe('validate-native-storage-imports', () => {
     expect(result.stderr).toContain('failed to resolve under plain node');
   });
 
+  it('fails when a storage subpath has a missing transitive dependency', async () => {
+    const distRoot = await createDistFixture({
+      'dist/shared/helper.js': "await import('@alga-psa/storage/StorageProviderFactory');",
+      'node_modules/@alga-psa/storage/dist/StorageProviderFactory.mjs': "import '@alga-psa/missing-dependency';",
+    });
+    tempDirs.push(distRoot);
+
+    const result = run(distRoot);
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('failed to resolve under plain node');
+    expect(result.stderr).toContain('@alga-psa/missing-dependency');
+  });
+
   it('fails when the storage dist is stale (only tsconfig.tsbuildinfo, no entry outputs)', async () => {
     const distRoot = await createDistFixture({
       'dist/shared/helper.js': "await import('@alga-psa/storage/config/storage');\n",
     });
     tempDirs.push(distRoot);
-    const staleStorageDist = path.join(distRoot, 'storage-dist');
+    const staleStorageDist = path.join(distRoot, 'node_modules/@alga-psa/storage/dist');
+    await fs.rm(staleStorageDist, { recursive: true, force: true });
     await fs.mkdir(staleStorageDist, { recursive: true });
     await fs.writeFile(path.join(staleStorageDist, 'tsconfig.tsbuildinfo'), '{}', 'utf8');
 
@@ -107,7 +139,8 @@ describe('validate-native-storage-imports', () => {
       'dist/shared/helper.js': "await import('@alga-psa/storage/StorageProviderFactory');\n",
     });
     tempDirs.push(distRoot);
-    const staleStorageDist = path.join(distRoot, 'storage-dist');
+    const staleStorageDist = path.join(distRoot, 'node_modules/@alga-psa/storage/dist');
+    await fs.rm(staleStorageDist, { recursive: true, force: true });
     await fs.mkdir(staleStorageDist, { recursive: true });
     await fs.writeFile(path.join(staleStorageDist, 'tsconfig.tsbuildinfo'), '{}', 'utf8');
 

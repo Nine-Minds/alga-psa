@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { resolveCommentAuthor } from '../../../../packages/tickets/src/lib/commentAuthorResolution';
 
 /**
  * These tests exercise the IMAP/in-app artifact pipeline end to end at the
@@ -384,15 +383,7 @@ describe('processInboundEmailArtifactsBestEffort — inbound upload policy', () 
     });
     expect(h.comments[0].content).toContain('voicemail.wav');
     expect(h.comments[0].content).toContain('attachment_type_not_allowed:audio/wav');
-
-    // The stored comment is authorless but system-generated, so the UI resolves
-    // it to System rather than Unknown User.
-    const resolved = resolveCommentAuthor(
-      { user_id: null, contact_id: null, is_system_generated: true },
-      { userMap: {} }
-    );
-    expect(resolved.source).toBe('system');
-    expect(resolved.displayName).toBe('System');
+    // Author display is covered by tickets/lib/commentAuthorResolution.test.ts.
   });
 
   it('skips a genuinely oversized attachment as attachment_too_large and lists it in the trail', async () => {

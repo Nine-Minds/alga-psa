@@ -9,7 +9,7 @@ import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { assertInternalApiUser } from '@/lib/api/middleware/apiMiddleware';
 import { runWithTenant } from 'server/src/lib/db';
 import { getAuthorizedDocumentByFileId } from '@alga-psa/documents/actions/documentActions';
-import { isPreviewableDocumentMimeType } from '@alga-psa/documents/lib/documentUtils';
+import { isPreviewableDocumentMimeType } from '@alga-psa/core';
 
 const TENANT_LOGO_DISCOVERY_TENANT = 'tenant-logo-file-discovery';
 const TENANT_LOGO_DISCOVERY_REASON = 'public tenant logo file lookup before tenant is known';
