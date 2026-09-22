@@ -150,6 +150,17 @@ function parseImportNumber(numStr: string | undefined): number | null {
   return isNaN(parsed) ? null : parsed;
 }
 
+/**
+ * Parse a CSV hours value into the whole minutes stored in
+ * project_tasks.estimated_hours (BIGINT minutes, same convention as TaskForm).
+ * Returns null for the values the validator already flags as "will be skipped".
+ */
+function parseImportHoursToMinutes(hoursStr: string | undefined): number | null {
+  const hours = parseImportNumber(hoursStr);
+  if (hours === null || hours < 0) return null;
+  return Math.round(hours * 60);
+}
+
 type ImportStatusMappingRow = IProjectStatusMapping & {
   phase_id?: string | null;
   status_name?: string;
@@ -299,7 +310,7 @@ export async function groupRowsIntoPhases(
       description: row.task_description?.trim() || null,
       assigned_to: primaryAgentId,
       additional_agent_ids: additionalAgentIds,
-      estimated_hours: parseImportNumber(row.estimated_hours),
+      estimated_hours: parseImportHoursToMinutes(row.estimated_hours),
       actual_hours: null,
       due_date: parseImportDate(row.due_date),
       priority_id: priorityLookup[priorityName] || null,
