@@ -330,12 +330,14 @@ export function AnswerMappingSection({
     },
     {
       title: t('editor.answerMapping.columns.actions'),
-      dataIndex: 'ruleId',
+      // DataTable keys columns by dataIndex; a second 'ruleId' column would
+      // collide with the selector column and render its cell instead.
+      dataIndex: 'actions',
       sortable: false,
-      render: (value: string, record) => (
+      render: (_value: unknown, record) => (
         <div className="flex gap-2">
           <Button
-            id={`service-request-answer-mapping-edit-${value}`}
+            id={`service-request-answer-mapping-edit-${record.ruleId}`}
             variant="outline"
             size="sm"
             onClick={() => setForm(formFromRule(record))}
@@ -343,10 +345,10 @@ export function AnswerMappingSection({
             {t('editor.answerMapping.editRule')}
           </Button>
           <Button
-            id={`service-request-answer-mapping-remove-${value}`}
+            id={`service-request-answer-mapping-remove-${record.ruleId}`}
             variant="destructive"
             size="sm"
-            onClick={() => removeRule(value)}
+            onClick={() => removeRule(record.ruleId)}
           >
             {t('editor.answerMapping.removeRule')}
           </Button>
@@ -389,7 +391,13 @@ export function AnswerMappingSection({
           <Button
             id="service-request-answer-mapping-publish"
             variant="default"
-            disabled={publishing || loading || !data || (!data.hasUnpublishedChanges && data.publishedVersionNumber !== null)}
+            disabled={
+              publishing ||
+              loading ||
+              !data ||
+              (data.publishedVersionNumber === null && data.rules.length === 0) ||
+              (data.publishedVersionNumber !== null && !data.hasUnpublishedChanges)
+            }
             onClick={publish}
           >
             {publishing ? t('editor.answerMapping.publishing') : t('editor.answerMapping.publish')}
