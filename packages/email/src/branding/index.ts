@@ -6,7 +6,7 @@
 
 export * from './types';
 export { STOCK_EMAIL_PALETTE, NON_PALETTE_TEMPLATE_COLORS } from './stockPalette';
-export { isHexColor, normalizeHex } from './color';
+export { isDarkEmailHeader, isDarkSurface, isHexColor, normalizeHex, relativeLuminance } from './color';
 export { resolveEmailPalette, DEFAULT_BADGE_ALPHA, type ResolvableEmailPalette } from './resolveEmailPalette';
 export {
   applyEmailPalette,
@@ -27,6 +27,7 @@ export {
   decorateBrandedHtml,
   findBrandLogoCid,
   parseBrandLogoVariant,
+  pickBrandLogoVariant,
   removeBrandLogo,
   resolveBrandLogoForPreview,
   stripBrandAttribution,
