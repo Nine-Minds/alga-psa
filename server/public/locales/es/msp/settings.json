@@ -1218,7 +1218,7 @@
         "followTheme": "Si está activado, el portal de clientes usa el tema elegido en Configuración → Apariencia. Si está desactivado, los colores de abajo lo sustituyen.",
         "followThemeActive": "Los colores de abajo se conservan, pero no se aplican mientras el portal siga el tema de la organización."
       },
-      "cropHelp": "Arrastra y haz zoom para elegir la parte que se muestra en el panel lateral del portal y en todos los marcos circulares. Tu logotipo ancho no cambia.",
+      "cropHelp": "Arrastre y haga zoom para elegir la parte que se muestra en el panel lateral del portal y en todos los marcos circulares. Su logotipo ancho no cambia.",
       "heroGradient": {
         "primaryShades": "Color primario a tono primario",
         "primarySecondary": "Color primario a color secundario"
@@ -1488,8 +1488,8 @@
     "whiteLabel": {
       "title": "Marca propia en la aplicación MSP",
       "description": "Suba su logotipo una vez. Sustituye la marca de Alga en el menú lateral MSP, y el portal de clientes usa las mismas imágenes.",
-      "logoHelp": "La marca cuadrada se usa dondequiera que el espacio sea cuadrado: el menú lateral contraído y los marcos circulares. Si sueltas un logotipo ancho en un espacio cuadrado, eliges qué parte se convierte en la marca; una vez subido un logotipo ancho, también puedes recortar la marca directamente de él. El logotipo ancho opcional sustituye a la marca y al nombre en el menú lateral expandido, así que suba uno que ya incluya el nombre de su empresa. El menú lateral se adapta a su propio fondo: usa las variantes para fondos oscuros cuando el menú es oscuro y las claras cuando es claro, y recurre a la variante que haya subido.",
-      "cropHelp": "Arrastra y haz zoom para elegir la parte que se muestra en el menú lateral contraído y en todos los marcos circulares. Tu logotipo ancho no cambia.",
+      "logoHelp": "La marca cuadrada se usa dondequiera que el espacio sea cuadrado: el menú lateral contraído y los marcos circulares. Si suelta un logotipo ancho en un espacio cuadrado, elige qué parte se convierte en la marca; una vez subido un logotipo ancho, también puede recortar la marca directamente de él. El logotipo ancho opcional sustituye a la marca y al nombre en el menú lateral expandido, así que suba uno que ya incluya el nombre de su empresa. El menú lateral se adapta a su propio fondo: usa las variantes para fondos oscuros cuando el menú es oscuro y las claras cuando es claro, y recurre a la variante que haya subido.",
+      "cropHelp": "Arrastre y haga zoom para elegir la parte que se muestra en el menú lateral contraído y en todos los marcos circulares. Su logotipo ancho no cambia.",
       "fields": {
         "mark": "Marca cuadrada",
         "markDark": "Marca cuadrada para fondos oscuros",

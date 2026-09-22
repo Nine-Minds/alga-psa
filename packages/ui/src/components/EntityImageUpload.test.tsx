@@ -16,14 +16,15 @@ vi.mock('react-hot-toast', () => ({
 
 // jsdom has no layout, so the real cropper never reports an area. This stand-in
 // reports the zone a user would have picked: 10% in, a full-height square of a 4:1 image.
-vi.mock('react-easy-crop', () => ({
-  default: (props: { onCropComplete?: (a: unknown, b: unknown) => void }) => {
+vi.mock('react-easy-crop', () => {
+  const MockCropper = (props: { onCropComplete?: (a: unknown, b: unknown) => void }) => {
     React.useEffect(() => {
       props.onCropComplete?.({ x: 10, y: 0, width: 25, height: 100 }, { x: 100, y: 0, width: 250, height: 250 });
     }, []);
     return <div data-testid="cropper" />;
-  },
-}));
+  };
+  return { default: MockCropper };
+});
 
 // jsdom never decodes images: the probe's natural size comes from this stub
 // and its load event is dispatched by hand on the last Image constructed.
