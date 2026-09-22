@@ -9,6 +9,7 @@ import { normalizeRulesSnapshot } from './mappingRules';
 import { isUniqueViolationOnIndex } from '../pgUniqueConstraint';
 import { recordServiceRequestSubmissionAudit } from '../submissionAudit';
 import type {
+  ApplyFieldResult,
   MappingApplicationRecord,
   MappingApplicationResultRecord,
   MappingApplicationStatus,
@@ -18,6 +19,7 @@ import type {
   MappingRuleEvaluation,
   MappingRulesSnapshot,
   MappingSubmissionContext,
+  MappingTargetField,
 } from './types';
 
 /**
@@ -31,6 +33,12 @@ const APPLICATIONS_UNIQUE_INDEX =
   'service_request_submission_applications_replay_unique';
 const APPLICATION_SETTLE_TIMEOUT_MS = 15000;
 const APPLICATION_SETTLE_POLL_MS = 100;
+/**
+ * How long a `pending` claim may go without a heartbeat before a retry treats
+ * it as abandoned. Every field transaction refreshes `claimed_at`, so a live
+ * run stays fresh; a crashed run's claim goes stale and can be taken over.
+ */
+const APPLICATION_CLAIM_STALE_MS = 30000;
 
 export interface RunAnswerMappingInput {
   knex: Knex;
@@ -200,6 +208,68 @@ function baseEvaluation(rule: MappingRule): MappingRuleEvaluation {
   };
 }
 
+function isClaimStale(claimedAt: Date | string | null | undefined, now = Date.now()): boolean {
+  if (!claimedAt) {
+    return true;
+  }
+  const claimedMs = new Date(claimedAt).getTime();
+  return Number.isNaN(claimedMs) || now - claimedMs >= APPLICATION_CLAIM_STALE_MS;
+}
+
+/**
+ * Runs a destination write. In apply mode `knex` is the per-field transaction,
+ * so the write runs in a nested transaction (savepoint): a SQL rejection rolls
+ * back only the failed destination write and leaves the outer transaction
+ * usable for the result row and audit event. Without this, a 22P02/22001 would
+ * abort the whole per-field transaction and the following INSERTs would fail
+ * with 25P02, aborting the run. In dry-run nothing is written and no savepoint
+ * is needed.
+ */
+async function applyDestinationField(
+  knex: Knex,
+  dryRun: boolean,
+  write: (writeKnex: Knex) => Promise<ApplyFieldResult>
+): Promise<ApplyFieldResult> {
+  if (dryRun) {
+    return write(knex);
+  }
+  return knex.transaction((savepoint) => write(savepoint));
+}
+
+function isSqlStateClass(error: unknown, classPrefix: string): boolean {
+  const code = (error as { code?: unknown } | null)?.code;
+  return typeof code === 'string' && code.startsWith(classPrefix);
+}
+
+/**
+ * Turns a destination rejection into a per-field outcome. SQLSTATE class 22
+ * (data exception, e.g. 22P02 invalid text representation, 22001 value too
+ * long) is a type-conversion failure; other SQL/validation rejections are
+ * validation failures. The message is deliberately clean — driver text is not
+ * surfaced to the admin.
+ */
+function describeDestinationRejection(
+  error: unknown,
+  field: MappingTargetField
+): { status: MappingFieldStatus; detail: string } {
+  if (isSqlStateClass(error, '22')) {
+    return {
+      status: 'failed_type_conversion',
+      detail: `The destination rejected the value as invalid for "${field.displayLabel}"`,
+    };
+  }
+  if (isSqlStateClass(error, '23')) {
+    return {
+      status: 'failed_validation',
+      detail: `The destination rejected the value: it violates a constraint on "${field.displayLabel}"`,
+    };
+  }
+  return {
+    status: 'failed_validation',
+    detail: `The destination rejected the value for "${field.displayLabel}"`,
+  };
+}
+
 /**
  * Evaluates one rule. In apply mode `knex` is the field transaction; in
  * dry-run it is the base connection and no write happens.
@@ -257,7 +327,8 @@ async function evaluateRule(
     evaluation.errorDetail = resolved.errorDetail ?? 'Destination target could not be resolved';
     return evaluation;
   }
-  evaluation.resolvedTargetRef = resolved.targetRef;
+  const resolvedTargetRef = resolved.targetRef;
+  evaluation.resolvedTargetRef = resolvedTargetRef;
   evaluation.resolvedTargetDisplay = resolved.targetDisplay ?? null;
 
   const coerced = targetField.coerce(answer);
@@ -291,28 +362,32 @@ async function evaluateRule(
 
   // The applier writes through the destination's own validated entrypoint
   // (ClientModel.updateClient / updateAssetRecord). A rejection there is a
-  // per-field outcome, never a run abort: the field is recorded as a
-  // validation failure and every other field still applies (plan §6.3).
+  // per-field outcome, never a run abort: the destination write runs in a
+  // savepoint, so a SQL rejection rolls back only that write and the field is
+  // recorded as a failure while every other field still applies (plan §6.3).
   try {
-    const applied = await provider.applyField({
-      knex,
-      tenant,
-      submission,
-      rule,
-      field: targetField,
-      targetRef: resolved.targetRef,
-      targetDisplay: resolved.targetDisplay ?? '',
-      value: coerced.value,
-      actorUserId: input.actorUserId,
-      dryRun: input.dryRun,
-    });
+    const applied = await applyDestinationField(knex, input.dryRun, (writeKnex) =>
+      provider.applyField({
+        knex: writeKnex,
+        tenant,
+        submission,
+        rule,
+        field: targetField,
+        targetRef: resolvedTargetRef,
+        targetDisplay: resolved.targetDisplay ?? '',
+        value: coerced.value,
+        actorUserId: input.actorUserId,
+        dryRun: input.dryRun,
+      })
+    );
     evaluation.status = applied.status;
     evaluation.beforeValue = applied.beforeValue ?? null;
     evaluation.afterValue = applied.afterValue ?? null;
   } catch (error) {
-    evaluation.status = 'failed_validation';
+    const rejection = describeDestinationRejection(error, targetField);
+    evaluation.status = rejection.status;
     evaluation.errorCode = 'destination_rejected';
-    evaluation.errorDetail = error instanceof Error ? error.message : String(error);
+    evaluation.errorDetail = rejection.detail;
   }
   return evaluation;
 }
@@ -404,16 +479,21 @@ async function recordFieldAudit(
   );
 }
 
+/** Internal claim row: the application record plus its liveness heartbeat. */
+interface ApplicationClaimRow extends MappingApplicationRecord {
+  claimed_at: Date;
+}
+
 async function loadApplicationRow(
   knex: Knex,
   tenant: string,
   submissionId: string,
   mappingVersionId: string
-): Promise<MappingApplicationRecord | undefined> {
+): Promise<ApplicationClaimRow | undefined> {
   return tenantDb(knex, tenant)
     .table('service_request_submission_applications')
     .where({ submission_id: submissionId, mapping_version_id: mappingVersionId })
-    .first<MappingApplicationRecord | undefined>(
+    .first<ApplicationClaimRow | undefined>(
       'application_id',
       'submission_id',
       'mapping_version_id',
@@ -421,7 +501,8 @@ async function loadApplicationRow(
       'applied_at',
       'status',
       'summary',
-      'created_at'
+      'created_at',
+      'claimed_at'
     );
 }
 
@@ -584,19 +665,26 @@ async function claimApplication(
     if (!existing) {
       throw error;
     }
-    if (existing.status === 'pending') {
-      // A concurrent run owns the claim. Wait for it to settle so a concurrent
-      // second apply converges to skipped_no_change like a sequential retry,
-      // then take over the row.
+    if (existing.status === 'pending' && !isClaimStale(existing.claimed_at)) {
+      // A live concurrent run owns the claim. Wait for it to settle so a
+      // concurrent second apply converges to skipped_no_change like a
+      // sequential retry. A stale claim (no heartbeat within
+      // APPLICATION_CLAIM_STALE_MS) is treated as abandoned and skipped
+      // straight to takeover instead of blocking.
       const deadline = Date.now() + APPLICATION_SETTLE_TIMEOUT_MS;
       let settled = existing;
-      while (settled.status === 'pending' && Date.now() < deadline) {
+      while (
+        settled.status === 'pending' &&
+        !isClaimStale(settled.claimed_at) &&
+        Date.now() < deadline
+      ) {
         await sleep(APPLICATION_SETTLE_POLL_MS);
         const reloaded = await loadApplicationRow(knex, tenant, submissionId, mappingVersionId);
         if (!reloaded) break;
         settled = reloaded;
       }
-      if (settled.status === 'pending') {
+      if (settled.status === 'pending' && !isClaimStale(settled.claimed_at)) {
+        // Still genuinely owned by a live run: report it rather than racing.
         return {
           applicationId: existing.application_id,
           replayed: await loadApplicationRecord(knex, tenant, existing.application_id) ?? {
@@ -606,7 +694,9 @@ async function claimApplication(
         };
       }
     }
-    // Sequential retry (or a settled concurrent run): reset and re-run.
+    // Sequential retry, a settled concurrent run, or an abandoned claim:
+    // reset and re-run. The heartbeat is refreshed so a subsequent concurrent
+    // caller sees a live claim.
     await knex.transaction(async (trx) => {
       const db = tenantDb(trx, tenant);
       await db
@@ -621,6 +711,7 @@ async function claimApplication(
           summary: {},
           applied_by: input.actorUserId,
           applied_at: trx.fn.now(),
+          claimed_at: trx.fn.now(),
         });
     });
     return { applicationId: existing.application_id, replayed: null };
@@ -640,6 +731,12 @@ export async function applyAnswerMapping(
   const results: MappingRuleEvaluation[] = [];
   for (const rule of rules) {
     const evaluation = await input.knex.transaction(async (trx) => {
+      // Heartbeat: proves this claim has a live owner. A retry only treats a
+      // `pending` row as abandoned once this goes stale.
+      await tenantDb(trx, input.tenant)
+        .table('service_request_submission_applications')
+        .where({ application_id: claim.applicationId })
+        .update({ claimed_at: trx.fn.now() });
       const evaluation = await evaluateRule(
         {
           knex: trx,
