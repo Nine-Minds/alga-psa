@@ -248,13 +248,16 @@ export class StorageService {
           // center-cropped to a 256px-wide square (alga0002162). Avatars keep the
           // square cover-crop so they fill circular/framed slots cleanly.
           const LOGO_MAX_DIMENSION = 1024;
+          // A logo also has to survive an email: Outlook renders no WebP, so a
+          // logo is stored as PNG (alpha preserved) and needs no transcode at
+          // send time. Avatars never leave the browser, so they stay WebP.
           processedBuffer = options.isEntityLogo
             ? await sharp(fileBuffer)
                 .resize(LOGO_MAX_DIMENSION, LOGO_MAX_DIMENSION, {
                   fit: 'inside',
                   withoutEnlargement: true,
                 })
-                .webp({ quality: 85 })
+                .png()
                 .toBuffer()
             : await sharp(fileBuffer)
                 .resize(256, 256, {
@@ -264,10 +267,10 @@ export class StorageService {
                 .webp({ quality: 85 })
                 .toBuffer();
 
-          processedMimeType = 'image/webp';
+          processedMimeType = options.isEntityLogo ? 'image/png' : 'image/webp';
           processedFileSize = processedBuffer.length;
 
-          processedOriginalName = changeFileExtension(originalName, 'webp');
+          processedOriginalName = changeFileExtension(originalName, options.isEntityLogo ? 'png' : 'webp');
         }
       }
       // --- End Image Processing Logic ---
