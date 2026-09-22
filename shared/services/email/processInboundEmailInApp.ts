@@ -2,7 +2,6 @@ import type { EmailMessageDetails } from '../../interfaces/inbound-email.interfa
 import type { IEventPublisher } from '@alga-psa/types';
 import type { InboundEmailExecutionOptions } from '../../workflow/actions/emailWorkflowActions';
 import { createHash, randomUUID } from 'node:crypto';
-import { convertHtmlToBlockNote, convertMarkdownToBlocks } from '../../lib/utils/contentConversion';
 import { extractEmailDomain, normalizeEmailAddress } from '../../lib/email/addressUtils';
 import {
   detectAutomatedInboundMessage,
@@ -13,10 +12,11 @@ import {
   checkInboundReopenRateLimit,
   type InboundReopenRateLimitResult,
 } from './inboundReopenRateLimiter';
+import { processInboundEmailArtifactsBestEffort } from './processInboundEmailArtifacts';
 import {
-  processInboundEmailArtifactsBestEffort,
-  type ProcessInboundEmailArtifactsResult,
-} from './processInboundEmailArtifacts';
+  applyEmbeddedImageUrlMappingsToStoredBodies,
+  blocksFromEmailBody,
+} from './inboundEmbeddedImageUrlRewrite';
 import {
   buildInboundWatchListRecipients,
   getActiveWatchListEmails,
@@ -593,43 +593,6 @@ function buildDedupeKey(input: ProcessInboundEmailInAppInput): string {
   return `inbound-email:${input.tenantId}:${input.providerId}:${input.emailData.id}`;
 }
 
-function blocksFallbackFromText(text: string) {
-  return [
-    {
-      type: 'paragraph',
-      content: [{ type: 'text', text, styles: {} }],
-    },
-  ];
-}
-
-async function blocksFromEmailBody(params: {
-  html?: string;
-  text?: string;
-}): Promise<unknown[]> {
-  const html = params.html?.trim();
-  const text = params.text?.trim();
-
-  if (html) {
-    try {
-      const blocks = await convertHtmlToBlockNote(html, { flattenTables: true });
-      return blocks.length ? blocks : blocksFallbackFromText(text ?? '');
-    } catch {
-      return blocksFallbackFromText(text ?? '');
-    }
-  }
-
-  if (text) {
-    try {
-      const blocks = convertMarkdownToBlocks(text);
-      return blocks.length ? blocks : blocksFallbackFromText(text);
-    } catch {
-      return blocksFallbackFromText(text);
-    }
-  }
-
-  return blocksFallbackFromText('');
-}
-
 /**
  * Candidate lookup forms for a raw RFC 5322 Message-ID. The canonical
  * normalized form matches how the durable pipeline writes `email_metadata`
@@ -861,134 +824,6 @@ async function resolveReplyTargetFromProviderThreadId(params: {
         threadId: row.threadId,
       })
     : null;
-}
-
-function normalizeEmbeddedContentId(value: string | undefined | null): string {
-  if (!value) return '';
-  return String(value).trim().replace(/^cid:/i, '').replace(/^<|>$/g, '').toLowerCase();
-}
-
-function rewriteEmbeddedImageSourcesInHtml(
-  html: string,
-  embeddedMappings: ProcessInboundEmailArtifactsResult['embeddedImageUrlMappings']
-): string {
-  if (!html || !embeddedMappings.length) return html;
-
-  const dataUrlMap = new Map<string, string>();
-  const cidMap = new Map<string, string>();
-
-  for (const mapping of embeddedMappings) {
-    if (mapping.source === 'data-url') {
-      dataUrlMap.set(mapping.reference, mapping.url);
-      continue;
-    }
-
-    if (mapping.source === 'cid') {
-      const normalized = normalizeEmbeddedContentId(mapping.reference);
-      if (normalized) {
-        cidMap.set(normalized, mapping.url);
-      }
-    }
-  }
-
-  let rewritten = html;
-
-  if (dataUrlMap.size > 0) {
-    rewritten = rewritten.replace(
-      /data:(image\/[a-z0-9.+-]+);base64,([^"'<>]+)/gim,
-      (fullMatch: string, contentType: string, base64: string) => {
-        const normalized = `data:${String(contentType).toLowerCase()};base64,${String(base64).replace(/\s+/g, '')}`;
-        return dataUrlMap.get(normalized) || fullMatch;
-      }
-    );
-  }
-
-  if (cidMap.size > 0) {
-    rewritten = rewritten.replace(/\bcid:([^"'<>\s)]+)/gim, (fullMatch: string, cid: string) => {
-      const normalized = normalizeEmbeddedContentId(cid);
-      return cidMap.get(normalized) || fullMatch;
-    });
-  }
-
-  return rewritten;
-}
-
-function preserveEmbeddedImageUrlBlocks(
-  blocks: unknown[],
-  embeddedMappings: ProcessInboundEmailArtifactsResult['embeddedImageUrlMappings']
-): unknown[] {
-  if (!embeddedMappings.length) {
-    return blocks;
-  }
-
-  const serializedBlocks = JSON.stringify(blocks);
-  const missingMappings = embeddedMappings.filter((mapping) => (
-    mapping.url && !serializedBlocks.includes(mapping.url)
-  ));
-
-  if (!missingMappings.length) {
-    return blocks;
-  }
-
-  return [
-    ...blocks,
-    ...missingMappings.map((mapping) => ({
-      type: 'image',
-      props: {
-        url: mapping.url,
-        name: mapping.fileId || mapping.documentId || 'embedded-image',
-        caption: '',
-      },
-    })),
-  ];
-}
-
-async function maybeRewriteCommentWithEmbeddedAttachmentUrls(args: {
-  tenantId: string;
-  commentId: string;
-  html?: string;
-  text?: string;
-  originalCommentContent: string;
-  artifactsResult?: ProcessInboundEmailArtifactsResult;
-}): Promise<void> {
-  const embeddedMappings = args.artifactsResult?.embeddedImageUrlMappings ?? [];
-  if (!args.html || embeddedMappings.length === 0) {
-    return;
-  }
-
-  const rewrittenHtml = rewriteEmbeddedImageSourcesInHtml(args.html, embeddedMappings);
-  if (!rewrittenHtml || rewrittenHtml === args.html) {
-    return;
-  }
-
-  const rewrittenBlocks = preserveEmbeddedImageUrlBlocks(
-    await blocksFromEmailBody({
-      html: rewrittenHtml,
-      text: args.text,
-    }),
-    embeddedMappings
-  );
-  const rewrittenContent = JSON.stringify(rewrittenBlocks);
-  if (rewrittenContent === args.originalCommentContent) {
-    return;
-  }
-
-  try {
-    await withTenantAdminTransaction(args.tenantId, async (_trx: any, db: any) => {
-      await db.table('comments as c')
-        .where('c.comment_id', args.commentId)
-        .update({
-          note: rewrittenContent,
-          updated_at: new Date(),
-        });
-    });
-  } catch (error) {
-    console.warn('processInboundEmailInApp: embedded image comment rewrite failed (continuing)', {
-      tenantId: args.tenantId,
-      commentId: args.commentId,
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
 }
 
 export async function processInboundEmailInApp(
@@ -1663,13 +1498,14 @@ export async function processInboundEmailInApp(
           && matchedSenderContact.client_id === policyContext.clientId
         ),
       });
-      await maybeRewriteCommentWithEmbeddedAttachmentUrls({
+      await applyEmbeddedImageUrlMappingsToStoredBodies({
         tenantId,
-        commentId,
         html: parsedHtml,
         text: parsedText,
-        originalCommentContent: serializedBlocks,
-        artifactsResult,
+        mappings: artifactsResult?.embeddedImageUrlMappings ?? [],
+        targets: [
+          { kind: 'comment', id: commentId, originalContent: serializedBlocks },
+        ],
       });
     }
 
@@ -2135,13 +1971,15 @@ export async function processInboundEmailInApp(
         && matchedSenderContact.client_id === targetClientId
       ),
     });
-    await maybeRewriteCommentWithEmbeddedAttachmentUrls({
+    await applyEmbeddedImageUrlMappingsToStoredBodies({
       tenantId,
-      commentId,
       html: parsedHtml,
       text: parsedText,
-      originalCommentContent: serializedBlocks,
-      artifactsResult,
+      mappings: artifactsResult?.embeddedImageUrlMappings ?? [],
+      targets: [
+        { kind: 'comment', id: commentId, originalContent: serializedBlocks },
+        { kind: 'ticket-description', id: ticketResult.ticket_id, originalContent: serializedBlocks },
+      ],
     });
   }
 
