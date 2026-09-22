@@ -332,7 +332,7 @@ async function evaluateRule(
   evaluation.resolvedTargetDisplay = resolved.targetDisplay ?? null;
 
   const coerced = targetField.coerce(answer);
-  if (!coerced.ok) {
+  if (coerced.ok === false) {
     evaluation.status = 'failed_type_conversion';
     evaluation.errorCode = 'type_conversion';
     evaluation.errorDetail = coerced.error;
@@ -340,7 +340,7 @@ async function evaluateRule(
   }
 
   const validated = targetField.validate(coerced.value);
-  if (!validated.ok) {
+  if (validated.ok === false) {
     evaluation.status = 'failed_validation';
     evaluation.errorCode = 'validation';
     evaluation.errorDetail = validated.error;
