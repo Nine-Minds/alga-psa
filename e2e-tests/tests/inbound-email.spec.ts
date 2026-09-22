@@ -71,6 +71,11 @@ test('built email service ingests MIME, preserves inline quotations, threads rep
     Buffer.from('data'), Buffer.from([0x00, 0x00, 0x00, 0x00]),
   ]);
   const boundary = `mime-${actors.runId}`;
+  const relatedBoundary = `related-${actors.runId}`;
+  // One inline logo referenced once by CID: it must persist as exactly one
+  // image document, never a CID copy plus a data-URL copy.
+  const inlinePngBase64 =
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=';
   const raw = [
     `From: Customer <${tenant.portal.email}>`, `To: ${mailbox}`, `Subject: ${title}`,
     `Message-ID: ${firstId}`, `Date: ${new Date().toUTCString()}`, 'MIME-Version: 1.0',
@@ -78,8 +83,12 @@ test('built email service ingests MIME, preserves inline quotations, threads rep
     // does not implement Internet SPF/DKIM/DMARC verification.
     'Authentication-Results: imap-test-server; dmarc=pass header.from=example.invalid; spf=pass smtp.mailfrom=example.invalid; dkim=pass header.d=example.invalid',
     `Content-Type: multipart/mixed; boundary="${boundary}"`, '',
-    `--${boundary}`, 'Content-Type: text/html; charset=utf-8', '',
-    `<p>${firstBody}</p><blockquote>${inlineQuote}</blockquote><p>My answer follows the quotation.</p>`,
+    `--${boundary}`, `Content-Type: multipart/related; boundary="${relatedBoundary}"`, '',
+    `--${relatedBoundary}`, 'Content-Type: text/html; charset=utf-8', '',
+    `<p>${firstBody}</p><blockquote>${inlineQuote}</blockquote><p>My answer follows the quotation.</p><img src="cid:inline-logo" alt="Logo">`,
+    `--${relatedBoundary}`, 'Content-Type: image/png', 'Content-ID: <inline-logo>',
+    'Content-Disposition: inline; filename="inline-logo.png"', 'Content-Transfer-Encoding: base64', '',
+    inlinePngBase64, `--${relatedBoundary}--`,
     `--${boundary}`, 'Content-Type: text/plain; name="diagnostic.txt"',
     'Content-Disposition: attachment; filename="diagnostic.txt"', 'Content-Transfer-Encoding: base64', '',
     Buffer.from(`Attachment bytes ${actors.runId}`).toString('base64'),
@@ -130,6 +139,23 @@ test('built email service ingests MIME, preserves inline quotations, threads rep
     const audioDownload = await page.request.get(`/api/documents/download/${audioAttachments[0].file_id}`);
     expect(audioDownload.status()).toBe(200);
     expect(await audioDownload.body()).toEqual(wavBytes);
+    // The Documents tile links the recording straight to the download route:
+    // the view route refuses audio with 400, so a /view link is a dead click.
+    const documentsTile = page.locator('#ticket-details-bento-documents-section');
+    await expect(documentsTile.getByRole('link', { name: /voicemail\.wav/ })).toHaveAttribute(
+      'href', `/api/documents/download/${audioAttachments[0].file_id}`);
+    await expect(documentsTile.getByRole('link', { name: /diagnostic\.txt/ })).toHaveAttribute(
+      'href', `/api/documents/download/${attachments[0].file_id}`);
+
+    // The single inline CID logo is stored once and the comment body reuses it.
+    const imageDocuments = await database('documents as d')
+      .join('document_associations as a', function () {
+        this.on('a.tenant', '=', 'd.tenant').andOn('a.document_id', '=', 'd.document_id');
+      }).where({ 'd.tenant': tenant.tenantId, 'a.entity_id': ticket.ticket_id, 'd.mime_type': 'image/png' })
+      .select('d.file_id', 'd.document_name');
+    expect(imageDocuments).toHaveLength(1);
+    expect(imageDocuments[0].document_name).toBe('inline-logo.png');
+    await expect(description.locator(`img[src*="/api/documents/view/${imageDocuments[0].file_id}"]`)).toHaveCount(1);
 
     const agentReply = `Agent transport response ${actors.runId}`;
     const conversation = page.locator('#ticket-details-bento-timeline-tile');
