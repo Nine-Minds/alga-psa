@@ -255,4 +255,25 @@ describe('TicketProperties live timer board policy', () => {
       expect(screen.getAllByText('Add Time Entry').length).toBeGreaterThan(0);
     });
   });
+
+  it('disables Add Time Entry and shows the spinner while a launch is pending', async () => {
+    const props = defaultProps();
+
+    render(<TicketProperties {...props} isLaunchingTimeEntry />);
+
+    const button = await screen.findByTestId('ticket-properties-add-time-entry-btn');
+    expect(button).toBeDisabled();
+    expect(button.querySelector('[role="status"]')).not.toBeNull();
+    expect(screen.getByText('Add Time Entry')).toBeInTheDocument();
+  });
+
+  it('leaves Add Time Entry enabled without a spinner when no launch is pending', async () => {
+    const props = defaultProps();
+
+    render(<TicketProperties {...props} isLaunchingTimeEntry={false} />);
+
+    const button = await screen.findByTestId('ticket-properties-add-time-entry-btn');
+    expect(button).not.toBeDisabled();
+    expect(button.querySelector('[role="status"]')).toBeNull();
+  });
 });

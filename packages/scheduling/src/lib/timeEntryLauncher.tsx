@@ -117,18 +117,15 @@ export async function launchTimeEntryForWorkItem({ openDrawer, closeDrawer, cont
         isOpen={true}
         onClose={closeDrawer}
         onSave={async (timeEntry) => {
-          try {
-            const savedEntry = await saveTimeEntry(timeEntry);
-            if (isActionMessageError(savedEntry) || isActionPermissionError(savedEntry)) {
-              toast.error(getErrorMessage(savedEntry));
-              return;
-            }
-            closeDrawer();
-            if (onComplete) onComplete();
-          } catch (error) {
-            console.error('Failed to save time entry:', error);
-            toast.error(getErrorMessage(error));
+          // Persistence failures must reject so TimeEntryDialog keeps the dialog
+          // open and runs its own error path. Toasting-and-returning here made a
+          // failed save look successful and closed the dialog.
+          const savedEntry = await saveTimeEntry(timeEntry);
+          if (isActionMessageError(savedEntry) || isActionPermissionError(savedEntry)) {
+            throw new Error(getErrorMessage(savedEntry));
           }
+          closeDrawer();
+          if (onComplete) onComplete();
         }}
         workItem={workItem}
         date={baseDate}

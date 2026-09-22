@@ -4,11 +4,12 @@ import { launchTimeEntryForWorkItem } from '../src/lib/timeEntryLauncher';
 // Behavioral coverage for time-entry launch feedback: blocked launches use the
 // deduplicated long-lived toast with the refreshed copy.
 
-const { getCurrentUser, getCurrentTimePeriod, fetchOrCreateTimeSheet, getTimeEntryById, toastError } =
+const { getCurrentUser, getCurrentTimePeriod, fetchOrCreateTimeSheet, saveTimeEntry, getTimeEntryById, toastError } =
   vi.hoisted(() => ({
     getCurrentUser: vi.fn(),
     getCurrentTimePeriod: vi.fn(),
     fetchOrCreateTimeSheet: vi.fn(),
+    saveTimeEntry: vi.fn(),
     getTimeEntryById: vi.fn(),
     toastError: vi.fn(),
   }));
@@ -26,7 +27,7 @@ vi.mock('../src/actions/timePeriodsActions', () => ({
 
 vi.mock('../src/actions/timeEntryActions', () => ({
   fetchOrCreateTimeSheet,
-  saveTimeEntry: vi.fn(),
+  saveTimeEntry,
   getTimeEntryById,
 }));
 
@@ -48,6 +49,8 @@ const baseContext = {
 
 beforeEach(() => {
   toastError.mockClear();
+  saveTimeEntry.mockReset();
+  saveTimeEntry.mockResolvedValue({});
   getCurrentUser.mockResolvedValue({ user_id: 'user-1' });
   getCurrentTimePeriod.mockResolvedValue({
     period_id: 'period-1',
@@ -57,6 +60,28 @@ beforeEach(() => {
   fetchOrCreateTimeSheet.mockResolvedValue({ id: 'sheet-1' });
   getTimeEntryById.mockResolvedValue(null);
 });
+
+type CapturedDialog = {
+  props: {
+    onSave: (entry: unknown) => Promise<void>;
+  };
+};
+
+async function launchAndCaptureOnSave() {
+  const openDrawer = vi.fn();
+  const closeDrawer = vi.fn();
+  const onComplete = vi.fn();
+
+  await launchTimeEntryForWorkItem({
+    openDrawer,
+    closeDrawer,
+    onComplete,
+    context: baseContext,
+  });
+
+  const dialog = openDrawer.mock.calls[0][0] as CapturedDialog;
+  return { closeDrawer, onComplete, onSave: dialog.props.onSave };
+}
 
 describe('launchTimeEntryForWorkItem launch feedback', () => {
   it('no time period uses the refreshed copy on the deduplicated long-lived toast', async () => {
@@ -107,5 +132,35 @@ describe('launchTimeEntryForWorkItem launch feedback', () => {
 
     expect(toastError).toHaveBeenCalledTimes(1);
     expect(toastError).toHaveBeenCalledWith('Time entry not found.', { id: 'time-entry-launch-blocked', duration: 10000 });
+  });
+
+  it('rejects the save when persistence throws so the dialog never runs its success path', async () => {
+    saveTimeEntry.mockRejectedValueOnce(new Error('persist failed'));
+    const { closeDrawer, onComplete, onSave } = await launchAndCaptureOnSave();
+
+    await expect(onSave({ id: 'entry-1' })).rejects.toThrow('persist failed');
+
+    expect(closeDrawer).not.toHaveBeenCalled();
+    expect(onComplete).not.toHaveBeenCalled();
+  });
+
+  it('rejects the save when persistence returns an action error', async () => {
+    saveTimeEntry.mockResolvedValueOnce({ actionError: 'Bucket usage failed' });
+    const { closeDrawer, onComplete, onSave } = await launchAndCaptureOnSave();
+
+    await expect(onSave({ id: 'entry-1' })).rejects.toThrow('Bucket usage failed');
+
+    expect(closeDrawer).not.toHaveBeenCalled();
+    expect(onComplete).not.toHaveBeenCalled();
+  });
+
+  it('closes and completes only after a successful save', async () => {
+    saveTimeEntry.mockResolvedValueOnce({ entry_id: 'entry-1' });
+    const { closeDrawer, onComplete, onSave } = await launchAndCaptureOnSave();
+
+    await onSave({ id: 'entry-1' });
+
+    expect(closeDrawer).toHaveBeenCalledTimes(1);
+    expect(onComplete).toHaveBeenCalledTimes(1);
   });
 });
