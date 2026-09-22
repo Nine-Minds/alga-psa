@@ -69,7 +69,21 @@ export const clientSchema = z.object({
   properties: z.record(z.any()).nullable(),
   parent_client_id: z.string().uuid().nullable(),
   contract_line_id: z.string().uuid().nullable(),
-  is_default: z.boolean().nullable()
+  is_default: z.boolean().nullable(),
+  // Additional allowlisted account columns written by the questionnaire answer
+  // mapping engine. Optional/nullable so existing callers are unaffected; Zod
+  // would otherwise strip these keys before the UPDATE.
+  tax_id_number: z.string().nullable().optional(),
+  payment_terms: z.string().nullable().optional(),
+  billing_cycle: z.string().nullable().optional(),
+  credit_limit: z.number().nullable().optional(),
+  preferred_payment_method: z.string().nullable().optional(),
+  auto_invoice: z.boolean().nullable().optional(),
+  invoice_delivery_method: z.string().nullable().optional(),
+  is_tax_exempt: z.boolean().nullable().optional(),
+  tax_exemption_certificate: z.string().nullable().optional(),
+  timezone: z.string().nullable().optional(),
+  billing_email: z.string().nullable().optional()
 });
 
 // Client update schema
