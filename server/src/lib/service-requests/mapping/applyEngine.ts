@@ -28,7 +28,7 @@ import type {
  */
 
 const APPLICATIONS_UNIQUE_INDEX =
-  'service_request_submission_applications_submission_version_unique';
+  'service_request_submission_applications_replay_unique';
 const APPLICATION_SETTLE_TIMEOUT_MS = 15000;
 const APPLICATION_SETTLE_POLL_MS = 100;
 
@@ -341,6 +341,10 @@ function computeApplicationStatus(results: MappingRuleEvaluation[]): MappingAppl
   return 'applied';
 }
 
+function toJsonbParam(value: unknown): string | null {
+  return value === null || value === undefined ? null : JSON.stringify(value);
+}
+
 function resultRowFromEvaluation(
   tenant: string,
   applicationId: string,
@@ -356,8 +360,10 @@ function resultRowFromEvaluation(
     resolved_target_ref: evaluation.resolvedTargetRef,
     resolved_target_display: evaluation.resolvedTargetDisplay,
     status: evaluation.status,
-    before_value: evaluation.beforeValue,
-    after_value: evaluation.afterValue,
+    // jsonb columns: scalars must be serialized explicitly — the pg driver only
+    // auto-encodes objects, and a bare string is not valid JSON input.
+    before_value: toJsonbParam(evaluation.beforeValue),
+    after_value: toJsonbParam(evaluation.afterValue),
     error_code: evaluation.errorCode,
     error_detail: evaluation.errorDetail,
   };

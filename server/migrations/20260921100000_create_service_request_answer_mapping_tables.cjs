@@ -81,7 +81,7 @@ exports.up = async function up(knex) {
 
       table.primary(['tenant', 'version_id']);
       table.unique(['tenant', 'mapping_id', 'version_number'], {
-        indexName: 'service_request_answer_mapping_versions_mapping_version_unique',
+        indexName: 'service_request_answer_mapping_versions_number_unique',
       });
     });
 
@@ -120,7 +120,7 @@ exports.up = async function up(knex) {
     // valid on Citus (leads with the distribution column) and mirrors the
     // submission client-key index discipline.
     await knex.raw(`
-      CREATE UNIQUE INDEX service_request_submission_applications_submission_version_unique
+      CREATE UNIQUE INDEX service_request_submission_applications_replay_unique
       ON service_request_submission_applications (tenant, submission_id, mapping_version_id)
       WHERE mapping_version_id IS NOT NULL
     `);

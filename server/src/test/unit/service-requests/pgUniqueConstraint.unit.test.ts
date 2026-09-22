@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { isUniqueViolationOnIndex } from '../../../lib/service-requests/pgUniqueConstraint';
 
-const INDEX = 'service_request_submission_applications_submission_version_unique';
+const INDEX = 'service_request_submission_applications_replay_unique';
 
 describe('isUniqueViolationOnIndex', () => {
   it('recognizes the bare index name plain Postgres reports', () => {
