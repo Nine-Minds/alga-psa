@@ -71,6 +71,15 @@ function formatDate(value: string | Date | null | undefined): string {
   return date.toISOString();
 }
 
+/**
+ * project_tasks stores durations as whole minutes; the "Estimated Hours" and
+ * "Actual Hours" columns are hours, so a round-trip through the importer keeps
+ * the same value.
+ */
+function formatMinutesAsHours(minutes: number): string {
+  return String(Number((Number(minutes) / 60).toFixed(2)));
+}
+
 function formatTaskType(typeKey: string | null | undefined): string {
   if (!typeKey) return '';
   // Convert snake_case keys to title case
@@ -197,8 +206,8 @@ function taskToRow(
     assigned_to: assignedToName,
     assigned_team: assignedTeamName,
     due_date: formatDate(task.due_date),
-    estimated_hours: task.estimated_hours != null ? String(task.estimated_hours) : '',
-    actual_hours: task.actual_hours != null ? String(task.actual_hours) : '',
+    estimated_hours: task.estimated_hours != null ? formatMinutesAsHours(task.estimated_hours) : '',
+    actual_hours: task.actual_hours != null ? formatMinutesAsHours(task.actual_hours) : '',
     checklist_progress: checklistProgress,
     tags,
     created_at: formatDate(task.created_at),
