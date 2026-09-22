@@ -1,14 +1,19 @@
 'use client';
 
 import * as React from 'react';
-import Cropper, { type Area } from 'react-easy-crop';
+import Cropper, { type Area, type MediaSize, type Size } from 'react-easy-crop';
 import type { LogoCropRect } from '@alga-psa/types';
+import { Minus, Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter } from './Dialog';
 import { Button } from './Button';
 import { useTranslation } from '../lib/i18n/client';
 
-const MIN_ZOOM = 1;
+// Below 1x the mark gets transparent space around it, so a symbol sitting on
+// the edge of a wordmark can still be centred in the circle.
+const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 4;
+// One click of the - / + buttons; the slider itself is continuous.
+const ZOOM_STEP = 0.1;
 
 // The circle sizes the mark actually lands in: table rows and the smallest cells.
 const PREVIEW_SIZES = [32, 24];
@@ -28,10 +33,35 @@ export interface ImageCropDialogProps {
 }
 
 /**
+ * Keeps the image and the crop window overlapping by at least half of whichever
+ * is smaller on each axis: the window may hang past the image's edge (the
+ * server pads that with transparency), but the image can never leave it.
+ */
+const clampPosition = (
+  position: { x: number; y: number },
+  zoom: number,
+  media: MediaSize | null,
+  cropSize: Size | null,
+): { x: number; y: number } => {
+  if (!media || !cropSize) return position;
+  const limit = (extent: number, window: number) => {
+    const scaled = extent * zoom;
+    return (scaled + window) / 2 - Math.min(scaled, window) / 2;
+  };
+  const maxX = limit(media.width, cropSize.width);
+  const maxY = limit(media.height, cropSize.height);
+  return {
+    x: Math.min(Math.max(position.x, -maxX), maxX),
+    y: Math.min(Math.max(position.y, -maxY), maxY),
+  };
+};
+
+/**
  * Picks the square zone of a wide logo that avatar-sized slots will show. The
  * image covers a fixed-height stage and the round window stays put, so the user
- * drags the wordmark under it and zooms in on the part that reads as a mark.
- * Returns fractions of the source image, never pixels.
+ * drags the wordmark under it and zooms in on the part that reads as a mark, or
+ * out to leave space around it. Returns fractions of the source image, never
+ * pixels; a zone that reaches past the image is cut with transparent padding.
  */
 export function ImageCropDialog({
   isOpen,
@@ -46,17 +76,25 @@ export function ImageCropDialog({
   const { t } = useTranslation('client-portal');
   const { t: tCore } = useTranslation('common');
   const [position, setPosition] = React.useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = React.useState(MIN_ZOOM);
+  const [zoom, setZoom] = React.useState(1);
   const [area, setArea] = React.useState<Area | null>(null);
+  const [media, setMedia] = React.useState<MediaSize | null>(null);
+  const [cropSize, setCropSize] = React.useState<Size | null>(null);
+  const crop = clampPosition(position, zoom, media, cropSize);
 
-  // Every open starts centred; a stale offset from another image would land off-canvas.
+  // Every open starts centred at 1x; a stale offset from another image would land off-canvas.
   React.useEffect(() => {
     if (isOpen) {
       setPosition({ x: 0, y: 0 });
-      setZoom(MIN_ZOOM);
+      setZoom(1);
       setArea(null);
+      setMedia(null);
     }
   }, [isOpen, imageUrl]);
+
+  // Rounded to the step so repeated clicks land on clean values (0.9, 1, 1.1...).
+  const stepZoom = (delta: number) =>
+    setZoom((current) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round((current + delta) * 100) / 100)));
 
   const handleConfirm = () => {
     if (!area) return;
@@ -99,7 +137,7 @@ export function ImageCropDialog({
         <DialogDescription className="text-sm text-[rgb(var(--color-text-500))]">
           {helpText ?? t(
             'profile.imageUpload.cropHelp',
-            'Drag the logo and zoom to pick the part shown in small, square spaces. The full logo is kept as well.'
+            'Drag the logo and zoom to pick the part shown in small, square spaces. Zoom out to leave space around it. The full logo is kept as well.'
           )}
         </DialogDescription>
 
@@ -110,7 +148,7 @@ export function ImageCropDialog({
           {imageUrl && (
             <Cropper
               image={imageUrl}
-              crop={position}
+              crop={crop}
               zoom={zoom}
               aspect={1}
               cropShape="round"
@@ -118,8 +156,11 @@ export function ImageCropDialog({
               showGrid={false}
               minZoom={MIN_ZOOM}
               maxZoom={MAX_ZOOM}
+              restrictPosition={false}
               onCropChange={setPosition}
               onZoomChange={setZoom}
+              onMediaLoaded={setMedia}
+              onCropSizeChange={setCropSize}
               onCropComplete={(percentages) => setArea(percentages)}
               mediaProps={{ alt: imageName }}
             />
@@ -127,10 +168,22 @@ export function ImageCropDialog({
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-6">
-          <label htmlFor={`${id}-zoom`} className="flex flex-1 items-center gap-3 text-sm">
-            <span className="shrink-0 text-[rgb(var(--color-text-600))]">
+          <div className="flex flex-1 items-center gap-2 text-sm">
+            <label htmlFor={`${id}-zoom`} className="shrink-0 text-[rgb(var(--color-text-600))]">
               {t('profile.imageUpload.zoom', 'Zoom')}
-            </span>
+            </label>
+            <Button
+              id={`${id}-zoom-out`}
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => stepZoom(-ZOOM_STEP)}
+              disabled={zoom <= MIN_ZOOM}
+              aria-label={t('profile.imageUpload.zoomOut', 'Zoom out')}
+              className="h-7 w-7 shrink-0 p-0"
+            >
+              <Minus className="h-4 w-4" />
+            </Button>
             <input
               id={`${id}-zoom`}
               type="range"
@@ -142,7 +195,19 @@ export function ImageCropDialog({
               className="w-full accent-[rgb(var(--color-primary-500))]"
               aria-valuetext={`${Math.round(zoom * 100)}%`}
             />
-          </label>
+            <Button
+              id={`${id}-zoom-in`}
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => stepZoom(ZOOM_STEP)}
+              disabled={zoom >= MAX_ZOOM}
+              aria-label={t('profile.imageUpload.zoomIn', 'Zoom in')}
+              className="h-7 w-7 shrink-0 p-0"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
 
           <div className="flex items-center gap-3" aria-hidden="true">
             <span className="text-xs text-[rgb(var(--color-text-500))]">

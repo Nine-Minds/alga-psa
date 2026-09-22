@@ -7,8 +7,10 @@ export type EntityLogoVariant = 'default' | 'dark' | 'wide' | 'wide-dark' | 'fav
 
 /**
  * The square zone of a logo shown in avatar-sized slots, as fractions of the
- * source image (0..1). Fractions survive EXIF rotation, SVG rasterization and
- * browser downscaling, which pixel offsets would not.
+ * source image. 0..1 spans the image; a zone may reach past it (the user
+ * zoomed out) and is padded with transparency there. Fractions survive EXIF
+ * rotation, SVG rasterization and browser downscaling, which pixel offsets
+ * would not.
  */
 export interface LogoCropRect {
     x: number;

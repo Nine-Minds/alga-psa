@@ -5,18 +5,27 @@ export type { LogoCropRect };
 /** Square marks are stored at the same size as avatars so every circle reads them alike. */
 export const SQUARE_MARK_DIMENSION = 256;
 
+// How far past the image a crop may reach, in multiples of the image's size.
+// The dialog zooms out to 0.5x, so a zone can be twice the image on one axis
+// and offset by up to one image-length; anything beyond that is not a crop.
+const MAX_OVERHANG = 3;
+
 // Rasterized SVG sources are rendered to roughly this long edge before the cut.
 const SVG_RENDER_DIMENSION = 1024;
 const SVG_DEFAULT_DENSITY = 72;
 const EPSILON = 1e-6;
 
-const isFraction = (value: unknown): value is number =>
-  typeof value === 'number' && Number.isFinite(value) && value >= -EPSILON && value <= 1 + EPSILON;
+const TRANSPARENT = { r: 0, g: 0, b: 0, alpha: 0 };
+
+const isInRange = (value: unknown, min: number, max: number): value is number =>
+  typeof value === 'number' && Number.isFinite(value) && value >= min - EPSILON && value <= max + EPSILON;
 
 /**
- * Reads the optional `crop` form field: a JSON {x, y, width, height} of
- * fractions in 0..1. Absent or empty means "no crop"; anything else that does
- * not describe a non-empty zone inside the image is rejected.
+ * Reads the optional `crop` form field: a JSON {x, y, width, height} in
+ * fractions of the source image. The zone may reach past the image (the user
+ * zoomed out to leave space around the mark), but it must still overlap it.
+ * Absent or empty means "no crop"; anything else that is not such a zone is
+ * rejected.
  */
 export function parseLogoCrop(raw: unknown): LogoCropRect | null {
   if (raw === null || raw === undefined || raw === '') return null;
@@ -34,33 +43,54 @@ export function parseLogoCrop(raw: unknown): LogoCropRect | null {
   }
 
   const { x, y, width, height } = value as Record<string, unknown>;
-  if (!isFraction(x) || !isFraction(y) || !isFraction(width) || !isFraction(height)) {
-    throw new Error('Invalid logo crop: x, y, width and height must be fractions between 0 and 1');
+  if (
+    !isInRange(x, -MAX_OVERHANG, MAX_OVERHANG) ||
+    !isInRange(y, -MAX_OVERHANG, MAX_OVERHANG) ||
+    !isInRange(width, 0, MAX_OVERHANG) ||
+    !isInRange(height, 0, MAX_OVERHANG)
+  ) {
+    throw new Error('Invalid logo crop: x, y, width and height must be fractions of the image');
   }
-  if (width <= EPSILON || height <= EPSILON || x + width > 1 + EPSILON || y + height > 1 + EPSILON) {
-    throw new Error('Invalid logo crop: zone must be non-empty and inside the image');
+  if (width <= EPSILON || height <= EPSILON) {
+    throw new Error('Invalid logo crop: zone must be non-empty');
+  }
+  if (x >= 1 - EPSILON || y >= 1 - EPSILON || x + width <= EPSILON || y + height <= EPSILON) {
+    throw new Error('Invalid logo crop: zone must overlap the image');
   }
 
   return { x, y, width, height };
 }
 
-const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+export interface CropPixels {
+  /** Zone to extract, in pixels of the padded image. */
+  region: { left: number; top: number; width: number; height: number };
+  /** Transparent padding to add on each side before extracting; all zero when the zone lies inside. */
+  extend: { left: number; top: number; right: number; bottom: number };
+}
 
 /**
- * Turns a fractional crop into an integer pixel rectangle that always lies
- * inside a width x height image and is never empty, so `extract` cannot throw
- * on a rounding overshoot.
+ * Turns a fractional crop into an integer pixel rectangle over a width x
+ * height image. A zone reaching past the image becomes transparent padding on
+ * that side, so `extract` always cuts from inside the (padded) canvas and is
+ * never empty.
  */
-export function resolveCropPixels(
-  crop: LogoCropRect,
-  imageWidth: number,
-  imageHeight: number,
-): { left: number; top: number; width: number; height: number } {
-  const left = clamp(Math.round(crop.x * imageWidth), 0, Math.max(imageWidth - 1, 0));
-  const top = clamp(Math.round(crop.y * imageHeight), 0, Math.max(imageHeight - 1, 0));
-  const width = clamp(Math.round(crop.width * imageWidth), 1, Math.max(imageWidth - left, 1));
-  const height = clamp(Math.round(crop.height * imageHeight), 1, Math.max(imageHeight - top, 1));
-  return { left, top, width, height };
+export function resolveCropPixels(crop: LogoCropRect, imageWidth: number, imageHeight: number): CropPixels {
+  const left = Math.round(crop.x * imageWidth);
+  const top = Math.round(crop.y * imageHeight);
+  const width = Math.max(Math.round(crop.width * imageWidth), 1);
+  const height = Math.max(Math.round(crop.height * imageHeight), 1);
+
+  const extend = {
+    left: Math.max(-left, 0),
+    top: Math.max(-top, 0),
+    right: Math.max(left + width - imageWidth, 0),
+    bottom: Math.max(top + height - imageHeight, 0),
+  };
+
+  return {
+    region: { left: left + extend.left, top: top + extend.top, width, height },
+    extend,
+  };
 }
 
 // Only the surface of sharp this module touches, so tests can hand in a stub.
@@ -70,6 +100,9 @@ export interface SharpLike {
 export interface SharpPipelineLike {
   metadata(): Promise<{ width?: number; height?: number; orientation?: number }>;
   rotate(): SharpPipelineLike;
+  ensureAlpha(): SharpPipelineLike;
+  extend(options: { left: number; top: number; right: number; bottom: number; background: typeof TRANSPARENT }): SharpPipelineLike;
+  png(): SharpPipelineLike;
   extract(region: { left: number; top: number; width: number; height: number }): SharpPipelineLike;
   resize(width: number, height: number, options: Record<string, unknown>): SharpPipelineLike;
   webp(options: Record<string, unknown>): SharpPipelineLike;
@@ -80,7 +113,8 @@ export interface SharpPipelineLike {
  * Cuts the chosen square zone out of a logo and renders it as a 256px WebP,
  * the same footprint avatars get. SVGs are rasterized large enough to stay
  * crisp; EXIF-rotated photos are oriented first so the fractions the browser
- * measured on the displayed image line up with the pixels we cut.
+ * measured on the displayed image line up with the pixels we cut. Where the
+ * zone reaches past the image, the mark gets transparent padding.
  */
 export async function renderSquareMark(
   sharp: SharpLike,
@@ -111,10 +145,16 @@ export async function renderSquareMark(
     [width, height] = [height, width];
   }
 
-  const region = resolveCropPixels(crop, width, height);
+  const { region, extend } = resolveCropPixels(crop, width, height);
+  let oriented = source.rotate();
+  if (extend.left || extend.top || extend.right || extend.bottom) {
+    // sharp always pads after extracting, so the padded canvas is materialized
+    // first (as PNG: a JPEG would flatten the transparent margin to black).
+    const padded = await oriented.ensureAlpha().extend({ ...extend, background: TRANSPARENT }).png().toBuffer();
+    oriented = sharp(padded);
+  }
 
-  return source
-    .rotate()
+  return oriented
     .extract(region)
     .resize(SQUARE_MARK_DIMENSION, SQUARE_MARK_DIMENSION, { fit: 'cover' })
     .webp({ quality: 85 })

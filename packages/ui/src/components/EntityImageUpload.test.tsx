@@ -134,7 +134,7 @@ describe('EntityImageUpload crop on upload', () => {
   const png = () => new File(['png'], 'Logo.png', { type: 'image/png' });
 
   it('opens the crop dialog for a wide image and uploads the chosen zone', async () => {
-    const uploadAction = vi.fn(async () => ({ success: true, imageUrl: '/api/documents/view/mark', wideImageUrl: '/api/documents/view/wide' }));
+    const uploadAction = vi.fn(async (_id: string, _formData: FormData) => ({ success: true, imageUrl: '/api/documents/view/mark', wideImageUrl: '/api/documents/view/wide' }));
     const onImageChange = vi.fn();
     renderUpload('circle', { cropWideToSquare: true, uploadAction, onImageChange });
 
@@ -148,7 +148,7 @@ describe('EntityImageUpload crop on upload', () => {
     });
 
     await waitFor(() => expect(uploadAction).toHaveBeenCalledTimes(1));
-    const formData = uploadAction.mock.calls[0][1] as FormData;
+    const formData = uploadAction.mock.calls[0][1];
     expect((formData.get('logo') as File).name).toBe('Logo.png');
     expect(JSON.parse(formData.get('crop') as string)).toEqual({ x: 0.1, y: 0, width: 0.25, height: 1 });
     await waitFor(() => expect(onImageChange).toHaveBeenLastCalledWith(
@@ -158,14 +158,14 @@ describe('EntityImageUpload crop on upload', () => {
   });
 
   it('uploads a square image straight away, with no crop field', async () => {
-    const uploadAction = vi.fn(async () => ({ success: true, imageUrl: '/api/documents/view/mark', wideImageUrl: null }));
+    const uploadAction = vi.fn(async (_id: string, _formData: FormData) => ({ success: true, imageUrl: '/api/documents/view/mark', wideImageUrl: null }));
     renderUpload('circle', { cropWideToSquare: true, uploadAction });
 
     await pickFile(png(), { width: 512, height: 512 });
 
     expect(cropDialog()).toBeNull();
     await waitFor(() => expect(uploadAction).toHaveBeenCalledTimes(1));
-    expect((uploadAction.mock.calls[0][1] as FormData).get('crop')).toBeNull();
+    expect(uploadAction.mock.calls[0][1].get('crop')).toBeNull();
   });
 
   it('cancelling the dialog drops the file and clears the input', async () => {
