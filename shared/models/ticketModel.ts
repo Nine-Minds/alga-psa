@@ -1,4 +1,4 @@
-import { persistCommentPublication } from '../lib/ticketCommentAttachments';
+import { persistCommentPublication, resolveCommentAuthorDisplay } from '../lib/ticketCommentAttachments';
 /**
  * Shared Ticket Model - Core business logic for ticket operations
  * This model contains the essential ticket business logic extracted from
@@ -1536,26 +1536,23 @@ export class TicketModel {
     if (eventPublisher) {
       try {
         // Resolve a display name so notification templates render the author/body.
-        let authorName: string | undefined;
-        if (validatedData.contact_id) {
-          const c = await db.table('contacts')
-            .select('full_name')
-            .where({ contact_name_id: validatedData.contact_id })
-            .first();
-          authorName = c?.full_name || undefined;
-        } else if (validatedData.author_id) {
-          const u = await db.table('users')
-            .select('first_name', 'last_name')
-            .where({ user_id: validatedData.author_id })
-            .first();
-          authorName = u ? `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || undefined : undefined;
-        }
+        // Inbound-email comments frequently match no contact and no user; the
+        // shared resolver falls back to the stored sender identity, never to a
+        // placeholder, and never leaves the schema-required field empty.
+        const authorName = await resolveCommentAuthorDisplay(trx, tenant, {
+          contact_id: validatedData.contact_id,
+          user_id: validatedData.author_id,
+          metadata: validatedData.metadata,
+        });
+        // The event schema requires a uuid; user-less comments reuse the ticket
+        // id as the sentinel actor, matching the inbound-email outbox publisher.
+        const eventUserId = userId || validatedData.author_id || validatedData.ticket_id;
 
         const event = {
           tenantId: tenant,
           ticketId: validatedData.ticket_id,
           commentId: commentId,
-          userId: userId,
+          userId: eventUserId,
           metadata: {
             author_type: dbAuthorType,
             is_internal: validatedData.is_internal,
@@ -1570,7 +1567,7 @@ export class TicketModel {
           await eventPublisher.publishCommentCreated(event);
         } else {
           await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: {
-            tenantId: tenant, ticketId: validatedData.ticket_id, commentId, userId,
+            tenantId: tenant, ticketId: validatedData.ticket_id, commentId, userId: eventUserId,
             comment: { id: commentId, content: validatedData.content, author: authorName,
               isInternal: commentIsInternal, authorType: dbAuthorType },
           } });
