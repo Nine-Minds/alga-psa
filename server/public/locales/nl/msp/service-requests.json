@@ -228,7 +228,7 @@
         "previewTitle": "Voorbeeld (geen wijzigingen geschreven) · toewijzing v{{version}}",
         "resultsTitle": "Toegepaste runs",
         "noRuns": "Op deze inzending is nog geen toewijzing toegepast.",
-        "runLabel": "Run {{date}} · {{status}}",
+        "runLabel": "Uitvoering {{date}} · {{status}}",
         "runActor": "door {{actor}}",
         "replayed": "Deze run was al toegepast; het vastgelegde resultaat wordt getoond.",
         "summary": "{{applied}} toegepast · {{skipped}} overgeslagen · {{failed}} mislukt",
@@ -279,7 +279,7 @@
         "removeSelected": "Selectie verwijderen",
         "clear": "Selectie wissen",
         "confirmTitle": "Geselecteerde regels verwijderen?",
-        "confirmMessage": "{{count}} geselecteerde regels uit het concept verwijderen? Gepubliceerde versies blijven ongewijzigd totdat je opnieuw publiceert."
+        "confirmMessage": "{{count}} geselecteerde regels uit het concept verwijderen? Gepubliceerde versies blijven ongewijzigd totdat u opnieuw publiceert."
       },
       "save": "Regel opslaan",
       "cancel": "Annuleren",
