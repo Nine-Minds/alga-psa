@@ -9,6 +9,7 @@ import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { assertInternalApiUser } from '@/lib/api/middleware/apiMiddleware';
 import { runWithTenant } from 'server/src/lib/db';
 import { getAuthorizedDocumentByFileId } from '@alga-psa/documents/actions/documentActions';
+import { isPreviewableDocumentMimeType } from '@alga-psa/documents/lib/documentUtils';
 
 const TENANT_LOGO_DISCOVERY_TENANT = 'tenant-logo-file-discovery';
 const TENANT_LOGO_DISCOVERY_REASON = 'public tenant logo file lookup before tenant is known';
@@ -148,13 +149,9 @@ export async function GET(
       }
     }
 
-    // Check if it's a viewable file type (images, videos, PDFs)
-    const isViewableType = fileRecord.mime_type?.startsWith('image/') || 
-                          fileRecord.mime_type?.startsWith('video/') || 
-                          fileRecord.mime_type === 'application/pdf' ||
-                          fileRecord.mime_type === 'image/svg+xml';
-    
-    if (!isViewableType) {
+    // Only inline-previewable types (images, videos, PDFs) are served here; the
+    // same predicate drives which documents link to /view vs /download.
+    if (!isPreviewableDocumentMimeType(fileRecord.mime_type)) {
         return new NextResponse('File type not supported for viewing', { status: 400 });
     }
 
