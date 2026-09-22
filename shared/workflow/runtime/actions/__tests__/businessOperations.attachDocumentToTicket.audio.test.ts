@@ -40,10 +40,8 @@ vi.mock('@alga-psa/db', () => ({
   tenantDb: (conn: any, _tenant: string) => conn,
 }));
 
-vi.mock('@alga-psa/storage', () => ({
-  StorageService: {
-    validateFileUpload: (...args: any[]) => validateFileUploadMock(...args),
-  },
+vi.mock('@alga-psa/storage/config/storage', () => ({
+  validateFileUpload: (...args: any[]) => validateFileUploadMock(...args),
 }));
 
 describe('attachDocumentToTicket — shared upload policy', () => {
@@ -53,7 +51,7 @@ describe('attachDocumentToTicket — shared upload policy', () => {
     insertedAssociations.length = 0;
   });
 
-  it('accepts an audio attachment by delegating to StorageService.validateFileUpload', async () => {
+  it('accepts an audio attachment by delegating to the shared upload validator', async () => {
     validateFileUploadMock.mockResolvedValue(undefined);
     const { attachDocumentToTicket } = await import('../businessOperations/shared');
 
@@ -64,7 +62,7 @@ describe('attachDocumentToTicket — shared upload policy', () => {
       { source: { file_id: fileRow.file_id } }
     );
 
-    expect(validateFileUploadMock).toHaveBeenCalledWith('tenant-1', 'audio/wav', 1234);
+    expect(validateFileUploadMock).toHaveBeenCalledWith('audio/wav', 1234);
     expect(result).toMatchObject({
       file_id: fileRow.file_id,
       filename: fileRow.original_name,

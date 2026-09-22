@@ -331,10 +331,12 @@ export async function attachDocumentToTicket(
     }
     // Unify with the same MIME/size policy manual upload uses so workflow
     // attachments (including audio) accept exactly what a tenant may upload.
+    // Import the narrow subpath (not the barrel): StorageService delegates to
+    // this same function and the barrel drags in a validation module that the
+    // native workflow-worker runtime cannot resolve.
     try {
-      const { StorageService } = await import('@alga-psa/storage');
-      await StorageService.validateFileUpload(
-        tx.tenantId,
+      const { validateFileUpload } = await import('@alga-psa/storage/config/storage');
+      await validateFileUpload(
         fileRecord.mime_type ?? 'application/octet-stream',
         Number(fileRecord.file_size ?? 0)
       );
@@ -375,8 +377,8 @@ export async function attachDocumentToTicket(
     }
     // Same shared policy as manual upload (see the file_id branch above).
     try {
-      const { StorageService } = await import('@alga-psa/storage');
-      await StorageService.validateFileUpload(tx.tenantId, contentType ?? 'application/octet-stream', buffer.length);
+      const { validateFileUpload } = await import('@alga-psa/storage/config/storage');
+      await validateFileUpload(contentType ?? 'application/octet-stream', buffer.length);
     } catch (error) {
       throwActionError(ctx, {
         category: 'ValidationError',
@@ -385,7 +387,7 @@ export async function attachDocumentToTicket(
       });
     }
 
-    const { StorageProviderFactory, generateStoragePath } = await import('@alga-psa/storage');
+    const { StorageProviderFactory, generateStoragePath } = await import('@alga-psa/storage/StorageProviderFactory');
     const provider = await StorageProviderFactory.createProvider();
     const filename = input.filename ?? new URL(input.source.url).pathname.split('/').filter(Boolean).pop() ?? 'attachment.bin';
     const storagePath = generateStoragePath(tx.tenantId, '', filename);

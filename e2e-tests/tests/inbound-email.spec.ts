@@ -127,7 +127,7 @@ test('built email service ingests MIME, preserves inline quotations, threads rep
     expect(audioAttachments[0]).toMatchObject({ mime_type: 'audio/wav' });
     expect(audioAttachments[0].file_id).toBeTruthy();
     expect(audioAttachments[0].storage_path).toBeTruthy();
-    const audioDownload = await page.request.get(`/api/documents/view/${audioAttachments[0].file_id}`);
+    const audioDownload = await page.request.get(`/api/documents/download/${audioAttachments[0].file_id}`);
     expect(audioDownload.status()).toBe(200);
     expect(await audioDownload.body()).toEqual(wavBytes);
 
