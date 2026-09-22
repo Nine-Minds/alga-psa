@@ -1,80 +1,42 @@
-# Remove forced consent from Microsoft mailbox OAuth
+# Remove forced Microsoft OAuth consent
 
-Design Session implementation plan, 2026-09-22. This deliverable is planning only.
+Microsoft mailbox connections currently force consent even when an administrator has already granted the requested permissions. Replace the Microsoft email helpers' `prompt=consent` with `prompt=select_account`, matching `buildBootstrapAuthorizationUrl` in `packages/integrations/src/actions/integrations/microsoftEmailSetupActions.ts:146`. Keep `offline_access` and all other request parameters unchanged.
 
-## Problem and decision
+Microsoft documents that `select_account` requests account selection and that the authorization-code flow returns refresh tokens when `offline_access` is requested. Consent remains subject to existing grants and tenant policy; account selection is not a consent screen. See [Microsoft authorization-code flow](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow).
 
-A customer reports that the hosted Microsoft mailbox connection repeatedly requests admin approval despite an existing tenant-wide admin-consent grant and disabled user consent. Both email URL helpers force `prompt=consent` and incorrectly explain that it is required for a refresh token.
+## Verified files and edits
 
-Change Microsoft email authorization requests to `prompt: 'select_account'`, matching the bootstrap builder in `packages/integrations/src/actions/integrations/microsoftEmailSetupActions.ts:146` and all three existing Microsoft calendar builders. Keep `offline_access` and every other request parameter intact. This retains explicit account choice while allowing Entra to determine whether consent is needed.
+Line numbers below refer to the code inspected on 2026-09-22.
 
-Microsoft documents that `consent` forces the consent dialog, `select_account` requests account selection, missing grants trigger consent, and refresh tokens require `offline_access`. See [Microsoft authorization code flow](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow). The reported enterprise-policy failure still requires validation against a real tenant; local URL tests cannot prove tenant-policy behavior.
-
-## Verified scope and exact edits
-
-Line references below describe the inspected checkout before implementation.
-
-| File | Finding and implementation edit |
+| File | Planned edit |
 | --- | --- |
-| `packages/integrations/src/utils/email/oauthHelpers.ts:46` | In `generateMicrosoftAuthUrl`, replace `prompt: 'consent'` with `prompt: 'select_account'`. Replace the incorrect refresh-token comment with `// Select an account without forcing consent; offline_access requests a refresh token.` Leave Google at line 74 unchanged. |
-| `server/src/utils/email/oauthHelpers.ts:41` | Apply the identical Microsoft-only replacement and comment. Line 69 belongs to `generateGoogleAuthUrl`; preserve it. Retain the legacy module and its exports. |
-| `packages/integrations/src/utils/email/oauthHelpers.test.ts:25` | Change the Microsoft expectation from `toBe('consent')` to `toBe('select_account')`. Retain the complete existing scope expectation, including `offline_access`. |
-| `server/src/test/unit/email/microsoftOutboundOAuth.contract.test.ts:7` | Add `expect(authUrl.searchParams.get('prompt')).toBe('select_account')` to the existing URL contract case to cover the separately maintained legacy builder. Retain authority, redirect URI, and scope checks. |
-| `packages/integrations/src/utils/calendar/oauthHelpers.ts:25` | No production edit. The cited line is **Google** Calendar and must keep `consent`. Microsoft already uses `select_account` at line 52 and includes `offline_access` at line 43. |
-| `ee/packages/calendar/src/lib/utils/calendar/oauthHelpers.ts:22` | No production edit. The cited line is **Google** Calendar. Microsoft already uses `select_account` at line 46 and includes `offline_access` at line 37. |
-| `server/src/utils/calendar/oauthHelpers.ts:24` | No production edit. The cited line is **Google** Calendar. Microsoft already uses `select_account` at line 51 and includes `offline_access` at line 42. |
-| `shared/services/email/microsoftGraphEndpoints.ts:15` | No edit. Both email helpers default to `MICROSOFT_EMAIL_OAUTH_SCOPES`, which already includes `offline_access` at line 23. |
-| `packages/integrations/src/actions/integrations/microsoftEmailSetupActions.ts:146` | No edit; existing `select_account` is the model. |
-| `server/src/app/api/email/oauth/imap/initiate/route.ts:71` | Deliberately out of scope; retain `consent`. The endpoint takes an arbitrary configured authorization URL and scopes, and unconditionally includes Google-style `access_type: 'offline'`. Changing all providers or adding provider detection is not trivially safe within this Microsoft mailbox fix. |
+| `packages/integrations/src/utils/email/oauthHelpers.ts:46` | In `generateMicrosoftAuthUrl`, replace `prompt: 'consent'` with `prompt: 'select_account'`. Replace the misleading refresh-token comment with `// Select an account without forcing consent; offline_access requests a refresh token.` Leave Google's line 74 unchanged. |
+| `server/src/utils/email/oauthHelpers.ts:41` | Apply the same Microsoft parameter and comment change. Line 69 belongs to Google and stays unchanged. |
+| `packages/integrations/src/utils/email/oauthHelpers.test.ts:25` | Expect `select_account` instead of `consent`; retain the complete scope assertion, including `offline_access`. |
+| `server/src/test/unit/email/microsoftOutboundOAuth.contract.test.ts` | Add a `prompt === 'select_account'` assertion to the existing legacy-helper test; retain its scope and URL assertions. |
+| `packages/integrations/src/utils/calendar/oauthHelpers.ts` | No edit. Line 25 is Google consent. Microsoft already uses `select_account` at line 52 and includes `offline_access`. |
+| `ee/packages/calendar/src/lib/utils/calendar/oauthHelpers.ts` | No edit. Line 22 is Google consent. Microsoft already uses `select_account` at line 46 and includes `offline_access`. |
+| `server/src/utils/calendar/oauthHelpers.ts` | No edit. Line 24 is Google consent. Microsoft already uses `select_account` at line 51 and includes `offline_access`. |
 
-Expected implementation diff: two helper files and two existing test files. Do not edit calendar production code just to touch the sites named in the brief.
+The legacy email module is still referenced: the HTTP email initiate route imports its Google helper and nonce/state utilities; the IMAP initiate/callback routes import its state utilities. Its Microsoft URL builder has a caller in `server/src/test/unit/email/microsoftOutboundOAuth.contract.test.ts`, but no production caller was found. The HTTP initiate route explicitly rejects Microsoft; the supported mailbox flow uses `packages/integrations/src/actions/email-actions/oauthActions.ts:133` with signed state. Keep the legacy builder consistent without deleting or rerouting it.
 
-## Reference and dependency audit
+Repository searches for consent parameters, Microsoft authorize endpoints, and helper references found no additional Microsoft-specific builder forcing consent. The package helper also serves `packages/integrations/src/actions/integrations/entraActions.ts:455` and `ee/server/src/lib/mcp/connectOAuth.ts:86`; they inherit account selection without caller edits. The bootstrap builder already uses the desired value.
 
-The legacy server email module is still referenced at runtime:
+`server/src/app/api/email/oauth/imap/initiate/route.ts:71` remains out of scope. It builds a URL from provider-configured endpoint/scopes and always sends consent. It can target Microsoft, but changing it globally could affect Google and other providers; a provider-aware change is not trivially safe.
 
-- `server/src/app/api/email/oauth/initiate/route.ts:4` imports Google URL generation, nonce generation, and the state type. Its Microsoft branch explicitly rejects requests; it does not call the legacy Microsoft builder.
-- `server/src/app/api/email/oauth/imap/initiate/route.ts:5` imports state encoding, nonce generation, and the state type.
-- `server/src/app/api/email/oauth/imap/callback/route.ts:3` imports state decoding and validation.
-- `server/src/test/unit/email/microsoftOutboundOAuth.contract.test.ts:2` imports the legacy Microsoft builder directly. No runtime caller of that specific export was found. Updating it prevents the retained implementation from diverging; deleting or consolidating it is outside this fix.
+## Validation and acceptance
 
-The package Microsoft helper has these runtime consumers:
+1. Run the existing package helper suite after updating its expectation: from `packages/integrations`, run `npx vitest run src/utils/email/oauthHelpers.test.ts`. Run the existing `src/actions/email-actions/oauthActions.test.ts` and `src/actions/integrations/microsoftEmailSetupActions.test.ts` suites with the same package runner.
+2. From `server`, run `npx vitest run src/test/unit/email/microsoftOutboundOAuth.contract.test.ts src/test/unit/integrations/entraActions.directConnect.test.ts`. Run the existing `ee/server/src/__tests__/unit/mcpConnectOAuth.test.ts` suite using its EE unit runner because that flow shares the changed helper. These are planned checks, not results from this design session.
+3. Review generated mailbox and calendar authorize URLs: `prompt=select_account`, no `prompt=consent`, and `offline_access` retained. Recheck all three calendar copies and ensure Google consent/offline parameters are unchanged.
+4. In a real Microsoft tenant with user consent disabled and admin consent granted for the selected app's complete requested scope set, connect a hosted mailbox as an ordinary user. Expect account selection, no consent screen or admin-approval loop, successful callback, and a stored refresh token. Repeat for Microsoft calendar with its required grants.
+5. In a tenant lacking consent, verify Microsoft still requests consent/admin approval according to policy. Complete consent with an authorized administrator and verify connection succeeds. An ordinary user with consent disabled must not bypass approval.
+6. Reconnect an existing mailbox provider and calendar provider. Verify successful code exchange returns and persists a fresh refresh token and that token refresh succeeds. Record success without recording token values.
 
-- `packages/integrations/src/actions/email-actions/oauthActions.ts:133,137`: mailbox initiation, including signed-state create/reconnect and hosted/tenant application selection. The prompt change must preserve the signed state verbatim.
-- `packages/integrations/src/actions/integrations/entraActions.ts:455`: Entra direct connect with explicit delegated scopes.
-- `ee/server/src/lib/mcp/connectOAuth.ts:86`: Microsoft MCP connect with its own scopes.
+## Boundaries and risks
 
-These callers inherit account selection. They pass the resulting URL onward and do not inspect or require `prompt=consent`. Missing grants must continue to invoke Microsoft's consent handling. Commented-out calls in `emailProviderActions.ts` are not active consumers.
+No Google changes, generic IMAP changes, scope changes, state/callback/token-storage changes, helper consolidation, migrations, feature flags, or UI work. Preserve `MICROSOFT_EMAIL_OAUTH_SCOPES` in `shared/services/email/microsoftGraphEndpoints.ts:15`. This design deliverable does not implement, open a PR, merge, deploy, or send a customer reply. Customer follow-up remains due after merge/deployment is confirmed.
 
-Repository-wide searches for `prompt`, `prompt=consent`, `oauthHelpers`, `generateMicrosoftAuthUrl`, `generateMicrosoftCalendarAuthUrl`, Microsoft authorize endpoints, and `getMicrosoftAuthorizeUrl` found no additional explicit Microsoft URL builder forcing consent. The generic IMAP endpoint can be configured with Microsoft and remains the explicit exception. The only assertion found requiring Microsoft `consent` is the package helper test identified above; no runtime dependency on that value was found.
+Account selection also affects Entra direct-connect and MCP callers of the package helper. Missing permissions, a grant for another application, and tenant access policies can still require approval or prevent connection. URL tests cannot prove real Entra consent or refresh-token behavior.
 
-## Implementation and validation sequence
-
-1. Make the four scoped edits above. Preserve Google consent settings, scopes, authority selection, redirect URIs, signed/unsigned state behavior, and token exchange/persistence code.
-2. Run the existing package helper suite from `packages/integrations`: `npx vitest run src/utils/email/oauthHelpers.test.ts`.
-3. Run the legacy contract suite from `server`: `npx vitest run src/test/unit/email/microsoftOutboundOAuth.contract.test.ts`. Use the repository's configured test environment; report environmental failures separately from assertion failures.
-4. Inspect the complete diff and repeat the prompt/builder search. Confirm both Microsoft email builders now use `select_account`, all three Microsoft calendar builders retain it, and Google's email/calendar `consent` settings remain unchanged. Confirm `offline_access` remains in both email defaults and all calendar scope lists.
-5. Exercise the live acceptance matrix below against configured test Microsoft applications/tenants. Existing calendar emulator coverage in `server/src/test/integration/microsoftCalendarEmulator.integration.test.ts` exercises shared and EE authorization/token exchange, but does not prove Entra consent policy and is not a substitute for live acceptance.
-
-No new test infrastructure, schema migrations, refactoring, or feature flag is needed. Tests are planned here, not executed during the Design Session.
-
-## Acceptance checks
-
-| Scenario | Expected evidence |
-| --- | --- |
-| Microsoft mailbox connect and calendar connect | Inspect generated authorize URLs: `prompt=select_account`, never `prompt=consent`; `offline_access` remains present. Cover the hosted mailbox flow and retain calendar behavior. |
-| User consent disabled, matching app already granted tenant admin consent for all requested scopes | Connect as an ordinary user through the hosted app. Account selection/sign-in may appear, but no consent screen or repeating admin-approval loop. Callback completes, provider is connected, and code exchange returns a refresh token that is persisted. Record presence/success without recording token contents. |
-| First connect with no existing grant | Use an account allowed to grant the requested permissions (an admin when tenant policy requires it). Microsoft displays the consent screen without forced consent, and connection succeeds after approval. An ordinary user with user consent disabled still legitimately needs admin approval; this fix must not bypass policy. |
-| Reconnect existing provider | Reconnect using the same selected application and intended mailbox. Verify completion for the existing provider and a refresh token returned by the new code exchange and saved for subsequent refresh. Verify a refresh exchange succeeds; do not infer success solely from a previously stored token. |
-| Google regression | Google email and calendar URL generation retains `prompt=consent` and `access_type=offline`. |
-| Existing unit coverage | Package helper and legacy contract tests pass with `select_account` and existing scope assertions. |
-
-## Risks, open questions, and release boundary
-
-- No open implementation decision: use `select_account` in both email copies, preserve already-correct calendar builders, and leave generic IMAP unchanged.
-- Live validation needs a test tenant with user consent disabled and an admin grant covering the exact selected app and requested scopes, plus a separate unconsented app/tenant case. Availability of those fixtures is the outstanding validation question; do not claim live acceptance from unit tests.
-- Entra direct connect and Microsoft MCP connect share the changed package helper. Review their existing connect tests and smoke-check account selection/missing-grant behavior when those integrations are available; retain their custom scope lists unchanged.
-- A grant for another app, incomplete scope grants, Conditional Access, or other tenant restrictions can still require interaction or deny access. Account selection is intentional and does not promise silent sign-in.
-- Generic Microsoft-via-IMAP may retain the reported behavior; treating arbitrary OAuth providers requires a separate scoped change.
-- Existing unrelated `package-lock.json` modifications were present at inspection and must not enter this plan commit or the implementation diff.
-- This assignment ends after committing this plan only. No implementation, PR, merge, deployment, board transition, or customer message is part of the Design Session. Once the fix is merged and deployed under subsequent orders, the customer follow-up should report the deployed fix and invite retry; that follow-up remains outstanding until deployment is verified.
+No open implementation decision remains. The validation dependency is access to test tenants/accounts covering existing admin consent, missing consent, and reconnect. If unavailable, report live acceptance as unverified rather than substituting emulator success. Generic Microsoft IMAP consent behavior remains a separate follow-up.
