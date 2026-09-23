@@ -17,6 +17,7 @@ import type { ImportClientResult } from '@alga-psa/clients/actions';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { CLIENT_SINCE_FORMAT_MESSAGE, toClientSinceDate } from '../../lib/clientSince';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -184,10 +185,10 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
       errors.push('Credit limit must be a number');
     }
 
-    // Same shape the import action enforces, so a bad tenure date shows up in
-    // the preview instead of only in the results list.
-    if (mappedData.client_since && !/^\d{4}-\d{2}-\d{2}([T ].*)?$/.test(String(mappedData.client_since).trim())) {
-      errors.push('Client since must be a date in YYYY-MM-DD form');
+    // Same parser the import action runs, so a bad tenure date shows up in the
+    // preview instead of only in the results list.
+    if (mappedData.client_since && toClientSinceDate(mappedData.client_since) === undefined) {
+      errors.push(CLIENT_SINCE_FORMAT_MESSAGE);
     }
 
     if (mappedData.auto_invoice && typeof mappedData.auto_invoice !== 'boolean') {
