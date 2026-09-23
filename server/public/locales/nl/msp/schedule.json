@@ -824,6 +824,10 @@
       "cancel": "Annuleren",
       "saving": "Opslaan...",
       "save": "Opslaan"
+    },
+    "settings": {
+      "title": "Agenda delen",
+      "description": "Kies welke collega's en teams uw planning kunnen zien en of zij tijd voor u mogen boeken."
     }
   },
   "groupCalendars": {

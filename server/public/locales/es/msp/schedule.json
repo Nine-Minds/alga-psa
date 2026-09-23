@@ -824,6 +824,10 @@
       "cancel": "Cancelar",
       "saving": "Guardando...",
       "save": "Guardar"
+    },
+    "settings": {
+      "title": "Uso compartido del calendario",
+      "description": "Elija qué compañeros y equipos pueden ver su agenda y si pueden reservar tiempo por usted."
     }
   },
   "groupCalendars": {

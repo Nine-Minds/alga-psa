@@ -824,6 +824,10 @@
       "cancel": "Cancel",
       "saving": "Saving...",
       "save": "Save"
+    },
+    "settings": {
+      "title": "Calendar sharing",
+      "description": "Choose which colleagues and teams can see your schedule, and whether they can book time for you."
     }
   },
   "groupCalendars": {

@@ -824,6 +824,10 @@
       "cancel": "Anuluj",
       "saving": "Zapisywanie...",
       "save": "Zapisz"
+    },
+    "settings": {
+      "title": "Udostępnianie kalendarza",
+      "description": "Wybierz, którzy współpracownicy i zespoły widzą Twój harmonogram i czy mogą rezerwować dla Ciebie czas."
     }
   },
   "groupCalendars": {

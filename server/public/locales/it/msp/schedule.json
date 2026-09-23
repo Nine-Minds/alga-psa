@@ -824,6 +824,10 @@
       "cancel": "Annulla",
       "saving": "Salvataggio...",
       "save": "Salva"
+    },
+    "settings": {
+      "title": "Condivisione del calendario",
+      "description": "Scegli quali colleghi e team possono vedere la tua pianificazione e se possono prenotare tempo per te."
     }
   },
   "groupCalendars": {

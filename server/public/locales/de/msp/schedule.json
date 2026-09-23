@@ -824,6 +824,10 @@
       "cancel": "Abbrechen",
       "saving": "Wird gespeichert...",
       "save": "Speichern"
+    },
+    "settings": {
+      "title": "Kalenderfreigabe",
+      "description": "Legen Sie fest, welche Kollegen und Teams Ihren Terminplan sehen und ob sie Termine für Sie buchen dürfen."
     }
   },
   "groupCalendars": {

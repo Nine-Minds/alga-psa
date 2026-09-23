@@ -824,6 +824,10 @@
       "cancel": "Cancelar",
       "saving": "Salvando...",
       "save": "Salvar"
+    },
+    "settings": {
+      "title": "Compartilhamento da agenda",
+      "description": "Escolha quais colegas e equipes podem ver sua agenda e se podem reservar horários para você."
     }
   },
   "groupCalendars": {

@@ -824,6 +824,10 @@
       "cancel": "Annuler",
       "saving": "Enregistrement...",
       "save": "Enregistrer"
+    },
+    "settings": {
+      "title": "Partage du calendrier",
+      "description": "Choisissez quels collègues et équipes peuvent voir votre planning, et s'ils peuvent réserver du temps pour vous."
     }
   },
   "groupCalendars": {
