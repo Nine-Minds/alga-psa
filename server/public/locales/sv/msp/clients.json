@@ -178,7 +178,7 @@
       }
     },
     "shareTooltip": "Skriv ut, importera och exportera",
-    "defaultClientDeleteError": "Det går inte att radera standardkunden. Ange först en annan kund som standard i allmänna inställningar.",
+    "defaultClientDeleteError": "Det går inte att radera standardkunden. Ange först en annan kund som standard i Allmänna inställningar.",
     "clientNotFound": "Kunden hittades inte.",
     "deletePermissionDenied": "Åtkomst nekad: Det går inte att radera kunder.",
     "bulk": {
@@ -189,7 +189,7 @@
         "delete": "Radera",
         "print": "Skriv ut markerade",
         "more": "Mer",
-        "clear": "Rensa"
+        "clear": "Avmarkera"
       }
     }
   },
@@ -377,7 +377,7 @@
       "nothingOutstanding": "Inga utestående belopp på färdigställda fakturor.",
       "taxSettings": "Skatteinställningar",
       "unbilledHours": "{{hours}} h",
-      "unbilledMaterials": "{{amount}} för material",
+      "unbilledMaterials": "{{amount}} i material",
       "unbilledWork": "Ej fakturerat arbete"
     },
     "notes": {
@@ -502,7 +502,7 @@
     "usersLoadError": "Det gick inte att ladda användare för val av kundansvarig.",
     "countriesLoadError": "Det gick inte att ladda länder.",
     "phoneTypeSuggestionsError": "Det gick inte att ladda förslag på kontakternas telefontyper.",
-    "created": "”{{name}}” har skapats. Lägg till en till kund nedan.",
+    "created": "”{{name}}” har skapats. Lägg till ytterligare en kund nedan.",
     "createAndAddAnother": "Skapa + lägg till en till",
     "createAndView": "Skapa + visa kund",
     "additionalDetails": "Ytterligare uppgifter",
@@ -742,7 +742,7 @@
     "deactivateError": "Det gick inte att inaktivera avtalet",
     "updateError": "Det gick inte att uppdatera avtalet",
     "createContract": "Skapa avtal",
-    "quickAdd": "Snabbtillägg",
+    "quickAdd": "Lägg till snabbt",
     "billingProfile": "Debiteringsprofil",
     "billingProfileUnassigned": "Inte tilldelad",
     "billingProfileUpdated": "Debiteringsprofilen har uppdaterats"
@@ -798,7 +798,7 @@
     "hoursUsedSummary": "{{used}} / {{total}} timmar förbrukade",
     "noActiveBucketPlans": "Inga aktiva timpottsplaner hittades.",
     "noHours": "Inga timmar registrerade under de senaste 30 dagarna.",
-    "noInvoices": "Inga nya fakturor hittades.",
+    "noInvoices": "Inga fakturor den senaste tiden.",
     "noUsage": "Inga förbrukningsdata för de senaste 30 dagarna.",
     "retry": "Försök igen",
     "loadError": "Det gick inte att ladda avsnittet.",
@@ -948,7 +948,7 @@
       "restricted": "Tillgodohavanden begränsas till valda tjänstetyper. Välj minst en för att spara."
     },
     "order": {
-      "expirationFirst": "De som löper ut först",
+      "expirationFirst": "Tillgodohavandet som löper ut först",
       "oldestFirst": "Äldsta tillgodohavandet först",
       "newestFirst": "Nyaste tillgodohavandet först"
     },
@@ -994,7 +994,7 @@
     "saveError": "Det gick inte att uppdatera kundens språkinställning",
     "cardDescription": "Ange standardspråk för alla kontakter hos {{clientName}}.",
     "saveSuccess": "Standardspråket för kontakter hos {{clientName}} har ändrats till {{language}}",
-    "thisClient": "kund"
+    "thisClient": "kunden"
   },
   "clientQuickView": {
     "notFound": "Kunden hittades inte",
@@ -1578,7 +1578,7 @@
       "expiredSuffix": "(Utgången)",
       "filterByType": "Filtrera efter typ",
       "inventory": {
-        "subtitle": "Hantera och spåra alla kundens tillgångar",
+        "subtitle": "Hantera och spåra kundens alla tillgångar",
         "title": "Tillgångar"
       },
       "loading": "Laddar tillgångar…",
@@ -1730,7 +1730,7 @@
     "bucketSwitchHelp": "Avisera när förbrukningen av en förbetald timpott når den angivna nivån",
     "bucketPercent": "Förbrukningströskel (%)",
     "bucketPercentPlaceholder": "T.ex. 80",
-    "bucketPercentHelp": "Andel av timpottens kapacitet i procent som utlöser en avisering",
+    "bucketPercentHelp": "Procentandel av timpottens kapacitet som utlöser en avisering",
     "percentRangeError": "Ange ett heltal från 1 till 100",
     "notifyClient": "Skicka även e-post till kundens fakturamottagare",
     "notifyClientHelp": "Skickar aviseringen till kundens ordinarie fakturamottagare",
@@ -1742,7 +1742,7 @@
     "replenishmentAmountHelp": "Belopp i vald valuta. Timpottsaviseringar använder minuterna nedan.",
     "replenishmentAmountError": "Ange ett positivt påfyllnadsbelopp för tillgodohavandet i vald valuta",
     "replenishmentMinutes": "Minuter för påfyllning av timpott",
-    "replenishmentMinutesError": "Ange ett positivt heltal minuter",
+    "replenishmentMinutesError": "Ange antal minuter som ett positivt heltal",
     "replenishmentHorizon": "Hoppa över påfyllning inom så här många dagar före avtalets slut",
     "replenishmentHorizonError": "Ange ett antal dagar från 0 till 3 650",
     "save": "Spara",
