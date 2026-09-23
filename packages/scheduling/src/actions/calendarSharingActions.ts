@@ -18,6 +18,7 @@ import type {
   ICalendarShareInput,
   ICalendarShareView,
   IScheduleViewerCapabilities,
+  ITeam,
   IVisibleCalendar,
 } from '@alga-psa/types';
 import {
@@ -645,5 +646,44 @@ export const restoreGroupCalendar = withAuth(async (
   } catch (error) {
     console.error('Error restoring group calendar:', error);
     return fail('Failed to restore calendar.');
+  }
+});
+
+/** Teams that can receive a calendar share (for the share pickers). */
+export const getShareableTeams = withAuth(async (
+  user,
+  { tenant }
+): Promise<CalendarSharingResult<ITeam[]>> => {
+  try {
+    const { knex: db } = await createTenantKnex();
+    const base = await checkBaseAccess(user, db);
+    if (!base.ok) return fail(base.error);
+
+    const teams = await withTransaction(db, async (trx: Knex.Transaction) => {
+      const scoped = tenantDb(trx, tenant);
+      const [teamRows, memberRows] = await Promise.all([
+        scoped.table('teams').select('team_id', 'team_name', 'manager_id').orderBy('team_name', 'asc'),
+        scoped.table('team_members').select('team_id', 'user_id'),
+      ]);
+      const membersByTeam = new Map<string, Array<{ user_id: string }>>();
+      for (const row of memberRows as Array<{ team_id: string; user_id: string }>) {
+        const members = membersByTeam.get(row.team_id) ?? [];
+        members.push({ user_id: row.user_id });
+        membersByTeam.set(row.team_id, members);
+      }
+      return (teamRows as Array<{ team_id: string; team_name: string; manager_id: string | null }>).map(
+        (team): ITeam => ({
+          tenant,
+          team_id: team.team_id,
+          team_name: team.team_name,
+          manager_id: team.manager_id,
+          members: (membersByTeam.get(team.team_id) ?? []) as ITeam['members'],
+        })
+      );
+    });
+    return { success: true, data: teams };
+  } catch (error) {
+    console.error('Error loading teams for sharing:', error);
+    return fail('Failed to load teams.');
   }
 });

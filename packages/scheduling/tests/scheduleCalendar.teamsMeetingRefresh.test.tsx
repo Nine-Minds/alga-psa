@@ -58,6 +58,29 @@ const {
 }));
 
 vi.mock('@alga-psa/scheduling/actions', () => ({
+  // Shared calendars: the viewer sees every calendar (user_schedule:update).
+  getCalendarsVisibleToMe: vi.fn(async () => ({
+    success: true,
+    data: {
+      viewerUserId: 'tech-1',
+      canViewAll: true,
+      me: {
+        key: 'tech-1', calendar_type: 'personal', calendar_id: null, owner_user_id: 'tech-1',
+        name: 'Tess Tech', color: '#2563eb', access_level: 'edit',
+      },
+      people: [],
+      groups: [],
+    },
+  })),
+  getMyCalendarShares: vi.fn(async () => ({ success: true, data: [] })),
+  setMyCalendarShares: vi.fn(async () => ({ success: true, data: [] })),
+  getShareableTeams: vi.fn(async () => ({ success: true, data: [] })),
+  createGroupCalendar: vi.fn(),
+  updateGroupCalendar: vi.fn(),
+  getGroupCalendarShares: vi.fn(async () => ({ success: true, data: [] })),
+  setGroupCalendarShares: vi.fn(),
+  archiveGroupCalendar: vi.fn(),
+  restoreGroupCalendar: vi.fn(),
   getScheduleEntries,
   addScheduleEntry,
   updateScheduleEntry,
