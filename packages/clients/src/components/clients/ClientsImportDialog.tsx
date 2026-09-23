@@ -38,6 +38,7 @@ type MappableClientField =
   | 'client_type'
   | 'is_inactive'
   | 'notes'
+  | 'client_since'
   | 'tags'
   | 'location_name'
   | 'address_line1'
@@ -82,6 +83,7 @@ const COMPANY_FIELDS: Record<MappableClientField, string> = {
   client_type: 'Client Type',
   is_inactive: 'Is Inactive',
   notes: 'Notes',
+  client_since: 'Client Since',
   tags: 'Tags',
   location_name: 'Location Name',
   address_line1: 'Address Line 1',
@@ -180,6 +182,12 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
 
     if (mappedData.credit_limit && isNaN(Number(mappedData.credit_limit))) {
       errors.push('Credit limit must be a number');
+    }
+
+    // Same shape the import action enforces, so a bad tenure date shows up in
+    // the preview instead of only in the results list.
+    if (mappedData.client_since && !/^\d{4}-\d{2}-\d{2}([T ].*)?$/.test(String(mappedData.client_since).trim())) {
+      errors.push('Client since must be a date in YYYY-MM-DD form');
     }
 
     if (mappedData.auto_invoice && typeof mappedData.auto_invoice !== 'boolean') {
@@ -522,7 +530,7 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
               </p>
               <p className="mt-1 text-xs text-gray-500">
                 <strong>Required:</strong> client_name<br />
-                <strong>Client fields:</strong> website, client_type, is_inactive, notes, tags<br />
+                <strong>Client fields:</strong> website, client_type, is_inactive, notes, client_since (YYYY-MM-DD), tags<br />
                 <strong>Location fields:</strong> location_name, email, phone_number, phone_extension, address_line1, address_line2, city, state_province, postal_code, country<br />
                 <strong>Note:</strong> is_inactive should be 'true' or 'false' (case-insensitive)
               </p>

@@ -1478,6 +1478,7 @@ export const exportClientsToCSV = withAuth(async (user, { tenant }, clients: ICl
         client_type: client.client_type || 'company',
         is_inactive: client.is_inactive ? 'true' : 'false',
         notes: client.notes || '',
+        client_since: toDateOnlyOrNull(client.client_since) || '',
         tags: tagNames,
         // Location fields
         location_name: location.location_name || '',
@@ -1499,6 +1500,7 @@ export const exportClientsToCSV = withAuth(async (user, { tenant }, clients: ICl
     'client_type',
     'is_inactive',
     'notes',
+    'client_since',
     'tags',
     'location_name',
     'email',
@@ -1523,6 +1525,7 @@ export async function generateClientCSVTemplate(): Promise<string> {
       client_type: 'company',
       is_inactive: 'false',
       notes: 'Specializes in unbirthday party supplies and premium tea blends',
+      client_since: '2015-06-01',
       tags: 'Tea, Party Planning, Whimsical',
       location_name: 'The Tea Party Table',
       email: 'hatter@teaparty.wonderland',
@@ -1543,6 +1546,7 @@ export async function generateClientCSVTemplate(): Promise<string> {
     'client_type',
     'is_inactive',
     'notes',
+    'client_since',
     'tags',
     'location_name',
     'email',
@@ -1813,6 +1817,14 @@ export const importClientsFromCSV = withAuth(async (
         clientData.phone_number = normalizedRow.phone_no;
       }
 
+      // Bulk migration is how tenure actually arrives, so a date the source
+      // exported in another shape fails this row by itself rather than landing
+      // in the column as garbage or vanishing silently.
+      const clientSince = toDateOnlyOrNull(clientData.client_since);
+      if (clientSince === undefined) {
+        throw new Error('Client since must be a date in YYYY-MM-DD form');
+      }
+
       let savedClient: IClient | undefined;
       let created = false;
       let skipped = false;
@@ -1856,6 +1868,11 @@ export const importClientsFromCSV = withAuth(async (
           }
           if (clientData.account_manager_id !== undefined) {
             updateData.account_manager_id = clientData.account_manager_id === '' ? null : clientData.account_manager_id;
+          }
+          // Mapped-but-empty clears the date back to the created_at fallback;
+          // an unmapped column leaves whatever is already stored alone.
+          if (clientData.client_since !== undefined) {
+            updateData.client_since = clientSince;
           }
 
           [savedClient] = await tenantScopedTable(trx, 'clients', tenant)
@@ -1926,6 +1943,7 @@ export const importClientsFromCSV = withAuth(async (
             tax_id_number: clientData.tax_id_number || '',
             tax_exemption_certificate: clientData.tax_exemption_certificate || '',
             notes: clientData.notes || '',
+            client_since: clientSince,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           };
