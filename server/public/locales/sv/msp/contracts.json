@@ -133,7 +133,7 @@
       "renewalTermPlaceholder": "T.ex. 12",
       "renewalTicketBoard": "Tavla för förnyelseärenden",
       "renewalTicketStatus": "Status för förnyelseärenden",
-      "required": "Obligatorisk",
+      "required": "Krävs",
       "selectBoard": "Välj tavla",
       "selectBoardFirst": "Välj en tavla först",
       "selectRenewalMode": "Välj förnyelseläge",
@@ -152,7 +152,7 @@
       "clientName": "Kundnamn",
       "endDate": "Slutdatum",
       "ownerClient": "Ägande kund",
-      "required": "Obligatorisk",
+      "required": "Krävs",
       "startDate": "Startdatum",
       "systemManaged": "Ägarskapet hanteras av systemet för det här standardavtalet.",
       "title": "Kundägarskap"
@@ -431,7 +431,7 @@
       "servicesConfiguration": "Tjänsteinställningar",
       "servicesHourlyRates": "Tjänster och timtaxor",
       "servicesIncludedReference": "Ingående tjänster (referens)",
-      "timeBillingConfiguration": "Inställningar för tiddebitering",
+      "timeBillingConfiguration": "Inställningar för tidsdebitering",
       "unitOfMeasure": "Måttenhet",
       "unitOfMeasureHint": "T.ex. GB, API-anrop, användare"
     },
@@ -608,7 +608,7 @@
     "rateProvenance": {
       "standard": "Standard",
       "custom": "Anpassad",
-      "unreviewed": "Inte granskad"
+      "unreviewed": "Ej granskad"
     }
   },
   "contractLineEdit": {
@@ -693,7 +693,7 @@
       "minimumBillableMinutes": "Minsta debiterbara antal minuter",
       "roundUpToNearest": "Avrunda uppåt till närmaste (minuter)",
       "servicesAndRates": "Tjänster och timtaxor",
-      "title": "Inställningar för tiddebitering"
+      "title": "Inställningar för tidsdebitering"
     },
     "loading": "Läser in förinställningar för avtalsrader…",
     "selection": {
@@ -905,10 +905,10 @@
       "createContract": "Skapa avtal",
       "createTemplate": "Skapa mall",
       "openMenu": "Öppna meny",
-      "quickAdd": "Snabbtillägg",
+      "quickAdd": "Lägg till snabbt",
       "resume": "Återuppta",
       "restore": "Återställ",
-      "setToActive": "Sätt som aktivt",
+      "setToActive": "Ange som aktivt",
       "terminate": "Avsluta"
     },
     "columns": {
@@ -1016,7 +1016,7 @@
     "loading": "Läser in kundavtal…",
     "po": {
       "notRequired": "Krävs inte",
-      "required": "Obligatorisk"
+      "required": "Krävs"
     },
     "search": {
       "ariaLabel": "Sök kundavtal",
@@ -1266,7 +1266,7 @@
     },
     "steps": {
       "configureBilling": {
-        "description": "Välj debiteringsmodell eller modeller. Du kan kombinera flera typer:",
+        "description": "Välj en eller flera debiteringsmodeller. Du kan kombinera flera typer:",
         "title": "Konfigurera debitering"
       },
       "createContract": {
@@ -1320,7 +1320,7 @@
   "frequencyOverride": {
     "confirmation": "Avtalsraden debiteras {{lineFrequency}} i stället för {{contractFrequency}}.",
     "description": "Valfritt: Åsidosätt avtalets debiteringsintervall ({{frequency}}) för den här avtalsraden.",
-    "label": "Åsidosätt debiteringsintervall",
+    "label": "Åsidosatt debiteringsintervall",
     "optionAlreadySetForContract": "{{label}} (redan angivet för avtalet)",
     "placeholder": "Använd avtalets debiteringsintervall ({{frequency}})"
   },
@@ -1408,7 +1408,7 @@
       "placeholder": "Välj debiteringsintervall"
     },
     "cadenceOwner": {
-      "description": "Anger vilket schema som styr som standard för återkommande rader som skapas i guiden.",
+      "description": "Anger vilket styrande schema som används som standard för återkommande rader som skapas i guiden.",
       "label": "Standardschema för återkommande debitering",
       "options": {
         "client": {
@@ -1790,7 +1790,7 @@
         "one": "{{count}} produkt",
         "other": "{{count}} produkter"
       },
-      "overrideRate": "- anpassad taxa {{rate}}/{{currencyCode}}"
+      "overrideRate": "- anpassat pris {{rate}}/{{currencyCode}}"
     },
     "hourly": {
       "badgeCount": {
