@@ -58,6 +58,28 @@ export interface MicrosoftProviderFormProps {
   emailSetup?: MicrosoftEmailSetupReadiness | null;
 }
 
+/**
+ * Open the Microsoft sign-in popup synchronously, inside the click's user
+ * gesture. Browsers block `window.open` calls that happen after an `await`, so
+ * opening here and navigating once the server returns the authorize URL keeps
+ * the window from being silently suppressed.
+ */
+function openMicrosoftOAuthPopup(): Window | null {
+  try {
+    return window.open('', 'microsoft-oauth', 'width=600,height=700,scrollbars=yes,resizable=yes');
+  } catch {
+    return null;
+  }
+}
+
+function closePopupQuietly(popup: Window | null): void {
+  try {
+    popup?.close();
+  } catch {
+    /* ignore */
+  }
+}
+
 export function MicrosoftProviderForm({ 
   tenant,
   provider, 
@@ -304,15 +326,26 @@ export function MicrosoftProviderForm({
   };
 
   const handleOAuthAuthorization = async () => {
-    try {
-      setOauthStatus('authorizing');
-      setError(null);
+    setOauthStatus('authorizing');
+    setError(null);
 
+    // Open the popup before any await so the browser treats it as part of the
+    // click gesture; a blocked popup is reported immediately instead of leaving
+    // the button stuck on "Signing in…".
+    const popup = openMicrosoftOAuthPopup();
+    if (!popup) {
+      setOauthStatus('error');
+      setError(t('forms.microsoft.validation.popupBlocked', { defaultValue: 'Failed to open OAuth popup. Please allow popups for this site.' }));
+      return;
+    }
+
+    try {
       const formData = form.getValues();
 
       // Validate required fields for OAuth
       const isValid = await form.trigger();
       if (!isValid) {
+        closePopupQuietly(popup);
         setOauthStatus('error');
         setError(t('forms.microsoft.validation.authorizeRequiresValid', { defaultValue: 'Please fill in all required fields before authorizing' }));
         return;
@@ -320,12 +353,16 @@ export function MicrosoftProviderForm({
 
       // An explicit issuer choice is mandatory so the server never guesses the app.
       if (!selectedIssuer) {
+        closePopupQuietly(popup);
         setOauthStatus('error');
         setError(t('forms.microsoft.validation.issuerRequired', { defaultValue: 'Choose a Microsoft app before signing in' }));
         return;
       }
 
-      // Save provider first so credentials are available for OAuth
+      // Save provider first so the signed state has a provider to bind to.
+      // Skip automation: the mailbox has no tokens yet, so webhook setup would
+      // fail and leave the row in an error state before sign-in. The submit
+      // path (`onSubmit`) runs automation once OAuth has stored tokens.
       let providerId = provider?.id;
       if (!providerId) {
         const payload = {
@@ -347,9 +384,12 @@ export function MicrosoftProviderForm({
           }
         };
 
-        const result = await upsertEmailProvider(payload);
+        const result = await upsertEmailProvider(payload, true);
         if (isActionMessageError(result)) {
           throw new Error(getErrorMessage(result));
+        }
+        if (result.setupError) {
+          throw new Error(result.setupError);
         }
         providerId = result.provider.id;
       }
@@ -366,19 +406,18 @@ export function MicrosoftProviderForm({
       }
       const { authUrl } = oauthInit;
 
-      // Open OAuth popup
-      const popup = window.open(
-        authUrl,
-        'microsoft-oauth',
-        'width=600,height=700,scrollbars=yes,resizable=yes'
-      );
-
-      if (!popup) {
-        throw new Error(t('forms.microsoft.validation.popupBlocked', { defaultValue: 'Failed to open OAuth popup. Please allow popups for this site.' }));
-      }
-
       oauthCleanupRef.current?.();
       oauthCompletedRef.current = false;
+
+      // The user may have closed the popup while the server was responding.
+      if (popup.closed) {
+        setOauthStatus('error');
+        setError(t('forms.microsoft.validation.closedEarly', { defaultValue: 'Authorization window closed before completing. Please try again.' }));
+        return;
+      }
+
+      // Navigate the already-open popup to the Microsoft authorize URL.
+      popup.location.href = authUrl;
 
       // Monitor popup for completion
       const checkClosed = setInterval(() => {
@@ -401,8 +440,8 @@ export function MicrosoftProviderForm({
         ) {
           oauthCompletedRef.current = true;
           oauthCleanupRef.current?.();
-          popup?.close();
-          
+          closePopupQuietly(popup);
+
           if (event.data.success) {
             setOauthStatus('success');
           } else {
@@ -421,6 +460,7 @@ export function MicrosoftProviderForm({
       };
 
     } catch (err) {
+      closePopupQuietly(popup);
       setOauthStatus('error');
       console.error('Failed to start Microsoft authorization:', err);
       setError(getErrorMessage(err));
