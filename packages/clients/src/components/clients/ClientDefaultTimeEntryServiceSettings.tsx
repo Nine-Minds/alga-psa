@@ -30,6 +30,12 @@ const ClientDefaultTimeEntryServiceSettings: React.FC<ClientDefaultTimeEntryServ
   // render would otherwise show "no default" for EVERY client, and a click in
   // that window could write the empty value over the client's persisted one.
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>('loading');
+  // Some i18n setups return a fresh bound `t` on every render. Listing it as an
+  // effect dependency would re-run the load after every state update and hammer
+  // the server actions. The ref keeps the latest translator for error messages
+  // while the effect depends only on the client it is loading.
+  const tRef = React.useRef(t);
+  tRef.current = t;
 
   useEffect(() => {
     let cancelled = false;
@@ -53,7 +59,7 @@ const ClientDefaultTimeEntryServiceSettings: React.FC<ClientDefaultTimeEntryServ
       } catch (error) {
         if (cancelled) return;
         setLoadState('error');
-        handleError(error, t('clientDefaultTimeEntryServiceSettings.loadError', {
+        handleError(error, tRef.current('clientDefaultTimeEntryServiceSettings.loadError', {
           defaultValue: 'Failed to load default time-entry service',
         }));
       }
@@ -63,7 +69,7 @@ const ClientDefaultTimeEntryServiceSettings: React.FC<ClientDefaultTimeEntryServ
     return () => {
       cancelled = true;
     };
-  }, [clientId, t]);
+  }, [clientId]);
 
   const handleChange = async (value: string) => {
     if (loadState !== 'ready') return;

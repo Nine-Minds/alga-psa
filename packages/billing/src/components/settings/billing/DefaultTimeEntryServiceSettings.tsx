@@ -22,6 +22,12 @@ const DefaultTimeEntryServiceSettings = (): React.JSX.Element => {
   const [serviceId, setServiceId] = React.useState<string>('');
   const [options, setOptions] = React.useState<Array<{ value: string; label: string }>>([]);
   const [isLoading, setIsLoading] = React.useState(true);
+  // Some i18n setups return a fresh bound `t` on every render. Listing it as an
+  // effect dependency would re-run the load after every state update and hammer
+  // the server action. The ref keeps the latest translator for error messages
+  // while the effect itself depends only on stable inputs (mount here).
+  const tRef = React.useRef(t);
+  tRef.current = t;
 
   React.useEffect(() => {
     let cancelled = false;
@@ -44,7 +50,7 @@ const DefaultTimeEntryServiceSettings = (): React.JSX.Element => {
         setOptions(services.map((service) => ({ value: service.service_id, label: service.service_name })));
       } catch (error) {
         if (cancelled) return;
-        handleError(error, t('general.timeEntryService.errors.load', {
+        handleError(error, tRef.current('general.timeEntryService.errors.load', {
           defaultValue: 'Failed to load default time-entry service',
         }));
       } finally {
@@ -56,7 +62,7 @@ const DefaultTimeEntryServiceSettings = (): React.JSX.Element => {
     return () => {
       cancelled = true;
     };
-  }, [t]);
+  }, []);
 
   const handleChange = async (value: string) => {
     try {

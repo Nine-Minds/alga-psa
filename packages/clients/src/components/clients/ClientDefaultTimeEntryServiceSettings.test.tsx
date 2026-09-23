@@ -17,13 +17,11 @@ vi.mock('../../lib/billingHelpers', () => ({
   getServicesAsync: (...args: unknown[]) => getServicesAsync(...(args as [])),
 }));
 
-const { translate } = vi.hoisted(() => ({
-  translate: (_key: string, opts?: { defaultValue?: string }) => opts?.defaultValue ?? _key,
-}));
-
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  // Fresh translator per render: an unstable `t` identity used to be an effect
+  // dependency here, which re-ran the load after every state update.
   useTranslation: () => ({
-    t: translate,
+    t: (key: string, opts?: { defaultValue?: string }) => opts?.defaultValue ?? key,
   }),
 }));
 
@@ -107,5 +105,45 @@ describe('ClientDefaultTimeEntryServiceSettings error handling', () => {
     await waitFor(() =>
       expect((screen.getByTestId('client-default-time-entry-service') as HTMLSelectElement).value).toBe('service-b')
     );
+  });
+
+  it('loads exactly once and settles while idle despite a changing translator identity', async () => {
+    getClientContractLineSettingsAsync.mockResolvedValue({ defaultTimeEntryServiceId: 'service-a' });
+    getServicesAsync.mockResolvedValue(SERVICES);
+
+    await renderLoaded();
+
+    // Let any runaway effect/state cycle surface before asserting.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(getClientContractLineSettingsAsync).toHaveBeenCalledTimes(1);
+    expect(getServicesAsync).toHaveBeenCalledTimes(1);
+    expect((screen.getByTestId('client-default-time-entry-service') as HTMLSelectElement).value).toBe('service-a');
+  });
+
+  it('loads the new client value and ignores a stale response when clientId changes', async () => {
+    let resolveFirst: (value: { defaultTimeEntryServiceId: string }) => void = () => {};
+    getClientContractLineSettingsAsync.mockImplementation((id: string) => {
+      if (id === 'client-1') {
+        return new Promise<{ defaultTimeEntryServiceId: string }>((resolve) => {
+          resolveFirst = resolve;
+        });
+      }
+      return Promise.resolve({ defaultTimeEntryServiceId: 'service-b' });
+    });
+    getServicesAsync.mockResolvedValue(SERVICES);
+
+    const { rerender } = render(<ClientDefaultTimeEntryServiceSettings clientId="client-1" />);
+    rerender(<ClientDefaultTimeEntryServiceSettings clientId="client-2" />);
+
+    await waitFor(() =>
+      expect((screen.getByTestId('client-default-time-entry-service') as HTMLSelectElement).value).toBe('service-b')
+    );
+
+    resolveFirst({ defaultTimeEntryServiceId: 'service-a' });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    expect((screen.getByTestId('client-default-time-entry-service') as HTMLSelectElement).value).toBe('service-b');
+    expect(getClientContractLineSettingsAsync).toHaveBeenNthCalledWith(1, 'client-1');
+    expect(getClientContractLineSettingsAsync).toHaveBeenNthCalledWith(2, 'client-2');
   });
 });

@@ -11,10 +11,6 @@ const getServices = vi.fn();
 const handleError = vi.fn();
 const toastSuccess = vi.fn();
 
-const { translate } = vi.hoisted(() => ({
-  translate: (_key: string, opts?: { defaultValue?: string }) => opts?.defaultValue ?? _key,
-}));
-
 vi.mock('../../../actions/billingSettingsActions', () => ({
   getDefaultBillingSettings: (...args: unknown[]) => getDefaultBillingSettings(...(args as [])),
   updateDefaultBillingSettings: (...args: unknown[]) => updateDefaultBillingSettings(...(args as [])),
@@ -24,8 +20,13 @@ vi.mock('../../../actions/serviceActions', () => ({
   getServices: (...args: unknown[]) => getServices(...(args as [])),
 }));
 
+// Return a fresh translator on every render. This reproduces the loop the
+// component must tolerate: an unstable `t` identity that used to be an effect
+// dependency and re-triggered the load after each state update.
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
-  useTranslation: () => ({ t: translate }),
+  useTranslation: () => ({
+    t: (key: string, opts?: { defaultValue?: string }) => opts?.defaultValue ?? key,
+  }),
 }));
 
 vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
@@ -114,5 +115,18 @@ describe('DefaultTimeEntryServiceSettings error handling', () => {
     await userEvent.selectOptions(screen.getByTestId('default-time-entry-service'), '');
 
     await waitFor(() => expect(updateDefaultBillingSettings).toHaveBeenCalledWith({ defaultTimeEntryServiceId: null }));
+  });
+
+  it('loads exactly once and settles while idle despite a changing translator identity', async () => {
+    getDefaultBillingSettings.mockResolvedValue({ defaultTimeEntryServiceId: 'service-a' });
+    getServices.mockResolvedValue(SERVICES);
+
+    await renderLoaded();
+
+    // Let any runaway effect/state cycle surface before asserting.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(getDefaultBillingSettings).toHaveBeenCalledTimes(1);
+    expect(getServices).toHaveBeenCalledTimes(1);
+    expect((screen.getByTestId('default-time-entry-service') as HTMLSelectElement).value).toBe('service-a');
   });
 });
