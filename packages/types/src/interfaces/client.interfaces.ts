@@ -38,7 +38,6 @@ export interface IClient extends TenantEntity, ITaggable {
     status?: string;
     type?: string;
     billing_address?: string;
-    tax_id?: string;
     notes?: string;
     payment_terms?: string;
     website?: string;

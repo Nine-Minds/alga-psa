@@ -27,7 +27,6 @@ export const ClientPropertiesSchema = z.object({
   status: z.string().optional(),
   type: z.string().optional(),
   billing_address: z.string().optional(),
-  tax_id: z.string().optional(),
   notes: z.string().optional(),
   timezone: z.string().optional(),
   payment_terms: z.string().optional(),

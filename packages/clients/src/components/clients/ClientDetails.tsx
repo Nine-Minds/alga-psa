@@ -1542,8 +1542,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             </FieldContainer>
             <TextDetailItem
               label="Tax ID"
-              value={editedClient.properties?.tax_id ?? ""}
-              onEdit={(value) => handleFieldChange('properties.tax_id', value)}
+              value={editedClient.tax_id_number ?? ""}
+              onEdit={(value) => handleFieldChange('tax_id_number', value)}
               automationId="tax-id-field"
             />
             <TextDetailItem
