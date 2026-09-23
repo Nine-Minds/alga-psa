@@ -71,7 +71,7 @@
     "recordFailed": "Det gick inte att registrera inventeringen.",
     "recorded": "Inventeringen registrerad.",
     "saveCount": "Spara inventering",
-    "staleBadge": "Inaktuellt — lagerbeståndet har ändrats, räkna om",
+    "staleBadge": "Inaktuell — lagerbeståndet har ändrats, räkna om",
     "staleLines": "{{count}} rader var inaktuella (lagerbeståndet ändrades under inventeringen) och hoppades över — räkna om dem.",
     "startCount": "Starta inventering",
     "startDialogTitle": "Starta en cyklisk inventering",
@@ -127,7 +127,7 @@
       "bands": {
         "red": "Kostar pengar eller en kund idag",
         "amber": "Bör följas upp denna vecka",
-        "info": "Håll uppsikt över"
+        "info": "Håll uppsikt"
       },
       "actions": {
         "invoice": "Fakturera",
@@ -184,7 +184,7 @@
         "stockOut": "{{service}} är slut i lager",
         "stockLow": "{{service}} ligger under beställningspunkten",
         "poPartial": "delvis mottagen inköpsorder är fortfarande öppen",
-        "warranty": "Garantin för {{count}} enheter går ut om <30 dagar",
+        "warranty": "garantin för {{count}} enheter går ut om <30 dagar",
         "deadStock": "inga lagerrörelser på 90 dagar"
       },
       "meta": {
@@ -246,7 +246,7 @@
       "empty": "Inga nya lagerrörelser.",
       "fullLedger": "Hela lagerjournalen",
       "generic": "{{type}} {{qty}} × {{name}}",
-      "itemFallback": "post",
+      "itemFallback": "artikel",
       "received": "Mottaget",
       "rma": "RMA",
       "serialSuffix": " (serienr {{sn}})",
@@ -258,7 +258,7 @@
       "arriving": "På väg",
       "empty": "Inga öppna inköpsorder.",
       "open": "Öppen",
-      "partial": "Delvis",
+      "partial": "Delvis mottagen",
       "receivedOf": "{{received}} av {{ordered}} mottagna",
       "title": "Kö för varumottagning",
       "unit": "{{count}} enhet",
@@ -352,7 +352,7 @@
       "subtitle": "{{count}} driftsättningar med datum",
       "eyebrow": "Denna vecka",
       "scope": "{{qty}}× {{name}} — {{staged}} förberedda · {{backordered}} restnoterade",
-      "itemFallback": "post",
+      "itemFallback": "artikel",
       "scopeFallback": "{{staged}} förberedda · {{backordered}} restnoterade",
       "feeder": "Levereras via {{po}} från {{vendor}}, beräknad ankomst {{eta}} — {{slack}} dagars marginal.",
       "vendorFallback": "leverantör",
@@ -549,7 +549,7 @@
     },
     "reorder": {
       "destinationAndSourceRequired": "Välj både lastens destination och en ursprungshylla.",
-      "recordInvalid": "En av de valda lastlisteposterna är inte längre giltig. Ladda om och försök igen."
+      "recordInvalid": "En av de valda posterna i lastlistan är inte längre giltig. Ladda om och försök igen."
     },
     "reporting": {
       "invalidDateRange": "Välj ett giltigt datumintervall för rapporten."
@@ -806,7 +806,7 @@
     "addFailed": "Det gick inte att lägga till",
     "columns": {
       "component": "Komponent",
-      "sku": "SKU"
+      "sku": "Artikelnummer"
     },
     "componentAdded": "Komponenten tillagd.",
     "componentRemoved": "Komponenten borttagen.",
@@ -815,7 +815,7 @@
     "fields": {
       "component": "Komponent",
       "componentPlaceholder": "Välj en produkt…",
-      "sku": "SKU",
+      "sku": "Artikelnummer",
       "unit": "Enhet"
     },
     "loadComponentsFailed": "Det gick inte att ladda komponenter",
@@ -1028,7 +1028,7 @@
       "available": "Tillgängligt",
       "onHand": "I lager",
       "product": "Produkt",
-      "sku": "SKU",
+      "sku": "Artikelnummer",
       "stock": "Lagerbestånd",
       "type": "Typ"
     },
@@ -1262,7 +1262,7 @@
       "location": "Plats",
       "locationPlaceholder": "Välj en plats…",
       "reason": "Orsak",
-      "returnedUnitId": "Returnerad enhets ID",
+      "returnedUnitId": "ID för returnerad enhet",
       "rmaType": "Returtyp",
       "vendor": "Leverantör",
       "vendorPlaceholder": "Välj en leverantör…",
@@ -1471,7 +1471,7 @@
       "overridden": "Ändrat från {{price}} för denna försäljningsorder",
       "reset": "Återställ till paketpris"
     },
-    "invoiceModeHelp": "Vid leverans fakturerar när varorna skickas. Manuell låter dig sköta faktureringen själv.",
+    "invoiceModeHelp": "Vid leverans skapas fakturan när varorna skickas. Med Manuell sköter du faktureringen själv.",
     "invoicedItems": "{{count}} poster fakturerade.",
     "invoices": "Fakturor",
     "invoicingFailed": "Faktureringen misslyckades: {{error}}. Använd ”Skapa faktura” för att försöka igen.",
@@ -1533,7 +1533,7 @@
       "location": "Plats",
       "onHand": "I lager",
       "product": "Produkt",
-      "sku": "SKU"
+      "sku": "Artikelnummer"
     },
     "empty": {
       "noMatchTitle": "Inga produkter matchar",
@@ -1676,7 +1676,7 @@
       "unit": "Enhet",
       "unitPlaceholder": "Sök en levererad eller returnerad enhet…",
       "noUnits": "Inga levererade eller returnerade enheter matchar",
-      "location": "Återlägg i lager på plats",
+      "location": "Plats för återläggning",
       "locationPlaceholder": "Välj en plats…",
       "useCurrentLocation": "Använd enhetens nuvarande plats",
       "product": "Produkt",
