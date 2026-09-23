@@ -43,9 +43,23 @@ import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClien
 export function normalizeLegacyClientTaxId<T extends { tax_id_number?: string; properties?: any }>(data: T): T {
   const properties = data.properties && typeof data.properties === 'object' ? { ...data.properties } : data.properties;
   // Canonical input wins whenever present; legacy input is accepted only as fallback.
-  const taxIdNumber = data.tax_id_number ?? properties?.tax_id;
+  const legacyTaxId = typeof properties?.tax_id === 'string' ? properties.tax_id.trim() : properties?.tax_id;
+  const taxIdNumber = data.tax_id_number ?? legacyTaxId;
   if (properties && typeof properties === 'object') delete properties.tax_id;
   return { ...data, ...(taxIdNumber === undefined ? {} : { tax_id_number: taxIdNumber }), ...(properties === undefined ? {} : { properties }) };
+}
+
+export function replaceClientPropertiesPreservingLegacyTaxId(properties: any, previousProperties: any): any {
+  if (!properties || typeof properties !== 'object') return properties;
+  const replacement = { ...properties };
+  if (
+    previousProperties && typeof previousProperties === 'object' &&
+    Object.prototype.hasOwnProperty.call(previousProperties, 'legacy_tax_id') &&
+    !Object.prototype.hasOwnProperty.call(replacement, 'legacy_tax_id')
+  ) {
+    replacement.legacy_tax_id = previousProperties.legacy_tax_id;
+  }
+  return replacement;
 }
 
 function stripLegacyClientTaxId<T extends { properties?: any }>(client: T): T {
@@ -631,10 +645,10 @@ export class ClientService extends BaseService<IClient> {
         updated_at: knex.raw('now()'),
       };
 
-      // Preserve existing JSON properties during partial updates, including
-      // legacy_tax_id values retained by the consolidation migration.
+      // Keep PUT properties replacement semantics, retaining only the audit
+      // value introduced by the Tax ID consolidation migration.
       if (normalized.properties && typeof normalized.properties === 'object') {
-        updateData.properties = { ...(before.properties || {}), ...normalized.properties };
+        updateData.properties = replaceClientPropertiesPreservingLegacyTaxId(normalized.properties, before.properties);
       }
 
       // Remove undefined values + non-column fields
