@@ -67,8 +67,12 @@ resolve_control_plane_image() {
     return 0
   fi
   local image
+  # Prefer the pod that is actually running: an upgrade briefly leaves the
+  # previous (Completed/Terminating) pod in the list, and selecting it would run
+  # the reconcile Job with a stale image that lacks the current helper.
   image="$("$KUBECTL_BIN" --kubeconfig "$KUBECONFIG_PATH" -n "$CONTROL_PLANE_NAMESPACE" \
     get pods -l app.kubernetes.io/name=appliance-control-plane \
+    --field-selector=status.phase=Running \
     -o jsonpath='{.items[0].status.containerStatuses[0].imageID}' 2>/dev/null || true)"
   if [ -z "$image" ]; then
     image="$("$KUBECTL_BIN" --kubeconfig "$KUBECONFIG_PATH" -n "$CONTROL_PLANE_NAMESPACE" \

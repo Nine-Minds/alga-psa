@@ -117,6 +117,37 @@ test('the Job namespace and service account are overridable for tests and future
   assert.match(result.stdout, /serviceAccountName: custom-sa/);
 });
 
+test('the reconcile image is resolved from the running control-plane pod, not a stale one', () => {
+  // An upgrade briefly lists the previous Completed/Terminating pod before the
+  // running replacement. Selecting `.items[0]` unconditionally ran the Job with
+  // an image that lacked the current helper; the resolver must filter to Running.
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-dns-image-'));
+  const fakeBin = path.join(dir, 'bin');
+  fs.mkdirSync(fakeBin);
+  const argsLog = path.join(dir, 'kubectl-args.log');
+  const runningImage = `ghcr.io/nine-minds/alga-appliance-control-plane@sha256:${'b'.repeat(64)}`;
+  fs.writeFileSync(path.join(fakeBin, 'kubectl'), `#!/usr/bin/env bash
+printf '%s\\n' "$*" >> "$KUBECTL_ARGS_LOG"
+printf '%s' "$RUNNING_IMAGE"
+`, { mode: 0o755 });
+
+  const result = spawnSync('bash', [launcher, '--dry-run', '--kubeconfig', '/tmp/k3s.yaml'], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      PATH: `${fakeBin}:${process.env.PATH}`,
+      KUBECTL_ARGS_LOG: argsLog,
+      RUNNING_IMAGE: runningImage,
+      ALGA_APPLIANCE_CONTROL_PLANE_IMAGE: ''
+    }
+  });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  const job = YAML.parse(result.stdout);
+  assert.equal(job.spec.template.spec.containers[0].image, runningImage);
+  assert.match(fs.readFileSync(argsLog, 'utf8'), /--field-selector=status\.phase=Running/);
+});
+
 // A YAML-parse assertion cannot catch a command that parses but cannot run. This
 // builds the real command string and executes it against stub host tools so the
 // `command -v`-as-a-builtin bug (and any future staging regression) fails here.
