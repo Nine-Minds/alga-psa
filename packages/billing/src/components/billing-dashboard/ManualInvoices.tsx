@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   generateManualInvoice,
   getClientBillingEmailStatus,
@@ -293,6 +293,9 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Stable per-unsaved-edit idempotency key: a retried save reuses it, so the
+  // server returns the already-applied result instead of appending twice.
+  const pendingOperationIdRef = useRef<string>(uuidv4());
   const [partialPeriodOpen, setPartialPeriodOpen] = useState(false);
   const [partialDirection, setPartialDirection] = useState<'increase' | 'decrease'>('increase');
   const [partialUnits, setPartialUnits] = useState('3');
@@ -763,6 +766,9 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           newItems: newItemsToSave.map(mapToNewItemSaveFormat),
           updatedItems: updatedItemsToSave.map(mapToUpdateSaveFormat),
           removedItemIds
+        }, {
+          operationId: pendingOperationIdRef.current,
+          expectedRevision: currentInvoiceData.draft_adjustment_revision,
         });
 
         if (isManualInvoiceFailure(updateResult)) {
@@ -844,6 +850,8 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
             item_id: uuidv4(),
             invoice_id: currentInvoiceData.invoice_id
         }]);
+        // This edit is committed; the next edit gets a fresh idempotency key.
+        pendingOperationIdRef.current = uuidv4();
         await onSaved?.();
         onGenerateSuccess(); // Notify parent about successful update
 

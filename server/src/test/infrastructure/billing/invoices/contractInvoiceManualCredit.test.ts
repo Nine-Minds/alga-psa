@@ -264,7 +264,11 @@ describe('Contract Invoice Manual Credit', () => {
       tenant: context.tenantId
     };
 
-    const updatedInvoice = await addManualItemsToInvoice(invoiceId, [manualCredit]);
+    const operationId = uuidv4();
+    const updatedInvoice = await addManualItemsToInvoice(invoiceId, [manualCredit], {
+      operationId,
+      expectedRevision: 0,
+    });
 
     const baseSubtotal = Number(generatedInvoice!.subtotal);
     const baseTax = Number(generatedInvoice!.tax);
@@ -330,6 +334,31 @@ describe('Contract Invoice Manual Credit', () => {
       });
 
     expect(creditDetails.length).toBe(0);
+
+    // --- Retry idempotency: replaying the same operation must not append ---
+    const replayedInvoice = await addManualItemsToInvoice(invoiceId, [manualCredit], {
+      operationId,
+      expectedRevision: 1,
+    });
+    const creditsAfterReplay = await context.db('invoice_charges')
+      .where({ invoice_id: invoiceId, tenant: context.tenantId, is_manual: true, is_discount: true });
+    expect(creditsAfterReplay).toHaveLength(1);
+    expect(Number(replayedInvoice.total_amount)).toBe(expectedTotal);
+    expect(replayedInvoice.draft_adjustment_revision).toBe(1);
+
+    // --- A stale revision with a fresh operation is rejected before any write ---
+    const staleCredit = { ...manualCredit, item_id: uuidv4() };
+    const beforeStale = await context.db('invoice_charges')
+      .where({ invoice_id: invoiceId, tenant: context.tenantId });
+    await expect(
+      addManualItemsToInvoice(invoiceId, [staleCredit], {
+        operationId: uuidv4(),
+        expectedRevision: 0,
+      }),
+    ).rejects.toMatchObject({ code: 'STALE_ADJUSTMENT_REVISION' });
+    const afterStale = await context.db('invoice_charges')
+      .where({ invoice_id: invoiceId, tenant: context.tenantId });
+    expect(afterStale).toHaveLength(beforeStale.length);
   });
 
   it('T022: invoice generation succeeds for a cloned assignment with duplicated contract-line configuration after migration', async () => {

@@ -651,6 +651,7 @@ const Invoice = {
       credit_applied: creditApplied,
       billing_cycle_id: invoice.billing_cycle_id,
       is_manual: Boolean(invoice.is_manual),
+      draft_adjustment_revision: Number((invoice as { draft_adjustment_revision?: number }).draft_adjustment_revision ?? 0),
       tax_source: invoice.tax_source || 'internal',
       recurring_service_period_start: recurringServicePeriodStarts[0] || null,
       recurring_service_period_end: recurringServicePeriodEnds[recurringServicePeriodEnds.length - 1] || null,

@@ -234,6 +234,22 @@ export interface IDiscount extends TenantEntity {
   discount_type: 'percentage' | 'fixed';
   value: number;
   amount?: number;
+  /**
+   * Explicit eligible scope. Null preserves the legacy invoice-wide behavior
+   * (a contract-line link stays an eligibility trigger, not an implicit
+   * narrowing). Set by configured automatic discounts that opt into a scope.
+   */
+  scope?: 'invoice' | 'contract' | 'service' | 'item' | null;
+  /** Contract assignment a `contract`-scoped discount resolves against. */
+  client_contract_id?: string | null;
+  /** Contract line a legacy/eligibility-linked discount is associated with. */
+  contract_line_id?: string | null;
+  /** Service a `service`-scoped discount resolves against. */
+  scope_service_id?: string | null;
+  /** Charge item an `item`-scoped discount resolves against. */
+  applies_to_item_id?: string | null;
+  /** Persisted evaluation order; lower runs first. */
+  priority?: number | null;
 }
 
 export interface IAdjustment extends TenantEntity {

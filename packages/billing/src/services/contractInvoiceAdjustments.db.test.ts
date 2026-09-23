@@ -26,7 +26,11 @@ vi.mock('../lib/authHelpers', () => ({
   getAnalyticsAsync: vi.fn(),
 }));
 
-const { persistManualInvoiceCharges, reconcileAutomaticInvoiceDiscounts } = await import('./invoiceService');
+const {
+  persistManualInvoiceCharges,
+  reconcileAutomaticInvoiceDiscounts,
+  reconcileAutomaticInvoiceAdjustments,
+} = await import('./invoiceService');
 
 let db: Knex;
 let tenant: string;
@@ -490,6 +494,97 @@ describe('contract invoice adjustments (DB-backed)', () => {
         );
       }),
     ).rejects.toMatchObject({ code: 'DISCOUNT_TARGET_NOT_FOUND' });
+  });
+
+  it('applies a configured service-scoped discount only to matching service rows', async () => {
+    // The shared invoice-wide discount would mask the scoped one; disable it
+    // for the duration of this fixture.
+    await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: false });
+    const scopedDiscountId = uuidv4();
+    await db('discounts').insert({
+      tenant,
+      discount_id: scopedDiscountId,
+      discount_name: 'Service 50%',
+      discount_type: 'percentage',
+      value: 0.5,
+      start_date: '2026-01-01T00:00:00.000Z',
+      end_date: null,
+      is_active: true,
+      scope: 'service',
+      scope_service_id: serviceId,
+    });
+    await db('contract_line_discounts').insert({
+      tenant,
+      discount_id: scopedDiscountId,
+      contract_line_id: contractLineId,
+      client_id: clientId,
+    });
+
+    try {
+      const invoiceId = uuidv4();
+      await db('invoices').insert({
+        tenant,
+        invoice_id: invoiceId,
+        invoice_number: `ADJ-SVC-${invoiceId.slice(0, 8)}`,
+        invoice_date: '2026-09-01T00:00:00.000Z',
+        due_date: '2026-09-30T00:00:00.000Z',
+        total_amount: 490_000,
+        status: 'draft',
+        client_id: clientId,
+        currency_code: 'USD',
+        is_manual: false,
+      });
+      await db('invoice_charges').insert({
+        tenant,
+        item_id: uuidv4(),
+        invoice_id: invoiceId,
+        service_id: serviceId,
+        description: 'In-scope recurring',
+        quantity: 1,
+        unit_price: 390_000,
+        net_amount: 390_000,
+        total_price: 390_000,
+        tax_amount: 0,
+        tax_rate: 0,
+        is_manual: false,
+        is_discount: false,
+        is_taxable: false,
+      });
+      await db('invoice_charges').insert({
+        tenant,
+        item_id: uuidv4(),
+        invoice_id: invoiceId,
+        service_id: null,
+        description: 'Out-of-scope line',
+        quantity: 1,
+        unit_price: 100_000,
+        net_amount: 100_000,
+        total_price: 100_000,
+        tax_amount: 0,
+        tax_rate: 0,
+        is_manual: false,
+        is_discount: false,
+        is_taxable: false,
+      });
+
+      const result = await db.transaction(async (trx) =>
+        reconcileAutomaticInvoiceAdjustments(trx, tenant, invoiceId),
+      );
+
+      // 50% of the in-scope $3,900 only; the $1,000 line is out of scope.
+      expect(result.automaticDiscountAmount).toBe(195_000);
+      const discountRows = await db('invoice_charges')
+        .where({ tenant, invoice_id: invoiceId, adjustment_source_kind: 'discount' });
+      expect(discountRows).toHaveLength(1);
+      expect(Number(discountRows[0].net_amount)).toBe(-195_000);
+      expect(discountRows[0].adjustment_scope).toBe('service');
+      expect(Number(discountRows[0].adjustment_base_amount)).toBe(390_000);
+    } finally {
+      await db('contract_line_discounts').where({ tenant, discount_id: scopedDiscountId }).delete();
+      await db('invoice_charges').where({ tenant, adjustment_source_id: scopedDiscountId }).delete();
+      await db('discounts').where({ tenant, discount_id: scopedDiscountId }).delete();
+      await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: true });
+    }
   });
 });
 

@@ -47,6 +47,12 @@ export interface IInvoice extends TenantEntity {
   credit_applied: number;
   billing_cycle_id?: string;
   is_manual: boolean;
+  /**
+   * Monotonic token bumped by every manual adjustment save. The editor sends
+   * the revision it loaded; a stale value is rejected instead of overwriting a
+   * newer edit.
+   */
+  draft_adjustment_revision?: number;
   invoice_charges: IInvoiceCharge[];
   /** @deprecated Use invoice_charges instead. */
   invoice_items?: IInvoiceCharge[];
@@ -641,6 +647,12 @@ export interface InvoiceViewModel {
   credit_applied: number;
   billing_cycle_id?: string;
   is_manual: boolean;
+  /**
+   * Monotonic token bumped by every manual adjustment save. The editor sends
+   * the revision it loaded; a stale value is rejected instead of overwriting a
+   * newer edit.
+   */
+  draft_adjustment_revision?: number;
   /** Financial-document identity, stamped at finalization. */
   invoice_type?: 'standard' | 'credit_note' | 'prepayment' | null;
   is_prepayment?: boolean;

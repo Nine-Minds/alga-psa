@@ -16,11 +16,6 @@ import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileL
 import { resolveChargeProfile } from '../lib/billing/billingProfileResolution';
 import { resolveInvoiceBillingRecipient } from './invoiceBillingRecipientService';
 import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
-import {
-  evaluateContractInvoiceAdjustments,
-  toPersistedAutomaticDiscountLines,
-  type AutomaticDiscountPolicy,
-} from '../lib/billing/compute/contractInvoiceAdjustments';
 
 
 // Helper interface for tax calculation
@@ -1053,173 +1048,14 @@ export async function persistManualInvoiceCharges(
   return subtotal;
 }
 
-/**
- * Re-evaluates the automatic discount lines that the generator stamped with
- * `adjustment_source_kind = 'discount'`. Draft refresh and manual saves call
- * this so a discount configured against the invoice-wide eligible base is
- * applied again after manual charges/credits are added, in place and without
- * duplicating rows.
- *
- * Legacy automatic discount rows have no provenance and are intentionally left
- * untouched: this path only reconciles discounts this system generated with a
- * stable source link, so historical documents keep their saved snapshot.
- */
-export async function reconcileAutomaticInvoiceDiscounts(
-  tx: Knex.Transaction,
-  tenant: string,
-  invoiceId: string,
-): Promise<void> {
-  const invoice = await tenantScopedTable(tx, tenant, 'invoices')
-    .where({ invoice_id: invoiceId })
-    .first();
-  if (!invoice) return;
 
-  const charges = await tenantScopedTable(tx, tenant, 'invoice_charges')
-    .where({ invoice_id: invoiceId })
-    .select(
-      'item_id',
-      'service_id',
-      'client_contract_id',
-      'description',
-      'quantity',
-      'unit_price',
-      'net_amount',
-      'is_discount',
-      'is_manual',
-      'adjustment_source_kind',
-      'adjustment_source_id',
-    );
+// Automatic discount settlement lives in a dedicated service so generation,
+// preview and draft refresh share one evaluator.
+export {
+  reconcileAutomaticInvoiceDiscounts,
+  reconcileAutomaticInvoiceAdjustments,
+} from "./invoiceAutomaticAdjustments";
 
-  const provenanceRows: any[] = charges.filter(
-    (charge: any) => charge.adjustment_source_kind === 'discount',
-  );
-  // Configured automatic discounts are (re)applied on contract-origin drafts
-  // even before a provenance row exists, so activating a discount and then
-  // adjusting the draft surfaces it. Manual-origin invoices with no
-  // source-linked row are left completely alone: never infer a source from a
-  // description or amount.
-  const contractOrigin = !Boolean(invoice.is_manual);
-  if (provenanceRows.length === 0 && !contractOrigin) return;
-
-  const db = tenantDb(tx, tenant);
-  const discountRowsQuery = db.table('discounts');
-  db.tenantJoin(discountRowsQuery, 'contract_line_discounts', 'discounts.discount_id', 'contract_line_discounts.discount_id');
-  db.tenantJoin(discountRowsQuery, 'contract_lines as cl', 'cl.contract_line_id', 'contract_line_discounts.contract_line_id');
-  db.tenantJoin(discountRowsQuery, 'contracts as c', 'c.contract_id', 'cl.contract_id');
-  db.tenantJoin(discountRowsQuery, 'client_contracts as cc', 'cc.contract_id', 'c.contract_id');
-  const today = Temporal.Now.plainDateISO().toString();
-  const discountRows: any[] = await discountRowsQuery
-    .where({
-      'cc.client_id': invoice.client_id,
-      'cc.tenant': tenant,
-      'discounts.is_active': true,
-    })
-    .andWhere('discounts.start_date', '<=', today)
-    .andWhere(function (this: Knex.QueryBuilder) {
-      this.whereNull('discounts.end_date').orWhere('discounts.end_date', '>', today);
-    })
-    .select('discounts.*');
-
-  const policies: AutomaticDiscountPolicy[] = discountRows.map((row) => ({
-    discount_id: row.discount_id,
-    discount_name: row.discount_name,
-    discount_type: row.discount_type,
-    value: Number(row.value) || 0,
-    scope: 'invoice',
-    priority: null,
-  }));
-
-  const result = evaluateContractInvoiceAdjustments({
-    charges: charges.map((charge: any) => ({
-      item_id: charge.item_id,
-      service_id: charge.service_id,
-      client_contract_id: charge.client_contract_id,
-      description: charge.description,
-      quantity: Number(charge.quantity) || 0,
-      unit_price: Number(charge.unit_price) || 0,
-      net_amount: Number(charge.net_amount) || 0,
-      is_discount: Boolean(charge.is_discount),
-      is_manual: Boolean(charge.is_manual),
-      adjustment_source_kind: charge.adjustment_source_kind,
-    })),
-    automaticDiscounts: policies,
-  });
-
-  const desired = toPersistedAutomaticDiscountLines(result);
-  const desiredById = new Map(desired.map((discount) => [discount.discount_id, discount]));
-  const existingBySourceId = new Map<string, any>(
-    provenanceRows
-      .filter((row: any) => Boolean(row.adjustment_source_id))
-      .map((row: any): [string, any] => [String(row.adjustment_source_id), row]),
-  );
-
-  const clientDefaultBillingProfileId = await getClientDefaultBillingProfileId(
-    tx,
-    tenant,
-    invoice.client_id,
-  );
-  const now = Temporal.Now.instant().toString();
-
-  for (const discount of desired) {
-    const netAmount = -discount.amount;
-    const unitPrice = discount.discount_type === 'percentage' ? 0 : netAmount;
-    const existing = existingBySourceId.get(discount.discount_id);
-    if (existing) {
-      await tenantScopedTable(tx, tenant, 'invoice_charges')
-        .where({ item_id: existing.item_id, invoice_id: invoiceId })
-        .update({
-          net_amount: netAmount,
-          total_price: netAmount,
-          unit_price: unitPrice,
-          discount_type: discount.discount_type,
-          discount_percentage: discount.discount_type === 'percentage' ? discount.value : null,
-          adjustment_source_revision: 1,
-          adjustment_scope: discount.scope,
-          adjustment_base_amount: discount.base_amount,
-          adjustment_reason: `Automatic discount: ${discount.discount_name}`,
-          updated_at: now,
-        });
-    } else {
-      await tenantScopedTable(tx, tenant, 'invoice_charges').insert({
-        item_id: uuidv4(),
-        invoice_id: invoiceId,
-        service_id: null,
-        description: discount.discount_name,
-        quantity: 1,
-        unit_price: unitPrice,
-        net_amount: netAmount,
-        tax_amount: 0,
-        tax_rate: 0,
-        total_price: netAmount,
-        is_taxable: false,
-        is_discount: true,
-        is_manual: false,
-        discount_type: discount.discount_type,
-        discount_percentage: discount.discount_type === 'percentage' ? discount.value : null,
-        billing_profile_id: clientDefaultBillingProfileId,
-        billing_profile_source: 'client_default',
-        adjustment_source_kind: 'discount',
-        adjustment_source_id: discount.discount_id,
-        adjustment_source_revision: 1,
-        adjustment_scope: discount.scope,
-        adjustment_base_amount: discount.base_amount,
-        adjustment_reason: `Automatic discount: ${discount.discount_name}`,
-        tenant,
-        created_at: now,
-      });
-    }
-  }
-
-  // A source discount that is no longer configured/active removes only its own
-  // still-editable automatic settlement; manual rows and other sources remain.
-  for (const row of provenanceRows) {
-    if (!row.adjustment_source_id) continue;
-    if (desiredById.has(String(row.adjustment_source_id))) continue;
-    await tenantScopedTable(tx, tenant, 'invoice_charges')
-      .where({ item_id: row.item_id, invoice_id: invoiceId, adjustment_source_kind: 'discount' })
-      .delete();
-  }
-}
 
 /**
  * Persists fixed-price invoice items generated by the billing engine.

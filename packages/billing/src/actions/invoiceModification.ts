@@ -16,7 +16,8 @@ import { IInvoiceCharge, InvoiceViewModel, DiscountType } from '@alga-psa/types'
 import { BillingEngine } from '../lib/billing/billingEngine';
 import ProjectBillingCapUsage from '../models/projectBillingCapUsage';
 import ProjectBillingScheduleEntry from '../models/projectBillingScheduleEntry';
-import { persistInvoiceCharges, persistManualInvoiceCharges, reconcileAutomaticInvoiceDiscounts } from '../services/invoiceService'; // Import persistManualInvoiceCharges
+import { persistInvoiceCharges, persistManualInvoiceCharges } from '../services/invoiceService'; // Import persistManualInvoiceCharges
+import { reconcileAutomaticInvoiceAdjustments } from '../services/invoiceAutomaticAdjustments';
 import Invoice from '@alga-psa/billing/models/invoice';
 import { v4 as uuidv4 } from 'uuid';
 // import { getRedisStreamClient } from '@alga-psa/workflow-streams'; // No longer directly used here
@@ -929,6 +930,68 @@ async function assertInvoiceEditableUnderLock(
 }
 
 /**
+ * Server-checked identity for a manual adjustment save. The client sends the
+ * `expectedRevision` it loaded and (optionally) a per-save `operationId`.
+ * A stale revision is rejected; a replayed operation is a no-op, so a double
+ * click or retry cannot append the same lines twice.
+ */
+export interface ManualAdjustmentSubmission {
+  operationId?: string;
+  expectedRevision?: number;
+}
+
+export const STALE_ADJUSTMENT_REVISION = 'STALE_ADJUSTMENT_REVISION';
+
+async function adjustmentOperationAlreadyApplied(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  operationId: string | undefined,
+): Promise<boolean> {
+  if (!operationId) return false;
+  const row = await tenantScopedTable(conn, tenant, 'invoice_adjustment_operations')
+    .where({ tenant, operation_id: operationId })
+    .first('operation_id');
+  return Boolean(row);
+}
+
+function assertAdjustmentRevisionCurrent(
+  invoice: Record<string, any>,
+  expectedRevision: number | undefined,
+): void {
+  if (expectedRevision === undefined || expectedRevision === null) return;
+  const current = Number(invoice.draft_adjustment_revision ?? 0);
+  if (Number(expectedRevision) !== current) {
+    throw new ManualInvoiceError(
+      STALE_ADJUSTMENT_REVISION,
+      'This invoice changed since it was loaded. Reload it before saving your adjustments.',
+      { expectedRevision: String(expectedRevision), currentRevision: String(current) },
+    );
+  }
+}
+
+async function recordAdjustmentSave(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  invoiceId: string,
+  operationId: string | undefined,
+): Promise<void> {
+  await tenantScopedTable(conn, tenant, 'invoices')
+    .where({ invoice_id: invoiceId, tenant })
+    .increment('draft_adjustment_revision', 1);
+
+  if (!operationId) return;
+  const row = await tenantScopedTable(conn, tenant, 'invoices')
+    .where({ invoice_id: invoiceId, tenant })
+    .first('draft_adjustment_revision');
+  await tenantScopedTable(conn, tenant, 'invoice_adjustment_operations').insert({
+    tenant,
+    operation_id: operationId,
+    invoice_id: invoiceId,
+    resulting_revision: Number(row?.draft_adjustment_revision ?? 0),
+  });
+}
+
+/**
  * Read-only capability probe for the draft adjustment editor. Returns the same
  * decision the writers enforce, without taking a row lock.
  */
@@ -1748,7 +1811,8 @@ export const updateInvoiceManualItems = withAuth(async (
   user,
   { tenant },
   invoiceId: string,
-  changes: ManualItemsUpdate
+  changes: ManualItemsUpdate,
+  submission?: ManualAdjustmentSubmission,
 ): Promise<InvoiceManualItemsUpdateActionResult> => {
   const context = {
     tenant,
@@ -1806,7 +1870,7 @@ export const updateInvoiceManualItems = withAuth(async (
       );
     }
 
-    await updateManualInvoiceItemsInternal(invoiceId, changes, session!, tenant); // Renamed internal call
+    await updateManualInvoiceItemsInternal(invoiceId, changes, session!, tenant, submission); // Renamed internal call
     return await Invoice.getFullInvoiceById(knex, tenant, invoiceId);
   } catch (error) {
     if (error instanceof ManualInvoiceError) {
@@ -1840,7 +1904,8 @@ async function updateManualInvoiceItemsInternal(
   invoiceId: string,
   changes: ManualItemsUpdate,
   session: Session,
-  tenant: string
+  tenant: string,
+  submission?: ManualAdjustmentSubmission,
 ): Promise<void> {
   const { knex } = await createTenantKnex(tenant);
   const billingEngine = new BillingEngine();
@@ -1852,6 +1917,13 @@ async function updateManualInvoiceItemsInternal(
     // the operator is editing must win the race, not be overwritten by a stale
     // snapshot the UI fetched earlier.
     const invoice = await assertInvoiceEditableUnderLock(trx, tenant, invoiceId);
+
+    // A replayed operation is a no-op; a stale revision is rejected before any
+    // row is touched.
+    if (await adjustmentOperationAlreadyApplied(trx, tenant, submission?.operationId)) {
+      return;
+    }
+    assertAdjustmentRevisionCurrent(invoice, submission?.expectedRevision);
 
     const client = await tenantScopedTable(trx, tenant, 'clients')
       .where({ client_id: invoice.client_id })
@@ -2102,8 +2174,9 @@ async function updateManualInvoiceItemsInternal(
     // Automatic discounts stamped with provenance are re-applied against the
     // post-edit eligible base first, in place, so the stored discount rows and
     // the manual additions agree.
-    await reconcileAutomaticInvoiceDiscounts(trx, tenant, invoiceId);
+    await reconcileAutomaticInvoiceAdjustments(trx, tenant, invoiceId);
     await billingEngine.recalculateInvoice(invoiceId, trx, tenant);
+    await recordAdjustmentSave(trx, tenant, invoiceId, submission?.operationId);
   });
 
 }
@@ -2113,7 +2186,8 @@ export const addManualItemsToInvoice = withAuth(async (
   user,
   { tenant },
   invoiceId: string,
-  items: IInvoiceCharge[]
+  items: IInvoiceCharge[],
+  submission?: ManualAdjustmentSubmission,
 ): Promise<InvoiceManualItemsUpdateActionResult> => {
   if (!await hasPermission(user, 'invoice', 'update')) {
     return permissionError('Permission denied: invoice update required', 'msp/invoicing:errors.permissions.invoiceUpdate');
@@ -2158,7 +2232,7 @@ export const addManualItemsToInvoice = withAuth(async (
   }
 
   try {
-    await addManualInvoiceItemsInternal(invoiceId, items, session!, tenant); // Renamed internal call
+    await addManualInvoiceItemsInternal(invoiceId, items, session!, tenant, submission); // Renamed internal call
   } catch (error) {
     const expectedError = toInvoiceActionError(error);
     if (expectedError) {
@@ -2174,7 +2248,8 @@ async function addManualInvoiceItemsInternal(
   invoiceId: string,
   items: IInvoiceCharge[],
   session: Session,
-  tenant: string
+  tenant: string,
+  submission?: ManualAdjustmentSubmission,
 ): Promise<void> {
   const { knex } = await createTenantKnex(tenant);
   const billingEngine = new BillingEngine();
@@ -2184,6 +2259,13 @@ async function addManualInvoiceItemsInternal(
     // concurrent finalize/export could still receive new rows. Lock and recheck
     // the lifecycle in the same transaction that inserts them.
     const invoice = await assertInvoiceEditableUnderLock(trx, tenant, invoiceId);
+
+    // A replayed operation is a no-op; a stale revision is rejected before any
+    // row is touched.
+    if (await adjustmentOperationAlreadyApplied(trx, tenant, submission?.operationId)) {
+      return;
+    }
+    assertAdjustmentRevisionCurrent(invoice, submission?.expectedRevision);
 
     const client = await tenantScopedTable(trx, tenant, 'clients')
       .where({ client_id: invoice.client_id })
@@ -2235,8 +2317,9 @@ async function addManualInvoiceItemsInternal(
     // Recalculate inside the transaction: a tax/totals failure must roll the
     // new rows back, not leave an invoice whose stored totals disagree with its
     // charges (previously recalc ran post-commit).
-    await reconcileAutomaticInvoiceDiscounts(trx, tenant, invoiceId);
+    await reconcileAutomaticInvoiceAdjustments(trx, tenant, invoiceId);
     await billingEngine.recalculateInvoice(invoiceId, trx, tenant);
+    await recordAdjustmentSave(trx, tenant, invoiceId, submission?.operationId);
   });
 }
 

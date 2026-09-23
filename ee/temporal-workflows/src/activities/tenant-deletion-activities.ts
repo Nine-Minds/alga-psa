@@ -123,6 +123,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'opportunity_meeting_sessions', 'opportunity_settings', 'opportunities',
 
   // Invoice details
+  // invoice_adjustment_operations is a FK-less manual-save idempotency ledger,
+  // so it can drop with the invoice rows it keys.
+  'invoice_adjustment_operations',
   'invoice_charges', 'invoice_annotations', 'invoice_time_entries', 'invoice_usage_records',
   'invoice_charge_details', 'invoice_charge_fixed_details', 'invoice_items',
   'invoice_payment_links', 'invoice_payments', 'invoice_template_assignments',

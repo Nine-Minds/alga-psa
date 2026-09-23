@@ -20,9 +20,18 @@ Isolated synthetic contract draft, seeded directly for the smoke:
   "Smoke 10% (all eligible)", percentage 0.10, active, linked through
   `contract_line_discounts` to the client's contract line.
 
-The new migration `20260923000000_add_adjustment_provenance_to_invoice_charges.cjs`
-was applied to the dev database before the final save (the worktree dev
-database did not auto-run it).
+Two migrations back this behaviour and were applied to the dev database before
+the final save (the worktree dev database did not auto-run them):
+
+- `20260923000000_add_adjustment_provenance_to_invoice_charges.cjs` — charge
+  provenance plus the `(tenant, invoice_id, adjustment_source_kind,
+  adjustment_source_id)` unique index that makes one settlement per source a
+  database invariant.
+- `20260923010000_invoice_adjustment_settlement_support.cjs` — explicit
+  discount `scope`/`scope_service_id`/`applies_to_item_id`/`priority`, the
+  affected `adjustment_period_start`/`_end` on a settlement row, and the
+  `invoices.draft_adjustment_revision` + `invoice_adjustment_operations`
+  manual-save idempotency ledger.
 
 ## What was exercised
 
@@ -35,7 +44,10 @@ database did not auto-run it).
 4. Saved. The automatic 10% discount was reconciled in place against the
    post-edit eligible base and the full authoritative invoice came back.
 5. Saved a second time to confirm idempotency; the discount row count stayed
-   at one and the totals did not change.
+   at one and the totals did not change. The save also carries a per-edit
+   operation id and the loaded `draft_adjustment_revision`, so a replayed
+   submit is a server-side no-op and a stale revision is rejected before any
+   row is touched.
 
 ## Expected vs actual
 
@@ -61,12 +73,19 @@ rows and the preview all agree, exercising the same persisted row set.
 # Unit (evaluator + allocation + partial-period maths)
 cd packages/billing && npx vitest run src/lib/billing/compute/contractInvoiceAdjustments.test.ts
 
-# DB-backed behavior (persistence, idempotency, prohibited edits)
+# DB-backed behavior (persistence, discount scopes, idempotency, prohibited edits)
 cd server && npx vitest run ../packages/billing/src/services/contractInvoiceAdjustments.db.test.ts
+
+# Manual-save idempotency, stale revision and the ledger table (real action path)
+cd server && npx vitest run src/test/infrastructure/billing/invoices/contractInvoiceManualCredit.test.ts
+
+# Generation regression for the existing discount surfaces
+cd server && npx vitest run src/test/infrastructure/billing/invoices/billingInvoiceGeneration_discounts.test.ts
 
 # Types and build
 NODE_OPTIONS="--max-old-space-size=8192" npx tsc --noEmit -p packages/billing/tsconfig.json
-npx tsc --noEmit -p packages/types/tsconfig.json
+NODE_OPTIONS="--max-old-space-size=8192" npx tsc --noEmit -p packages/types/tsconfig.json
+NODE_OPTIONS="--max-old-space-size=8192" npx tsc --noEmit -p packages/db/tsconfig.json
 cd packages/billing && npx tsup
 ```
 
@@ -78,7 +97,10 @@ cd packages/billing && npx tsup
   `5a1e0000-0000-4000-8000-0000000000a3` (and the smoke invoice) to remove it.
 - The manual line is taxable in the client region, so the invoice total carries
   $9.00 tax; the acceptance figures are pre-tax subtotals.
-- Automatic contract-change (true-up) settlement is not exercised here: the
-  companion card owns effective-history and its baseline policy is
-  next-period-only with no mid-period true-up. The manual partial-period path
-  covers both increase and decrease directions.
+- Automatic contract-change (true-up) settlement is deliberately absent, not
+  merely unexercised: companion card `f6e7254b` owns effective-history and its
+  recorded baseline is next-period-only with no mid-period true-up policy.
+  There is no supported policy to settle, so provisioning one would be
+  inventing product behaviour. The manual partial-period path covers both
+  increase and decrease directions and is the supported way to settle a
+  partial period.
