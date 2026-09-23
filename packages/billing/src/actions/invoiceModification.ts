@@ -2119,8 +2119,19 @@ async function updateManualInvoiceItemsInternal(
                 : subtotal;
               newNetAmount = -Math.round((baseAmount * updatedItem.discount_percentage) / 100);
             } else {
-              // Fixed discount - use the unit_price
-              newNetAmount = -Math.abs(Math.round(updatedItem.unit_price));
+              // Fixed discount or operator credit. A negative-rate manual charge
+              // is persisted as a fixed discount-like credit whose magnitude is
+              // quantity × rate (see persistManualInvoiceCharges' first pass);
+              // the editor reloads it as a fixed discount. Scaling by quantity
+              // preserves that credit when it is edited or resaved, while a
+              // fixed discount authored with quantity 1 keeps the historical
+              // -abs(rate) amount. The old unit-price-only formula silently
+              // dropped every credit's quantity in totals and output.
+              const quantity = Number(updatedItem.quantity);
+              const unitPrice = Number(updatedItem.unit_price);
+              const effectiveQuantity = Number.isFinite(quantity) && quantity !== 0 ? quantity : 1;
+              const effectiveUnitPrice = Number.isFinite(unitPrice) ? unitPrice : 0;
+              newNetAmount = -Math.abs(Math.round(effectiveQuantity * effectiveUnitPrice));
             }
             
             // Update the net_amount

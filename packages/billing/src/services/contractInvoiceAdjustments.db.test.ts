@@ -806,6 +806,123 @@ describe('contract invoice adjustments (DB-backed)', () => {
     }
   });
 
+  it('excludes a discount linked only to an unbilled sibling contract line (detail-backed invoice)', async () => {
+    // The only candidate should be the sibling-line discount.
+    await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: false });
+
+    const siblingLineId = uuidv4();
+    const siblingDiscountId = uuidv4();
+    const configId = uuidv4();
+    await db('contract_lines').insert({
+      tenant,
+      contract_line_id: siblingLineId,
+      contract_line_name: 'Unbilled sibling line',
+      contract_id: contractId,
+      billing_frequency: 'monthly',
+      contract_line_type: 'fixed',
+      is_active: true,
+    });
+    await db('discounts').insert({
+      tenant,
+      discount_id: siblingDiscountId,
+      discount_name: 'Sibling 25%',
+      discount_type: 'percentage',
+      value: 0.25,
+      start_date: '2026-01-01T00:00:00.000Z',
+      end_date: null,
+      is_active: true,
+    });
+    await db('contract_line_discounts').insert({
+      tenant,
+      discount_id: siblingDiscountId,
+      contract_line_id: siblingLineId,
+      client_id: clientId,
+    });
+
+    try {
+      const invoiceId = uuidv4();
+      const chargeId = uuidv4();
+      await db('invoices').insert({
+        tenant,
+        invoice_id: invoiceId,
+        invoice_number: `ADJ-SIB-${invoiceId.slice(0, 8)}`,
+        invoice_date: '2026-09-01T00:00:00.000Z',
+        due_date: '2026-09-30T00:00:00.000Z',
+        subtotal: 390000,
+        tax: 0,
+        total_amount: 390000,
+        status: 'draft',
+        client_id: clientId,
+        currency_code: 'USD',
+        is_manual: false,
+        client_contract_id: clientContractId,
+      });
+      await db('invoice_charges').insert({
+        tenant,
+        item_id: chargeId,
+        invoice_id: invoiceId,
+        service_id: serviceId,
+        description: 'Recurring support (detail-backed)',
+        quantity: 1,
+        unit_price: 390000,
+        net_amount: 390000,
+        total_price: 390000,
+        tax_amount: 0,
+        tax_rate: 0,
+        is_manual: false,
+        is_discount: false,
+        is_taxable: false,
+        client_contract_id: clientContractId,
+      });
+      // Canonical detail link to the BILLED line. The contract now has a
+      // concrete detail line, so the whole-contract fallback no longer applies
+      // and the unbilled sibling line cannot be represented.
+      await db('contract_line_service_configuration').insert({
+        tenant,
+        config_id: configId,
+        service_id: serviceId,
+        configuration_type: 'fixed',
+        contract_line_id: contractLineId,
+      });
+      await db('invoice_charge_details').insert({
+        tenant,
+        item_id: chargeId,
+        service_id: serviceId,
+        config_id: configId,
+        quantity: 1,
+        rate: 390000,
+      });
+
+      const result = await db.transaction(async (trx) =>
+        reconcileAutomaticInvoiceAdjustments(trx, tenant, invoiceId),
+      );
+
+      expect(result.automaticDiscountAmount).toBe(0);
+      const discountRows = await db('invoice_charges')
+        .where({ tenant, invoice_id: invoiceId, adjustment_source_kind: 'discount' });
+      expect(discountRows).toHaveLength(0);
+
+      // Positive control: moving the same discount onto the billed line makes it
+      // apply, proving the fixture reaches the evaluator and the exclusion is
+      // specifically the unbilled sibling link.
+      await db('contract_line_discounts')
+        .where({ tenant, discount_id: siblingDiscountId })
+        .update({ contract_line_id: contractLineId });
+      const applied = await db.transaction(async (trx) =>
+        reconcileAutomaticInvoiceAdjustments(trx, tenant, invoiceId),
+      );
+      expect(applied.automaticDiscountAmount).toBe(97500);
+    } finally {
+      await db('invoice_charge_details').where({ tenant, config_id: configId }).delete();
+      await db('contract_line_service_configuration').where({ tenant, config_id: configId }).delete();
+      await db('contract_line_discounts').where({ tenant, discount_id: siblingDiscountId }).delete();
+      await db('discounts').where({ tenant, discount_id: siblingDiscountId }).delete();
+      await db('invoice_charges').where({ tenant, adjustment_source_id: siblingDiscountId }).delete();
+      await db('contract_lines').where({ tenant, contract_line_id: siblingLineId }).delete();
+      await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: true });
+    }
+  });
+
   it('keeps a service-scoped, capped discount intact through tax and totals recalculation', async () => {
     // The plan's financial path: reconcile automatic settlements, then run the
     // shared tax/totals pass that calls recalculatePercentageDiscountInvoiceCharges.

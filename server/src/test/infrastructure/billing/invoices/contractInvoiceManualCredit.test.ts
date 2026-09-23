@@ -6,7 +6,7 @@ import { createClient } from '../../../../../test-utils/testDataFactory';
 import { createTestDate, createTestDateISO } from '../../../test-utils/dateUtils';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { generateInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
-import { addManualItemsToInvoice } from '@alga-psa/billing/actions/invoiceModification';
+import { addManualItemsToInvoice, updateInvoiceManualItems } from '@alga-psa/billing/actions/invoiceModification';
 import type { IInvoiceCharge } from 'server/src/interfaces/invoice.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -359,6 +359,105 @@ describe('Contract Invoice Manual Credit', () => {
     const afterStale = await context.db('invoice_charges')
       .where({ invoice_id: invoiceId, tenant: context.tenantId });
     expect(afterStale).toHaveLength(beforeStale.length);
+  });
+
+  it('T231: preserves a quantity>1 negative-rate credit through resave, tax and totals', async () => {
+    const clientId = context.clientId;
+    const invoiceId = await context.createEntity('invoices', {
+      invoice_number: `CREDIT-${uuidv4().slice(0, 8)}`,
+      invoice_date: createTestDateISO({ year: 2025, month: 1, day: 1 }),
+      due_date: createTestDateISO({ year: 2025, month: 2, day: 1 }),
+      status: 'draft',
+      client_id: clientId,
+      currency_code: 'USD',
+      is_manual: false,
+      total_amount: 0,
+    }, 'invoice_id');
+
+    const positiveItem: IInvoiceCharge = {
+      item_id: uuidv4(),
+      invoice_id: invoiceId,
+      service_id: undefined,
+      description: 'Manual service charge',
+      quantity: 1,
+      rate: 50000,
+      unit_price: 50000,
+      total_price: 50000,
+      net_amount: 50000,
+      tax_amount: 0,
+      tax_region: undefined,
+      tax_rate: 0,
+      is_manual: true,
+      is_taxable: false,
+      is_discount: false,
+      tenant: context.tenantId,
+    };
+    const creditItemId = uuidv4();
+    const creditItem: IInvoiceCharge = {
+      item_id: creditItemId,
+      invoice_id: invoiceId,
+      service_id: undefined,
+      description: 'Goodwill credit 3 x $100',
+      quantity: 3,
+      rate: -10000,
+      unit_price: -10000,
+      total_price: -30000,
+      net_amount: -30000,
+      tax_amount: 0,
+      tax_region: undefined,
+      tax_rate: 0,
+      is_manual: true,
+      is_taxable: false,
+      // The editor adds it as a charge; the negative rate makes it a credit,
+      // which the persistence layer stores as a fixed discount-like row.
+      is_discount: false,
+      tenant: context.tenantId,
+    };
+
+    await addManualItemsToInvoice(invoiceId, [positiveItem, creditItem], {
+      operationId: uuidv4(),
+      expectedRevision: 0,
+    });
+
+    const afterAdd = await context.db('invoice_charges')
+      .where({ item_id: creditItemId, tenant: context.tenantId })
+      .first();
+    expect(afterAdd).toBeTruthy();
+    expect(Number(afterAdd.quantity)).toBe(3);
+    expect(afterAdd.is_discount).toBe(true);
+    expect(Number(afterAdd.net_amount)).toBe(-30000);
+    expect(Number(afterAdd.total_price)).toBe(-30000);
+
+    // Reload, then resave the row exactly as the editor does: it is now a fixed
+    // discount carrying quantity 3 and rate -10000. Before the repair the
+    // fixed-discount recalc wrote -abs(unit_price) = -10000 here.
+    const resavedInvoice = await updateInvoiceManualItems(invoiceId, {
+      updatedItems: [
+        {
+          item_id: creditItemId,
+          description: 'Goodwill credit 3 x $100',
+          quantity: 3,
+          rate: -10000,
+          is_discount: true,
+          discount_type: 'fixed',
+          is_taxable: false,
+        },
+      ],
+      newItems: [],
+      removedItemIds: [],
+    } as any, { operationId: uuidv4(), expectedRevision: 1 });
+
+    const afterResave = await context.db('invoice_charges')
+      .where({ item_id: creditItemId, tenant: context.tenantId })
+      .first();
+    expect(Number(afterResave.quantity)).toBe(3);
+    expect(Number(afterResave.net_amount)).toBe(-30000);
+    expect(Number(afterResave.total_price)).toBe(-30000);
+
+    // Totals carry the full credit (50000 - 30000 = 20000), not -10000.
+    expect(Number((resavedInvoice as any).subtotal)).toBe(20000);
+    expect(Number((resavedInvoice as any).tax)).toBe(0);
+    expect(Number((resavedInvoice as any).total_amount)).toBe(20000);
   });
 
   it('T022: invoice generation succeeds for a cloned assignment with duplicated contract-line configuration after migration', async () => {

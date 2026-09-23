@@ -212,6 +212,28 @@ cd packages/billing && npx tsup
   Covered by the DB test “rejects a location and a billing profile that belong
   to another client”.
 
+## Credit and sibling-line repairs (review follow-up)
+
+- **Quantity>1 negative-rate credits.** A negative manual rate with quantity > 1
+  is persisted through the first pass as a fixed discount-like credit with
+  `net_amount = quantity × rate` (e.g. `3 × -$100 = -$300`) and `is_discount=true`;
+  the editor reloads it as a fixed discount. The update path's fixed-discount
+  recalc used `-abs(unit_price)` and dropped the quantity to `-$100` on edit or
+  resave. It now recomputes `-abs(quantity × unit_price)`, so the signed credit
+  survives save, edit, reload, tax and totals; a fixed discount authored with
+  quantity 1 is unchanged. Regression: `contractInvoiceManualCredit.test.ts`
+  `T231` adds a `3 × -$100` credit, resaves it through
+  `updateInvoiceManualItems`, and asserts the row stays `-$300` and the invoice
+  totals stay `$500 - $300 = $200`.
+- **Detail-backed sibling-line exclusion.** `contractInvoiceAdjustments.db.test.ts`
+  now builds an invoice whose charge carries a canonical
+  `invoice_charge_details.config_id → contract_line_service_configuration`
+  link to the billed line, a discount on an unbilled sibling line of the same
+  contract, and asserts the sibling discount is not applied (positive control:
+  moving the same discount onto the billed line applies `25% × $3,900 = $975`).
+  This proves the strict line-level eligibility change on the fixture it
+  actually affects.
+
 ## Cleanup / caveats
 
 - The seeded discount is active for the synthetic client and will keep applying
