@@ -1,0 +1,18 @@
+[
+  {"id":"F001","description":"Migration adds nullable client_billing_profiles.preferred_payment_method with CHECK in ('credit_card','bank_transfer','check'); down migration drops it","implemented":false,"prdRefs":["Data Model / API"]},
+  {"id":"F002","description":"Migration adds nullable invoices.payment_method snapshot column; existing rows remain NULL","implemented":false,"prdRefs":["Data Model / API"]},
+  {"id":"F003","description":"Single shared PREFERRED_PAYMENT_METHODS constant + type + i18n label keys; BillingConfigForm consumes it instead of its inline list","implemented":false,"prdRefs":["Data Model / API","UX / UI Notes"]},
+  {"id":"F004","description":"EffectiveBillingIdentity gains preferredPaymentMethod resolved profile ?? client via inherit(), recording overriddenFields","implemented":false,"prdRefs":["Data Model / API","Goals"]},
+  {"id":"F005","description":"Resolver normalizes legacy client values: '' or unknown strings resolve to null without throwing","implemented":false,"prdRefs":["Risks"]},
+  {"id":"F006","description":"ClientBillingProfileSettingsInput/SETTINGS_FIELDS include preferred_payment_method; get returns stored + effective value","implemented":false,"prdRefs":["Data Model / API"]},
+  {"id":"F007","description":"updateClientBillingProfileSettings validates preferred_payment_method against the method list and returns an i18n action error for invalid values; null clears to inherit","implemented":false,"prdRefs":["Data Model / API","Acceptance Criteria"]},
+  {"id":"F008","description":"Read action returns the profile's default non-deleted saved card (type, last4, expiry) via billingProfilePayments.listPaymentMethods, scoped to profile and client, client:read permission","implemented":false,"prdRefs":["Goals","Data Model / API"]},
+  {"id":"F009","description":"PaymentMethod interface in packages/types gains billing_profile_id","implemented":false,"prdRefs":["Data Model / API"]},
+  {"id":"F010","description":"Profile settings panel renders a Payment method CustomSelect with 'Inherit from client (<value>)' first option; selection saves key or null","implemented":false,"prdRefs":["UX / UI Notes"]},
+  {"id":"F011","description":"Profile settings panel shows read-only card-on-file line ('Visa •••• 4242, exp 04/28' or 'No card on file') with note that cards are managed in the client portal","implemented":false,"prdRefs":["UX / UI Notes"]},
+  {"id":"F012","description":"All new UI/error strings added to msp/clients (and billing) locale files with defaultValue","implemented":false,"prdRefs":["UX / UI Notes"]},
+  {"id":"F013","description":"Recurring invoice generation writes invoices.payment_method from the resolved billing identity of the invoice's profile","implemented":false,"prdRefs":["Data Model / API","Goals"]},
+  {"id":"F014","description":"Any other invoice creation path that sets invoices.billing_profile_id (manual/API invoices) also snapshots payment_method","implemented":false,"prdRefs":["Data Model / API"]},
+  {"id":"F015","description":"WasmInvoiceViewModel gains paymentMethod; invoiceAdapters maps invoices.payment_method key to localized label (null -> null)","implemented":false,"prdRefs":["Data Model / API"]},
+  {"id":"F016","description":"Invoice designer fieldCatalog registers invoice.paymentMethod; preview bindings and sample scenarios populate it","implemented":false,"prdRefs":["Data Model / API","Goals"]}
+]
