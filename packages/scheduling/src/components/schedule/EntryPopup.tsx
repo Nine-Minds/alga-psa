@@ -101,6 +101,11 @@ interface EntryPopupProps {
    */
   calendarOptions?: IVisibleCalendar[];
   /**
+   * Every group calendar the viewer may see (including read-only ones), used
+   * only to resolve the real name of an entry's calendar in read-only mode.
+   */
+  visibleGroupCalendars?: IVisibleCalendar[];
+  /**
    * Users whose calendars the viewer may assign entries to (self plus edit
    * shares). Undefined means no delegate restriction beyond canAssignOthers.
    */
@@ -154,6 +159,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   canAssignOthers,
   viewOnly = false,
   calendarOptions = [],
+  visibleGroupCalendars = [],
   assignableUserIds,
   lockWorkItem = false,
   hideWorkItemRow = false,
@@ -280,15 +286,20 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         ...calendarOptions.map((calendar) => ({ value: calendar.key, label: calendar.name })),
       ];
       // Keep the entry's current group calendar selectable even if the viewer
-      // could not add new entries to it.
+      // could not add new entries to it. Read-only viewers see the calendar's
+      // real name from the calendars already visible to them; only fall back to
+      // the generic label when it truly isn't in their visible set.
       if (entryData.calendar_id && !options.some((option) => option.value === entryData.calendar_id)) {
+        const knownCalendar = [...calendarOptions, ...visibleGroupCalendars]
+          .find((calendar) => calendar.key === entryData.calendar_id);
         options.push({
           value: entryData.calendar_id,
-          label: t('entryPopup.fields.calendarUnavailable', { defaultValue: 'Group calendar' }),
+          label: knownCalendar?.name
+            ?? t('entryPopup.fields.calendarUnavailable', { defaultValue: 'Group calendar' }),
         });
       }
       return options;
-    }, [calendarOptions, entryData.calendar_id, t]);
+    }, [calendarOptions, visibleGroupCalendars, entryData.calendar_id, t]);
     
     // Add a message to display when a user can't edit a private event
     const privateEventMessage = isPrivateEvent && !isCurrentUserSoleAssignee
@@ -1411,7 +1422,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         {(!isAppointmentRequest || (appointmentRequestData && appointmentRequestData.status === 'approved')) && (
         <div className="min-w-0">
           <div className="relative">
-            {viewOnly || lockWorkItem || isSourceOwnedWorkItemType(entryData.work_item_type) ? (
+            {viewOnly || !canEditFields || lockWorkItem || isSourceOwnedWorkItemType(entryData.work_item_type) ? (
               <div className="flex justify-between items-start gap-3 pt-1 pb-4">
                 {selectedWorkItem ? (
                   <div className="min-w-0 flex-1 text-sm text-gray-500 space-y-0.5">

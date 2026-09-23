@@ -748,6 +748,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
         focusedTechnicianId={focusedTechnicianId}
         canAssignOthers={canAssignOthers}
         calendarOptions={editableGroupCalendars}
+        visibleGroupCalendars={visibleGroups}
         assignableUserIds={assignableUserIds}
         users={usersLoading ? [] : displayedTechnicians}
         loading={usersLoading}
@@ -1426,7 +1427,6 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
           isOpen={isShareDialogOpen}
           onClose={() => setIsShareDialogOpen(false)}
           currentUserId={currentUserId}
-          users={allTechnicians || []}
         />
       )}
       {currentUserId && groupDialog.open && (
@@ -1438,7 +1438,6 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
             void fetchEvents();
           }}
           currentUserId={currentUserId}
-          users={allTechnicians || []}
           calendar={groupDialog.calendar}
         />
       )}

@@ -13,6 +13,7 @@ export default defineConfig({
       'tests/**/*.test.ts',
       'src/**/*.test.ts',
       'tests/AvailabilitySettings.component.test.tsx',
+      'tests/calendarSharePicker.component.test.tsx',
       'tests/agentScheduleView.test.tsx',
       'tests/SchedulePage.accessRetry.test.tsx',
       'tests/SchedulePage.dialogRestore.test.tsx',

@@ -75,6 +75,7 @@ vi.mock('@alga-psa/scheduling/actions', () => ({
   getMyCalendarShares: vi.fn(async () => ({ success: true, data: [] })),
   setMyCalendarShares: vi.fn(async () => ({ success: true, data: [] })),
   getShareableTeams: vi.fn(async () => ({ success: true, data: [] })),
+  getShareableUsers: vi.fn(async () => ({ success: true, data: [] })),
   createGroupCalendar: vi.fn(),
   updateGroupCalendar: vi.fn(),
   getGroupCalendarShares: vi.fn(async () => ({ success: true, data: [] })),

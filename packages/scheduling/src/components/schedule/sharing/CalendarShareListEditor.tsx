@@ -94,6 +94,7 @@ const CalendarShareListEditor: React.FC<CalendarShareListEditorProps> = ({
         labelStyle="none"
         placeholder={t('sharing.addRecipient', { defaultValue: 'Add a person or team' })}
         disabled={disabled}
+        hideNotAssignedOption
         modal
       />
 

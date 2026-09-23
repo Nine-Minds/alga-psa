@@ -5,14 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/component
 import { Button } from '@alga-psa/ui/components/Button';
 import { Share2 } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { useUsers } from '@alga-psa/user-composition/hooks';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import ShareCalendarDialog from './ShareCalendarDialog';
 
 /** Profile › Calendar settings card that opens the "Share my calendar" dialog. */
 const CalendarSharingSettings: React.FC = () => {
   const { t } = useTranslation('msp/schedule');
-  const { users } = useUsers();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -53,7 +51,6 @@ const CalendarSharingSettings: React.FC = () => {
             isOpen={isOpen}
             onClose={() => setIsOpen(false)}
             currentUserId={currentUserId}
-            users={users || []}
           />
         )}
       </CardContent>

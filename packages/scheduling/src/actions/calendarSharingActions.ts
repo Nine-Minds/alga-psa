@@ -19,6 +19,7 @@ import type {
   ICalendarShareView,
   IScheduleViewerCapabilities,
   ITeam,
+  IUser,
   IVisibleCalendar,
 } from '@alga-psa/types';
 import {
@@ -649,6 +650,33 @@ export const restoreGroupCalendar = withAuth(async (
   }
 });
 
+/**
+ * Active internal users that can receive a calendar share. Gated by
+ * `user_schedule:read`, not `user:read`: a Technician can pick colleagues to
+ * share with without holding the broader user-read permission.
+ */
+export const getShareableUsers = withAuth(async (
+  user,
+  { tenant }
+): Promise<CalendarSharingResult<IUser[]>> => {
+  try {
+    const { knex: db } = await createTenantKnex();
+    const base = await checkBaseAccess(user, db);
+    if (!base.ok) return fail(base.error);
+
+    const users = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return tenantDb(trx, tenant).table('users')
+        .where({ user_type: 'internal', is_inactive: false })
+        .select('user_id', 'first_name', 'last_name', 'email', 'user_type', 'is_inactive')
+        .orderBy([{ column: 'first_name' }, { column: 'last_name' }]);
+    });
+    return { success: true, data: users as IUser[] };
+  } catch (error) {
+    console.error('Error loading users for sharing:', error);
+    return fail('Failed to load users.');
+  }
+});
+
 /** Teams that can receive a calendar share (for the share pickers). */
 export const getShareableTeams = withAuth(async (
   user,
@@ -663,12 +691,32 @@ export const getShareableTeams = withAuth(async (
       const scoped = tenantDb(trx, tenant);
       const [teamRows, memberRows] = await Promise.all([
         scoped.table('teams').select('team_id', 'team_name', 'manager_id').orderBy('team_name', 'asc'),
-        scoped.table('team_members').select('team_id', 'user_id'),
+        scoped.table('team_members').select('team_id', 'user_id', 'role'),
       ]);
-      const membersByTeam = new Map<string, Array<{ user_id: string }>>();
-      for (const row of memberRows as Array<{ team_id: string; user_id: string }>) {
+      const typedMemberRows = memberRows as Array<{ team_id: string; user_id: string; role: string | null }>;
+      const memberUserIds = Array.from(new Set(typedMemberRows.map((row) => row.user_id)));
+      // Join names server-side under the same user_schedule:read gate so the
+      // picker can show the team lead without the caller holding user:read.
+      const memberUserRows = memberUserIds.length > 0
+        ? await scoped.table('users')
+            .whereIn('user_id', memberUserIds)
+            .select('user_id', 'first_name', 'last_name')
+        : [];
+      const namesById = new Map(
+        (memberUserRows as Array<{ user_id: string; first_name: string | null; last_name: string | null }>)
+          .map((row) => [row.user_id, row])
+      );
+
+      const membersByTeam = new Map<string, ITeam['members']>();
+      for (const row of typedMemberRows) {
+        const names = namesById.get(row.user_id);
         const members = membersByTeam.get(row.team_id) ?? [];
-        members.push({ user_id: row.user_id });
+        members.push({
+          user_id: row.user_id,
+          first_name: names?.first_name ?? '',
+          last_name: names?.last_name ?? '',
+          role: row.role === 'lead' ? 'lead' : 'member',
+        } as ITeam['members'][number]);
         membersByTeam.set(row.team_id, members);
       }
       return (teamRows as Array<{ team_id: string; team_name: string; manager_id: string | null }>).map(
@@ -677,7 +725,7 @@ export const getShareableTeams = withAuth(async (
           team_id: team.team_id,
           team_name: team.team_name,
           manager_id: team.manager_id,
-          members: (membersByTeam.get(team.team_id) ?? []) as ITeam['members'],
+          members: membersByTeam.get(team.team_id) ?? [],
         })
       );
     });

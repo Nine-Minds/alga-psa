@@ -16,6 +16,7 @@ import {
   createGroupCalendar,
   getGroupCalendarShares,
   getShareableTeams,
+  getShareableUsers,
   restoreGroupCalendar,
   setGroupCalendarShares,
   updateGroupCalendar,
@@ -29,7 +30,6 @@ interface GroupCalendarDialogProps {
   onClose: () => void;
   onSaved?: () => void;
   currentUserId: string;
-  users: IUser[];
   /** Calendar to manage; omit to create a new one. */
   calendar?: IVisibleCalendar | null;
 }
@@ -40,7 +40,6 @@ const GroupCalendarDialog: React.FC<GroupCalendarDialogProps> = ({
   onClose,
   onSaved,
   currentUserId,
-  users,
   calendar,
 }) => {
   const { t } = useTranslation('msp/schedule');
@@ -49,6 +48,7 @@ const GroupCalendarDialog: React.FC<GroupCalendarDialogProps> = ({
   const [color, setColor] = useState(DEFAULT_COLOR);
   const [description, setDescription] = useState('');
   const [members, setMembers] = useState<ICalendarShareView[]>([]);
+  const [users, setUsers] = useState<IUser[]>([]);
   const [teams, setTeams] = useState<ITeam[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -65,12 +65,15 @@ const GroupCalendarDialog: React.FC<GroupCalendarDialogProps> = ({
     setIsLoading(true);
 
     const load = async () => {
-      const [teamsResult, membersResult] = await Promise.all([
+      const [teamsResult, usersResult, membersResult] = await Promise.all([
         getShareableTeams(),
+        getShareableUsers(),
         calendar?.calendar_id ? getGroupCalendarShares(calendar.calendar_id) : Promise.resolve(null),
       ]);
       if (!active) return;
       if (teamsResult.success) setTeams(teamsResult.data);
+      if (usersResult.success) setUsers(usersResult.data);
+      else setError(usersResult.error);
       if (membersResult) {
         if (membersResult.success) setMembers(membersResult.data);
         else setError(membersResult.error);

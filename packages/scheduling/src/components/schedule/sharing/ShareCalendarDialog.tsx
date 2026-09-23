@@ -10,6 +10,7 @@ import type { ICalendarShareView, ITeam, IUser } from '@alga-psa/types';
 import {
   getMyCalendarShares,
   getShareableTeams,
+  getShareableUsers,
   setMyCalendarShares,
 } from '@alga-psa/scheduling/actions';
 import CalendarShareListEditor from './CalendarShareListEditor';
@@ -20,7 +21,6 @@ interface ShareCalendarDialogProps {
   /** Called after shares are saved. */
   onSaved?: () => void;
   currentUserId: string;
-  users: IUser[];
 }
 
 /** "Share my calendar": choose who can see the current user's schedule and at what level. */
@@ -29,11 +29,11 @@ const ShareCalendarDialog: React.FC<ShareCalendarDialogProps> = ({
   onClose,
   onSaved,
   currentUserId,
-  users,
 }) => {
   const { t } = useTranslation('msp/schedule');
   const [shares, setShares] = useState<ICalendarShareView[]>([]);
   const [teams, setTeams] = useState<ITeam[]>([]);
+  const [users, setUsers] = useState<IUser[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,12 +43,14 @@ const ShareCalendarDialog: React.FC<ShareCalendarDialogProps> = ({
     let active = true;
     setIsLoading(true);
     setError(null);
-    Promise.all([getMyCalendarShares(), getShareableTeams()])
-      .then(([sharesResult, teamsResult]) => {
+    Promise.all([getMyCalendarShares(), getShareableTeams(), getShareableUsers()])
+      .then(([sharesResult, teamsResult, usersResult]) => {
         if (!active) return;
         if (sharesResult.success) setShares(sharesResult.data);
         else setError(sharesResult.error);
         if (teamsResult.success) setTeams(teamsResult.data);
+        if (usersResult.success) setUsers(usersResult.data);
+        else setError(usersResult.error);
       })
       .catch(() => {
         if (active) setError(t('sharing.errors.load', { defaultValue: 'Failed to load calendar sharing.' }));
