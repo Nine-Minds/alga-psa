@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { Temporal } from '@js-temporal/polyfill';
 import {
   buildClientCadenceDueSelectionInput,
   buildContractCadenceDueSelectionInput,
@@ -511,7 +512,9 @@ describe('invoice preview recurring timing', () => {
       success: true,
       data: expect.objectContaining({
         invoiceNumber: 'PREVIEW',
-        dueDate: '2025-03-15',
+        // The stubbed profile identity sets no payment terms, so the preview
+        // is due on Net 30 from today.
+        dueDate: Temporal.Now.plainDateISO().add({ days: 30 }).toString(),
         currencyCode: 'USD',
         subtotal: 4000,
         tax: 200,

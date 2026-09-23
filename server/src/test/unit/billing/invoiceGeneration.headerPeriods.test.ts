@@ -421,7 +421,7 @@ describe('invoice generation header billing periods', () => {
     );
   });
 
-  it('T-EC6: an explicit invoiceDate override stamps invoice_date and the due-date input on the override date', async () => {
+  it('T-EC6: an explicit invoiceDate override stamps invoice_date and dates the due date from the override', async () => {
     // The override is the tenant-local final calendar day the month-end close
     // computed; the server host clock may read any other date and must not win.
     vi.useFakeTimers();
@@ -439,7 +439,8 @@ describe('invoice generation header billing periods', () => {
     );
 
     expect(mocks.state.insertedInvoices[0].invoice_date).toBe('2026-01-31');
-    expect(mocks.getDueDate).toHaveBeenCalledWith('client-1', '2026-01-31');
+    // The stubbed profile identity sets no payment terms: Net 30 from the override.
+    expect(mocks.state.insertedInvoices[0].due_date).toBe('2026-03-02');
     vi.useRealTimers();
   });
 
@@ -461,7 +462,9 @@ describe('invoice generation header billing periods', () => {
     );
 
     expect(mocks.state.insertedInvoices[0].invoice_date).toBe(expectedHostDate);
-    expect(mocks.getDueDate).toHaveBeenCalledWith('client-1', expectedHostDate);
+    expect(mocks.state.insertedInvoices[0].due_date).toBe(
+      Temporal.PlainDate.from(expectedHostDate).add({ days: 30 }).toString(),
+    );
     vi.useRealTimers();
   });
 });
