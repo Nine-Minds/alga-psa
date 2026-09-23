@@ -40,6 +40,13 @@ import {
   type TicketViewSettings,
 } from '../lib/ticketViewSettings';
 import type { TicketFilterChangeOptions } from '../lib/ticketFilterChange';
+import { LIST_VIEW_URL_PARAM } from '@alga-psa/list-views';
+import { useListViews } from '@alga-psa/list-views/hooks';
+import { ListViewPicker } from '@alga-psa/list-views/components';
+import {
+  createTicketListViewAdapter,
+  type TicketListLiveState,
+} from '../lib/ticketListViewAdapter';
 
 const TICKETS_PAGE_SIZE_SETTING = 'tickets_list_page_size';
 
@@ -396,6 +403,12 @@ export default function TicketingDashboardContainer({
     }
     if (filters.bundleView && filters.bundleView !== 'bundled') {
       params.set('bundleView', filters.bundleView);
+    }
+    // The applied named view is owned by useListViews; carry it through every
+    // filter rewrite so the address bar keeps naming the view being refined.
+    const activeNamedView = new URLSearchParams(window.location.search).get(LIST_VIEW_URL_PARAM);
+    if (activeNamedView) {
+      params.set(LIST_VIEW_URL_PARAM, activeNamedView);
     }
 
     // Update URL without triggering a server-side re-render. Board-tab moves
@@ -938,6 +951,102 @@ export default function TicketingDashboardContainer({
     setJustSavedViews(current => ({ ...current, [boardId ?? TENANT_VIEW_KEY]: saved }));
   }, []);
 
+  // ── Named list views ────────────────────────────────────────────────────────
+  //
+  // A named view sits above the board/tenant default: it is a full snapshot
+  // (board scope included) that replaces the baseline group by group. The
+  // generic hook owns loading, resolution (?view= → my default → baseline),
+  // dirty state and persistence; this screen only says what its live state is
+  // and how to put a new one on screen.
+  const [columnSizing, setColumnSizing] = useState<Record<string, number> | undefined>(undefined);
+
+  const listViewLive = useMemo<TicketListLiveState>(() => ({
+    filters: { ...activeFilters, sortBy, sortDirection },
+    presentation: viewPresentation,
+    pageSize,
+    columnSizing,
+  }), [activeFilters, sortBy, sortDirection, viewPresentation, pageSize, columnSizing]);
+
+  const listViewKnownIds = useMemo(() => ({
+    boardIds: new Set(effectiveOptions.boardOptions.map(board => board.board_id).filter((id): id is string => Boolean(id))),
+    statusIds: new Set<string>(knownFilterIds.statusIds as string[]),
+    priorityIds: new Set<string>(knownFilterIds.priorityIds as string[]),
+    categoryIds: new Set<string>(knownFilterIds.categoryIds as string[]),
+    clientIds: new Set<string>(knownFilterIds.clientIds as string[]),
+    userIds: new Set<string>(knownFilterIds.userIds as string[]),
+    teamIds: initialTeams ? new Set(initialTeams.map(team => team.team_id)) : undefined,
+    tags: effectiveOptions.tags ? new Set(effectiveOptions.tags.map(tag => tag.tag_text)) : undefined,
+  }), [effectiveOptions.boardOptions, effectiveOptions.tags, knownFilterIds, initialTeams]);
+
+  const ticketListViewAdapter = useMemo(() => createTicketListViewAdapter({
+    neutralFilters: neutralListFilters,
+    resolveBaselineForBoard: resolveViewForBoard,
+    // "Default view" returns to what arriving at the current board gives you:
+    // the board/tenant default, keeping the board scope the user is on.
+    baseline: (live) => {
+      const boardSelection: Partial<ITicketListFilters> = {
+        boardId: live.filters.boardId,
+        boardIds: live.filters.boardIds,
+        excludeBoardIds: live.filters.excludeBoardIds,
+        boardFilterState: live.filters.boardFilterState,
+      };
+      const boardId = live.filters.boardIds?.length === 1
+        ? live.filters.boardIds[0]
+        : live.filters.boardId ?? null;
+      const resolved = resolveViewForBoard(boardId);
+      const filters = buildBoardArrivalFilters({
+        baseline: neutralListFilters(),
+        boardSelection,
+        viewFilters: validateCapturedFilters(resolved.filters, knownFilterIds, [TICKET_STATUS_FILTER_OPEN, 'all']),
+      });
+      return {
+        filters: {
+          ...filters,
+          sortBy: filters.sortBy ?? 'entered_at',
+          sortDirection: filters.sortDirection ?? 'desc',
+        },
+        presentation: resolved,
+        pageSize: live.pageSize,
+        columnSizing: undefined,
+      };
+    },
+    known: listViewKnownIds,
+  }), [neutralListFilters, resolveViewForBoard, knownFilterIds, listViewKnownIds]);
+
+  const handleListViewApply = useCallback((next: TicketListLiveState) => {
+    if (filterFetchTimeoutRef.current) {
+      clearTimeout(filterFetchTimeoutRef.current);
+      filterFetchTimeoutRef.current = null;
+    }
+    const nextSortBy = next.filters.sortBy ?? 'entered_at';
+    const nextSortDirection = next.filters.sortDirection ?? 'desc';
+    setActiveFilters(next.filters);
+    activeFiltersRef.current = next.filters;
+    setSortBy(nextSortBy);
+    setSortDirection(nextSortDirection);
+    setViewPresentation(next.presentation);
+    setColumnSizing(next.columnSizing);
+    setCurrentPage(1);
+    if (next.pageSize !== pageSize) {
+      setPageSize(next.pageSize);
+      // The remembered page size would otherwise pull the list straight back.
+      setStoredPageSize(next.pageSize);
+    }
+    updateURLWithFilters(next.filters, 1, next.pageSize);
+    void fetchTicketsRef.current(next.filters, 1, next.pageSize, {
+      sortBy: nextSortBy,
+      sortDirection: nextSortDirection,
+    });
+  }, [pageSize, setStoredPageSize, updateURLWithFilters]);
+
+  const listViews = useListViews({
+    adapter: ticketListViewAdapter,
+    live: listViewLive,
+    onApply: handleListViewApply,
+    // A link that names filters wins over the user's personal default.
+    urlHasExplicitState: entryUrlHasFilterOpinion.current,
+  });
+
   const mappedAndFilteredBoards = effectiveOptions.boardOptions.map(board => ({
     ...board,
     board_id: board.board_id || '',
@@ -987,6 +1096,9 @@ export default function TicketingDashboardContainer({
         savedViewSettings={savedViewForActiveTab}
         hasStoredDefaultView={hasStoredDefaultForActiveTab}
         onSavedViewChanged={handleSavedViewChanged}
+        listViewPicker={<ListViewPicker id="tickets-view-picker" controller={listViews} />}
+        columnSizing={columnSizing}
+        onColumnSizingChange={setColumnSizing}
       />
   );
 }

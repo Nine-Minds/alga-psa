@@ -235,7 +235,7 @@
   {
     "id": "F030",
     "description": "Tickets adapter built on ticketViewSettings helpers, capturing filters incl. board scope (excluding searchQuery), sort, column visibility/order, density, page size, column sizing.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD.md#relationship-to-ticket-board-defaults"
     ]
@@ -243,7 +243,7 @@
   {
     "id": "F031",
     "description": "Tickets sanitize drops references to deleted boards, statuses, priorities, categories, tags, users, teams, clients, contacts.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD.md#relationship-to-ticket-board-defaults"
     ]
@@ -251,7 +251,7 @@
   {
     "id": "F032",
     "description": "Tickets: applying a view with board scope navigates to that board tab; baseline remains board/tenant default resolution.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD.md#relationship-to-ticket-board-defaults"
     ]
@@ -259,7 +259,7 @@
   {
     "id": "F033",
     "description": "Tickets: ListViewPicker rendered in TicketingDashboard toolbar beside TicketViewMenu; board/tenant default save/reset unchanged.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD.md#relationship-to-ticket-board-defaults"
     ]
@@ -267,7 +267,7 @@
   {
     "id": "F034",
     "description": "Tickets: `?view=` coexists with existing URL filter params (explicit filter params present = no user-default auto-apply).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD.md#relationship-to-ticket-board-defaults"
     ]
