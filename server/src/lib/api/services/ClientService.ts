@@ -607,18 +607,20 @@ export class ClientService extends BaseService<IClient> {
       }
 
       // Prepare update data
-      const updateData: any = {
-        ...data,
-        updated_at: knex.raw('now()'),
-      };
-
-      // Remove undefined values + non-column fields
-      Object.keys(updateData).forEach((key) => {
-        if (updateData[key] === undefined) {
-          delete updateData[key];
-        }
-      });
-      delete updateData.tags;
+      // Keep SQL writes constrained to persisted clients columns; tags are stored separately.
+      // This list must stay aligned with clientBodySchema and the clients migrations.
+      const clientColumns = [
+        'client_name', 'url', 'client_type', 'tax_id_number', 'notes', 'properties',
+        'payment_terms', 'billing_cycle', 'credit_limit', 'default_currency_code',
+        'preferred_payment_method', 'auto_invoice', 'invoice_delivery_method', 'region_code',
+        'is_tax_exempt', 'tax_exemption_certificate', 'timezone', 'invoice_template_id',
+        'billing_contact_id', 'billing_email', 'account_manager_id', 'is_inactive',
+      ] as const;
+      const updateData: Record<string, unknown> = { updated_at: knex.raw('now()') };
+      for (const column of clientColumns) {
+        const value = (data as Record<string, unknown>)[column];
+        if (value !== undefined) updateData[column] = value;
+      }
 
       const updatedFieldKeys = Object.keys(updateData);
 

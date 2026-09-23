@@ -106,6 +106,48 @@ describe('client currency and billing-profile lifecycle integration', () => {
     }
   });
 
+  it('rejects location fields, ignores unknown keys, updates real columns, and preserves omitted flags', async () => {
+    for (const [field, value] of [['email', 'x@example.com'], ['phone_no', '555-0100'], ['address', '1 Main St']] as const) {
+      const result = updateClientSchema.safeParse({ [field]: value });
+      expect(result.success).toBe(false);
+      if (!result.success) expect(result.error.issues.some((issue) => issue.path.includes(field))).toBe(true);
+    }
+
+    const tenantId = await createTenant();
+    const clientId = await seedClient(tenantId);
+    const initialFlags = {
+      ...(hasColumn(clientColumns, 'auto_invoice') ? { auto_invoice: true } : {}),
+      ...(hasColumn(clientColumns, 'is_tax_exempt') ? { is_tax_exempt: true } : {}),
+      ...(hasColumn(clientColumns, 'is_inactive') ? { is_inactive: true } : {}),
+    };
+    await tenantTable(tenantId, 'clients').where({ client_id: clientId }).update(initialFlags);
+
+    const parsed = updateClientSchema.parse({ client_name: 'Renamed client', default_locale: 'fr', foo: 'bar' });
+    expect(parsed).toMatchObject({ client_name: 'Renamed client' });
+    expect(parsed).not.toHaveProperty('default_locale');
+    expect(parsed).not.toHaveProperty('foo');
+    const updated = await serviceFor(tenantId).update(clientId, parsed as any, { tenant: tenantId, userId: uuidv4() } as any);
+    expect(updated.client_name).toBe('Renamed client');
+    const persisted = await tenantTable(tenantId, 'clients').where({ client_id: clientId }).first();
+    for (const [field, value] of Object.entries(initialFlags)) expect(persisted[field]).toBe(value);
+  });
+
+  it('keeps location fields accepted by the create schema', () => {
+    const parsed = createClientSchema.parse({
+      client_name: 'Created client',
+      billing_cycle: 'monthly',
+      email: 'x@example.com',
+      phone_no: '555-0100',
+      address: '1 Main St',
+    });
+
+    expect(parsed).toMatchObject({
+      email: 'x@example.com',
+      phone_no: '555-0100',
+      address: '1 Main St',
+    });
+  });
+
   // Regression: the field was absent from the request schema, so Zod stripped it
   // and the write returned 200 with the currency silently discarded.
   it('survives request-schema validation instead of being stripped', () => {
