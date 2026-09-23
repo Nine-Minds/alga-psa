@@ -22,6 +22,11 @@ export interface ListViewPickerProps<F = Record<string, unknown>> {
   className?: string;
 }
 
+function filterByQuery<V extends { name: string }>(views: V[], query: string): V[] {
+  const needle = query.trim().toLowerCase();
+  return needle ? views.filter((view) => view.name.toLowerCase().includes(needle)) : views;
+}
+
 type DialogState =
   | { kind: 'none' }
   | { kind: 'create' }
@@ -50,10 +55,6 @@ export function ListViewPicker<F>({ id, controller, className }: ListViewPickerP
     defaultViewId,
   } = controller;
 
-  const filterByQuery = (views: ListViewSummary<F>[], query: string) => {
-    const needle = query.trim().toLowerCase();
-    return needle ? views.filter((view) => view.name.toLowerCase().includes(needle)) : views;
-  };
   const visibleMine = useMemo(() => filterByQuery(myViews, myQuery), [myViews, myQuery]);
   const visibleShared = useMemo(() => filterByQuery(sharedViews, sharedQuery), [sharedViews, sharedQuery]);
 

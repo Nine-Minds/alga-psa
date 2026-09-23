@@ -18,6 +18,22 @@
 - **(2026-09-22) Migrations:** `20260922120000_create_list_views.cjs` and `20260922120100_add_list_view_permissions.cjs`, which calls reconcileAllTenants.
 - **(2026-09-22) The adapter contract is split in two.** The client `ListViewAdapter` (capture, apply, sanitize, differs) is in `packages/types`. The server `ListViewDefinition` (read permission, strict schema, schemaVersion, migrate) is in the list-views registry. `packages/types` has no zod dependency, so a schema cannot live on the client type.
 
+- **(2026-09-22) Deviations in the draft.** Each is deliberate, and a reviewer can reverse it:
+  - **Row actions are inline icon buttons,** revealed on hover or focus, rather than a nested `⋯` menu. The picker is a Popover rather than a DropdownMenu, because Radix menu typeahead fights a search box inside the menu.
+  - **`tagsInlineUnderTitle` is not stored in a named ticket view.** The strict envelope has no place for it, so it keeps the board/tenant baseline.
+  - **Column visibility and order are captured only where the list lets the user choose them:** Tickets (View menu) and Assets (column chooser). Projects, Clients and Contacts have no column chooser, and adding one is out of scope. Their views capture filters, sort, widths and page size.
+  - **On Tickets, `?view=` wins over URL filter params in the same link.** Explicit filter params only stop the *personal default* from applying.
+  - **Applying a view clears the search text** on every list, because search is never part of a view.
+  - **"Default view" on Tickets returns to the current board tab's default,** and keeps board scope. It does not jump back to All tickets.
+  - **Column widths:** DataTable's controlled widths are mirrored into the remembered (localStorage) widths. Returning to the baseline therefore keeps the widths on screen rather than resetting them.
+- **(2026-09-22) createTableListViewAdapter** (list-views) was extracted once Projects, Clients, Contacts and Assets all proved to share one adapter shape. Tickets keeps a hand-written adapter, because it layers over board defaults.
+- **(2026-09-22) Manual smoke on :3768 (users namedviews.smoke.a/b@emeraldcity.oz):**
+  - On Tickets: saved a private view, moved to a board tab (the dirty dot appeared), saved changes (the dot cleared), and reloaded `?view=<id>` (the board tab and the name were restored).
+  - Saved a shared view.
+  - Opened A's private link as user B: it fell back to Default view and the param was removed, and B saw only the shared view, with its owner's name.
+  - The pickers render on Projects, Clients, Contacts and Assets.
+  - The Playwright E2E tests T013 and T014 were **not** written.
+
 ## Discoveries / constraints
 
 - **Ticket view prior art:** `packages/tickets/src/lib/ticketViewSettings.ts`.
