@@ -2,7 +2,7 @@
 
 - Slug: `billing-profile-payment-methods`
 - Date: `2026-09-22`
-- Status: Draft
+- Status: Draft — implemented (first draft); human decisions on Q1–Q3 applied
 - Builds on: `ee/docs/plans/2026-08-15-billing-profiles-sub-account-billing/` (PR #3180)
 
 ## Summary
@@ -49,11 +49,7 @@ under.
 - Charging a saved card automatically, or collecting a card through the MSP UI.
   The card-entry form in the client portal is still a mock (see scratchpad).
   That work belongs to the Stripe work, not this plan.
-- Changing whether a Stripe payment link appears in the invoice email based on
-  the payment method. This is open question Q1, and the default is no change.
 - Mapping payment methods to accounting systems (QBO `PaymentMethodRef`).
-- Using the profile's `payment_terms` to set the invoice due date. That gap is
-  real but separate, so it is recorded in the scratchpad.
 - A REST or OpenAPI surface for billing profiles, which doesn't exist yet.
 - Letting a tenant define its own payment methods. The method list stays fixed.
 
@@ -155,16 +151,21 @@ under.
 - No feature flag. The field has no effect until someone sets it or a template
   uses it.
 
-## Open Questions
+## Decisions (human, 2026-09-23)
 
-- **Q1.** Should an invoice whose effective method is Check or Bank Transfer
-  leave out the Stripe "Pay now" link in its email and portal? Default for this
-  plan: no change. If the answer is yes, it becomes a follow-up feature.
-- **Q2.** Should the method list gain "ACH / Direct debit" or "Other"? Default:
-  keep the three existing values, to stay consistent with the client field.
-- **Q3.** Should the profile's `payment_terms` now also drive the invoice due
-  date? It is in the same area but out of scope here. It is recorded as a known
-  gap.
+These replace the open questions and their "no change" defaults.
+
+- **Q1 → yes.** An invoice whose payment-method snapshot is Check or Bank
+  Transfer leaves out the Stripe "Pay now" link: the invoice email (direct
+  send and scheduled job) gets the portal link only, the client-portal pay
+  page shows "Payment unavailable", and the portal list disables Pay Now.
+  Credit Card and invoices with no recorded method keep today's behaviour.
+- **Q2 → keep the same three options.** Credit Card, Bank Transfer, Check.
+- **Q3 → fix it here.** Due dates follow the profile's effective payment terms
+  (profile first, then client) in generation, preview, manual invoices, and
+  `getDueDate`. The profile panel's free-text terms input becomes a select
+  sharing the client's options plus "Inherit from client"; unrecognized legacy
+  values resolve as unset and are cleared on the next save.
 
 ## Acceptance Criteria
 
@@ -183,3 +184,6 @@ under.
 - A single-profile client with no overrides generates byte-identical invoice
   data, apart from the new `payment_method` snapshot, which equals the client's
   preference.
+- A check or bank-transfer invoice's email and portal offer no "Pay now".
+- A profile set to Due on Receipt produces invoices due on the invoice date
+  while a sibling inheriting Net 30 is due 30 days later.

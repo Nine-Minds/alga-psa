@@ -56,3 +56,23 @@
 - Run migrations: `cd server && npx knex migrate:latest --knexfile knexfile.cjs`,
   run against the `alga-psa-local-test` stack.
 - Dev server: port 3421.
+
+## Implementation notes (2026-09-23)
+
+- Shared vocabulary: `shared/billingClients/paymentPreferences.ts` (methods,
+  terms, normalizers, `isOfflinePaymentMethod`, `paymentTermDays`). UI labels:
+  `packages/clients/src/components/clients/paymentPreferenceOptions.ts`.
+- Due dates: `packages/billing/src/lib/billing/invoiceDueDate.ts`.
+  `getDueDate` now resolves the (default) profile identity, so a client with
+  no overrides is unchanged.
+- Manual invoices snapshot the default profile's method (beyond F014's
+  literal scope) so client-wide invoices follow Q1 the same way.
+- Not covered: `server/src/lib/api/services/InvoiceService.ts` (REST API
+  invoice creation) still computes due dates from `clients.payment_terms` and
+  does not snapshot `payment_method`; hour-block and sales-order invoices get
+  default-profile terms via `getDueDate` but no method snapshot.
+- Rendered `invoice.paymentMethod` uses authored English labels; it is not
+  translated to the document locale yet.
+- `knex migrate:latest` refuses on the shared local-test DB (EE and
+  other-branch migrations recorded); the migration was applied with a script
+  calling its `up()`.
