@@ -508,17 +508,6 @@ export const MergeClientsDialog: React.FC<MergeClientsDialogProps> = ({
 
   const renderConfirm = () => (
     <div className="space-y-4">
-      {blockers.length > 0 && (
-        <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-3">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
-          <ul className="space-y-1 text-sm text-red-700">
-            {blockers.map((blocker) => (
-              <li key={blocker.code}>{blocker.message}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
       <div className="rounded-md border border-gray-200 p-3">
         <p className="text-sm font-medium">
           {t('mergeClients.previewHeading', { defaultValue: 'What will move' })}
@@ -609,6 +598,27 @@ export const MergeClientsDialog: React.FC<MergeClientsDialogProps> = ({
         </div>
       );
     }
+    const content = renderStep();
+    if (blockers.length === 0 || step === 'accounting') return content;
+
+    // Shown from the moment the preview lands: the Next button disables on a
+    // blocker, and a disabled button with no reason beside it is a dead end.
+    return (
+      <div className="space-y-4">
+        <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-3">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
+          <ul className="space-y-1 text-sm text-red-700">
+            {blockers.map((blocker) => (
+              <li key={blocker.code}>{blocker.message}</li>
+            ))}
+          </ul>
+        </div>
+        {content}
+      </div>
+    );
+  };
+
+  const renderStep = () => {
     switch (step) {
       case 'select': return renderSelect();
       case 'contacts': return renderContacts();
