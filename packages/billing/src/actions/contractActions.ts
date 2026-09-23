@@ -1,7 +1,7 @@
 // @alga-psa/billing/actions.ts
 'use server'
 
-import { resolveEffectiveSeatPricing } from '../lib/billing/seatRevisions';
+import { resolveEffectiveRecurringUnitPricingInTransaction } from '../lib/billing/seatRevisions';
 import { resolveUsageMeasurementRevision } from '../lib/billing/usageMeasurementTransitions';
 
 import Contract from '@alga-psa/billing/models/contract';
@@ -1160,7 +1160,8 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
             'cls.service_id',
             's.service_name',
             's.billing_method',
-            's.unit_of_measure'
+            's.unit_of_measure',
+            's.item_kind'
           ]);
 
         // Get service configurations for rates
@@ -1199,14 +1200,41 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
           (usageSemantics as any[]).map((row: any) => [row.config_id, row]),
         );
 
+        const itemKindByService = new Map<string, string | null>(
+          (services as any[]).map((svc: any) => [svc.service_id, svc.item_kind ?? null]),
+        );
+
         const asOf = new Date().toISOString().slice(0, 10);
+        // Configuration IDs whose displayed quantity/rate reflect the effective
+        // revision-aware values rather than frozen columns.
+        const effectiveUnitConfigIds = new Set<string>();
         for (const config of configs as any[]) {
           const fixed = fixedSemanticsMap.get(config.config_id);
-          if (fixed?.pricing_basis === 'unit') {
-            const effective = await resolveEffectiveSeatPricing({trx: knex as Knex.Transaction, tenant,
-              contractLineId: line.contract_line_id, serviceId: config.service_id, configId: config.config_id, boundary: asOf});
-            config.quantity = effective.quantity;
-            fixed.base_rate = effective.unitRateCents;
+          const itemKind = itemKindByService.get(config.service_id) ?? null;
+          // Products and explicitly unit-priced services share the revision
+          // store, so both can read the effective quantity/price for asOf.
+          const kind = fixed?.pricing_basis === 'unit' ? 'service' : itemKind === 'product' ? 'product' : null;
+          if (kind) {
+            const effective = await resolveEffectiveRecurringUnitPricingInTransaction({
+              trx: knex as Knex.Transaction,
+              tenant,
+              contractLineId: line.contract_line_id,
+              serviceId: config.service_id,
+              configId: config.config_id,
+              kind,
+              boundary: asOf,
+            });
+            // Unit services keep their existing baseline read. Untouched
+            // products must keep their legacy display, so a product is only
+            // restated when an operator has actually scheduled a revision.
+            const applyEffective = kind === 'service' || effective.source === 'revision';
+            if (applyEffective) {
+              config.quantity = effective.quantity;
+              if (fixed) {
+                fixed.base_rate = effective.pricePolicy === 'override' ? effective.unitRateCents : null;
+              }
+              effectiveUnitConfigIds.add(config.config_id);
+            }
           }
           if (config.configuration_type === 'Usage') {
             const revision = await resolveUsageMeasurementRevision(knex, tenant, config.config_id, asOf);
@@ -1223,6 +1251,9 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
           display_order: line.display_order ?? 0,
           services: (services as any[]).map((svc: any) => {
             const config = configMap.get(svc.service_id);
+            const semantics = fixedSemanticsMap.get(config?.config_id);
+            const isScheduledUnit = effectiveUnitConfigIds.has(config?.config_id);
+            const isUnitValued = semantics?.pricing_basis === 'unit' || isScheduledUnit;
             return {
               service_id: svc.service_id,
               service_name: svc.service_name || 'Unknown Service',
@@ -1237,14 +1268,13 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
                   : null,
               unit_of_measure: svc.unit_of_measure || null,
               config_id: config?.config_id ?? null,
-              pricing_basis: fixedSemanticsMap.get(config?.config_id)?.pricing_basis ?? null,
+              pricing_basis: semantics?.pricing_basis ?? (isScheduledUnit ? 'unit' : null),
               measurement_mode: usageSemanticsMap.get(config?.config_id)?.measurement_mode ?? null,
-              unit_rate:
-                fixedSemanticsMap.get(config?.config_id)?.pricing_basis === 'unit'
-                  ? (fixedSemanticsMap.get(config?.config_id)?.base_rate != null
-                      ? Number(fixedSemanticsMap.get(config?.config_id)?.base_rate)
-                      : (config?.custom_rate != null ? Number(config.custom_rate) : null))
-                  : null
+              unit_rate: isUnitValued
+                ? (semantics?.base_rate != null
+                    ? Number(semantics.base_rate)
+                    : (config?.custom_rate != null ? Number(config.custom_rate) : null))
+                : null
             };
           })
         });

@@ -41,6 +41,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { AddContractLinesDialog } from './AddContractLinesDialog';
 import { CreateCustomContractLineDialog } from './CreateCustomContractLineDialog';
 import { BucketPoolEditor } from './BucketPoolEditor';
+import { RecurringUnitSchedulePanel } from './RecurringUnitSchedulePanel';
 import { listBucketBusinessHoursSchedules } from '@alga-psa/billing/actions/bucketPoolActions';
 import {
   ServiceSelectionDialog,
@@ -126,6 +127,8 @@ interface ServiceConfiguration {
     service_name: string;
     service_type?: string;
     billing_method?: string;
+    /** `product` marks a catalog product billed through the recurring product path. */
+    item_kind?: string | null;
   };
   configuration: {
     config_id: string;
@@ -1926,6 +1929,27 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                             </div>
                                           </div>
                                         </div>
+                                      )}
+
+                                      {serviceConfig.configuration.configuration_type === 'Fixed'
+                                        && (serviceConfig.typeConfig?.pricing_basis === 'unit'
+                                          || serviceConfig.service.item_kind === 'product') && (
+                                        <details className="pt-2">
+                                          <summary className="cursor-pointer text-sm font-medium text-[rgb(var(--color-primary-700))]">
+                                            {t('contractLines.recurringSchedule.openPanel', {
+                                              defaultValue: 'Schedule recurring change & history',
+                                            })}
+                                          </summary>
+                                          <div className="mt-3">
+                                            <RecurringUnitSchedulePanel
+                                              contractLineId={line.contract_line_id}
+                                              serviceId={serviceConfig.service.service_id}
+                                              configId={serviceConfig.configuration.config_id}
+                                              currencyCode={contract.currency_code || 'USD'}
+                                              disabled={isSavingLine}
+                                            />
+                                          </div>
+                                        </details>
                                       )}
                                     </div>
                                   );

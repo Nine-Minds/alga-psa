@@ -7,6 +7,7 @@
   "types": "index.d.ts",
   "exports": {
     "./billingClients/resolveFixedLineRate": "./dist/billingClients/resolveFixedLineRate.js",
+    "./billingClients/recurringUnitPricing": "./dist/billingClients/recurringUnitPricing.js",
     "./types": "./dist/types/index.js",
     "./core": "./dist/core/index.js",
     "./core/logger.js": "./dist/core/logger.js",

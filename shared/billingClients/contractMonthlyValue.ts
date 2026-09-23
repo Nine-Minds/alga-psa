@@ -175,7 +175,13 @@ export async function getContractMonthlyFixedValuesByContract(
 
   // Latest unit-pricing revision effective at/before asOf per (line, service,
   // config). Future revisions are scheduled values, not current commitments.
-  const effectiveRevisions = new Map<string, { quantity: number; unit_rate_cents: number }>();
+  // Products use this same store, so a scheduled product change is valued with
+  // its effective quantity/price instead of the legacy baseline (which for
+  // wizard products derives to zero).
+  const effectiveRevisions = new Map<
+    string,
+    { quantity: number; unit_rate_cents: number | null; price_policy: 'override' | 'catalog' }
+  >();
   if (fixedLineIds.length > 0) {
     const revisionRows = (await db.table('contract_line_unit_pricing_revisions as rev')
       .whereIn('rev.contract_line_id', fixedLineIds)
@@ -187,18 +193,21 @@ export async function getContractMonthlyFixedValuesByContract(
         'rev.config_id',
         'rev.quantity',
         'rev.unit_rate_cents',
+        'rev.price_policy',
       )) as Array<{
         contract_line_id: string;
         service_id: string;
         config_id: string;
         quantity: number | string;
-        unit_rate_cents: number | string;
+        unit_rate_cents: number | string | null;
+        price_policy: string | null;
       }>;
     // Ascending order: later effective dates overwrite earlier (superseded) ones.
     for (const row of revisionRows) {
       effectiveRevisions.set(`${row.contract_line_id}:${row.service_id}:${row.config_id}`, {
         quantity: Number(row.quantity),
-        unit_rate_cents: Number(row.unit_rate_cents),
+        unit_rate_cents: toCents(row.unit_rate_cents),
+        price_policy: row.price_policy === 'catalog' ? 'catalog' : 'override',
       });
     }
   }
@@ -228,18 +237,31 @@ export async function getContractMonthlyFixedValuesByContract(
     if (line.contract_line_type === 'Usage') return 0;
     if (line.contract_line_type === 'Fixed') {
       const members = membersByLine.get(line.contract_line_id) ?? [];
-      const unitMembers = members.filter((member) => isUnitPricedMember(member));
-      const bundleMembers = members.filter((member) => !isUnitPricedMember(member));
+      const revisionKey = (member: FixedMemberValuationRow) =>
+        `${line.contract_line_id}:${member.service_id}:${member.config_id}`;
+      // A member is unit-valued when it is explicitly unit-priced OR when it
+      // carries an applicable scheduled revision (products share the revision
+      // store). Members without a revision keep their legacy valuation path so
+      // untouched contracts are unchanged.
+      const unitMembers = members.filter(
+        (member) => isUnitPricedMember(member) || effectiveRevisions.has(revisionKey(member)),
+      );
+      const bundleMembers = members.filter(
+        (member) => !isUnitPricedMember(member) && !effectiveRevisions.has(revisionKey(member)),
+      );
 
       // Unit-priced members: Σ quantity × unit rate, revision-aware. Rate
       // fallback mirrors the engine's unit branch: base_rate → member
-      // custom_rate → catalog default_rate.
+      // custom_rate → catalog default_rate. A catalog-policy revision resolves
+      // against the catalog rate; an explicit override (including zero) wins.
       let totalCents = 0;
       for (const member of unitMembers) {
-        const revision = effectiveRevisions.get(`${line.contract_line_id}:${member.service_id}:${member.config_id}`);
+        const revision = effectiveRevisions.get(revisionKey(member));
         const quantity = revision ? revision.quantity : Number(member.quantity ?? 0);
         const rateCents = revision
-          ? revision.unit_rate_cents
+          ? revision.price_policy === 'catalog'
+            ? toCents(member.default_rate)
+            : revision.unit_rate_cents
           : (toCents(member.base_rate) ?? toCents(member.custom_rate) ?? toCents(member.default_rate));
         if (!Number.isFinite(quantity) || quantity <= 0 || rateCents === null || rateCents < 0) {
           // Zero/absent quantity is an explicit zero; a member without a

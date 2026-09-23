@@ -40,6 +40,14 @@ export interface IContractLineServiceFixedConfig extends TenantEntity {
    *   precedence and no quantity fallback to 1 (zero means zero).
    */
   pricing_basis?: 'unit' | 'bundle' | null;
+  /**
+   * Effective price policy at a requested service-period boundary. `override`
+   * means base_rate/custom_rate is an explicit contract price (zero is real);
+   * `catalog` means the item inherits the currency- and period-effective
+   * catalog price and the stored base_rate is not authoritative. Populated only
+   * by dated reads; not a persisted column on this table.
+   */
+  price_policy?: 'override' | 'catalog' | null;
   // enable_proration: boolean; // Removed: Moved to contract_line_fixed_config
   // billing_cycle_alignment: 'start' | 'end' | 'prorated'; // Removed: Moved to contract_line_fixed_config
   tenant: string;

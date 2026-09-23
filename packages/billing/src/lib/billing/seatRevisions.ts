@@ -3,6 +3,18 @@ import { toPlainDate } from '@alga-psa/core';
 import { lockTenantBilling } from './billingMutationLock';
 import { tenantDb } from '@alga-psa/db';
 import type { IContractLineUnitPricingRevision } from '@alga-psa/types';
+import type {
+  RecurringPricePolicy,
+  RecurringUnitKind,
+  RecurringUnitRevisionRow,
+} from '@alga-psa/shared/billingClients/recurringUnitPricing';
+import {
+  normalizeRecurringBoundary,
+  resolveRecurringUnitBaseline,
+  selectEffectiveRecurringUnitPricing,
+  toRecurringUnitRevisionCandidate,
+  type EffectiveRecurringUnitPricing,
+} from '@alga-psa/shared/billingClients/recurringUnitPricing';
 
 /**
  * Transactional core of prospective recurring-seat (unit pricing) revisions.
@@ -181,6 +193,27 @@ export async function validateProspectivePricingBoundary(trx: Knex.Transaction, 
   return rejectBilledSeatBoundary({trx, tenant, contractLineId: lineId, effectivePeriodStart: boundary});
 }
 
+export interface IScheduleRecurringUnitRevisionParams {
+  trx: Knex.Transaction;
+  tenant: string;
+  userId: string | null;
+  contractLineId: string;
+  serviceId: string;
+  configId: string;
+  kind: RecurringUnitKind;
+  quantity: number;
+  pricePolicy: RecurringPricePolicy;
+  /** Required and >= 0 for `override`; must be null/omitted for `catalog`. */
+  unitRateCents: number | null;
+  effectivePeriodStart: string;
+  /** Compare-and-set token for a pending-boundary replacement. */
+  expectedVersion?: number | null;
+}
+
+export type ScheduleRecurringUnitRevisionResult =
+  | { ok: true; revision: IContractLineUnitPricingRevision }
+  | { ok: false; error: string };
+
 export interface IScheduleSeatRevisionParams {
   trx: Knex.Transaction;
   tenant: string;
@@ -193,17 +226,108 @@ export interface IScheduleSeatRevisionParams {
   effectivePeriodStart: string;
 }
 
-export type ScheduleSeatRevisionResult =
-  | { ok: true; revision: IContractLineUnitPricingRevision }
-  | { ok: false; error: string };
+export type ScheduleSeatRevisionResult = ScheduleRecurringUnitRevisionResult;
+
+async function loadRecurringUnitRevisions(
+  trx: Knex.Transaction,
+  tenant: string,
+  params: { contractLineId: string; serviceId: string; configId: string },
+): Promise<RecurringUnitRevisionRow[]> {
+  return (await tenantScopedTable(trx, tenant, 'contract_line_unit_pricing_revisions')
+    .where({
+      tenant,
+      contract_line_id: params.contractLineId,
+      service_id: params.serviceId,
+      config_id: params.configId,
+    })
+    .orderBy('effective_period_start', 'asc')
+    .orderBy('created_at', 'asc')) as unknown as RecurringUnitRevisionRow[];
+}
 
 /**
- * Validates the seat scope (explicitly unit-priced Fixed service on a Fixed
- * line), refuses billed boundaries, and upserts the revision for the boundary.
+ * Resolve the baseline (no-revision) quantity/rate policy for a recurring unit
+ * from its live configuration, honoring kind-specific precedence: an
+ * explicitly unit-priced service reads fixed base_rate first; a product reads
+ * only the contract override chain and never the wizard placeholder base_rate.
  */
-export async function scheduleSeatRevisionInTransaction(
-  params: IScheduleSeatRevisionParams,
-): Promise<ScheduleSeatRevisionResult> {
+async function loadRecurringUnitBaseline(
+  trx: Knex.Transaction,
+  tenant: string,
+  params: { contractLineId: string; serviceId: string; configId: string; kind: RecurringUnitKind },
+) {
+  const config = await tenantScopedTable(trx, tenant, 'contract_line_service_configuration')
+    .where({
+      tenant,
+      contract_line_id: params.contractLineId,
+      service_id: params.serviceId,
+      config_id: params.configId,
+    })
+    .first<{ quantity: number | null; custom_rate: number | string | null } | undefined>(
+      'quantity',
+      'custom_rate',
+    );
+  const serviceLine = await tenantScopedTable(trx, tenant, 'contract_line_services')
+    .where({
+      tenant,
+      contract_line_id: params.contractLineId,
+      service_id: params.serviceId,
+    })
+    .first<{ quantity: number | null; custom_rate: number | string | null } | undefined>(
+      'quantity',
+      'custom_rate',
+    );
+  const fixedConfig = await tenantScopedTable(trx, tenant, 'contract_line_service_fixed_config')
+    .where({ tenant, config_id: params.configId })
+    .first<{ base_rate: number | string | null } | undefined>('base_rate');
+  return resolveRecurringUnitBaseline({
+    kind: params.kind,
+    quantity: config?.quantity ?? serviceLine?.quantity,
+    configurationCustomRate: config?.custom_rate,
+    serviceLineCustomRate: serviceLine?.custom_rate,
+    fixedBaseRate: fixedConfig?.base_rate,
+  });
+}
+
+/**
+ * The full effective (revision-aware) quantity/rate policy in force for periods
+ * starting at `boundary`, using the same shared selection rules as billing.
+ */
+export async function resolveEffectiveRecurringUnitPricingInTransaction(params: {
+  trx: Knex.Transaction;
+  tenant: string;
+  contractLineId: string;
+  serviceId: string;
+  configId: string;
+  kind: RecurringUnitKind;
+  boundary: string;
+}): Promise<EffectiveRecurringUnitPricing> {
+  const baseline = await loadRecurringUnitBaseline(params.trx, params.tenant, {
+    contractLineId: params.contractLineId,
+    serviceId: params.serviceId,
+    configId: params.configId,
+    kind: params.kind,
+  });
+  const rows = await loadRecurringUnitRevisions(params.trx, params.tenant, {
+    contractLineId: params.contractLineId,
+    serviceId: params.serviceId,
+    configId: params.configId,
+  });
+  return selectEffectiveRecurringUnitPricing({
+    boundary: params.boundary,
+    baseline,
+    revisions: rows.map(toRecurringUnitRevisionCandidate),
+  });
+}
+
+/**
+ * Validates the recurring-unit scope (an explicitly unit-priced Fixed service
+ * or a catalog product on a Fixed line), refuses billed boundaries, enforces
+ * compare-and-set for pending replacements, records the superseded pending edit
+ * in history, and upserts the revision for the boundary.
+ */
+export async function scheduleRecurringUnitRevisionInTransaction(
+  params: IScheduleRecurringUnitRevisionParams,
+): Promise<ScheduleRecurringUnitRevisionResult> {
   const {
     trx,
     tenant,
@@ -211,16 +335,32 @@ export async function scheduleSeatRevisionInTransaction(
     contractLineId,
     serviceId,
     configId,
+    kind,
     quantity,
+    pricePolicy,
     unitRateCents,
     effectivePeriodStart,
+    expectedVersion,
   } = params;
 
   if (!Number.isInteger(quantity) || quantity < 0) {
     return { ok: false, error: 'Quantity must be a whole number of 0 or more.' };
   }
-  if (!Number.isFinite(unitRateCents) || unitRateCents < 0 || !Number.isInteger(unitRateCents)) {
-    return { ok: false, error: 'Unit rate must be a whole number of minor units (cents) of 0 or more.' };
+  if (pricePolicy !== 'override' && pricePolicy !== 'catalog') {
+    return { ok: false, error: 'Price policy must be either an explicit override or catalog inheritance.' };
+  }
+  if (pricePolicy === 'override') {
+    if (
+      unitRateCents === null ||
+      unitRateCents === undefined ||
+      !Number.isFinite(unitRateCents) ||
+      unitRateCents < 0 ||
+      !Number.isInteger(unitRateCents)
+    ) {
+      return { ok: false, error: 'An explicit unit price override must be a whole number of minor units (cents) of 0 or more.' };
+    }
+  } else if (unitRateCents !== null && unitRateCents !== undefined) {
+    return { ok: false, error: 'Catalog inheritance stores no unit rate; omit the override amount or choose explicit pricing.' };
   }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(effectivePeriodStart)) {
     return { ok: false, error: 'Effective date must be a calendar date (YYYY-MM-DD) at a service-period boundary.' };
@@ -240,12 +380,20 @@ export async function scheduleSeatRevisionInTransaction(
   if (!fixedConfig) {
     return { ok: false, error: 'The selected service is not a Fixed configuration on that contract line.' };
   }
-  if (fixedConfig.pricing_basis !== 'unit') {
+  if (kind === 'service' && fixedConfig.pricing_basis !== 'unit') {
     return {
       ok: false,
       error:
         'Only explicitly unit-priced (recurring seats/units) services can carry scheduled quantity/rate changes. This service uses bundle pricing.',
     };
+  }
+  if (kind === 'product') {
+    const catalogItem = await tenantScopedTable(trx, tenant, 'service_catalog')
+      .where({ tenant, service_id: serviceId })
+      .first<{ item_kind: string | null } | undefined>('item_kind');
+    if (catalogItem?.item_kind !== 'product') {
+      return { ok: false, error: 'The selected item is not a recurring catalog product.' };
+    }
   }
   const line = await tenantScopedTable(trx, tenant, 'contract_lines')
     .where({ tenant, contract_line_id: contractLineId, contract_line_type: 'Fixed' })
@@ -267,18 +415,58 @@ export async function scheduleSeatRevisionInTransaction(
       config_id: configId,
       effective_period_start: effectivePeriodStart,
     })
-    .first<{ revision_id: string }>('revision_id');
+    .first<{
+      revision_id: string;
+      quantity: number;
+      unit_rate_cents: number | string | null;
+      price_policy: string | null;
+      version: number | string | null;
+    }>('revision_id', 'quantity', 'unit_rate_cents', 'price_policy', 'version');
 
   if (existing) {
+    const storedVersion = Number(existing.version ?? 1);
+    if (expectedVersion !== null && expectedVersion !== undefined && Number(expectedVersion) !== storedVersion) {
+      return {
+        ok: false,
+        error: 'This pending change was updated by someone else. Reload the period and review the newer values before saving.',
+      };
+    }
+    // Append-only audit of the superseded pending edit; the canonical row stays
+    // the single source billing reads.
+    await tenantScopedTable(trx, tenant, 'contract_line_unit_pricing_revision_history').insert({
+      tenant,
+      revision_id: existing.revision_id,
+      contract_line_id: contractLineId,
+      service_id: serviceId,
+      config_id: configId,
+      quantity: Number(existing.quantity),
+      unit_rate_cents: existing.unit_rate_cents === null ? null : Number(existing.unit_rate_cents),
+      price_policy: existing.price_policy === 'catalog' ? 'catalog' : 'override',
+      effective_period_start: effectivePeriodStart,
+      version: storedVersion,
+      superseded_by: userId ?? 'system',
+      recorded_by: userId,
+    });
     const [updated] = await tenantScopedTable(trx, tenant, 'contract_line_unit_pricing_revisions')
       .where({ tenant, revision_id: existing.revision_id })
       .update({
         quantity,
-        unit_rate_cents: unitRateCents,
+        unit_rate_cents: pricePolicy === 'override' ? unitRateCents : null,
+        price_policy: pricePolicy,
+        version: storedVersion + 1,
+        updated_by: userId,
+        updated_at: trx.fn.now(),
         created_by: userId,
       })
       .returning('*');
     return { ok: true, revision: updated as unknown as IContractLineUnitPricingRevision };
+  }
+
+  if (expectedVersion !== null && expectedVersion !== undefined) {
+    return {
+      ok: false,
+      error: 'This pending change no longer exists at that boundary. Reload the period before saving.',
+    };
   }
 
   const [inserted] = await tenantScopedTable(trx, tenant, 'contract_line_unit_pricing_revisions')
@@ -288,10 +476,117 @@ export async function scheduleSeatRevisionInTransaction(
       service_id: serviceId,
       config_id: configId,
       quantity,
-      unit_rate_cents: unitRateCents,
+      unit_rate_cents: pricePolicy === 'override' ? unitRateCents : null,
+      price_policy: pricePolicy,
+      version: 1,
       effective_period_start: effectivePeriodStart,
       created_by: userId,
+      updated_by: userId,
     })
     .returning('*');
   return { ok: true, revision: inserted as unknown as IContractLineUnitPricingRevision };
+}
+
+/** Backwards-compatible seat wrapper: unit-priced Fixed service, explicit rate. */
+export async function scheduleSeatRevisionInTransaction(
+  params: IScheduleSeatRevisionParams,
+): Promise<ScheduleSeatRevisionResult> {
+  return scheduleRecurringUnitRevisionInTransaction({
+    ...params,
+    kind: 'service',
+    pricePolicy: 'override',
+    unitRateCents: params.unitRateCents,
+  });
+}
+
+export interface IRecurringUnitPricingRevisionListRow {
+  revision_id: string;
+  quantity: number;
+  unit_rate_cents: number | null;
+  price_policy: RecurringPricePolicy;
+  version: number;
+  effective_period_start: string;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string | Date | null;
+  updated_at: string | Date | null;
+}
+
+/**
+ * Canonical scheduled revisions for one configuration, earliest boundary first.
+ * These are the rows billing reads; a replacement keeps the same revision id
+ * and bumps `version`, so the latest row per boundary is authoritative.
+ */
+export async function listRecurringUnitPricingRevisions(params: {
+  trx: Knex.Transaction | Knex;
+  tenant: string;
+  contractLineId: string;
+  serviceId: string;
+  configId: string;
+}): Promise<IRecurringUnitPricingRevisionListRow[]> {
+  const rows = await loadRecurringUnitRevisions(params.trx as Knex.Transaction, params.tenant, {
+    contractLineId: params.contractLineId,
+    serviceId: params.serviceId,
+    configId: params.configId,
+  });
+  return rows.map((row) => ({
+    revision_id: String(row.revision_id),
+    quantity: Number(row.quantity),
+    unit_rate_cents:
+      row.unit_rate_cents === null || row.unit_rate_cents === undefined
+        ? null
+        : Number(row.unit_rate_cents),
+    price_policy: row.price_policy === 'catalog' ? 'catalog' : 'override',
+    version: Number(row.version ?? 1),
+    effective_period_start: normalizeRecurringBoundary(row.effective_period_start),
+    created_by: row.created_by == null ? null : String(row.created_by),
+    updated_by: row.updated_by == null ? null : String(row.updated_by),
+    created_at: (row.created_at as string | Date | null) ?? null,
+    updated_at: (row.updated_at as string | Date | null) ?? null,
+  }));
+}
+
+export interface IRecurringUnitPricingHistoryRow {
+  history_id: string;
+  revision_id: string;
+  quantity: number;
+  unit_rate_cents: number | null;
+  price_policy: RecurringPricePolicy;
+  effective_period_start: string;
+  version: number;
+  superseded_by: string;
+  recorded_by: string | null;
+  created_at: string | Date | null;
+}
+
+/**
+ * Read the append-only superseded-edit log for one configuration, newest first.
+ */
+export async function listRecurringUnitPricingHistory(params: {
+  trx: Knex.Transaction | Knex;
+  tenant: string;
+  contractLineId: string;
+  serviceId: string;
+  configId: string;
+}): Promise<IRecurringUnitPricingHistoryRow[]> {
+  const rows = (await tenantScopedTable(params.trx, params.tenant, 'contract_line_unit_pricing_revision_history')
+    .where({
+      tenant: params.tenant,
+      contract_line_id: params.contractLineId,
+      service_id: params.serviceId,
+      config_id: params.configId,
+    })
+    .orderBy('created_at', 'desc')) as Array<Record<string, unknown>>;
+  return rows.map((row) => ({
+    history_id: String(row.history_id),
+    revision_id: String(row.revision_id),
+    quantity: Number(row.quantity),
+    unit_rate_cents: row.unit_rate_cents === null || row.unit_rate_cents === undefined ? null : Number(row.unit_rate_cents),
+    price_policy: row.price_policy === 'catalog' ? 'catalog' : 'override',
+    effective_period_start: normalizeRecurringBoundary(row.effective_period_start),
+    version: Number(row.version ?? 1),
+    superseded_by: String(row.superseded_by ?? ''),
+    recorded_by: row.recorded_by == null ? null : String(row.recorded_by),
+    created_at: (row.created_at as string | Date | null) ?? null,
+  }));
 }

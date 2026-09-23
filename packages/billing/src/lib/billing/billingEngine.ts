@@ -126,6 +126,11 @@ interface ContractObligationSink {
 import { getClientDefaultBillingProfileId } from "./billingProfileLookup";
 import { listSeparatelyBillingProfiles } from "@alga-psa/shared/billingClients/billingProfileSettings";
 import {
+  resolveRecurringUnitBaseline,
+  selectEffectiveRecurringUnitPricing,
+  toRecurringUnitRevisionCandidate,
+} from "@alga-psa/shared/billingClients/recurringUnitPricing";
+import {
   buildContractLineAttributionDecision,
   resolveDeterministicContractLineSelection,
   type ContractLineSelectionReason,
@@ -6146,6 +6151,92 @@ export class BillingEngine {
       return;
     }
 
+    // Recurring product/license quantity & price scheduling shares the
+    // unit-pricing revision store with unit-priced Fixed services. The covered
+    // service-period start picks the latest revision effective on/before it;
+    // with no applicable revision the untouched legacy product path runs
+    // (including its historical zero/null quantity coercion). The configuration
+    // columns are never rewritten here — the effective copy only feeds this
+    // obligation's charge math, so earlier periods stay historical.
+    const recurringUnitRevisionRows = (await db
+      .table("contract_line_unit_pricing_revisions")
+      .where({
+        tenant,
+        contract_line_id: clientContractLine.client_contract_line_id,
+      })
+      .where("effective_period_start", "<=", timingResolution.servicePeriodStart)
+      .orderBy("effective_period_start", "desc")
+      .orderBy("created_at", "desc")) as Array<{
+      revision_id: string;
+      service_id: string;
+      config_id: string;
+      quantity: number | string;
+      unit_rate_cents: number | string | null;
+      price_policy?: string | null;
+      version?: number | string | null;
+      effective_period_start: string | Date;
+      created_at?: string | Date | null;
+      updated_at?: string | Date | null;
+    }>;
+
+    const revisionsByConfig = new Map<
+      string,
+      ReturnType<typeof toRecurringUnitRevisionCandidate>[]
+    >();
+    for (const row of recurringUnitRevisionRows) {
+      const key = `${row.service_id}::${row.config_id}`;
+      const existing = revisionsByConfig.get(key);
+      const candidate = toRecurringUnitRevisionCandidate(row);
+      if (existing) {
+        existing.push(candidate);
+      } else {
+        revisionsByConfig.set(key, [candidate]);
+      }
+    }
+
+    const effectivePlanServices =
+      revisionsByConfig.size === 0
+        ? planServices
+        : planServices.map((service: any) => {
+            const candidates = revisionsByConfig.get(
+              `${service.service_id}::${service.config_id}`,
+            );
+            if (!candidates || candidates.length === 0) {
+              return service;
+            }
+            const baseline = resolveRecurringUnitBaseline({
+              kind: "product",
+              quantity:
+                service.configuration_quantity ?? service.service_quantity,
+              configurationCustomRate: service.configuration_custom_rate,
+              serviceLineCustomRate: service.service_line_custom_rate,
+            });
+            const effective = selectEffectiveRecurringUnitPricing({
+              boundary: timingResolution.servicePeriodStart,
+              baseline,
+              revisions: candidates,
+            });
+            if (
+              effective.source !== "revision" ||
+              effective.revisionId === null ||
+              effective.version === null ||
+              effective.effectivePeriodStart === null
+            ) {
+              return service;
+            }
+            return {
+              ...service,
+              effective_pricing: {
+                quantity: effective.quantity,
+                pricePolicy: effective.pricePolicy,
+                unitRateCents: effective.unitRateCents,
+                revisionId: effective.revisionId,
+                version: effective.version,
+                effectivePeriodStart: effective.effectivePeriodStart,
+              },
+            };
+          });
+
     const obligation = {
       kind: chargeType,
       executionMode: "live",
@@ -6154,7 +6245,7 @@ export class BillingEngine {
         client,
         timing: timingResolution,
         chargeType,
-        services: planServices,
+        services: effectivePlanServices,
         contractCurrency: clientContractLine.currency_code || "USD",
         billingProfile: await this.loadChargeProfileAssignments(
           clientId,
