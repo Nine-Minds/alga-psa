@@ -10,7 +10,7 @@ RUN npm run build
 
 FROM node:22-alpine AS runtime
 WORKDIR /opt/alga-appliance
-RUN apk add --no-cache bash curl kubectl \
+RUN apk add --no-cache bash curl kubectl util-linux \
   && curl -s https://fluxcd.io/install.sh | bash
 ENV NODE_ENV=production
 ENV ALGA_APPLIANCE_PORT=8080

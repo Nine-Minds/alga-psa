@@ -23,8 +23,17 @@ type Blocker = {
   severity?: string;
   component?: string;
   layer?: string;
+  step?: string | null;
   reason?: string;
+  details?: string | null;
   nextAction?: string;
+  autoRetry?: {
+    attempts?: number;
+    maxAttempts?: number;
+    exhausted?: boolean;
+    nextAttemptInSeconds?: number;
+  } | null;
+  pending?: boolean;
   loginBlocking?: boolean;
 };
 type EventItem = {
@@ -51,9 +60,33 @@ type ManageSummary = {
 };
 type StatusResponse = {
   status?: string;
-  // True when setup is blocked on a correctable install code; the UI offers a
-  // "re-enter your install code" action and the /setup form is reachable again.
+  // True when setup is blocked on an install code the operator can act on — a
+  // bad/expired/used code or a network/DNS/TLS failure while redeeming; the UI
+  // offers a "re-enter your install code" action and the /setup form is
+  // reachable again.
   setupReEditable?: boolean;
+  // Classification of the blocked redemption and the recovery copy/diagnostic
+  // to render, so the UI blames the code only for a confirmed code error and
+  // shows transport diagnostics (or neutral guidance) otherwise.
+  setupRecovery?: {
+    reEditable?: boolean;
+    kind?: "code" | "network" | "other" | string;
+    confirmedCodeError?: boolean;
+    hasNetworkEvidence?: boolean;
+    step?: string | null;
+    message?: string | null;
+    details?: string | null;
+    hostname?: string | null;
+    dnsServers?: string[];
+    lookupAddresses?: string[];
+    resolvedAddresses?: string[];
+    dnsOk?: boolean | null;
+    dnsError?: string | null;
+    socketCode?: string | null;
+    title?: string | null;
+    body?: string | null;
+    diagnostic?: string | null;
+  } | null;
   rollup?: { state?: string; message?: string; nextAction?: string } | null;
   currentPhase?: string;
   urls?: { statusUrl?: string | null; loginUrl?: string | null };
@@ -69,8 +102,18 @@ type StatusResponse = {
   failures?: Array<{
     category?: string;
     phase?: string;
+    step?: string | null;
+    details?: string | null;
     suspectedCause?: string;
     suggestedNextStep?: string;
+    retrySafe?: boolean;
+    pending?: boolean;
+    autoRetry?: {
+      attempts?: number;
+      maxAttempts?: number;
+      exhausted?: boolean;
+      nextAttemptInSeconds?: number;
+    };
   }>;
   bootstrap?: {
     job?: {
@@ -87,7 +130,24 @@ type StatusResponse = {
     phase?: string;
     lastAction?: string;
     updatedAt?: string;
+    failure?: {
+      step?: string | null;
+      message?: string;
+      details?: string | null;
+      retrySafe?: boolean;
+      suspectedCause?: string;
+      suggestedNextStep?: string;
+    } | null;
   };
+  engineLog?: { file?: string | null; error?: string | null } | null;
+  dnsReconcile?: {
+    ok?: boolean | null;
+    state?: string | null;
+    error?: string | null;
+    activation?: { stage?: string | null; error?: string | null } | null;
+    at?: string | null;
+    logFile?: string | null;
+  } | null;
   kubernetes?: {
     nodes?: Array<{ name?: string; ready?: boolean }>;
     podCount?: number;
@@ -241,15 +301,42 @@ function tierEntries(status: StatusResponse | null) {
 
 function blockers(status: StatusResponse | null): Blocker[] {
   if (status?.topBlockers?.length) return status.topBlockers;
-  return (status?.failures || []).map((failure) => ({
+  const fromFailures = (status?.failures || []).map((failure) => ({
     severity:
       failure.category === "background-services" ? "background" : "critical",
     component: failure.category,
     layer: failure.phase,
+    step: failure.step,
     reason: failure.suspectedCause,
+    details: failure.details,
     nextAction: failure.suggestedNextStep,
-    loginBlocking: failure.category !== "background-services",
+    autoRetry: failure.autoRetry,
+    pending: failure.pending,
+    loginBlocking:
+      failure.category !== "background-services" && failure.pending !== true,
   }));
+  if (fromFailures.length > 0) return fromFailures;
+  // A retained install-state failure must always read as a blocker, even when
+  // the derived failure list is momentarily empty.
+  const retained = status?.installState?.failure;
+  if (retained) {
+    return [
+      {
+        severity: "critical",
+        component: retained.step || status?.installState?.phase || "setup",
+        layer: status?.installState?.phase,
+        step: retained.step,
+        reason: retained.message || retained.suspectedCause || "Setup failed.",
+        details: retained.details,
+        nextAction:
+          retained.suggestedNextStep ||
+          retained.details ||
+          "Review the setup engine log and retry setup.",
+        loginBlocking: true,
+      },
+    ];
+  }
+  return [];
 }
 
 function ageFrom(date?: string | null) {
@@ -652,6 +739,9 @@ export default function StatusPage() {
     status?.installState?.status ||
     "loading";
   const blockerList = blockers(status);
+  // The server classifies the blocked redemption and supplies the matching copy
+  // and diagnostic; the UI only renders it.
+  const setupRecovery = status?.setupRecovery || null;
   const runningOperations = status?.activeOperations || [];
   const primaryOperation = runningOperations[0];
   const currentPhase =
@@ -786,16 +876,18 @@ export default function StatusPage() {
           </div>
         ) : null}
 
-        {status?.setupReEditable ? (
+        {status?.setupReEditable && setupRecovery ? (
           <div className={styles.setupCta} role="alert">
             <div>
-              <strong>Install code needs attention</strong>
-              <p>
-                The install code could not be redeemed — it may be invalid,
-                expired, or already used. Re-issue a fresh code at{" "}
-                <strong>nineminds.com/order/appliance/reissue</strong> and we
-                will email it to you, then re-enter it to continue.
-              </p>
+              <strong>
+                {setupRecovery.title || "Install code could not be redeemed"}
+              </strong>
+              <p>{setupRecovery.body}</p>
+              {setupRecovery.diagnostic ? (
+                <small className={styles.muted}>
+                  {setupRecovery.diagnostic}
+                </small>
+              ) : null}
             </div>
             <a className={styles.primaryButton} href="/setup/">
               Re-enter install code
@@ -937,8 +1029,21 @@ export default function StatusPage() {
                     key={index}
                   >
                     <strong>{blocker.component || blocker.layer}</strong>
+                    {blocker.step ? (
+                      <p className={styles.muted}>Failed step: {blocker.step}</p>
+                    ) : null}
                     <p>{blocker.reason}</p>
+                    {blocker.details ? (
+                      <small className={styles.muted}>{blocker.details}</small>
+                    ) : null}
                     <small>{blocker.nextAction}</small>
+                    {typeof blocker.autoRetry?.attempts === "number" ? (
+                      <small>
+                        {blocker.autoRetry.exhausted
+                          ? `Automatic retries exhausted after ${blocker.autoRetry.attempts} of ${blocker.autoRetry.maxAttempts} attempts.`
+                          : `Automatic retry attempt ${blocker.autoRetry.attempts} of ${blocker.autoRetry.maxAttempts}.`}
+                      </small>
+                    ) : null}
                   </div>
                 ))
               )}

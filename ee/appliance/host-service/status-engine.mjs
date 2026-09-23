@@ -240,6 +240,17 @@ function guidanceForCategory(category) {
 
 const NETWORK_CLASS_CATEGORIES = ['network', 'dns', 'registry-release-source'];
 
+// Steps the live network probe (registry DNS + GHCR + release manifest) actually
+// exercises. A recorded failure outside this set — notably `redeem-install-code`
+// — is never treated as resolved just because the probe passes.
+const PROBE_COVERED_FAILURE_STEPS = new Set([
+  'resolve-system-resolvers',
+  'resolve-registry-host',
+  'reach-ghcr',
+  'resolve-release-manifest',
+  'network-probe'
+]);
+
 // Builds a failure-summary entry from a live network probe. When `resolved` is
 // true the probe currently passes but a network-class failure was previously
 // recorded, so we surface an accurate, actionable retry blocker instead of the
@@ -323,8 +334,10 @@ function deriveFailureSummary(installState, podLines, helmIssues, warnings) {
     summaries.push({
       category,
       phase,
+      step: failure.step || null,
       lastAction: installState?.lastAction || failure.message || 'Failure reported.',
       suspectedCause: failure.suspectedCause || failure.message || 'Unknown failure.',
+      details: failure.details || null,
       suggestedNextStep: failure.suggestedNextStep || guidanceForCategory(category),
       retrySafe: failure.retrySafe !== false,
       logs: [
@@ -454,13 +467,21 @@ function normalizeReadinessTiers(tiers) {
 
 function blockerFromFailure(failure) {
   const isBackground = failure.category === 'background-services';
+  // A pending DNS activation is actionable but not a hard failure: show it so the
+  // operator is not told "no blockers" while setup is gated, without styling it
+  // as a critical login blocker.
+  const isPendingDns = failure.pending === true;
   return {
-    severity: isBackground ? 'background' : 'critical',
+    severity: isPendingDns ? 'info' : (isBackground ? 'background' : 'critical'),
     component: failure.category,
     layer: failure.phase,
+    step: failure.step || null,
     reason: failure.suspectedCause || failure.lastAction || 'Unknown blocker.',
+    details: failure.details || null,
     nextAction: failure.suggestedNextStep || guidanceForCategory(failure.category),
-    loginBlocking: !isBackground
+    autoRetry: failure.autoRetry || null,
+    pending: isPendingDns ? true : undefined,
+    loginBlocking: !isBackground && !isPendingDns
   };
 }
 
@@ -572,6 +593,8 @@ function buildStatusSnapshot({
   kubeconfigPath,
   networkProbe,
   autoRetry,
+  setupEngineLog,
+  dnsReconcile,
   nodeResult,
   podResult,
   jobResult,
@@ -584,15 +607,17 @@ function buildStatusSnapshot({
   const releaseSelection = readJsonFile(releaseSelectionFile);
 
   // Authority inversion for network-class failures: the recorded install-state
-  // failure is only trusted for non-network categories. For network/dns/github
-  // failures we defer to the live probe so a transient (or fixed) network issue
-  // is not reported as a permanent blocker, and so it cannot poison the
-  // early-Kubernetes suppression below.
+  // failure is only superseded by the live probe when the probe actually covers
+  // the failed operation. A healthy GHCR probe must not clear a licensing
+  // (`redeem-install-code`) failure, because the probe never exercises
+  // redemption. Uncovered failures remain the authoritative blocker.
   const recordedFailure = installState?.failure || null;
   const recordedCategory = recordedFailure
     ? classifyFailureCategory(installState?.phase, installState?.status, recordedFailure)
     : null;
   const recordedIsNetworkClass = NETWORK_CLASS_CATEGORIES.includes(recordedCategory);
+  const recordedCoveredByProbe = recordedIsNetworkClass
+    && PROBE_COVERED_FAILURE_STEPS.has(String(recordedFailure?.step || ''));
 
   let effectiveFailure = recordedFailure;
   let liveNetworkBlocker = null;
@@ -602,8 +627,8 @@ function buildStatusSnapshot({
     networkStatus = { ok: Boolean(networkProbe.ok), checkedAt: networkProbe.checkedAt || null };
     if (!networkProbe.ok) {
       liveNetworkBlocker = networkFailureSummary(networkProbe, { resolved: false });
-      if (recordedIsNetworkClass) effectiveFailure = null; // the live blocker supersedes the recorded one
-    } else if (recordedIsNetworkClass) {
+      if (recordedCoveredByProbe) effectiveFailure = null; // the live blocker supersedes the recorded one
+    } else if (recordedCoveredByProbe) {
       resolvedNetworkFailure = { ...recordedFailure, resolvedByLiveCheck: true, checkedAt: networkProbe.checkedAt || null };
       effectiveFailure = null;
       liveNetworkBlocker = networkFailureSummary(networkProbe, { resolved: true });
@@ -663,6 +688,67 @@ function buildStatusSnapshot({
   const tiers = deriveReadiness(failureState, nodes, podLines, jobLines, helmLines, helmIssues, readinessWarnings);
   const derivedFailures = deriveFailureSummary(failureState, podLines, blockingHelmIssues, warnings);
   const failures = liveNetworkBlocker ? [liveNetworkBlocker, ...derivedFailures] : derivedFailures;
+
+  // During a retry the engine writes running states whose phase may momentarily
+  // carry no failure object. The retry controller's last failure snapshot is the
+  // durable evidence, so surface it rather than dropping the blocker — even when
+  // other derived failures (e.g. transient kubectl unavailability) are present.
+  if (autoRetry?.lastFailure && !failures.some((item) => item.step && item.step === autoRetry.lastFailure.step)) {
+    const record = autoRetry.lastFailure;
+    failures.push({
+      category: record.category || 'setup',
+      phase: record.phase || 'setup',
+      step: record.step || null,
+      lastAction: record.message || 'The last setup attempt failed.',
+      suspectedCause: record.message || 'The last setup attempt failed.',
+      details: record.details || null,
+      suggestedNextStep: record.details || guidanceForCategory(record.category),
+      retrySafe: record.retrySafe !== false,
+      logs: ['journalctl -u alga-appliance.service -u alga-appliance-console.service -n 200']
+    });
+  }
+
+  // A failed or pending cluster-DNS activation is its own blocker: setup cannot
+  // safely redeem or let Flux pull against a resolver that still leaks the
+  // customer search suffix, and this is independent of the setup retry budget.
+  // The DNS reconcile record is authoritative for this step, so drop any
+  // derived/retained failure carrying the same step (a retryable setup run
+  // writes a `reconcile-cluster-dns` failure too) rather than double-listing it
+  // and hiding the pending flag behind the generic record.
+  const removeDnsStepFailures = () => {
+    for (let i = failures.length - 1; i >= 0; i -= 1) {
+      if (failures[i].step === 'reconcile-cluster-dns') failures.splice(i, 1);
+    }
+  };
+  if (dnsReconcile && dnsReconcile.ok === false) {
+    removeDnsStepFailures();
+    failures.push({
+      category: 'dns',
+      phase: 'dns',
+      step: 'reconcile-cluster-dns',
+      lastAction: 'Cluster DNS reconciliation failed.',
+      suspectedCause: dnsReconcile.error || 'Cluster DNS reconciliation failed.',
+      details: dnsReconcile.error || null,
+      suggestedNextStep: 'Inspect the DNS reconcile log and host k3s configuration, then reconcile again.',
+      retrySafe: true,
+      logs: dnsReconcile.logFile ? [`tail -n 200 ${dnsReconcile.logFile}`] : []
+    });
+  } else if (dnsReconcile && dnsReconcile.state === 'submitted' && dnsReconcile.ok === null) {
+    removeDnsStepFailures();
+    failures.push({
+      category: 'dns',
+      phase: 'dns',
+      step: 'reconcile-cluster-dns',
+      lastAction: 'Cluster DNS activation is in progress; setup is gated until it completes.',
+      suspectedCause: 'Cluster DNS activation is in progress; setup is gated until it completes.',
+      details: dnsReconcile.activation?.error || null,
+      suggestedNextStep: 'Wait for DNS activation to finish (watch the reconcile log); if it stalls, run setup again to retry.',
+      retrySafe: true,
+      pending: true,
+      logs: dnsReconcile.logFile ? [`tail -n 200 ${dnsReconcile.logFile}`] : []
+    });
+  }
+
   const readinessTiers = normalizeReadinessTiers(tiers);
   let rollup = rollupFromState(installState, tiers, failures);
 
@@ -673,7 +759,11 @@ function buildStatusSnapshot({
     const pendingSeconds = autoRetry.nextAttemptInSeconds ?? 0;
     const whenSentence = pendingSeconds > 0 ? `next attempt in ~${pendingSeconds}s` : 'starting the next attempt now';
     for (const failure of retrySafeFailures) {
-      failure.autoRetry = { attempts: autoRetry.attempts, nextAttemptInSeconds: pendingSeconds };
+      failure.autoRetry = {
+        attempts: autoRetry.attempts,
+        maxAttempts: autoRetry.maxAttempts,
+        nextAttemptInSeconds: pendingSeconds
+      };
       failure.suggestedNextStep = `Continuing automatically — retry attempt ${autoRetry.attempts + 1} of ${autoRetry.maxAttempts}, ${whenSentence}. No action needed.`;
     }
     if (retrySafeFailures.length === failures.length) {
@@ -685,7 +775,12 @@ function buildStatusSnapshot({
     }
   } else if (autoRetry?.exhausted) {
     for (const failure of failures) {
+      failure.autoRetry = { attempts: autoRetry.attempts, maxAttempts: autoRetry.maxAttempts, exhausted: true };
       failure.suggestedNextStep = `${failure.suggestedNextStep} Automatic retries are exhausted after ${autoRetry.attempts} attempts; open the Setup page to re-run setup or collect a support bundle.`;
+    }
+  } else if (autoRetry?.error) {
+    for (const failure of failures) {
+      failure.suggestedNextStep = `${failure.suggestedNextStep} ${autoRetry.error}`;
     }
   }
 
@@ -704,6 +799,8 @@ function buildStatusSnapshot({
     kubeconfigPath,
     network: networkStatus,
     lastRecordedError: resolvedNetworkFailure,
+    engineLog: setupEngineLog || null,
+    dnsReconcile: dnsReconcile || null,
     tiers,
     failures,
     readinessTiers,
@@ -790,6 +887,8 @@ export function collectStatusSnapshot(options = {}) {
     ...context,
     networkProbe: options.networkProbe,
     autoRetry: options.autoRetry,
+    setupEngineLog: options.setupEngineLog,
+    dnsReconcile: options.dnsReconcile,
     nodeResult,
     podResult,
     jobResult,
@@ -820,6 +919,8 @@ export async function collectStatusSnapshotAsync(options = {}) {
     ...context,
     networkProbe,
     autoRetry: options.autoRetry,
+    setupEngineLog: options.setupEngineLog,
+    dnsReconcile: options.dnsReconcile,
     nodeResult,
     podResult,
     jobResult,

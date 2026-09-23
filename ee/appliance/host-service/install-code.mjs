@@ -13,6 +13,7 @@
  */
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import { httpsRequest, diagnoseResolution, requireHttpsUrl } from './http-transport.mjs';
 
 /**
  * Stable per-appliance id for /register (appliances are keyed by it, so check-in
@@ -36,6 +37,51 @@ const FRIENDLY_ERRORS = {
   consumed_claim_code: 'Install code has already been used. Request a fresh one from the portal (re-issue).',
 };
 
+function hostnameOf(url) {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return String(url);
+  }
+}
+
+// Build a reachability error that names the destination and the resolver path
+// without ever echoing the install code or any credential.
+function reachabilityError(url, error, diagnostics) {
+  const hostname = hostnameOf(url);
+  const cause = error instanceof Error ? error.message : String(error);
+  const code = error && typeof error === 'object' ? (error.code || error.errno || null) : null;
+  // Addresses the failing connection itself looked up (captured by the
+  // transport) are reported as the destination; a later query is labeled as a
+  // later diagnostic lookup, never as the failed connection's destination.
+  const lookupAddresses = Array.isArray(error?.lookupAddresses) ? error.lookupAddresses : [];
+  const parts = [`Could not reach the license service at ${url} to redeem the install code: ${cause}`];
+  if (code) parts.push(`(${code})`);
+  if (diagnostics && diagnostics.servers?.length) {
+    parts.push(`DNS servers: ${diagnostics.servers.join(', ')}.`);
+  }
+  if (lookupAddresses.length > 0) {
+    parts.push(`The failed connection resolved ${hostname} to ${lookupAddresses.join(', ')}.`);
+  }
+  if (diagnostics) {
+    parts.push(diagnostics.ok
+      ? `A later diagnostic lookup of ${hostname} returned: ${diagnostics.addresses.join(', ')}.`
+      : `A later diagnostic lookup of ${hostname} also failed: ${diagnostics.error}`);
+  }
+  const wrapped = new Error(parts.join(' '));
+  wrapped.cause = error;
+  wrapped.network = {
+    hostname,
+    servers: diagnostics?.servers || [],
+    lookupAddresses,
+    addresses: diagnostics?.addresses || [],
+    dnsOk: Boolean(diagnostics?.ok),
+    dnsError: diagnostics?.error || null,
+    code
+  };
+  return wrapped;
+}
+
 /**
  * Redeem an install code against alga-license `/register`.
  * @returns {Promise<{tenantId,edition,companyName,contactEmail,licenseToken,applianceCredential,checkInUrl,applianceId}>}
@@ -43,23 +89,64 @@ const FRIENDLY_ERRORS = {
  *   unreachable service (surfaced to the setup UI; install is blocked, never
  *   silently falls back to a self-generated tenant).
  */
-export async function redeemInstallCode({ serviceUrl, installCode, applianceId, fetchImpl }) {
-  const doFetch = fetchImpl || globalThis.fetch;
+export async function redeemInstallCode({ serviceUrl, installCode, applianceId, fetchImpl, lookupServers = [], requestImpl }) {
   if (!serviceUrl) {
     throw new Error('License service URL is not configured (ALGA_LICENSE_SERVICE_URL); cannot redeem the install code.');
   }
-  const url = `${String(serviceUrl).replace(/\/$/, '')}/register`;
+  // Reject a non-HTTPS or unparseable service URL clearly instead of letting the
+  // transport surface a cryptic error; the claim code must only travel over TLS.
+  const baseUrl = String(serviceUrl).replace(/\/$/, '');
+  try {
+    requireHttpsUrl(baseUrl);
+  } catch (error) {
+    throw new Error(`Invalid license service URL (ALGA_LICENSE_SERVICE_URL): ${error instanceof Error ? error.message : String(error)}`);
+  }
+  const url = `${baseUrl}/register`;
   const code = String(installCode || '').trim().toUpperCase();
+  const hostname = hostnameOf(url);
 
   let res;
-  try {
-    res = await doFetch(url, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ claim_code: code, appliance_id: applianceId }),
-    });
-  } catch (err) {
-    throw new Error(`Could not reach the license service at ${url} to redeem the install code: ${err instanceof Error ? err.message : String(err)}`);
+  if (fetchImpl) {
+    // Injectable seam for unit tests (and callers that must supply a transport).
+    try {
+      res = await fetchImpl(url, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ claim_code: code, appliance_id: applianceId }),
+      });
+    } catch (err) {
+      throw reachabilityError(url, err, await diagnoseResolution(lookupServers, hostname));
+    }
+  } else {
+    // Production path: the same explicit-resolver transport registry requests
+    // use, so global-fetch search-domain behavior cannot diverge.
+    const doRequest = requestImpl || httpsRequest;
+    let raw;
+    try {
+      raw = await doRequest(url, 8000, lookupServers, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ claim_code: code, appliance_id: applianceId }),
+        // Never forward a claim code across a redirect to another host.
+        rejectRedirects: true,
+      });
+    } catch (err) {
+      throw reachabilityError(url, err, await diagnoseResolution(lookupServers, hostname));
+    }
+    if (raw.statusCode >= 300 && raw.statusCode < 400) {
+      throw new Error(`Install-code redemption was redirected away from ${hostname}; refusing to forward the install code.`);
+    }
+    res = {
+      ok: raw.statusCode >= 200 && raw.statusCode < 300,
+      status: raw.statusCode,
+      json: async () => {
+        try {
+          return JSON.parse(raw.body || '{}');
+        } catch {
+          return {};
+        }
+      },
+    };
   }
 
   if (!res.ok) {

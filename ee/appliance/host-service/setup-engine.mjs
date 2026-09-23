@@ -2,13 +2,20 @@
 import crypto from 'node:crypto';
 import dns from 'node:dns';
 import fs from 'node:fs';
-import https from 'node:https';
 import os from 'node:os';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { persistMaintenanceMetadata } from './metadata-engine.mjs';
 import { redeemInstallCode, deriveApplianceId, licenseSeedFromRedeem } from './install-code.mjs';
 import { writeSecureJsonFileAtomic } from './update-state.mjs';
+import {
+  resolveAddressesWithServers,
+  resolverLookup,
+  httpsRequest
+} from './http-transport.mjs';
+
+// Preserve the historical setup-engine export surface for callers/tests.
+export { resolveAddressesWithServers, resolverLookup, httpsRequest };
 
 // Path defaults honor the ALGA_APPLIANCE_* environment the control plane runs
 // with, falling back to the bare-host locations. This keeps the setup workflow
@@ -55,13 +62,40 @@ function readSystemResolvers(resolvConfPath = DEFAULT_RESOLV_CONF) {
     .filter((value) => value.length > 0);
 }
 
-function writeInstallState(state, stateFile = DEFAULT_STATE_FILE) {
-  writeSecureJsonFileAtomic(stateFile, state);
+function readExistingState(stateFile) {
+  try {
+    if (!stateFile || !fs.existsSync(stateFile)) return null;
+    const parsed = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+// Carry the last unresolved failure across intermediate writes (queued, running
+// and non-terminal *-complete phases) so a retry or phase transition never
+// erases the operator's evidence. A write clears the failure explicitly with
+// `failure: null` (whole-workflow success) or supersedes it with its own
+// failure object (a new failure).
+function writeInstallState(state, stateFile = DEFAULT_STATE_FILE, options = {}) {
+  let next = state;
+  const hasOwnFailure = Object.prototype.hasOwnProperty.call(state, 'failure');
+  if (!hasOwnFailure && options.retainFailure !== false) {
+    const existing = readExistingState(stateFile);
+    if (existing?.failure) {
+      next = {
+        ...state,
+        failure: existing.failure,
+        ...(existing.setupRunId && !state.setupRunId ? { setupRunId: existing.setupRunId } : {})
+      };
+    }
+  }
+  writeSecureJsonFileAtomic(stateFile, next);
 }
 
 function writeWorkflowInstallState(state, stateFile, options) {
   if (!options.update) {
-    writeInstallState(state, stateFile);
+    writeInstallState(state, stateFile, { retainFailure: options?.retainFailure !== false });
     return;
   }
 
@@ -74,11 +108,13 @@ function writeWorkflowInstallState(state, stateFile, options) {
     ? 'update-running'
     : state.status;
   const { owner: _owner, ...terminalUpdate } = options.update;
+  // Application updates own their own state lifecycle; never inherit a prior
+  // setup failure into update state.
   writeInstallState({
     ...state,
     status,
     update: isBlocked ? terminalUpdate : options.update
-  }, stateFile);
+  }, stateFile, { retainFailure: false });
 }
 
 function writeSecureJsonFile(targetFile, value) {
@@ -91,118 +127,6 @@ function writeSecureJsonFile(targetFile, value) {
 
 function nowIso() {
   return new Date().toISOString();
-}
-
-async function resolveAddressesWithServers(servers, hostname, family = 0) {
-  const resolver = new dns.promises.Resolver();
-  resolver.setServers(servers);
-
-  const records = [];
-  if (family !== 6) {
-    try {
-      for (const address of await resolver.resolve4(hostname)) {
-        records.push({ address, family: 4 });
-      }
-    } catch {
-      // No IPv4 records (or query error); fall through to IPv6 before giving up.
-    }
-  }
-  if (family !== 4 && records.length === 0) {
-    try {
-      for (const address of await resolver.resolve6(hostname)) {
-        records.push({ address, family: 6 });
-      }
-    } catch {
-      // Surfaced by the empty-result check below.
-    }
-  }
-
-  if (records.length === 0) {
-    throw new Error(`No A or AAAA records resolved for ${hostname} via DNS server(s) ${servers.join(', ')}`);
-  }
-
-  return records;
-}
-
-// Custom DNS lookup for https.request that resolves against explicit servers.
-// Guards against empty results (which previously yielded "Invalid IP address:
-// undefined") and honors Node's all/family lookup options.
-function resolverLookup(servers) {
-  return (hostname, options, callback) => {
-    const done = typeof options === 'function' ? options : callback;
-    const opts = typeof options === 'object' && options ? options : {};
-    resolveAddressesWithServers(servers, hostname, opts.family || 0)
-      .then((records) => {
-        if (opts.all) {
-          done(null, records);
-        } else {
-          done(null, records[0].address, records[0].family);
-        }
-      })
-      .catch((error) => done(error));
-  };
-}
-
-function httpsRequest(url, timeoutMs = 8000, lookupServers = [], extra = {}) {
-  return new Promise((resolve, reject) => {
-    const requestOptions = {
-      method: extra.method || 'GET',
-      timeout: timeoutMs,
-      headers: extra.headers || {}
-    };
-    if (lookupServers && lookupServers.length > 0) {
-      requestOptions.lookup = resolverLookup(lookupServers);
-    }
-
-    const req = https.request(url, requestOptions, (res) => {
-      const status = res.statusCode || 0;
-      // Opt-in redirect following (OCI blob fetches 307 to a CDN). On a
-      // cross-host redirect, drop Authorization — the redirect target is a
-      // pre-signed URL and forwarding a bearer to a third party is unsafe.
-      const redirectsLeft = extra.followRedirects ? (extra.maxRedirects ?? 5) : 0;
-      if (status >= 300 && status < 400 && res.headers.location && redirectsLeft > 0) {
-        res.resume();
-        let nextUrl;
-        try {
-          nextUrl = new URL(res.headers.location, url).toString();
-        } catch (error) {
-          reject(error);
-          return;
-        }
-        const nextHeaders = { ...(extra.headers || {}) };
-        try {
-          if (new URL(nextUrl).host !== new URL(url).host) {
-            delete nextHeaders.Authorization;
-            delete nextHeaders.authorization;
-          }
-        } catch {
-          // keep headers if URL parsing fails; the next request will surface errors
-        }
-        httpsRequest(nextUrl, timeoutMs, lookupServers, {
-          ...extra,
-          headers: nextHeaders,
-          maxRedirects: redirectsLeft - 1
-        }).then(resolve, reject);
-        return;
-      }
-
-      const chunks = [];
-      res.on('data', (chunk) => chunks.push(chunk));
-      res.on('end', () => {
-        resolve({
-          statusCode: status,
-          headers: res.headers || {},
-          body: Buffer.concat(chunks).toString('utf8')
-        });
-      });
-    });
-
-    req.on('timeout', () => {
-      req.destroy(new Error(`Request timed out for ${url}`));
-    });
-    req.on('error', reject);
-    req.end();
-  });
 }
 
 function runShell(command, options = {}) {
@@ -1120,14 +1044,28 @@ export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelec
     const applianceId = deriveApplianceId(inputs.appHostname);
     const doRedeem = options.redeemInstallCode || redeemInstallCode;
     try {
-      redeemResult = await doRedeem({ serviceUrl, installCode: inputs.installCode, applianceId });
+      redeemResult = await doRedeem({
+        serviceUrl,
+        installCode: inputs.installCode,
+        applianceId,
+        lookupServers: resolverServersForInputs(inputs, options.resolvConfPath || DEFAULT_RESOLV_CONF)
+      });
     } catch (error) {
+      const network = error && typeof error === 'object' ? error.network : null;
+      const connectionAddresses = (network?.lookupAddresses || []).join(', ');
+      const networkDetail = network
+        ? ` Destination: ${network.hostname}; DNS servers: ${(network.servers || []).join(', ') || 'none'};${connectionAddresses ? ` failed connection resolved: ${connectionAddresses};` : ''} resolved addresses: ${(network.addresses || []).join(', ') || 'none'}; DNS lookup: ${network.dnsOk ? 'ok' : (network.dnsError || 'failed')}; socket/TLS code: ${network.code || 'n/a'}.`
+        : '';
       const failure = preflightFailure(
         'registry-release-source',
         'redeem-install-code',
         'Could not redeem the install code.',
-        error instanceof Error ? error.message : String(error)
+        `${error instanceof Error ? error.message : String(error)}${networkDetail}`
       );
+      // Keep the transport's resolver/TLS detail structured as well as in the
+      // human-readable details string so the status UI can name the destination
+      // and DNS servers, and can tell a network failure apart from a bad code.
+      if (network) failure.network = network;
       // A bad/expired/used code is operator-correctable: stop auto-retrying (it
       // will never succeed) so the control-plane keeps the setup form open for a
       // re-issued code. Transient/network errors stay retry-safe (unflagged).
@@ -1418,7 +1356,28 @@ export async function runSetupWorkflow(inputs, options = {}) {
     releaseSelectionFile: options.releaseSelectionFile,
     installStateFile: options.stateFile
   });
-  return configResult;
+
+  // Explicit terminal acknowledgment. Individual *-complete phases are not
+  // terminal; only the whole workflow reaching this point clears the retained
+  // failure and marks the run resolved for the retry controller.
+  acknowledgeSetupSuccess(options.stateFile || DEFAULT_STATE_FILE, configResult.releaseSelectionFile, options);
+
+  return { ...configResult, terminalSuccess: true };
+}
+
+// Whole-workflow success: clear the retained failure and mark the state
+// terminal. Exported so the acknowledgment is directly testable.
+export function acknowledgeSetupSuccess(stateFile = DEFAULT_STATE_FILE, releaseSelectionFile = DEFAULT_RELEASE_SELECTION_FILE, options = {}) {
+  writeWorkflowInstallState({
+    status: 'release-config-complete',
+    phase: 'registry-release-source',
+    lastAction: 'Setup workflow completed successfully.',
+    failure: null,
+    terminalSuccess: true,
+    releaseSelectionFile,
+    completedAt: nowIso(),
+    updatedAt: nowIso()
+  }, stateFile, options);
 }
 
 function parseCliArgs(argv) {
