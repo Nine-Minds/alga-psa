@@ -25,7 +25,7 @@ import { getContactsForPicker } from '@alga-psa/user-composition/actions/contact
 import QuoteStatusBadge from './QuoteStatusBadge';
 import { QuoteTermsContent } from '@alga-psa/ui/editor';
 import { ArrowLeft } from 'lucide-react';
-import { QuoteSendRecipientsField, type QuoteRecipient } from './QuoteSendRecipientsField';
+import { QuoteSendDialog, type QuoteSendDialogPayload } from './QuoteSendDialog';
 
 interface QuoteDetailProps {
   quoteId: string;
@@ -160,9 +160,6 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
   const [approvalDialogMode, setApprovalDialogMode] = useState<'approve' | 'changes' | null>(null);
   const [approvalComment, setApprovalComment] = useState('');
   const [isSendDialogOpen, setIsSendDialogOpen] = useState(false);
-  const [sendMessage, setSendMessage] = useState('');
-  const [sendRecipients, setSendRecipients] = useState<QuoteRecipient[]>([]);
-  const [additionalEmails, setAdditionalEmails] = useState('');
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewHtml, setPreviewHtml] = useState<{ html: string; css: string } | null>(null);
   const [isPreviewLoading2, setIsPreviewLoading2] = useState(false);
@@ -599,7 +596,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
     }
   };
 
-  const handleSendQuote = async () => {
+  const handleSendQuote = async (payload: QuoteSendDialogPayload) => {
     if (!quote) {
       return;
     }
@@ -608,20 +605,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       setIsWorking(true);
       setError(null);
       setNotice(null);
-      const typedEmails = additionalEmails.split(',').map((e) => e.trim()).filter(Boolean);
-      const pickedEmails = sendRecipients.map((r) => r.email);
-      const seen = new Set<string>();
-      const combined: string[] = [];
-      for (const email of [...pickedEmails, ...typedEmails]) {
-        const key = email.toLowerCase();
-        if (seen.has(key)) continue;
-        seen.add(key);
-        combined.push(email);
-      }
-      const result = await sendQuote(quote.quote_id, {
-        message: sendMessage.trim() || undefined,
-        email_addresses: combined.length > 0 ? combined : undefined,
-      });
+      const result = await sendQuote(quote.quote_id, payload);
 
       if (isReturnedActionError(result)) {
         throw new Error(getErrorMessage(result));
@@ -629,9 +613,6 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
 
       setQuote(result);
       setIsSendDialogOpen(false);
-      setSendMessage('');
-      setSendRecipients([]);
-      setAdditionalEmails('');
       setNotice(
         t('quoteDetail.notices.sent', { defaultValue: 'Quote sent to the client.' }),
       );
@@ -1496,60 +1477,14 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
           )}
         </DialogContent>
       </Dialog>
-      <Dialog
-        id="quote-send-dialog"
+      <QuoteSendDialog
+        idPrefix="quote-send"
         isOpen={isSendDialogOpen}
+        clientId={quote.client_id}
+        isSending={isWorking}
         onClose={() => setIsSendDialogOpen(false)}
-        title={t('quoteForm.dialogs.send.title', { defaultValue: 'Send Quote to Client' })}
-        footer={(
-          <div className="flex justify-end space-x-2">
-            <Button id="quote-send-cancel" variant="outline" onClick={() => setIsSendDialogOpen(false)} disabled={isWorking}>{t('common.actions.cancel', { defaultValue: 'Cancel' })}</Button>
-            <Button id="quote-send-confirm" onClick={() => void handleSendQuote()} disabled={isWorking}>
-              {isWorking
-                ? t('common.states.sending', { defaultValue: 'Sending...' })
-                : t('quoteForm.actions.sendQuote', { defaultValue: 'Send Quote' })}
-            </Button>
-          </div>
-        )}
-      >
-        <DialogContent>
-          <DialogDescription>
-            {t('quoteForm.dialogs.send.description', {
-              defaultValue: 'This will email the quote to the client\'s billing contacts and change its status to "Sent".',
-            })}
-          </DialogDescription>
-          <div className="space-y-3 py-2">
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              {t('quoteForm.fields.recipients', { defaultValue: 'Recipients' })}
-              <QuoteSendRecipientsField
-                id="quote-send-recipients"
-                clientId={quote?.client_id}
-                value={sendRecipients}
-                onChange={setSendRecipients}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              {t('quoteForm.fields.additionalEmails', { defaultValue: 'Additional email addresses (comma-separated)' })}
-              <input
-                type="text"
-                value={additionalEmails}
-                onChange={(event) => setAdditionalEmails(event.target.value)}
-                placeholder={t('quoteForm.placeholders.additionalEmails', { defaultValue: 'email@example.com, another@example.com' })}
-                className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              {t('quoteDetail.dialogs.send.message', { defaultValue: 'Optional message to include in the email' })}
-              <TextArea
-                value={sendMessage}
-                onChange={(event) => setSendMessage(event.target.value)}
-                rows={3}
-                placeholder={t('quoteForm.placeholders.message', { defaultValue: 'Add a personal note for the client...' })}
-              />
-            </label>
-          </div>
-        </DialogContent>
-      </Dialog>
+        onConfirm={(payload) => void handleSendQuote(payload)}
+      />
       <Dialog
         id="quote-approval-dialog"
         isOpen={approvalDialogMode !== null}
