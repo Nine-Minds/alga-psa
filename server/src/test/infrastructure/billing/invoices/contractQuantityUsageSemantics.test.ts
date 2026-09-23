@@ -10,7 +10,7 @@ import { generateGroupedInvoicesAsRecurringBillingRun, generateInvoicesAsRecurri
 import { updateContractLineService } from '@alga-psa/billing/actions/contractLineServiceActions';
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
-import { setupCommonMocks } from '../../../../../test-utils/testMocks';
+import { setupCommonMocks, setMockUser, createMockUser } from '../../../../../test-utils/testMocks';
 import {
   generateInvoice,
   generateInvoiceForSelectionInput,
@@ -1722,6 +1722,72 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         .where({ tenant: context.tenantId, config_id: setup.users.configId });
       expect(history).toHaveLength(1);
       expect(history[0]).toMatchObject({ quantity: 23, version: 1 });
+    });
+
+    it('rejects a second create when two editors both saw an empty boundary', async () => {
+      const setup = await setupProductLine();
+
+      // Editor A and editor B both loaded the boundary and saw no revision, so
+      // both send expected_version=null. The first create wins; the second must
+      // be rejected instead of silently replacing it.
+      const editorA = expectScheduled(await scheduleProduct(setup, setup.users, {
+        quantity: 23,
+        effective_period_start: '2023-02-01',
+      }));
+      expect(editorA.version).toBe(1);
+      const editorB = await scheduleProduct(setup, setup.users, {
+        quantity: 99,
+        effective_period_start: '2023-02-01',
+      });
+      expect('actionError' in editorB).toBe(true);
+
+      const canonical = await context.db('contract_line_unit_pricing_revisions')
+        .where({ tenant: context.tenantId, config_id: setup.users.configId })
+        .first();
+      expect(canonical).toMatchObject({ quantity: 23, version: 1 });
+
+      // A genuine replacement still requires the matching version token.
+      const replaced = expectScheduled(await scheduleProduct(setup, setup.users, {
+        quantity: 25,
+        effective_period_start: '2023-02-01',
+        expected_version: 1,
+      }));
+      expect(replaced.version).toBe(2);
+    });
+
+    it('preserves the original author while recording the replacing actor', async () => {
+      const setup = await setupProductLine();
+      const userA = createMockUser('internal', { user_id: 'editor-a', tenant: context.tenantId });
+      const userB = createMockUser('internal', { user_id: 'editor-b', tenant: context.tenantId });
+
+      setMockUser(userA, ['billing:update']);
+      const first = expectScheduled(await scheduleProduct(setup, setup.users, {
+        quantity: 23,
+        effective_period_start: '2023-02-01',
+      }));
+      expect(first.version).toBe(1);
+
+      setMockUser(userB, ['billing:update']);
+      const replaced = expectScheduled(await scheduleProduct(setup, setup.users, {
+        quantity: 25,
+        effective_period_start: '2023-02-01',
+        expected_version: 1,
+      }));
+      expect(replaced.version).toBe(2);
+
+      const canonical = await context.db('contract_line_unit_pricing_revisions')
+        .where({ tenant: context.tenantId, config_id: setup.users.configId })
+        .first();
+      // The original author is not overwritten by the replacer.
+      expect(canonical).toMatchObject({ created_by: 'editor-a', updated_by: 'editor-b' });
+
+      const history = await context.db('contract_line_unit_pricing_revision_history')
+        .where({ tenant: context.tenantId, config_id: setup.users.configId });
+      expect(history).toHaveLength(1);
+      expect(history[0]).toMatchObject({
+        superseded_by: 'editor-b',
+        original_created_by: 'editor-a',
+      });
     });
 
     it('rejects a product change inside an already-billed period and allows the next boundary', async () => {

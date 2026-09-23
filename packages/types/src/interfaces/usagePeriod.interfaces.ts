@@ -112,7 +112,13 @@ export interface IContractLineUnitPricingRevisionHistoryEntry extends TenantEnti
   price_policy: ContractLineUnitPricePolicy;
   effective_period_start: ISO8601String;
   version: number;
+  /** Actor who performed the replacement. */
   superseded_by: string;
   recorded_by?: string | null;
+  /** Author of the superseded values, when known and different from the replacer. */
+  original_created_by?: string | null;
+  original_created_at?: ISO8601String | Date | null;
+  original_updated_by?: string | null;
+  original_updated_at?: ISO8601String | Date | null;
   created_at: ISO8601String | Date;
 }

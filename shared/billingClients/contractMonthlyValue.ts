@@ -1,5 +1,15 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import {
+  resolveMemberRate,
+  type UnitPricingRevisionRateRow,
+  type ServicePriceRateRow,
+} from './resolveFixedLineRate';
+import {
+  selectLatestApplicableRevision,
+  toRecurringUnitRevisionCandidate,
+  type RecurringUnitRevisionCandidate,
+} from './recurringUnitPricing';
 
 export interface ContractMonthlyValue {
   clientContractId: string;
@@ -67,6 +77,8 @@ interface FixedMemberValuationRow {
   config_id: string;
   quantity: number | string | null;
   custom_rate: number | string | null;
+  /** `contract_line_services.custom_rate` — the legacy service-line override. */
+  service_line_custom_rate?: number | string | null;
   base_rate: number | string | null;
   pricing_basis: string | null;
   /** Catalog rate (minor units) — the engine's last fallback for a member with no configured rate. */
@@ -150,6 +162,30 @@ export async function getContractMonthlyFixedValuesByContract(
     .filter((line) => line.contract_line_type === 'Fixed')
     .map((line) => line.contract_line_id);
 
+  // Contract currency drives the currency-specific catalog price, matching the
+  // invoice engine's `service_prices` join.
+  const contractCurrencies = new Map<string, string>();
+  if (contractIds.length > 0) {
+    const contractRows = (await db.table('contracts')
+      .whereIn('contract_id', contractIds)
+      .select('contract_id', 'currency_code')) as Array<{
+      contract_id: string;
+      currency_code: string | null;
+    }>;
+    for (const contract of contractRows) {
+      contractCurrencies.set(
+        contract.contract_id,
+        (contract.currency_code && String(contract.currency_code).trim()) || 'USD',
+      );
+    }
+  }
+  const tenantSettings = (await db.table('default_billing_settings')
+    .select('default_currency_code')
+    .first()) as { default_currency_code?: string | null } | undefined;
+  const tenantDefaultCurrency =
+    (tenantSettings?.default_currency_code && String(tenantSettings.default_currency_code).trim()) ||
+    'USD';
+
   const membersByLine = new Map<string, FixedMemberValuationRow[]>();
   if (fixedLineIds.length > 0) {
     const memberQuery = db.table('contract_line_service_configuration as clsc')
@@ -170,48 +206,112 @@ export async function getContractMonthlyFixedValuesByContract(
     db.tenantJoin(memberQuery, 'service_catalog as sc', 'clsc.service_id', 'sc.service_id', { type: 'left' });
     const members = (await memberQuery) as FixedMemberValuationRow[];
     for (const member of members) {
+      member.service_line_custom_rate = null;
       const existing = membersByLine.get(member.contract_line_id) ?? [];
       existing.push(member);
       membersByLine.set(member.contract_line_id, existing);
     }
   }
 
-  // Latest unit-pricing revision effective at/before asOf per (line, service,
-  // config). Future revisions are scheduled values, not current commitments.
-  // Products use this same store, so a scheduled product change is valued with
-  // its effective quantity/price instead of the legacy baseline (which for
-  // wizard products derives to zero).
-  const effectiveRevisions = new Map<
-    string,
-    { quantity: number; unit_rate_cents: number | null; price_policy: 'override' | 'catalog' }
-  >();
+  // Legacy service-line overrides (`contract_line_services.custom_rate`) — the
+  // product baseline consults these before the catalog price.
+  const serviceLineRates = new Map<string, number | string | null>();
+  if (fixedLineIds.length > 0) {
+    const serviceLineRows = (await db.table('contract_line_services')
+      .whereIn('contract_line_id', fixedLineIds)
+      .select('contract_line_id', 'service_id', 'custom_rate')) as Array<{
+      contract_line_id: string;
+      service_id: string;
+      custom_rate: number | string | null;
+    }>;
+    for (const row of serviceLineRows) {
+      serviceLineRates.set(`${row.contract_line_id}:${row.service_id}`, row.custom_rate ?? null);
+    }
+    for (const [lineId, members] of membersByLine) {
+      for (const member of members) {
+        member.service_line_custom_rate =
+          serviceLineRates.get(`${lineId}:${member.service_id}`) ?? null;
+      }
+    }
+  }
+
+  // Currency/period-specific catalog prices for every member service. The shared
+  // resolver admits only the matching currency and latest effective date.
+  const memberServiceIds = new Set<string>();
+  for (const members of membersByLine.values()) {
+    for (const member of members) memberServiceIds.add(member.service_id);
+  }
+  const catalogPrices: ServicePriceRateRow[] = memberServiceIds.size > 0
+    ? ((await db.table('service_prices')
+        .whereIn('service_id', [...memberServiceIds])
+        .select('price_id', 'service_id', 'currency_code', 'rate', 'effective_date', 'created_at')) as ServicePriceRateRow[])
+    : [];
+
+  // Unit-pricing revisions effective at/before asOf, keyed for the shared
+  // resolver and for quantity selection. Future revisions are scheduled values,
+  // not current commitments. Products use this same store.
+  const revisionsByLine = new Map<string, UnitPricingRevisionRateRow[]>();
+  const candidatesByKey = new Map<string, RecurringUnitRevisionCandidate[]>();
   if (fixedLineIds.length > 0) {
     const revisionRows = (await db.table('contract_line_unit_pricing_revisions as rev')
       .whereIn('rev.contract_line_id', fixedLineIds)
       .where('rev.effective_period_start', '<=', asOf)
       .orderBy('rev.effective_period_start', 'asc')
       .select(
+        'rev.revision_id',
         'rev.contract_line_id',
         'rev.service_id',
         'rev.config_id',
         'rev.quantity',
         'rev.unit_rate_cents',
         'rev.price_policy',
+        'rev.version',
+        'rev.created_at',
+        'rev.effective_period_start',
       )) as Array<{
+        revision_id: string;
         contract_line_id: string;
         service_id: string;
         config_id: string;
         quantity: number | string;
         unit_rate_cents: number | string | null;
         price_policy: string | null;
+        version: number | string | null;
+        created_at: string | Date | null;
+        effective_period_start: string | Date;
       }>;
-    // Ascending order: later effective dates overwrite earlier (superseded) ones.
     for (const row of revisionRows) {
-      effectiveRevisions.set(`${row.contract_line_id}:${row.service_id}:${row.config_id}`, {
-        quantity: Number(row.quantity),
-        unit_rate_cents: toCents(row.unit_rate_cents),
-        price_policy: row.price_policy === 'catalog' ? 'catalog' : 'override',
-      });
+      const resolverRow: UnitPricingRevisionRateRow = {
+        revision_id: row.revision_id,
+        service_id: row.service_id,
+        config_id: row.config_id,
+        effective_period_start: row.effective_period_start,
+        unit_rate_cents:
+          row.unit_rate_cents === null || row.unit_rate_cents === undefined
+            ? null
+            : Number(row.unit_rate_cents),
+        price_policy: row.price_policy,
+        version: row.version === null || row.version === undefined ? null : Number(row.version),
+        created_at: row.created_at,
+      };
+      const lineRevisions = revisionsByLine.get(row.contract_line_id) ?? [];
+      lineRevisions.push(resolverRow);
+      revisionsByLine.set(row.contract_line_id, lineRevisions);
+
+      const key = `${row.contract_line_id}:${row.service_id}:${row.config_id}`;
+      const candidates = candidatesByKey.get(key) ?? [];
+      candidates.push(
+        toRecurringUnitRevisionCandidate({
+          revision_id: row.revision_id,
+          quantity: Number(row.quantity),
+          unit_rate_cents: row.unit_rate_cents,
+          price_policy: row.price_policy,
+          version: row.version,
+          effective_period_start: row.effective_period_start,
+          created_at: row.created_at,
+        }),
+      );
+      candidatesByKey.set(key, candidates);
     }
   }
 
@@ -230,53 +330,65 @@ export async function getContractMonthlyFixedValuesByContract(
     }
   }
 
-  // LEVERAGE: pattern fixed-rate-resolution — this valuation still re-derives
-  // the fixed/unit member rate chain (base_rate → custom_rate → default_rate)
-  // instead of calling resolveFixedLineRate, so it does not yet see effective
-  // service_prices or the (service_id, config_id) revision keying the resolver
-  // unifies. Catalog-price-changes plan §0.5 schedules this collapse; the
-  // deferred-revenue loader and the EE simulator already call the resolver.
   const lineMonthlyCents = (line: (typeof lines)[number]): number => {
     if (line.contract_line_type === 'Usage') return 0;
     if (line.contract_line_type === 'Fixed') {
       const members = membersByLine.get(line.contract_line_id) ?? [];
+      const currency = contractCurrencies.get(line.contract_id) ?? 'USD';
+      const revisions = revisionsByLine.get(line.contract_line_id) ?? [];
+      // `resolveMemberRate` is the same pure chain the invoice engine and the
+      // deferred-revenue loader use, including currency/period-specific
+      // `service_prices` and catalog-policy revisions.
+      const revisionInput = {
+        period: { start: asOf, end: asOf },
+        currency,
+        revisions,
+        catalogPrices,
+        tenantDefaultCurrency,
+      };
       const revisionKey = (member: FixedMemberValuationRow) =>
         `${line.contract_line_id}:${member.service_id}:${member.config_id}`;
-      const lineHasEffectiveRevision = members.some((member) =>
-        effectiveRevisions.has(revisionKey(member)),
-      );
+      const hasApplicableRevision = (member: FixedMemberValuationRow) =>
+        (candidatesByKey.get(revisionKey(member)) ?? []).length > 0;
       // A member is unit-valued when it is explicitly unit-priced, when it
       // carries an applicable scheduled revision, or — once the line is
       // actively revision-managed — when it is a catalog product (products share
       // the revision store and must value consistently with the invoice instead
       // of the wizard's placeholder base_rate). Members on untouched lines keep
       // their legacy valuation path so existing contracts are unchanged.
+      const lineHasEffectiveRevision = members.some(hasApplicableRevision);
       const isEffectiveUnitMember = (member: FixedMemberValuationRow) =>
         isUnitPricedMember(member) ||
-        effectiveRevisions.has(revisionKey(member)) ||
+        hasApplicableRevision(member) ||
         (lineHasEffectiveRevision && member.item_kind === 'product');
       const unitMembers = members.filter(isEffectiveUnitMember);
       const bundleMembers = members.filter((member) => !isEffectiveUnitMember(member));
 
-      // Unit-priced members: Σ quantity × unit rate, revision-aware. Rate
-      // fallback mirrors the engine's unit branch: base_rate → member
-      // custom_rate → catalog default_rate for services. A product never uses
-      // the wizard's placeholder base_rate; it uses its contract override or the
-      // catalog price. A catalog-policy revision resolves against the catalog
-      // rate; an explicit override (including zero) wins.
+      // Unit-valued members: Σ quantity × effective resolved rate. Quantity
+      // comes from the latest applicable revision (products/services share the
+      // store) else the configuration column. The rate chain is the shared
+      // resolver's: revision override, else product contract override, else the
+      // currency catalog price; a catalog-policy revision follows the currency
+      // price dynamically and an explicit override (including zero) wins.
       let totalCents = 0;
       for (const member of unitMembers) {
-        const revision = effectiveRevisions.get(revisionKey(member));
-        const quantity = revision ? revision.quantity : Number(member.quantity ?? 0);
-        const baselineRate =
-          member.item_kind === 'product'
-            ? (toCents(member.custom_rate) ?? toCents(member.default_rate))
-            : (toCents(member.base_rate) ?? toCents(member.custom_rate) ?? toCents(member.default_rate));
-        const rateCents = revision
-          ? revision.price_policy === 'catalog'
-            ? toCents(member.default_rate)
-            : revision.unit_rate_cents
-          : baselineRate;
+        const latest = selectLatestApplicableRevision(
+          candidatesByKey.get(revisionKey(member)) ?? [],
+          asOf,
+        );
+        const quantity = latest ? latest.quantity : Number(member.quantity ?? 0);
+        const resolved = resolveMemberRate(revisionInput, {
+          service_id: member.service_id,
+          config_id: member.config_id,
+          configuration_quantity: member.quantity,
+          configuration_custom_rate: member.custom_rate,
+          service_base_rate: member.base_rate,
+          service_line_custom_rate: member.service_line_custom_rate,
+          default_rate: member.default_rate,
+          pricing_basis: member.pricing_basis,
+          item_kind: member.item_kind,
+        });
+        const rateCents = resolved.rateCents;
         if (!Number.isFinite(quantity) || quantity <= 0 || rateCents === null || rateCents < 0) {
           // Zero/absent quantity is an explicit zero; a member without a
           // valid unit rate bills nothing (mirrors the engine's unit branch).

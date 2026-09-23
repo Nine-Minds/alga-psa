@@ -61,6 +61,11 @@ function toActionError(error: unknown): UnitPricingActionError {
   if (dbError?.code === '22P02') {
     return actionError('The selected contract line, service, or date is invalid.');
   }
+  if (dbError?.code === '23505') {
+    return actionError(
+      'Another change was created or replaced at this effective date by someone else. Reload the period and review the newer values before saving.',
+    );
+  }
   throw error;
 }
 
@@ -155,7 +160,10 @@ async function scheduleRecurringUnitPricingRevisionImpl(
         pricePolicy,
         unitRateCents: pricePolicy === 'override' ? Number(input.unit_rate_cents) : null,
         effectivePeriodStart: effective,
-        expectedVersion: input.expected_version ?? null,
+        // Preserve the caller's explicit expectation: `null` means "I saw no
+        // revision at this boundary", `undefined` (omitted) means a legacy
+        // unconditional writer, a number is a compare-and-set token.
+        expectedVersion: input.expected_version,
       });
       if (scheduled.ok === false) {
         return actionError(scheduled.error);

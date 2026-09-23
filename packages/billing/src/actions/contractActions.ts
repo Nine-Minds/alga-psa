@@ -1208,6 +1208,9 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
         // Configuration IDs whose displayed quantity/rate reflect the effective
         // revision-aware values rather than frozen columns.
         const effectiveUnitConfigIds = new Set<string>();
+        // Configuration IDs whose effective revision switched to catalog
+        // inheritance: a stale configuration custom_rate must not resurface.
+        const catalogPolicyConfigIds = new Set<string>();
         for (const config of configs as any[]) {
           const fixed = fixedSemanticsMap.get(config.config_id);
           const itemKind = itemKindByService.get(config.service_id) ?? null;
@@ -1234,6 +1237,9 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
                 fixed.base_rate = effective.pricePolicy === 'override' ? effective.unitRateCents : null;
               }
               effectiveUnitConfigIds.add(config.config_id);
+              if (effective.pricePolicy === 'catalog') {
+                catalogPolicyConfigIds.add(config.config_id);
+              }
             }
           }
           if (config.configuration_type === 'Usage') {
@@ -1253,6 +1259,7 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
             const config = configMap.get(svc.service_id);
             const semantics = fixedSemanticsMap.get(config?.config_id);
             const isScheduledUnit = effectiveUnitConfigIds.has(config?.config_id);
+            const isCatalogPolicy = catalogPolicyConfigIds.has(config?.config_id);
             const isUnitValued = semantics?.pricing_basis === 'unit' || isScheduledUnit;
             return {
               service_id: svc.service_id,
@@ -1270,7 +1277,9 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
               config_id: config?.config_id ?? null,
               pricing_basis: semantics?.pricing_basis ?? (isScheduledUnit ? 'unit' : null),
               measurement_mode: usageSemanticsMap.get(config?.config_id)?.measurement_mode ?? null,
-              unit_rate: isUnitValued
+              // A catalog-policy revision inherits the catalog price; do not
+              // fall back to a stale configuration custom_rate.
+              unit_rate: isUnitValued && !isCatalogPolicy
                 ? (semantics?.base_rate != null
                     ? Number(semantics.base_rate)
                     : (config?.custom_rate != null ? Number(config.custom_rate) : null))

@@ -206,7 +206,14 @@ export interface IScheduleRecurringUnitRevisionParams {
   /** Required and >= 0 for `override`; must be null/omitted for `catalog`. */
   unitRateCents: number | null;
   effectivePeriodStart: string;
-  /** Compare-and-set token for a pending-boundary replacement. */
+  /**
+   * Optimistic-concurrency expectation for the target boundary:
+   *  - `undefined`: internal/legacy unconditional upsert (configuration service);
+   *  - `null`: the caller loaded the boundary and saw no revision — creation is
+   *    expected, so an existing row means another editor created one first and
+   *    the write is rejected;
+   *  - a number: compare-and-set on the stored pending version.
+   */
   expectedVersion?: number | null;
 }
 
@@ -421,18 +428,36 @@ export async function scheduleRecurringUnitRevisionInTransaction(
       unit_rate_cents: number | string | null;
       price_policy: string | null;
       version: number | string | null;
-    }>('revision_id', 'quantity', 'unit_rate_cents', 'price_policy', 'version');
+      created_by: string | null;
+      created_at: string | Date | null;
+      updated_by: string | null;
+      updated_at: string | Date | null;
+    }>('revision_id', 'quantity', 'unit_rate_cents', 'price_policy', 'version', 'created_by', 'created_at', 'updated_by', 'updated_at');
 
   if (existing) {
     const storedVersion = Number(existing.version ?? 1);
-    if (expectedVersion !== null && expectedVersion !== undefined && Number(expectedVersion) !== storedVersion) {
+    // The caller expected to *create* at an empty boundary, but another editor
+    // won the race and a revision now exists: reject rather than silently
+    // replacing their edit.
+    if (expectedVersion === null) {
+      return {
+        ok: false,
+        error:
+          'Another change was created at this effective date by someone else. Reload the period and review the newer values before saving.',
+      };
+    }
+    // A replacement requires a matching version. Legacy/internal writers that
+    // omit `expectedVersion` (the configuration service) keep unconditional
+    // upsert semantics.
+    if (expectedVersion !== undefined && Number(expectedVersion) !== storedVersion) {
       return {
         ok: false,
         error: 'This pending change was updated by someone else. Reload the period and review the newer values before saving.',
       };
     }
-    // Append-only audit of the superseded pending edit; the canonical row stays
-    // the single source billing reads.
+    // Append-only audit of the superseded pending edit, preserving both the
+    // original author/timestamps and the replacing actor. The canonical row
+    // stays the single source billing reads.
     await tenantScopedTable(trx, tenant, 'contract_line_unit_pricing_revision_history').insert({
       tenant,
       revision_id: existing.revision_id,
@@ -446,6 +471,10 @@ export async function scheduleRecurringUnitRevisionInTransaction(
       version: storedVersion,
       superseded_by: userId ?? 'system',
       recorded_by: userId,
+      original_created_by: existing.created_by,
+      original_created_at: existing.created_at,
+      original_updated_by: existing.updated_by,
+      original_updated_at: existing.updated_at,
     });
     const [updated] = await tenantScopedTable(trx, tenant, 'contract_line_unit_pricing_revisions')
       .where({ tenant, revision_id: existing.revision_id })
@@ -456,12 +485,16 @@ export async function scheduleRecurringUnitRevisionInTransaction(
         version: storedVersion + 1,
         updated_by: userId,
         updated_at: trx.fn.now(),
-        created_by: userId,
+        // `created_by`/`created_at` are the original author's and are preserved;
+        // replacement attribution lives on `updated_by` and in history.
       })
       .returning('*');
     return { ok: true, revision: updated as unknown as IContractLineUnitPricingRevision };
   }
 
+  // A caller that expected to replace (a version number) but finds no row — or
+  // an explicit create-expectation that is satisfied — falls through to insert.
+  // Only an explicit version mismatch (a replacement expectation) is stale.
   if (expectedVersion !== null && expectedVersion !== undefined) {
     return {
       ok: false,
@@ -554,8 +587,14 @@ export interface IRecurringUnitPricingHistoryRow {
   price_policy: RecurringPricePolicy;
   effective_period_start: string;
   version: number;
+  /** Actor who performed the replacement (the superseding writer). */
   superseded_by: string;
   recorded_by: string | null;
+  /** Author of the superseded revision values (may differ from `superseded_by`). */
+  original_created_by: string | null;
+  original_created_at: string | Date | null;
+  original_updated_by: string | null;
+  original_updated_at: string | Date | null;
   created_at: string | Date | null;
 }
 
@@ -587,6 +626,12 @@ export async function listRecurringUnitPricingHistory(params: {
     version: Number(row.version ?? 1),
     superseded_by: String(row.superseded_by ?? ''),
     recorded_by: row.recorded_by == null ? null : String(row.recorded_by),
+    original_created_by:
+      row.original_created_by == null ? null : String(row.original_created_by),
+    original_created_at: (row.original_created_at as string | Date | null) ?? null,
+    original_updated_by:
+      row.original_updated_by == null ? null : String(row.original_updated_by),
+    original_updated_at: (row.original_updated_at as string | Date | null) ?? null,
     created_at: (row.created_at as string | Date | null) ?? null,
   }));
 }
