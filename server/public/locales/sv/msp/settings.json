@@ -541,7 +541,7 @@
         "default": "Standard",
         "defaultAgent": "Standardhandläggare",
         "defaultPriority": "Standardprioritet",
-        "boardManager": "Tavlansvarig",
+        "boardManager": "Tavelansvarig",
         "order": "Ordning",
         "itilBoard": "ITIL-tavla",
         "actions": "Åtgärder",
@@ -571,8 +571,8 @@
       },
       "fields": {
         "boardName": {
-          "label": "Tavlnamn",
-          "placeholder": "Ange tavlnamn"
+          "label": "Tavelnamn",
+          "placeholder": "Ange tavelnamn"
         },
         "description": {
           "label": "Beskrivning",
@@ -585,14 +585,14 @@
         },
         "inactive": "Markera som inaktiv",
         "itilCompliant": "Följer ITIL",
-        "boardConfiguration": "Tavlkonfiguration",
+        "boardConfiguration": "Tavelkonfiguration",
         "boardManager": {
-          "label": "Tavlansvarig",
-          "placeholder": "Välj en tavlansvarig",
+          "label": "Tavelansvarig",
+          "placeholder": "Välj en tavelansvarig",
           "help": "Användaren som ansvarar för att hantera tavlan"
         },
         "defaultAssignedAgent": {
-          "label": "Förvald ansvarig handläggare",
+          "label": "Tilldelad standardhandläggare",
           "placeholder": "Välj standardhandläggare",
           "help": "Nya ärenden på tavlan tilldelas som standard denna handläggare"
         },
@@ -735,7 +735,7 @@
         "error": {
           "fetchFailed": "Det gick inte att ladda tavlor",
           "fetchAvailableFailed": "Det gick inte att hämta tillgängliga tavlor för import",
-          "nameRequired": "Tavlnamn krävs",
+          "nameRequired": "Tavelnamn krävs",
           "saveFailed": "Det gick inte att spara tavlan",
           "lastDefault": "Det går inte att ta bort den sista standardtavlan",
           "statusRequired": "Lägg till minst en ärendestatus innan du sparar tavlan.",
@@ -793,7 +793,7 @@
           "appearance": "Utseende och standardinställningar",
           "appearanceHelp": "Fästa flikar och tavlans standardlistvy",
           "assignment": "Tilldelning och SLA",
-          "assignmentHelp": "Standardroutning, SLA och tavlansvarig",
+          "assignmentHelp": "Standardtilldelning, SLA och tavelansvarig",
           "inbound": "E-post och inkommande svar",
           "inboundHelp": "Öppna ärenden igen när kunder svarar via e-post",
           "close": "Stängningsregler",
@@ -803,14 +803,14 @@
           "statuses": "Prioriteter och statusar",
           "statusesHelp": "Standardprioritet och ärendestatusar för tavlan",
           "display": "Visning och beteende",
-          "displayHelp": "Löpande tidtagning och tavltyp"
+          "displayHelp": "Löpande tidtagning och taveltyp"
         },
         "saveChanges": "Spara ändringar",
         "unsaved": "Osparat",
         "unsavedShort": "Osparade ändringar",
         "unsavedBanner": "Du har osparade ändringar. Klicka på ”Spara ändringar” för att tillämpa dem.",
         "allSaved": "Alla ändringar har sparats",
-        "reopenBadge": "öppna igen",
+        "reopenBadge": "återöppning",
         "required": "Obligatorisk"
       },
       "appearance": {
@@ -1733,7 +1733,7 @@
           "subject": "ämne"
         },
         "overwrite": "Skriv över",
-        "overwriteHint": "Skriv över återskapar mallen från standardmallen med din palett och kastar dina ändringar.",
+        "overwriteHint": "Att skriva över återskapar mallen från standardmallen med din palett och kastar dina ändringar.",
         "preview": {
           "open": "Förhandsgranska resultatet",
           "title": "Förhandsgranskning: {{name}}",
@@ -2114,7 +2114,7 @@
         "source": "Källa",
         "file": "Fil",
         "status": "Status",
-        "created": "Skapad",
+        "created": "Skapade",
         "duplicates": "Dubbletter",
         "errors": "Fel"
       }
@@ -2160,7 +2160,7 @@
         "description": "Visar upp till de första 10 raderna av totalt {{totalRows}} poster.",
         "stats": {
           "total": "Totalt",
-          "valid": "Giltig",
+          "valid": "Giltiga",
           "duplicates": "Dubbletter",
           "errors": "Fel"
         },
@@ -2222,8 +2222,8 @@
       "stats": {
         "totalRows": "Totalt antal rader",
         "processed": "Bearbetade",
-        "created": "Skapad",
-        "updated": "Uppdaterad",
+        "created": "Skapade",
+        "updated": "Uppdaterade",
         "duplicates": "Dubbletter",
         "errors": "Fel"
       },
@@ -2236,7 +2236,7 @@
       "fields": {
         "source": "Källa",
         "originalFileName": "Ursprungligt filnamn",
-        "storedFileId": "Lagrad fils ID",
+        "storedFileId": "ID för lagrad fil",
         "documentId": "Dokument-ID",
         "documentAssociation": "Dokumentkoppling",
         "clientAssociation": "Kundkoppling",
@@ -2537,7 +2537,7 @@
         "processed_one": "{{count}} användare har bearbetats.",
         "processed_other": "{{count}} användare har bearbetats.",
         "candidatesSelected": "{{count}} valda",
-        "unlinked": "Inte kopplad",
+        "unlinked": "Koppling borttagen",
         "wouldUnlink": "Skulle ta bort kopplingen",
         "linked": "Kopplad",
         "wouldLink": "Skulle koppla",
@@ -2817,7 +2817,7 @@
       "recentBreaches": {
         "empty": "Inga SLA-överträdelser under den valda perioden",
         "title": "Senaste överträdelser",
-        "unassigned": "Ej tilldelat"
+        "unassigned": "Ej tilldelad"
       },
       "trendChart": {
         "breaches": "Överträdelser",
@@ -2943,8 +2943,8 @@
         "noRecipients": "Inga mottagare",
         "percentLabel": "Tröskel (%)",
         "recipientAssignee": "Ansvarig",
-        "recipientBoardManager": "Tavlansvarig",
-        "recipientBoardManagerShort": "Tavlansvarig",
+        "recipientBoardManager": "Tavelansvarig",
+        "recipientBoardManagerShort": "Tavelansvarig",
         "recipientEscalationManager": "Eskaleringsansvarig",
         "recipientEscalationManagerShort": "Eskaleringsansvarig",
         "recipientsLabel": "Mottagare",
@@ -3360,7 +3360,7 @@
       "nameRequired": "Statusnamn krävs",
       "nameEmpty": "Statusnamnet får inte vara tomt",
       "idRequired": "Status-ID krävs",
-      "manageFromBoard": "Ärendestatusar måste hanteras från tavlinställningarna",
+      "manageFromBoard": "Ärendestatusar måste hanteras från tavlans inställningar",
       "closedCannotBeDefault": "En stängd status kan inte vara standardstatus",
       "defaultMustStayOpen": "Ange en annan status som standard innan du stänger denna"
     },
