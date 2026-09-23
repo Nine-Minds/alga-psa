@@ -119,7 +119,7 @@
       "newPost": "Nytt inlägg",
       "today": "Idag",
       "tomorrow": "Imorgon",
-      "dueAt": "ska publiceras {{time}}",
+      "dueAt": "ska publiceras kl. {{time}}",
       "needsPublishing": "Behöver publiceras",
       "needsPublishingCount": "{{total}} väntande · {{overdue}} försenade",
       "needsPublishingCountSimple": "{{total}} väntande",
@@ -136,11 +136,11 @@
       "publishedRecently": "Nyligen publicerat",
       "noUpcoming": "Inget schemalagt under den här perioden.",
       "emptyTitle": "Inget i kalendern ännu",
-      "emptyBody": "Skapa ett inlägg på sidan Inlägg så visas det här på den schemalagda dagen.",
+      "emptyBody": "Skapa ett inlägg på sidan Inlägg så dyker det upp här på den schemalagda dagen.",
       "toast": {
         "skipped": "Överhoppat"
       },
-      "weekOf": "Veckan som innehåller {{date}}",
+      "weekOf": "Veckan från {{date}}",
       "viewMonth": "Månad",
       "viewAgenda": "Agenda",
       "moreItems": "+{{count}} fler"
@@ -365,7 +365,7 @@
         "title": "Utskick",
         "from": "Från",
         "provider": "Tjänsteleverantör",
-        "notConfigured": "Inte konfigurerat",
+        "notConfigured": "Inte konfigurerad",
         "unsubscribe": "Avprenumerationslänk",
         "on": "På",
         "tracking": "Spårning"
