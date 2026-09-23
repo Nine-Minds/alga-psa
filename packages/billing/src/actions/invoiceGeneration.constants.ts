@@ -48,6 +48,16 @@ export const USAGE_PERIOD_TOTAL_STALE_MESSAGE_KEY =
   'msp/invoicing:manualInvoices.errors.USAGE_PERIOD_TOTAL_STALE';
 
 /**
+ * Namespaced message key for the stale recurring quantity/price revision
+ * failure (`RECURRING_PRICING_STALE`). Finalization must bill exactly the
+ * revision and inherited catalog price the preview priced; when either changed
+ * after the preview, generation refuses and the operator re-previews rather
+ * than being charged a different amount silently.
+ */
+export const RECURRING_PRICING_STALE_MESSAGE_KEY =
+  'msp/invoicing:manualInvoices.errors.RECURRING_PRICING_STALE';
+
+/**
  * Namespaced message key for a per-service usage pricing failure
  * (`USAGE_CALCULATION_ERROR`). A service whose recorded usage cannot be priced
  * is a calculation error, never "unreported": preview surfaces the typed state

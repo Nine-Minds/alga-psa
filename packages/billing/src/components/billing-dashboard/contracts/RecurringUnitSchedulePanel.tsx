@@ -71,6 +71,14 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
   const [effective, setEffective] = useState<EffectiveRecurringUnitPricingReadResult | null>(null);
   const [revisions, setRevisions] = useState<IRecurringUnitPricingRevisionListRow[]>([]);
   const [history, setHistory] = useState<IContractLineUnitPricingRevisionHistoryEntry[]>([]);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  // The values the form was loaded with; a date change that would discard an
+  // unsaved edit prompts before reloading.
+  const loadedInputsRef = useRef<{ quantity: string; policy: ContractLineUnitPricePolicy; rate: string }>({
+    quantity: '',
+    policy: 'override',
+    rate: '',
+  });
 
   const [quantityInput, setQuantityInput] = useState<string>('');
   const [pricePolicy, setPricePolicy] = useState<ContractLineUnitPricePolicy>('override');
@@ -119,18 +127,28 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
         if (requestId !== requestRef.current) return;
         setEffective(effectiveResult);
         setRevisions(isReturnedActionError(revisionRows) ? [] : revisionRows);
-        setHistory(isReturnedActionError(historyRows) ? [] : historyRows);
+        if (isReturnedActionError(historyRows)) {
+          setHistory([]);
+          setHistoryError(getErrorMessage(historyRows));
+        } else {
+          setHistory(historyRows);
+          setHistoryError(null);
+        }
         // Start the form from the values in force at the selected boundary.
-        setQuantityInput(String(effectiveResult.quantity));
-        setPricePolicy(effectiveResult.pricePolicy);
-        setRateInput(
+        const nextQuantity = String(effectiveResult.quantity);
+        const nextPolicy = effectiveResult.pricePolicy;
+        const nextRate =
           effectiveResult.unitRateCents === null || effectiveResult.unitRateCents === undefined
             ? ''
-            : (effectiveResult.unitRateCents / 100).toFixed(2),
-        );
+            : (effectiveResult.unitRateCents / 100).toFixed(2);
+        setQuantityInput(nextQuantity);
+        setPricePolicy(nextPolicy);
+        setRateInput(nextRate);
+        loadedInputsRef.current = { quantity: nextQuantity, policy: nextPolicy, rate: nextRate };
       } catch (error) {
         if (requestId === requestRef.current) {
           setLoadError(getErrorMessage(error));
+          setEffective(null);
         }
       } finally {
         if (requestId === requestRef.current) {
@@ -158,12 +176,28 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
   }, [contractLineId, load]);
 
   const handleBoundaryChange = (nextBoundary: string) => {
+    if (!nextBoundary) return;
+    const loaded = loadedInputsRef.current;
+    const dirty =
+      quantityInput !== loaded.quantity ||
+      pricePolicy !== loaded.policy ||
+      rateInput !== loaded.rate;
+    if (
+      dirty &&
+      typeof window !== 'undefined' &&
+      !window.confirm(
+        t('contractLines.recurringSchedule.discardDirty', {
+          defaultValue:
+            'Changing the effective date reloads the values in force and discards your unsaved edit. Continue?',
+        }),
+      )
+    ) {
+      return;
+    }
     setBoundary(nextBoundary);
     setSavedMessage(null);
     setSaveError(null);
-    if (nextBoundary) {
-      void load(nextBoundary);
-    }
+    void load(nextBoundary);
   };
 
   // Only the revision stored at exactly the selected boundary is authoritative
@@ -231,6 +265,30 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
   };
 
   const stale = boundaryRevision !== null;
+  const isProtected =
+    effective?.protectedLifecycle === 'billed' || effective?.protectedLifecycle === 'locked';
+  const currentResolvedRateCents =
+    effective?.resolvedUnitRateCents ?? effective?.unitRateCents ?? null;
+  const proposedRateCents =
+    pricePolicy === 'catalog'
+      ? effective?.resolvedUnitRateCents ?? null
+      : rateInput === ''
+        ? null
+        : Math.round(Number(rateInput) * 100);
+  const proposedQuantity = Number(quantityInput);
+  const currentSubtotalCents =
+    effective && currentResolvedRateCents !== null
+      ? effective.quantity * currentResolvedRateCents
+      : null;
+  const proposedSubtotalCents =
+    proposedRateCents !== null && Number.isInteger(proposedQuantity)
+      ? proposedQuantity * proposedRateCents
+      : null;
+  const deltaCents =
+    currentSubtotalCents !== null && proposedSubtotalCents !== null
+      ? proposedSubtotalCents - currentSubtotalCents
+      : null;
+  const coveredEndLabel = effective?.coveredEnd ?? t('contractLines.recurringSchedule.openPeriod', { defaultValue: 'next boundary' });
 
   return (
     <div className="col-span-2 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4">
@@ -258,6 +316,29 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
         </Alert>
       )}
 
+      {historyError && (
+        <Alert variant="destructive" className="mb-3">
+          <AlertDescription>
+            {t('contractLines.recurringSchedule.historyLoadError', {
+              defaultValue: 'Could not load the scheduled history: {{error}}',
+              error: historyError,
+            })}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {isProtected && (
+        <Alert variant="destructive" className="mb-3">
+          <AlertDescription className="text-xs">
+            {t('contractLines.recurringSchedule.protectedPeriod', {
+              defaultValue:
+                'This period is already {{state}} and is protected. Choose a later, unbilled service-period boundary; billed invoice amounts are never rewritten.',
+              state: effective?.protectedLifecycle ?? 'billed',
+            })}
+          </AlertDescription>
+        </Alert>
+      )}
+
       {effective && effective.source === 'revision' && (
         <Alert variant="info" className="mb-3">
           <AlertDescription className="text-xs">
@@ -270,6 +351,13 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
           </AlertDescription>
         </Alert>
       )}
+
+      <p className="mb-3 text-xs text-[rgb(var(--color-text-600))]">
+        {t('contractLines.recurringSchedule.boundaryOnly', {
+          defaultValue:
+            'Changes take effect only at a service-period boundary. There is no mid-period proration, true-up or credit: earlier billed amounts stay unchanged and the new quantity/price applies from the boundary shown.',
+        })}
+      </p>
 
       <div className="grid gap-4 md:grid-cols-2">
         <div>
@@ -359,18 +447,56 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
       </div>
 
       {effective && (
-        <p className="mt-3 text-sm text-[rgb(var(--color-text-700))]">
-          {t('contractLines.recurringSchedule.currentEffective', {
-            defaultValue: 'In force for periods from {{date}}: {{quantity}} × {{rate}} ({{source}}).',
-            date: effective.effectivePeriodStart ?? boundary,
-            quantity: effective.quantity,
-            rate: formatRate(effective.unitRateCents),
-            source:
-              effective.pricePolicy === 'catalog'
-                ? t('contractLines.recurringSchedule.sourceCatalog', { defaultValue: 'catalog price' })
-                : t('contractLines.recurringSchedule.sourceOverride', { defaultValue: 'explicit override' }),
-          })}
-        </p>
+        <div className="mt-3 space-y-1 text-sm text-[rgb(var(--color-text-700))]">
+          <p>
+            {t('contractLines.recurringSchedule.currentEffective', {
+              defaultValue: 'In force for periods from {{date}}: {{quantity}} × {{rate}} ({{source}}).',
+              date: effective.effectivePeriodStart ?? boundary,
+              quantity: effective.quantity,
+              rate: formatRate(currentResolvedRateCents),
+              source:
+                effective.pricePolicy === 'catalog'
+                  ? t('contractLines.recurringSchedule.sourceCatalog', { defaultValue: 'catalog price' })
+                  : t('contractLines.recurringSchedule.sourceOverride', { defaultValue: 'explicit override' }),
+            })}
+          </p>
+          <p className="text-xs text-[rgb(var(--color-text-600))]">
+            {t('contractLines.recurringSchedule.coverage', {
+              defaultValue: 'Covers {{start}} to {{end}} ({{currency}}).',
+              start: effective.coveredStart ?? boundary,
+              end: coveredEndLabel,
+              currency: effective.currencyCode ?? currencyCode,
+            })}
+          </p>
+          {effective.pricePolicy === 'catalog' && (
+            <p className="text-xs text-[rgb(var(--color-text-600))]">
+              {t('contractLines.recurringSchedule.catalogSource', {
+                defaultValue:
+                  'Catalog price {{priceId}} effective {{effectiveDate}}; inherited, so a later catalog change follows automatically.',
+                priceId: effective.catalogPriceId ?? t('common.empty.notAvailable', { defaultValue: 'N/A' }),
+                effectiveDate: effective.catalogEffectiveDate ?? t('common.empty.notAvailable', { defaultValue: 'N/A' }),
+              })}
+            </p>
+          )}
+          <p className="text-xs text-[rgb(var(--color-text-600))]">
+            {t('contractLines.recurringSchedule.baselineRow', {
+              defaultValue: 'Baseline (no revision): {{quantity}} × {{rate}}.',
+              quantity: effective.baselineQuantity,
+              rate: formatRate(effective.baselineUnitRateCents),
+            })}
+          </p>
+          {deltaCents !== null && (
+            <p className="text-xs font-medium text-[rgb(var(--color-text-800))]">
+              {t('contractLines.recurringSchedule.invoiceImpact', {
+                defaultValue:
+                  'From {{date}} the recurring subtotal for this item changes by {{delta}} to {{total}} (before discounts and tax). This period is unchanged.',
+                date: boundary,
+                delta: formatCurrency(deltaCents / 100, effective.currencyCode ?? currencyCode),
+                total: formatCurrency((proposedSubtotalCents ?? 0) / 100, effective.currencyCode ?? currencyCode),
+              })}
+            </p>
+          )}
+        </div>
       )}
 
       {saveError && (
@@ -390,7 +516,7 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
           type="button"
           size="sm"
           onClick={() => void handleSave()}
-          disabled={disabled || saving || loading || !boundary}
+          disabled={disabled || saving || loading || !boundary || !!loadError || isProtected}
         >
           {saving && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
           {stale
@@ -410,22 +536,48 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
                 <th className="py-1 pr-3">{t('contractLines.recurringSchedule.effectiveDate', { defaultValue: 'Effective from' })}</th>
                 <th className="py-1 pr-3">{t('contractLines.recurringSchedule.quantity', { defaultValue: 'Quantity' })}</th>
                 <th className="py-1 pr-3">{t('contractLines.recurringSchedule.unitPrice', { defaultValue: 'Unit price' })}</th>
-                <th className="py-1">{t('contractLines.recurringSchedule.version', { defaultValue: 'Version' })}</th>
+                <th className="py-1 pr-3">{t('contractLines.recurringSchedule.version', { defaultValue: 'Version' })}</th>
+                <th className="py-1 pr-3">{t('contractLines.recurringSchedule.status', { defaultValue: 'Status' })}</th>
+                <th className="py-1">{t('contractLines.recurringSchedule.actor', { defaultValue: 'Actor' })}</th>
               </tr>
             </thead>
             <tbody>
-              {revisions.map((revision) => (
-                <tr key={revision.revision_id} className="border-t border-[rgb(var(--color-border-100))]">
-                  <td className="py-1 pr-3">{revision.effective_period_start}</td>
-                  <td className="py-1 pr-3">{revision.quantity}</td>
+              {effective && (
+                <tr className="border-t border-[rgb(var(--color-border-100))] text-muted-foreground">
                   <td className="py-1 pr-3">
-                    {revision.price_policy === 'catalog'
-                      ? t('contractLines.recurringSchedule.catalogLabel', { defaultValue: 'Catalog' })
-                      : formatRate(revision.unit_rate_cents)}
+                    {t('contractLines.recurringSchedule.baselineLabel', { defaultValue: 'Baseline' })}
                   </td>
-                  <td className="py-1">{revision.version}</td>
+                  <td className="py-1 pr-3">{effective.baselineQuantity}</td>
+                  <td className="py-1 pr-3">{formatRate(effective.baselineUnitRateCents)}</td>
+                  <td className="py-1 pr-3">—</td>
+                  <td className="py-1 pr-3">—</td>
+                  <td className="py-1">—</td>
                 </tr>
-              ))}
+              )}
+              {revisions.map((revision) => {
+                const isFuture = revision.effective_period_start > todayIso();
+                const isInForce = effective?.revisionId === revision.revision_id;
+                return (
+                  <tr key={revision.revision_id} className="border-t border-[rgb(var(--color-border-100))]">
+                    <td className="py-1 pr-3">{revision.effective_period_start}</td>
+                    <td className="py-1 pr-3">{revision.quantity}</td>
+                    <td className="py-1 pr-3">
+                      {revision.price_policy === 'catalog'
+                        ? t('contractLines.recurringSchedule.catalogLabel', { defaultValue: 'Catalog' })
+                        : formatRate(revision.unit_rate_cents)}
+                    </td>
+                    <td className="py-1 pr-3">{revision.version}</td>
+                    <td className="py-1 pr-3">
+                      {isInForce
+                        ? t('contractLines.recurringSchedule.statusInForce', { defaultValue: 'In force' })
+                        : isFuture
+                          ? t('contractLines.recurringSchedule.statusScheduled', { defaultValue: 'Scheduled' })
+                          : t('contractLines.recurringSchedule.statusSuperseded', { defaultValue: 'Superseded' })}
+                    </td>
+                    <td className="py-1">{revision.updated_by ?? revision.created_by ?? '—'}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

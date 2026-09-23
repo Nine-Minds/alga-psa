@@ -126,10 +126,12 @@ interface ContractObligationSink {
 import { getClientDefaultBillingProfileId } from "./billingProfileLookup";
 import { listSeparatelyBillingProfiles } from "@alga-psa/shared/billingClients/billingProfileSettings";
 import {
+  normalizeRecurringBoundary,
   resolveRecurringUnitBaseline,
   selectEffectiveRecurringUnitPricing,
   toRecurringUnitRevisionCandidate,
 } from "@alga-psa/shared/billingClients/recurringUnitPricing";
+import { resolveMemberRate } from "@alga-psa/shared/billingClients/resolveFixedLineRate";
 import {
   buildContractLineAttributionDecision,
   resolveDeterministicContractLineSelection,
@@ -3775,6 +3777,8 @@ export class BillingEngine {
         "sc.service_name",
         "sc.default_rate",
         "esp.rate as currency_rate",
+        "esp.price_id as currency_price_id",
+        "esp.effective_date as currency_price_effective_date",
         "sc.tax_rate_id",
         "cls.quantity as service_quantity",
         "cls.custom_rate as service_line_custom_rate",
@@ -4273,26 +4277,36 @@ export class BillingEngine {
         .where("effective_period_start", "<=", servicePeriodStart)
         .orderBy("effective_period_start", "desc")
         .orderBy("created_at", "desc")) as Array<{
+        revision_id: string;
         service_id: string;
         config_id: string;
         quantity: number | string;
-        unit_rate_cents: number | string;
+        unit_rate_cents: number | string | null;
+        price_policy: string | null;
+        version: number | string | null;
+        effective_period_start: string | Date;
+        created_at?: string | Date | null;
       }>;
       if (revisionRows.length > 0) {
+        const contractCurrency = clientContractLine.currency_code || "USD";
+        const revisionCandidates = revisionRows.map((revision) => ({
+          revision_id: revision.revision_id,
+          service_id: revision.service_id,
+          config_id: revision.config_id,
+          effective_period_start: revision.effective_period_start,
+          unit_rate_cents: revision.unit_rate_cents,
+          price_policy: revision.price_policy,
+          version: revision.version,
+          created_at: revision.created_at ?? null,
+        }));
         // Keyed on (service_id, config_id): a line may carry two configs of the
         // same service, each with its own prospective revision. Keying on
         // service_id alone silently dropped the second config's revision.
-        const latestRevisionByConfig = new Map<
-          string,
-          { quantity: number; unit_rate_cents: number }
-        >();
+        const latestRevisionByConfig = new Map<string, (typeof revisionRows)[number]>();
         for (const revision of revisionRows) {
           const configKey = `${revision.service_id}::${revision.config_id}`;
           if (!latestRevisionByConfig.has(configKey)) {
-            latestRevisionByConfig.set(configKey, {
-              quantity: Number(revision.quantity),
-              unit_rate_cents: Number(revision.unit_rate_cents),
-            });
+            latestRevisionByConfig.set(configKey, revision);
           }
         }
         effectivePlanServices = planServices.map((service) => {
@@ -4302,10 +4316,82 @@ export class BillingEngine {
           if (!revision) {
             return service;
           }
+          // Same shared resolver the product path uses: an override revision
+          // carries its explicit rate, a catalog-policy revision resolves the
+          // currency/period `service_prices` price. `Number(null)` must never
+          // become a billed zero (the previous bug), so the legacy `default_rate`
+          // is admitted only as the resolver's own last-resort fallback.
+          const catalogRate =
+            service.currency_rate ?? service.default_rate ?? null;
+          const resolved = resolveMemberRate(
+            {
+              period: { start: servicePeriodStart, end: servicePeriodEnd },
+              currency: contractCurrency,
+              revisions: revisionCandidates,
+              catalogPrices:
+                catalogRate === null
+                  ? []
+                  : [
+                      {
+                        service_id: service.service_id,
+                        currency_code: contractCurrency,
+                        rate: catalogRate,
+                      },
+                    ],
+            },
+            {
+              service_id: service.service_id,
+              config_id: service.config_id,
+              configuration_quantity: service.configuration_quantity,
+              configuration_custom_rate: service.configuration_custom_rate,
+              service_base_rate: service.service_base_rate,
+              service_line_custom_rate: service.service_line_custom_rate,
+              default_rate: service.default_rate,
+              pricing_basis: service.pricing_basis,
+            },
+          );
+          const quantity = Number(revision.quantity);
+          const resolvedRateCents = resolved.rateCents;
+          if (
+            quantity > 0 &&
+            (resolvedRateCents === null ||
+              !Number.isFinite(resolvedRateCents) ||
+              resolvedRateCents < 0)
+          ) {
+            throw new Error(
+              `Scheduled revision for unit-priced service "${service.service_name}" (${service.service_id}) has no ${contractCurrency} unit price. ` +
+                `Add a ${contractCurrency} catalog price or set an explicit override on the scheduled change.`,
+            );
+          }
           return {
             ...service,
-            configuration_quantity: revision.quantity,
-            service_base_rate: revision.unit_rate_cents,
+            configuration_quantity: quantity,
+            // The resolver is authoritative: overwrite the rate and suppress the
+            // other candidates so computeFixedCharges cannot fall back to a
+            // stale configuration or catalog column.
+            service_base_rate: resolvedRateCents,
+            configuration_custom_rate: null,
+            currency_rate: catalogRate,
+            default_rate: null,
+            effective_pricing: {
+              quantity,
+              pricePolicy: revision.price_policy === "catalog" ? "catalog" : "override",
+              unitRateCents: resolvedRateCents,
+              revisionId: revision.revision_id,
+              version: Number(revision.version ?? 1),
+              effectivePeriodStart: normalizeRecurringBoundary(
+                revision.effective_period_start,
+              ),
+              catalogPriceId:
+                revision.price_policy === "catalog"
+                  ? service.currency_price_id ?? null
+                  : null,
+              catalogEffectiveDate:
+                revision.price_policy === "catalog" &&
+                service.currency_price_effective_date != null
+                  ? String(service.currency_price_effective_date).slice(0, 10)
+                  : null,
+            },
           };
         });
       }
@@ -6145,6 +6231,8 @@ export class BillingEngine {
       "clsc.quantity as configuration_quantity",
       "clsc.custom_rate as configuration_custom_rate",
       "sp.rate as price_rate",
+      "sp.price_id as price_id",
+      "sp.effective_date as price_effective_date",
     );
 
     if (planServices.length === 0) {
@@ -6233,6 +6321,15 @@ export class BillingEngine {
                 revisionId: effective.revisionId,
                 version: effective.version,
                 effectivePeriodStart: effective.effectivePeriodStart,
+                catalogPriceId:
+                  effective.pricePolicy === "catalog"
+                    ? service.price_id ?? null
+                    : null,
+                catalogEffectiveDate:
+                  effective.pricePolicy === "catalog" &&
+                  service.price_effective_date != null
+                    ? String(service.price_effective_date).slice(0, 10)
+                    : null,
               },
             };
           });

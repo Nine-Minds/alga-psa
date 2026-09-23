@@ -1,7 +1,7 @@
 import { getAvailableRecurringDueWork } from '@alga-psa/billing/actions/billingAndTax';
 import { repairMissingRecurringServicePeriods, repairAllRecurringServicePeriodsForTenant } from '@alga-psa/billing/actions/recurringServicePeriodActions';
 import { createCustomContractLine } from '@alga-psa/billing/actions/contractLinePresetActions';
-import { getConfigurationWithDetails, updateConfiguration } from '@alga-psa/billing/actions/contractLineServiceConfigurationActions';
+import { getConfigurationWithDetails, updateConfiguration, deleteConfiguration } from '@alga-psa/billing/actions/contractLineServiceConfigurationActions';
 import knexFactory from 'knex';
 import { getContractOverview } from '@alga-psa/billing/actions/contractActions';
 import * as invoiceService from '@alga-psa/billing/services/invoiceService';
@@ -20,6 +20,7 @@ import {
   USAGE_CALCULATION_ERROR_MESSAGE_KEY,
   USAGE_PERIOD_TOTAL_STALE_MESSAGE_KEY,
   USAGE_RECORDS_MISSING_ACK_REQUIRED_MESSAGE_KEY,
+  RECURRING_PRICING_STALE_MESSAGE_KEY,
 } from '@alga-psa/billing/actions/invoiceGeneration.constants';
 import { buildClientCadenceDueSelectionInput, buildContractCadenceDueSelectionInput } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
 import {
@@ -1439,6 +1440,125 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       expect(Number(earlier?.subtotal)).toBe(189000);
     });
 
+    it('a unit-priced service switching to catalog inheritance bills the currency catalog price, not zero', async () => {
+      // A seat service whose explicit base_rate is 10,000 but whose schedule
+      // switches to catalog inheritance. The old billing path did
+      // `Number(revision.unit_rate_cents)` on a catalog revision (null) and
+      // passed 0 as service_base_rate, billing nothing; valuation instead
+      // resolved the catalog price. They must agree.
+      const contractLineId = await context.createEntity('contract_lines', {
+        contract_line_name: 'Catalog Seat Line',
+        billing_frequency: 'monthly',
+        is_custom: false,
+        contract_line_type: 'Fixed',
+        custom_rate: null,
+        billing_timing: 'arrears'
+      }, 'contract_line_id');
+      const seat = await addSeatService(contractLineId, { serviceName: 'Catalog Seat', quantity: 10, unitRateCents: 10000, taxRegion: 'US-NY' });
+      await assignContractLineToClient(context, contractLineId, {
+        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+      });
+      // A future currency price exists so the catalog revision has a resolver.
+      await updateCatalogPrice(context, seat.serviceId, { rateCents: 12000, effectiveDate: '2023-02-01' });
+
+      const januaryCycle = await setupInvoiceCycle(2023, 2, 1);
+      expect(unwrapInvoiceResult(await generateInvoice(januaryCycle)).subtotal).toBe(100000);
+
+      const scheduled = await scheduleUnitPricingRevision({
+        contract_line_id: contractLineId,
+        service_id: seat.serviceId,
+        config_id: seat.configId,
+        quantity: 10,
+        price_policy: 'catalog',
+        unit_rate_cents: null,
+        effective_period_start: '2023-02-01'
+      });
+      if ('actionError' in (scheduled as object)) throw new Error(JSON.stringify(scheduled));
+
+      const februaryCycle = await setupInvoiceCycle(2023, 3, 1);
+      const preview = await previewInvoice(februaryCycle);
+      expect(preview.success, JSON.stringify(preview)).toBe(true);
+      if (!preview.success) throw new Error('unreachable');
+      expect(preview.data.subtotal).toBe(120000); // 10 × $120 catalog, never 0
+
+      const february = unwrapInvoiceResult(await generateInvoice(februaryCycle));
+      expect(february.subtotal).toBe(120000);
+
+      // Catalog inheritance stays dynamic: a later catalog price change applies.
+      await updateCatalogPrice(context, seat.serviceId, { rateCents: 13000, effectiveDate: '2023-03-01' });
+      const march = unwrapInvoiceResult(await generateInvoice(await setupInvoiceCycle(2023, 4, 1)));
+      expect(march.subtotal).toBe(130000);
+
+      // Overview valuation agrees with the billed catalog revisions.
+      const overview: any = await getContractOverview(await context.db('contract_lines').where({ tenant: context.tenantId, contract_line_id: contractLineId }).first().then((row: any) => row.contract_id));
+      expect(overview.totalEstimatedMonthlyValue).toBe(130000);
+    });
+
+    it('refuses to delete a configuration that carries scheduled revisions (stop via zero instead)', async () => {
+      const setup = await setupSeatLine({ year: 2023, month: 2, day: 1 });
+      const scheduled = await scheduleUnitPricingRevision({
+        contract_line_id: setup.contractLineId,
+        service_id: setup.standard.serviceId,
+        config_id: setup.standard.configId,
+        quantity: 12,
+        unit_rate_cents: 10000,
+        effective_period_start: '2023-02-01'
+      });
+      if ('actionError' in (scheduled as object)) throw new Error(JSON.stringify(scheduled));
+
+      const refused = await deleteConfiguration(setup.standard.configId).catch((error) => error);
+      expect(refused instanceof Error || 'actionError' in Object(refused)).toBe(true);
+
+      // The configuration and its scheduled history survive.
+      const config = await context.db('contract_line_service_configuration')
+        .where({ tenant: context.tenantId, config_id: setup.standard.configId }).first();
+      expect(config).toBeTruthy();
+      const revisions = await context.db('contract_line_unit_pricing_revisions')
+        .where({ tenant: context.tenantId, config_id: setup.standard.configId });
+      expect(revisions).toHaveLength(1);
+    });
+
+    it('refuses to delete a configuration that appears on an issued invoice and keeps its provenance', async () => {
+      const setup = await setupSeatLine({ year: 2023, month: 2, day: 1 });
+      await generateInvoice(setup.billingCycleId);
+
+      const before = await context.db('invoice_charge_details')
+        .where({ tenant: context.tenantId, config_id: setup.standard.configId }).first();
+      expect(before).toBeTruthy();
+
+      const refused = await deleteConfiguration(setup.standard.configId).catch((error) => error);
+      expect(refused instanceof Error || 'actionError' in Object(refused)).toBe(true);
+
+      // The persisted charge detail still points at the configuration.
+      const after = await context.db('invoice_charge_details')
+        .where({ tenant: context.tenantId, config_id: setup.standard.configId }).first();
+      expect(after).toBeTruthy();
+      expect(after.item_detail_id).toBe(before.item_detail_id);
+    });
+
+    it('the inline editor cannot silently replace an existing scheduled revision', async () => {
+      const setup = await setupSeatLine({ year: 2023, month: 2, day: 1 });
+      const scheduled = await scheduleUnitPricingRevision({
+        contract_line_id: setup.contractLineId,
+        service_id: setup.standard.serviceId,
+        config_id: setup.standard.configId,
+        quantity: 12,
+        unit_rate_cents: 10000,
+        effective_period_start: '2023-02-01'
+      });
+      if ('actionError' in (scheduled as object)) throw new Error(JSON.stringify(scheduled));
+
+      const refused = await updateContractLineService(setup.contractLineId, setup.standard.serviceId, {
+        quantity: 15,
+        typeConfig: { effective_period_start: '2023-02-01' }
+      }).catch((error) => error);
+      expect(refused instanceof Error || 'actionError' in Object(refused)).toBe(true);
+
+      const revision = await context.db('contract_line_unit_pricing_revisions')
+        .where({ tenant: context.tenantId, config_id: setup.standard.configId, effective_period_start: '2023-02-01' }).first();
+      expect(Number(revision.quantity)).toBe(12);
+    });
+
     it('scheduling a change inside an already-billed service period is rejected at the boundary guard', async () => {
       const setup = await setupSeatLine({ year: 2023, month: 2, day: 1 });
 
@@ -1687,6 +1807,237 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       await updateCatalogPrice(context, setup.endpoints.serviceId, { rateCents: 6000, effectiveDate: '2023-03-01' });
       const march = unwrapInvoiceResult<any>(await generateInvoice(await setupInvoiceCycle(2023, 4, 1)));
       expect(march.subtotal).toBe(473000); // 23×$110 + 30×$60 + 2×$200
+    });
+
+    it('an all-zero contract reaches a stable no-charge period without duplicate invoices', async () => {
+      const setup = await setupProductLine();
+      expect(unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId)).subtotal).toBe(390000);
+
+      // Stop every product at the next boundary.
+      for (const member of [setup.users, setup.endpoints, setup.locations]) {
+        expectScheduled(await scheduleProduct(setup, member, {
+          quantity: 0,
+          effective_period_start: '2023-02-01',
+        }));
+      }
+
+      const februaryCycle = await setupInvoiceCycle(2023, 3, 1);
+      const february = await generateInvoice(februaryCycle).catch((error) => error);
+      // A deliberate no-charge outcome: either no invoice or a zero-total one,
+      // never an error and never a phantom unit.
+      if (february instanceof Error) throw february;
+      if (february && !('actionError' in february) && !('code' in february)) {
+        expect(Number((february as any).subtotal)).toBe(0);
+        expect(Number((february as any).total_amount)).toBe(0);
+      }
+
+      // Not endlessly retryable: a second generation of the same window must not
+      // create another invoice.
+      const before = await context.db('invoices').where({ tenant: context.tenantId, client_id: context.clientId });
+      await generateInvoice(februaryCycle).catch(() => null);
+      const after = await context.db('invoices').where({ tenant: context.tenantId, client_id: context.clientId });
+      expect(after.length).toBe(before.length);
+      // The stop is recorded: every product carries its zero revision.
+      const zeroRevisions = await context.db('contract_line_unit_pricing_revisions')
+        .where({ tenant: context.tenantId, contract_line_id: setup.contractLineId, effective_period_start: '2023-02-01' });
+      expect(zeroRevisions).toHaveLength(3);
+      expect(zeroRevisions.every((row: any) => Number(row.quantity) === 0)).toBe(true);
+    });
+
+    it('applies and persists percentage and fixed contract discounts plus tax to revised product subtotals', async () => {
+      const setup = await setupProductLine();
+      const discountId = uuidv4();
+      await context.db('discounts').insert({
+        tenant: context.tenantId,
+        discount_id: discountId,
+        discount_name: 'Ten percent contract',
+        discount_type: 'percentage',
+        value: 0.1,
+        start_date: '2022-01-01',
+        end_date: null,
+        is_active: true,
+      });
+      await context.db('contract_line_discounts').insert({
+        tenant: context.tenantId,
+        discount_id: discountId,
+        contract_line_id: setup.contractLineId,
+      });
+
+      const january = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+      // invoice.subtotal is net of discounts; the gross 390000 is reduced by 10%.
+      expect(january.subtotal).toBe(351000);
+      expect(Number(january.tax)).toBe(39000);
+      expect(Number(january.total_amount)).toBe(390000);
+      const janDiscount = await context.db('invoice_charges')
+        .where({ tenant: context.tenantId, invoice_id: january.invoice_id, is_discount: true }).first();
+      expect(janDiscount).toBeTruthy();
+      expect(Number(janDiscount.total_price ?? janDiscount.net_amount)).toBe(-39000);
+
+      expectScheduled(await scheduleProduct(setup, setup.users, {
+        quantity: 23,
+        effective_period_start: '2023-02-01',
+      }));
+      const februaryCycle = await setupInvoiceCycle(2023, 3, 1);
+      const preview = await previewInvoice(februaryCycle);
+      expect(preview.success, JSON.stringify(preview)).toBe(true);
+      if (!preview.success) throw new Error('unreachable');
+      // The preview runs the same discount/tax pipeline on the revised gross
+      // 420000 (its subtotal is pre-discount; the persisted invoice subtotal is
+      // net, and both agree on the 420000 total after tax and discount).
+      expect(preview.data.subtotal).toBe(420000);
+
+      const february = unwrapInvoiceResult<any>(await generateInvoice(februaryCycle));
+      expect(february.subtotal).toBe(378000);
+      expect(Number(february.tax)).toBe(42000);
+      expect(Number(february.total_amount)).toBe(420000);
+      const febDiscount = await context.db('invoice_charges')
+        .where({ tenant: context.tenantId, invoice_id: february.invoice_id, is_discount: true }).first();
+      expect(febDiscount).toBeTruthy();
+      expect(Number(febDiscount.total_price ?? febDiscount.net_amount)).toBe(-42000);
+      const earlier = await context.db('invoices')
+        .where({ tenant: context.tenantId, invoice_id: january.invoice_id }).first();
+      expect(Number(earlier?.subtotal)).toBe(351000);
+    });
+
+    it('applies and persists a fixed contract discount to revised product subtotals', async () => {
+      const setup = await setupProductLine();
+      const discountId = uuidv4();
+      await context.db('discounts').insert({
+        tenant: context.tenantId,
+        discount_id: discountId,
+        discount_name: 'Hundred off contract',
+        discount_type: 'fixed',
+        value: 10000,
+        start_date: '2022-01-01',
+        end_date: null,
+        is_active: true,
+      });
+      await context.db('contract_line_discounts').insert({
+        tenant: context.tenantId,
+        discount_id: discountId,
+        contract_line_id: setup.contractLineId,
+      });
+
+      const january = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+      expect(january.subtotal).toBe(380000); // 390000 gross − 10000 fixed
+      expect(Number(january.tax)).toBe(39000); // tax stays on the gross base
+      expect(Number(january.total_amount)).toBe(419000);
+
+      expectScheduled(await scheduleProduct(setup, setup.users, {
+        quantity: 23,
+        effective_period_start: '2023-02-01',
+      }));
+      const february = unwrapInvoiceResult<any>(await generateInvoice(await setupInvoiceCycle(2023, 3, 1)));
+      expect(february.subtotal).toBe(410000); // 420000 gross − 10000 fixed
+      expect(Number(february.tax)).toBe(42000);
+      expect(Number(february.total_amount)).toBe(452000);
+      const febDiscount = await context.db('invoice_charges')
+        .where({ tenant: context.tenantId, invoice_id: february.invoice_id, is_discount: true }).first();
+      expect(Number(febDiscount.total_price ?? febDiscount.net_amount)).toBe(-10000);
+    });
+
+    it('persists revision provenance and rejects generation after the reviewed revision changed', async () => {
+      const setup = await setupProductLine();
+      expect(unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId)).subtotal).toBe(390000);
+
+      const first = expectScheduled(await scheduleProduct(setup, setup.users, {
+        quantity: 23,
+        effective_period_start: '2023-02-01',
+      }));
+      expect(first.version).toBe(1);
+
+      const februaryCycle = await setupInvoiceCycle(2023, 3, 1);
+      const preview = await previewInvoice(februaryCycle);
+      expect(preview.success, JSON.stringify(preview)).toBe(true);
+      if (!preview.success) throw new Error('unreachable');
+      expect(preview.data.subtotal).toBe(420000);
+      const reviewed = preview.expectedRecurringPricingSources ?? [];
+      expect(reviewed.length).toBeGreaterThan(0);
+      expect(reviewed.find((source) => source.serviceId === setup.users.serviceId)).toMatchObject({
+        revisionId: first.revision_id,
+        version: 1,
+        pricePolicy: 'catalog',
+      });
+
+      // A concurrent editor replaces the pending revision before generation.
+      expectScheduled(await scheduleProduct(setup, setup.users, {
+        quantity: 25,
+        effective_period_start: '2023-02-01',
+        expected_version: 1,
+      }));
+
+      const refused = await generateInvoice(februaryCycle, {
+        expectedRecurringPricingSources: reviewed,
+      } as any).catch((error) => error);
+      const isRefused =
+        refused instanceof Error ||
+        'actionError' in Object(refused) ||
+        'code' in Object(refused ?? {});
+      expect(isRefused, JSON.stringify(refused)).toBe(true);
+      // The refusal is the coded, localized stale-pricing failure, not a raw
+      // exception: the UI must offer "re-run the preview", not a stack trace.
+      expect((refused as { messageKey?: string }).messageKey).toBe(
+        RECURRING_PRICING_STALE_MESSAGE_KEY,
+      );
+
+      // Nothing was finalized for that window.
+      const invoices = await context.db('invoices')
+        .where({ tenant: context.tenantId, client_id: context.clientId })
+        .orderBy('invoice_date', 'asc');
+      expect(invoices).toHaveLength(1);
+      expect(Number(invoices[0].subtotal)).toBe(390000);
+    });
+
+    it('persists the effective pricing provenance on generated invoice details', async () => {
+      const setup = await setupProductLine();
+      expectScheduled(await scheduleProduct(setup, setup.users, {
+        quantity: 23,
+        effective_period_start: '2023-02-01',
+      }));
+      const february = unwrapInvoiceResult<any>(await generateInvoice(await setupInvoiceCycle(2023, 3, 1)));
+      expect(february.subtotal).toBe(420000);
+
+      const detail = await context.db('invoice_charge_details')
+        .where({ tenant: context.tenantId, config_id: setup.users.configId })
+        .orderBy('created_at', 'desc')
+        .first();
+      expect(detail).toBeTruthy();
+      const provenance =
+        typeof detail.effective_pricing === 'string'
+          ? JSON.parse(detail.effective_pricing)
+          : detail.effective_pricing;
+      expect(Number(detail.quantity)).toBe(23);
+      expect(provenance).toMatchObject({ pricePolicy: 'catalog', version: 1 });
+      expect(provenance.revisionId).toBeTruthy();
+      expect(provenance.effectivePeriodStart).toBe('2023-02-01');
+    });
+
+    it('rejects generation when the inherited catalog price changed after preview', async () => {
+      const setup = await setupProductLine();
+      expectScheduled(await scheduleProduct(setup, setup.endpoints, {
+        quantity: 30,
+        effective_period_start: '2023-02-01',
+      }));
+      const februaryCycle = await setupInvoiceCycle(2023, 3, 1);
+      const preview = await previewInvoice(februaryCycle);
+      expect(preview.success, JSON.stringify(preview)).toBe(true);
+      if (!preview.success) throw new Error('unreachable');
+      const reviewed = preview.expectedRecurringPricingSources ?? [];
+      const endpointsSource = reviewed.find((source) => source.serviceId === setup.endpoints.serviceId);
+      expect(endpointsSource).toMatchObject({ pricePolicy: 'catalog' });
+      expect(endpointsSource?.catalogPriceId).toBeTruthy();
+
+      // Catalog price moves before generation: the reviewed source is stale.
+      await updateCatalogPrice(context, setup.endpoints.serviceId, { rateCents: 6000, effectiveDate: '2023-02-01' });
+
+      const refused = await generateInvoice(februaryCycle, {
+        expectedRecurringPricingSources: reviewed,
+      } as any).catch((error) => error);
+      const isRefused =
+        refused instanceof Error ||
+        'actionError' in Object(refused) ||
+        'code' in Object(refused ?? {});
+      expect(isRefused, JSON.stringify(refused)).toBe(true);
     });
 
     it('replaces a pending boundary with compare-and-set and retains superseded history', async () => {

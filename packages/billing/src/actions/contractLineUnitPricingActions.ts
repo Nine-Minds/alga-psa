@@ -20,7 +20,7 @@ import {
 import {
   listRecurringUnitPricingHistory,
   listRecurringUnitPricingRevisions as listRecurringUnitPricingRevisionsInTransaction,
-  resolveEffectiveRecurringUnitPricingInTransaction,
+  resolveRecurringUnitDisplayPricing,
   scheduleRecurringUnitRevisionInTransaction,
   type IRecurringUnitPricingRevisionListRow,
 } from '../lib/billing/seatRevisions';
@@ -196,7 +196,7 @@ async function getEffectiveRecurringUnitPricingImpl(
     if (!kind) {
       return actionError('The selected item is not a recurring product or unit-priced service on this contract line.');
     }
-    const effective = await resolveEffectiveRecurringUnitPricingInTransaction({
+    const effective = await resolveRecurringUnitDisplayPricing({
       trx: knex as unknown as Knex.Transaction,
       tenant,
       contractLineId: input.contract_line_id,
@@ -265,6 +265,16 @@ export interface EffectiveRecurringUnitPricingReadResult {
   revisionId: string | null;
   version: number | null;
   effectivePeriodStart: string | null;
+  /** Resolved currency/period catalog rate for display (null for N/A). */
+  resolvedUnitRateCents?: number | null;
+  catalogPriceId?: string | null;
+  catalogEffectiveDate?: string | null;
+  coveredStart?: string;
+  coveredEnd?: string | null;
+  protectedLifecycle?: string | null;
+  currencyCode?: string;
+  baselineQuantity?: number;
+  baselineUnitRateCents?: number | null;
 }
 
 export const scheduleRecurringUnitPricingRevision = withAuth(

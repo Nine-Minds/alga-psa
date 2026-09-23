@@ -3,6 +3,7 @@ import type {
   IClientContractLine,
   ILicenseCharge,
   IProductCharge,
+  IRecurringPricingSource,
 } from "@alga-psa/types";
 import type {
   ChargeComputeClient,
@@ -25,6 +26,9 @@ export interface RecurringQuantityEffectivePricing {
   revisionId: string;
   version: number;
   effectivePeriodStart: string;
+  /** `service_prices` identity that supplied a catalog-policy rate. */
+  catalogPriceId?: string | null;
+  catalogEffectiveDate?: string | null;
 }
 
 export interface RecurringQuantityServiceRow {
@@ -99,6 +103,7 @@ export function computeRecurringQuantityCharges(
     let originalRate: number;
     let rateSource: string;
     let revisionApplied = false;
+    let recurringPricingSource: IRecurringPricingSource | null = null;
 
     if (effective) {
       revisionApplied = true;
@@ -173,6 +178,20 @@ export function computeRecurringQuantityCharges(
           : service.service_line_custom_rate != null
             ? "service override"
             : "currency catalog price";
+    }
+
+    if (effective) {
+      // Carry the resolved revision/catalog provenance so preview can hand it
+      // back to generation and the persisted detail can prove what was billed.
+      recurringPricingSource = {
+        revisionId: effective.revisionId,
+        version: effective.version,
+        pricePolicy: effective.pricePolicy,
+        unitRateCents: originalRate,
+        effectivePeriodStart: effective.effectivePeriodStart,
+        catalogPriceId: effective.catalogPriceId ?? null,
+        catalogEffectiveDate: effective.catalogEffectiveDate ?? null,
+      };
     }
 
     const originalTotal = originalRate * quantity;
@@ -262,6 +281,7 @@ export function computeRecurringQuantityCharges(
       location_id: clientContractLine.location_id ?? null,
       billing_profile_id: resolvedProfile?.billingProfileId ?? null,
       billing_profile_source: resolvedProfile?.source ?? null,
+      recurringPricingSource,
       ...(chargeType === "license"
         ? {
             period_start: timing.servicePeriodStart,

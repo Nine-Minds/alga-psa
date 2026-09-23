@@ -32,7 +32,12 @@ interface EvaluationWindow {
   endInclusive: string;
 }
 
-function dateOnly(value: ISO8601String): string {
+function dateOnly(value: ISO8601String | Date): string {
+  // pg materialises `timestamptz` columns as Date; contract-discount rows read
+  // straight from the DB must not crash the whole invoice when they do.
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? '' : value.toISOString().slice(0, 10);
+  }
   return value.slice(0, 10);
 }
 

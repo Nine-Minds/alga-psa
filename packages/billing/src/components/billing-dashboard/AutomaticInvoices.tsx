@@ -14,6 +14,7 @@ import { DateRangePicker, DateRange } from '@alga-psa/ui/components/DateRangePic
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertTriangle, X, MoreVertical, Eye, ChevronRight, ChevronDown, Check, Link2, Clock, Hourglass, Wrench, FileText, Filter } from 'lucide-react';
 import type {
+  IExpectedRecurringPricingSource,
   IExpectedUsagePeriodTotal,
   IRecurringDueSelectionInput,
   IRecurringDueWorkInvoiceCandidate,
@@ -186,6 +187,7 @@ interface RecurringInvoiceParentGroup {
 
 type RecurringSelectionGroup = {
   expectedUsagePeriodTotals?: IExpectedUsagePeriodTotal[];
+  expectedRecurringPricingSources?: IExpectedRecurringPricingSource[];
   groupKey: string;
   selectorInputs: IRecurringDueSelectionInput[];
   billingCycleId: string | null;
@@ -793,6 +795,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       selectorInputs: IRecurringDueSelectionInput[];
       usageServicePeriodStatuses?: IUsageServicePeriodStatus[];
       expectedUsagePeriodTotals?: IExpectedUsagePeriodTotal[];
+      expectedRecurringPricingSources?: IExpectedRecurringPricingSource[];
     }>;
     invoiceCount: number;
     billingCycleId: string | null;
@@ -803,8 +806,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
      * path. Handed to generation so finalization refuses (stale preview)
      * when a report or its pricing changed after this preview was shown.
      */
-    expectedUsagePeriodTotals: IExpectedUsagePeriodTotal[] | null;
-  }>({ previews: [], invoiceCount: 0, billingCycleId: null, executionIdentityKey: null, selectorInput: null, expectedUsagePeriodTotals: null });
+    expectedUsagePeriodTotals?: IExpectedUsagePeriodTotal[] | null;
+    expectedRecurringPricingSources?: IExpectedRecurringPricingSource[] | null;
+  }>({ previews: [], invoiceCount: 0, billingCycleId: null, executionIdentityKey: null, selectorInput: null, expectedUsagePeriodTotals: null, expectedRecurringPricingSources: null });
   // Structured code of the last preview failure; drives actionable remediation
   // (e.g. USAGE_RECORDS_MISSING links to Usage Tracking for the period).
   const [previewFailureCode, setPreviewFailureCode] = useState<RecurringInvoiceFailureCode | null>(null);
@@ -1648,6 +1652,10 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           response.previews.length === 1
             ? response.previews[0].expectedUsagePeriodTotals ?? null
             : null,
+        expectedRecurringPricingSources:
+          response.previews.length === 1
+            ? response.previews[0].expectedRecurringPricingSources ?? null
+            : null,
       });
       setShowPreviewDialog(true);
     } else {
@@ -2023,6 +2031,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           ...(previewState.expectedUsagePeriodTotals
             ? { expectedUsagePeriodTotals: previewState.expectedUsagePeriodTotals }
             : {}),
+          ...(previewState.expectedRecurringPricingSources
+            ? { expectedRecurringPricingSources: previewState.expectedRecurringPricingSources }
+            : {}),
         },
       ] : [];
       const groupedTargets = previewState.previews.map(preview => ({
@@ -2030,6 +2041,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         selectorInputs: preview.selectorInputs,
         billingCycleId: lastPreviewGroupsRef.current.find(group => group.groupKey === preview.previewGroupKey)?.billingCycleId ?? null,
         expectedUsagePeriodTotals: preview.expectedUsagePeriodTotals,
+        expectedRecurringPricingSources: preview.expectedRecurringPricingSources,
       }));
       const runResult = targets.length > 0
         ? await generateInvoicesAsRecurringBillingRun({ targets })
@@ -2109,6 +2121,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           // identity binding across the PO-overage confirmation.
           ...(previewState.expectedUsagePeriodTotals
             ? { expectedUsagePeriodTotals: previewState.expectedUsagePeriodTotals }
+            : {}),
+          ...(previewState.expectedRecurringPricingSources
+            ? { expectedRecurringPricingSources: previewState.expectedRecurringPricingSources }
             : {}),
         },
       ];

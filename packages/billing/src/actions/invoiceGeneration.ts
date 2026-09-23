@@ -87,6 +87,7 @@ import {
   USAGE_RECORDS_MISSING_MESSAGE_KEY,
   USAGE_RECORDS_MISSING_ACK_REQUIRED_MESSAGE_KEY,
   USAGE_PERIOD_TOTAL_STALE_MESSAGE_KEY,
+  RECURRING_PRICING_STALE_MESSAGE_KEY,
   USAGE_CALCULATION_ERROR_MESSAGE_KEY,
 } from './invoiceGeneration.constants';
 import {
@@ -98,6 +99,11 @@ import {
   bindUsagePeriodTotalInputs,
   type IExpectedUsagePeriodTotal,
 } from '../lib/billing/usagePeriodTotalIdentity';
+import {
+  bindRecurringPricingSources,
+  findStaleRecurringPricingSources,
+  type IExpectedRecurringPricingSource,
+} from '../lib/billing/recurringPricingIdentity';
 import type { HandledRecurringFailureCode } from './recurringBillingRunActions.shared';
 import {
   detectRecurringApprovalBlockers,
@@ -764,6 +770,7 @@ function buildUsageCalculationError(
 }
 
 export type { IExpectedUsagePeriodTotal } from '../lib/billing/usagePeriodTotalIdentity';
+export type { IExpectedRecurringPricingSource } from '../lib/billing/recurringPricingIdentity';
 
 /**
  * Options accepted by every recurring invoice-generation entry point. All
@@ -791,6 +798,39 @@ export interface IInvoiceGenerationRequestOptions {
    * numbers than the operator approved.
    */
   expectedUsagePeriodTotals?: IExpectedUsagePeriodTotal[];
+  /**
+   * Recurring quantity/price revision sources the caller previewed. Generation
+   * refuses with `RECURRING_PRICING_STALE` when the selected revision, its
+   * version, its policy, its quantity, or the inherited catalog price identity
+   * changed since the preview, instead of silently billing different numbers.
+   */
+  expectedRecurringPricingSources?: IExpectedRecurringPricingSource[];
+}
+
+/**
+ * Enforces preview/generation consistency for recurring quantity/price
+ * revisions. Every reviewed source must still be present with the same
+ * revision/version/policy/rate/catalog identity; an unreviewed new source is
+ * also stale. Legacy/automated callers pass nothing and are unaffected.
+ */
+function assertExpectedRecurringPricingSourcesCurrent(params: {
+  charges: IBillingCharge[];
+  expected: IExpectedRecurringPricingSource[];
+}): void {
+  const stale = findStaleRecurringPricingSources({
+    expected: params.expected,
+    current: bindRecurringPricingSources(params.charges),
+  });
+  if (stale.length > 0) {
+    throw new ManualInvoiceError(
+      'RECURRING_PRICING_STALE',
+      `The preview is out of date: ${stale.map((detail) => detail.reason).join('; ')}. Re-run the preview to see the current numbers, then generate again.`,
+      {
+        serviceIds: stale.map((detail) => detail.serviceId).join(','),
+        details: stale.map((detail) => detail.reason).join('; '),
+      },
+    );
+  }
 }
 
 /**
@@ -966,6 +1006,8 @@ function manualInvoiceErrorMessageKey(
       return USAGE_RECORDS_MISSING_ACK_REQUIRED_MESSAGE_KEY;
     case 'USAGE_PERIOD_TOTAL_STALE':
       return USAGE_PERIOD_TOTAL_STALE_MESSAGE_KEY;
+    case 'RECURRING_PRICING_STALE':
+      return RECURRING_PRICING_STALE_MESSAGE_KEY;
     case 'USAGE_CALCULATION_ERROR':
       return USAGE_CALCULATION_ERROR_MESSAGE_KEY;
     default:
@@ -2130,6 +2172,12 @@ interface BuiltPreviewInvoice {
    * after the preview.
    */
   expectedUsagePeriodTotals?: IExpectedUsagePeriodTotal[];
+  /**
+   * Recurring revision/catalog sources every charge was priced from, for the
+   * caller to hand back to generation so finalization refuses when a scheduled
+   * revision or its catalog source changed after the preview.
+   */
+  expectedRecurringPricingSources?: IExpectedRecurringPricingSource[];
 }
 
 async function buildPreviewInvoiceForSelectionInputs(params: {
@@ -2416,12 +2464,16 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
 
   const usageServicePeriodStatuses = billingResult.usageServicePeriodStatuses;
   const expectedUsagePeriodTotals = billingResult.expectedUsagePeriodTotals ?? [];
+  const expectedRecurringPricingSources = bindRecurringPricingSources(billingResult.charges);
   return {
     viewModel,
     ...(usageServicePeriodStatuses && usageServicePeriodStatuses.length > 0
       ? { usageServicePeriodStatuses }
       : {}),
     ...(expectedUsagePeriodTotals.length > 0 ? { expectedUsagePeriodTotals } : {}),
+    ...(expectedRecurringPricingSources.length > 0
+      ? { expectedRecurringPricingSources }
+      : {}),
   };
 }
 
@@ -2460,6 +2512,11 @@ export type RecurringGroupedPreviewResponse = {
      * pass back through generation as expectedUsagePeriodTotals.
      */
     expectedUsagePeriodTotals?: IExpectedUsagePeriodTotal[];
+    /**
+     * Reviewed recurring revision/catalog sources for scheduled charges, to
+     * pass back through generation as expectedRecurringPricingSources.
+     */
+    expectedRecurringPricingSources?: IExpectedRecurringPricingSource[];
   }>;
 } | {
   success: false;
@@ -2523,6 +2580,9 @@ export const previewGroupedInvoicesForSelectionInputs = withAuth(async (
             : {}),
           ...(preview.expectedUsagePeriodTotals
             ? { expectedUsagePeriodTotals: preview.expectedUsagePeriodTotals }
+            : {}),
+          ...(preview.expectedRecurringPricingSources
+            ? { expectedRecurringPricingSources: preview.expectedRecurringPricingSources }
             : {}),
         };
       }),
@@ -2598,6 +2658,9 @@ export const previewInvoiceForSelectionInput = withAuth(async (
         : {}),
       ...(preview.expectedUsagePeriodTotals
         ? { expectedUsagePeriodTotals: preview.expectedUsagePeriodTotals }
+        : {}),
+      ...(preview.expectedRecurringPricingSources
+        ? { expectedRecurringPricingSources: preview.expectedRecurringPricingSources }
         : {}),
     };
   } catch (error) {
@@ -2686,6 +2749,9 @@ export const previewInvoice = withAuth(async (
         : {}),
       ...(preview.expectedUsagePeriodTotals
         ? { expectedUsagePeriodTotals: preview.expectedUsagePeriodTotals }
+        : {}),
+      ...(preview.expectedRecurringPricingSources
+        ? { expectedRecurringPricingSources: preview.expectedRecurringPricingSources }
         : {}),
     };
   } catch (error) {
@@ -3155,6 +3221,23 @@ async function generateInvoiceForLockedSelectionInputs(params: Parameters<typeof
         charges: billingResult.charges,
         expected: expectedUsagePeriodTotals,
         statuses: billingResult.usageServicePeriodStatuses,
+      });
+    } catch (error) {
+      throw error instanceof ManualInvoiceError
+        ? withRecurringWindowErrorContext(error, normalizedSelectorInput)
+        : error;
+    }
+  }
+
+  // Preview/generation consistency for scheduled recurring pricing: when the
+  // caller passed the revision/catalog sources it previewed, generation refuses
+  // if any changed (replaced revision, new version, switched policy, moved
+  // catalog price) rather than charging a different amount silently.
+  if (params.options?.expectedRecurringPricingSources !== undefined) {
+    try {
+      assertExpectedRecurringPricingSourcesCurrent({
+        charges: billingResult.charges,
+        expected: params.options.expectedRecurringPricingSources,
       });
     } catch (error) {
       throw error instanceof ManualInvoiceError

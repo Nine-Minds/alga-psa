@@ -15,6 +15,10 @@ import {
   toRecurringUnitRevisionCandidate,
   type EffectiveRecurringUnitPricing,
 } from '@alga-psa/shared/billingClients/recurringUnitPricing';
+import {
+  selectEffectiveServicePrice,
+  type ServicePriceRateRow,
+} from '@alga-psa/shared/billingClients/resolveFixedLineRate';
 
 /**
  * Transactional core of prospective recurring-seat (unit pricing) revisions.
@@ -105,6 +109,36 @@ export async function rejectBilledSeatBoundary(params: {
     .where('detail.service_period_end', '>=', effectivePeriodStart).first('detail.item_detail_id');
   if (conflicting || billedDetail) {
     return 'That effective date falls inside an already-billed or finalizing service period. Choose the next unbilled service-period boundary instead.';
+  }
+  return null;
+}
+
+/**
+ * Refuse to delete a configuration that is referenced by issued invoices or
+ * carries scheduled recurring-unit revisions: deleting it would erase billing
+ * provenance (invoice_charge_details.config_id) and orphan effective history.
+ * The operator stops the item by scheduling a zero quantity instead, which
+ * keeps the item and its history. Returns an actionable message, or null when
+ * deletion is safe.
+ */
+export async function configurationDeletionGuard(params: {
+  trx: Knex.Transaction;
+  tenant: string;
+  configId: string;
+}): Promise<string | null> {
+  const { trx, tenant, configId } = params;
+  const revision = await tenantScopedTable(trx, tenant, 'contract_line_unit_pricing_revisions')
+    .where({ tenant, config_id: configId })
+    .first('revision_id');
+  if (revision) {
+    return 'This item has scheduled recurring quantity/price revisions. Stop it by scheduling a zero quantity — that keeps the item and its history — instead of removing it.';
+  }
+  const billed = await tenantDb(trx, tenant)
+    .table('invoice_charge_details')
+    .where({ config_id: configId })
+    .first('item_detail_id');
+  if (billed) {
+    return 'This item appears on an issued invoice. Removing it would erase billing history; stop it by scheduling a zero quantity instead.';
   }
   return null;
 }
@@ -324,6 +358,111 @@ export async function resolveEffectiveRecurringUnitPricingInTransaction(params: 
     baseline,
     revisions: rows.map(toRecurringUnitRevisionCandidate),
   });
+}
+
+export interface EffectiveRecurringUnitDisplayPricing extends EffectiveRecurringUnitPricing {
+  /** Currency/period catalog price when the policy inherits it, else the override. */
+  resolvedUnitRateCents: number | null;
+  /** `service_prices` identity that supplied a catalog-policy rate. */
+  catalogPriceId: string | null;
+  catalogEffectiveDate: string | null;
+  /** Covered service period containing the boundary, when materialized. */
+  coveredStart: string;
+  coveredEnd: string | null;
+  /** Lifecycle state of the covering period (e.g. `billed` = protected). */
+  protectedLifecycle: string | null;
+  currencyCode: string;
+  /** Legacy baseline quantity/rate before any applicable revision. */
+  baselineQuantity: number;
+  baselineUnitRateCents: number | null;
+}
+
+/**
+ * Read-side companion for the scheduling panel: the effective policy plus the
+ * resolved catalog price it will actually bill (not N/A), the covered dates and
+ * whether the period is protected. Used only for display; billing resolves
+ * independently through the same shared rules.
+ */
+export async function resolveRecurringUnitDisplayPricing(params: {
+  trx: Knex.Transaction;
+  tenant: string;
+  contractLineId: string;
+  serviceId: string;
+  configId: string;
+  kind: RecurringUnitKind;
+  boundary: string;
+}): Promise<EffectiveRecurringUnitDisplayPricing> {
+  const effective = await resolveEffectiveRecurringUnitPricingInTransaction(params);
+  const { trx, tenant, contractLineId, serviceId, configId, boundary } = params;
+  const db = tenantDb(trx, tenant);
+
+  const line = await db
+    .table('contract_lines')
+    .where({ tenant, contract_line_id: contractLineId })
+    .first<{ contract_id: string | null } | undefined>('contract_id');
+  const contract = line?.contract_id
+    ? await db
+        .table('contracts')
+        .where({ tenant, contract_id: line.contract_id })
+        .first<{ currency_code: string | null } | undefined>('currency_code')
+    : undefined;
+  const currencyCode =
+    (contract?.currency_code && String(contract.currency_code).trim()) || 'USD';
+
+  let resolvedUnitRateCents = effective.unitRateCents;
+  let catalogPriceId: string | null = null;
+  let catalogEffectiveDate: string | null = null;
+  if (effective.pricePolicy === 'catalog') {
+    const prices = (await db
+      .table('service_prices')
+      .where({ tenant, service_id: serviceId, currency_code: currencyCode })
+      .select('price_id', 'service_id', 'currency_code', 'rate', 'effective_date', 'created_at')) as ServicePriceRateRow[];
+    const selected = selectEffectiveServicePrice(prices, serviceId, currencyCode, boundary);
+    if (selected) {
+      resolvedUnitRateCents = selected.rateCents;
+      catalogPriceId = selected.price_id;
+      catalogEffectiveDate = selected.effectiveDate;
+    } else {
+      // Mirror the resolver's legacy fallback for the tenant currency.
+      const catalogRow = await db
+        .table('service_catalog')
+        .where({ tenant, service_id: serviceId })
+        .first<{ default_rate: number | string | null } | undefined>('default_rate');
+      const legacy = catalogRow?.default_rate == null ? null : Number(catalogRow.default_rate);
+      resolvedUnitRateCents = Number.isFinite(legacy) ? legacy : null;
+    }
+  }
+
+  const period = await db
+    .table('recurring_service_periods')
+    .where({ tenant, obligation_id: contractLineId })
+    .where('service_period_start', '<=', boundary)
+    .andWhere('service_period_end', '>', boundary)
+    .first<{
+      service_period_start: unknown;
+      service_period_end: unknown;
+      lifecycle_state: string | null;
+    }>('service_period_start', 'service_period_end', 'lifecycle_state');
+
+  const baseline = await loadRecurringUnitBaseline(trx, tenant, {
+    contractLineId,
+    serviceId,
+    configId,
+    kind: params.kind,
+  });
+
+  return {
+    ...effective,
+    resolvedUnitRateCents,
+    catalogPriceId,
+    catalogEffectiveDate,
+    coveredStart: period ? toBoundaryDay(period.service_period_start) : boundary,
+    coveredEnd: period ? toBoundaryDay(period.service_period_end) : null,
+    protectedLifecycle: period?.lifecycle_state ?? null,
+    currencyCode,
+    baselineQuantity: baseline.quantity,
+    baselineUnitRateCents: baseline.unitRateCents,
+  };
 }
 
 /**

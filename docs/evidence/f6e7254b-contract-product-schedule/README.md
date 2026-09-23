@@ -8,10 +8,16 @@ Implementation history:
 - `166b961fdf` — feature: schedule recurring product quantity and price revisions.
 - `288cda16f5` — repair: carry `effective_pricing` through the domain facts and value
   revision-managed product lines in monthly valuation.
-- Follow-up repair (this run, Draft Implementation re-run after the prior run failed):
-  unify the valuation rate chain on `resolveFixedLineRate`, keep a catalog-policy
-  revision from re-reading a stale configuration rate, and preserve original edit
-  attribution in revision history. Committed locally; not pushed.
+- `da32cd04a2` — follow-up repair: unify the valuation rate chain on
+  `resolveFixedLineRate`, keep a catalog-policy revision from re-reading a stale
+  configuration rate, and preserve original edit attribution in revision history.
+- Final Draft Implementation run (this change, uncommitted at capture): add the
+  preview↔generation stale-pricing lock (`RECURRING_PRICING_STALE`), persist
+  `effective_pricing` provenance on `invoice_charge_details`, refuse configuration
+  deletion when it would erase invoice/revision provenance, and surface the resolved
+  catalog rate, covered dates, baseline and invoice delta in the scheduling panel.
+  Includes a focused `recurringPricingIdentity` unit suite and a coded-refusal
+  assertion in the integration suite. Committed locally; not pushed.
 
 ## Scenario
 
@@ -69,12 +75,83 @@ Tests the revision created in this run on the Users product:
 | --- | --- | --- | --- | --- | --- |
 | SMOKE Prod Users | 25 | NULL | catalog | 2 | 2026-10-01 |
 | SMOKE Prod Users | 23 | 11000 | override | 1 | 2026-11-01 |
-| **SMOKE Prod Users** | **27** | **11000** | **override** | **1** | **2027-01-01** |
+| SMOKE Prod Users | 27 | 11000 | override | 1 | 2027-01-01 |
+| **SMOKE Prod Users** | **30** | **12000** | **override** | **1** | **2027-02-01** |
+| **SMOKE Prod Users** | **31** | **12000** | **override** | **1** | **2027-03-01** |
 | SMOKE Prod Endpoints | 35 | NULL | catalog | 1 | 2026-10-01 |
 | SMOKE Prod Locations | 0 | NULL | catalog | 1 | 2026-12-01 |
 
+The two bold Users rows were created live through the panel in the final run
+(`created_by = 77206cb5…`, the review-2515 account). `SMOKE Prod Users` rows at
+`2026-10-01/23`, `2026-11-01/23` and the superseded edit are carried from the
+prior run; the `2026-10-01/23` superseded value remains in
+`contract_line_unit_pricing_revision_history` (superseded by `acdb0685…`).
+
 `contract_line_unit_pricing_revision_history` keeps the superseded `2026-10-01 / 23`
 Users edit. The `2027-01-01` revision was created fresh, so it has no history row.
+
+## Final-run UI smoke (this change)
+
+Fresh capture at `http://localhost:3029` as the tenant `6d178771-…` review account
+(`review-2515@example.test`), on the working tree including this change. New
+screenshots supersede the earlier `01`–`12` set for the current panel surface:
+
+- `22-final-contract-lines-tab.png`, `23-final-line-expanded.png` — the contract line
+  and its three recurring products each expose **Schedule recurring change & history**.
+- `24-final-users-panel.png` — default boundary `2026-10-01`, effective
+  `25 × $100.00 (catalog price)`, coverage `2026-10-01 to next boundary (USD)`, the
+  resolved `service_prices` identity/effective date, baseline `20 × N/A`, and the
+  boundary-only policy note.
+- `25-final-plan-30x120-2027-02-01.png` — scheduling `30` at `2027-02-01` with an
+  explicit `$120.00` override: the panel shows the in-force `27 × $110.00`, coverage
+  and a `+$630.00 to $3,600.00` delta (before discounts/tax). `30 × 120 − 27 × 110`
+  matches.
+- `26-final-scheduled-2027-02-01.png` — save succeeds (`Scheduled: 30 effective
+  2027-02-01.`); the Scheduled-periods table gains `2027-02-01 / 30 / $120.00 / v1`
+  with the real actor, and the button flips to **Replace scheduled change**. The DB
+  row confirms `quantity=30, unit_rate_cents=12000, price_policy=override, version=1,
+  created_by=77206cb5…`.
+- `27-final-billed-rejected.png` — with an issued-invoice detail for the config
+  present, an attempted save at the covered boundary is refused by the server with
+  *"That effective date falls inside an already-billed or finalizing service period.
+  Choose the next unbilled service-period boundary instead."* (the synthetic
+  `invoice_charge_details` row inserted only to trigger the guard was deleted after
+  capture; verified count 0).
+- `28-final-superseded-history.png` — the **Superseded pending edits** disclosure
+  shows the prior `2026-10-01 / 23 / Catalog` value and superseding actor.
+- `29-final-stale-two-tab.png` — two tabs both loaded an empty boundary
+  (`2027-03-01`, `expected_version = null`); tab B created `31`, then tab A's save was
+  refused: *"Another change was created at this effective date by someone else.
+  Reload the period and review the newer values before saving."* Tab A's table does
+  not yet show the rival row, i.e. it is genuinely stale.
+
+## Final-run completion (this change)
+
+- **Preview↔generation stale-pricing lock.** `billingEngine` emits a
+  `recurringPricingSource` on each revision-priced charge; `recurringPricingIdentity`
+  binds it to the obligation key and compares the reviewed sources to the recomputed
+  ones. `previewInvoice` returns `expectedRecurringPricingSources`; generation refuses
+  with the coded `RECURRING_PRICING_STALE` when a revision/version/policy/rate/catalog
+  identity or quantity changed. The code is wired through
+  `invoiceGeneration.constants` → `manualInvoiceErrorMessageKey` →
+  `recurringBillingRunActions`' failure mapping and the `msp/invoicing` locale, so it
+  reaches both interactive and automated runs as an actionable keyed error.
+- **Persisted provenance.** `invoice_charge_details.effective_pricing` (jsonb,
+  additive nullable) stores the revision id/version/policy, resolved rate and
+  catalog-price identity on generated details; migration
+  `20260923010000_invoice_charge_details_recurring_pricing_provenance.cjs` was applied
+  to the dev DB and recorded in `knex_migrations` (batch 51) without touching the
+  drifted ledger beyond that.
+- **Deletion guard.** `configurationDeletionGuard` plus the configuration model/config
+  service refuse to delete a config referenced by `invoice_charge_details` or carrying
+  scheduled revisions; the operator stops the item with a zero revision instead.
+- **Panel display.** Resolved catalog rate/identity, covered dates, baseline row,
+  invoice delta, protected-period notice, discard-dirty confirmation, history load
+  error, status/actor columns and superseded-pending disclosure.
+- **Tests.** `recurringPricingIdentity.test.ts` (10) is new; the integration block
+  gains a coded `RECURRING_PRICING_STALE` assertion, plus cases for catalog-inheritance
+  billing, all-zero no-charge stability, percentage/fixed discounts with tax, deletion
+  guards, inline-editor conflict, provenance persistence and catalog-stale refusal.
 
 ## Follow-up repair in this run
 
@@ -110,7 +187,8 @@ revision stored at the exact selected boundary.
 Real server actions + billing engine against PostgreSQL (not source-string tests):
 
 - `server/src/test/infrastructure/billing/invoices/contractQuantityUsageSemantics.test.ts`
-  — **77 passed**. The `recurring products (parity with unit services)` block covers:
+  — **87 passed** (this run; 77 before the completion cases). The
+  `recurring products (parity with unit services)` block covers:
   20/30/2 bills **$3,900** (390000); scheduling Users to 23 at `2023-02-01` yields
   preview **and** generated invoice subtotal **$4,200** (420000) with the earlier
   invoice row unchanged and `getContractOverview` = 420000; decrease (18 → 370000),
@@ -121,7 +199,21 @@ Real server actions + billing engine against PostgreSQL (not source-string tests
   the second create is rejected; the original author is preserved while the replacer
   is recorded; a change inside a billed period is rejected while the next boundary is
   accepted; repeated generation creates no second invoice; and a future revision does
-  not reprice an older, later-billed period.
+  not reprice an older, later-billed period. The completion cases add: a unit-priced
+  service switching to catalog inheritance bills the currency catalog price (not zero)
+  and the overview agrees; an all-zero contract reaches a stable no-charge period with
+  no duplicate invoice; percentage (10%) and fixed (`$100`) contract discounts plus tax
+  are applied and persisted over the revised gross subtotals; provenance is persisted
+  on generated details; generation after the reviewed revision changed is refused with
+  the coded `RECURRING_PRICING_STALE` message key; generation after the inherited
+  catalog price moved is refused; and deletion of a configuration is refused when it
+  carries scheduled revisions or issued-invoice provenance.
+- `packages/billing/src/lib/billing/recurringPricingIdentity.test.ts` — **10 passed**
+  (new). Unit coverage for the preview↔generation source comparison: unchanged
+  source accepted; bumped version, switched policy, moved catalog price, changed
+  quantity, dropped source and unreviewed-new source all reported stale; legacy
+  charges without provenance ignored; obligation key includes config and covered
+  window.
 - `server/src/test/infrastructure/billing/invoices/contractRecurringValueReporting.test.ts`
   — **7 passed** (new). The added case proves monthly valuation of a revision-managed
   product line: an untouched line stays `0`, scheduling Users to 23 at `2023-02-01`
@@ -142,14 +234,15 @@ Real server actions + billing engine against PostgreSQL (not source-string tests
 
 Commands and results:
 
-- `cd shared && npx vitest run billingClients/__tests__/recurringUnitPricing.test.ts` — passed.
-- `cd packages/billing && npx vitest run src/lib/billing/compute/compute.test.ts` — passed.
-- `cd server && TEST_DB_NAME=test_db_pcs_sched REQUIRE_DB=1 npx vitest run src/test/infrastructure/billing/invoices/contractQuantityUsageSemantics.test.ts` — 77 passed.
+- `cd shared && npx vitest run billingClients/__tests__/recurringUnitPricing.test.ts` — 10 passed.
+- `cd packages/billing && npx vitest run src/lib/billing/compute/compute.test.ts` — 46 passed.
+- `cd packages/billing && npx vitest run src/lib/billing/recurringPricingIdentity.test.ts` — 10 passed.
+- `cd server && TEST_DB_NAME=test_db_pcs_sched REQUIRE_DB=1 npx vitest run src/test/infrastructure/billing/invoices/contractQuantityUsageSemantics.test.ts` — 87 passed.
 - `cd server && TEST_DB_NAME=test_db_pcs_sched REQUIRE_DB=1 npx vitest run src/test/infrastructure/billing/invoices/contractRecurringValueReporting.test.ts` — 7 passed.
 - `cd shared && npx tsc --noEmit` — exit 0.
 - `cd packages/types && npx tsc --noEmit` — exit 0.
 - `npx tsc --noEmit -p packages/db/tsconfig.json` — exit 0.
-- `cd packages/billing && NODE_OPTIONS=--max-old-space-size=8192 npx tsc --noEmit -p tsconfig.json` — exit 0.
+- `cd packages/billing && NODE_OPTIONS=--max-old-space-size=4096 npx tsc --noEmit -p tsconfig.json` — exit 0.
 - `npx eslint <changed files>` — 0 errors (pre-existing `any`/non-null-assertion warnings only).
 - `server` `tsc --noEmit` was not run: it is a known host-memory OOM and its tsconfig
   excludes `src/test/**`, so the new tests are outside it anyway.
@@ -181,24 +274,53 @@ can consume without inventing a second scheduling engine:
   effective revision id/version, quantity, unprorated unit rate, price policy,
   currency and catalog-price identity; zero is an explicit stop that reaches compute
   as zero and needs no catalog price.
+- **Wire provenance (this run):** the resolved facts ride on
+  `IBillingCharge.recurringPricingSource` (`IRecurringPricingSource` in
+  `packages/types`), are persisted to `invoice_charge_details.effective_pricing`, are
+  returned from preview as `IExpectedRecurringPricingSource[]`
+  (`{ revisionId, version, pricePolicy, unitRateCents, effectivePeriodStart,
+  catalogPriceId, catalogEffectiveDate, clientContractLineId, configId, serviceId,
+  servicePeriodStart, servicePeriodEnd, quantity }`), and are compared by
+  `packages/billing/src/lib/billing/recurringPricingIdentity.ts`. A companion that
+  wanted to fingerprint the same source version can consume that shape.
 
 ### Companion integration gaps (explicit, not claimed complete)
 
-- Companion plan `docs/plans/2026-09-22-contract-invoice-adjustments-plan.md` at commit
-  `c89f0e15` is **not present** in this checkout (`git cat-file -t c89f0e15` → not a
-  valid object; no branch contains it). No implemented source/settlement API exists to
-  consume. This card therefore cannot verify companion adjustment sources with fixtures
-  and does not claim companion adjustment handling.
-- Both plans claim effective-history ownership. This card's position: the revision
-  store above is the effective-history authority; the companion should consume
-  resolved facts and own invoice allocation/settlement identities.
+Rechecked in this run without merging: the companion card `b97eda7b` now has a
+separate worktree at `~/alga-copies/feature-contract-invoices-automatic-adjustments-and-disc`
+with commits `c89f0e157f` (plan `docs/plans/2026-09-22-contract-invoice-adjustments-plan.md`),
+`a9d4bafb29`, `fc377b32a1`, `90750df0b5`, and its own dev server on `:3185`. It ships
+its own settlement implementation (`invoiceAutomaticAdjustments.ts`,
+`invoiceAdjustmentEditability.ts`, and migrations
+`20260923000000_add_adjustment_provenance_to_invoice_charges.cjs` /
+`20260923010000_invoice_adjustment_settlement_support.cjs`).
+
+The concrete interface between the two cards is therefore **only the shared revision
+store**, not a shared settlement API:
+
+- The companion consumes contract/obligation identity and invoice-charge metadata; it
+  does **not** import or reference `IRecurringPricingSource`,
+  `IExpectedRecurringPricingSource`, `recurringPricingSource`,
+  `effective_pricing`, `recurringPricingIdentity`, `resolveRecurringUnitDisplayPricing`
+  or `RECURRING_PRICING_STALE` (verified by grep in the companion worktree — zero
+  matches). Its own provenance lives on `invoice_charges.adjustment_provenance`.
+- The shared table both branches touch is `contract_line_unit_pricing_revisions` (from
+  main); this card owns the write/read semantics and the pricing provenance types it
+  emits, the companion owns adjustment/settlement identities.
+- **Ownership conflict, unresolved:** both plans claim effective-history ownership. The
+  companion plan states "the companion owns validated effective history and exposes it
+  to the existing recurring pricing/timing resolver"; this card treats the revision
+  store (`contract_line_unit_pricing_revisions` + append-only history, registered
+  tenant-scoped, selected by `recurringUnitPricing.ts`) as that authority. Neither has
+  been reconciled with the other; no shared settlement API exists and none is claimed.
+  The reviewer should confirm the handoff before either branch integrates.
 - Baseline policy is boundary-only: a `20 → 23` change at the next boundary moves this
   period by $0 and the next recurring subtotal by +$300 (gross `3,900 → 4,200`), with
   no mid-period proration, true-up or credit. No automatic adjustment charge is emitted
   by this card.
 - Discount/tax interaction is validated only through the existing shared compute
   pipeline (10% and $100 fixed over the gross subtotals) — not through a companion
-  settlement flow, which does not exist here.
+  settlement flow.
 
 ## Disclosures and limitations
 
@@ -210,10 +332,22 @@ can consume without inventing a second scheduling engine:
   behavior, preview↔invoice parity and repeated generation are validated through real
   actions and the billing engine in the integration suites above.
 - The dev DB's `knex_migrations` is drift-corrupted by branch-ahead EE files, so
-  `migrate:latest`/`migrate:ee` abort. Both additive migrations
+  `migrate:latest`/`migrate:ee` (and even a single-file `MIGRATIONS_DIR`) abort on
+  `validateMigrationList`. The two advertised additive migrations
   (`20260922120000_contract_recurring_pricing_revision_policy` and
   `20260923000000_contract_recurring_pricing_history_attribution`) are recorded as
-  applied and their columns verified present; they were not re-run.
+  applied and their columns verified present; they were not re-run. This run's new
+  additive migration
+  `20260923010000_invoice_charge_details_recurring_pricing_provenance.cjs` was applied
+  to the dev DB as `ALTER TABLE invoice_charge_details ADD COLUMN effective_pricing
+  jsonb` and recorded in `knex_migrations` at batch 51, matching how the prior two were
+  recorded; no other ledger rows were changed.
+- The contract Overview tab shows `Est. Monthly Value $0.00` for the smoke contract
+  because its revisions are scheduled *after* the overview's `asOf` date (today) and
+  the wizard-authored product config carries `base_rate = 0`, so the preserved legacy
+  valuation is zero. This is the documented untouched-legacy behavior, not a revision
+  regression; the integration suites prove the value becomes `420000` once a revision is
+  effective.
 - Monthly valuation now uses the invoice engine's currency-tagged `service_prices`
   chain. The previous untagged `service_catalog.default_rate` fallback remains only as
   the resolver's last resort for the tenant default currency when no `service_prices`

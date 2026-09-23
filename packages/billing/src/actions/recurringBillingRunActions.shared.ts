@@ -6,6 +6,7 @@ import {
   type RecurringInvoiceFailureCode,
 } from '@alga-psa/types';
 import type { IExpectedUsagePeriodTotal } from '../lib/billing/usagePeriodTotalIdentity';
+import type { IExpectedRecurringPricingSource } from '../lib/billing/recurringPricingIdentity';
 
 /**
  * Structured failure codes the recurring run can expose to the UI as safe,
@@ -42,6 +43,13 @@ export type RecurringBillingRunTarget = {
    * runs, which keep the recompute-from-database behavior.
    */
   expectedUsagePeriodTotals?: IExpectedUsagePeriodTotal[];
+  /**
+   * Previewed recurring revision/catalog sources for this target's window.
+   * Present only when generation flows from a preview the operator approved;
+   * generation then refuses with RECURRING_PRICING_STALE if a scheduled
+   * revision or its inherited catalog price changed since the preview.
+   */
+  expectedRecurringPricingSources?: IExpectedRecurringPricingSource[];
 };
 
 export type RecurringBillingRunGroupedTarget = {
@@ -50,6 +58,8 @@ export type RecurringBillingRunGroupedTarget = {
   billingCycleId?: string | null;
   /** Same contract as {@link RecurringBillingRunTarget.expectedUsagePeriodTotals}. */
   expectedUsagePeriodTotals?: IExpectedUsagePeriodTotal[];
+  /** Same contract as {@link RecurringBillingRunTarget.expectedRecurringPricingSources}. */
+  expectedRecurringPricingSources?: IExpectedRecurringPricingSource[];
 };
 
 export type ClientCadenceRecurringRunTarget = RecurringBillingRunTarget & {

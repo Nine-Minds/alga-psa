@@ -1289,6 +1289,9 @@ async function persistFixedInvoiceCharges(
         service_period_start: detail.servicePeriodStart ?? null,
         service_period_end: detail.servicePeriodEnd ?? null,
         billing_timing: detail.billingTiming ?? null,
+        effective_pricing: detail.recurringPricingSource
+          ? JSON.stringify(detail.recurringPricingSource)
+          : null,
         created_at: now,
         updated_at: now,
         tenant
@@ -1495,6 +1498,9 @@ export async function persistInvoiceCharges(
         service_period_start: charge.servicePeriodStart ?? null,
         service_period_end: charge.servicePeriodEnd ?? null,
         billing_timing: charge.billingTiming ?? null,
+        effective_pricing: charge.recurringPricingSource
+          ? JSON.stringify(charge.recurringPricingSource)
+          : null,
         created_at: now,
         updated_at: now,
         tenant

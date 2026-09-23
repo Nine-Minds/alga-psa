@@ -4,6 +4,7 @@ import {
   resolveNextUnbilledSeatBoundary,
   resolveEffectiveRecurringUnitPricingInTransaction,
   scheduleRecurringUnitRevisionInTransaction,
+  configurationDeletionGuard,
 } from '../lib/billing/seatRevisions';
 import { resolveRecurringUnitKind, type RecurringUnitKind } from '@alga-psa/shared/billingClients/recurringUnitPricing';
 import { Knex } from 'knex';
@@ -380,6 +381,11 @@ export class ContractLineServiceConfigurationService {
               contractLineId: currentConfig.contract_line_id, serviceId: currentConfig.service_id, configId,
               kind, quantity: Number(baseConfig?.quantity ?? effective.quantity),
               pricePolicy, unitRateCents, effectivePeriodStart: boundary,
+              // The inline editor has no version token, so it may only create at
+              // an empty boundary. Replacing an existing scheduled change must go
+              // through the scheduling panel's compare-and-set, which surfaces
+              // the newer values and records the superseded edit in history.
+              expectedVersion: null,
             });
             if (scheduled.ok === false) throw new Error(scheduled.error);
             const { quantity, custom_rate, ...restBase } = baseConfig ?? {};
@@ -481,6 +487,19 @@ export class ContractLineServiceConfigurationService {
     
     // Use transaction to ensure all operations succeed or fail together
     return await this.knex.transaction(async (trx) => {
+      // Serialize against billing writes and refuse to erase an item that has
+      // issued-invoice provenance or scheduled effective history. The operator
+      // stops such an item with a zero revision instead of deleting it.
+      await lockTenantBilling(trx, this.tenant);
+      const deletionGuard = await configurationDeletionGuard({
+        trx,
+        tenant: this.tenant,
+        configId,
+      });
+      if (deletionGuard) {
+        throw new Error(deletionGuard);
+      }
+
       // Create models with transaction
       const planServiceConfigModel = new ContractLineServiceConfiguration(trx, this.tenant);
       const fixedConfigModel = new ContractLineServiceFixedConfig(trx, this.tenant);
