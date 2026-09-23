@@ -7,7 +7,6 @@ import { Knex } from 'knex';
 import { BaseService, ServiceContext, ListResult, tenantDb, withTransaction } from '@alga-psa/db';
 import { IClient, IClientLocation } from 'server/src/interfaces/client.interfaces';
 import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
-import { createDefaultTaxSettingsInternal } from '@alga-psa/billing/actions';
 import { availableCreditSubquerySql } from '@alga-psa/billing/lib/creditBalance';
 import { isEnterprise } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
@@ -25,7 +24,6 @@ import {
   UpdateClientLocationData
 } from '../schemas/client';
 import { ListOptions } from '../controllers/types';
-import { runWithTenant } from 'server/src/lib/db';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import {
   buildClientArchivedPayload,
@@ -39,6 +37,8 @@ import {
   ensureDefaultContractForClientIfBillingConfigured,
 } from '@alga-psa/shared/billingClients/defaultContract';
 import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
+import { initializeClientDefaultTax } from '@alga-psa/shared/billingClients/defaultTaxRate';
+import { resolveProductCode } from '@alga-psa/types';
 
 function maybeUserActorFromContext(context: ServiceContext) {
   if (typeof context.userId !== 'string' || !context.userId) return undefined;
@@ -360,6 +360,18 @@ export class ClientService extends BaseService<IClient> {
         clientId: client.client_id,
       });
 
+      // Tax initialization shares the client transaction: for PSA tenants an
+      // invalid/missing configuration must roll the client back rather than
+      // commit a client with no usable tax setup. AlgaDesk tenants have no tax
+      // rates (the product intentionally excludes billing) and keep the same
+      // exemption as the UI and shared client-writer paths.
+      const tenantProduct = await tenantDb(trx, context.tenant)
+        .table('tenants')
+        .first('product_code');
+      if (resolveProductCode(tenantProduct?.product_code).productCode !== 'algadesk') {
+        await initializeClientDefaultTax(trx, context.tenant, client.client_id);
+      }
+
       // Handle tags if provided
       if ((data as any).tags && (data as any).tags.length > 0) {
         try {
@@ -372,16 +384,6 @@ export class ClientService extends BaseService<IClient> {
 
       return client;
     });
-
-    // Try to create default tax settings for the client with tenant context (after transaction)
-    try {
-      await runWithTenant(context.tenant, async () => {
-        await createDefaultTaxSettingsInternal(client.client_id);
-      });
-    } catch (taxError) {
-      console.warn('Failed to create default tax settings:', taxError);
-      // Continue without tax settings - they can be added later
-    }
 
     const createdAt = (client as any).created_at ?? new Date().toISOString();
     const status =

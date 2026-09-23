@@ -1,8 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import { v4 as uuid4 } from 'uuid';
-import type { IClientTaxSettings, ITaxRateDetails as ITaxRate, ITaxComponent, TaxSource } from '@alga-psa/types';
-import { ensureClientDefaultBillingProfile } from './billingProfiles';
+import type { IClientTaxSettings, TaxSource } from '@alga-psa/types';
+import { initializeClientDefaultTax } from './defaultTaxRate';
 
 export async function getClientTaxSettings(
   knexOrTrx: Knex | Knex.Transaction,
@@ -41,51 +40,12 @@ export async function createDefaultTaxSettings(
   tenant: string,
   clientId: string
 ): Promise<IClientTaxSettings> {
-  const db = tenantDb(knexOrTrx, tenant);
-  // `client_tax_settings` is keyed per billing profile since S7: the client's
-  // default profile is the legal entity a freshly created client bills as,
-  // and the NOT NULL profile column is part of the row's identity.
-  const billingProfileId = await ensureClientDefaultBillingProfile(knexOrTrx, tenant, clientId);
-
-  // Get the first active tax rate to use as the default
-  const defaultTaxRate = await db.table<ITaxRate>('tax_rates')
-    .where('is_active', true)
-    .orderBy('created_at', 'asc')
-    .first();
-
-  if (!defaultTaxRate) {
-    throw new Error('No active tax rates found in the system to assign as default.');
-  }
-
-  const [taxSettings] = await db.table<IClientTaxSettings>('client_tax_settings')
-    .insert({
-      client_id: clientId,
-      billing_profile_id: billingProfileId,
-      is_reverse_charge_applicable: false,
-      tenant
-    })
-    .returning('*');
-
-  await db.table('client_tax_rates').insert({
-    client_id: clientId,
-    tax_rate_id: defaultTaxRate.tax_rate_id,
-    is_default: true,
-    location_id: null,
-    tenant
-  });
-
-  const tax_component_id = uuid4();
-  await db.table<ITaxComponent>('tax_components').insert({
-    tax_component_id,
-    tax_rate_id: defaultTaxRate.tax_rate_id,
-    name: 'Default Tax',
-    rate: Math.ceil((defaultTaxRate as any).tax_percentage),
-    sequence: 1,
-    is_compound: false,
-    tenant
-  });
-
-  return taxSettings as IClientTaxSettings;
+  // Converged with the shared, transactional initializer so every client
+  // creation path (UI, public API, Entra provisioning, shared model) resolves
+  // the same configured/legacy default and writes exactly one client-wide
+  // `is_default` association. Initialization no longer creates or rounds
+  // rate-global tax components.
+  return initializeClientDefaultTax(knexOrTrx, tenant, clientId);
 }
 
 export async function getClientTaxExemptStatus(

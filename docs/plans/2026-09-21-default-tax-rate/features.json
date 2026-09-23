@@ -1,0 +1,162 @@
+[
+  {
+    "id": "F001",
+    "description": "Add nullable tenant default tax rate with tenant-qualified restrictive FK and reversible schema migration.",
+    "implemented": false,
+    "prdRefs": [
+      "Storage, transactions, and backfill"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Resolve configured defaults using tenant ownership, active region/rate, and assignment-day eligibility; reject invalid configuration.",
+    "implemented": false,
+    "prdRefs": [
+      "Scope and decisions"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Preserve documented unset behavior: catalog NULL and deterministic legacy client fallback without fabricated zero rates.",
+    "implemented": false,
+    "prdRefs": [
+      "Scope and decisions"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Expose default settings read/save with billing permissions and preservation of unrelated tenant settings.",
+    "implemented": false,
+    "prdRefs": [
+      "User flows and interface"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Add translated default-rate settings panel with persisted selection, region/percentage labels, and setup/error states.",
+    "implemented": false,
+    "prdRefs": [
+      "User flows and interface"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Prevent rate/region mutations from invalidating a configured default and expose the deletion dependency.",
+    "implemented": false,
+    "prdRefs": [
+      "Code evidence and change map"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Consolidate shared model and TaxService create/ensure writers behind the transaction-aware shared initializer.",
+    "implemented": false,
+    "prdRefs": [
+      "Code evidence and change map"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Initialize profile-keyed settings and one client-wide visible default without overwriting existing overrides or location associations.",
+    "implemented": false,
+    "prdRefs": [
+      "Storage, transactions, and backfill"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Make repeated/concurrent initialization idempotent and stop creating or rounding tax components during client creation.",
+    "implemented": false,
+    "prdRefs": [
+      "Storage, transactions, and backfill"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Run required API/model client tax initialization atomically and propagate failures while preserving AlgaDesk/explicit skip behavior.",
+    "implemented": false,
+    "prdRefs": [
+      "Code evidence and change map"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Keep UI client and Entra provisioning paths on the same shared transactional default policy.",
+    "implemented": false,
+    "prdRefs": [
+      "Code evidence and change map"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Apply omission-inherits, NULL-non-taxable, UUID-override semantics to server-action catalog creates.",
+    "implemented": false,
+    "prdRefs": [
+      "Scope and decisions"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Apply the same creation policy to both ServiceCatalogService and ProductCatalogService with schema preservation of omission.",
+    "implemented": false,
+    "prdRefs": [
+      "Code evidence and change map"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Give quick-add service/product creates distinct inheritance and non-taxable selections, including reset and late-fetch handling.",
+    "implemented": false,
+    "prdRefs": [
+      "User flows and interface"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Preserve saved tax assignments on product/service edits and all unrelated catalog behavior.",
+    "implemented": false,
+    "prdRefs": [
+      "Scope and decisions"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Preview tenant-local NULL catalog rows and permit exclusions before explicitly applying the named saved default.",
+    "implemented": false,
+    "prdRefs": [
+      "User flows and interface"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Apply backfill only to selected still-NULL rows with permission, stale-default, ownership, and rate checks plus changed/skipped counts.",
+    "implemented": false,
+    "prdRefs": [
+      "Storage, transactions, and backfill"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Coordinate assignment/settings/rate lifecycle locks and safe settings upserts under concurrent operations.",
+    "implemented": false,
+    "prdRefs": [
+      "Storage, transactions, and backfill"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Audit supported import/create callers and exports so omission reaches the shared policy without accidental NULL normalization.",
+    "implemented": false,
+    "prdRefs": [
+      "Code evidence and change map"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Keep invoice region precedence, exemption handling, external tax-source behavior, and existing assignments unchanged.",
+    "implemented": false,
+    "prdRefs": [
+      "Acceptance and verification"
+    ]
+  }
+]
