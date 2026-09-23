@@ -152,6 +152,20 @@ export interface IInvoiceCharge extends TenantEntity, NetAmountItem {
    */
   billing_profile_id?: string | null;
   billing_profile_source?: BillingProfileSource | null;
+  /** Provenance for automatic discounts/true-ups and manual adjustments. */
+  adjustment_source_kind?: AdjustmentSourceKind | null;
+  /** Stable source id (discount id or contract-change id) for automatic lines. */
+  adjustment_source_id?: string | null;
+  /** Source revision claimed by this settlement; re-validated on draft refresh. */
+  adjustment_source_revision?: number | null;
+  /** Scope an automatic discount resolved against. */
+  adjustment_scope?: AdjustmentScope | null;
+  /** Eligible base used to derive the amount (integer minor units). */
+  adjustment_base_amount?: number | null;
+  /** Human-readable calculation reason for the adjustment line. */
+  adjustment_reason?: string | null;
+  /** Authoring facts for manually entered adjustment lines. */
+  manual_line_metadata?: ManualLineMetadata | null;
   client_contract_id?: string; // Reference to the client contract assignment
   contract_name?: string; // Contract name
   is_bundle_header?: boolean; // Whether this item is a contract group header
@@ -170,6 +184,29 @@ export interface IInvoiceCharge extends TenantEntity, NetAmountItem {
 }
 
 export type DiscountType = 'percentage' | 'fixed';
+
+/** What produced an invoice adjustment line. */
+export type AdjustmentSourceKind = 'discount' | 'contract_change' | 'manual_adjustment';
+/** Which charges an automatic discount resolves against. */
+export type AdjustmentScope = 'invoice' | 'contract' | 'service' | 'item';
+
+/**
+ * Authoring facts for a manually entered adjustment line, kept separate from
+ * the resolved monetary values so a partial-period line such as
+ * "3 × $100 × 15/30" stays intelligible after it is priced.
+ */
+export interface ManualLineMetadata {
+  /** Partial-period calculator inputs (contracted, not resolved). */
+  partialPeriod?: {
+    units: number;
+    unitPrice: number;
+    coveredDays: number;
+    fullPeriodDays: number;
+  };
+  /** Optional freeform note explaining the adjustment. */
+  reason?: string;
+  [key: string]: unknown;
+}
 
 /**
  * Interface for adding manual items to an invoice

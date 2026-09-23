@@ -3771,8 +3771,18 @@ export async function createInvoiceFromBillingResultImpl(
         is_taxable: false,
         is_discount: true,
         is_manual: false,
+        discount_type: discount.discount_type,
+        discount_percentage: discount.discount_type === 'percentage'
+          ? Math.round(discount.value * 100 * 10000) / 10000
+          : null,
         billing_profile_id: discountBillingProfileId,
         billing_profile_source: 'client_default' as const,
+        adjustment_source_kind: 'discount',
+        adjustment_source_id: discount.discount_id,
+        adjustment_source_revision: 1,
+        adjustment_scope: 'invoice',
+        adjustment_base_amount: Math.round(billingResult.totalAmount),
+        adjustment_reason: `Automatic discount: ${discount.discount_name}`,
         tenant,
         created_by: userId
       };

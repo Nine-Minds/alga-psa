@@ -16,7 +16,7 @@ import { IInvoiceCharge, InvoiceViewModel, DiscountType } from '@alga-psa/types'
 import { BillingEngine } from '../lib/billing/billingEngine';
 import ProjectBillingCapUsage from '../models/projectBillingCapUsage';
 import ProjectBillingScheduleEntry from '../models/projectBillingScheduleEntry';
-import { persistInvoiceCharges, persistManualInvoiceCharges } from '../services/invoiceService'; // Import persistManualInvoiceCharges
+import { persistInvoiceCharges, persistManualInvoiceCharges, reconcileAutomaticInvoiceDiscounts } from '../services/invoiceService'; // Import persistManualInvoiceCharges
 import Invoice from '@alga-psa/billing/models/invoice';
 import { v4 as uuidv4 } from 'uuid';
 // import { getRedisStreamClient } from '@alga-psa/workflow-streams'; // No longer directly used here
@@ -29,6 +29,12 @@ import {
 import { validateInvoiceFinalization, validateInvoiceFinalizationInternal } from './taxSourceActions';
 import { enqueueInvoiceAutoExport } from '../services/accountingSync/syncProducers';
 import { assertInvoiceNotExported } from '../services/accountingSync/invoiceExportGuards';
+import {
+  inspectInvoiceEditable,
+  type InvoiceAdjustmentCapability,
+} from '../services/invoiceAdjustmentEditability';
+
+export type { InvoiceAdjustmentCapability } from '../services/invoiceAdjustmentEditability';
 import { assertInvoiceExportReady, InvoiceExportReadinessError } from '../services/accountingSync/exportReadiness';
 import { withAuth } from '@alga-psa/auth';
 import { getSession } from '@alga-psa/auth';
@@ -325,6 +331,14 @@ export interface ManualInvoiceUpdate {
   discount_percentage?: number;
   applies_to_item_id?: string;
   is_taxable?: boolean; // Keep for purely manual items without service
+  /** Optional location attribution for the manual line. */
+  location_id?: string | null;
+  /** Explicit billing profile for the manual line. */
+  billing_profile_id?: string | null;
+  /** Service-level discount target (resolved to an item id on save). */
+  applies_to_service_id?: string;
+  /** Partial-period inputs and reason, kept alongside the resolved amount. */
+  manual_line_metadata?: Record<string, unknown> | null;
 }
 
 interface ManualItemsUpdate {
@@ -898,6 +912,40 @@ function isManualInvoiceNumberConflict(error: unknown): boolean {
     databaseError.constraint === 'unique_invoice_number_per_tenant';
 }
 
+async function assertInvoiceEditableUnderLock(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  invoiceId: string,
+): Promise<Record<string, any>> {
+  const { invoice, capability } = await inspectInvoiceEditable(conn, tenant, invoiceId, {
+    forUpdate: true,
+  });
+
+  if (!invoice || !capability.editable) {
+    throw expectedInvoiceActionError(capability.reason ?? 'Invoice cannot be modified');
+  }
+
+  return invoice;
+}
+
+/**
+ * Read-only capability probe for the draft adjustment editor. Returns the same
+ * decision the writers enforce, without taking a row lock.
+ */
+export const getInvoiceAdjustmentCapability = withAuth(async (
+  user,
+  { tenant },
+  invoiceId: string,
+): Promise<InvoiceAdjustmentCapability | ActionPermissionError> => {
+  if (!await hasPermission(user, 'invoice', 'update')) {
+    return permissionError('Permission denied: invoice update required', 'msp/invoicing:errors.permissions.invoiceUpdate');
+  }
+
+  const { knex } = await createTenantKnex();
+  const { capability } = await inspectInvoiceEditable(knex, tenant, invoiceId);
+  return capability;
+});
+
 export const updateDraftInvoiceProperties = withAuth(async (
   user,
   { tenant },
@@ -944,6 +992,7 @@ export const updateDraftInvoiceProperties = withAuth(async (
         invoice_id: invoiceId,
         tenant,
       })
+      .forUpdate()
       .first();
 
     if (!invoice) {
@@ -1797,31 +1846,21 @@ async function updateManualInvoiceItemsInternal(
   const billingEngine = new BillingEngine();
   const currentDate = Temporal.Now.plainDateISO().toString();
 
-  const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await tenantScopedTable(trx, tenant, 'invoices')
-      .where({ invoice_id: invoiceId })
-      .first();
-  });
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    // Lock the invoice and re-check the full editability contract inside the
+    // write transaction. A concurrent finalize/export/void that commits while
+    // the operator is editing must win the race, not be overwritten by a stale
+    // snapshot the UI fetched earlier.
+    const invoice = await assertInvoiceEditableUnderLock(trx, tenant, invoiceId);
 
-  if (!invoice) {
-    throw expectedInvoiceActionError('Invoice not found');
-  }
-
-  if (['paid', 'cancelled'].includes(invoice.status)) {
-    throw expectedInvoiceActionError('Cannot modify a paid or cancelled invoice');
-  }
-
-  const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await tenantScopedTable(trx, tenant, 'clients')
+    const client = await tenantScopedTable(trx, tenant, 'clients')
       .where({ client_id: invoice.client_id })
       .first();
-  });
 
-  if (!client) {
-    throw expectedInvoiceActionError('Client not found');
-  }
+    if (!client) {
+      throw expectedInvoiceActionError('Client not found');
+    }
 
-  await withTransaction(knex, async (trx: Knex.Transaction) => {
     const targetedItemIds = Array.from(
       new Set([
         ...(changes.removedItemIds ?? []),
@@ -1855,11 +1894,52 @@ async function updateManualInvoiceItemsInternal(
       }
     }
 
+    // Every discount/adjustment target must be a line on THIS invoice. Target
+    // IDs arrive from the client and previously went unchecked, so a forged
+    // target could make percentage discounts read another invoice's line.
+    const discountTargetIds = Array.from(
+      new Set(
+        [
+          ...((changes.updatedItems ?? []).map((item) => item.applies_to_item_id)),
+          ...((changes.newItems ?? []).map((item: any) => item.applies_to_item_id)),
+        ].filter((value): value is string => Boolean(value)),
+      ),
+    );
+
+    if (discountTargetIds.length > 0) {
+      const ownedTargetIds = await tenantScopedTable(trx, tenant, 'invoice_charges')
+        .where({ invoice_id: invoiceId })
+        .whereIn('item_id', discountTargetIds)
+        .pluck('item_id');
+      const owned = new Set(ownedTargetIds as string[]);
+      const foreignTargets = discountTargetIds.filter((id) => !owned.has(id));
+      if (foreignTargets.length > 0) {
+        throw expectedInvoiceActionError(
+          'A discount or adjustment can only target a line on this invoice.'
+        );
+      }
+    }
+
     // Process removals
     if (changes.removedItemIds && changes.removedItemIds.length > 0) {
+      // Reject removing a line while manual discounts still target it: the
+      // supported behavior is an explicit retarget/removal in the same confirmed
+      // edit, never silently orphaning (or cascading away) the discount.
+      const dependentDiscountIds = await tenantScopedTable(trx, tenant, 'invoice_charges')
+        .where({ invoice_id: invoiceId, is_manual: true, is_discount: true })
+        .whereIn('applies_to_item_id', changes.removedItemIds)
+        .whereNotIn('item_id', changes.removedItemIds)
+        .pluck('item_id');
+
+      if (dependentDiscountIds.length > 0) {
+        throw expectedInvoiceActionError(
+          'Remove or retarget the discount attached to this line in the same edit before deleting it.'
+        );
+      }
+
       await tenantScopedTable(trx, tenant, 'invoice_charges')
+        .where({ invoice_id: invoiceId, is_manual: true })
         .whereIn('item_id', changes.removedItemIds)
-        .andWhere({ is_manual: true }) // Ensure we only delete manual items intended for removal
         .delete();
     }
 
@@ -1877,7 +1957,13 @@ async function updateManualInvoiceItemsInternal(
           discount_type: item.discount_type,
           discount_percentage: item.discount_percentage,
           applies_to_item_id: item.applies_to_item_id,
+          applies_to_service_id: item.applies_to_service_id,
+          location_id: item.location_id,
+          billing_profile_id: item.billing_profile_id,
           is_taxable: item.is_taxable,
+          manual_line_metadata: item.manual_line_metadata !== undefined
+            ? (item.manual_line_metadata ? JSON.stringify(item.manual_line_metadata) : null)
+            : undefined,
           updated_at: currentDate // Use the existing currentDate variable
         };
         // Filter out undefined values to avoid overwriting columns with null unnecessarily
@@ -1885,7 +1971,7 @@ async function updateManualInvoiceItemsInternal(
 
         if (Object.keys(filteredUpdateData).length > 0) {
            await tenantScopedTable(trx, tenant, 'invoice_charges')
-            .where({ item_id: item.item_id, is_manual: true }) // Ensure we only update manual items
+            .where({ item_id: item.item_id, invoice_id: invoiceId, is_manual: true }) // Scope to this invoice and manual rows only
             .update(filteredUpdateData);
         }
       }
@@ -1895,7 +1981,7 @@ async function updateManualInvoiceItemsInternal(
         if (item.is_discount) {
           // Get the updated item from the database
           const updatedItem = await tenantScopedTable(trx, tenant, 'invoice_charges')
-            .where({ item_id: item.item_id, is_manual: true })
+            .where({ item_id: item.item_id, invoice_id: invoiceId, is_manual: true })
             .first();
           
           if (updatedItem) {
@@ -1914,7 +2000,7 @@ async function updateManualInvoiceItemsInternal(
               // If discount applies to a specific item, get that item's amount
               if (updatedItem.applies_to_item_id) {
                 const applicableItem = await tenantScopedTable(trx, tenant, 'invoice_charges')
-                  .where({ item_id: updatedItem.applies_to_item_id })
+                  .where({ item_id: updatedItem.applies_to_item_id, invoice_id: invoiceId })
                   .first();
                 applicableAmount = applicableItem?.net_amount;
               }
@@ -1934,7 +2020,7 @@ async function updateManualInvoiceItemsInternal(
             
             // Update the net_amount
             await tenantScopedTable(trx, tenant, 'invoice_charges')
-              .where({ item_id: item.item_id, is_manual: true })
+              .where({ item_id: item.item_id, invoice_id: invoiceId, is_manual: true })
               .update({
                 net_amount: newNetAmount,
                 total_price: newNetAmount // Also update total_price since discounts have no tax
@@ -1960,12 +2046,21 @@ async function updateManualInvoiceItemsInternal(
           service_id: item.service_id || undefined,
           description: item.description,
           tax_region: item.tax_region || client.tax_region,
+          tax_rate_id: (item as any).tax_rate_id ?? null,
+          location_id: (item as any).location_id ?? null,
           is_taxable: item.is_taxable !== false,
           applies_to_service_id: item.applies_to_service_id,
           discount_percentage: item.discount_percentage,
           // Step 1 of the resolution chain; persistManualInvoiceCharges falls
           // through to the client default when unset (F033).
           billing_profile_id: item.billing_profile_id ?? null,
+          manual_line_metadata: (item as any).manual_line_metadata ?? null,
+          adjustment_source_kind: (item as any).adjustment_source_kind ?? 'manual_adjustment',
+          adjustment_source_id: (item as any).adjustment_source_id ?? null,
+          adjustment_source_revision: (item as any).adjustment_source_revision ?? null,
+          adjustment_scope: (item as any).adjustment_scope ?? null,
+          adjustment_base_amount: (item as any).adjustment_base_amount ?? null,
+          adjustment_reason: (item as any).adjustment_reason ?? null,
         })),
         client,
         session,
@@ -2004,6 +2099,10 @@ async function updateManualInvoiceItemsInternal(
     }
 
     // Recalculate before commit so tax/totals failures roll back item mutations.
+    // Automatic discounts stamped with provenance are re-applied against the
+    // post-edit eligible base first, in place, so the stored discount rows and
+    // the manual additions agree.
+    await reconcileAutomaticInvoiceDiscounts(trx, tenant, invoiceId);
     await billingEngine.recalculateInvoice(invoiceId, trx, tenant);
   });
 
@@ -2078,32 +2177,22 @@ async function addManualInvoiceItemsInternal(
   tenant: string
 ): Promise<void> {
   const { knex } = await createTenantKnex(tenant);
-
-  const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await tenantScopedTable(trx, tenant, 'invoices')
-      .where({ invoice_id: invoiceId })
-      .first();
-  });
-
-  if (!invoice) {
-    throw expectedInvoiceActionError('Invoice not found');
-  }
-
-  if (['paid', 'cancelled'].includes(invoice.status)) {
-    throw expectedInvoiceActionError('Cannot modify a paid or cancelled invoice');
-  }
-
-  const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await tenantScopedTable(trx, tenant, 'clients')
-      .where({ client_id: invoice.client_id })
-      .first();
-  });
-
-  if (!client) {
-    throw expectedInvoiceActionError('Client not found');
-  }
+  const billingEngine = new BillingEngine();
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
+    // Add-only mutations were previously unchecked after the outer read, so a
+    // concurrent finalize/export could still receive new rows. Lock and recheck
+    // the lifecycle in the same transaction that inserts them.
+    const invoice = await assertInvoiceEditableUnderLock(trx, tenant, invoiceId);
+
+    const client = await tenantScopedTable(trx, tenant, 'clients')
+      .where({ client_id: invoice.client_id })
+      .first();
+
+    if (!client) {
+      throw expectedInvoiceActionError('Client not found');
+    }
+
     // Use persistManualInvoiceCharges for adding manual items
     await persistManualInvoiceCharges(
       trx,
@@ -2118,23 +2207,37 @@ async function addManualInvoiceItemsInternal(
           service_id: item.service_id || undefined,
           description: item.description,
           tax_region: item.tax_region || client.tax_region,
+          tax_rate_id: (item as any).tax_rate_id ?? null,
+          location_id: (item as any).location_id ?? null,
           is_taxable: item.is_taxable !== false,
           applies_to_service_id: item.applies_to_service_id,
           discount_percentage: item.discount_percentage,
+          billing_profile_id: item.billing_profile_id ?? null,
+          manual_line_metadata: (item as any).manual_line_metadata ?? null,
+          adjustment_source_kind: (item as any).adjustment_source_kind ?? 'manual_adjustment',
+          adjustment_source_id: (item as any).adjustment_source_id ?? null,
+          adjustment_source_revision: (item as any).adjustment_source_revision ?? null,
+          adjustment_scope: (item as any).adjustment_scope ?? null,
+          adjustment_base_amount: (item as any).adjustment_base_amount ?? null,
+          adjustment_reason: (item as any).adjustment_reason ?? null,
       })),
       client,
       session,
       tenant
       // No 'isManual' boolean needed for persistManualInvoiceCharges
     );
-     // Touch updated_at when items are added
-     await tenantScopedTable(trx, tenant, 'invoices')
-        .where({ invoice_id: invoiceId })
-        .update({ updated_at: Temporal.Now.plainDateISO().toString() });
-  });
 
-  const billingEngine = new BillingEngine();
-  await billingEngine.recalculateInvoice(invoiceId);
+    // Touch updated_at when items are added
+    await tenantScopedTable(trx, tenant, 'invoices')
+      .where({ invoice_id: invoiceId })
+      .update({ updated_at: Temporal.Now.plainDateISO().toString() });
+
+    // Recalculate inside the transaction: a tax/totals failure must roll the
+    // new rows back, not leave an invoice whose stored totals disagree with its
+    // charges (previously recalc ran post-commit).
+    await reconcileAutomaticInvoiceDiscounts(trx, tenant, invoiceId);
+    await billingEngine.recalculateInvoice(invoiceId, trx, tenant);
+  });
 }
 
 

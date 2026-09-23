@@ -19,6 +19,7 @@ import type {
 import { translateManualInvoiceFailure } from './manualInvoiceErrorTranslation';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import { Input } from '@alga-psa/ui/components/Input';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { Card } from '@alga-psa/ui/components/Card';
@@ -28,7 +29,8 @@ import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import type { IClient } from '@alga-psa/types';
 import { ErrorBoundary } from 'react-error-boundary';
 import type { IService } from '@alga-psa/types';
-import { InvoiceViewModel, DiscountType, IInvoiceCharge } from '@alga-psa/types';
+import { InvoiceViewModel, DiscountType, IInvoiceCharge, type ManualLineMetadata } from '@alga-psa/types';
+import { computePartialPeriodAmount } from '../../lib/billing/compute/contractInvoiceAdjustments';
 import type { JSX } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { PlusIcon, MinusCircleIcon } from 'lucide-react';
@@ -58,6 +60,15 @@ interface ManualInvoicesProps {
   invoice?: InvoiceViewModel;
   invoiceableSalesOrders?: InvoiceableSalesOrderForBilling[];
   sourceSalesOrderId?: string | null;
+  /**
+   * `standard` keeps the manual-invoice generator. `draftAdjustments` renders
+   * the same editor for an existing contract draft: invoice metadata is owned
+   * by the details card, so it is hidden here and the generated rows are shown
+   * read-only above the operator's manual additions.
+   */
+  variant?: 'standard' | 'draftAdjustments';
+  /** Called after a successful save so the host can refresh authoritative data. */
+  onSaved?: () => void | Promise<void>;
 }
 
 const isLegacyManualItemsUpdateError = (
@@ -82,7 +93,21 @@ interface EditableInvoiceItem extends Omit<IInvoiceCharge, 'tenant' | 'created_a
   isExisting?: boolean;
   isRemoved?: boolean;
   is_bundle_header?: boolean;
+  /** Partial-period inputs and reason for one-time adjustment lines. */
+  manual_line_metadata?: ManualLineMetadata | null;
 }
+
+// An untouched default row (no service, description, amount or adjustment
+// metadata) is a placeholder, not a financial line. Saving it would persist a
+// meaningless zero charge on the invoice.
+const isBlankManualItem = (item: EditableInvoiceItem): boolean =>
+  !item.isExisting
+  && !item.isRemoved
+  && !item.is_discount
+  && !item.service_id
+  && !item.manual_line_metadata
+  && !(item.description ?? '').trim()
+  && (item.rate ?? 0) === 0;
 
 // Base structure for a default item, ensuring required fields for EditableInvoiceItem are present
 const baseDefaultItem: Omit<EditableInvoiceItem, 'invoice_id'> = {
@@ -105,6 +130,7 @@ const baseDefaultItem: Omit<EditableInvoiceItem, 'invoice_id'> = {
   contract_name: undefined,
   is_bundle_header: undefined as any,
   parent_item_id: undefined,
+  manual_line_metadata: undefined,
 };
 
 
@@ -112,6 +138,11 @@ const AutomatedItemsTable: React.FC<{
   items: Array<{
     service_name: string;
     total: number; // Should be total_price from IInvoiceCharge (in cents)
+    description?: string;
+    contractName?: string | null;
+    servicePeriod?: string | null;
+    isDiscount?: boolean;
+    reason?: string | null;
   }>;
   currencyCode?: string;
 }> = ({ items, currencyCode = 'USD' }) => {
@@ -128,13 +159,16 @@ const AutomatedItemsTable: React.FC<{
   return (
     <div className="mb-6">
       <h3 className="text-sm font-medium mb-2">
-        {t('manualInvoices.automatedItems.title', { defaultValue: 'Automated Line Items' })}
+        {t('manualInvoices.automatedItems.title', { defaultValue: 'Generated Line Items' })}
       </h3>
       <table className="w-full">
         <thead className="text-sm text-muted-foreground">
           <tr>
             <th className="text-left py-2">
               {t('manualInvoices.automatedItems.service', { defaultValue: 'Service' })}
+            </th>
+            <th className="text-left py-2">
+              {t('manualInvoices.automatedItems.period', { defaultValue: 'Period' })}
             </th>
             <th className="text-right py-2">
               {t('manualInvoices.automatedItems.total', { defaultValue: 'Total' })}
@@ -143,10 +177,24 @@ const AutomatedItemsTable: React.FC<{
         </thead>
         <tbody className="text-sm">
           {items.map((item, i) => (
-            <tr key={i} className="border-t">
-              <td className="py-2">{item.service_name}</td>
+            <tr key={i} className="border-t align-top">
+              <td className="py-2">
+                <div className="text-[rgb(var(--color-text-900))]">{item.service_name}</div>
+                {item.description && item.description !== item.service_name ? (
+                  <div className="text-xs text-muted-foreground">{item.description}</div>
+                ) : null}
+                {item.reason ? (
+                  <div className="text-xs text-muted-foreground">{item.reason}</div>
+                ) : null}
+              </td>
+              <td className="py-2 text-xs text-muted-foreground">
+                {item.contractName ? <div>{item.contractName}</div> : null}
+                {item.servicePeriod ? <div>{item.servicePeriod}</div> : null}
+              </td>
               {/* Display total_price */}
-              <td className="text-right">{formatCurrency(item.total / 100, currencyCode)}</td>
+              <td className={`text-right ${item.isDiscount ? 'text-[rgb(var(--color-text-600))]' : ''}`}>
+                {formatCurrency(item.total / 100, currencyCode)}
+              </td>
             </tr>
           ))}
         </tbody>
@@ -185,7 +233,10 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   invoice, // This is the initial invoice prop
   invoiceableSalesOrders = [],
   sourceSalesOrderId,
+  variant = 'standard',
+  onSaved,
 }) => {
+  const isDraftAdjustments = variant === 'draftAdjustments';
   const { t } = useTranslation('msp/invoicing');
   const router = useRouter();
   const { formatCurrency } = useFormatters();
@@ -226,6 +277,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
         is_manual: true,
         is_taxable: item.is_taxable, // Include is_taxable from the item
         // tax_rate_id: item.tax_rate_id || null, // Removed
+        manual_line_metadata: (item as IInvoiceCharge).manual_line_metadata ?? null,
         isExisting: true,
         isRemoved: false,
       });
@@ -241,6 +293,15 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [partialPeriodOpen, setPartialPeriodOpen] = useState(false);
+  const [partialDirection, setPartialDirection] = useState<'increase' | 'decrease'>('increase');
+  const [partialUnits, setPartialUnits] = useState('3');
+  const [partialUnitPrice, setPartialUnitPrice] = useState('100');
+  const [partialCoveredDays, setPartialCoveredDays] = useState('15');
+  const [partialFullDays, setPartialFullDays] = useState('30');
+  const [partialDescription, setPartialDescription] = useState('');
+  const [partialReason, setPartialReason] = useState('');
+  const [partialError, setPartialError] = useState<string | null>(null);
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [loading, setLoading] = useState(false);
@@ -404,6 +465,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
               parent_item_id: item.parent_item_id,
               is_manual: true,
               is_taxable: item.is_taxable,
+              manual_line_metadata: (item as IInvoiceCharge).manual_line_metadata ?? null,
               isExisting: true,
               isRemoved: false,
             };
@@ -454,6 +516,73 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
     const newItems = [...items, newItem];
     setItems(newItems);
     setExpandedItems(new Set([newItems.length - 1]));
+  };
+
+  const resetPartialPeriodForm = () => {
+    setPartialDirection('increase');
+    setPartialUnits('3');
+    setPartialUnitPrice('100');
+    setPartialCoveredDays('15');
+    setPartialFullDays('30');
+    setPartialDescription('');
+    setPartialReason('');
+    setPartialError(null);
+  };
+
+  const handleAddPartialPeriodCharge = () => {
+    const units = Number(partialUnits);
+    const unitPriceMajor = Number(partialUnitPrice);
+    const coveredDays = Number(partialCoveredDays);
+    const fullPeriodDays = Number(partialFullDays);
+
+    if (!Number.isFinite(units) || units <= 0) {
+      setPartialError(t('manualInvoices.partialPeriod.errors.units', { defaultValue: 'Units must be greater than zero.' }));
+      return;
+    }
+    if (!Number.isFinite(unitPriceMajor)) {
+      setPartialError(t('manualInvoices.partialPeriod.errors.unitPrice', { defaultValue: 'Unit price must be a number.' }));
+      return;
+    }
+    try {
+      const unitPrice = Math.round(unitPriceMajor * 100);
+      const magnitude = computePartialPeriodAmount({ units, unitPrice, coveredDays, fullPeriodDays });
+      // A decrease is the same proration reversed: it is a signed credit, not a
+      // separate calculator. It persists as a negative non-discount rate, which
+      // the manual writer already treats as a credit.
+      const resolvedAmount = partialDirection === 'decrease' ? -magnitude : magnitude;
+      const proration = `${units} × ${formatCurrency(unitPriceMajor, currencyCode)} × ${coveredDays}/${fullPeriodDays}`;
+      const defaultDescription = partialDirection === 'decrease'
+        ? t('manualInvoices.partialPeriod.creditDescription', {
+          defaultValue: 'Credit: {{proration}}',
+          proration,
+        })
+        : proration;
+      const newItem: EditableInvoiceItem = {
+        ...baseDefaultItem,
+        invoice_id: currentInvoiceData?.invoice_id || '',
+        item_id: uuidv4(),
+        is_discount: false,
+        rate: resolvedAmount,
+        quantity: 1,
+        description: partialDescription.trim() || defaultDescription,
+        isExisting: false,
+        is_taxable: true,
+        manual_line_metadata: {
+          partialPeriod: { units, unitPrice, coveredDays, fullPeriodDays },
+          direction: partialDirection,
+          reason: partialReason.trim() || undefined,
+        },
+      };
+      const newItems = [...items, newItem];
+      setItems(newItems);
+      setExpandedItems(new Set([newItems.length - 1]));
+      setPartialPeriodOpen(false);
+      resetPartialPeriodForm();
+    } catch (error) {
+      setPartialError(error instanceof Error
+        ? error.message
+        : t('manualInvoices.partialPeriod.errors.invalid', { defaultValue: 'Enter a valid partial period.' }));
+    }
   };
 
   const handleRemoveItem = (index: number) => {
@@ -577,7 +706,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
             removedCount: items.filter(i => i.isRemoved).length
         });
 
-        const newItemsToSave = items.filter(item => !item.isExisting && !item.isRemoved);
+        const newItemsToSave = items.filter(item => !item.isExisting && !item.isRemoved && !isBlankManualItem(item));
         const updatedItemsToSave = items.filter(item => item.isExisting && !item.isRemoved && item.item_id);
         const removedItemIds = items
           .filter(item => item.isExisting && item.isRemoved && item.item_id)
@@ -609,6 +738,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           is_bundle_header: item.is_bundle_header as any,
           parent_item_id: item.parent_item_id,
           rate: item.rate, // Add the missing rate property
+          manual_line_metadata: item.manual_line_metadata ?? null,
           // Omit audit fields
         });
 
@@ -625,6 +755,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           applies_to_item_id: item.applies_to_item_id,
           is_taxable: item.is_taxable, // Include is_taxable property
           // tax_rate_id: item.tax_rate_id, // Removed
+          manual_line_metadata: item.manual_line_metadata ?? null,
         });
 
         const updateResult = await updateInvoiceManualItems(currentInvoiceData.invoice_id, {
@@ -654,21 +785,31 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           setIsGenerating(false);
           return;
         }
-        // Refresh items from server
-        const refreshedItems = await getInvoiceLineItems(currentInvoiceData.invoice_id);
+
+        // `updateInvoiceManualItems` returns the full authoritative invoice,
+        // including recalculated discounts, tax and totals. Prefer it over the
+        // older line-items-only refresh so the editor never displays a
+        // manual-only subtotal as the invoice total.
+        const authoritativeInvoice = (
+          updateResult
+          && typeof updateResult === 'object'
+          && Array.isArray((updateResult as InvoiceViewModel).invoice_charges)
+        )
+          ? (updateResult as InvoiceViewModel)
+          : null;
+
+        const refreshedItems = authoritativeInvoice?.invoice_charges
+          ?? await getInvoiceLineItems(currentInvoiceData.invoice_id);
         if (isActionMessageError(refreshedItems) || isActionPermissionError(refreshedItems)) {
           setError(getErrorMessage(refreshedItems));
           return;
         }
         console.log('[Submit] Refreshed items after update:', refreshedItems.length);
-        
-        // Fetch the updated invoice data from the server
-        // We need to create a new object with updated values since we don't have a direct way to get the full invoice
-        const updatedInvoiceData = {
-          ...currentInvoiceData,
-          invoice_charges: refreshedItems
-        };
-        
+
+        const updatedInvoiceData: InvoiceViewModel = authoritativeInvoice
+          ? { ...authoritativeInvoice, invoice_charges: refreshedItems }
+          : { ...currentInvoiceData, invoice_charges: refreshedItems };
+
         // Update the state with the refreshed data
         setCurrentInvoiceData(updatedInvoiceData);
         console.log('[Submit] Updated currentInvoiceData state with refreshed items');
@@ -694,6 +835,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
             parent_item_id: item.parent_item_id,
             is_manual: true,
             is_taxable: item.is_taxable, // Include is_taxable from the item
+            manual_line_metadata: (item as IInvoiceCharge).manual_line_metadata ?? null,
             isExisting: true,
             isRemoved: false,
         }));
@@ -702,6 +844,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
             item_id: uuidv4(),
             invoice_id: currentInvoiceData.invoice_id
         }]);
+        await onSaved?.();
         onGenerateSuccess(); // Notify parent about successful update
 
       } else {
@@ -820,6 +963,21 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   const selectedClientData = clientOptions.find(c => c.client_id === (currentInvoiceData?.client_id || selectedClient));
   const currencyCode = currentInvoiceData?.currencyCode || selectedClientData?.default_currency_code || 'USD';
 
+  const partialPeriodPreview = (() => {
+    try {
+      const unitPrice = Math.round(Number(partialUnitPrice) * 100);
+      const magnitude = computePartialPeriodAmount({
+        units: Number(partialUnits),
+        unitPrice,
+        coveredDays: Number(partialCoveredDays),
+        fullPeriodDays: Number(partialFullDays),
+      });
+      return partialDirection === 'decrease' ? -magnitude : magnitude;
+    } catch {
+      return null;
+    }
+  })();
+
   const serviceOptions: ServiceOption[] = services
     .filter((service) => service.is_active !== false)
     .map((service): ServiceOption => {
@@ -884,23 +1042,29 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
             <div className="flex items-center gap-4 mb-6">
               <div>
                 <h2 className="text-lg font-semibold">
-                  {(currentInvoiceData || invoice)
-                    ? t('manualInvoices.detailsTitle', { defaultValue: 'Invoice Details' })
-                    : t('manualInvoices.title', { defaultValue: 'Generate Manual Invoice' })}
+                  {isDraftAdjustments
+                    ? t('manualInvoices.draftAdjustments.title', { defaultValue: 'Invoice adjustments' })
+                    : (currentInvoiceData || invoice)
+                      ? t('manualInvoices.detailsTitle', { defaultValue: 'Invoice Details' })
+                      : t('manualInvoices.title', { defaultValue: 'Generate Manual Invoice' })}
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {(currentInvoiceData || invoice)
-                    ? t('manualInvoices.detailsDescription', {
-                      defaultValue: 'Manual edits stay periodless by default, while recurring detail-backed lines keep their canonical service periods.',
+                  {isDraftAdjustments
+                    ? t('manualInvoices.draftAdjustments.description', {
+                      defaultValue: 'Add one-time charges, discounts or credits. Generated contract charges stay read-only; correct the source contract or add an adjustment.',
                     })
-                    : t('manualInvoices.description', {
-                      defaultValue: 'Use manual invoices for one-off or adjustment lines. They coexist with recurring invoices without redefining recurring service periods.',
-                    })}
+                    : (currentInvoiceData || invoice)
+                      ? t('manualInvoices.detailsDescription', {
+                        defaultValue: 'Manual edits stay periodless by default, while recurring detail-backed lines keep their canonical service periods.',
+                      })
+                      : t('manualInvoices.description', {
+                        defaultValue: 'Use manual invoices for one-off or adjustment lines. They coexist with recurring invoices without redefining recurring service periods.',
+                      })}
                 </p>
               </div>
             </div>
 
-            {currentInvoiceData && (
+            {currentInvoiceData && !isDraftAdjustments && (
               <div className="mb-6">
                 <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
                   {t('manualInvoices.fields.client', { defaultValue: 'Client' })}
@@ -912,7 +1076,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
               </div>
             )}
 
-            {currentInvoiceData && (
+            {currentInvoiceData && !isDraftAdjustments && (
               <div className="mb-6">
                 <label htmlFor="invoice-number-input" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
                   {t('manualInvoices.fields.invoiceNumber', { defaultValue: 'Invoice Number' })}
@@ -1081,7 +1245,14 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                         || t('manualInvoices.automatedItems.unknownService', {
                           defaultValue: 'Unknown Service',
                         }),
-                      total: item.total_price // Pass total_price (in cents)
+                      total: item.total_price, // Pass total_price (in cents)
+                      description: item.description,
+                      contractName: item.contract_name,
+                      servicePeriod: item.service_period_start && item.service_period_end
+                        ? `${String(item.service_period_start).slice(0, 10)} – ${String(item.service_period_end).slice(0, 10)}`
+                        : null,
+                      isDiscount: Boolean(item.is_discount),
+                      reason: item.adjustment_reason ?? null,
                     }))
                   }
                   currencyCode={currencyCode}
@@ -1175,6 +1346,130 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
               )}
 
               {!hasSalesOrderSource && (
+                <div className="space-y-4">
+                {partialPeriodOpen && (
+                  <div
+                    id="partial-period-charge-panel"
+                    className="rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] p-4 space-y-3"
+                  >
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-medium text-[rgb(var(--color-text-900))]">
+                        {t('manualInvoices.partialPeriod.title', { defaultValue: 'Partial-period charge' })}
+                      </h4>
+                      <Button
+                        id="cancel-partial-period-charge-button"
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setPartialPeriodOpen(false);
+                          resetPartialPeriodForm();
+                        }}
+                      >
+                        {t('common.actions.cancel', { defaultValue: 'Cancel' })}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {t('manualInvoices.partialPeriod.help', {
+                        defaultValue: 'Resolved as units × period unit price × covered days / full-period days. The inputs are kept with the line so it stays intelligible.',
+                      })}
+                    </p>
+                    {partialError && (
+                      <Alert variant="destructive">
+                        <AlertDescription>{partialError}</AlertDescription>
+                      </Alert>
+                    )}
+                    <div className="flex gap-2" role="group" aria-label={t('manualInvoices.partialPeriod.direction', { defaultValue: 'Direction' })}>
+                      <Button
+                        id="partial-period-direction-increase-button"
+                        type="button"
+                        size="sm"
+                        variant={partialDirection === 'increase' ? 'default' : 'outline'}
+                        onClick={() => setPartialDirection('increase')}
+                      >
+                        {t('manualInvoices.partialPeriod.increase', { defaultValue: 'Increase' })}
+                      </Button>
+                      <Button
+                        id="partial-period-direction-decrease-button"
+                        type="button"
+                        size="sm"
+                        variant={partialDirection === 'decrease' ? 'default' : 'outline'}
+                        onClick={() => setPartialDirection('decrease')}
+                      >
+                        {t('manualInvoices.partialPeriod.decrease', { defaultValue: 'Decrease (credit)' })}
+                      </Button>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-4">
+                      <Input
+                        id="partial-period-units-input"
+                        label={t('manualInvoices.partialPeriod.units', { defaultValue: 'Units' })}
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={partialUnits}
+                        onChange={(event) => setPartialUnits(event.target.value)}
+                      />
+                      <Input
+                        id="partial-period-unit-price-input"
+                        label={t('manualInvoices.partialPeriod.unitPrice', { defaultValue: 'Unit price' })}
+                        type="number"
+                        step="0.01"
+                        value={partialUnitPrice}
+                        onChange={(event) => setPartialUnitPrice(event.target.value)}
+                      />
+                      <Input
+                        id="partial-period-covered-days-input"
+                        label={t('manualInvoices.partialPeriod.coveredDays', { defaultValue: 'Covered days' })}
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={partialCoveredDays}
+                        onChange={(event) => setPartialCoveredDays(event.target.value)}
+                      />
+                      <Input
+                        id="partial-period-full-days-input"
+                        label={t('manualInvoices.partialPeriod.fullPeriodDays', { defaultValue: 'Full-period days' })}
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={partialFullDays}
+                        onChange={(event) => setPartialFullDays(event.target.value)}
+                      />
+                    </div>
+                    <Input
+                      id="partial-period-description-input"
+                      label={t('manualInvoices.partialPeriod.description', { defaultValue: 'Description (optional)' })}
+                      value={partialDescription}
+                      onChange={(event) => setPartialDescription(event.target.value)}
+                      placeholder={`${partialUnits} × ${partialUnitPrice} × ${partialCoveredDays}/${partialFullDays}`}
+                    />
+                    <Input
+                      id="partial-period-reason-input"
+                      label={t('manualInvoices.partialPeriod.reason', { defaultValue: 'Reason (optional)' })}
+                      value={partialReason}
+                      onChange={(event) => setPartialReason(event.target.value)}
+                    />
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-[rgb(var(--color-text-700))]">
+                        {partialPeriodPreview === null
+                          ? t('manualInvoices.partialPeriod.previewUnavailable', { defaultValue: 'Enter a valid calculation.' })
+                          : t('manualInvoices.partialPeriod.resolvedAmount', {
+                            defaultValue: 'Resolved amount: {{amount}}',
+                            amount: formatCurrency(partialPeriodPreview / 100, currencyCode),
+                          })}
+                      </span>
+                      <Button
+                        id="add-partial-period-charge-confirm-button"
+                        type="button"
+                        onClick={handleAddPartialPeriodCharge}
+                        disabled={isGenerating || partialPeriodPreview === null}
+                      >
+                        <PlusIcon className="w-4 h-4 mr-2" />
+                        {t('manualInvoices.partialPeriod.addCharge', { defaultValue: 'Add charge' })}
+                      </Button>
+                    </div>
+                  </div>
+                )}
                 <div className="flex justify-between items-center">
                 <div className="flex gap-2">
                   <Button id='add-line-item-button' type="button" onClick={() => handleAddItem(false)} variant="secondary" disabled={isGenerating || expandedItems.size > 0}>
@@ -1185,6 +1480,15 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                     <MinusCircleIcon className="w-4 h-4 mr-2" />
                     {t('manualInvoices.actions.addDiscount', { defaultValue: 'Add Discount' })}
                   </Button>
+                  <Button
+                    id='add-partial-period-charge-button'
+                    type="button"
+                    onClick={() => setPartialPeriodOpen(true)}
+                    variant="outline"
+                    disabled={isGenerating || partialPeriodOpen}
+                  >
+                    {t('manualInvoices.actions.addPartialPeriodCharge', { defaultValue: 'Add partial-period charge' })}
+                  </Button>
                 </div>
                 <div className="text-lg font-semibold">
                   {/* Always use the calculated total for consistency */}
@@ -1192,6 +1496,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                     {t('manualInvoices.labels.total', { defaultValue: 'Total' })}: {formatCurrency(calculatedGrandTotal / 100, currencyCode)}
                   </>
                 </div>
+              </div>
               </div>
               )}
 

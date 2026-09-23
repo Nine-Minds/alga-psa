@@ -627,6 +627,12 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
             : {}),
           location_id: item.location_id ?? null,
           location: null,
+          isDiscount: Boolean(item.is_discount),
+          discountType: item.is_discount ? (item.discount_type ?? 'fixed') : null,
+          adjustmentSourceKind: item.adjustment_source_kind ?? null,
+          adjustmentScope: item.adjustment_scope ?? null,
+          adjustmentReason: item.adjustment_reason ?? null,
+          manualLineMetadata: item.manual_line_metadata ?? null,
         };
       });
       const computedSubtotal = normalizedItems.reduce((sum, item) => sum + item.total, 0);

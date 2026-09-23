@@ -16,6 +16,10 @@ export interface ManualInvoiceUpdate { // Add export
   discount_percentage?: number;
   applies_to_item_id?: string;
   is_taxable?: boolean; // Keep for purely manual items without service
+  location_id?: string | null;
+  billing_profile_id?: string | null;
+  applies_to_service_id?: string;
+  manual_line_metadata?: Record<string, unknown> | null;
 }
 
 interface ManualItemsUpdate {
