@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ListViewAdapter, ListViewCollection, ListViewSettings, ListViewSummary } from '@alga-psa/types';
 
 const actions = vi.hoisted(() => ({
@@ -230,5 +230,117 @@ describe('useListViews', () => {
     });
     expect(result.current.activeView?.view_id).toBe(created.view_id);
     expect(result.current.isDirty).toBe(false);
+  });
+});
+
+/**
+ * In the app router, Next's HistoryUpdater keeps a non-null `history.state`
+ * (carrying `__NA`) and re-canonicalises the URL, so a `replaceState` that
+ * passes that state does not stick. Only a null-state replaceState survives.
+ * These tests emulate that so they fail against the old
+ * `replaceState(window.history.state, ...)` code.
+ */
+describe('useListViews ?view= under the Next router', () => {
+  let replaceStateSpy: ReturnType<typeof vi.spyOn> | undefined;
+
+  function setTicketsUrl(search: string) {
+    window.history.replaceState(null, '', `/msp/tickets${search}`);
+  }
+
+  function emulateNextHistory() {
+    const original = window.history.replaceState.bind(window.history);
+    original({ __NA: true }, '', window.location.href);
+    replaceStateSpy = vi.spyOn(window.history, 'replaceState').mockImplementation((state, _title, url) => {
+      const target = url == null
+        ? `${window.location.pathname}${window.location.search}${window.location.hash}`
+        : String(url);
+      if (state === null || state === undefined) {
+        original(null, '', target);
+        // Next re-adds its internal state after any router-visible write.
+        original({ __NA: true }, '', target);
+        return;
+      }
+      // A state-bearing write is Next's own: it re-canonicalises the URL it knew.
+    });
+    return replaceStateSpy;
+  }
+
+  /** onApply that behaves like a list which mirrors its filters into the URL. */
+  const listOnApply = vi.fn(() => {
+    window.history.replaceState(null, '', '/msp/tickets?boardIds=x');
+  });
+
+  function renderTickets(onApply: (next: Live, meta: { viewId: string | null }) => void = listOnApply) {
+    return renderHook(() => useListViews<Live, Filters>({
+      adapter: { ...adapter, listKey: 'tickets' },
+      live: { status: 'active', tags: [] } as Live,
+      onApply,
+    }));
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    replaceStateSpy?.mockRestore();
+    replaceStateSpy = undefined;
+  });
+
+  it('keeps view= alongside the filters URL that onApply writes', async () => {
+    actions.listListViews.mockResolvedValue(collection());
+    setTicketsUrl('?boardIds=x');
+    const replaceState = emulateNextHistory();
+
+    const { result } = renderTickets();
+    await waitFor(() => expect(result.current.views).toHaveLength(2));
+
+    act(() => result.current.applyView(VIEW_A));
+
+    expect(replaceState).toHaveBeenCalledWith(null, '', expect.any(String));
+    const search = window.location.search;
+    expect(new URLSearchParams(search).get('view')).toBe(VIEW_A);
+    expect(new URLSearchParams(search).get('boardIds')).toBe('x');
+  });
+
+  it('drops view= after deleting the active view', async () => {
+    actions.listListViews.mockResolvedValue(collection());
+    actions.deleteListView.mockResolvedValue({ deleted: true });
+    setTicketsUrl(`?boardIds=x&view=${VIEW_A}`);
+    emulateNextHistory();
+
+    // onApply leaves the URL alone, so writeViewParam(null) is the only writer.
+    const { result } = renderTickets(vi.fn());
+    await waitFor(() => expect(result.current.activeView?.view_id).toBe(VIEW_A));
+
+    await act(async () => {
+      await result.current.deleteView(VIEW_A);
+    });
+
+    expect(new URLSearchParams(window.location.search).get('view')).toBeNull();
+  });
+
+  it('drops view= when "Default view" is applied', async () => {
+    actions.listListViews.mockResolvedValue(collection());
+    setTicketsUrl(`?boardIds=x&view=${VIEW_A}`);
+    emulateNextHistory();
+
+    const { result } = renderTickets(vi.fn());
+    await waitFor(() => expect(result.current.activeView?.view_id).toBe(VIEW_A));
+
+    act(() => result.current.applyView(null));
+
+    expect(new URLSearchParams(window.location.search).get('view')).toBeNull();
+  });
+
+  it('writes view= for a personal default applied on a bare list', async () => {
+    actions.listListViews.mockResolvedValue(collection({ defaultViewId: VIEW_B }));
+    setTicketsUrl('');
+    emulateNextHistory();
+
+    const { result } = renderTickets();
+
+    await waitFor(() => expect(result.current.activeView?.view_id).toBe(VIEW_B));
+    expect(new URLSearchParams(window.location.search).get('view')).toBe(VIEW_B);
   });
 });

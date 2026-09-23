@@ -102,7 +102,7 @@ export function writeViewParam(viewId: string | null): void {
   const next = `${url.pathname}${url.search}${url.hash}`;
   const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
   if (next !== current) {
-    window.history.replaceState(window.history.state, '', next);
+    window.history.replaceState(null, '', next);
   }
 }
 

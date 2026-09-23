@@ -33,6 +33,7 @@
   - Opened A's private link as user B: it fell back to Default view and the param was removed, and B saw only the shared view, with its owner's name.
   - The pickers render on Projects, Clients, Contacts and Assets.
   - The Playwright E2E tests T013 and T014 were **not** written.
+- **(2026-09-23) Deploy fix: `?view=` is now written with `replaceState(null, …)`.** Passing `window.history.state` (Next's `__NA`) made the router re-canonicalise the URL and drop `view=`; the fix is in `writeViewParam` (`packages/list-views/src/hooks/useListViews.ts`), with four Next-state regression tests in `useListViews.test.tsx`.
 
 ## Discoveries / constraints
 
