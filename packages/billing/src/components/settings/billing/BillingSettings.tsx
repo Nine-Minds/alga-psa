@@ -12,6 +12,7 @@ import CustomTabs, { TabContent } from '@alga-psa/ui/components/CustomTabs';
 import NumberingSettings from '@alga-psa/reference-data/components/settings/NumberingSettings';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import DefaultCurrencySettings from './DefaultCurrencySettings';
+import DefaultTimeEntryServiceSettings from './DefaultTimeEntryServiceSettings';
 import ZeroDollarInvoiceSettings from './ZeroDollarInvoiceSettings';
 import CreditExpirationSettings from './CreditExpirationSettings';
 import CreditDrawdownSettings from './CreditDrawdownSettings';
@@ -177,6 +178,20 @@ const BillingSettings: React.FC = () => {
             </CardHeader>
             <CardContent>
               <DefaultCurrencySettings />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('general.timeEntryService.title', { defaultValue: 'Default time-entry service' })}</CardTitle>
+              <CardDescription>
+                {t('general.timeEntryService.description', {
+                  defaultValue: 'Fallback service used for new ticket time entries. Per-client defaults take precedence.'
+                })}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <DefaultTimeEntryServiceSettings />
             </CardContent>
           </Card>
 

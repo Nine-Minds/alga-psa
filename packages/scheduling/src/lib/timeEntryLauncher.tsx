@@ -5,7 +5,7 @@ import { toast } from 'react-hot-toast';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { getCurrentTimePeriod } from '../actions/timePeriodsActions';
-import { fetchOrCreateTimeSheet, saveTimeEntry, getTimeEntryById } from '../actions/timeEntryActions';
+import { fetchOrCreateTimeSheet, saveTimeEntry, getTimeEntryById, resolveDefaultTicketTimeEntryService } from '../actions/timeEntryActions';
 import type { IExtendedWorkItem, ITimeEntryWithWorkItem, TimeEntryWorkItemContext } from '@alga-psa/types';
 import TimeEntryDialog from '../components/time-management/time-entry/time-sheet/TimeEntryDialog';
 import type { OpenDrawerFn } from '@alga-psa/ui/context';
@@ -106,8 +106,27 @@ export async function launchTimeEntryForWorkItem({ openDrawer, closeDrawer, cont
       timeSheetId = timeSheet.id;
     }
 
-    const workItem = buildWorkItem(context);
-    const { defaultStartTime, defaultEndTime } = deriveDefaultTimes(context);
+    // New ticket entries take the client/tenant configured default service when
+    // one resolves; an explicitly supplied service is left untouched. Existing
+    // entries are edited, so their service is never defaulted.
+    let effectiveContext = context;
+    if (context.workItemType === 'ticket' && !existingEntryId && !context.serviceId) {
+      try {
+        const resolved = await resolveDefaultTicketTimeEntryService({
+          workItemId: context.workItemId,
+          workItemType: context.workItemType,
+          effectiveDate: context.startTime || new Date(),
+        });
+        if (resolved && 'serviceId' in resolved && resolved.serviceId) {
+          effectiveContext = { ...context, serviceId: resolved.serviceId };
+        }
+      } catch (error) {
+        console.warn('Unable to resolve default ticket time entry service:', error);
+      }
+    }
+
+    const workItem = buildWorkItem(effectiveContext);
+    const { defaultStartTime, defaultEndTime } = deriveDefaultTimes(effectiveContext);
     const baseDate = existingEntry?.start_time
       ? new Date(existingEntry.start_time)
       : context.startTime || defaultStartTime || new Date();

@@ -1066,6 +1066,15 @@
     "taxRateOption": "⟦{{regionLabel}} - {{percentage}}% ({{description}})⟧",
     "unknownRegion": "⟦Ŭƞķƞȯẇƞ Řḗɠīȯƞ⟧"
   },
+  "clientDefaultTimeEntryServiceSettings": {
+    "title": "⟦Ḓḗƒȧŭŀŧ ŧīḿḗ-ḗƞŧřẏ şḗřṽīƈḗ⟧",
+    "label": "⟦Ḓḗƒȧŭŀŧ ŧīḿḗ-ḗƞŧřẏ şḗřṽīƈḗ⟧",
+    "placeholder": "⟦Ŭşḗ ŧḗƞȧƞŧ ḓḗƒȧŭŀŧ⟧",
+    "help": "⟦Ŭşḗḓ ƒȯř ƞḗẇ ŧīƈķḗŧ ŧīḿḗ ḗƞŧřīḗş ƒȯř ŧħīş ƈŀīḗƞŧ. Ƈŀḗȧř ŧħḗ şḗŀḗƈŧīȯƞ ŧȯ ŭşḗ ŧħḗ ŧḗƞȧƞŧ ḓḗƒȧŭŀŧ.⟧",
+    "updatedSuccess": "⟦Ḓḗƒȧŭŀŧ ŧīḿḗ-ḗƞŧřẏ şḗřṽīƈḗ ŭƥḓȧŧḗḓ.⟧",
+    "saveError": "⟦Ƒȧīŀḗḓ ŧȯ şȧṽḗ ḓḗƒȧŭŀŧ ŧīḿḗ-ḗƞŧřẏ şḗřṽīƈḗ⟧",
+    "loadError": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ḓḗƒȧŭŀŧ ŧīḿḗ-ḗƞŧřẏ şḗřṽīƈḗ⟧"
+  },
   "clientZeroDollarInvoiceSettings": {
     "title": "⟦Ẑḗřȯ-ḓȯŀŀȧř īƞṽȯīƈḗ şḗŧŧīƞɠş⟧",
     "invoiceHandling": "⟦Īƞṽȯīƈḗ Ħȧƞḓŀīƞɠ⟧",

@@ -32,6 +32,7 @@ export default defineConfig({
       // (the `nx affected -t test` lane) selects them, not only the server
       // coverage run that globs ../packages/**.
       'src/components/settings/billing/ServiceCatalogManager.rollout.contract.test.tsx',
+      'src/components/settings/billing/DefaultTimeEntryServiceSettings.test.tsx',
       'src/components/settings/billing/PriceChangeRolloutDialog.contract.test.tsx',
       // Multi-select bulk actions on the catalog and product lists — listed for
       // the same reason as the suites above.

@@ -6,6 +6,9 @@ interface BuildTicketTimeEntryContextParams {
   elapsedTime?: number;
   timeDescription?: string;
   masterTicketNumber?: string | null;
+  /** Resolved/explicit default service for the time entry; null = none. */
+  serviceId?: string | null;
+  serviceName?: string | null;
 }
 
 export function buildTicketTimeEntryContext({
@@ -14,6 +17,8 @@ export function buildTicketTimeEntryContext({
   elapsedTime,
   timeDescription,
   masterTicketNumber,
+  serviceId,
+  serviceName,
 }: BuildTicketTimeEntryContextParams): TimeEntryWorkItemContext {
   return {
     workItemId: ticket.ticket_id ?? '',
@@ -25,6 +30,8 @@ export function buildTicketTimeEntryContext({
     clientName: clientName ?? null,
     elapsedTime,
     timeDescription,
+    serviceId: serviceId ?? null,
+    serviceName: serviceName ?? null,
   };
 }
 
