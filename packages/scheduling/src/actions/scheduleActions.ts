@@ -48,6 +48,16 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { resolveAppointmentTeamsMeetingContext } from '../lib/teamsMeetingContent';
+import {
+  applyEntryAccess,
+  buildVisibilityFilter,
+  canAssignUser,
+  evaluateEntryAccess,
+  levelAtLeast,
+  maskEntry,
+  resolveCalendarAccess,
+  type CalendarAccess,
+} from '../lib/calendarAccess';
 
 export type ScheduleActionResult<T> =
   | { success: true; entries: T; error?: never }
@@ -115,78 +125,84 @@ async function getTicketIdForAppointmentRequest(
 }
 
 /**
- * Fetches schedule entries based on date range and user permissions.
- * - Users with 'user_schedule:update' can view all entries, optionally filtered by technicianIds.
- * - Users with only 'user_schedule:read' can view only their own entries.
- * - Users without 'user_schedule:read' cannot view any entries.
+ * Fetches schedule entries visible to the viewer for a date range.
+ *
+ * Visibility comes from the shared-calendar resolver (lib/calendarAccess):
+ * the viewer's own entries, entries on personal calendars shared with them,
+ * entries on group calendars they belong to, and — for `user_schedule:update`
+ * holders — everyone's entries. Busy-level entries are masked server-side and
+ * every returned entry carries `access` and `can_edit`.
+ *
+ * `technicianIds` / `calendarIds` optionally narrow the result to specific
+ * people and group calendars (the schedule page's overlay selection).
  */
 export const getScheduleEntries = withAuth(async (
   user,
   { tenant },
   start: Date,
   end: Date,
-  technicianIds?: string[]
+  technicianIds?: string[],
+  calendarIds?: string[]
 ): Promise<ScheduleActionResult<IScheduleEntry[]>> => {
   try {
     const { knex: db } = await createTenantKnex();
 
-    // Check for basic read permission
     const canRead = await hasPermission(user, 'user_schedule', 'read', db);
     if (!canRead) {
-        // Return empty list if no read permission, as per contract line implication
         console.warn(`User ${user.user_id} lacks user_schedule:read permission.`);
         return { success: true, entries: [] };
-        // Alternative: return { success: false, error: 'Permission denied to view schedule entries.' };
     }
 
-    // Check if user has broader view/update permission
+    // `user_schedule:update` keeps implicit view/edit of every calendar.
     const canUpdate = await hasPermission(user, 'user_schedule', 'update', db);
 
-    // Optimize: Filter at database level instead of loading all and filtering in memory
-    let filteredEntries = await withTransaction(db, async (trx: Knex.Transaction) => {
-      const allEntries = await ScheduleEntry.getAll(trx, tenant, start, end);
+    const entries = await withTransaction(db, async (trx: Knex.Transaction) => {
+      const access = await resolveCalendarAccess(trx, tenant, user, canUpdate);
+      const candidates = await ScheduleEntry.getAll(trx, tenant, start, end, buildVisibilityFilter(access));
+      const visible = applyEntryAccess(candidates, access);
 
-      // Early return if no filtering needed (user can see all)
-      if (canUpdate && (!technicianIds || technicianIds.length === 0)) {
-        return allEntries;
+      const narrowByPeople = technicianIds && technicianIds.length > 0;
+      const narrowByCalendars = calendarIds && calendarIds.length > 0;
+      if (!narrowByPeople && !narrowByCalendars) {
+        return visible;
       }
 
-      // Filter based on permissions
-      if (canUpdate && technicianIds && technicianIds.length > 0) {
-        // User has update permission: Can view assigned entries OR unassigned appointment requests
-        return allEntries.filter(entry =>
-          entry.assigned_user_ids.some(assignedId => technicianIds.includes(assignedId)) ||
-          (entry.assigned_user_ids.length === 0 && entry.work_item_type === 'appointment_request')
-        );
-      } else {
-        // User only has read permission: View only own entries
-        return allEntries.filter(entry =>
-          entry.assigned_user_ids.includes(user.user_id)
-        );
-      }
+      return visible.filter(entry =>
+        (narrowByPeople && entry.assigned_user_ids.some(assignedId => technicianIds!.includes(assignedId))) ||
+        (narrowByCalendars && !!entry.calendar_id && calendarIds!.includes(entry.calendar_id)) ||
+        (canUpdate && entry.assigned_user_ids.length === 0 && entry.work_item_type === 'appointment_request')
+      );
     });
 
-    // Then filter private entries - these are only visible to assigned users regardless of permissions
-    filteredEntries = filteredEntries.map(entry => {
-      if (entry.is_private && !entry.assigned_user_ids.includes(user.user_id)) {
-        return {
-          ...entry,
-          title: "Busy",
-          notes: "",
-          work_item_id: null,
-          work_item_type: "ad_hoc"
-        };
-      }
-      return entry;
-    });
-
-    return { success: true, entries: filteredEntries };
+    return { success: true, entries };
   } catch (error) {
     console.error('Error fetching schedule entries:', error);
     const message = scheduleActionErrorMessage(error, 'Failed to fetch schedule entries');
     return { success: false, error: message };
   }
 });
+
+/**
+ * Validate a target group calendar for an entry: it must exist, be a
+ * non-archived group calendar, and the viewer must have edit or higher on it.
+ */
+async function assertEditableGroupCalendar(
+  trx: Knex.Transaction,
+  tenant: string,
+  calendarId: string,
+  access: CalendarAccess
+): Promise<string | null> {
+  const calendar = await tenantDb(trx, tenant).table('calendars')
+    .where({ calendar_id: calendarId })
+    .first('calendar_type', 'is_archived');
+  if (!calendar || calendar.calendar_type !== 'group' || calendar.is_archived) {
+    return 'The selected calendar is not available.';
+  }
+  if (!levelAtLeast(access.groupLevels.get(calendarId)?.level, 'edit')) {
+    return 'Permission denied to add entries to this calendar.';
+  }
+  return null;
+}
 
 // Removed getScheduleEntriesByUser and getCurrentUserScheduleEntries as getScheduleEntries now handles permissions.
 
@@ -227,21 +243,44 @@ export const addScheduleEntry = withAuth(async (
       };
     }
 
-    // Determine final assignedUserIds, preferring entry.assigned_user_ids, then options, then defaulting to current user
+    const canUpdate = await hasPermission(user, 'user_schedule', 'update', db);
+    const access = await withTransaction(db, async (trx: Knex.Transaction) =>
+      resolveCalendarAccess(trx, tenant, user, canUpdate)
+    );
+
+    // Group calendar placement: must be an editable, non-archived group
+    // calendar; group entries are never private.
+    const calendarId = entry.calendar_id || null;
+    if (calendarId) {
+      const calendarError = await withTransaction(db, async (trx: Knex.Transaction) =>
+        assertEditableGroupCalendar(trx, tenant, calendarId, access)
+      );
+      if (calendarError) {
+        return { success: false, error: calendarError };
+      }
+      entry.calendar_id = calendarId;
+      entry.is_private = false;
+    } else {
+      entry.calendar_id = null;
+    }
+
+    // Determine final assignedUserIds, preferring entry.assigned_user_ids, then options.
+    // Personal entries default to the current user; group calendar entries may be unassigned.
     let assignedUserIds: string[];
     if (entry.assigned_user_ids && entry.assigned_user_ids.length > 0) {
       assignedUserIds = entry.assigned_user_ids;
     } else if (options?.assignedUserIds && options.assignedUserIds.length > 0) {
       assignedUserIds = options.assignedUserIds;
+    } else if (calendarId) {
+      assignedUserIds = [];
     } else {
       assignedUserIds = [user.user_id];
     }
 
     // --- Permission Check ---
-    const isAssigningToOthers = assignedUserIds.some(id => id !== user.user_id);
-    const canUpdate = await hasPermission(user, 'user_schedule', 'update', db);
-
-    if (isAssigningToOthers && !canUpdate) {
+    // Without user_schedule:update a viewer may only assign themselves and
+    // users whose calendars they have edit access to.
+    if (assignedUserIds.some(id => !canAssignUser(id, access))) {
       return {
         success: false,
         error: 'Permission denied to assign schedule entries to other users.'
@@ -546,39 +585,52 @@ export const updateScheduleEntry = withAuth(async (
     }
 
     // --- Permission Check ---
-    let canEditThisEntry = false;
-
-    // Check if the entry is private
-    const isPrivateEntry = existingEntry.is_private;
+    const isPrivateEntry = existingEntry.is_private && !existingEntry.calendar_id;
     const isOwnEntry =
       existingEntry.assigned_user_ids.length === 1 &&
       existingEntry.assigned_user_ids[0] === user.user_id;
 
-    // If the entry is private, only the creator can edit it
+    // If the entry is private, only its sole assignee can edit it
     if (isPrivateEntry && !isOwnEntry) {
       return { success: false, error: 'Permission denied to edit a private schedule entry.' };
     }
 
-    if (canUpdateGlobally) {
-      // Global update permission allows editing any non-private entry
-      canEditThisEntry = true;
-    } else {
-      // User might only have 'user_schedule:read' (implicitly checked by reaching here)
+    const access = await withTransaction(db, async (trx: Knex.Transaction) =>
+      resolveCalendarAccess(trx, tenant, user, canUpdateGlobally)
+    );
+    const decision = evaluateEntryAccess(existingEntry, access);
+    if (decision.access === 'none' || !decision.canEdit) {
+      return { success: false, error: 'Permission denied to update this schedule entry.' };
+    }
 
-      // Check if the update attempts to change assignment *away* from solely the current user
-      // If assigned_user_ids is not part of the update, assignment doesn't change.
-      // If it is part of the update, it must contain *only* the current user's ID.
-      const assignmentRemainsOwn = entry.assigned_user_ids
-        ? (entry.assigned_user_ids.length === 1 && entry.assigned_user_ids[0] === user.user_id)
-        : true; // If assigned_user_ids is not being updated, the assignment aspect is permitted
-
-      if (isOwnEntry && assignmentRemainsOwn) {
-        canEditThisEntry = true; // Allowed to edit own entry if assignment isn't changed to others
+    // Newly added assignees must be users the viewer may assign.
+    if (entry.assigned_user_ids) {
+      const addedAssignees = entry.assigned_user_ids.filter(
+        id => !existingEntry.assigned_user_ids.includes(id)
+      );
+      if (addedAssignees.some(id => !canAssignUser(id, access))) {
+        return { success: false, error: 'Permission denied to assign schedule entries to other users.' };
       }
     }
 
-    if (!canEditThisEntry) {
-      return { success: false, error: 'Permission denied to update this schedule entry.' };
+    // Moving the entry onto a (different) group calendar requires edit there.
+    if (entry.calendar_id !== undefined) {
+      const targetCalendarId = entry.calendar_id || null;
+      entry.calendar_id = targetCalendarId;
+      if (targetCalendarId && targetCalendarId !== existingEntry.calendar_id) {
+        const calendarError = await withTransaction(db, async (trx: Knex.Transaction) =>
+          assertEditableGroupCalendar(trx, tenant, targetCalendarId, access)
+        );
+        if (calendarError) {
+          return { success: false, error: calendarError };
+        }
+      }
+    }
+    // Group calendar entries are never private.
+    const resultingCalendarId =
+      entry.calendar_id !== undefined ? entry.calendar_id : existingEntry.calendar_id;
+    if (resultingCalendarId) {
+      entry.is_private = false;
     }
     // --- End Permission Check ---
 
@@ -903,6 +955,24 @@ export const deleteScheduleEntry = withAuth(async (
       };
     }
 
+    const canUpdateGlobally = await hasPermission(user, 'user_schedule', 'update', db);
+    const access = await withTransaction(db, async (trx: Knex.Transaction) =>
+      resolveCalendarAccess(trx, tenant, user, canUpdateGlobally)
+    );
+    const decision = evaluateEntryAccess(existingEntry, access);
+    if (decision.access === 'none' || !decision.canEdit) {
+      const message = 'Permission denied to delete this schedule entry.';
+      return {
+        success: false,
+        error: message,
+        canDelete: false,
+        code: 'PERMISSION_DENIED',
+        message,
+        dependencies: [],
+        alternatives: []
+      };
+    }
+
     const appointmentRequestRow =
       existingEntry.work_item_type === 'appointment_request' && existingEntry.work_item_id
         ? await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -1161,6 +1231,11 @@ export const getScheduleEntryById = withAuth(async (
 ): Promise<IScheduleEntry | null | ScheduleActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
+    const canRead = await hasPermission(user, 'user_schedule', 'read', db);
+    if (!canRead) {
+      return permissionError('Permission denied to view schedule entries.');
+    }
+    const canUpdate = await hasPermission(user, 'user_schedule', 'update', db);
     return withTransaction(db, async (trx: Knex.Transaction) => {
       const scopedDb = tenantDb(trx, tenant) as any;
 
@@ -1192,19 +1267,16 @@ export const getScheduleEntryById = withAuth(async (
         assigned_user_ids: assignedUserIds || []
       };
 
-      // Check if entry is private and user is not assigned to it
-      if (scheduleEntry.is_private && !assignedUserIds.includes(user.user_id)) {
-        // Return limited information for private entries
-        return {
-          ...scheduleEntry,
-          title: "Busy",
-          notes: "",
-          work_item_id: null,
-          work_item_type: "ad_hoc"
-        };
+      const access = await resolveCalendarAccess(trx, tenant, user, canUpdate);
+      const decision = evaluateEntryAccess(scheduleEntry, access);
+      if (decision.access === 'none') {
+        return null;
+      }
+      if (decision.access === 'busy') {
+        return maskEntry(scheduleEntry, access);
       }
 
-      return scheduleEntry;
+      return { ...scheduleEntry, access: 'full', can_edit: decision.canEdit };
     });
   } catch (error) {
     console.error('Error fetching schedule entry by ID:', error);
