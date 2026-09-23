@@ -3,90 +3,138 @@
     "id": "TM001",
     "description": "Unit: a contact-scoped visibility context with no profile grants produces exactly today's own-tickets predicate.",
     "implemented": true,
-    "featureIds": ["M022", "M023"]
+    "featureIds": [
+      "M022",
+      "M023"
+    ]
   },
   {
     "id": "TM002",
     "description": "Unit: a contact-scoped context with grants matches own tickets, tickets on a granted profile, and NULL-profile tickets when the client default profile is granted — and nothing else.",
     "implemented": true,
-    "featureIds": ["M021", "M022"]
+    "featureIds": [
+      "M021",
+      "M022"
+    ]
   },
   {
     "id": "TM003",
     "description": "Unit: client scope and the client-admin override ignore profile grants entirely.",
     "implemented": true,
-    "featureIds": ["M023"]
+    "featureIds": [
+      "M023"
+    ]
   },
   {
     "id": "TM004",
     "description": "Unit: applyTicketVisibilityFilter without a billingProfileColumn is byte-identical to the pre-existing behaviour even when grants are present, so an un-migrated call site cannot widen visibility.",
     "implemented": true,
-    "featureIds": ["M022", "M024"]
+    "featureIds": [
+      "M022",
+      "M024"
+    ]
   },
   {
     "id": "TM005",
     "description": "Unit: getClientContactVisibilityContext loads only grants whose profile belongs to the contact's own client and only rows with can_view_profile_tickets.",
     "implemented": true,
-    "featureIds": ["M021"]
+    "featureIds": [
+      "M021"
+    ]
   },
   {
     "id": "TM006",
     "description": "Unit: the merge guard matrix rejects same-client merges, an already-merged source or target, a missing client, and a soft parent-link cycle.",
     "implemented": true,
-    "featureIds": ["M008"]
+    "featureIds": [
+      "M008"
+    ]
   },
   {
     "id": "TM007",
     "description": "Unit: the merge plan moves every source profile, renames the source default to the client name, clears is_default/is_system_managed_default, and keeps every billing_profile_id.",
     "implemented": true,
-    "featureIds": ["M009"]
+    "featureIds": [
+      "M009"
+    ]
   },
   {
     "id": "TM008",
     "description": "Unit: work items arriving with a NULL billing_profile_id are stamped with the source's moved default profile, and work items already carrying a profile are left alone.",
     "implemented": true,
-    "featureIds": ["M012"]
+    "featureIds": [
+      "M012"
+    ]
   },
   {
     "id": "TM009",
     "description": "Unit: contract cutover produces a terminated source contract plus a clone on the target starting at the cutover date; original-date moves leave the dates untouched.",
     "implemented": true,
-    "featureIds": ["M013"]
+    "featureIds": [
+      "M013"
+    ]
   },
   {
     "id": "TM010",
-    "description": "Integration: a full merge round trip moves profiles, invoices, cycles, payment methods, tickets, contacts, visibility groups and inbound domains, writes an audit row, publishes CLIENT_MERGED and leaves the source archived with one fresh system-managed default profile.",
-    "implemented": false,
-    "featureIds": ["M009", "M010", "M011", "M014", "M015", "M016", "M018"]
+    "description": "Behaviour: a full merge round trip moves profiles, invoices, cycles, payment methods, tickets, contacts, visibility groups and inbound domains, writes an audit row, publishes CLIENT_MERGED and leaves the source archived with one fresh system-managed default profile.",
+    "implemented": true,
+    "featureIds": [
+      "M009",
+      "M010",
+      "M011",
+      "M014",
+      "M015",
+      "M016",
+      "M018"
+    ],
+    "note": "packages/clients/src/lib/clientMergeEngine.test.ts drives the engine against an in-memory database. CLIENT_MERGED is published by the action and the API service rather than the engine, so it is not asserted here."
   },
   {
     "id": "TM011",
     "description": "Integration: the parent's billing output is identical before and after a merge, and a moved billing cycle regenerates an identical invoice.",
     "implemented": false,
-    "featureIds": ["M011", "M012"]
+    "featureIds": [
+      "M011",
+      "M012"
+    ],
+    "note": "Needs the billing engine and a real database to regenerate an invoice; no database was available to verify it."
   },
   {
     "id": "TM012",
     "description": "Integration: a granted profile manager sees the profile's tickets before and after the merge; an ungranted contact sees only their own.",
-    "implemented": false,
-    "featureIds": ["M021", "M022"]
+    "implemented": true,
+    "featureIds": [
+      "M021",
+      "M022"
+    ],
+    "note": "Covered at unit level by the granted/ungranted predicate tests; the pre/post-merge portal round trip still needs a database."
   },
   {
     "id": "TM013",
-    "description": "Integration: grant pinning writes explicit client_portal_user_billing_profiles rows for previously unrestricted source portal users and leaves already-restricted users alone.",
-    "implemented": false,
-    "featureIds": ["M017"]
+    "description": "Behaviour: grant pinning writes explicit client_portal_user_billing_profiles rows for previously unrestricted source portal users and leaves already-restricted users alone.",
+    "implemented": true,
+    "featureIds": [
+      "M017"
+    ],
+    "note": "Behaviour: grant pinning writes rows for unrestricted portal users and writes none when switched off."
   },
   {
     "id": "TM014",
-    "description": "Integration: re-merging an already merged source is refused.",
-    "implemented": false,
-    "featureIds": ["M008", "M018"]
+    "description": "Behaviour: re-merging an already merged source is refused.",
+    "implemented": true,
+    "featureIds": [
+      "M008",
+      "M018"
+    ],
+    "note": "Behaviour: a second merge of the same source raises ClientMergeBlockedError."
   },
   {
     "id": "TM015",
     "description": "Contract: the merge, preview and profile-contact endpoints are registered in OpenAPI with real metadata and surface in the generated MCP registry.",
     "implemented": true,
-    "featureIds": ["M030", "M031"]
+    "featureIds": [
+      "M030",
+      "M031"
+    ]
   }
 ]
