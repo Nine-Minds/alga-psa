@@ -12,14 +12,28 @@
       "clearAll": "Limpar tudo",
       "viewWeek": "Ver semana",
       "compare": "Comparar",
-      "stopComparing": "Pare de comparar"
+      "stopComparing": "Pare de comparar",
+      "shareMyCalendar": "Compartilhar minha agenda",
+      "newGroupCalendar": "Nova agenda de grupo",
+      "manageGroupCalendar": "Gerenciar agenda"
     },
     "labels": {
-      "inactive": "(Inativo)"
+      "inactive": "(Inativo)",
+      "archived": "(Arquivada)"
     },
     "aria": {
       "viewWeek": "Ver semana para {{name}}",
-      "compare": "Comparar {{name}}"
+      "compare": "Comparar {{name}}",
+      "toggleGroupCalendar": "Mostrar {{name}}"
+    },
+    "sections": {
+      "myCalendar": "Minha agenda",
+      "people": "Pessoas",
+      "groupCalendars": "Agendas de grupo"
+    },
+    "empty": {
+      "people": "Ninguém compartilhou uma agenda com você ainda. Compartilhe a sua para que os colegas vejam quando você está livre.",
+      "groups": "Agendas de grupo guardam eventos compartilhados, como plantões ou fechamentos do escritório."
     }
   },
   "agentView": {
@@ -90,7 +104,8 @@
         "start": "Início: {{dateTime}}",
         "end": "Fim: {{dateTime}}",
         "multiDay": "(Vários dias)"
-      }
+      },
+      "busy": "Ocupado"
     },
     "deleteDialog": {
       "title": "Excluir entrada de agendamento",
@@ -122,6 +137,11 @@
         "title": "Opções de impressão",
         "description": "Escolha quais colunas incluir ao imprimir a programação."
       }
+    },
+    "busyDialog": {
+      "title": "Ocupado",
+      "close": "Fechar",
+      "timeRange": "{{start}} – {{end}}"
     }
   },
   "weeklyEvent": {
@@ -591,7 +611,11 @@
       "end": "Fim *",
       "notes": "Notas",
       "technician": "Técnico",
-      "notesPlaceholder": "Tudo o que o técnico deve saber antes de começar"
+      "notesPlaceholder": "Tudo o que o técnico deve saber antes de começar",
+      "calendarPersonal": "Pessoal",
+      "calendarUnavailable": "Agenda de grupo",
+      "calendar": "Agenda",
+      "assignedUsersOptional": "Usuários atribuídos"
     },
     "actions": {
       "cancel": "Cancelar",
@@ -776,5 +800,54 @@
     "deleteFailed": "Não foi possível excluir a entrada de agenda",
     "loadFailed": "Não foi possível carregar a entrada de agenda",
     "noPermission": "Você precisa da permissão de atualização de agenda para agendar trabalho."
+  },
+  "sharing": {
+    "levels": {
+      "freeBusy": "Livre/ocupado",
+      "read": "Ver detalhes",
+      "edit": "Editar",
+      "manage": "Gerenciar"
+    },
+    "addRecipient": "Adicionar pessoa ou equipe",
+    "noRecipients": "Ainda não compartilhada com ninguém.",
+    "unknownRecipient": "Destinatário desconhecido",
+    "removeRecipient": "Remover {{name}}",
+    "errors": {
+      "load": "Não foi possível carregar o compartilhamento da agenda.",
+      "save": "Não foi possível salvar o compartilhamento da agenda."
+    },
+    "shareDialog": {
+      "title": "Compartilhar minha agenda",
+      "description": "Livre/ocupado mostra apenas quando você está ocupado. Ver detalhes mostra suas entradas, exceto as privadas. Editar também permite adicionar e alterar entradas por você."
+    },
+    "actions": {
+      "cancel": "Cancelar",
+      "saving": "Salvando...",
+      "save": "Salvar"
+    }
+  },
+  "groupCalendars": {
+    "errors": {
+      "load": "Não foi possível carregar a agenda.",
+      "nameRequired": "O nome da agenda é obrigatório.",
+      "save": "Não foi possível salvar a agenda."
+    },
+    "dialog": {
+      "manageTitle": "Gerenciar agenda de grupo",
+      "createTitle": "Nova agenda de grupo"
+    },
+    "actions": {
+      "restore": "Restaurar",
+      "archive": "Arquivar",
+      "create": "Criar agenda"
+    },
+    "fields": {
+      "name": "Nome",
+      "namePlaceholder": "ex.: Escala de plantão",
+      "color": "Cor",
+      "description": "Descrição (opcional)",
+      "members": "Membros",
+      "creatorNote": "Você poderá gerenciar esta agenda."
+    }
   }
 }

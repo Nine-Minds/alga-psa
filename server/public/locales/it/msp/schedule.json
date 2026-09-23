@@ -12,14 +12,28 @@
       "clearAll": "Cancella tutto",
       "viewWeek": "Visualizza settimana",
       "compare": "Confronta",
-      "stopComparing": "Smetti di confrontare"
+      "stopComparing": "Smetti di confrontare",
+      "shareMyCalendar": "Condividi il mio calendario",
+      "newGroupCalendar": "Nuovo calendario di gruppo",
+      "manageGroupCalendar": "Gestisci calendario"
     },
     "labels": {
-      "inactive": "(Inattivo)"
+      "inactive": "(Inattivo)",
+      "archived": "(Archiviato)"
     },
     "aria": {
       "viewWeek": "Visualizza settimana per {{name}}",
-      "compare": "Confronta {{name}}"
+      "compare": "Confronta {{name}}",
+      "toggleGroupCalendar": "Mostra {{name}}"
+    },
+    "sections": {
+      "myCalendar": "Il mio calendario",
+      "people": "Persone",
+      "groupCalendars": "Calendari di gruppo"
+    },
+    "empty": {
+      "people": "Nessuno ha ancora condiviso un calendario con te. Condividi il tuo così i colleghi sanno quando sei libero.",
+      "groups": "I calendari di gruppo contengono eventi condivisi, come turni di reperibilità o chiusure dell'ufficio."
     }
   },
   "agentView": {
@@ -90,7 +104,8 @@
         "start": "Inizio: {{dateTime}}",
         "end": "Fine: {{dateTime}}",
         "multiDay": "(Più giorni)"
-      }
+      },
+      "busy": "Occupato"
     },
     "deleteDialog": {
       "title": "Elimina voce di pianificazione",
@@ -122,6 +137,11 @@
         "title": "Opzioni di stampa",
         "description": "Scegli quali colonne includere durante la stampa del calendario."
       }
+    },
+    "busyDialog": {
+      "title": "Occupato",
+      "close": "Chiudi",
+      "timeRange": "{{start}} – {{end}}"
     }
   },
   "weeklyEvent": {
@@ -591,7 +611,11 @@
       "end": "Fine *",
       "notes": "Note",
       "technician": "Tecnico",
-      "notesPlaceholder": "Tutto ciò che il tecnico deve sapere prima di iniziare"
+      "notesPlaceholder": "Tutto ciò che il tecnico deve sapere prima di iniziare",
+      "calendarPersonal": "Personale",
+      "calendarUnavailable": "Calendario di gruppo",
+      "calendar": "Calendario",
+      "assignedUsersOptional": "Utenti assegnati"
     },
     "actions": {
       "cancel": "Annulla",
@@ -776,5 +800,54 @@
     "deleteFailed": "Impossibile eliminare la voce di agenda",
     "loadFailed": "Impossibile caricare la voce di agenda",
     "noPermission": "Hai bisogno del permesso di aggiornamento agenda per pianificare il lavoro."
+  },
+  "sharing": {
+    "levels": {
+      "freeBusy": "Libero/occupato",
+      "read": "Visualizza dettagli",
+      "edit": "Modifica",
+      "manage": "Gestione"
+    },
+    "addRecipient": "Aggiungi una persona o un team",
+    "noRecipients": "Non ancora condiviso con nessuno.",
+    "unknownRecipient": "Destinatario sconosciuto",
+    "removeRecipient": "Rimuovi {{name}}",
+    "errors": {
+      "load": "Impossibile caricare la condivisione del calendario.",
+      "save": "Impossibile salvare la condivisione del calendario."
+    },
+    "shareDialog": {
+      "title": "Condividi il mio calendario",
+      "description": "Libero/occupato mostra solo quando sei occupato. Visualizza dettagli mostra le tue voci, tranne quelle private. Modifica consente anche di aggiungere e modificare voci per te."
+    },
+    "actions": {
+      "cancel": "Annulla",
+      "saving": "Salvataggio...",
+      "save": "Salva"
+    }
+  },
+  "groupCalendars": {
+    "errors": {
+      "load": "Impossibile caricare il calendario.",
+      "nameRequired": "Il nome del calendario è obbligatorio.",
+      "save": "Impossibile salvare il calendario."
+    },
+    "dialog": {
+      "manageTitle": "Gestisci calendario di gruppo",
+      "createTitle": "Nuovo calendario di gruppo"
+    },
+    "actions": {
+      "restore": "Ripristina",
+      "archive": "Archivia",
+      "create": "Crea calendario"
+    },
+    "fields": {
+      "name": "Nome",
+      "namePlaceholder": "es. Turni di reperibilità",
+      "color": "Colore",
+      "description": "Descrizione (facoltativa)",
+      "members": "Membri",
+      "creatorNote": "Potrai gestire questo calendario."
+    }
   }
 }

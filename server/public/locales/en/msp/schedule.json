@@ -12,14 +12,28 @@
       "clearAll": "Clear All",
       "viewWeek": "View Week",
       "compare": "Compare",
-      "stopComparing": "Stop Comparing"
+      "stopComparing": "Stop Comparing",
+      "shareMyCalendar": "Share my calendar",
+      "newGroupCalendar": "New group calendar",
+      "manageGroupCalendar": "Manage calendar"
     },
     "labels": {
-      "inactive": "(Inactive)"
+      "inactive": "(Inactive)",
+      "archived": "(Archived)"
     },
     "aria": {
       "viewWeek": "View week for {{name}}",
-      "compare": "Compare {{name}}"
+      "compare": "Compare {{name}}",
+      "toggleGroupCalendar": "Show {{name}}"
+    },
+    "sections": {
+      "myCalendar": "My calendar",
+      "people": "People",
+      "groupCalendars": "Group calendars"
+    },
+    "empty": {
+      "people": "No one has shared a calendar with you yet. Share yours so teammates can see when you are free.",
+      "groups": "Group calendars hold shared events such as on-call rotations or office closures."
     }
   },
   "agentView": {
@@ -90,7 +104,8 @@
         "start": "Start: {{dateTime}}",
         "end": "End: {{dateTime}}",
         "multiDay": "(Multi-day)"
-      }
+      },
+      "busy": "Busy"
     },
     "deleteDialog": {
       "title": "Delete Schedule Entry",
@@ -122,6 +137,11 @@
         "title": "Print options",
         "description": "Choose which columns to include when printing the schedule."
       }
+    },
+    "busyDialog": {
+      "title": "Busy",
+      "close": "Close",
+      "timeRange": "{{start}} – {{end}}"
     }
   },
   "weeklyEvent": {
@@ -591,7 +611,11 @@
       "end": "End *",
       "notes": "Notes",
       "technician": "Technician",
-      "notesPlaceholder": "Anything the technician should know before starting"
+      "notesPlaceholder": "Anything the technician should know before starting",
+      "calendarPersonal": "Personal",
+      "calendarUnavailable": "Group calendar",
+      "calendar": "Calendar",
+      "assignedUsersOptional": "Assigned Users"
     },
     "actions": {
       "cancel": "Cancel",
@@ -776,5 +800,54 @@
     "deleteFailed": "Failed to delete schedule entry",
     "loadFailed": "Failed to load schedule entry",
     "noPermission": "You need the schedule update permission to schedule work."
+  },
+  "sharing": {
+    "levels": {
+      "freeBusy": "Free/busy",
+      "read": "View details",
+      "edit": "Edit",
+      "manage": "Manage"
+    },
+    "addRecipient": "Add a person or team",
+    "noRecipients": "Not shared with anyone yet.",
+    "unknownRecipient": "Unknown recipient",
+    "removeRecipient": "Remove {{name}}",
+    "errors": {
+      "load": "Failed to load calendar sharing.",
+      "save": "Failed to save calendar sharing."
+    },
+    "shareDialog": {
+      "title": "Share my calendar",
+      "description": "Free/busy shows only when you are busy. View details shows your entries, except private ones. Edit also lets them add and change entries for you."
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "saving": "Saving...",
+      "save": "Save"
+    }
+  },
+  "groupCalendars": {
+    "errors": {
+      "load": "Failed to load calendar.",
+      "nameRequired": "Calendar name is required.",
+      "save": "Failed to save calendar."
+    },
+    "dialog": {
+      "manageTitle": "Manage group calendar",
+      "createTitle": "New group calendar"
+    },
+    "actions": {
+      "restore": "Restore",
+      "archive": "Archive",
+      "create": "Create calendar"
+    },
+    "fields": {
+      "name": "Name",
+      "namePlaceholder": "e.g. On-call rotation",
+      "color": "Color",
+      "description": "Description (optional)",
+      "members": "Members",
+      "creatorNote": "You will be able to manage this calendar."
+    }
   }
 }

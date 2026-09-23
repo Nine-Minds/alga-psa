@@ -12,14 +12,28 @@
       "clearAll": "Wyczyść wszystko",
       "viewWeek": "Zobacz tydzień",
       "compare": "Porównaj",
-      "stopComparing": "Przestań porównywać"
+      "stopComparing": "Przestań porównywać",
+      "shareMyCalendar": "Udostępnij mój kalendarz",
+      "newGroupCalendar": "Nowy kalendarz grupowy",
+      "manageGroupCalendar": "Zarządzaj kalendarzem"
     },
     "labels": {
-      "inactive": "(Nieaktywny)"
+      "inactive": "(Nieaktywny)",
+      "archived": "(Zarchiwizowany)"
     },
     "aria": {
       "viewWeek": "Wyświetl tydzień dla {{name}}",
-      "compare": "Porównaj {{name}}"
+      "compare": "Porównaj {{name}}",
+      "toggleGroupCalendar": "Pokaż {{name}}"
+    },
+    "sections": {
+      "myCalendar": "Mój kalendarz",
+      "people": "Osoby",
+      "groupCalendars": "Kalendarze grupowe"
+    },
+    "empty": {
+      "people": "Nikt jeszcze nie udostępnił Ci kalendarza. Udostępnij swój, aby współpracownicy widzieli, kiedy jesteś wolny.",
+      "groups": "Kalendarze grupowe zawierają wspólne wydarzenia, takie jak dyżury czy zamknięcia biura."
     }
   },
   "agentView": {
@@ -90,7 +104,8 @@
         "start": "Początek: {{dateTime}}",
         "end": "Koniec: {{dateTime}}",
         "multiDay": "(Wielodniowe)"
-      }
+      },
+      "busy": "Zajęty"
     },
     "deleteDialog": {
       "title": "Usuń wpis harmonogramu",
@@ -122,6 +137,11 @@
         "title": "Opcje drukowania",
         "description": "Wybierz, które kolumny dołączyć podczas drukowania harmonogramu."
       }
+    },
+    "busyDialog": {
+      "title": "Zajęty",
+      "close": "Zamknij",
+      "timeRange": "{{start}} – {{end}}"
     }
   },
   "weeklyEvent": {
@@ -591,7 +611,11 @@
       "end": "Koniec *",
       "notes": "Notatki",
       "technician": "Technik",
-      "notesPlaceholder": "Wszystko, co technik powinien wiedzieć przed rozpoczęciem"
+      "notesPlaceholder": "Wszystko, co technik powinien wiedzieć przed rozpoczęciem",
+      "calendarPersonal": "Osobisty",
+      "calendarUnavailable": "Kalendarz grupowy",
+      "calendar": "Kalendarz",
+      "assignedUsersOptional": "Przypisani użytkownicy"
     },
     "actions": {
       "cancel": "Anuluj",
@@ -776,5 +800,54 @@
     "deleteFailed": "Nie udało się usunąć wpisu harmonogramu",
     "loadFailed": "Nie udało się wczytać wpisu harmonogramu",
     "noPermission": "Potrzebujesz uprawnienia do aktualizacji harmonogramu, aby planować pracę."
+  },
+  "sharing": {
+    "levels": {
+      "freeBusy": "Wolny/zajęty",
+      "read": "Wyświetlanie szczegółów",
+      "edit": "Edycja",
+      "manage": "Zarządzanie"
+    },
+    "addRecipient": "Dodaj osobę lub zespół",
+    "noRecipients": "Jeszcze nikomu nie udostępniono.",
+    "unknownRecipient": "Nieznany odbiorca",
+    "removeRecipient": "Usuń {{name}}",
+    "errors": {
+      "load": "Nie udało się wczytać udostępniania kalendarza.",
+      "save": "Nie udało się zapisać udostępniania kalendarza."
+    },
+    "shareDialog": {
+      "title": "Udostępnij mój kalendarz",
+      "description": "Wolny/zajęty pokazuje tylko, kiedy jesteś zajęty. Wyświetlanie szczegółów pokazuje Twoje wpisy oprócz prywatnych. Edycja pozwala też dodawać i zmieniać wpisy w Twoim imieniu."
+    },
+    "actions": {
+      "cancel": "Anuluj",
+      "saving": "Zapisywanie...",
+      "save": "Zapisz"
+    }
+  },
+  "groupCalendars": {
+    "errors": {
+      "load": "Nie udało się wczytać kalendarza.",
+      "nameRequired": "Nazwa kalendarza jest wymagana.",
+      "save": "Nie udało się zapisać kalendarza."
+    },
+    "dialog": {
+      "manageTitle": "Zarządzaj kalendarzem grupowym",
+      "createTitle": "Nowy kalendarz grupowy"
+    },
+    "actions": {
+      "restore": "Przywróć",
+      "archive": "Archiwizuj",
+      "create": "Utwórz kalendarz"
+    },
+    "fields": {
+      "name": "Nazwa",
+      "namePlaceholder": "np. Grafik dyżurów",
+      "color": "Kolor",
+      "description": "Opis (opcjonalnie)",
+      "members": "Członkowie",
+      "creatorNote": "Będziesz mógł zarządzać tym kalendarzem."
+    }
   }
 }
