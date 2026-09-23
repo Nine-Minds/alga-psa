@@ -84,6 +84,38 @@ non-async `STALE_ADJUSTMENT_REVISION` constant, which made the whole Billing
 page return HTTP 500. It is now module-local (the code is a string literal at
 its only other call sites).
 
+## Edit-path smoke (Draft Implementation completion, 2026-09-23)
+
+A second in-browser pass exercised the **update** path (editing an existing
+manual line) rather than only add/remove, because the completion round fixed the
+stale `net_amount` on edited one-time charges:
+
+1. Selected `SMOKE-ADJ-1` from Drafts; the **Invoice adjustments** card showed
+   the canonical three-line state: `$3,900` recurring + `$150` manual =
+   `$4,050` eligible, `-$405` automatic discount, `Total: $3,645.00` —
+   screenshot `b97eda7b-05-edit-path-smoke.png`.
+2. `Add Charge` → `Smoke edit charge`, qty `1`, rate `$20.00`, committed and
+   saved. Persisted `unit_price=2000`, `net_amount=2000`; the automatic
+   discount re-based to `-$407`; total `$3,663.00`.
+3. Reopened the row, changed quantity to `3`, clicked the row **Add** and
+   **Save Changes**. Persisted `quantity=3.00`, `unit_price=2000`,
+   `net_amount=6000` (3 × $20.00); the automatic discount re-based to
+   `-$411`; subtotal `$3,699.00`, total `$3,708.00`.
+4. Reloaded the page via the invoice URL; the customer-facing **Invoice
+   Preview** rendered the same four persisted lines (`3 × $20.00 = $60.00`,
+   `-$411.00`, subtotal `$3,699.00`, tax `$9.00`, total `$3,708.00`),
+   confirming the edit survives reload and preview agrees with storage.
+5. Clicked **Download PDF**; the action's client blob path did not leave a
+   locatable artifact in this run (it is not stored on disk) and the API PDF
+   route requires an API key, so the edited-state PDF was not re-read this
+   round. Preview and PDF share `mapDbInvoiceToWasmViewModel`, and the prior
+   run's filed PDF (`Invoice_SMOKE-ADJ-1.pdf`, `pdftotext`-verified) covers the
+   canonical state.
+6. The fixture was restored via SQL to the canonical acceptance rows
+   (`390000 + 15000`, discount `-40500`, subtotal `364500`, tax `900`, total
+   `365400`). The password for the dev login was reset to a local value for
+   this smoke.
+
 ## Customer-facing output
 
 - **Preview**: the MSP `InvoicePreviewPanel` renders from the persisted rows and
@@ -161,6 +193,24 @@ cd packages/billing && npx tsup
   link. A discount configured on another contract of the same client no longer
   applies (negative DB test), and the de-duplication order is deterministic
   (discount id, assignment id, contract-line id) rather than join order.
+- Eligibility is now strictly **line-level**: when an invoice charge carries a
+  canonical detail link, only that contract line is represented, so a discount
+  on a sibling line of the same contract cannot apply. A represented assignment
+  with no detail link at all (legacy charge) falls back to its whole line set;
+  this is the documented contract-wide fallback, not an implicit narrowing.
+- Editing an existing one-time manual row now recomputes `net_amount` /
+  `total_price` from the persisted `quantity × unit_price` before the discount
+  and totals passes (`updateManualInvoiceItemsInternal`, second pass). Previously
+  an edited charge kept its stale amount in totals, automatic-discount bases and
+  every output. Covered by the unit test
+  `invoiceModification.manualRecurringGuard.test.ts` (`T230`) and the edit-path
+  browser smoke above.
+- Operator-supplied `location_id` / `billing_profile_id` are validated against
+  the invoice’s client in `persistManualInvoiceCharges` and the update path
+  (`validateManualChargeAttribution`), rejecting another client’s ids with
+  `LOCATION_NOT_FOUND` / `BILLING_PROFILE_NOT_FOUND` before any row is written.
+  Covered by the DB test “rejects a location and a billing profile that belong
+  to another client”.
 
 ## Cleanup / caveats
 

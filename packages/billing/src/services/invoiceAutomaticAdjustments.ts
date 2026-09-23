@@ -168,27 +168,49 @@ export function buildAutomaticDiscountPolicies(
   return [...policies.values()];
 }
 
-interface RepresentedContractLines {
-  /** Client-contract assignments that put a charge on this invoice. */
-  clientContractIds: string[];
-  /** Contract lines whose canonical detail rows appear on the invoice. */
-  contractLineIds: string[];
-}
-
 /**
- * The contract lines represented on this invoice, from both signals the schema
- * offers: the assignment a persisted charge carries (`invoice_charges.client_contract_id`)
- * and the canonical service-config link behind a charge detail
- * (`invoice_charge_details.config_id -> contract_line_service_configuration`).
- * A discount configured against a contract with no line on the invoice must not
- * reach it.
+ * Concrete contract lines represented on this invoice.
+ *
+ * The canonical signal is a charge detail's service-config link
+ * (`invoice_charge_details.config_id -> contract_line_service_configuration.contract_line_id`).
+ * A contract that has a concrete detail line on the invoice contributes only
+ * those lines, so a discount on a sibling line that is absent from the invoice
+ * cannot apply.
+ *
+ * When a represented client-contract assignment has no detail link at all (for
+ * example a legacy charge persisted without details) the invoice cannot say
+ * which of that contract's lines it covers, so its whole line set is admitted:
+ * this is the documented contract-wide fallback, not an implicit narrowing.
  */
-async function loadRepresentedContractLines(
+async function loadRepresentedContractLineIds(
   conn: Knex | Knex.Transaction,
   tenant: string,
   invoiceId: string,
   invoice: InvoiceForSettlement,
-): Promise<RepresentedContractLines> {
+): Promise<string[]> {
+  const detailRows = await tenantDb(conn, tenant)
+    .table('invoice_charge_details as d')
+    .join('invoice_charges as c', function () {
+      this.on('c.item_id', '=', 'd.item_id').andOn('c.tenant', '=', 'd.tenant');
+    })
+    .join('contract_line_service_configuration as cfg', function () {
+      this.on('cfg.config_id', '=', 'd.config_id').andOn('cfg.tenant', '=', 'd.tenant');
+    })
+    .join('contract_lines as cl', function () {
+      this.on('cl.contract_line_id', '=', 'cfg.contract_line_id').andOn('cl.tenant', '=', 'cfg.tenant');
+    })
+    .where({ 'c.invoice_id': invoiceId, 'c.tenant': tenant })
+    .whereNotNull('d.config_id')
+    .distinct('cl.contract_line_id', 'cl.contract_id');
+
+  const contractLineIds = new Set<string>();
+  const contractsWithDetailLines = new Set<string>();
+  for (const row of detailRows as Array<{ contract_line_id: string | null; contract_id: string | null }>) {
+    if (row.contract_line_id) contractLineIds.add(row.contract_line_id);
+    if (row.contract_id) contractsWithDetailLines.add(row.contract_id);
+  }
+
+  const assignmentIds = new Set<string>();
   const chargeRows = await tenantScopedTable<{ client_contract_id: string | null }>(
     conn,
     tenant,
@@ -197,45 +219,44 @@ async function loadRepresentedContractLines(
     .where({ invoice_id: invoiceId, tenant })
     .whereNotNull('client_contract_id')
     .distinct('client_contract_id');
-
-  const clientContractIds = new Set<string>();
   for (const row of chargeRows) {
-    if (row.client_contract_id) clientContractIds.add(row.client_contract_id);
+    if (row.client_contract_id) assignmentIds.add(row.client_contract_id);
   }
-  if (invoice.client_contract_id) clientContractIds.add(invoice.client_contract_id);
+  if (invoice.client_contract_id) assignmentIds.add(invoice.client_contract_id);
 
-  const detailRows = await tenantDb(conn, tenant)
-    .table('invoice_charge_details as d')
-    .join('invoice_charges as c', function () {
-      this.on('c.item_id', '=', 'd.item_id').andOn('c.tenant', '=', 'd.tenant');
-    })
-    .where({ 'c.invoice_id': invoiceId, 'c.tenant': tenant })
-    .whereNotNull('d.config_id')
-    .distinct('d.config_id');
-
-  const configIds = detailRows
-    .map((row: Record<string, unknown>) => row.config_id)
-    .filter((value): value is string => Boolean(value));
-
-  const contractLineIds = new Set<string>();
-  if (configIds.length > 0) {
-    const configs = await tenantScopedTable<{ contract_line_id: string | null }>(
+  if (assignmentIds.size > 0) {
+    const assignments = await tenantScopedTable<{ contract_id: string | null }>(
       conn,
       tenant,
-      'contract_line_service_configuration',
+      'client_contracts',
     )
       .where({ tenant })
-      .whereIn('config_id', configIds)
-      .distinct('contract_line_id');
-    for (const config of configs) {
-      if (config.contract_line_id) contractLineIds.add(config.contract_line_id);
+      .whereIn('client_contract_id', [...assignmentIds])
+      .select('contract_id');
+
+    const fallbackContractIds = new Set<string>();
+    for (const assignment of assignments) {
+      if (assignment.contract_id && !contractsWithDetailLines.has(assignment.contract_id)) {
+        fallbackContractIds.add(assignment.contract_id);
+      }
+    }
+
+    if (fallbackContractIds.size > 0) {
+      const fallbackLines = await tenantScopedTable<{ contract_line_id: string | null }>(
+        conn,
+        tenant,
+        'contract_lines',
+      )
+        .where({ tenant })
+        .whereIn('contract_id', [...fallbackContractIds])
+        .select('contract_line_id');
+      for (const line of fallbackLines) {
+        if (line.contract_line_id) contractLineIds.add(line.contract_line_id);
+      }
     }
   }
 
-  return {
-    clientContractIds: [...clientContractIds],
-    contractLineIds: [...contractLineIds],
-  };
+  return [...contractLineIds];
 }
 
 async function loadApplicableDiscountRows(
@@ -243,9 +264,9 @@ async function loadApplicableDiscountRows(
   tenant: string,
   clientId: string,
   window: AdjustmentWindow,
-  represented: RepresentedContractLines,
+  representedContractLineIds: string[],
 ): Promise<Array<Record<string, any>>> {
-  if (represented.clientContractIds.length === 0 && represented.contractLineIds.length === 0) {
+  if (representedContractLineIds.length === 0) {
     // No contract line is represented on the invoice, so no contract-linked
     // discount is eligible. Invoice-scope discounts still require a contract
     // link as their eligibility trigger under the existing configuration model.
@@ -265,18 +286,9 @@ async function loadApplicableDiscountRows(
       'cc.tenant': tenant,
       'discounts.is_active': true,
     })
-    .where(function (this: Knex.QueryBuilder) {
-      if (represented.clientContractIds.length > 0) {
-        this.whereIn('cc.client_contract_id', represented.clientContractIds);
-      }
-      if (represented.contractLineIds.length > 0) {
-        if (represented.clientContractIds.length > 0) {
-          this.orWhereIn('cld.contract_line_id', represented.contractLineIds);
-        } else {
-          this.whereIn('cld.contract_line_id', represented.contractLineIds);
-        }
-      }
-    })
+    // Eligibility is line-level: a discount linked to a line of a represented
+    // contract that has no charge on this invoice must not apply.
+    .whereIn('cld.contract_line_id', representedContractLineIds)
     // Invoice-period eligibility (not "today"): half-open on the discount end,
     // inclusive on the window end, matching the billing engine.
     .andWhere('discounts.start_date', '<=', window.end)
@@ -421,13 +433,13 @@ export async function reconcileAutomaticInvoiceDiscounts(
   if (provenance.length === 0 && !contractOrigin) return 0;
 
   const window = await loadInvoiceServiceWindow(tx, tenant, invoiceId, invoice);
-  const represented = await loadRepresentedContractLines(tx, tenant, invoiceId, invoice);
+  const representedContractLineIds = await loadRepresentedContractLineIds(tx, tenant, invoiceId, invoice);
   const discountRows = await loadApplicableDiscountRows(
     tx,
     tenant,
     invoice.client_id,
     window,
-    represented,
+    representedContractLineIds,
   );
   const policies = buildAutomaticDiscountPolicies(discountRows);
   const result = evaluateContractInvoiceAdjustments({

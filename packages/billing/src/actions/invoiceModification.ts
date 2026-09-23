@@ -16,7 +16,7 @@ import { IInvoiceCharge, InvoiceViewModel, DiscountType } from '@alga-psa/types'
 import { BillingEngine } from '../lib/billing/billingEngine';
 import ProjectBillingCapUsage from '../models/projectBillingCapUsage';
 import ProjectBillingScheduleEntry from '../models/projectBillingScheduleEntry';
-import { persistInvoiceCharges, persistManualInvoiceCharges } from '../services/invoiceService'; // Import persistManualInvoiceCharges
+import { persistInvoiceCharges, persistManualInvoiceCharges, validateManualChargeAttribution } from '../services/invoiceService'; // Import persistManualInvoiceCharges
 import { reconcileAutomaticInvoiceAdjustments } from '../services/invoiceAutomaticAdjustments';
 import Invoice from '@alga-psa/billing/models/invoice';
 import { v4 as uuidv4 } from 'uuid';
@@ -1933,6 +1933,15 @@ async function updateManualInvoiceItemsInternal(
       throw expectedInvoiceActionError('Client not found');
     }
 
+    // Attribution ids on an edit must belong to this invoice's client; the
+    // editor's selects are not an authorization boundary.
+    await validateManualChargeAttribution(
+      trx,
+      tenant,
+      invoice.client_id,
+      changes.updatedItems ?? [],
+    );
+
     const targetedItemIds = Array.from(
       new Set([
         ...(changes.removedItemIds ?? []),
@@ -2048,7 +2057,31 @@ async function updateManualInvoiceItemsInternal(
         }
       }
       
-      // Second pass: Recalculate net_amount for discount items
+      // Second pass: recompute ordinary manual rows from their persisted
+      // quantity and unit price. The first pass updates quantity/unit_price but
+      // previously left net_amount stale, so an edited one-time charge kept its
+      // old amount in totals, automatic-discount bases and every output. This
+      // runs before the discount pass so percentage bases read the new amount.
+      for (const item of changes.updatedItems) {
+        if (item.is_discount) continue;
+        const updatedRow = await tenantScopedTable(trx, tenant, 'invoice_charges')
+          .where({ item_id: item.item_id, invoice_id: invoiceId, is_manual: true })
+          .first();
+        if (!updatedRow || updatedRow.is_discount) continue;
+        const netAmount = Math.round(
+          (Number(updatedRow.quantity) || 0) * (Number(updatedRow.unit_price) || 0),
+        );
+        if (
+          Number(updatedRow.net_amount) !== netAmount ||
+          Number(updatedRow.total_price) !== netAmount
+        ) {
+          await tenantScopedTable(trx, tenant, 'invoice_charges')
+            .where({ item_id: item.item_id, invoice_id: invoiceId, is_manual: true })
+            .update({ net_amount: netAmount, total_price: netAmount });
+        }
+      }
+
+      // Third pass: Recalculate net_amount for discount items
       for (const item of changes.updatedItems) {
         if (item.is_discount) {
           // Get the updated item from the database

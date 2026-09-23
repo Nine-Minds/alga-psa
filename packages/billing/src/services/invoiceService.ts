@@ -772,6 +772,61 @@ async function claimManualChargeSource(
 }
 
 /**
+ * Rejects operator-supplied attribution that does not belong to the invoice's
+ * client. The editor's location/billing-profile selects only constrain the
+ * browser: a forged or stale id must not be persisted just because it exists
+ * for another client.
+ */
+export async function validateManualChargeAttribution(
+  tx: Knex.Transaction,
+  tenant: string,
+  clientId: string,
+  items: Array<{ location_id?: string | null; billing_profile_id?: string | null }>,
+): Promise<void> {
+  const locationIds = [...new Set(
+    items
+      .map((item) => item.location_id)
+      .filter((value): value is string => Boolean(value)),
+  )];
+  if (locationIds.length > 0) {
+    const owned = await tenantScopedTable(tx, tenant, 'client_locations')
+      .where({ tenant, client_id: clientId })
+      .whereIn('location_id', locationIds)
+      .pluck('location_id');
+    const ownedSet = new Set(owned as string[]);
+    const foreign = locationIds.find((id) => !ownedSet.has(id));
+    if (foreign) {
+      throw new ManualInvoiceError(
+        'LOCATION_NOT_FOUND',
+        "The selected location does not belong to this invoice's client.",
+        { locationId: foreign },
+      );
+    }
+  }
+
+  const profileIds = [...new Set(
+    items
+      .map((item) => item.billing_profile_id)
+      .filter((value): value is string => Boolean(value)),
+  )];
+  if (profileIds.length > 0) {
+    const owned = await tenantScopedTable(tx, tenant, 'client_billing_profiles')
+      .where({ tenant, client_id: clientId })
+      .whereIn('billing_profile_id', profileIds)
+      .pluck('billing_profile_id');
+    const ownedSet = new Set(owned as string[]);
+    const foreign = profileIds.find((id) => !ownedSet.has(id));
+    if (foreign) {
+      throw new ManualInvoiceError(
+        'BILLING_PROFILE_NOT_FOUND',
+        "The selected billing profile does not belong to this invoice's client.",
+        { billingProfileId: foreign },
+      );
+    }
+  }
+}
+
+/**
  * Persists manual invoice items to the database.
  * Handles both regular manual items and manual discount items.
  * Resolves service ID references for discounts.
@@ -788,6 +843,7 @@ export async function persistManualInvoiceCharges(
   tenant: string
 ): Promise<number> {
   const sourceSnapshots = await validateManualTicketSources(tx, tenant, invoiceId, client.client_id, manualItems);
+  await validateManualChargeAttribution(tx, tenant, client.client_id, manualItems);
   let subtotal = 0;
   const serviceToItemMap = new Map<string, string>(); // Maps service_id to item_id for discount resolution
   const now = Temporal.Now.instant().toString();

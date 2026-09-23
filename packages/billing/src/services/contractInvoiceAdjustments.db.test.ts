@@ -36,6 +36,7 @@ const {
 let db: Knex;
 let tenant: string;
 let clientId: string;
+let foreignClientId: string;
 let serviceId: string;
 let userId: string;
 let contractId: string;
@@ -228,9 +229,14 @@ beforeAll(async () => {
   tenant = seedTenant.tenant;
 
   const client = await db('clients').where({ tenant }).first();
+  const foreignClient = await db('clients')
+    .where({ tenant })
+    .whereNot({ client_id: client.client_id })
+    .first();
   const service = await db('service_catalog').where({ tenant }).first();
   const user = await db('users').where({ tenant }).first();
   clientId = client.client_id;
+  foreignClientId = foreignClient.client_id;
   serviceId = service.service_id;
   userId = user.user_id;
 
@@ -528,6 +534,83 @@ describe('contract invoice adjustments (DB-backed)', () => {
         );
       }),
     ).rejects.toMatchObject({ code: 'DISCOUNT_TARGET_NOT_FOUND' });
+  });
+
+  it('rejects a location and a billing profile that belong to another client', async () => {
+    const fixture = await createDraftWithGeneratedChargeAndDiscount();
+
+    const foreignLocationId = uuidv4();
+    await db('client_locations').insert({
+      tenant,
+      location_id: foreignLocationId,
+      client_id: foreignClientId,
+      location_name: 'Foreign office',
+      address_line1: '9 Elsewhere',
+      city: 'Faraway',
+      country_code: 'US',
+      country_name: 'United States',
+      is_active: true,
+    });
+
+    await expect(
+      db.transaction(async (trx) => {
+        await persistManualInvoiceCharges(
+          trx,
+          fixture.invoiceId,
+          [
+            {
+              item_id: uuidv4(),
+              description: 'Charge on a foreign location',
+              quantity: 1,
+              rate: 1_000,
+              is_taxable: true,
+              location_id: foreignLocationId,
+            },
+          ],
+          { client_id: clientId, region_code: null, default_currency_code: 'USD' },
+          { user: { id: userId } } as never,
+          tenant,
+        );
+      }),
+    ).rejects.toMatchObject({ code: 'LOCATION_NOT_FOUND' });
+
+    const foreignProfileId = uuidv4();
+    await db('client_billing_profiles').insert({
+      tenant,
+      billing_profile_id: foreignProfileId,
+      client_id: foreignClientId,
+      name: 'Foreign profile',
+      // A per-client guard requires any client holding profiles to have exactly
+      // one default, so the client's first profile must be the default.
+      is_default: true,
+    });
+
+    await expect(
+      db.transaction(async (trx) => {
+        await persistManualInvoiceCharges(
+          trx,
+          fixture.invoiceId,
+          [
+            {
+              item_id: uuidv4(),
+              description: 'Charge on a foreign billing profile',
+              quantity: 1,
+              rate: 1_000,
+              is_taxable: true,
+              billing_profile_id: foreignProfileId,
+            },
+          ],
+          { client_id: clientId, region_code: null, default_currency_code: 'USD' },
+          { user: { id: userId } } as never,
+          tenant,
+        );
+      }),
+    ).rejects.toMatchObject({ code: 'BILLING_PROFILE_NOT_FOUND' });
+
+    // Both rejections happen before any insert, so no partial line leaks.
+    const manualRows = await db('invoice_charges')
+      .where({ tenant, invoice_id: fixture.invoiceId, is_manual: true });
+    expect(manualRows).toHaveLength(0);
   });
 
   it('applies a configured service-scoped discount only to matching service rows', async () => {
