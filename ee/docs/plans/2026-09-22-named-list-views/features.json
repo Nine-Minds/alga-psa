@@ -114,7 +114,7 @@
   {
     "id": "F015",
     "description": "DataTable supports controlled `columnSizing`/`onColumnSizingChange`, keeping localStorage fallback when uncontrolled.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD.md#engine-changes-lower-layers"
     ]
@@ -122,7 +122,7 @@
   {
     "id": "F016",
     "description": "DataTable supports controlled `columnVisibility` (hidden columns excluded before auto-fit).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD.md#engine-changes-lower-layers"
     ]
@@ -130,7 +130,7 @@
   {
     "id": "F017",
     "description": "DataTable supports controlled `columnOrder`.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD.md#engine-changes-lower-layers"
     ]

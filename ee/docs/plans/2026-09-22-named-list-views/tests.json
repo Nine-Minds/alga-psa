@@ -67,7 +67,7 @@
   {
     "id": "T008",
     "description": "Unit: DataTable honors controlled columnSizing/columnVisibility/columnOrder and falls back to localStorage sizing when uncontrolled.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015",
       "F016",
