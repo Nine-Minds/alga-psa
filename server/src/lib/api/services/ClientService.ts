@@ -611,6 +611,9 @@ export class ClientService extends BaseService<IClient> {
         ...data,
         updated_at: knex.raw('now()'),
       };
+      if (data.properties !== undefined) {
+        updateData.properties = { ...(before.properties ?? {}), ...data.properties };
+      }
 
       // Remove undefined values + non-column fields
       Object.keys(updateData).forEach((key) => {
