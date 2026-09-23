@@ -228,6 +228,7 @@ async function getBasicInvoiceViewModel(invoice: IInvoice, client: any): Promise
     invoice_number: invoice.invoice_number,
     client_id: invoice.client_id,
     po_number: invoice.po_number ?? null,
+    payment_method: invoice.payment_method ?? null,
     client_contract_id: invoice.client_contract_id ?? null,
     client: {
       name: client.client_name,
@@ -613,6 +614,7 @@ export const fetchInvoicesByClient = withAuth(async (
           'invoices.currency_code',
           'invoices.invoice_type',
           'invoices.is_prepayment',
+          'invoices.payment_method',
           trx.raw('CAST(invoices.subtotal AS BIGINT) as subtotal'),
           trx.raw('CAST(invoices.tax AS BIGINT) as tax'),
           trx.raw('CAST(invoices.total_amount AS BIGINT) as total_amount'),

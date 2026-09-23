@@ -627,6 +627,7 @@ const Invoice = {
       invoice_number: invoice.invoice_number,
       client_id: invoice.client_id,
       po_number: invoice.po_number ?? null,
+      payment_method: invoice.payment_method ?? null,
       client_contract_id: invoice.client_contract_id ?? null,
       client: {
         name: client.client_name || '',

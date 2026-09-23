@@ -15,7 +15,8 @@ import { getAnalyticsAsync } from '../lib/authHelpers';
 
 import { tenantDb } from '@alga-psa/db';
 import { getInitialInvoiceTaxSource } from './taxSourceActions';
-import { getDueDate } from './billingAndTax';
+import { resolveEffectiveBillingIdentity } from '@alga-psa/shared/billingClients/billingProfileSettings';
+import { dueDateForPaymentTerms } from '../lib/billing/invoiceDueDate';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import logger from '@alga-psa/core/logger';
 import {
@@ -178,10 +179,11 @@ export const generateManualInvoice = withAuth(async (
     }
 
     const currentDate = Temporal.Now.plainDateISO().toString();
-    const dueDate = await getDueDate(clientId, currentDate);
-    if (isActionMessageError(dueDate) || isActionPermissionError(dueDate)) {
-      throw new Error(getErrorMessage(dueDate));
-    }
+    // A manual invoice bills the client as a whole, i.e. its default billing
+    // profile: terms and payment method come from there, inheriting the
+    // client's values unless the default profile overrides them.
+    const billingIdentity = await resolveEffectiveBillingIdentity(knex, tenant, clientId, null);
+    const dueDate = dueDateForPaymentTerms(currentDate, billingIdentity.paymentTerms);
 
     const invoiceNumber = request.invoiceNumber?.trim() || await generateInvoiceNumber();
     const invoiceId = uuidv4();
@@ -196,6 +198,7 @@ export const generateManualInvoice = withAuth(async (
       client_id: clientId,
       invoice_date: currentDate,
       due_date: dueDate,
+      payment_method: billingIdentity.preferredPaymentMethod,
       invoice_number: invoiceNumber,
       status: 'draft',
       currency_code: currencyCode,

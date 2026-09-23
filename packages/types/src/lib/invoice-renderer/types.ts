@@ -170,6 +170,11 @@ export interface WasmInvoiceViewModel {
   dueDate: string; // Consider using ISO8601String or a specific date format
   currencyCode: string; // Added for multi-currency support
   poNumber?: string | null;
+  /**
+   * Display label of the payment method snapshotted on the invoice when it was
+   * generated (e.g. "Check"); null when none was recorded.
+   */
+  paymentMethod?: string | null;
   projectName?: string | null;
   projectNumber?: string | null;
   recurringServicePeriodStart?: string | null;

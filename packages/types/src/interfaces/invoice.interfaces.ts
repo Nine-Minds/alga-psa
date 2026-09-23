@@ -31,6 +31,13 @@ export interface IInvoice extends TenantEntity {
   prepayment_description?: string | null;
   /** Snapshot of the purchase order number for this invoice (nullable). */
   po_number?: string | null;
+  /**
+   * The billing profile's effective payment method when the invoice was
+   * generated (`credit_card` | `bank_transfer` | `check`). NULL on invoices
+   * generated before it was recorded. Check and bank transfer suppress the
+   * online "Pay now" link.
+   */
+  payment_method?: string | null;
   /** Client contract assignment that generated this invoice (nullable). */
   client_contract_id?: string | null;
   /** Support ticket this manual invoice was raised from (nullable; quick-invoice-a-ticket). */
@@ -572,6 +579,8 @@ export interface InvoiceViewModel {
   invoice_number: string;
   client_id: string;
   po_number?: string | null;
+  /** Payment-method snapshot key; see IInvoice.payment_method. */
+  payment_method?: string | null;
   client_contract_id?: string | null;
   client: {
     name: string;

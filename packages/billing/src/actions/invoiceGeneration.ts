@@ -18,6 +18,8 @@ import {
   scopeChargesToProfile,
 } from '../lib/billing/billingProfileInvoiceScope';
 import { resolveEffectiveBillingIdentity } from '@alga-psa/shared/billingClients/billingProfileSettings';
+import { paymentMethodDisplayLabel } from '@alga-psa/shared/billingClients/paymentPreferences';
+import { dueDateForPaymentTerms } from '../lib/billing/invoiceDueDate';
 import ProjectBillingCapUsage from '../models/projectBillingCapUsage';
 import ProjectBillingConfig from '../models/projectBillingConfig';
 import ProjectBillingScheduleEntry from '../models/projectBillingScheduleEntry';
@@ -59,7 +61,7 @@ import { calculateAndDistributeTax, claimRecurringServicePeriodsForSelectionInpu
 
 
 // TODO: Import these from billingAndTax.ts once created
-import { getNextBillingDate, getDueDate } from './billingAndTax'; // Updated import
+import { getNextBillingDate } from './billingAndTax';
 import { getClientDefaultTaxRegionCode } from '@alga-psa/shared/billingClients';
 import { applyCreditToInvoice } from './creditActions';
 import { getCurrencySymbol } from '@alga-psa/core';
@@ -2136,6 +2138,11 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
   knex: Knex;
   tenant: string;
   selectorInputs: IRecurringDueSelectionInput[];
+  /**
+   * The profile the previewed invoice would bill. Omitted for selection-based
+   * previews, which bill the client's default profile.
+   */
+  billingProfileId?: string | null;
 }): Promise<BuiltPreviewInvoice> {
   const { knex, tenant, selectorInputs } = params;
   const canonicalSelection = assertSameRecurringSelectionWindow(selectorInputs);
@@ -2211,7 +2218,15 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
 
   const client = await getClientDetails(knex, tenant, client_id);
   const previewInvoiceDate = Temporal.Now.plainDateISO().toString();
-  const due_date = unwrapBillingHelperResult(await getDueDate(client_id, previewInvoiceDate));
+  // Same resolution as generation: the profile's terms and payment method,
+  // inheriting the client's field by field.
+  const previewBillingIdentity = await resolveEffectiveBillingIdentity(
+    knex,
+    tenant,
+    client_id,
+    params.billingProfileId ?? null,
+  );
+  const due_date = dueDateForPaymentTerms(previewInvoiceDate, previewBillingIdentity.paymentTerms);
   const chargesByContractGroup: { [key: string]: IBillingCharge[] } = {};
   const chargesByProjectGroup: { [key: string]: IBillingCharge[] } = {};
   const nonContractAssociatedCharges: IBillingCharge[] = [];
@@ -2413,6 +2428,7 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
     previewTax,
     tenant,
   );
+  viewModel.paymentMethod = paymentMethodDisplayLabel(previewBillingIdentity.preferredPaymentMethod);
 
   const usageServicePeriodStatuses = billingResult.usageServicePeriodStatuses;
   const expectedUsagePeriodTotals = billingResult.expectedUsagePeriodTotals ?? [];
@@ -2429,11 +2445,13 @@ async function buildPreviewInvoiceForSelectionInput(params: {
   knex: Knex;
   tenant: string;
   selectorInput: IRecurringDueSelectionInput;
+  billingProfileId?: string | null;
 }): Promise<BuiltPreviewInvoice> {
   return buildPreviewInvoiceForSelectionInputs({
     knex: params.knex,
     tenant: params.tenant,
     selectorInputs: [params.selectorInput],
+    billingProfileId: params.billingProfileId,
   });
 }
 
@@ -2677,6 +2695,7 @@ export const previewInvoice = withAuth(async (
       knex,
       tenant,
       selectorInput,
+      billingProfileId: await getCycleBillingProfileId(knex, tenant, billing_cycle_id),
     });
     return {
       success: true,
@@ -3509,13 +3528,12 @@ export async function createInvoiceFromBillingResultImpl(
     console.error(`[createInvoiceFromBillingResult] Cannot create invoice for client ${clientId} (${client.client_name}) because it lacks a default tax region (region_code) even after auto-configuration attempt.`);
     throw new Error(`Client '${client.client_name}' does not have a default tax region configured. Please set one before generating invoices.`);
   }
-  // `invoice_date` (and the `getDueDate` input it feeds) is the invoice's "today".
+  // `invoice_date` (and the due date computed from it) is the invoice's "today".
   // The calendar month-end close passes `options.invoiceDate` — the tenant-local
   // final calendar day its eligibility gate approved — so the draft is stamped on
   // the billing calendar. Every other caller omits it and this stays exactly the
   // server-host calendar date it has always been.
   const currentDate = options.invoiceDate ?? Temporal.Now.plainDateISO().toString();
-  const due_date = unwrapBillingHelperResult(await getDueDate(clientId, currentDate));
   // taxService initialized above
   // let subtotal = 0; // Subtotal will be calculated by persistInvoiceCharges
 
@@ -3553,6 +3571,10 @@ export async function createInvoiceFromBillingResultImpl(
   // A PO on the contract is specific to that agreement and outranks the
   // profile's standing PO number.
   const invoicePoNumber = contractPoNumber ?? billingIdentity.poNumber ?? null;
+  // Terms and payment method come from the invoice's profile too. The method
+  // is snapshotted so a later profile edit never changes an issued invoice,
+  // including whether it offers online payment.
+  const due_date = dueDateForPaymentTerms(currentDate, billingIdentity.paymentTerms);
 
   // Create base invoice object
   const invoiceData = {
@@ -3560,6 +3582,7 @@ export async function createInvoiceFromBillingResultImpl(
     ...(options.projectId ? { project_id: options.projectId } : {}),
     client_contract_id: clientContractId,
     billing_profile_id: profileScope.billingProfileId,
+    payment_method: billingIdentity.preferredPaymentMethod,
     po_number: invoicePoNumber,
     invoice_date: toISODate(Temporal.PlainDate.from(currentDate)),
     due_date,
