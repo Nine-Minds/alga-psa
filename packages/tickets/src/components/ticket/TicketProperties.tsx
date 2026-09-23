@@ -10,6 +10,7 @@ import { ITicketResource } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import { TagManager } from '@alga-psa/tags/components';
 import { Button } from '@alga-psa/ui/components/Button';
+import Spinner from '@alga-psa/ui/components/Spinner';
 import { CallLink } from '@alga-psa/ui/components/CallLink';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -82,6 +83,8 @@ interface TicketPropertiesProps {
   onStop: () => void;
   onTimeDescriptionChange: (value: string) => void;
   onAddTimeEntry: () => void;
+  /** True while the time-entry launch chain is in flight; disables the button. */
+  isLaunchingTimeEntry?: boolean;
   onClientClick: () => void;
   onContactClick: () => void;
   onAgentClick: (userId: string) => void;
@@ -188,6 +191,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   onStop,
   onTimeDescriptionChange,
   onAddTimeEntry,
+  isLaunchingTimeEntry = false,
   onClientClick,
   onContactClick,
   onAgentClick,
@@ -658,11 +662,16 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             type="button"
             className={`w-full mt-4 flex items-center justify-center`}
             onClick={onAddTimeEntry}
+            disabled={isLaunchingTimeEntry}
           >
             <span className="mr-2">{t('properties.addTimeEntry', 'Add Time Entry')}</span>
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="#D6BBFB">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-            </svg>
+            {isLaunchingTimeEntry ? (
+              <Spinner size="button" variant="inverted" />
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="#D6BBFB">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+            )}
           </Button>
 
           {ticket.ticket_id && userId && (
