@@ -222,6 +222,15 @@ const SUGGESTED_DEFAULTS: ISuggestedDefault[] = [
       { folderPath: '/Quotes/Attachments', sortOrder: 2, isClientVisible: true },
     ],
   },
+  {
+    entityType: 'opportunity',
+    items: [
+      { folderPath: '/Opportunities', sortOrder: 0, isClientVisible: false },
+      { folderPath: '/Opportunities/Requirements', sortOrder: 1, isClientVisible: false },
+      { folderPath: '/Opportunities/Proposals', sortOrder: 2, isClientVisible: false },
+      { folderPath: '/Opportunities/Correspondence', sortOrder: 3, isClientVisible: false },
+    ],
+  },
 ];
 
 /**
