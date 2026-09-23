@@ -1,0 +1,36 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit: initialize a new entry with explicit default start and end times and verify its notes equal the work-item description, including exact whitespace preservation.",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Unit: initialize a new entry without explicit default times and verify its notes equal the work-item description; repeat with a nullish description and verify an empty string.",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F003"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Unit: initialize from an existing entry and verify its saved notes are preserved even when the work item has a different description.",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Manual smoke: enter a work description on a ticket, select Add time, confirm Notes is prefilled, save without editing it, and confirm the saved time entry shows the same notes.",
+    "implemented": false,
+    "featureIds": [
+      "F001",
+      "F002"
+    ]
+  }
+]
