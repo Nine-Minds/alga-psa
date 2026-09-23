@@ -98,7 +98,7 @@
   {
     "id": "T011",
     "description": "Unit: projects, clients, contacts, assets adapters capture\u2192apply round-trip and differs() detection.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036",
       "F038",

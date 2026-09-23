@@ -194,10 +194,9 @@ export function sanitizeTicketListView(
   };
 }
 
-// LEVERAGE: pattern list-view-adapter — every list's adapter is capture/apply/
-// sanitize plus differsByCapture over a context the screen owns; if a sixth list
-// adopts, a createListViewAdapter({ capture, apply, sanitize }) factory would
-// remove the remaining boilerplate.
+// Hand-written rather than createTableListViewAdapter: tickets layer a named
+// view over the board/tenant default and carry density and a column catalog,
+// which the flat table adapter does not model.
 export function createTicketListViewAdapter(
   context: TicketListViewContext,
 ): ListViewAdapter<TicketListLiveState, TicketListViewFilters> {

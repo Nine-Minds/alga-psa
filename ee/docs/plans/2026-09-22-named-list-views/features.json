@@ -275,7 +275,7 @@
   {
     "id": "F035",
     "description": "Projects: consolidate ProjectListFilters + sort + page size + columns into a typed live-state object consumable by the adapter.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD.md#engine-changes-lower-layers"
     ]
@@ -283,7 +283,7 @@
   {
     "id": "F036",
     "description": "Projects adapter (capture/apply/sanitize/differs) and ListViewPicker on the Projects list.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD.md#goals"
     ]
@@ -291,7 +291,7 @@
   {
     "id": "F037",
     "description": "Clients: consolidate status/type/lifecycle/tag filters, search-excluded, sort, page size, columns into typed live state.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD.md#engine-changes-lower-layers"
     ]
@@ -299,7 +299,7 @@
   {
     "id": "F038",
     "description": "Clients adapter and ListViewPicker on the Clients list (table mode).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD.md#goals"
     ]
@@ -307,7 +307,7 @@
   {
     "id": "F039",
     "description": "Contacts: consolidate status/tags filters, sort, page size, columns into typed live state.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD.md#engine-changes-lower-layers"
     ]
@@ -315,7 +315,7 @@
   {
     "id": "F040",
     "description": "Contacts adapter and ListViewPicker on the Contacts list.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD.md#goals"
     ]
@@ -323,7 +323,7 @@
   {
     "id": "F041",
     "description": "Assets: consolidate status/type/client/agent/RMM filters, sort, visibleColumnIds, page size into typed live state.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD.md#engine-changes-lower-layers"
     ]
@@ -331,7 +331,7 @@
   {
     "id": "F042",
     "description": "Assets adapter and ListViewPicker on the Assets list.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD.md#goals"
     ]

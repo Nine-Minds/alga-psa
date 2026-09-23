@@ -37,6 +37,8 @@ interface ClientsListProps {
     sortBy?: string;
     sortDirection?: 'asc' | 'desc';
     onSortChange?: (sortBy: string, sortDirection: 'asc' | 'desc') => void;
+    columnSizing?: Record<string, number>;
+    onColumnSizingChange?: (columnSizing: Record<string, number>) => void;
 }
 
 // Component for client selection checkbox
@@ -137,7 +139,9 @@ const ClientsList = ({
   onTagsChange,
   sortBy,
   sortDirection,
-  onSortChange
+  onSortChange,
+  columnSizing,
+  onColumnSizingChange,
 }: ClientsListProps) => {
   const router = useRouter(); // Get router instance
   const { t } = useTranslation('msp/clients');
@@ -352,6 +356,8 @@ const ClientsList = ({
                 sortBy={sortBy}
                 sortDirection={sortDirection}
                 onSortChange={onSortChange}
+                columnSizing={columnSizing}
+                onColumnSizingChange={onColumnSizingChange}
             />
         </div>
     );

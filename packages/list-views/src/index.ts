@@ -13,3 +13,4 @@ export * from './lib/definitions/clients';
 export * from './lib/definitions/contacts';
 export * from './lib/definitions/assets';
 export * from './lib/adapterHelpers';
+export * from './lib/tableListViewAdapter';
