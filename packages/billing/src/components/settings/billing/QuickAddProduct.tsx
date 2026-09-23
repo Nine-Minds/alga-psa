@@ -803,6 +803,11 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
                 defaultValue: 'Optional freeform label'
               })}
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              {t('quickAddProduct.fields.label.help', {
+                defaultValue: 'Internal identifier such as manufacturer/model; searchable, never shown to customers.'
+              })}
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">

@@ -1021,7 +1021,8 @@
       },
       "label": {
         "label": "Categorielabel",
-        "placeholder": "Optioneel vrij label"
+        "placeholder": "Optioneel vrij label",
+        "help": "Interne identificatie zoals fabrikant/model; doorzoekbaar, nooit aan klanten getoond."
       },
       "vendor": {
         "label": "Leverancier"

@@ -1021,7 +1021,8 @@
       },
       "label": {
         "label": "Kategoriebezeichnung",
-        "placeholder": "Optionale freie Bezeichnung"
+        "placeholder": "Optionale freie Bezeichnung",
+        "help": "Interner Bezeichner wie Hersteller/Modell; durchsuchbar, wird Kunden nie angezeigt."
       },
       "vendor": {
         "label": "Verkäufer"

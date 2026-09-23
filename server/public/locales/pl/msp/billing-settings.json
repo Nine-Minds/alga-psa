@@ -1023,7 +1023,8 @@
       },
       "label": {
         "label": "Etykieta kategorii",
-        "placeholder": "Opcjonalna dowolna etykieta"
+        "placeholder": "Opcjonalna dowolna etykieta",
+        "help": "Wewnętrzny identyfikator, np. producent/model; przeszukiwalny, nigdy niepokazywany klientom."
       },
       "vendor": {
         "label": "Sprzedawca"

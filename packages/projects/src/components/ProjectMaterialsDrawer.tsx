@@ -162,6 +162,7 @@ export default function ProjectMaterialsDrawer({
         return {
           value: item.service_id,
           label: item.sku ? `${item.service_name} (${item.sku})` : item.service_name,
+          secondaryLabel: item.product_category || undefined,
           badge: onHandBadge(item),
         };
       });

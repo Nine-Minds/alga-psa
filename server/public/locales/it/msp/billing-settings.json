@@ -1021,7 +1021,8 @@
       },
       "label": {
         "label": "Etichetta categoria",
-        "placeholder": "Etichetta libera opzionale"
+        "placeholder": "Etichetta libera opzionale",
+        "help": "Identificatore interno come produttore/modello; ricercabile, mai mostrato ai clienti."
       },
       "vendor": {
         "label": "Venditore"
