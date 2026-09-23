@@ -1,0 +1,194 @@
+[
+  {
+    "id": "M001",
+    "description": "billing_profile_contacts table exists with PK (tenant, billing_profile_id, contact_name_id), FKs to client_billing_profiles and contacts, and is_manager / can_view_profile_tickets flags defaulting to false.",
+    "implemented": true,
+    "prdRefs": ["Data Model / Integration Notes"]
+  },
+  {
+    "id": "M002",
+    "description": "At most one is_manager contact per billing profile, enforced by a partial unique index rather than application code.",
+    "implemented": true,
+    "prdRefs": ["Data Model / Integration Notes"]
+  },
+  {
+    "id": "M003",
+    "description": "client_merges audit table records source/target client ids, moved profile ids, per-entity moved-row counts, contract decisions, strategy, merged_by and merged_at.",
+    "implemented": true,
+    "prdRefs": ["Design / D4 — Audit, not undo"]
+  },
+  {
+    "id": "M004",
+    "description": "clients gains merged_into_client_id and merged_at so an archived source is a tombstone pointing at its target.",
+    "implemented": true,
+    "prdRefs": ["Design / D4 — Audit, not undo"]
+  },
+  {
+    "id": "M005",
+    "description": "Both new tables are tenant-distributed on Citus and registered in tenantTableMetadata and the tenant-deletion activity table list.",
+    "implemented": true,
+    "prdRefs": ["Data Model / Integration Notes"]
+  },
+  {
+    "id": "M006",
+    "description": "previewClientMerge performs a dry run: per-entity row counts, the profiles that would move, the contracts with a suggested date treatment, portal-grant impact, external-accounting mapping suggestions, and blockers — writing nothing.",
+    "implemented": true,
+    "prdRefs": ["Users and Primary Flows"]
+  },
+  {
+    "id": "M007",
+    "description": "mergeClientIntoParent runs in a single transaction holding the per-tenant billing advisory lock invoice generation takes, so a billing cycle cannot move mid-generation.",
+    "implemented": true,
+    "prdRefs": ["Risks, Rollout, and Migration"]
+  },
+  {
+    "id": "M008",
+    "description": "Merge guards: same tenant, source != target, neither client already merged, soft parent-link cycle blocked, client:update and client:delete permissions required.",
+    "implemented": true,
+    "prdRefs": ["Design / D6 — Any target, recorded parent pre-selected"]
+  },
+  {
+    "id": "M009",
+    "description": "Every source billing profile is re-parented to the target keeping its billing_profile_id, losing is_default and is_system_managed_default; the source's default profile is renamed to the source client name.",
+    "implemented": true,
+    "prdRefs": ["Design / D1 — Profiles move, they are not copied"]
+  },
+  {
+    "id": "M010",
+    "description": "A fresh system-managed default billing profile is inserted on the archived source shell so the one-default-per-client invariant still holds.",
+    "implemented": true,
+    "prdRefs": ["Design / D1 — Profiles move, they are not copied"]
+  },
+  {
+    "id": "M011",
+    "description": "Billing history rows (invoices, client_billing_cycles, payment_methods, transactions, credit_tracking, credit_allocations, invoice_charges, client_tax_settings) are re-stamped client_id -> target for the moved profiles, with billing_profile_id values left untouched.",
+    "implemented": true,
+    "prdRefs": ["Design / D1 — Profiles move, they are not copied"]
+  },
+  {
+    "id": "M012",
+    "description": "Tickets and projects move to the target and any NULL billing_profile_id is stamped with the source's moved default profile, so the attribution chain cannot silently re-resolve them to the parent's default.",
+    "implemented": true,
+    "prdRefs": ["Goals"]
+  },
+  {
+    "id": "M013",
+    "description": "Contracts move per the operator's per-contract choice: original dates (with billing_profile_id stamped when NULL) or termination at a cutover date plus a clone on the target starting at that date.",
+    "implemented": true,
+    "prdRefs": ["Design / D2 — Contracts: original dates or cutover"]
+  },
+  {
+    "id": "M014",
+    "description": "All source contacts move to the target and each is written into billing_profile_contacts against the profile the operator mapped it to, with the manager flag settable inline.",
+    "implemented": true,
+    "prdRefs": ["Design / D8 — All contacts move"]
+  },
+  {
+    "id": "M015",
+    "description": "client_portal_visibility_groups move with the contacts, renamed on name collision, so a moved contact's portal_visibility_group_id never raises VISIBILITY_GROUP_MISMATCH_ERROR.",
+    "implemented": true,
+    "prdRefs": ["Design / D8 — All contacts move"]
+  },
+  {
+    "id": "M016",
+    "description": "The remaining client-keyed operational tables (interactions, assets, documents, usage, buckets, materials, surveys, tags, inbound email domains, asset associations, locations, notes, aliases) move to the target.",
+    "implemented": true,
+    "prdRefs": ["Goals"]
+  },
+  {
+    "id": "M017",
+    "description": "Portal billing-segment grants can be pinned: portal users of the source that were unrestricted get explicit rows for the moved profiles, so 'no rows = all profiles' does not suddenly expose the whole parent's billing.",
+    "implemented": true,
+    "prdRefs": ["Design / D5 — Visibility is per contact and per profile"]
+  },
+  {
+    "id": "M018",
+    "description": "The source client finishes inactive with merged_into_client_id / merged_at set, other clients' properties.parent_client_id re-pointed at the target, an audit row written and CLIENT_MERGED published.",
+    "implemented": true,
+    "prdRefs": ["Acceptance Criteria / Definition of Done"]
+  },
+  {
+    "id": "M019",
+    "description": "External-accounting mappings are only re-pointed for the rows the operator explicitly confirms; the default is a suggestion, and skipping leaves the mapping alone.",
+    "implemented": true,
+    "prdRefs": ["Design / D7 — External accounting: suggest, never decide"]
+  },
+  {
+    "id": "M020",
+    "description": "billingProfileContactActions expose listing, setting, manager toggling and ticket-visibility toggling for profile contacts, validating that the contact belongs to the profile's client.",
+    "implemented": true,
+    "prdRefs": ["Design / D5 — Visibility is per contact and per profile"]
+  },
+  {
+    "id": "M021",
+    "description": "ContactVisibilityContext carries grantedTicketProfileIds and defaultBillingProfileId, loaded from billing_profile_contacts rows with can_view_profile_tickets for the contact's own client.",
+    "implemented": true,
+    "prdRefs": ["Design / D5 — Visibility is per contact and per profile"]
+  },
+  {
+    "id": "M022",
+    "description": "applyTicketVisibilityFilter takes an optional billingProfileColumn and, for contact scope, widens to (mine OR profile granted OR (profile NULL AND client default granted)); with no grants the predicate is unchanged.",
+    "implemented": true,
+    "prdRefs": ["Design / D5 — Visibility is per contact and per profile"]
+  },
+  {
+    "id": "M023",
+    "description": "Client-scoped users and client admins are unaffected by profile grants, so an MSP that keeps everyone on client scope sees no change.",
+    "implemented": true,
+    "prdRefs": ["Design / D5 — Visibility is per contact and per profile"]
+  },
+  {
+    "id": "M024",
+    "description": "Every portal ticket query site (list, detail, search, metrics, dashboard, API TicketService) passes the billing-profile column so the grant applies uniformly and cannot be bypassed by one surface.",
+    "implemented": true,
+    "prdRefs": ["Design / D5 — Visibility is per contact and per profile"]
+  },
+  {
+    "id": "M025",
+    "description": "A portal-created ticket is stamped with the creating contact's associated billing profile (else the location default, else NULL) so a manager's team's tickets are attributed to the right segment.",
+    "implemented": true,
+    "prdRefs": ["Goals"]
+  },
+  {
+    "id": "M026",
+    "description": "MergeClientsDialog walks target, source, contact-to-profile mapping, per-contract date choice, grant pinning, dry-run preview, typed confirmation and the post-merge external-mapping dialog.",
+    "implemented": true,
+    "prdRefs": ["Users and Primary Flows"]
+  },
+  {
+    "id": "M027",
+    "description": "The merge is reachable from the client detail header and from the billing profiles section ('Merge a client into this one as a billing profile').",
+    "implemented": true,
+    "prdRefs": ["Users and Primary Flows"]
+  },
+  {
+    "id": "M028",
+    "description": "Profile contacts are editable from the billing profile settings panel, with the ticket-visibility grant as a separate checkbox from the manager designation.",
+    "implemented": true,
+    "prdRefs": ["Design / D5 — Visibility is per contact and per profile"]
+  },
+  {
+    "id": "M029",
+    "description": "A contact's billing-profile associations are shown read-only on the contact portal tab next to the existing billing-segment access control.",
+    "implemented": true,
+    "prdRefs": ["Design / D5 — Visibility is per contact and per profile"]
+  },
+  {
+    "id": "M030",
+    "description": "REST v1 exposes POST /clients/{id}/merge/preview, POST /clients/{id}/merge and GET/PUT /clients/{id}/billing-profiles/{profileId}/contacts through ApiClientController and ClientService.",
+    "implemented": true,
+    "prdRefs": ["Design / D9 — Server actions, REST and MCP"]
+  },
+  {
+    "id": "M031",
+    "description": "The new endpoints carry real OpenAPI metadata (not route-inventory placeholders) and appear in the regenerated MCP registry so they are callable via search_api_registry / call_api_endpoint.",
+    "implemented": true,
+    "prdRefs": ["Design / D9 — Server actions, REST and MCP"]
+  },
+  {
+    "id": "M032",
+    "description": "Merge and profile-contact user-facing strings are translatable, with keys in the MSP clients and client-portal locale bundles.",
+    "implemented": true,
+    "prdRefs": ["Users and Primary Flows"]
+  }
+]
