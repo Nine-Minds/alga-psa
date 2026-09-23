@@ -11,6 +11,7 @@ import { createKubectlQueue } from './kubectl-queue.mjs';
 import { createSetupRetry, installStateRunning } from './setup-retry.mjs';
 import { createSetupEngineLog, DEFAULT_SETUP_ENGINE_LOG_MAX_BYTES } from './setup-engine-log.mjs';
 import { createDnsReconciler } from './dns-reconcile-runner.mjs';
+import { classifySetupRecovery } from './setup-recovery.mjs';
 import { dnsBlockerMessage } from './dns-launch-gate.mjs';
 import { ensureRequestedDnsActive, evaluateDnsAdmission } from './setup-admission.mjs';
 import { dnsConfigurationFingerprint } from './dns-config.mjs';
@@ -349,19 +350,28 @@ function currentMode() {
   }
 }
 
-// True when setup is blocked on an operator-correctable input — specifically a
-// bad/expired/used install code (failure.step === 'redeem-install-code'). In
-// that state we keep GET /setup and POST /api/setup OPEN so the operator can
-// re-enter a re-issued code, instead of permanently locking them into the
-// status view. Any other submitted state stays locked (status mode) as before.
-function setupReEditable() {
+// Live classification of a blocked install-code redemption, read from the raw
+// state file (not the cached status snapshot) so the status UI always sees the
+// current recovery advice. Returns null when setup is not blocked on
+// `redeem-install-code`.
+function readSetupRecovery() {
   try {
-    if (!fs.existsSync(stateFile)) return false;
+    if (!fs.existsSync(stateFile)) return null;
     const state = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
-    return state?.failure?.step === 'redeem-install-code';
+    return classifySetupRecovery(state);
   } catch {
-    return false;
+    return null;
   }
+}
+
+// True when setup is blocked on an install-code redemption the operator can act
+// on — a bad/expired/used code OR a network/DNS/TLS failure while redeeming. In
+// that state we keep GET /setup and POST /api/setup OPEN so the operator can
+// re-enter a re-issued code or retry after fixing connectivity, instead of
+// permanently locking them into the status view. Any other submitted state stays
+// locked (status mode) as before.
+function setupReEditable() {
+  return readSetupRecovery()?.reEditable === true;
 }
 
 function readRequestBody(req) {
@@ -1302,10 +1312,12 @@ const server = http.createServer(async (req, res) => {
     }
     if (res.destroyed || res.writableEnded) return;
     res.writeHead(200, { 'content-type': 'application/json' });
-    // setupReEditable is computed live (not from the cached snapshot) so the
-    // status UI can offer a "re-enter your install code" action while setup is
-    // blocked on a correctable (bad/used/expired) install code.
-    res.end(JSON.stringify({ ...snapshot, setupReEditable: setupReEditable() }));
+    // setupReEditable / setupRecovery are computed live (not from the cached
+    // snapshot) so the status UI can offer a "re-enter your install code" action
+    // while setup is blocked on redemption, and can tell a confirmed code error
+    // apart from a network/DNS/TLS failure.
+    const recovery = readSetupRecovery();
+    res.end(JSON.stringify({ ...snapshot, setupReEditable: recovery?.reEditable === true, setupRecovery: recovery }));
     return;
   }
 

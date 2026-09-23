@@ -1062,6 +1062,10 @@ export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelec
         'Could not redeem the install code.',
         `${error instanceof Error ? error.message : String(error)}${networkDetail}`
       );
+      // Keep the transport's resolver/TLS detail structured as well as in the
+      // human-readable details string so the status UI can name the destination
+      // and DNS servers, and can tell a network failure apart from a bad code.
+      if (network) failure.network = network;
       // A bad/expired/used code is operator-correctable: stop auto-retrying (it
       // will never succeed) so the control-plane keeps the setup form open for a
       // re-issued code. Transient/network errors stay retry-safe (unflagged).

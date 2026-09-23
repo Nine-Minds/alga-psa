@@ -344,6 +344,48 @@ test('applyRuntimeValuesAndReleaseSelection surfaces network diagnostics in the 
     const persisted = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
     assert.equal(persisted.failure.step, 'redeem-install-code');
     assert.match(persisted.failure.details, /Destination: lic\.example/);
+    // The transport detail is also kept structured so the status UI can name the
+    // destination/DNS servers and classify this as a network failure (not a bad
+    // code).
+    assert.equal(persisted.failure.network.hostname, 'lic.example');
+    assert.deepEqual(persisted.failure.network.servers, ['192.0.2.53']);
+    assert.equal(persisted.failure.network.code, 'ENOTFOUND');
+    assert.notEqual(persisted.failure.correctable, true);
+  } finally {
+    process.env.PATH = oldPath;
+  }
+});
+
+test('a correctable install-code failure is persisted as a non-retry-safe code error', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-appliance-redeem-code-error-'));
+  const stateFile = path.join(tmp, 'state', 'install-state.json');
+  const runtimeValuesDir = path.join(tmp, 'runtime');
+  const binDir = path.join(tmp, 'bin');
+  const oldPath = process.env.PATH;
+  fs.mkdirSync(binDir, { recursive: true });
+  fs.writeFileSync(path.join(binDir, 'kubectl'), '#!/bin/sh\nexit 0\n', { mode: 0o755 });
+  process.env.PATH = `${binDir}:${oldPath}`;
+
+  try {
+    const result = await applyRuntimeValuesAndReleaseSelection({
+      channel: 'stable', appHostname: 'psa.example.test', initialTenant, installCode: 'USEDCODE'
+    }, { ok: true, releaseVersion: '1.2.3' }, {
+      stateFile, runtimeValuesDir,
+      releaseManifestOverride: makeReleaseManifest(),
+      kubeconfigPath: path.join(tmp, 'k3s.yaml'),
+      tokenFile: path.join(tmp, 'setup-token'),
+      redeemInstallCode: async () => {
+        const error = new Error('Install code has already been used. Request a fresh one from the portal (re-issue).');
+        error.correctable = true;
+        throw error;
+      }
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.step, 'redeem-install-code');
+    const persisted = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+    assert.equal(persisted.failure.correctable, true);
+    assert.equal(persisted.failure.retrySafe, false);
+    assert.equal(persisted.failure.network, undefined);
   } finally {
     process.env.PATH = oldPath;
   }

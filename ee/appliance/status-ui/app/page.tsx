@@ -60,9 +60,28 @@ type ManageSummary = {
 };
 type StatusResponse = {
   status?: string;
-  // True when setup is blocked on a correctable install code; the UI offers a
-  // "re-enter your install code" action and the /setup form is reachable again.
+  // True when setup is blocked on an install code the operator can act on — a
+  // bad/expired/used code or a network/DNS/TLS failure while redeeming; the UI
+  // offers a "re-enter your install code" action and the /setup form is
+  // reachable again.
   setupReEditable?: boolean;
+  // Classification of the blocked redemption so the UI blames the code only for
+  // a confirmed code error and shows transport diagnostics otherwise.
+  setupRecovery?: {
+    reEditable?: boolean;
+    kind?: "code" | "network" | string;
+    confirmedCodeError?: boolean;
+    step?: string | null;
+    message?: string | null;
+    details?: string | null;
+    hostname?: string | null;
+    dnsServers?: string[];
+    lookupAddresses?: string[];
+    resolvedAddresses?: string[];
+    dnsOk?: boolean | null;
+    dnsError?: string | null;
+    socketCode?: string | null;
+  } | null;
   rollup?: { state?: string; message?: string; nextAction?: string } | null;
   currentPhase?: string;
   urls?: { statusUrl?: string | null; loginUrl?: string | null };
@@ -313,6 +332,28 @@ function blockers(status: StatusResponse | null): Blocker[] {
     ];
   }
   return [];
+}
+
+// Builds the diagnostic line for a transport-class install-code failure:
+// destination hostname, configured DNS servers, resolved addresses and the
+// socket/TLS error code, plus the engine's human-readable detail. A confirmed
+// code error has none of these — the code itself is the problem.
+function installCodeNetworkDiagnostic(
+  recovery: NonNullable<StatusResponse["setupRecovery"]>,
+) {
+  const parts: string[] = [];
+  if (recovery.hostname) parts.push(`Destination ${recovery.hostname}`);
+  if (recovery.dnsServers?.length) {
+    parts.push(`DNS servers ${recovery.dnsServers.join(", ")}`);
+  }
+  if (recovery.resolvedAddresses?.length) {
+    parts.push(`resolved ${recovery.resolvedAddresses.join(", ")}`);
+  } else if (recovery.dnsError) {
+    parts.push(`DNS lookup failed: ${recovery.dnsError}`);
+  }
+  if (recovery.socketCode) parts.push(`socket/TLS code ${recovery.socketCode}`);
+  const summary = parts.join(" · ");
+  return [summary, recovery.details].filter(Boolean).join(" — ");
 }
 
 function ageFrom(date?: string | null) {
@@ -715,6 +756,15 @@ export default function StatusPage() {
     status?.installState?.status ||
     "loading";
   const blockerList = blockers(status);
+  // Only a confirmed code error (invalid/expired/used) may advise re-issuing the
+  // code. A redeem failure with transport detail is a network/DNS/TLS problem and
+  // must not be blamed on the code.
+  const setupRecovery = status?.setupRecovery || null;
+  const setupRecoveryConfirmedCodeError =
+    setupRecovery?.confirmedCodeError === true || setupRecovery?.kind === "code";
+  const setupRecoveryNetworkDiagnostic = setupRecovery
+    ? installCodeNetworkDiagnostic(setupRecovery)
+    : "";
   const runningOperations = status?.activeOperations || [];
   const primaryOperation = runningOperations[0];
   const currentPhase =
@@ -851,15 +901,33 @@ export default function StatusPage() {
 
         {status?.setupReEditable ? (
           <div className={styles.setupCta} role="alert">
-            <div>
-              <strong>Install code needs attention</strong>
-              <p>
-                The install code could not be redeemed — it may be invalid,
-                expired, or already used. Re-issue a fresh code at{" "}
-                <strong>nineminds.com/order/appliance/reissue</strong> and we
-                will email it to you, then re-enter it to continue.
-              </p>
-            </div>
+            {setupRecoveryConfirmedCodeError ? (
+              <div>
+                <strong>Install code needs attention</strong>
+                <p>
+                  The install code could not be redeemed — it may be invalid,
+                  expired, or already used. Re-issue a fresh code at{" "}
+                  <strong>nineminds.com/order/appliance/reissue</strong> and we
+                  will email it to you, then re-enter it to continue.
+                </p>
+              </div>
+            ) : (
+              <div>
+                <strong>Could not reach the licensing service</strong>
+                <p>
+                  The install code could not be redeemed because this appliance
+                  could not reach the licensing service. This is a network
+                  problem, so your code may still be valid. Check that the
+                  appliance can resolve the licensing hostname and make outbound
+                  HTTPS connections, then re-enter the code to try again.
+                </p>
+                {setupRecoveryNetworkDiagnostic ? (
+                  <small className={styles.muted}>
+                    {setupRecoveryNetworkDiagnostic}
+                  </small>
+                ) : null}
+              </div>
+            )}
             <a className={styles.primaryButton} href="/setup/">
               Re-enter install code
             </a>
