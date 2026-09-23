@@ -511,6 +511,10 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "Agent",
+      "Check",
+      "URL:",
+      "billing@example.com",
       "Kanban",
       "Status *",
       "Status: {{label}}",
