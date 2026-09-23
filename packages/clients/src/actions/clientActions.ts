@@ -42,6 +42,7 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { applyClientListIndexedSearchFilter } from '../lib/listSearchSql';
+import { CLIENT_SINCE_FORMAT_MESSAGE, toClientSinceDate } from '../lib/clientSince';
 import { normalizeClientType } from '../lib/normalizeClientType';
 import { clientCoreFieldsSchema, normalizePhone, parseSubmittedFields } from '@alga-psa/validation';
 import { isStructuralFailure, type StructuralResult } from '../lib/structuralResult';
@@ -73,35 +74,6 @@ function applyClientStructuralSchema<T extends Record<string, any>>(
     return { ok: false, error: result.error ?? 'Invalid client data' };
   }
   return { ok: true, data: { ...payload, ...(result.data ?? {}) } };
-}
-
-const DATE_ONLY_PATTERN = /^(\d{4}-\d{2}-\d{2})(?:[T ].*)?$/;
-
-/**
- * Calendar date as 'yyyy-MM-dd' for the clients.client_since DATE column; empty
- * clears it. pg hands DATE columns back as local-midnight Dates, so local parts
- * name the stored day — sending the Date itself lets the database session
- * timezone cast it to the day before. Returns undefined for anything that is
- * not a date, leaving the caller to decide how loudly to fail.
- */
-function toDateOnlyOrNull(value: unknown): string | null | undefined {
-  if (value === null || value === undefined || value === '') return null;
-
-  const format = (date: Date): string =>
-    `${date.getFullYear()}-${`${date.getMonth() + 1}`.padStart(2, '0')}-${`${date.getDate()}`.padStart(2, '0')}`;
-
-  if (value instanceof Date) {
-    return Number.isNaN(value.getTime()) ? undefined : format(value);
-  }
-  if (typeof value !== 'string') return undefined;
-
-  const match = DATE_ONLY_PATTERN.exec(value.trim());
-  if (!match) return undefined;
-  const dateOnly = match[1];
-  const parsed = new Date(`${dateOnly}T00:00:00`);
-  // Rejects the calendar-shaped impossibilities (2015-02-30) that the parser
-  // would otherwise roll forward into March.
-  return Number.isNaN(parsed.getTime()) || format(parsed) !== dateOnly ? undefined : dateOnly;
 }
 
 function tenantScopedTable(
@@ -411,9 +383,9 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
       // them — including a local-midnight Date — and sending that back would
       // let the database session timezone cast it to the previous day.
       if (permittedUpdateData.hasOwnProperty('client_since')) {
-        const clientSince = toDateOnlyOrNull(permittedUpdateData.client_since);
+        const clientSince = toClientSinceDate(permittedUpdateData.client_since);
         if (clientSince === undefined) {
-          throw new ClientStructuralError('Client since must be a date in YYYY-MM-DD form.');
+          throw new ClientStructuralError(`${CLIENT_SINCE_FORMAT_MESSAGE}.`);
         }
         updateObject.client_since = clientSince;
       }
@@ -1478,7 +1450,7 @@ export const exportClientsToCSV = withAuth(async (user, { tenant }, clients: ICl
         client_type: client.client_type || 'company',
         is_inactive: client.is_inactive ? 'true' : 'false',
         notes: client.notes || '',
-        client_since: toDateOnlyOrNull(client.client_since) || '',
+        client_since: toClientSinceDate(client.client_since) || '',
         tags: tagNames,
         // Location fields
         location_name: location.location_name || '',
@@ -1820,9 +1792,9 @@ export const importClientsFromCSV = withAuth(async (
       // Bulk migration is how tenure actually arrives, so a date the source
       // exported in another shape fails this row by itself rather than landing
       // in the column as garbage or vanishing silently.
-      const clientSince = toDateOnlyOrNull(clientData.client_since);
+      const clientSince = toClientSinceDate(clientData.client_since);
       if (clientSince === undefined) {
-        throw new Error('Client since must be a date in YYYY-MM-DD form');
+        throw new Error(CLIENT_SINCE_FORMAT_MESSAGE);
       }
 
       let savedClient: IClient | undefined;
