@@ -554,6 +554,15 @@ export function calculateNetAmount(
   }
 }
 
+/**
+ * A row produced by automatic reconciliation (automatic discount, contract
+ * settlement) rather than authored by an operator. It carries both a source
+ * kind and a stable source id; manual lines carry a kind but no source id.
+ */
+function isSourceLinkedSettlement(item: ManualInvoiceItem): boolean {
+  return Boolean(item.adjustment_source_kind) && Boolean(item.adjustment_source_id);
+}
+
 export async function recalculatePercentageDiscountInvoiceCharges(
   tx: Knex.Transaction,
   invoiceId: string,
@@ -565,11 +574,18 @@ export async function recalculatePercentageDiscountInvoiceCharges(
       .where('invoice_id', invoiceId)
       .select('*');
 
+  // Automatic discounts are source-linked settlements: their scope, cap and
+  // per-charge allocation are owned by reconcileAutomaticInvoiceAdjustments.
+  // Recomputing them here from the whole invoice subtotal (or a single target
+  // item) would discard that scope/cap and let the stored rows disagree with
+  // the totals. Legacy/manual percentage discounts carry no source id and keep
+  // the historical whole-invoice/target-item recalculation.
   const percentageDiscountItems = invoiceItems.filter(
     (item) =>
       item.is_discount === true &&
       item.discount_type === 'percentage' &&
-      item.discount_percentage != null,
+      item.discount_percentage != null &&
+      !isSourceLinkedSettlement(item),
   );
 
   if (percentageDiscountItems.length === 0) {

@@ -49,6 +49,58 @@ the final save (the worktree dev database did not auto-run them):
    submit is a server-side no-op and a stale revision is rejected before any
    row is touched.
 
+## Fresh smoke after review fixes (same run, 2026-09-23)
+
+The review round required a fresh browser pass plus the financial-path fixes.
+The fixture now carries the contract assignment on the recurring charge
+(`client_contract_id` = the `client_contracts` row for the discounted contract
+line), which is what generated invoices do; the earlier hand-seeded fixture
+omitted it.
+
+1. Reloaded the page, searched `SMOKE-ADJ` and selected `SMOKE-ADJ-1`.
+2. `Add Charge` opened a freeform line; the editor renders a **Location** and a
+   **Billing profile** select under the rate field — screenshot
+   `b97eda7b-04-attribution-controls.png`. Location is populated from
+   `getActiveClientLocationsForBilling` and profile from
+   `getClientBillingProfilesForBilling`; both default to “Client default”.
+3. Added `Smoke attribution charge` at `$10.00`, selected `Downtown Office` and
+   the `Mountain Dental` profile, clicked the row’s **Add** to commit it to the
+   editor, then **Save Changes**.
+4. The save persisted the line with `location_id` =
+   `cccccccc-0000-4000-8000-0000000000c1` and `billing_profile_id` =
+   `ddf20f87-972f-48ad-a62e-7e1ac430b3bb`, and re-applied the automatic 10%
+   discount against the new eligible base `$4,060.00` → `-$406.00`.
+5. Reloaded the page; the editor and the customer-facing **Invoice Preview**
+   both showed the four persisted lines and the same totals — screenshot
+   `b97eda7b-03-adjustments-after-save.png`. Stored rows: `390000 + 15000 +
+   1000 − 40600 = 365400` subtotal, `900` tax, `366300` total.
+6. The fixture was then restored to the canonical three-line acceptance state
+   (`$3,900 + $150 = $4,050`, 10% = `-$405`, `$3,645` net) so the table below
+   still describes the persisted fixture.
+
+The run also caught a real server-action defect that typecheck cannot see:
+`invoiceModification.ts` is a `'use server'` module and had exported a
+non-async `STALE_ADJUSTMENT_REVISION` constant, which made the whole Billing
+page return HTTP 500. It is now module-local (the code is a string literal at
+its only other call sites).
+
+## Customer-facing output
+
+- **Preview**: the MSP `InvoicePreviewPanel` renders from the persisted rows and
+  was verified line-for-line in the fresh run (screenshots 02/03).
+- **PDF**: `Download PDF` filed and served the rendered artifact
+  `Invoice_SMOKE-ADJ-1.pdf` (39,091 bytes) through `getStoredInvoicePdf`.
+  `pdftotext` of the stored file shows all four adjustment lines and
+  `Subtotal $3,654.00 / Tax $9.00 / Total $3,663.00`, matching the persisted row
+  set and the preview.
+- **Client portal**: **not verified in-browser.** `/client-portal/billing`
+  refuses the active MSP session (“Portal Switch Required” → AccessDenied), and
+  this worktree has no portal credential/invitation for the synthetic client.
+  The portal consumes the same persisted rows through the same
+  `mapDbInvoiceToWasmViewModel` adapter that produced the verified preview and
+  PDF, so the amounts it renders are the same rows; only the portal session and
+  its own chrome were not exercised.
+
 ## Expected vs actual
 
 | Amount | Expected | Actual (stored) |
@@ -88,6 +140,27 @@ NODE_OPTIONS="--max-old-space-size=8192" npx tsc --noEmit -p packages/types/tsco
 NODE_OPTIONS="--max-old-space-size=8192" npx tsc --noEmit -p packages/db/tsconfig.json
 cd packages/billing && npx tsup
 ```
+
+## Review-round financial fixes
+
+- `calculateAndDistributeTax` calls
+  `recalculatePercentageDiscountInvoiceCharges`, which used to overwrite *any*
+  percentage discount row from the whole invoice subtotal (or one target item).
+  A service-scoped or capped automatic discount was therefore silently rewritten
+  during the tax pass. Source-linked settlements (`adjustment_source_kind` and
+  `adjustment_source_id` both set) are now excluded from that legacy
+  recalculation; manual percentage discounts keep the historical behaviour.
+  The DB suite proves it end to end: reconcile two stacked 60% service-scoped
+  discounts onto `$3,900` with a `$1,000` out-of-scope manual charge, run
+  `BillingEngine.recalculateInvoice` (tax + totals) and assert the discount rows
+  stay `-234000 / -156000` and the stored subtotal stays `100000`. Removing the
+  exclusion reproduces the bug (`-294000 / -294000`).
+- Discount eligibility is constrained to the contract lines actually represented
+  on the invoice, via the charge’s `client_contract_id` and/or the canonical
+  `invoice_charge_details.config_id → contract_line_service_configuration`
+  link. A discount configured on another contract of the same client no longer
+  applies (negative DB test), and the de-duplication order is deterministic
+  (discount id, assignment id, contract-line id) rather than join order.
 
 ## Cleanup / caveats
 

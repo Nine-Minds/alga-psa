@@ -11,6 +11,8 @@ import {
   type InvoiceManualItemsUpdateActionResult,
 } from '@alga-psa/billing/actions/invoiceModification';
 import { getInvoiceLineItems } from '@alga-psa/billing/actions/invoiceQueries';
+import { getActiveClientLocationsForBilling } from '@alga-psa/billing/actions/billingClientLocationActions';
+import { getClientBillingProfilesForBilling } from '@alga-psa/billing/actions/billingProfileActions';
 import type { ManualInvoiceUpdate } from '@alga-psa/billing/actions/invoiceActions'; // Import the specific type
 import type { ManualInvoiceItem as ManualInvoiceItemForAction } from '@alga-psa/billing/actions/manualInvoiceActions'; // Import and alias
 import type {
@@ -131,6 +133,8 @@ const baseDefaultItem: Omit<EditableInvoiceItem, 'invoice_id'> = {
   is_bundle_header: undefined as any,
   parent_item_id: undefined,
   manual_line_metadata: undefined,
+  location_id: null,
+  billing_profile_id: null,
 };
 
 
@@ -278,6 +282,8 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
         is_taxable: item.is_taxable, // Include is_taxable from the item
         // tax_rate_id: item.tax_rate_id || null, // Removed
         manual_line_metadata: (item as IInvoiceCharge).manual_line_metadata ?? null,
+        location_id: item.location_id ?? null,
+        billing_profile_id: item.billing_profile_id ?? null,
         isExisting: true,
         isRemoved: false,
       });
@@ -305,6 +311,11 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   const [partialDescription, setPartialDescription] = useState('');
   const [partialReason, setPartialReason] = useState('');
   const [partialError, setPartialError] = useState<string | null>(null);
+  // Attribution controls for operator-created one-time charges on a contract
+  // draft: the client's locations and billing profiles, resolved once per
+  // client. The standard manual-invoice generator leaves these undefined.
+  const [locationOptions, setLocationOptions] = useState<SelectOption[]>([]);
+  const [billingProfileOptions, setBillingProfileOptions] = useState<SelectOption[]>([]);
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [loading, setLoading] = useState(false);
@@ -469,6 +480,8 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
               is_manual: true,
               is_taxable: item.is_taxable,
               manual_line_metadata: (item as IInvoiceCharge).manual_line_metadata ?? null,
+              location_id: item.location_id ?? null,
+              billing_profile_id: item.billing_profile_id ?? null,
               isExisting: true,
               isRemoved: false,
             };
@@ -503,6 +516,50 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
     fetchItems();
     // Run effect only when the invoice prop itself changes
   }, [invoice]);
+
+  // Attribution options for the draft-adjustment editor. Loaded only for an
+  // existing contract draft, where the client is fixed and the operator needs
+  // to choose a location/billing profile for each one-time charge.
+  const attributionClientId = isDraftAdjustments
+    ? (currentInvoiceData?.client_id || invoice?.client_id || null)
+    : null;
+  useEffect(() => {
+    if (!attributionClientId) {
+      setLocationOptions([]);
+      setBillingProfileOptions([]);
+      return;
+    }
+    let cancelled = false;
+    const loadAttributionOptions = async () => {
+      try {
+        const [locationsResult, profilesResult] = await Promise.all([
+          getActiveClientLocationsForBilling(attributionClientId),
+          getClientBillingProfilesForBilling(attributionClientId),
+        ]);
+        if (cancelled) return;
+        if (Array.isArray(locationsResult)) {
+          setLocationOptions(locationsResult.map((location) => ({
+            value: location.location_id,
+            label: location.location_name || location.address_line1 || location.location_id,
+          })));
+        }
+        if (Array.isArray(profilesResult)) {
+          setBillingProfileOptions(profilesResult.map((profile) => ({
+            value: profile.billing_profile_id,
+            label: profile.name,
+          })));
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.warn('[ManualInvoices] Failed to load attribution options', error);
+        }
+      }
+    };
+    void loadAttributionOptions();
+    return () => {
+      cancelled = true;
+    };
+  }, [attributionClientId]);
 
   const handleAddItem = (isDiscount: boolean = false) => {
     const newItem: EditableInvoiceItem = {
@@ -742,6 +799,8 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           parent_item_id: item.parent_item_id,
           rate: item.rate, // Add the missing rate property
           manual_line_metadata: item.manual_line_metadata ?? null,
+          location_id: item.location_id ?? null,
+          billing_profile_id: item.billing_profile_id ?? null,
           // Omit audit fields
         });
 
@@ -759,6 +818,8 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           is_taxable: item.is_taxable, // Include is_taxable property
           // tax_rate_id: item.tax_rate_id, // Removed
           manual_line_metadata: item.manual_line_metadata ?? null,
+          location_id: item.location_id ?? null,
+          billing_profile_id: item.billing_profile_id ?? null,
         });
 
         const updateResult = await updateInvoiceManualItems(currentInvoiceData.invoice_id, {
@@ -842,6 +903,8 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
             is_manual: true,
             is_taxable: item.is_taxable, // Include is_taxable from the item
             manual_line_metadata: (item as IInvoiceCharge).manual_line_metadata ?? null,
+            location_id: item.location_id ?? null,
+            billing_profile_id: item.billing_profile_id ?? null,
             isExisting: true,
             isRemoved: false,
         }));
@@ -1022,6 +1085,8 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
       discount_type: item.discount_type,
       discount_percentage: item.discount_percentage,
       applies_to_item_id: item.applies_to_item_id,
+      location_id: item.location_id ?? null,
+      billing_profile_id: item.billing_profile_id ?? null,
   });
 
   // Adapter for LineItem's onChange prop
@@ -1347,6 +1412,8 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                         setExpandedItems(newExpanded);
                       }}
                       currencyCode={currencyCode}
+                      locationOptions={isDraftAdjustments ? locationOptions : undefined}
+                      billingProfileOptions={isDraftAdjustments ? billingProfileOptions : undefined}
                     />
                   ))}
                 </div>

@@ -940,7 +940,7 @@ export interface ManualAdjustmentSubmission {
   expectedRevision?: number;
 }
 
-export const STALE_ADJUSTMENT_REVISION = 'STALE_ADJUSTMENT_REVISION';
+const STALE_ADJUSTMENT_REVISION = 'STALE_ADJUSTMENT_REVISION';
 
 async function adjustmentOperationAlreadyApplied(
   conn: Knex | Knex.Transaction,

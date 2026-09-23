@@ -29,6 +29,10 @@ export interface EditableItem { // Add export
   discount_type?: DiscountType;
   discount_percentage?: number;
   applies_to_item_id?: string;
+  /** Client location this one-time line is attributed to. */
+  location_id?: string | null;
+  /** Billing profile this one-time line is attributed to. */
+  billing_profile_id?: string | null;
 }
 
 interface LineItemProps {
@@ -41,6 +45,10 @@ interface LineItemProps {
   onChange: (updatedItem: EditableItem) => void;
   onToggleExpand: () => void;
   currencyCode?: string;
+  /** When provided, one-time charges expose a location attribution select. */
+  locationOptions?: SelectOption[];
+  /** When provided, one-time charges expose a billing-profile attribution select. */
+  billingProfileOptions?: SelectOption[];
 }
 
 export const LineItem: React.FC<LineItemProps> = ({
@@ -53,6 +61,8 @@ export const LineItem: React.FC<LineItemProps> = ({
   onChange,
   onToggleExpand,
   currencyCode = 'USD',
+  locationOptions,
+  billingProfileOptions,
 }) => {
   const { t } = useTranslation('msp/billing');
   const currencySymbol = getCurrencySymbol(currencyCode);
@@ -89,6 +99,8 @@ export const LineItem: React.FC<LineItemProps> = ({
     discount_type: item.discount_type,
     discount_percentage: item.discount_percentage,
     applies_to_item_id: item.applies_to_item_id,
+    location_id: item.location_id,
+    billing_profile_id: item.billing_profile_id,
     isRemoved: item.isRemoved,
   });
   const lastSyncedItemKey = useRef(itemSyncKey);
@@ -221,6 +233,10 @@ export const LineItem: React.FC<LineItemProps> = ({
         case 'description':
         case 'applies_to_item_id':
           newState[field] = value as string;
+          break;
+        case 'location_id':
+        case 'billing_profile_id':
+          newState[field] = (value as string) || null;
           break;
         case 'is_discount':
           newState.is_discount = value as boolean;
@@ -528,30 +544,76 @@ export const LineItem: React.FC<LineItemProps> = ({
             )}
           </>
         ) : (
-          <div className="col-span-1">
-            <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
-              {t('lineItem.fields.rate', {
-                defaultValue: 'Rate ({{currencySymbol}})',
-                currencySymbol,
-              })}
-            </label>
-            <Input
-              id='rate-input'
-              type="number"
-              min="0"
-              step="0.01"
-              value={rateInDollars}
-              onChange={(e) => {
-                const value = e.target.value;
-                const rateInCents = value.includes('.')
-                  ? Math.round(parseFloat(value) * 100)
-                  : parseInt(value, 10) * 100;
-                handleLocalChange('rate', rateInCents || 0);
-              }}
-              className="w-full"
-              disabled={editState.isRemoved}
-            />
-          </div>
+          <>
+            <div className="col-span-1">
+              <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                {t('lineItem.fields.rate', {
+                  defaultValue: 'Rate ({{currencySymbol}})',
+                  currencySymbol,
+                })}
+              </label>
+              <Input
+                id='rate-input'
+                type="number"
+                min="0"
+                step="0.01"
+                value={rateInDollars}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  const rateInCents = value.includes('.')
+                    ? Math.round(parseFloat(value) * 100)
+                    : parseInt(value, 10) * 100;
+                  handleLocalChange('rate', rateInCents || 0);
+                }}
+                className="w-full"
+                disabled={editState.isRemoved}
+              />
+            </div>
+
+            {locationOptions && locationOptions.length > 0 && (
+              <div className="col-span-1">
+                <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                  {t('lineItem.fields.location', { defaultValue: 'Location' })}
+                </label>
+                <CustomSelect
+                  id='line-item-location-select'
+                  value={editState.location_id || ''}
+                  onValueChange={(value) => handleLocalChange('location_id', value)}
+                  options={[
+                    {
+                      value: '',
+                      label: t('lineItem.fields.clientDefaultLocation', { defaultValue: 'Client default' }),
+                    },
+                    ...locationOptions,
+                  ]}
+                  className="w-full"
+                  disabled={editState.isRemoved}
+                />
+              </div>
+            )}
+
+            {billingProfileOptions && billingProfileOptions.length > 0 && (
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                  {t('lineItem.fields.billingProfile', { defaultValue: 'Billing profile' })}
+                </label>
+                <CustomSelect
+                  id='line-item-billing-profile-select'
+                  value={editState.billing_profile_id || ''}
+                  onValueChange={(value) => handleLocalChange('billing_profile_id', value)}
+                  options={[
+                    {
+                      value: '',
+                      label: t('lineItem.fields.clientDefaultProfile', { defaultValue: 'Client default' }),
+                    },
+                    ...billingProfileOptions,
+                  ]}
+                  className="w-full"
+                  disabled={editState.isRemoved}
+                />
+              </div>
+            )}
+          </>
         )}
       </div>
 

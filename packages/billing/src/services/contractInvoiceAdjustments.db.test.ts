@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection, wireLocalTestDbEnv } from '../actions/_dbTestUtils';
 import { computePartialPeriodAmount } from '../lib/billing/compute/contractInvoiceAdjustments';
 import { inspectInvoiceEditable } from './invoiceAdjustmentEditability';
+import { BillingEngine } from '../lib/billing/billingEngine';
 
 // Real-database coverage for contract invoice adjustments.
 //
@@ -39,11 +40,15 @@ let serviceId: string;
 let userId: string;
 let contractId: string;
 let contractLineId: string;
+let clientContractId: string;
 let discountId: string;
+let defaultBillingProfileId: string;
+let smokeLocationId: string;
 
 async function seedContractDiscount(): Promise<void> {
   contractId = uuidv4();
   contractLineId = uuidv4();
+  clientContractId = uuidv4();
   discountId = uuidv4();
 
   await db('contracts').insert({
@@ -64,7 +69,7 @@ async function seedContractDiscount(): Promise<void> {
   });
   await db('client_contracts').insert({
     tenant,
-    client_contract_id: uuidv4(),
+    client_contract_id: clientContractId,
     client_id: clientId,
     contract_id: contractId,
     start_date: '2026-01-01T00:00:00.000Z',
@@ -112,7 +117,7 @@ async function createDraftWithGeneratedChargeAndDiscount(): Promise<InvoiceFixtu
     client_id: clientId,
     currency_code: 'USD',
     is_manual: false,
-    client_contract_id: uuidv4(),
+    client_contract_id: clientContractId,
   });
 
   await db('invoice_charges').insert({
@@ -130,7 +135,7 @@ async function createDraftWithGeneratedChargeAndDiscount(): Promise<InvoiceFixtu
     is_manual: false,
     is_discount: false,
     is_taxable: false,
-    client_contract_id: contractId,
+    client_contract_id: clientContractId,
   });
 
   // A prior draft refresh already stamped this generated discount with its
@@ -165,6 +170,8 @@ async function insertManualPartialPeriodCharge(params: {
   invoiceId: string;
   generatedChargeId: string;
   description?: string;
+  locationId?: string;
+  billingProfileId?: string;
 }): Promise<{ itemId: string; amount: number }> {
   const amount = computePartialPeriodAmount({
     units: 3,
@@ -185,6 +192,8 @@ async function insertManualPartialPeriodCharge(params: {
           quantity: 1,
           rate: amount,
           is_taxable: true,
+          location_id: params.locationId,
+          billing_profile_id: params.billingProfileId,
           manual_line_metadata: {
             partialPeriod: { units: 3, unitPrice: 10_000, coveredDays: 15, fullPeriodDays: 30 },
             reason: 'Mid-period seat addition',
@@ -238,6 +247,24 @@ beforeAll(async () => {
       is_system_managed_default: true,
     });
   }
+  const resolvedProfile = await db('client_billing_profiles')
+    .where({ tenant, client_id: clientId, is_default: true })
+    .first('billing_profile_id');
+  defaultBillingProfileId = resolvedProfile.billing_profile_id;
+
+  smokeLocationId = uuidv4();
+  await db('client_locations').insert({
+    tenant,
+    location_id: smokeLocationId,
+    client_id: clientId,
+    location_name: 'Smoke location',
+    address_line1: '1 Test Way',
+    city: 'Testville',
+    country_code: 'US',
+    country_name: 'United States',
+    is_default: false,
+    is_active: true,
+  });
 
   await seedContractDiscount();
 });
@@ -252,6 +279,8 @@ describe('contract invoice adjustments (DB-backed)', () => {
     const manual = await insertManualPartialPeriodCharge({
       invoiceId: fixture.invoiceId,
       generatedChargeId: fixture.generatedChargeId,
+      locationId: smokeLocationId,
+      billingProfileId: defaultBillingProfileId,
     });
 
     expect(manual.amount).toBe(15_000);
@@ -271,6 +300,10 @@ describe('contract invoice adjustments (DB-backed)', () => {
       coveredDays: 15,
       fullPeriodDays: 30,
     });
+    // Operator-chosen attribution survives the manual write, not just the
+    // client-default fallback.
+    expect(manualRow.location_id).toBe(smokeLocationId);
+    expect(manualRow.billing_profile_id).toBe(defaultBillingProfileId);
 
     const discountRows = await db('invoice_charges')
       .where({ tenant, invoice_id: fixture.invoiceId, adjustment_source_kind: 'discount' });
@@ -389,6 +422,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
       is_manual: false,
       is_discount: false,
       is_taxable: false,
+      client_contract_id: clientContractId,
     });
 
     await db.transaction(async (trx) => {
@@ -549,6 +583,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
         is_manual: false,
         is_discount: false,
         is_taxable: false,
+        client_contract_id: clientContractId,
       });
       await db('invoice_charges').insert({
         tenant,
@@ -565,6 +600,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
         is_manual: false,
         is_discount: false,
         is_taxable: false,
+        client_contract_id: clientContractId,
       });
 
       const result = await db.transaction(async (trx) =>
@@ -583,6 +619,229 @@ describe('contract invoice adjustments (DB-backed)', () => {
       await db('contract_line_discounts').where({ tenant, discount_id: scopedDiscountId }).delete();
       await db('invoice_charges').where({ tenant, adjustment_source_id: scopedDiscountId }).delete();
       await db('discounts').where({ tenant, discount_id: scopedDiscountId }).delete();
+      await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: true });
+    }
+  });
+
+  it('does not apply a configured discount from another contract of the same client', async () => {
+    const otherContractId = uuidv4();
+    const otherContractLineId = uuidv4();
+    const otherClientContractId = uuidv4();
+    const otherDiscountId = uuidv4();
+    await db('contracts').insert({
+      tenant,
+      contract_id: otherContractId,
+      contract_name: 'Unrelated contract',
+      billing_frequency: 'monthly',
+      is_active: true,
+    });
+    await db('contract_lines').insert({
+      tenant,
+      contract_line_id: otherContractLineId,
+      contract_line_name: 'Unrelated line',
+      contract_id: otherContractId,
+      billing_frequency: 'monthly',
+      contract_line_type: 'fixed',
+      is_active: true,
+    });
+    await db('client_contracts').insert({
+      tenant,
+      client_contract_id: otherClientContractId,
+      client_id: clientId,
+      contract_id: otherContractId,
+      start_date: '2026-01-01T00:00:00.000Z',
+      is_active: true,
+    });
+    await db('discounts').insert({
+      tenant,
+      discount_id: otherDiscountId,
+      discount_name: 'Unrelated 20%',
+      discount_type: 'percentage',
+      value: 0.2,
+      start_date: '2026-01-01T00:00:00.000Z',
+      end_date: null,
+      is_active: true,
+    });
+    await db('contract_line_discounts').insert({
+      tenant,
+      discount_id: otherDiscountId,
+      contract_line_id: otherContractLineId,
+      client_id: clientId,
+    });
+
+    // Disable the represented-contract discount so the only candidate is the
+    // unrelated one; the invoice already carries a charge from clientContractId.
+    await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: false });
+    try {
+      const invoiceId = uuidv4();
+      await db('invoices').insert({
+        tenant,
+        invoice_id: invoiceId,
+        invoice_number: `ADJ-UNREL-${invoiceId.slice(0, 8)}`,
+        invoice_date: '2026-09-01T00:00:00.000Z',
+        due_date: '2026-09-30T00:00:00.000Z',
+        total_amount: 390_000,
+        status: 'draft',
+        client_id: clientId,
+        currency_code: 'USD',
+        is_manual: false,
+        client_contract_id: clientContractId,
+      });
+      await db('invoice_charges').insert({
+        tenant,
+        item_id: uuidv4(),
+        invoice_id: invoiceId,
+        service_id: serviceId,
+        description: 'Recurring on the represented contract',
+        quantity: 1,
+        unit_price: 390_000,
+        net_amount: 390_000,
+        total_price: 390_000,
+        tax_amount: 0,
+        tax_rate: 0,
+        is_manual: false,
+        is_discount: false,
+        is_taxable: false,
+        client_contract_id: clientContractId,
+      });
+
+      const result = await db.transaction(async (trx) =>
+        reconcileAutomaticInvoiceAdjustments(trx, tenant, invoiceId),
+      );
+
+      expect(result.automaticDiscountAmount).toBe(0);
+      const discountRows = await db('invoice_charges')
+        .where({ tenant, invoice_id: invoiceId, adjustment_source_kind: 'discount' });
+      expect(discountRows).toHaveLength(0);
+    } finally {
+      await db('contract_line_discounts').where({ tenant, discount_id: otherDiscountId }).delete();
+      await db('discounts').where({ tenant, discount_id: otherDiscountId }).delete();
+      await db('client_contracts').where({ tenant, client_contract_id: otherClientContractId }).delete();
+      await db('contract_lines').where({ tenant, contract_line_id: otherContractLineId }).delete();
+      await db('contracts').where({ tenant, contract_id: otherContractId }).delete();
+      await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: true });
+    }
+  });
+
+  it('keeps a service-scoped, capped discount intact through tax and totals recalculation', async () => {
+    // The plan's financial path: reconcile automatic settlements, then run the
+    // shared tax/totals pass that calls recalculatePercentageDiscountInvoiceCharges.
+    // Two 60% service-scoped discounts exceed the eligible base, so the second
+    // is capped; an out-of-scope manual charge must never enter the base. A
+    // legacy whole-invoice recalculation would overwrite both rows with 60% of
+    // the 490000 subtotal and wipe the manual line.
+    await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: false });
+    const firstDiscountId = uuidv4();
+    const secondDiscountId = uuidv4();
+    for (const [id, name, priority] of [
+      [firstDiscountId, 'Service 60% (first)', 1],
+      [secondDiscountId, 'Service 60% (second)', 2],
+    ] as const) {
+      await db('discounts').insert({
+        tenant,
+        discount_id: id,
+        discount_name: name,
+        discount_type: 'percentage',
+        value: 0.6,
+        start_date: '2026-01-01T00:00:00.000Z',
+        end_date: null,
+        is_active: true,
+        scope: 'service',
+        scope_service_id: serviceId,
+        priority,
+      });
+      await db('contract_line_discounts').insert({
+        tenant,
+        discount_id: id,
+        contract_line_id: contractLineId,
+        client_id: clientId,
+      });
+    }
+
+    try {
+      const invoiceId = uuidv4();
+      await db('invoices').insert({
+        tenant,
+        invoice_id: invoiceId,
+        invoice_number: `ADJ-CAP-${invoiceId.slice(0, 8)}`,
+        invoice_date: '2026-09-01T00:00:00.000Z',
+        due_date: '2026-09-30T00:00:00.000Z',
+        subtotal: 490_000,
+        tax: 0,
+        total_amount: 490_000,
+        status: 'draft',
+        client_id: clientId,
+        currency_code: 'USD',
+        is_manual: false,
+        client_contract_id: clientContractId,
+      });
+      await db('invoice_charges').insert({
+        tenant,
+        item_id: uuidv4(),
+        invoice_id: invoiceId,
+        service_id: serviceId,
+        description: 'In-scope recurring',
+        quantity: 1,
+        unit_price: 390_000,
+        net_amount: 390_000,
+        total_price: 390_000,
+        tax_amount: 0,
+        tax_rate: 0,
+        is_manual: false,
+        is_discount: false,
+        is_taxable: false,
+        client_contract_id: clientContractId,
+      });
+      await db('invoice_charges').insert({
+        tenant,
+        item_id: uuidv4(),
+        invoice_id: invoiceId,
+        service_id: null,
+        description: 'Out-of-scope manual',
+        quantity: 1,
+        unit_price: 100_000,
+        net_amount: 100_000,
+        total_price: 100_000,
+        tax_amount: 0,
+        tax_rate: 0,
+        is_manual: true,
+        is_discount: false,
+        is_taxable: false,
+      });
+
+      await db.transaction(async (trx) => {
+        await reconcileAutomaticInvoiceAdjustments(trx, tenant, invoiceId);
+        await new BillingEngine().recalculateInvoice(invoiceId, trx, tenant);
+      });
+
+      const discountRows = await db('invoice_charges')
+        .where({ tenant, invoice_id: invoiceId, adjustment_source_kind: 'discount' })
+        .select('net_amount');
+      expect(discountRows.map((row) => Number(row.net_amount)).sort((a, b) => a - b)).toEqual([
+        -234_000,
+        -156_000,
+      ]);
+
+      const invoice = await db('invoices').where({ tenant, invoice_id: invoiceId }).first();
+      // 390000 + 100000 − 234000 − 156000 = 100000, and no discount exceeds the
+      // eligible base. Tax is zero because both charges are non-taxable.
+      expect(Number(invoice.subtotal)).toBe(100_000);
+      expect(Number(invoice.tax)).toBe(0);
+      expect(Number(invoice.total_amount)).toBe(100_000);
+
+      const rows = await db('invoice_charges')
+        .where({ tenant, invoice_id: invoiceId })
+        .select('net_amount');
+      const netSum = rows.reduce((sum, row) => sum + Number(row.net_amount), 0);
+      expect(netSum).toBe(Number(invoice.subtotal));
+    } finally {
+      await db('contract_line_discounts')
+        .whereIn('discount_id', [firstDiscountId, secondDiscountId])
+        .delete();
+      await db('invoice_charges')
+        .whereIn('adjustment_source_id', [firstDiscountId, secondDiscountId])
+        .delete();
+      await db('discounts').whereIn('discount_id', [firstDiscountId, secondDiscountId]).delete();
       await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: true });
     }
   });
