@@ -138,8 +138,8 @@ async function loadShareViews(
       ? db.table('teams').whereIn('team_id', teamIds).select('team_id', 'team_name')
       : Promise.resolve([]),
   ]);
-  const userNames = new Map<string, string>(users.map((u: any) => [u.user_id, displayName(u)]));
-  const teamNames = new Map<string, string>(teams.map((t: any) => [t.team_id, t.team_name]));
+  const userNames = new Map<string, string>(users.map((u: any): [string, string] => [u.user_id, displayName(u)]));
+  const teamNames = new Map<string, string>(teams.map((t: any): [string, string] => [t.team_id, t.team_name]));
 
   return shares.map((share: any) => ({
     grantee_type: share.grantee_type,
@@ -373,7 +373,7 @@ export const getCalendarsVisibleToMe = withAuth(async (
         access_level: 'edit',
       };
 
-      const people: IVisibleCalendar[] = peopleRows.map((row: any) => ({
+      const people: IVisibleCalendar[] = peopleRows.map((row: any): IVisibleCalendar => ({
         key: row.user_id,
         calendar_type: 'personal',
         calendar_id: null,
@@ -383,7 +383,7 @@ export const getCalendarsVisibleToMe = withAuth(async (
         access_level: access.canViewAll ? 'edit' : access.userLevels.get(row.user_id)!,
       }));
 
-      const groups: IVisibleCalendar[] = groupRows.map((row: any) => ({
+      const groups: IVisibleCalendar[] = groupRows.map((row: any): IVisibleCalendar => ({
         key: row.calendar_id,
         calendar_type: 'group',
         calendar_id: row.calendar_id,

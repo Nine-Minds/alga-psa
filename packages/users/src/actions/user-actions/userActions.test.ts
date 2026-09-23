@@ -460,6 +460,8 @@ const CE_CLEANUP_TABLES: ReadonlySet<string> = new Set([
   'project_task_comments', 'project_template_task_resources', 'time_sheet_comments',
   'user_roles', 'user_preferences', 'import_jobs', 'user_invitations',
   'user_activity_group_items', 'user_activity_groups',
+  // shared calendars (grantee shares, personal calendar)
+  'calendars', 'calendar_shares',
   // Always present in both editions:
   'users', 'clients',
 ]);
