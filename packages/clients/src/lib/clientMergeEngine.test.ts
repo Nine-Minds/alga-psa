@@ -440,6 +440,40 @@ describe('executeClientMerge', () => {
     expect(table('client_portal_user_billing_profiles')).toEqual([]);
   });
 
+  it('demotes the source default location so the one-default-per-client index survives', async () => {
+    table('client_locations').push(
+      { tenant: TENANT, location_id: 'loc-source', client_id: 'source', is_default: true },
+      { tenant: TENANT, location_id: 'loc-target', client_id: 'target', is_default: true },
+    );
+
+    await executeClientMerge(fakeTrx, TENANT, 'actor-1', {
+      sourceClientId: 'source',
+      targetClientId: 'target',
+    });
+
+    const locations = table('client_locations');
+    // Two defaults on one client would abort the whole merge on
+    // ux_client_locations_default_per_client.
+    expect(locations.filter((row) => row.client_id === 'target' && row.is_default)).toHaveLength(1);
+    expect(locations.find((row) => row.location_id === 'loc-source')).toMatchObject({
+      client_id: 'target',
+      is_default: false,
+    });
+  });
+
+  it('keeps the source default location when the target has none', async () => {
+    table('client_locations').push(
+      { tenant: TENANT, location_id: 'loc-source', client_id: 'source', is_default: true },
+    );
+
+    await executeClientMerge(fakeTrx, TENANT, 'actor-1', {
+      sourceClientId: 'source',
+      targetClientId: 'target',
+    });
+
+    expect(table('client_locations')[0]).toMatchObject({ client_id: 'target', is_default: true });
+  });
+
   it('archives the source, re-points its children and records an audit row', async () => {
     const result = await executeClientMerge(fakeTrx, TENANT, 'actor-1', {
       sourceClientId: 'source',

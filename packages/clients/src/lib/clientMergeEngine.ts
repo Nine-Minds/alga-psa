@@ -637,6 +637,20 @@ export async function executeClientMerge(
     .update({ client_id: target.clientId });
 
   // --- 5. Work items and the plain client-keyed tables -------------------
+
+  // `ux_client_locations_default_per_client` allows one default location per
+  // client, so a source default arriving at a target that already has one
+  // would abort the whole merge on a unique violation. The target's default is
+  // the one that stays: it is the client the group is now run as.
+  const targetHasDefaultLocation = await scoped(trx, tenant, 'client_locations')
+    .where({ client_id: target.clientId, is_default: true })
+    .first('location_id');
+  if (targetHasDefaultLocation) {
+    await scoped(trx, tenant, 'client_locations')
+      .where({ client_id: source.clientId, is_default: true })
+      .update({ is_default: false });
+  }
+
   for (const entry of CLIENT_OWNED_MOVE_TABLES) {
     if (entry.stampsBillingProfile && movedDefaultProfileId) {
       // Stamped *before* the move, while the rows are still identifiable, and

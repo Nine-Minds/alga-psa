@@ -119,7 +119,16 @@ caller. This effort is its first one.
   to `tenant` by `20250512094730_standardize_tenant_columns.cjs`. `tenantDb()` works
   on it; the original migration is misleading.
 - `client_locations.default_billing_profile_id` needs no rewrite: profile ids do not
-  change, so a moved location keeps pointing at the right profile.
+  change, so a moved location keeps pointing at the right profile. **But**
+  `ux_client_locations_default_per_client` (`20260718234058`) allows one default
+  location per client, so a source default arriving at a target that already has one
+  aborts the entire merge on a unique violation. The merge demotes the source's
+  default first, and only when the target actually has one.
+- The other client-keyed tables that move are safe: `client_name_aliases` and
+  `client_inbound_email_domains` are unique per *tenant* (alias / domain), not per
+  client, so re-pointing `client_id` cannot collide. `tag_mappings`,
+  `document_associations` and `asset_associations` can, and are de-duplicated
+  row by row.
 - `client_portal_visibility_groups` has `UNIQUE (tenant, client_id, name)` — moving a
   group to the target can therefore collide. Renamed with the source client name as a
   suffix.
