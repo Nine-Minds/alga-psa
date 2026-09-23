@@ -25,6 +25,10 @@
     "./lib/*": {
       "import": "./src/lib/*.ts",
       "types": "./src/lib/*.ts"
+    },
+    "./models/*": {
+      "import": "./src/models/*.ts",
+      "types": "./src/models/*.ts"
     }
   },
   "scripts": {

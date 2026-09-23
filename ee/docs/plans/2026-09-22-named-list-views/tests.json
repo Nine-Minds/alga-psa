@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "DB integration: create private + shared views as user A; listListViews as user B returns only the shared view; getListView(B, A's private id) returns not-found identical to a random id.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F007",
@@ -14,7 +14,7 @@
   {
     "id": "T002",
     "description": "DB integration: createListView with visibility=shared without list_view:share is rejected; with permission succeeds.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004",
       "F010"
@@ -23,7 +23,7 @@
   {
     "id": "T003",
     "description": "DB integration: duplicate name (case-insensitive) for same owner+list is rejected; same name for different owner or different list succeeds.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002",
       "F010"
@@ -32,7 +32,7 @@
   {
     "id": "T004",
     "description": "DB integration: updateListView by non-owner on a shared view fails without list_view:manage and succeeds with it; non-owner can never update a private view.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ]
@@ -40,7 +40,7 @@
   {
     "id": "T005",
     "description": "DB integration: deleteListView clears user_preferences defaults pointing at it for all users; setMyDefaultListView rejects a view not visible to the caller.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012",
       "F013"
@@ -49,7 +49,7 @@
   {
     "id": "T006",
     "description": "DB integration: settings failing adapter schema (unknown key / bad sort direction) and unknown list_key are rejected.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005",
       "F006",
@@ -59,7 +59,7 @@
   {
     "id": "T007",
     "description": "DB integration: hard-deleting a user removes their private views and reassigns shared views to the acting admin.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ]

@@ -50,7 +50,7 @@
   {
     "id": "F007",
     "description": "ListView model (tenantDb-scoped) with visibility-aware query: shared OR owned by session user.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD.md#api--server-actions"
     ]
@@ -58,7 +58,7 @@
   {
     "id": "F008",
     "description": "`listListViews(listKey)` returns caller's private + all shared views with owner name, isOwner, canEdit, isMyDefault; gated on list read permission.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD.md#api--server-actions"
     ]
@@ -66,7 +66,7 @@
   {
     "id": "F009",
     "description": "`getListView(viewId)` returns shared or owned views; private-of-other and missing both return the same not-found error.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD.md#api--server-actions"
     ]
@@ -74,7 +74,7 @@
   {
     "id": "F010",
     "description": "`createListView` validates name (trimmed, 1-100, unique per owner/list) and settings via adapter schema; `shared` requires list_view:share.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD.md#api--server-actions"
     ]
@@ -82,7 +82,7 @@
   {
     "id": "F011",
     "description": "`updateListView` patches name/visibility/settings; owner or list_view:manage (shared only); switching to shared requires list_view:share.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD.md#api--server-actions"
     ]
@@ -90,7 +90,7 @@
   {
     "id": "F012",
     "description": "`deleteListView` deletes a view (owner or list_view:manage for shared) and clears any `listViews.default.<list_key>` preferences pointing at it.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD.md#api--server-actions"
     ]
@@ -98,7 +98,7 @@
   {
     "id": "F013",
     "description": "`setMyDefaultListView(listKey, viewId|null)` stores the default in user_preferences for the session user only, requiring the view be visible to the caller.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD.md#api--server-actions"
     ]
@@ -106,7 +106,7 @@
   {
     "id": "F014",
     "description": "User hard-delete path deletes the user's private views and reassigns their shared views to the acting admin.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD.md#data-model"
     ]
