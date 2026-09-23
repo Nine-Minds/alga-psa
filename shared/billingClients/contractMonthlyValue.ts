@@ -71,6 +71,8 @@ interface FixedMemberValuationRow {
   pricing_basis: string | null;
   /** Catalog rate (minor units) — the engine's last fallback for a member with no configured rate. */
   default_rate: number | string | null;
+  /** `service_catalog.item_kind`; `product` marks the recurring product path. */
+  item_kind?: string | null;
 }
 
 // LEVERAGE: pattern unit-priced-fixed-service — twin of
@@ -162,6 +164,7 @@ export async function getContractMonthlyFixedValuesByContract(
         'fc.base_rate',
         'fc.pricing_basis',
         'sc.default_rate',
+        'sc.item_kind',
       );
     db.tenantJoin(memberQuery, 'contract_line_service_fixed_config as fc', 'clsc.config_id', 'fc.config_id', { type: 'left' });
     db.tenantJoin(memberQuery, 'service_catalog as sc', 'clsc.service_id', 'sc.service_id', { type: 'left' });
@@ -239,30 +242,41 @@ export async function getContractMonthlyFixedValuesByContract(
       const members = membersByLine.get(line.contract_line_id) ?? [];
       const revisionKey = (member: FixedMemberValuationRow) =>
         `${line.contract_line_id}:${member.service_id}:${member.config_id}`;
-      // A member is unit-valued when it is explicitly unit-priced OR when it
-      // carries an applicable scheduled revision (products share the revision
-      // store). Members without a revision keep their legacy valuation path so
-      // untouched contracts are unchanged.
-      const unitMembers = members.filter(
-        (member) => isUnitPricedMember(member) || effectiveRevisions.has(revisionKey(member)),
+      const lineHasEffectiveRevision = members.some((member) =>
+        effectiveRevisions.has(revisionKey(member)),
       );
-      const bundleMembers = members.filter(
-        (member) => !isUnitPricedMember(member) && !effectiveRevisions.has(revisionKey(member)),
-      );
+      // A member is unit-valued when it is explicitly unit-priced, when it
+      // carries an applicable scheduled revision, or — once the line is
+      // actively revision-managed — when it is a catalog product (products share
+      // the revision store and must value consistently with the invoice instead
+      // of the wizard's placeholder base_rate). Members on untouched lines keep
+      // their legacy valuation path so existing contracts are unchanged.
+      const isEffectiveUnitMember = (member: FixedMemberValuationRow) =>
+        isUnitPricedMember(member) ||
+        effectiveRevisions.has(revisionKey(member)) ||
+        (lineHasEffectiveRevision && member.item_kind === 'product');
+      const unitMembers = members.filter(isEffectiveUnitMember);
+      const bundleMembers = members.filter((member) => !isEffectiveUnitMember(member));
 
       // Unit-priced members: Σ quantity × unit rate, revision-aware. Rate
       // fallback mirrors the engine's unit branch: base_rate → member
-      // custom_rate → catalog default_rate. A catalog-policy revision resolves
-      // against the catalog rate; an explicit override (including zero) wins.
+      // custom_rate → catalog default_rate for services. A product never uses
+      // the wizard's placeholder base_rate; it uses its contract override or the
+      // catalog price. A catalog-policy revision resolves against the catalog
+      // rate; an explicit override (including zero) wins.
       let totalCents = 0;
       for (const member of unitMembers) {
         const revision = effectiveRevisions.get(revisionKey(member));
         const quantity = revision ? revision.quantity : Number(member.quantity ?? 0);
+        const baselineRate =
+          member.item_kind === 'product'
+            ? (toCents(member.custom_rate) ?? toCents(member.default_rate))
+            : (toCents(member.base_rate) ?? toCents(member.custom_rate) ?? toCents(member.default_rate));
         const rateCents = revision
           ? revision.price_policy === 'catalog'
             ? toCents(member.default_rate)
             : revision.unit_rate_cents
-          : (toCents(member.base_rate) ?? toCents(member.custom_rate) ?? toCents(member.default_rate));
+          : baselineRate;
         if (!Number.isFinite(quantity) || quantity <= 0 || rateCents === null || rateCents < 0) {
           // Zero/absent quantity is an explicit zero; a member without a
           // valid unit rate bills nothing (mirrors the engine's unit branch).

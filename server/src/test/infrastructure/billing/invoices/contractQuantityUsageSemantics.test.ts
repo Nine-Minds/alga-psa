@@ -28,7 +28,10 @@ import {
   getUsagePeriodTotals,
 } from '@alga-psa/billing/actions/usagePeriodTotalActions';
 import { createUsageRecord, updateUsageRecord } from '@alga-psa/billing/actions/usageActions';
-import { scheduleUnitPricingRevision } from '@alga-psa/billing/actions/contractLineUnitPricingActions';
+import {
+  scheduleUnitPricingRevision,
+  scheduleRecurringUnitPricingRevision,
+} from '@alga-psa/billing/actions/contractLineUnitPricingActions';
 import { setUsageMeasurementMode } from '@alga-psa/billing/actions/contractLineSemanticsActions';
 import { v4 as uuidv4 } from 'uuid';
 import { TextEncoder as NodeTextEncoder } from 'util';
@@ -40,6 +43,7 @@ import {
   assignContractLineToClient,
   createTestService,
   ensureClientPlanBundlesTable,
+  updateCatalogPrice,
   unwrapInvoiceResult,
 } from '../../../../../test-utils/billingTestHelpers';
 
@@ -146,6 +150,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         'usage_measurement_revisions',
         'usage_period_totals',
         'contract_line_unit_pricing_revisions',
+        'contract_line_unit_pricing_revision_history',
         'recurring_service_periods',
         'invoice_charges',
         'invoices',
@@ -1507,6 +1512,266 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         // Refusing to bill an all-zero line is also correct (no phantom seat).
         expect(true).toBe(true);
       }
+    });
+  });
+
+  describe('recurring products (parity with unit services)', () => {
+    type ScheduledRevision = { revision_id: string; version: number; quantity: number };
+
+    async function addProductConfig(lineId: string, options: {
+      serviceName: string;
+      quantity: number;
+      catalogRateCents: number;
+      currency?: string;
+      taxRegion?: string;
+      /** Wizard placeholder `base_rate`; must never become the effective price. */
+      baseRate?: number;
+    }) {
+      const serviceId = await createTestService(context, {
+        service_name: options.serviceName,
+        billing_method: 'fixed',
+        default_rate: options.catalogRateCents,
+        unit_of_measure: 'unit',
+        tax_region: options.taxRegion ?? 'US-NY',
+        currency_code: options.currency ?? 'USD',
+      });
+      // Catalog classification decides only presentation/routing: a product is
+      // billed through the recurring product path, never the Fixed bundle path.
+      await context.db('service_catalog')
+        .where({ tenant: context.tenantId, service_id: serviceId })
+        .update({ item_kind: 'product' });
+
+      const configId = uuidv4();
+      await context.db('contract_line_services').insert({
+        contract_line_id: lineId,
+        service_id: serviceId,
+        tenant: context.tenantId,
+      });
+      await context.db('contract_line_service_configuration').insert({
+        config_id: configId,
+        contract_line_id: lineId,
+        service_id: serviceId,
+        configuration_type: 'Fixed',
+        quantity: options.quantity,
+        tenant: context.tenantId,
+      });
+      // Wizard shape: a Fixed config whose placeholder base_rate is 0 while the
+      // currency catalog price is the real baseline.
+      await context.db('contract_line_service_fixed_config').insert({
+        config_id: configId,
+        tenant: context.tenantId,
+        base_rate: options.baseRate ?? 0,
+        pricing_basis: 'bundle',
+      });
+      return { serviceId, configId };
+    }
+
+    async function setupProductLine() {
+      const contractLineId = await context.createEntity('contract_lines', {
+        contract_line_name: 'Managed package',
+        billing_frequency: 'monthly',
+        is_custom: false,
+        contract_line_type: 'Fixed',
+        custom_rate: null,
+        billing_timing: 'arrears',
+      }, 'contract_line_id');
+      const users = await addProductConfig(contractLineId, { serviceName: 'Users', quantity: 20, catalogRateCents: 10000 });
+      const endpoints = await addProductConfig(contractLineId, { serviceName: 'Endpoints', quantity: 30, catalogRateCents: 5000 });
+      const locations = await addProductConfig(contractLineId, { serviceName: 'Locations', quantity: 2, catalogRateCents: 20000 });
+      const assignment = await assignContractLineToClient(context, contractLineId, {
+        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+      });
+      const billingCycleId = await setupInvoiceCycle(2023, 2, 1);
+      return { contractLineId, users, endpoints, locations, billingCycleId, ...assignment };
+    }
+
+    async function scheduleProduct(
+      setup: { contractLineId: string },
+      member: { serviceId: string; configId: string },
+      changes: {
+        quantity: number;
+        effective_period_start: string;
+        price_policy?: 'override' | 'catalog';
+        unit_rate_cents?: number | null;
+        expected_version?: number | null;
+      },
+    ): Promise<ScheduledRevision | { actionError?: string; permissionError?: string }> {
+      return await scheduleRecurringUnitPricingRevision({
+        contract_line_id: setup.contractLineId,
+        service_id: member.serviceId,
+        config_id: member.configId,
+        quantity: changes.quantity,
+        price_policy: changes.price_policy ?? 'catalog',
+        unit_rate_cents: changes.unit_rate_cents ?? null,
+        effective_period_start: changes.effective_period_start,
+        expected_version: changes.expected_version ?? null,
+        kind: 'product',
+      }) as ScheduledRevision | { actionError?: string; permissionError?: string };
+    }
+
+    function expectScheduled(result: ScheduledRevision | { actionError?: string; permissionError?: string }): ScheduledRevision {
+      if ('actionError' in result || 'permissionError' in result) {
+        throw new Error(`expected a scheduled revision, got ${JSON.stringify(result)}`);
+      }
+      return result;
+    }
+
+    it('bills 20/30/2 at $3,900, then 23 users at $4,200 from the next boundary, preserving the earlier invoice', async () => {
+      const setup = await setupProductLine();
+
+      const january = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+      expect(january.subtotal).toBe(390000);
+
+      const scheduled = expectScheduled(await scheduleProduct(setup, setup.users, {
+        quantity: 23,
+        effective_period_start: '2023-02-01',
+      }));
+      expect(scheduled.version).toBe(1);
+
+      const februaryCycle = await setupInvoiceCycle(2023, 3, 1);
+      const februaryPreview = await previewInvoice(februaryCycle);
+      expect(februaryPreview.success, JSON.stringify(februaryPreview)).toBe(true);
+      if (!februaryPreview.success) throw new Error('unreachable');
+      expect(februaryPreview.data.subtotal).toBe(420000);
+
+      const february = unwrapInvoiceResult<any>(await generateInvoice(februaryCycle));
+      expect(february.subtotal).toBe(420000);
+
+      const earlier = await context.db('invoices')
+        .where({ tenant: context.tenantId, invoice_id: january.invoice_id })
+        .first();
+      expect(Number(earlier?.subtotal)).toBe(390000);
+
+      const overview: any = await getContractOverview(setup.contractId);
+      expect(overview.totalEstimatedMonthlyValue).toBe(420000);
+    });
+
+    it('handles decrease, a zero stop and later resumption as separate effective periods', async () => {
+      const setup = await setupProductLine();
+      expect(unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId)).subtotal).toBe(390000);
+
+      expectScheduled(await scheduleProduct(setup, setup.users, { quantity: 18, effective_period_start: '2023-02-01' }));
+      const february = unwrapInvoiceResult<any>(await generateInvoice(await setupInvoiceCycle(2023, 3, 1)));
+      expect(february.subtotal).toBe(370000); // 18×100 + 30×50 + 2×200
+
+      expectScheduled(await scheduleProduct(setup, setup.users, { quantity: 0, effective_period_start: '2023-03-01' }));
+      const march = unwrapInvoiceResult<any>(await generateInvoice(await setupInvoiceCycle(2023, 4, 1)));
+      expect(march.subtotal).toBe(190000); // users stopped; endpoints + locations only
+
+      expectScheduled(await scheduleProduct(setup, setup.users, { quantity: 20, effective_period_start: '2023-04-01' }));
+      const april = unwrapInvoiceResult<any>(await generateInvoice(await setupInvoiceCycle(2023, 5, 1)));
+      expect(april.subtotal).toBe(390000);
+    });
+
+    it('applies an explicit override and keeps catalog-policy revisions following the catalog price', async () => {
+      const setup = await setupProductLine();
+      expect(unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId)).subtotal).toBe(390000);
+
+      expectScheduled(await scheduleProduct(setup, setup.users, {
+        quantity: 23,
+        price_policy: 'override',
+        unit_rate_cents: 11000,
+        effective_period_start: '2023-02-01',
+      }));
+      // A catalog-policy revision does not pin the rate: a later catalog price
+      // change applies to its periods.
+      expectScheduled(await scheduleProduct(setup, setup.endpoints, {
+        quantity: 30,
+        price_policy: 'catalog',
+        effective_period_start: '2023-02-01',
+      }));
+
+      const february = unwrapInvoiceResult<any>(await generateInvoice(await setupInvoiceCycle(2023, 3, 1)));
+      expect(february.subtotal).toBe(443000); // 23×$110 + 30×$50 + 2×$200
+
+      await updateCatalogPrice(context, setup.endpoints.serviceId, { rateCents: 6000, effectiveDate: '2023-03-01' });
+      const march = unwrapInvoiceResult<any>(await generateInvoice(await setupInvoiceCycle(2023, 4, 1)));
+      expect(march.subtotal).toBe(473000); // 23×$110 + 30×$60 + 2×$200
+    });
+
+    it('replaces a pending boundary with compare-and-set and retains superseded history', async () => {
+      const setup = await setupProductLine();
+
+      const first = expectScheduled(await scheduleProduct(setup, setup.users, {
+        quantity: 23,
+        effective_period_start: '2023-02-01',
+      }));
+      expect(first.version).toBe(1);
+
+      const replaced = expectScheduled(await scheduleProduct(setup, setup.users, {
+        quantity: 25,
+        effective_period_start: '2023-02-01',
+        expected_version: first.version,
+      }));
+      expect(replaced.version).toBe(2);
+      expect(replaced.quantity).toBe(25);
+
+      const stale = await scheduleProduct(setup, setup.users, {
+        quantity: 26,
+        effective_period_start: '2023-02-01',
+        expected_version: 1,
+      });
+      expect('actionError' in stale).toBe(true);
+
+      const canonical = await context.db('contract_line_unit_pricing_revisions')
+        .where({ tenant: context.tenantId, config_id: setup.users.configId })
+        .first();
+      expect(canonical).toMatchObject({ quantity: 25, version: 2 });
+
+      const history = await context.db('contract_line_unit_pricing_revision_history')
+        .where({ tenant: context.tenantId, config_id: setup.users.configId });
+      expect(history).toHaveLength(1);
+      expect(history[0]).toMatchObject({ quantity: 23, version: 1 });
+    });
+
+    it('rejects a product change inside an already-billed period and allows the next boundary', async () => {
+      const setup = await setupProductLine();
+      expect(unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId)).subtotal).toBe(390000);
+
+      const insideBilled = await scheduleProduct(setup, setup.users, {
+        quantity: 25,
+        effective_period_start: '2023-01-15',
+      });
+      expect('actionError' in insideBilled).toBe(true);
+
+      const nextBoundary = await scheduleProduct(setup, setup.users, {
+        quantity: 25,
+        effective_period_start: '2023-02-01',
+      });
+      expect('actionError' in nextBoundary).toBe(false);
+    });
+
+    it('does not duplicate a revised period on repeated generation', async () => {
+      const setup = await setupProductLine();
+      expect(unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId)).subtotal).toBe(390000);
+
+      expectScheduled(await scheduleProduct(setup, setup.users, {
+        quantity: 23,
+        effective_period_start: '2023-02-01',
+      }));
+      const februaryCycle = await setupInvoiceCycle(2023, 3, 1);
+      const first = unwrapInvoiceResult<any>(await generateInvoice(februaryCycle));
+      expect(first.subtotal).toBe(420000);
+
+      // A second generation of the same window must not create a second invoice
+      // (or a duplicate charge) for the already-persisted February period.
+      await generateInvoice(februaryCycle).catch(() => undefined);
+      const invoices = await context.db('invoices').where({ tenant: context.tenantId });
+      expect(invoices).toHaveLength(2);
+    });
+
+    it('leaves untouched products on their legacy pricing until a revision applies', async () => {
+      const setup = await setupProductLine();
+      expect(unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId)).subtotal).toBe(390000);
+
+      // A future revision on Users must not reprice the older February period
+      // when it is billed late; only the applicable boundary changes.
+      expectScheduled(await scheduleProduct(setup, setup.users, {
+        quantity: 23,
+        effective_period_start: '2023-03-01',
+      }));
+      const february = unwrapInvoiceResult<any>(await generateInvoice(await setupInvoiceCycle(2023, 3, 1)));
+      expect(february.subtotal).toBe(390000);
     });
   });
 
