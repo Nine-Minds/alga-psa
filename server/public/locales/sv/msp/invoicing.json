@@ -1,0 +1,2209 @@
+{
+  "automaticInvoices": {
+    "monthEndClose": {
+      "action": "Skapa faktura vid månadsslut",
+      "title": "Avsluta {{servicePeriod}} vid månadsslut?",
+      "warning": "Detta fakturerar {{servicePeriod}} på periodens sista kalenderdag. Tid- eller förbrukningsposter som registreras efter avslutet tas inte med, så avsluta perioden först när allt arbete har registrerats.",
+      "confirm": "Skapa vid månadsslut",
+      "omissionWarning": "Tid- eller förbrukningsposter som registreras efter avslutet tas INTE med på fakturan.",
+      "generationFailed": "Det gick inte att skapa fakturan vid månadsslut. Försök igen."
+    },
+    "ready": {
+      "title": "Klara att fakturera",
+      "description": "Granska återkommande arbete som ska faktureras och skapa fakturautkast för de valda perioderna.",
+      "selectAllExplanation": "Välj överordnade grupper eller enskilda rader för att styra vilka fakturor som skapas.",
+      "filterPlaceholder": "Filtrera efter kund",
+      "dateRange": "Faktureringsintervall",
+      "search": "Tillämpa",
+      "groupedPreviewUnavailable": "Förhandsgranskningen stöder grupperade val. Direktåtgärden ”Skapa från förhandsgranskning” stöder fortfarande bara ett val åt gången.",
+      "selectionHintCombined": "1 faktura om överordnad grupp väljs",
+      "selectionHintSeparate": "Välj poster var för sig",
+      "needsApproval": {
+        "title": "Kräver godkännande",
+        "description": "Dessa återkommande intervall innehåller debiterbar tid som ännu inte är godkänd. Hela faktureringsintervallet är blockerat tills alla godkännanden är klara.",
+        "labels": {
+          "servicePeriod": "Tjänsteperiod",
+          "invoiceWindow": "Faktureringsintervall"
+        },
+        "unapprovedEntries": "{{count}} ej godkänd post",
+        "unapprovedEntries_one": "{{count}} ej godkänd post",
+        "unapprovedEntries_other": "{{count}} ej godkända poster",
+        "actions": {
+          "reviewApprovals": "Granska godkännanden"
+        }
+      },
+      "columns": {
+        "group": "Kund / grupp",
+        "servicePeriod": "Tjänsteperiod",
+        "invoiceWindow": "Faktureringsintervall",
+        "included": "Ingår",
+        "charge": "Debitering",
+        "status": "Status",
+        "amount": "Belopp"
+      },
+      "pageScopeNote": "Grupper på den här sidan: {{count}}"
+    },
+    "groups": {
+      "item": "{{count}} rad",
+      "item_one": "{{count}} rad",
+      "item_other": "{{count}} rader",
+      "contract": "{{count}} avtal",
+      "contract_one": "{{count}} avtal",
+      "contract_other": "{{count}} avtal",
+      "line": "{{count}} rad",
+      "line_one": "{{count}} rad",
+      "line_other": "{{count}} rader",
+      "includedCount": "{{count}} rad ingår",
+      "includedCount_one": "{{count}} rad ingår",
+      "includedCount_other": "{{count}} rader ingår",
+      "attributionMetadataMissing": "Metadata om koppling till tilldelning saknas ({{count}} rad)",
+      "attributionMetadataMissing_one": "Metadata om koppling till tilldelning saknas ({{count}} rad)",
+      "attributionMetadataMissing_other": "Metadata om koppling till tilldelning saknas ({{count}} rader)",
+      "actions": {
+        "expand": "Expandera",
+        "collapse": "Fäll ihop"
+      },
+      "ready": "Klar att fakturera",
+      "canCombine": "Kan slås ihop till 1 faktura",
+      "separate": "Måste faktureras separat",
+      "blocked": "Innehåller blockerade poster",
+      "notReady": "Inte klar att fakturera",
+      "upcoming": "Ännu inte dags att fakturera",
+      "upcomingDetail": "Debiteras i efterskott. Tillgänglig när tjänsteperioden är slut.",
+      "upcomingDetailWithDate": "Den här perioden debiteras i efterskott och kan därför faktureras från {{date}}, efter tjänsteperiodens slut."
+    },
+    "incompatibilityReasons": {
+      "invoiceWindowDiffers": "Faktureringsintervallen skiljer sig åt",
+      "clientDiffers": "Kunderna skiljer sig åt",
+      "poScopeDiffers": "Inköpsorderns omfattning skiljer sig åt",
+      "currencyDiffers": "Valutorna skiljer sig åt",
+      "taxTreatmentDiffers": "Skattehanteringen skiljer sig åt",
+      "exportShapeDiffers": "Exportstrukturen skiljer sig åt"
+    },
+    "executionRows": {
+      "labels": {
+        "cadence": "Intervall",
+        "billingTiming": "Debiteringstidpunkt",
+        "servicePeriod": "Tjänsteperiod"
+      },
+      "pendingAmount": "Väntande belopp",
+      "billableOn": "Kan faktureras {{date}}",
+      "attributionWarning": "Metadata om koppling till tilldelning saknas",
+      "blockedUntilApproval": "Blockerat i väntan på godkännande: {{count}} ej godkänd post.",
+      "blockedUntilApproval_one": "Blockerat i väntan på godkännande: {{count}} ej godkänd post.",
+      "blockedUntilApproval_other": "Blockerat i väntan på godkännande: {{count}} ej godkända poster.",
+      "assignmentContext": {
+        "unresolvedTimeEntry": "Tidpost med olöst koppling",
+        "unresolvedUsageRecord": "Förbrukningspost med olöst koppling",
+        "assignedContractLine": "Tilldelad avtalsrad",
+        "assignedWorkItem": "Tilldelad arbetspost",
+        "unresolvedWork": "Arbete med olöst koppling"
+      }
+    },
+    "actions": {
+      "previewSelected": "Förhandsgranska markerade",
+      "generateSelected": "Skapa fakturor ({{count}})",
+      "generateSelected_one": "Skapa faktura ({{count}})",
+      "generateSelected_other": "Skapa fakturor ({{count}})",
+      "reverseInvoice": "Återför faktura",
+      "deleteInvoice": "Radera faktura",
+      "closePreview": "Stäng förhandsgranskning",
+      "generateInvoice": "Skapa faktura",
+      "recordUsage": "Registrera förbrukning"
+    },
+    "dialogs": {
+      "reverse": {
+        "title": "Återför återkommande faktura",
+        "warning": "Om du återför den här fakturan tas det skapade utkastet och tillhörande återkommande val bort.",
+        "warningTitle": "Varning: Återför återkommande faktura",
+        "description": "Du håller på att återföra den återkommande fakturan för:",
+        "impactTitle": "Den här åtgärden kommer att:",
+        "cannotUndo": "Den här åtgärden kan inte ångras.",
+        "confirm": "Ja, återför fakturan",
+        "reversing": "Återför…",
+        "error": "Det gick inte att återföra den återkommande fakturan",
+        "labels": {
+          "client": "Kund",
+          "cadenceSource": "Intervallkälla",
+          "servicePeriod": "Tjänsteperiod"
+        },
+        "effects": {
+          "deleteDraft": "Radera det skapade utkastet till återkommande faktura",
+          "reissueCredits": "Återställa eventuella tillgodohavanden som användes på fakturan",
+          "unmarkRecords": "Ta bort faktureringsmarkeringen från länkade tidposter och förbrukningsposter",
+          "retireBridge": "Avveckla den länkade kopplingsposten för kundens intervall och öppna de länkade återkommande tjänsteperioderna igen",
+          "reopenPeriods": "Öppna de länkade återkommande tjänsteperioderna igen utan krav på metadata för koppling till kundcykeln"
+        }
+      },
+      "delete": {
+        "title": "Radera återkommande faktura permanent?",
+        "message": "Den här åtgärden kan inte ångras. Den återkommande fakturan för följande raderas permanent:\nKund: {{client}}\nIntervallkälla: {{cadenceSource}}\nTjänsteperiod: {{servicePeriod}}\n{{bridgeEffect}}",
+        "bridgeDeleted": "Den länkade kopplingsposten för kundens intervall raderas också.",
+        "bridgeReopened": "Länkade återkommande tjänsteperioder öppnas igen utan krav på metadata för koppling till kundcykeln.",
+        "confirm": "Ja, radera permanent",
+        "deleting": "Raderar…",
+        "error": "Det gick inte att radera den återkommande fakturan"
+      },
+      "preview": {
+        "title": "Förhandsgranskning av faktura",
+        "description": "Detta är en förhandsgranskning av hur fakturan kommer att se ut när den är fastställd.",
+        "summary_one": "{{count}} faktura markerad",
+        "summary_other": "{{count}} fakturor markerade",
+        "summaryCombined": "Det här urvalet skapar en samlad faktura.",
+        "summarySeparate": "Det här urvalet skapar {{count}} separata fakturor.",
+        "invoiceTitle": "Faktura {{index}}",
+        "sections": {
+          "clientDetails": "Kunduppgifter",
+          "invoiceDetails": "Fakturauppgifter",
+          "lineItems": "Rader"
+        },
+        "fields": {
+          "date": "Datum"
+        },
+        "columns": {
+          "description": "Beskrivning",
+          "quantity": "Antal",
+          "rate": "Taxa",
+          "amount": "Belopp"
+        },
+        "totals": {
+          "subtotal": "Delsumma",
+          "tax": "Skatt",
+          "total": "Totalt"
+        },
+        "generating": "Skapar…",
+        "generateError": "Det gick inte att skapa fakturan från förhandsgranskningen",
+        "missingUsageHeading": "Ingen förbrukning registrerad för den här perioden",
+        "missingUsageService": "{{service}}: inga förbrukningsposter för {{periodStart}} till {{periodEnd}}",
+        "usageAttributionExcluded": "{{service}}: förbrukning registrerad för {{periodStart}} till {{periodEnd}} tas inte med förrän kopplingen till avtalsraden är löst — lös kopplingen istället för att registrera mer förbrukning",
+        "usageCalculationError": "{{service}}: registrerad förbrukning för {{periodStart}} till {{periodEnd}} kunde inte prissättas — rätta tjänstens prissättning istället för att registrera mer förbrukning",
+        "recordScopedUsage": "Registrera förbrukning: {{service}} — {{line}}",
+        "calculationContext": "{{service}}: {{periodStart}} till {{periodEnd}} — registrerad förbrukning kunde inte prissättas. Granska tjänstens prisinställningar.",
+        "reportedPeriodTotalsHeading": "Rapporterade periodantal"
+      },
+      "poOverage": {
+        "title": "Överskridna inköpsordergränser",
+        "description": "Den valda fakturans totalsumma överskrider gränsen med {{amount}}.",
+        "batchDescription": "En eller flera fakturor skulle överskrida det godkända beloppet för en inköpsorder. Vad vill du göra?",
+        "batchItem": "{{clientName}}: överskrider med {{amount}}",
+        "poNumber": "Inköpsorder {{number}}",
+        "allowOverages": "Tillåt överskridanden (skapa alla fakturor)",
+        "skipInvoices": "Hoppa över fakturor som skulle överskrida inköpsorderns belopp",
+        "continue": "Fortsätt",
+        "singleDescription": "Den här fakturan skulle överskrida inköpsorderns godkända belopp med {{amount}}.",
+        "proceedAnyway": "Fortsätta ändå?",
+        "proceedConfirm": "Fortsätt ändå",
+        "skippedError": "Överhoppad på grund av överskriden inköpsordergräns ({{poLabel}}): överskrider med {{amount}}."
+      },
+      "unreportedUsage": {
+        "title": "Ingen förbrukning rapporterad för den här perioden",
+        "description": "Dessa förbrukningsbaserade tjänster saknar rapport för faktureringsintervallet. Om du skapar fakturan nu tas de inte med. De kan fortfarande faktureras när förbrukningen har rapporterats.",
+        "omittedItem": "{{services}}: ingen förbrukning rapporterad för {{periodStart}} till {{periodEnd}}",
+        "question": "Skapa utan dessa tjänster?",
+        "confirm": "Skapa utan orapporterad förbrukning"
+      }
+    },
+    "history": {
+      "title": "Historik för återkommande fakturor",
+      "filterPlaceholder": "Filtrera kunder…",
+      "columns": {
+        "client": "Kund",
+        "assignmentScope": "Tilldelningens omfattning",
+        "cadenceSource": "Intervallkälla",
+        "servicePeriod": "Tjänsteperiod",
+        "invoiceWindow": "Faktureringsintervall",
+        "invoice": "Faktura",
+        "actions": "Åtgärder"
+      },
+      "badges": {
+        "contractAnniversary": "Avtalets årsdag",
+        "clientSchedule": "Kundschema",
+        "unknownCadenceSource": "Okänd intervallkälla ({{source}})",
+        "multiContractInvoice": "Faktura för flera avtal",
+        "servicePeriodBacked": "Baserad på tjänsteperiod"
+      }
+    },
+    "materializationGap": {
+      "title": "Dessa debiteringsscheman behöver byggas om",
+      "description": "Ett debiteringsschema har ändrats för dessa kunder, så deras kommande debiteringar är inaktuella och kan inte faktureras ännu. En ombyggnad uppdaterar debiteringarna så att de följer det aktuella schemat. Redan fakturerade debiteringar påverkas inte.",
+      "labels": {
+        "servicePeriod": "Tjänsteperiod",
+        "invoiceWindow": "Faktureringsintervall",
+        "scheduleKey": "Schemanyckel"
+      },
+      "reviewLink": "Granska tjänsteperioder",
+      "helpText": "Reparera de kanoniska tjänsteperiodposterna istället för att skapa en kompatibilitetsrad för fakturering.",
+      "fixAll": "Åtgärda alla",
+      "fixAllBusy": "Bygger om…",
+      "fixAllResult": "Ombyggda scheman: {{schedules}}. Berörda kunder: {{clients}}.",
+      "fixAllNoop": "Alla debiteringsscheman är redan uppdaterade. Det som fortfarande visas nedan behöver granskas individuellt.",
+      "fixAllError": "Det gick inte att bygga om tjänsteperioderna. Försök igen.",
+      "fixAllDenied": "Du har inte behörighet att bygga om tjänsteperioder."
+    },
+    "errors": {
+      "title": "Fel uppstod när fakturorna fastställdes:",
+      "titleFinalize": "Fel uppstod när fakturorna fastställdes:",
+      "titleDelete": "Fel uppstod när fakturorna raderades:",
+      "titleReverse": "Fel uppstod när fakturorna återfördes:",
+      "loadReady": "Det gick inte att läsa in debiteringsperioderna. Försök igen.",
+      "loadHistory": "Det gick inte att läsa in historiken för återkommande fakturor. Försök igen."
+    },
+    "loading": {
+      "billingData": "Läser in debiteringsdata",
+      "candidates": "Läser in fakturakandidater."
+    },
+    "views": {
+      "all": "Alla",
+      "ready": "Klar",
+      "combinable": "Kan slås ihop",
+      "attention": "Kräver åtgärd",
+      "notYetDue": "Ännu inte dags att fakturera"
+    },
+    "status": {
+      "ready": "Klar",
+      "combine": "Slå ihop",
+      "separate": "Separata",
+      "notYetDue": "Ännu inte dags att fakturera",
+      "approval": "Godkännande",
+      "blocked": "Blockerad"
+    },
+    "chargeTags": {
+      "fixed": "Fast",
+      "hourly": "Tid och material",
+      "usage": "Förbrukning",
+      "bucket": "Timpott"
+    },
+    "summary": {
+      "selected": "Markerade: {{count}}",
+      "breakdown": "Fakturor: {{invoices}} · samlade: {{combine}} · separata: {{separate}}",
+      "knownNow": "känt nu",
+      "knownPlusAtGeneration": "känt nu · {{count}} beräknas när fakturan skapas",
+      "atGenerationLines": "Rader: {{count}}",
+      "empty": "Välj grupper eller rader för att förhandsgranska eller skapa fakturor.",
+      "pageScope": "Grupper: {{groups}} · rader: {{obligations}}"
+    },
+    "amount": {
+      "atGeneration": "Beräknas när fakturan skapas",
+      "plusAtGeneration": "+ {{count}} när fakturan skapas"
+    },
+    "window": {
+      "open": "Öppet",
+      "opensOn": "Öppnas {{date}}",
+      "notOpen": "Ännu inte öppet"
+    },
+    "legend": {
+      "confirmed": "Belopp känt nu",
+      "atGeneration": "Beräknas när fakturan skapas",
+      "combine": "Slå ihop till en faktura",
+      "separate": "Måste faktureras separat",
+      "notYetDue": "Ännu inte dags att fakturera"
+    },
+    "filters": {
+      "title": "Filter",
+      "windowOpen": "Öppet intervall",
+      "charge": "Debitering",
+      "currency": "Valuta",
+      "any": "valfri",
+      "clear": "Rensa",
+      "countSummary": "Grupper: {{groups}} · rader: {{obligations}}"
+    }
+  },
+  "manualInvoices": {
+    "title": "Skapa manuell faktura",
+    "detailsTitle": "Fakturauppgifter",
+    "detailsDescription": "Manuella ändringar saknar period som standard, medan återkommande rader med detaljposter behåller sina kanoniska tjänsteperioder.",
+    "description": "Skapa en manuell faktura och inkludera automatiserade återkommande poster om du vill.",
+    "fields": {
+      "client": "Kund",
+      "invoiceNumber": "Fakturanummer",
+      "invoiceNumberOptional": "Fakturanummer (valfritt)",
+      "sourceSalesOrder": "Ursprunglig försäljningsorder (valfritt)"
+    },
+    "placeholders": {
+      "selectClient": "Välj kund",
+      "invoiceNumberOptional": "Lämna tomt för att skapa automatiskt",
+      "sourceSalesOrder": "Välj en levererad eller manuellt fakturerbar försäljningsorder",
+      "searchSalesOrders": "Sök försäljningsorder…",
+      "noInvoiceableSalesOrders": "Inga fakturerbara försäljningsorder hittades."
+    },
+    "automatedItems": {
+      "title": "Automatiserade rader",
+      "service": "Tjänst",
+      "total": "Totalt",
+      "unknownService": "Okänd tjänst"
+    },
+    "lineItems": {
+      "manual": "Manuella rader",
+      "all": "Rader"
+    },
+    "actions": {
+      "addCharge": "Lägg till debitering",
+      "addDiscount": "Lägg till rabatt",
+      "generate": "Skapa faktura",
+      "saveChanges": "Spara ändringar",
+      "processing": "Bearbetar…",
+      "generateSalesOrderInvoice": "Skapa faktura från försäljningsorder",
+      "clearSalesOrderSource": "Rensa ursprunglig försäljningsorder"
+    },
+    "labels": {
+      "total": "Totalt"
+    },
+    "prepayment": {
+      "label": "Detta är en förskottsfaktura (skapar tillgodohavande)",
+      "description": "Markera bara detta när den manuella fakturan ska skapa ett tillgodohavande för framtida avräkning istället för att avse återkommande tjänsteperioder."
+    },
+    "creditExpiration": {
+      "label": "Tillgodohavandets utgångsdatum",
+      "helpText": "Lämna tomt för att inte ange något utgångsdatum eller för att använda standardgiltighetstiden"
+    },
+    "errors": {
+      "selectClient": "Välj kund",
+      "invoiceNumberUnique": "Det här fakturanumret används redan.",
+      "noTaxRateConfigured": "Ingen skattesats har konfigurerats för regionen.",
+      "serviceNotFound": "Den valda tjänsten hittades inte.",
+      "cannotModify": "Fakturan kan inte ändras (betald/avbruten).",
+      "loadItems": "Fel vid inläsning av fakturarader",
+      "refresh": "Ett fel uppstod när fakturauppgifterna lästes in på nytt.",
+      "updateFailed": "Fel vid uppdatering av faktura",
+      "generateFailed": "Fel när fakturan skapades",
+      "NO_BILLING_EMAIL": "{{clientName}} saknar e-postadress för fakturering. Ange en faktureringskontakt, en e-postadress för kundens fakturering eller en e-postadress för faktureringsplatsen eller standardplatsen och försök igen.",
+      "USAGE_RECORDS_MISSING": "Inga förbrukningsposter som kan faktureras för {{services}} under tjänsteperioden {{periodStart}} till {{periodEnd}}. Registrera förbrukning för perioden (eller en post med nollförbrukning) för att debitera dessa tjänster.",
+      "CLIENT_NOT_FOUND": "Den valda kunden hittades inte. Ladda om och försök igen.",
+      "SERVICE_NOT_FOUND": "Tjänsten {{serviceId}} hittades inte. Ladda om och försök igen.",
+      "INVALID_QUANTITY": "Antalet måste vara större än noll.",
+      "NO_TAX_RATE": "Ingen aktiv skattesats hittades för {{region}} den {{date}}.",
+      "DISCOUNT_TARGET_NOT_FOUND": "Tjänsten {{serviceId}} för den här rabatten hittades inte.",
+      "INVOICE_NUMBER_CONFLICT": "Det här fakturanumret används redan.",
+      "PERMISSION_DENIED": "Du har inte behörighet att skapa eller uppdatera den här fakturan.",
+      "UNEXPECTED": "Något gick fel när fakturan skapades. Ange referensen {{ref}} när du kontaktar supporten.",
+      "salesOrderGenerateFailed": "Det gick inte att skapa fakturan från försäljningsordern.",
+      "salesOrderNothingToInvoice": "Det finns inget kvar att fakturera för den här försäljningsordern.",
+      "salesOrderNotInvoiceable": "Den försäljningsordern kan inte längre faktureras.",
+      "USAGE_RECORDS_MISSING_ACK_REQUIRED": "Det här faktureringsintervallet har fakturerbara debiteringar, men {{services}} saknar rapporterad förbrukning för tjänsteperioden {{periodStart}} till {{periodEnd}}. Registrera förbrukningen först eller bekräfta uttryckligen att fakturan ska skapas utan den — de orapporterade tjänsterna kan fortfarande faktureras senare.",
+      "USAGE_PERIOD_TOTAL_STALE": "Förhandsgranskningen är inaktuell: {{details}}. Kör förhandsgranskningen igen för att se aktuella siffror och skapa sedan fakturan på nytt.",
+      "USAGE_CALCULATION_ERROR": "Förbrukning för {{services}} under tjänsteperioden {{periodStart}} till {{periodEnd}} är registrerad men kunde inte prissättas. Rätta tjänstens prissättning (katalogpris i avtalsvalutan, en anpassad taxa eller prisnivåer) och försök igen. Registrera inte ersättande förbrukning.",
+      "SOURCE_ALREADY_BILLED": "Vissa valda poster kan inte längre faktureras (redan fakturerade, inte godkända eller borttagna). Ladda om och försök igen.",
+      "SOURCE_NOT_ELIGIBLE": "En vald post hör inte till det här ärendets debiterbara poster eller kan inte längre faktureras. Ladda om och försök igen.",
+      "SOURCE_CURRENCY_MISMATCH": "Vissa valda produkter är prissatta i en annan valuta än kundens faktureringsvaluta och kan därför inte läggas till. Fakturera dem separat i deras egen valuta."
+    },
+    "warnings": {
+      "noBillingEmail": "Den här kunden saknar e-postadress för fakturering. Ange en faktureringskontakt, en e-postadress för kundens fakturering eller en e-postadress för faktureringsplatsen eller standardplatsen innan du skapar fakturan."
+    },
+    "errorFallback": {
+      "title": "Något gick fel",
+      "retry": "Försök igen"
+    },
+    "salesOrderContext": {
+      "summary": "Antal poster klara att fakturera: {{quantity}}. Antal rader: {{lineCount}}. Utkastet kommer att länkas till försäljningsordern."
+    }
+  },
+  "quickInvoice": {
+    "currencyExcluded": "Produkter som undantas eftersom deras valuta skiljer sig från {{currency}}: {{count}}.",
+    "action": "Snabbfakturering",
+    "title": "Snabbfakturera det här ärendet",
+    "loading": "Läser in debiterbara poster…",
+    "empty": "Det finns inga ofakturerade poster i det här ärendet.",
+    "billableTime": "Debiterbar tid",
+    "products": "Produkter",
+    "selectedTotal": "Markerat totalbelopp",
+    "create": "Skapa faktura",
+    "creating": "Skapar…",
+    "done": "Klar",
+    "viewInvoice": "Visa faktura",
+    "created": "Fakturan har skapats",
+    "createdDetail": "Fakturan skapades och länkades till det här ärendet.",
+    "existingInvoices": "Fakturor för det här ärendet",
+    "unknownService": "Debiterbar post",
+    "errors": {
+      "ticketNotFound": "Det ärendet finns inte längre."
+    }
+  },
+  "draftsTab": {
+    "title": "Fakturautkast",
+    "searchPlaceholder": "Sök fakturor…",
+    "columns": {
+      "invoiceNumber": "Fakturanummer",
+      "client": "Kund",
+      "amount": "Belopp",
+      "invoiceDate": "Fakturadatum",
+      "dueDate": "Förfallodatum",
+      "status": "Status",
+      "actions": "Åtgärder",
+      "quickbooks": "QuickBooks"
+    },
+    "actions": {
+      "finalize": "Fastställ",
+      "finalizeSelected": "Fastställ markerade",
+      "downloadPdf": "Ladda ner PDF",
+      "reverseDraft": "Återför utkast",
+      "reverseSelected": "Återför markerade",
+      "generateInvoices": "Skapa fakturor"
+    },
+    "status": {
+      "draft": "Utkast"
+    },
+    "empty": {
+      "title": "Inga fakturautkast",
+      "description": "Fakturautkast visas här när du skapar fakturor som ännu inte har fastställts."
+    },
+    "loading": "Läser in fakturautkast…",
+    "errors": {
+      "loadFailed": "Det gick inte att läsa in fakturautkasten. Försök igen.",
+      "finalizeFailed": "Det gick inte att fastställa fakturan. Försök igen.",
+      "bulkFinalizeFailed": "Det gick inte att fastställa de markerade fakturorna. Försök igen.",
+      "pdfFailed": "Det gick inte att skapa PDF-filen. Försök igen.",
+      "reverseFailed": "Det gick inte att återföra fakturautkasten. Försök igen.",
+      "bulkFinalizePendingTax_one": "{{count}} faktura hoppades över eftersom den väntar på import av extern skatt. Importera skatten från ditt bokföringssystem eller byt till intern skatt och fastställ sedan fakturan individuellt.",
+      "bulkFinalizePendingTax_other": "{{count}} fakturor hoppades över eftersom de väntar på import av extern skatt. Importera skatten från ditt bokföringssystem eller byt till intern skatt och fastställ sedan fakturorna individuellt.",
+      "bulkFinalizeSkipped_one": "{{count}} faktura kunde inte fastställas och hoppades över.",
+      "bulkFinalizeSkipped_other": "{{count}} fakturor kunde inte fastställas och hoppades över."
+    },
+    "reverseDialog": {
+      "title_other": "Återför fakturautkast",
+      "message_one": "Om du återför det här fakturautkastet raderas det och eventuella länkade tidposter eller förbrukningsposter frigörs. Åtgärden kan inte ångras.",
+      "message_other": "Om du återför {{count}} fakturautkast raderas de och eventuella länkade tidposter eller förbrukningsposter frigörs. Åtgärden kan inte ångras.",
+      "confirm": "Återför utkast",
+      "cancel": "Avbryt",
+      "title_one": "Återför fakturautkast"
+    },
+    "pendingTaxDialog": {
+      "title": "Fakturan väntar på extern skatt",
+      "message": "Den här fakturan är inställd på att använda skatt som beräknas av ett externt bokföringssystem, men ingen skatt har importerats ännu. Därför kan fakturan inte fastställas. Exportera den till ditt bokföringssystem (QuickBooks, Xero) och importera skatten tillbaka för att fastställa med extern skatt — eller byt fakturan till intern skatt nu så att Alga beräknar skatten och fastställ den.",
+      "confirm": "Byt till intern skatt och fastställ",
+      "cancel": "Avbryt"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "Markerade: {{count}}",
+        "clear": "Rensa"
+      }
+    }
+  },
+  "finalizedTab": {
+    "title": "Fastställda fakturor",
+    "searchPlaceholder": "Sök fakturor…",
+    "columns": {
+      "invoiceNumber": "Fakturanummer",
+      "client": "Kund",
+      "amount": "Belopp",
+      "finalizedDate": "Fastställelsedatum",
+      "status": "Status",
+      "actions": "Åtgärder",
+      "quickbooks": "QuickBooks"
+    },
+    "actions": {
+      "downloadPdfs": "Ladda ner PDF-filer",
+      "sendEmails": "Skicka e-postmeddelanden",
+      "unfinalizeSelected": "Återställ markerade till utkast",
+      "downloadPdf": "Ladda ner PDF",
+      "sendEmail": "Skicka e-post",
+      "unfinalize": "Återställ till utkast"
+    },
+    "status": {
+      "finalized": "Fastställd"
+    },
+    "empty": {
+      "title": "Inga fastställda fakturor",
+      "description": "Fastställ fakturautkast för att se dem här.",
+      "viewDrafts": "Visa utkast"
+    },
+    "loading": "Läser in fakturor…",
+    "errors": {
+      "loadFailed": "Det gick inte att läsa in fakturorna. Försök igen.",
+      "pdfFailed": "Det gick inte att skapa PDF-filen. Försök igen.",
+      "bulkPdfFailed": "Det gick inte att skapa PDF-filerna. Försök igen.",
+      "unfinalizeFailed": "Det gick inte att återställa fakturan till utkast. Försök igen.",
+      "bulkUnfinalizeFailed": "Det gick inte att återställa fakturorna till utkast. Försök igen.",
+      "bulkUnfinalizeInvoiceFailed": "Det gick inte att återställa {{invoiceNumber}} till utkast: {{reason}}"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "Markerade: {{count}}",
+        "clear": "Rensa"
+      }
+    }
+  },
+  "recurringServicePeriods": {
+    "title": "Återkommande tjänsteperioder",
+    "description": "Granska täckningsintervall för återkommande fakturor för en kundavtalsrad, felsök varför arbete ska eller inte ska faktureras och granska faktureringshistorik länkad till fakturans detaljrader.",
+    "fields": {
+      "scheduleSelect": "Välj schema",
+      "scheduleSelectPlaceholder": "Välj ett nyligen använt återkommande schema",
+      "scheduleKey": "Schemanyckel",
+      "scheduleKeyPlaceholder": "Klistra in en schemanyckel (valfritt om du har valt ovan)",
+      "client": "Kund",
+      "cadenceSource": "Intervallkälla",
+      "billingTiming": "Debiteringstidpunkt",
+      "chargeFamily": "Debiteringskategori",
+      "scheduleKeyLabel": "Schemanyckel"
+    },
+    "actions": {
+      "loadingSchedule": "Läser in…",
+      "openSchedule": "Öppna schema",
+      "repairMissing": "Reparera saknade tjänsteperioder",
+      "repairing": "Reparerar…",
+      "previewRegeneration": "Förhandsgranska återskapande",
+      "previewing": "Förhandsgranskar…"
+    },
+    "errors": {
+      "enterScheduleKey": "Ange en schemanyckel för att granska återkommande tjänsteperioder.",
+      "loadFailed": "Det gick inte att läsa in återkommande tjänsteperioder.",
+      "candidateRecordsArray": "Kandidatposterna i JSON måste vara en array.",
+      "previewFailed": "Det gick inte att förhandsgranska återskapandet av återkommande tjänsteperioder.",
+      "repairFailed": "Det gick inte att reparera materialiseringen av återkommande tjänsteperioder."
+    },
+    "labels": {
+      "recurringObligation": "Återkommande åtagande",
+      "generated": "Skapad",
+      "edited": "Redigerad",
+      "billed": "Fakturerad",
+      "exceptions": "Undantag",
+      "repairCompleted": "Reparation slutförd",
+      "candidateRecordsJson": "Kandidatposter i JSON",
+      "conflicts": "Konflikter"
+    },
+    "values": {
+      "notLinked": "Inte länkad",
+      "contractAnniversary": "Avtalets årsdag",
+      "clientSchedule": "Kundschema",
+      "advance": "Förskott",
+      "arrears": "Efterskott",
+      "unknownClient": "Okänd kund",
+      "range": "{{start}} till {{end}}",
+      "scheduleOptionLabel": "{{client}} · {{entity}} · {{cadence}} · {{timing}}",
+      "generatedFromSourceCadence": "Skapad utifrån källans intervall",
+      "noConflicts": "Inga konflikter vid återskapande upptäcktes för de angivna kandidaterna."
+    },
+    "displayStates": {
+      "generated": {
+        "label": "Skapad",
+        "detail": "Följer de aktuella intervallreglerna och väntar på debitering eller granskning."
+      },
+      "edited": {
+        "label": "Redigerad",
+        "detail": "En senare revision ändrade det skapade schemat och är fortfarande aktiv."
+      },
+      "skipped": {
+        "label": "Överhoppad",
+        "detail": "Den här framtida perioden är avsiktligt undantagen från faktureringsurvalet tills den redigeras igen."
+      },
+      "locked": {
+        "label": "Låst",
+        "detail": "Den här perioden är låst för vanliga ändringar i väntan på debitering eller rättelse."
+      },
+      "billed": {
+        "label": "Fakturerad",
+        "detailLinked": "Länkad till fakturadetalj {{invoiceChargeDetailId}}.",
+        "detailUnlinked": "Länkad till faktureringshistorik."
+      },
+      "superseded": {
+        "label": "Ersatt",
+        "detail": "En nyare revision ersatte den här perioden och raden finns kvar för revisionshistorik."
+      },
+      "archived": {
+        "label": "Arkiverad",
+        "detail": "Den här historiska raden sparas endast för revision och avstämning."
+      }
+    },
+    "provenanceReasons": {
+      "boundary_adjustment": "Gräns justerad",
+      "invoice_window_adjustment": "Faktureringsintervall justerat",
+      "activity_window_adjustment": "Aktivitetsintervall justerat",
+      "skip": "Överhoppad av debiteringspersonal",
+      "defer": "Uppskjuten till ett senare faktureringsintervall",
+      "source_rule_changed": "Återskapad efter ändring av källregel",
+      "billing_schedule_changed": "Återskapad efter ändring av debiteringsschema",
+      "cadence_owner_changed": "Återskapad efter byte av intervallägare",
+      "activity_window_changed": "Återskapad efter ändring av aktivitetsintervall",
+      "backfill_realignment": "Justerad vid efterhandskomplettering",
+      "integrity_repair": "Reparerad för dataintegritet",
+      "invoice_linkage_repair": "Reparerad efter rättelse av fakturakoppling",
+      "admin_correction": "Rättad administrativt",
+      "initial_materialization": "Skapad utifrån källans intervall",
+      "backfill_materialization": "Skapad vid efterhandskomplettering"
+    },
+    "governanceActions": {
+      "view": "visa",
+      "edit_boundaries": "redigera gränser",
+      "skip": "hoppa över",
+      "defer": "skjut upp",
+      "regenerate": "återskapa",
+      "invoice_linkage_repair": "reparera fakturakoppling",
+      "archive": "arkivera"
+    },
+    "table": {
+      "columns": {
+        "state": "Tillstånd",
+        "servicePeriod": "Tjänsteperiod",
+        "invoiceWindow": "Faktureringsintervall",
+        "revision": "Revision",
+        "reason": "Orsak",
+        "allowedActions": "Tillåtna åtgärder"
+      }
+    },
+    "repairPanel": {
+      "title": "Sparade tjänsteperioder saknas",
+      "description": "Det här återkommande schemat finns i aktiva debiteringsmetadata men saknar sparade tjänsteperiodrader. Reparationen skapar endast framtida rader, bevarar gränserna i faktureringshistoriken och märker de nya posterna som efterhandskompletterade.",
+      "result": "Kompletterade {{backfilled}} rader, justerade {{realigned}}, hoppade över {{skipped}} historiska kandidater och lämnade {{active}} aktiva rader i schemat."
+    },
+    "regenerationPreview": {
+      "title": "Förhandsgranskning av återskapande",
+      "description": "Klistra in kandidatposter i JSON för att förhandsgranska hur bevarade redigerade eller fakturerade rader skulle stå i konflikt med återskapade framtida kandidater för det här schemat."
+    },
+    "conflicts": {
+      "kinds": {
+        "missing_candidate": "kandidat saknas",
+        "service_period_mismatch": "tjänsteperioden stämmer inte överens",
+        "invoice_window_mismatch": "faktureringsintervallet stämmer inte överens",
+        "activity_window_mismatch": "aktivitetsintervallet stämmer inte överens"
+      },
+      "reasons": {
+        "missing_candidate": "Ingen återskapad kandidat återstår för den här bevarade åsidosatta perioden.",
+        "service_period_mismatch": "Den återskapade kandidaten matchar inte längre den bevarade åsidosatta tjänsteperiodens gräns.",
+        "invoice_window_mismatch": "Den återskapade kandidaten matchar inte längre det bevarade åsidosatta faktureringsintervallet.",
+        "activity_window_mismatch": "Den återskapade kandidaten matchar inte längre det bevarade åsidosatta aktivitetsintervallet."
+      }
+    }
+  },
+  "billingCycles": {
+    "title": "Debiteringscykler",
+    "tooltip": "Konfigurera kundernas debiteringsscheman och förhandsgranska de faktureringsintervall som de skapar för återkommande tjänster med kundens intervall.",
+    "description": "Kundernas debiteringsscheman definierar faktureringsintervall för återkommande rader som faktureras enligt kundens debiteringsschema. Rader som följer avtalets årsdag kan ha egna intervall och förhandsgranskas inte här.",
+    "searchPlaceholder": "Sök kunder…",
+    "dateRange": "Debiteringscykelns datumintervall",
+    "search": "Sök",
+    "loading": "Läser in debiteringscykler",
+    "errors": {
+      "loadFailed": "Det gick inte att hämta data. Försök igen senare."
+    },
+    "columns": {
+      "client": "Kund",
+      "contract": "Avtal",
+      "currentBillingCycle": "Aktuell debiteringscykel",
+      "anchor": "Förankringspunkt",
+      "actions": "Åtgärder"
+    },
+    "actions": {
+      "viewClientBilling": "Visa kunddebitering"
+    },
+    "values": {
+      "noActiveAssignments": "Inga aktiva tilldelningar",
+      "unknown": "Okänd",
+      "assignmentId": "Tilldelning {{id}}",
+      "notSet": "Inte angivet",
+      "rolling": "Rullande",
+      "weekday": "Veckodag {{day}}",
+      "starts": "Startar {{date}}",
+      "day": "Dag {{day}}",
+      "monthDay": "{{day}} {{month}}",
+      "dash": "—"
+    },
+    "cycles": {
+      "weekly": "Veckovis",
+      "bi-weekly": "Varannan vecka",
+      "monthly": "Månadsvis",
+      "quarterly": "Kvartalsvis",
+      "semi-annually": "Halvårsvis",
+      "annually": "Årligen"
+    },
+    "months": {
+      "january": "Januari",
+      "february": "Februari",
+      "march": "Mars",
+      "april": "April",
+      "may": "Maj",
+      "june": "Juni",
+      "july": "Juli",
+      "august": "Augusti",
+      "september": "September",
+      "october": "Oktober",
+      "november": "November",
+      "december": "December"
+    }
+  },
+  "invoicePreview": {
+    "title": "Förhandsgranskning av faktura",
+    "templatePlaceholder": "Välj fakturamall…",
+    "labels": {
+      "standard": " (standardmall)"
+    },
+    "actions": {
+      "finalizeInvoice": "Fastställ faktura",
+      "editItems": "Redigera rader",
+      "downloadPdf": "Ladda ner PDF",
+      "reverseDraft": "Återför utkast",
+      "sendEmail": "Skicka e-post",
+      "unfinalize": "Återställ till utkast",
+      "viewSourceQuote": "Visa ursprunglig offert",
+      "applyCredit": "Använd tillgodohavande",
+      "driftAccept": "Godta QuickBooks-versionen",
+      "driftReexport": "Exportera till QuickBooks igen",
+      "syncNow": "Synkronisera med QuickBooks",
+      "viewInQbo": "Visa i QuickBooks",
+      "voidInvoice": "Makulera faktura",
+      "viewInXero": "Visa i Xero"
+    },
+    "loading": "Läser in förhandsgranskning…",
+    "empty": "Välj en faktura att förhandsgranska",
+    "error": "Det gick inte att visa förhandsgranskningen",
+    "errorDescription": "Det gick inte att visa förhandsgranskningen. Data kan saknas.",
+    "errors": {
+      "notFound": "Fakturan hittades inte.",
+      "noTemplates": "Inga fakturamallar är tillgängliga.",
+      "loadFailed": "Det gick inte att läsa in förhandsgranskningen: {{message}}",
+      "actionFailed": "Det gick inte att {{action}}. Försök igen.",
+      "actionLabels": {
+        "finalizeInvoice": "fastställa fakturan",
+        "downloadPdf": "ladda ner PDF",
+        "reverseDraft": "återföra utkastet",
+        "sendEmail": "skicka e-post",
+        "unfinalize": "återställa fakturan till utkast"
+      }
+    },
+    "applyCreditDialog": {
+      "title": "Använd tillgodohavande"
+    },
+    "voidDialog": {
+      "title": "Makulera faktura",
+      "description": "Makuleringen av den här fakturan är permanent. Ange en orsak.",
+      "reasonPlaceholder": "Orsak till makulering…",
+      "cancel": "Avbryt",
+      "confirm": "Makulera faktura",
+      "voiding": "Makulerar…"
+    }
+  },
+  "templateEditor": {
+    "actions": {
+      "back": "Tillbaka till fakturalayouter",
+      "cancel": "Avbryt",
+      "save": "Spara mall",
+      "saving": "Sparar…"
+    },
+    "titles": {
+      "create": "Skapa ny fakturalayout",
+      "edit": "Redigera layout: {{name}}"
+    },
+    "fields": {
+      "templateName": "Mallnamn",
+      "templateAst": "Mallens AST (JSON)",
+      "created": "Skapad",
+      "lastUpdated": "Senast uppdaterad"
+    },
+    "tabs": {
+      "visual": "Visuell",
+      "code": "Kod"
+    },
+    "alerts": {
+      "codeReadonly": "Kodvyn skapas från den visuella arbetsytan och är skrivskyddad."
+    },
+    "errors": {
+      "loadFailed": "Det gick inte att läsa in malldata.",
+      "saveFailed": "Det gick inte att spara mallen.",
+      "unexpectedSave": "Ett oväntat fel uppstod när uppgifterna sparades.",
+      "templateNameRequired": "Mallnamn krävs",
+      "astExportFailed": "Det gick inte att exportera mallens AST från den visuella arbetsytan: {{message}}",
+      "unknownAstExport": "Okänt fel vid AST-export"
+    }
+  },
+  "templates": {
+    "title": "Fakturalayouter",
+    "columns": {
+      "templateName": "Mallnamn",
+      "type": "Typ",
+      "default": "Standard",
+      "actions": "Åtgärder"
+    },
+    "types": {
+      "standard": "Standard",
+      "custom": "Anpassad"
+    },
+    "actions": {
+      "edit": "Redigera",
+      "editAsCopy": "Redigera som kopia",
+      "clone": "Klona",
+      "setDefault": "Ange som standard",
+      "delete": "Radera",
+      "openMenu": "Öppna meny",
+      "create": "Skapa ny layout"
+    },
+    "loading": "Läser in fakturalayouter",
+    "values": {
+      "thisTemplate": "den här mallen",
+      "copySuffix": " (Kopia)",
+      "copyOfName": "Kopia av {{name}}",
+      "standardSuffix": " (standardmall)"
+    },
+    "errors": {
+      "cloneFailed": "Det gick inte att klona mallen.",
+      "cloneEditFailed": "Det gick inte att skapa en redigerbar kopia.",
+      "setDefaultFailed": "Det gick inte att ange mallen som standard.",
+      "fetchFailed": "Det gick inte att hämta mallarna.",
+      "deleteValidationFailed": "Det gick inte att validera raderingen. Försök igen.",
+      "deleteUnexpected": "Ett oväntat fel uppstod när mallen raderades."
+    }
+  },
+  "externalTax": {
+    "title": "Import av extern skatt",
+    "description": "Granska fakturor som väntar på extern skatteberäkning och importera de beräknade beloppen.",
+    "columns": {
+      "invoice": "Faktura",
+      "client": "Kund",
+      "amount": "Belopp",
+      "system": "System",
+      "created": "Skapad",
+      "actions": "Åtgärder"
+    },
+    "actions": {
+      "import": "Importera",
+      "importing": "Importerar…",
+      "refresh": "Ladda om",
+      "importAll": "Importera alla",
+      "showHistory": "Visa historik",
+      "hideHistory": "Dölj historik",
+      "importFromAdapter": "Importera skatt från {{adapter}}"
+    },
+    "summary": {
+      "pending_one": "{{count}} faktura väntar på skatteimport",
+      "pending_other": "{{count}} fakturor väntar på skatteimport",
+      "successful_one": "{{count}} lyckades",
+      "successful_other": "{{count}} lyckades",
+      "failed_one": "{{count}} misslyckades",
+      "failed_other": "{{count}} misslyckades"
+    },
+    "progress": {
+      "importing": "Importerar skatter…",
+      "importingCount": "Importerar {{current}}/{{total}}…"
+    },
+    "empty": {
+      "allUpToDate": "Alla fakturor är uppdaterade",
+      "nonePending": "Inga fakturor väntar på import av extern skatt.",
+      "history": "Ingen importhistorik tillgänglig."
+    },
+    "helpText": "Fakturor visas här när de exporteras med extern skatteberäkning aktiverad. Importera skatten när ditt bokföringssystem har beräknat skattebeloppen.",
+    "alerts": {
+      "pendingTitle": "Skatt väntar på import",
+      "pendingDescription": "Den här fakturan exporterades till {{adapter}} utan skattebelopp. Importera den beräknade skatten när fakturan har behandlats.",
+      "importedTitle": "Skatt importerad från {{adapter}}",
+      "significantDifference": "Skillnaden överstiger 1 %",
+      "significantDifferenceTitle": "Betydande skatteskillnad",
+      "significantDifferenceDescription": "Den externa skatten skiljer sig från den interna beräkningen med mer än 1 %. Granska debiteringarna för att säkerställa att de är korrekta."
+    },
+    "reconciliation": {
+      "internal": "Intern",
+      "external": "Extern",
+      "difference": "Skillnad",
+      "history": "Importhistorik"
+    },
+    "reconciliationView": {
+      "title": "Skatteavstämning",
+      "description": "Jämför interna och externa skatteberäkningar.",
+      "tooltips": {
+        "significantDifference": "Skillnaden överstiger 1 %",
+        "amountsMatch": "Skattebeloppen stämmer överens inom godtagbart intervall"
+      },
+      "summary": {
+        "internal": "Intern (AlgaPSA)",
+        "external": "Extern (bokföring)"
+      },
+      "alerts": {
+        "significantDifferenceTitle": "Betydande skatteskillnad upptäckt",
+        "significantDifferenceDescription": "Skillnaden mellan interna och externa skatteberäkningar överstiger 1 %. Granska specifikationen rad för rad nedan för att identifiera avvikelser."
+      },
+      "sections": {
+        "lineByLineBreakdown": "Specifikation rad för rad"
+      },
+      "columns": {
+        "description": "Beskrivning",
+        "internalTax": "Intern skatt",
+        "externalTax": "Extern skatt",
+        "difference": "Skillnad"
+      },
+      "labels": {
+        "total": "Totalt",
+        "line": "Rad {{index}}"
+      },
+      "states": {
+        "loading": "Läser in avstämningsdata…",
+        "noData": "Inga avstämningsdata tillgängliga."
+      },
+      "helpText": "Skillnader kan uppstå på grund av avrundning, olika skatteregler eller tidsskillnader mellan systemen."
+    },
+    "states": {
+      "loadingHistory": "Läser in historik…",
+      "emptyHistory": "Inga tidigare skatteimporter hittades."
+    },
+    "tooltips": {
+      "externalRef": "Extern referens: {{reference}}"
+    },
+    "values": {
+      "unknownSystem": "Okänd",
+      "externalSystem": "Externt system",
+      "notAvailable": "Ej tillgängligt"
+    },
+    "toasts": {
+      "noPendingInvoices": "Inga fakturor väntar på skatteimport",
+      "batchImportedSuccess_one": "Skatt importerades för {{count}} faktura",
+      "batchImportedSuccess_other": "Skatt importerades för {{count}} fakturor",
+      "batchImportedPartial": "Importerade {{successCount}} fakturor, {{failureCount}} misslyckades",
+      "batchImportedFailed_one": "Det gick inte att importera skatt för {{count}} faktura",
+      "batchImportedFailed_other": "Det gick inte att importera skatt för {{count}} fakturor",
+      "taxImportedSuccessfully": "Skatten har importerats",
+      "taxImportedFromAdapter": "Skatten har importerats från {{adapter}}",
+      "taxImportFailed": "Det gick inte att importera skatt"
+    },
+    "errors": {
+      "loadPendingInvoices": "Det gick inte att läsa in väntande fakturor",
+      "batchImportFailed": "Massimporten misslyckades",
+      "importFailed": "Importen misslyckades",
+      "importTaxFailed": "Det gick inte att importera skatt"
+    },
+    "adapterNames": {
+      "quickbooks": "QuickBooks Online",
+      "xero": "Xero",
+      "sage": "Sage"
+    }
+  },
+  "sendEmail": {
+    "title": "Skicka faktura via e-post",
+    "loading": "Läser in mottagaruppgifter…",
+    "summary": {
+      "invoices_one": "{{count}} faktura",
+      "invoices_other": "{{count}} fakturor",
+      "readyToSend_one": "{{count}} klar att skicka",
+      "readyToSend_other": "{{count}} klara att skicka",
+      "missingEmail_one": "{{count}} saknar e-postadress",
+      "missingEmail_other": "{{count}} saknar e-postadress"
+    },
+    "recipients": {
+      "title": "Mottagare",
+      "billingContact": "Faktureringskontakt",
+      "billingEmail": "E-postadress för fakturering",
+      "clientEmail": "Kundens e-postadress",
+      "noEmailFound": "Ingen e-postadress hittades",
+      "notConfigured": "Ingen e-postadress har konfigurerats för den här kunden."
+    },
+    "fields": {
+      "due": "Förfaller",
+      "additionalMessage": "Ytterligare meddelande",
+      "additionalMessagePlaceholder": "Lägg till en personlig anteckning i e-postmeddelandet…"
+    },
+    "preview": "E-postmeddelanden skickas från {{fromEmail}} för {{companyName}}. Varje faktura bifogas som en PDF-fil.",
+    "values": {
+      "defaultFromEmail": "noreply@example.com",
+      "defaultCompanyName": "Ditt företag"
+    },
+    "actions": {
+      "cancel": "Avbryt",
+      "sendFallback": "Skicka e-post",
+      "send_one": "Skicka {{count}} e-postmeddelande",
+      "send_other": "Skicka {{count}} e-postmeddelanden",
+      "sending_one": "Skickar {{count}} faktura…",
+      "sending_other": "Skickar {{count}} fakturor…"
+    },
+    "toasts": {
+      "noValidRecipients": "Inga giltiga mottagare hittades",
+      "sentSuccess_one": "{{count}} faktura har skickats",
+      "sentSuccess_other": "{{count}} fakturor har skickats",
+      "sentFailure_one": "Det gick inte att skicka {{count}} faktura",
+      "sentFailure_other": "Det gick inte att skicka {{count}} fakturor",
+      "sentPartial": "{{successCount}} skickade, {{failureCount}} misslyckades"
+    },
+    "errors": {
+      "loadRecipients": "Det gick inte att läsa in mottagaruppgifterna",
+      "sendFailed": "Det gick inte att skicka e-postmeddelandena"
+    }
+  },
+  "generateTab": {
+    "fields": {
+      "invoiceType": "Fakturatyp"
+    },
+    "types": {
+      "automatic": "Automatiska fakturor",
+      "manual": "Manuell faktura",
+      "prepayment": "Förskottsbetalning"
+    },
+    "descriptions": {
+      "automatic": "Skapa fakturor för de återkommande tjänsteperioder som ska faktureras.",
+      "manual": "Använd manuella fakturor för engångsrader eller justeringsrader. De ändrar inte återkommande tjänsteperioder.",
+      "prepayment": "Använd förskottsbetalnings- och krediteringsflöden för ekonomiska värden som ska hållas åtskilda från återkommande tjänsteperioder."
+    },
+    "messages": {
+      "success": "Fakturan har skapats",
+      "loadFailed": "Det gick inte att läsa in data",
+      "salesOrderSourcesUnavailable": "Det gick inte att läsa in försäljningsorder som underlag. Du kan fortfarande ange manuella fakturarader."
+    }
+  },
+  "prepayment": {
+    "titles": {
+      "prepayment": "Skapa förskottsfaktura"
+    },
+    "descriptions": {
+      "prepayment": "Förskottsfakturor skapar tillgodohavanden för kunder att använda senare. De skapar inte återkommande tjänsteperioder. Senare återkommande fakturor behåller sina egna tjänsteperioder."
+    },
+    "fields": {
+      "client": "Kund",
+      "amount": "Belopp",
+      "descriptionOptional": "Beskrivning (valfri)"
+    },
+    "placeholders": {
+      "amount": "Ange belopp",
+      "prepaymentDescription": "Förskottsbetalning för framtida tjänster"
+    },
+    "errors": {
+      "allFieldsRequired": "Fyll i alla fält",
+      "validAmount": "Ange ett giltigt belopp",
+      "generateFailed": "Fel när fakturan skapades"
+    },
+    "actions": {
+      "generating": "Skapar…",
+      "generatePrepayment": "Skapa förskottsfaktura"
+    }
+  },
+  "contractItems": {
+    "columns": {
+      "description": "Beskrivning",
+      "quantity": "Antal",
+      "rate": "Taxa",
+      "amount": "Belopp",
+      "salesOrder": "Försäljningsorder",
+      "cogsMargin": "Kostnad för sålda varor / marginal"
+    },
+    "labels": {
+      "contractSubtotal": "Delsumma för avtal:",
+      "otherItemsSubtotal": "Delsumma för övriga rader:",
+      "otherItems": "Övriga rader",
+      "product": "Produkt"
+    }
+  },
+  "hub": {
+    "title": "Fakturering",
+    "tabs": {
+      "generate": "Skapa",
+      "drafts": "Utkast",
+      "finalized": "Fastställda",
+      "projectBilling": "Projektdebitering"
+    }
+  },
+  "invoiceSyncBadge": {
+    "states": {
+      "notSynced": "Inte synkroniserad",
+      "queued": "I kö",
+      "synced": "Synkroniserad",
+      "drift": "Avvikelse",
+      "error": "Synkroniseringsfel",
+      "voided": "Makulerad"
+    },
+    "tooltip": {
+      "qboNumberPrefix": "QBO-nr",
+      "lastSynced": "Senast synkroniserad:",
+      "viewInQuickBooks": "Visa i QuickBooks",
+      "viewInXero": "Visa i Xero",
+      "xeroNumberPrefix": "Xero-nr"
+    }
+  },
+  "templateManager": {
+    "title": "Hantering av fakturamallar",
+    "sampleInvoices": "Exempelfakturor",
+    "templatePreview": "Förhandsgranskning av mall",
+    "invoiceNumber": "Faktura nr {{number}}"
+  },
+  "taxBadge": {
+    "labels": {
+      "internal": "Skatt: intern",
+      "external": "Skatt: extern",
+      "pending": "Skatt: väntande"
+    },
+    "tooltips": {
+      "internal": "Skatt beräknad av AlgaPSA utifrån konfigurerade skattesatser",
+      "external": "Skatt beräknad av externt bokföringssystem",
+      "pending": "Skatt väntar på import från externt bokföringssystem",
+      "externalAdapter": "Skatt beräknad av {{adapter}}",
+      "externalAdapterImportedAt": "Skatt beräknad av {{adapter}} den {{date}}",
+      "pendingAdapter": "Väntar på skatteberäkning från {{adapter}}"
+    },
+    "adapterNames": {
+      "quickbooks": "QuickBooks Online",
+      "xero": "Xero",
+      "sage": "Sage"
+    }
+  },
+  "annotations": {
+    "title": "Fakturaanteckningar",
+    "labels": {
+      "internal": "Intern",
+      "external": "Extern"
+    },
+    "placeholder": "Lägg till en ny anteckning",
+    "actions": {
+      "add": "Lägg till anteckning"
+    }
+  },
+  "purchaseOrder": {
+    "labels": {
+      "short": "Inköpsorder",
+      "number": "Inköpsordernummer",
+      "authorized": "Godkänt inköpsorderbelopp",
+      "consumed": "Förbrukat inköpsorderbelopp (fastställt)",
+      "remaining": "Återstående inköpsorderbelopp"
+    }
+  },
+  "common": {
+    "actions": {
+      "cancel": "Avbryt",
+      "close": "Stäng",
+      "delete": "Radera",
+      "edit": "Redigera",
+      "loading": "Läser in…",
+      "openMenu": "Öppna meny",
+      "refresh": "Ladda om",
+      "retry": "Försök igen",
+      "save": "Spara",
+      "search": "Sök"
+    },
+    "labels": {
+      "actions": "Åtgärder",
+      "amount": "Belopp",
+      "client": "Kund",
+      "created": "Skapad",
+      "description": "Beskrivning",
+      "difference": "Skillnad",
+      "dueDate": "Förfallodatum",
+      "invoice": "Faktura",
+      "invoiceNumber": "Fakturanummer",
+      "unknownClient": "Okänd kund",
+      "status": "Status",
+      "system": "System",
+      "total": "Totalt",
+      "invoiceDate": "Fakturadatum"
+    },
+    "states": {
+      "empty": "Inga data tillgängliga",
+      "loading": "Läser in…",
+      "notAvailable": "—"
+    }
+  },
+  "designer": {
+    "toolbar": {
+      "undo": "Ångra",
+      "redo": "Gör om",
+      "snap": "Fäst",
+      "guides": "Stödlinjer",
+      "rulers": "Linjaler",
+      "zoom": "Zoom",
+      "metrics": {
+        "drags": "Dragningar: {{count}}",
+        "success": "Lyckade: {{count}}",
+        "invalid": "Ogiltiga: {{count}}"
+      }
+    },
+    "palette": {
+      "tabs": {
+        "blocks": "Block",
+        "presets": "Förinställningar",
+        "fields": "Fält",
+        "outline": "Disposition"
+      },
+      "search": {
+        "blocks": "Sök block…",
+        "presets": "Sök förinställningar…",
+        "fields": "Sök fält…"
+      },
+      "dragHint": "Dra eller tryck på `+` för att infoga.",
+      "addAriaLabel": "Lägg till {{label}}",
+      "noBlocksMatch": "Inga block matchar sökningen.",
+      "presets": {
+        "sectionTitle": "Makromallar",
+        "sectionDescription": "Förinställda paket för vanliga fakturaavsnitt."
+      },
+      "noPresetsMatch": "Inga förinställningar matchar sökningen.",
+      "fields": {
+        "insertHint": "Klicka på ett fält för att infoga det i det fokuserade textfältet.",
+        "categories": {
+          "client": "Kund",
+          "contact": "Kontakt",
+          "line-item": "Rad",
+          "quote": "Offert",
+          "quote-totals": "Offertsummor",
+          "invoice": "Faktura",
+          "customer": "Kund",
+          "tenant": "Klientorganisation"
+        }
+      },
+      "noFieldsMatch": "Inga fält matchar sökningen.",
+      "categories": {
+        "structure": "Struktur",
+        "content": "Innehåll",
+        "media": "Media",
+        "dynamic": "Dynamiskt"
+      }
+    },
+    "inspector": {
+      "layoutControls": "Layoutkontroller",
+      "sizingMode": "Storleksläge",
+      "flexItem": "Flexelement",
+      "displayFormat": "Visningsformat",
+      "attachments": "Bilagor",
+      "media": "Media",
+      "title": "Egenskapspanel",
+      "layerName": "Lagernamn",
+      "typeLabel": "Typ",
+      "fieldTypeLabel": "Fälttyp",
+      "noBindingKey": "Ingen bindningsnyckel angiven",
+      "layoutPreset": "Layoutförinställning",
+      "clear": "Rensa",
+      "fitSectionToContents": "Anpassa avsnitt till innehållet",
+      "sectionNoChildContent": "Avsnittet saknar underordnat innehåll att anpassa till.",
+      "apply": "Tillämpa",
+      "emptyHelp": "Välj en komponent för att redigera dess egenskaper."
+    },
+    "shell": {
+      "selectedLabel": "Markerat:",
+      "selectedNone": "Inget",
+      "clickBlockHint": "Klicka på ett block på arbetsytan",
+      "orUse": "eller använd",
+      "plusInLeftPanelHint": "+ i den vänstra panelen"
+    },
+    "pageSetup": {
+      "title": "Sidinställningar",
+      "description": "Välj ett förinställt pappersformat och en sidmarginal utan att markera den dolda sidnoden.",
+      "paperPreset": "Förinställt pappersformat",
+      "marginMm": "Marginal (mm)"
+    },
+    "breadcrumbs": {
+      "emptyHelp": "Välj en komponent på arbetsytan för att visa dess hierarki.",
+      "hierarchy": "Hierarki"
+    },
+    "workspace": {
+      "preview": {
+        "source": {
+          "sample": "Exempel",
+          "existing": "Befintlig"
+        },
+        "sampleScenario": "Exempelscenario",
+        "selectScenarioPlaceholder": "Välj scenario…",
+        "searchInvoices": "Sök fakturor…",
+        "searchInvoicesHint": "Sök efter nummer eller kund…",
+        "noInvoicesFound": "Inga fakturor hittades.",
+        "selectInvoice": "Välj faktura",
+        "loadingDetails": "Läser in fakturauppgifter…",
+        "selectInvoiceHint": "Välj en faktura för att förhandsgranska databundet resultat.",
+        "shape": "Forma",
+        "render": "Rendera",
+        "rerun": "Kör igen",
+        "emptyState": "Välj exempeldata eller befintliga fakturadata för att skapa en förhandsgranskning av det slutliga resultatet.",
+        "loadingPreview": "Formar och renderar förhandsgranskning…",
+        "templateError": "Det gick inte att skapa förhandsgranskningsmallen från den aktuella arbetsytan.",
+        "renderError": "Renderingen av förhandsgranskningen misslyckades.",
+        "searchQuotes": "Sök offerter…",
+        "noQuotesFound": "Inga offerter hittades.",
+        "selectQuote": "Välj offert",
+        "loadingQuoteDetails": "Läser in offertuppgifter…",
+        "loadingDocumentDetails": "Läser in dokumentuppgifter…"
+      },
+      "tabs": {
+        "design": "Design",
+        "transforms": "Transformeringar",
+        "preview": "Förhandsgranskning"
+      }
+    },
+    "blocks": {
+      "document": {
+        "label": "Dokument",
+        "description": "Fakturadokumentets rot."
+      },
+      "page": {
+        "label": "Sida",
+        "description": "En enskild fakturasida."
+      },
+      "section": {
+        "label": "Avsnitt",
+        "description": "Logisk gruppering med gemensamma layoutregler."
+      },
+      "column": {
+        "label": "Kolumn",
+        "description": "Äldre kolumnbehållare."
+      },
+      "text": {
+        "label": "Textblock",
+        "description": "Statiskt eller databundet textinnehåll."
+      },
+      "totals": {
+        "label": "Summor",
+        "description": "Sammanställning av delsumma, skatt och totalsumma."
+      },
+      "table": {
+        "label": "Fakturaradstabell",
+        "description": "Upprepade rader för fakturarader."
+      },
+      "dynamic-table": {
+        "label": "Dynamisk tabell",
+        "description": "Avancerad datatabell med kolumnbindningar."
+      },
+      "field": {
+        "label": "Datafält",
+        "description": "Visar ett bundet värde (fakturanummer, datum, summor)."
+      },
+      "label": {
+        "label": "Fältetikett",
+        "description": "Statisk etikett kopplad till datafält."
+      },
+      "subtotal": {
+        "label": "Rad för delsumma",
+        "description": "Visar delsumma före skatt."
+      },
+      "tax": {
+        "label": "Skatterad",
+        "description": "Visar beräknat skattebelopp."
+      },
+      "discount": {
+        "label": "Rabattrad",
+        "description": "Visar rabattbelopp."
+      },
+      "custom-total": {
+        "label": "Anpassad summeringsrad",
+        "description": "Konfigurerbar beräknad rad (avgifter, krediteringar osv.)."
+      },
+      "image": {
+        "label": "Bild",
+        "description": "Infogat bildelement."
+      },
+      "logo": {
+        "label": "Logotyp",
+        "description": "Grafisk resurs för klientorganisationens varumärke."
+      },
+      "qr": {
+        "label": "QR-kod",
+        "description": "Automatiskt skapad QR-kod för betalningslänkar."
+      },
+      "signature": {
+        "label": "Signaturblock",
+        "description": "Undertecknarens namn och signaturrad eller bild."
+      },
+      "action-button": {
+        "label": "Åtgärdsknapp",
+        "description": "Knapp med uppmaning till åtgärd (t.ex. Betala nu)."
+      },
+      "attachment-list": {
+        "label": "Bilagelista",
+        "description": "Visar underlag eller länkar."
+      },
+      "divider": {
+        "label": "Avdelare",
+        "description": "Horisontell avdelningslinje."
+      },
+      "spacer": {
+        "label": "Avståndselement",
+        "description": "Tomt utrymme för layoutjustering."
+      },
+      "container": {
+        "label": "Rutbehållare",
+        "description": "Formaterad behållare för att gruppera innehåll (kantlinjer, bakgrunder)."
+      }
+    },
+    "presets": {
+      "header-logo-address": {
+        "label": "Sidhuvud: logotyp + adress",
+        "description": "Sidhuvud med två kolumner, låsta logotypproportioner och staplade adressrader."
+      },
+      "line-items-table": {
+        "label": "Fakturaradstabell",
+        "description": "Tabell i full bredd med upprepade rader."
+      },
+      "totals-stack": {
+        "label": "Staplade summor",
+        "description": "Sammanställning av summor med anteckningsblock."
+      },
+      "two-column-summary": {
+        "label": "Sammanfattning i två kolumner",
+        "description": "Lika breda kolumner för sammanfattning och kontaktuppgifter."
+      },
+      "notes-totals-row": {
+        "label": "Rad med anteckningar + summor",
+        "description": "Bred anteckningskolumn bredvid en smal summeringskolumn med CSS grid."
+      },
+      "two-equal-columns-grid": {
+        "label": "Två lika breda kolumner",
+        "description": "Balanserat innehållsavsnitt med två kolumner med CSS grid."
+      },
+      "three-info-columns": {
+        "label": "Tre informationskolumner",
+        "description": "Rad med informationskort i tre kolumner med CSS grid."
+      },
+      "recurring-onetime-tables": {
+        "label": "Tabeller för återkommande poster + engångsposter",
+        "description": "Staplade dynamiska tabeller för återkommande poster och engångsposter, färdiga för offerter."
+      },
+      "header-with-qr": {
+        "label": "Delat sidhuvud med QR-kod",
+        "description": "Logotyp + staplade adressrader med betalningsblock med QR-kod."
+      },
+      "modern-invoice-complete": {
+        "label": "Modern fakturamall",
+        "description": "Komplett layout med sidhuvud, faktureringsuppgifter, radtabell och sidfot."
+      },
+      "billed-time-entries": {
+        "label": "Detaljer för fakturerade tidposter",
+        "description": "Lägg till en informationstabell med datum, arbetsposter, timmar, taxor och belopp."
+      },
+      "billed-time-by-ticket": {
+        "label": "Fakturerad tid per ärende",
+        "description": "Upprepa en arbetspostrubrik och dess avgränsade posttabell för varje ärende eller uppgift."
+      }
+    },
+    "schema": {
+      "panels": {
+        "layout": {
+          "title": "Layout",
+          "fields": {
+            "gap": {
+              "label": "Mellanrum"
+            },
+            "padding": {
+              "label": "Inre marginal"
+            },
+            "flexDirection": {
+              "label": "Riktning",
+              "options": {
+                "column": "Vertikal",
+                "row": "Horisontell"
+              }
+            },
+            "alignItems": {
+              "label": "Justera objekt",
+              "options": {
+                "stretch": "Sträck ut",
+                "flex-start": "Start",
+                "center": "Centrera",
+                "flex-end": "Slut"
+              }
+            },
+            "justifyContent": {
+              "label": "Fördela innehåll",
+              "options": {
+                "flex-start": "Start",
+                "center": "Centrera",
+                "flex-end": "Slut",
+                "space-between": "Utrymme mellan",
+                "space-around": "Utrymme runt",
+                "space-evenly": "Jämnt utrymme"
+              }
+            },
+            "gridAutoFlow": {
+              "label": "Automatiskt flöde",
+              "options": {
+                "row": "row",
+                "column": "column",
+                "dense": "dense",
+                "row dense": "row dense",
+                "column dense": "column dense"
+              }
+            },
+            "gridTemplateColumns": {
+              "label": "Mallkolumner"
+            },
+            "gridTemplateRows": {
+              "label": "Mallrader"
+            },
+            "display": {
+              "options": {
+                "flex": "Stapel (Flex)",
+                "grid": "Rutnät"
+              }
+            }
+          }
+        },
+        "sizing-css": {
+          "title": "Storlek (CSS)",
+          "fields": {
+            "height": {
+              "label": "height"
+            },
+            "minWidth": {
+              "label": "min-width"
+            },
+            "minHeight": {
+              "label": "min-height"
+            },
+            "maxWidth": {
+              "label": "max-width"
+            },
+            "maxHeight": {
+              "label": "max-height"
+            }
+          }
+        },
+        "appearance": {
+          "title": "Utseende",
+          "fields": {
+            "color": {
+              "label": "Textfärg"
+            },
+            "border": {
+              "label": "Kantlinje"
+            },
+            "borderRadius": {
+              "label": "Radie"
+            },
+            "margin": {
+              "label": "Marginal"
+            }
+          }
+        },
+        "section-border": {
+          "title": "Avsnittets kantlinje",
+          "fields": {
+            "sectionBorderStyle": {
+              "options": {
+                "light": "Svag",
+                "strong": "Stark",
+                "none": "Inget"
+              }
+            }
+          }
+        },
+        "field-binding": {
+          "title": "Fältbindning",
+          "fields": {
+            "format": {
+              "options": {
+                "text": "Text",
+                "number": "Tal",
+                "currency": "Valuta",
+                "date": "Datum"
+              }
+            },
+            "fieldBorderStyle": {
+              "options": {
+                "underline": "Understrykning",
+                "box": "Ruta",
+                "none": "Inget"
+              }
+            }
+          }
+        },
+        "field-layout": {
+          "title": "Fältlayout"
+        },
+        "text-content": {
+          "title": "Textinnehåll"
+        },
+        "label-style": {
+          "title": "Etikettext",
+          "fields": {
+            "fontWeight": {
+              "options": {
+                "semibold": "Halvfet",
+                "bold": "Fet",
+                "medium": "Medel",
+                "normal": "Normal"
+              }
+            }
+          }
+        },
+        "totals-row": {
+          "title": "Summeringsrad"
+        },
+        "action-button": {
+          "title": "Knapp",
+          "fields": {
+            "actionType": {
+              "options": {
+                "url": "URL",
+                "mailto": "E-post"
+              }
+            }
+          }
+        },
+        "signature": {
+          "title": "Signaturblock"
+        },
+        "table": {
+          "title": "Tabell"
+        },
+        "table-header-style": {
+          "title": "Rubrikformat",
+          "fields": {
+            "headerColor": {
+              "label": "Textfärg"
+            },
+            "att-1": {
+              "label": "Contract.pdf"
+            }
+          }
+        },
+        "totals-rows": {
+          "title": "Summeringsrader"
+        }
+      }
+    },
+    "fields": {
+      "invoice_number": {
+        "label": "Fakturanummer",
+        "description": "Fakturanumret som visas för kunden."
+      },
+      "invoice_invoiceNumber": {
+        "label": "Fakturanummer",
+        "description": "Fakturanumret som visas för kunden."
+      },
+      "invoice_issueDate": {
+        "label": "Utfärdandedatum",
+        "description": "Datumet då fakturan utfärdades."
+      },
+      "invoice_dueDate": {
+        "label": "Förfallodatum",
+        "description": "Datumet då betalningen förfaller."
+      },
+      "invoice_poNumber": {
+        "label": "Inköpsordernummer",
+        "description": "Inköpsorderreferensen för den här fakturan."
+      },
+      "invoice_subtotal": {
+        "label": "Delsumma",
+        "description": "Fakturans delsumma före skatt och rabatter."
+      },
+      "invoice_tax": {
+        "label": "Skatt",
+        "description": "Fakturans skattebelopp."
+      },
+      "invoice_discount": {
+        "label": "Rabatt",
+        "description": "Fakturans rabattbelopp."
+      },
+      "invoice_total": {
+        "label": "Totalt",
+        "description": "Det totala beloppet att betala på fakturan."
+      },
+      "invoice_currencyCode": {
+        "label": "Valutakod",
+        "description": "ISO-valutakoden för den här fakturan."
+      },
+      "invoice_recurringServicePeriodStart": {
+        "label": "Återkommande tjänsteperiods start",
+        "description": "Startdatum för den återkommande fakturans kanoniska tjänsteperiod, om tillgängligt."
+      },
+      "invoice_recurringServicePeriodEnd": {
+        "label": "Återkommande tjänsteperiods slut",
+        "description": "Slutdatum för den återkommande fakturans kanoniska tjänsteperiod, om tillgängligt."
+      },
+      "invoice_recurringServicePeriodLabel": {
+        "label": "Återkommande tjänsteperiod",
+        "description": "En formaterad etikett för den återkommande fakturans kanoniska tjänsteperiod, om tillgänglig."
+      },
+      "customer_name": {
+        "label": "Kundnamn",
+        "description": "Kundnamnet som visas på fakturan."
+      },
+      "customer_address": {
+        "label": "Kundadress",
+        "description": "Kundens faktureringsadress."
+      },
+      "client_name": {
+        "label": "Kundnamn",
+        "description": "Kundnamnet som visas i offertmallar."
+      },
+      "client_address": {
+        "label": "Kundadress",
+        "description": "Kundens adress."
+      },
+      "contact_name": {
+        "label": "Kontaktens namn",
+        "description": "Kontaktens namn som visas i offertmallar."
+      },
+      "contact_address": {
+        "label": "Kontaktens adress",
+        "description": "Kontaktens adress."
+      },
+      "tenant_name": {
+        "label": "Klientorganisationens namn",
+        "description": "Ditt företagsnamn."
+      },
+      "tenant_address": {
+        "label": "Klientorganisationens adress",
+        "description": "Ditt företags adress."
+      },
+      "tenantClient_name": {
+        "label": "Klientorganisationens namn",
+        "description": "Ditt företagsnamn."
+      },
+      "tenantClient_address": {
+        "label": "Klientorganisationens adress",
+        "description": "Ditt företags adress."
+      }
+    },
+    "canvas": {
+      "templateBoundary": "Mallgräns",
+      "translatableHint": "Översätts automatiskt till mottagarens språk. Redigera för att istället använda din egen fasta text."
+    },
+    "dragOverlay": {
+      "component": "Komponent"
+    }
+  },
+  "projectBilling": {
+    "subtitle": "Klara milstolpar och förskottsbetalningar som väntar på godkännande i alla projekt.",
+    "loading": "Läser in kön för projektdebitering…",
+    "empty": "Inget väntar på granskning. Klara milstolpar och förskottsbetalningar visas här.",
+    "columns": {
+      "project": "Projekt",
+      "client": "Kund",
+      "description": "Beskrivning",
+      "amount": "Belopp",
+      "trigger": "Utlösare",
+      "daysWaiting": "Dagar i väntan",
+      "actions": "Åtgärder"
+    },
+    "trigger": {
+      "phase": "Fas {{phase}} slutförd {{date}}",
+      "date": "Datum uppnått",
+      "manual": "Manuell"
+    },
+    "actions": {
+      "approve": "Godkänn",
+      "approveInvoiceNow": "Godkänn och fakturera nu",
+      "hold": "Pausa",
+      "cancel": "Avbryt",
+      "approveSelected": "Godkänn markerade",
+      "holdSelected": "Pausa markerade"
+    },
+    "toasts": {
+      "approved": "Posten har godkänts.",
+      "approvedWithWarning": "Posten har godkänts. {{warning}}",
+      "invoiced": "Posten har godkänts och fakturerats.",
+      "bulkApproved": "{{count}} poster har godkänts.",
+      "bulkApproveFailed": "{{count}} poster kunde inte godkännas (t.ex. {{reason}}).",
+      "held": "Posten har pausats.",
+      "bulkHeld": "{{count}} poster har pausats.",
+      "bulkHoldFailed": "{{count}} poster kunde inte pausas (t.ex. {{reason}}).",
+      "canceled": "Posten har avbrutits."
+    },
+    "errors": {
+      "loadFailed": "Det gick inte att läsa in granskningskön för projektdebitering. Försök igen.",
+      "approveFailed": "Det gick inte att godkänna posten.",
+      "invoiceFailed": "Det gick inte att godkänna och fakturera posten.",
+      "holdFailed": "Det gick inte att pausa posten.",
+      "cancelFailed": "Det gick inte att avbryta posten."
+    },
+    "holdDialog": {
+      "title": "Pausa post",
+      "titlePlural": "Pausa {{count}} poster",
+      "description": "Pausning återställer posten till väntande tills den görs klar igen. En orsak krävs.",
+      "reasonPlaceholder": "Orsak till pausning…",
+      "cancel": "Avbryt",
+      "confirm": "Pausa"
+    },
+    "cancelDialog": {
+      "title": "Avbryt post",
+      "message": "Om du avbryter den här schemaposten tas den bort från debiteringen. Detta kan inte ångras.",
+      "confirm": "Avbryt post",
+      "dismiss": "Behåll post"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} markerade",
+        "clear": "Rensa"
+      }
+    }
+  },
+  "invoiceDesigner": {
+    "transforms": {
+      "rowCount": "Rader: {{count}}",
+      "operators": {
+        "eq": "Lika med",
+        "neq": "Inte lika med",
+        "gt": "Större än",
+        "gte": "Större än eller lika med",
+        "lt": "Mindre än",
+        "lte": "Mindre än eller lika med",
+        "in": "Finns i lista"
+      },
+      "sortDirections": {
+        "asc": "Stigande",
+        "desc": "Fallande"
+      },
+      "aggregations": {
+        "sum": "Summa",
+        "count": "Antal",
+        "avg": "Medelvärde",
+        "min": "Minimum",
+        "max": "Maximum"
+      },
+      "operations": {
+        "advancedPredicate": "Avancerat predikat",
+        "groupBy": "Gruppera efter {{field}}",
+        "readOnly": "Bevaras skrivskyddad i V1"
+      },
+      "source": {
+        "title": "Källdata",
+        "description": "Välj förhandsgranskningsdata och den samlingsbindning som ska formas.",
+        "sampleScenario": "Exempelscenario",
+        "selectInvoice": "Välj faktura",
+        "collection": "Källsamling",
+        "outputBindingId": "Utdatabindningens ID"
+      },
+      "metadata": {
+        "title": "Källmetadata",
+        "binding": "Bindning:",
+        "bindingNone": "Inget",
+        "resolvedPath": "Upplöst sökväg:",
+        "pathNotResolved": "Inte upplöst",
+        "noFields": "Välj förhandsgranskningsdata och en samlingsbindning för att hitta fält."
+      },
+      "pipeline": {
+        "title": "Transformeringspipeline",
+        "description": "Åtgärder körs uppifrån och ned.",
+        "addFilter": "+ Filter",
+        "addSort": "+ Sortering",
+        "addGroup": "+ Gruppering",
+        "addAggregate": "+ Aggregering",
+        "empty": "Lägg till åtgärder för att bygga transformeringspipelinen.",
+        "moveUp": "Flytta {{operation}} uppåt",
+        "moveDown": "Flytta {{operation}} nedåt",
+        "duplicate": "Duplicera {{operation}}",
+        "delete": "Radera {{operation}}"
+      },
+      "inspector": {
+        "description": "Redigera den valda transformeringsåtgärden.",
+        "empty": "Välj ett transformeringskort för att redigera dess inställningar.",
+        "advancedPredicateNotice": "Det här filtret använder en avancerad predikatstruktur. Om du redigerar här omvandlas den till en enkel jämförelse.",
+        "unsupportedOperation": "Den här åtgärdstypen bevaras på arbetsytan, men designverktyget i V1 kan endast redigera filtrering, sortering, gruppering och aggregering.",
+        "field": "Fält",
+        "operator": "Operator",
+        "value": "Värde",
+        "valueList": "Värden (kommaseparerade)",
+        "sortKey": "Sorteringsnyckel {{index}}",
+        "remove": "Ta bort",
+        "direction": "Riktning",
+        "addSortKey": "+ Sorteringsnyckel",
+        "groupField": "Grupperingsfält",
+        "groupLabel": "Etikett (valfri)",
+        "aggregation": "Aggregering {{index}}",
+        "outputId": "Utdata-ID",
+        "operation": "Åtgärd",
+        "addAggregation": "+ Aggregering"
+      },
+      "output": {
+        "title": "Förhandsgranskning av utdata",
+        "description": "Förhandsgranska rader som skapas av den aktuella transformeringspipelinen.",
+        "rowPaths": "Tillgängliga radsökvägar",
+        "groupedRows": "Grupperade rader: {{count}}",
+        "binding": "Bindning: {{binding}}",
+        "bindingNotSet": "Inte angivet",
+        "groupKey": "nyckel: {{value}}",
+        "groupItems": "Poster: {{count}}",
+        "emptyConfigure": "Konfigurera källa, utdatabindning och åtgärder för att förhandsgranska transformerade rader.",
+        "emptyNoData": "Välj förhandsgranskningsdata för att granska transformerade utdata.",
+        "previewFailed": "Förhandsgranskningen av transformeringar misslyckades."
+      }
+    },
+    "tableEditor": {
+      "bindings": {
+        "lineItems": "Alla rader",
+        "phases": "Faser",
+        "recurringItems": "Återkommande poster",
+        "onetimeItems": "Engångsposter",
+        "serviceItems": "Tjänsterader",
+        "productItems": "Produktrader",
+        "items": "Poster",
+        "transformsSource": "{{binding}} (transformeringskälla)",
+        "transformsOutput": "{{binding}} (transformeringsutdata)",
+        "ticketGroups": "Fakturerad tid per ärende",
+        "timeEntries": "Fakturerade tidposter",
+        "ticketPresentationRows": "Debiteringar per ärende"
+      },
+      "presets": {
+        "description": {
+          "label": "Beskrivning",
+          "hint": "Radbeskrivning"
+        },
+        "quantity": {
+          "label": "Antal",
+          "hint": "Antal"
+        },
+        "unitPrice": {
+          "label": "Taxa",
+          "hint": "Enhetspris"
+        },
+        "amount": {
+          "label": "Belopp",
+          "hint": "Radsumma"
+        },
+        "ticket": {
+          "label": "Ärende",
+          "hint": "Ärendenummer och titel"
+        },
+        "ticketDescription": {
+          "hint": "Ärendebeskrivning som visas för kunden"
+        },
+        "hours": {
+          "label": "Timmar"
+        },
+        "ticketHours": {
+          "hint": "Totalt antal fakturerade timmar för ärendet"
+        },
+        "ticketRate": {
+          "hint": "Timtaxa (”Blandade taxor” när posterna skiljer sig åt)"
+        },
+        "ticketAmount": {
+          "hint": "Totalt fakturerat belopp för ärendet"
+        },
+        "date": {
+          "label": "Datum"
+        },
+        "entryDate": {
+          "hint": "Datum då arbetet utfördes"
+        },
+        "entryTicket": {
+          "hint": "Ursprungligt ärendenummer"
+        },
+        "entryTitle": {
+          "hint": "Ärendets titel eller uppgiftens namn"
+        },
+        "entryHours": {
+          "hint": "Fakturerade timmar för posten"
+        },
+        "entryRate": {
+          "hint": "Timtaxa för posten"
+        },
+        "entryAmount": {
+          "hint": "Fakturerat belopp för posten"
+        }
+      },
+      "sourceBinding": {
+        "title": "Källbindning",
+        "description": "Bind den här tabellen till en rådatasamling eller till utdata från de skapade transformeringarna."
+      },
+      "columns": {
+        "title": "Tabellkolumner",
+        "add": "+ Kolumn",
+        "quickAdd": "Snabbtillägg:",
+        "newColumnHeader": "Ny kolumn",
+        "empty": "Inga kolumner har definierats. Lägg till minst en kolumn.",
+        "itemLabel": "Kolumn",
+        "moveUp": "Flytta {{column}} uppåt",
+        "moveDown": "Flytta {{column}} nedåt",
+        "remove": "Ta bort {{column}}",
+        "header": "Rubrik",
+        "headerPlaceholder": "Rubriktext",
+        "bindingKey": "Bindningsnyckel",
+        "type": "Typ",
+        "width": "Bredd",
+        "stackedLines": "Staplade rader",
+        "addLine": "+ Rad",
+        "clearLines": "En rad",
+        "stackedLinesHint": "Varje ifylld rad visas på en egen rad. När alla rader är tomma visas kolumnens bindningsnyckel ovan.",
+        "removeLine": "Ta bort rad {{index}}"
+      },
+      "columnTypes": {
+        "text": "Text",
+        "number": "Tal",
+        "currency": "Valuta",
+        "date": "Datum"
+      },
+      "style": {
+        "title": "Tabellformat",
+        "borderPreset": "Förinställd kantlinje",
+        "headerWeight": "Rubrikens teckenvikt",
+        "borderOuter": "Yttre",
+        "borderRows": "Rader",
+        "borderColumns": "Kolumner"
+      },
+      "borderPresets": {
+        "list": "Lista",
+        "boxed": "Inramad",
+        "grid": "Rutnät",
+        "none": "Inget",
+        "custom": "Anpassad"
+      },
+      "headerWeights": {
+        "normal": "Normal",
+        "medium": "Medel",
+        "semibold": "Halvfet",
+        "bold": "Fet"
+      },
+      "reference": {
+        "title": "Referens för fältnycklar",
+        "transformAggregate": "Transformeringsaggregat",
+        "groupedRowKey": "Grupperad rads nyckel",
+        "groupedRowItems": "Grupperad rads poster",
+        "availableBinding": "Tillgänglig bindning"
+      }
+    },
+    "imagePicker": {
+      "browse": "Bläddra bland dokument",
+      "hiddenFromClients": "{{document}} är dolt för kunder. Det visas inte på offerter eller fakturor som öppnas via kundportalen.",
+      "updating": "Uppdaterar…",
+      "markVisible": "Markera som synlig för kunder",
+      "visibleInPortal": "Synlig i kundportalen",
+      "dialogTitle": "Välj bild",
+      "dialogDescription": "Välj en bild från dina dokument att använda i den här mallen."
+    },
+    "totalsRowsEditor": {
+      "rowBackground": "Radbakgrund",
+      "rowTextColor": "Textfärg",
+      "resetColors": "Återställ färger",
+      "clearRowBackground": "Rensa radens bakgrundsfärg",
+      "clearRowTextColor": "Rensa radens textfärg",
+      "labelColorOverrideNote": "Den här etiketten behåller sin sparade färg och ärver inte radens textfärg som anges ovan. Beloppet följer fortfarande radens textfärg.",
+      "noRows": "Det här summeringsblocket har inga sparade rader ännu. Spara mallen och öppna den igen för att redigera radfärger."
+    }
+  },
+  "draftInvoiceDetails": {
+    "title": "Fakturauppgifter",
+    "description": "Redigera fakturautkastets metadata innan det fastställs.",
+    "actions": {
+      "saving": "Sparar…"
+    },
+    "errors": {
+      "invoiceNumberRequired": "Fakturanummer krävs.",
+      "invoiceDateRequired": "Fakturadatum krävs."
+    }
+  },
+  "documentTemplates": {
+    "defaultTypeLabel": "Dokument",
+    "title": "Layouter för {{type}}",
+    "description": "Utforma layouter för PDF-filer och förhandsgranskningar av {{type}}.",
+    "availableLayouts": "Tillgängliga layouter",
+    "actions": {
+      "newLayout": "Ny layout"
+    },
+    "columns": {
+      "name": "Namn",
+      "source": "Källa"
+    },
+    "values": {
+      "nameWithStandardSuffix": "{{name}} (Standard)",
+      "copyName": "{{name}} (Kopia)"
+    },
+    "toasts": {
+      "cloned": "Mallen har klonats",
+      "defaultUpdated": "Standardmallen har uppdaterats",
+      "deleted": "Mallen har raderats"
+    },
+    "errors": {
+      "loadFailed": "Det gick inte att läsa in mallar för {{type}}",
+      "cloneFailed": "Det gick inte att klona mallen",
+      "setDefaultFailed": "Det gick inte att ange standardmall",
+      "deleteFailed": "Det gick inte att radera mallen"
+    },
+    "deleteDialog": {
+      "title": "Radera layout för {{type}}",
+      "message": "Vill du radera ”{{name}}”?"
+    },
+    "editor": {
+      "titles": {
+        "create": "Ny layout för {{type}}",
+        "edit": "Redigera layout för {{type}}"
+      },
+      "description": "Utforma layouten för {{type}} i den visuella redigeraren och förhandsgranska sedan med exempeldata.",
+      "errorTitle": "Layoutredigerare för {{type}}",
+      "sections": {
+        "details": "Layoutdetaljer"
+      },
+      "fields": {
+        "version": "Version"
+      },
+      "placeholders": {
+        "templateName": "Mall för {{type}}"
+      },
+      "actions": {
+        "back": "Tillbaka till layouter",
+        "save": "Spara layout"
+      },
+      "labels": {
+        "created": "Skapad: {{date}}",
+        "lastUpdated": "Senast uppdaterad: {{date}}"
+      },
+      "preview": {
+        "sampleNote": "Renderad med representativa exempeldata för {{type}}.",
+        "frameTitle": "Förhandsgranskning av {{type}}",
+        "empty": "Öppna den här fliken för att skapa en förhandsgranskning av det slutliga resultatet.",
+        "existingNote": "Renderad med den valda försäljningsordern.",
+        "searchDocuments": "Sök försäljningsorder…",
+        "searchDocumentsHint": "Sök efter nummer eller kund…",
+        "noDocumentsFound": "Inga försäljningsorder hittades.",
+        "selectDocument": "Välj försäljningsorder",
+        "selectDocumentHint": "Välj en försäljningsorder för att förhandsgranska databundet resultat."
+      },
+      "errors": {
+        "nameRequired": "Mallnamn krävs.",
+        "astExportFailed": "Det gick inte att exportera mallen från den visuella arbetsytan: {{message}}",
+        "saveFailed": "Det gick inte att spara layouten för {{type}}",
+        "previewFailed": "Det gick inte att skapa förhandsgranskningen."
+      },
+      "toasts": {
+        "saved": "Layouten för {{type}} har sparats"
+      }
+    },
+    "types": {
+      "salesOrder": "Försäljningsorder",
+      "packingSlip": "Följesedel",
+      "pickList": "Plocklista"
+    }
+  },
+  "errors": {
+    "permissions": {
+      "invoiceUpdate": "Behörighet saknas: behörighet att uppdatera fakturor krävs",
+      "invoiceDelete": "Behörighet saknas: behörighet att radera fakturor krävs",
+      "invoiceAccess": "Behörighet saknas: åtkomst till fakturor nekad",
+      "otherClientInvoices": "Behörighet saknas: kan inte komma åt en annan kunds fakturor"
+    },
+    "invoice": {
+      "notFound": "Fakturan hittades inte",
+      "notFoundRefresh": "Fakturan hittades inte. Den kan ha uppdaterats eller raderats. Ladda om och försök igen.",
+      "notFoundNumbered": "Fakturan {{invoiceId}} hittades inte.",
+      "clientNotFoundForInvoice": "Kunden för faktura {{invoiceNumber}} hittades inte.",
+      "numberRequired": "Fakturanummer krävs",
+      "dateRequired": "Fakturadatum krävs",
+      "dateInvalid": "Fakturadatumet är ogiltigt",
+      "dueDateInvalid": "Förfallodatumet är ogiltigt",
+      "onlyDraftEditable": "Endast fakturautkast kan redigeras",
+      "numberExists": "Fakturanumret finns redan. Välj ett annat nummer.",
+      "notFinalized": "Fakturan är inte fastställd",
+      "unfinalizeFailed": "Fakturan kunde inte återställas till utkast eftersom ett oväntat datafel uppstod. Ladda om och försök igen.",
+      "paidOrCancelled": "Det går inte att ändra en betald eller avbruten faktura",
+      "syncedVoidInstead": "Den här fakturan är synkroniserad med ett bokföringssystem — makulera den istället för att radera den.",
+      "invalidValue": "Ett av de valda fakturavärdena är ogiltigt. Ladda om och försök igen.",
+      "referenceMissing": "Den valda fakturan, kunden, avtalet eller debiteringsposten finns inte längre. Ladda om och försök igen.",
+      "duplicate": "En faktura med motstridiga uppgifter finns redan. Ladda om och försök igen.",
+      "missingField": "Ett obligatoriskt fakturafält saknas.",
+      "missingFieldNamed": "Ett obligatoriskt fakturafält saknas: {{field}}."
+    },
+    "billingCycle": {
+      "notFoundRefresh": "Debiteringscykeln hittades inte. Den kan ha uppdaterats eller raderats. Ladda om och försök igen.",
+      "invalidDates": "Debiteringscykeln har ogiltiga datum. Granska cykeln och försök igen."
+    },
+    "jobs": {
+      "selectInvoicesPdf": "Välj minst en faktura för att skapa PDF-filer.",
+      "selectInvoicesEmail": "Välj minst en faktura att skicka via e-post.",
+      "selectInvoices": "Välj minst en faktura.",
+      "emailNotConfigured": "E-post är inte konfigurerad. Konfigurera e-post under Inställningar innan du skickar fakturor.",
+      "schedulePdfFailed": "Det gick inte att starta skapandet av fakturor i PDF-format. Försök igen.",
+      "scheduleEmailFailed": "Det gick inte att starta utskicket av fakturor via e-post. Försök igen.",
+      "recipientFailed": "Det gick inte att läsa in mottagaruppgifter för den här fakturan.",
+      "sendFailed": "Det gick inte att skicka fakturan via e-post. Försök igen."
+    },
+    "template": {
+      "selectStandard": "Välj en standardfakturamall innan du sparar.",
+      "selectBeforePreview": "Välj en fakturamall innan du förhandsgranskar.",
+      "notFoundRefresh": "Fakturamallen hittades inte. Den kan ha uppdaterats eller raderats. Ladda om och försök igen.",
+      "missingDesign": "Fakturamallen saknar sin designnyttolast. Välj en annan mall.",
+      "invalidValue": "Ett av de valda fakturamallsvärdena är ogiltigt. Ladda om och försök igen.",
+      "referenceMissing": "Den valda fakturamallen eller kunden finns inte längre. Ladda om och försök igen.",
+      "duplicate": "En fakturamall med de inställningarna finns redan.",
+      "missingField": "Ett obligatoriskt fakturamallsfält saknas.",
+      "missingFieldNamed": "Ett obligatoriskt fakturamallsfält saknas: {{field}}.",
+      "evaluationFailed": "Mallens databindning misslyckades: {{details}}"
+    }
+  },
+  "periodTotal": {
+    "missingContext": "Kund- eller tjänsteinställningar saknas för den här rapporten.",
+    "invalidQuantity": "Ange ett heltal på 0 eller mer som periodantal.",
+    "saveError": "Det går inte att spara periodantalet.",
+    "retryError": "Det går inte att spara periodantalet. Försök skicka in igen.",
+    "correct": "Rätta det rapporterade antalet {{quantity}} för {{service}} ({{periodStart}} till {{periodEnd}})",
+    "report": "Rapportera ett periodantal för {{service}} ({{periodStart}} till {{periodEnd}})",
+    "quantityLabel": "Periodantal för {{service}}",
+    "saving": "Sparar…",
+    "saveCorrection": "Spara rättelse",
+    "save": "Spara"
+  }
+}
