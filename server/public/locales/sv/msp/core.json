@@ -1,0 +1,759 @@
+{
+  "nav": {
+    "home": "Hem",
+    "userActivities": "Användaraktiviteter",
+    "tickets": "Ärenden",
+    "serviceRequests": "Tjänsteförfrågningar",
+    "surveys": "Enkäter",
+    "projects": "Projekt",
+    "projectsAll": "Alla projekt",
+    "projectsTemplates": "Mallar",
+    "clients": "Kunder",
+    "opportunities": "Affärsmöjligheter",
+    "marketing": {
+      "label": "Marknadsföring",
+      "calendar": "Kalender",
+      "posts": "Inlägg",
+      "content": "Innehåll",
+      "campaigns": "Kampanjer",
+      "sequences": "Sekvenser",
+      "forms": "Formulär",
+      "channels": "Kanaler"
+    },
+    "contacts": "Kontakter",
+    "interactions": "Interaktioner",
+    "documents": "Dokument",
+    "documentsAll": "Alla dokument",
+    "knowledgeBase": "Kunskapsbas",
+    "assets": "Tillgångar",
+    "assetsAll": "Alla tillgångar",
+    "assetsMaintenance": "Underhåll",
+    "passwords": "Lösenord",
+    "inventory": {
+      "label": "Lager",
+      "sections": {
+        "overview": "Översikt",
+        "stock": "Lagerbestånd",
+        "purchasing": "Inköp",
+        "salesFulfillment": "Försäljning och orderhantering",
+        "analytics": "Analys"
+      }
+    },
+    "inventoryDashboard": "Översiktspanel",
+    "inventoryStock": "Lagerbestånd",
+    "inventoryLocations": "Lagerplatser",
+    "inventoryUnits": "Lagerenheter",
+    "inventoryVendors": "Leverantörer",
+    "inventoryPurchaseOrders": "Inköpsorder",
+    "inventoryVendorBills": "Leverantörsfakturor",
+    "inventorySalesOrders": "Försäljningsorder",
+    "inventoryDocumentLayouts": "Dokumentlayouter",
+    "inventoryTransfers": "Lageröverföringar",
+    "inventoryCounts": "Rullande inventeringar",
+    "inventoryWriteOffs": "Lageravskrivningar",
+    "inventoryMargin": "Marginal",
+    "inventoryGhostUsage": "Oregistrerad materialförbrukning",
+    "inventoryRma": "RMA",
+    "inventoryLoaners": "Låneenheter",
+    "inventoryKits": "Paket",
+    "timeManagement": "Tidshantering",
+    "timeEntry": "Tidregistrering",
+    "approvals": "Godkännanden",
+    "billing": {
+      "label": "Debitering",
+      "sections": {
+        "contracts": "Avtal",
+        "invoicing": "Fakturering",
+        "quotes": "Offerter",
+        "pricing": "Prissättning",
+        "trackingReports": "Uppföljning och rapporter"
+      },
+      "contractTemplates": "Avtalsmallar",
+      "clientContracts": "Kundavtal",
+      "quotes": "Offerter",
+      "quoteBusinessTemplates": "Offertmallar",
+      "quoteLayouts": "Offertlayouter",
+      "contractLinePresets": "Förinställningar för avtalsrader",
+      "invoicing": "Fakturering",
+      "invoiceLayouts": "Fakturalayouter",
+      "billingCycles": "Debiteringscykler",
+      "servicePeriods": "Tjänsteperioder",
+      "credits": "Krediteringar",
+      "serviceTypes": "Tjänstetyper",
+      "serviceCategories": "Tjänstekategorier",
+      "serviceCatalog": "Tjänster",
+      "products": "Produkter",
+      "taxRates": "Skatt",
+      "usageTracking": "Förbrukningsuppföljning",
+      "reports": "Rapporter",
+      "accountingExports": "Bokföringsexporter"
+    },
+    "schedule": "Schema",
+    "technicianDispatch": "Resursplanering",
+    "automationHub": "Arbetsflöden",
+    "workflows": "Arbetsflöden",
+    "controlPanel": "Kontrollpanel",
+    "workflowEditor": "Arbetsflödesredigerare",
+    "runs": "Körningar",
+    "events": "Händelser",
+    "deadLetter": "Olevererbara meddelanden",
+    "systemMonitor": "Systemövervakare",
+    "systemMonitoring": "Systemövervakning",
+    "jobMonitoring": "Övervakning av bakgrundsjobb",
+    "jobs": "Bakgrundsjobb",
+    "emailLogs": "E-postloggar",
+    "extensions": "Tillägg"
+  },
+  "marketing": {
+    "dialogs": {
+      "cancel": "Avbryt",
+      "save": "Spara",
+      "create": "Skapa"
+    },
+    "actions": {
+      "edit": "Redigera",
+      "delete": "Radera"
+    },
+    "calendar": {
+      "title": "Marknadsföringskalender",
+      "newPost": "Nytt inlägg",
+      "today": "Idag",
+      "tomorrow": "Imorgon",
+      "dueAt": "ska publiceras {{time}}",
+      "needsPublishing": "Behöver publiceras",
+      "needsPublishingCount": "{{total}} väntande · {{overdue}} försenade",
+      "needsPublishingCountSimple": "{{total}} väntande",
+      "needsPublishingHint": "Kopiera texten, publicera på plattformen och markera sedan inlägget som publicerat.",
+      "thisWeek": "Den här veckan",
+      "stats": {
+        "published": "Publicerade",
+        "scheduled": "Schemalagda",
+        "awaiting": "Väntar på publicering"
+      },
+      "channels": "Kanaler",
+      "manageChannels": "Hantera",
+      "noChannels": "Inga kanaler ännu.",
+      "publishedRecently": "Nyligen publicerat",
+      "noUpcoming": "Inget schemalagt under den här perioden.",
+      "emptyTitle": "Inget i kalendern ännu",
+      "emptyBody": "Skapa ett inlägg på sidan Inlägg så visas det här på den schemalagda dagen.",
+      "toast": {
+        "skipped": "Överhoppat"
+      },
+      "weekOf": "Veckan som innehåller {{date}}",
+      "viewMonth": "Månad",
+      "viewAgenda": "Agenda",
+      "moreItems": "+{{count}} fler"
+    },
+    "posts": {
+      "title": "Inlägg",
+      "new": "Nytt inlägg",
+      "copyText": "Kopiera text",
+      "skip": "Hoppa över",
+      "reschedule": "Ändra schemaläggning",
+      "emptyTitle": "Inga inlägg ännu",
+      "emptyBody": "Skapa ett inlägg från ditt innehållsbibliotek så visas det i den här kön.",
+      "status": {
+        "scheduled": "Schemalagt",
+        "awaiting-manual-publish": "Väntar på publicering",
+        "published": "Publicerat",
+        "skipped": "Överhoppat",
+        "expired": "Utgånget"
+      },
+      "columns": {
+        "content": "Innehåll",
+        "channel": "Kanal",
+        "campaign": "Kampanj",
+        "scheduled": "Schemalagt",
+        "status": "Status",
+        "actions": "Åtgärder"
+      },
+      "filters": {
+        "status": "Status",
+        "channel": "Kanal",
+        "campaign": "Kampanj",
+        "all": "Alla",
+        "dateFrom": "Schemalagt från",
+        "dateTo": "Schemalagt till"
+      },
+      "createDialog": {
+        "title": "Nytt inlägg",
+        "content": "Innehåll",
+        "contentPlaceholder": "Välj innehåll…",
+        "channels": "Kanaler",
+        "noChannels": "Inga aktiva kanaler – lägg först till en på sidan Kanaler.",
+        "campaign": "Kampanj (valfri)",
+        "noCampaign": "Ingen kampanj",
+        "scheduledAt": "Schemalägg till (valfritt)",
+        "submit": "Skapa inlägg"
+      },
+      "rescheduleDialog": {
+        "title": "Ändra schemaläggning för inlägg",
+        "scheduledAt": "Ny tid",
+        "submit": "Ändra schemaläggning"
+      },
+      "markPublished": {
+        "title": "Markera som publicerat",
+        "permalink": "Permanent länk (valfri)",
+        "confirm": "Markera som publicerat"
+      },
+      "toast": {
+        "created": "Inlägget har skapats",
+        "rescheduled": "Inläggets schemaläggning har ändrats",
+        "markedPublished": "Markerat som publicerat",
+        "copied": "Kopierat till urklipp",
+        "copyFailed": "Det gick inte att kopiera till urklipp"
+      }
+    },
+    "content": {
+      "title": "Innehåll",
+      "new": "Nytt innehåll",
+      "emptyTitle": "Inget innehåll ännu",
+      "emptyBody": "Skriv de inlägg du vill publicera och schemalägg dem sedan på sidan Inlägg.",
+      "columns": {
+        "title": "Titel",
+        "campaign": "Kampanj",
+        "variants": "Varianter",
+        "updated": "Uppdaterat",
+        "actions": "Åtgärder"
+      },
+      "dialog": {
+        "createTitle": "Nytt innehåll",
+        "editTitle": "Redigera innehåll",
+        "title": "Titel",
+        "body": "Brödtext (markdown)",
+        "campaign": "Kampanj (valfri)",
+        "noCampaign": "Ingen kampanj",
+        "variants": "Kanalvarianter",
+        "variantsHint": "Ersätt grundtexten för specifika plattformar. Tomma varianter ignoreras.",
+        "addVariant": "Lägg till plattformsvariant…",
+        "addVariantButton": "Lägg till"
+      },
+      "deleteDialog": {
+        "title": "Radera innehåll",
+        "message": "Radera ”{{title}}”? Det går inte att ångra."
+      },
+      "toast": {
+        "created": "Innehållet har skapats",
+        "updated": "Innehållet har uppdaterats",
+        "deleted": "Innehållet har raderats"
+      }
+    },
+    "campaigns": {
+      "title": "Kampanjer",
+      "new": "Ny kampanj",
+      "view": "Visa",
+      "emptyTitle": "Inga kampanjer ännu",
+      "emptyBody": "Kampanjer samlar inlägg, innehåll, formulär och sekvenser så att du kan se hela försäljningstratten på ett ställe.",
+      "status": {
+        "draft": "Utkast",
+        "active": "Aktiv",
+        "completed": "Slutförd",
+        "archived": "Arkiverad"
+      },
+      "columns": {
+        "name": "Namn",
+        "status": "Status",
+        "startDate": "Start",
+        "endDate": "Slut",
+        "actions": "Åtgärder"
+      },
+      "dialog": {
+        "createTitle": "Ny kampanj",
+        "editTitle": "Redigera kampanj",
+        "name": "Namn",
+        "goal": "Mål (valfritt)",
+        "sourceChannel": "Ursprungskanal (valfri)",
+        "status": "Status",
+        "startDate": "Startdatum",
+        "endDate": "Slutdatum"
+      },
+      "funnel": {
+        "loading": "Laddar försäljningstratten…",
+        "postsPublished": "Publicerade inlägg",
+        "emailsSent": "Skickade e-postmeddelanden",
+        "emailsOpened": "Öppnade",
+        "emailsClicked": "Klickade",
+        "formsSubmitted": "Inskickade formulär",
+        "suggestionsCreated": "Förslag",
+        "suggestionsAccepted": "Accepterade"
+      },
+      "toast": {
+        "created": "Kampanjen har skapats",
+        "updated": "Kampanjen har uppdaterats"
+      },
+      "detail": {
+        "posts": "Inlägg",
+        "noPosts": "Inga inlägg i den här kampanjen.",
+        "sequences": "Sekvenser",
+        "noSequences": "Inga sekvenser är kopplade till den här kampanjen.",
+        "forms": "Kontaktformulär",
+        "noForms": "Inga formulär är kopplade till den här kampanjen."
+      }
+    },
+    "sequences": {
+      "title": "Sekvenser",
+      "new": "Ny sekvens",
+      "pickerLabel": "Sekvens",
+      "emptyTitle": "Inga sekvenser ännu",
+      "emptyBody": "Sekvenser skickar en tidsstyrd serie e-postmeddelanden till tillagda kontakter.",
+      "headerSummary": "{{steps}} steg · {{active}} aktiva deltagare",
+      "headerOpenRate": "{{rate}} % öppningsfrekvens",
+      "journey": "Kundresa",
+      "noSteps": "Inga steg ännu – redigera sekvensen för att lägga till steg.",
+      "enroll": "Lägg till kontakter",
+      "performance": {
+        "title": "Resultat",
+        "openRate": "Öppningsfrekvens",
+        "clickRate": "Klickfrekvens",
+        "stopped": "Avprenumererade / stoppade"
+      },
+      "stepStats": {
+        "sent": "{{count}} skickade",
+        "opened": "{{rate}} % öppnade"
+      },
+      "status": {
+        "draft": "Utkast",
+        "active": "Aktiv",
+        "paused": "Pausad",
+        "archived": "Arkiverad"
+      },
+      "enrollments": {
+        "title": "Deltagare",
+        "empty": "Inga deltagare ännu.",
+        "contact": "Kontakt",
+        "progress": "Förlopp",
+        "nextSend": "Nästa utskick",
+        "state": "Tillstånd",
+        "actions": "Åtgärder",
+        "unenroll": "Ta bort från sekvensen"
+      },
+      "dialog": {
+        "createTitle": "Ny sekvens",
+        "editTitle": "Redigera sekvens",
+        "name": "Namn",
+        "description": "Beskrivning (valfri)",
+        "status": "Status",
+        "steps": "Steg",
+        "subjectPlaceholder": "Ämne",
+        "delay": "Vänta",
+        "delayAfterEnroll": "efter tillägg i sekvensen",
+        "delayAfterPrevious": "efter föregående steg",
+        "bodyPlaceholder": "Brödtext (markdown, stöd för {{merge.fields}})",
+        "addStep": "Lägg till steg",
+        "unit": {
+          "minutes": "minuter",
+          "hours": "timmar",
+          "days": "dagar"
+        },
+        "campaign": "Kampanj (valfri)",
+        "noCampaign": "Ingen"
+      },
+      "enrollDialog": {
+        "title": "Lägg till kontakt i sekvensen",
+        "contact": "Kontakt",
+        "contactPlaceholder": "Välj en kontakt…",
+        "submit": "Lägg till"
+      },
+      "toast": {
+        "created": "Sekvensen har skapats",
+        "updated": "Sekvensen har uppdaterats",
+        "enrolled": "Kontakten har lagts till i sekvensen",
+        "unenrolled": "Kontakten har tagits bort från sekvensen"
+      },
+      "sending": {
+        "title": "Utskick",
+        "from": "Från",
+        "provider": "Tjänsteleverantör",
+        "notConfigured": "Inte konfigurerat",
+        "unsubscribe": "Avprenumerationslänk",
+        "on": "På",
+        "tracking": "Spårning"
+      }
+    },
+    "forms": {
+      "title": "Kontaktformulär",
+      "new": "Nytt formulär",
+      "active": "Aktivt",
+      "inactive": "Inaktivt",
+      "createsSuggestion": "Förslag",
+      "copyUrl": "Kopiera",
+      "emptyTitle": "Inga kontaktformulär ännu",
+      "emptyBody": "Offentliga formulär omvandlar inkommande kundförfrågningar till kontakter och kan även skapa förslag på affärsmöjligheter.",
+      "columns": {
+        "name": "Namn",
+        "slug": "URL-namn",
+        "campaign": "Kampanj",
+        "status": "Status",
+        "captureUrl": "Formulär-URL",
+        "actions": "Åtgärder"
+      },
+      "dialog": {
+        "createTitle": "Nytt kontaktformulär",
+        "editTitle": "Redigera formulär",
+        "name": "Namn",
+        "slug": "URL-namn",
+        "slugHint": "Små bokstäver, siffror och bindestreck (t.ex. demo-request). Används i formulärets offentliga URL.",
+        "slugInvalid": "Ogiltigt URL-namn",
+        "description": "Beskrivning (valfri)",
+        "campaign": "Kampanj (valfri)",
+        "noCampaign": "Ingen kampanj",
+        "createsSuggestion": "Skapa ett förslag på affärsmöjlighet för varje inskickat formulär",
+        "isActive": "Aktivt (tar emot inskickade formulär)"
+      },
+      "toast": {
+        "created": "Formuläret har skapats",
+        "updated": "Formuläret har uppdaterats",
+        "urlCopied": "Formulärets URL har kopierats"
+      }
+    },
+    "channels": {
+      "title": "Kanaler",
+      "new": "Ny kanal",
+      "emptyTitle": "Inga kanaler ännu",
+      "emptyBody": "Kanaler är de platser där du publicerar – en LinkedIn-profil, en YouTube-kanal eller en blogg.",
+      "columns": {
+        "name": "Namn",
+        "platform": "Plattform",
+        "handle": "Användarnamn / URL",
+        "active": "Aktiv",
+        "actions": "Åtgärder"
+      },
+      "dialog": {
+        "createTitle": "Ny kanal",
+        "editTitle": "Redigera kanal",
+        "name": "Namn",
+        "namePlaceholder": "t.ex. Roberts LinkedIn",
+        "platform": "Plattform",
+        "platformPlaceholder": "Välj en plattform…",
+        "handle": "Användarnamn eller URL (valfritt)",
+        "isActive": "Aktiv"
+      },
+      "toast": {
+        "created": "Kanalen har skapats",
+        "updated": "Kanalen har uppdaterats",
+        "activated": "Kanalen har aktiverats",
+        "deactivated": "Kanalen har inaktiverats"
+      }
+    },
+    "contact": {
+      "title": "Marknadsföring",
+      "loading": "Laddar marknadsföringsaktivitet…",
+      "consentGiven": "Samtycke",
+      "noConsent": "Inget samtycke",
+      "suppressed": "Spärrad för utskick",
+      "activeEnrollments": "Aktivt deltagande",
+      "noEnrollments": "Deltar inte i någon sekvens.",
+      "enrollmentMeta": "steg {{step}} · nästa {{date}}",
+      "recentEngagements": "Senaste engagemang",
+      "noEngagements": "Inga marknadsföringskontakter ännu."
+    },
+    "boundary": {
+      "disabledTitle": "Marknadsföring är inte aktiverat",
+      "disabledDescription": "Marknadsföringsmodulen är inte aktiverad för det här kontot.",
+      "permissionTitle": "Ingen åtkomst till marknadsföring",
+      "permissionDescription": "Du har inte behörighet att visa marknadsföring. Be en administratör om läsbehörighet för marknadsföring.",
+      "backToDashboard": "Gå till översiktspanelen"
+    }
+  },
+  "sidebar": {
+    "backToMain": "Tillbaka till huvudmenyn",
+    "searchPlaceholder": "Sök",
+    "settings": "Inställningar",
+    "support": "Support",
+    "goToDashboard": "Gå till översiktspanelen",
+    "logoAlt": "AlgaPSA-logotyp",
+    "expandSidebar": "Expandera sidofältet",
+    "collapseSidebar": "Fäll ihop sidofältet",
+    "collapseSection": "Fäll ihop {{section}}",
+    "expandSection": "Expandera {{section}}",
+    "appLogoAlt": "Logotyp för {{appName}}",
+    "poweredBy": "Drivs av"
+  },
+  "settings": {
+    "sections": {
+      "organizationAccess": "Organisation och åtkomst",
+      "workManagement": "Arbetshantering",
+      "timeBilling": "Tid och debitering",
+      "communication": "Kommunikation",
+      "dataIntegration": "Data och integrering",
+      "experimental": "Experimentellt"
+    },
+    "tabs": {
+      "general": "Allmänt",
+      "users": "Användare",
+      "teams": "Team",
+      "language": "Språk",
+      "appearance": "Utseende",
+      "clientPortal": "Kundportal",
+      "license": "Licens",
+      "ticketing": "Ärendehantering",
+      "sla": "SLA",
+      "projects": "Projekt",
+      "assets": "Tillgångar",
+      "interactions": "Interaktioner",
+      "opportunities": "Affärsmöjligheter",
+      "notifications": "Aviseringar",
+      "timeEntry": "Tidregistrering",
+      "billing": "Debitering",
+      "secrets": "Hemligheter",
+      "importExport": "Import/export",
+      "email": "E-post",
+      "integrations": "Integreringar",
+      "extensions": "Tillägg",
+      "experimentalFeatures": "Experimentella funktioner",
+      "profile": "Profil",
+      "security": "Säkerhet"
+    }
+  },
+  "dashboard": {
+    "onboardingWizard": "Introduktionsguide"
+  },
+  "header": {
+    "userFallback": "Användare",
+    "quickAccess": "Snabb åtkomst till profil och konto.",
+    "profile": "Profil",
+    "account": "Konto",
+    "signOut": "Logga ut",
+    "quickAsk": {
+      "ariaLabel": "Fråga AI om det här arbetsflödet",
+      "title": "Fråga AI",
+      "shortcutHint": "Öppna Fråga AI för vägledning om arbetsflöden"
+    },
+    "quickCreate": {
+      "ariaLabel": "Öppna snabbregistrering",
+      "title": "Snabbregistrering",
+      "heading": "Skapa",
+      "options": {
+        "opportunity": {
+          "description": "Registrera en affär innan du glömmer den",
+          "label": "Affärsmöjlighet"
+        },
+        "ticket": {
+          "label": "Ärende",
+          "description": "Skapa ett nytt supportärende"
+        },
+        "client": {
+          "label": "Kund",
+          "description": "Lägg till en ny kund i ditt system"
+        },
+        "contact": {
+          "label": "Kontakt",
+          "description": "Lägg till en ny kontaktperson"
+        },
+        "project": {
+          "label": "Projekt",
+          "description": "Starta ett nytt projekt"
+        },
+        "asset": {
+          "label": "Tillgång",
+          "description": "Lägg till en ny enhet i din arbetsyta"
+        },
+        "service": {
+          "label": "Tjänst",
+          "description": "Lägg till en ny debiterbar tjänst"
+        },
+        "product": {
+          "label": "Produkt",
+          "description": "Lägg till en ny produkt i din katalog"
+        }
+      }
+    },
+    "resources": {
+      "ariaLabel": "Resurser och hjälp",
+      "title": "Resurser",
+      "documentation": "Dokumentation",
+      "support": "Kontakta supporten"
+    },
+    "jobs": {
+      "ariaLabel": "Visa aktivitet för bakgrundsjobb",
+      "title": "Bakgrundsjobb",
+      "description": "Följ importer, automatiseringskörningar och schemalagt arbete.",
+      "active": "Aktiva bakgrundsjobb",
+      "queued": "Köade bakgrundsjobb",
+      "failedLast24h": "Misslyckade de senaste 24 timmarna",
+      "openJobCenter": "Öppna bakgrundsjobbcentret"
+    },
+    "breadcrumb": {
+      "label": "Navigeringssökväg",
+      "dashboard": "Översiktspanel",
+      "home": "Hem"
+    },
+    "tenantBadge": {
+      "ariaLabel": "Aktiv klientorganisation {{tenant}}"
+    },
+    "themeToggle": {
+      "ariaLabel": "Växla tema",
+      "light": "Ljust",
+      "dark": "Mörkt",
+      "system": "System",
+      "selected": "Valt"
+    },
+    "openUserMenu": "Öppna användarmenyn"
+  },
+  "dialogs": {
+    "aiInterrupt": {
+      "navigate": {
+        "title": "Lämna sidan och avbryta AI-svaret?",
+        "message": "Ett AI-svar eller en verktygsåtgärd pågår fortfarande. Om du lämnar sidan nu avbryts det som pågår.",
+        "confirm": "Lämna sidan",
+        "cancel": "Stanna på sidan"
+      },
+      "closeChat": {
+        "title": "Stänga chatten och avbryta AI-svaret?",
+        "message": "Ett AI-svar eller en verktygsåtgärd pågår fortfarande. Om du stänger chatten nu avbryts det som pågår.",
+        "confirm": "Stäng chatten",
+        "cancel": "Behåll chatten öppen"
+      }
+    }
+  },
+  "banners": {
+    "trial": {
+      "dayLeft": "1 dag kvar",
+      "daysLeft": "{{count}} dagar kvar",
+      "stripeTrial": "Provperiod för {{tier}}: {{daysLabel}}"
+    },
+    "paymentFailed": {
+      "message": "Betalningen misslyckades – uppdatera betalningsmetoden",
+      "portalError": "Det gick inte att öppna debiteringsportalen"
+    },
+    "platformNotification": {
+      "learnMore": "Läs mer",
+      "dismiss": "Stäng avisering"
+    }
+  },
+  "quickCreate": {
+    "success": {
+      "asset": "Tillgången har skapats",
+      "opportunity": "Affärsmöjligheten ”{{title}}” har skapats",
+      "ticket": "Ärende #{{number}} har skapats",
+      "client": "Kunden ”{{name}}” har skapats",
+      "contact": "{{name}} har lagts till",
+      "project": "Projektet ”{{name}}” har skapats",
+      "service": "Tjänsten har skapats",
+      "product": "Produkten har skapats"
+    },
+    "errors": {
+      "loadClients": "Det gick inte att ladda kunder",
+      "loadServiceTypes": "Det gick inte att ladda tjänstetyper"
+    },
+    "dialogTitles": {
+      "contact": "Lägg till ny kontakt",
+      "opportunity": "Ny affärsmöjlighet",
+      "project": "Lägg till nytt projekt",
+      "service": "Lägg till ny tjänst"
+    }
+  },
+  "rightSidebar": {
+    "title": "Chatt",
+    "enterpriseOnly": "Chattfunktionen är endast tillgänglig i Pro."
+  },
+  "notifications": {
+    "messages": {
+      "error": {
+        "loadFailed": "Det gick inte att ladda aviseringar"
+      }
+    }
+  },
+  "search": {
+    "placeholder": "Sök kunder, ärenden, dokument…",
+    "shortcutHint": "Cmd/Ctrl+K",
+    "loading": "Söker…",
+    "pageTitle": "Sök",
+    "helperText": "Sök i hela arbetsytan.",
+    "resultSummary": "{{count}} resultat för ”{{query}}”",
+    "resultsRegionLabel": "Sökresultat",
+    "filtersLabel": "Sökfilter",
+    "sortLabel": "Sortera resultat",
+    "paginationLabel": "Sidnavigering för sökresultat",
+    "seeAllResults": "Visa alla {{count}} resultat",
+    "noResults": "Inga resultat för ”{{query}}”",
+    "emptyBroadenQuery": "Prova en bredare sökning.",
+    "emptyRemoveFilter": "Prova att ta bort typfiltret.",
+    "error": "Sökningen misslyckades. Försök igen.",
+    "filters": {
+      "all": "Alla",
+      "client": "Kunder",
+      "contact": "Kontakter",
+      "user": "Teammedlemmar",
+      "ticket": "Ärenden",
+      "ticket_comment": "Ärendekommentarer",
+      "project": "Projekt",
+      "project_phase": "Projektfaser",
+      "project_task": "Projektuppgifter",
+      "project_task_comment": "Kommentarer till projektuppgifter",
+      "asset": "Tillgångar",
+      "sales_order": "Försäljningsorder",
+      "purchase_order": "Inköpsorder",
+      "stock_unit": "Lagerenheter",
+      "invoice": "Fakturor",
+      "invoice_item": "Fakturarader",
+      "invoice_annotation": "Fakturaanteckningar",
+      "contract": "Avtal",
+      "client_contract": "Kundavtal",
+      "document": "Dokument",
+      "kb_article": "Kunskapsbasartiklar",
+      "service_catalog": "Tjänstekatalog",
+      "service_request_submission": "Tjänsteförfrågningar",
+      "service_request_definition": "Definitioner av tjänsteförfrågningar",
+      "workflow_task": "Arbetsflödesuppgifter",
+      "interaction": "Interaktioner",
+      "schedule_entry": "Schemaposter",
+      "time_entry": "Tidposter",
+      "board": "Tavlor",
+      "category": "Kategorier",
+      "tag": "Taggar",
+      "status": "Statusar"
+    },
+    "groups": {
+      "client": "Kunder",
+      "contact": "Kontakter",
+      "user": "Teammedlemmar",
+      "ticket": "Ärenden",
+      "ticket_comment": "Ärendekommentarer",
+      "project": "Projekt",
+      "project_phase": "Projektfaser",
+      "project_task": "Projektuppgifter",
+      "project_task_comment": "Kommentarer till projektuppgifter",
+      "asset": "Tillgångar",
+      "sales_order": "Försäljningsorder",
+      "purchase_order": "Inköpsorder",
+      "stock_unit": "Lagerenheter",
+      "invoice": "Fakturor",
+      "invoice_item": "Fakturarader",
+      "invoice_annotation": "Fakturaanteckningar",
+      "contract": "Avtal",
+      "client_contract": "Kundavtal",
+      "document": "Dokument",
+      "kb_article": "Kunskapsbasartiklar",
+      "service_catalog": "Tjänstekatalog",
+      "service_request_submission": "Tjänsteförfrågningar",
+      "service_request_definition": "Definitioner av tjänsteförfrågningar",
+      "workflow_task": "Arbetsflödesuppgifter",
+      "interaction": "Interaktioner",
+      "schedule_entry": "Schemaposter",
+      "time_entry": "Tidposter",
+      "board": "Tavlor",
+      "category": "Kategorier",
+      "tag": "Taggar",
+      "status": "Statusar"
+    },
+    "sort": {
+      "relevance": "Relevans",
+      "recent": "Senaste"
+    },
+    "pagination": {
+      "previous": "Föregående",
+      "next": "Nästa"
+    }
+  },
+  "onboardingRedirect": {
+    "title": "Du omdirigeras till konfigurationen",
+    "description": "Din arbetsyta behöver konfigureras innan du kan använda översiktspanelen. Det går snabbt.",
+    "action": "Fortsätt till konfigurationen"
+  },
+  "githubStar": {
+    "label": "Stjärnmärk",
+    "ariaLabel": "Stjärnmärk {{repository}} på GitHub"
+  }
+}

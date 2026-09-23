@@ -511,7 +511,7 @@
   ],
   "identicalAllowlist": {
     "exact": [
-      "Filter", "Information", "Status", "{{entityType}}", "{{thankYouText}}",
+      "Filter", "Information", "Status", "Support", "{{entityType}}", "{{thankYouText}}",
       "3CX", "Acme IT Solutions", "Alga", "AlgaDesk", "AlgaPSA", "Android", "App Store (iOS)",
       "CIPP (CyberDrain Improved Partner Portal)", "Datto", "Entra ID", "Excel", "Gmail", "Google",
       "Google Calendar", "Google Cloud Console", "Google OAuth", "Google Play (Android)", "Google Workspace",
