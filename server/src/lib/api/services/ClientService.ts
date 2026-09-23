@@ -342,6 +342,7 @@ export class ClientService extends BaseService<IClient> {
         billing_email: data.billing_email,
         account_manager_id: data.account_manager_id,
         is_inactive: data.is_inactive || false,
+        client_since: data.client_since ?? null,
         tenant: context.tenant,
         created_at: knex.raw('now()'),
         updated_at: knex.raw('now()')
