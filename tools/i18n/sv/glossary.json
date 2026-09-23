@@ -511,6 +511,10 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "{{type}} {{qty}} × {{name}}",
+      "T-{{days}}",
+      "T+{{days}}",
+      "{{name}} · {{count}}{{amount}}",
       "Agent",
       "Check",
       "URL:",
