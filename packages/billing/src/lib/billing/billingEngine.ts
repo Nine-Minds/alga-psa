@@ -4389,7 +4389,7 @@ export class BillingEngine {
               catalogEffectiveDate:
                 revision.price_policy === "catalog" &&
                 service.currency_price_effective_date != null
-                  ? String(service.currency_price_effective_date).slice(0, 10)
+                  ? normalizeScheduleDate(service.currency_price_effective_date)
                   : null,
             },
           };
@@ -6328,7 +6328,7 @@ export class BillingEngine {
                 catalogEffectiveDate:
                   effective.pricePolicy === "catalog" &&
                   service.price_effective_date != null
-                    ? String(service.price_effective_date).slice(0, 10)
+                    ? normalizeScheduleDate(service.price_effective_date)
                     : null,
               },
             };

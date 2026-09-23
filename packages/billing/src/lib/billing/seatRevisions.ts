@@ -366,6 +366,16 @@ export interface EffectiveRecurringUnitDisplayPricing extends EffectiveRecurring
   /** `service_prices` identity that supplied a catalog-policy rate. */
   catalogPriceId: string | null;
   catalogEffectiveDate: string | null;
+  /**
+   * The currency/period catalog price resolved for the selected boundary
+   * independently of the currently-effective policy, so the operator can
+   * preview an override→catalog switch. Null when no currency catalog price
+   * applies; products never fall back to the unqualified `default_rate`
+   * because product billing rejects a missing currency price.
+   */
+  catalogUnitRateCents: number | null;
+  catalogUnitPriceId: string | null;
+  catalogUnitEffectiveDate: string | null;
   /** Covered service period containing the boundary, when materialized. */
   coveredStart: string;
   coveredEnd: string | null;
@@ -409,29 +419,44 @@ export async function resolveRecurringUnitDisplayPricing(params: {
   const currencyCode =
     (contract?.currency_code && String(contract.currency_code).trim()) || 'USD';
 
-  let resolvedUnitRateCents = effective.unitRateCents;
-  let catalogPriceId: string | null = null;
-  let catalogEffectiveDate: string | null = null;
-  if (effective.pricePolicy === 'catalog') {
-    const prices = (await db
-      .table('service_prices')
-      .where({ tenant, service_id: serviceId, currency_code: currencyCode })
-      .select('price_id', 'service_id', 'currency_code', 'rate', 'effective_date', 'created_at')) as ServicePriceRateRow[];
-    const selected = selectEffectiveServicePrice(prices, serviceId, currencyCode, boundary);
-    if (selected) {
-      resolvedUnitRateCents = selected.rateCents;
-      catalogPriceId = selected.price_id;
-      catalogEffectiveDate = selected.effectiveDate;
-    } else {
-      // Mirror the resolver's legacy fallback for the tenant currency.
-      const catalogRow = await db
-        .table('service_catalog')
-        .where({ tenant, service_id: serviceId })
-        .first<{ default_rate: number | string | null } | undefined>('default_rate');
-      const legacy = catalogRow?.default_rate == null ? null : Number(catalogRow.default_rate);
-      resolvedUnitRateCents = Number.isFinite(legacy) ? legacy : null;
-    }
+  // Resolve the currency/period catalog price for the selected boundary
+  // independently of the currently-effective policy, so switching an override
+  // to catalog inherits the real catalog price rather than the old override.
+  const prices = (await db
+    .table('service_prices')
+    .where({ tenant, service_id: serviceId, currency_code: currencyCode })
+    .select('price_id', 'service_id', 'currency_code', 'rate', 'effective_date', 'created_at')) as ServicePriceRateRow[];
+  const selectedCatalogPrice = selectEffectiveServicePrice(prices, serviceId, currencyCode, boundary);
+  let catalogUnitRateCents: number | null = null;
+  let catalogUnitPriceId: string | null = null;
+  let catalogUnitEffectiveDate: string | null = null;
+  if (selectedCatalogPrice) {
+    catalogUnitRateCents = selectedCatalogPrice.rateCents;
+    catalogUnitPriceId = selectedCatalogPrice.price_id;
+    catalogUnitEffectiveDate = selectedCatalogPrice.effectiveDate;
+  } else if (params.kind !== 'product') {
+    // Legacy unit-services may still fall back to the tenant-currency
+    // `service_catalog.default_rate`. Products must not: product billing
+    // resolves the contract-currency `service_prices` row and rejects a
+    // missing price, so a fallback here would show a billable amount that
+    // generation later refuses.
+    const catalogRow = await db
+      .table('service_catalog')
+      .where({ tenant, service_id: serviceId })
+      .first<{ default_rate: number | string | null } | undefined>('default_rate');
+    const legacy = catalogRow?.default_rate == null ? null : Number(catalogRow.default_rate);
+    catalogUnitRateCents = Number.isFinite(legacy) ? legacy : null;
   }
+
+  // The effective bill rate follows the policy in force; catalog-policy
+  // revisions inherit the resolved catalog price, override revisions bill
+  // their explicit rate.
+  const resolvedUnitRateCents =
+    effective.pricePolicy === 'catalog' ? catalogUnitRateCents : effective.unitRateCents;
+  const catalogPriceId =
+    effective.pricePolicy === 'catalog' ? catalogUnitPriceId : null;
+  const catalogEffectiveDate =
+    effective.pricePolicy === 'catalog' ? catalogUnitEffectiveDate : null;
 
   const period = await db
     .table('recurring_service_periods')
@@ -456,6 +481,9 @@ export async function resolveRecurringUnitDisplayPricing(params: {
     resolvedUnitRateCents,
     catalogPriceId,
     catalogEffectiveDate,
+    catalogUnitRateCents,
+    catalogUnitPriceId,
+    catalogUnitEffectiveDate,
     coveredStart: period ? toBoundaryDay(period.service_period_start) : boundary,
     coveredEnd: period ? toBoundaryDay(period.service_period_end) : null,
     protectedLifecycle: period?.lifecycle_state ?? null,
@@ -551,6 +579,15 @@ export async function scheduleRecurringUnitRevisionInTransaction(
   const boundaryConflict = await validateProspectivePricingBoundary(trx, tenant, contractLineId, effectivePeriodStart);
   if (boundaryConflict) {
     return { ok: false, error: boundaryConflict };
+  }
+
+  if (kind === 'product' && pricePolicy === 'catalog' && quantity > 0) {
+    const pricing = await resolveRecurringUnitDisplayPricing({
+      trx, tenant, contractLineId, serviceId, configId, kind, boundary: effectivePeriodStart,
+    });
+    if (pricing.catalogUnitRateCents === null) {
+      return { ok: false, error: `No ${pricing.currencyCode} catalog price covers this boundary. Add a currency price or choose an explicit unit price override.` };
+    }
   }
 
   const existing = await tenantScopedTable(trx, tenant, 'contract_line_unit_pricing_revisions')

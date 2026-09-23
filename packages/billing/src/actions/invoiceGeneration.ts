@@ -94,6 +94,9 @@ import {
   ManualInvoiceError,
   type HandledManualInvoiceErrorCode,
 } from '../errors/manualInvoiceErrors';
+import { scheduleRecurringUnitRevisionInTransaction } from '../lib/billing/seatRevisions';
+import { resolveRecurringUnitKind } from '@alga-psa/shared/billingClients/recurringUnitPricing';
+import type { IContractLineUnitPricingRevisionInput } from '@alga-psa/types';
 import { lockTenantBilling } from '../lib/billing/billingMutationLock';
 import {
   bindUsagePeriodTotalInputs,
@@ -2129,7 +2132,15 @@ async function adaptToWasmViewModel(
       item.time_entry_links = item.time_entry_links.map((link) => ({ ...link, itemId: item.item_id, invoiceId: item.invoice_id, tenant }));
     }
   }
-  const previewViewModelItems = invoiceItems.map(buildPreviewViewModelItem);
+  // Use the same signed, rounded discount lines as invoice persistence. Tax
+  // remains the existing engine policy; scheduling does not change that policy.
+  const discountItems = billingResult.discounts.map((discount) => {
+    const amount = Math.round(-(discount.amount || 0));
+    return { id: `preview-discount-${discount.discount_id}`, description: discount.discount_name,
+      quantity: 1, unitPrice: amount, total: amount };
+  });
+  const discountAdjustment = discountItems.reduce((sum, item) => sum + item.total, 0);
+  const previewViewModelItems = [...invoiceItems.map(buildPreviewViewModelItem), ...discountItems];
 
   const previewViewModel: WasmInvoiceViewModel = {
     invoiceNumber: 'PREVIEW',
@@ -2143,9 +2154,9 @@ async function adaptToWasmViewModel(
     },
     tenantClient: tenantClientInfo, // Use fetched tenant client info
     items: previewViewModelItems,
-    subtotal: billingResult.totalAmount,
+    subtotal: billingResult.totalAmount + discountAdjustment,
     tax: previewTax,
-    total: billingResult.totalAmount + previewTax,
+    total: billingResult.totalAmount + discountAdjustment + previewTax,
     // notes: undefined, // Add if needed
   };
 
@@ -2155,6 +2166,77 @@ async function adaptToWasmViewModel(
 
   return previewViewModel;
 }
+
+export type RecurringRevisionInvoiceImpact = {
+  success: true;
+  before: WasmInvoiceViewModel;
+  after: WasmInvoiceViewModel;
+  windowStart: string;
+  windowEnd: string;
+} | { success: false; error: string };
+
+/** Calculate a proposed revision through the invoice pipeline, without saving it. */
+export const previewRecurringRevisionInvoiceImpact = withAuth(async (
+  user, { tenant }, input: IContractLineUnitPricingRevisionInput,
+): Promise<RecurringRevisionInvoiceImpact> => {
+  if (!await hasPermission(user, 'billing', 'update') ||
+      (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate'))) {
+    return { success: false, error: 'Permission denied: billing update and invoice preview access required.' };
+  }
+  const { knex } = await createTenantKnex();
+  // Carry the result out through rollback, including when the caller already
+  // has a transaction. Neither a revision nor its history may survive preview.
+  class PreviewRollback extends Error {
+    constructor(readonly result: RecurringRevisionInvoiceImpact) { super('Preview rollback'); }
+  }
+  try {
+    await knex.transaction(async (trx: Knex.Transaction) => {
+      await lockTenantBilling(trx, tenant);
+      const db = tenantDb(trx, tenant);
+      const config = await db.table('contract_line_service_configuration as cfg')
+        .join('contract_line_service_fixed_config as fc', function () {
+          this.on('fc.config_id', 'cfg.config_id').andOn('fc.tenant', 'cfg.tenant');
+        }).join('service_catalog as sc', function () {
+          this.on('sc.service_id', 'cfg.service_id').andOn('sc.tenant', 'cfg.tenant');
+        }).where({ 'cfg.config_id': input.config_id, 'cfg.contract_line_id': input.contract_line_id,
+          'cfg.service_id': input.service_id })
+        .first('cfg.configuration_type', 'fc.pricing_basis', 'sc.item_kind');
+      const kind = config && resolveRecurringUnitKind({ configurationType: config.configuration_type,
+        pricingBasis: config.pricing_basis, itemKind: config.item_kind });
+      if (!kind) throw new Error('This item does not support recurring quantity changes.');
+      const period = await db.table('recurring_service_periods as rsp')
+        .join('contract_lines as cl', function () {
+          this.on('cl.contract_line_id', 'rsp.obligation_id').andOn('cl.tenant', 'rsp.tenant');
+        }).join('contracts as ct', function () {
+          this.on('ct.contract_id', 'cl.contract_id').andOn('ct.tenant', 'cl.tenant');
+        }).where({ 'rsp.obligation_id': input.contract_line_id,
+          'rsp.service_period_start': input.effective_period_start })
+        .whereNotIn('rsp.lifecycle_state', ['archived', 'superseded'])
+        .first('rsp.invoice_window_start', 'rsp.invoice_window_end', 'ct.owner_client_id');
+      if (!period) throw new Error('No service period is available for this boundary. Prepare service periods in Billing, then retry the preview.');
+      const windowStart = normalizeRecurringWindowDate(period.invoice_window_start);
+      const windowEnd = normalizeRecurringWindowDate(period.invoice_window_end);
+      const selectorInputs = await resolveCanonicalSelectorInputsForClientWindow({
+        knex: trx, tenant, clientId: period.owner_client_id, windowStart, windowEnd,
+      });
+      const before = await buildPreviewInvoiceForSelectionInputs({ knex: trx, tenant, selectorInputs });
+      const scheduled = await scheduleRecurringUnitRevisionInTransaction({
+        trx, tenant, userId: user.user_id, kind,
+        contractLineId: input.contract_line_id, serviceId: input.service_id, configId: input.config_id,
+        quantity: input.quantity, pricePolicy: input.price_policy ?? 'override',
+        unitRateCents: input.unit_rate_cents, effectivePeriodStart: input.effective_period_start,
+        expectedVersion: input.expected_version,
+      });
+      if (!scheduled.ok) throw new Error(scheduled.error);
+      const after = await buildPreviewInvoiceForSelectionInputs({ knex: trx, tenant, selectorInputs });
+      throw new PreviewRollback({ success: true, before: before.viewModel, after: after.viewModel, windowStart, windowEnd });
+    });
+    return { success: false, error: 'Invoice impact could not be calculated.' };
+  } catch (error) {
+    if (error instanceof PreviewRollback) return error.result;
+    return { success: false, error: error instanceof Error ? error.message : 'Invoice impact could not be calculated.' };
+  }
+});
 
 interface BuiltPreviewInvoice {
   viewModel: WasmInvoiceViewModel;
@@ -2175,9 +2257,11 @@ interface BuiltPreviewInvoice {
   /**
    * Recurring revision/catalog sources every charge was priced from, for the
    * caller to hand back to generation so finalization refuses when a scheduled
-   * revision or its catalog source changed after the preview.
+   * revision or its catalog source changed after the preview. Always present
+   * after a successful preview — an empty array means the preview reviewed no
+   * scheduled sources, which generation treats as a reviewed (empty) set.
    */
-  expectedRecurringPricingSources?: IExpectedRecurringPricingSource[];
+  expectedRecurringPricingSources: IExpectedRecurringPricingSource[];
 }
 
 async function buildPreviewInvoiceForSelectionInputs(params: {
@@ -2464,6 +2548,9 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
 
   const usageServicePeriodStatuses = billingResult.usageServicePeriodStatuses;
   const expectedUsagePeriodTotals = billingResult.expectedUsagePeriodTotals ?? [];
+  // Always present, even when empty: an empty review must still bind generation
+  // to "no scheduled revisions were billed", otherwise an untouched-contract
+  // preview followed by a concurrent first revision would silently bill it.
   const expectedRecurringPricingSources = bindRecurringPricingSources(billingResult.charges);
   return {
     viewModel,
@@ -2471,9 +2558,7 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
       ? { usageServicePeriodStatuses }
       : {}),
     ...(expectedUsagePeriodTotals.length > 0 ? { expectedUsagePeriodTotals } : {}),
-    ...(expectedRecurringPricingSources.length > 0
-      ? { expectedRecurringPricingSources }
-      : {}),
+    expectedRecurringPricingSources,
   };
 }
 
@@ -2514,9 +2599,10 @@ export type RecurringGroupedPreviewResponse = {
     expectedUsagePeriodTotals?: IExpectedUsagePeriodTotal[];
     /**
      * Reviewed recurring revision/catalog sources for scheduled charges, to
-     * pass back through generation as expectedRecurringPricingSources.
+     * pass back through generation as expectedRecurringPricingSources. Always
+     * present after a successful preview; `[]` means none were reviewed.
      */
-    expectedRecurringPricingSources?: IExpectedRecurringPricingSource[];
+    expectedRecurringPricingSources: IExpectedRecurringPricingSource[];
   }>;
 } | {
   success: false;
@@ -2581,9 +2667,7 @@ export const previewGroupedInvoicesForSelectionInputs = withAuth(async (
           ...(preview.expectedUsagePeriodTotals
             ? { expectedUsagePeriodTotals: preview.expectedUsagePeriodTotals }
             : {}),
-          ...(preview.expectedRecurringPricingSources
-            ? { expectedRecurringPricingSources: preview.expectedRecurringPricingSources }
-            : {}),
+          expectedRecurringPricingSources: preview.expectedRecurringPricingSources,
         };
       }),
     );
@@ -2659,9 +2743,7 @@ export const previewInvoiceForSelectionInput = withAuth(async (
       ...(preview.expectedUsagePeriodTotals
         ? { expectedUsagePeriodTotals: preview.expectedUsagePeriodTotals }
         : {}),
-      ...(preview.expectedRecurringPricingSources
-        ? { expectedRecurringPricingSources: preview.expectedRecurringPricingSources }
-        : {}),
+      expectedRecurringPricingSources: preview.expectedRecurringPricingSources,
     };
   } catch (error) {
     logPreviewInvoiceFailure(
@@ -2750,9 +2832,7 @@ export const previewInvoice = withAuth(async (
       ...(preview.expectedUsagePeriodTotals
         ? { expectedUsagePeriodTotals: preview.expectedUsagePeriodTotals }
         : {}),
-      ...(preview.expectedRecurringPricingSources
-        ? { expectedRecurringPricingSources: preview.expectedRecurringPricingSources }
-        : {}),
+      expectedRecurringPricingSources: preview.expectedRecurringPricingSources,
     };
   } catch (error) {
     logPreviewInvoiceFailure(

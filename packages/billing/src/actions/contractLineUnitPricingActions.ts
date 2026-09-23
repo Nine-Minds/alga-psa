@@ -269,6 +269,14 @@ export interface EffectiveRecurringUnitPricingReadResult {
   resolvedUnitRateCents?: number | null;
   catalogPriceId?: string | null;
   catalogEffectiveDate?: string | null;
+  /**
+   * Catalog price resolved for the selected boundary independently of the
+   * currently-effective policy, so an override→catalog switch previews the
+   * right rate (null when no currency catalog price applies).
+   */
+  catalogUnitRateCents?: number | null;
+  catalogUnitPriceId?: string | null;
+  catalogUnitEffectiveDate?: string | null;
   coveredStart?: string;
   coveredEnd?: string | null;
   protectedLifecycle?: string | null;

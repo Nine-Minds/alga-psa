@@ -20,6 +20,7 @@ import {
   listRecurringUnitPricingRevisions,
   scheduleRecurringUnitPricingRevision,
 } from '@alga-psa/billing/actions/contractLineUnitPricingActions';
+import { previewRecurringRevisionInvoiceImpact, type RecurringRevisionInvoiceImpact } from '@alga-psa/billing/actions/invoiceGeneration';
 import { getNextContractServiceBoundary } from '@alga-psa/billing/actions/contractLineSemanticsActions';
 import type { EffectiveRecurringUnitPricingReadResult } from '@alga-psa/billing/actions/contractLineUnitPricingActions';
 import type { IRecurringUnitPricingRevisionListRow } from '@alga-psa/billing/lib/billing/seatRevisions';
@@ -83,6 +84,34 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
   const [quantityInput, setQuantityInput] = useState<string>('');
   const [pricePolicy, setPricePolicy] = useState<ContractLineUnitPricePolicy>('override');
   const [rateInput, setRateInput] = useState<string>('');
+  const [impact, setImpact] = useState<RecurringRevisionInvoiceImpact | null>(null);
+  const [previewing, setPreviewing] = useState(false);
+  const impactRequest = useRef(0);
+  useEffect(() => {
+    impactRequest.current += 1;
+    setImpact(null);
+    setPreviewing(false);
+  }, [boundary, quantityInput, pricePolicy, rateInput, revisions]);
+
+  const previewImpact = async () => {
+    const request = ++impactRequest.current;
+    setPreviewing(true);
+    setImpact(null);
+    try {
+      const result = await previewRecurringRevisionInvoiceImpact({
+        contract_line_id: contractLineId, service_id: serviceId, config_id: configId,
+        quantity: Number(quantityInput), price_policy: pricePolicy,
+        unit_rate_cents: pricePolicy === 'override' ? Math.round(Number(rateInput) * 100) : null,
+        effective_period_start: boundary,
+        expected_version: boundaryRevision?.version ?? null,
+      });
+      if (request === impactRequest.current) setImpact(result);
+    } catch (error) {
+      if (request === impactRequest.current) setImpact({ success: false, error: getErrorMessage(error) });
+    } finally {
+      if (request === impactRequest.current) setPreviewing(false);
+    }
+  };
 
   const formatRate = useCallback(
     (cents: number | null | undefined) =>
@@ -269,13 +298,21 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
     effective?.protectedLifecycle === 'billed' || effective?.protectedLifecycle === 'locked';
   const currentResolvedRateCents =
     effective?.resolvedUnitRateCents ?? effective?.unitRateCents ?? null;
+  // A catalog selection must preview the catalog price for the selected
+  // boundary, not the currently-effective override.
   const proposedRateCents =
     pricePolicy === 'catalog'
-      ? effective?.resolvedUnitRateCents ?? null
+      ? effective?.catalogUnitRateCents ?? null
       : rateInput === ''
         ? null
         : Math.round(Number(rateInput) * 100);
   const proposedQuantity = Number(quantityInput);
+  const catalogPriceMissing =
+    pricePolicy === 'catalog' &&
+    !!effective &&
+    effective.catalogUnitRateCents === null &&
+    Number.isInteger(proposedQuantity) &&
+    proposedQuantity > 0;
   const currentSubtotalCents =
     effective && currentResolvedRateCents !== null
       ? effective.quantity * currentResolvedRateCents
@@ -309,6 +346,12 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
           </Badge>
         )}
       </div>
+
+      {boundary && boundary < todayIso() && !isProtected && (
+        <Alert variant="info" className="mt-3"><AlertDescription>
+          {t('contractLines.recurringSchedule.olderUnbilled', { defaultValue: 'This boundary is in the past. Pending billing from this date onward will use the scheduled values; earlier billed periods stay unchanged.' })}
+        </AlertDescription></Alert>
+      )}
 
       {loadError && (
         <Alert variant="destructive" className="mb-3">
@@ -489,7 +532,7 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
             <p className="text-xs font-medium text-[rgb(var(--color-text-800))]">
               {t('contractLines.recurringSchedule.invoiceImpact', {
                 defaultValue:
-                  'From {{date}} the recurring subtotal for this item changes by {{delta}} to {{total}} (before discounts and tax). This period is unchanged.',
+                  'From {{date}} the recurring subtotal for this item changes by {{delta}} to {{total}} (before discounts and tax). Earlier billed periods are unchanged.',
                 date: boundary,
                 delta: formatCurrency(deltaCents / 100, effective.currencyCode ?? currencyCode),
                 total: formatCurrency((proposedSubtotalCents ?? 0) / 100, effective.currencyCode ?? currencyCode),
@@ -497,6 +540,35 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
             </p>
           )}
         </div>
+      )}
+
+      <div className="mt-3" aria-live="polite">
+        <Button id={`preview-recurring-impact-${configId}`} type="button" variant="outline" size="sm"
+          disabled={disabled || saving || loading || previewing || isProtected || !!loadError ||
+            !boundary || quantityInput === '' || !Number.isInteger(proposedQuantity) || proposedQuantity < 0 ||
+            catalogPriceMissing || (pricePolicy === 'override' && (rateInput === '' || !Number.isFinite(proposedRateCents) || (proposedRateCents ?? -1) < 0))}
+          onClick={() => void previewImpact()}>
+          {t('contractLines.recurringSchedule.previewImpact', { defaultValue: 'Preview invoice impact' })}
+          {previewing && <Loader2 className="ml-1 h-4 w-4 animate-spin" />}
+        </Button>
+        {impact?.success === false && <Alert variant="destructive" className="mt-2"><AlertDescription>{impact.error}</AlertDescription></Alert>}
+        {impact?.success && <div className="mt-2 text-sm">
+          <p>{t('contractLines.recurringSchedule.invoiceWindow', { defaultValue: 'Estimated client invoice for {{start}} to {{end}}. Includes other items in this billing window; no mid-period adjustment.', start: impact.windowStart, end: impact.windowEnd })}</p>
+          <p>{t('contractLines.recurringSchedule.invoiceTotals', { defaultValue: 'Subtotal after discounts: {{subtotal}}. Tax: {{tax}}. Total: {{before}} → {{after}}.', subtotal: formatCurrency(impact.after.subtotal / 100, impact.after.currencyCode), tax: formatCurrency(impact.after.tax / 100, impact.after.currencyCode), before: formatCurrency(impact.before.total / 100, impact.before.currencyCode), after: formatCurrency(impact.after.total / 100, impact.after.currencyCode) })}</p>
+          {impact.after.items.filter(item => item.total < 0).map(item => <p key={item.id}>{item.description}: {formatCurrency(item.total / 100, impact.after.currencyCode)}</p>)}
+        </div>}
+      </div>
+
+      {catalogPriceMissing && (
+        <Alert variant="destructive" className="mt-3">
+          <AlertDescription className="text-xs">
+            {t('contractLines.recurringSchedule.catalogPriceMissing', {
+              defaultValue:
+                'No {{currency}} catalog price covers this boundary, so a positive quantity cannot bill. Add a {{currency}} catalog price or choose "Override unit price" before saving.',
+              currency: effective?.currencyCode ?? currencyCode,
+            })}
+          </AlertDescription>
+        </Alert>
       )}
 
       {saveError && (
@@ -516,7 +588,15 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
           type="button"
           size="sm"
           onClick={() => void handleSave()}
-          disabled={disabled || saving || loading || !boundary || !!loadError || isProtected}
+          disabled={
+            disabled ||
+            saving ||
+            loading ||
+            !boundary ||
+            !!loadError ||
+            isProtected ||
+            catalogPriceMissing
+          }
         >
           {saving && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
           {stale

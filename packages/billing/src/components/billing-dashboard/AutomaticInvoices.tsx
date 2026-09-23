@@ -1654,7 +1654,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             : null,
         expectedRecurringPricingSources:
           response.previews.length === 1
-            ? response.previews[0].expectedRecurringPricingSources ?? null
+            ? response.previews[0].expectedRecurringPricingSources ?? []
             : null,
       });
       setShowPreviewDialog(true);
@@ -1666,6 +1666,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         executionIdentityKey: null,
         selectorInput: null,
         expectedUsagePeriodTotals: null,
+        expectedRecurringPricingSources: null,
       }); // Clear preview state on error
       setPreviewFailureCode(response.code ?? null);
       // Prefill the remediation route from what was previewed: the selection's
@@ -2031,7 +2032,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           ...(previewState.expectedUsagePeriodTotals
             ? { expectedUsagePeriodTotals: previewState.expectedUsagePeriodTotals }
             : {}),
-          ...(previewState.expectedRecurringPricingSources
+          ...(previewState.expectedRecurringPricingSources != null
             ? { expectedRecurringPricingSources: previewState.expectedRecurringPricingSources }
             : {}),
         },
@@ -2122,7 +2123,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           ...(previewState.expectedUsagePeriodTotals
             ? { expectedUsagePeriodTotals: previewState.expectedUsagePeriodTotals }
             : {}),
-          ...(previewState.expectedRecurringPricingSources
+          ...(previewState.expectedRecurringPricingSources != null
             ? { expectedRecurringPricingSources: previewState.expectedRecurringPricingSources }
             : {}),
         },

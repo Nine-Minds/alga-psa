@@ -1,0 +1,102 @@
+{
+  "companionCommit": "a0656bc53f",
+  "scope": "Read-only pure evaluator against real persisted charges; not combined settlement persistence or tax validation",
+  "results": [
+    {
+      "invoiceId": "d8816325-32a7-4a58-b000-ff987b99f6fe",
+      "discount_type": "percentage",
+      "gross": 390000,
+      "net": 351000,
+      "discountCount": 1,
+      "allocations": [
+        {
+          "discount_id": "handoff-discount",
+          "item_id": "90c52d17-ab08-4c4f-b670-937b6a48e62f",
+          "amount": 4000
+        },
+        {
+          "discount_id": "handoff-discount",
+          "item_id": "3edb6d3e-9c22-4385-af02-ce9c4524b6ae",
+          "amount": 15000
+        },
+        {
+          "discount_id": "handoff-discount",
+          "item_id": "eb30c4d9-cc1d-4d7c-9551-01a751306694",
+          "amount": 20000
+        }
+      ]
+    },
+    {
+      "invoiceId": "d8816325-32a7-4a58-b000-ff987b99f6fe",
+      "discount_type": "fixed",
+      "gross": 390000,
+      "net": 380000,
+      "discountCount": 1,
+      "allocations": [
+        {
+          "discount_id": "handoff-discount",
+          "item_id": "90c52d17-ab08-4c4f-b670-937b6a48e62f",
+          "amount": 1026
+        },
+        {
+          "discount_id": "handoff-discount",
+          "item_id": "3edb6d3e-9c22-4385-af02-ce9c4524b6ae",
+          "amount": 3846
+        },
+        {
+          "discount_id": "handoff-discount",
+          "item_id": "eb30c4d9-cc1d-4d7c-9551-01a751306694",
+          "amount": 5128
+        }
+      ]
+    },
+    {
+      "invoiceId": "e2d0a40e-e5be-4fea-baa7-6b76e7d0ddd8",
+      "discount_type": "percentage",
+      "gross": 420000,
+      "net": 378000,
+      "discountCount": 1,
+      "allocations": [
+        {
+          "discount_id": "handoff-discount",
+          "item_id": "46f7fde8-355d-46b2-8486-45832f4854f5",
+          "amount": 4000
+        },
+        {
+          "discount_id": "handoff-discount",
+          "item_id": "d8e087d4-a287-406c-b677-222d4be3c1d3",
+          "amount": 15000
+        },
+        {
+          "discount_id": "handoff-discount",
+          "item_id": "8240025a-f462-4e49-b1bc-27453f94e46d",
+          "amount": 23000
+        }
+      ]
+    },
+    {
+      "invoiceId": "e2d0a40e-e5be-4fea-baa7-6b76e7d0ddd8",
+      "discount_type": "fixed",
+      "gross": 420000,
+      "net": 410000,
+      "discountCount": 1,
+      "allocations": [
+        {
+          "discount_id": "handoff-discount",
+          "item_id": "46f7fde8-355d-46b2-8486-45832f4854f5",
+          "amount": 952
+        },
+        {
+          "discount_id": "handoff-discount",
+          "item_id": "d8e087d4-a287-406c-b677-222d4be3c1d3",
+          "amount": 3572
+        },
+        {
+          "discount_id": "handoff-discount",
+          "item_id": "8240025a-f462-4e49-b1bc-27453f94e46d",
+          "amount": 5476
+        }
+      ]
+    }
+  ]
+}

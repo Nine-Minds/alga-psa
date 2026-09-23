@@ -384,7 +384,8 @@
       "USAGE_CALCULATION_ERROR": "Het verbruik voor {{services}} in de serviceperiode {{periodStart}} tot {{periodEnd}} is geregistreerd maar kon niet worden geprijsd. Corrigeer de serviceprijzen (catalogusprijs in de contractvaluta, een aangepast tarief of tariefschijven) en probeer het opnieuw. Registreer geen vervangend verbruik.",
       "SOURCE_ALREADY_BILLED": "Sommige geselecteerde items zijn niet meer factureerbaar (al gefactureerd, niet goedgekeurd of verwijderd). Vernieuw en probeer opnieuw.",
       "SOURCE_NOT_ELIGIBLE": "Een geselecteerd item hoort niet bij dit ticket of is niet langer in aanmerking komend. Vernieuw en probeer opnieuw.",
-      "SOURCE_CURRENCY_MISMATCH": "Sommige geselecteerde producten zijn geprijsd in een andere valuta dan de factuurvaluta van deze klant en kunnen niet worden toegevoegd. Factureer ze apart in hun eigen valuta."
+      "SOURCE_CURRENCY_MISMATCH": "Sommige geselecteerde producten zijn geprijsd in een andere valuta dan de factuurvaluta van deze klant en kunnen niet worden toegevoegd. Factureer ze apart in hun eigen valuta.",
+      "RECURRING_PRICING_STALE": "The preview is out of date: {{details}}. Re-run the preview to see the current numbers, then generate again."
     },
     "warnings": {
       "noBillingEmail": "Deze klant heeft geen facturatie-e-mailadres. Stel een contactpersoon voor facturering, een facturatie-e-mailadres van de klant of een e-mailadres op de facturatielocatie of standaardlocatie in voordat u de factuur genereert."

@@ -1588,7 +1588,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                               )}
 
                               {/* Fixed contract line - show info message */}
-                              {line.contract_line_type === 'Fixed' && !services.some(service => service.typeConfig?.pricing_basis === 'unit' || service.configuration.configuration_type === 'Usage') && (
+                              {line.contract_line_type === 'Fixed' && !services.some(service => service.service.item_kind === 'product' || service.typeConfig?.pricing_basis === 'unit' || service.configuration.configuration_type === 'Usage') && (
                                 <div className="col-span-2 space-y-2">
                                   <p className="text-sm text-muted-foreground">
                                     {t('contractLines.configuration.fixedInfo', {
@@ -1665,6 +1665,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                               <div className="space-y-3">
                                 {services.filter(s => s.configuration.configuration_type !== 'Bucket').map((serviceConfig, idx) => {
                                   const isUnitPriced = serviceConfig.typeConfig?.pricing_basis === 'unit';
+                                  const isRecurringProduct = serviceConfig.service.item_kind === 'product';
                                   const isEditing = editingLineId === line.contract_line_id && (!pricingOnly || isUnitPriced || serviceConfig.configuration.configuration_type === 'Usage');
                                   const configId = serviceConfig.configuration.config_id;
                                   const editData = editServiceConfigs[configId] || {};
@@ -1729,7 +1730,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                           && serviceConfig.configuration.configuration_type !== 'Usage' && (
                                           <div>
                                             <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                                              {isUnitPriced ? t('contractLines.services.recurringUnits', {defaultValue: 'Recurring seats/units'}) : line.contract_line_type === 'Fixed'
+                                              {isUnitPriced || isRecurringProduct ? t('contractLines.services.recurringUnits', {defaultValue: 'Recurring seats/units'}) : line.contract_line_type === 'Fixed'
                                                 ? t('contractLines.services.quantityTaxAllocation', {
                                                   defaultValue: 'Quantity (for tax allocation)',
                                                 })
@@ -1763,7 +1764,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                           <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                                             {serviceConfig.configuration.configuration_type === 'Hourly'
                                               ? t('contractLines.services.hourlyRate', { defaultValue: 'Hourly Rate' })
-                                              : serviceConfig.configuration.configuration_type === 'Usage' || isUnitPriced
+                                              : serviceConfig.configuration.configuration_type === 'Usage' || isUnitPriced || isRecurringProduct
                                               ? t('contractLines.services.unitRate', { defaultValue: 'Unit Rate' })
                                               : t('contractLines.services.rateTaxAllocation', { defaultValue: 'Rate (for tax allocation)' })}
                                           </Label>

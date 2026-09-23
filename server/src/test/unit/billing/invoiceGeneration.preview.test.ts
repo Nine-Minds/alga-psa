@@ -508,6 +508,7 @@ describe('invoice preview recurring timing', () => {
     );
     expect(result).toEqual({
       success: true,
+      expectedRecurringPricingSources: [],
       data: expect.objectContaining({
         invoiceNumber: 'PREVIEW',
         dueDate: '2025-03-15',
@@ -672,6 +673,7 @@ describe('invoice preview recurring timing', () => {
 
     expect(selectorResult).toEqual({
       success: true,
+      expectedRecurringPricingSources: [],
       data: expect.objectContaining({
         dueDate: legacyResult.success ? legacyResult.data.dueDate : undefined,
         subtotal: legacyResult.success ? legacyResult.data.subtotal : undefined,

@@ -609,6 +609,14 @@
       "standard": "Estándar",
       "custom": "Personalizado",
       "unreviewed": "Sin revisar"
+    },
+    "recurringSchedule": {
+      "previewImpact": "Preview invoice impact",
+      "invoiceWindow": "Estimated client invoice for {{start}} to {{end}}. Includes other items in this billing window; no mid-period adjustment.",
+      "invoiceTotals": "Subtotal after discounts: {{subtotal}}. Tax: {{tax}}. Total: {{before}} → {{after}}.",
+      "olderUnbilled": "This boundary is in the past. Pending billing from this date onward will use the scheduled values; earlier billed periods stay unchanged.",
+      "catalogPriceMissing": "No {{currency}} catalog price covers this boundary, so a positive quantity cannot bill. Add a {{currency}} catalog price or choose \"Override unit price\" before saving.",
+      "invoiceImpact": "From {{date}} the recurring subtotal for this item changes by {{delta}} to {{total}} (before discounts and tax). Earlier billed periods are unchanged."
     }
   },
   "contractLineEdit": {
