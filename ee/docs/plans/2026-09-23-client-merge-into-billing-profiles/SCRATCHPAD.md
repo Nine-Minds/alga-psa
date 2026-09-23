@@ -89,6 +89,16 @@ on `billing_profile_contacts` keeps the whole feature in one shape.
 optional so an unmigrated call site *narrows* (own tickets only) rather than widening.
 That is the safe failure direction and is asserted by TM004.
 
+There is a *second*, parallel expression of the same predicate: the authorization
+kernel's `contact_visibility` relationship template
+(`packages/authorization/src/kernel/relationshipTemplates.ts`), reached when a portal
+user calls the MSP ticket actions. It is deliberately left unchanged in this slice —
+it keeps producing the own-tickets predicate, which is the narrow (safe) direction,
+and the portal's own read surfaces (`client-tickets.ts`, `dashboard.ts`,
+`TicketService`) all go through `applyTicketVisibilityFilter`. Teaching the kernel
+adapter about a billing-profile column is the follow-up if a profile manager ever
+needs the grant on an MSP-side surface.
+
 ### `client_portal_user_billing_profiles`: absence means "all"
 
 Documented deliberately in `20260818030000`. After a merge that is dangerous — a
