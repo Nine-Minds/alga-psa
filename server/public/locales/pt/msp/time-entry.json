@@ -480,7 +480,8 @@
       "onlyDraftRemovable": "Somente planilhas de horas em rascunho podem ser removidas.",
       "removeEntriesFirst": "Remova os lançamentos de horas antes de remover esta planilha de horas.",
       "onlyApprovedReopenable": "Somente planilhas de horas aprovadas podem ser reabertas.",
-      "invoicedCannotReopen": "Esta planilha de horas contém horas faturadas e não pode ser reaberta."
+      "invoicedCannotReopen": "Esta planilha de horas contém horas faturadas e não pode ser reaberta.",
+      "notEditable": "Esta folha de horas está bloqueada. Escolha uma folha de rascunho ou uma folha com alterações solicitadas."
     },
     "timeEntry": {
       "notFoundRefresh": "Lançamento de horas não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
@@ -506,5 +507,32 @@
       "missingField": "Falta um campo obrigatório da configuração de período.",
       "missingFieldNamed": "Falta um campo obrigatório da configuração de período: {{field}}."
     }
+  },
+  "periodPicker": {
+    "title": "Adicionar nova entrada de tempo para {{name}}",
+    "label": "Período de tempo",
+    "placeholder": "Escolher um período de tempo",
+    "current": "Atual",
+    "continue": "Continuar",
+    "continueLoading": "A carregar…",
+    "cancel": "Cancelar",
+    "status": {
+      "DRAFT": "Rascunho",
+      "SUBMITTED": "Submetido",
+      "APPROVED": "Aprovado",
+      "CHANGES_REQUESTED": "Alterações solicitadas",
+      "UNKNOWN": "Desconhecido"
+    },
+    "locked": "Esta folha de horas está {{status}}. Escolha uma folha de rascunho ou uma folha com alterações solicitadas.",
+    "statusChanged": "Esta folha de horas está agora {{status}}. Escolha uma folha de rascunho ou uma folha com alterações solicitadas.",
+    "outsidePeriod": "As horas de início e fim fornecidas estão fora deste período, pelo que a entrada começa em {{date}} às 08:00."
+  },
+  "launch": {
+    "noUser": "Não foi possível carregar o utilizador atual para o registo de tempo.",
+    "entryNotFound": "Entrada de tempo não encontrada.",
+    "entryMissingSheet": "Esta entrada de tempo não está associada a uma folha de horas e não pode ser editada aqui.",
+    "entryMissingPeriod": "A folha de horas desta entrada não tem período e não pode ser aberta.",
+    "noPeriods": "Ainda não estão configurados períodos de tempo, pelo que não é possível registar tempo. Peça a um administrador para criar períodos de tempo em Definições → Registo de tempo.",
+    "prepareFailed": "Ocorreu um erro ao preparar a entrada de tempo. Tente novamente."
   }
 }

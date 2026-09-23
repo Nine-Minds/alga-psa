@@ -17,7 +17,15 @@ import { MinusCircle, XCircle, Info, AlertTriangle } from 'lucide-react';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { TimeEntryFormProps } from './types';
-import { calculateDuration, clampDurationToSameDay, formatTimeForInput, parseTimeToDate, getDurationParts } from './utils';
+import { calculateDuration, clampDurationToSameDay, clampDurationToZonedSameDay, formatTimeForInput, parseTimeToDate, getDurationParts } from './utils';
+import {
+  dateOnlyToLocalDate,
+  dateToPlainDate,
+  formatZonedTime,
+  formatZonedTimeSeconds,
+  instantAtZonedTime,
+  workDateInTimeZone,
+} from '../../../../lib/timeEntryPeriodSelection';
 import { ISO8601String } from '@alga-psa/types';
 import ContractInfoBanner from './ContractInfoBanner';
 import { TimeEntryChangeRequestPanel } from './TimeEntryChangeRequestFeedback';
@@ -44,6 +52,26 @@ const parseDateOnlyLocal = (value: string): Date => {
   return new Date(year, month - 1, day);
 };
 
+// Build the instant for an HH:mm wall clock on a subject-timezone calendar day.
+// Returns null for unparseable/invalid input so callers can ignore it rather
+// than throw inside Temporal.PlainTime.from.
+const buildZonedTimeInstant = (
+  value: string,
+  subjectDate: string,
+  timeZone: string,
+): Date | null => {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
+  if (!match) return null;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (hours > 23 || minutes > 59) return null;
+  return instantAtZonedTime(
+    subjectDate,
+    `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`,
+    timeZone,
+  );
+};
+
 const TimeEntryEditForm = memo(function TimeEntryEditForm({
   id,
   entry,
@@ -60,11 +88,23 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
   lastNoteInputRef,
   timePeriod,
   date,
+  workTimeZone,
   isNewEntry = false,
   isSaving = false,
   disableSave = false
 }: TimeEntryFormProps) {
   const { t } = useTranslation('msp/time-entry');
+  // When a subject timezone is supplied, the date field, bounds, and time
+  // pickers all operate on that user's calendar day so they line up with the
+  // work_date the server derives. Without it, keep browser-local behavior.
+  const useSubjectZone = Boolean(workTimeZone);
+  const formatInputTime = useCallback(
+    (value: string | Date) =>
+      useSubjectZone
+        ? formatZonedTime(value, workTimeZone)
+        : formatTimeForInput(value instanceof Date ? value : parseISO(value)),
+    [useSubjectZone, workTimeZone],
+  );
   const latestEntry = useRef(entry);
   latestEntry.current = entry;
   // Use work item times for ad-hoc entries - only update if values actually changed
@@ -73,8 +113,8 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
       const start = parseISO(entry.start_time);
       const end = parseISO(entry.end_time);
 
-      const newStartInput = formatTimeForInput(start);
-      const newEndInput = formatTimeForInput(end);
+      const newStartInput = formatInputTime(start);
+      const newEndInput = formatInputTime(end);
 
       // Only update if the formatted times are different from current inputs
       if (timeInputs[`start-${index}`] !== newStartInput ||
@@ -85,7 +125,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
         });
       }
     }
-  }, [entry?.work_item_type, entry?.start_time, entry?.end_time, index, onUpdateTimeInputs, timeInputs]);
+  }, [entry?.work_item_type, entry?.start_time, entry?.end_time, index, onUpdateTimeInputs, timeInputs, formatInputTime]);
   const { hours: durationHours, minutes: durationMinutes } = useMemo(
     () => entry?.start_time && entry?.end_time
       ? getDurationParts(calculateDuration(parseISO(entry.start_time), parseISO(entry.end_time)))
@@ -121,9 +161,18 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
   const prevServiceIdRef = useRef<string | undefined | null>(undefined);
   const [selectedDate, setSelectedDate] = useState<Date>(() => {
     if (entry?.start_time) {
-      return parseISO(entry.start_time);
+      // Represent the entry's subject calendar day as a local-midnight Date so
+      // the DatePicker renders that calendar day regardless of browser TZ.
+      return useSubjectZone
+        ? dateOnlyToLocalDate(workDateInTimeZone(entry.start_time, workTimeZone))
+        : parseISO(entry.start_time);
     }
-    return date || new Date();
+    if (date) {
+      return useSubjectZone
+        ? dateOnlyToLocalDate(workDateInTimeZone(date, workTimeZone))
+        : date;
+    }
+    return new Date();
   });
 
   // Keep the entry inside its time sheet's period. The period is a half-open interval
@@ -149,7 +198,11 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
       newErrors.duration = t('timeEntryForm.validation.invalidTimeRange', {
         defaultValue: 'Enter a valid time range'
       });
-    } else if (!isSameDay(startTime, endTime)) {
+    } else if (
+      useSubjectZone
+        ? workDateInTimeZone(entry.start_time, workTimeZone) !== workDateInTimeZone(entry.end_time, workTimeZone)
+        : !isSameDay(startTime, endTime)
+    ) {
       newErrors.duration = t('timeEntryForm.validation.durationSameDay', {
         defaultValue: 'Duration must end on the same day'
       });
@@ -179,7 +232,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
 
     setValidationErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [entry?.start_time, entry?.end_time, t]);
+  }, [entry?.start_time, entry?.end_time, t, useSubjectZone, workTimeZone]);
 
   // Get client ID from entry or work item
   useEffect(() => {
@@ -372,7 +425,10 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
     if (!isEditable || !entry) return;
 
     const currentDate = parseISO(entry.start_time);
-    const newTime = parseTimeToDate(value, currentDate);
+    const newTime = useSubjectZone
+      ? buildZonedTimeInstant(value, workDateInTimeZone(entry.start_time, workTimeZone), workTimeZone as string)
+      : parseTimeToDate(value, currentDate);
+    if (!newTime) return;
 
     const updatedEntry = markEntryAsDirty(updateBillableDuration(
       {
@@ -394,7 +450,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
     if (showErrors) {
       validateTimes();
     }
-  }, [isEditable, entry, index, markEntryAsDirty, onUpdateEntry, onUpdateTimeInputs, showErrors, updateBillableDuration, validateTimes]);
+  }, [isEditable, entry, index, markEntryAsDirty, onUpdateEntry, onUpdateTimeInputs, showErrors, updateBillableDuration, validateTimes, useSubjectZone, workTimeZone]);
 
 
 
@@ -433,7 +489,9 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
       endTime: newEndTime,
       maxDurationMinutes,
       wasClampedToSameDay,
-    } = clampDurationToSameDay(startTime, requestedTotalMinutes);
+    } = useSubjectZone
+      ? clampDurationToZonedSameDay(startTime, requestedTotalMinutes, workTimeZone as string)
+      : clampDurationToSameDay(startTime, requestedTotalMinutes);
 
     const newBillableDuration = entry.billable_duration === 0 ? 0 : totalMinutes;
 
@@ -455,7 +513,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
 
     onUpdateEntry(index, updatedEntry);
     onUpdateTimeInputs({
-      [`end-${index}`]: formatTimeForInput(newEndTime),
+      [`end-${index}`]: formatInputTime(newEndTime),
     });
 
     const durationError = wasClampedToSameDay
@@ -473,7 +531,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
     if (showErrors && !durationError) {
       validateTimes();
     }
-  }, [durationHours, durationMinutes, entry, index, isEditable, markEntryAsDirty, onUpdateEntry, onUpdateTimeInputs, parseDurationInputValue, showErrors, t, validateTimes]);
+  }, [durationHours, durationMinutes, entry, index, isEditable, markEntryAsDirty, onUpdateEntry, onUpdateTimeInputs, parseDurationInputValue, showErrors, t, validateTimes, useSubjectZone, workTimeZone, formatInputTime]);
 
   return (
     <div className="space-y-5">
@@ -580,20 +638,28 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
             const startTime = parseISO(entry.start_time);
             const endTime = parseISO(entry.end_time);
 
-            const newStartTime = setSeconds(
-              setMinutes(
-                setHours(newDate, startTime.getHours()),
-                startTime.getMinutes()
-              ),
-              startTime.getSeconds()
-            );
+            const newStartTime = useSubjectZone
+              ? instantAtZonedTime(
+                  dateToPlainDate(newDate),
+                  formatZonedTimeSeconds(entry.start_time, workTimeZone),
+                  workTimeZone as string,
+                )
+              : setSeconds(
+                  setMinutes(
+                    setHours(newDate, startTime.getHours()),
+                    startTime.getMinutes()
+                  ),
+                  startTime.getSeconds()
+                );
 
             const originalDuration = calculateDuration(startTime, endTime);
             const {
               durationMinutes,
               endTime: newEndTime,
               wasClampedToSameDay,
-            } = clampDurationToSameDay(newStartTime, originalDuration);
+            } = useSubjectZone
+              ? clampDurationToZonedSameDay(newStartTime, originalDuration, workTimeZone as string)
+              : clampDurationToSameDay(newStartTime, originalDuration);
 
             onUpdateEntry(index, markEntryAsDirty({
               ...entry,
@@ -602,8 +668,8 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
               billable_duration: entry.billable_duration === 0 ? 0 : durationMinutes,
             }));
             onUpdateTimeInputs({
-              [`start-${index}`]: formatTimeForInput(newStartTime),
-              [`end-${index}`]: formatTimeForInput(newEndTime),
+              [`start-${index}`]: formatInputTime(newStartTime),
+              [`end-${index}`]: formatInputTime(newEndTime),
             });
             setValidationErrors(prev => ({
               ...prev,
@@ -627,7 +693,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
           </label>
           <TimePicker
             id={`${id}-start-time-${index}`}
-            value={timeInputs[`start-${index}`] || (entry?.start_time ? formatTimeForInput(parseISO(entry.start_time)) : '')}
+            value={timeInputs[`start-${index}`] || (entry?.start_time ? formatInputTime(entry.start_time) : '')}
             onChange={(value) => handleTimeChange('start', value)}
             allowManualInput
             disabled={!isEditable}
@@ -643,7 +709,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
           </label>
           <TimePicker
             id={`${id}-end-time-${index}`}
-            value={timeInputs[`end-${index}`] || (entry?.end_time ? formatTimeForInput(parseISO(entry.end_time)) : '')}
+            value={timeInputs[`end-${index}`] || (entry?.end_time ? formatInputTime(entry.end_time) : '')}
             onChange={(value) => handleTimeChange('end', value)}
             allowManualInput
             disabled={!isEditable}

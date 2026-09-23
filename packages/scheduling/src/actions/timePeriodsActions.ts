@@ -316,6 +316,24 @@ export const getCurrentTimePeriod = withAuth(async (user, { tenant }): Promise<T
   }
 });
 
+export const getTimeEntryUserTimeZone = withAuth(async (user, { tenant }): Promise<TimePeriodActionResult<string>> => {
+  try {
+    const { knex } = await createTenantKnex();
+    const userId = user?.user_id || null;
+    if (!tenant || !userId) {
+      return 'UTC';
+    }
+    return await resolveUserTimeZone(knex, tenant, userId);
+  } catch (error) {
+    const expected = timePeriodActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    console.error('Error resolving time entry user timezone:', error);
+    throw error;
+  }
+});
+
 // Helper function to get the end of a period based on frequency unit
 function getEndOfPeriod(startDate: string, setting: ITimePeriodSettings): Temporal.PlainDate {
   const frequency = setting.frequency || 1;

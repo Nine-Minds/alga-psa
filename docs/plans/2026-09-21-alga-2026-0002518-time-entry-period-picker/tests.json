@@ -1,0 +1,87 @@
+[
+  {
+    "id": "T001",
+    "description": "Rendered launcher: current period preselected; choose prior DRAFT and CHANGES_REQUESTED periods; assert Continue resolves only selected sheet and mounts matching ID/bounds. Browsing creates no sheets.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F007",
+      "F012"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Rendered launcher: SUBMITTED/APPROVED/unknown statuses block Continue; a sheet becoming locked during resolution remains at selection; failed requests, double Continue, and cancellation cannot advance stale state.",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F003",
+      "F004"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Launcher feedback: no current period with historical options permits explicit selection; empty catalog and returned auth/permission errors provide actionable feedback without opening an editable form.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F004",
+      "F005"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Default-date behavior: nonweekly period, inclusive first/last day and exclusive end, subject/browser timezone mismatch and DST; valid timer defaults remain, out-of-period defaults use selected first day with explanation. Include schedule/ad-hoc overrides.",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F007"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Existing-entry behavior: historical entry uses its own sheet, period and status even without a current period; never creates a sheet or exposes transfer. Retain ownership and invoice restrictions.",
+    "implemented": true,
+    "featureIds": [
+      "F008",
+      "F009"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Rendered save lifecycle: server action error and thrown exception retain the form without success toast, close, or completion; successful ticket and project saves close/refresh exactly once and retain work-item/service context. Save validates the subject calendar day across browser-midnight boundaries, retaining browser-day behavior when no subject timezone is supplied.",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F010"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "DB-backed integration against migrated schema: select a prior period without a sheet, resolve/create it and save a ticket entry, verify owner/period/work_date and reuse on repeat resolution; reject submitted/approved sheets (including status changed before save), locked original update, wrong owner or tenant, and out-of-period endpoints with no entry or bucket mutation.",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F006",
+      "F007",
+      "F008",
+      "F009"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Manual smoke: ticket Add time -> current default -> prior period -> dated entry -> Save -> verify prior timesheet and ticket refresh. Exercise locked/no-current states, keyboard control, light/dark themes, localized date/year/status, and Cancel/relaunch to change period.",
+    "notes": "Builder reported prior-period persistence, ticket refresh, locked/no-current states, keyboard selection, light/dark themes, and Cancel/relaunch on port 3518. Current-period default is covered by automated tests, but was not browser-smoked because the dev data had no period covering today. Browser smoke was not repeated during takeover.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F005",
+      "F007",
+      "F011",
+      "F012"
+    ]
+  }
+]

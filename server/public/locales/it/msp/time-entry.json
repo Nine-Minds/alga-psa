@@ -480,7 +480,8 @@
       "onlyDraftRemovable": "Solo i fogli ore in bozza possono essere rimossi.",
       "removeEntriesFirst": "Rimuovere gli inserimenti ore prima di rimuovere questo foglio ore.",
       "onlyApprovedReopenable": "Solo i fogli ore approvati possono essere riaperti.",
-      "invoicedCannotReopen": "Questo foglio ore contiene tempo fatturato e non può essere riaperto."
+      "invoicedCannotReopen": "Questo foglio ore contiene tempo fatturato e non può essere riaperto.",
+      "notEditable": "Questa scheda attività è bloccata. Scegli una bozza o una scheda con modifiche richieste."
     },
     "timeEntry": {
       "notFoundRefresh": "Inserimento ore non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
@@ -506,5 +507,32 @@
       "missingField": "Manca un campo obbligatorio dell’impostazione del periodo.",
       "missingFieldNamed": "Manca un campo obbligatorio dell’impostazione del periodo: {{field}}."
     }
+  },
+  "periodPicker": {
+    "title": "Aggiungi nuova voce di tempo per {{name}}",
+    "label": "Periodo di tempo",
+    "placeholder": "Scegli un periodo di tempo",
+    "current": "Corrente",
+    "continue": "Continua",
+    "continueLoading": "Caricamento…",
+    "cancel": "Annulla",
+    "status": {
+      "DRAFT": "Bozza",
+      "SUBMITTED": "Inviato",
+      "APPROVED": "Approvato",
+      "CHANGES_REQUESTED": "Modifiche richieste",
+      "UNKNOWN": "Sconosciuto"
+    },
+    "locked": "Questa scheda attività è {{status}}. Scegli una bozza o una scheda con modifiche richieste.",
+    "statusChanged": "Questa scheda attività ora è {{status}}. Scegli una bozza o una scheda con modifiche richieste.",
+    "outsidePeriod": "Gli orari di inizio e fine forniti sono al di fuori di questo periodo, quindi la voce inizia il {{date}} alle 08:00."
+  },
+  "launch": {
+    "noUser": "Impossibile caricare l'utente corrente per la voce di tempo.",
+    "entryNotFound": "Voce di tempo non trovata.",
+    "entryMissingSheet": "Questa voce di tempo non è collegata a una scheda attività e non può essere modificata qui.",
+    "entryMissingPeriod": "Alla scheda attività di questa voce manca il periodo e non può essere aperta.",
+    "noPeriods": "Non sono ancora stati configurati periodi di tempo, quindi non è possibile registrare tempo. Chiedi a un amministratore di creare periodi di tempo in Impostazioni → Registrazione tempo.",
+    "prepareFailed": "Si è verificato un errore durante la preparazione della voce di tempo. Riprova."
   }
 }

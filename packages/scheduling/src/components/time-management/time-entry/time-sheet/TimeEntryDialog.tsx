@@ -49,6 +49,10 @@ interface TimeEntryDialogProps {
   timeSheetId?: string;
   onTimeEntriesUpdate?: (entries: ITimeEntryWithWorkItemString[]) => void;
   inDrawer?: boolean;
+  /** Optional selected-period context shown under the drawer title. */
+  periodContextLabel?: string;
+  /** IANA timezone the entry's work_date is derived in (the subject user's). */
+  workTimeZone?: string;
 }
 
 function splitPaymentWarning(message: string): [string, string] {
@@ -74,6 +78,8 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     timeSheetId,
     onTimeEntriesUpdate,
     inDrawer,
+    periodContextLabel,
+    workTimeZone,
   } = props;
   const { t } = useTranslation('msp/time-entry');
   // Injected from the composition layer (billing owns the warning action).
@@ -167,7 +173,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
       // is nothing to validate here. See billingEngine.getTaxInfoFromService.
     }
 
-    if (!validateTimeEntry(entry)) {
+    if (!validateTimeEntry(entry, workTimeZone)) {
       toast.error(t('messages.invalidTimeEntry'));
       return;
     }
@@ -219,7 +225,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     } finally {
       setIsSaving(false);
     }
-  }, [entries, isEditable, isSaving, onClose, onSave, onTimeEntriesUpdate, services, timeSheetId, workItem]);
+  }, [entries, isEditable, isSaving, onClose, onSave, onTimeEntriesUpdate, services, timeSheetId, workItem, workTimeZone]);
 
   const deleteTimeEntryAtIndex = async (index: number) => {
     try {
@@ -340,6 +346,9 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
       data-automation-type="container"
     >
       {inDrawer && <h2 className="mb-4 text-lg font-semibold">{title}</h2>}
+      {inDrawer && periodContextLabel && (
+        <p className="mb-3 text-sm text-[rgb(var(--color-text-600))]">{periodContextLabel}</p>
+      )}
       {hasProjectPaymentWarning && (
         <Alert id={`${id}-project-payment-warning`} variant="warning" className="mb-3">
           <AlertDescription>
@@ -383,6 +392,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
             onUpdateTimeInputs={updateTimeInputs}
             timePeriod={timePeriod}
             date={date}
+            workTimeZone={workTimeZone}
             isNewEntry={!hasExistingEntry}
           />
         </div>

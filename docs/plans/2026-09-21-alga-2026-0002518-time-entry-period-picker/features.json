@@ -1,0 +1,98 @@
+[
+  {
+    "id": "F001",
+    "description": "Load existing user periods with sheet status and preselect the server-resolved current period.",
+    "implemented": true,
+    "prdRefs": [
+      "User flow and layout"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Show localized date ranges and status, with locked selections explained and Continue disabled.",
+    "implemented": true,
+    "prdRefs": [
+      "User flow and layout"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Resolve or create only the selected sheet on Continue and recheck its actual editability.",
+    "implemented": true,
+    "prdRefs": [
+      "User flow and layout"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Prevent repeated Continue and ignore pending responses after cancellation; retain picker on resolution errors.",
+    "implemented": true,
+    "prdRefs": [
+      "Empty and error states"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Allow explicit historical selection without a current period; show actionable feedback for an empty catalog.",
+    "implemented": true,
+    "prdRefs": [
+      "Empty and error states"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Initialize dates and time defaults inside the selected period using the subject timezone, preserving valid context defaults.",
+    "implemented": true,
+    "prdRefs": [
+      "Date and existing-entry rules"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Pass the selected sheet and its actual period together to the bounded entry form while preserving work-item context.",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation by file"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Resolve existing entries through their saved sheet and actual period without offering a period transfer.",
+    "implemented": true,
+    "prdRefs": [
+      "Date and existing-entry rules"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Reject saves on locked target or original sheets in the write transaction while retaining existing permission and period guards.",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation by file"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Propagate save failures so the dialog retains entered values; close and refresh the caller once on success.",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation by file"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Provide accessible period selection, theme-aware presentation, and translated labels on shared launcher surfaces.",
+    "implemented": true,
+    "prdRefs": [
+      "User flow and layout"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Keep period selection separate from entry editing and show selected-period context in the editor.",
+    "implemented": true,
+    "prdRefs": [
+      "User flow and layout"
+    ]
+  }
+]

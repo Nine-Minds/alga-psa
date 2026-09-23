@@ -20,6 +20,9 @@ export default defineConfig({
       'tests/entryPopup.slotDraftPersistence.test.tsx',
       'tests/entryPopup.teamsMeetingRefresh.test.tsx',
       'tests/scheduleCalendar.teamsMeetingRefresh.test.tsx',
+      'tests/timeEntryLauncher.test.tsx',
+      'tests/timeEntryPeriodLauncher.test.tsx',
+      'tests/timeEntryDialog.saveLifecycle.test.tsx',
     ],
     // 20s, matching the other heavy action-layer packages (billing, tickets,
     // client-portal, integrations). Mock factories here close over module-level

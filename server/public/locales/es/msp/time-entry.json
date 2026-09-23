@@ -480,7 +480,8 @@
       "onlyDraftRemovable": "Solo se pueden quitar las hojas de horas en borrador.",
       "removeEntriesFirst": "Quite las entradas de tiempo antes de quitar esta hoja de horas.",
       "onlyApprovedReopenable": "Solo se pueden reabrir las hojas de horas aprobadas.",
-      "invoicedCannotReopen": "Esta hoja de horas contiene tiempo facturado y no se puede reabrir."
+      "invoicedCannotReopen": "Esta hoja de horas contiene tiempo facturado y no se puede reabrir.",
+      "notEditable": "Esta hoja de tiempo está bloqueada. Elige una hoja borrador o una hoja con cambios solicitados."
     },
     "timeEntry": {
       "notFoundRefresh": "No se encontró la entrada de tiempo. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
@@ -506,5 +507,32 @@
       "missingField": "Falta un campo obligatorio de la configuración del período.",
       "missingFieldNamed": "Falta un campo obligatorio de la configuración del período: {{field}}."
     }
+  },
+  "periodPicker": {
+    "title": "Agregar nueva entrada de tiempo para {{name}}",
+    "label": "Período de tiempo",
+    "placeholder": "Elegir un período de tiempo",
+    "current": "Actual",
+    "continue": "Continuar",
+    "continueLoading": "Cargando…",
+    "cancel": "Cancelar",
+    "status": {
+      "DRAFT": "Borrador",
+      "SUBMITTED": "Enviado",
+      "APPROVED": "Aprobado",
+      "CHANGES_REQUESTED": "Cambios solicitados",
+      "UNKNOWN": "Desconocido"
+    },
+    "locked": "Esta hoja de tiempo está {{status}}. Elige una hoja borrador o una hoja con cambios solicitados.",
+    "statusChanged": "Esta hoja de tiempo ahora está {{status}}. Elige una hoja borrador o una hoja con cambios solicitados.",
+    "outsidePeriod": "Las horas de inicio y fin proporcionadas están fuera de este período, por lo que la entrada comienza el {{date}} a las 08:00."
+  },
+  "launch": {
+    "noUser": "No se pudo cargar el usuario actual para la entrada de tiempo.",
+    "entryNotFound": "Entrada de tiempo no encontrada.",
+    "entryMissingSheet": "Esta entrada de tiempo no está asociada a una hoja de tiempo, por lo que no se puede editar aquí.",
+    "entryMissingPeriod": "La hoja de tiempo de esta entrada no tiene período y no se puede abrir.",
+    "noPeriods": "Aún no hay períodos de tiempo configurados, por lo que no se puede registrar tiempo. Pide a un administrador que cree períodos de tiempo en Configuración → Entrada de tiempo.",
+    "prepareFailed": "Se produjo un error al preparar la entrada de tiempo. Inténtalo de nuevo."
   }
 }
