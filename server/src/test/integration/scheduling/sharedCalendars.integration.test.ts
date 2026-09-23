@@ -17,6 +17,8 @@ import {
   setMyCalendarShares,
   getMyCalendarShares,
   getCalendarsVisibleToMe,
+  getShareableTeams,
+  getShareableUsers,
   createGroupCalendar,
   setGroupCalendarShares,
   archiveGroupCalendar,
@@ -37,17 +39,26 @@ const permsRef = vi.hoisted(() => ({ byUser: new Map<string, Set<string>>() }));
 vi.mock('@alga-psa/db', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@alga-psa/db')>()),
   createTenantKnex: vi.fn(async () => ({ knex: dbRef.knex, tenant: dbRef.tenant })),
+  // The notification subscriber resolves its own connection; route it to the
+  // same transaction so rows inserted by the test are visible to it.
+  getConnection: vi.fn(async () => dbRef.knex),
 }));
 
-vi.mock('@alga-psa/auth', () => ({
-  withAuth: (action: any) => (...args: any[]) => action(userRef.user, { tenant: dbRef.tenant }, ...args),
-  hasPermission: vi.fn(async (user: any, resource: string, action: string) => {
-    const perms = permsRef.byUser.get(user.user_id) ?? new Set(['user_schedule:read']);
-    return perms.has(`${resource}:${action}`);
-  }),
-  getCurrentUser: vi.fn(async () => userRef.user),
-  getSession: vi.fn(async () => (userRef.user ? { user: { id: userRef.user.user_id, tenant: dbRef.tenant } } : null)),
-}));
+vi.mock('@alga-psa/auth', () => {
+  const wrap = (action: any) => (...args: any[]) =>
+    action(userRef.user, { tenant: dbRef.tenant }, ...args);
+  return {
+    withAuth: wrap,
+    withOptionalAuth: wrap,
+    withAuthCheck: wrap,
+    hasPermission: vi.fn(async (user: any, resource: string, action: string) => {
+      const perms = permsRef.byUser.get(user.user_id) ?? new Set(['user_schedule:read']);
+      return perms.has(`${resource}:${action}`);
+    }),
+    getCurrentUser: vi.fn(async () => userRef.user),
+    getSession: vi.fn(async () => (userRef.user ? { user: { id: userRef.user.user_id, tenant: dbRef.tenant } } : null)),
+  };
+});
 
 const HOOK_TIMEOUT = 240_000;
 const helpers = TestContext.createHelpers();
@@ -61,6 +72,7 @@ describe('Shared calendars integration', () => {
   let viewerB: string;
   let teamMemberC: string;
   let outsiderE: string;
+  let inactiveD: string;
   let clientUser: string;
   let teamId: string;
 
@@ -120,11 +132,12 @@ describe('Shared calendars integration', () => {
     viewerB = await createUser(ctx.db, ctx.tenantId, { first_name: 'Bob', last_name: 'Viewer' });
     teamMemberC = await createUser(ctx.db, ctx.tenantId, { first_name: 'Cara', last_name: 'Member' });
     outsiderE = await createUser(ctx.db, ctx.tenantId, { first_name: 'Eve', last_name: 'Outsider' });
+    inactiveD = await createUser(ctx.db, ctx.tenantId, { first_name: 'Dave', last_name: 'Dormant', is_inactive: true });
     clientUser = await createUser(ctx.db, ctx.tenantId, { user_type: 'client' });
 
     teamId = uuidv4();
     await table('teams').insert({ tenant: ctx.tenantId, team_id: teamId, team_name: 'Field techs', manager_id: outsiderE });
-    await table('team_members').insert({ tenant: ctx.tenantId, team_id: teamId, user_id: teamMemberC, role: 'member' });
+    await table('team_members').insert({ tenant: ctx.tenantId, team_id: teamId, user_id: teamMemberC, role: 'lead' });
   }, HOOK_TIMEOUT);
 
   afterEach(async () => {
@@ -407,8 +420,8 @@ describe('Shared calendars integration', () => {
     expect((await setMyCalendarShares([{ grantee_type: 'user', grantee_id: teamMemberC, access_level: 'read' }], ownerA)).success).toBe(true);
   });
 
-  // T009 (publication; the subscriber handler is exercised separately)
-  it('publishes CALENDAR_SHARE_GRANTED for new or changed user grants only', async () => {
+  // T009
+  it('publishes CALENDAR_SHARE_GRANTED for new or changed user grants only and notifies the grantee', async () => {
     actAs(ownerA);
     await setMyCalendarShares([
       { grantee_type: 'user', grantee_id: viewerB, access_level: 'read' },
@@ -421,11 +434,51 @@ describe('Shared calendars integration', () => {
     expect(grantEvents()).toHaveLength(1);
     expect(grantEvents()[0].payload).toMatchObject({ granteeType: 'user', granteeId: viewerB, accessLevel: 'read' });
 
+    // The real event bus is stubbed in tests, so drive the notification
+    // subscriber directly with the published event. `getConnection` is mocked
+    // above to the test transaction, so the subscriber and this assertion see
+    // the same rows. This is what proves CALENDAR_SHARE_GRANTED routes to
+    // internal-notifications (see the INTERNAL_NOTIFICATION_EVENT_TYPES sets).
+    const { internalNotificationSubscriberTestHarness } = await import(
+      'server/src/lib/eventBus/subscribers/internalNotificationSubscriber'
+    );
+    await internalNotificationSubscriberTestHarness.handleCalendarShareGranted(grantEvents()[0] as any);
+
+    const notification = await table('internal_notifications')
+      .where({ user_id: viewerB, template_name: 'calendar-share-granted' })
+      .first();
+    expect(notification).toBeTruthy();
+    expect(notification.title).toBe('Alice Owner shared their calendar with you');
+    expect(notification.message).toContain('Alice Owner');
+
     publishEventMock.mockClear();
     await setMyCalendarShares([
       { grantee_type: 'user', grantee_id: viewerB, access_level: 'read' },
       { grantee_type: 'team', grantee_id: teamId, access_level: 'read' },
     ]);
     expect(grantEvents()).toHaveLength(0);
+  });
+
+  // T017
+  it('lists active internal users for the share picker without requiring user:read', async () => {
+    actAs(viewerB, ['user_schedule:read']);
+
+    const usersResult = await getShareableUsers();
+    expect(usersResult.success).toBe(true);
+    if (!usersResult.success) throw new Error(usersResult.error);
+    const returnedIds = usersResult.data.map((u) => u.user_id);
+    expect(returnedIds).toContain(ownerA);
+    expect(returnedIds).toContain(teamMemberC);
+    expect(returnedIds).not.toContain(inactiveD);
+    expect(returnedIds).not.toContain(clientUser);
+    expect(usersResult.data.every((u) => u.user_type === 'internal' && u.is_inactive === false)).toBe(true);
+
+    const teamsResult = await getShareableTeams();
+    expect(teamsResult.success).toBe(true);
+    if (!teamsResult.success) throw new Error(teamsResult.error);
+    const field = teamsResult.data.find((team) => team.team_id === teamId);
+    expect(field).toBeTruthy();
+    const lead = field!.members.find((member) => member.role === 'lead');
+    expect(lead).toMatchObject({ user_id: teamMemberC, first_name: 'Cara', last_name: 'Member' });
   });
 });
