@@ -9,11 +9,13 @@ import { translateFieldValidation, validateAnnualRevenueField, validateClientNam
 import { Button } from '@alga-psa/ui/components/Button';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { FieldWarnings } from '@alga-psa/ui/components/FieldWarnings';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { FormFieldComponent } from '@alga-psa/ui/ui-reflection/types';
+import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Flex, Text } from '@radix-ui/themes';
@@ -133,6 +135,21 @@ const TextDetailItem: React.FC<{
       )}
     </div>
   );
+};
+
+/**
+ * clients.client_since is a DATE. It reaches this form as 'yyyy-MM-dd', or as a
+ * Date once a server action has round-tripped it — read that one with local
+ * parts, which is how the driver built it from the stored calendar date.
+ */
+const clientSinceFieldValue = (value: unknown): string => {
+  if (!value) return '';
+  if (value instanceof Date) return dateToString(value);
+  if (typeof value !== 'string') return '';
+  const trimmed = value.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+  const parsed = new Date(trimmed);
+  return Number.isNaN(parsed.getTime()) ? '' : dateToString(parsed);
 };
 
 const FieldContainer: React.FC<{
@@ -537,6 +554,34 @@ export function ClientDetailsTabContent({
                 { value: 'former', label: t('clientLifecycle.former', { defaultValue: 'Former client' }) },
               ]}
             />
+          </FieldContainer>
+
+          <FieldContainer
+            label={t('clientDetails.clientSince', { defaultValue: 'Client since' })}
+            fieldType="textField"
+            value={clientSinceFieldValue(editedClient.client_since)}
+            helperText={t('clientDetails.clientSinceHelper', {
+              defaultValue: 'When the relationship started. Leave it empty to use the date this client was added here.',
+            })}
+            automationId="client-since-field"
+          >
+            <Text as="label" size="2" className="text-gray-700 font-medium">
+              {t('clientDetails.clientSince', { defaultValue: 'Client since' })}
+            </Text>
+            <DatePicker
+              id="client-since-picker"
+              label={t('clientDetails.clientSince', { defaultValue: 'Client since' })}
+              placeholder={t('clientDetails.clientSincePlaceholder', { defaultValue: 'Date this client was added' })}
+              clearable
+              className="w-full"
+              value={dateFromString(clientSinceFieldValue(editedClient.client_since))}
+              onChange={(date) => onFieldChange('client_since', dateToString(date) || null)}
+            />
+            <Text size="1" className="text-gray-500">
+              {t('clientDetails.clientSinceHelper', {
+                defaultValue: 'When the relationship started. Leave it empty to use the date this client was added here.',
+              })}
+            </Text>
           </FieldContainer>
 
           <TextDetailItem

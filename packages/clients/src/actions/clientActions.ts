@@ -75,6 +75,35 @@ function applyClientStructuralSchema<T extends Record<string, any>>(
   return { ok: true, data: { ...payload, ...(result.data ?? {}) } };
 }
 
+const DATE_ONLY_PATTERN = /^(\d{4}-\d{2}-\d{2})(?:[T ].*)?$/;
+
+/**
+ * Calendar date as 'yyyy-MM-dd' for the clients.client_since DATE column; empty
+ * clears it. pg hands DATE columns back as local-midnight Dates, so local parts
+ * name the stored day — sending the Date itself lets the database session
+ * timezone cast it to the day before. Returns undefined for anything that is
+ * not a date, leaving the caller to decide how loudly to fail.
+ */
+function toDateOnlyOrNull(value: unknown): string | null | undefined {
+  if (value === null || value === undefined || value === '') return null;
+
+  const format = (date: Date): string =>
+    `${date.getFullYear()}-${`${date.getMonth() + 1}`.padStart(2, '0')}-${`${date.getDate()}`.padStart(2, '0')}`;
+
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? undefined : format(value);
+  }
+  if (typeof value !== 'string') return undefined;
+
+  const match = DATE_ONLY_PATTERN.exec(value.trim());
+  if (!match) return undefined;
+  const dateOnly = match[1];
+  const parsed = new Date(`${dateOnly}T00:00:00`);
+  // Rejects the calendar-shaped impossibilities (2015-02-30) that the parser
+  // would otherwise roll forward into March.
+  return Number.isNaN(parsed.getTime()) || format(parsed) !== dateOnly ? undefined : dateOnly;
+}
+
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
   table: string,
@@ -376,6 +405,17 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
 
       if (permittedUpdateData.hasOwnProperty('account_manager_id')) {
           updateObject.account_manager_id = permittedUpdateData.account_manager_id === '' ? null : permittedUpdateData.account_manager_id;
+      }
+
+      // client_since is a DATE. Forms round-trip whatever the driver handed
+      // them — including a local-midnight Date — and sending that back would
+      // let the database session timezone cast it to the previous day.
+      if (permittedUpdateData.hasOwnProperty('client_since')) {
+        const clientSince = toDateOnlyOrNull(permittedUpdateData.client_since);
+        if (clientSince === undefined) {
+          throw new ClientStructuralError('Client since must be a date in YYYY-MM-DD form.');
+        }
+        updateObject.client_since = clientSince;
       }
 
       console.log('Final updateObject being sent to database:', JSON.stringify(updateObject, null, 2));
