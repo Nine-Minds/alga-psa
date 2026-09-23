@@ -1560,7 +1560,8 @@
       "label": "Services",
       "quantityLabel": "Hoeveelheid",
       "selectServicePlaceholder": "Selecteer een service",
-      "serviceItemLabel": "Service {{index}}"
+      "serviceItemLabel": "Service {{index}}",
+      "catalogDefaultHint": "Geen catalogusprijs in {{currency}}; de catalogusstandaard wordt gebruikt."
     }
   },
   "wizardProducts": {
@@ -1608,7 +1609,8 @@
       "serviceItem": "Service {{index}}",
       "setBucketOfHours": "Urenbundel instellen",
       "noCurrencyPriceEnterRate": "Geen {{currency}}-prijs in de catalogus. Voer een uurtarief in.",
-      "noCurrencyPriceWithLegacyHint": "Geen {{currency}}-prijs in de catalogus. Verouderd standaardtarief: {{rate}}. Voer een uurtarief in {{currency}} in."
+      "noCurrencyPriceWithLegacyHint": "Geen {{currency}}-prijs in de catalogus. Verouderd standaardtarief: {{rate}}. Voer een uurtarief in {{currency}} in.",
+      "catalogDefaultRateHint": "Geen catalogusprijs in {{currency}}; de catalogusstandaard wordt gebruikt."
     },
     "minimumBillableTime": {
       "hint": "bijv. 15 minuten - elke tijdregistratie korter dan dit wordt naar boven afgerond",
@@ -1668,7 +1670,8 @@
       "unitOfMeasureHint": "Kies de eenheid waarop deze service wordt gefactureerd.",
       "unitOfMeasurePlaceholder": "bijv. GB, API-aanroep, gebruiker",
       "noCurrencyPriceEnterRate": "Geen {{currency}}-prijs in de catalogus. Voer een eenheidstarief in.",
-      "noCurrencyPriceWithLegacyHint": "Geen {{currency}}-prijs in de catalogus. Verouderd standaardtarief: {{rate}}. Voer een eenheidstarief in {{currency}} in."
+      "noCurrencyPriceWithLegacyHint": "Geen {{currency}}-prijs in de catalogus. Verouderd standaardtarief: {{rate}}. Voer een eenheidstarief in {{currency}} in.",
+      "catalogDefaultRateHint": "Geen catalogusprijs in {{currency}}; de catalogusstandaard wordt gebruikt."
     },
     "summary": {
       "labels": {

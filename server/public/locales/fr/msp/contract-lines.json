@@ -727,7 +727,8 @@
         "enterRatePlaceholder": "Entrez le taux",
         "metadata": "Type de service : {{type}} | Méthode : {{method}}",
         "noCurrencyPrice": "Pas de prix {{currency}}",
-        "rateDetail": "Taux : {{symbol}}{{amount}}"
+        "rateDetail": "Taux : {{symbol}}{{amount}}",
+        "catalogDefaultRateDetail": "Valeur par défaut du catalogue : {{symbol}}{{amount}}"
       },
       "unknownService": "Service inconnu"
     },

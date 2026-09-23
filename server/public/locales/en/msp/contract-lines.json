@@ -727,7 +727,8 @@
         "enterRatePlaceholder": "Enter rate",
         "metadata": "Service Type: {{type}} | Method: {{method}}",
         "noCurrencyPrice": "No {{currency}} price",
-        "rateDetail": "Rate: {{symbol}}{{amount}}"
+        "rateDetail": "Rate: {{symbol}}{{amount}}",
+        "catalogDefaultRateDetail": "Catalog default: {{symbol}}{{amount}}"
       },
       "unknownService": "Unknown Service"
     },

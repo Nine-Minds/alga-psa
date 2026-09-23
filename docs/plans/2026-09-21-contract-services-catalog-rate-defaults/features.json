@@ -1,0 +1,74 @@
+[
+  {
+    "id": "F001",
+    "description": "Resolve a contract-authoring catalog rate by preferring the matching contract-currency price, then falling back to the catalog default rate, while reporting the selected source.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements > 1"]
+  },
+  {
+    "id": "F002",
+    "description": "Allow GenericContractLineServicesList to add a service with its catalog default rate when no contract-currency price row exists.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements > 2", "Requirements > Functional Requirements > 3"]
+  },
+  {
+    "id": "F003",
+    "description": "Require a manual rate only when a selected service has neither a contract-currency price nor a usable catalog default rate.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements > 4"]
+  },
+  {
+    "id": "F004",
+    "description": "Use the shared authoring-rate resolver in ServiceSelectionDialog so all existing-line membership additions apply the same precedence.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements > 5"]
+  },
+  {
+    "id": "F005",
+    "description": "Exclude product catalog items from hourly, usage, and bucket-style service selection while retaining supported fixed-line product selection.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements > 6", "Requirements > Functional Requirements > 7"]
+  },
+  {
+    "id": "F006",
+    "description": "Capture resolved catalog rate metadata for fixed services selected in the contract wizard without changing the persisted submission shape.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements > 8", "Requirements > Functional Requirements > 13"]
+  },
+  {
+    "id": "F007",
+    "description": "Suggest the fixed recurring base rate as the sum of each selected service's resolved rate multiplied by its quantity.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements > 8"]
+  },
+  {
+    "id": "F008",
+    "description": "Refresh an auto-derived fixed base-rate suggestion when fixed services are selected, replaced, removed, or have their quantities changed.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements > 9"]
+  },
+  {
+    "id": "F009",
+    "description": "Preserve a manually edited, resumed, or existing fixed base rate instead of overwriting it after service-list changes.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements > 10", "Requirements > Functional Requirements > 11"]
+  },
+  {
+    "id": "F010",
+    "description": "Keep the existing non-zero recurring base-rate validation for fixed lines when no positive suggestion can be produced.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements > 12"]
+  },
+  {
+    "id": "F011",
+    "description": "Seed an empty legacy fixed-line base-rate editor from the resolved associated-service total without changing a populated value.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements > 14"]
+  },
+  {
+    "id": "F012",
+    "description": "Label currency-specific and catalog-default authoring rates accurately without creating or modifying catalog currency-price rows.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Data / API / Integrations"]
+  }
+]

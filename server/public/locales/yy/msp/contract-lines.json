@@ -727,7 +727,8 @@
         "enterRatePlaceholder": "〖Ḗƞŧḗř řȧŧḗ ····〗",
         "metadata": "〖Şḗřṽīƈḗ Ŧẏƥḗ: {{type}} | Ḿḗŧħȯḓ: {{method}} ··················〗",
         "noCurrencyPrice": "〖Ƞȯ {{currency}} ƥřīƈḗ ·········〗",
-        "rateDetail": "〖Řȧŧḗ: {{symbol}}{{amount}} ···········〗"
+        "rateDetail": "〖Řȧŧḗ: {{symbol}}{{amount}} ···········〗",
+        "catalogDefaultRateDetail": "〖Ƈȧŧȧŀȯɠ ḓḗƒȧŭŀŧ: {{symbol}}{{amount}} ···············〗"
       },
       "unknownService": "〖Ŭƞķƞȯẇƞ Şḗřṽīƈḗ ······〗"
     },

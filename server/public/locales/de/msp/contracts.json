@@ -1560,7 +1560,8 @@
       "label": "Dienste",
       "quantityLabel": "Menge",
       "selectServicePlaceholder": "Service auswählen",
-      "serviceItemLabel": "Dienst {{index}}"
+      "serviceItemLabel": "Dienst {{index}}",
+      "catalogDefaultHint": "Kein {{currency}}-Katalogpreis; es wird der Katalogstandard verwendet."
     }
   },
   "wizardProducts": {
@@ -1608,7 +1609,8 @@
       "serviceItem": "Dienst {{index}}",
       "setBucketOfHours": "Stundenkontingent festlegen",
       "noCurrencyPriceEnterRate": "Kein {{currency}}-Preis im Katalog. Geben Sie einen Stundensatz ein.",
-      "noCurrencyPriceWithLegacyHint": "Kein {{currency}}-Preis im Katalog. Bisheriger Standardsatz: {{rate}}. Geben Sie einen Stundensatz in {{currency}} ein."
+      "noCurrencyPriceWithLegacyHint": "Kein {{currency}}-Preis im Katalog. Bisheriger Standardsatz: {{rate}}. Geben Sie einen Stundensatz in {{currency}} ein.",
+      "catalogDefaultRateHint": "Kein {{currency}}-Katalogpreis; es wird der Katalogstandard verwendet."
     },
     "minimumBillableTime": {
       "hint": "z. B. 15 Minuten – jeder Zeiteintrag darunter wird aufgerundet",
@@ -1668,7 +1670,8 @@
       "unitOfMeasureHint": "Wählen Sie die Einheit aus, nach der dieser Service abgerechnet wird.",
       "unitOfMeasurePlaceholder": "z. B. GB, API-Aufruf, Benutzer",
       "noCurrencyPriceEnterRate": "Kein {{currency}}-Preis im Katalog. Geben Sie einen Einheitensatz ein.",
-      "noCurrencyPriceWithLegacyHint": "Kein {{currency}}-Preis im Katalog. Bisheriger Standardsatz: {{rate}}. Geben Sie einen Einheitensatz in {{currency}} ein."
+      "noCurrencyPriceWithLegacyHint": "Kein {{currency}}-Preis im Katalog. Bisheriger Standardsatz: {{rate}}. Geben Sie einen Einheitensatz in {{currency}} ein.",
+      "catalogDefaultRateHint": "Kein {{currency}}-Katalogpreis; es wird der Katalogstandard verwendet."
     },
     "summary": {
       "labels": {

@@ -36,32 +36,45 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
   const { formatCurrency, formatNumber, formatDate: formatDateInLocale } = useFormatters();
   const billingFrequencyOptions = useBillingFrequencyOptions();
   const formatBillingFrequency = useFormatBillingFrequency();
-  const [clientName, setClientName] = useState<string>(
-    t('wizardReview.fallback.notSelected', { defaultValue: 'Not selected' })
+  const notSelectedLabel = t('wizardReview.fallback.notSelected', { defaultValue: 'Not selected' });
+  // `client_id` is the single canonical identity for the chosen client;
+  // `clientName` only ever holds a resolved display value. It is empty while the
+  // lookup is in flight (the id is shown instead) and never the "Not selected"
+  // fallback, which is reserved for the genuinely unselected state.
+  const [clientName, setClientName] = useState<string>(() =>
+    data.client_id ? '' : notSelectedLabel
   );
 
   useEffect(() => {
-    const loadClientName = async () => {
-      if (!data.client_id) {
-        setClientName(t('wizardReview.fallback.notSelected', { defaultValue: 'Not selected' }));
-        return;
-      }
+    if (!data.client_id) {
+      setClientName(notSelectedLabel);
+      return;
+    }
 
+    let cancelled = false;
+    setClientName('');
+
+    const loadClientName = async () => {
       try {
         const client = await getClientByIdForBilling(data.client_id);
+        if (cancelled) return;
         if (isActionMessageError(client) || isActionPermissionError(client)) {
           setClientName(data.client_id);
           return;
         }
         setClientName(client?.client_name || data.client_id);
       } catch (error) {
+        if (cancelled) return;
         console.error('Error loading client name:', error);
         setClientName(data.client_id);
       }
     };
 
     void loadClientName();
-  }, [data.client_id, t]);
+    return () => {
+      cancelled = true;
+    };
+  }, [data.client_id, notSelectedLabel]);
 
   const currencyCode = data.currency_code || 'USD';
   const recurringPreview = getRecurringAuthoringPreview({
@@ -259,7 +272,7 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
                 {t('wizardReview.fields.client', { defaultValue: 'Client' })}
               </p>
               <p className="font-medium">
-                {clientName || t('wizardReview.fallback.notSelected', { defaultValue: 'Not selected' })}
+                {clientName || data.client_id || notSelectedLabel}
               </p>
             </div>
           </div>

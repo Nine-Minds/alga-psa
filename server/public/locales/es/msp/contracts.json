@@ -1560,7 +1560,8 @@
       "label": "Servicios",
       "quantityLabel": "Cantidad",
       "selectServicePlaceholder": "Seleccione un servicio",
-      "serviceItemLabel": "Servicio {{index}}"
+      "serviceItemLabel": "Servicio {{index}}",
+      "catalogDefaultHint": "No hay precio de catálogo en {{currency}}; se usa el valor predeterminado del catálogo."
     }
   },
   "wizardProducts": {
@@ -1608,7 +1609,8 @@
       "serviceItem": "Servicio {{index}}",
       "setBucketOfHours": "Establecer bloque de horas",
       "noCurrencyPriceEnterRate": "No hay precio en {{currency}} en el catálogo. Introduzca una tarifa por hora.",
-      "noCurrencyPriceWithLegacyHint": "No hay precio en {{currency}} en el catálogo. Tarifa predeterminada heredada: {{rate}}. Introduzca una tarifa por hora en {{currency}}."
+      "noCurrencyPriceWithLegacyHint": "No hay precio en {{currency}} en el catálogo. Tarifa predeterminada heredada: {{rate}}. Introduzca una tarifa por hora en {{currency}}.",
+      "catalogDefaultRateHint": "No hay precio de catálogo en {{currency}}; se usa el valor predeterminado del catálogo."
     },
     "minimumBillableTime": {
       "hint": "p. ej., 15 minutos: cualquier entrada de tiempo inferior a esto se redondeará hacia arriba",
@@ -1668,7 +1670,8 @@
       "unitOfMeasureHint": "Elija la unidad en la que se factura este servicio.",
       "unitOfMeasurePlaceholder": "p. ej., GB, llamada a API, usuario",
       "noCurrencyPriceEnterRate": "No hay precio en {{currency}} en el catálogo. Introduzca una tarifa unitaria.",
-      "noCurrencyPriceWithLegacyHint": "No hay precio en {{currency}} en el catálogo. Tarifa predeterminada heredada: {{rate}}. Introduzca una tarifa unitaria en {{currency}}."
+      "noCurrencyPriceWithLegacyHint": "No hay precio en {{currency}} en el catálogo. Tarifa predeterminada heredada: {{rate}}. Introduzca una tarifa unitaria en {{currency}}.",
+      "catalogDefaultRateHint": "No hay precio de catálogo en {{currency}}; se usa el valor predeterminado del catálogo."
     },
     "summary": {
       "labels": {

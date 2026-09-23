@@ -1560,7 +1560,8 @@
       "label": "Services",
       "quantityLabel": "Quantité",
       "selectServicePlaceholder": "Sélectionnez un service",
-      "serviceItemLabel": "Service {{index}}"
+      "serviceItemLabel": "Service {{index}}",
+      "catalogDefaultHint": "Pas de prix catalogue en {{currency}} ; la valeur par défaut du catalogue est utilisée."
     }
   },
   "wizardProducts": {
@@ -1608,7 +1609,8 @@
       "serviceItem": "Service {{index}}",
       "setBucketOfHours": "Définir une banque d'heures",
       "noCurrencyPriceEnterRate": "Aucun prix en {{currency}} dans le catalogue. Saisissez un taux horaire.",
-      "noCurrencyPriceWithLegacyHint": "Aucun prix en {{currency}} dans le catalogue. Tarif par défaut hérité : {{rate}}. Saisissez un taux horaire en {{currency}}."
+      "noCurrencyPriceWithLegacyHint": "Aucun prix en {{currency}} dans le catalogue. Tarif par défaut hérité : {{rate}}. Saisissez un taux horaire en {{currency}}.",
+      "catalogDefaultRateHint": "Pas de prix catalogue en {{currency}} ; la valeur par défaut du catalogue est utilisée."
     },
     "minimumBillableTime": {
       "hint": "par ex., 15 minutes - toute entrée de temps inférieure à ce seuil sera arrondie à la hausse",
@@ -1668,7 +1670,8 @@
       "unitOfMeasureHint": "Choisissez l'unité sur laquelle ce service est facturé.",
       "unitOfMeasurePlaceholder": "par ex., Go, appel API, utilisateur",
       "noCurrencyPriceEnterRate": "Aucun prix en {{currency}} dans le catalogue. Saisissez un tarif unitaire.",
-      "noCurrencyPriceWithLegacyHint": "Aucun prix en {{currency}} dans le catalogue. Tarif par défaut hérité : {{rate}}. Saisissez un tarif unitaire en {{currency}}."
+      "noCurrencyPriceWithLegacyHint": "Aucun prix en {{currency}} dans le catalogue. Tarif par défaut hérité : {{rate}}. Saisissez un tarif unitaire en {{currency}}.",
+      "catalogDefaultRateHint": "Pas de prix catalogue en {{currency}} ; la valeur par défaut du catalogue est utilisée."
     },
     "summary": {
       "labels": {

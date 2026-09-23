@@ -17,50 +17,93 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { getRecurringAuthoringPreview } from '../recurringAuthoringPreview';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useFormatBillingFrequency } from '@alga-psa/billing/hooks/useBillingEnumOptions';
+import { resolveContractAuthoringRate } from '../../../../lib/contractAuthoringRate';
 
 interface FixedFeeServicesStepProps {
   data: ContractWizardData;
   updateData: (data: Partial<ContractWizardData>) => void;
 }
 
+type FixedServiceDraft = ContractWizardData['fixed_services'][number];
+
+function computeWeightedResolvedRate(services: FixedServiceDraft[]): number {
+  return services.reduce((sum, service) => {
+    const rate =
+      typeof service.resolved_rate === 'number' && Number.isFinite(service.resolved_rate)
+        ? service.resolved_rate
+        : 0;
+    const quantity = Number.isFinite(service.quantity) ? service.quantity : 0;
+    return sum + Math.round(rate * quantity);
+  }, 0);
+}
+
 export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepProps) {
   const { t } = useTranslation('msp/contracts');
   const [baseRateInput, setBaseRateInput] = useState<string>('');
+  // A populated base rate (manual edit, resumed draft, or existing line) is
+  // authoritative; the service-derived total is only a suggestion while the
+  // field remains auto-derived.
+  const [baseRateIsManual, setBaseRateIsManual] = useState<boolean>(
+    () => typeof data.fixed_base_rate === 'number' && data.fixed_base_rate > 0,
+  );
 
   useEffect(() => {
     if (data.fixed_base_rate !== undefined) {
       setBaseRateInput((data.fixed_base_rate / 100).toFixed(2));
+    } else {
+      // An auto-derived suggestion that drops to zero clears the field so the
+      // existing non-zero validation still applies. A manually cleared field is
+      // left alone.
+      setBaseRateInput((previous) => (baseRateIsManual ? previous : ''));
     }
+    // Intentionally keyed only on the committed rate: re-running when the
+    // manual flag flips would clobber an in-progress edit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data.fixed_base_rate]);
 
+  /**
+   * Returns the base-rate field update that keeps the suggestion in sync while
+   * it is auto-derived. Once the author edits the field, returns nothing so the
+   * manual value survives later service/quantity changes.
+   */
+  const getAutoBaseRateUpdate = (services: FixedServiceDraft[]): Partial<ContractWizardData> => {
+    if (baseRateIsManual) {
+      return {};
+    }
+    const total = computeWeightedResolvedRate(services);
+    return { fixed_base_rate: total > 0 ? total : undefined };
+  };
+
   const handleAddService = () => {
-    updateData({
-      fixed_services: [
-        ...data.fixed_services,
-        { service_id: '', service_name: '', quantity: 1, bucket_overlay: undefined },
-      ],
-    });
+    const next = [
+      ...data.fixed_services,
+      { service_id: '', service_name: '', quantity: 1, bucket_overlay: undefined },
+    ];
+    updateData({ fixed_services: next, ...getAutoBaseRateUpdate(next) });
   };
 
   const handleRemoveService = (index: number) => {
     const next = data.fixed_services.filter((_, i) => i !== index);
-    updateData({ fixed_services: next });
+    updateData({ fixed_services: next, ...getAutoBaseRateUpdate(next) });
   };
 
   const handleServiceChange = (index: number, item: ServiceCatalogPickerItem) => {
     const next = [...data.fixed_services];
+    const resolved = resolveContractAuthoringRate(item, data.currency_code);
     next[index] = {
       ...next[index],
       service_id: item.service_id,
       service_name: item.service_name,
+      resolved_rate: resolved.rate,
+      resolved_rate_source: resolved.source,
     };
-    updateData({ fixed_services: next });
+    updateData({ fixed_services: next, ...getAutoBaseRateUpdate(next) });
   };
 
   const handleQuantityChange = (index: number, quantity: number) => {
     const next = [...data.fixed_services];
     next[index] = { ...next[index], quantity };
-    updateData({ fixed_services: next });
+    updateData({ fixed_services: next, ...getAutoBaseRateUpdate(next) });
   };
 
   const currencySymbol = getCurrencySymbol(data.currency_code);
@@ -157,6 +200,9 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
                   const value = event.target.value.replace(/[^0-9.]/g, '');
                   const decimalCount = (value.match(/\./g) || []).length;
                   if (decimalCount <= 1) {
+                    // Any edit makes the field authoritative; later service or
+                    // quantity changes must not overwrite the author's value.
+                    setBaseRateIsManual(true);
                     setBaseRateInput(value);
                   }
                 }}
@@ -228,10 +274,19 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
                     selectedLabel={service.service_name}
                     onSelect={(item) => handleServiceChange(index, item)}
                     itemKinds={['service']}
+                    currencyCode={data.currency_code}
                     placeholder={t('wizardFixed.services.selectServicePlaceholder', {
                       defaultValue: 'Select a service',
                     })}
                   />
+                  {service.resolved_rate_source === 'catalog-default' && service.resolved_rate !== null && service.resolved_rate !== undefined ? (
+                    <p className="text-xs text-[rgb(var(--color-text-400))]">
+                      {t('wizardFixed.services.catalogDefaultHint', {
+                        defaultValue: 'No {{currency}} catalog price; using the catalog default rate.',
+                        currency: data.currency_code,
+                      })}
+                    </p>
+                  ) : null}
                 </div>
 
                 <div className="space-y-2">

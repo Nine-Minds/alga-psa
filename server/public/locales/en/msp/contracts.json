@@ -1560,7 +1560,8 @@
       "label": "Services",
       "quantityLabel": "Quantity",
       "selectServicePlaceholder": "Select a service",
-      "serviceItemLabel": "Service {{index}}"
+      "serviceItemLabel": "Service {{index}}",
+      "catalogDefaultHint": "No {{currency}} catalog price; using the catalog default rate."
     }
   },
   "wizardProducts": {
@@ -1608,7 +1609,8 @@
       "serviceItem": "Service {{index}}",
       "setBucketOfHours": "Set bucket of hours",
       "noCurrencyPriceEnterRate": "No {{currency}} price in the catalog. Enter an hourly rate.",
-      "noCurrencyPriceWithLegacyHint": "No {{currency}} price in the catalog. Legacy default rate: {{rate}}. Enter an hourly rate in {{currency}}."
+      "noCurrencyPriceWithLegacyHint": "No {{currency}} price in the catalog. Legacy default rate: {{rate}}. Enter an hourly rate in {{currency}}.",
+      "catalogDefaultRateHint": "No {{currency}} catalog price; using the catalog default rate."
     },
     "minimumBillableTime": {
       "hint": "e.g., 15 minutes - any time entry less than this will be rounded up",
@@ -1668,7 +1670,8 @@
       "unitOfMeasureHint": "Choose the unit this service bills on.",
       "unitOfMeasurePlaceholder": "e.g., GB, API call, user",
       "noCurrencyPriceEnterRate": "No {{currency}} price in the catalog. Enter a unit rate.",
-      "noCurrencyPriceWithLegacyHint": "No {{currency}} price in the catalog. Legacy default rate: {{rate}}. Enter a unit rate in {{currency}}."
+      "noCurrencyPriceWithLegacyHint": "No {{currency}} price in the catalog. Legacy default rate: {{rate}}. Enter a unit rate in {{currency}}.",
+      "catalogDefaultRateHint": "No {{currency}} catalog price; using the catalog default rate."
     },
     "summary": {
       "labels": {

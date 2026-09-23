@@ -727,7 +727,8 @@
         "enterRatePlaceholder": "Wprowadź stawkę",
         "metadata": "Typ usługi: {{type}} | Metoda: {{method}}",
         "noCurrencyPrice": "Brak ceny {{currency}}",
-        "rateDetail": "Stawka: {{symbol}}{{amount}}"
+        "rateDetail": "Stawka: {{symbol}}{{amount}}",
+        "catalogDefaultRateDetail": "Domyślna stawka katalogowa: {{symbol}}{{amount}}"
       },
       "unknownService": "Nieznana usługa"
     },

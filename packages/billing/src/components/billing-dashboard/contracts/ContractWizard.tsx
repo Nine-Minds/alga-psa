@@ -39,6 +39,8 @@ import {
   getUnsupportedRecurringAuthoringCombinationMessage,
 } from "@shared/billingClients/recurringAuthoringValidation";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
+import type { ContractAuthoringRateSource } from "../../../lib/contractAuthoringRate";
+import { projectFixedServicesForSubmission } from "../../../lib/contractAuthoringSubmission";
 
 const REQUIRED_STEPS = [0, 5];
 const MIN_NOTICE_PERIOD_DAYS = 0;
@@ -163,6 +165,10 @@ export interface ContractWizardData {
     service_name?: string;
     quantity: number;
     bucket_overlay?: BucketOverlayInput | null;
+    /** Draft-only resolved catalog rate in minor units. Never submitted. */
+    resolved_rate?: number | null;
+    /** Draft-only provenance for the resolved rate. Never submitted. */
+    resolved_rate_source?: ContractAuthoringRateSource;
   }>;
   product_services: Array<{
     service_id: string;
@@ -552,7 +558,9 @@ export function ContractWizard({
         enable_proration: wizardData.enable_proration,
         hourly_services: (wizardData.hourly_services ?? []).map(withoutLegacyBucketOverlay),
         hourly_billing_frequency: wizardData.hourly_billing_frequency,
-        fixed_services: wizardData.fixed_services ?? [],
+        // Explicitly project the public fixed-service fields so draft-only
+        // rate/source metadata never reaches the persisted submission.
+        fixed_services: projectFixedServicesForSubmission(wizardData.fixed_services ?? []),
         product_services: wizardData.product_services ?? [],
         usage_services: (wizardData.usage_services ?? []).map(withoutLegacyBucketOverlay),
         usage_billing_frequency: wizardData.usage_billing_frequency,
