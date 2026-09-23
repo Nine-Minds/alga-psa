@@ -97,6 +97,10 @@ test('the dry-run manifest parses as valid YAML and runs as root with the runnin
   assert.match(command, /systemd-run/);
   assert.match(command, /alga-appliance-dns-activate/);
   assert.doesNotMatch(command, /--host-root/);
+  // Host commands must switch to the host root filesystem, not just the host
+  // namespaces; otherwise systemd/sharded host tools are unreachable.
+  assert.match(command, /--root=\/host\b/);
+  assert.match(command, /--wdns=\//);
 
   // The helper writes the activation record from host root; assert the mount is
   // present so the record lands on the shared state path.
@@ -116,6 +120,12 @@ test('the Job namespace and service account are overridable for tests and future
 // A YAML-parse assertion cannot catch a command that parses but cannot run. This
 // builds the real command string and executes it against stub host tools so the
 // `command -v`-as-a-builtin bug (and any future staging regression) fails here.
+//
+// The harness also models the container-root defect: the container's `systemd-run`
+// is a decoy that records and fails, while only the host root's `systemd-run`
+// succeeds. A Job that enters the host namespaces without switching root reaches
+// the decoy and fails, so the regression test below catches the missing
+// `--root`/`--wdns` switch.
 function makeExecHarness() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-dns-job-'));
   const fakeBin = path.join(dir, 'bin');
@@ -123,28 +133,47 @@ function makeExecHarness() {
   const helperSource = path.join(dir, 'configure-k3s-dns.sh');
   fs.writeFileSync(helperSource, '#!/usr/bin/env bash\necho "helper $*"\n', { mode: 0o755 });
   const hostRoot = path.join(dir, 'host');
-  fs.mkdirSync(hostRoot);
+  fs.mkdirSync(path.join(hostRoot, 'usr', 'bin'), { recursive: true });
   const stageDir = '/var/lib/alga-appliance/dns';
-  const systemdRunLog = path.join(dir, 'systemd-run.log');
+  const systemdRunLog = path.join(dir, 'host-systemd-run.log');
+  const containerSystemdRunLog = path.join(dir, 'container-systemd-run.log');
   const nsenterLog = path.join(dir, 'nsenter.log');
 
-  // Forward nsenter calls to the real command so `... -- /bin/sh -c '...'`
-  // behaves like the host mount namespace.
+  // Forward nsenter calls to the command after `--`, emulating the host root
+  // switch: `--root=<dir>` prepends that root's /usr/bin to PATH (the real
+  // nsenter opens the directory before setns and chroots into it).
   fs.writeFileSync(path.join(fakeBin, 'nsenter'), `#!/usr/bin/env bash
 echo "$*" >> "$NSENTER_LOG"
-while [ "$#" -gt 0 ] && [ "$1" != "--" ]; do shift; done
-[ "$1" = "--" ] && shift
+root=""
+while [ "$#" -gt 0 ] && [ "$1" != "--" ]; do
+  case "$1" in
+    --root=*) root="\${1#--root=}" ;;
+  esac
+  shift
+done
+[ "\${1:-}" = "--" ] && shift
+if [ -n "$root" ] && [ -d "$root" ]; then
+  export PATH="$root/usr/bin:$PATH"
+fi
 exec "$@"
 `, { mode: 0o755 });
   fs.writeFileSync(path.join(fakeBin, 'systemctl'), `#!/usr/bin/env bash
 exit 1
 `, { mode: 0o755 });
+  // The container image root has no working host tooling: without a root switch
+  // this decoy is what a systemd-run call would hit.
   fs.writeFileSync(path.join(fakeBin, 'systemd-run'), `#!/usr/bin/env bash
+echo "$*" >> "$CONTAINER_SYSTEMD_RUN_LOG"
+echo "systemd-run: command not usable from the container root" >&2
+exit 1
+`, { mode: 0o755 });
+  // The host root's real tooling.
+  fs.writeFileSync(path.join(hostRoot, 'usr', 'bin', 'systemd-run'), `#!/usr/bin/env bash
 echo "$*" >> "$SYSTEMD_RUN_LOG"
 exit 0
 `, { mode: 0o755 });
 
-  return { dir, fakeBin, helperSource, hostRoot, stageDir, systemdRunLog, nsenterLog };
+  return { dir, fakeBin, helperSource, hostRoot, stageDir, systemdRunLog, containerSystemdRunLog, nsenterLog };
 }
 
 test('the generated container command executes and launches the host unit', () => {
@@ -168,6 +197,7 @@ test('the generated container command executes and launches the host unit', () =
       ...process.env,
       PATH: `${harness.fakeBin}:${process.env.PATH}`,
       SYSTEMD_RUN_LOG: harness.systemdRunLog,
+      CONTAINER_SYSTEMD_RUN_LOG: harness.containerSystemdRunLog,
       NSENTER_LOG: harness.nsenterLog
     }
   });
@@ -184,4 +214,44 @@ test('the generated container command executes and launches the host unit', () =
   const stagedDir = path.join(harness.hostRoot, harness.stageDir);
   assert.equal(fs.existsSync(path.join(stagedDir, 'configure-k3s-dns.sh')), true);
   assert.equal(fs.existsSync(path.join(stagedDir, 'kubectl')), true);
+});
+
+test('every host nsenter switches to the host root and reaches the host systemd-run', () => {
+  const harness = makeExecHarness();
+  const result = renderManifest({
+    ALGA_APPLIANCE_DNS_JOB_HOST_ROOT: harness.hostRoot,
+    ALGA_APPLIANCE_DNS_HELPER_SOURCE: harness.helperSource,
+    ALGA_APPLIANCE_DNS_STAGE_DIR: harness.stageDir,
+    ALGA_APPLIANCE_DNS_CONFIG_FINGERPRINT: 'c'.repeat(64)
+  });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+
+  const job = YAML.parse(result.stdout);
+  const command = job.spec.template.spec.containers[0].command[2];
+  const execution = spawnSync('bash', ['-c', command], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      PATH: `${harness.fakeBin}:${process.env.PATH}`,
+      SYSTEMD_RUN_LOG: harness.systemdRunLog,
+      CONTAINER_SYSTEMD_RUN_LOG: harness.containerSystemdRunLog,
+      NSENTER_LOG: harness.nsenterLog
+    }
+  });
+  assert.equal(execution.status, 0, execution.stderr || execution.stdout);
+
+  // Every nsenter invocation must name the host root and the rooted workdir.
+  const nsenterLog = fs.readFileSync(harness.nsenterLog, 'utf8').trim().split('\n').filter(Boolean);
+  assert.ok(nsenterLog.length >= 3, `expected the systemd-run path to nsenter, got ${nsenterLog.length}`);
+  for (const invocation of nsenterLog) {
+    assert.match(invocation, /--root=/, `nsenter invocation missing host root: ${invocation}`);
+    assert.match(invocation, /--wdns=\//, `nsenter invocation missing rooted workdir: ${invocation}`);
+  }
+
+  // The activation reached the host's systemd-run, not the container-root decoy.
+  assert.equal(fs.existsSync(harness.containerSystemdRunLog), false, 'activation ran against container-root systemd-run');
+  const hostInvocation = nsenterLog.find((line) => /systemd-run/.test(line));
+  assert.ok(hostInvocation, 'no nsenter call reached systemd-run');
+  assert.match(fs.readFileSync(harness.systemdRunLog, 'utf8'), /--unit=alga-appliance-dns-activate/);
 });

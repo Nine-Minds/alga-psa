@@ -107,9 +107,18 @@ if ! command -v nsenter >/dev/null 2>&1; then
   echo "nsenter is not available in the control-plane image" >&2
   exit 1
 fi
+# Enter the host namespaces AND switch the root filesystem to the host root.
+# Entering the mount namespace alone leaves the process root at the container
+# image, so host tools (/bin/sh, systemctl, systemd-run) are neither found nor
+# executed; --root opens the host root before the namespace switch and chroots
+# into it, and --wdns starts the command at that root. The mount is the Job's
+# /host hostPath; the host root persists for the staged helper and host unit.
+host_nsenter() {
+  nsenter -t 1 -m -u -i -n -p --root=__HOST_ROOT__ --wdns=/ -- "$@"
+}
 # `command -v` is a shell builtin: it must be run by an explicit host shell, not
 # handed to nsenter as if it were an executable.
-if ! nsenter -t 1 -m -u -i -n -p -- /bin/sh -c 'command -v systemd-run >/dev/null 2>&1'; then
+if ! host_nsenter /bin/sh -c 'command -v systemd-run >/dev/null 2>&1'; then
   echo "host systemd-run is not available; cannot launch a host-owned activation service" >&2
   exit 1
 fi
@@ -125,12 +134,12 @@ printf '%s\n' \
   'echo "k3s binary not found on host" >&2' \
   'exit 1' > "$stage/kubectl"
 chmod 0755 "$stage/kubectl"
-if nsenter -t 1 -m -u -i -n -p -- systemctl is-active --quiet "__ACTIVATION_UNIT__"; then
+if host_nsenter systemctl is-active --quiet "__ACTIVATION_UNIT__"; then
   echo "DNS activation service is already running; nothing to do."
   exit 0
 fi
-nsenter -t 1 -m -u -i -n -p -- systemctl reset-failed "__ACTIVATION_UNIT__" >/dev/null 2>&1 || true
-nsenter -t 1 -m -u -i -n -p -- systemd-run \
+host_nsenter systemctl reset-failed "__ACTIVATION_UNIT__" >/dev/null 2>&1 || true
+host_nsenter systemd-run \
   --unit="__ACTIVATION_UNIT__" \
   --collect \
   --property=Type=oneshot \
