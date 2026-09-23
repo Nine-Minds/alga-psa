@@ -1549,6 +1549,8 @@
     "deleteConfirmTitle": "Supprimer l'entrée de temps ?",
     "deleteConfirmMessage": "Cette entrée de temps sera définitivement supprimée. Cette action est irréversible.",
     "deleteConfirmAction": "Supprimer",
+    "billable": "Facturable",
+    "nonBillable": "Non facturable",
     "duration": {
       "hr": "h",
       "hrs": "h",

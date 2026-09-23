@@ -1557,6 +1557,8 @@
     "deleteConfirmTitle": "Delete time entry?",
     "deleteConfirmMessage": "This will permanently delete the time entry. This action cannot be undone.",
     "deleteConfirmAction": "Delete",
+    "billable": "Billable",
+    "nonBillable": "Non-billable",
     "duration": {
       "hr": "hr",
       "hrs": "hrs",

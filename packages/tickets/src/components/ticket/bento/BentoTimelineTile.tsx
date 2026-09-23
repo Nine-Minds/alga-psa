@@ -42,7 +42,7 @@ import { BentoTile, BentoTileEmpty } from '@alga-psa/ui/components/bento/BentoTi
 import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
 } from '../TicketNotificationSuppressionControl';
-import { dateToWallTimeString, getUserTimeZone, zonedWallTimeToUtc } from '@alga-psa/core';
+import { dateToWallTimeString, getUserTimeZone, workedMinutes, zonedWallTimeToUtc } from '@alga-psa/core';
 
 const TextEditor = dynamic(() => import('@alga-psa/ui/editor').then((mod) => mod.TextEditor), {
   loading: () => <RichTextEditorSkeleton height="120px" />,
@@ -142,6 +142,14 @@ function formatMinutes(minutes: number): string {
   const rest = minutes % 60;
   if (hours === 0) return `${rest}m`;
   return rest > 0 ? `${hours}h ${rest}m` : `${hours}h`;
+}
+
+// Theme-aware classification chip; the Badge component renders a `div`, which
+// is invalid inside the timeline row's `<p>`, so this mirrors its token classes.
+function billabilityChipClasses(isBillable: boolean): string {
+  return isBillable
+    ? 'border-[rgb(var(--badge-success-border))] bg-[rgb(var(--badge-success-bg))] text-[rgb(var(--badge-success-text))]'
+    : 'border-[rgb(var(--badge-default-border))] bg-[rgb(var(--badge-default-bg))] text-[rgb(var(--badge-default-text))]';
 }
 
 type Translator = (key: string, fallback: string, opts?: Record<string, unknown>) => string;
@@ -1118,6 +1126,8 @@ function TimelineNodeView({ id, node, t }: { id: string; node: TimelineNode; t: 
   const { formatDate } = useFormatters();
   if (node.lane === 'time' && node.entry?.timeEntry) {
     const timeEntry = node.entry.timeEntry;
+    // Worked duration is elapsed time; billability is the separate billing value.
+    const isBillable = timeEntry.billable_duration > 0;
     return (
       <div id={`${id}-${node.sortId}`} className="flex gap-2.5 items-baseline pt-1">
         <p className="text-sm text-[rgb(var(--color-text-600))] min-w-0">
@@ -1126,7 +1136,14 @@ function TimelineNodeView({ id, node, t }: { id: string; node: TimelineNode; t: 
           </span>{' '}
           {t('bento.timeline.logged', 'logged')}{' '}
           <span className="chip-primary inline-block rounded px-1.5 text-xs font-semibold">
-            {formatMinutes(timeEntry.billable_duration)}
+            {formatMinutes(workedMinutes(timeEntry))}
+          </span>{' '}
+          <span
+            className={`inline-block rounded-full border px-1.5 align-middle text-[10px] font-semibold ${billabilityChipClasses(isBillable)}`}
+          >
+            {isBillable
+              ? t('timeEntries.billable', 'Billable')
+              : t('timeEntries.nonBillable', 'Non-billable')}
           </span>
           {timeEntry.notes ? <> — {timeEntry.notes}</> : null}
         </p>

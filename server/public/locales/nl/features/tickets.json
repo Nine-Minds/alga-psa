@@ -1549,6 +1549,8 @@
     "deleteConfirmTitle": "Tijdsregistratie verwijderen?",
     "deleteConfirmMessage": "De tijdsregistratie wordt permanent verwijderd. Deze actie kan niet ongedaan worden gemaakt.",
     "deleteConfirmAction": "Verwijderen",
+    "billable": "Factureerbaar",
+    "nonBillable": "Niet-factureerbaar",
     "duration": {
       "hr": "uur",
       "hrs": "uur",

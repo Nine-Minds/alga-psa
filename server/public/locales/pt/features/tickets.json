@@ -1549,6 +1549,8 @@
     "deleteConfirmTitle": "Excluir entrada de hora?",
     "deleteConfirmMessage": "Isso excluirá permanentemente a entrada de hora. Esta ação não pode ser desfeita.",
     "deleteConfirmAction": "Excluir",
+    "billable": "Faturável",
+    "nonBillable": "Não faturável",
     "duration": {
       "hr": "horas",
       "hrs": "horas",

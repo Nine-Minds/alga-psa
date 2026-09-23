@@ -1549,6 +1549,8 @@
     "deleteConfirmTitle": "Zeiteintrag löschen?",
     "deleteConfirmMessage": "Dieser Zeiteintrag wird endgültig gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
     "deleteConfirmAction": "Löschen",
+    "billable": "Abrechenbar",
+    "nonBillable": "Nicht abrechenbar",
     "duration": {
       "hr": "Std.",
       "hrs": "Std.",
