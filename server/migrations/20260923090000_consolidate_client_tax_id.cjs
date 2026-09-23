@@ -14,8 +14,8 @@ exports.consolidateTenant = async function consolidateTenant(knex, tenant) {
   await db.table('clients').where({ tenant })
     .whereRaw("NULLIF(BTRIM(tax_id_number), '') IS NOT NULL")
     .whereRaw("NULLIF(BTRIM(properties->>'tax_id'), '') IS NOT NULL")
-    .whereRaw("tax_id_number IS DISTINCT FROM properties->>'tax_id'")
-    .update({ properties: knex.raw("jsonb_set(properties - 'tax_id', '{legacy_tax_id}', CASE WHEN jsonb_exists(properties, 'legacy_tax_id') THEN jsonb_build_array(properties->'legacy_tax_id', to_jsonb(properties->>'tax_id')) ELSE to_jsonb(properties->>'tax_id') END, true)") });
+    .whereRaw("BTRIM(tax_id_number) IS DISTINCT FROM BTRIM(properties->>'tax_id')")
+    .update({ properties: knex.raw("jsonb_set(properties - 'tax_id', '{legacy_tax_id}', CASE WHEN jsonb_typeof(properties->'legacy_tax_id') = 'array' THEN (properties->'legacy_tax_id') || jsonb_build_array(to_jsonb(properties->>'tax_id')) WHEN jsonb_exists(properties, 'legacy_tax_id') THEN jsonb_build_array(properties->'legacy_tax_id', to_jsonb(properties->>'tax_id')) ELSE to_jsonb(properties->>'tax_id') END, true)") });
   await db.table('clients').where({ tenant })
     .whereRaw("NULLIF(BTRIM(tax_id_number), '') IS NULL")
     .whereRaw("NULLIF(BTRIM(properties->>'tax_id'), '') IS NOT NULL")
