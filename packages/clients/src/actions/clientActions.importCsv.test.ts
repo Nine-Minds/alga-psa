@@ -1,4 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+// Load during collection: a cold transform inside a timed test can outlive that
+// test and write into the next test's reset database state. vi.mock is hoisted.
+import { importClientsFromCSV } from './clientActions';
 
 const createTenantKnexMock = vi.hoisted(() => vi.fn());
 const tenantDbMock = vi.hoisted(() => vi.fn((conn: any) => ({
@@ -285,7 +288,6 @@ function csvRow(overrides: Record<string, any> = {}): Record<string, any> {
 }
 
 async function importClients(rows: Record<string, any>[], updateExisting = false) {
-  const { importClientsFromCSV } = await import('./clientActions');
   return importClientsFromCSV(rows, updateExisting) as Promise<Array<{
     success: boolean;
     message: string;
@@ -370,7 +372,11 @@ describe('importClientsFromCSV', () => {
     })]);
 
     expect(results[0]).toMatchObject({ success: true });
+    expect(state.clients).toHaveLength(1);
+    expect(state.clients[0]).toMatchObject({ client_name: 'Bogota Support' });
+    expect(state.client_locations).toHaveLength(1);
     expect(state.client_locations[0]).toMatchObject({
+      client_id: state.clients[0].client_id,
       phone: '+573007001234',
       phone_extension: '',
       country_code: 'CO',
