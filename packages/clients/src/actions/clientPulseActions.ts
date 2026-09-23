@@ -60,6 +60,24 @@ function toIsoString(value: unknown): string | null {
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
+/**
+ * Calendar date as plain 'YYYY-MM-DD'. pg hands DATE columns back as
+ * local-midnight Date objects, so reading UTC parts off one would move the day
+ * — and on Jan 1 the year — for anyone east of Greenwich.
+ */
+function toDateOnlyString(value: unknown): string | null {
+  if (!value) return null;
+  if (typeof value === 'string') {
+    const match = /^\d{4}-\d{2}-\d{2}/.exec(value.trim());
+    if (match) return match[0];
+  }
+  const date = value instanceof Date ? value : new Date(value as string | number);
+  if (Number.isNaN(date.getTime())) return null;
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
 function daysSince(value: unknown, nowMs: number): number | null {
   const iso = toIsoString(value);
   if (!iso) return null;
@@ -364,7 +382,7 @@ async function fetchRecord(
     defaultContactId
       ? trx('contacts')
         .where({ tenant, contact_name_id: defaultContactId, client_id: clientRow.client_id })
-        .select('full_name')
+        .select('contact_name_id', 'full_name')
         .first()
       : Promise.resolve(null),
     trx('client_inbound_email_domains')
@@ -392,9 +410,12 @@ async function fetchRecord(
     url: clientRow.url ?? null,
     accountManagerName: formatUserName(clientRow),
     defaultContactName: defaultContact?.full_name ?? null,
+    // Only when the contact resolved — the query is what proves it still
+    // belongs to this client, and a stale id would open the wrong drawer.
+    defaultContactId: defaultContact?.contact_name_id ?? null,
     inboundDomains: inboundDomains.map((domain) => String(domain)),
     taxRegion: taxRegion?.region_name ?? null,
-    clientSince: toIsoString(clientRow.created_at),
+    clientSince: toDateOnlyString(clientRow.client_since ?? clientRow.created_at),
     isInactive: Boolean(clientRow.is_inactive),
   };
 }
@@ -1001,6 +1022,7 @@ export const getClientPulse = withAuth(async (
       .select(
         'c.client_id',
         'c.created_at',
+        'c.client_since',
         'c.url',
         'c.account_manager_id',
         'c.is_inactive',

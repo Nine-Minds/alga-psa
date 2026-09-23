@@ -377,8 +377,8 @@ describe('RecordCard', () => {
       <RecordCard
         id="rec"
         data={{
-          url: null, accountManagerName: 'Dorothy Gale', defaultContactName: null,
-          inboundDomains: [], taxRegion: null, clientSince: '2019-04-01T00:00:00.000Z', isInactive: false,
+          url: null, accountManagerName: 'Dorothy Gale', defaultContactName: null, defaultContactId: null,
+          inboundDomains: [], taxRegion: null, clientSince: '2019-04-01', isInactive: false,
         }}
         onOpen={null}
         onOpenAdditionalInfo={null}
@@ -391,10 +391,49 @@ describe('RecordCard', () => {
     expect(screen.getByText('2019')).toBeInTheDocument();
   });
 
+  it('shows the client_since year, not the year the row was created', () => {
+    // A migrated client: the relationship started years before the AlgaPSA row,
+    // and on Jan 1 a timezone-shifted re-parse would report 2014.
+    render(
+      <RecordCard
+        id="rec"
+        data={{
+          url: null, accountManagerName: null, defaultContactName: null, defaultContactId: null,
+          inboundDomains: [], taxRegion: null, clientSince: '2015-01-01', isInactive: false,
+        }}
+        onOpen={null}
+        onOpenAdditionalInfo={null}
+        t={t}
+      />,
+    );
+
+    expect(screen.getByText('2015')).toBeInTheDocument();
+  });
+
+  it('opens the default contact when there is a handler and a resolved contact', () => {
+    const onOpenContact = vi.fn();
+    const data = {
+      url: null, accountManagerName: null, defaultContactName: 'Glinda Good',
+      defaultContactId: 'contact-1', inboundDomains: [], taxRegion: null,
+      clientSince: null, isInactive: false,
+    };
+
+    const { rerender } = render(
+      <RecordCard id="rec" data={data} onOpen={null} onOpenAdditionalInfo={null} onOpenContact={onOpenContact} t={t} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Glinda Good' }));
+    expect(onOpenContact).toHaveBeenCalledWith('contact-1');
+
+    // Without a handler the name stays plain text — nothing to click.
+    rerender(<RecordCard id="rec" data={data} onOpen={null} onOpenAdditionalInfo={null} t={t} />);
+    expect(screen.queryByRole('button', { name: 'Glinda Good' })).toBeNull();
+    expect(screen.getByText('Glinda Good')).toBeInTheDocument();
+  });
+
   it('renders the additional-info footer link only when it has a destination', () => {
     const onOpenAdditionalInfo = vi.fn();
     const data = {
-      url: null, accountManagerName: null, defaultContactName: null,
+      url: null, accountManagerName: null, defaultContactName: null, defaultContactId: null,
       inboundDomains: [], taxRegion: null, clientSince: null, isInactive: false,
     };
 
