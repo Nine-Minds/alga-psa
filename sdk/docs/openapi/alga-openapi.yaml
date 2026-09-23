@@ -5071,6 +5071,11 @@ components:
           type: string
         properties:
           type: object
+          properties:
+            tax_id:
+              type: string
+              description: Deprecated legacy input. Send tax_id_number instead.
+              deprecated: true
           additionalProperties: {}
         payment_terms:
           type: string
@@ -5765,8 +5770,6 @@ components:
                   type: string
                 billing_address:
                   type: string
-                tax_id:
-                  type: string
                 notes:
                   type: string
                 payment_terms:
@@ -5963,8 +5966,6 @@ components:
                   type:
                     type: string
                   billing_address:
-                    type: string
-                  tax_id:
                     type: string
                   notes:
                     type: string

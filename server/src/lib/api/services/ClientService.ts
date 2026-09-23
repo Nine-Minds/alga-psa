@@ -40,6 +40,21 @@ import {
 } from '@alga-psa/shared/billingClients/defaultContract';
 import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
 
+export function normalizeLegacyClientTaxId<T extends { tax_id_number?: string; properties?: any }>(data: T): T {
+  const properties = data.properties && typeof data.properties === 'object' ? { ...data.properties } : data.properties;
+  // Canonical input wins whenever present; legacy input is accepted only as fallback.
+  const taxIdNumber = data.tax_id_number ?? properties?.tax_id;
+  if (properties && typeof properties === 'object') delete properties.tax_id;
+  return { ...data, ...(taxIdNumber === undefined ? {} : { tax_id_number: taxIdNumber }), ...(properties === undefined ? {} : { properties }) };
+}
+
+function stripLegacyClientTaxId<T extends { properties?: any }>(client: T): T {
+  if (!client.properties || typeof client.properties !== 'object') return client;
+  const properties = { ...client.properties };
+  delete properties.tax_id;
+  return { ...client, properties };
+}
+
 function maybeUserActorFromContext(context: ServiceContext) {
   if (typeof context.userId !== 'string' || !context.userId) return undefined;
   return { actorType: 'USER' as const, actorUserId: context.userId };
@@ -267,7 +282,7 @@ export class ClientService extends BaseService<IClient> {
       const clientsWithLogos = await Promise.all(
         (clients as IClient[]).map(async (client) => {
           const logoUrl = await getClientLogoUrl(client.client_id, context.tenant);
-          return { ...client, logoUrl };
+          return stripLegacyClientTaxId({ ...client, logoUrl });
         })
       );
 
@@ -306,7 +321,7 @@ export class ClientService extends BaseService<IClient> {
       const logoUrl = await getClientLogoUrl(id, context.tenant);
 
       return {
-        ...client,
+        ...stripLegacyClientTaxId(client),
         logoUrl
       } as unknown as IClient;
     });
@@ -315,6 +330,9 @@ export class ClientService extends BaseService<IClient> {
   /**
    * Create new client with default settings   */
   async create(data: Partial<IClient>, context: ServiceContext): Promise<IClient> {
+    const normalized = normalizeLegacyClientTaxId(data as any);
+    const taxIdNumber = normalized.tax_id_number;
+    const properties = normalized.properties;
     const { knex } = await this.getKnex();
     const client = await withTransaction(knex, async (trx) => {
       // Prepare client data
@@ -323,9 +341,9 @@ export class ClientService extends BaseService<IClient> {
         client_name: data.client_name,
         url: data.url || '',
         client_type: data.client_type,
-        tax_id_number: data.tax_id_number,
+        tax_id_number: taxIdNumber,
         notes: data.notes,
-        properties: data.properties,
+        properties,
         payment_terms: data.payment_terms,
         billing_cycle: data.billing_cycle,
         credit_limit: data.credit_limit,
@@ -404,7 +422,7 @@ export class ClientService extends BaseService<IClient> {
       idempotencyKey: `client_created:${client.client_id}`,
     });
 
-    return client;
+    return stripLegacyClientTaxId(client);
   }
 
   async delete(id: string, context: ServiceContext): Promise<void> {
@@ -607,10 +625,17 @@ export class ClientService extends BaseService<IClient> {
       }
 
       // Prepare update data
+      const normalized = normalizeLegacyClientTaxId(data as any);
       const updateData: any = {
-        ...data,
+        ...normalized,
         updated_at: knex.raw('now()'),
       };
+
+      // Preserve existing JSON properties during partial updates, including
+      // legacy_tax_id values retained by the consolidation migration.
+      if (normalized.properties && typeof normalized.properties === 'object') {
+        updateData.properties = { ...(before.properties || {}), ...normalized.properties };
+      }
 
       // Remove undefined values + non-column fields
       Object.keys(updateData).forEach((key) => {
@@ -619,7 +644,6 @@ export class ClientService extends BaseService<IClient> {
         }
       });
       delete updateData.tags;
-
       const updatedFieldKeys = Object.keys(updateData);
 
       // Update client
@@ -766,7 +790,7 @@ export class ClientService extends BaseService<IClient> {
       });
     }
 
-    return result.after as IClient;
+    return stripLegacyClientTaxId(result.after as IClient);
   }
 
   /**
