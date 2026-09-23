@@ -20,7 +20,8 @@
       "select": "Selecione",
       "update": "Atualizar",
       "uploadCsv": "Carregar CSV",
-      "view": "Visualizar"
+      "view": "Visualizar",
+      "next": "Avançar"
     },
     "states": {
       "active": "Ativo",
@@ -304,7 +305,9 @@
     "parentClientSelf": "Um cliente não pode ser seu próprio cliente principal",
     "parentClientPlaceholder": "Sem cliente principal",
     "parentClientClear": "Limpar",
-    "parentClientLegacy": "Inserido anteriormente como texto: {{name}}"
+    "parentClientLegacy": "Inserido anteriormente como texto: {{name}}",
+    "mergeClient": "Mesclar",
+    "mergeClientHelp": "Absorver outro cliente neste como perfil de faturamento"
   },
   "clientCommandCenter": {
     "cards": {
@@ -1688,7 +1691,9 @@
     "archived": "«{{name}}» arquivado",
     "deleted": "«{{name}}» eliminado",
     "restored": "«{{name}}» restaurado",
-    "settings": "Configurações de faturamento"
+    "settings": "Configurações de faturamento",
+    "mergeHelp": "Você mantém uma unidade ou entidade como cliente separado? Mescle-a: ela se torna um perfil de faturamento aqui, preservando faturas e histórico.",
+    "mergeButton": "Mesclar um cliente"
   },
   "portalBillingProfileAccess": {
     "label": "Segmentos de faturamento",
@@ -1868,6 +1873,77 @@
       "otherClient": "Esse perfil de faturamento pertence a outro cliente.",
       "archived": "Esse perfil de faturamento está arquivado.",
       "selectionNotThisClient": "Um dos perfis de faturamento selecionados não pertence a este cliente."
+    },
+    "clientMerge": {
+      "blocked": "Não é possível concluir esta mesclagem.",
+      "signInRequired": "Você precisa estar conectado para mesclar clientes.",
+      "sourceNotFound": "O cliente que seria mesclado não existe mais.",
+      "targetNotFound": "O cliente de destino não existe mais.",
+      "sameClient": "Um cliente não pode ser mesclado consigo mesmo.",
+      "sourceAlreadyMerged": "Este cliente já foi mesclado em outro cliente.",
+      "targetAlreadyMerged": "O cliente de destino foi ele próprio mesclado em outro cliente. Mescle naquele.",
+      "sourceIsTenantDefault": "O registro da sua própria organização não pode ser mesclado em um cliente.",
+      "parentLinkCycle": "Esse cliente está registrado como filho do que você está mesclando, então a mesclagem inverteria a hierarquia.",
+      "invalidContractCutover": "Uma das datas de virada está fora da vigência do contrato correspondente."
+    },
+    "profileContacts": {
+      "duplicateManager": "Um perfil de faturamento só pode ter um responsável.",
+      "notThisClient": "Um dos contatos selecionados não pertence ao cliente deste perfil de faturamento."
     }
+  },
+  "mergeClients": {
+    "title": "Mesclar um cliente neste",
+    "description": "O cliente escolhido passa a ser um perfil de faturamento do cliente de destino. Suas faturas, ciclos de faturamento, formas de pagamento e créditos continuam vinculados a esse perfil; seus chamados, contatos, ativos e contratos são transferidos. Esta ação não pode ser desfeita.",
+    "sourceLabel": "Cliente a mesclar",
+    "sourcePlaceholder": "Selecione um cliente",
+    "targetLabel": "Cliente de destino",
+    "targetPlaceholder": "Selecione um cliente",
+    "cannotMergeIntoItself": "Um cliente não pode ser mesclado consigo mesmo",
+    "recordedParent": "“{{source}}” registra “{{parent}}” como cliente principal.",
+    "useRecordedParent": "Usar",
+    "contactsDescription": "Todos os contatos passam para o cliente de destino. Informe a qual perfil de faturamento cada um pertence — é isso que permitirá, depois, dar a um responsável de unidade os chamados da unidade dele.",
+    "noContacts": "Este cliente não tem contatos.",
+    "noProfile": "Sem perfil",
+    "contractsDescription": "Transferir um contrato com as datas originais não altera nenhum período de faturamento. A virada encerra o contrato no cliente antigo e inicia uma cópia no cliente de destino a partir da data escolhida.",
+    "noContracts": "Este cliente não tem contratos.",
+    "unnamedContract": "Contrato",
+    "openEnded": "sem prazo final",
+    "keepOriginalDates": "Manter as datas originais",
+    "cutOver": "Virada",
+    "cutoverDate": "Data da virada",
+    "pinGrantsLabel": "Manter os usuários do portal nos segmentos de faturamento atuais",
+    "pinGrantsHelp": "Um usuário do portal sem restrição de segmento vê hoje todos os perfis do cliente dele. Depois da mesclagem, seriam todos os perfis do cliente de destino. Deixar esta opção ativa registra os segmentos que ele tem hoje.",
+    "pinGrantsCount": "{{count}} usuário(s) do portal afetados",
+    "groupRenames": "Grupos de visibilidade renomeados para evitar conflito",
+    "previewHeading": "O que será transferido",
+    "profilesHeading": "Perfis de faturamento após a mesclagem",
+    "confirmLabel": "Digite “{{name}}” para confirmar",
+    "loadingPreview": "Calculando o que seria transferido…",
+    "submit": "Mesclar cliente",
+    "merging": "Mesclando…",
+    "merged": "“{{source}}” foi mesclado em “{{target}}”",
+    "accountingDescription": "Estes vínculos contábeis ainda apontam para o cliente mesclado. Sugerimos redirecioná-los para o cliente de destino, mas nada é alterado sem a sua confirmação — deixe uma linha desmarcada para revinculá-la manualmente depois.",
+    "accountingAlreadyMapped": "O cliente de destino já tem um vínculo para esta integração, então este terá de ser revinculado manualmente.",
+    "accountingApply": "Aplicar selecionados",
+    "accountingSkip": "Deixar para depois",
+    "accountingRemapped": "Vínculos contábeis redirecionados",
+    "accountingSkipped": "{{count}} vínculo(s) não puderam ser redirecionados e precisam de revinculação manual."
+  },
+  "billingProfileContacts": {
+    "title": "Contatos do perfil",
+    "description": "As pessoas que pertencem a este segmento de faturamento. Indicar um responsável registra quem o conduz; a caixa de chamados é uma permissão separada que lhe permite ver no portal do cliente todos os chamados atribuídos a este perfil.",
+    "loading": "Carregando os contatos do perfil…",
+    "noContacts": "Este cliente ainda não tem contatos.",
+    "contact": "Contato",
+    "inProfile": "No perfil",
+    "manager": "Responsável",
+    "seesTickets": "Vê os chamados do perfil",
+    "saved": "Contatos do perfil salvos"
+  },
+  "contactBillingProfiles": {
+    "label": "Perfis de faturamento",
+    "manager": "Responsável",
+    "seesTickets": "Vê os chamados do perfil",
+    "editHint": "Estes itens são editados no perfil de faturamento, nas configurações de faturamento do cliente."
   }
 }

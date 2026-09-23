@@ -843,7 +843,7 @@ async function moveTagMappings(
  * overwritten — the uniqueness constraint would reject it anyway, and silently
  * discarding an accounting link is not an outcome to guess at.
  */
-async function applyExternalRemaps(
+export async function applyExternalRemaps(
   trx: Knex.Transaction,
   tenant: string,
   sourceClientId: string,

@@ -20,7 +20,8 @@
       "select": "Auswählen",
       "update": "Aktualisieren",
       "uploadCsv": "CSV hochladen",
-      "view": "Anzeigen"
+      "view": "Anzeigen",
+      "next": "Weiter"
     },
     "states": {
       "active": "Aktiv",
@@ -304,7 +305,9 @@
     "parentClientSelf": "Ein Kunde kann nicht sein eigener übergeordneter Kunde sein",
     "parentClientPlaceholder": "Kein übergeordneter Kunde",
     "parentClientClear": "Löschen",
-    "parentClientLegacy": "Zuvor als Text eingegeben: {{name}}"
+    "parentClientLegacy": "Zuvor als Text eingegeben: {{name}}",
+    "mergeClient": "Zusammenführen",
+    "mergeClientHelp": "Einen anderen Kunden als Abrechnungsprofil in diesen Kunden übernehmen"
   },
   "clientCommandCenter": {
     "cards": {
@@ -1688,7 +1691,9 @@
     "archived": "„{{name}}“ archiviert",
     "deleted": "„{{name}}“ gelöscht",
     "restored": "„{{name}}“ wiederhergestellt",
-    "settings": "Abrechnungseinstellungen"
+    "settings": "Abrechnungseinstellungen",
+    "mergeHelp": "Führen Sie einen Standort oder Rechtsträger bisher als eigenen Kunden? Führen Sie ihn zusammen – er wird hier zu einem Abrechnungsprofil und behält seine Rechnungen und seine Historie.",
+    "mergeButton": "Kunden zusammenführen"
   },
   "portalBillingProfileAccess": {
     "label": "Abrechnungssegmente",
@@ -1868,6 +1873,77 @@
       "otherClient": "Dieses Abrechnungsprofil gehört zu einem anderen Kunden.",
       "archived": "Dieses Abrechnungsprofil ist archiviert.",
       "selectionNotThisClient": "Eines der ausgewählten Abrechnungsprofile gehört nicht zu diesem Kunden."
+    },
+    "clientMerge": {
+      "blocked": "Diese Zusammenführung kann nicht abgeschlossen werden.",
+      "signInRequired": "Sie müssen angemeldet sein, um Kunden zusammenzuführen.",
+      "sourceNotFound": "Der zusammenzuführende Kunde existiert nicht mehr.",
+      "targetNotFound": "Der Zielkunde existiert nicht mehr.",
+      "sameClient": "Ein Kunde kann nicht mit sich selbst zusammengeführt werden.",
+      "sourceAlreadyMerged": "Dieser Kunde wurde bereits in einen anderen Kunden zusammengeführt.",
+      "targetAlreadyMerged": "Der Zielkunde wurde selbst in einen anderen Kunden zusammengeführt. Führen Sie stattdessen dorthin zusammen.",
+      "sourceIsTenantDefault": "Der Datensatz Ihrer eigenen Organisation kann nicht in einen Kunden zusammengeführt werden.",
+      "parentLinkCycle": "Dieser Kunde ist als untergeordneter Kunde des zusammenzuführenden Kunden hinterlegt; die Zusammenführung würde die Hierarchie umkehren.",
+      "invalidContractCutover": "Einer der Stichtage liegt außerhalb der Laufzeit seines Vertrags."
+    },
+    "profileContacts": {
+      "duplicateManager": "Ein Abrechnungsprofil kann nur eine Leitung haben.",
+      "notThisClient": "Einer der ausgewählten Kontakte gehört nicht zum Kunden dieses Abrechnungsprofils."
     }
+  },
+  "mergeClients": {
+    "title": "Einen Kunden in diesen Kunden zusammenführen",
+    "description": "Der gewählte Kunde wird zu einem Abrechnungsprofil des Zielkunden. Seine Rechnungen, Abrechnungszyklen, Zahlungsmethoden und Guthaben bleiben diesem Profil zugeordnet; seine Tickets, Kontakte, Assets und Verträge wechseln mit. Dieser Vorgang lässt sich nicht rückgängig machen.",
+    "sourceLabel": "Zusammenzuführender Kunde",
+    "sourcePlaceholder": "Kunden auswählen",
+    "targetLabel": "Zielkunde",
+    "targetPlaceholder": "Kunden auswählen",
+    "cannotMergeIntoItself": "Ein Kunde kann nicht mit sich selbst zusammengeführt werden",
+    "recordedParent": "Für „{{source}}“ ist „{{parent}}“ als übergeordneter Kunde hinterlegt.",
+    "useRecordedParent": "Übernehmen",
+    "contactsDescription": "Alle Kontakte wechseln zum Zielkunden. Legen Sie fest, zu welchem Abrechnungsprofil jeder Kontakt gehört – nur so kann einer Standortleitung später Zugriff auf die Tickets ihres Standorts gegeben werden.",
+    "noContacts": "Dieser Kunde hat keine Kontakte.",
+    "noProfile": "Kein Profil",
+    "contractsDescription": "Wird ein Vertrag mit seinen ursprünglichen Daten übernommen, ändert sich kein Abrechnungszeitraum. Bei einem Stichtagswechsel endet der Vertrag beim bisherigen Kunden und eine Kopie beginnt beim Zielkunden ab dem gewählten Datum.",
+    "noContracts": "Dieser Kunde hat keine Verträge.",
+    "unnamedContract": "Vertrag",
+    "openEnded": "unbefristet",
+    "keepOriginalDates": "Ursprüngliche Daten behalten",
+    "cutOver": "Stichtagswechsel",
+    "cutoverDate": "Stichtag",
+    "pinGrantsLabel": "Portalbenutzer auf ihren bisherigen Abrechnungssegmenten belassen",
+    "pinGrantsHelp": "Ein Portalbenutzer ohne Einschränkung auf Abrechnungssegmente sieht derzeit alle Profile seines Kunden. Nach der Zusammenführung wären das alle Profile des Zielkunden. Bleibt diese Option aktiv, werden die heute gültigen Segmente festgeschrieben.",
+    "pinGrantsCount": "{{count}} Portalbenutzer betroffen",
+    "groupRenames": "Sichtbarkeitsgruppen zur Vermeidung von Namenskonflikten umbenannt",
+    "previewHeading": "Was übernommen wird",
+    "profilesHeading": "Abrechnungsprofile nach der Zusammenführung",
+    "confirmLabel": "Geben Sie zur Bestätigung „{{name}}“ ein",
+    "loadingPreview": "Es wird ermittelt, was übernommen würde …",
+    "submit": "Kunden zusammenführen",
+    "merging": "Wird zusammengeführt …",
+    "merged": "„{{source}}“ wurde in „{{target}}“ zusammengeführt",
+    "accountingDescription": "Diese Buchhaltungszuordnungen verweisen weiterhin auf den zusammengeführten Kunden. Eine Umstellung auf den Zielkunden wird vorgeschlagen, es wird jedoch nichts geändert, solange Sie es nicht bestätigen – lassen Sie eine Zeile ungewählt, um sie später manuell zu verknüpfen.",
+    "accountingAlreadyMapped": "Für diese Integration ist der Zielkunde bereits zugeordnet, diese Zuordnung muss daher manuell neu verknüpft werden.",
+    "accountingApply": "Auswahl übernehmen",
+    "accountingSkip": "Vorerst überspringen",
+    "accountingRemapped": "Buchhaltungszuordnungen wurden umgestellt",
+    "accountingSkipped": "{{count}} Zuordnung(en) konnten nicht umgestellt werden und müssen manuell neu verknüpft werden."
+  },
+  "billingProfileContacts": {
+    "title": "Profilkontakte",
+    "description": "Die Personen, die zu diesem Abrechnungssegment gehören. Die Benennung einer Leitung hält fest, wer das Segment verantwortet; das Ticket-Kontrollkästchen ist eine gesonderte Berechtigung, mit der diese Person im Kundenportal alle Tickets dieses Profils sieht.",
+    "loading": "Profilkontakte werden geladen …",
+    "noContacts": "Dieser Kunde hat noch keine Kontakte.",
+    "contact": "Kontakt",
+    "inProfile": "Im Profil",
+    "manager": "Leitung",
+    "seesTickets": "Sieht Profil-Tickets",
+    "saved": "Profilkontakte gespeichert"
+  },
+  "contactBillingProfiles": {
+    "label": "Abrechnungsprofile",
+    "manager": "Leitung",
+    "seesTickets": "Sieht Profil-Tickets",
+    "editHint": "Diese Angaben werden am Abrechnungsprofil in den Abrechnungseinstellungen des Kunden bearbeitet."
   }
 }

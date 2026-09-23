@@ -44,9 +44,10 @@ import { useClientCrossFeature } from '../../context/ClientCrossFeatureContext';
 import { Button } from '@alga-psa/ui/components/Button';
 import { PrintButton } from '@alga-psa/ui/components/PrintButton';
 import { PrintableDetailHeader, type PrintableDetailField } from '@alga-psa/ui/components/PrintableDetailHeader';
-import { ExternalLink, RefreshCw, Trash2 } from 'lucide-react';
+import { ExternalLink, Merge, RefreshCw, Trash2 } from 'lucide-react';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import InteractionsFeed from '../interactions/InteractionsFeed';
+import MergeClientsDialog from './MergeClientsDialog';
 import { IInteraction } from '@alga-psa/types';
 import { useDrawer } from "@alga-psa/ui";
 import TimezonePicker from '@alga-psa/ui/components/TimezonePicker';
@@ -280,6 +281,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     users?: IUser[];
   } | null>(null);
   const [isLocationsDialogOpen, setIsLocationsDialogOpen] = useState(false);
+  const [isMergeDialogOpen, setIsMergeDialogOpen] = useState(false);
   const [locationsRefreshKey, setLocationsRefreshKey] = useState(0);
   const [tags, setTags] = useState<ITag[]>([]);
   const [defaultContactOptions, setDefaultContactOptions] = useState<IContact[]>(contacts);
@@ -1860,6 +1862,19 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
               size="sm"
             />
             <Button
+              id={`${id}-merge-client-button`}
+              onClick={() => setIsMergeDialogOpen(true)}
+              variant="outline"
+              size="sm"
+              className="flex items-center"
+              title={t('clientDetails.mergeClientHelp', {
+                defaultValue: 'Absorb another client into this one as a billing profile',
+              })}
+            >
+              <Merge className="h-4 w-4 mr-2" />
+              {t('clientDetails.mergeClient', { defaultValue: 'Merge' })}
+            </Button>
+            <Button
               id={`${id}-delete-client-button`}
               onClick={handleDeleteClient}
               variant="destructive"
@@ -1948,6 +1963,14 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             name: editedClient.client_name,
           },
         })}
+
+        <MergeClientsDialog
+          isOpen={isMergeDialogOpen}
+          onClose={() => setIsMergeDialogOpen(false)}
+          targetClientId={client.client_id}
+          clients={allClients.length ? allClients : [client]}
+          onMerged={() => setPulseRefreshNonce((nonce) => nonce + 1)}
+        />
 
         <QuickAddContact
           isOpen={isAddContactOpen}

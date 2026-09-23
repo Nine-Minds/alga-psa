@@ -14,11 +14,13 @@ import {
 import { assertMspPermission } from '../lib/authHelpers';
 import {
   ClientMergeBlockedError,
+  applyExternalRemaps,
   executeClientMerge,
   previewClientMerge as previewClientMergeInternal,
   type ClientMergeInput,
   type ClientMergePreview,
   type ClientMergeResult,
+  type ExternalMappingRemapChoice,
 } from '../lib/clientMergeEngine';
 
 /**
@@ -116,6 +118,36 @@ export const mergeClientIntoParent = withAuth(async (
     });
 
     return result;
+  } catch (error) {
+    const expected = mergeActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+});
+
+/**
+ * Re-points the accounting mappings the operator ticked after a merge has
+ * already committed.
+ *
+ * Separate from the merge itself because Q8 says the user decides, and a
+ * decision they have not made yet cannot be part of an atomic operation that
+ * has to complete. Running it later also means a mistake here is a mapping to
+ * fix rather than a merge to unpick.
+ */
+export const applyClientMergeAccountingRemap = withAuth(async (
+  user,
+  { tenant },
+  input: {
+    sourceClientId: string;
+    targetClientId: string;
+    choices: ExternalMappingRemapChoice[];
+  },
+): Promise<{ remapped: string[]; skipped: string[] } | ClientMergeActionError> => {
+  try {
+    await assertCanMerge(user);
+    const { knex } = await createTenantKnex();
+    return await withTransaction(knex, async (trx: Knex.Transaction) =>
+      applyExternalRemaps(trx, tenant, input.sourceClientId, input.targetClientId, input.choices));
   } catch (error) {
     const expected = mergeActionErrorFrom(error);
     if (expected) return expected;

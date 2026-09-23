@@ -20,7 +20,8 @@
       "select": "Seleziona",
       "update": "Aggiorna",
       "uploadCsv": "Carica CSV",
-      "view": "Visualizza"
+      "view": "Visualizza",
+      "next": "Avanti"
     },
     "states": {
       "active": "Attivo",
@@ -304,7 +305,9 @@
     "parentClientSelf": "Un cliente non può essere il proprio cliente principale",
     "parentClientPlaceholder": "Nessun cliente principale",
     "parentClientClear": "Cancella",
-    "parentClientLegacy": "Inserito in precedenza come testo: {{name}}"
+    "parentClientLegacy": "Inserito in precedenza come testo: {{name}}",
+    "mergeClient": "Unisci",
+    "mergeClientHelp": "Assorbire un altro cliente in questo come profilo di fatturazione"
   },
   "clientCommandCenter": {
     "cards": {
@@ -1688,7 +1691,9 @@
     "archived": "«{{name}}» archiviato",
     "deleted": "«{{name}}» eliminato",
     "restored": "«{{name}}» ripristinato",
-    "settings": "Impostazioni di fatturazione"
+    "settings": "Impostazioni di fatturazione",
+    "mergeHelp": "Gestisci già una sede o un'entità come cliente a sé? Uniscila: diventerà un profilo di fatturazione qui, mantenendo fatture e storico.",
+    "mergeButton": "Unisci un cliente"
   },
   "portalBillingProfileAccess": {
     "label": "Segmenti di fatturazione",
@@ -1868,6 +1873,77 @@
       "otherClient": "Questo profilo di fatturazione appartiene a un altro cliente.",
       "archived": "Questo profilo di fatturazione è archiviato.",
       "selectionNotThisClient": "Uno dei profili di fatturazione selezionati non appartiene a questo cliente."
+    },
+    "clientMerge": {
+      "blocked": "Non è possibile completare questa unione.",
+      "signInRequired": "Devi aver effettuato l'accesso per unire i clienti.",
+      "sourceNotFound": "Il cliente da unire non esiste più.",
+      "targetNotFound": "Il cliente di destinazione non esiste più.",
+      "sameClient": "Un cliente non può essere unito a se stesso.",
+      "sourceAlreadyMerged": "Questo cliente è già stato unito a un altro cliente.",
+      "targetAlreadyMerged": "Il cliente di destinazione è stato a sua volta unito a un altro cliente. Unisci a quello.",
+      "sourceIsTenantDefault": "La scheda della tua organizzazione non può essere unita a un cliente.",
+      "parentLinkCycle": "Quel cliente risulta figlio di quello che stai unendo, quindi l'unione invertirebbe la gerarchia.",
+      "invalidContractCutover": "Una delle date di subentro è al di fuori della durata del relativo contratto."
+    },
+    "profileContacts": {
+      "duplicateManager": "Un profilo di fatturazione può avere un solo responsabile.",
+      "notThisClient": "Uno dei contatti selezionati non appartiene al cliente di questo profilo di fatturazione."
     }
+  },
+  "mergeClients": {
+    "title": "Unisci un cliente a questo",
+    "description": "Il cliente scelto diventa un profilo di fatturazione del cliente di destinazione. Fatture, cicli di fatturazione, metodi di pagamento e crediti restano collegati a quel profilo; ticket, contatti, asset e contratti vengono trasferiti. L'operazione non è reversibile.",
+    "sourceLabel": "Cliente da unire",
+    "sourcePlaceholder": "Seleziona un cliente",
+    "targetLabel": "Cliente di destinazione",
+    "targetPlaceholder": "Seleziona un cliente",
+    "cannotMergeIntoItself": "Un cliente non può essere unito a se stesso",
+    "recordedParent": "Per «{{source}}» è registrato «{{parent}}» come cliente principale.",
+    "useRecordedParent": "Usalo",
+    "contactsDescription": "Tutti i contatti passano al cliente di destinazione. Indica a quale profilo di fatturazione appartiene ciascuno: è ciò che consentirà in seguito di assegnare a un responsabile di sede i ticket della sua sede.",
+    "noContacts": "Questo cliente non ha contatti.",
+    "noProfile": "Nessun profilo",
+    "contractsDescription": "Trasferire un contratto con le date originali non modifica alcun periodo di fatturazione. Il passaggio a una data di subentro chiude il contratto sul cliente precedente e avvia una copia sul cliente di destinazione dalla data scelta.",
+    "noContracts": "Questo cliente non ha contratti.",
+    "unnamedContract": "Contratto",
+    "openEnded": "senza scadenza",
+    "keepOriginalDates": "Mantieni le date originali",
+    "cutOver": "Subentro",
+    "cutoverDate": "Data di subentro",
+    "pinGrantsLabel": "Mantieni gli utenti del portale sui loro segmenti di fatturazione attuali",
+    "pinGrantsHelp": "Un utente del portale senza restrizioni di segmento vede oggi tutti i profili del proprio cliente. Dopo l'unione vedrebbe tutti i profili del cliente di destinazione. Lasciando attiva questa opzione vengono registrati i segmenti di cui dispone oggi.",
+    "pinGrantsCount": "{{count}} utente/i del portale coinvolti",
+    "groupRenames": "Gruppi di visibilità rinominati per evitare un conflitto",
+    "previewHeading": "Cosa verrà trasferito",
+    "profilesHeading": "Profili di fatturazione dopo l'unione",
+    "confirmLabel": "Digita «{{name}}» per confermare",
+    "loadingPreview": "Calcolo di ciò che verrebbe trasferito…",
+    "submit": "Unisci cliente",
+    "merging": "Unione in corso…",
+    "merged": "«{{source}}» è stato unito a «{{target}}»",
+    "accountingDescription": "Queste corrispondenze contabili puntano ancora al cliente unito. Si suggerisce di reindirizzarle al cliente di destinazione, ma nulla viene modificato senza la tua conferma: lascia una riga non selezionata per ricollegarla manualmente in seguito.",
+    "accountingAlreadyMapped": "Il cliente di destinazione ha già una corrispondenza per questa integrazione, quindi questa dovrà essere ricollegata manualmente.",
+    "accountingApply": "Applica la selezione",
+    "accountingSkip": "Rimanda",
+    "accountingRemapped": "Corrispondenze contabili reindirizzate",
+    "accountingSkipped": "{{count}} corrispondenza/e non è stato possibile reindirizzarle: vanno ricollegate manualmente."
+  },
+  "billingProfileContacts": {
+    "title": "Contatti del profilo",
+    "description": "Le persone che appartengono a questo segmento di fatturazione. Designare un responsabile registra chi lo gestisce; la casella dei ticket è un'autorizzazione separata che gli permette di vedere nel portale clienti tutti i ticket attribuiti a questo profilo.",
+    "loading": "Caricamento dei contatti del profilo…",
+    "noContacts": "Questo cliente non ha ancora contatti.",
+    "contact": "Contatto",
+    "inProfile": "Nel profilo",
+    "manager": "Responsabile",
+    "seesTickets": "Vede i ticket del profilo",
+    "saved": "Contatti del profilo salvati"
+  },
+  "contactBillingProfiles": {
+    "label": "Profili di fatturazione",
+    "manager": "Responsabile",
+    "seesTickets": "Vede i ticket del profilo",
+    "editHint": "Si modificano sul profilo di fatturazione, nelle impostazioni di fatturazione del cliente."
   }
 }
