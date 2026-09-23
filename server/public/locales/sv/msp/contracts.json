@@ -1,0 +1,2491 @@
+{
+  "common": {
+    "actions": {
+      "back": "Tillbaka",
+      "cancel": "Avbryt",
+      "close": "Stäng",
+      "create": "Skapa",
+      "delete": "Radera",
+      "discard": "Kasta",
+      "edit": "Redigera",
+      "refresh": "Ladda om",
+      "remove": "Ta bort",
+      "retry": "Försök igen",
+      "save": "Spara",
+      "saveChanges": "Spara ändringar",
+      "saveChangesDirty": "Spara ändringar *",
+      "saving": "Sparar…",
+      "view": "Visa",
+      "openMenu": "Öppna meny"
+    },
+    "alerts": {
+      "saveSuccess": "Ändringarna har sparats.",
+      "systemManagedDefault": "Det här är ett systemhanterat standardavtal."
+    },
+    "empty": {
+      "none": "Inget",
+      "notAvailable": "Ej tillämpligt",
+      "notSpecified": "Inte angivet",
+      "ongoing": "Pågående"
+    },
+    "errors": {
+      "failedToLoad": "Det gick inte att läsa in data.",
+      "failedToSave": "Det gick inte att spara ändringarna.",
+      "validationPrefix": "Korrigera följande:"
+    },
+    "labels": {
+      "created": "Skapad",
+      "currency": "Valuta",
+      "description": "Beskrivning",
+      "lastUpdated": "Senast uppdaterad",
+      "name": "Namn",
+      "no": "Nej",
+      "status": "Status",
+      "yes": "Ja"
+    },
+    "tabs": {
+      "clientContracts": "Kundavtal",
+      "drafts": "Utkast",
+      "templates": "Mallar"
+    },
+    "moneyPlaceholder": "—",
+    "notAvailable": "-"
+  },
+  "status": {
+    "active": "Aktivt",
+    "draft": "Utkast",
+    "expired": "Utgånget",
+    "terminated": "Avslutat"
+  },
+  "renewal": {
+    "labels": {
+      "decisionDue": "Sista beslutsdatum",
+      "mode": "Förnyelseläge",
+      "noticeDays": "Uppsägningstid",
+      "source": "Förnyelsekälla",
+      "termMonths": "Förnyelseperiod"
+    },
+    "modes": {
+      "auto": "Automatisk förnyelse",
+      "manual": "Manuell förnyelse",
+      "none": "Förnyas inte"
+    },
+    "source": {
+      "contract": "Avtal",
+      "tenantDefault": "Klientorganisationens standardinställning"
+    }
+  },
+  "billing": {
+    "cadenceOwner": {
+      "client": "Kundens schema",
+      "contract": "Avtalets årsdag"
+    },
+    "frequency": {
+      "annually": "Årligen",
+      "biweekly": "Varannan vecka",
+      "monthly": "Månadsvis",
+      "quarterly": "Kvartalsvis",
+      "weekly": "Veckovis"
+    },
+    "labels": {
+      "billingFrequency": "Debiteringsintervall",
+      "timing": "Debiteringstidpunkt",
+      "cadenceOwner": "Styrande schema"
+    },
+    "timing": {
+      "advance": "I förskott",
+      "arrears": "I efterskott"
+    }
+  },
+  "po": {
+    "labels": {
+      "amount": "Inköpsorderbelopp",
+      "number": "Inköpsordernummer",
+      "required": "Inköpsorder krävs"
+    }
+  },
+  "contractDetail": {
+    "alerts": {
+      "saveSuccess": "Avtalet har sparats.",
+      "unsavedChanges": "Du har osparade ändringar. Klicka på ”Spara ändringar” för att tillämpa dem."
+    },
+    "cards": {
+      "assignment": "Kundtilldelning",
+      "clientOwnership": "Kundägarskap",
+      "contractDetails": "Avtalsdetaljer",
+      "header": "Avtalshuvud",
+      "quickActions": "Snabbåtgärder",
+      "renewalHandling": "Förnyelsehantering"
+    },
+    "clientAssignment": {
+      "clientContractId": "Kundavtals-ID: {{id}}",
+      "creditDrawdownOptOut": "Undanta från avräkning av tillgodohavande",
+      "empty": "Avtalet har inte tilldelats någon kund ännu.",
+      "endDate": "Slutdatum",
+      "endDateLabel": "Tilldelningens slutdatum",
+      "loadingStatuses": "Läser in statusar…",
+      "notRequired": "Krävs inte",
+      "noticePeriodDays": "Uppsägningstid (dagar)",
+      "noticePeriodPlaceholder": "T.ex. 30",
+      "noticePrefix": "Uppsägningstid:",
+      "renewalHandling": "Förnyelsehantering",
+      "renewalTermMonths": "Förnyelseperiod (månader)",
+      "renewalTermPlaceholder": "T.ex. 12",
+      "renewalTicketBoard": "Tavla för förnyelseärenden",
+      "renewalTicketStatus": "Status för förnyelseärenden",
+      "required": "Obligatorisk",
+      "selectBoard": "Välj tavla",
+      "selectBoardFirst": "Välj en tavla först",
+      "selectRenewalMode": "Välj förnyelseläge",
+      "selectStartDate": "Välj startdatum",
+      "selectStatus": "Välj status",
+      "startDate": "Startdatum",
+      "startDateLabel": "Tilldelningens startdatum",
+      "startDateLocked": "Startdatum kan inte ändras för aktiva avtal",
+      "title": "Kundtilldelning",
+      "useTenantRenewalDefaults": "Använd klientorganisationens standardinställningar för förnyelse",
+      "usingCustomSettings": "Anpassade tilldelningsinställningar används",
+      "usingTenantDefaults": "Klientorganisationens standardinställningar används"
+    },
+    "clientOwnership": {
+      "assignmentStatus": "Tilldelningsstatus",
+      "clientName": "Kundnamn",
+      "endDate": "Slutdatum",
+      "ownerClient": "Ägande kund",
+      "required": "Obligatorisk",
+      "startDate": "Startdatum",
+      "systemManaged": "Ägarskapet hanteras av systemet för det här standardavtalet.",
+      "title": "Kundägarskap"
+    },
+    "detailsCard": {
+      "actions": {
+        "cancelDescription": "Avbryt ändringar i beskrivningen",
+        "cancelName": "Avbryt ändring av avtalsnamnet",
+        "editDescription": "Redigera avtalsbeskrivning",
+        "editName": "Redigera avtalsnamn",
+        "saveDescription": "Spara beskrivning",
+        "saveName": "Spara avtalsnamn"
+      },
+      "contractNameLabel": "Avtalsnamn *",
+      "contractNamePlaceholder": "Ange avtalsnamn",
+      "descriptionLabel": "Beskrivning",
+      "descriptionPlaceholder": "Ange avtalsbeskrivning",
+      "title": "Avtalsdetaljer"
+    },
+    "headerCard": {
+      "assignmentLifecycleHint": "Kundens aktuella status styrs av tilldelningens livscykel nedan.",
+      "assignmentStatus": "Tilldelningsstatus",
+      "billingFrequencyLabel": "Debiteringsintervall *",
+      "billingFrequencyPlaceholder": "Välj debiteringsintervall",
+      "customSettings": "Anpassade inställningar",
+      "expiredStatusNote": "Utgångna avtal kan inte ändras till en annan status",
+      "notice": "Uppsägningstid",
+      "noticeDay": "{{count}} dag",
+      "noticeDays": "{{count}} dagar",
+      "ongoingNoEndDate": "Pågående (utan slutdatum)",
+      "renewalHeading": "Förnyelse",
+      "tenantDefaults": "Klientorganisationens standardinställningar",
+      "title": "Avtalshuvud"
+    },
+    "dialogs": {
+      "delete": {
+        "cancel": "Avbryt",
+        "confirm": "Radera avtal",
+        "deleting": "Raderar…",
+        "description": "Vill du radera det här avtalet? Åtgärden kan inte ångras.",
+        "message": "Vill du radera det här avtalet? Åtgärden kan inte ångras och tar bort alla tillhörande data.",
+        "title": "Radera avtal"
+      },
+      "discard": {
+        "cancel": "Fortsätt redigera",
+        "confirm": "Kasta ändringar",
+        "description": "Vill du kasta dina osparade ändringar?",
+        "message": "Vill du kasta alla ändringar? Alla osparade ändringar går förlorade.",
+        "title": "Kasta ändringar"
+      },
+      "leave": {
+        "confirm": "Lämna sidan",
+        "description": "Du har osparade ändringar. Vill du lämna sidan utan att spara?",
+        "title": "Osparade ändringar"
+      },
+      "unsaved": {
+        "cancel": "Stanna på sidan",
+        "confirm": "Lämna sidan",
+        "message": "Du har osparade ändringar. Vill du lämna sidan? Alla ändringar går förlorade.",
+        "title": "Osparade ändringar"
+      }
+    },
+    "invoices": {
+      "columns": {
+        "amount": "Belopp",
+        "createdAt": "Skapad",
+        "dueDate": "Förfallodatum",
+        "invoiceDate": "Fakturadatum",
+        "invoiceNumber": "Fakturanummer",
+        "preview": "Förhandsgranska",
+        "status": "Status"
+      },
+      "empty": "Inga fakturor hittades för det här avtalet.",
+      "loading": "Läser in fakturor…",
+      "noTemplatesAvailable": "Det finns inga fakturamallar att förhandsgranska.",
+      "preview": "Förhandsgranska",
+      "selectForPreview": "Välj en faktura för att öppna en fullständig förhandsgranskning i sidopanelen.",
+      "title": "Avtalets fakturor"
+    },
+    "labels": {
+      "client": "Kund",
+      "contractName": "Avtalsnamn",
+      "description": "Beskrivning",
+      "noClientAssigned": "Ingen kund tilldelad",
+      "noDescription": "Ingen beskrivning",
+      "systemManagedDefault": "Systemhanterad standard",
+      "useTenantDefaults": "Använd klientorganisationens standardinställningar"
+    },
+    "quickActions": {
+      "deleteContract": "Radera avtal",
+      "manageContractLines": "Hantera avtalsrader",
+      "managePricingSchedules": "Hantera prisscheman",
+      "title": "Snabbåtgärder",
+      "viewDocuments": "Visa dokument",
+      "viewInvoices": "Visa fakturor"
+    },
+    "systemManaged": {
+      "attributionOnly": "Det här avtalet används enbart för koppling av arbete och styr inte återkommande debitering.",
+      "configureCustom": "Skapa eller redigera ett vanligt användarskapat avtal för att anpassa debiteringen.",
+      "createdAutomatically": "Skapas automatiskt för arbete utan avtal.",
+      "title": "Systemhanterat standardavtal"
+    },
+    "tabs": {
+      "documents": "Dokument",
+      "invoices": "Fakturor",
+      "lines": "Avtalsrader",
+      "overview": "Översikt",
+      "pricing": "Prisscheman",
+      "simulator": "Simulera"
+    },
+    "validation": {
+      "billingFrequencyRequired": "Debiteringsintervall krävs.",
+      "billingFrequency": "Debiteringsintervall",
+      "contractName": "Avtalsnamn",
+      "contractNameRequired": "Avtalsnamn krävs.",
+      "failedToUpdate": "Det gick inte att uppdatera avtalet",
+      "fixErrors": "Korrigera följande fel:"
+    },
+    "documents": {
+      "loading": "Läser in dokument…"
+    }
+  },
+  "contractHeader": {
+    "badges": {
+      "clientOwned": "Kundägt",
+      "template": "Mall"
+    },
+    "labels": {
+      "billingFrequency": "Debiteringsintervall",
+      "contractLines": "Avtalsrader",
+      "currency": "Valuta",
+      "endDate": "Slutdatum",
+      "lastUpdated": "Senast uppdaterad",
+      "startDate": "Startdatum"
+    },
+    "po": {
+      "prefix": "Inköpsorder",
+      "requiredForContract": "Inköpsorder krävs för det här avtalet."
+    },
+    "status": {
+      "active": "Aktivt",
+      "draft": "Utkast",
+      "expired": "Utgånget",
+      "terminated": "Avslutat"
+    },
+    "values": {
+      "ongoing": "Pågående"
+    }
+  },
+  "contractOverview": {
+    "errors": {
+      "failedToLoadOverview": "Det gick inte att läsa in översikten"
+    },
+    "frequency": {
+      "annually": "Årligen",
+      "biweekly": "Varannan vecka",
+      "semi_annually": "Halvårsvis",
+      "weekly": "Veckovis"
+    },
+    "lines": {
+      "addContractLines": "Lägg till avtalsrader",
+      "collapseAll": "Fäll ihop alla",
+      "expandAll": "Fäll ut alla",
+      "includedServices": "Ingående tjänster",
+      "noContractLinesDescription": "Lägg till avtalsrader för att ange vad som ingår i avtalet",
+      "noContractLinesYet": "Inga avtalsrader ännu",
+      "noServicesConfigured": "Inga tjänster konfigurerade",
+      "billedOnRecordedUsage": "Debiteras efter registrerad förbrukning",
+      "serviceCountOne": "{{count}} tjänst",
+      "serviceCountOther": "{{count}} tjänster",
+      "previouslyConfiguredQuantity": "Tidigare konfigurerat antal: {{count}} — används inte för debitering",
+      "billedOnPeriodCount": "Debiteras efter antalet som rapporteras för varje period",
+      "recurringSeats": "{{count}} × {{rate}} (återkommande licenser)",
+      "bundleAllocation": "Fördelning av paketpriset — inte debiterbara licenser",
+      "setUpRecurringSeats": "Konfigurera återkommande licenser",
+      "reportPeriodCount": "Rapportera periodens antal"
+    },
+    "stats": {
+      "contractLines": "Avtalsrader",
+      "estimatedMonthlyValue": "Uppskattat månadsvärde",
+      "totalServices": "Totalt antal tjänster",
+      "variable": "Rörligt",
+      "variableSuffix": "+ rörligt (tid/förbrukning)",
+      "viewDetails": "Visa detaljer"
+    },
+    "title": "Det här ingår",
+    "legacyTransition": {
+      "recurringSeats": {
+        "title": "Konfigurera återkommande licenser",
+        "explanation": "Återkommande licenser debiteras med antal × enhetstaxa varje period utan förbrukningsposter. Därför hör de till en avtalsrad med fast pris som prissätts efter återkommande licenser/enheter — inte till den här förbrukningsbaserade raden.",
+        "nextStep": "Gå till Avtalsrader, lägg till (eller öppna) en rad med fast pris, lägg till tjänsten och välj ”Återkommande licenser/enheter”. Bekräfta sedan antal och enhetstaxa. Ändringen gäller från nästa ofakturerade tjänsteperiod. Den här förbrukningsbaserade raden och dess historik bevaras tills du tar bort den.",
+        "manualHandoff": "Gå till Avtalsrader → Skapa anpassad, välj Fast, lägg till tjänsten och välj ”Återkommande licenser/enheter”. Granska antal, enhetstaxa och debiteringsschema innan du sparar. Detta skapar ett separat återkommande åtagande och omvandlar eller avslutar inte den här förbrukningsbaserade tjänsten. Samordna starten med slutet för förbrukningsdebiteringen och granska kvarvarande förbrukning innan du aktiverar båda för samma period."
+      },
+      "periodCount": {
+        "title": "Rapportera periodens antal",
+        "explanation": "När du rapporterar periodens antal övergår tjänsten till ett enda ersättningsbart antal per tjänsteperiod: om 10 korrigeras till 12 debiteras 12, aldrig 22, och miniminivån tillämpas en gång. Nästa period börjar utan rapporterat antal — inget antal förs över.",
+        "nextStep": "Bekräftelsen ändrar bara hur tjänsten mäts från nästa ofakturerade tjänsteperiod. Befintliga poster fortsätter att summeras och inget antal skapas. Rapportera periodens antal under Förbrukningsregistrering efteråt."
+      },
+      "referenceHeading": "Obekräftade referensvärden från föregående konfiguration",
+      "referenceQuantity": "Tidigare konfigurerat antal: {{count}}",
+      "referenceRate": "Sparad taxa: {{rate}}",
+      "referenceCaveat": "Dessa värden har aldrig debiterats. Inget här sparas eller debiteras förrän du själv bekräftar värdena i flödet nedan.",
+      "actions": {
+        "close": "Stäng",
+        "cancel": "Avbryt",
+        "switching": "Byter…",
+        "confirmPeriodCount": "Byt till antal per period"
+      },
+      "errors": {
+        "missingConfiguration": "Tjänsten har ingen sparad konfiguration att omvandla. Ladda om och försök igen.",
+        "failed": "Det gick inte att ändra hur tjänsten mäts."
+      },
+      "effectiveFrom": "Ändrad mätning gäller från"
+    }
+  },
+  "contractDialog": {
+    "actions": {
+      "createContract": "Skapa avtal",
+      "saveAsDraft": "Spara som utkast",
+      "updateContract": "Uppdatera avtal"
+    },
+    "documents": {
+      "loading": "Läser in dokument…"
+    },
+    "form": {
+      "billingFrequencyLabel": "Debiteringsintervall *",
+      "billingFrequencyPlaceholder": "Välj debiteringsintervall",
+      "clientLabel": "Kund *",
+      "clientPlaceholder": "Välj en kund",
+      "contractNameLabel": "Avtalsnamn *",
+      "contractNamePlaceholder": "T.ex. MSP-standardtjänster",
+      "currencyHint": "Valutan baseras på kundens standardvaluta.",
+      "descriptionLabel": "Beskrivning (valfri)",
+      "descriptionPlaceholder": "Lägg till ytterligare anteckningar om avtalet…",
+      "endDateHint": "Lämna tomt för löpande avtal utan fast slutdatum.",
+      "endDateLabel": "Slutdatum (valfritt)",
+      "noticePeriodLabel": "Uppsägningstid (dagar)",
+      "noticePeriodPlaceholder": "T.ex. 30",
+      "renewalModePlaceholder": "Välj förnyelseläge",
+      "renewalSettingsDescription": "Konfigurera förnyelse för den här kundavtalstilldelningen.",
+      "renewalSettingsTitle": "Förnyelseinställningar",
+      "renewalTermLabel": "Förnyelseperiod (månader)",
+      "renewalTermPlaceholder": "T.ex. 12",
+      "selectClientFirst": "Välj en kund först",
+      "startDateLabel": "Startdatum *",
+      "useTenantDefaultsDescription": "Tillämpa organisationens inställningar för förnyelseläge och uppsägningstid.",
+      "useTenantDefaultsLabel": "Använd klientorganisationens standardinställningar för förnyelse"
+    },
+    "po": {
+      "amountLabel": "Inköpsorderbelopp (valfritt)",
+      "amountPlaceholder": "0,00",
+      "comingSoon": "Fakturaintegrering kommer snart. Inställningarna sparas, men kravet på inköpsorder börjar gälla först i en kommande version.",
+      "noteLabel": "Obs:",
+      "numberLabel": "Inköpsordernummer *",
+      "numberPlaceholder": "T.ex. PO-2024-12345",
+      "requirePurchaseOrder": "Kräv inköpsorder",
+      "requirePurchaseOrderTooltip": "När detta är aktiverat kan fakturor för avtalet inte skapas utan ett inköpsordernummer."
+    },
+    "presetDetails": {
+      "defaultBaseRate": "Standardbastaxa:",
+      "defaultRatePlaceholder": "Standard: {{rate}} $",
+      "defaultRateValue": "Standard: {{rate}} $",
+      "enterBaseRate": "Ange bastaxa",
+      "fixedRateConfiguration": "Inställningar för fast taxa",
+      "fixedServicesReferenceHelp": "Tjänsterna visas enbart som referens. Den fasta taxan ovan avgör debiteringsbeloppet.",
+      "hourlyRate": "Timtaxa",
+      "leaveBlankDefaultRate": "Lämna tomt för att använda standardtaxan",
+      "minimumBillableMinutes": "Minsta debiterbara antal minuter",
+      "noServicesConfigured": "Inga tjänster konfigurerade för den här förinställningen",
+      "notSet": "Inte angivet",
+      "overrideBaseRate": "Åsidosätt bastaxa",
+      "usageRecordDrivenNote": "Förbrukningsbaserade tjänster debiteras utifrån den förbrukning som anges under Förbrukningsregistrering för varje tjänsteperiod. En period utan förbrukningspost ger ingen debitering — registrera förbrukning (eller uttryckligen noll) varje period för att debitera dessa tjänster.",
+      "quantityShort": "Antal: {{quantity}}",
+      "ratePerUnit": "Taxa (per enhet)",
+      "roundUpToNearestMinutes": "Avrunda uppåt till närmaste (minuter)",
+      "servicesConfiguration": "Tjänsteinställningar",
+      "servicesHourlyRates": "Tjänster och timtaxor",
+      "servicesIncludedReference": "Ingående tjänster (referens)",
+      "timeBillingConfiguration": "Inställningar för tiddebitering",
+      "unitOfMeasure": "Måttenhet",
+      "unitOfMeasureHint": "T.ex. GB, API-anrop, användare"
+    },
+    "presets": {
+      "allTypes": "Alla typer",
+      "empty": "Inga förinställningar för avtalsrader är tillgängliga. Du kan lägga till dem senare.",
+      "heading": "Förinställningar för avtalsrader (valfritt)",
+      "headingTooltip": "Välj förinställningar för avtalsrader att kopiera till avtalet. Du kan lägga till fler senare.",
+      "loading": "Läser in förinställningar för avtalsrader…",
+      "noMatches": "Inga förinställningar för avtalsrader matchar din sökning.",
+      "resetFilters": "Återställ",
+      "searchPlaceholder": "Sök förinställningar för avtalsrader…",
+      "selectedPlural": "{{count}} förinställningar för avtalsrader valda",
+      "selectedSingle": "{{count}} förinställning för avtalsrader vald",
+      "serviceCountPlural": "{{count}} tjänster",
+      "serviceCountSingle": "{{count}} tjänst",
+      "typePlaceholder": "Välj typ"
+    },
+    "title": {
+      "create": "Skapa avtal",
+      "edit": "Redigera avtal"
+    },
+    "validation": {
+      "billingFrequency": "Debiteringsintervall",
+      "client": "Kund",
+      "contractName": "Avtalsnamn",
+      "failedToSave": "Det gick inte att spara avtalet",
+      "noticePeriodInvalid": "Uppsägningstiden i dagar måste vara ett heltal som är noll eller större",
+      "poNumberRequired": "Inköpsordernummer (krävs när inköpsorder är aktiverat)",
+      "renewalTermInvalid": "Förnyelseperioden i månader måste vara ett positivt heltal för avtal med automatisk förnyelse",
+      "requiredFields": "Fyll i de obligatoriska fälten:",
+      "startDate": "Startdatum"
+    }
+  },
+  "contractForm": {
+    "actions": {
+      "saveChanges": "Spara ändringar",
+      "saving": "Sparar…"
+    },
+    "errors": {
+      "failedToUpdateContract": "Det gick inte att uppdatera avtalet"
+    },
+    "fields": {
+      "billingFrequency": "Debiteringsintervall",
+      "billingFrequencyPlaceholder": "Välj debiteringsintervall",
+      "contractName": "Avtalsnamn",
+      "contractNamePlaceholder": "Ange avtalsnamn",
+      "currency": "Valuta",
+      "currencyPlaceholder": "Välj valuta",
+      "description": "Beskrivning",
+      "descriptionPlaceholder": "Ange avtalsbeskrivning",
+      "status": "Status"
+    },
+    "heading": "Avtalsdetaljer",
+    "status": {
+      "active": "Aktivt",
+      "draft": "Utkast",
+      "expired": "Utgånget",
+      "expiredHelper": "Utgångna avtal kan inte ändras till en annan status",
+      "terminated": "Avslutat"
+    },
+    "validation": {
+      "billingFrequency": "Debiteringsintervall",
+      "contractName": "Avtalsnamn",
+      "requiredFields": "Fyll i de obligatoriska fälten:"
+    }
+  },
+  "contractLines": {
+    "actions": {
+      "addFromPresets": "Lägg till från förinställningar",
+      "collapseLine": "Fäll ihop avtalsrad",
+      "createCustom": "Skapa anpassad",
+      "expandLine": "Fäll ut avtalsrad",
+      "resetToStandard": "Återställ till standard"
+    },
+    "billingProfile": {
+      "hint": "Avgifter från raden faktureras till den här profilen, som åsidosätter avtalets profil.",
+      "label": "Debiteringsprofil",
+      "none": "Använd avtalets profil",
+      "updated": "Debiteringsprofilen har uppdaterats"
+    },
+    "bucket": {
+      "billingPeriod": "Debiteringsperiod: {{period}}",
+      "defaultUnit": "enhet",
+      "defaultUnits": "enheter",
+      "enableTracking": "Aktivera registrering av pottförbrukning",
+      "hour": "timme",
+      "hoursValue": "{{hours}} timmar",
+      "included": "Ingår: {{value}}",
+      "overageRate": "Överförbrukningstaxa: {{rate}} per {{unit}}",
+      "rolloverEnabled": "Överföring till nästa period: aktiverad",
+      "title": "Pottinställningar",
+      "unitsValue": "{{count}} {{units}}"
+    },
+    "columns": {
+      "actions": "Åtgärder",
+      "frequency": "Intervall",
+      "name": "Namn",
+      "rate": "Taxa",
+      "services": "Tjänster",
+      "type": "Typ"
+    },
+    "configuration": {
+      "description": "Inställningar som gäller för den här avtalsraden",
+      "fixedInfo": "Avtalsrader med fast pris debiteras med en fast återkommande avgift oavsett de enskilda tjänsternas taxor.",
+      "fixedInfoDetails": "För rader med fast avgift används tjänsternas taxor och antal enbart för skattefördelning. De avgör hur den fasta avgiften fördelas proportionellt mellan tjänsterna vid skatteberäkning. Det belopp som faktiskt debiteras är avtalsradens bastaxa ovan.",
+      "fixedInfoHeading": "Om tjänstetaxorna nedan:",
+      "minimumBillableTime": "Minsta debiterbara tid (minuter)",
+      "minutesValue": "{{count}} minuter",
+      "roundUpToNearest": "Avrunda uppåt till närmaste (minuter)",
+      "title": "Avtalsradsinställningar",
+      "usageInfo": "Förbrukningsbaserade avtalsrader konfigureras per tjänst med enhetstaxor."
+    },
+    "customRate": "Anpassad",
+    "description": {
+      "default": "Hantera avtalets avtalsrader och tjänster",
+      "readOnly": "Det här systemhanterade standardavtalet används enbart för koppling av arbete. Redigering av avtalsrader är inaktiverad."
+    },
+    "dialogs": {
+      "confirmRemove": "Vill du ta bort avtalsraden ”{{name}}”?",
+      "confirmResetRate": "Vill du återställa raden till katalogens standardtaxa? Den sparade anpassade taxan tas bort."
+    },
+    "empty": {
+      "noneAdded": "Inga avtalsrader har lagts till ännu.",
+      "selectAbove": "Välj en avtalsrad ovan för att komma igång."
+    },
+    "errors": {
+      "cannotEditWithInvoices": "Avtalsraden kan inte redigeras: det finns fakturor kopplade till avtalet. Avtalsrader kan inte redigeras när fakturor har skapats.",
+      "failedToCheckEditable": "Det gick inte att kontrollera om avtalet kan redigeras",
+      "failedToLoad": "Det gick inte att läsa in avtalsrader",
+      "failedToRefresh": "Det gick inte att ladda om avtalsrader",
+      "failedToRemove": "Det gick inte att ta bort avtalsraden",
+      "failedToUpdate": "Det gick inte att uppdatera avtalsraden",
+      "failedToResetRate": "Det gick inte att återställa radens taxa"
+    },
+    "loading": {
+      "contractLines": "Läser in avtalsrader",
+      "inline": "Läser in…"
+    },
+    "location": {
+      "addLocation": "+ Lägg till plats",
+      "fallback": "Plats",
+      "label": "Plats",
+      "lineCountPlural": "{{count}} rader",
+      "lineCountSingle": "{{count}} rad",
+      "none": "Ingen plats tilldelad",
+      "pendingEmptyHint": "Inga avtalsrader finns för den här platsen ännu. Lägg till en rad och tilldela den sedan till platsen via radens redigeringspanel.",
+      "placeholder": "Välj en plats",
+      "removePendingGroup": "Ta bort tom platsgrupp",
+      "unassigned": "Ingen plats tilldelad",
+      "unnamed": "Plats"
+    },
+    "serviceCountPlural": "{{count}} tjänster",
+    "serviceCountSingle": "{{count}} tjänst",
+    "services": {
+      "empty": "Inga tjänster är konfigurerade för den här avtalsraden.",
+      "hourlyRate": "Timtaxa",
+      "quantity": "Antal",
+      "quantityShort": "Antal: {{quantity}}",
+      "quantityTaxAllocation": "Antal (för skattefördelning)",
+      "rateTaxAllocation": "Taxa (för skattefördelning)",
+      "title": "Tjänster ({{count}})",
+      "typeLabel": "Tjänst av typen {{type}}",
+      "unitOfMeasure": "Måttenhet",
+      "unitPlaceholder": "enhet",
+      "unitRate": "Enhetstaxa",
+      "effectiveFrom": "Ändringar av återkommande licenser gäller från",
+      "prospectiveSeatHelp": "Licenser debiteras med antal × enhetstaxa. Ändringar gäller från denna tjänsteperiodsgräns. Tidigare antal och prissättning bevaras.",
+      "recurringUnits": "Återkommande licenser/enheter",
+      "semanticsEffectiveFrom": "Ändrad tjänsteprissättning och mätning gäller från",
+      "prospectiveSemanticsHelp": "Ändringar gäller från denna tjänsteperiodsgräns. Tidigare antal, mätning och prissättning bevaras. Om du ändrar datumet läses de tillämpliga inställningarna in på nytt för granskning."
+    },
+    "title": "Avtalsrader",
+    "rateProvenance": {
+      "standard": "Standard",
+      "custom": "Anpassad",
+      "unreviewed": "Inte granskad"
+    }
+  },
+  "contractLineEdit": {
+    "actions": {
+      "cancel": "Avbryt",
+      "saveChanges": "Spara ändringar",
+      "saving": "Sparar…"
+    },
+    "errors": {
+      "failedToSaveChanges": "Det gick inte att spara ändringarna"
+    },
+    "fields": {
+      "billingTimingQuestion": "När ska raden debiteras?",
+      "rate": "Taxa"
+    },
+    "sections": {
+      "billingTiming": "Debiteringstidpunkt",
+      "pricing": "Prissättning"
+    },
+    "timingDescriptions": {
+      "advance": "Avgifterna debiteras innan tjänsten tillhandahålls",
+      "arrears": "Avgifterna debiteras efter att tjänsten har tillhandahållits"
+    },
+    "timingOptions": {
+      "advance": "I förskott (vid debiteringsperiodens början)",
+      "arrears": "I efterskott (vid debiteringsperiodens slut)"
+    },
+    "title": "Redigera avtalsrad: {{name}}",
+    "validation": {
+      "validRateRequired": "Ange en giltig taxa (ett tal som är noll eller större)"
+    },
+    "values": {
+      "unnamedLine": "Namnlös rad"
+    }
+  },
+  "contractLineRate": {
+    "actions": {
+      "cancel": "Avbryt",
+      "saveRate": "Spara taxa"
+    },
+    "fields": {
+      "rate": "Taxa"
+    },
+    "title": "Ange anpassad taxa för {{name}}",
+    "validation": {
+      "validRateRequired": "Ange en giltig taxa (ett tal som är noll eller större)"
+    }
+  },
+  "addLines": {
+    "actions": {
+      "addPlural": "Lägg till ({{count}}) förinställningar",
+      "addSingle": "Lägg till ({{count}}) förinställning",
+      "adding": "Lägger till…"
+    },
+    "empty": {
+      "noMatches": "Inga förinställningar matchar din sökning.",
+      "noneAvailable": "Inga förinställningar för avtalsrader är tillgängliga."
+    },
+    "errors": {
+      "failedToAddPresets": "Det gick inte att lägga till de valda förinställningarna.",
+      "failedToLoadPresetDetails": "Det gick inte att läsa in förinställningens detaljer.",
+      "failedToLoadPresets": "Det gick inte att läsa in förinställningar för avtalsrader."
+    },
+    "filters": {
+      "allTypes": "Alla typer",
+      "reset": "Återställ",
+      "searchPlaceholder": "Sök förinställningar…",
+      "typePlaceholder": "Välj typ"
+    },
+    "fixedConfig": {
+      "defaultBaseRate": "Standardbastaxa:",
+      "defaultRatePlaceholder": "Standard: {{rate}} $",
+      "enterBaseRate": "Ange bastaxa",
+      "leaveBlankDefault": "Lämna tomt för att använda standardtaxan",
+      "notSet": "Inte angivet",
+      "overrideBaseRate": "Åsidosätt bastaxa",
+      "title": "Inställningar för fast taxa"
+    },
+    "hourlyConfig": {
+      "defaultRate": "Standard: {{rate}} $",
+      "hourlyRate": "Timtaxa",
+      "minimumBillableMinutes": "Minsta debiterbara antal minuter",
+      "roundUpToNearest": "Avrunda uppåt till närmaste (minuter)",
+      "servicesAndRates": "Tjänster och timtaxor",
+      "title": "Inställningar för tiddebitering"
+    },
+    "loading": "Läser in förinställningar för avtalsrader…",
+    "selection": {
+      "deselectPreset": "Avmarkera förinställning",
+      "selectPreset": "Välj förinställning",
+      "selectedPlural": "{{count}} förinställningar valda",
+      "selectedSingle": "{{count}} förinställning vald"
+    },
+    "serviceCountPlural": "{{count}} tjänster",
+    "serviceCountSingle": "{{count}} tjänst",
+    "services": {
+      "configuration": "Tjänsteinställningar",
+      "empty": "Inga tjänster konfigurerade för den här förinställningen",
+      "fixedReferenceHelp": "Tjänsterna visas enbart som referens. Den fasta taxan ovan avgör debiteringsbeloppet.",
+      "includedReference": "Ingående tjänster (referens)",
+      "quantityShort": "Antal: {{quantity}}",
+      "unknownService": "Okänd tjänst"
+    },
+    "title": "Lägg till avtalsrader från förinställningar",
+    "usageConfig": {
+      "defaultRate": "Standard: {{rate}} $",
+      "recordDrivenNote": "Förbrukningsbaserade tjänster debiteras utifrån den förbrukning som anges under Förbrukningsregistrering för varje tjänsteperiod. En period utan förbrukningspost ger ingen debitering — registrera förbrukning (eller uttryckligen noll) varje period för att debitera dessa tjänster.",
+      "ratePerUnit": "Taxa (per enhet)",
+      "unitHint": "T.ex. GB, API-anrop, användare",
+      "unitOfMeasure": "Måttenhet",
+      "unitPlaceholder": "enhet"
+    }
+  },
+  "createCustomLine": {
+    "addBucketOfConsumption": "Lägg till förbrukningspott",
+    "addBucketOfHours": "Lägg till timpott",
+    "addHourlyService": "Lägg till timdebiterad tjänst",
+    "addItem": "Lägg till post",
+    "addUsageService": "Lägg till förbrukningsbaserad tjänst",
+    "adjustForPartialPeriods": "Justera för delperioder",
+    "adjustForPartialPeriodsHelp": "När detta är aktiverat anpassas den återkommande avgiften till den del av tjänsteperioden som omfattas när avtalet börjar eller slutar under perioden.",
+    "basicsDescription": "Skapa en anpassad avtalsrad direkt för det här avtalet.",
+    "basicsTitle": "Grunduppgifter för avtalsrad",
+    "billingFrequencyLabel": "Debiteringsintervall *",
+    "billingFrequencyPlaceholder": "Välj debiteringsintervall",
+    "billingModel": {
+      "fixedDescription": "Debitera ett fast belopp varje debiteringsperiod.",
+      "fixedTitle": "Fast avgift",
+      "hourlyDescription": "Debitera utifrån godkända tidposter.",
+      "hourlyTitle": "Per timme",
+      "usageDescription": "Fakturera för förbrukade enheter.",
+      "usageTitle": "Förbrukningsbaserad",
+      "fixedSemantics": "Debitera ett paketpris eller återkommande antal × enhetstaxa varje period."
+    },
+    "billingTiming": {
+      "advance": "Förskott (debitera vid periodens början)",
+      "arrears": "Efterskott (debitera vid periodens slut)"
+    },
+    "billingTimingHelp": "Förskottsdebitering är vanlig för fasta avgifter, efterskottsdebitering för tids- och förbrukningsbaserade tjänster.",
+    "chooseBillingModel": "Välj debiteringsmodell *",
+    "chooseBillingModelDescription": "Välj den debiteringsmodell som passar erbjudandet.",
+    "contractLineNameLabel": "Avtalsradsnamn *",
+    "contractLineNamePlaceholder": "T.ex. Hanterad support – Guld",
+    "create": "Skapa avtalsrad",
+    "creating": "Skapar…",
+    "defaultUnit": "enhet",
+    "defaultUnits": "enheter",
+    "enterHourlyRate": "Ange timtaxa",
+    "enterUnitRate": "Ange enhetstaxa",
+    "fixedServicesAlertBaseRate": "Avtalsradens bastaxa (anges nedan) är det belopp som debiteras.",
+    "fixedServicesAlertHeading": "Tjänster med fast avgift",
+    "fixedServicesAlertProducts": "Du kan även koppla produkter till avtalsraden. Produktantal debiteras som enheter, medan antal för tjänster med fast avgift enbart används för skattefördelning.",
+    "fixedServicesDescription": "Konfigurera tjänster som debiteras med en fast återkommande taxa.",
+    "fixedServicesTitle": "Tjänster med fast avgift",
+    "hourlyRateDisplay": "{{rate}}/timme",
+    "hourlyRateLabel": "Timtaxa",
+    "hourlyServicesAlertDescription": "Tjänsterna debiteras utifrån faktiskt registrerad tid.",
+    "hourlyServicesAlertHeading": "Timdebiterade tjänster",
+    "hourlyServicesDescription": "Konfigurera tjänster som debiteras utifrån registrerad tid.",
+    "hourlyServicesLabel": "Timdebiterade tjänster",
+    "hourlyServicesTitle": "Timdebiterade tjänster",
+    "itemLabel": "Post {{index}}",
+    "moneyPlaceholder": "0,00",
+    "minimumBillableTimeLabel": "Minsta debiterbara tid (minuter)",
+    "noFixedItems": "Inga poster med fast avgift har lagts till ännu. Klicka på ”Lägg till post” ovan för att komma igång.",
+    "noHourlyServices": "Inga timdebiterade tjänster har lagts till ännu. Klicka på ”Lägg till timdebiterad tjänst” ovan för att komma igång.",
+    "noUsageServices": "Inga förbrukningsbaserade tjänster har lagts till ännu. Klicka på ”Lägg till förbrukningsbaserad tjänst” ovan för att komma igång.",
+    "quantityLabel": "Antal",
+    "ratePerUnitLabel": "Taxa per enhet",
+    "recurringBaseRateHelp": "Återkommande avgift för alla tjänster med fast pris.",
+    "recurringBaseRateLabel": "Återkommande bastaxa",
+    "roundUpToNearestLabel": "Avrunda uppåt till närmaste (minuter)",
+    "selectItemPlaceholder": "Välj en post",
+    "selectServicePlaceholder": "Välj en tjänst",
+    "serviceLabel": "Tjänst {{index}}",
+    "servicesAndProductsLabel": "Tjänster och produkter",
+    "title": "Skapa anpassad avtalsrad",
+    "unitOfMeasureLabel": "Måttenhet",
+    "unitOfMeasurePlaceholder": "T.ex. GB, API-anrop, användare",
+    "unitRateDisplay": "{{rate}}/{{unit}}",
+    "usageServicesAlertDescription": "Tjänsterna debiteras utifrån faktisk förbrukning.",
+    "usageServicesAlertHeading": "Förbrukningsbaserade tjänster",
+    "usageServicesDescription": "Konfigurera tjänster som debiteras utifrån förbrukning.",
+    "usageServicesLabel": "Förbrukningsbaserade tjänster",
+    "usageServicesTitle": "Förbrukningsbaserade tjänster",
+    "validation": {
+      "billingFrequencyRequired": "Debiteringsintervall krävs",
+      "contractLineNameRequired": "Avtalsradsnamn krävs",
+      "contractLineTypeRequired": "Avtalsradstyp krävs",
+      "failedToCreate": "Det gick inte att skapa avtalsraden",
+      "fixedServiceRequired": "Minst en tjänst med fast pris eller en produkt krävs",
+      "fixedServiceSelectRequired": "Post {{index}}: Välj en tjänst eller produkt",
+      "hourlyRateRequired": "Tjänst {{index}}: Timtaxa krävs",
+      "hourlyServiceRequired": "Minst en timdebiterad tjänst krävs",
+      "hourlyServiceSelectRequired": "Tjänst {{index}}: Välj en tjänst",
+      "unitOfMeasureRequired": "Tjänst {{index}}: Måttenhet krävs",
+      "unitRateRequired": "Tjänst {{index}}: Enhetstaxa krävs",
+      "usageServiceRequired": "Minst en förbrukningsbaserad tjänst krävs",
+      "usageServiceSelectRequired": "Tjänst {{index}}: Välj en tjänst",
+      "invalidQuantity": "Antalet måste vara noll eller större.",
+      "recurringUnitRateRequired": "Ange en enhetstaxa för varje återkommande tjänst."
+    },
+    "fixedServicesPricingIntent": "Välj ett paketpris eller återkommande licenser/enheter för varje tjänst.",
+    "fixedServicesPricingExplanation": "Vid paketfördelning delas radens bastaxa. Återkommande licenser debiteras med avtalat antal × enhetstaxa varje period utan förbrukningsposter.",
+    "recurringQuantity": "Återkommande antal",
+    "allocationQuantity": "Fördelningsantal",
+    "bundleBaseRateHelp": "Återkommande avgift för tjänster med paketpris. Återkommande licenser debiteras separat med antal × enhetstaxa."
+  },
+  "pricingSchedules": {
+    "list": {
+      "actions": {
+        "addSchedule": "Lägg till schema",
+        "deleteSchedule": "Radera schema",
+        "editSchedule": "Redigera schema"
+      },
+      "columns": {
+        "actions": "Åtgärder",
+        "customRate": "Anpassad taxa",
+        "effectiveDate": "Gäller från",
+        "endDate": "Slutdatum",
+        "notes": "Anteckningar"
+      },
+      "dialogs": {
+        "confirmDeleteSchedule": "Vill du radera det här prisschemat?"
+      },
+      "empty": {
+        "description": "Lägg till prisscheman för att ange tidsstyrda taxeändringar för avtalet",
+        "noPricingSchedules": "Inga prisscheman ännu"
+      },
+      "errors": {
+        "failedToDeletePricingSchedule": "Det gick inte att radera prisschemat",
+        "failedToLoadPricingSchedules": "Det gick inte att läsa in prisscheman"
+      },
+      "loading": "Läser in prisscheman",
+      "readOnlyNotice": "Det här systemhanterade standardavtalet används enbart för koppling av arbete. Redigering av prisscheman är inaktiverad.",
+      "timeline": {
+        "title": "Tidslinje för prissättning"
+      },
+      "title": "Prisscheman",
+      "values": {
+        "defaultRate": "Standardtaxa",
+        "ongoing": "Pågående",
+        "useDefaultRate": "Använd standardtaxa"
+      }
+    },
+    "dialog": {
+      "actions": {
+        "addSchedule": "Lägg till schema",
+        "cancel": "Avbryt",
+        "saving": "Sparar…",
+        "updateSchedule": "Uppdatera schema"
+      },
+      "durationUnits": {
+        "days": "Dagar",
+        "months": "Månader",
+        "weeks": "Veckor",
+        "years": "År"
+      },
+      "errors": {
+        "failedToSavePricingSchedule": "Det gick inte att spara prisschemat"
+      },
+      "fields": {
+        "customRate": "Anpassad taxa",
+        "customRatePlaceholder": "0,00",
+        "duration": "Varaktighet",
+        "durationPlaceholder": "T.ex. 6",
+        "effectiveDate": "Gäller från",
+        "endDate": "Slutdatum",
+        "hasEndDate": "Har slutdatum",
+        "notes": "Anteckningar",
+        "notesPlaceholder": "Lägg till anteckningar om prisändringen (t.ex. ”Årlig taxehöjning”)",
+        "unit": "Enhet",
+        "useDefaultRate": "Använd standardtaxa",
+        "useDuration": "Använd varaktighet"
+      },
+      "title": {
+        "addPricingSchedule": "Lägg till prisschema",
+        "editPricingSchedule": "Redigera prisschema"
+      },
+      "validation": {
+        "customRatePositive": "Den anpassade taxan måste vara ett positivt tal",
+        "customRateRequired": "Anpassad taxa krävs när standardtaxan inte används",
+        "durationPositive": "Varaktigheten måste vara ett positivt tal",
+        "durationRequired": "Ett värde krävs när varaktighet används",
+        "effectiveDateRequired": "Datum då ändringen börjar gälla krävs",
+        "endDateAfterEffectiveDate": "Slutdatum måste vara efter datumet då ändringen börjar gälla",
+        "endDateRequiredWhenEnabled": "Slutdatum krävs när ”Har slutdatum” är aktiverat"
+      }
+    }
+  },
+  "contractsList": {
+    "actions": {
+      "deleting": "Raderar…",
+      "createContract": "Skapa avtal",
+      "createTemplate": "Skapa mall",
+      "openMenu": "Öppna meny",
+      "quickAdd": "Snabbtillägg",
+      "resume": "Återuppta",
+      "restore": "Återställ",
+      "setToActive": "Sätt som aktivt",
+      "terminate": "Avsluta"
+    },
+    "columns": {
+      "actions": "Åtgärder",
+      "client": "Kund",
+      "contractName": "Avtalsnamn",
+      "created": "Skapad",
+      "description": "Beskrivning",
+      "endDate": "Slutdatum",
+      "lastModified": "Senast ändrad",
+      "sourceTemplate": "Ursprungsmall",
+      "startDate": "Startdatum",
+      "status": "Status"
+    },
+    "dialogs": {
+      "deleteClient": {
+        "clientSuffix": " för {{clientName}}",
+        "message": "Vill du radera kundavtalet ”{{contractName}}”{{clientSuffix}} permanent? Åtgärden kan inte ångras.",
+        "title": "Radera kundavtal?"
+      },
+      "deleteTemplate": {
+        "message": "Vill du radera mallen ”{{contractName}}” permanent? Åtgärden kan inte ångras.",
+        "title": "Radera avtalsmall?"
+      },
+      "discardDraft": {
+        "message": "Detta raderar utkastet ”{{contractName}}” för {{clientName}} permanent.\nÅtgärden kan inte ångras.",
+        "title": "Kasta avtalsutkast?"
+      }
+    },
+    "drafts": {
+      "badgeCount": "{{count}} avtalsutkast"
+    },
+    "empty": {
+      "dash": "—",
+      "noClientContracts": "Inga kundavtal matchar din sökning.",
+      "noDescription": "Ingen beskrivning",
+      "noDraftMatches": "Inga avtalsutkast matchar din sökning.",
+      "noDrafts": "Inga avtalsutkast. Börja skapa ett nytt avtal för att spara det som utkast.",
+      "noTemplates": "Inga mallar matchar din sökning.",
+      "unknownClient": "Okänd kund",
+      "untitledContract": "Avtal utan titel",
+      "untitledDraft": "Utkast utan titel",
+      "untitledTemplate": "Mall utan titel"
+    },
+    "errors": {
+      "failedToFetch": "Det gick inte att hämta avtal"
+    },
+    "heading": {
+      "description": "Mallar är återanvändbara definitioner. Kundavtal är instanser som ägs av kunden.",
+      "title": "Avtal"
+    },
+    "loading": {
+      "contracts": "Läser in avtal…"
+    },
+    "search": {
+      "clientContractsAriaLabel": "Sök kundavtal",
+      "clientContractsPlaceholder": "Sök efter kund eller avtal…",
+      "draftsAriaLabel": "Sök avtalsutkast",
+      "draftsPlaceholder": "Sök utkast…",
+      "templatesAriaLabel": "Sök avtalsmallar",
+      "templatesPlaceholder": "Sök mallar…"
+    },
+    "status": {
+      "archived": "Arkiverad",
+      "published": "Publicerad"
+    },
+    "toasts": {
+      "draftDiscarded": "Utkastet har kastats",
+      "failedToActivateContract": "Det gick inte att aktivera avtalet",
+      "failedToDeleteContract": "Det gick inte att radera avtalet",
+      "failedToDiscardDraft": "Det gick inte att kasta utkastet",
+      "failedToRestoreContract": "Det gick inte att återställa avtalet",
+      "failedToResumeDraft": "Det gick inte att återuppta utkastet",
+      "failedToTerminateContract": "Det gick inte att avsluta avtalet"
+    }
+  },
+  "clientContracts": {
+    "actions": {
+      "viewDetails": "Visa detaljer"
+    },
+    "columns": {
+      "actions": "Åtgärder",
+      "billingFrequency": "Debiteringsintervall",
+      "client": "Kund",
+      "contractName": "Avtalsnamn",
+      "endDate": "Slutdatum",
+      "poIndicator": "Inköpsorder",
+      "sourceTemplate": "Ursprungsmall",
+      "startDate": "Startdatum",
+      "status": "Status"
+    },
+    "dialogs": {
+      "terminate": {
+        "clientSuffix": " för {{clientName}}",
+        "message": "Vill du avsluta ”{{contractName}}”{{clientSuffix}}?",
+        "title": "Avsluta kundavtal?"
+      }
+    },
+    "empty": {
+      "noMatches": "Inga kundavtal matchar din sökning."
+    },
+    "errors": {
+      "failedToFetch": "Det gick inte att hämta kundavtal"
+    },
+    "loading": "Läser in kundavtal…",
+    "po": {
+      "notRequired": "Krävs inte",
+      "required": "Obligatorisk"
+    },
+    "search": {
+      "ariaLabel": "Sök kundavtal",
+      "placeholder": "Sök efter kund eller avtal…"
+    },
+    "tabs": {
+      "contracts": "Avtal",
+      "upcomingRenewals": "Kommande förnyelser ({{count}})"
+    },
+    "toasts": {
+      "failedToActivate": "Det gick inte att aktivera avtalet",
+      "failedToDelete": "Det gick inte att radera avtalet",
+      "failedToMarkNonRenewing": "Det gick inte att markera att förnyelsen inte ska genomföras",
+      "failedToMarkRenewing": "Det gick inte att markera att förnyelsen ska genomföras",
+      "failedToRestore": "Det gick inte att återställa avtalet",
+      "failedToResumeDraft": "Det gick inte att återuppta utkastet",
+      "failedToTerminate": "Det gick inte att avsluta avtalet"
+    },
+    "upcoming": {
+      "actions": {
+        "markNonRenewing": "Markera för utebliven förnyelse",
+        "markRenewing": "Markera för förnyelse",
+        "openMenu": "Öppna förnyelseåtgärder"
+      },
+      "columns": {
+        "actions": "Åtgärder",
+        "client": "Kund",
+        "contract": "Avtal",
+        "daysUntilDue": "Dagar till sista datum",
+        "decisionDue": "Sista beslutsdatum",
+        "status": "Status",
+        "type": "Typ"
+      },
+      "description": "Avtal där beslut om förnyelse ska fattas inom det valda intervallet.",
+      "empty": "Inga kommande förnyelser för det valda intervallet.",
+      "filterAriaLabel": "Filtrera kommande förnyelser",
+      "filterPlaceholder": "Filtrera kommande förnyelser…",
+      "status": {
+        "completed": "Slutförd",
+        "nonRenewing": "Förnyas inte",
+        "pending": "Väntande",
+        "renewing": "Förnyas",
+        "snoozed": "Uppskjuten"
+      },
+      "title": "Kommande förnyelser",
+      "type": {
+        "evergreen": "Tillsvidare",
+        "fixedTerm": "Tidsbegränsat"
+      },
+      "window": {
+        "all": "Alla",
+        "next30": "Nästa 30 dagar",
+        "next60": "Nästa 60 dagar",
+        "next90": "Nästa 90 dagar"
+      },
+      "windowPlaceholder": "Välj förnyelseintervall"
+    }
+  },
+  "templatesTab": {
+    "actions": {
+      "createTemplate": "Skapa mall",
+      "delete": "Radera",
+      "edit": "Redigera"
+    },
+    "columns": {
+      "actions": "Åtgärder",
+      "description": "Beskrivning",
+      "status": "Status",
+      "templateName": "Mallnamn"
+    },
+    "empty": {
+      "createFirstTemplate": "Skapa din första mall för att komma igång.",
+      "noSearchMatches": "Inga mallar matchar din sökning",
+      "noTemplates": "Inga mallar ännu",
+      "tryDifferentSearch": "Prova ett annat sökord."
+    },
+    "errors": {
+      "failedToDeleteContract": "Det gick inte att radera avtalet",
+      "failedToFetchTemplates": "Det gick inte att hämta mallar"
+    },
+    "loading": "Läser in mallar…",
+    "search": {
+      "ariaLabel": "Sök avtalsmallar",
+      "placeholder": "Sök mallar…"
+    },
+    "status": {
+      "active": "Aktiv",
+      "archived": "Arkiverad",
+      "draft": "Utkast",
+      "expired": "Utgången",
+      "published": "Publicerad",
+      "terminated": "Avslutad"
+    },
+    "values": {
+      "noDescription": "Ingen beskrivning"
+    }
+  },
+  "detailSwitcher": {
+    "errors": {
+      "contractNotFound": "Avtalet hittades inte",
+      "failedToLoadContractDetails": "Det gick inte att läsa in avtalsdetaljer",
+      "missingContractIdentifier": "Avtalsidentifierare saknas",
+      "noContractSelected": "Inget avtal valt.",
+      "unableToLoadContractDetails": "Avtalsdetaljerna kunde inte läsas in"
+    },
+    "loading": {
+      "contract": "Läser in avtal…"
+    }
+  },
+  "templateDetail": {
+    "backToTemplates": "Tillbaka till mallar",
+    "backToTemplatesArrow": "← Tillbaka till mallar",
+    "composition": {
+      "addContractLinesBeforeManaging": "Lägg till avtalsrader i mallen innan du hanterar tjänster.",
+      "additionalPlans": "Ytterligare planer",
+      "bucketSummary": "Timpott: {{minutes}} min • Överförbrukning {{overage}} $",
+      "closeManager": "Stäng hanteraren",
+      "editRate": "Redigera taxa",
+      "fixedFeeBundles": "Paket med fast avgift",
+      "fixedFeeRate": "Fast taxa:",
+      "hourlyPlans": "Timdebiterade planer",
+      "manageServices": "Hantera tjänster",
+      "manageTemplateServices": "Hantera mallens tjänster",
+      "minimumTimeLabel": "Minsta tid:",
+      "minutesValue": "{{count}} min",
+      "noFixedFeeLines": "Inga avtalsrader med fast avgift har konfigurerats ännu.",
+      "noHourlyLines": "Inga timdebiterade avtalsrader har konfigurerats ännu.",
+      "noServicesAssigned": "Inga tjänster har tilldelats den här avtalsraden.",
+      "noUsageLines": "Inga förbrukningsbaserade avtalsrader har konfigurerats ännu.",
+      "notSet": "Inte angivet",
+      "quantityLabel": "Antal:",
+      "roundUpLabel": "Avrunda uppåt:",
+      "serviceCountPlural": "{{count}} tjänster",
+      "serviceCountSingle": "{{count}} tjänst",
+      "serviceFallback": "Tjänst",
+      "title": "Mallens sammansättning",
+      "unitLabel": "Enhet:",
+      "usageBasedPlans": "Förbrukningsbaserade planer"
+    },
+    "editBasicsTitle": "Redigera mallens grunduppgifter",
+    "editGuidanceTitle": "Redigera mallens vägledning",
+    "failedToLoadTemplate": "Det gick inte att läsa in avtalsmallen",
+    "form": {
+      "currencyPlaceholder": "Välj valuta",
+      "internalNotesLabel": "Interna anteckningar",
+      "internalNotesPlaceholder": "Beskriv var mallen ska användas, tips för introduktion eller krav på godkännande.",
+      "recommendedBillingFrequencyLabel": "Rekommenderat debiteringsintervall *",
+      "recommendedBillingFrequencyPlaceholder": "Välj debiteringsintervall",
+      "templateNameLabel": "Mallnamn *",
+      "templateNamePlaceholder": "Startpaket för hanterade tjänster, premiumpaket för support osv."
+    },
+    "guidance": {
+      "noCadenceProvided": "Inget rekommenderat intervall angivet.",
+      "recommendedCadenceLabel": "Rekommenderat intervall",
+      "recommendedCadencePlaceholder": "Välj ett intervall",
+      "tagsHint": "Taggar hjälper team att snabbt hitta relevanta mallar.",
+      "tagsLabel": "Taggar",
+      "tagsPlaceholder": "Kommaseparerade (t.ex. introduktion, ekonomi)",
+      "title": "Vägledning för mallen",
+      "usageNotesLabel": "Användningsanteckningar",
+      "usageNotesPlaceholder": "Lägg till vägledning som hjälper andra att förstå hur mallen ska användas."
+    },
+    "loadingTemplate": "Läser in mall…",
+    "servicesLabel": "Tjänster",
+    "templateBadge": "Mall",
+    "templateNotFound": "Avtalsmallen hittades inte",
+    "templateSnapshotTitle": "Ögonblicksbild av mallen",
+    "validation": {
+      "billingFrequencyRequired": "Debiteringsintervall krävs",
+      "failedToUpdateBasics": "Det gick inte att uppdatera mallens grunduppgifter",
+      "failedToUpdateGuidance": "Det gick inte att uppdatera mallens vägledning",
+      "templateNameRequired": "Mallnamn krävs"
+    },
+    "clientAssignments": {
+      "title": "Kundtilldelningar",
+      "totalAssignments": "Totalt antal tilldelningar",
+      "activeClients": "Aktiva kunder",
+      "purchaseOrders": "Inköpsorder",
+      "poRequiredCount": "{{count}} tilldelningar kräver inköpsorder",
+      "noPoRequirements": "Inga krav på inköpsorder har registrerats.",
+      "noClientContracts": "Inga kundavtal använder den här mallen för närvarande.",
+      "reviewBelow": "Granska hela tilldelningslistan i detaljavsnittet nedan."
+    },
+    "assignmentDetails": {
+      "title": "Tilldelningsdetaljer",
+      "empty": "När kundavtal börjar använda mallen visas de här tillsammans med inköpsorderuppgifter.",
+      "contractId": "Avtals-ID: {{id}}",
+      "ongoing": "Pågående",
+      "notRequired": "Krävs inte",
+      "columns": {
+        "client": "Kund",
+        "status": "Status",
+        "start": "Start",
+        "end": "Slut",
+        "poRequired": "Inköpsorder krävs",
+        "poNumber": "Inköpsordernummer",
+        "poAmount": "Inköpsorderbelopp"
+      },
+      "status": {
+        "active": "Aktiv",
+        "inactive": "Inaktiv"
+      }
+    },
+    "simulation": {
+      "client": "Kundkontext",
+      "hypothetical": "Hypotetisk kundprofil",
+      "open": "Simulera",
+      "title": "Mallsimulering"
+    }
+  },
+  "quickStart": {
+    "actions": {
+      "createFirstContract": "Skapa ditt första avtal",
+      "dismiss": "Stäng",
+      "minimize": "Minimera",
+      "showGuide": "Visa guide"
+    },
+    "badge": {
+      "new": "Ny"
+    },
+    "bestPractices": {
+      "items": {
+        "clearNames": "Använd tydliga, beskrivande avtalsnamn (t.ex. ”Acme Corp – MSP-tjänster kv. 4 2024”)",
+        "endDates": "Ange slutdatum för tidsbegränsade avtal för att följa förnyelsedatum",
+        "partialPeriodAdjustment": "Använd delperiodsjustering när avtalsdatumen bara omfattar en del av en tjänsteperiod",
+        "poNumbers": "Lägg till inköpsordernummer när kundens inköpspolicy kräver det"
+      },
+      "title": "Rekommenderade arbetssätt"
+    },
+    "billingModels": {
+      "bucketHours": {
+        "description": "Förbetalda timmar + överförbrukning",
+        "label": "Timpott:"
+      },
+      "fixedFee": {
+        "description": "Samma pris varje månad",
+        "label": "Fast avgift:"
+      },
+      "hourly": {
+        "description": "Debitera efter registrerad tid",
+        "label": "Per timme:"
+      },
+      "usageBased": {
+        "description": "Debitera efter förbrukning",
+        "label": "Förbrukningsbaserad:"
+      }
+    },
+    "steps": {
+      "configureBilling": {
+        "description": "Välj debiteringsmodell eller modeller. Du kan kombinera flera typer:",
+        "title": "Konfigurera debitering"
+      },
+      "createContract": {
+        "description": "Klicka på ”Nytt avtal” för att starta guiden. Välj en kund och namnge avtalet.",
+        "requiredFields": "Obligatoriskt: kund, avtalsnamn, startdatum",
+        "title": "Skapa ett avtal"
+      },
+      "reviewCreate": {
+        "description": "Kontrollera allt innan du skapar avtalet. Du kan alltid redigera senare.",
+        "tip": "Tips: Minst en tjänsterad krävs",
+        "title": "Granska och skapa"
+      }
+    },
+    "subtitle": "Lär dig att skapa och hantera avtal",
+    "title": "Snabbstartsguide"
+  },
+  "servicePicker": {
+    "emptyMessage": "Ingen tjänst hittades.",
+    "placeholder": "Välj tjänst…",
+    "searchPlaceholder": "Sök tjänster…",
+    "catalog": {
+      "badges": {
+        "product": "Produkt",
+        "service": "Tjänst"
+      },
+      "custom": {
+        "addAsCustomItem": "Lägg till ”{{name}}” som anpassad post",
+        "badge": "Anpassad",
+        "typeNameHint": "Skriv ett namn för att lägga till en anpassad post"
+      },
+      "emptyMessage": "Inga matchande poster.",
+      "placeholder": "Välj post…",
+      "searchPlaceholder": "Sök poster…"
+    }
+  },
+  "bucketOverlay": {
+    "includedLabel": "Ingående {{units}}",
+    "includedPlaceholderHours": "T.ex. 40",
+    "includedPlaceholderUnits": "T.ex. 1 000",
+    "includedTooltip": "Antal {{units}} som ingår varje debiteringsperiod innan överförbrukning debiteras.",
+    "overageRateLabel": "Överförbrukningstaxa",
+    "overageRateTooltip": "Avgift för varje {{unit}} utöver det som ingår.",
+    "rolloverDescription": "Om detta är aktiverat förs oanvänt saldo över till nästa period.",
+    "rolloverLabel": "Tillåt att oanvända {{units}} förs över till nästa period",
+    "units": {
+      "hour": "timme",
+      "hours": "timmar",
+      "units": "enheter"
+    }
+  },
+  "frequencyOverride": {
+    "confirmation": "Avtalsraden debiteras {{lineFrequency}} i stället för {{contractFrequency}}.",
+    "description": "Valfritt: Åsidosätt avtalets debiteringsintervall ({{frequency}}) för den här avtalsraden.",
+    "label": "Åsidosätt debiteringsintervall",
+    "optionAlreadySetForContract": "{{label}} (redan angivet för avtalet)",
+    "placeholder": "Använd avtalets debiteringsintervall ({{frequency}})"
+  },
+  "wizard": {
+    "dialogs": {
+      "unsavedChanges": {
+        "cancel": "Stanna kvar",
+        "confirm": "Kasta ändringar",
+        "message": "Du har osparade ändringar. Om du stänger dialogrutan nu kastas ändringarna.",
+        "title": "Kasta ändringar?"
+      }
+    },
+    "errors": {
+      "failedToCreateContract": "Det gick inte att skapa avtalet",
+      "failedToLoadTemplateDetails": "Det gick inte att läsa in malldetaljer",
+      "failedToLoadTemplates": "Det gick inte att läsa in mallar",
+      "failedToSaveDraft": "Det gick inte att spara utkastet"
+    },
+    "steps": {
+      "contractBasics": "Avtalets grunduppgifter",
+      "fixedFeeServices": "Tjänster med fast avgift",
+      "hourlyServices": "Timdebiterade tjänster",
+      "products": "Produkter",
+      "reviewCreate": "Granska och skapa",
+      "usageBasedServices": "Förbrukningsbaserade tjänster"
+    },
+    "title": {
+      "createNewContract": "Skapa nytt avtal",
+      "editContract": "Redigera avtal"
+    },
+    "validation": {
+      "addAtLeastOneService": "Lägg till minst en tjänst innan du skapar avtalet",
+      "baseRateRequiredWhenFixedServices": "Bastaxa krävs när tjänster med fast pris ingår",
+      "billingFrequencyRequired": "Debiteringsintervall krävs",
+      "clientRequired": "Kund krävs",
+      "contractNameRequired": "Avtalsnamn krävs",
+      "noticePeriodRange": "Uppsägningstiden måste vara mellan {{min}} och {{max}} dagar",
+      "noticePeriodWholeNumber": "Uppsägningstiden måste vara ett helt antal dagar",
+      "recurring": {
+        "frequency": {
+          "annually": "årligen",
+          "biweekly": "varannan vecka",
+          "monthly": "månadsvis",
+          "quarterly": "kvartalsvis",
+          "semi-annually": "halvårsvis",
+          "weekly": "veckovis"
+        },
+        "lineType": {
+          "fixed": "Fast",
+          "hourly": "Per timme",
+          "product": "Produkt",
+          "usage": "Förbrukning"
+        }
+      },
+      "renewalModeRequiredWithEndDate": "Förnyelseläge krävs när ett slutdatum har angetts",
+      "renewalTermPositiveWhole": "Förnyelseperioden i månader måste vara ett positivt heltal",
+      "selectClientBeforeDraft": "Välj en kund innan du sparar som utkast",
+      "selectProductForEachLine": "Välj en produkt för varje produktrad",
+      "startDateRequired": "Startdatum krävs",
+      "unsupportedRecurringAuthoringCombination": "Den här kombinationen stöds inte för återkommande tjänster av typen {{lineType}}: schemat för avtalets årsdag stöder för närvarande debiteringsintervallen {{supportedFrequencies}}. {{billingFrequency}} stöds inte ännu. Använd ett av de intervall som stöds eller fakturera enligt kundens debiteringsschema."
+    },
+    "nav": {
+      "back": "Tillbaka",
+      "next": "Nästa",
+      "skip": "Hoppa över",
+      "finish": "Slutför konfiguration",
+      "saveDraft": "Spara som utkast",
+      "saving": "Sparar…",
+      "completing": "Slutför…"
+    },
+    "simulation": {
+      "description": "Testa det osparade utkastet med antagen aktivitet. Simuleringen sparar eller utfärdar inget.",
+      "title": "Simulera innan du skapar"
+    }
+  },
+  "wizardBasics": {
+    "additionalDescription": {
+      "hint": "Interna anteckningar eller avtalsdetaljer.",
+      "label": "Beskrivning (valfri)",
+      "placeholder": "Lägg till ytterligare anteckningar om avtalet…"
+    },
+    "billingFrequency": {
+      "hint": "Hur ofta ska avtalet debiteras?",
+      "label": "Debiteringsintervall",
+      "placeholder": "Välj debiteringsintervall"
+    },
+    "cadenceOwner": {
+      "description": "Anger vilket schema som styr som standard för återkommande rader som skapas i guiden.",
+      "label": "Standardschema för återkommande debitering",
+      "options": {
+        "client": {
+          "description": "Använd kundens debiteringskalender så att återkommande rader följer kundens vanliga faktureringsintervall.",
+          "label": "Fakturera enligt kundens debiteringsschema"
+        },
+        "contract": {
+          "description": "Använd tjänsteperioder baserade på avtalets årsdag för återkommande rader som ska följa avtalets tidslinje.",
+          "label": "Fakturera på avtalets årsdag"
+        }
+      }
+    },
+    "client": {
+      "chooseClientHint": "Välj den kund som avtalet gäller för.",
+      "clientLabel": "Kund",
+      "loadingClients": "Läser in kunder…",
+      "selectClient": "Välj en kund"
+    },
+    "contractName": {
+      "hint": "Ge avtalet ett beskrivande namn.",
+      "label": "Avtalsnamn",
+      "placeholder": "T.ex. MSP-standardtjänster, premiumpaket för support"
+    },
+    "currency": {
+      "hint": "Avtalets valuta. Kundens föredragna valuta används som standard.",
+      "label": "Valuta",
+      "placeholder": "Välj valuta"
+    },
+    "dates": {
+      "endDateAfterStartValidation": "Slutdatum måste vara efter startdatum",
+      "endDateLabel": "Slutdatum (valfritt)",
+      "endDateOngoingHint": "Lämna tomt för ett löpande avtal.",
+      "endDateTooltip": "Lämna tomt för löpande avtal utan fast slutdatum. Du kan alltid ange ett slutdatum senare när avtalet avslutas eller löper ut.",
+      "startDateHint": "När börjar avtalet gälla?",
+      "startDateLabel": "Startdatum"
+    },
+    "description": "Välj en mall (valfritt), välj kunden och ange avtalets grunduppgifter. Tjänstedetaljer läses in i nästa steg.",
+    "heading": "Avtalets grunduppgifter",
+    "po": {
+      "amountHint": "Totalt godkänt belopp på inköpsordern.",
+      "amountLabel": "Inköpsorderbelopp",
+      "noteLabel": "Obs:",
+      "noteText": "Kravet på inköpsorder börjar gälla när automatisk fakturering aktiveras. Konfigurera det redan nu.",
+      "numberHint": "Kundens referensnummer för inköpsordern.",
+      "numberLabel": "Inköpsordernummer",
+      "numberPlaceholder": "T.ex. PO-2024-12345",
+      "requireForInvoicing": "Kräv inköpsorder för fakturering",
+      "requireHint": "Blockera fakturaskapande om inköpsorder saknas.",
+      "requireTooltip": "När detta är aktiverat kan fakturor för avtalet inte skapas utan ett inköpsordernummer.",
+      "title": "Inköpsorder (valfri)"
+    },
+    "renewal": {
+      "evergreen": {
+        "description": "Avtalet löper tills vidare. Konfigurera intervall för årlig granskning och uppsägningstid.",
+        "title": "Granskningsinställningar för tillsvidareavtal"
+      },
+      "fixedTerm": {
+        "description": "Avtalet har ett fast slutdatum. Konfigurera förnyelse och uppsägningstid.",
+        "title": "Förnyelseinställningar"
+      },
+      "modeLabel": "Förnyelseläge",
+      "modeOptions": {
+        "auto": "Automatisk förnyelse",
+        "manual": "Manuell förnyelse",
+        "none": "Ingen förnyelse"
+      },
+      "modePlaceholder": "Välj förnyelseläge",
+      "noticePeriodLabel": "Uppsägningstid (dagar)",
+      "noticePeriodPlaceholder": "T.ex. 30",
+      "termLabel": "Förnyelseperiod (månader)",
+      "termPlaceholder": "T.ex. 12",
+      "useTenantDefaultsDescription": "Tillämpa organisationens förnyelseinställningar om de inte uttryckligen åsidosätts.",
+      "useTenantDefaultsLabel": "Använd klientorganisationens standardinställningar för förnyelse"
+    },
+    "summary": {
+      "labels": {
+        "billingFrequency": "Debiteringsintervall:",
+        "client": "Kund:",
+        "contract": "Avtal:",
+        "currency": "Valuta:",
+        "noticePeriod": "Uppsägningstid:",
+        "period": "Period:",
+        "poAmount": "Inköpsorderbelopp:",
+        "poNumber": "Inköpsordernummer:",
+        "poRequired": "Inköpsorder krävs:",
+        "renewalMode": "Förnyelseläge:",
+        "renewalTerm": "Förnyelseperiod:"
+      },
+      "title": "Avtalssammanfattning",
+      "values": {
+        "notSelected": "Inte valt",
+        "noticePeriodDays_one": "{{count}} dag",
+        "noticePeriodDays_other": "{{count}} dagar",
+        "ongoing": "Pågående",
+        "renewalTermMonths_one": "{{count}} månad",
+        "renewalTermMonths_other": "{{count}} månader",
+        "noticePeriodDays": "{{count}} dag",
+        "renewalTermMonths": "{{count}} månad"
+      }
+    },
+    "template": {
+      "loadingTemplateDetails": "Läser in malldetaljer…",
+      "loadingTemplates": "Läser in mallar…",
+      "prefillHint": "Förifyll tjänster, anteckningar och debiteringsintervall från en befintlig mall. Du kan fortfarande justera allt innan du publicerar.",
+      "preview": {
+        "billingCadenceLabel": "Debiteringsintervall:",
+        "notSpecified": "Inte angivet",
+        "templateLabel": "Mall:"
+      },
+      "selectTemplateOptional": "Välj en mall (valfritt)",
+      "startFromTemplate": "Utgå från mall"
+    }
+  },
+  "wizardFixed": {
+    "alternateFrequencyLabel": "Alternativt debiteringsintervall (valfritt)",
+    "baseRate": {
+      "hint": "Total återkommande avgift för alla tjänster med fast pris tillsammans.",
+      "label": "Återkommande bastaxa",
+      "placeholder": "0,00"
+    },
+    "description": "Konfigurera tjänster som debiteras med en fast taxa varje debiteringsperiod. Du kan fortfarande registrera tid, men debiteringen baseras på det fasta beloppet.",
+    "emptyState": "Inga tjänster med fast avgift har lagts till ännu. Klicka på ”Lägg till tjänst” ovan eller på ”Hoppa över” för att gå vidare.",
+    "explainer": {
+      "description": "Tjänsterna har ett bestämt återkommande pris. Du registrerar fortfarande tidposter för dem, men debiteringen baseras på den fasta taxan, inte på arbetade timmar.",
+      "title": "Vad är tjänster med fast avgift?"
+    },
+    "heading": "Tjänster med fast avgift",
+    "preview": {
+      "labels": {
+        "alternateFrequency": "Alternativt debiteringsintervall:",
+        "billingTiming": "Debiteringstidpunkt:",
+        "cadenceOwner": "Styrande schema:",
+        "invoiceWindow": "Faktureringsintervall:",
+        "recurringRate": "Återkommande taxa:",
+        "service": "Tjänst:",
+        "services": "Tjänster:"
+      },
+      "materializedPeriods": {
+        "tooltip": "En förhandsgranskning av de närmaste tjänsteperioderna och de faktureringsintervall som skulle skapas för dem med nuvarande inställningar. Här kan du kontrollera schemat innan du sparar — de faktiska fakturorna skapas senare vid debiteringskörningen."
+      },
+      "title": "Förhandsgranska återkommande debitering innan du sparar"
+    },
+    "proration": {
+      "label": "Justera för delperioder",
+      "tooltip": "Justera den återkommande avgiften när avtalsdatumen bara omfattar en del av en tjänsteperiod."
+    },
+    "services": {
+      "addService": "Lägg till tjänst",
+      "label": "Tjänster",
+      "quantityLabel": "Antal",
+      "selectServicePlaceholder": "Välj en tjänst",
+      "serviceItemLabel": "Tjänst {{index}}"
+    }
+  },
+  "wizardProducts": {
+    "actions": {
+      "addProduct": "Lägg till produkt"
+    },
+    "description": "Koppla produkter som ska debiteras varje period. Produkter använder katalogpriset i avtalets valuta om du inte anger ett annat pris.",
+    "emptyState": "Inga produkter har kopplats ännu. Lägg till en produkt om du vill debitera den varje period.",
+    "heading": "Produkter",
+    "labels": {
+      "defaultCatalogPrice": "Standardpris i katalogen:",
+      "overrideUnitPriceOptional": "Åsidosätt enhetspris (valfritt)",
+      "productItem": "Produkt {{index}}",
+      "products": "Produkter",
+      "quantity": "Antal",
+      "selectProductPlaceholder": "Välj en produkt",
+      "catalogPriceInCurrency": "Katalogpris i {{currency}}:"
+    },
+    "validation": {
+      "noDefaultPriceEnterUnitPrice": "Inget standardpris har angetts. Ange ett enhetspris.",
+      "productMissingPrice": "Produkten saknar både standardpris och anpassat pris. Den kan inte debiteras förrän du anger ett enhetspris.",
+      "noCurrencyPriceEnterUnitPrice": "Inget pris i {{currency}} finns i katalogen. Ange ett enhetspris.",
+      "noCurrencyPriceWithLegacyHint": "Inget pris i {{currency}} finns i katalogen. Äldre standardtaxa: {{rate}}. Ange ett enhetspris i {{currency}}."
+    }
+  },
+  "wizardHourly": {
+    "actions": {
+      "addHourlyService": "Lägg till timdebiterad tjänst"
+    },
+    "alternateFrequencyLabel": "Alternativt debiteringsintervall (valfritt)",
+    "description": "Konfigurera tjänster som debiteras utifrån registrerad tid. Passar arbete på löpande räkning med tid och material.",
+    "emptyState": "Inga timdebiterade tjänster har lagts till ännu. Klicka på ”Lägg till timdebiterad tjänst” ovan eller på ”Hoppa över” om du inte behöver debitera tid och material.",
+    "explainer": {
+      "description": "Tjänsterna debiteras utifrån faktiskt registrerad tid. Varje tidpost multipliceras med timtaxan för att beräkna fakturabeloppet.",
+      "title": "Vad är timdebiterade tjänster?"
+    },
+    "heading": "Timdebiterade tjänster",
+    "labels": {
+      "enterHourlyRate": "Ange timtaxan",
+      "hourlyRate": "Timtaxa",
+      "hourlyRatePerHour": "{{rate}}/timme",
+      "hourlyRatePlaceholder": "0,00",
+      "hourlyServices": "Timdebiterade tjänster",
+      "selectServicePlaceholder": "Välj en tjänst",
+      "serviceItem": "Tjänst {{index}}",
+      "setBucketOfHours": "Ange timpott",
+      "noCurrencyPriceEnterRate": "Inget pris i {{currency}} finns i katalogen. Ange en timtaxa.",
+      "noCurrencyPriceWithLegacyHint": "Inget pris i {{currency}} finns i katalogen. Äldre standardtaxa: {{rate}}. Ange en timtaxa i {{currency}}."
+    },
+    "minimumBillableTime": {
+      "hint": "T.ex. 15 minuter – kortare tidposter avrundas uppåt",
+      "label": "Minsta debiterbara tid (minuter)",
+      "placeholder": "15"
+    },
+    "roundUpToNearest": {
+      "hint": "T.ex. 15 minuter – tidposter avrundas uppåt till närmaste intervall",
+      "label": "Avrunda uppåt till närmaste (minuter)",
+      "placeholder": "15"
+    },
+    "summary": {
+      "labels": {
+        "alternateFrequency": "Alternativt debiteringsintervall:",
+        "bucketsHeading": "Potter:",
+        "includedHours": "Ingående timmar:",
+        "minimumTime": "Minsta tid:",
+        "overageRate": "Överförbrukningstaxa:",
+        "rollover": "Överföring till nästa period:",
+        "roundUp": "Avrunda uppåt:",
+        "serviceFallback": "Tjänst {{index}}",
+        "services": "Tjänster:"
+      },
+      "title": "Sammanfattning av timdebiterade tjänster",
+      "values": {
+        "everyMinutes": "Med {{count}} minuters intervall",
+        "hours": "{{count}} timmar",
+        "minutes": "{{count}} minuter",
+        "overageRatePerHour": "{{rate}}/timme",
+        "rolloverDisabled": "Inaktiverad",
+        "rolloverEnabled": "Aktiverad"
+      }
+    }
+  },
+  "wizardUsage": {
+    "actions": {
+      "addUsageBasedService": "Lägg till förbrukningsbaserad tjänst"
+    },
+    "alternateFrequencyLabel": "Alternativt debiteringsintervall (valfritt)",
+    "description": "Konfigurera tjänster som debiteras utifrån förbrukning. Passar mätbara tjänster som dataöverföring, API-anrop och lagring.",
+    "emptyState": "Inga förbrukningsbaserade tjänster har lagts till ännu. Klicka på ”Lägg till förbrukningsbaserad tjänst” ovan eller på ”Hoppa över” om du inte behöver förbrukningsdebitering.",
+    "explainer": {
+      "description": "Tjänsterna debiteras utifrån faktisk förbrukning eller uppmätt användning. Varje förbrukad enhet multipliceras med enhetstaxan för att beräkna fakturabeloppet.",
+      "title": "Vad är förbrukningsbaserade tjänster?"
+    },
+    "heading": "Förbrukningsbaserade tjänster",
+    "labels": {
+      "enterUnitRate": "Ange enhetstaxan",
+      "ratePerUnit": "Taxa per enhet",
+      "ratePerUnitPlaceholder": "0,00",
+      "ratePerUnitValue": "{{rate}}/{{unit}}",
+      "selectServicePlaceholder": "Välj en tjänst",
+      "serviceItem": "Tjänst {{index}}",
+      "services": "Tjänster",
+      "setBucketAllocation": "Ange pottilldelning",
+      "unitOfMeasure": "Måttenhet",
+      "unitOfMeasureHint": "Välj den enhet som tjänsten debiteras efter.",
+      "unitOfMeasurePlaceholder": "T.ex. GB, API-anrop, användare",
+      "noCurrencyPriceEnterRate": "Inget pris i {{currency}} finns i katalogen. Ange en enhetstaxa.",
+      "noCurrencyPriceWithLegacyHint": "Inget pris i {{currency}} finns i katalogen. Äldre standardtaxa: {{rate}}. Ange en enhetstaxa i {{currency}}."
+    },
+    "summary": {
+      "labels": {
+        "services": "Tjänster:"
+      },
+      "title": "Sammanfattning av förbrukningsbaserad debitering"
+    },
+    "values": {
+      "defaultUnit": "enhet"
+    }
+  },
+  "wizardReview": {
+    "heading": "Granska avtal",
+    "description": "Granska alla avtalsdetaljer innan du skapar avtalet. Du kan fortfarande redigera det efteråt vid behov.",
+    "sections": {
+      "contractBasics": "Avtalets grunduppgifter",
+      "fixedFeeServices": "Tjänster med fast avgift",
+      "products": "Produkter",
+      "hourlyServices": "Timdebiterade tjänster",
+      "usageBasedServices": "Förbrukningsbaserade tjänster"
+    },
+    "fields": {
+      "client": "Kund",
+      "contractName": "Avtalsnamn",
+      "billingFrequency": "Debiteringsintervall",
+      "currency": "Valuta",
+      "startDate": "Startdatum",
+      "endDate": "Slutdatum",
+      "renewalMode": "Förnyelseläge",
+      "noticePeriod": "Uppsägningstid",
+      "renewalTerm": "Förnyelseperiod"
+    },
+    "fallback": {
+      "notSelected": "Inte valt",
+      "notSpecified": "Inte angivet",
+      "ongoing": "Pågående",
+      "notApplicable": "Ej tillämpligt"
+    },
+    "renewalMode": {
+      "none": "Ingen förnyelse",
+      "manual": "Manuell förnyelse",
+      "auto": "Automatisk förnyelse"
+    },
+    "noticePeriod": {
+      "one": "{{count}} dag",
+      "other": "{{count}} dagar"
+    },
+    "renewalTerm": {
+      "one": "{{count}} månad",
+      "other": "{{count}} månader"
+    },
+    "common": {
+      "yes": "Ja",
+      "no": "Nej",
+      "enabled": "Aktiverad",
+      "disabled": "Inaktiverad",
+      "bucketLabel": "Pott:",
+      "billingFrequencyOverrideLabel": "Åsidosatt debiteringsintervall:",
+      "serviceQuantityRow": "{{serviceName}} (antal: {{quantity}})",
+      "unitSingular": "enhet",
+      "unitsFallback": "enheter",
+      "hourSingular": "timme"
+    },
+    "po": {
+      "title": "Krav på inköpsorder",
+      "requiredLabel": "Inköpsorder krävs:",
+      "numberLabel": "Inköpsordernummer:",
+      "amountLabel": "Inköpsorderbelopp:"
+    },
+    "bucket": {
+      "includedHours": "{{formattedValue}} timmar",
+      "includedUnits": "{{formattedValue}} {{unitLabel}}",
+      "overageLabel": "{{rate}}/{{unit}} i överförbrukning",
+      "rolloverEnabled": "överföring till nästa period aktiverad",
+      "rolloverDisabled": "ingen överföring till nästa period",
+      "summaryWithOverage": "{{included}}, {{overage}}, {{rollover}}",
+      "summaryWithoutOverage": "{{included}}, {{rollover}}"
+    },
+    "fixed": {
+      "badgeCount": {
+        "one": "{{count}} tjänst",
+        "other": "{{count}} tjänster"
+      },
+      "monthlyBaseRate": "Månadsbastaxa:",
+      "partialPeriodAdjustment": "Delperiodsjustering:"
+    },
+    "recurring": {
+      "cadenceOwner": {
+        "label": "Styrande schema:",
+        "contractAnniversary": "Avtalets årsdag",
+        "clientBillingSchedule": "Kundens debiteringsschema"
+      },
+      "firstInvoice": {
+        "contract": {
+          "advance": "Första fakturan: fakturera i det intervall enligt avtalets årsdag som inleder den första tjänsteperioden som omfattas.",
+          "arrears": "Första fakturan: fakturera i nästa intervall enligt avtalets årsdag efter att den första tjänsteperioden som omfattas har avslutats."
+        },
+        "client": {
+          "advance": "Första fakturan: fakturera i det första intervall i kundens debiteringsschema som omfattar tjänsteperioden.",
+          "arrears": "Första fakturan: fakturera i nästa intervall i kundens debiteringsschema efter att den första tjänsteperioden som omfattas har avslutats."
+        }
+      },
+      "partialPeriod": {
+        "enabled": "För delperioder anpassas den återkommande avgiften till den del av tjänsteperioden som omfattas.",
+        "disabled": "För delperioder behålls hela den återkommande avgiften även när avtalsdatumen infaller under en tjänsteperiod."
+      },
+      "materialized": {
+        "heading": "Exempel på framtida perioder som skapas",
+        "serviceLabel": "Tjänst:",
+        "invoiceWindowLabel": "Faktureringsintervall:",
+        "summary": {
+          "contract": "Om du sparar den här återkommande raden skapas framtida perioder före fakturaskapandet enligt förhandsgranskningens årsdagsschema, med den 8:e som utgångspunkt.",
+          "client": "Om du sparar den här återkommande raden skapas framtida perioder före fakturaskapandet enligt förhandsgranskningen av kundens debiteringsschema."
+        }
+      }
+    },
+    "products": {
+      "badgeCount": {
+        "one": "{{count}} produkt",
+        "other": "{{count}} produkter"
+      },
+      "overrideRate": "- anpassad taxa {{rate}}/{{currencyCode}}"
+    },
+    "hourly": {
+      "badgeCount": {
+        "one": "{{count}} tjänst",
+        "other": "{{count}} tjänster"
+      },
+      "servicesAndRates": "Tjänster och taxor",
+      "serviceRateRow": "{{serviceName}} - {{rate}}/timme",
+      "minimumTimeLabel": "Minsta tid:",
+      "roundUpLabel": "Avrunda uppåt:",
+      "minutesValue": "{{count}} minuter"
+    },
+    "usage": {
+      "badgeCount": {
+        "one": "{{count}} tjänst",
+        "other": "{{count}} tjänster"
+      },
+      "serviceRateRow": "{{serviceName}} - {{rate}}/{{unit}}"
+    },
+    "total": {
+      "title": "Uppskattat månadsbelopp",
+      "description": "Endast fasta avgifter. Timdebiterade och förbrukningsbaserade tjänster debiteras separat efter faktisk förbrukning.",
+      "perMonth": "per månad"
+    },
+    "finalChecklist": {
+      "title": "Innan du slutför:",
+      "itemRates": "Kontrollera alla taxor, antal och potter",
+      "itemPo": "Bekräfta eventuella krav på inköpsorder",
+      "itemDates": "Kontrollera start- och slutdatum",
+      "itemEditLater": "Kom ihåg: du kan redigera avtalet senare vid behov"
+    }
+  },
+  "templateWizard": {
+    "title": {
+      "createContractTemplate": "Skapa avtalsmall"
+    },
+    "steps": {
+      "templateBasics": "Mallens grunduppgifter",
+      "fixedFeeBlocks": "Block med fast avgift",
+      "products": "Produkter",
+      "hourlyBlocks": "Timdebiterade block",
+      "usageBasedBlocks": "Förbrukningsbaserade block",
+      "reviewPublish": "Granska och publicera"
+    },
+    "actions": {
+      "continue": "Fortsätt",
+      "publishTemplate": "Publicera mall"
+    },
+    "errors": {
+      "failedToCreateTemplate": "Det gick inte att skapa mallen"
+    },
+    "validation": {
+      "templateNameRequired": "Mallnamn krävs",
+      "billingFrequencyRequired": "Debiteringsintervall krävs",
+      "duplicateNameExists": "En mall med det här namnet finns redan",
+      "templateNameAlreadyInUse": "Mallnamnet används redan",
+      "atLeastOneServiceRequired": "Minst en tjänst krävs",
+      "unsupportedRecurringAuthoringCombination": "Den här kombinationen stöds inte för återkommande tjänster av typen {{lineType}}: schemat för avtalets årsdag stöder för närvarande debiteringsintervallen {{supportedFrequencies}}. {{billingFrequency}} stöds inte ännu. Använd ett av de intervall som stöds eller fakturera enligt kundens debiteringsschema.",
+      "recurring": {
+        "frequency": {
+          "monthly": "månadsvis",
+          "quarterly": "kvartalsvis",
+          "semi-annually": "halvårsvis",
+          "annually": "årligen",
+          "weekly": "veckovis",
+          "biweekly": "varannan vecka"
+        },
+        "lineType": {
+          "fixed": "Fast",
+          "product": "Produkt",
+          "hourly": "Per timme",
+          "usage": "Förbrukning"
+        }
+      }
+    }
+  },
+  "templateBasics": {
+    "heading": "Mallens grunduppgifter",
+    "description": "Namnge avtalsmallen och ange övergripande vägledning. Prissättning och kundspecifika uppgifter fastställs när mallen tillämpas på en kund.",
+    "fields": {
+      "templateName": "Mallnamn *",
+      "internalNotes": "Interna anteckningar",
+      "recommendedBillingFrequency": "Rekommenderat debiteringsintervall *"
+    },
+    "placeholders": {
+      "templateName": "Startpaket för hanterade tjänster, premiumpaket för support osv.",
+      "internalNotes": "Beskriv var mallen ska användas, tips för introduktion eller krav på godkännande.",
+      "billingFrequency": "Välj debiteringsintervall"
+    },
+    "help": {
+      "templateName": "Använd ett beskrivande namn så att team snabbt kan hitta rätt mall.",
+      "internalNotes": "Anteckningarna följer med mallen och ger sammanhang när kollegor använder den.",
+      "billingFrequency": "Anger standardintervallet när mallen tillämpas. Det kan fortfarande justeras per kund."
+    }
+  },
+  "templateFixed": {
+    "heading": "Tjänster med fast avgift",
+    "description": "Konfigurera tjänster som debiteras med en fast taxa varje debiteringsperiod. Du kan fortfarande registrera tid, men debiteringen baseras på det fasta beloppet.",
+    "info": {
+      "title": "Vad är tjänster med fast avgift?",
+      "description": "Tjänsterna har ett bestämt återkommande pris. Du registrerar fortfarande tidposter för dem, men debiteringen baseras på den fasta taxan, inte på arbetade timmar."
+    },
+    "cadenceOwner": {
+      "label": "Styrande schema",
+      "help": "Välj vilket schema som ska styra återkommande tjänsteperioder för avtal som skapas från mallen.",
+      "client": {
+        "label": "Fakturera enligt kundens debiteringsschema",
+        "description": "Använd kundens debiteringskalender så att avtal som skapas från mallen följer kundens debiteringsintervall."
+      },
+      "contract": {
+        "label": "Fakturera på avtalets årsdag",
+        "description": "Använd avtalsradens årsdagsschema. Avtalsschemat stöder för närvarande återkommande debitering månadsvis, kvartalsvis, halvårsvis och årligen."
+      }
+    },
+    "billingTiming": {
+      "arrears": "Efterskott – fakturera efter periodens slut",
+      "advance": "Förskott – fakturera vid periodens början"
+    },
+    "fields": {
+      "billingTiming": "Debiteringstidpunkt",
+      "adjustPartialPeriods": "Justera för delperioder",
+      "services": "Tjänster",
+      "serviceNumber": "Tjänst {{index}}",
+      "quantityOptional": "Antal (valfritt)"
+    },
+    "placeholders": {
+      "billingTiming": "Välj debiteringstidpunkt",
+      "selectService": "Välj en tjänst"
+    },
+    "help": {
+      "adjustPartialPeriods": "Använd detta när avtal som skapas från mallen ska anpassa den återkommande avgiften om tjänsten börjar eller slutar under en period.",
+      "quantity": "Föreslaget antal när avtal skapas"
+    },
+    "preview": {
+      "unknownService": "Okänd tjänst",
+      "cadenceOwnerLabel": "Styrande schema:",
+      "billingTimingLabel": "Debiteringstidpunkt:",
+      "serviceLabel": "Tjänst:",
+      "invoiceWindowLabel": "Faktureringsintervall:"
+    },
+    "actions": {
+      "addService": "Lägg till tjänst"
+    }
+  },
+  "templateProducts": {
+    "heading": "Produkter",
+    "description": "Koppla produkter till mallen. När ett avtal skapas från mallen debiteras produkterna varje period med produktkatalogens pris i avtalets valuta.",
+    "fields": {
+      "products": "Produkter",
+      "productNumber": "Produkt {{index}}",
+      "quantityOptional": "Antal (valfritt)"
+    },
+    "placeholders": {
+      "selectProduct": "Välj en produkt"
+    },
+    "help": {
+      "quantity": "Föreslaget antal när avtal skapas"
+    },
+    "actions": {
+      "addProduct": "Lägg till produkt"
+    },
+    "preview": {
+      "unknownProduct": "Okänd produkt"
+    }
+  },
+  "templateHourly": {
+    "heading": "Timdebiterade tjänster",
+    "description": "Välj tjänster som debiteras utifrån registrerad tid. Taxorna bestäms av tjänstens prissättning i kundens valuta när avtalet skapas.",
+    "info": {
+      "title": "Vad är timdebiterade tjänster?",
+      "description": "Tjänsterna debiteras utifrån faktiskt registrerad tid. Varje tidpost multipliceras med tjänstens timtaxa för att beräkna fakturabeloppet."
+    },
+    "rounding": {
+      "heading": "Inställningar för tidsavrundning",
+      "minimumBillableTime": "Minsta debiterbara tid (minuter)",
+      "minimumBillableTimeHelp": "Exempel: 15 minuter. Alla tidposter under denna gräns avrundas uppåt.",
+      "roundUpToNearest": "Avrunda uppåt till närmaste (minuter)",
+      "roundUpToNearestHelp": "Exempel: 15 minuter. Tidposter avrundas uppåt till närmaste intervall.",
+      "defaultIntervalPlaceholder": "15"
+    },
+    "fields": {
+      "services": "Tjänster",
+      "serviceNumber": "Tjänst {{index}}",
+      "setBucketOfHours": "Ange timpott"
+    },
+    "placeholders": {
+      "selectService": "Välj en tjänst"
+    },
+    "preview": {
+      "unknownService": "Okänd tjänst"
+    },
+    "actions": {
+      "addService": "Lägg till tjänst"
+    }
+  },
+  "templateUsage": {
+    "heading": "Förbrukningsbaserade tjänster",
+    "description": "Välj tjänster som debiteras utifrån förbrukning. Taxorna bestäms av tjänstens prissättning i kundens valuta när avtalet skapas.",
+    "info": {
+      "title": "Vad är förbrukningsbaserade tjänster?",
+      "description": "Tjänsterna debiteras utifrån faktisk förbrukning eller uppmätt användning. Varje förbrukad enhet multipliceras med tjänstens enhetstaxa för att beräkna fakturabeloppet."
+    },
+    "fields": {
+      "services": "Tjänster",
+      "serviceNumber": "Tjänst {{index}}",
+      "unitOfMeasureOptional": "Måttenhet (valfri)",
+      "setBucketAllocation": "Ange pottilldelning"
+    },
+    "placeholders": {
+      "selectService": "Välj en tjänst",
+      "unitOfMeasure": "T.ex. GB, API-anrop, användare"
+    },
+    "help": {
+      "unitOfMeasure": "Åsidosätt tjänstens standardmåttenhet."
+    },
+    "preview": {
+      "unknownService": "Okänd tjänst"
+    },
+    "actions": {
+      "addService": "Lägg till tjänst"
+    }
+  },
+  "templateReview": {
+    "heading": "Granska mall",
+    "description": "Bekräfta mallens innehåll. Taxorna bestäms av varje tjänsts prissättning i kundens valuta när ett avtal skapas från mallen.",
+    "sections": {
+      "basics": "Mallens grunduppgifter",
+      "fixedFeeServices": "Tjänster med fast avgift",
+      "products": "Produkter",
+      "hourlyServices": "Timdebiterade tjänster",
+      "usageBasedServices": "Förbrukningsbaserade tjänster"
+    },
+    "fields": {
+      "templateName": "Mallnamn",
+      "billingFrequency": "Debiteringsintervall",
+      "internalNotes": "Interna anteckningar"
+    },
+    "fallback": {
+      "none": "—",
+      "noNotes": "Inga anteckningar har lagts till.",
+      "unnamedService": "Namnlös tjänst",
+      "unnamedProduct": "Namnlös produkt"
+    },
+    "empty": {
+      "fixed": "Inga tjänster med fast avgift har valts.",
+      "products": "Inga produkter har valts.",
+      "hourly": "Inga timdebiterade tjänster har valts.",
+      "usage": "Inga förbrukningsbaserade tjänster har valts."
+    },
+    "common": {
+      "quantity": "Antal:",
+      "bucket": "Pott:",
+      "enabled": "Aktiverad",
+      "disabled": "Inaktiverad"
+    },
+    "fixed": {
+      "cadenceOwnerLabel": "Styrande schema:",
+      "cadenceOwner": {
+        "contract": "Avtalets årsdag",
+        "client": "Kundens debiteringsschema"
+      },
+      "billingTimingLabel": "Debiteringstidpunkt:",
+      "billingTiming": {
+        "advance": "Förskott",
+        "arrears": "Efterskott"
+      },
+      "partialPeriodLabel": "Delperiodsjustering:",
+      "serviceLabel": "Tjänst:",
+      "invoiceWindowLabel": "Faktureringsintervall:"
+    },
+    "hourly": {
+      "minimumBillableTimeLabel": "Minsta debiterbara tid:",
+      "roundUpLabel": "Avrunda uppåt:",
+      "minutes": "{{count}} minuter"
+    },
+    "usage": {
+      "unitLabel": "Enhet:"
+    },
+    "bucket": {
+      "hoursIncluded": "{{value}} timmar ingår",
+      "unitsIncluded": "{{value}} {{unit}} ingår",
+      "unitsFallback": "enheter",
+      "overage": "Överförbrukning {{amount}} $/{{unit}}",
+      "hourSingular": "timme",
+      "unitSingular": "enhet",
+      "rolloverEnabled": "Överföring till nästa period aktiverad",
+      "period": "Period: {{period}}"
+    }
+  },
+  "templatePreview": {
+    "serviceType": {
+      "fixedFee": "Fast avgift",
+      "products": "Produkter",
+      "hourly": "Per timme",
+      "usageBased": "Förbrukningsbaserad"
+    },
+    "selectedHeading": "Valda tjänster av typen {{type}} ({{count}})",
+    "labels": {
+      "qty": "Antal:"
+    },
+    "removeDialog": {
+      "title": "Ta bort förinställning för avtalsrad",
+      "message": "Vill du ta bort ”{{serviceName}}” från ”{{presetName}}”? Även alla andra tjänster kopplade till förinställningen för avtalsraden tas bort.",
+      "confirm": "Ta bort alla",
+      "cancel": "Avbryt"
+    }
+  },
+  "recurringPreview": {
+    "rangeSeparator": "{{start}} till {{end}}",
+    "cadenceOwner": {
+      "contract": {
+        "label": "Avtalets årsdag",
+        "summary": "Tjänsteperioder och faktureringsintervall följer avtalets årsdagar."
+      },
+      "client": {
+        "label": "Kundens debiteringsschema",
+        "summary": "Tjänsteperioder och faktureringsintervall följer kundens debiteringskalender."
+      }
+    },
+    "billingTiming": {
+      "advance": {
+        "label": "Förskott",
+        "summary": "Fakturor bokförs i början av den aktuella tjänsteperioden."
+      },
+      "arrears": {
+        "label": "Efterskott",
+        "summary": "Fakturor bokförs efter slutet av den tjänsteperiod som omfattas."
+      }
+    },
+    "firstInvoice": {
+      "contract": {
+        "advance": "Första fakturan: fakturera i det intervall enligt avtalets årsdag som inleder den första tjänsteperioden som omfattas.",
+        "arrears": "Första fakturan: fakturera i nästa intervall enligt avtalets årsdag efter att den första tjänsteperioden som omfattas har avslutats."
+      },
+      "client": {
+        "advance": "Första fakturan: fakturera i det första intervall i kundens debiteringsschema som omfattar tjänsteperioden.",
+        "arrears": "Första fakturan: fakturera i nästa intervall i kundens debiteringsschema efter att den första tjänsteperioden som omfattas har avslutats."
+      }
+    },
+    "partialPeriod": {
+      "prorated": "För delperioder anpassas den återkommande avgiften till den del av tjänsteperioden som omfattas.",
+      "full": "För delperioder behålls hela den återkommande avgiften även när avtalsdatumen infaller under en tjänsteperiod."
+    },
+    "materializedPeriods": {
+      "heading": "Exempel på framtida perioder som skapas",
+      "summary": {
+        "contract": "Om du sparar den här återkommande raden skapas framtida perioder före fakturaskapandet enligt förhandsgranskningens årsdagsschema, med den 8:e som utgångspunkt.",
+        "client": "Om du sparar den här återkommande raden skapas framtida perioder före fakturaskapandet enligt förhandsgranskningen av kundens debiteringsschema."
+      }
+    }
+  },
+  "contractSimulator": {
+    "assumptions": {
+      "empty": "Scenario med enbart fasta avgifter — inga antaganden behövs.",
+      "hoursUnit": "h",
+      "inputLabel": "Antaget antal {{unit}} per tjänsteperiod — {{service}}",
+      "loadReplay": "Läs in aktivitet och fakturor",
+      "periodLabel": "P{{number}}",
+      "replayEnd": "Till och med",
+      "replayStart": "Från",
+      "replayTitle": "Jämför med tidigare fakturor",
+      "rowLabel": "{{service}} — antaget antal {{unit}} per tjänsteperiod",
+      "subtitle": "Ange förväntat arbete eller förbrukning per tjänsteperiod. Vid efterskottsdebitering använder varje faktura den föregående tjänsteperioden.",
+      "title": "Antagen aktivitet",
+      "useRecent": "Använd genomsnittet från de senaste 3 debiteringsperioderna",
+      "varyByPeriod": "Ange aktivitet för varje faktura",
+      "arrearsHint": "Varje faktura avser den föregående tjänsteperioden.",
+      "advanceHint": "Varje faktura avser den aktuella tjänsteperioden.",
+      "invoicePeriodLabel": "Faktura för {{period}}",
+      "overrideInputLabel": "Faktura för {{period}} — {{unit}} från dess tjänsteperiod — {{service}}",
+      "zeroActivity": "Tjänsten bidrar inte till beloppet förrän den antagna aktiviteten är större än noll.",
+      "averageLoaded": "Aktivitetsgenomsnitt har lästs in från {{window}}. {{count}} antagna värden har ändrats.",
+      "replayLoaded": "Historisk aktivitet har lästs in från {{window}} med {{count}} utfärdade fakturor. {{changed}} antagna värden har ändrats.",
+      "replayRangeLoaded": "Historisk aktivitet och {{count}} utfärdade fakturor har lästs in från {{window}}. Antagen aktivitet är oförändrad.",
+      "prefillNextStep": "Uppdaterade värden är markerade. Uppdatera simuleringen för att beräkna fakturorna på nytt.",
+      "prefillUnchanged": "Inlästa värden från {{window}} matchar den nuvarande antagna aktiviteten.",
+      "loadingHistory": "Läser in historisk aktivitet…",
+      "prefillChange": "Inläst värde: {{before}} → {{after}} {{unit}} per tjänsteperiod",
+      "prefillOverrides": "{{count}} periodvärden har lästs in"
+    },
+    "compare": {
+      "added": "Tillagd",
+      "changed": "Ändrad",
+      "horizonImpact": "Total ändring över {{count}} debiteringsperioder",
+      "horizonImpactHint": "Jämfört med nuvarande avtal",
+      "noChange": "Ingen simulerad ändring",
+      "removed": "Borttagen från nuvarande avtal"
+    },
+    "emptyScenario": {
+      "description": "Avtalet saknar avtalsrader. Lägg till avtalsrader först och återkom sedan för att simulera.",
+      "title": "Inget att simulera ännu"
+    },
+    "diagnostics": {
+      "title": "Simuleringsanteckningar"
+    },
+    "explanation": {
+      "amount": "Belopp",
+      "close": "Stäng",
+      "inputs": "Indata",
+      "noBreakdown": "Ingen specifikation tillgänglig",
+      "steps": "Beräkning",
+      "title": "Avgiftsspecifikation"
+    },
+    "featureName": "Avtalssimulator",
+    "invoiceDetail": {
+      "columns": {
+        "amount": "Belopp",
+        "line": "Rad",
+        "qty": "Antal",
+        "rate": "Taxa"
+      },
+      "draftNote": "utkast, inte utfärdat",
+      "billedInAdvance": "Debiterat i förskott",
+      "billedInArrears": "Debiterat i efterskott",
+      "explainHint": "Visa hur beloppet beräknades",
+      "renderedPreview": "Förhandsgranska fakturalayout",
+      "invoicePeriod": "Faktureringsintervall: {{start}} – {{end}}",
+      "servicePeriod": "Tjänsteperiod: {{start}} – {{end}}",
+      "subtotal": "Delsumma",
+      "tax": "Skatt",
+      "title": "Simulerad faktura för {{period}}",
+      "total": "Totalt"
+    },
+    "loadFailed": "Det gick inte att läsa in avtalsscenariot.",
+    "loadingSnapshot": "Läser in scenario…",
+    "preparingDraft": "Förbereder simulering…",
+    "markers": {
+      "bucketOverage": "Pottöverförbrukning",
+      "cadenceCoincidence": "Överlappande intervall",
+      "contractEnd": "Avtalet slutar gälla",
+      "oneTime": "Engångsdebitering",
+      "prorated": "Proportionellt justerat"
+    },
+    "replay": {
+      "actualInvoice": "Utfärdad faktura {{number}}",
+      "issued": "utfärdad",
+      "previewIssued": "Förhandsgranska utfärdad faktura",
+      "projected": "simulerad",
+      "simulatedDelta": "simulerad skillnad"
+    },
+    "runBar": {
+      "compareToggle": "Visa ändringar jämfört med nuvarande avtal",
+      "horizonOption": "{{count}} av kundens debiteringsperioder",
+      "lastRun": "Simuleringen är aktuell · {{count}} av kundens debiteringsperioder",
+      "neverRun": "Inte simulerat ännu",
+      "simulate": "Simulera",
+      "simulating": "Simulerar…",
+      "stale": "Ändringarna har inte simulerats",
+      "staleBanner": "Beloppen kommer från föregående simulering. Uppdatera simuleringen för att ta med dina senaste ändringar.",
+      "updateSimulation": "Uppdatera simulering"
+    },
+    "scenario": {
+      "addAdjustment": "+ lägg till justering",
+      "advancedChanges": "Avancerade avtalsändringar",
+      "advancedSummary": "{{schedules}} scheman · {{discounts}} rabatter · {{adjustments}} justeringar",
+      "addBucket": "Lägg till ingående timmar",
+      "addCatalogService": "Lägg till katalogtjänst",
+      "addCatalogServiceOption": "+ Lägg till katalogtjänst…",
+      "addDiscount": "+ lägg till rabatt",
+      "addIncludedHours": "Lägg till ingående timmar",
+      "addIncludedUnits": "Lägg till ingående enheter",
+      "addLine": "Lägg till rad",
+      "addSchedule": "+ lägg till schema",
+      "addTier": "+ lägg till nivå",
+      "adjustments": "Justeringar",
+      "allocationRate": "Fördelningstaxa",
+      "catalogRate": "Katalogtaxa",
+      "allLines": "alla rader",
+      "bucketIncluded": "{{hours}} h ingår; taxan ovan är överförbrukningstaxan",
+      "cadence": {
+        "client": "Använd kundens debiteringsschema",
+        "contract": "Använd avtalsradens schema"
+      },
+      "defaultRate": "standard",
+      "discountTypes": {
+        "fixed": "fast",
+        "percentage": "procent"
+      },
+      "discounts": "Rabatter",
+      "fields": {
+        "adjustmentAmount": "Justeringsbelopp i dollar",
+        "adjustmentDescription": "Beskrivning av justeringen",
+        "adjustmentPeriod": "Justeringsperiod",
+        "billingFrequency": "Debiteringsintervall",
+        "billingTiming": "Debiteringstidpunkt",
+        "bucketQuantity": "Ingående antal i potten",
+        "cadenceOwner": "Debiteringsschema",
+        "configurationType": "Tjänstens debiteringsmetod",
+        "discountLine": "Rabattrad",
+        "discountName": "Rabattnamn",
+        "discountType": "Rabattyp",
+        "discountValue": "Rabattvärde",
+        "lineName": "Avtalsradsnamn",
+        "lineType": "Radtyp",
+        "minimumBillableMinutes": "Minsta debiterbara antal minuter",
+        "minimumUsage": "Minsta förbrukning",
+        "includedHours": "Ingående timmar",
+        "includedUnits": "Ingående enheter",
+        "overtimeRate": "Övertidstaxa ($/h)",
+        "overtimeThreshold": "Övertidsgräns (timmar)",
+        "roundUpMinutes": "Avrunda uppåt till minuter",
+        "scheduleEffectiveDate": "Schemats startdatum",
+        "scheduleEndDate": "Schemats slutdatum",
+        "scheduleRate": "Schemats taxa i dollar",
+        "serviceQuantity": "Antal licenser eller produkter",
+        "tierMaximum": "Nivåns maximivärde",
+        "tierMinimum": "Nivåns minimivärde",
+        "tierRate": "Nivåns taxa i dollar",
+        "usageUnit": "Förbrukningsenhet"
+      },
+      "frequencies": {
+        "annually": "Årligen",
+        "monthly": "Månadsvis",
+        "quarterly": "Kvartalsvis",
+        "semi-annually": "Halvårsvis"
+      },
+      "licenseSuffix": " · licens",
+      "lineCount": "{{count}} rader",
+      "lineSummary": "{{type}} · {{frequency}} · {{timing}} · {{services}}",
+      "oneService": "1 tjänst",
+      "serviceCount": "{{count}} tjänster",
+      "collapseDetailsFor": "Fäll ihop detaljer för {{line}}",
+      "editDetails": "Redigera regler",
+      "editDetailsFor": "Redigera detaljer för {{line}}",
+      "modified": "Ändrad",
+      "newAdjustmentName": "Engångsjustering",
+      "newDiscountName": "Scenariorabatt",
+      "newLineName": "Scenariorad {{number}}",
+      "oneTime": "engångsdebitering",
+      "overtime": "övertid",
+      "placeholders": {
+        "minimum": "minimivärde",
+        "minimumMinutes": "minsta antal minuter",
+        "overtimeRate": "övertid $/h",
+        "roundMinutes": "avrunda minuter",
+        "thresholdHours": "timgräns"
+      },
+      "pricingSchedules": "Prisscheman",
+      "productUnitPrice": "Enhetspris",
+      "hourlyRate": "Timtaxa",
+      "usageRate": "Förbrukningstaxa",
+      "overageRate": "Överförbrukningstaxa",
+      "serviceBaseRate": "Tjänstens bastaxa",
+      "rateOverriddenByLine": "Taxan ersätts av det återkommande radpriset",
+      "fromServiceRates": "Från tjänstetaxor",
+      "proration": "proportionell justering",
+      "removeAdjustment": "Ta bort justering",
+      "removeDiscount": "Ta bort rabatt",
+      "removeLine": "Ta bort",
+      "removeSchedule": "Ta bort prisschema",
+      "removeTier": "Ta bort nivå",
+      "removeService": "ta bort",
+      "recurringLinePrice": "Återkommande radpris",
+      "resetAll": "Återställ alla",
+      "resetLine": "Återställ",
+      "rollover": "överföring till nästa period",
+      "tieredPricing": "nivåbaserad prissättning",
+      "timing": {
+        "advance": "Debitera i förskott",
+        "arrears": "Debitera i efterskott"
+      },
+      "types": {
+        "bucket": "Pottillägg",
+        "fixed": "Fast",
+        "hourly": "Per timme",
+        "usage": "Förbrukning"
+      },
+      "title": "Avtalsändringar",
+      "columns": {
+        "name": "Namn",
+        "type": "Typ",
+        "value": "Värde",
+        "appliesTo": "Gäller för",
+        "description": "Beskrivning",
+        "amount": "Belopp ($)",
+        "billingPeriod": "Debiteringsperiod",
+        "timing": "Tidpunkt"
+      }
+    },
+    "timeline": {
+      "deltaDown": "−{{amount}} jämfört med nuvarande avtal",
+      "deltaUp": "+{{amount}} jämfört med nuvarande avtal",
+      "empty": "Simulera för att se kommande debiteringsperioder och granska varje avgift.",
+      "noDelta": "ingen ändring jämfört med aktuellt avtal",
+      "noPreviousDelta": "ingen ändring jämfört med föregående",
+      "invoicePeriod": "Faktureringsintervall",
+      "periodAria": "{{period}}, {{total}}",
+      "previousDelta": "{{sign}}{{amount}} jämfört med fakturan för {{period}}",
+      "title": "Simulerade faktureringsintervall"
+    },
+    "unavailable": {
+      "description": "Avtalssimulatorn finns i AlgaPSA Pro.",
+      "title": "Pro-funktion"
+    }
+  },
+  "bucketPools": {
+    "heading": "Timpotter",
+    "actions": {
+      "addPool": "Lägg till timpott",
+      "create": "Skapa timpott",
+      "cancel": "Avbryt",
+      "remove": "Ta bort",
+      "applyRule": "Tillämpa regel för arbete utanför kontorstid"
+    },
+    "loading": "Läser in timpotter…",
+    "empty": "Raden saknar timpotter. Lägg till en timpott för att inkludera förbetalda timmar.",
+    "labels": {
+      "catchAll": "Alla tjänster på raden",
+      "pool": "Timpott",
+      "scopeCatchAll": "Omfattar alla tjänster på raden (medlemstjänster åsidosätter multiplikatorn)",
+      "scopeMembers": "Endast medlemstjänster",
+      "totalHours": "Totalt antal timmar",
+      "overageRate": "Överförbrukningstaxa per timme",
+      "rollover": "Tillåt överföring till nästa period",
+      "afterHours": "Förbrukningsmultiplikator utanför kontorstid",
+      "afterHoursMultiplier": "Multiplikator (t.ex. 1,5)",
+      "schedule": "Schema för kontorstid",
+      "default": "standard",
+      "members": "Medlemstjänster",
+      "multiplier": "×",
+      "noMembers": "Inga medlemstjänster är kopplade.",
+      "noServicesOnLine": "Lägg till en tjänst på avtalsraden innan du skapar en timpott.",
+      "selectService": "Välj en tjänst…",
+      "poolName": "Pottens namn (valfritt)",
+      "poolNamePlaceholder": "T.ex. Standardtimmar",
+      "coversAll": "Omfattar alla tjänster på raden",
+      "burnMultiplier": "Förbrukningsmultiplikator"
+    },
+    "badges": {
+      "dormant": "inga tjänster kopplade — inget förbrukas från potten"
+    },
+    "errors": {
+      "catchAllExists": "Raden har redan en pott som omfattar alla tjänster.",
+      "invalidAfterHoursRule": "Ange en giltig regel för arbete utanför kontorstid.",
+      "scheduleLoadFailed": "Det gick inte att läsa in scheman för kontorstid.",
+      "scheduleRequired": "Välj ett schema för kontorstid innan du tillämpar regeln."
+    }
+  },
+  "wizardBucketPools": {
+    "heading": "Timpotter för raden",
+    "empty": "Raden saknar timpotter ännu. Lägg till en timpott för att inkludera förbetalda timmar."
+  },
+  "errors": {
+    "permissions": {
+      "modifyLines": "Åtkomst nekad: avtalsrader kan inte ändras",
+      "deleteContracts": "Åtkomst nekad: debiteringsavtal kan inte raderas"
+    },
+    "contract": {
+      "hasInvoices": "Avtalet har kopplade fakturor och kan inte raderas.",
+      "invalidValue": "Ett av de valda avtalsvärdena är ogiltigt. Ladda om och försök igen.",
+      "referenceMissing": "Det valda avtalet, kunden eller den relaterade posten finns inte längre. Ladda om och försök igen.",
+      "conflict": "Avtalsändringen står i konflikt med en befintlig post. Ladda om och försök igen.",
+      "notAllowed": "Ett av avtalsvärdena är inte tillåtet. Granska formuläret och försök igen.",
+      "missingField": "Ett obligatoriskt avtalsfält saknas.",
+      "missingFieldNamed": "Ett obligatoriskt avtalsfält saknas: {{field}}."
+    },
+    "wizard": {
+      "permissions": {
+        "createTemplates": "Åtkomst nekad: debiteringsmallar kan inte skapas",
+        "createContracts": "Åtkomst nekad: debiteringsavtal kan inte skapas",
+        "listTemplates": "Åtkomst nekad: avtalsmallar kan inte listas",
+        "viewSnapshot": "Åtkomst nekad: avtalsmallens ögonblicksbild kan inte visas",
+        "resumeContracts": "Åtkomst nekad: debiteringsavtal kan inte återupptas"
+      },
+      "templateNotFound": "Mallen hittades inte",
+      "contractNotFound": "Avtalet hittades inte",
+      "notDraft": "Avtalet är inte ett utkast",
+      "missingClient": "Avtalsutkastet saknar kundtilldelning",
+      "invalidStartDate": "Avtalsutkastet har ett ogiltigt startdatum",
+      "recordInvalid": "En av de valda posterna i avtalsguiden är inte längre giltig. Ladda om och försök igen.",
+      "duplicate": "En matchande post finns redan i avtalsguiden."
+    },
+    "pricingSchedule": {
+      "endAfterEffective": "Slutdatum måste vara efter datumet då ändringen börjar gälla",
+      "overlaps": "Schemat överlappar ett befintligt prisschema",
+      "wouldOverlap": "Schemat skulle överlappa ett befintligt prisschema",
+      "notFound": "Prisschemat hittades inte"
+    },
+    "renewals": {
+      "permissions": {
+        "read": "Åtkomst nekad: förnyelsekön kan inte läsas",
+        "update": "Åtkomst nekad: förnyelsekön kan inte uppdateras",
+        "ownerOtherTenant": "Åtkomst nekad: förnyelser kan inte tilldelas en användare från en annan klientorganisation.",
+        "contractOtherTenant": "Åtkomst nekad: förnyelsen kan inte slutföras med ett avtal från en annan klientorganisation."
+      },
+      "clientContractIdRequired": "Kundavtals-ID krävs.",
+      "workItemNotFound": "Förnyelseposten hittades inte. Den kan ha uppdaterats eller raderats. Ladda om och försök igen.",
+      "snoozeDateRequired": "Välj ett datum för uppskjutning innan du sparar.",
+      "snoozeDateInvalid": "Välj ett giltigt datum för uppskjutning.",
+      "snoozeDateFuture": "Välj ett framtida datum för uppskjutning.",
+      "ownerInvalid": "Välj en giltig förnyelseansvarig.",
+      "ownerUnavailable": "Den valda förnyelseansvariga är inte längre tillgänglig. Ladda om och försök igen.",
+      "activatedContractIdRequired": "ID för det aktiverade förnyelseavtalet krävs.",
+      "contractNotActive": "Det aktiverade förnyelseavtalet är inte längre aktivt. Ladda om och försök igen.",
+      "manualRetryDueOnly": "Manuellt återförsök är bara tillgängligt för förnyelsecykler vars förnyelsedatum har nåtts."
+    }
+  }
+}
