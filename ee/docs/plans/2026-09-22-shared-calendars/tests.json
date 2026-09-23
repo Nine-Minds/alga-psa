@@ -1,8 +1,8 @@
 [
   {
     "id": "T001",
-    "description": "DB integration: migration schema sanity \u2014 create group calendar + shares; duplicate share upsert updates level; personal-calendar uniqueness and type check constraints reject invalid rows; schedule_entries.calendar_id FK rejects unknown calendar.",
-    "implemented": false,
+    "description": "DB integration: migration schema sanity — create group calendar + shares; duplicate share upsert updates level; personal-calendar uniqueness and type check constraints reject invalid rows; schedule_entries.calendar_id FK rejects unknown calendar.",
+    "implemented": true,
     "featureIds": [
       "F001",
       "F002",
@@ -12,8 +12,8 @@
   },
   {
     "id": "T002",
-    "description": "DB integration: resolver \u2014 direct read share, team free_busy share (max-level merge), inactive grantor ignored, user_schedule:update \u2192 edit on all, no share \u2192 invisible.",
-    "implemented": false,
+    "description": "DB integration: resolver — direct read share, team free_busy share (max-level merge), inactive grantor ignored, user_schedule:update → edit on all, no share → invisible.",
+    "implemented": true,
     "featureIds": [
       "F006",
       "F007",
@@ -24,7 +24,7 @@
   {
     "id": "T003",
     "description": "DB integration: getScheduleEntries for a viewer with mixed shares returns own full, shared-read full, shared private masked Busy (no title/notes/work item), free_busy masked, group calendar entries, excludes unshared users and archived calendars; recurring series masked per instance.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010",
       "F011",
@@ -37,15 +37,15 @@
   {
     "id": "T004",
     "description": "DB integration: getScheduleEntryById returns not-found for no access, masked for busy, and requires user_schedule:read.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]
   },
   {
     "id": "T005",
-    "description": "DB integration: delegate edit \u2014 edit share can create entry for owner and move owner's entry; read share rejected on create/update/delete; private entry of owner rejected; assigning a non-editable user rejected.",
-    "implemented": false,
+    "description": "DB integration: delegate edit — edit share can create entry for owner and move owner's entry; read share rejected on create/update/delete; private entry of owner rejected; assigning a non-editable user rejected.",
+    "implemented": true,
     "featureIds": [
       "F016",
       "F017",
@@ -54,8 +54,8 @@
   },
   {
     "id": "T006",
-    "description": "DB integration: group calendar \u2014 edit member creates entry (is_private forced false), read member rejected, manage member updates shares, last-manager removal rejected, non-manager rename rejected, admin can manage orphaned calendar.",
-    "implemented": false,
+    "description": "DB integration: group calendar — edit member creates entry (is_private forced false), read member rejected, manage member updates shares, last-manager removal rejected, non-manager rename rejected, admin can manage orphaned calendar.",
+    "implemented": true,
     "featureIds": [
       "F019",
       "F023",
@@ -66,8 +66,8 @@
   },
   {
     "id": "T007",
-    "description": "DB integration: revocation \u2014 removing a share, removing user from team, and deleting the team each revoke visibility on next fetch.",
-    "implemented": false,
+    "description": "DB integration: revocation — removing a share, removing user from team, and deleting the team each revoke visibility on next fetch.",
+    "implemented": true,
     "featureIds": [
       "F007",
       "F020",
@@ -77,7 +77,7 @@
   {
     "id": "T008",
     "description": "Share actions guard: self-share rejected, client-portal grantee rejected, manage level on personal calendar rejected, non-owner non-admin cannot change another user's shares; admin can.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020",
       "F021"
@@ -86,7 +86,7 @@
   {
     "id": "T009",
     "description": "Notification: granting a share to a user publishes CALENDAR_SHARE_GRANTED and creates an internal notification for the grantee; team grant does not.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027",
       "F028"
@@ -114,7 +114,7 @@
   },
   {
     "id": "T012",
-    "description": "Component: EntryPopup \u2014 selecting a group calendar hides Private toggle and allows no assignees; busy entry opens read-only Busy popup; assignee options limited to editable users.",
+    "description": "Component: EntryPopup — selecting a group calendar hides Private toggle and allows no assignees; busy entry opens read-only Busy popup; assignee options limited to editable users.",
     "implemented": false,
     "featureIds": [
       "F033",
