@@ -31,3 +31,27 @@ export function toClientSinceDate(value: unknown): string | null | undefined {
 }
 
 export const CLIENT_SINCE_FORMAT_MESSAGE = 'Client since must be a date in YYYY-MM-DD form';
+
+/**
+ * The 'yyyy-MM-dd' a date picker should show for a client_since that came back
+ * from a server action. Only a date-only string names a calendar day in the
+ * browser: a Date built from a DATE column carries the server's midnight, which
+ * a browser west of the server reads as the day before, so it is refused here.
+ */
+export function clientSinceInputValue(value: unknown): string {
+  if (typeof value !== 'string') return '';
+  const match = DATE_ONLY_PATTERN.exec(value.trim());
+  return match ? match[1] : '';
+}
+
+/**
+ * Normalizes client_since on a row leaving a server action. The driver builds
+ * the Date at the server's midnight, and the browser would read that Date with
+ * its own timezone — a day early whenever the server runs ahead of the user
+ * (containers default to UTC, most users are west of it). Past this boundary
+ * the calendar date only ever travels as 'yyyy-MM-dd'.
+ */
+export function withClientSinceDateString<T extends Record<string, any>>(row: T): T {
+  if (!row || !('client_since' in row)) return row;
+  return { ...row, client_since: toClientSinceDate(row.client_since) ?? null };
+}

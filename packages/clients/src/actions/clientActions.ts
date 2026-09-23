@@ -42,7 +42,7 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { applyClientListIndexedSearchFilter } from '../lib/listSearchSql';
-import { CLIENT_SINCE_FORMAT_MESSAGE, toClientSinceDate } from '../lib/clientSince';
+import { CLIENT_SINCE_FORMAT_MESSAGE, toClientSinceDate, withClientSinceDateString } from '../lib/clientSince';
 import { normalizeClientType } from '../lib/normalizeClientType';
 import { clientCoreFieldsSchema, normalizePhone, parseSubmittedFields } from '@alga-psa/validation';
 import { isStructuralFailure, type StructuralResult } from '../lib/structuralResult';
@@ -417,7 +417,11 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
       getClientLogoUrlAsync(clientId, tenant),
       getClientWideLogoUrlAsync(clientId, tenant),
     ]);
-    const updatedClientWithLogo = { ...updateResult.after, logoUrl, logoWideUrl } as IClientWithLocation;
+    const updatedClientWithLogo = withClientSinceDateString({
+      ...updateResult.after,
+      logoUrl,
+      logoWideUrl,
+    }) as IClientWithLocation;
 
     const occurredAt = updateResult.occurredAt ?? updatedClientWithLogo.updated_at ?? new Date().toISOString();
     const actor = maybeUserActor(user);
@@ -653,7 +657,7 @@ export const createClient = withAuth(async (user, { tenant }, client: Omit<IClie
       idempotencyKey: `client_created:${createdClient.client_id}`,
     });
 
-    return { success: true, data: createdClient };
+    return { success: true, data: withClientSinceDateString(createdClient) };
   } catch (error: any) {
     console.error('Error creating client:', error);
 
