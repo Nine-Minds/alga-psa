@@ -138,7 +138,7 @@
   {
     "id": "F018",
     "description": "`useListViews` hook: loads views, resolves active view from `?view=` \u2192 user default \u2192 baseline on first load.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD.md#engine-changes-lower-layers"
     ]
@@ -146,7 +146,7 @@
   {
     "id": "F019",
     "description": "`useListViews` apply: adapter.sanitize then adapter.apply, resets to page 1, writes `?view=<id>` to the URL; toast lists dropped stale references.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD.md#engine-changes-lower-layers",
       "PRD.md#ux--ui-notes"
@@ -155,7 +155,7 @@
   {
     "id": "F020",
     "description": "`useListViews` dirty tracking via adapter.differs, save-changes, save-as-new, discard (re-apply stored).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD.md#engine-changes-lower-layers"
     ]
@@ -163,7 +163,7 @@
   {
     "id": "F021",
     "description": "Inaccessible or missing `?view=` id falls back to baseline with a toast and removes the param.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD.md#users-and-primary-flows"
     ]
@@ -171,7 +171,7 @@
   {
     "id": "F022",
     "description": "Adapter `migrate` is applied on read when stored schema_version is older than the adapter's current version.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD.md#data-model"
     ]
@@ -179,7 +179,7 @@
   {
     "id": "F023",
     "description": "`ListViewPicker` trigger shows active view name or 'Default view' plus dirty dot.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD.md#ux--ui-notes"
     ]
@@ -187,7 +187,7 @@
   {
     "id": "F024",
     "description": "Picker dropdown lists Default view, My views, Shared views (alphabetical, shared rows show owner), default star, and a search box when >8 views.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD.md#ux--ui-notes"
     ]
@@ -195,7 +195,7 @@
   {
     "id": "F025",
     "description": "Picker row menu: Manage, Set/Clear my default, Copy link, Delete (items hidden when not permitted).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD.md#ux--ui-notes"
     ]
@@ -203,7 +203,7 @@
   {
     "id": "F026",
     "description": "Picker footer: Save changes to <name> (enabled only when dirty and editable), Save as new view\u2026, Discard changes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD.md#ux--ui-notes"
     ]
@@ -211,7 +211,7 @@
   {
     "id": "F027",
     "description": "Save/Manage dialog (custom Dialog, sticky footer) with Name and Private/Shared visibility; Shared disabled with hint when lacking list_view:share; inline duplicate-name error.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD.md#ux--ui-notes"
     ]
@@ -219,7 +219,7 @@
   {
     "id": "F028",
     "description": "Delete confirmation dialog; deleting the active view reverts the list to baseline.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD.md#ux--ui-notes"
     ]
@@ -227,7 +227,7 @@
   {
     "id": "F029",
     "description": "All picker/dialog strings in `common` namespace `listViews.*` across all locale files incl. xx/yy; all interactive elements have kebab-case ids.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PRD.md#ux--ui-notes"
     ]

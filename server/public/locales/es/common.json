@@ -1619,5 +1619,75 @@
     "disabledByAdmin": "Desactivado por el administrador",
     "mixed": "Parcialmente activado",
     "empty": "No hay categorías de notificaciones por correo disponibles."
+  },
+  "listViews": {
+    "defaultView": "Vista predeterminada",
+    "unsavedChanges": "Esta vista tiene cambios sin guardar",
+    "searchPlaceholder": "Buscar vistas",
+    "noMatches": "No hay vistas coincidentes",
+    "sections": {
+      "mine": "Mis vistas",
+      "mineEmpty": "Aún no hay vistas privadas",
+      "shared": "Vistas compartidas",
+      "sharedEmpty": "Aún no hay vistas compartidas"
+    },
+    "labels": {
+      "myDefault": "Mi predeterminada",
+      "sharedByYou": "Compartida por ti"
+    },
+    "visibility": {
+      "private": "Privada",
+      "shared": "Compartida"
+    },
+    "actions": {
+      "delete": "Eliminar",
+      "manage": "Administrar",
+      "setDefault": "Establecer como mi predeterminada",
+      "clearDefault": "Quitar mi predeterminada",
+      "copyLink": "Copiar enlace",
+      "saveChanges": "Guardar cambios",
+      "saveChangesTo": "Guardar cambios en \"{{name}}\"",
+      "saveAsNew": "Guardar como vista nueva…",
+      "discardChanges": "Descartar cambios"
+    },
+    "dialog": {
+      "createTitle": "Guardar como vista nueva",
+      "manageTitle": "Administrar vista",
+      "nameLabel": "Nombre",
+      "nameInvalid": "Introduce un nombre de 1 a {{max}} caracteres.",
+      "visibilityLabel": "Quién puede verla",
+      "privateHint": "Solo tú puedes ver esta vista.",
+      "sharedHint": "Todas las personas que pueden abrir esta lista pueden verla y aplicarla.",
+      "sharedDisabledHint": "No tienes permiso para compartir vistas."
+    },
+    "deleteDialog": {
+      "title": "Eliminar vista",
+      "message": "¿Eliminar \"{{name}}\"?",
+      "messageShared": "¿Eliminar \"{{name}}\"? Está compartida, así que desaparecerá para todas las personas que la usan."
+    },
+    "toasts": {
+      "saved": "Se guardó \"{{name}}\"",
+      "updated": "Se actualizó \"{{name}}\"",
+      "deleted": "Vista eliminada",
+      "defaultSet": "Vista predeterminada establecida",
+      "defaultCleared": "Vista predeterminada quitada",
+      "linkCopied": "Enlace copiado",
+      "droppedReferences": "Algunos elementos de \"{{name}}\" ya no existen y se omitieron: {{fields}}"
+    },
+    "errors": {
+      "notFound": "Esta vista es privada o ya no existe.",
+      "unknownList": "Lista desconocida.",
+      "invalidName": "El nombre de una vista debe tener entre 1 y 100 caracteres.",
+      "duplicateName": "Ya tienes una vista llamada \"{{name}}\" en esta lista.",
+      "invalidSettings": "No se pudo guardar la vista: {{detail}}",
+      "invalidVisibility": "La visibilidad debe ser privada o compartida.",
+      "cannotShare": "No tienes permiso para compartir vistas.",
+      "cannotEdit": "No tienes permiso para cambiar esta vista.",
+      "cannotReadList": "No tienes permiso para ver esta lista.",
+      "saveFailed": "No se pudo guardar la vista.",
+      "deleteFailed": "No se pudo eliminar la vista.",
+      "defaultFailed": "No se pudo cambiar tu vista predeterminada.",
+      "copyFailed": "No se pudo copiar el enlace."
+    }
   }
 }

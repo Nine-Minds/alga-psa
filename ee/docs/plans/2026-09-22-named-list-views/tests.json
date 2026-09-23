@@ -77,7 +77,7 @@
   {
     "id": "T009",
     "description": "Unit: useListViews resolution order (?view= \u2192 user default \u2192 baseline), dirty detection, discard, inaccessible-id fallback, and migrate on older schema_version.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018",
       "F019",
@@ -109,7 +109,7 @@
   {
     "id": "T012",
     "description": "UI (component): ListViewPicker renders sections/owner/star, footer enablement by dirty+canEdit, Shared option disabled without share permission, delete confirmation.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023",
       "F024",
@@ -144,7 +144,7 @@
   {
     "id": "T015",
     "description": "Translation validation passes (validate-translations.cjs) with new listViews.* keys in all locales.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029"
     ]
