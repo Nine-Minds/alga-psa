@@ -35,6 +35,11 @@ const contactPhoneNumberSchema = z.object({
   display_order: z.number().int().min(0),
 });
 
+export const clientAnniversaryUpcomingEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  clientId: clientIdSchema, anniversaryDate: z.string().date(), yearsAsClient: z.number().int().positive(), daysUntil: z.number().int().nonnegative(),
+}).describe('Payload for CLIENT_ANNIVERSARY_UPCOMING');
+export type ClientAnniversaryUpcomingEventPayload = z.infer<typeof clientAnniversaryUpcomingEventPayloadSchema>;
+
 export const clientCreatedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   clientId: clientIdSchema,
   clientName: z.string().min(1),

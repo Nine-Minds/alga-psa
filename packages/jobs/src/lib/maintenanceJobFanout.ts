@@ -20,6 +20,7 @@ import { expiringHourBlocksNotificationHandler } from './handlers/expiringHourBl
 import { handleReconcileBucketUsage } from './handlers/reconcileBucketUsageHandler';
 import { handleReconcileHourBlockAllocations } from './handlers/reconcileHourBlockAllocationsHandler';
 import { processRenewalQueueHandler } from './handlers/processRenewalQueueHandler';
+import { workflowDateTriggerScanHandler } from './handlers/workflowDateTriggerScanHandler';
 import { autoCloseTicketsHandler } from './handlers/autoCloseTicketsHandler';
 import { SEARCH_RECONCILE_JOB_NAME, searchReconcileHandler } from './handlers/searchReconcileHandler';
 import { verifyGoogleCalendarProvisioning } from './handlers/calendarWebhookMaintenanceHandler';
@@ -123,6 +124,7 @@ const MAINTENANCE_JOBS: Record<string, MaintenanceJobDef> = {
   'expiring-hour-blocks-notification': { scope: 'tenant', run: (tenantId) => expiringHourBlocksNotificationHandler({ tenantId }) },
   'reconcile-bucket-usage': { scope: 'tenant', run: (tenantId) => handleReconcileBucketUsage({ id: `fanout:${tenantId}`, data: { tenantId } } as any) },
   'reconcile-hour-block-allocations': { scope: 'tenant', run: (tenantId) => handleReconcileHourBlockAllocations({ id: `fanout:${tenantId}`, data: { tenantId } } as any) },
+  'workflow-date-trigger-scan': { scope: 'tenant', run: (tenantId) => workflowDateTriggerScanHandler({ tenantId }) },
   'process-renewal-queue': { scope: 'tenant', run: (tenantId) => processRenewalQueueHandler({ tenantId, horizonDays: RENEWAL_HORIZON_DAYS }) },
   'auto-close-tickets': { scope: 'tenant', run: (tenantId) => autoCloseTicketsHandler({ tenantId }) },
   [SEARCH_RECONCILE_JOB_NAME]: { scope: 'tenant', run: (tenantId) => searchReconcileHandler({ tenantId }) },

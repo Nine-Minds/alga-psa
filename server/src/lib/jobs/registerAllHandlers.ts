@@ -52,6 +52,7 @@ import {
   handleReconcileHourBlockAllocations,
   ReconcileHourBlockAllocationsJobData,
 } from '@alga-psa/jobs/handlers/reconcileHourBlockAllocationsHandler';
+import { workflowDateTriggerScanHandler, WorkflowDateTriggerScanJobData } from '@alga-psa/jobs/handlers/workflowDateTriggerScanHandler';
 import {
   processRenewalQueueHandler,
   RenewalQueueProcessorJobData,
@@ -517,6 +518,8 @@ export async function registerAllJobHandlers(
     },
     registerOpts
   );
+
+  JobHandlerRegistry.register<WorkflowDateTriggerScanJobData & BaseJobData>({ name: 'workflow-date-trigger-scan', handler: async (_jobId, data) => { await workflowDateTriggerScanHandler(data); }, retry: { maxAttempts: 3 } }, registerOpts);
 
   JobHandlerRegistry.register<RenewalQueueProcessorJobData & BaseJobData>(
     {

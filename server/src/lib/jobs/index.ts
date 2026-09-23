@@ -36,6 +36,7 @@ import {
 } from './handlers/providerDisconnectRetryHandler';
 import { renewGoogleGmailWatchSubscriptions, GoogleGmailWatchRenewalJobData } from '@alga-psa/jobs/handlers/googleGmailWatchRenewalHandler';
 import { processRenewalQueueHandler, RenewalQueueProcessorJobData } from '@alga-psa/jobs/handlers/processRenewalQueueHandler';
+import { workflowDateTriggerScanHandler, WorkflowDateTriggerScanJobData } from '@alga-psa/jobs/handlers/workflowDateTriggerScanHandler';
 import { autoCloseTicketsHandler, AutoCloseTicketsJobData } from '@alga-psa/jobs/handlers/autoCloseTicketsHandler';
 import { lowStockNotificationHandler, LowStockNotificationJobData } from './handlers/lowStockNotificationHandler';
 import {
@@ -267,6 +268,8 @@ export const initializeScheduler = async (storageService?: StorageService) => {
     jobScheduler.registerJobHandler<ProviderDisconnectRetryJobData>(PROVIDER_DISCONNECT_RETRY_JOB, async (job: Job<ProviderDisconnectRetryJobData>) => {
       await providerDisconnectRetryJobHandler(job);
     });
+
+    jobScheduler.registerJobHandler<WorkflowDateTriggerScanJobData>('workflow-date-trigger-scan', async (job) => { await workflowDateTriggerScanHandler(job.data); });
 
     // Register renewal queue processing handler
     jobScheduler.registerJobHandler<RenewalQueueProcessorJobData>(
@@ -1039,4 +1042,10 @@ export const scheduleSearchReconcileJob = async (
     cronExpression,
     { tenantId }
   );
+};
+
+export const scheduleWorkflowDateTriggerScanJob = async (tenantId: string, cronExpression: string = '0 5 * * *'): Promise<string | null> => {
+  if (isEnterpriseWorkflowEdition()) return null;
+  const scheduler = await initializeScheduler();
+  return scheduler.scheduleRecurringJob<WorkflowDateTriggerScanJobData>('workflow-date-trigger-scan', cronExpression, { tenantId });
 };
