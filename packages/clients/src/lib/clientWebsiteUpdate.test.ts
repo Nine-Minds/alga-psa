@@ -85,6 +85,22 @@ describe('clientWebsiteFieldsForSave', () => {
     )).toEqual({ changed: true, url: '', website: '' });
   });
 
+  it('detects a change back to the previous website after a successful save', () => {
+    const original = { url: 'https://a.example', properties: { website: 'https://a.example' } };
+    const afterFirstSave = { url: 'https://b.example', properties: { website: 'https://b.example' } };
+
+    expect(clientWebsiteFieldsForSave(afterFirstSave, original)).toEqual({
+      changed: true,
+      url: 'https://b.example',
+      website: 'https://b.example',
+    });
+    expect(clientWebsiteFieldsForSave(original, afterFirstSave)).toEqual({
+      changed: true,
+      url: 'https://a.example',
+      website: 'https://a.example',
+    });
+  });
+
   it('ignores a url populated from properties.website while the form loads', () => {
     expect(clientWebsiteFieldsForSave(
       { url: 'https://saved.example', properties: { website: 'https://saved.example' } },

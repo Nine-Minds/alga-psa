@@ -99,6 +99,7 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
   const { renderQuickAddTicket, renderSurveySummaryCard, getSlaPolicies } = useClientCrossFeature();
   const resolvedClientId = clientId ?? initialClient?.client_id;
   const [client, setClient] = useState<IClientWithLocation | IClient | null>(initialClient ?? null);
+  const savedClientRef = useRef<IClient | null>(initialClient ?? null);
   const [editedClient, setEditedClient] = useState<IClient | null>(initialClient ?? null);
   const [loading, setLoading] = useState(!initialClient);
   const [error, setError] = useState<string | null>(null);
@@ -149,6 +150,7 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
   useEffect(() => {
     if (initialClient) {
       setClient(initialClient);
+      savedClientRef.current = initialClient;
       setEditedClient(initialClient);
       setLoading(false);
     }
@@ -168,6 +170,7 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
           setError(t('clientQuickView.notFound', { defaultValue: 'Client not found' }));
         } else {
           setClient(data);
+          savedClientRef.current = data;
           setEditedClient({
             ...data,
             client_type: data.client_type || 'company',
@@ -338,7 +341,12 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
   }, [client]);
 
   const setClientInactiveState = useCallback((isInactive: boolean) => {
-    setClient((prev) => prev ? { ...prev, is_inactive: isInactive } : prev);
+    setClient((prev) => {
+      if (!prev) return prev;
+      const updatedClient = { ...prev, is_inactive: isInactive };
+      savedClientRef.current = updatedClient;
+      return updatedClient;
+    });
     setEditedClient((prev) => prev ? { ...prev, is_inactive: isInactive } : prev);
     setHasUnsavedChanges(false);
   }, []);
@@ -350,6 +358,7 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
       const latestClientData = await getClientById(client.client_id);
       if (latestClientData) {
         setClient(latestClientData);
+        savedClientRef.current = latestClientData;
         setEditedClient(latestClientData);
         setHasUnsavedChanges(false);
       }
@@ -557,7 +566,8 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
         properties: restOfEditedClient.properties ? { ...restOfEditedClient.properties } : {},
         account_manager_id: editedClientRef.current.account_manager_id === '' ? null : editedClientRef.current.account_manager_id,
       };
-      const websiteFields = clientWebsiteFieldsForSave(editedClientRef.current, client);
+      if (!savedClientRef.current) return;
+      const websiteFields = clientWebsiteFieldsForSave(editedClientRef.current, savedClientRef.current);
       if (!websiteFields.changed) {
         delete dataToUpdate.url;
         if (dataToUpdate.properties) delete dataToUpdate.properties.website;
@@ -575,6 +585,7 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
       }
 
       const updatedClient = updateResult as IClient;
+      savedClientRef.current = updatedClient;
       setClient(updatedClient);
       setEditedClient(updatedClient);
       setHasUnsavedChanges(false);
