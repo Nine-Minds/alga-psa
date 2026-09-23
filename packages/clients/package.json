@@ -38,6 +38,14 @@
       "types": "./src/lib/onlineMeetingArtifactCapture.ts",
       "import": "./src/lib/onlineMeetingArtifactCapture.ts"
     },
+    "./lib/clientMergeEngine": {
+      "types": "./src/lib/clientMergeEngine.ts",
+      "import": "./src/lib/clientMergeEngine.ts"
+    },
+    "./lib/clientMergePlan": {
+      "types": "./src/lib/clientMergePlan.ts",
+      "import": "./src/lib/clientMergePlan.ts"
+    },
     "./lib/contactActionErrorCodes": {
       "import": "./src/lib/contactActionErrorCodes.ts",
       "types": "./src/lib/contactActionErrorCodes.ts"
