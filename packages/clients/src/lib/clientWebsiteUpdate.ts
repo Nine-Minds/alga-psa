@@ -29,7 +29,7 @@ export function mergeClientWebsiteUpdate<T extends { url?: string | null; proper
 export function clientWebsiteFieldsForSave<T extends {
   url?: string | null;
   properties?: Record<string, unknown> | null;
-}>(edited: T, original: T): { changed: boolean; url?: string; website?: unknown } {
+}>(edited: T, original: T): { changed: boolean; url?: string; website?: string } {
   // Compare the effective form value. The website input can synchronize `url`
   // while loading, which is not a user edit when properties.website is intact.
   const effectiveWebsite = (client: T) => {
@@ -44,6 +44,6 @@ export function clientWebsiteFieldsForSave<T extends {
   return {
     changed: true,
     url: editedWebsite == null ? '' : String(editedWebsite),
-    website: editedWebsite,
+    website: editedWebsite == null ? '' : String(editedWebsite),
   };
 }

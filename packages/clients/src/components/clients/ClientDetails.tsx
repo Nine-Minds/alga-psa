@@ -736,6 +736,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           ...latestClientData,
           client_type: latestClientData.client_type || 'company'
         });
+        savedClientRef.current = latestClientData;
         setHasUnsavedChanges(false);
       }
     } catch (error) {
@@ -752,6 +753,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       ...client,
       client_type: client.client_type || 'company'
     });
+    savedClientRef.current = client;
     setHasUnsavedChanges(false);
   }, [client]);
 

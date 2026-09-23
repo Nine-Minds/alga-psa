@@ -24,6 +24,12 @@ describe('mergeClientWebsiteUpdate', () => {
     })).toEqual({ properties: { website: 'https://properties.example', industry: 'IT' } });
   });
 
+  it('preserves a url-only legacy value while updating unrelated properties', () => {
+    expect(mergeClientWebsiteUpdate('https://url-only.example', {}, {
+      properties: { industry: 'IT' },
+    })).toEqual({ properties: { industry: 'IT' } });
+  });
+
   it('synchronizes both copies when url is explicitly set', () => {
     expect(mergeClientWebsiteUpdate('https://old.example', { website: 'https://old.example' }, {
       url: 'https://new.example',
@@ -84,6 +90,20 @@ describe('clientWebsiteFieldsForSave', () => {
       { url: 'https://saved.example', properties: { website: 'https://saved.example' } },
       { url: '', properties: { website: 'https://saved.example' } },
     )).toEqual({ changed: false });
+  });
+
+  it('treats an unchanged url-only legacy value as unchanged', () => {
+    expect(clientWebsiteFieldsForSave(
+      { url: 'https://url-only.example', properties: {} },
+      { url: 'https://url-only.example', properties: {} },
+    )).toEqual({ changed: false });
+  });
+
+  it('detects a changed url-only legacy value', () => {
+    expect(clientWebsiteFieldsForSave(
+      { url: 'https://new.example', properties: {} },
+      { url: 'https://old.example', properties: {} },
+    )).toEqual({ changed: true, url: 'https://new.example', website: 'https://new.example' });
   });
 
   it('detects a deliberate clear against the effective original website', () => {
