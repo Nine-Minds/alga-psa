@@ -689,7 +689,16 @@
       "fileError": "Impossible de téléverser le fichier",
       "associatedEntityTypeLabel": "Associer à",
       "noAssociation": "Aucune association",
-      "selectAssociatedEntityError": "Sélectionnez une entité associée avant de téléverser."
+      "selectAssociatedEntityError": "Sélectionnez une entité associée avant de téléverser.",
+      "uploaded": "Téléversé",
+      "failed": "Échec",
+      "failureSummary": "{{failed}} sur {{total}} fichiers n'ont pas pu être téléversés. Consultez les erreurs ci-dessous.",
+      "outcomeSummary": "{{succeeded}} sur {{total}} fichiers téléversés",
+      "emptyDropTitle": "Aucun fichier reçu",
+      "emptyDropMessage": "Aucun fichier n'a été reçu. Enregistrez la pièce jointe ou l'e-mail sur votre ordinateur, puis glissez le fichier enregistré ici ou utilisez « Parcourir les fichiers ».",
+      "uploadInProgress": "Un téléversement est déjà en cours. Attendez qu'il se termine avant d'ajouter d'autres fichiers.",
+      "refreshFailed": "Vos fichiers ont été téléversés, mais la liste des documents n'a pas pu être actualisée. Rechargez la page pour les voir.",
+      "clearResults": "Effacer les résultats"
     },
     "folders": {
       "root": "Racine",

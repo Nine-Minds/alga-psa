@@ -779,7 +779,16 @@
       "fileError": "No se pudo subir el archivo",
       "associatedEntityTypeLabel": "Asociar con",
       "noAssociation": "Sin asociación",
-      "selectAssociatedEntityError": "Seleccione una entidad asociada antes de subir."
+      "selectAssociatedEntityError": "Seleccione una entidad asociada antes de subir.",
+      "uploaded": "Subido",
+      "failed": "Fallido",
+      "failureSummary": "No se pudieron subir {{failed}} de {{total}} archivos. Revise los errores a continuación.",
+      "outcomeSummary": "{{succeeded}} de {{total}} archivos subidos",
+      "emptyDropTitle": "No se recibieron archivos",
+      "emptyDropMessage": "No se recibió ningún archivo. Guarde el adjunto o el correo en su equipo y, a continuación, arrastre el archivo guardado aquí o use «Buscar archivos».",
+      "uploadInProgress": "Ya hay una carga en curso. Espere a que finalice antes de añadir más archivos.",
+      "refreshFailed": "Sus archivos se subieron, pero la lista de documentos no se pudo actualizar. Recargue la página para verlos.",
+      "clearResults": "Borrar resultados"
     },
     "folders": {
       "root": "Raíz",

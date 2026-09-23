@@ -809,7 +809,16 @@
       "fileError": "Nie udało się przesłać pliku",
       "associatedEntityTypeLabel": "Powiąż z",
       "noAssociation": "Brak powiązania",
-      "selectAssociatedEntityError": "Przed przesłaniem wybierz powiązany obiekt."
+      "selectAssociatedEntityError": "Przed przesłaniem wybierz powiązany obiekt.",
+      "uploaded": "Przesłano",
+      "failed": "Niepowodzenie",
+      "failureSummary": "Nie udało się przesłać {{failed}} z {{total}} plików. Sprawdź błędy poniżej.",
+      "outcomeSummary": "Przesłano {{succeeded}} z {{total}} plików",
+      "emptyDropTitle": "Nie otrzymano plików",
+      "emptyDropMessage": "Nie otrzymano żadnych plików. Zapisz załącznik lub wiadomość e-mail na komputerze, a następnie przeciągnij zapisany plik tutaj albo użyj opcji „Przeglądaj pliki”.",
+      "uploadInProgress": "Przesyłanie jest już w toku. Poczekaj na jego zakończenie, zanim dodasz kolejne pliki.",
+      "refreshFailed": "Twoje pliki zostały przesłane, ale nie udało się odświeżyć listy dokumentów. Odśwież stronę, aby je zobaczyć.",
+      "clearResults": "Wyczyść wyniki"
     },
     "folders": {
       "root": "Główny",
