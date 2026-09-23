@@ -1714,7 +1714,20 @@
     "paymentTerms": "Betalingsvoorwaarden",
     "taxExempt": "Btw-vrijgesteld",
     "taxExemptInherited": "Geërfd van de klant ({{value}})",
-    "regionNote": "De belastingregio wordt hier niet ingesteld. Die volgt de plaats van levering — de dienst, dan de locatie van de contractregel, dan de standaard van de klant."
+    "regionNote": "De belastingregio wordt hier niet ingesteld. Die volgt de plaats van levering — de dienst, dan de locatie van de contractregel, dan de standaard van de klant.",
+    "inheritFromClient": "Overnemen van klant ({{value}})",
+    "paymentMethod": "Betaalmethode",
+    "paymentMethodHint": "Facturen met cheque of bankoverschrijving bevatten geen online link \"Nu betalen\".",
+    "legacyPaymentTerms": "\"{{value}}\" is geen bekende betalingstermijn en is nooit toegepast. Opslaan wist deze.",
+    "cardOnFileLabel": "Opgeslagen kaart",
+    "cardOnFile": "{{type}} •••• {{last4}}{{expiry}}",
+    "cardExpiry": ", verloopt {{month}}/{{year}}",
+    "noCardOnFile": "Geen kaart opgeslagen",
+    "cardOnFileHint": "Opgeslagen kaarten beheert de klant in het klantenportaal.",
+    "cardType": {
+      "card": "Kaart",
+      "bankAccount": "Bankrekening"
+    }
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Prepaid-saldo-meldingen",
@@ -1867,7 +1880,9 @@
       "recordNotFound": "Dat record of facturatieprofiel bestaat niet meer.",
       "otherClient": "Dat facturatieprofiel hoort bij een andere klant.",
       "archived": "Dat facturatieprofiel is gearchiveerd.",
-      "selectionNotThisClient": "Een van de geselecteerde facturatieprofielen hoort niet bij deze klant."
+      "selectionNotThisClient": "Een van de geselecteerde facturatieprofielen hoort niet bij deze klant.",
+      "invalidPaymentTerms": "Kies een van de vermelde betalingstermijnen.",
+      "invalidPaymentMethod": "Kies een van de vermelde betaalmethoden."
     }
   }
 }

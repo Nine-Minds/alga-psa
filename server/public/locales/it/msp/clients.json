@@ -1714,7 +1714,20 @@
     "paymentTerms": "Termini di pagamento",
     "taxExempt": "Esente da imposta",
     "taxExemptInherited": "Ereditato dal cliente ({{value}})",
-    "regionNote": "La regione fiscale non si imposta qui. Segue il luogo di erogazione: il servizio, poi la sede della riga di contratto, poi il valore predefinito del cliente."
+    "regionNote": "La regione fiscale non si imposta qui. Segue il luogo di erogazione: il servizio, poi la sede della riga di contratto, poi il valore predefinito del cliente.",
+    "inheritFromClient": "Eredita dal cliente ({{value}})",
+    "paymentMethod": "Metodo di pagamento",
+    "paymentMethodHint": "Le fatture con assegno o bonifico bancario non includono il link online «Paga ora».",
+    "legacyPaymentTerms": "«{{value}}» non è un termine di pagamento riconosciuto e non è mai stato applicato. Il salvataggio lo rimuove.",
+    "cardOnFileLabel": "Carta salvata",
+    "cardOnFile": "{{type}} •••• {{last4}}{{expiry}}",
+    "cardExpiry": ", scad. {{month}}/{{year}}",
+    "noCardOnFile": "Nessuna carta salvata",
+    "cardOnFileHint": "Le carte salvate sono gestite dal cliente nel portale clienti.",
+    "cardType": {
+      "card": "Carta",
+      "bankAccount": "Conto bancario"
+    }
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Avvisi saldo prepagato",
@@ -1867,7 +1880,9 @@
       "recordNotFound": "Questo record o profilo di fatturazione non esiste più.",
       "otherClient": "Questo profilo di fatturazione appartiene a un altro cliente.",
       "archived": "Questo profilo di fatturazione è archiviato.",
-      "selectionNotThisClient": "Uno dei profili di fatturazione selezionati non appartiene a questo cliente."
+      "selectionNotThisClient": "Uno dei profili di fatturazione selezionati non appartiene a questo cliente.",
+      "invalidPaymentTerms": "Scegli uno dei termini di pagamento elencati.",
+      "invalidPaymentMethod": "Scegli uno dei metodi di pagamento elencati."
     }
   }
 }

@@ -1714,7 +1714,20 @@
     "paymentTerms": "Zahlungsbedingungen",
     "taxExempt": "Steuerbefreit",
     "taxExemptInherited": "Wird vom Kunden geerbt ({{value}})",
-    "regionNote": "Die Steuerregion wird hier nicht gesetzt. Sie richtet sich nach dem Leistungsort – Leistung, dann Standort der Vertragsposition, dann Kundenstandard."
+    "regionNote": "Die Steuerregion wird hier nicht gesetzt. Sie richtet sich nach dem Leistungsort – Leistung, dann Standort der Vertragsposition, dann Kundenstandard.",
+    "inheritFromClient": "Vom Kunden übernehmen ({{value}})",
+    "paymentMethod": "Zahlungsmethode",
+    "paymentMethodHint": "Rechnungen mit Scheck oder Banküberweisung enthalten keinen Online-Link „Jetzt bezahlen“.",
+    "legacyPaymentTerms": "„{{value}}“ ist keine bekannte Zahlungsbedingung und wurde nie angewendet. Beim Speichern wird sie entfernt.",
+    "cardOnFileLabel": "Hinterlegte Karte",
+    "cardOnFile": "{{type}} •••• {{last4}}{{expiry}}",
+    "cardExpiry": ", gültig bis {{month}}/{{year}}",
+    "noCardOnFile": "Keine Karte hinterlegt",
+    "cardOnFileHint": "Hinterlegte Karten verwaltet der Kunde im Kundenportal.",
+    "cardType": {
+      "card": "Karte",
+      "bankAccount": "Bankkonto"
+    }
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Prepaid-Saldo-Warnungen",
@@ -1867,7 +1880,9 @@
       "recordNotFound": "Dieser Datensatz oder dieses Abrechnungsprofil existiert nicht mehr.",
       "otherClient": "Dieses Abrechnungsprofil gehört zu einem anderen Kunden.",
       "archived": "Dieses Abrechnungsprofil ist archiviert.",
-      "selectionNotThisClient": "Eines der ausgewählten Abrechnungsprofile gehört nicht zu diesem Kunden."
+      "selectionNotThisClient": "Eines der ausgewählten Abrechnungsprofile gehört nicht zu diesem Kunden.",
+      "invalidPaymentTerms": "Wählen Sie eine der aufgeführten Zahlungsbedingungen.",
+      "invalidPaymentMethod": "Wählen Sie eine der aufgeführten Zahlungsmethoden."
     }
   }
 }

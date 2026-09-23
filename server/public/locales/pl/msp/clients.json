@@ -1766,7 +1766,20 @@
     "paymentTerms": "Warunki płatności",
     "taxExempt": "Zwolniony z podatku",
     "taxExemptInherited": "Dziedziczone od klienta ({{value}})",
-    "regionNote": "Regionu podatkowego nie ustawia się tutaj. Wynika on z miejsca wykonania — usługa, potem lokalizacja pozycji umowy, potem domyślna wartość klienta."
+    "regionNote": "Regionu podatkowego nie ustawia się tutaj. Wynika on z miejsca wykonania — usługa, potem lokalizacja pozycji umowy, potem domyślna wartość klienta.",
+    "inheritFromClient": "Dziedzicz z klienta ({{value}})",
+    "paymentMethod": "Metoda płatności",
+    "paymentMethodHint": "Faktury opłacane czekiem lub przelewem bankowym nie zawierają linku „Zapłać teraz”.",
+    "legacyPaymentTerms": "„{{value}}” nie jest rozpoznanym terminem płatności i nigdy nie został zastosowany. Zapisanie go usunie.",
+    "cardOnFileLabel": "Zapisana karta",
+    "cardOnFile": "{{type}} •••• {{last4}}{{expiry}}",
+    "cardExpiry": ", ważna do {{month}}/{{year}}",
+    "noCardOnFile": "Brak zapisanej karty",
+    "cardOnFileHint": "Zapisanymi kartami zarządza klient w portalu klienta.",
+    "cardType": {
+      "card": "Karta",
+      "bankAccount": "Konto bankowe"
+    }
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Alerty salda przedpłaconego",
@@ -1919,7 +1932,9 @@
       "recordNotFound": "Ten rekord lub profil rozliczeniowy już nie istnieje.",
       "otherClient": "Ten profil rozliczeniowy należy do innego klienta.",
       "archived": "Ten profil rozliczeniowy jest zarchiwizowany.",
-      "selectionNotThisClient": "Jeden z wybranych profili rozliczeniowych nie należy do tego klienta."
+      "selectionNotThisClient": "Jeden z wybranych profili rozliczeniowych nie należy do tego klienta.",
+      "invalidPaymentTerms": "Wybierz jeden z wymienionych terminów płatności.",
+      "invalidPaymentMethod": "Wybierz jedną z wymienionych metod płatności."
     }
   }
 }

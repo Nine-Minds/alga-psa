@@ -1714,7 +1714,20 @@
     "paymentTerms": "Condições de pagamento",
     "taxExempt": "Isento de imposto",
     "taxExemptInherited": "Herdado do cliente ({{value}})",
-    "regionNote": "A região fiscal não é definida aqui. Ela segue o local de entrega — o serviço, depois a localização da linha de contrato, depois o padrão do cliente."
+    "regionNote": "A região fiscal não é definida aqui. Ela segue o local de entrega — o serviço, depois a localização da linha de contrato, depois o padrão do cliente.",
+    "inheritFromClient": "Herdar do cliente ({{value}})",
+    "paymentMethod": "Método de pagamento",
+    "paymentMethodHint": "Faturas com cheque ou transferência bancária não incluem o link online \"Pagar agora\".",
+    "legacyPaymentTerms": "\"{{value}}\" não é um prazo de pagamento reconhecido e nunca foi aplicado. Salvar o remove.",
+    "cardOnFileLabel": "Cartão salvo",
+    "cardOnFile": "{{type}} •••• {{last4}}{{expiry}}",
+    "cardExpiry": ", validade {{month}}/{{year}}",
+    "noCardOnFile": "Nenhum cartão salvo",
+    "cardOnFileHint": "Os cartões salvos são gerenciados pelo cliente no portal do cliente.",
+    "cardType": {
+      "card": "Cartão",
+      "bankAccount": "Conta bancária"
+    }
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Alertas de saldo pré-pago",
@@ -1867,7 +1880,9 @@
       "recordNotFound": "Esse registro ou perfil de faturamento não existe mais.",
       "otherClient": "Esse perfil de faturamento pertence a outro cliente.",
       "archived": "Esse perfil de faturamento está arquivado.",
-      "selectionNotThisClient": "Um dos perfis de faturamento selecionados não pertence a este cliente."
+      "selectionNotThisClient": "Um dos perfis de faturamento selecionados não pertence a este cliente.",
+      "invalidPaymentTerms": "Escolha um dos prazos de pagamento listados.",
+      "invalidPaymentMethod": "Escolha um dos métodos de pagamento listados."
     }
   }
 }

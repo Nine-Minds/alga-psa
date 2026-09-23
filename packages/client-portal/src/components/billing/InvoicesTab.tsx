@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
 import type { InvoiceViewModel } from '@alga-psa/types';
+import { isOfflinePaymentMethod } from '@alga-psa/shared/billingClients/paymentPreferences';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -186,11 +187,13 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
   const isCreditNote = (invoice: InvoiceViewModel): boolean =>
     invoice.invoice_type === 'credit_note' || invoice.total < 0;
 
-  // Check if invoice can be paid (finalized, not a credit note, not fully covered)
+  // Check if invoice can be paid online (finalized, not a credit note, not
+  // fully covered, and not issued for payment by check or bank transfer)
   const canPayInvoice = (invoice: InvoiceViewModel): boolean => {
     // Must be finalized
     if (!invoice.finalized_at) return false;
     if (isCreditNote(invoice)) return false;
+    if (isOfflinePaymentMethod(invoice.payment_method)) return false;
     // Check if already paid (total matches credit_applied or has paid status)
     if (invoice.credit_applied >= invoice.total) return false;
     return true;
