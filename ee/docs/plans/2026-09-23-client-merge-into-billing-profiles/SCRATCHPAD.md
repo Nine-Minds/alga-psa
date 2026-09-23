@@ -125,3 +125,15 @@ caller. This effort is its first one.
   suffix.
 - Migrations run with `transaction: false` because `create_distributed_table` cannot
   run inside a transaction on Citus.
+- `sdk/scripts/generate-openapi.ts` cannot resolve the `@shared/*` path aliases when
+  run from `sdk/` with its own tsconfig; run it as
+  `npx tsx --tsconfig ../tsconfig.base.json scripts/generate-openapi.ts --edition ce`.
+  Pre-existing — it fails the same way with this branch's changes stashed.
+- `x-chat-approval-required` is declared on `POST /clients/{id}/merge` (matching the
+  `emailTemplates` precedent) but does **not** reach the MCP registry: the spec
+  generator nests route extensions under an `extensions` object while
+  `ee/scripts/generate-chat-registry.mjs` reads `operation['x-chat-approval-required']`
+  from the operation root. Every route in the repo therefore emits
+  `approvalRequired: false`. Pre-existing generator gap; fixing it would flip the flag
+  on unrelated endpoints, so it is left alone and the metadata is declared correctly
+  for when it is fixed.

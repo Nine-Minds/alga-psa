@@ -235,3 +235,71 @@ export type ClientResponse = z.infer<typeof clientResponseSchema>;
 export type CreateClientLocationData = z.infer<typeof createClientLocationSchema>;
 export type UpdateClientLocationData = z.infer<typeof updateClientLocationSchema>;
 export type ClientLocationResponse = z.infer<typeof clientLocationResponseSchema>;
+
+// ---------------------------------------------------------------------------
+// Client merge (absorbing a client as a billing profile)
+// ---------------------------------------------------------------------------
+
+export const clientMergePreviewRequestSchema = z.object({
+  source_client_id: uuidSchema
+});
+
+export const clientMergeContactAssignmentSchema = z.object({
+  contact_name_id: uuidSchema,
+  billing_profile_id: uuidSchema,
+  is_manager: z.boolean().optional(),
+  can_view_profile_tickets: z.boolean().optional()
+});
+
+export const clientMergeContractDecisionSchema = z.object({
+  client_contract_id: uuidSchema,
+  choice: z.enum(['original', 'cutover']),
+  // Only read for 'cutover'; a date on an 'original' row is ignored rather
+  // than rejected, so a UI that keeps both in state stays valid.
+  cutover_date: z.string().date().nullable().optional()
+});
+
+export const clientMergeExternalRemapChoiceSchema = z.object({
+  mapping_id: uuidSchema,
+  apply: z.boolean()
+});
+
+export const clientMergeRequestSchema = z.object({
+  source_client_id: uuidSchema,
+  contact_assignments: z.array(clientMergeContactAssignmentSchema).optional(),
+  contract_decisions: z.array(clientMergeContractDecisionSchema).optional(),
+  // Defaults to true in the engine: absence of a portal grant means "every
+  // profile", which after a merge would be the whole destination client.
+  pin_portal_grants: z.boolean().optional(),
+  external_remap_choices: z.array(clientMergeExternalRemapChoiceSchema).optional()
+});
+
+export const clientMergeResponseSchema = z.object({
+  merge_id: uuidSchema,
+  source_client_id: uuidSchema,
+  target_client_id: uuidSchema,
+  moved_profile_ids: z.array(uuidSchema),
+  moved_default_profile_id: uuidSchema.nullable(),
+  counts: z.record(z.number()),
+  remapped_external_mapping_ids: z.array(z.string()),
+  skipped_external_mapping_ids: z.array(z.string())
+});
+
+// ---------------------------------------------------------------------------
+// Billing profile contacts
+// ---------------------------------------------------------------------------
+
+export const billingProfileContactSchema = z.object({
+  contact_name_id: uuidSchema,
+  is_manager: z.boolean().optional(),
+  // A separate, explicit grant: naming a manager never widens what they read.
+  can_view_profile_tickets: z.boolean().optional()
+});
+
+export const setBillingProfileContactsSchema = z.object({
+  contacts: z.array(billingProfileContactSchema)
+});
+
+export type ClientMergePreviewRequest = z.infer<typeof clientMergePreviewRequestSchema>;
+export type ClientMergeRequest = z.infer<typeof clientMergeRequestSchema>;
+export type SetBillingProfileContactsRequest = z.infer<typeof setBillingProfileContactsSchema>;
