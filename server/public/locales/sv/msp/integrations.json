@@ -668,7 +668,7 @@
         "moreNames": "och ytterligare {{count}}",
         "nothingWritten": "Inget har skrivits ännu",
         "showNames": "Visa namn",
-        "summary": "{{count}} identiteter kontrollerades kl. {{time}}. Inget ändrades.",
+        "summary": "{{count}} identiteter kontrollerades {{time}}. Inget ändrades.",
         "summaryNoTime": "{{count}} identiteter kontrollerades. Inget ändrades.",
         "title": "Vad den här synkroniseringen skulle göra"
       },
@@ -910,7 +910,7 @@
           "lastDiscoveryLabel": "Senaste identifiering:",
           "lastValidatedLabel": "Senast kontrollerad",
           "neverFormatted": "Aldrig",
-          "noneValidationError": "Ingen",
+          "noneValidationError": "Inget",
           "validationErrorLabel": "Valideringsfel:"
         },
         "wizard": {
@@ -1270,7 +1270,7 @@
           "importing": "Importerar…",
           "save": "Spara mappningar",
           "saving": "Sparar…",
-          "discard": "Kasta"
+          "discard": "Kasta ändringar"
         },
         "counters": {
           "mapped": "mappade",
@@ -1370,7 +1370,7 @@
           "refreshing": "Laddar om…",
           "save": "Spara mappningar",
           "saving": "Sparar…",
-          "discard": "Kasta"
+          "discard": "Kasta ändringar"
         },
         "counters": {
           "mapped": "mappade",
@@ -1627,7 +1627,7 @@
           "warning": "En anpassad Entra-app behövs normalt inte i värdbaserad AlgaPSA. Fortsätt bara när din organisation uttryckligen kräver en egen app och egna autentiseringsuppgifter."
         },
         "platform": {
-          "title": "Microsoft-e-post är klart att ansluta",
+          "title": "Microsoft-e-post är klar att ansluta",
           "description": "Anslut Microsoft 365 med appen som tillhandahålls av AlgaPSA. Ingen Entra-appregistrering krävs.",
           "readyDescription": "Microsoft-appen är godkänd och klar för inloggning till e-postlåda.",
           "connectAction": "Anslut en e-postlåda →",
@@ -1893,7 +1893,7 @@
           "disconnectInProgress": "QuickBooks håller på att kopplas från. Slutför frånkopplingen innan du ansluter igen.",
           "forbidden": "Du har inte längre behörighet att hantera bokföringsanslutningar. Be en administratör om åtkomst.",
           "generic": "QuickBooks returnerade ett OAuth-fel: {{code}}",
-          "invalidState": "QuickBooks OAuth-tillstånd var ogiltigt eller hade gått ut. Starta anslutningsflödet igen.",
+          "invalidState": "QuickBooks OAuth-tillståndet var ogiltigt eller hade gått ut. Starta anslutningsflödet igen.",
           "missingParams": "QuickBooks-återanropet saknade obligatoriska parametrar. Starta anslutningsflödet igen.",
           "oauthFailed": "QuickBooks OAuth-återanrop misslyckades. Försök ansluta igen. Om problemet kvarstår kontrollerar du omdirigerings-URI och behörighetsomfång.",
           "sessionExpired": "Din session är inte längre giltig. Logga in och starta QuickBooks-anslutningen igen.",
@@ -1999,9 +1999,9 @@
         "lastCycleStatus": "Status",
         "lastCycleFinishedAt": "Slutförd",
         "lastCycleStats": "Resultat",
-        "statOpsProcessed": "{{count}} åtgärder behandlade",
+        "statOpsProcessed": "{{count}} behandlade åtgärder",
         "statDriftFound": "{{count}} avvikelser",
-        "statPaymentsApplied": "{{count}} betalningar tillämpade",
+        "statPaymentsApplied": "{{count}} avräknade betalningar",
         "noLastCycle": "Ingen synkroniseringscykel har körts ännu.",
         "nextRunHint": "Körs automatiskt var 15:e minut när automatisk synkronisering är aktiverad.",
         "pendingOps": "Väntande åtgärder",
@@ -2078,7 +2078,7 @@
             "create": "Kommer att skapas",
             "update": "Kommer att uppdateras",
             "link": "Kommer att länkas (matchar redan)",
-            "skip": "Överhoppad"
+            "skip": "Överhoppade"
           },
           "qboName": "QuickBooks-namn: {{name}} (importeras som ”{{importedAs}}”)"
         },
@@ -2290,7 +2290,7 @@
             "login": "Logga in på din NinjaOne-översiktspanel",
             "navigate": "Gå till Administration → Appar → API",
             "addClient": "Klicka på ”+ Add client app” för att skapa en ny API-app",
-            "platform": "Ange appplattformen som ”Web (PHP, Java, .Net Core, etc.)”",
+            "platform": "Ange app-plattformen till ”Web (PHP, Java, .Net Core, etc.)”",
             "name": "Ange ett namn (t.ex. ”AlgaPSA”)",
             "redirectUri": "Lägg till omdirigerings-URI:",
             "scopes": "Markera ”Monitoring” och ”Management” under ”Scopes”",
@@ -2673,7 +2673,7 @@
           "groupSyncCompleted": "Gruppidentifieringen är klar: {{processed}} behandlade, {{created}} skapade, {{updated}} uppdaterade"
         },
         "sync": {
-          "description": "Identifiera Level-grupper, mappa dem till kunder och synkronisera enheter. Enheter i omappade grupper hoppas över. Undergrupper ärver närmaste mappade överordnade grupp.",
+          "description": "Identifiera Level-grupper, mappa dem till kunder och synkronisera enheter. Enheter i grupper som inte är mappade hoppas över. Undergrupper ärver närmaste mappade överordnade grupp.",
           "summary": "{{mappedGroups}} mappade grupper · {{devices}} enheter · {{activeAlerts}} aktiva larm",
           "title": "Synkronisering och gruppmappningar"
         },
@@ -2705,7 +2705,7 @@
           "unmapped": "Inte mappad → triage"
         },
         "title": "Organisationsmappning",
-        "description": "Mappa Huntress-organisationer till kunder. Incidenter för omappade organisationer går till reservkunden och triagetavlan.",
+        "description": "Mappa Huntress-organisationer till kunder. Incidenter för organisationer som inte är mappade går till reservkunden och triagetavlan.",
         "unmappedSuffix": "({{count}} inte mappade)",
         "syncButton": "Synkronisera organisationer",
         "loading": "Läser in…",
@@ -2796,7 +2796,7 @@
           "title": "Inga organisationer har synkroniserats ännu.",
           "hint": "Klicka på ”Ladda om organisationer” för att hämta organisationer från NinjaOne."
         },
-        "unmappedNote": "Enheter från omappade organisationer synkroniseras inte. Mappa varje organisation till ett Alga-företag för att aktivera enhetssynkronisering.",
+        "unmappedNote": "Enheter från organisationer som inte är mappade synkroniseras inte. Mappa varje organisation till ett Alga-företag för att aktivera enhetssynkronisering.",
         "success": {
           "synced": "Synkroniserade {{processed}} organisationer ({{created}} nya, {{updated}} uppdaterade)",
           "mappingUpdated": "Mappningen har uppdaterats",
@@ -3035,8 +3035,8 @@
         },
         "description": "Koppla Teams till en Microsoft-profil, aktivera funktioner och generera klientorganisationens paket.",
         "errors": {
-          "downloadPackage": "Det gick inte att ladda ner Teams-apppaketet",
-          "generatePackage": "Det gick inte att generera Teams-apppaketet",
+          "downloadPackage": "Det gick inte att ladda ner Teams-appens paket",
+          "generatePackage": "Det gick inte att generera Teams-appens paket",
           "loadGuidance": "Det gick inte att läsa in Teams-konfigurationsanvisningarna",
           "saveSettings": "Det gick inte att spara Teams-inställningarna"
         },
@@ -3092,7 +3092,7 @@
           "deepLinks": "Djuplänkar",
           "description": "Generera appmanifestet och installationslänkarna för den valda Microsoft-profilen.",
           "downloadManifest": "Ladda ner manifest som JSON",
-          "downloadZip": "Ladda ner apppaket (.zip)",
+          "downloadZip": "Ladda ner app-paketet (.zip)",
           "downloading": "Laddar ner…",
           "fileName": "Filnamn",
           "generate": "Generera paket",
@@ -3123,8 +3123,8 @@
         "statusMessage": {
           "activated": "Teams-konfigurationen har aktiverats.",
           "deactivated": "Teams-konfigurationen har inaktiverats.",
-          "packageDownloaded": "Teams-apppaketet har laddats ner.",
-          "packageGenerated": "Teams-apppaketet har genererats.",
+          "packageDownloaded": "Teams-appens paket har laddats ner.",
+          "packageGenerated": "Teams-appens paket har genererats.",
           "saved": "Teams-konfigurationen har sparats."
         },
         "title": "Microsoft Teams",
@@ -3180,7 +3180,7 @@
             "profileCredentials": "Komplettera Microsoft-profilens autentiseringsuppgifter innan du aktiverar Teams.",
             "meetingOrganizer": "Konfigurera standardorganisatören för Teams-möten i Teams-inställningarna.",
             "meetingOrganizerObjectId": "Spara standardorganisatören för Teams-möten igen så att AlgaPSA kan slå upp dess Microsoft Entra-objekt-ID.",
-            "package": "Generera Teams-apppaketet innan du kör validering av hela flödet.",
+            "package": "Generera Teams-appens paket innan du kör validering av hela flödet.",
             "baseUrl": "Generera Teams-paketet igen med en nåbar bas-URL.",
             "botEnv": "Konfigurera TEAMS_BOT_APP_ID, TEAMS_BOT_APP_TENANT_ID och TEAMS_BOT_APP_PASSWORD.",
             "userLinkage": "Länka ditt Microsoft-konto i dina profilinställningar.",
@@ -3254,12 +3254,12 @@
             },
             "package": {
               "title": "Generera och ladda ner paketet",
-              "description": "Bygg Teams-apppaketet för den valda profilen och installationens bas-URL.",
-              "hint": "Använd Teams-paketkortet nedan för att generera och ladda ner apppaketet."
+              "description": "Bygg Teams-appens paket för den valda profilen och installationens bas-URL.",
+              "hint": "Använd Teams-paketkortet nedan för att generera och ladda ner app-paketet."
             },
             "sideload": {
               "title": "Installera appen manuellt",
-              "description": "Ladda upp apppaketet till Teams så att användare kan installera det.",
+              "description": "Ladda upp app-paketet till Teams så att användare kan installera det.",
               "body": "Ladda upp det nedladdade paketet till administrationscentret för Teams (Hantera appar och sedan Ladda upp ny app) eller installera det manuellt från Teams-klienten."
             },
             "verify": {
@@ -3371,8 +3371,8 @@
               "remedy": "Aktivera Teams-integreringen i inställningarna."
             },
             "package_misconfigured": {
-              "cause": "Apppaketet har aldrig genererats eller så saknas förutsättningar för leverans (app-ID, bas-URL).",
-              "remedy": "Generera Teams-apppaketet i inställningarna och försök sedan igen."
+              "cause": "App-paketet har aldrig genererats eller så saknas förutsättningar för leverans (app-ID, bas-URL).",
+              "remedy": "Generera Teams-appens paket i inställningarna och försök sedan igen."
             },
             "graph_not_found": {
               "cause": "Teams-appen är inte installerad för mottagaren, så Microsoft Graph kan inte nå mottagaren (404).",
@@ -3397,8 +3397,8 @@
           }
         },
         "staleManifest": {
-          "title": "Teams-apppaketet är inaktuellt",
-          "warning": "Ditt Teams-apppaket är inaktuellt – generera det igen och ladda upp det på nytt.",
+          "title": "Teams-appens paket är inaktuellt",
+          "warning": "Teams-appens paket är inaktuellt – generera det igen och ladda upp det på nytt.",
           "regenerate": "Generera paketet igen",
           "regenerating": "Genererar igen…"
         }
@@ -3452,8 +3452,8 @@
           "result": {
             "created": "Skapade",
             "mappings": "Mappningar",
-            "skipped": "Överhoppad",
-            "updated": "Uppdaterad"
+            "skipped": "Överhoppade",
+            "updated": "Uppdaterade"
           },
           "selectCsvFile": "Välj CSV-fil",
           "startNewImport": "Starta ny import",
@@ -3579,7 +3579,7 @@
           "disconnectInProgress": "Xero håller på att kopplas från. Slutför frånkopplingen innan du ansluter igen.",
           "forbidden": "Du har inte längre behörighet att hantera bokföringsanslutningar. Be en administratör om åtkomst.",
           "generic": "Xero returnerade ett OAuth-fel: {{code}}",
-          "invalidState": "Xero OAuth-tillstånd var ogiltigt eller hade gått ut. Starta anslutningsflödet igen.",
+          "invalidState": "Xero OAuth-tillståndet var ogiltigt eller hade gått ut. Starta anslutningsflödet igen.",
           "missingParams": "Xero-återanropet saknade obligatoriska parametrar. Starta anslutningsflödet igen.",
           "noConnections": "Xero returnerade inga organisationer för den här inloggningen. Kontrollera din Xero-app och organisationsåtkomst och försök sedan igen.",
           "oauthFailed": "Xero OAuth-återanrop misslyckades. Försök ansluta igen. Om problemet kvarstår kontrollerar du omdirigerings-URI och behörighetsomfång.",
@@ -3598,7 +3598,7 @@
           "connectionId": "Anslutnings-ID: {{id}}",
           "defaultBadge": "Standard för synkronisering",
           "defaultOrganisation": "Standard för synkronisering och exporter",
-          "description": "En Xero-auktorisering länkar dessa organisationer till Alga PSA.",
+          "description": "En Xero-auktorisering länkar dessa organisationer till AlgaPSA.",
           "linkedOrganisations": "Länkade organisationer ({{count}})",
           "multipleOrganisationScope": "Den här auktoriseringen omfattar {{count}} Xero-organisationer. Återanslutning och frånkoppling gäller alla.",
           "notConnected": "Ingen Xero-organisation är direktansluten ännu. Spara autentiseringsuppgifter och klicka sedan på Anslut Xero.",
@@ -3641,7 +3641,7 @@
         "scopeReconnectNote": "Återanslut Xero efter ändring av behörigheter. Tokenförnyelser behåller behörigheterna från den senaste auktoriseringen.",
         "storedClientId": "Lagrat klient-ID: {{value}}",
         "storedClientSecret": "Lagrad klienthemlighet: {{value}}",
-        "tenantOauthDescription": "Ange klient-ID och klienthemlighet från din Xero-app. Alga PSA lagrar dem säkert.",
+        "tenantOauthDescription": "Ange klient-ID och klienthemlighet från din Xero-app. AlgaPSA lagrar dem säkert.",
         "tenantOauthTitle": "Xero-appens autentiseringsuppgifter",
         "title": "Xero",
         "xeroCsv": "Använd Xero CSV",
@@ -3651,7 +3651,7 @@
         "disconnectForceFinalized": "Xero-frånkopplingen har tvångsslutförts. Rensningen hos tjänsteleverantören kunde inte bekräftas, så autentiseringsuppgifterna togs bort lokalt och åtgärden registrerades i granskningsloggen.",
         "disconnect": {
           "confirmDescription": "Detta kopplar från {{organisations}} och pausar synkronisering och exporter. Dina Xero-appautentiseringsuppgifter förblir sparade.",
-          "confirmTitle": "Koppla från Xero från Alga PSA?",
+          "confirmTitle": "Ska Xero kopplas från AlgaPSA?",
           "dangerDescription": "Stoppar synkronisering och exporter och tar bort alla {{count}} länkade organisationer. Appautentiseringsuppgifterna förblir sparade.",
           "dangerTitle": "Koppla från Xero",
           "forceFinalizePrompt": "Orsak till att Xero-frånkopplingen tvångsslutförs (registreras i granskningsloggen):",
@@ -3796,7 +3796,7 @@
             "help": "Skickar kontakter med telefonnummer till 3CX-företagstelefonboken och lägger till nummer som endast finns i PBX hos matchande kontakter.",
             "schedule": "Avstämningsschema",
             "daily": "Dagligen",
-            "hourly": "Per timme",
+            "hourly": "Varje timme",
             "pushNow": "Skicka nu",
             "importNow": "Importera nu",
             "lastPush": "Senaste sändning",
