@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import QuickAddContact from '../contacts/QuickAddContact';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { paymentMethodOptions, paymentTermsOptions } from './paymentPreferenceOptions';
 
 interface BillingConfigFormProps {
     billingConfig: {
@@ -107,17 +108,8 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
         )
     }));
 
-    const paymentTermsOptions = [
-        { value: 'net_30', label: t('billingConfigForm.paymentTerms.net30', { defaultValue: 'Net 30' }) },
-        { value: 'net_15', label: t('billingConfigForm.paymentTerms.net15', { defaultValue: 'Net 15' }) },
-        { value: 'due_on_receipt', label: t('billingConfigForm.paymentTerms.dueOnReceipt', { defaultValue: 'Due on Receipt' }) }
-    ];
-
-    const paymentMethodOptions = [
-        { value: 'credit_card', label: t('billingConfigForm.paymentMethods.creditCard', { defaultValue: 'Credit Card' }) },
-        { value: 'bank_transfer', label: t('billingConfigForm.paymentMethods.bankTransfer', { defaultValue: 'Bank Transfer' }) },
-        { value: 'check', label: t('billingConfigForm.paymentMethods.check', { defaultValue: 'Check' }) }
-    ];
+    const termsOptions = paymentTermsOptions(t);
+    const methodOptions = paymentMethodOptions(t);
 
     const deliveryMethodOptions = [
         { value: 'email', label: t('billingConfigForm.deliveryMethods.email', { defaultValue: 'Email' }) },
@@ -224,7 +216,7 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
                     label={t('billingConfigForm.paymentTermsLabel', { defaultValue: 'Payment terms' })}
                     value={billingConfig.payment_terms}
                     onValueChange={handleSelectChange('payment_terms')}
-                    options={paymentTermsOptions}
+                    options={termsOptions}
                 />
             </div>
 
@@ -233,7 +225,7 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
                     label={t('billingConfigForm.preferredPaymentMethod', { defaultValue: 'Preferred payment method' })}
                     value={billingConfig.preferred_payment_method}
                     onValueChange={handleSelectChange('preferred_payment_method')}
-                    options={paymentMethodOptions}
+                    options={methodOptions}
                 />
             </div>
 

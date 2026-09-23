@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { toast } from 'react-hot-toast';
@@ -14,10 +15,24 @@ import {
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import {
+  isPaymentTerms,
+  normalizePaymentTerms,
+  normalizePreferredPaymentMethod,
+} from '@alga-psa/shared/billingClients/paymentPreferences';
+import {
+  getClientBillingProfileCardOnFile,
   getClientBillingProfileSettings,
   updateClientBillingProfileSettings,
+  type ClientBillingProfileCardOnFile,
+  type ClientBillingProfileInheritedValues,
   type ClientBillingProfileSettingsInput,
 } from '../../actions/clientBillingProfileActions';
+import {
+  paymentMethodLabels,
+  paymentMethodOptions,
+  paymentTermsLabels,
+  paymentTermsOptions,
+} from './paymentPreferenceOptions';
 
 /**
  * A billing profile's own bill-to identity, tax, PO, and delivery settings
@@ -45,6 +60,9 @@ interface ClientBillingProfileSettingsProps {
 
 type Draft = Record<string, string | boolean | null>;
 
+/** Select value standing for "store NULL and inherit the client's value". */
+const INHERIT_VALUE = '__inherit__';
+
 export function ClientBillingProfileSettings({
   clientId,
   billingProfileId,
@@ -54,17 +72,43 @@ export function ClientBillingProfileSettings({
   const [isSaving, setIsSaving] = useState(false);
   const [draft, setDraft] = useState<Draft>({});
   const [effective, setEffective] = useState<Record<string, unknown>>({});
+  const [clientValues, setClientValues] = useState<ClientBillingProfileInheritedValues>({
+    paymentTerms: null,
+    preferredPaymentMethod: null,
+  });
+  const [cardOnFile, setCardOnFile] = useState<ClientBillingProfileCardOnFile | null>(null);
+  const [legacyPaymentTerms, setLegacyPaymentTerms] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setIsLoading(true);
     try {
-      const result = await getClientBillingProfileSettings({ clientId, billingProfileId });
+      const [result, card] = await Promise.all([
+        getClientBillingProfileSettings({ clientId, billingProfileId }),
+        getClientBillingProfileCardOnFile({ clientId, billingProfileId }),
+      ]);
       if (isReturnedActionError(result)) {
         toast.error(getErrorMessage(result));
         return;
       }
-      setDraft(result.stored as Draft);
+      // Payment terms used to be free text here. A value that is not one of
+      // the known terms never took effect, so it is shown as inheriting and
+      // is cleared on the next save rather than being re-sent and rejected.
+      const storedTerms = result.stored.payment_terms ?? null;
+      const unrecognizedTerms =
+        storedTerms !== null && storedTerms.trim() !== '' && !isPaymentTerms(storedTerms)
+          ? storedTerms
+          : null;
+      setLegacyPaymentTerms(unrecognizedTerms);
+      setDraft({
+        ...(result.stored as Draft),
+        payment_terms: normalizePaymentTerms(storedTerms),
+        preferred_payment_method: normalizePreferredPaymentMethod(
+          result.stored.preferred_payment_method,
+        ),
+      });
       setEffective(result.effective as unknown as Record<string, unknown>);
+      setClientValues(result.clientValues);
+      setCardOnFile(isReturnedActionError(card) ? null : card);
     } finally {
       setIsLoading(false);
     }
@@ -136,6 +180,57 @@ export function ClientBillingProfileSettings({
     </div>
   );
 
+  const notSetLabel = t('clientBillingProfileSettings.notSet', { defaultValue: 'Not set' });
+
+  const selectField = (
+    field: 'payment_terms' | 'preferred_payment_method',
+    label: string,
+    options: Array<{ value: string; label: string }>,
+    inheritedLabel: string | null,
+    hint?: string | null,
+  ) => (
+    <div key={field}>
+      <CustomSelect
+        id={`profile-setting-${field}`}
+        label={label}
+        value={(draft[field] as string | null) ?? INHERIT_VALUE}
+        onValueChange={(value) => set(field, value === INHERIT_VALUE ? null : value)}
+        options={[
+          {
+            value: INHERIT_VALUE,
+            label: t('clientBillingProfileSettings.inheritFromClient', {
+              value: inheritedLabel ?? notSetLabel,
+              defaultValue: 'Inherit from client ({{value}})',
+            }),
+          },
+          ...options,
+        ]}
+      />
+      {hint ? <p className="mt-1 text-xs text-gray-500">{hint}</p> : null}
+    </div>
+  );
+
+  const methodLabels = paymentMethodLabels(t);
+  const termsLabels = paymentTermsLabels(t);
+
+  const cardOnFileText = cardOnFile
+    ? t('clientBillingProfileSettings.cardOnFile', {
+        type: cardOnFile.type === 'credit_card'
+          ? t('clientBillingProfileSettings.cardType.card', { defaultValue: 'Card' })
+          : t('clientBillingProfileSettings.cardType.bankAccount', { defaultValue: 'Bank account' }),
+        last4: cardOnFile.last4 ?? '????',
+        expiry:
+          cardOnFile.exp_month && cardOnFile.exp_year
+            ? t('clientBillingProfileSettings.cardExpiry', {
+                month: String(cardOnFile.exp_month).padStart(2, '0'),
+                year: String(cardOnFile.exp_year).slice(-2),
+                defaultValue: ', exp {{month}}/{{year}}',
+              })
+            : '',
+        defaultValue: '{{type}} •••• {{last4}}{{expiry}}',
+      })
+    : t('clientBillingProfileSettings.noCardOnFile', { defaultValue: 'No card on file' });
+
   return (
     <div className="space-y-4 rounded-md border border-gray-200 p-4">
       <div className="flex items-start justify-between gap-4">
@@ -199,11 +294,45 @@ export function ClientBillingProfileSettings({
           t('clientBillingProfileSettings.billingCycle', { defaultValue: 'Billing cycle' }),
           effective.billingCycle as string,
         )}
-        {textField(
+        {selectField(
           'payment_terms',
           t('clientBillingProfileSettings.paymentTerms', { defaultValue: 'Payment terms' }),
-          effective.paymentTerms as string,
+          paymentTermsOptions(t),
+          clientValues.paymentTerms ? termsLabels[clientValues.paymentTerms] : null,
+          legacyPaymentTerms
+            ? t('clientBillingProfileSettings.legacyPaymentTerms', {
+                value: legacyPaymentTerms,
+                defaultValue:
+                  '"{{value}}" is not a recognized payment term and was never applied. Saving clears it.',
+              })
+            : null,
         )}
+        {selectField(
+          'preferred_payment_method',
+          t('clientBillingProfileSettings.paymentMethod', { defaultValue: 'Payment method' }),
+          paymentMethodOptions(t),
+          clientValues.preferredPaymentMethod
+            ? methodLabels[clientValues.preferredPaymentMethod]
+            : null,
+          t('clientBillingProfileSettings.paymentMethodHint', {
+            defaultValue:
+              'Invoices for Check or Bank Transfer do not include an online "Pay now" link.',
+          }),
+        )}
+      </div>
+
+      <div>
+        <Label>
+          {t('clientBillingProfileSettings.cardOnFileLabel', { defaultValue: 'Saved card on file' })}
+        </Label>
+        <p id="profile-card-on-file" className="text-sm">
+          {cardOnFileText}
+        </p>
+        <p className="text-xs text-gray-500">
+          {t('clientBillingProfileSettings.cardOnFileHint', {
+            defaultValue: 'Saved cards are managed by the client in the client portal.',
+          })}
+        </p>
       </div>
 
       <div className="flex items-center justify-between gap-4">
