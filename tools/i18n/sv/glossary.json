@@ -511,6 +511,15 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "{{count}} status",
+      "{{count}} team",
+      "Team",
+      "name@example.com",
+      "via {{source}}",
+      "status",
+      "team",
+      "{{actor}} · {{eventName}}",
+      "https://...",
       "system",
       "corr-123",
       "Status: {{status}}",
