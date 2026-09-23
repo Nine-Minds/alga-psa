@@ -25,7 +25,7 @@ export const LOCALE_CONFIG = {
    * the tenant's country — see countryDateFormat — so a locale names a language
    * and nothing else.
    */
-  supportedLocales: ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt', 'xx', 'yy'] as const,
+  supportedLocales: ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt', 'sv', 'xx', 'yy'] as const,
 
   /**
    * Human-readable names for each locale
@@ -40,6 +40,7 @@ export const LOCALE_CONFIG = {
     it: 'Italiano',
     pl: 'Polski',
     pt: 'Português (Brasil)',
+    sv: 'Svenska',
     xx: 'Pseudo (xx)',
     yy: 'Pseudo (yy)',
   } as const,
@@ -157,7 +158,7 @@ export const PREVIEW_LOCALES: ReadonlyArray<SupportedLocale> = [];
  * users who already selected them keep working, and so we can continue
  * iterating on them, but they won't appear as new selections.
  */
-export const INCOMPLETE_LOCALES: ReadonlyArray<SupportedLocale> = [];
+export const INCOMPLETE_LOCALES: ReadonlyArray<SupportedLocale> = ['sv'];
 
 /**
  * Filter non-production locales from a list. Use this for any user-facing
