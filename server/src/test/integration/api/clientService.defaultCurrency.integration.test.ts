@@ -142,6 +142,28 @@ describe('client currency and billing-profile lifecycle integration', () => {
     expect(persisted.default_currency_code).toBe('EUR');
   });
 
+  it('preserves both website copies on partial update and clears both when explicitly requested', async () => {
+    const tenantId = await createTenant();
+    const clientId = await seedClient(tenantId);
+    const service = serviceFor(tenantId);
+    const website = 'https://digital-checkmark.example';
+    await tenantTable(tenantId, 'clients').where({ client_id: clientId }).update({
+      url: website,
+      properties: { website, industry: 'IT' },
+    });
+
+    const context = { tenant: tenantId, userId: uuidv4() } as any;
+    await service.update(clientId, updateClientSchema.parse({ client_name: 'Renamed' }) as any, context);
+    let persisted = await tenantTable(tenantId, 'clients').where({ client_id: clientId }).first();
+    expect(persisted.url).toBe(website);
+    expect(persisted.properties).toMatchObject({ website, industry: 'IT' });
+
+    await service.update(clientId, updateClientSchema.parse({ properties: { website: '' } }) as any, context);
+    persisted = await tenantTable(tenantId, 'clients').where({ client_id: clientId }).first();
+    expect(persisted.url).toBe('');
+    expect(persisted.properties).toMatchObject({ website: '' });
+  });
+
   it('persists default_currency_code on create and defaults to USD when omitted', async () => {
     const tenantId = await createTenant();
     const service = serviceFor(tenantId);

@@ -64,6 +64,7 @@ import {
 } from './clientDetailsEntraSyncAction';
 import { useEntraSyncPermission } from './useEntraSyncPermission';
 import { ClientDetailsTabContent } from './ClientDetailsTabContent';
+import { clientWebsiteFieldsForSave } from '../../lib/clientWebsiteUpdate';
 
 function isClientActionError(value: unknown): value is ActionMessageError | ActionPermissionError {
   return isActionMessageError(value) || isActionPermissionError(value);
@@ -556,6 +557,17 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
         properties: restOfEditedClient.properties ? { ...restOfEditedClient.properties } : {},
         account_manager_id: editedClientRef.current.account_manager_id === '' ? null : editedClientRef.current.account_manager_id,
       };
+      const websiteFields = clientWebsiteFieldsForSave(editedClientRef.current, client);
+      if (!websiteFields.changed) {
+        delete dataToUpdate.url;
+        if (dataToUpdate.properties) delete dataToUpdate.properties.website;
+      } else {
+        dataToUpdate.url = websiteFields.url;
+        dataToUpdate.properties = {
+          ...(dataToUpdate.properties ?? {}),
+          website: websiteFields.website,
+        };
+      }
       const updateResult = await updateClient(client.client_id, dataToUpdate);
       if (isClientActionError(updateResult)) {
         handleError(updateResult);

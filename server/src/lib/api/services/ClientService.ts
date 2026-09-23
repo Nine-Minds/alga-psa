@@ -39,6 +39,7 @@ import {
   ensureDefaultContractForClientIfBillingConfigured,
 } from '@alga-psa/shared/billingClients/defaultContract';
 import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
+import { mergeClientWebsiteUpdate } from '@alga-psa/clients/lib/clientWebsiteUpdate';
 
 function maybeUserActorFromContext(context: ServiceContext) {
   if (typeof context.userId !== 'string' || !context.userId) return undefined;
@@ -611,6 +612,15 @@ export class ClientService extends BaseService<IClient> {
         ...data,
         updated_at: knex.raw('now()'),
       };
+
+      // API PATCH-style updates must preserve omitted properties and synchronize
+      // website copies only when url or properties.website was explicitly sent.
+      Object.assign(updateData, mergeClientWebsiteUpdate(before.url, before.properties, data));
+      // The raw spread above would otherwise pass properties: null through and
+      // clear the column despite null meaning "no property update" here.
+      if (data.properties === null) {
+        delete updateData.properties;
+      }
 
       // Remove undefined values + non-column fields
       Object.keys(updateData).forEach((key) => {
