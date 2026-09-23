@@ -511,6 +511,13 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "Kanban",
+      "Status *",
+      "Status: {{label}}",
+      "Budget",
+      "Budget:",
+      "{{actual}} / {{estimated}}",
+      "{{hours}} h",
       "{{count}} {{units}}",
       "{{rate}}/{{unit}}",
       "{{count}} min",
