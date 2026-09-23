@@ -646,7 +646,16 @@
       "propagationSummary": "{{masters}} geselecteerde ticket(s) zijn masters in synchronisatiemodus; deze wijziging sluit/heropent {{children}} kindticket(s).",
       "masterSummary": "{{children}} kindticket(s)",
       "applyToChildren": "Toepassen op kinderen",
-      "mastersOnly": "Alleen masters"
+      "mastersOnly": "Alleen masters",
+      "membersLabel": "Tickets in this bundle",
+      "addTicketSearchPlaceholder": "Search tickets by number or title",
+      "addTicketEmpty": "Search for tickets to add",
+      "badgeAdded": "Added",
+      "badgeInBundle": "In bundle #{{number}}",
+      "badgeMaster": "Bundle master",
+      "masterTag": "Master",
+      "removeMember": "Remove",
+      "needMoreTickets": "Add at least one more ticket to bundle."
     },
     "auth": {
       "moveRequired": "U moet zijn ingelogd om tickets te verplaatsen",
@@ -672,7 +681,8 @@
       "dueDate": "Vervaldatum",
       "statusDisabledMultiBoard": "Geselecteerde tickets staan op verschillende borden",
       "statusResolvingBoards": "Borden van geselecteerde tickets controleren…",
-      "more": "Meer"
+      "more": "Meer",
+      "bundleNeedsOne": "Select at least 1 ticket to bundle"
     },
     "assign": {
       "dialogTitle": "Geselecteerde tickets toewijzen",

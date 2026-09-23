@@ -718,7 +718,16 @@
       "propagationSummary": "{{masters}} wybranych zgłoszeń to zgłoszenia nadrzędne w trybie synchronizacji; ta zmiana zamknie lub ponownie otworzy {{children}} zgłoszeń podrzędnych.",
       "masterSummary": "{{children}} zgłoszeń podrzędnych",
       "applyToChildren": "Zastosuj do podrzędnych",
-      "mastersOnly": "Tylko nadrzędne"
+      "mastersOnly": "Tylko nadrzędne",
+      "membersLabel": "Tickets in this bundle",
+      "addTicketSearchPlaceholder": "Search tickets by number or title",
+      "addTicketEmpty": "Search for tickets to add",
+      "badgeAdded": "Added",
+      "badgeInBundle": "In bundle #{{number}}",
+      "badgeMaster": "Bundle master",
+      "masterTag": "Master",
+      "removeMember": "Remove",
+      "needMoreTickets": "Add at least one more ticket to bundle."
     },
     "auth": {
       "moveRequired": "Musisz być zalogowany, aby przenosić zgłoszenia",
@@ -746,7 +755,8 @@
       "statusResolvingBoards": "Sprawdzanie tablic wybranych zgłoszeń…",
       "more": "Więcej",
       "selectedCount_few": "Zaznaczono {{count}}",
-      "selectedCount_many": "Zaznaczono {{count}}"
+      "selectedCount_many": "Zaznaczono {{count}}",
+      "bundleNeedsOne": "Select at least 1 ticket to bundle"
     },
     "assign": {
       "dialogTitle": "Przypisz wybrane zgłoszenia",

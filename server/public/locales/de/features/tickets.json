@@ -646,7 +646,16 @@
       "propagationSummary": "{{masters}} ausgewählte(s) Ticket(s) sind Master im Synchronmodus; diese Änderung schließt/öffnet {{children}} untergeordnete(s) Ticket(s).",
       "masterSummary": "{{children}} untergeordnete(s) Ticket(s)",
       "applyToChildren": "Auf untergeordnete Tickets anwenden",
-      "mastersOnly": "Nur Master"
+      "mastersOnly": "Nur Master",
+      "membersLabel": "Tickets in this bundle",
+      "addTicketSearchPlaceholder": "Search tickets by number or title",
+      "addTicketEmpty": "Search for tickets to add",
+      "badgeAdded": "Added",
+      "badgeInBundle": "In bundle #{{number}}",
+      "badgeMaster": "Bundle master",
+      "masterTag": "Master",
+      "removeMember": "Remove",
+      "needMoreTickets": "Add at least one more ticket to bundle."
     },
     "auth": {
       "moveRequired": "Sie müssen angemeldet sein, um Tickets zu verschieben",
@@ -672,7 +681,8 @@
       "dueDate": "Fälligkeitsdatum",
       "statusDisabledMultiBoard": "Ausgewählte Tickets liegen auf verschiedenen Boards",
       "statusResolvingBoards": "Boards der ausgewählten Tickets werden geprüft…",
-      "more": "Mehr"
+      "more": "Mehr",
+      "bundleNeedsOne": "Select at least 1 ticket to bundle"
     },
     "assign": {
       "dialogTitle": "Ausgewählte Tickets zuweisen",

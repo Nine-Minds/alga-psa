@@ -13,6 +13,7 @@ import { useTranslation } from '../lib/i18n/client';
 export interface SelectOption {
   value: string;
   label: string;
+  disabled?: boolean;
   badge?: {
     text: string;
     variant?: 'default' | 'primary' | 'secondary' | 'success' | 'warning' | 'danger';
@@ -82,6 +83,7 @@ export function AsyncSearchableSelect({
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const pageRef = useRef(1);
+  const requestGenerationRef = useRef(0);
   const listRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -188,6 +190,7 @@ export function AsyncSearchableSelect({
 
   const fetchOptions = useCallback(
     async (term: string, page: number) => {
+      const generation = ++requestGenerationRef.current;
       if (page === 1) {
         setLoading(true);
       } else {
@@ -196,6 +199,7 @@ export function AsyncSearchableSelect({
       setLoadError(null);
       try {
         const result = await loadOptions({ search: term, page, limit });
+        if (generation !== requestGenerationRef.current) return;
         if (page === 1) {
           setOptions(result.options);
         } else {
@@ -204,6 +208,7 @@ export function AsyncSearchableSelect({
         setTotal(result.total);
         pageRef.current = page;
       } catch (e) {
+        if (generation !== requestGenerationRef.current) return;
         console.error('[AsyncSearchableSelect] Failed to load options:', e);
         if (page === 1) {
           setOptions([]);
@@ -211,8 +216,10 @@ export function AsyncSearchableSelect({
         }
         setLoadError('Failed to load results');
       } finally {
-        setLoading(false);
-        setLoadingMore(false);
+        if (generation === requestGenerationRef.current) {
+          setLoading(false);
+          setLoadingMore(false);
+        }
       }
     },
     [loadOptions, limit]
@@ -295,11 +302,14 @@ export function AsyncSearchableSelect({
                   key={option.value}
                   value={option.value}
                   onSelect={() => {
+                    if (option.disabled) return;
                     onChange(option.value, option);
                     setOpen(false);
                   }}
+                  aria-disabled={option.disabled || undefined}
                   className={cn(
-                    'flex items-center px-2 py-1.5 text-sm rounded-sm cursor-pointer',
+                    'flex items-center px-2 py-1.5 text-sm rounded-sm',
+                    option.disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
                     'hover:bg-[rgb(var(--color-border-100))]',
                     'aria-selected:bg-[rgb(var(--color-border-100))]',
                     value === option.value && 'bg-[rgb(var(--color-border-100))]'

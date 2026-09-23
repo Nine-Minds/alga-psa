@@ -646,7 +646,16 @@
       "propagationSummary": "{{masters}} ticket selezionati sono master in modalità sincronizzazione; questa modifica chiuderà/riaprirà {{children}} ticket figli.",
       "masterSummary": "{{children}} ticket figli",
       "applyToChildren": "Applica ai figli",
-      "mastersOnly": "Solo master"
+      "mastersOnly": "Solo master",
+      "membersLabel": "Tickets in this bundle",
+      "addTicketSearchPlaceholder": "Search tickets by number or title",
+      "addTicketEmpty": "Search for tickets to add",
+      "badgeAdded": "Added",
+      "badgeInBundle": "In bundle #{{number}}",
+      "badgeMaster": "Bundle master",
+      "masterTag": "Master",
+      "removeMember": "Remove",
+      "needMoreTickets": "Add at least one more ticket to bundle."
     },
     "auth": {
       "moveRequired": "Devi aver effettuato l'accesso per spostare i ticket",
@@ -672,7 +681,8 @@
       "dueDate": "Scadenza",
       "statusDisabledMultiBoard": "I ticket selezionati sono su bacheche diverse",
       "statusResolvingBoards": "Verifica delle bacheche dei ticket selezionati…",
-      "more": "Altro"
+      "more": "Altro",
+      "bundleNeedsOne": "Select at least 1 ticket to bundle"
     },
     "assign": {
       "dialogTitle": "Assegna ticket selezionati",

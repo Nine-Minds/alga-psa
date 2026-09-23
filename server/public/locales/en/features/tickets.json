@@ -566,7 +566,8 @@
       "dueDate": "Due Date",
       "statusDisabledMultiBoard": "Selected tickets are on different boards",
       "statusResolvingBoards": "Checking the boards of selected tickets…",
-      "more": "More"
+      "more": "More",
+      "bundleNeedsOne": "Select at least 1 ticket to bundle"
     },
     "moveDialogTitle": "Move Selected Tickets",
     "moveDialogDescription": "Select a destination board and status, then confirm moving the selected tickets.",
@@ -671,7 +672,16 @@
       "propagationSummary": "{{masters}} selected ticket(s) are sync-mode bundle masters; this change will close/reopen {{children}} child ticket(s).",
       "masterSummary": "{{children}} child ticket(s)",
       "applyToChildren": "Apply to children",
-      "mastersOnly": "Masters only"
+      "mastersOnly": "Masters only",
+      "membersLabel": "Tickets in this bundle",
+      "addTicketSearchPlaceholder": "Search tickets by number or title",
+      "addTicketEmpty": "Search for tickets to add",
+      "badgeAdded": "Added",
+      "badgeInBundle": "In bundle #{{number}}",
+      "badgeMaster": "Bundle master",
+      "masterTag": "Master",
+      "removeMember": "Remove",
+      "needMoreTickets": "Add at least one more ticket to bundle."
     },
     "auth": {
       "moveRequired": "You must be logged in to move tickets",
