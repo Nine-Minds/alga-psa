@@ -3,6 +3,7 @@
 import React from 'react';
 import { ArrowUpRight, FileText, Mail, MapPin, Phone, Plus, Settings } from 'lucide-react';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
+import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import {
   BentoChip,
   BentoFooterLinks,
@@ -751,6 +752,7 @@ export function RecordCard({ id, data, onOpen, onOpenAdditionalInfo, onOpenConta
   t: TFn;
 }) {
   const defaultContactId = data.defaultContactId;
+  const { formatDate } = useFormatters();
   // W5: tax region + inbound domains were plumbing on the overview (they live
   // in the Details/Tax focus views); the card keeps the who-owns-this facts.
   const rows: Array<{ label: string; value: string | null; onClick?: () => void }> = [
@@ -765,9 +767,13 @@ export function RecordCard({ id, data, onOpen, onOpenAdditionalInfo, onOpenConta
     },
     {
       label: t('clientCommandCenter.record.clientSince', { defaultValue: 'Client since' }),
-      // The value is already a calendar date — re-parsing it into a Date would
-      // read the year back in the browser's timezone and lose a January 1.
-      value: data.clientSince ? data.clientSince.slice(0, 4) : null,
+      // The full day, in the tenant country's digit order and separator. The
+      // value stays the raw calendar date string on the way in: formatDate
+      // treats YYYY-MM-DD as a date with no timezone, while pre-parsing it into
+      // a Date here would shift a January 1 into the prior year west of UTC.
+      value: data.clientSince
+        ? formatDate(data.clientSince, { year: 'numeric', month: '2-digit', day: '2-digit' })
+        : null,
     },
   ];
 

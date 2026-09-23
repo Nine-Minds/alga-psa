@@ -4,6 +4,7 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { DateFormatProvider } from '@alga-psa/ui/lib/dateFormat/useDateFormat';
 import type {
   ClientPulseDocuments,
   ClientPulseInstallBase,
@@ -388,12 +389,31 @@ describe('RecordCard', () => {
 
     expect(screen.getByText('Dorothy Gale')).toBeInTheDocument();
     expect(screen.getByText('not set')).toBeInTheDocument();
-    expect(screen.getByText('2019')).toBeInTheDocument();
+    expect(screen.getByText('04/01/2019')).toBeInTheDocument();
   });
 
-  it('shows the client_since year, not the year the row was created', () => {
+  it("writes client since in the tenant country's date order", () => {
+    render(
+      <DateFormatProvider countryCode="AU">
+        <RecordCard
+          id="rec"
+          data={{
+            url: null, accountManagerName: null, defaultContactName: null, defaultContactId: null,
+            inboundDomains: [], taxRegion: null, clientSince: '2019-04-01', isInactive: false,
+          }}
+          onOpen={null}
+          onOpenAdditionalInfo={null}
+          t={t}
+        />
+      </DateFormatProvider>,
+    );
+
+    expect(screen.getByText('01/04/2019')).toBeInTheDocument();
+  });
+
+  it('shows the whole client_since day, not the day the row was created', () => {
     // A migrated client: the relationship started years before the AlgaPSA row,
-    // and on Jan 1 a timezone-shifted re-parse would report 2014.
+    // and on Jan 1 a timezone-shifted re-parse would report 31/12/2014.
     render(
       <RecordCard
         id="rec"
@@ -407,7 +427,7 @@ describe('RecordCard', () => {
       />,
     );
 
-    expect(screen.getByText('2015')).toBeInTheDocument();
+    expect(screen.getByText('01/01/2015')).toBeInTheDocument();
   });
 
   it('opens the default contact when there is a handler and a resolved contact', () => {
