@@ -674,8 +674,21 @@ describe('processInboundEmailInApp', () => {
     expect(processInboundEmailArtifactsBestEffortMock).not.toHaveBeenCalled();
   });
 
-  it('rewrites data:image embeds to served attachment URLs in stored comment note after artifacts persist', async () => {
+  it('rewrites data:image embeds to served attachment URLs in the stored comment and description after artifacts persist', async () => {
     const updatedNotes: any[] = [];
+    const updatedTicketAttributes: any[] = [];
+    let storedCommentContent: string | null = null;
+    let storedTicketAttributes: Record<string, unknown> | null = null;
+
+    createCommentFromEmailMock.mockImplementation(async (data: any) => {
+      storedCommentContent = data.content;
+      return 'comment-1';
+    });
+    createTicketFromEmailMock.mockImplementation(async (data: any) => {
+      storedTicketAttributes = { ...(data.attributes ?? {}), description: data.description };
+      return { ticket_id: 'ticket-1', ticket_number: 'T-1' };
+    });
+
     withAdminTransactionMock.mockImplementation(async (callback: (trx: any) => Promise<any>) => {
       const trx = vi.fn((table: string) => {
         if (table === 'tickets as t') {
@@ -700,6 +713,38 @@ describe('processInboundEmailInApp', () => {
             first: vi.fn().mockResolvedValue(undefined),
             update: vi.fn().mockImplementation(async (payload: any) => {
               updatedNotes.push(payload);
+              return 1;
+            }),
+          };
+          return builder;
+        }
+
+        if (table === 'comments') {
+          const builder: any = {
+            where: vi.fn().mockReturnThis(),
+            first: vi.fn().mockImplementation(async () => (
+              storedCommentContent === null ? undefined : { note: storedCommentContent }
+            )),
+            update: vi.fn().mockImplementation(async (payload: any) => {
+              updatedNotes.push(payload);
+              storedCommentContent = payload.note;
+              return 1;
+            }),
+          };
+          return builder;
+        }
+
+        if (table === 'tickets') {
+          const builder: any = {
+            where: vi.fn().mockReturnThis(),
+            first: vi.fn().mockImplementation(async () => (
+              storedTicketAttributes === null
+                ? undefined
+                : { attributes: JSON.stringify(storedTicketAttributes) }
+            )),
+            update: vi.fn().mockImplementation(async (payload: any) => {
+              updatedTicketAttributes.push(payload);
+              storedTicketAttributes = JSON.parse(payload.attributes);
               return 1;
             }),
           };
@@ -753,6 +798,9 @@ describe('processInboundEmailInApp', () => {
     expect(typeof updatedNotes[0].note).toBe('string');
     expect(updatedNotes[0].note).toContain('/api/documents/view/file-123');
     expect(updatedNotes[0].note).not.toContain('data:image/png;base64,aGVsbG8=');
+    expect(updatedTicketAttributes).toHaveLength(1);
+    expect(JSON.parse(updatedTicketAttributes[0].attributes).description).toContain('/api/documents/view/file-123');
+    expect(JSON.parse(updatedTicketAttributes[0].attributes).description).not.toContain('data:image/png;base64,aGVsbG8=');
   });
 
   it('T019: new ticket path includes watch-list attributes from To/CC recipients', async () => {

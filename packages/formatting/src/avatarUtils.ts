@@ -133,6 +133,19 @@ export async function getClientLogoUrl(
 }
 
 /**
+ * Logo for a client on a generated document (invoice, quote, sales order),
+ * where there is room for the full wordmark: the 'wide' variant when the
+ * square mark was cut from one, otherwise the square mark itself.
+ */
+export async function getClientDocumentLogoUrl(
+  clientId: string,
+  tenant: string
+): Promise<string | null> {
+  return (await getEntityImageUrl('client', clientId, tenant, 'wide'))
+    ?? getEntityImageUrl('client', clientId, tenant);
+}
+
+/**
  * Convenience function to get a team's avatar URL
  */
 export async function getTeamAvatarUrl(

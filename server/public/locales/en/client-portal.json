@@ -615,7 +615,18 @@
       "deleteError": "Failed to delete.",
       "deleteConfirm": "Are you sure you want to delete this? This action cannot be undone.",
       "linking": "Linking...",
-      "linkDocument": "Link Document"
+      "linkDocument": "Link Document",
+      "cropTitle": "Choose the square mark",
+      "cropHelp": "Drag the logo and zoom to pick the part shown in small, square spaces. Zoom out to leave space around it. The full logo is kept as well.",
+      "zoom": "Zoom",
+      "zoomOut": "Zoom out",
+      "zoomIn": "Zoom in",
+      "cropPreview": "Preview",
+      "applyCrop": "Use this crop",
+      "adjustMark": "Adjust mark",
+      "cropFromWide": "Crop from wide logo",
+      "recropSuccess": "Mark updated.",
+      "recropError": "Failed to update the mark."
     },
     "validation": {
       "clientNameRequired": "Client name is required",

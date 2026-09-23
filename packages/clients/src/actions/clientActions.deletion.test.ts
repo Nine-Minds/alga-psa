@@ -78,12 +78,15 @@ vi.mock('../lib/billingHelpers', () => ({
 
 vi.mock('../lib/documentsHelpers', () => ({
   getClientLogoUrlAsync: vi.fn(),
+  getClientWideLogoUrlAsync: vi.fn(),
   getClientLogoUrlsBatchAsync: vi.fn(),
 }));
 
 vi.mock('@alga-psa/storage', () => ({
   uploadEntityImage: vi.fn(),
   deleteEntityImage: vi.fn(),
+  recropEntityLogo: vi.fn(),
+  parseLogoCrop: vi.fn(() => null),
 }));
 
 vi.mock('@alga-psa/tags/actions', () => ({

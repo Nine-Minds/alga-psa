@@ -24,7 +24,7 @@ import type {
   InvoiceTimeEntrySnapshot,
   InvoiceViewModel,
 } from '@alga-psa/types';
-import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
+import { getClientDocumentLogoUrl } from '@alga-psa/formatting/avatarUtils';
 import { isValidInvoiceTimeSnapshot } from '../lib/billing/invoiceTimeSnapshot';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 
@@ -500,7 +500,7 @@ const Invoice = {
         .select('full_name')
         .where({ client_id: invoice.client_id })
         .first() as unknown as Promise<InvoiceContactRow | undefined>,
-      getClientLogoUrl(invoice.client_id, tenant).catch(() => null),
+      getClientDocumentLogoUrl(invoice.client_id, tenant).catch(() => null),
       tenantClientQuery
         .select(
           'tc.client_id',
@@ -563,7 +563,7 @@ const Invoice = {
 
     let tenantClient: InvoiceViewModel['tenantClient'] = null;
     if (tenantClientDetails?.client_id) {
-      const tenantLogoUrl = await getClientLogoUrl(tenantClientDetails.client_id, tenant).catch(() => null);
+      const tenantLogoUrl = await getClientDocumentLogoUrl(tenantClientDetails.client_id, tenant).catch(() => null);
       const tenantClientName = asTrimmedString(tenantClientDetails.client_name);
       const tenantClientAddress = asTrimmedString(tenantClientDetails.location_address);
 

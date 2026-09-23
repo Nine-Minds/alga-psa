@@ -47,6 +47,7 @@
     "@alga-psa/db": "*",
     "@alga-psa/event-bus": "*",
     "@alga-psa/formatting": "*",
+    "@alga-psa/types": "*",
     "@alga-psa/validation": "*",
     "file-type": "^21.3.2"
   },

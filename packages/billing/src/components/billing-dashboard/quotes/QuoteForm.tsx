@@ -59,6 +59,14 @@ interface QuoteFormProps {
   };
   onCancel: () => void;
   onSaved: (quoteId: string) => void;
+  /**
+   * Notifies the owning list that a successful in-form workflow action changed
+   * this quote's persisted status (send, resend, approve). Awaited while the
+   * action remains busy so the parent snapshot is current before the buttons
+   * re-enable; a parent refresh failure never turns the successful mutation
+   * into a visible action error.
+   */
+  onQuoteStatusChanged?: () => void | Promise<void>;
 }
 
 interface QuoteFormState {
@@ -145,6 +153,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   initialContext,
   onCancel,
   onSaved,
+  onQuoteStatusChanged,
 }) => {
   const { t } = useTranslation('msp/quotes');
   const { formatCurrency: formatLocalizedCurrency, formatDate } = useFormatters();
@@ -689,7 +698,11 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
 
   const quoteStatus = (quote?.status ?? 'draft') as QuoteStatus;
 
-  const runWorkflowAction = async (label: string, action: () => Promise<IQuote | { permissionError: string }>) => {
+  const runWorkflowAction = async (
+    label: string,
+    action: () => Promise<IQuote | { permissionError: string }>,
+    options?: { notifyStatusChanged?: boolean },
+  ) => {
     try {
       setIsWorking(true);
       setError(null);
@@ -699,6 +712,16 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
         throw new Error(getErrorMessage(result));
       }
       setQuote(result as IQuote);
+      if (options?.notifyStatusChanged) {
+        // Isolate a parent-refresh failure: the status mutation already
+        // succeeded, so a list refetch error must not render as a failed
+        // send/resend/approve. The callback owns its own error reporting.
+        try {
+          await onQuoteStatusChanged?.();
+        } catch (refreshError) {
+          console.error('Quote status change refresh failed:', refreshError);
+        }
+      }
       return result;
     } catch (actionError) {
       setError(
@@ -733,6 +756,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
         message: sendMessage.trim() || undefined,
         email_addresses: combined.length > 0 ? combined : undefined,
       }),
+      { notifyStatusChanged: true },
     );
     if (result) {
       setIsSendDialogOpen(false);
@@ -750,6 +774,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
     const result = await runWorkflowAction(
       t('quoteForm.errorActions.resendQuote', { defaultValue: 'resend quote' }),
       () => resendQuote(quote.quote_id),
+      { notifyStatusChanged: true },
     );
     if (result) {
       setNotice(t('quoteForm.notices.resent', { defaultValue: 'Quote resent.' }));
@@ -791,6 +816,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
     const result = await runWorkflowAction(
       t('quoteForm.errorActions.approveQuote', { defaultValue: 'approve quote' }),
       () => approveQuote(quote.quote_id, approvalComment),
+      { notifyStatusChanged: true },
     );
     if (result) {
       setApprovalDialogMode(null);
