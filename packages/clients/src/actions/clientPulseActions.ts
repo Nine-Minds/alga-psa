@@ -4,6 +4,7 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
+import { toClientSinceDate } from '../lib/clientSince';
 import { getContactAvatarUrlsBatchAsync } from '../lib/documentsHelpers';
 import {
   actionError,
@@ -58,24 +59,6 @@ function toIsoString(value: unknown): string | null {
   if (!value) return null;
   const date = value instanceof Date ? value : new Date(value as string | number);
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
-}
-
-/**
- * Calendar date as plain 'YYYY-MM-DD'. pg hands DATE columns back as
- * local-midnight Date objects, so reading UTC parts off one would move the day
- * — and on Jan 1 the year — for anyone east of Greenwich.
- */
-function toDateOnlyString(value: unknown): string | null {
-  if (!value) return null;
-  if (typeof value === 'string') {
-    const match = /^\d{4}-\d{2}-\d{2}/.exec(value.trim());
-    if (match) return match[0];
-  }
-  const date = value instanceof Date ? value : new Date(value as string | number);
-  if (Number.isNaN(date.getTime())) return null;
-  const month = `${date.getMonth() + 1}`.padStart(2, '0');
-  const day = `${date.getDate()}`.padStart(2, '0');
-  return `${date.getFullYear()}-${month}-${day}`;
 }
 
 function daysSince(value: unknown, nowMs: number): number | null {
@@ -415,7 +398,9 @@ async function fetchRecord(
     defaultContactId: defaultContact?.contact_name_id ?? null,
     inboundDomains: inboundDomains.map((domain) => String(domain)),
     taxRegion: taxRegion?.region_name ?? null,
-    clientSince: toDateOnlyString(clientRow.client_since ?? clientRow.created_at),
+    // Calendar date, not a timestamp: the card reads the year off it, and a
+    // UTC re-parse would lose a January 1 for anyone east of Greenwich.
+    clientSince: toClientSinceDate(clientRow.client_since ?? clientRow.created_at) ?? null,
     isInactive: Boolean(clientRow.is_inactive),
   };
 }
