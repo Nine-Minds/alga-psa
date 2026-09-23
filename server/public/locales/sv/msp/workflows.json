@@ -1,0 +1,2593 @@
+{
+  "page": {
+    "title": "Arbetsflöden"
+  },
+  "nav": {
+    "designer": "Arbetsflödesdesigner",
+    "runs": "Körningar",
+    "control": "Arbetsflödeskontroll",
+    "tasks": "Uppgifter"
+  },
+  "sections": {
+    "definitions": "Arbetsflödesdefinitioner",
+    "runStudio": "Körningsstudio"
+  },
+  "empty": {
+    "title": "Inga arbetsflöden hittades",
+    "description": "Arbetsflöden visas här när de har skapats."
+  },
+  "filters": {
+    "allStatuses": "Alla statusar",
+    "allLevels": "Alla nivåer",
+    "allTypes": "Alla typer"
+  },
+  "actions": {
+    "create": "Skapa arbetsflöde",
+    "open": "Öppna",
+    "close": "Stäng",
+    "print": "Skriv ut",
+    "printOptions": "Utskriftsalternativ",
+    "printSelected": "Skriv ut markerade ({{count}})"
+  },
+  "runList": {
+    "shareTooltip": "Skriv ut och exportera",
+    "quickRanges": {
+      "last24h": "Senaste 24 timmarna",
+      "last7d": "Senaste 7 dagarna"
+    },
+    "summary": {
+      "total": "Totalt",
+      "activeWorkflows": "Aktiva arbetsflöden",
+      "runCount": "{{count}} körningar"
+    },
+    "filters": {
+      "all": "Alla",
+      "allWorkflows": "Alla arbetsflöden",
+      "searchLabel": "Körnings-ID eller korrelationsnyckel",
+      "searchPlaceholder": "Sök efter körnings-ID eller korrelationsnyckel",
+      "statusLabel": "Status",
+      "workflowLabel": "Arbetsflöde",
+      "versionLabel": "Arbetsflödesversion",
+      "versionPlaceholder": "Valfri version",
+      "fromLabel": "Från",
+      "toLabel": "Till",
+      "sortLabel": "Sortera"
+    },
+    "actions": {
+      "applyFilters": "Tillämpa filter",
+      "reset": "Återställ",
+      "viewLatestRun": "Visa senaste körningen",
+      "runNow": "Kör nu",
+      "exportCsv": "Exportera CSV",
+      "refresh": "Ladda om",
+      "details": "Detaljer",
+      "loadMore": "Ladda fler",
+      "preview": "Förhandsgranska"
+    },
+    "table": {
+      "runId": "Körnings-ID",
+      "workflow": "Arbetsflöde",
+      "version": "Version",
+      "tenant": "Klientorganisation",
+      "triggerPayload": "Utlösarens nyttolast",
+      "status": "Status",
+      "started": "Startad",
+      "updated": "Uppdaterad",
+      "duration": "Varaktighet",
+      "emptyValue": "—",
+      "trigger": {
+        "manual": "Manuell",
+        "mapped": "Mappad",
+        "identity": "Identitet"
+      }
+    },
+    "states": {
+      "loading": "Laddar arbetsflödeskörningar…",
+      "empty": "Inga arbetsflödeskörningar matchar de aktuella filtren."
+    },
+    "bulk": {
+      "cancelTitle": "Avbryt markerade körningar",
+      "cancelMessage": "Avbryta {{count}} markerade körningar? Detta kan inte ångras.",
+      "reasonLabel": "Orsak",
+      "cancelReasonPlaceholder": "Ange en orsak till att avbryta",
+      "cancelConfirm": "Avbryt körningar",
+      "actionBar": {
+        "selectedCount": "{{count}} markerade",
+        "cancel": "Avbryt körningar",
+        "clear": "Avmarkera alla"
+      }
+    },
+    "toasts": {
+      "loadRunsFailed": "Det gick inte att ladda arbetsflödeskörningar",
+      "selectWorkflowForLatestRun": "Välj ett arbetsflöde för att visa dess senaste körning.",
+      "noRunsFoundForWorkflow": "Inga körningar hittades för det arbetsflödet.",
+      "loadLatestRunFailed": "Det gick inte att ladda den senaste körningen",
+      "selectWorkflowToRun": "Välj ett arbetsflöde att köra.",
+      "exportReady": "Körningsexporten är klar",
+      "exportFailed": "Det gick inte att exportera körningarna",
+      "selectRunsForBulkAction": "Markera körningar för att utföra den här åtgärden.",
+      "bulkReasonTooShort": "Orsaken måste innehålla minst 3 tecken.",
+      "noEligibleRuns": "Ingen av de markerade körningarna kan användas för den åtgärden.",
+      "bulkCancelFailedCount": "Det gick inte att avbryta {{count}} körningar.",
+      "bulkCancelSuccessCount": "{{count}} körningar avbröts.",
+      "bulkSkippedIneligibleCount": "{{count}} körningar som inte kunde behandlas hoppades över.",
+      "bulkActionFailed": "Massåtgärden misslyckades"
+    },
+    "print": {
+      "title": "Arbetsflödeskörningar",
+      "selectedTitle": "Markerade arbetsflödeskörningar",
+      "subtitle": "{{count}} körningar",
+      "noRuns": "Inga arbetsflödeskörningar att skriva ut",
+      "columns": {
+        "run": "Körning",
+        "workflow": "Arbetsflöde",
+        "version": "Version",
+        "status": "Status",
+        "started": "Startad",
+        "updated": "Uppdaterad",
+        "duration": "Varaktighet"
+      },
+      "optionsDialog": {
+        "title": "Utskriftsalternativ",
+        "description": "Välj vilka kolumner som ska ingå vid utskrift av arbetsflödeskörningar."
+      }
+    },
+    "preview": {
+      "close": "Stäng",
+      "next": "Nästa",
+      "openFullPage": "Öppna helsida",
+      "position": "{{current}} av {{total}} laddade körningar",
+      "previous": "Föregående",
+      "selectedRun": "Markerad körning",
+      "title": "Förhandsgranskning av körning"
+    }
+  },
+  "runDetails": {
+    "common": {
+      "emptyValue": "—"
+    },
+    "header": {
+      "runIdLabel": "Körnings-ID",
+      "workflowIdLabel": "Arbetsflödes-ID:",
+      "triggerLabel": "Utlösare:"
+    },
+    "actions": {
+      "cancel": "Avbryt",
+      "export": "Exportera",
+      "replay": "Kör om",
+      "close": "Stäng",
+      "view": "Visa",
+      "apply": "Tillämpa",
+      "reset": "Återställ",
+      "exportCsv": "Exportera CSV",
+      "loadMore": "Ladda fler",
+      "exportAuditCsv": "Exportera granskningslogg som CSV"
+    },
+    "summary": {
+      "statusLabel": "Status",
+      "startedLabel": "Startad",
+      "updatedLabel": "Uppdaterad",
+      "completedLabel": "Slutförd",
+      "triggerLabel": "Utlösare",
+      "scheduleStateLabel": "Schemastatus",
+      "scheduledForLabel": "Schemalagd till",
+      "cronLabel": "Cron",
+      "nodePathLabel": "Nodsökväg:",
+      "eventTypeLabel": "Händelsetyp:",
+      "triggerPayloadSchemaLabel": "Schema för utlösarens nyttolast:",
+      "mapped": "Mappad",
+      "identity": "Identitet",
+      "runErrorFallback": "Körningsfel",
+      "errorCategoryFallback": "Fel",
+      "technicalDetailLabel": "Teknisk detalj:"
+    },
+    "stepTimeline": {
+      "title": "Tidslinje för steg",
+      "description": "Försök, varaktighet och fel per steg.",
+      "loading": "Laddar…",
+      "stepStatusLabel": "Stegstatus",
+      "nodeTypeLabel": "Nodtyp",
+      "collapseNestedLabel": "Fäll ihop nästlade block",
+      "columns": {
+        "stepPath": "Stegsökväg",
+        "type": "Typ",
+        "status": "Status",
+        "attempt": "Försök",
+        "duration": "Varaktighet",
+        "nextRetry": "Nästa försök",
+        "started": "Startad",
+        "error": "Fel",
+        "action": "Åtgärd"
+      },
+      "empty": "Ingen steghistorik ännu."
+    },
+    "stepDetails": {
+      "title": "Stegdetaljer",
+      "statusLabel": "Status",
+      "attemptLabel": "Försök",
+      "startedLabel": "Startad",
+      "completedLabel": "Slutfört",
+      "durationLabel": "Varaktighet",
+      "nodeTypeLabel": "Nodtyp",
+      "definitionStepIdLabel": "Steg-ID i definitionen",
+      "nextRetryLabel": "Nästa försök",
+      "errorTitle": "Fel",
+      "stepErrorFallback": "Stegfel",
+      "errorCategoryFallback": "Fel",
+      "technicalDetailLabel": "Teknisk detalj:"
+    },
+    "waitHistory": {
+      "title": "Väntningshistorik",
+      "eventLine": "Händelse: {{event}} · Nyckel: {{key}} · Filter: {{count}}",
+      "timeLine": "Läge: {{mode}} · Schemalagd återupptagning: {{scheduledResume}}",
+      "timeoutLine": "Tidsgräns: {{timeout}} · Avslutad: {{resolved}}"
+    },
+    "envelope": {
+      "title": "Kuvertdata",
+      "description": "Nyttolast, vars, meta och error från den senaste ögonblicksbilden.",
+      "redactedNotice": "Maskerade värden visas som {{marker}}.",
+      "noSnapshot": "Ingen ögonblicksbild tillgänglig.",
+      "tabs": {
+        "payload": "Nyttolast",
+        "vars": "Variabler",
+        "meta": "Meta",
+        "error": "Fel",
+        "raw": "Rådata"
+      }
+    },
+    "invocations": {
+      "title": "Åtgärdsanrop",
+      "redactedNotice": "Maskerade värden visas som {{marker}}.",
+      "empty": "Inga åtgärdsanrop registrerade för det här steget.",
+      "attemptLine": "Försök {{count}}",
+      "durationLine": "Varaktighet: {{duration}}",
+      "sizeLine": "Indatastorlek: {{inputSize}}{{inputSuffix}} · Utdatastorlek: {{outputSize}}{{outputSuffix}}",
+      "truncatedSuffix": " (avkortad)",
+      "inputLabel": "Indata",
+      "outputLabel": "Utdata"
+    },
+    "logs": {
+      "title": "Körningsloggar",
+      "description": "Driftlogghändelser för den här körningen.",
+      "searchLabel": "Sök",
+      "searchPlaceholder": "Sök i loggmeddelanden",
+      "levelLabel": "Nivå",
+      "empty": "Inga loggposter hittades.",
+      "columns": {
+        "timestamp": "Tidsstämpel",
+        "level": "Nivå",
+        "message": "Meddelande",
+        "step": "Steg",
+        "event": "Händelse",
+        "correlation": "Korrelation"
+      },
+      "loading": "Laddar loggar…"
+    },
+    "audit": {
+      "title": "Granskningslogg",
+      "description": "Administrativa åtgärder för den här körningen.",
+      "empty": "Inga granskningsposter ännu.",
+      "systemUser": "system",
+      "columns": {
+        "timestamp": "Tidsstämpel",
+        "operation": "Åtgärd",
+        "user": "Användare",
+        "details": "Detaljer"
+      },
+      "loading": "Laddar granskningslogg…",
+      "unknownUser": "Okänd användare"
+    },
+    "dialogs": {
+      "reasonLabel": "Orsak",
+      "cancelTitle": "Avbryt arbetsflödeskörning",
+      "cancelMessage": "Avbryta den här arbetsflödeskörningen? Detta kan inte ångras.",
+      "cancelReasonPlaceholder": "Ange en orsak till att avbryta",
+      "cancelConfirm": "Avbryt körning",
+      "replayTitle": "Kör arbetsflödet igen",
+      "replayMessage": "Kör om den här körningen med en ny nyttolast.",
+      "replayReasonPlaceholder": "Ange en orsak till att köra om",
+      "payloadLabel": "Nyttolast (JSON)",
+      "replayConfirm": "Kör om"
+    },
+    "toasts": {
+      "loadRunDetailsFailed": "Det gick inte att ladda körningsdetaljer",
+      "loadLogsFailed": "Det gick inte att ladda loggar",
+      "loadAuditLogsFailed": "Det gick inte att ladda granskningsloggar",
+      "logExportReady": "Loggexporten är klar",
+      "exportLogsFailed": "Det gick inte att exportera loggarna",
+      "reasonTooShort": "Orsaken måste innehålla minst 3 tecken.",
+      "runCanceled": "Körningen avbröts",
+      "cancelRunFailed": "Det gick inte att avbryta körningen",
+      "runExportReady": "Körningsexporten är klar",
+      "exportRunFailed": "Det gick inte att exportera körningen",
+      "replayPayloadInvalid": "Nyttolasten för omkörningen måste vara giltig JSON.",
+      "runReplayStarted": "Omkörningen har startat",
+      "replayRunFailed": "Det gick inte att köra om",
+      "auditExportReady": "Granskningsexporten är klar",
+      "exportAuditLogsFailed": "Det gick inte att exportera granskningsloggarna"
+    },
+    "queuedWarning": {
+      "title": "I kö – väntar på en arbetsflödesarbetare",
+      "description": "Den här körningen startade för över en minut sedan, men inga steg har körts ännu. Kontrollera att arbetsflödets arbetartjänst körs och är ansluten till Temporal."
+    }
+  },
+  "runDialog": {
+    "title": "Kör arbetsflöde",
+    "description": "Ange en syntetisk nyttolast för att förhandsgranska (och köra) ett arbetsflöde.",
+    "descriptionEvent": "Händelse: {{name}}.",
+    "draftWarning": "Utkastversionen skiljer sig från den publicerade (v{{version}}).",
+    "concurrencyLimit": "Samtidighetsgräns: {{count}} körningar åt gången.",
+    "common": {
+      "emptyValue": "—"
+    },
+    "actions": {
+      "addField": "Lägg till fält",
+      "addItem": "Lägg till post",
+      "cloneLatestRun": "Klona senaste körningen",
+      "close": "Stäng",
+      "copyPayload": "Kopiera nyttolast",
+      "formBuilder": "Formulärbyggare",
+      "hide": "Dölj",
+      "jsonEditor": "JSON-redigerare",
+      "openEventCatalog": "Öppna händelsekatalog",
+      "publishDraft": "Publicera utkast",
+      "publishLatest": "Publicera senaste",
+      "remove": "Ta bort",
+      "reset": "Återställ",
+      "resetToDefaults": "Återställ standardinställningar",
+      "savePreset": "Spara förinställning",
+      "show": "Visa",
+      "startRun": "Starta körning",
+      "starting": "Startar…"
+    },
+    "eventCatalog": {
+      "title": "Händelsekatalog",
+      "description": "Välj en händelsetyp som grund för nyttolastscheman.",
+      "searchLabel": "Sök händelser",
+      "searchPlaceholder": "Sök efter namn, typ eller kategori",
+      "eventTypeLabel": "Händelsetyp",
+      "loadingEvents": "Laddar händelser…",
+      "selectEventType": "Välj händelsetyp",
+      "systemBadge": "System",
+      "tenantBadge": "Klientorganisation",
+      "systemEvent": "Systemhändelse",
+      "tenantEvent": "Klientorganisationshändelse",
+      "uncategorized": "Utan kategori"
+    },
+    "fields": {
+      "workflowLabel": "Arbetsflöde",
+      "publishedVersionLabel": "Publicerad version",
+      "triggerLabel": "Utlösare",
+      "manualTrigger": "Manuell",
+      "workflowStatusLabel": "Arbetsflödesstatus",
+      "statusActive": "aktivt",
+      "statusPaused": "pausat"
+    },
+    "form": {
+      "booleanTrue": "Sant",
+      "booleanFalse": "Falskt",
+      "mapEntriesTitle": "Nyckel-värdeposter",
+      "mapEntriesPrompt": "Ange fältnyckel eller sökväg",
+      "mapEntriesDescription": "Lägg till nycklar och ange varje värde för objekt med nyckel-värdepar.",
+      "mapEntriesEmpty": "Inga nyckel-värdeposter har lagts till.",
+      "noSchema": "Inget schema finns för att visa ett formulär."
+    },
+    "noPublishedVersion": {
+      "title": "Ingen publicerad version",
+      "description": "Du kan förhandsgranska nyttolastbyggaren, men du måste publicera arbetsflödet innan du startar en körning."
+    },
+    "payload": {
+      "largePayloadWarning": "Nyttolastens storlek överstiger 256 KB. Körningarna kan bli långsammare.",
+      "payloadJsonLabel": "Nyttolast (JSON)",
+      "payloadLabel": "nyttolast",
+      "payloadSize": "Nyttolastens storlek: {{size}} KB"
+    },
+    "presets": {
+      "presetNameLabel": "Förinställningens namn",
+      "presetNamePlaceholder": "t.ex. nyttolast för regressionstest",
+      "savedPresets": "Sparade förinställningar"
+    },
+    "schema": {
+      "sourceLabel": "Schemakälla",
+      "workflowSchema": "Arbetsflödesschema",
+      "eventSchema": "Händelseschema",
+      "schemaRef": "Schemareferens",
+      "schemaRefLabel": "Schemareferens",
+      "selectSchema": "Välj schema…",
+      "noSchemasFound": "Inga scheman hittades",
+      "unknownSchemaRef": "Okänd schemareferens.",
+      "useEventSchema": "Använd händelseschema",
+      "viewSchemaDiff": "Visa schemaskillnader",
+      "hideSchemaDiff": "Dölj schemaskillnader",
+      "onlyInEvent": "Endast i händelseschemat",
+      "requiredOnlyInEvent": "Obligatoriskt endast i händelsen",
+      "onlyInWorkflow": "Endast i arbetsflödesschemat",
+      "requiredOnlyInWorkflow": "Obligatoriskt endast i arbetsflödet",
+      "typeMismatches": "Typavvikelser",
+      "typeMismatchLine": "{{field}}: händelse {{eventType}} jämfört med arbetsflöde {{payloadType}}",
+      "selectedEventWarningPrefix": "Den valda händelsen ({{selectedEventType}}) kanske inte matchar arbetsflödets utlösare ({{triggerEventName}}). ",
+      "matchOptional": "Schemareferenserna matchar. Utlösarmappning tillämpas (valfritt).",
+      "matchIdentity": "Schemareferenserna matchar. Identitetsmappning används (ingen mappning krävs).",
+      "diffWillApply": "Schemareferenserna skiljer sig åt ({{eventSchemaRef}} → {{payloadSchemaRef}}). Utlösarmappning tillämpas.",
+      "diffRequiredMissing": "Schemareferenserna skiljer sig åt ({{eventSchemaRef}} → {{payloadSchemaRef}}). Utlösarmappning krävs men är inte konfigurerad.",
+      "triggerEventDiffers": "Utlösarhändelsens schema skiljer sig från arbetsflödets nyttolastschema. Byt till ”Händelseschema” om du vill ange en nyttolast för utlösarhändelsen.",
+      "eventUnavailable": "Händelseschemat är inte tillgängligt. Arbetsflödesschemat används istället.",
+      "mapping": {
+        "identityOptional": "Identitetsmappning (ingen mappning krävs)",
+        "requiredMissing": "Utlösarmappning krävs men är inte konfigurerad",
+        "willApply": "Utlösarmappning tillämpas",
+        "willApplyOptional": "Utlösarmappning tillämpas (valfritt)"
+      }
+    },
+    "systemWorkflowWarning": "Detta är ett systemarbetsflöde. Att köra det kan påverka grundläggande automatisering.",
+    "systemWorkflowConfirm": "Jag förstår och vill köra det.",
+    "templates": {
+      "exampleLabel": "Exempel {{count}}",
+      "eventTemplates": "Händelsemallar",
+      "sampleTemplates": "Exempelmallar",
+      "emailTemplate": "Inkommande e-post",
+      "webhookTemplate": "Webhook-händelse"
+    },
+    "toasts": {
+      "confirmSystemRun": "Bekräfta att du vill köra det här systemarbetsflödet.",
+      "eventMissingSchemaRef": "Den valda händelsen saknar en nyttolastschemareferens och kan inte köras med utlösarmappning.",
+      "loadLatestRunFailed": "Det gick inte att ladda den senaste körningen",
+      "mapEntryExists": "Den nyckeln finns redan.",
+      "noPriorPayload": "Ingen nyttolast från en tidigare körning hittades.",
+      "payloadCopied": "Nyttolasten har kopierats till urklipp.",
+      "presetSaved": "Förinställningen har sparats.",
+      "providePresetName": "Ange ett namn på förinställningen.",
+      "startRunFailed": "Det gick inte att starta körningen",
+      "triggerMappingMissing": "Utlösarmappning krävs för det här händelseschemat men är inte konfigurerad i arbetsflödet."
+    },
+    "validation": {
+      "invalidJson": "Ogiltig JSON",
+      "summaryTitle": "Obligatoriska händelsefält saknas fortfarande i nyttolasten och måste fyllas i innan körningen kan starta",
+      "summaryDescription": "Fyll i de saknade fälten nedan, byt till formulärbyggaren eller använd en knapp för exempelnyttolast.",
+      "moreErrors": "+{{count}} till…"
+    },
+    "sampleEmailBody": "Exempel på e-posttext",
+    "sections": {
+      "schemaAndEvents": "Schema och händelser",
+      "payloadTools": "Nyttolastverktyg"
+    }
+  },
+  "eventList": {
+    "common": {
+      "emptyValue": "—"
+    },
+    "summary": {
+      "total": "Totalt",
+      "matched": "Matchad",
+      "unmatched": "Utan matchning",
+      "errors": "Fel"
+    },
+    "filters": {
+      "eventNameLabel": "Händelsenamn",
+      "eventNamePlaceholder": "workflow.event",
+      "correlationKeyLabel": "Korrelationsnyckel",
+      "correlationKeyPlaceholder": "corr-123",
+      "statusLabel": "Status",
+      "fromLabel": "Från",
+      "toLabel": "Till",
+      "datePlaceholder": "Valfritt datum"
+    },
+    "actions": {
+      "applyFilters": "Tillämpa filter",
+      "reset": "Återställ",
+      "exportCsv": "Exportera CSV",
+      "exportJson": "Exportera JSON",
+      "close": "Stäng",
+      "viewRunDetails": "Visa körningsdetaljer"
+    },
+    "table": {
+      "schemaConflict": "katalog ≠ inskickat",
+      "columns": {
+        "event": "Händelse",
+        "correlation": "Korrelation",
+        "schema": "Schema",
+        "status": "Status",
+        "matchedRun": "Matchad körning",
+        "payload": "Nyttolast",
+        "created": "Skapad"
+      }
+    },
+    "states": {
+      "loading": "Laddar händelser…",
+      "empty": "Inga arbetsflödeshändelser hittades."
+    },
+    "detail": {
+      "title": "Händelsedetaljer",
+      "loading": "Laddar händelsedetaljer…",
+      "eventIdLabel": "Händelse-ID",
+      "statusLabel": "Status",
+      "eventNameLabel": "Händelsenamn",
+      "correlationKeyLabel": "Korrelationsnyckel",
+      "payloadSchemaRefLabel": "Nyttolastschemareferens",
+      "schemaConflict": "Schemareferenserna står i konflikt: katalog {{catalog}} jämfört med inskickat {{submission}}",
+      "createdLabel": "Skapad",
+      "processedLabel": "Behandlad",
+      "errorLine": "Fel: {{message}}",
+      "waitLabel": "Väntan",
+      "waitIdLine": "Väntnings-ID: {{waitId}}",
+      "waitStatusLine": "Status: {{status}}",
+      "waitTimeoutLine": "Tidsgräns: {{value}}",
+      "waitResolvedLine": "Avslutad: {{value}}",
+      "waitStepLine": "Steg: {{value}}",
+      "matchedRunLabel": "Matchad körning",
+      "runStatusLine": "Status: {{status}}",
+      "payloadLabel": "Nyttolast"
+    },
+    "toasts": {
+      "loadEventsFailed": "Det gick inte att ladda arbetsflödeshändelser",
+      "loadEventDetailFailed": "Det gick inte att ladda händelsedetaljer",
+      "exportReady": "Händelseexporten är klar",
+      "exportFailed": "Det gick inte att exportera händelserna"
+    }
+  },
+  "deadLetter": {
+    "common": {
+      "emptyValue": "—"
+    },
+    "filters": {
+      "minimumRetriesLabel": "Minsta antal omförsök",
+      "minimumRetriesPlaceholder": "3"
+    },
+    "actions": {
+      "refresh": "Ladda om",
+      "loadMore": "Ladda fler"
+    },
+    "table": {
+      "columns": {
+        "runId": "Körnings-ID",
+        "workflow": "Arbetsflöde",
+        "version": "Version",
+        "status": "Status",
+        "retries": "Omförsök",
+        "failedSteps": "Misslyckade steg",
+        "updated": "Uppdaterad"
+      }
+    },
+    "states": {
+      "empty": "Inga körningar i felkön hittades.",
+      "loading": "Laddar körningar i felkön…"
+    },
+    "toasts": {
+      "loadFailed": "Det gick inte att ladda körningar i felkön"
+    }
+  },
+  "audit": {
+    "common": {
+      "emptyValue": "—"
+    },
+    "header": {
+      "title": "Arbetsflödesgranskning"
+    },
+    "actions": {
+      "exportCsv": "Exportera CSV",
+      "loadMore": "Ladda fler",
+      "refresh": "Ladda om"
+    },
+    "table": {
+      "columns": {
+        "timestamp": "Tidsstämpel",
+        "operation": "Åtgärd",
+        "user": "Användare",
+        "details": "Detaljer"
+      }
+    },
+    "states": {
+      "selectWorkflow": "Välj ett arbetsflöde för att visa granskningshistorik.",
+      "empty": "Inga granskningsposter ännu.",
+      "loading": "Laddar granskningsposter…"
+    },
+    "values": {
+      "system": "system"
+    },
+    "toasts": {
+      "loadFailed": "Det gick inte att ladda granskningsloggar",
+      "exportReady": "Granskningsexporten är klar",
+      "exportFailed": "Det gick inte att exportera granskningsloggarna"
+    }
+  },
+  "designer": {
+    "page": {
+      "controlPanelTitle": "Kontrollpanel för arbetsflöden",
+      "controlPanelDescription": "Hantera scheman, körningar, händelser och händelsekatalogen.",
+      "designerTitle": "Arbetsflödesdesigner",
+      "designerDescription": "Skapa och underhåll automatiserade arbetsflöden.",
+      "editorTitle": "Arbetsflödesredigerare",
+      "editorDescription": "Välj ett arbetsflöde att redigera eller skapa ett nytt."
+    },
+    "controlPanel": {
+      "tabs": {
+        "schedules": "Scheman",
+        "runs": "Körningar",
+        "events": "Händelser",
+        "eventCatalog": "Händelsekatalog",
+        "deadLetter": "Felkö"
+      },
+      "quota": {
+        "consumedLabel": "Förbrukat",
+        "consumedUnit": "förbrukade",
+        "loading": "Laddar…",
+        "planLimit": "Gräns: {{limit}}",
+        "remainingLabel": "Återstående",
+        "remainingUnit": "återstående",
+        "resetsOn": "Återställs {{date}}",
+        "title": "Arbetsflödesåtgärder",
+        "unavailable": "Inte tillgängligt",
+        "unlimitedPlan": "Obegränsat abonnemang",
+        "unlimitedRemaining": "Obegränsat"
+      }
+    },
+    "toolbar": {
+      "backToList": "Tillbaka till arbetsflöden",
+      "newWorkflow": "Nytt arbetsflöde",
+      "saveDraft": "Spara utkast",
+      "saving": "Sparar…",
+      "publish": "Publicera",
+      "publishing": "Publicerar…",
+      "run": "Kör",
+      "previewOnly": "Endast förhandsgranskning tills en version har publicerats.",
+      "validation": {
+        "lastValidated": "Senast validerat: {{timestamp}}",
+        "unknown": "Okänd valideringsstatus"
+      }
+    },
+    "form": {
+      "nameLabel": "Arbetsflödesnamn",
+      "versionLabel": "Version",
+      "descriptionLabel": "Beskrivning",
+      "latestPublishedVersion": "Senaste publicerade version: {{version}}",
+      "triggerTypeLabel": "Utlösartyp",
+      "triggerTypePlaceholder": "Välj utlösartyp",
+      "triggerTypeHelp": "Välj om arbetsflödet ska startas manuellt eller av en händelse. Återanvändbara scheman hanteras i kontrollpanelen för arbetsflöden.",
+      "manualTriggerNote": "Det här arbetsflödet saknar utlösare. Det kan ändå köras manuellt och schemaläggas från kontrollpanelen för arbetsflöden när det har ett låst nyttolastschema och en publicerad version.",
+      "eventCategoryLabel": "Händelsekategori",
+      "eventLabel": "Händelse",
+      "selectEventCategory": "Välj händelsekategori",
+      "selectEvent": "Välj händelse",
+      "selectCategoryFirst": "Välj kategori först",
+      "inputDataLabel": "Arbetsflödets indata",
+      "inputDataEvent": "Stegen läser data från den valda utlösaren.",
+      "inputDataTimePrefix": "Det här arbetsflödet tar emot en fast syntetisk klocknyttolast. Datakontraktet är låst till",
+      "inputDataManualPrefix": "Utan utlösare används",
+      "inputDataManualSuffix": "som standard. Ändra detta i avancerade schemainställningar om arbetsflödet behöver ett annat manuellt datakontrakt.",
+      "triggerMappingRequired": "Utlösarmappning krävs. Öppna avancerade schemainställningar för att konfigurera den.",
+      "schemaLocked": "Schemaversionen är låst",
+      "schemaAutoSelected": "Valt automatiskt från utlösaren",
+      "schemaSuffixClock": " till det fasta datakontraktet för klocknyttolasten.",
+      "schemaSuffixPinned": " för att hålla arbetsflödet stabilt om utlösarscheman ändras.",
+      "chooseTriggerHint": "Välj en utlösare för att definiera tillgängliga fält.",
+      "schemaLoadErrorPrefix": "Det gick inte att ladda schemainformation för",
+      "schemaLoadErrorSuffix": "Kontrollera posten i händelsekatalogen.",
+      "draftDifferent": "Utkastets datakontrakt skiljer sig från det publicerade",
+      "publishedUsesPrefix": "Den publicerade versionen använder",
+      "draftResolvesTo": "Det här utkastet använder för närvarande",
+      "lockToPublished": "Lås till publicerat datakontrakt",
+      "advancedSchemaSettings": "Avancerade schemainställningar",
+      "inferredSchemaPrefix": "Aktuellt härlett schema:",
+      "noSchemaInferred": "Inget schema har härletts ännu.",
+      "unknownSchemaRef": "Okänd schemareferens. Öppna avancerade schemainställningar och välj en giltig schemaversion.",
+      "workflowStepsHeading": "Arbetsflödessteg",
+      "workflowStepsListHint": "Dra steg för att ändra ordningen eller flytta dem mellan flöden.",
+      "workflowStepsGraphHint": "Panorera och zooma i grafen. Grenar visas som separata banor.",
+      "workflowStepsViewAria": "Vy för arbetsflödessteg",
+      "warningsCount": "{{count}} varningar"
+    },
+    "stepPanel": {
+      "readOnly": "Skrivskyddad åtkomst: stegredigering är inaktiverad.",
+      "selectPrompt": "Välj ett steg för att redigera dess konfiguration.",
+      "readOnlyNotice": "Skrivskyddad åtkomst: stegredigering är inaktiverad.",
+      "contractMode": "Datakontraktsläge:",
+      "catalogSchema": "Katalogschema:"
+    },
+    "stepConfig": {
+      "eventLabel": "Händelse",
+      "selectEvent": "Välj händelse",
+      "correlationKey": "Uttryck för korrelationsnyckel",
+      "payloadFilters": "Nyttolastfilter",
+      "addFilter": "Lägg till filter",
+      "noFiltersConfigured": "Inga filter har konfigurerats.",
+      "loadingEventSchema": "Laddar händelseschemats fält…",
+      "timeoutMs": "Tidsgräns (ms)",
+      "assignOnResume": "Tilldela vid återupptagning",
+      "fieldLabel": "Fält",
+      "fieldPathLabel": "Fältsökväg",
+      "dataContextToggle": "Vilka data har jag tillgång till här?",
+      "condition": "Villkor",
+      "itemsExpression": "Uttryck för poster",
+      "itemVariable": "Postvariabel",
+      "concurrency": "Samtidighet",
+      "onItemError": "Vid postfel",
+      "captureErrorAs": "Fånga fel som",
+      "workflowId": "Arbetsflödes-ID",
+      "workflowVersion": "Arbetsflödesversion",
+      "inputMapping": "Indatamappning",
+      "outputMapping": "Utdatamappning",
+      "value": "Värde",
+      "mode": "Läge",
+      "days": "Dagar",
+      "hours": "Timmar",
+      "minutes": "Minuter",
+      "seconds": "Sekunder",
+      "untilInput": "Inmatning av sluttid",
+      "specificDateTime": "Specifikt datum och klockslag",
+      "untilExpression": "Uttryck för sluttid",
+      "returnNotice": "Retur avslutar arbetsflödeskörningen."
+    },
+    "mappingExpr": {
+      "add": "Lägg till",
+      "remove": "Ta bort",
+      "empty": "Inga mappningar ännu.",
+      "expressionLabel": "Uttryck"
+    },
+    "schemaForm": {
+      "sectionTitle": "Nodkonfiguration",
+      "stepSettings": "Steginställningar",
+      "missingRequired": "Obligatoriska fält saknas: {{fields}}"
+    },
+    "fieldMetadata": {
+      "actionId": {
+        "label": "Åtgärd",
+        "description": "Åtgärden som ska anropas"
+      },
+      "version": {
+        "label": "Version",
+        "description": "Åtgärdens versionsnummer"
+      },
+      "inputMapping": {
+        "label": "Indatamappning",
+        "description": "Mappa data till åtgärdens indata"
+      },
+      "saveAs": {
+        "label": "Spara resultat som",
+        "description": "Variabelnamn eller tilldelningssökväg (t.ex. result, vars.result, payload.result)"
+      },
+      "idempotencyKey": {
+        "label": "Idempotensnyckel",
+        "description": "Uttryck som skapar en unik nyckel för att förhindra dubbla körningar. Om samma nyckel påträffas två gånger returneras det cachade resultatet."
+      },
+      "onError": {
+        "label": "Felhantering",
+        "description": "Hur fel ska hanteras"
+      },
+      "eventName": {
+        "label": "Händelsenamn",
+        "description": "Namnet på händelsen att vänta på"
+      },
+      "correlationKey": {
+        "label": "Korrelationsnyckel",
+        "description": "Uttryck för att matcha inkommande händelser"
+      },
+      "filters": {
+        "label": "Nyttolastfilter",
+        "description": "Valfria filter för händelsens nyttolast (OCH-villkor)"
+      },
+      "timeoutMs": {
+        "label": "Tidsgräns (ms)",
+        "description": "Maximal väntetid i millisekunder"
+      },
+      "mode": {
+        "label": "Vänteläge",
+        "description": "Varaktighet eller sluttid"
+      },
+      "durationMs": {
+        "label": "Varaktighet",
+        "description": "Relativ varaktighet lagrad i millisekunder"
+      },
+      "until": {
+        "label": "Till",
+        "description": "Uttryck som ger ett absolut datum och klockslag"
+      },
+      "state": {
+        "label": "Tillståndsnamn",
+        "description": "Tillståndet att övergå till"
+      },
+      "assign": {
+        "label": "Tilldelningar",
+        "description": "Variabler att tilldela"
+      },
+      "taskType": {
+        "label": "Uppgiftstyp",
+        "description": "Typ av manuell uppgift"
+      },
+      "title": {
+        "label": "Titel",
+        "description": "Uppgiftstitel som visas för den ansvariga"
+      },
+      "contextData": {
+        "label": "Kontextdata",
+        "description": "Ytterligare data som ska ingå i uppgiften"
+      }
+    },
+    "actions": {
+      "ai.infer": {
+        "label": "Härled strukturerade utdata",
+        "description": "Generera strukturerade arbetsflödesdata från en prompt med den konfigurerade AI-tjänsteleverantören."
+      },
+      "store.get": {
+        "label": "Hämta lagrat värde",
+        "description": "Läs en sparad nyckel-värdepost för arbetsflöden."
+      },
+      "store.set": {
+        "label": "Ange lagrat värde",
+        "description": "Spara en nyckel-värdepost för arbetsflöden."
+      },
+      "store.delete": {
+        "label": "Radera lagrat värde",
+        "description": "Radera en sparad nyckel-värdepost för arbetsflöden."
+      },
+      "store.increment": {
+        "label": "Öka lagrat tal",
+        "description": "Öka ett sparat tal för arbetsflöden atomärt."
+      },
+      "store.list": {
+        "label": "Lista lagrade värden",
+        "description": "Lista sparade nyckel-värdeposter för arbetsflöden i en namnrymd."
+      },
+      "store.list_namespaces": {
+        "label": "Lista datalagrets namnrymder",
+        "description": "Lista namnrymder i arbetsflödenas datalager som används av den här klientorganisationen."
+      },
+      "links.upsert": {
+        "label": "Skapa eller uppdatera entitetslänk",
+        "description": "Skapa eller uppdatera en sparad länk mellan två arbetsflödesentiteter."
+      },
+      "links.lookup": {
+        "label": "Sök entitetslänkar",
+        "description": "Hitta sparade entitetslänkar efter källentitet och riktning."
+      },
+      "links.delete": {
+        "label": "Radera entitetslänkar",
+        "description": "Radera sparade entitetslänkar efter sida och valfri relation."
+      },
+      "links.list": {
+        "label": "Lista entitetslänkar",
+        "description": "Lista sparade entitetslänkar i en namnrymd."
+      },
+      "links.list_namespaces": {
+        "label": "Lista länknamnrymder",
+        "description": "Lista namnrymder för arbetsflödenas entitetslänkar som används av den här klientorganisationen."
+      }
+    },
+    "validation": {
+      "badge": {
+        "invalid": "Ogiltigt",
+        "warnings": "Varningar",
+        "valid": "Giltigt",
+        "unknown": "Okänt"
+      },
+      "errors": "Valideringsfel"
+    },
+    "discardDialog": {
+      "title": "Kasta osparade ändringar?",
+      "message": "Du har osparade ändringar i det här arbetsflödet. Kasta dem och fortsätta?",
+      "confirm": "Kasta ändringar",
+      "cancel": "Fortsätt redigera"
+    },
+    "eventSchemaDialog": {
+      "title": "Byta arbetsflödets indataschema?",
+      "messageWithEvent": "Den valda händelsen {{eventName}} använder {{schemaRef}}. Vill du byta till det händelseschemat för arbetsflödet?",
+      "messageFallback": "Vill du byta till det valda händelseschemat för arbetsflödet?",
+      "confirm": "Använd händelseschema",
+      "cancel": "Behåll aktuellt schema"
+    },
+    "blockSection": {
+      "then": "Då",
+      "else": "Annars",
+      "try": "Försök",
+      "catch": "Fånga",
+      "body": "Innehåll"
+    },
+    "palette": {
+      "showPalette": "Visa palett",
+      "hidePalette": "Dölj palett",
+      "searchPlaceholder": "Sök",
+      "dragHint": "Släpp på flödet för att lägga till",
+      "chooseAction": "Välj en åtgärd när du har lagt till det här steget",
+      "returnsSummary": "Returnerar: {{list}}{{suffix}}",
+      "categories": {
+        "Control": "Styrning",
+        "Core": "Kärna",
+        "Transform": "Transformering",
+        "AI": "AI",
+        "Apps": "Appar",
+        "Action": "Åtgärd",
+        "Email": "E-post",
+        "Nodes": "Noder"
+      },
+      "controlBlocks": {
+        "control.if": {
+          "label": "Om",
+          "description": "Villkorsstyrd förgrening"
+        },
+        "control.forEach": {
+          "label": "För varje",
+          "description": "Iterera över poster"
+        },
+        "control.tryCatch": {
+          "label": "Try/Catch",
+          "description": "Hantera fel"
+        },
+        "control.callWorkflow": {
+          "label": "Anropa arbetsflöde",
+          "description": "Anropa ett annat arbetsflöde"
+        },
+        "control.return": {
+          "label": "Retur",
+          "description": "Stoppa körning"
+        }
+      },
+      "nodes": {
+        "state.set": {
+          "label": "Ange tillstånd",
+          "description": "Uppdatera arbetsflödets tillstånd"
+        },
+        "event.wait": {
+          "label": "Vänta på händelse",
+          "description": "Vänta på en extern händelse"
+        },
+        "time.wait": {
+          "label": "Vänta på tid",
+          "description": "Vänta en viss tid eller till ett datum och klockslag"
+        },
+        "transform.assign": {
+          "label": "Tilldela",
+          "description": "Tilldela värden i payload eller vars"
+        },
+        "action.call": {
+          "label": "Anropa åtgärd",
+          "description": "Anropa en registrerad åtgärd"
+        },
+        "email.parseBody": {
+          "label": "Tolka e-posttext",
+          "description": "Tolka och rensa texten i ett e-postsvar"
+        },
+        "email.renderCommentBlocks": {
+          "label": "Rendera kommentarsblock",
+          "description": "Rendera kommentarsblock från e-postinnehåll"
+        },
+        "human.task": {
+          "label": "Manuell uppgift",
+          "description": "Pausa tills en manuell uppgift har slutförts"
+        }
+      },
+      "groups": {
+        "ticket": {
+          "label": "Ärende",
+          "description": "Ärendeåtgärder"
+        },
+        "contact": {
+          "label": "Kontakt",
+          "description": "Kontaktåtgärder"
+        },
+        "client": {
+          "label": "Kund",
+          "description": "Kundåtgärder"
+        },
+        "communication": {
+          "label": "Kommunikation",
+          "description": "Kommunikationsåtgärder"
+        },
+        "scheduling": {
+          "label": "Schemaläggning",
+          "description": "Schemaläggningsåtgärder"
+        },
+        "project": {
+          "label": "Projekt",
+          "description": "Projektåtgärder"
+        },
+        "time": {
+          "label": "Tid",
+          "description": "Tidsåtgärder"
+        },
+        "crm": {
+          "label": "CRM",
+          "description": "CRM-åtgärder"
+        },
+        "transform": {
+          "label": "Transformering",
+          "description": "Transformeringsåtgärder"
+        },
+        "ai": {
+          "label": "AI",
+          "description": "AI-åtgärder"
+        },
+        "data-store": {
+          "label": "Datalager",
+          "description": "Läs och skriv beständigt arbetsflödestillstånd mellan körningar."
+        }
+      }
+    },
+    "stepCard": {
+      "selectAriaLabel": "Välj steget {{label}}",
+      "badges": {
+        "if": "Om",
+        "loop": "Slinga",
+        "try": "Försök",
+        "block": "Block",
+        "disconnected": "Frånkopplat"
+      },
+      "mapping": {
+        "unmappedTitle": "{{count}} obligatoriska fält är inte mappade",
+        "unmappedBadge": "{{count}} obligatoriska fält inte mappade",
+        "allMappedTitle": "Alla {{count}} obligatoriska fält är mappade",
+        "allMappedAria": "Alla obligatoriska fält är mappade"
+      },
+      "errorCount": "{{count}} {{noun}}",
+      "errorSingular": "fel",
+      "errorPlural": "fel",
+      "actions": {
+        "duplicate": "Duplicera steg",
+        "duplicateAriaLabel": "Duplicera steget {{label}}",
+        "delete": "Radera steg"
+      },
+      "forEachSummary": "Post: {{itemVar}} | Samtidighet: {{concurrency}}",
+      "disconnectedTitle": "{{group}} är inte ansluten. Det här steget misslyckas vid körning tills anslutningen återställs."
+    },
+    "toasts": {
+      "loadRegistriesFailed": "Det gick inte att ladda arbetsflödesregister",
+      "loadPermissionsFailed": "Det gick inte att ladda behörigheter",
+      "loadWorkflowsFailed": "Det gick inte att ladda arbetsflöden",
+      "loadEventCatalogFailed": "Det gick inte att ladda händelsekatalogen",
+      "settingsUpdated": "Arbetsflödesinställningarna har uppdaterats",
+      "settingsUpdateFailed": "Det gick inte att uppdatera arbetsflödesinställningarna",
+      "created": "Arbetsflödet har skapats",
+      "saved": "Arbetsflödet har sparats",
+      "saveFailed": "Det gick inte att spara arbetsflödet",
+      "saveBeforePublish": "Spara arbetsflödet innan du publicerar det",
+      "published": "Arbetsflödet har publicerats",
+      "publishFailed": "Det gick inte att publicera arbetsflödet",
+      "publishValidationErrors": "Publiceringen misslyckades – åtgärda valideringsfelen",
+      "systemEventMissingSchema": "Den här systemhändelsen saknar ett giltigt schema och kan inte väljas förrän det har åtgärdats."
+    },
+    "propsPanel": {
+      "resizeAria": "Ändra storlek på egenskapspanelen",
+      "settingsTitle": "Arbetsflödesinställningar",
+      "settingsSubtitle": "Synlighet, pausning och säkerhetskontroller.",
+      "visibleToUsers": "Synligt för användare",
+      "paused": "Pausat (stoppa nya körningar)",
+      "concurrencyLimit": "Samtidighetsgräns",
+      "unlimited": "Obegränsat",
+      "autoPauseFailureRate": "Pausa automatiskt vid hög felfrekvens",
+      "failureRateThreshold": "Tröskelvärde för felfrekvens",
+      "minRunsBeforeAutoPause": "Minsta antal körningar före automatisk paus"
+    },
+    "trigger": {
+      "summary": "Utlösarsammanfattning",
+      "actionNeeded": "Kräver åtgärd",
+      "noMappingNeeded": "Ingen mappning behövs",
+      "sourceSchemaOverride": "Åsidosätt utlösarens källschema",
+      "useCatalogSchemaDefault": "Använd katalogschema (standard)",
+      "useCatalogSchemaPlaceholder": "Använd katalogschema…",
+      "noSchemasFound": "Inga scheman hittades",
+      "mappingTitle": "Utlösarmappning",
+      "mappingNotRequired": "Mappning: Krävs inte.",
+      "mappingErrors": "Mappningsfel",
+      "mappingWarnings": "Mappningsvarningar"
+    },
+    "schemaSettings": {
+      "lockVersion": "Lås schemaversion",
+      "lockVersionHelp": "Lås schemaversionen för att förhindra att framtida ändringar av utlösaren påverkar arbetsflödet.",
+      "lockedVersion": "Låst schemaversion",
+      "manualRef": "Manuell schemareferens",
+      "fixedForTimeTriggers": "Fast för tidsutlösare",
+      "availableFieldsPreview": "Förhandsgranskning av tillgängliga fält",
+      "payloadContract": "Datakontraktsschema för arbetsflödets nyttolast",
+      "ref": "Schemareferens:",
+      "loadFailed": "Det gick inte att ladda schemat.",
+      "notLoaded": "Schemat har inte laddats ännu.",
+      "loadPreviewFailed": "Det gick inte att ladda schemaförhandsgranskningen.",
+      "selectVersionPlaceholder": "Välj schemaversion…",
+      "payloadRefAdvanced": "Nyttolastschemareferens (avancerat)"
+    },
+    "expression": {
+      "insertField": "Infoga fält",
+      "enterPlaceholder": "Ange uttryck…"
+    },
+    "dataContext": {
+      "availableDataAtStep": "Tillgängliga data i det här steget",
+      "payload": "Nyttolast",
+      "noPayloadFields": "Inga nyttolastfält",
+      "payloadSchemaRefHint": "Ange ”Nyttolastschemareferens” för att definiera nyttolastens struktur",
+      "stepOutputs": "Stegutdata (vars)",
+      "outputSchemaUnavailable": "Utdataschema är inte tillgängligt",
+      "noFields": "Inga fält",
+      "copyAllPaths": "Kopiera alla sökvägar",
+      "copyAllFieldPaths": "Kopiera alla fältsökvägar"
+    },
+    "logoAlt": "Arbetsflödesredigerarens logotyp",
+    "nodes": {
+      "action": "Åtgärd:",
+      "process": "Process:",
+      "clientId": "Klient-ID:",
+      "clientSecret": "Klienthemlighet:",
+      "tenantId": "Klientorganisations-ID:",
+      "userEmail": "Användarens e-postadress:"
+    }
+  },
+  "actionInputFieldInfo": {
+    "required": "Obligatoriskt",
+    "requiredTitle": "Obligatoriskt",
+    "requiredMissingTitle": "Ett obligatoriskt fält saknar värde",
+    "format": "Format: {{value}}",
+    "eachItem": "Varje post: {{value}}",
+    "length": "Längd: {{min}} - {{max}}",
+    "range": "Intervall: {{min}} - {{max}}",
+    "any": "valfri",
+    "defaultPrefix": "Standard:",
+    "examplePrefix": "Exempel:"
+  },
+  "actionInputSection": {
+    "heading": "Åtgärdens indata"
+  },
+  "actionInputFixedPicker": {
+    "loadingOptions": "Laddar alternativ…",
+    "ticketSearchPlaceholder": "Sök ärenden efter nummer eller titel",
+    "ticketSelect": "Välj ärende",
+    "ticketTypeAbove": "Skriv ovan för att söka efter ärenden",
+    "placeholders": {
+      "board": "Välj tavla",
+      "client": "Välj kund",
+      "contact": "Välj kontakt",
+      "user": "Välj användare",
+      "userOrTeam": "Välj användare eller team"
+    },
+    "errors": {
+      "loadTicket": "Det gick inte att ladda ärendet",
+      "searchTickets": "Det gick inte att söka efter ärenden",
+      "loadOptions": "Det gick inte att ladda alternativen"
+    },
+    "dependencyHints": {
+      "contact": {
+        "client_id": "Välj först en fast kund för att ladda kontaktalternativ."
+      },
+      "client-location": {
+        "client_id": "Välj först en fast kund för att ladda platsalternativ."
+      },
+      "ticket-category": {
+        "board_id": "Välj först en fast tavla för att ladda kategorialternativ."
+      },
+      "ticket-status": {
+        "board_id": "Välj först en fast tavla för att ladda statusalternativ.",
+        "ticket_id": "Välj först ett fast ärende för att ladda statusalternativ."
+      },
+      "ticket-subcategory": {
+        "board_id": "Välj först en fast tavla för att ladda underkategorialternativ.",
+        "category_id": "Välj först en fast kategori för att ladda underkategorialternativ."
+      }
+    }
+  },
+  "serverErrors": {
+    "forbidden": "Du har inte behörighet att utföra den här åtgärden.",
+    "unauthorized": "Du måste vara inloggad för att utföra den här åtgärden.",
+    "notFound": "Hittades inte.",
+    "workflowNotFound": "Arbetsflödet hittades inte.",
+    "workflowVersionNotFound": "Arbetsflödesversionen hittades inte.",
+    "workflowVersionExists": "Arbetsflödesversion {{version}} finns redan. Ladda om och försök igen.",
+    "workflowValidationFailed": "Valideringen av arbetsflödet misslyckades.",
+    "noPublishedVersions": "Det här arbetsflödet har inga publicerade versioner ännu.",
+    "workflowPaused": "Det här arbetsflödet är pausat.",
+    "concurrencyLimitReached": "Arbetsflödets samtidighetsgräns har nåtts.",
+    "rateLimitExceeded": "Frekvensgränsen för arbetsflödeskörningar har överskridits.",
+    "payloadNotSerializable": "Nyttolasten måste kunna serialiseras till JSON.",
+    "payloadTooLarge": "Nyttolasten överskrider den största tillåtna storleken.",
+    "payloadValidationFailed": "Valideringen av nyttolasten misslyckades.",
+    "missingPayloadSchemaRef": "Det här arbetsflödet saknar en nyttolastschemareferens.",
+    "missingSourcePayloadSchemaRef": "Händelsens nyttolast saknar en referens till källans nyttolastschema.",
+    "triggerMappingRequired": "Utlösarmappning krävs för den här körningen.",
+    "runNotFailed": "Körningen har inte statusen misslyckad.",
+    "failedStepNotFound": "Det misslyckade steget kunde inte hittas.",
+    "noEventWaitFound": "Ingen händelseväntan hittades för den här körningen.",
+    "cancelTemporalRunFailed": "Det gick inte att avbryta arbetsflödeskörningen i körningsmotorn.",
+    "noDefinitionToPublish": "Det finns ingen arbetsflödesdefinition att publicera.",
+    "deleteActiveRunsBlocked": "Det här arbetsflödet har aktiva körningar. Avbryt alla körningar innan du raderar det.",
+    "scheduleOneTimeRunAtRequired": "Engångsscheman kräver en tidsstämpel för körningen.",
+    "scheduleOneTimeInvalidTimestamp": "Engångsscheman kräver en giltig ISO 8601-tidsstämpel.",
+    "scheduleOneTimeMustBeFuture": "Engångsscheman måste schemaläggas i framtiden.",
+    "scheduleOneTimeDayOfWeek": "Engångsscheman stöder endast ”Valfri dag”.",
+    "scheduleOneTimeBusinessHours": "Engångsscheman kan inte åsidosätta inställningarna för öppettider.",
+    "scheduleRecurringCronRequired": "Återkommande scheman kräver ett cron-uttryck.",
+    "scheduleRecurringCronFields": "Återkommande scheman kräver ett cron-uttryck med 5 fält.",
+    "scheduleRecurringTimezone": "Återkommande scheman kräver en giltig IANA-tidszon.",
+    "cronTooLong": "Cron-uttrycket är för långt.",
+    "cronUnsupportedCharacters": "Cron-uttrycket innehåller tecken som inte stöds.",
+    "cronDayConflict": "Ett cron-uttryck kan inte ange både dag i månaden och veckodag.",
+    "cronTooFrequent": "Det här cron-schemat körs för ofta (minsta intervall är 5 minuter).",
+    "schedulePublishedRequired": "Scheman kan bara skapas för arbetsflöden med en publicerad version.",
+    "schedulePinnedSchemaRequired": "Scheman stöds endast för arbetsflöden med ett låst nyttolastschema.",
+    "scheduleSchemaNotRegistered": "Den senaste publicerade arbetsflödesversionen saknar ett registrerat låst nyttolastschema.",
+    "schedulePayloadInvalid": "Valideringen av schemats nyttolast mot arbetsflödets nyttolastschema misslyckades.",
+    "processEventFailed": "Det gick inte att behandla arbetsflödeshändelsen."
+  },
+  "taskInbox": {
+    "title": "Uppgiftsinkorg",
+    "backToList": "← Tillbaka till uppgiftslistan",
+    "tabs": {
+      "pending": "Väntande",
+      "claimed": "Tagna",
+      "completed": "Slutförda",
+      "all": "Alla uppgifter"
+    }
+  },
+  "taskList": {
+    "pagination": {
+      "previous": "Föregående",
+      "next": "Nästa",
+      "pageLabel": "Sida {{current}} av {{total}}"
+    },
+    "errors": {
+      "loadFailed": "Det gick inte att ladda uppgifter. Försök igen.",
+      "claimFailed": "Det gick inte att ta uppgiften: {{error}}",
+      "unclaimFailed": "Det gick inte att lämna tillbaka uppgiften: {{error}}",
+      "unknown": "Okänt fel"
+    },
+    "actions": {
+      "claim": "Ta uppgift",
+      "unclaim": "Lämna tillbaka"
+    },
+    "noDueDate": "Inget förfallodatum",
+    "overdueSuffix": "(Försenad)",
+    "empty": "Inga uppgifter hittades",
+    "duePrefix": "Förfaller:"
+  },
+  "taskDetails": {
+    "notAvailable": "Ej tillgängligt",
+    "notFound": "Uppgiften hittades inte",
+    "retry": "Försök igen",
+    "youPronoun": "Du",
+    "noForm": "Inget formulär finns för den här uppgiften.",
+    "contextData": "Kontextdata",
+    "responseData": "Svarsdata",
+    "fields": {
+      "status": "Status",
+      "priority": "Prioritet",
+      "created": "Skapad",
+      "dueDate": "Förfallodatum",
+      "claimedBy": "Tagen av",
+      "completedBy": "Slutförd av"
+    },
+    "tabs": {
+      "details": "Detaljer",
+      "form": "Formulär",
+      "history": "Historik"
+    },
+    "actions": {
+      "claim": "Ta uppgift",
+      "unclaim": "Lämna tillbaka uppgift"
+    },
+    "errors": {
+      "loadFailed": "Det gick inte att ladda uppgiftsdetaljer. Försök igen.",
+      "claimFailed": "Det gick inte att ta uppgiften: {{error}}",
+      "unclaimFailed": "Det gick inte att lämna tillbaka uppgiften: {{error}}",
+      "unknown": "Okänt fel"
+    }
+  },
+  "taskHistory": {
+    "empty": "Ingen historik finns för den här uppgiften.",
+    "byPrefix": "Av:",
+    "system": "System",
+    "detailsLabel": "Detaljer",
+    "actions": {
+      "created": "Skapad",
+      "claimed": "Tagen",
+      "unclaimed": "Återlämnad",
+      "completed": "Slutförd",
+      "canceled": "Avbruten",
+      "expired": "Utgången"
+    },
+    "errors": {
+      "loadFailed": "Det gick inte att ladda uppgiftshistorik. Försök igen."
+    }
+  },
+  "taskForm": {
+    "actions": {
+      "complete": "Slutför uppgift",
+      "cancel": "Avbryt"
+    }
+  },
+  "dynamicForm": {
+    "actions": {
+      "submit": "Skicka in",
+      "cancel": "Avbryt"
+    },
+    "errors": {
+      "generic": "Ett fel uppstod"
+    }
+  },
+  "embeddedTaskInbox": {
+    "title": "Mina uppgifter",
+    "viewAll": "Visa alla",
+    "backToTasks": "← Tillbaka till uppgifter"
+  },
+  "actionButton": {
+    "processing": "Behandlar…",
+    "confirm": "Bekräfta",
+    "cancel": "Avbryt",
+    "confirmTitle": "Bekräfta åtgärd"
+  },
+  "stepNameField": {
+    "label": "Stegnamn"
+  },
+  "stepSaveOutput": {
+    "toggleLabel": "Spara utdata",
+    "placeholder": "t.ex. ticketDefaults",
+    "copyPathTitle": "Kopiera fullständig sökväg",
+    "accessibleAs": "Tillgängligt som:"
+  },
+  "aiSchemaSection": {
+    "heading": "Format för AI-svar",
+    "headingDescription": "Välj vad AI-svaret ska innehålla för senare steg.",
+    "modeSimple": "Enkelt",
+    "modeAdvanced": "Avancerat",
+    "addField": "Lägg till fält",
+    "addNested": "Lägg till nästlat fält",
+    "remove": "Ta bort",
+    "nameLabel": "Namn",
+    "answerType": "Svarstyp",
+    "arrayItems": "Arrayelement",
+    "required": "Obligatoriskt",
+    "descriptionLabel": "Beskrivning",
+    "objectItemFields": "Objektfält",
+    "nestedFields": "Nästlade fält",
+    "jsonSchemaLabel": "JSON Schema",
+    "advancedHelperText": "Avancerat läge stöder scheman med objekt som rot samt nästlade objekt, arrayer, beskrivningar, begränsningar och additionalProperties.",
+    "validationHeading": "Schemavalidering",
+    "advancedFallback": "Det här sparade schemat använder avancerade funktioner i JSON Schema och visas därför i avancerat läge.",
+    "simpleModeUnsupported": "Det här schemat kan inte visas i enkelt läge.",
+    "errors": {
+      "jsonRequired": "JSON för AI-utdataschemat krävs."
+    }
+  },
+  "composeText": {
+    "heading": "Skapa textutdata",
+    "headingDescription": "Skapa en eller flera Markdown-utdata med stabila referensnycklar för efterföljande steg.",
+    "addOutput": "Lägg till utdata",
+    "untitled": "Utdata utan titel",
+    "outputFallback": "utdata {{index}}",
+    "moveUpAria": "Flytta {{label}} uppåt",
+    "moveDownAria": "Flytta {{label}} nedåt",
+    "deleteAria": "Radera {{label}}",
+    "outputLabel": "Utdataetikett",
+    "stableKeyLabel": "Stabil nyckel",
+    "keyHintSafe": "Nyckel som kan användas i efterföljande steg",
+    "keyHintInvalid": "Använd endast gemener, siffror och understreck.",
+    "regenerate": "Generera på nytt",
+    "validationHeading": "Validering",
+    "downstreamPathLabel": "Referenssökväg för efterföljande steg",
+    "pathFallback": "Spara utdata för att visa en referenssökväg.",
+    "copied": "Kopierat",
+    "copyPath": "Kopiera sökväg",
+    "contentHeading": "Skapa innehåll",
+    "contentDescription": "Använd Markdown-kompatibel formatering och infogade arbetsflödesreferenser.",
+    "insertReference": "Infoga referens",
+    "insertReferenceHeading": "Infoga arbetsflödesreferens",
+    "errors": {
+      "noCodeBlock": "Referenser kan inte infogas i kodblock. Flytta markören till ett annat block och försök igen."
+    },
+    "placeholder": "Skriv Markdown-text…",
+    "referenceHint": "Referenser visas som infogade etiketter och sparas som referensnoder som kan användas i arbetsflödet."
+  },
+  "referenceSelector": {
+    "placeholders": {
+      "scope": "Välj källomfång…",
+      "step": "Välj steg…",
+      "field": "Välj fält…"
+    }
+  },
+  "pipeline": {
+    "stepCount_one": "({{count}} steg)",
+    "stepCount_other": "({{count}} steg)",
+    "start": "Start",
+    "insertStepHere": "Infoga steg här",
+    "emptyDisabled": "Inga steg ännu.",
+    "emptySelectPrompt": "Välj ett steg i panelen för att komma igång.",
+    "patchSummary": {
+      "unchanged": "övriga fält oförändrade"
+    }
+  },
+  "expressionEditor": {
+    "ariaLabel": "Uttrycksredigerare",
+    "autocompleteAria": "Förslag för automatisk komplettering av uttryck",
+    "textAreaPlaceholder": "Ange JSONata-uttryck…",
+    "field": {
+      "placeholder": "Ange uttryck…",
+      "insertFieldPlaceholder": "Infoga fält"
+    },
+    "clear": "Rensa",
+    "clearAriaLabel": "Rensa uttryck"
+  },
+  "sourceDataTree": {
+    "searchPlaceholder": "Sök fält…",
+    "sections": {
+      "payload": "Nyttolast",
+      "vars": "Stegutdata (vars)",
+      "loopContext": "Slingkontext",
+      "workflowMeta": "Arbetsflödesmetadata",
+      "errorContext": "Felkontext"
+    },
+    "vars": {
+      "emptyPrefix": "Inga variabler ännu. Använd",
+      "saveOutput": "Spara utdata",
+      "emptyConjunction": "eller steget",
+      "assignStep": "Tilldela",
+      "emptySuffix": "för att fylla"
+    },
+    "loop": {
+      "currentItem": "aktuell post",
+      "loopIndex": "slingindex"
+    }
+  },
+  "validationBadge": {
+    "status": {
+      "valid": "Giltigt",
+      "warning": "Varningar",
+      "error": "Fel",
+      "incomplete": "Ofullständigt"
+    },
+    "tooltip": {
+      "valid": "Alla obligatoriska indata är mappade",
+      "incomplete": "Konfigurera indatamappningar",
+      "mappingCount": "{{mapped}} av {{required}} obligatoriska fält mappade"
+    },
+    "openEditor": "Öppna mappningsredigerare",
+    "errorsHeading": "Fel ({{count}})",
+    "warningsHeading": "Varningar ({{count}})",
+    "moreErrors": "+{{count}} ytterligare fel",
+    "moreWarnings": "+{{count}} ytterligare varningar"
+  },
+  "inputMappingEditor": {
+    "empty": "Den här åtgärden har inga indatafält.",
+    "browseSources": "Bläddra bland källor",
+    "objectFields": "Objektfält",
+    "itemTitle": "Post {{index}}",
+    "reset": "Återställ",
+    "addItem": "Lägg till post",
+    "fill": "Fyll i",
+    "clearValues": "Rensa värden",
+    "askAi": {
+      "ariaLabel": "Be AI om hjälp med transformering",
+      "title": "Fråga AI",
+      "shortcutHint": "Öppna snabbfråga för vägledning om transformering"
+    },
+    "applySuggestions": "Tillämpa förslag ({{count}})",
+    "applySuggestionTitle": "Tillämpa förslag: {{sourcePath}}",
+    "fuzzySuffix": "(ungefärlig)",
+    "removeMapping": "Ta bort mappning (Delete/Backspace)",
+    "invalidJson": "Ogiltig JSON",
+    "stringPlaceholder": "Ange värde…",
+    "aria": {
+      "listbox": "Åtgärdens indatafält",
+      "fieldList": "Lista över åtgärdens indatafält"
+    },
+    "summary": {
+      "filledCount": "{{filled}} av {{total}} fält ifyllda",
+      "missingCount": "{{count}} obligatoriska fält saknas",
+      "missingTitle": "Obligatoriska fält saknar värden"
+    },
+    "mode": {
+      "structured": "Strukturerat",
+      "rawJson": "Rå JSON"
+    },
+    "nullable": {
+      "useValue": "Använd värde",
+      "setNull": "Ange null"
+    },
+    "primitiveList": {
+      "placeholder": "Ange ett värde per rad eller separera med kommatecken",
+      "helperText": "Separera med radbrytning, kommatecken eller semikolon."
+    },
+    "structuredGroup": {
+      "collapseAria": "Fäll ihop {{title}}",
+      "expandAria": "Expandera {{title}}"
+    },
+    "legacy": {
+      "title": "Äldre mappning stöds inte längre här",
+      "description": "Det här fältet använder ett sparat uttryck eller en hemlighet. Ersätt det med en strukturerad referens eller ett fast värde.",
+      "useReference": "Använd referens",
+      "useFixedValue": "Använd fast värde"
+    },
+    "fixedValueDialog": {
+      "title": "Redigera {{fieldName}}",
+      "description": "Använd den större redigeraren för längre innehåll med fasta värden.",
+      "openEditor": "Öppna redigerare",
+      "apply": "Tillämpa",
+      "cancel": "Avbryt"
+    },
+    "softEnumPlaceholder": "Välj eller ange värde",
+    "softEnumSearchPlaceholder": "Sök eller ange ett anpassat värde",
+    "softEnumNoResults": "Inga förslag",
+    "softEnumUseCustom": "Använd ”{{value}}”",
+    "expression": {
+      "placeholder": "t.ex. payload.body.task_name"
+    },
+    "updatePatch": {
+      "summaryTitle": "Fält att ändra",
+      "targetFraming": "Det här steget uppdaterar {{target}}.",
+      "summaryChanges": "Ändrar {{list}}",
+      "summaryChangesMore": "Ändrar {{list}} och {{count}} till",
+      "unchangedNote": "Alla andra fält behåller sina aktuella värden.",
+      "emptyGuidance": "Lägg till minst ett fält att ändra.",
+      "editChanges": "Redigera ändringar…",
+      "dialogTitle": "Redigera ändringar",
+      "dialogDescription": "Uppdaterar {{target}}. Endast fälten till höger ändras. Allt annat behåller sitt aktuella värde.",
+      "footerSummary": "{{count}} fält ändras · allt annat behåller sitt aktuella värde",
+      "done": "Klart",
+      "added": "Tillagt ✓",
+      "noChangesYet": "Inga ändringar ännu. Välj ett fält till vänster för att börja.",
+      "setFieldTo": "Ange {{field}} till",
+      "removeChange": "Sluta ändra det här fältet (det behåller sitt aktuella värde)",
+      "advancedTitle": "Avancerat",
+      "group": {
+        "details": "Detaljer",
+        "assignment": "Tilldelning",
+        "datesTags": "Datum och taggar",
+        "advanced": "Avancerat"
+      },
+      "target": {
+        "genericRecord": "post",
+        "unset": "posten ({{record}}) som valts ovan",
+        "fromReference": "posten ({{record}}) från ”{{source}}”",
+        "fromExpression": "posten ({{record}}) som valts av ett uttryck",
+        "fixed": "en specifik post av typen {{record}}"
+      }
+    }
+  },
+  "schemaReference": {
+    "selectAction": "Välj en åtgärd för att visa dess indata- och utdataschema",
+    "viewDetails": "Visa schemadetaljer",
+    "hideDetails": "Dölj schemadetaljer",
+    "inputSchemaTitle": "Indataschema",
+    "outputSchemaTitle": "Utdataschema",
+    "noInputParameters": "Inga indataparametrar",
+    "noOutputFields": "Inga utdatafält",
+    "noFields": "Inga fält",
+    "outputAvailablePrefix": "Utdata finns på",
+    "showRawJson": "Visa rått JSON Schema",
+    "hideRawJson": "Dölj rått JSON Schema",
+    "exportSchema": "Exportera schema",
+    "exportSchemaTitle": "Ladda ner schema som JSON-fil",
+    "rawInputComment": "// Indataschema",
+    "rawOutputComment": "// Utdataschema",
+    "copyPathTitle": "Kopiera {{path}}",
+    "copyAllPaths": "Kopiera alla sökvägar",
+    "copyAllPathsTitle": "Kopiera alla fältsökvägar",
+    "copied": "Kopierat",
+    "pathsCopied": "{{count}} sökvägar kopierade",
+    "nullableSuffix": "| null",
+    "constraints": {
+      "values": "Värden: {{list}}{{suffix}}",
+      "min": "Min: {{value}}",
+      "max": "Max: {{value}}",
+      "minLength": "Minsta längd: {{value}}",
+      "maxLength": "Största längd: {{value}}",
+      "pattern": "Mönster: {{value}}",
+      "format": "Format: {{value}}",
+      "examples": "Exempel: {{list}}",
+      "default": "Standard: {{value}}"
+    }
+  },
+  "groupedAction": {
+    "groupHeading": "Grupp",
+    "actionLabel": "Åtgärd",
+    "actionPlaceholder": "Välj en åtgärd i {{group}}",
+    "required": {
+      "title": "Åtgärd krävs",
+      "message": "Välj en åtgärd i {{group}} innan du konfigurerar indata eller publicerar arbetsflödet."
+    },
+    "tileKind": {
+      "core-object": "Kärna",
+      "transform": "Transformering",
+      "app": "App",
+      "ai": "AI"
+    },
+    "disconnected": {
+      "title": "{{group}} är inte ansluten",
+      "message": "Steg som använder dess åtgärder misslyckas vid körning tills integreringen återansluts under Inställningar > Integreringar."
+    }
+  },
+  "trigger": {
+    "manual": "Manuell",
+    "event": "Händelse",
+    "eventWithType": "Händelse: {{eventType}}",
+    "oneTimeSchedule": "Engångsschema",
+    "recurringSchedule": "Återkommande schema"
+  },
+  "scheduleStatus": {
+    "unknown": "Okänt",
+    "scheduled": "Schemalagt",
+    "paused": "Pausat",
+    "disabled": "Inaktiverat",
+    "completed": "Slutfört",
+    "failed": "Misslyckades"
+  },
+  "graph": {
+    "start": {
+      "label": "Start"
+    },
+    "states": {
+      "buildingGraph": "Bygger graf…"
+    },
+    "errors": {
+      "buildFailed": "Det gick inte att bygga arbetsflödesgrafen.",
+      "renderErrorTitle": "Fel vid rendering av grafen",
+      "switchToList": "Byt till listvyn för att fortsätta redigera."
+    },
+    "empty": {
+      "readonly": "Välj ett steg i panelen för att komma igång.",
+      "dropFirst": "Släpp för att lägga till som första steg",
+      "dragPrompt": "Dra ett steg från panelen eller välj ett för att komma igång."
+    },
+    "mapping": {
+      "unmappedTitle": "{{count}} obligatoriska fält inte mappade",
+      "unmappedBadge": "{{count}} obl. inte mappade",
+      "allMapped": "Alla obligatoriska fält är mappade"
+    },
+    "insert": {
+      "title": "Släpp ett steg här för att infoga"
+    },
+    "actions": {
+      "deleteStep": "Radera steg"
+    }
+  },
+  "runStudio": {
+    "header": {
+      "kicker": "Körningsstudio",
+      "fallbackTitle": "Arbetsflödeskörning",
+      "version": "Version {{version}}",
+      "updated": "Uppdaterad {{time}}",
+      "backToWorkflows": "← Tillbaka till arbetsflöden"
+    },
+    "actions": {
+      "replay": "Kör om",
+      "cancel": "Avbryt",
+      "refresh": "Ladda om"
+    },
+    "status": {
+      "running": "Körs",
+      "succeeded": "Lyckades",
+      "retrying": "Försöker igen",
+      "failed": "Misslyckades",
+      "pending": "Väntande",
+      "canceled": "Avbruten",
+      "loading": "Laddar"
+    },
+    "failure": {
+      "title": "Körningen misslyckades",
+      "lastSuccessfulStep": "Senaste lyckade steg: {{label}}"
+    },
+    "pipeline": {
+      "title": "Körningsflöde",
+      "emptyBranch": "Inga steg i den här grenen.",
+      "view": {
+        "graph": "Graf",
+        "list": "Lista"
+      },
+      "states": {
+        "loadingDefinition": "Laddar arbetsflödesdefinition…",
+        "loadingDefinitionPlain": "Laddar arbetsflödesdefinition…",
+        "noSteps": "Inga steg att visa."
+      },
+      "selectPrompt": "Välj ett steg för att markera det.",
+      "selectedStep": "Valt: {{label}}"
+    },
+    "details": {
+      "title": "Körningsdetaljer",
+      "fields": {
+        "runId": "Körnings-ID",
+        "started": "Startad",
+        "duration": "Varaktighet",
+        "tenant": "Klientorganisation",
+        "trigger": "Utlösare",
+        "eventType": "Händelsetyp",
+        "scheduleState": "Schemastatus",
+        "scheduledFor": "Schemalagd till",
+        "cron": "Cron",
+        "waitingFor": "Väntar på",
+        "counts": "Antal"
+      },
+      "values": {
+        "resumeEvent": "Återupptagningshändelse",
+        "counts": "{{steps}} steg · {{logs}} loggar · {{waits}} väntningar"
+      }
+    },
+    "errors": {
+      "title": "Körningsfel",
+      "runErrorPayload": "Nyttolast för körningsfel",
+      "resumeEventPayload": "Nyttolast för återupptagningshändelse"
+    },
+    "stepDetails": {
+      "title": "Stegdetaljer",
+      "empty": "Välj ett steg i flödet för att granska indata, utdata och ögonblicksbilder.",
+      "fields": {
+        "step": "Steg"
+      },
+      "panels": {
+        "configuration": "Stegkonfiguration",
+        "inputResolved": "Indata (beräknade)",
+        "output": "Utdata",
+        "envelopeSnapshot": "Ögonblicksbild av kuvert"
+      }
+    },
+    "timeline": {
+      "title": "Körningstidslinje",
+      "searchLabel": "Sök i tidslinjen",
+      "searchPlaceholder": "Sök efter stegsökväg, väntetyp eller status",
+      "empty": "Inga tidslinjeposter ännu.",
+      "waitTitle": "Väntan · {{waitType}}",
+      "attempt": "Försök {{attempt}} · {{status}}",
+      "inProgress": "Pågår",
+      "statusLine": "Status: {{status}}",
+      "eventSegment": " · Händelse: {{eventName}}",
+      "keySegment": " · Nyckel: {{key}}",
+      "createdLine": "Skapad: {{createdAt}}",
+      "resolvedSegment": " · Avslutad: {{resolvedAt}}",
+      "actions": {
+        "jump": "Gå till"
+      }
+    },
+    "logs": {
+      "title": "Körningsloggar",
+      "searchLabel": "Sök i loggar",
+      "searchPlaceholder": "Sök efter meddelande eller stegsökväg",
+      "empty": "Inga loggar ännu.",
+      "actions": {
+        "clear": "Rensa"
+      }
+    },
+    "dialog": {
+      "title": {
+        "cancel": "Avbryt körning",
+        "replay": "Kör om"
+      },
+      "heading": {
+        "cancel": "Avbryt arbetsflödeskörning",
+        "replay": "Kör arbetsflödet igen"
+      },
+      "description": {
+        "cancel": "Om du avbryter stoppas alla pågående eller väntande steg för den här körningen.",
+        "replay": "En omkörning startar en ny körning med nyttolasten nedan."
+      },
+      "fields": {
+        "reason": "Orsak",
+        "reasonPlaceholder": "t.ex. avbryter för att justera indata",
+        "payloadJson": "Nyttolast (JSON)"
+      },
+      "actions": {
+        "close": "Stäng",
+        "confirmCancel": "Bekräfta avbrott",
+        "startReplay": "Starta omkörning",
+        "working": "Arbetar…"
+      },
+      "errors": {
+        "invalidJson": "Ogiltig JSON"
+      }
+    },
+    "stepLabels": {
+      "action": "Åtgärd: {{actionId}}",
+      "ifCondition": "Om-villkor",
+      "forEach": "För varje",
+      "tryCatch": "Try/Catch",
+      "waitForEvent": "Vänta på händelse",
+      "waitForTime": "Vänta på tid",
+      "humanTask": "Manuell uppgift",
+      "setState": "Ange tillstånd",
+      "assign": "Tilldela"
+    },
+    "stepCard": {
+      "lastStatus": "Senaste status: {{status}} ({{timestamp}})",
+      "attempt": "Försök {{attempt}}",
+      "forEachSummary": "Post: {{itemVar}} | Samtidighet: {{concurrency}}",
+      "badges": {
+        "if": "Om",
+        "loop": "Slinga",
+        "try": "Försök",
+        "block": "Block"
+      },
+      "sections": {
+        "then": "Då",
+        "else": "Annars",
+        "try": "Försök",
+        "catch": "Fånga",
+        "body": "Innehåll"
+      }
+    },
+    "jsonPanel": {
+      "serializeFailed": "Det går inte att serialisera värdet."
+    },
+    "toasts": {
+      "reasonRequired": "En orsak krävs (minst 3 tecken).",
+      "canceled": "Körningen avbröts.",
+      "replayStarted": "Omkörningen har startat.",
+      "actionFailed": "Det gick inte att utföra åtgärden.",
+      "loadFailed": "Det gick inte att ladda körningsstudion"
+    },
+    "lastRefreshed": "Senast omladdad {{time}}",
+    "navigation": {
+      "backToRuns": "← Tillbaka till arbetsflödeskörningar"
+    },
+    "title": "Studio för arbetsflödeskörningar"
+  },
+  "schedules": {
+    "common": {
+      "emptyValue": "—",
+      "entityName": "schema"
+    },
+    "heading": {
+      "reflectionLabel": "Arbetsflödesscheman",
+      "title": "Scheman",
+      "description": "Hantera återanvändbara arbetsflödesscheman och deras sparade nyttolaster."
+    },
+    "actions": {
+      "new": "Nytt schema",
+      "edit": "Redigera",
+      "pause": "Pausa",
+      "resume": "Återuppta",
+      "delete": "Radera",
+      "cancel": "Avbryt",
+      "saving": "Sparar…",
+      "saveChanges": "Spara ändringar",
+      "create": "Skapa schema",
+      "rowMenu": "Schemaåtgärder för {{name}}"
+    },
+    "filters": {
+      "allWorkflows": "Alla arbetsflöden",
+      "allStatuses": "Alla statusar",
+      "allTriggers": "Alla utlösare",
+      "searchPlaceholder": "Sök scheman…"
+    },
+    "status": {
+      "enabled": "Aktiverat",
+      "paused": "Pausat",
+      "failed": "Misslyckades",
+      "completed": "Slutfört",
+      "disabled": "Inaktiverat"
+    },
+    "triggerType": {
+      "schedule": "Engångs",
+      "recurring": "Återkommande"
+    },
+    "dayType": {
+      "any": "Valfri dag",
+      "business": "Arbetsdagar",
+      "nonBusiness": "Arbetsfria dagar"
+    },
+    "table": {
+      "workflowVersion": "Arbetsflöde v{{version}}",
+      "columns": {
+        "schedule": "Schema",
+        "workflow": "Arbetsflöde",
+        "triggerType": "Utlösartyp",
+        "nextFire": "Nästa utlösning / körningstid",
+        "lastFire": "Senaste utlösning",
+        "status": "Status",
+        "lastError": "Senaste fel",
+        "actions": "Åtgärder"
+      }
+    },
+    "states": {
+      "loadingReflection": "Arbetsflödesscheman laddas",
+      "loading": "Laddar scheman…",
+      "never": "Aldrig",
+      "calendarMisconfigured": "Felkonfigurerad kalender",
+      "noEligibleUpcomingRun": "Ingen möjlig kommande körning",
+      "unknownWorkflow": "Okänt arbetsflöde",
+      "empty": "Inga scheman hittades",
+      "emptyDescription": "Skapa ett engångsschema eller ett återkommande schema för att köra ett publicerat arbetsflöde med sparade indata."
+    },
+    "errors": {
+      "loadFailed": "Det gick inte att ladda scheman.",
+      "updateFailed": "Det gick inte att uppdatera schemat.",
+      "deleteFailed": "Det gick inte att radera schemat."
+    },
+    "timezone": {
+      "browseAll": "Bläddra bland alla tidszoner…",
+      "custom": "Anpassat…",
+      "browseHelp": "Välj från den fullständiga listan över IANA-tidszoner som stöds.",
+      "customLabel": "Anpassad tidszon",
+      "customPlaceholder": "Etc/GMT+5"
+    },
+    "dialog": {
+      "title": {
+        "edit": "Redigera schema",
+        "create": "Skapa schema"
+      },
+      "description": "Konfigurera tidpunkter och statiska nyttolastdata för ett arbetsflödesschema.",
+      "states": {
+        "loading": "Laddar schemadetaljer…"
+      },
+      "fields": {
+        "workflow": "Arbetsflöde",
+        "workflowPlaceholder": "Välj ett arbetsflöde",
+        "name": "Schemanamn",
+        "namePlaceholder": "Synkronisering av leverantörsreskontra vid månadsslut",
+        "triggerType": "Utlösartyp",
+        "enabled": "Aktiverat",
+        "enabledHelp": "Schemat körs när det är giltigt.",
+        "disabledHelp": "Schemat förblir pausat tills det återupptas.",
+        "runAt": "Kör kl.",
+        "runOn": "Kör på",
+        "businessDaysOnly": "Endast arbetsdagar",
+        "nonBusinessDaysOnly": "Endast arbetsfria dagar",
+        "calendarSource": "Kalenderkälla",
+        "businessHoursSchedule": "Öppettidsschema",
+        "businessHoursSchedulePlaceholder": "Välj ett öppettidsschema",
+        "frequency": "Frekvens",
+        "time": "Tid",
+        "dayOfMonth": "Dag i månaden",
+        "weekdays": "Veckodagar",
+        "cron": "Cron",
+        "timezone": "Tidszon"
+      },
+      "workflow": {
+        "badges": {
+          "unpublished": "Opublicerat",
+          "inferredSchema": "Härlett schema"
+        }
+      },
+      "eligibility": {
+        "chooseWorkflow": "Välj ett arbetsflöde innan du sparar.",
+        "unpublished": "Scheman kan bara skapas för arbetsflöden med en publicerad version.",
+        "pinnedOnly": "Scheman stöds endast för arbetsflöden med ett låst nyttolastschema.",
+        "noPinnedSchema": "Det valda arbetsflödet tillhandahåller inget låst nyttolastschema.",
+        "unavailableSchemaRef": "Det valda arbetsflödet använder en otillgänglig nyttolastschemareferens: {{schemaRef}}."
+      },
+      "calendarSource": {
+        "tenantDefault": "Klientorganisationens standardöppettider",
+        "tenantDefaultMissing": "Klientorganisationens standardöppettider (inte konfigurerade)",
+        "tenantDefaultHint": "Ange först ett standardschema för klientorganisationens öppettider eller välj ett specifikt schema.",
+        "specific": "Specifikt öppettidsschema",
+        "specificHint": "Skapa ett öppettidsschema först.",
+        "tenantDefaultMissingDescription": "Inget standardschema för klientorganisationens öppettider har konfigurerats ännu. Välj ett specifikt öppettidsschema eller ange först ett standardschema för klientorganisationen.",
+        "holidaysNote": "Helgdagar räknas alltid som arbetsfria dagar."
+      },
+      "businessHours": {
+        "defaultSuffix": " (standard)",
+        "noneConfigured": "Inga öppettidsscheman har konfigurerats ännu.",
+        "usingTenantDefault": "Använder klientorganisationens standardschema för öppettider.",
+        "noTenantDefault": "Inget standardschema för klientorganisationens öppettider har konfigurerats ännu."
+      },
+      "recurring": {
+        "title": "Återkommande schema",
+        "description": "Välj ett vanligt upprepningsmönster. Avancerad cron finns för anpassade scheman.",
+        "builderMode": "Schemabyggare",
+        "advancedMode": "Avancerad cron",
+        "dailyHelper": "Körs varje dag vid den valda tidpunkten.",
+        "weeklyHelper": "Välj en eller flera veckodagar nedan.",
+        "customCronWarning": "Det här schemat använder ett anpassat cron-uttryck. Fortsätt redigera det här eller byt tillbaka till byggaren för att ersätta det med ett vanligt mönster.",
+        "cronPreview": "Cron: {{cron}}"
+      },
+      "payload": {
+        "title": "Nyttolast",
+        "description": "Skapa statiska indata som skickas till varje schemalagd körning.",
+        "rootLabel": "Nyttolast",
+        "rootKey": "nyttolast",
+        "mode": {
+          "form": "Formulärläge",
+          "json": "JSON-läge"
+        },
+        "actions": {
+          "addItem": "Lägg till post",
+          "removeItem": "Ta bort"
+        },
+        "states": {
+          "noItems": "Inga poster ännu."
+        },
+        "boolean": {
+          "true": "Sant",
+          "false": "Falskt"
+        },
+        "noSchema": {
+          "title": "Inget nyttolastschema finns för det här arbetsflödet ännu.",
+          "description": "Formulärfält visas här när arbetsflödet har publicerat ett låst nyttolastschema."
+        }
+      },
+      "validation": {
+        "title": "Valideringsfel i nyttolasten",
+        "more": "+{{count}} till…",
+        "invalidValue": "Ogiltigt värde",
+        "valueMustBeAllowed": "Värdet måste vara ett av de tillåtna alternativen.",
+        "expectedObject": "Ett objekt förväntades.",
+        "requiredFieldMissing": "Obligatoriskt fält saknas.",
+        "unknownProperty": "Okänd egenskap.",
+        "expectedArray": "En array förväntades.",
+        "expectedString": "En sträng förväntades.",
+        "expectedNumber": "Ett tal förväntades.",
+        "expectedBoolean": "Ett booleskt värde förväntades.",
+        "payloadMustBeObject": "Schemats nyttolast måste vara ett JSON-objekt.",
+        "invalidJson": "Ogiltig JSON"
+      },
+      "errors": {
+        "loadScheduleFailed": "Det gick inte att ladda schemat.",
+        "saveFailed": "Det gick inte att spara schemat."
+      }
+    },
+    "recurrence": {
+      "andWord": "och",
+      "frequency": {
+        "daily": "Dagligen",
+        "weekly": "Veckovis",
+        "monthly": "Månadsvis"
+      },
+      "validation": {
+        "validTime": "Välj ett giltigt klockslag.",
+        "weekdayRequired": "Välj minst en veckodag.",
+        "dayOfMonthRange": "Välj en dag i månaden mellan 1 och 31."
+      },
+      "summary": {
+        "daily": "Körs varje dag kl. {{timeLabel}} {{timezoneLabel}}",
+        "weekly": "Körs varje {{weekdayLabels}} kl. {{timeLabel}} {{timezoneLabel}}",
+        "monthly": "Körs den {{dayOfMonth}} varje månad kl. {{timeLabel}} {{timezoneLabel}}"
+      },
+      "weekdays": {
+        "0": {
+          "short": "Sön",
+          "long": "söndag"
+        },
+        "1": {
+          "short": "Mån",
+          "long": "måndag"
+        },
+        "2": {
+          "short": "Tis",
+          "long": "tisdag"
+        },
+        "3": {
+          "short": "Ons",
+          "long": "onsdag"
+        },
+        "4": {
+          "short": "Tor",
+          "long": "torsdag"
+        },
+        "5": {
+          "short": "Fre",
+          "long": "fredag"
+        },
+        "6": {
+          "short": "Lör",
+          "long": "lördag"
+        }
+      }
+    }
+  },
+  "enums": {
+    "workflowRunStatus": {
+      "RUNNING": "Körs",
+      "WAITING": "Väntar",
+      "SUCCEEDED": "Lyckades",
+      "FAILED": "Misslyckades",
+      "CANCELED": "Avbruten"
+    },
+    "workflowRunSort": {
+      "started_at:desc": "Nyast först",
+      "started_at:asc": "Äldst först",
+      "updated_at:desc": "Senast uppdaterade först",
+      "updated_at:asc": "Tidigast uppdaterade först"
+    },
+    "workflowEventStatus": {
+      "matched": "Matchad",
+      "unmatched": "Utan matchning",
+      "error": "Fel"
+    },
+    "workflowStepStatus": {
+      "STARTED": "Startat",
+      "SUCCEEDED": "Lyckades",
+      "FAILED": "Misslyckades",
+      "RETRY_SCHEDULED": "Omförsök schemalagt",
+      "CANCELED": "Avbrutet"
+    },
+    "workflowLogLevel": {
+      "DEBUG": "Felsökning",
+      "INFO": "Info",
+      "WARN": "Varning",
+      "ERROR": "Fel"
+    },
+    "workflowAiSchemaType": {
+      "string": "Sträng",
+      "number": "Tal",
+      "integer": "Heltal",
+      "boolean": "Booleskt värde",
+      "object": "Objekt",
+      "array": "Array"
+    },
+    "workflowInputSourceMode": {
+      "reference": "Referens",
+      "fixed": "Fast värde"
+    },
+    "workflowReferenceSection": {
+      "payload": "Nyttolast",
+      "vars": "Stegresultat",
+      "meta": "Arbetsflödesdetaljer",
+      "error": "Fel",
+      "forEach": "Slingkontext"
+    },
+    "workflowTriggerMode": {
+      "manual": "Ingen utlösare",
+      "event": "Händelse"
+    },
+    "workflowCanvasView": {
+      "list": "Lista",
+      "graph": "Graf"
+    },
+    "workflowOnError": {
+      "continue": "Fortsätt",
+      "fail": "Avsluta med fel"
+    },
+    "workflowWaitMode": {
+      "duration": "Varaktighet",
+      "until": "Till"
+    },
+    "workflowWaitTiming": {
+      "fixed": "Specifikt datum och klockslag",
+      "expression": "Avancerat uttryck"
+    },
+    "workflowEntityType": {
+      "project_task": "Projektuppgift",
+      "ticket": "Ärende",
+      "contact": "Kontakt",
+      "client": "Kund",
+      "project": "Projekt",
+      "appointment": "Bokning",
+      "quote": "Offert"
+    },
+    "workflowLinkRelation": {
+      "related": "Relaterad",
+      "mirrors": "Speglar",
+      "maps_to": "Mappas till",
+      "blocks": "Blockerar",
+      "duplicate_of": "Dubblett av",
+      "synced_with": "Synkroniserad med"
+    }
+  },
+  "automation": {
+    "createWorkflow": {
+      "dialogTitle": "Skapa nytt arbetsflöde",
+      "fields": {
+        "name": "Arbetsflödesnamn",
+        "namePlaceholder": "t.ex. skicka välkomstmeddelande via e-post",
+        "triggerType": "Utlösartyp"
+      },
+      "validation": {
+        "nameRequired": "Arbetsflödesnamn krävs",
+        "nameTooShort": "Namnet måste innehålla minst 3 tecken"
+      },
+      "actions": {
+        "cancel": "Avbryt",
+        "create": "Skapa arbetsflöde"
+      },
+      "triggers": {
+        "event": {
+          "title": "Händelsebaserat",
+          "description": "Utlöses automatiskt när specifika händelser inträffar (t.ex. ett ärende skapas eller en faktura betalas)."
+        },
+        "scheduled": {
+          "title": "Schemalagt",
+          "description": "Körs enligt ett återkommande schema med cron-uttryck (t.ex. dagligen eller veckovis)."
+        },
+        "manual": {
+          "title": "Manuell",
+          "description": "Startas på begäran av användare eller via API-anrop. Inga automatiska utlösare."
+        }
+      }
+    },
+    "workflowList": {
+      "header": "Arbetsflöden",
+      "stats": {
+        "total": "{{count}} totalt",
+        "active": "{{count}} aktiva",
+        "draft": "{{count}} utkast",
+        "paused": "{{count}} pausade"
+      },
+      "actions": {
+        "eventCatalog": "Händelsekatalog",
+        "newWorkflow": "Nytt arbetsflöde",
+        "createFirst": "Skapa ditt första arbetsflöde",
+        "retry": "Försök igen",
+        "resetFilters": "Återställ"
+      },
+      "searchPlaceholder": "Sök arbetsflöden…",
+      "statusFilter": {
+        "all": "Alla statusar",
+        "active": "Aktivt",
+        "draft": "Utkast",
+        "paused": "Pausat",
+        "archived": "Arkiverat"
+      },
+      "triggerFilter": {
+        "all": "Alla utlösare",
+        "event": "Händelsebaserat",
+        "schedule": "Engångsschema",
+        "recurring": "Återkommande schema",
+        "manual": "Manuell"
+      },
+      "triggerLabels": {
+        "manual": "Manuell",
+        "schedule": "Engångsschema",
+        "recurring": "Återkommande schema",
+        "event": "Händelse"
+      },
+      "bulk": {
+        "selectedSingular": "{{count}} arbetsflöde markerat",
+        "selectedPlural": "{{count}} arbetsflöden markerade",
+        "pause": "Pausa",
+        "resume": "Återuppta",
+        "delete": "Radera",
+        "clearSelection": "Avmarkera alla",
+        "deleteDialogTitle": "Radera markerade arbetsflöden",
+        "deleteConfirmSingular": "Radera {{count}} arbetsflöde",
+        "deleteConfirmPlural": "Radera {{count}} arbetsflöden",
+        "deleteClose": "Stäng",
+        "deleteCancel": "Avbryt",
+        "selectedSummarySingular": "Du har markerat <1>{{count}}</1> arbetsflöde.",
+        "selectedSummaryPlural": "Du har markerat <1>{{count}}</1> arbetsflöden.",
+        "willBeDeleted": "<1>{{count}}</1> raderas.",
+        "willBeSkipped": "<1>{{count}}</1> hoppas över.",
+        "skippedHeading": "Överhoppade arbetsflöden",
+        "systemWorkflowReason": "Systemarbetsflöde"
+      },
+      "columns": {
+        "name": "Namn",
+        "status": "Status",
+        "version": "Version",
+        "trigger": "Utlösare",
+        "lastModified": "Senast ändrat",
+        "actions": "Åtgärder"
+      },
+      "statusLabels": {
+        "active": "Aktivt",
+        "draft": "Utkast",
+        "archived": "Arkiverat",
+        "paused": "Pausat"
+      },
+      "tableValues": {
+        "system": "System",
+        "draftVersion": "Utkast: v{{version}}"
+      },
+      "rowMenu": {
+        "ariaLabel": "Arbetsflödesåtgärder",
+        "resume": "Återuppta",
+        "pause": "Pausa",
+        "duplicate": "Duplicera",
+        "viewRuns": "Visa körningar",
+        "delete": "Radera"
+      },
+      "states": {
+        "errorTitle": "Det gick inte att ladda arbetsflöden",
+        "errorFallback": "Det gick inte att hämta arbetsflöden",
+        "validationFailed": "Det gick inte att validera raderingen. Försök igen.",
+        "emptyTitle": "Inga arbetsflöden ännu",
+        "emptyDescription": "Skapa ditt första arbetsflöde för att automatisera uppgifter, reagera på händelser och effektivisera dina processer.",
+        "noResultsTitle": "Inga arbetsflöden hittades",
+        "noResultsDescription": "Prova att ändra sökningen eller filtren för att hitta det du söker."
+      },
+      "deleteDialog": {
+        "fallbackEntityName": "det här arbetsflödet"
+      }
+    },
+    "eventsCatalog": {
+      "header": {
+        "title": "Händelsekatalog för arbetsflöden",
+        "subtitle": "Utforska, hantera och utforma arbetsflöden för systemhändelser och utlösare.",
+        "defineCustomEvent": "Definiera anpassad händelse",
+        "managePermissionTitle": "Kräver behörigheten workflow:manage"
+      },
+      "filters": {
+        "searchPlaceholder": "Sök händelser (t.ex. ticket.create, email.receive)…",
+        "allCategories": "Alla kategorier",
+        "status": "Status",
+        "statusOptions": {
+          "all": "Alla statusar",
+          "active": "Aktiv",
+          "beta": "Beta",
+          "draft": "Utkast",
+          "deprecated": "Utfasad"
+        },
+        "source": "Källa",
+        "sourceOptions": {
+          "all": "Alla källor",
+          "system": "System",
+          "tenant": "Klientorganisation"
+        },
+        "sort": "Sortera",
+        "sortOptions": {
+          "categoryName": "Kategori · Namn",
+          "mostActive": "Mest aktiva (7 dagar)"
+        },
+        "apply": "Tillämpa",
+        "clear": "Rensa",
+        "viewGrid": "Rutnätsvy",
+        "viewList": "Listvy"
+      },
+      "card": {
+        "workflowsCount": "{{count}} arbetsflöden",
+        "actions": {
+          "simulate": "Simulera",
+          "metrics": "Mätvärden",
+          "attachTitle": "Koppla (nytt arbetsflöde)"
+        },
+        "metrics": {
+          "executions": "Körningar",
+          "successRate": "Andel lyckade",
+          "avgLatency": "Genomsnittlig latens"
+        }
+      },
+      "states": {
+        "noEventsTitle": "Inga händelser hittades",
+        "noEventsDescription": "Prova att ändra filtren.",
+        "noEventsInRange": "Inga händelser i det här intervallet.",
+        "noDataAvailable": "Inga data tillgängliga.",
+        "loading": "Laddar…"
+      },
+      "pagination": {
+        "showing": "Visar {{start}} till {{end}} av {{total}} resultat",
+        "prev": "Föregående",
+        "next": "Nästa",
+        "page": "Sida {{page}} / {{total}}"
+      },
+      "badges": {
+        "system": "System",
+        "tenant": "Klientorganisation",
+        "noSchema": "Inget schema",
+        "unknownSchema": "Okänt schema",
+        "schema": "Schema"
+      },
+      "details": {
+        "title": "Händelsedetaljer",
+        "close": "Stäng",
+        "simulate": "Simulera",
+        "metrics": "Mätvärden",
+        "attach": "Koppla",
+        "schema": {
+          "heading": "Schema",
+          "viewFull": "Visa fullständigt schema",
+          "managedNotice": "Schemat hanteras av schemaregistret.",
+          "missingNotice": "Ingen schemaRef har angetts. Händelsen kanske inte kan användas som arbetsflödesutlösare.",
+          "topLevelFields": "Fält på översta nivån",
+          "required": "obligatoriskt",
+          "moreFieldsHint": "Visar de första 12 fälten. Använd ”Visa fullständigt schema” för att se fler."
+        },
+        "attached": {
+          "heading": "Kopplade arbetsflöden",
+          "loading": "Laddar…",
+          "empty": "Inga arbetsflöden är kopplade.",
+          "publishedBadge": "Publicerat",
+          "systemBadge": "System",
+          "pausedBadge": "Pausat",
+          "hiddenBadge": "Dolt",
+          "open": "Öppna",
+          "detach": "Koppla från",
+          "publishTooltip": "Kräver behörigheten workflow:publish",
+          "adminTooltip": "Kräver workflow:admin för systemarbetsflöden"
+        }
+      },
+      "schemaModal": {
+        "close": "Stäng",
+        "headerTitle": "Nyttolastschema",
+        "loading": "Laddar…",
+        "unavailable": "Schemat är inte tillgängligt.",
+        "copy": "Kopiera",
+        "copySuccess": "Kopierat",
+        "copyFailed": "Kopieringen misslyckades"
+      },
+      "metricsDialog": {
+        "close": "Stäng",
+        "headerTitle": "Mätvärden · {{eventType}}",
+        "from": "Från",
+        "to": "Till",
+        "refresh": "Ladda om",
+        "openWorkflowEditor": "Öppna arbetsflödesredigeraren",
+        "loading": "Laddar…",
+        "totals": {
+          "totalEvents": "Totalt antal händelser",
+          "matched": "Matchad",
+          "unmatched": "Utan matchning",
+          "errors": "Fel",
+          "runsStarted": "Startade körningar",
+          "runSuccessRate": "Andel lyckade körningar",
+          "avgRunDuration": "Genomsnittlig körningstid"
+        },
+        "executionsOverTime": "Körningar över tid",
+        "recentEvents": "Senaste händelser",
+        "viewInEvents": "Visa bland händelser",
+        "openRun": "Visa körning",
+        "loadFailed": "Det gick inte att ladda mätvärden",
+        "rangeShowing": "Visar {{start}}–{{end}} av {{total}}",
+        "prev": "Föregående",
+        "next": "Nästa"
+      },
+      "simulateDialog": {
+        "headerTitle": "Simulera · {{eventType}}",
+        "submit": "Simulera",
+        "submitting": "Skickar in…",
+        "close": "Stäng",
+        "fields": {
+          "correlationKey": "Korrelationsnyckel (valfri)",
+          "correlationKeyPlaceholder": "Används för att avsluta väntan på händelser",
+          "schemaRef": "Schemareferens för händelsens nyttolast (avancerat)",
+          "schemaRefPlaceholderEmpty": "Ingen schemaRef för den här händelsen",
+          "payloadJson": "Nyttolast (JSON)",
+          "payload": "Nyttolast"
+        },
+        "modes": {
+          "form": "Formulär",
+          "json": "JSON",
+          "noSchema": "Inget schema finns. Formulärläget är inaktiverat."
+        },
+        "errors": {
+          "schemaValidationTitle": "Schemavalideringsfel",
+          "moreErrors": "+{{count}} till",
+          "fixBeforeSubmit": "Åtgärda schemavalideringsfelen innan du skickar in.",
+          "simulationTitle": "Simuleringsfel",
+          "submitFallback": "Det gick inte att simulera",
+          "submitToast": "Det gick inte att simulera",
+          "invalidJson": "Ogiltig JSON.",
+          "valueMustBeAllowed": "Värdet måste vara ett av de tillåtna alternativen.",
+          "expectedObject": "Ett objekt förväntades.",
+          "expectedArray": "En array förväntades.",
+          "expectedString": "En sträng förväntades.",
+          "expectedNumber": "Ett tal förväntades.",
+          "expectedBoolean": "Ett booleskt värde förväntades.",
+          "requiredField": "Obligatoriskt fält saknas."
+        },
+        "result": {
+          "title": "Resultat",
+          "status": "Status",
+          "eventId": "Händelse-ID",
+          "startedRuns": "Startade körningar",
+          "open": "Öppna",
+          "resumedRun": "Återupptagen körning",
+          "openResumedRun": "Öppna återupptagen körning"
+        },
+        "toasts": {
+          "success": "Händelsen har simulerats"
+        },
+        "form": {
+          "remove": "Ta bort",
+          "addItem": "Lägg till post",
+          "rootLabel": "Nyttolast",
+          "payloadJsonLabel": "Nyttolast (JSON)",
+          "true": "Sant",
+          "false": "Falskt"
+        }
+      },
+      "defineEventDialog": {
+        "title": "Definiera anpassad händelse",
+        "cancel": "Avbryt",
+        "submit": "Skapa händelse",
+        "submitting": "Skapar…",
+        "fields": {
+          "eventType": "Händelsetyp",
+          "eventTypePlaceholder": "t.ex. ticket.created",
+          "name": "Namn",
+          "namePlaceholder": "Lättläst namn",
+          "category": "Kategori",
+          "categoryPlaceholder": "t.ex. ärenden",
+          "description": "Beskrivning",
+          "descriptionPlaceholder": "Valfri beskrivning",
+          "useSchemaRef": "Använd schemareferens",
+          "useInline": "Inbäddat schema (avancerat)",
+          "selectSchemaRef": "Välj nyttolastschemareferens",
+          "selectPlaceholder": "Välj…",
+          "payloadSchemaJson": "Nyttolastschema (JSON)"
+        },
+        "footer": "Anpassade händelser gäller inom klientorganisationen och kan användas som arbetsflödesutlösare.",
+        "validation": {
+          "typeAndNameRequired": "Händelsetyp och namn krävs.",
+          "schemaRefRequired": "Välj en nyttolastschemareferens (eller använd ett inbäddat schema).",
+          "invalidJson": "Nyttolastschemat måste vara giltig JSON."
+        },
+        "toasts": {
+          "createSuccess": "Den anpassade händelsen har skapats",
+          "createFailed": "Det gick inte att skapa händelsen"
+        }
+      },
+      "toasts": {
+        "loadEventsFailed": "Det gick inte att ladda händelser",
+        "workflowCreated": "Arbetsflödet har skapats",
+        "createWorkflowFailed": "Det gick inte att skapa arbetsflödet",
+        "detachConfirm": "Koppla från arbetsflödet från händelsen? Detta publicerar en ny version där utlösaren har tagits bort.",
+        "detachValidationFailed": "Frånkopplingen misslyckades (valideringsfel)",
+        "detached": "Frånkopplat",
+        "detachFailed": "Det gick inte att koppla från"
+      }
+    },
+    "actionInput": {
+      "fallbacks": {
+        "loadingOptions": "Laddar alternativ…",
+        "selectName": "Välj {{name}}",
+        "ticketSearchPlaceholder": "Sök ärenden efter nummer eller titel",
+        "ticketSelect": "Välj ärende",
+        "ticketTypeAbove": "Skriv ovan för att söka efter ärenden",
+        "selectBoard": "Välj tavla",
+        "selectClient": "Välj kund",
+        "selectContact": "Välj kontakt",
+        "selectUser": "Välj användare",
+        "selectUserOrTeam": "Välj användare eller team"
+      },
+      "errors": {
+        "loadTicket": "Det gick inte att ladda ärendet",
+        "searchTickets": "Det gick inte att söka efter ärenden",
+        "loadOptions": "Det gick inte att ladda alternativen"
+      },
+      "dependencyHints": {
+        "contactClient": "Välj först en fast kund för att ladda kontaktalternativ.",
+        "locationClient": "Välj först en fast kund för att ladda platsalternativ.",
+        "categoryBoard": "Välj först en fast tavla för att ladda kategorialternativ.",
+        "statusBoard": "Välj först en fast tavla för att ladda statusalternativ.",
+        "statusTicket": "Välj först ett fast ärende för att ladda statusalternativ.",
+        "subcategoryBoard": "Välj först en fast tavla för att ladda underkategorialternativ.",
+        "subcategoryCategory": "Välj först en fast kategori för att ladda underkategorialternativ."
+      }
+    }
+  },
+  "automationGate": {
+    "loading": "Laddar arbetsflödesautomatisering…"
+  },
+  "flow": {
+    "designer": {
+      "title": "Arbetsflödesdesigner"
+    },
+    "sidebar": {
+      "dragHint": "Dra de här noderna till arbetsytan:"
+    },
+    "picker": {
+      "searchPlaceholder": "Sök…"
+    },
+    "fields": {
+      "selectInputField": "Välj indatafält",
+      "customFieldReference": "Anpassad fältreferens",
+      "selectOrEnterReference": "Välj eller ange en fältreferens"
+    },
+    "delete": {
+      "confirmTitle": "Bekräfta radering",
+      "confirmMessage": "Vill du radera det här arbetsflödet?"
+    },
+    "topBar": {
+      "workflowName": "Arbetsflödesnamn",
+      "workflowDescription": "Arbetsflödesbeskrivning"
+    },
+    "nodes": {
+      "classifier": {
+        "newClassification": "Ny klassificering"
+      },
+      "selector": {
+        "defaultInput": "Standardindata"
+      },
+      "decision": {
+        "type": "Typ",
+        "conditionValue": "Villkorsvärde",
+        "defaultOutput": "Standardutdata",
+        "defaultOutputProp": "Standardutdata"
+      },
+      "ticketCreator": {
+        "ticketTitle": "Ärendetitel:",
+        "ticketDescription": "Ärendebeskrivning:",
+        "selectBoard": "Välj eller ange en tavla",
+        "selectPriority": "Välj eller ange en prioritet"
+      }
+    }
+  },
+  "toggle": {
+    "disableTitle": "Inaktivera arbetsflöde",
+    "enableTitle": "Aktivera arbetsflöde",
+    "confirmDisable": "Vill du inaktivera det här arbetsflödet?",
+    "confirmEnable": "Vill du aktivera det här arbetsflödet?"
+  },
+  "mappingEditor": {
+    "error": {
+      "title": "Det gick inte att ladda schemat",
+      "retry": "Försök igen",
+      "retryWithCount": "Försök igen ({{retryCount}}/{{maxRetries}})",
+      "attemptOfMax": "Försök {{retryCount}} av {{maxRetries}}",
+      "maxRetriesReached": "Maximalt antal omförsök har nåtts.",
+      "contactSupport": "Kontakta support →"
+    }
+  },
+  "actionInputTypeHint": {
+    "coercible": "Typen ”{{sourceType}}” konverteras till ”{{targetType}}”",
+    "incompatible": "Typen ”{{sourceType}}” är inte kompatibel med den förväntade typen ”{{targetType}}”"
+  }
+}
