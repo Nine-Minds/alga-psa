@@ -173,3 +173,60 @@ test('disabled reconciler never spawns', async () => {
   assert.equal(result.skipped, 'disabled');
   assert.equal(h.spawnCalls.length, 0);
 });
+
+test('submit waits for an in-flight run and then starts a fresh one for the caller', async () => {
+  let activations = 0;
+  const h = harness({
+    maxActivationWaitMs: 60_000,
+    onSleep: ({ writeActivation }) => {
+      activations += 1;
+      writeActivation({
+        stage: 'active',
+        fingerprint: String(activations).repeat(64).slice(0, 64),
+        updatedAt: new Date(Date.UTC(2026, 0, 1, 0, 0, activations)).toISOString()
+      });
+    }
+  });
+
+  const first = h.reconciler.runOnce('startup');
+  assert.equal(h.spawnCalls.length, 1);
+  // submit must serialize behind the in-flight run rather than returning
+  // {skipped:'running'} — its result has to belong to a run that started after
+  // the current inputs were persisted.
+  const submitted = h.reconciler.submit('admission');
+  resolveNext(h.children[0], 0);
+  await first;
+
+  for (let i = 0; i < 20 && h.spawnCalls.length < 2; i += 1) {
+    await new Promise((resolve) => setImmediate(resolve));
+  }
+  assert.equal(h.spawnCalls.length, 2, 'submit must start a fresh run');
+
+  resolveNext(h.children[1], 0);
+  const result = await submitted;
+  assert.equal(result.state, 'active');
+  assert.equal(result.ok, true);
+  assert.equal(result.reason, 'admission');
+});
+
+test('the requested configuration fingerprint reaches the launcher and the activation result', async () => {
+  const fingerprint = 'e'.repeat(64);
+  const h = harness({
+    reconciler: { configFingerprint: () => fingerprint },
+    onSleep: ({ writeActivation }) => {
+      writeActivation({
+        stage: 'active',
+        fingerprint: 'f'.repeat(64),
+        configFingerprint: fingerprint,
+        updatedAt: '2026-09-22T00:00:05.000Z'
+      });
+    }
+  });
+  const pending = h.reconciler.runOnce('admission');
+  assert.equal(h.spawnCalls[0].opts.env.ALGA_APPLIANCE_DNS_CONFIG_FINGERPRINT, fingerprint);
+  resolveNext(h.children[0], 0);
+  const result = await pending;
+  assert.equal(result.state, 'active');
+  assert.equal(result.activation.configFingerprint, fingerprint);
+  assert.equal(h.readResult().activation.configFingerprint, fingerprint);
+});

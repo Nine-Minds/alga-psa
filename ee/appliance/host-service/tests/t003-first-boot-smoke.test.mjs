@@ -5,6 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import { spawn } from 'node:child_process';
+import { dnsConfigurationFingerprint } from '../dns-config.mjs';
 
 const repoRoot = path.resolve(path.join(import.meta.dirname, '..', '..', '..', '..'));
 const consoleScript = path.join(repoRoot, 'ee', 'appliance', 'host-service', 'console.mjs');
@@ -81,6 +82,19 @@ if (args.includes('get') && args.includes('pods') && args.includes('alga-applian
 }
 `, { mode: 0o755 });
 
+  // Setup admission now requires a verified cluster-DNS activation for the
+  // requested configuration, so the smoke test supplies a reconciler stub that
+  // records an active activation (the runner still owns the result envelope).
+  // The runner reads <state-dir>/dns-activation.json; the stub writes there via
+  // ALGA_APPLIANCE_DNS_STATUS_FILE, which the runner passes through to its child.
+  const dnsStatusFile = path.join(tmp, 'dns-activation.json');
+  const fakeReconcileScript = path.join(binDir, 'fake-reconcile-k3s-dns.sh');
+  const systemFingerprint = dnsConfigurationFingerprint({ dnsMode: 'system' });
+  fs.writeFileSync(fakeReconcileScript, `#!/usr/bin/env bash
+set -euo pipefail
+printf '{"stage":"active","fingerprint":"${'f'.repeat(64)}","configFingerprint":"${systemFingerprint}","updatedAt":"%s"}\\n' "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)" > "$ALGA_APPLIANCE_DNS_STATUS_FILE"
+`, { mode: 0o755 });
+
   const consoleResult = await new Promise((resolve) => {
     const child = spawn(process.execPath, [consoleScript], {
       cwd: repoRoot,
@@ -133,6 +147,8 @@ if (args.includes('get') && args.includes('pods') && args.includes('alga-applian
       ALGA_APPLIANCE_SESSION_SECRET_FILE: path.join(tmp, 'session-secret'),
       ALGA_APPLIANCE_STATE_FILE: path.join(tmp, 'install-state.json'),
       ALGA_APPLIANCE_SETUP_INPUTS_FILE: path.join(tmp, 'setup-inputs.json'),
+      ALGA_APPLIANCE_DNS_RECONCILE_SCRIPT: fakeReconcileScript,
+      ALGA_APPLIANCE_DNS_STATUS_FILE: dnsStatusFile,
       ALGA_APPLIANCE_SUPPORT_STATE_DIR: path.join(tmp, 'support-sessions'),
       ALGA_APPLIANCE_STATUS_UI_DIR: staticUiDir
     },

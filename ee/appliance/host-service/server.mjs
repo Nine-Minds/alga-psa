@@ -11,7 +11,9 @@ import { createKubectlQueue } from './kubectl-queue.mjs';
 import { createSetupRetry, installStateRunning } from './setup-retry.mjs';
 import { createSetupEngineLog, DEFAULT_SETUP_ENGINE_LOG_MAX_BYTES } from './setup-engine-log.mjs';
 import { createDnsReconciler } from './dns-reconcile-runner.mjs';
-import { dnsReconcileLaunchBlocker as evaluateDnsLaunchBlocker, dnsBlockerMessage } from './dns-launch-gate.mjs';
+import { dnsBlockerMessage } from './dns-launch-gate.mjs';
+import { ensureRequestedDnsActive, evaluateDnsAdmission } from './setup-admission.mjs';
+import { dnsConfigurationFingerprint } from './dns-config.mjs';
 import { persistSetupInputs, validateSetupInputs, runNetworkChecks, resolveReleaseManifest } from './setup-engine.mjs';
 import { generateSupportBundle } from './support-bundle.mjs';
 import { createNativeKubernetesAdapter } from './kubernetes-client-adapter.mjs';
@@ -106,6 +108,34 @@ function readInstallStateSafe() {
   } catch {
     return null;
   }
+}
+
+// The current persisted setup inputs. Read fresh for every admission check so a
+// submission that replaced the file is never admitted against the old values.
+function readPersistedSetupInputs() {
+  try {
+    if (!fs.existsSync(setupInputsFile)) return null;
+    const parsed = JSON.parse(fs.readFileSync(setupInputsFile, 'utf8'));
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+// The timestamp of the current persisted setup inputs (`validateSetupInputs`
+// stamps it). DNS admission compares it to the activation's submittedAt so a
+// result produced for earlier inputs can never authorize setup.
+function setupInputsSubmittedAt() {
+  return readPersistedSetupInputs()?.submittedAt || null;
+}
+
+// Resolver-configuration identity of the persisted setup inputs, computed by the
+// same function the host helper mirrors. Admission requires the completed
+// activation's fingerprint to equal this value, so an activation submitted for
+// one configuration can never release the gate after the inputs changed.
+function setupInputsDnsFingerprint() {
+  const inputs = readPersistedSetupInputs();
+  return inputs ? dnsConfigurationFingerprint(inputs) : null;
 }
 
 // Only spend outbound network egress on the live probe when a network-class
@@ -262,12 +292,18 @@ const retryController = createSetupRetry({
   readInstallState: () => readInstallStateSafe(),
   workflowOwnerAlive: (state) => setupWorkflowOwnerAlive(state),
   probe: () => getNetworkProbe(),
-  // A pending/failed DNS activation defers (does not consume) an automatic
-  // retry: the launch is not attempted until cluster DNS is active.
+  // A pending/failed/unverified DNS configuration defers (does not consume) an
+  // automatic retry: the launch is not attempted until the cluster resolver is
+  // verified active for the *currently requested* configuration. A stale success
+  // or an ancient pending record never authorizes a launch.
   readyBeforeLaunch: () => {
-    const blocker = dnsReconcileLaunchBlocker();
-    if (blocker) return { ok: false, pending: Boolean(blocker.pending), reason: blocker.error };
-    return { ok: true };
+    const decision = evaluateDnsAdmission({
+      requestedAt: setupInputsSubmittedAt(),
+      requestedFingerprint: setupInputsDnsFingerprint(),
+      result: dnsReconciler.readResult()
+    });
+    if (decision.ok) return { ok: true };
+    return { ok: false, pending: Boolean(decision.pending), reason: decision.error };
   },
   launch: () => queueSetupWorkflow(),
   logger: console
@@ -287,6 +323,7 @@ const dnsReconciler = createDnsReconciler({
   kubeconfigPath,
   stateFile,
   disabled: process.env.ALGA_APPLIANCE_DISABLE_DNS_RECONCILE === '1',
+  configFingerprint: () => setupInputsDnsFingerprint(),
   intervalMs: Number(process.env.ALGA_APPLIANCE_DNS_RECONCILE_INTERVAL_MS || 5 * 60 * 1000),
   startupDelayMs: Number(process.env.ALGA_APPLIANCE_DNS_RECONCILE_STARTUP_DELAY_MS ?? 10 * 1000),
   shouldSkip: () => {
@@ -590,22 +627,11 @@ function systemNetworkSummary() {
 // a repeated retry cannot grow unbounded. If the log cannot be opened we still
 // run setup (availability), but the error is retained and surfaced rather than
 // silently reverting to stdio: 'ignore'.
-// Cluster DNS must be verified before a setup run redeems or pulls through a
-// resolver that still leaks the customer search suffix. Both a durable `failed`
-// result and an in-flight `submitted` activation block a new workflow: setup must
-// not start while DNS reconciliation is pending or failed. A pending record older
-// than the activation wait budget is treated as stale so a crashed reconciler
-// cannot wedge setup forever. The decision itself lives in dns-launch-gate.mjs.
-function dnsReconcileLaunchBlocker() {
-  let result;
-  try {
-    result = dnsReconciler.readResult();
-  } catch {
-    /* a missing or unreadable result must not wedge setup */
-    return null;
-  }
-  return evaluateDnsLaunchBlocker(result);
-}
+// Cluster DNS must be verified for the *currently requested* configuration
+// before a setup run redeems or pulls through a resolver that still leaks the
+// customer search suffix. Admission requires a fresh active reconcile that
+// post-dates the current setup inputs; a stale success or an ancient pending
+// record is never enough (see setup-admission.mjs).
 
 // A setup request refused because DNS is not ready must not look accepted: write
 // a retry-safe blocked state so the retry controller (or the operator) resumes
@@ -626,13 +652,17 @@ function queueSetupWorkflow() {
     return { ok: false, error: 'Setup queue is disabled.' };
   }
 
-  const dnsBlocker = dnsReconcileLaunchBlocker();
-  if (dnsBlocker) {
+  const admission = evaluateDnsAdmission({
+    requestedAt: setupInputsSubmittedAt(),
+    requestedFingerprint: setupInputsDnsFingerprint(),
+    result: dnsReconciler.readResult()
+  });
+  if (!admission.ok) {
     return {
       ok: false,
       dnsBlocked: true,
-      dnsPending: Boolean(dnsBlocker.pending),
-      error: dnsBlockerMessage(dnsBlocker)
+      dnsPending: Boolean(admission.pending),
+      error: dnsBlockerMessage(admission)
     };
   }
 
@@ -682,48 +712,32 @@ function queueSetupWorkflow() {
   return { ok: true, pid: child.pid, logFile: setupEngineLogFile, logError: opened.error || null };
 }
 
-// A custom DNS selection must reach the cluster resolver before the workflow
-// redeems or pulls through it. The helper is a content-based no-op when nothing
-// changed, but a real change restarts k3s and replaces this control plane, so a
-// retry-safe blocker is recorded first: the periodic retry loop then resumes the
-// workflow once the host reports activation active. System mode stays on the
-// periodic reconciler so a fresh install never depends on a privileged Job here.
-async function reconcileClusterDnsBeforeSetup(setupInputs) {
-  if (setupInputs?.dnsMode !== 'custom') return;
-  const message = 'Applying the custom DNS selection to the cluster resolver before setup.';
-  recordSetupBlocker({ step: 'reconcile-cluster-dns', phase: 'dns', message });
-  try {
-    const outcome = await dnsReconciler.runOnce('setup-inputs');
-    if (outcome && (outcome.skipped === 'running' || outcome.skipped === 'setup-in-progress')) {
-      recordSetupBlocker({
-        step: 'reconcile-cluster-dns',
-        phase: 'dns',
-        message: 'Cluster DNS reconciliation is already running; setup will resume when it completes.'
-      });
-    }
-  } catch (error) {
-    recordSetupBlocker({
-      step: 'reconcile-cluster-dns',
-      phase: 'dns',
-      message: `Could not reconcile cluster DNS before setup: ${error instanceof Error ? error.message : String(error)}`
-    });
-  }
-}
-
-// Shared admission path for both setup submission routes. It refuses to queue
-// while cluster DNS is pending/failed, records a durable retry-safe blocker
-// instead of leaving a misleading `setup-queued`, and only then accepts.
+// Shared admission path for both setup submission routes. It requests a host
+// reconcile for the currently persisted DNS configuration, requires a fresh
+// verified activation of that configuration, records a durable retry-safe
+// blocker instead of a misleading `setup-queued`, and only then accepts.
 async function beginSetupWorkflow(setupInputs) {
   // A manual submission resets the active retry budget but keeps prior history as
-  // evidence; this also lets a custom-DNS restart resume through the retry loop.
+  // evidence; this also lets a DNS restart resume through the retry loop.
   retryController.reset('manual-setup');
-  await reconcileClusterDnsBeforeSetup(setupInputs);
 
-  const dnsBlocker = dnsReconcileLaunchBlocker();
-  if (dnsBlocker) {
-    const message = dnsBlockerMessage(dnsBlocker);
+  const requestedAt = setupInputs?.submittedAt || new Date().toISOString();
+  const pendingMessage = 'Verifying the cluster resolver for the requested DNS configuration before setup.';
+  recordSetupBlocker({ step: 'reconcile-cluster-dns', phase: 'dns', message: pendingMessage });
+
+  // A k3s restart triggered by the reconcile can replace this control plane
+  // before admission returns; the blocker above makes that resumable.
+  const admission = await ensureRequestedDnsActive({
+    requestedAt,
+    requestedFingerprint: dnsConfigurationFingerprint(setupInputs || {}),
+    reconcileOnce: () => dnsReconciler.submit('setup-inputs'),
+    readResult: () => dnsReconciler.readResult(),
+    logger: console
+  });
+  if (!admission.ok) {
+    const message = dnsBlockerMessage(admission);
     recordSetupBlocker({ step: 'reconcile-cluster-dns', phase: 'dns', message });
-    return { ok: false, statusCode: 409, dnsPending: Boolean(dnsBlocker.pending), error: message };
+    return { ok: false, statusCode: 409, dnsPending: Boolean(admission.pending), error: message };
   }
 
   fs.mkdirSync(path.dirname(stateFile), { recursive: true, mode: 0o750 });

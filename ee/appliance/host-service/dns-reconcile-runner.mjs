@@ -29,6 +29,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
+import { DNS_CONFIG_FINGERPRINT_ENV } from './dns-config.mjs';
 
 export const DEFAULT_DNS_RECONCILE_INTERVAL_MS = 5 * 60 * 1000;
 export const DEFAULT_DNS_RECONCILE_STARTUP_DELAY_MS = 10 * 1000;
@@ -55,6 +56,7 @@ function summarizeActivation(activation) {
   return {
     stage: activation.stage || null,
     fingerprint: activation.fingerprint || null,
+    configFingerprint: activation.configFingerprint || null,
     updatedAt: activation.updatedAt || null,
     error: activation.error || null
   };
@@ -82,6 +84,21 @@ export function createDnsReconciler(options = {}) {
   const disabled = Boolean(options.disabled);
   const shouldSkip = options.shouldSkip || (() => false);
   const spawnTimeoutMs = Number(options.spawnTimeoutMs || 10 * 60 * 1000);
+  // Fingerprint of the setup inputs the control plane is asking this reconcile
+  // to activate. Passed to the host helper, which recomputes it from the
+  // persisted inputs and refuses to record a different configuration as active.
+  const configFingerprint = options.configFingerprint ?? null;
+
+  function currentConfigFingerprint() {
+    if (typeof configFingerprint === 'function') {
+      try {
+        return String(configFingerprint() || '');
+      } catch {
+        return '';
+      }
+    }
+    return String(configFingerprint || '');
+  }
 
   let running = false;
   let timers = [];
@@ -137,8 +154,11 @@ export function createDnsReconciler(options = {}) {
       };
       let child;
       try {
+        const fingerprint = currentConfigFingerprint();
         child = spawnImpl('bash', [scriptPath, '--kubeconfig', kubeconfigPath, ...runArgs], {
-          env: process.env,
+          env: fingerprint
+            ? { ...process.env, [DNS_CONFIG_FINGERPRINT_ENV]: fingerprint }
+            : process.env,
           stdio: ['ignore', 'pipe', 'pipe']
         });
       } catch (error) {
@@ -176,6 +196,7 @@ export function createDnsReconciler(options = {}) {
     const baselineUpdatedAt = baseline?.updatedAt || null;
     const baselineStage = baseline?.stage || null;
     const baselineFingerprint = baseline?.fingerprint || null;
+    const baselineConfigFingerprint = baseline?.configFingerprint || null;
     const deadline = now() + maxActivationWaitMs;
     for (;;) {
       const activation = readActivation();
@@ -183,6 +204,7 @@ export function createDnsReconciler(options = {}) {
         (activation.updatedAt || null) !== baselineUpdatedAt
         || (activation.stage || null) !== baselineStage
         || (activation.fingerprint || null) !== baselineFingerprint
+        || (activation.configFingerprint || null) !== baselineConfigFingerprint
       );
       if (changed && activation.stage === 'active') {
         return {
@@ -212,11 +234,13 @@ export function createDnsReconciler(options = {}) {
     }
   }
 
-  async function runOnce(reason = 'manual') {
-    if (disabled) return { skipped: 'disabled' };
-    if (running) return { skipped: 'running' };
+  let currentRun = null;
+
+  function runOnce(reason = 'manual') {
+    if (disabled) return Promise.resolve({ skipped: 'disabled' });
+    if (running) return Promise.resolve({ skipped: 'running' });
     if (!scriptPath || !fsImpl.existsSync(scriptPath)) {
-      return { skipped: 'script-missing' };
+      return Promise.resolve({ skipped: 'script-missing' });
     }
     let skip;
     try {
@@ -225,59 +249,82 @@ export function createDnsReconciler(options = {}) {
       skip = false;
     }
     if (skip) {
-      return { skipped: 'setup-in-progress' };
+      return Promise.resolve({ skipped: 'setup-in-progress' });
     }
 
     running = true;
-    const submittedAt = new Date(now()).toISOString();
-    const baseline = readActivation();
-    appendLog(`[${submittedAt}] DNS reconcile trigger (${reason})`);
-    try {
-      // Persist the pending submission before spawning so a control-plane
-      // restart during the Job/activation cannot leave a stale success behind.
-      writeResult({
-        state: 'submitted',
-        ok: null,
-        reason,
-        at: submittedAt,
-        submittedAt,
-        error: null,
-        activation: summarizeActivation(baseline),
-        logFile
-      });
+    const promise = (async () => {
+      const submittedAt = new Date(now()).toISOString();
+      const baseline = readActivation();
+      appendLog(`[${submittedAt}] DNS reconcile trigger (${reason})`);
+      try {
+        // Persist the pending submission before spawning so a control-plane
+        // restart during the Job/activation cannot leave a stale success behind.
+        writeResult({
+          state: 'submitted',
+          ok: null,
+          reason,
+          at: submittedAt,
+          submittedAt,
+          error: null,
+          activation: summarizeActivation(baseline),
+          logFile
+        });
 
-      const outcome = await runCommand();
-      if (!outcome.ok) {
+        const outcome = await runCommand();
+        if (!outcome.ok) {
+          const record = {
+            state: 'failed',
+            ok: false,
+            reason,
+            at: new Date(now()).toISOString(),
+            submittedAt,
+            error: outcome.error || 'DNS reconcile submission failed.',
+            activation: summarizeActivation(readActivation()),
+            logFile
+          };
+          writeResult(record);
+          logger.error(`Cluster DNS reconciliation failed: ${record.error}`);
+          return record;
+        }
+
+        const activation = await waitForActivation(baseline, submittedAt);
         const record = {
-          state: 'failed',
-          ok: false,
+          ...activation,
           reason,
           at: new Date(now()).toISOString(),
           submittedAt,
-          error: outcome.error || 'DNS reconcile submission failed.',
-          activation: summarizeActivation(readActivation()),
           logFile
         };
         writeResult(record);
-        logger.error(`Cluster DNS reconciliation failed: ${record.error}`);
+        if (!record.ok) {
+          logger.error(`Cluster DNS reconciliation failed: ${record.error}`);
+        }
         return record;
+      } finally {
+        running = false;
+        currentRun = null;
       }
+    })();
+    currentRun = promise;
+    return promise;
+  }
 
-      const activation = await waitForActivation(baseline, submittedAt);
-      const record = {
-        ...activation,
-        reason,
-        at: new Date(now()).toISOString(),
-        submittedAt,
-        logFile
-      };
-      writeResult(record);
-      if (!record.ok) {
-        logger.error(`Cluster DNS reconciliation failed: ${record.error}`);
+  // Serialized submission for admission: wait behind any in-flight run, then
+  // start one that began *after* this call. This guarantees the verified result
+  // belongs to the current request and not to a reconcile started for earlier
+  // setup inputs.
+  async function submit(reason = 'admission') {
+    for (;;) {
+      while (currentRun) {
+        try {
+          await currentRun;
+        } catch {
+          // runOnce surfaces failures through writeResult; keep waiting.
+        }
       }
-      return record;
-    } finally {
-      running = false;
+      const outcome = await runOnce(reason);
+      if (!outcome || outcome.skipped !== 'running') return outcome;
     }
   }
 
@@ -301,5 +348,5 @@ export function createDnsReconciler(options = {}) {
     timers = [];
   }
 
-  return { runOnce, readResult, readActivation, writeResult, start, shutdown };
+  return { runOnce, submit, readResult, readActivation, writeResult, start, shutdown };
 }

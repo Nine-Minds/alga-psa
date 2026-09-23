@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -42,6 +44,22 @@ test('the DNS reconcile Job runs privileged in the support plane with the host h
   // Job, the control plane and the k3s restart it triggers.
   assert.match(manifest, /systemd-run/);
   assert.match(manifest, /alga-appliance-dns-activate/);
+  assert.match(manifest, /--setenv="ALGA_APPLIANCE_DNS_CONFIG_FINGERPRINT=/);
+});
+
+test('the requested DNS configuration fingerprint is forwarded to the host unit', () => {
+  const fingerprint = 'a'.repeat(64);
+  const result = renderManifest({ ALGA_APPLIANCE_DNS_CONFIG_FINGERPRINT: fingerprint });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  const job = YAML.parse(result.stdout);
+  const command = job.spec.template.spec.containers[0].command[2];
+  assert.match(command, new RegExp(`--setenv="ALGA_APPLIANCE_DNS_CONFIG_FINGERPRINT=${fingerprint}"`));
+});
+
+test('a malformed fingerprint is rejected before the Job is staged', () => {
+  const result = renderManifest({ ALGA_APPLIANCE_DNS_CONFIG_FINGERPRINT: 'not-a-fingerprint' });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /64-character hex sha256/);
 });
 
 test('the dry-run manifest parses as valid YAML and runs as root with the running image', () => {
@@ -93,4 +111,77 @@ test('the Job namespace and service account are overridable for tests and future
   assert.equal(result.status, 0, result.stderr || result.stdout);
   assert.match(result.stdout, /namespace: custom-dns/);
   assert.match(result.stdout, /serviceAccountName: custom-sa/);
+});
+
+// A YAML-parse assertion cannot catch a command that parses but cannot run. This
+// builds the real command string and executes it against stub host tools so the
+// `command -v`-as-a-builtin bug (and any future staging regression) fails here.
+function makeExecHarness() {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-dns-job-'));
+  const fakeBin = path.join(dir, 'bin');
+  fs.mkdirSync(fakeBin);
+  const helperSource = path.join(dir, 'configure-k3s-dns.sh');
+  fs.writeFileSync(helperSource, '#!/usr/bin/env bash\necho "helper $*"\n', { mode: 0o755 });
+  const hostRoot = path.join(dir, 'host');
+  fs.mkdirSync(hostRoot);
+  const stageDir = '/var/lib/alga-appliance/dns';
+  const systemdRunLog = path.join(dir, 'systemd-run.log');
+  const nsenterLog = path.join(dir, 'nsenter.log');
+
+  // Forward nsenter calls to the real command so `... -- /bin/sh -c '...'`
+  // behaves like the host mount namespace.
+  fs.writeFileSync(path.join(fakeBin, 'nsenter'), `#!/usr/bin/env bash
+echo "$*" >> "$NSENTER_LOG"
+while [ "$#" -gt 0 ] && [ "$1" != "--" ]; do shift; done
+[ "$1" = "--" ] && shift
+exec "$@"
+`, { mode: 0o755 });
+  fs.writeFileSync(path.join(fakeBin, 'systemctl'), `#!/usr/bin/env bash
+exit 1
+`, { mode: 0o755 });
+  fs.writeFileSync(path.join(fakeBin, 'systemd-run'), `#!/usr/bin/env bash
+echo "$*" >> "$SYSTEMD_RUN_LOG"
+exit 0
+`, { mode: 0o755 });
+
+  return { dir, fakeBin, helperSource, hostRoot, stageDir, systemdRunLog, nsenterLog };
+}
+
+test('the generated container command executes and launches the host unit', () => {
+  const harness = makeExecHarness();
+  const fingerprint = 'b'.repeat(64);
+  const result = renderManifest({
+    ALGA_APPLIANCE_DNS_JOB_HOST_ROOT: harness.hostRoot,
+    ALGA_APPLIANCE_DNS_HELPER_SOURCE: harness.helperSource,
+    ALGA_APPLIANCE_DNS_STAGE_DIR: harness.stageDir,
+    ALGA_APPLIANCE_DNS_CONFIG_FINGERPRINT: fingerprint
+  });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+
+  const job = YAML.parse(result.stdout);
+  const command = job.spec.template.spec.containers[0].command[2];
+
+  const execution = spawnSync('bash', ['-c', command], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      PATH: `${harness.fakeBin}:${process.env.PATH}`,
+      SYSTEMD_RUN_LOG: harness.systemdRunLog,
+      NSENTER_LOG: harness.nsenterLog
+    }
+  });
+  assert.equal(execution.status, 0, execution.stderr || execution.stdout);
+  assert.match(execution.stdout, /Launched host-owned DNS activation service/);
+
+  const systemdRun = fs.readFileSync(harness.systemdRunLog, 'utf8');
+  assert.match(systemdRun, /--unit=alga-appliance-dns-activate/);
+  assert.match(systemdRun, /configure-k3s-dns\.sh/);
+  assert.match(systemdRun, /--activate/);
+  assert.match(systemdRun, new RegExp(`ALGA_APPLIANCE_DNS_CONFIG_FINGERPRINT=${fingerprint}`));
+
+  // The fixed helper and the host kubectl wrapper landed on the staged host root.
+  const stagedDir = path.join(harness.hostRoot, harness.stageDir);
+  assert.equal(fs.existsSync(path.join(stagedDir, 'configure-k3s-dns.sh')), true);
+  assert.equal(fs.existsSync(path.join(stagedDir, 'kubectl')), true);
 });

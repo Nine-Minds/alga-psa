@@ -31,6 +31,11 @@ K3S_RESOLV_CONF="${ALGA_APPLIANCE_K3S_RESOLV_CONF:-/etc/rancher/k3s/resolv.conf}
 K3S_DNS_DROPIN="${ALGA_APPLIANCE_K3S_DNS_DROPIN:-/etc/rancher/k3s/config.yaml.d/30-alga-dns.yaml}"
 DNS_STATUS_FILE="${ALGA_APPLIANCE_DNS_STATUS_FILE:-/var/lib/alga-appliance/dns-activation.json}"
 DNS_LOCK_PATH="${ALGA_APPLIANCE_DNS_LOCK_PATH:-/var/lib/alga-appliance/dns-reconcile.lock}"
+# Requested configuration fingerprint supplied by the control-plane submission.
+# When set, the persisted setup inputs must resolve to the same fingerprint or
+# the activation is refused: a submission must never label a different
+# configuration as its own.
+DNS_CONFIG_FINGERPRINT_EXPECTED="${ALGA_APPLIANCE_DNS_CONFIG_FINGERPRINT:-}"
 K3S_SERVICE="${ALGA_APPLIANCE_K3S_SERVICE:-k3s}"
 KUBECTL_BIN="${ALGA_APPLIANCE_KUBECTL:-kubectl}"
 KUBECONFIG_PATH="${ALGA_APPLIANCE_KUBECONFIG:-/etc/rancher/k3s/k3s.yaml}"
@@ -47,6 +52,10 @@ DNS_NAMESPACE_GROUPS="${ALGA_APPLIANCE_DNS_NAMESPACE_GROUPS:-kube-system local-p
 DRY_RUN=false
 ACTIVATE_OVERRIDE=""
 INITIAL_MODE=false
+# Fingerprint of the configuration these files and the activation record describe.
+# Derived from the persisted setup inputs just like the control plane's
+# dns-config.mjs, so admission can compare the two without trusting timestamps.
+CONFIG_FINGERPRINT=""
 
 usage() {
   cat <<'EOF'
@@ -114,6 +123,28 @@ read_setup_dns() {
     system|custom) ;;
     *) DNS_MODE="system" ;;
   esac
+}
+
+# Identity of the requested resolver configuration, derived from the same setup
+# inputs the file generation reads. Must byte-match
+# host-service/dns-config.mjs#dnsConfigurationFingerprint so setup admission can
+# compare the host's activation against the control plane's expectation.
+setup_inputs_config_fingerprint() {
+  local file
+  file="$(rooted "$SETUP_INPUTS_FILE")"
+  node -e '
+    const fs = require("fs");
+    const crypto = require("crypto");
+    let value = {};
+    try { value = JSON.parse(fs.readFileSync(process.argv[1], "utf8")) || {}; } catch { value = {}; }
+    const mode = String(value.dnsMode || "system").trim().toLowerCase() === "custom" ? "custom" : "system";
+    let raw = value.dnsServers;
+    if (Array.isArray(raw)) raw = raw.join(",");
+    const servers = mode === "custom"
+      ? String(raw || "").split(",").map((entry) => entry.trim()).filter(Boolean)
+      : [];
+    process.stdout.write(crypto.createHash("sha256").update(`${mode}\n${servers.join("\n")}`).digest("hex"));
+  ' "$file" 2>/dev/null || true
 }
 
 # Validate candidate resolvers with Node's IP parser and normalize IPv6 so
@@ -259,9 +290,11 @@ write_status() {
   target="$(rooted "$DNS_STATUS_FILE")"
   mkdir -p "$(dirname "$target")"
   local tmp="${target}.tmp.$$"
+  STATUS_PREVIOUS_FILE="$target" \
   STATUS_STAGE="$stage" \
   STATUS_ERROR="$error" \
   STATUS_FINGERPRINT="${DESIRED_FINGERPRINT:-}" \
+  STATUS_CONFIG_FINGERPRINT="${CONFIG_FINGERPRINT:-}" \
   STATUS_RESOLVERS="${DESIRED_RESOLV:-}" \
   STATUS_RESTART_FROM="${RESTART_FROM:-}" \
   STATUS_RESTART_TOKEN="${RESTART_TOKEN:-}" \
@@ -269,26 +302,36 @@ write_status() {
   STATUS_FILES_DROPIN="$K3S_DNS_DROPIN" \
   node -e '
     const fs = require("fs");
-    const target = process.argv[1];
+    const output = process.argv[1];
+    // Read the durable record, NOT the about-to-be-written temp file, so
+    // restartFrom/startedAt evidence survives every atomic rewrite and a
+    // resumed activation does not lose its proof that the restart happened.
+    const previousFile = process.env.STATUS_PREVIOUS_FILE;
     let previous = {};
-    try { previous = JSON.parse(fs.readFileSync(target, "utf8")) || {}; } catch { /* first write */ }
+    try { previous = JSON.parse(fs.readFileSync(previousFile, "utf8")) || {}; } catch { /* first write */ }
     const now = new Date().toISOString();
+    const fingerprint = process.env.STATUS_FINGERPRINT || null;
+    // Restart evidence belongs to the resolver bytes that were restarted.
+    // A failed submission for new bytes must not inherit the old token and
+    // trick a later reconcile into skipping the required k3s restart.
+    const sameFingerprint = Boolean(fingerprint) && fingerprint === previous.fingerprint;
     const payload = {
       stage: process.env.STATUS_STAGE,
-      fingerprint: process.env.STATUS_FINGERPRINT || previous.fingerprint || null,
+      fingerprint,
+      configFingerprint: process.env.STATUS_CONFIG_FINGERPRINT || (sameFingerprint ? previous.configFingerprint : null) || null,
       resolvers: (process.env.STATUS_RESOLVERS || "").split("\n").filter(Boolean),
-      restartFrom: process.env.STATUS_RESTART_FROM || previous.restartFrom || null,
-      restartToken: process.env.STATUS_RESTART_TOKEN || previous.restartToken || null,
+      restartFrom: process.env.STATUS_RESTART_FROM || (sameFingerprint ? previous.restartFrom : null) || null,
+      restartToken: process.env.STATUS_RESTART_TOKEN || (sameFingerprint ? previous.restartToken : null) || null,
       error: process.env.STATUS_ERROR || null,
       files: { resolver: process.env.STATUS_FILES_RESOLV, dropin: process.env.STATUS_FILES_DROPIN },
-      startedAt: previous.startedAt || now,
+      startedAt: (sameFingerprint && previous.startedAt) || now,
       updatedAt: now,
       finishedAt: ["active", "failed"].includes(process.env.STATUS_STAGE) ? now : null
     };
-    fs.writeFileSync(target, JSON.stringify(payload, null, 2) + "\n", { mode: 0o644 });
+    fs.writeFileSync(output, JSON.stringify(payload, null, 2) + "\n", { mode: 0o644 });
     // The process umask can mask the create mode; force world-read so UID 10001
     // can read it regardless of the host umask.
-    fs.chmodSync(target, 0o644);
+    fs.chmodSync(output, 0o644);
   ' "$tmp"
   mv -f "$tmp" "$target"
 }
@@ -380,10 +423,26 @@ wait_for_api() {
 
 # Restart and verify every workload in a namespace, in a stable order. Rollout
 # status proves the new pods (and their resolv.conf) actually became ready.
+# Workload discovery errors must never be mistaken for an empty namespace: an
+# API/RBAC failure here would otherwise let activation be recorded `active`
+# without recreating the pods that still carry the old resolver.
 reconcile_namespace() {
   local namespace="$1"
-  local resources
-  resources="$("$KUBECTL_BIN" --kubeconfig "$KUBECONFIG_PATH" -n "$namespace" get deploy,statefulset,daemonset -o name 2>/dev/null || true)"
+  local resources status stderr_file message
+  stderr_file="$(mktemp)"
+  resources="$("$KUBECTL_BIN" --kubeconfig "$KUBECONFIG_PATH" -n "$namespace" get deploy,statefulset,daemonset -o name 2>"$stderr_file")" && status=0 || status=$?
+  message="$(cat "$stderr_file" 2>/dev/null || true)"
+  rm -f "$stderr_file"
+  if [ "$status" -ne 0 ]; then
+    # A namespace that does not exist yet (fresh install / not installed) is
+    # legitimately empty; any other failure (RBAC, API down) must fail activation.
+    if printf '%s' "$message" | grep -qiE 'not found|no resources found'; then
+      log "Namespace ${namespace} is not present yet; nothing to recreate."
+      return 0
+    fi
+    echo "Could not list workloads in ${namespace}: ${message:-kubectl exited ${status}}" >&2
+    return 1
+  fi
   if [ -z "$resources" ]; then
     log "No workloads found in ${namespace}."
     return 0
@@ -584,6 +643,17 @@ if ! gather_resolvers; then
   exit 1
 fi
 render_files
+
+# The configuration identity the control plane submitted for. If the persisted
+# setup inputs no longer resolve to it, the operator changed the configuration
+# after submitting: refuse to activate, so an old submission can never label a
+# different configuration as verified. Only compare when the caller supplied one.
+CONFIG_FINGERPRINT="$(setup_inputs_config_fingerprint)"
+if [ -n "$DNS_CONFIG_FINGERPRINT_EXPECTED" ] && [ "$CONFIG_FINGERPRINT" != "$DNS_CONFIG_FINGERPRINT_EXPECTED" ]; then
+  write_status failed "The requested DNS configuration changed before activation; refusing to record a different configuration as active."
+  echo "DNS configuration failure: the submitted configuration no longer matches the persisted setup inputs." >&2
+  exit 1
+fi
 
 resolv_current=false
 dropin_current=false

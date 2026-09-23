@@ -4,6 +4,7 @@ import path from 'node:path';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { dnsConfigurationFingerprint } from '../dns-config.mjs';
 
 const repoRoot = path.resolve(path.join(import.meta.dirname, '..', '..', '..', '..'));
 const helper = path.join(repoRoot, 'ee', 'appliance', 'scripts', 'configure-k3s-dns.sh');
@@ -63,7 +64,16 @@ for argument in "$@"; do
 done
 case "$*" in
   *"get deploy,statefulset,daemonset -o name"*)
-    if [ -n "$namespace" ] && [ -f "$FAKE_RESOURCES_DIR/$namespace" ]; then cat "$FAKE_RESOURCES_DIR/$namespace"; fi
+    if [ -n "$FAKE_LIST_FAIL_NAMESPACE" ] && [ "$namespace" = "$FAKE_LIST_FAIL_NAMESPACE" ]; then
+      echo "Error from server (Forbidden): deployments.apps is forbidden: cannot list resource \"deployments\" in namespace \"$namespace\"" >&2
+      exit 1
+    fi
+    if [ -n "$namespace" ] && [ -f "$FAKE_RESOURCES_DIR/$namespace" ]; then
+      cat "$FAKE_RESOURCES_DIR/$namespace"
+    else
+      echo "Error from server (NotFound): namespaces \"$namespace\" not found" >&2
+      exit 1
+    fi
     ;;
   *"get pods -o json"*) echo '{"items":[]}' ;;
   *"rollout status"*)
@@ -245,6 +255,9 @@ test('activation restarts k3s once, recreates workloads in priority order, and r
   const activation = readActivation(harness);
   assert.match(activation.fingerprint, /^[0-9a-f]{64}$/);
   assert.equal(activation.stage, 'active');
+  // The activation carries the setup-inputs fingerprint the control plane's
+  // dns-config.mjs computes, which is what setup admission compares against.
+  assert.equal(activation.configFingerprint, dnsConfigurationFingerprint({ dnsMode: 'system' }));
   // The control-plane host-service reads this file as UID 10001 from the state
   // hostPath; a root-only 0600 file would leave activation permanently pending.
   const activationMode = fs.statSync(path.join(harness.root, 'var/lib/alga-appliance/dns-activation.json')).mode & 0o777;
@@ -315,7 +328,10 @@ test('interrupted activation resumes rollouts without a second k3s restart', () 
   assert.equal(resumed.status, 0, resumed.stderr || resumed.stdout);
   assert.match(resumed.stdout, /Resuming a pending DNS activation/);
   assert.equal(restartCount(harness), 1);
-  assert.equal(readActivation(harness).stage, 'active');
+  const after = readActivation(harness);
+  assert.equal(after.stage, 'active');
+  assert.equal(after.restartFrom, '1', 'resume must keep the pre-restart token as restart evidence');
+  assert.equal(after.restartToken, '2');
 });
 
 test('a failed rollout is recoverable without restarting k3s again', () => {
@@ -345,4 +361,102 @@ test('rollout readiness failure is recorded as a durable failure', () => {
   const activation = readActivation(harness);
   assert.equal(activation.stage, 'failed');
   assert.match(activation.error, /rollout/i);
+});
+
+test('repeated rollout failures preserve restart evidence and never restart k3s again', () => {
+  const harness = createRoot({ systemdResolv: 'nameserver 192.0.2.53\n' });
+  fs.writeFileSync(harness.rolloutFailMarker, 'fail');
+
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const result = runHelper(harness, ['--activate']);
+    assert.notEqual(result.status, 0, `attempt ${attempt} should fail`);
+    assert.equal(restartCount(harness), 1, `attempt ${attempt} must not restart k3s again`);
+    const activation = readActivation(harness);
+    assert.equal(activation.stage, 'failed');
+    // restartFrom must survive every atomic rewrite; the previous implementation
+    // read it from the new temp file and lost it, so the third attempt restarted.
+    assert.equal(activation.restartFrom, '1', `attempt ${attempt} must keep restartFrom`);
+  }
+
+  fs.rmSync(harness.rolloutFailMarker);
+  const recovered = runHelper(harness, ['--activate']);
+  assert.equal(recovered.status, 0, recovered.stderr || recovered.stdout);
+  assert.match(recovered.stdout, /Resuming a pending DNS activation/);
+  assert.equal(restartCount(harness), 1, 'recovery must not restart k3s again');
+  const after = readActivation(harness);
+  assert.equal(after.stage, 'active');
+  assert.equal(after.restartFrom, '1');
+});
+
+test('a workload discovery error aborts activation instead of recording active', () => {
+  const harness = createRoot({ systemdResolv: 'nameserver 192.0.2.53\n' });
+  const result = runHelper(harness, ['--activate'], { FAKE_LIST_FAIL_NAMESPACE: 'flux-system' });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Could not list workloads in flux-system/);
+  const activation = readActivation(harness);
+  assert.equal(activation.stage, 'failed');
+  assert.match(activation.error, /rollout/i);
+});
+
+test('a namespace that does not exist yet is treated as empty, not a discovery failure', () => {
+  const harness = createRoot({ systemdResolv: 'nameserver 192.0.2.53\n' });
+  const result = runHelper(harness, ['--activate']);
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stdout, /Namespace msp is not present yet/);
+  assert.equal(readActivation(harness).stage, 'active');
+});
+
+test('activation records the requested fingerprint and refuses a mismatched submission', () => {
+  const inputs = { dnsMode: 'custom', dnsServers: '203.0.113.10, 203.0.113.11' };
+  const harness = createRoot({ systemdResolv: 'nameserver 192.0.2.53\n', setupInputs: inputs });
+  const expected = dnsConfigurationFingerprint(inputs);
+
+  const activated = runHelper(harness, ['--activate'], { ALGA_APPLIANCE_DNS_CONFIG_FINGERPRINT: expected });
+  assert.equal(activated.status, 0, activated.stderr || activated.stdout);
+  const activation = readActivation(harness);
+  assert.equal(activation.stage, 'active');
+  assert.equal(activation.configFingerprint, expected);
+  assert.equal(restartCount(harness), 1);
+
+  // The persisted inputs no longer resolve to the submitted fingerprint: the
+  // helper must refuse rather than label a different configuration as active.
+  const mismatched = runHelper(harness, ['--activate'], { ALGA_APPLIANCE_DNS_CONFIG_FINGERPRINT: 'd'.repeat(64) });
+  assert.notEqual(mismatched.status, 0);
+  assert.match(mismatched.stderr, /no longer matches the persisted setup inputs/);
+  const refused = readActivation(harness);
+  assert.equal(refused.stage, 'failed');
+  assert.match(refused.error, /changed before activation/);
+  assert.equal(restartCount(harness), 1, 'a refused submission must not restart k3s');
+});
+
+test('a refused old submission cannot lend restart evidence to a new resolver', () => {
+  const oldInputs = { dnsMode: 'custom', dnsServers: '203.0.113.10' };
+  const newInputs = { dnsMode: 'custom', dnsServers: '203.0.113.11' };
+  const harness = createRoot({ setupInputs: oldInputs });
+  const oldFingerprint = dnsConfigurationFingerprint(oldInputs);
+  const newFingerprint = dnsConfigurationFingerprint(newInputs);
+
+  const initial = runHelper(harness, ['--activate'], { ALGA_APPLIANCE_DNS_CONFIG_FINGERPRINT: oldFingerprint });
+  assert.equal(initial.status, 0, initial.stderr || initial.stdout);
+  assert.equal(restartCount(harness), 1);
+  assert.equal(readActivation(harness).restartFrom, '1');
+
+  fs.writeFileSync(path.join(harness.root, 'var/lib/alga-appliance/setup-inputs.json'), JSON.stringify(newInputs));
+  const refused = runHelper(harness, ['--activate'], { ALGA_APPLIANCE_DNS_CONFIG_FINGERPRINT: oldFingerprint });
+  assert.notEqual(refused.status, 0);
+  const failed = readActivation(harness);
+  assert.equal(failed.stage, 'failed');
+  assert.equal(failed.restartFrom, null, 'old restart evidence must be cleared for new resolver bytes');
+  assert.equal(failed.restartToken, null);
+  assert.equal(failed.configFingerprint, newFingerprint);
+  assert.equal(restartCount(harness), 1);
+
+  const reconciled = runHelper(harness, ['--activate'], { ALGA_APPLIANCE_DNS_CONFIG_FINGERPRINT: newFingerprint });
+  assert.equal(reconciled.status, 0, reconciled.stderr || reconciled.stdout);
+  assert.equal(restartCount(harness), 2, 'new resolver bytes require their own k3s restart');
+  const active = readActivation(harness);
+  assert.equal(active.stage, 'active');
+  assert.equal(active.configFingerprint, newFingerprint);
+  assert.equal(active.restartFrom, '2');
+  assert.equal(active.restartToken, '3');
 });

@@ -30,6 +30,11 @@ JOB_SA="${ALGA_APPLIANCE_DNS_JOB_SA:-default}"
 CONTROL_PLANE_NAMESPACE="${ALGA_APPLIANCE_CONTROL_PLANE_NAMESPACE:-alga-appliance-control-plane}"
 CONTROL_PLANE_DEPLOYMENT="${ALGA_APPLIANCE_CONTROL_PLANE_DEPLOYMENT:-appliance-control-plane}"
 IMAGE_PULL_POLICY="${ALGA_APPLIANCE_DNS_IMAGE_PULL_POLICY:-IfNotPresent}"
+# The requested resolver-configuration fingerprint (mode + ordered custom
+# servers) computed by the control plane from the persisted setup inputs. The
+# host helper recomputes it from the same file and refuses to record a different
+# configuration as active, so the submission and the activation cannot drift.
+DNS_CONFIG_FINGERPRINT="${ALGA_APPLIANCE_DNS_CONFIG_FINGERPRINT:-}"
 HOST_STAGE_DIR="${ALGA_APPLIANCE_DNS_STAGE_DIR:-/var/lib/alga-appliance/dns}"
 ACTIVATION_UNIT="${ALGA_APPLIANCE_DNS_UNIT:-alga-appliance-dns-activate}"
 JOB_TIMEOUT_SECONDS="${ALGA_APPLIANCE_DNS_JOB_TIMEOUT_SECONDS:-180}"
@@ -102,14 +107,16 @@ if ! command -v nsenter >/dev/null 2>&1; then
   echo "nsenter is not available in the control-plane image" >&2
   exit 1
 fi
-if ! nsenter -t 1 -m -u -i -n -p -- command -v systemd-run >/dev/null 2>&1; then
+# `command -v` is a shell builtin: it must be run by an explicit host shell, not
+# handed to nsenter as if it were an executable.
+if ! nsenter -t 1 -m -u -i -n -p -- /bin/sh -c 'command -v systemd-run >/dev/null 2>&1'; then
   echo "host systemd-run is not available; cannot launch a host-owned activation service" >&2
   exit 1
 fi
-stage="/host__HOST_STAGE_DIR__"
+stage="__HOST_ROOT__/__HOST_STAGE_DIR__"
 stage_path="__HOST_STAGE_DIR__"
 mkdir -p "$stage"
-install -m 0755 /opt/alga-appliance/scripts/configure-k3s-dns.sh "$stage/configure-k3s-dns.sh"
+install -m 0755 __HELPER_SOURCE__ "$stage/configure-k3s-dns.sh"
 printf '%s\n' \
   '#!/usr/bin/env bash' \
   'for candidate in /usr/local/bin/k3s /opt/alga-appliance/bin/k3s /usr/bin/k3s; do' \
@@ -131,6 +138,7 @@ nsenter -t 1 -m -u -i -n -p -- systemd-run \
   --property=WorkingDirectory=/ \
   --setenv="ALGA_APPLIANCE_KUBECTL=${stage_path}/kubectl" \
   --setenv="ALGA_APPLIANCE_KUBECONFIG=/etc/rancher/k3s/k3s.yaml" \
+  --setenv="ALGA_APPLIANCE_DNS_CONFIG_FINGERPRINT=__DNS_CONFIG_FINGERPRINT__" \
   /bin/bash "${stage_path}/configure-k3s-dns.sh" --activate
 echo "Launched host-owned DNS activation service __ACTIVATION_UNIT__."
 CONTAINER_COMMAND
@@ -138,10 +146,15 @@ CONTAINER_COMMAND
 
 build_manifest() {
   local image="$1"
+  local host_root="${ALGA_APPLIANCE_DNS_JOB_HOST_ROOT:-/host}"
+  local helper_source="${ALGA_APPLIANCE_DNS_HELPER_SOURCE:-/opt/alga-appliance/scripts/configure-k3s-dns.sh}"
   local command
   command="$(container_command)"
+  command="${command//__HOST_ROOT__/$host_root}"
   command="${command//__HOST_STAGE_DIR__/$HOST_STAGE_DIR}"
+  command="${command//__HELPER_SOURCE__/$helper_source}"
   command="${command//__ACTIVATION_UNIT__/$ACTIVATION_UNIT}"
+  command="${command//__DNS_CONFIG_FINGERPRINT__/$DNS_CONFIG_FINGERPRINT}"
   local indented
   indented="$(printf '%s\n' "$command" | sed 's/^/              /')"
   cat <<EOF
@@ -221,6 +234,11 @@ done
 IMAGE="$(resolve_control_plane_image)"
 if [ -z "$IMAGE" ]; then
   echo "Could not determine the running control-plane image for DNS reconciliation." >&2
+  exit 1
+fi
+
+if [ -n "$DNS_CONFIG_FINGERPRINT" ] && ! printf '%s' "$DNS_CONFIG_FINGERPRINT" | grep -Eq '^[0-9a-f]{64}$'; then
+  echo "ALGA_APPLIANCE_DNS_CONFIG_FINGERPRINT must be a 64-character hex sha256." >&2
   exit 1
 fi
 
