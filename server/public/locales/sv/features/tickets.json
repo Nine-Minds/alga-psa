@@ -142,7 +142,7 @@
     "lastUpdated": "Senast uppdaterad",
     "updatedAt": "Senast uppdaterad",
     "assignedTo": "Tilldelat till",
-    "requester": "Förfrågare",
+    "requester": "Beställare",
     "client": "Kund",
     "dueDate": "Förfallodatum",
     "resolution": "Lösning",
@@ -369,7 +369,7 @@
     "cancelScheduledComment": "Avbryt schemalagd kommentar",
     "cancelScheduledCommentConfirm": "Avbryta den här schemalagda kommentaren?",
     "invalidScheduleTime": "Välj en entydig framtida tid i den här tidszonen.",
-    "publishAt": "Publicera vid",
+    "publishAt": "Publiceringstid",
     "publishes": "Publiceras",
     "reschedule": "Ändra schemaläggning",
     "rescheduleComment": "Ändra schemaläggning för kommentar",
@@ -430,7 +430,7 @@
     "exportSelectedTooltip_one": "Exportera {{count}} markerat ärende till CSV",
     "exportSelectedTooltip_other": "Exportera {{count}} markerade ärenden till CSV",
     "exportDisabledTooltip": "Markera ärenden att exportera",
-    "selectAllMatching_one": "Markera matchande ärende ({{count}})",
+    "selectAllMatching_one": "Markera {{count}} ärende som matchar dina filter",
     "selectAllMatching_other": "Markera alla {{count}} ärenden som matchar dina filter",
     "allMatchingSelected_one": "{{count}} ärende som matchar dina filter är markerat.",
     "allMatchingSelected_other": "Alla {{count}} ärenden som matchar dina filter är markerade.",
@@ -478,7 +478,7 @@
       "allMatchingSelected_one": "{{count}} ärende som matchar dina filter är markerat.",
       "allMatchingSelected_other": "Alla {{count}} ärenden som matchar dina filter är markerade.",
       "clear": "Avmarkera alla",
-      "selectAllMatching_one": "Markera matchande ärende ({{count}})",
+      "selectAllMatching_one": "Markera {{count}} ärende som matchar dina filter",
       "selectAllMatching_other": "Markera alla {{count}} ärenden som matchar dina filter"
     },
     "spacing": {
@@ -684,7 +684,7 @@
     },
     "assign": {
       "dialogTitle": "Tilldela markerade ärenden",
-      "message": "Omtilldela {{count}} markerade ärenden till:",
+      "message": "Omtilldela markerade ärenden ({{count}}) till:",
       "unassigned": "Inte tilldelat",
       "teamHint": "Teamledaren blir huvudansvarig. Övriga teammedlemmar läggs till som ytterligare handläggare.",
       "confirm_one": "Omtilldela {{count}} ärende",
@@ -698,7 +698,7 @@
     },
     "tags": {
       "dialogTitle": "Lägg till taggar i markerade ärenden",
-      "message": "Lägg till en eller flera taggar i {{count}} markerade ärenden. Taggar som redan finns i ett ärende hoppas över.",
+      "message": "Lägg till en eller flera taggar i de markerade ärendena ({{count}}). Taggar som redan finns i ett ärende hoppas över.",
       "placeholder": "Skriv en tagg och tryck på Enter",
       "confirm_one": "Lägg till taggar i {{count}} ärende",
       "confirm_other": "Lägg till taggar i {{count}} ärenden",
@@ -711,7 +711,7 @@
     },
     "dueDate": {
       "dialogTitle": "Ange förfallodatum för markerade ärenden",
-      "message": "Ange eller rensa förfallodatum för {{count}} markerade ärenden.",
+      "message": "Ange eller rensa förfallodatum för markerade ärenden ({{count}}).",
       "modeSet": "Ange",
       "modeClear": "Rensa förfallodatum",
       "placeholder": "Välj ett datum",
@@ -726,7 +726,7 @@
     },
     "status": {
       "dialogTitle": "Ändra status för markerade ärenden",
-      "message": "Ange status för {{count}} markerade ärenden:",
+      "message": "Ange status för markerade ärenden ({{count}}):",
       "placeholder": "Välj en status",
       "loading": "Laddar statusar…",
       "confirm_one": "Uppdatera {{count}} ärende",
@@ -740,7 +740,7 @@
     },
     "priority": {
       "dialogTitle": "Ändra prioritet för markerade ärenden",
-      "message": "Ange prioritet för {{count}} markerade ärenden:",
+      "message": "Ange prioritet för markerade ärenden ({{count}}):",
       "placeholder": "Välj en prioritet",
       "confirm_one": "Uppdatera {{count}} ärende",
       "confirm_other": "Uppdatera {{count}} ärenden",
@@ -882,7 +882,7 @@
     "urgencyAxis": {
       "1": "Hög\nbrådska (1)",
       "2": "Medelhög\nbrådska (2)",
-      "3": "Medel\nbrådska (3)",
+      "3": "Medel-\nbrådska (3)",
       "4": "Medellåg\nbrådska (4)",
       "5": "Låg\nbrådska (5)"
     }
@@ -953,7 +953,7 @@
   },
   "properties": {
     "timeEntry": "Tidpost",
-    "ticketTimer": "Ärendetidtagare - #{{ticketNumber}}",
+    "ticketTimer": "Ärendetidtagare – #{{ticketNumber}}",
     "timerActiveElsewhere": "Tidtagaren är aktiv i ett annat fönster",
     "start": "Starta",
     "pause": "Pausa",
@@ -1312,8 +1312,8 @@
       "boardRequired": "Välj en tavla",
       "statusRequired": "Välj en status",
       "priorityRequired": "Välj en prioritet",
-      "impactRequired": "Välj en påverkan",
-      "urgencyRequired": "Välj en brådska"
+      "impactRequired": "Välj påverkan",
+      "urgencyRequired": "Välj brådska"
     },
     "category": {
       "nameRequired": "Kategorinamn krävs",
@@ -1409,9 +1409,9 @@
     },
     "board": {
       "invalidReference": "Den valda tavlan, statusen eller regeln är ogiltig. Ladda om och försök igen.",
-      "missingField": "Ett obligatoriskt tavelfält saknas.",
-      "missingFieldNamed": "Ett obligatoriskt tavelfält saknas: {{field}}.",
-      "referenceInvalid": "Den valda tavlan, statusen, prioriteten, ansvariga, teamet eller SLA-policyn är inte längre giltig. Ladda om och försök igen.",
+      "missingField": "Ett obligatoriskt fält för tavlan saknas.",
+      "missingFieldNamed": "Ett obligatoriskt fält för tavlan saknas: {{field}}.",
+      "referenceInvalid": "Den valda tavlan, statusen, prioriteten, den ansvariga, teamet eller SLA-policyn är inte längre giltig. Ladda om och försök igen.",
       "duplicateName": "En tavla med det här namnet finns redan.",
       "duplicate": "En tavla eller status med samma inställningar finns redan.",
       "invalidValue": "Ett av tavlans eller statusens värden är ogiltigt. Ladda om och försök igen."
@@ -1605,7 +1605,7 @@
     "applyTemplateFailed": "Det gick inte att tillämpa checklistmallen",
     "clickToRename": "Klicka för att byta namn",
     "deleteFailed": "Det gick inte att radera checklistpunkten",
-    "deleteItem": "Radera post",
+    "deleteItem": "Radera punkt",
     "empty": "Inga checklistpunkter ännu.",
     "itemMenu": "Meny för checklistpunkt",
     "loadTemplatesFailed": "Det gick inte att ladda checklistmallar",
@@ -1668,7 +1668,7 @@
       "metIn": "Uppfyllt inom {{duration}}",
       "missed": "Missat",
       "missedBy": "Missat med {{duration}}",
-      "paused": "Pausad",
+      "paused": "Pausat",
       "overdueBy": "Försenat med {{duration}}",
       "left": "{{duration}} kvar",
       "noPolicy": "Ingen SLA-policy gäller",
@@ -1820,7 +1820,7 @@
       "someone": "Någon",
       "ticketUpdated": "Ärendet har uppdaterats",
       "fieldChanged": "{{actor}} ändrade {{field}}: {{from}} → {{to}}",
-      "fieldSet": "{{field}} angivet till {{to}}",
+      "fieldSet": "{{field}} angavs till {{to}}",
       "actorEvent": "{{actor}} · {{eventName}}",
       "bundleStatusNotPropagated": "{{actor}} ändrade gruppens huvudärendestatus (underärenden uppdaterades inte)",
       "bundleStatusClosed": "{{actor}} stängde gruppens huvudärende och {{count}} underärenden",
