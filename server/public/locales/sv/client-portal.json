@@ -54,7 +54,7 @@
     "types": {
       "workstation": "Arbetsstationer",
       "server": "Servrar",
-      "mobile": "Mobiltelefoner",
+      "mobile": "Mobila enheter",
       "printer": "Skrivare",
       "network": "Nätverk",
       "unknown": "Annat"
@@ -479,11 +479,11 @@
     }
   },
   "licenses": {
-    "pageTitle": "Enhetslicenser",
+    "pageTitle": "Appliance-licenser",
     "pageDescription": "Dina Pro-licensrättigheter för Alga appliance. Licensnyckeldokument finns även under Dokument.",
     "loading": "Laddar licenser…",
     "empty": {
-      "message": "Inga enhetslicenser hittades.",
+      "message": "Inga appliance-licenser hittades.",
       "purchaseLink": "Köp en licens",
       "suffix": "för att komma igång."
     },
@@ -502,8 +502,8 @@
     },
     "transports": {
       "connectedMonthly": "Ansluten (månadsvis)",
-      "connectedAnnual": "Ansluten (årligen)",
-      "airgapAnnual": "Nätverksisolerad (årligen)"
+      "connectedAnnual": "Ansluten (årsvis)",
+      "airgapAnnual": "Nätverksisolerad (årsvis)"
     },
     "statuses": {
       "active": "Aktiv",
@@ -571,7 +571,7 @@
       "invoices": "Fakturaaviseringar",
       "announcements": "Systemmeddelanden",
       "emailPreferences": "E-post",
-      "internalPreferences": "Interna"
+      "internalPreferences": "Internt"
     },
     "actions": {
       "save": "Spara ändringar",
@@ -891,7 +891,7 @@
       "title": "Förbrukningshistorik",
       "trendStable": "Stabil",
       "current": "Aktuell",
-      "avgUsage": "Genomsnittlig förbrukning",
+      "avgUsage": "Snittförbrukning",
       "peak": "Topp",
       "periods": "Perioder"
     },
@@ -914,7 +914,7 @@
         "thankYou": "Tack för din betalning.",
         "amountPaid": "Betalt belopp: {{amount}}.",
         "confirmationEmail": "Ett bekräftelsemeddelande skickas till din registrerade e-postadress.",
-        "thankYouForInvoice": "Tack för din betalning av faktura #{{invoiceNumber}}."
+        "thankYouForInvoice": "Tack för din betalning av faktura nr {{invoiceNumber}}."
       },
       "servicePeriod": {
         "title": "Sammanfattning av tjänsteperioder",
@@ -973,7 +973,7 @@
       "missing": "En av de valda posterna finns inte längre. Ladda om och försök igen."
     },
     "access": {
-      "unauthorized": "Obehörig",
+      "unauthorized": "Behörighet saknas",
       "projectBillingData": "Du har inte behörighet att komma åt projektets debiteringsuppgifter",
       "quoteData": "Du har inte behörighet att komma åt offertuppgifterna",
       "invoiceData": "Du har inte behörighet att komma åt fakturauppgifterna",
