@@ -119,6 +119,7 @@ export const createCommentSchema = z.object({
   parent_comment_id: z.string().uuid('Parent comment ID must be a valid UUID').optional(),
   is_internal: z.boolean().optional(),
   is_resolution: z.boolean().optional(),
+  is_system_generated: z.boolean().optional(),
   author_type: z.enum(['internal', 'contact', 'system']).optional(),
   author_id: z.string().uuid('Author ID must be a valid UUID').optional(),
   contact_id: z.string().uuid('Contact ID must be a valid UUID').optional(),
@@ -224,6 +225,7 @@ export interface CreateCommentValidationInput {
   parent_comment_id?: string;
   is_internal?: boolean;
   is_resolution?: boolean;
+  is_system_generated?: boolean;
   author_type?: 'internal' | 'contact' | 'system';
   author_id?: string;
   contact_id?: string;
@@ -252,6 +254,7 @@ export interface CreateCommentInput {
   parent_comment_id?: string;
   is_internal?: boolean;
   is_resolution?: boolean;
+  is_system_generated?: boolean;
   author_type?: 'internal' | 'contact' | 'system';
   author_id?: string;
   contact_id?: string;
@@ -1477,6 +1480,7 @@ export class TicketModel {
       note: validatedData.content,
       is_internal: commentIsInternal,
       is_resolution: validatedData.is_resolution || false,
+      is_system_generated: validatedData.is_system_generated ?? false,
       author_type: dbAuthorType as any,
       user_id: validatedData.author_id || null,
       contact_id: validatedData.contact_id || null,

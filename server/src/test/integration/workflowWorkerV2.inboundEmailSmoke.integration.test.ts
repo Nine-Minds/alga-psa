@@ -133,7 +133,17 @@ describeDb('Workflow worker v2 + inbound email smoke', () => {
     const ticket = await scopedDb.table('tickets').where({ title: 'Smoke inbound subject' }).first<any>();
     expect(ticket).toBeDefined();
     const comments = await scopedDb.table('comments').where({ ticket_id: ticket.ticket_id });
-    expect(comments).toHaveLength(1);
+    // This fixture has no Google credentials. Source archival must report its
+    // failure internally without disrupting the customer-authored comment.
+    expect(comments).toHaveLength(2);
+    expect(comments.filter(comment => !comment.is_internal)).toHaveLength(1);
+    const trail = comments.find(comment => comment.is_internal);
+    expect(trail).toMatchObject({ is_system_generated: true, user_id: null, contact_id: null });
+    expect(trail.metadata.inboundAttachmentTrail).toMatchObject({ emailId, providerId });
+    expect(trail.metadata.inboundAttachmentTrail.files).toEqual([expect.objectContaining({
+      contentType: 'message/rfc822', status: 'failed',
+      reason: `Google provider config not found for provider ${providerId}`,
+    })]);
 
     await scopedDb.table('comments').where({ ticket_id: ticket.ticket_id }).delete();
     // Ticket creation now writes audit rows that FK the ticket.

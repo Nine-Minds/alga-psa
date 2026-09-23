@@ -23,7 +23,7 @@ async function removeDirIfExists(dirPath: string): Promise<void> {
 
 describe('validate-runtime-imports', () => {
   const tempDirs: string[] = [];
-  const scriptPath = fileURLToPath(new URL('./validate-runtime-imports.mjs', import.meta.url));
+  const scriptPath = fileURLToPath(new URL('../../scripts/validate-runtime-imports.mjs', import.meta.url));
 
   afterEach(async () => {
     while (tempDirs.length > 0) {
@@ -129,6 +129,46 @@ describe('validate-runtime-imports', () => {
 
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain('relative import does not resolve in dist output');
+  });
+
+  it('fails when the runtime graph imports the @alga-psa/storage barrel', async () => {
+    const distRoot = await createDistFixture({
+      'dist/src/index.js': "import './storage-user.js';\n",
+      'dist/src/storage-user.js': "await import('@alga-psa/storage');\n",
+    });
+    tempDirs.push(distRoot);
+
+    const result = spawnSync(process.execPath, [scriptPath], {
+      cwd: process.cwd(),
+      env: {
+        ...process.env,
+        WORKFLOW_WORKER_VALIDATE_DIST_ROOT: path.join(distRoot, 'dist'),
+      },
+      encoding: 'utf8',
+    });
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('forbidden package root import');
+  });
+
+  it('allows narrow @alga-psa/storage subpath imports in the runtime graph', async () => {
+    const distRoot = await createDistFixture({
+      'dist/src/index.js': "import './storage-user.js';\n",
+      'dist/src/storage-user.js': "await import('@alga-psa/storage/config/storage');\n",
+    });
+    tempDirs.push(distRoot);
+
+    const result = spawnSync(process.execPath, [scriptPath], {
+      cwd: process.cwd(),
+      env: {
+        ...process.env,
+        WORKFLOW_WORKER_VALIDATE_DIST_ROOT: path.join(distRoot, 'dist'),
+      },
+      encoding: 'utf8',
+    });
+
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toContain('validation passed');
   });
 
   it('allows AI runtime wiring only through the dedicated runtime/worker entrypoint', async () => {
