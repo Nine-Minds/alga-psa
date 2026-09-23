@@ -1,0 +1,165 @@
+[
+  {
+    "id": "T001",
+    "description": "DB integration: migration schema sanity \u2014 create group calendar + shares; duplicate share upsert updates level; personal-calendar uniqueness and type check constraints reject invalid rows; schedule_entries.calendar_id FK rejects unknown calendar.",
+    "implemented": false,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F004"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "DB integration: resolver \u2014 direct read share, team free_busy share (max-level merge), inactive grantor ignored, user_schedule:update \u2192 edit on all, no share \u2192 invisible.",
+    "implemented": false,
+    "featureIds": [
+      "F006",
+      "F007",
+      "F008",
+      "F009"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "DB integration: getScheduleEntries for a viewer with mixed shares returns own full, shared-read full, shared private masked Busy (no title/notes/work item), free_busy masked, group calendar entries, excludes unshared users and archived calendars; recurring series masked per instance.",
+    "implemented": false,
+    "featureIds": [
+      "F010",
+      "F011",
+      "F012",
+      "F013",
+      "F014",
+      "F025"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "DB integration: getScheduleEntryById returns not-found for no access, masked for busy, and requires user_schedule:read.",
+    "implemented": false,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "DB integration: delegate edit \u2014 edit share can create entry for owner and move owner's entry; read share rejected on create/update/delete; private entry of owner rejected; assigning a non-editable user rejected.",
+    "implemented": false,
+    "featureIds": [
+      "F016",
+      "F017",
+      "F018"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "DB integration: group calendar \u2014 edit member creates entry (is_private forced false), read member rejected, manage member updates shares, last-manager removal rejected, non-manager rename rejected, admin can manage orphaned calendar.",
+    "implemented": false,
+    "featureIds": [
+      "F019",
+      "F023",
+      "F024",
+      "F025",
+      "F009"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "DB integration: revocation \u2014 removing a share, removing user from team, and deleting the team each revoke visibility on next fetch.",
+    "implemented": false,
+    "featureIds": [
+      "F007",
+      "F020",
+      "F026"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Share actions guard: self-share rejected, client-portal grantee rejected, manage level on personal calendar rejected, non-owner non-admin cannot change another user's shares; admin can.",
+    "implemented": false,
+    "featureIds": [
+      "F020",
+      "F021"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Notification: granting a share to a user publishes CALENDAR_SHARE_GRANTED and creates an internal notification for the grantee; team grant does not.",
+    "implemented": false,
+    "featureIds": [
+      "F027",
+      "F028"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "API: GET /api/v1/schedules as non-admin with a read share includes the sharer's entries (masked private) and excludes unshared users.",
+    "implemented": false,
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Component: schedule sidebar renders People/Group calendars from getCalendarsVisibleToMe, toggling persists preference and restores on remount, stale calendars dropped; capabilities replace read:all check.",
+    "implemented": false,
+    "featureIds": [
+      "F022",
+      "F030",
+      "F031",
+      "F032",
+      "F040"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Component: EntryPopup \u2014 selecting a group calendar hides Private toggle and allows no assignees; busy entry opens read-only Busy popup; assignee options limited to editable users.",
+    "implemented": false,
+    "featureIds": [
+      "F033",
+      "F034",
+      "F035",
+      "F036",
+      "F039"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Component: Share my calendar dialog adds a user and a team with levels, changes a level, removes a share, and calls setMyCalendarShares with the expected payload.",
+    "implemented": false,
+    "featureIds": [
+      "F037"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Component: group calendar dialog creates calendar with name/color/members and archive action is visible only to managers.",
+    "implemented": false,
+    "featureIds": [
+      "F038"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "E2E (Playwright): User A shares calendar with B (View details); B toggles A on and sees A's entry and a private entry as Busy; A creates group calendar with B as Edit; B creates an entry on it that A sees.",
+    "implemented": false,
+    "featureIds": [
+      "F014",
+      "F022",
+      "F030",
+      "F036",
+      "F037",
+      "F038",
+      "F039"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "i18n: new msp/schedule keys exist in all supported locales (locale key parity check).",
+    "implemented": false,
+    "featureIds": [
+      "F041"
+    ]
+  }
+]
