@@ -727,6 +727,7 @@
     "status": "Statut",
     "actions": "Actions",
     "openMenu": "Ouvrir le menu",
+    "viewDetails": "Voir les détails",
     "unassign": "Annuler l'attribution",
     "loading": "Chargement des contrats...",
     "empty": "Aucun contrat n'a encore été attribué à ce client.",

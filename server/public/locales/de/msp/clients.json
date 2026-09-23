@@ -727,6 +727,7 @@
     "status": "Status",
     "actions": "Aktionen",
     "openMenu": "Menü öffnen",
+    "viewDetails": "Details anzeigen",
     "unassign": "Zuweisung aufheben",
     "loading": "Verträge werden geladen...",
     "empty": "Diesem Kunden sind noch keine Verträge zugeordnet.",
