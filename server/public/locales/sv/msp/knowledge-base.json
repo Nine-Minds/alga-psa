@@ -65,8 +65,8 @@
     },
     "stats": {
       "views": "Visningar",
-      "helpful": "Hjälpsam",
-      "notHelpful": "Inte hjälpsam"
+      "helpful": "Användbar",
+      "notHelpful": "Inte användbar"
     },
     "actions": {
       "edit": "Redigera",
@@ -89,14 +89,14 @@
       "archive": {
         "title": "Arkivera artikel",
         "message": "Vill du arkivera ”{{title}}”? Artikeln blir då inte längre synlig för kunder.",
-        "titleMultiple": "Arkivera artiklar: {{count}}",
-        "messageMultiple": "Vill du arkivera alla valda artiklar ({{count}})? De blir då inte längre synliga för kunder."
+        "titleMultiple": "Arkivera {{count}} artiklar",
+        "messageMultiple": "Vill du arkivera {{count}} artiklar? De blir då inte längre synliga för kunder."
       },
       "delete": {
         "title": "Radera artikel",
         "message": "Vill du radera ”{{title}}” permanent? Artikeln och dess innehåll tas bort. Det går inte att ångra.",
-        "titleMultiple": "Radera artiklar: {{count}}",
-        "messageMultiple": "Vill du radera alla valda artiklar ({{count}}) permanent? Artiklarna och deras innehåll tas bort. Det går inte att ångra.",
+        "titleMultiple": "Radera {{count}} artiklar",
+        "messageMultiple": "Vill du radera {{count}} artiklar permanent? Artiklarna och deras innehåll tas bort. Det går inte att ångra.",
         "skippedNotice": "Antal valda artiklar som är publicerade eller under granskning: {{count}}. Dessa hoppas över – arkivera dem först."
       }
     },
@@ -105,12 +105,12 @@
       "archiveSuccess": "Artikeln har arkiverats",
       "deleteError": "Det gick inte att radera artikeln",
       "deleteSuccess": "Artikeln har raderats permanent",
-      "bulkArchiveSuccess": "Antal arkiverade artiklar: {{count}}",
-      "bulkArchiveError": "Antal artiklar som inte kunde arkiveras: {{count}}",
-      "bulkArchivePartial": "Antal arkiverade artiklar: {{count}}; kunde inte arkiveras: {{failed}}",
-      "bulkDeleteSuccess": "Antal permanent raderade artiklar: {{count}}",
-      "bulkDeleteError": "Antal artiklar som inte kunde raderas: {{count}}",
-      "bulkDeletePartial": "Antal permanent raderade artiklar: {{count}}; kunde inte raderas: {{failed}}",
+      "bulkArchiveSuccess": "{{count}} artiklar har arkiverats",
+      "bulkArchiveError": "Det gick inte att arkivera {{count}} artiklar",
+      "bulkArchivePartial": "Arkiverade artiklar: {{count}}. Kunde inte arkiveras: {{failed}}",
+      "bulkDeleteSuccess": "{{count}} artiklar har raderats permanent",
+      "bulkDeleteError": "Det gick inte att radera {{count}} artiklar",
+      "bulkDeletePartial": "Permanent raderade artiklar: {{count}}. Kunde inte raderas: {{failed}}",
       "deleteNotAllowed": "Artiklar som är publicerade eller under granskning måste arkiveras innan de kan raderas"
     },
     "bulk": {
@@ -167,15 +167,15 @@
     "stats": {
       "title": "Statistik",
       "views": "Visningar",
-      "helpful": "Hjälpsam",
-      "notHelpful": "Inte hjälpsam",
+      "helpful": "Användbar",
+      "notHelpful": "Inte användbar",
       "published": "Publicerad"
     },
     "metadata": {
       "title": "Metadata",
       "fields": {
         "title": "Titel",
-        "slug": "URL-segment",
+        "slug": "URL-namn",
         "articleType": "Artikeltyp",
         "audience": "Målgrupp",
         "category": "Kategori",
@@ -279,11 +279,11 @@
     "empty": "Allt är klart. Inga artiklar behöver granskas.",
     "sections": {
       "awaitingReview": "Artiklar som väntar på granskning",
-      "overdue": "Försenade granskningar"
+      "overdue": "Artiklar med försenad granskning"
     },
     "labels": {
       "submitted": "Inskickad",
-      "due": "Ska granskas senast",
+      "due": "Granskning senast",
       "lastReviewed": "Senast granskad",
       "never": "Aldrig"
     },
@@ -307,14 +307,14 @@
       "articleType": "Artikeltyp"
     },
     "actions": {
-      "import": "Importera filer: {{count}}",
+      "import": "Importera filer ({{count}})",
       "importing": "Importerar…",
-      "importingProgress": "Har importerat {{imported}} av {{total}}…"
+      "importingProgress": "Importerar {{imported}} av {{total}}…"
     },
     "feedback": {
       "unsupportedFileType": "{{fileName}}: filtypen stöds inte. Använd .md eller .html",
       "permissionDenied": "Åtkomst nekad",
-      "importSuccess": "Antal importerade artiklar: {{imported}} av {{total}}",
+      "importSuccess": "{{imported}} av {{total}} artiklar har importerats",
       "allFailed": "Alla importer misslyckades",
       "importError": "Importen misslyckades",
       "fileTooLarge": "{{fileName}} är större än {{limit}} MB",
@@ -323,7 +323,7 @@
       "importTimedOut": "Importen tar längre tid än väntat. Kontrollera igen om en stund."
     },
     "results": {
-      "summary": "Antal importerade artiklar: {{imported}} av {{total}}",
+      "summary": "{{imported}} av {{total}} artiklar har importerats",
       "failedCount": "Misslyckade importer ({{count}}):"
     }
   },
@@ -340,7 +340,7 @@
     }
   },
   "common": {
-    "done": "Klar",
+    "done": "Klart",
     "cancel": "Avbryt"
   }
 }
