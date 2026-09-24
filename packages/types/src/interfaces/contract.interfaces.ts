@@ -101,6 +101,11 @@ export interface IClientContract extends TenantEntity {
   renewal_cycle_key?: string;
   days_until_due?: number;
   is_active: boolean;
+  /**
+   * Billing profile this contract bills to — step 3 of the charge-attribution
+   * chain. NULL falls through to the client default, the pre-profile behaviour.
+   */
+  billing_profile_id?: string | null;
   po_required?: boolean;
   po_number?: string | null;
   po_amount?: number | null;

@@ -255,3 +255,11 @@ Two write paths were carried along so a chosen profile is not quietly lost:
 `getDraftContractForResume` returns it, and the renewals queue copies it onto
 the renewal draft — otherwise the first renewal would silently fall back to the
 client default.
+
+`IClientContract` had been left behind: `client_contracts.billing_profile_id`
+has existed since 20260816010000 and both the merge and the new creation path
+read and write it, but the interface never declared it, so every consumer that
+touched the field did so through a cast and `tsc -p shared/tsconfig.json` broke
+on the first honest read (TS2339 in the assignment test). The field is now
+declared optional and nullable next to the other attribution columns, matching
+`ClientContractAssignmentCreateInput` — NULL still means "the client default".
