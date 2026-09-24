@@ -3141,7 +3141,8 @@
           "invalidOptions": "Les options ne peuvent pas être vides.",
           "invalidField": "Ce champ est invalide."
         }
-      }
+      },
+      "additionalFields": "Additional fields"
     }
   },
   "mcpServer": {

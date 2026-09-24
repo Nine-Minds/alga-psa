@@ -18,6 +18,7 @@ export interface RemoteAccessButtonProps {
   className?: string;
   hasTemplateLinks?: boolean;
   iconOnly?: boolean;
+  surface?: 'asset-header' | 'asset-drawer' | 'ticket-sidebar';
 }
 
 const ninjaOneTypes: AssetRemoteConnectionType[] = ['splashtop', 'teamviewer', 'vnc', 'rdp', 'shell'];
@@ -32,7 +33,7 @@ function connectionLabel(type: AssetRemoteConnectionType, t: (key: string) => st
   return t(`remoteAccess.connectionTypes.${type}`);
 }
 
-export function RemoteAccessButton({ asset, variant = 'default', size = 'sm', className = '', hasTemplateLinks = false, iconOnly = false }: RemoteAccessButtonProps) {
+export function RemoteAccessButton({ asset, variant = 'default', size = 'sm', className = '', hasTemplateLinks = false, iconOnly = false, surface = 'asset-header' }: RemoteAccessButtonProps) {
   const { t } = useTranslation('msp/assets');
   const { rmm } = useAssetCrossFeature();
   const [availableTypes, setAvailableTypes] = useState<AssetRemoteConnectionType[] | null>(null);
@@ -96,7 +97,7 @@ export function RemoteAccessButton({ asset, variant = 'default', size = 'sm', cl
     <div className="relative">
       <DropdownMenu onOpenChange={(open) => { if (open) void loadOptions(); }}>
         <DropdownMenuTrigger asChild>
-          <Button id={`remote-access-button-${asset.asset_id}`} data-asset-id={asset.asset_id} aria-label={iconOnly ? t('remoteAccess.remoteAccess') : undefined} title={iconOnly ? t('remoteAccess.remoteAccess') : undefined} variant={variant} size={size} className={`${iconOnly ? 'px-2' : 'gap-2'} ${className}`} disabled={isPending}>
+          <Button id={`remote-access-button-${surface}-${asset.asset_id}`} data-asset-id={asset.asset_id} aria-label={iconOnly ? t('remoteAccess.remoteAccess') : undefined} title={iconOnly ? t('remoteAccess.remoteAccess') : undefined} variant={variant} size={size} className={`${iconOnly ? 'px-2' : 'gap-2'} ${className}`} disabled={isPending}>
             {isPending || isLoadingOptions ? <Loader2 className="h-4 w-4 animate-spin" /> : <Monitor className="h-4 w-4" />}
             {!iconOnly && t('remoteAccess.remoteAccess')}
           </Button>

@@ -129,7 +129,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
   });
 
   // F309: registry entry for the selected slug when it is a custom type.
-  const selectedCustomType = findCustomAssetType(registryEntries, formData.asset_type);
+  const selectedCustomType = registryEntries?.find((entry) => entry.slug === formData.asset_type) ?? null;
   const customTypeFields = selectedCustomType?.fields_schema ?? [];
 
   useEffect(() => {
@@ -231,7 +231,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
     setHasAttemptedSubmit(true);
 
     // F309: required enforcement for custom-type schema fields.
-    const attributeIssues = selectedCustomType
+    const attributeIssues = customTypeFields.length > 0
       ? validateAttributesAgainstSchema(customTypeFields, formData.attributes, { requireAll: true })
       : [];
     setAttributeErrors(Object.fromEntries(attributeIssues.map((issue) => [issue.key, issue.message])));
@@ -268,7 +268,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
       };
 
       // F309: custom-type schema values land in payload.attributes.
-      if (selectedCustomType) {
+      if (customTypeFields.length > 0) {
         assetData.attributes = pickSchemaAttributes(customTypeFields, formData.attributes);
       }
 
@@ -371,7 +371,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
 
     // F309: custom types render their fields_schema instead of the built-in
     // extension panels; values read/write formData.attributes[key].
-    if (selectedCustomType) {
+    if (selectedCustomType && !selectedCustomType.is_builtin) {
       return (
         <CustomTypeFieldsPanel
           fields={customTypeFields}
@@ -793,6 +793,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
                   })}
                 </h3>
                 {renderTypeSpecificFields()}
+                {selectedCustomType?.is_builtin && customTypeFields.length > 0 && <CustomTypeFieldsPanel fields={customTypeFields} values={formData.attributes} errors={attributeErrors} onChange={(key, value) => setFormData((prev) => ({ ...prev, attributes: { ...prev.attributes, [key]: value } }))} idPrefix="quick-add-asset-additional" />}
               </div>
             )}
           </form>

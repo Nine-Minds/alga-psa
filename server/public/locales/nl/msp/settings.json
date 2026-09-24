@@ -3141,7 +3141,8 @@
           "invalidOptions": "Opties mogen niet leeg zijn.",
           "invalidField": "Dit veld is ongeldig."
         }
-      }
+      },
+      "additionalFields": "Additional fields"
     }
   },
   "mcpServer": {

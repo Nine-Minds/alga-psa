@@ -70,15 +70,10 @@ function renderFieldValue(field: AssetTypeField, value: unknown, t: TranslateFn)
 export const CustomTypeDetailsPanel: React.FC<CustomTypeDetailsPanelProps> = ({ asset }) => {
   const { t } = useTranslation('msp/assets');
   const variant = useContentCardVariant();
-  const isCustom = !isBuiltinAssetTypeSlug(asset.asset_type);
-  const entries = useAssetTypeRegistry(isCustom);
-
-  if (!isCustom) {
-    return null;
-  }
+  const entries = useAssetTypeRegistry(true);
 
   const entry = entries?.find(
-    (candidate) => candidate.slug === asset.asset_type && !candidate.is_builtin
+    (candidate) => candidate.slug === asset.asset_type
   );
   if (!entry || entry.fields_schema.length === 0) {
     return null;

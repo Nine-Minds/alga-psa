@@ -776,7 +776,7 @@
       "save": "⟦Şȧṽḗ⟧",
       "label": "⟦Ɓŭŧŧȯƞ ŀȧƀḗŀ⟧",
       "template": "⟦ŬŘĿ ŧḗḿƥŀȧŧḗ⟧",
-      "tokens": "⟦Ƥŀȧƈḗħȯŀḓḗřş: {ȧşşḗŧ.ƞȧḿḗ}, {ȧşşḗŧ.ȧşşḗŧ_ŧȧɠ}, {ȧşşḗŧ.şḗřīȧŀ_ƞŭḿƀḗř}, {ƈŀīḗƞŧ.ƞȧḿḗ}, ȧƞḓ {ƒīḗŀḓ.ķḗẏ}.⟧",
+      "tokens": "Use {field.<key>} with custom field keys defined in Settings → Assets → Asset types.",
       "errors": {
         "load": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ řḗḿȯŧḗ ȧƈƈḗşş ŀīƞķş.⟧",
         "save": "⟦Ƒȧīŀḗḓ ŧȯ şȧṽḗ ŧħḗ řḗḿȯŧḗ ȧƈƈḗşş ŀīƞķ.⟧",
@@ -784,13 +784,21 @@
         "templateHttp": "Template must begin with http:// or https:// and a literal host.",
         "templatePlaceholder": "Template contains an unsupported placeholder.",
         "templateUrl": "Template must produce a valid http or https URL.",
-        "required": "A label and URL template are required."
+        "required": "A label and URL template are required.",
+        "partialDelete": "Could not delete {{count}} selected link(s)."
       },
       "loading": "⟦Ŀȯȧḓīƞɠ řḗḿȯŧḗ ȧƈƈḗşş ȯƥŧīȯƞş…⟧",
       "noneAvailable": "⟦Ƞȯ řḗḿȯŧḗ ȧƈƈḗşş ȯƥŧīȯƞş ȧřḗ ȧṽȧīŀȧƀŀḗ.⟧",
       "unavailable": "⟦Ŭƞȧṽȧīŀȧƀŀḗ ƒȯř ŧħīş ȧşşḗŧ⟧",
       "confirmDeleteTitle": "⟦Ḓḗŀḗŧḗ řḗḿȯŧḗ ȧƈƈḗşş ŀīƞķ?⟧",
-      "confirmDeleteMessage": "⟦Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ ḓḗŀḗŧḗ “{{label}}”? Ŧħīş ȧƈŧīȯƞ ƈȧƞƞȯŧ ƀḗ ŭƞḓȯƞḗ.⟧"
+      "confirmDeleteMessage": "⟦Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ ḓḗŀḗŧḗ “{{label}}”? Ŧħīş ȧƈŧīȯƞ ƈȧƞƞȯŧ ƀḗ ŭƞḓȯƞḗ.⟧",
+      "actions": "Actions",
+      "openMenu": "Open menu",
+      "selectLabel": "Select {{label}}",
+      "selectAll": "Select all links",
+      "confirmBulkDeleteTitle": "Delete selected links?",
+      "confirmBulkDeleteMessage": "Delete {{count}} selected remote access link(s)?",
+      "selectedCount": "{{count}} selected"
     }
   },
   "assetListErrors": {

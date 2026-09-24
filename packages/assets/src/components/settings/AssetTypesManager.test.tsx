@@ -332,7 +332,7 @@ describe('AssetTypesManager (T308)', () => {
     expect(mockToastSuccess).toHaveBeenCalledWith('Asset type created');
   }, 15_000);
 
-  it('built-in edit allows name/icon only and locks the schema area with a hint', async () => {
+  it('built-in edit allows additional schema fields while keeping the standard form fixed', async () => {
     const user = userEvent.setup();
     mockUpdateAssetTypeAction.mockResolvedValue({ success: true, data: builtinType });
     await renderManager();
@@ -340,14 +340,13 @@ describe('AssetTypesManager (T308)', () => {
     await user.click(byId('assets-types-edit-workstation')!);
     expect(byId('assets-types-dialog')).toBeTruthy();
 
-    // Schema editor is replaced by a read-only hint; no field rows, no add button.
     expect(byId('assets-types-builtin-schema-note')).toBeTruthy();
-    expect(byId('asset-type-field-0-label')).toBeNull();
-    expect(byId('assets-types-add-field-button')).toBeNull();
+    expect(byId('asset-type-field-0-label')).toBeTruthy();
+    expect(byId('assets-types-add-field-button')).toBeTruthy();
     expect(byId('assets-types-display-order-input')).toBeNull();
     expect(
       screen.getByText(
-        'Built-in types use fixed forms managed by AlgaPSA, so their field schema cannot be edited. You can still rename the type or change its icon.'
+        'The standard built-in form stays fixed. These additional fields are tenant-defined.'
       )
     ).toBeTruthy();
 
@@ -362,6 +361,7 @@ describe('AssetTypesManager (T308)', () => {
     expect(mockUpdateAssetTypeAction).toHaveBeenCalledWith('workstation', {
       name: 'Workstation X',
       icon: 'monitor',
+      fields_schema: [{ key: 'cpu', label: 'CPU', kind: 'text' }],
     });
     await waitFor(() => expect(byId('assets-types-dialog')).toBeNull());
   });

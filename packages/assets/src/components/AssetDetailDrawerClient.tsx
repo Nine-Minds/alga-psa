@@ -334,7 +334,7 @@ function renderOverviewTab({ asset, maintenanceReport, history, router, statusBa
             <FileText className="h-4 w-4" />
             {t('assetDetailDrawer.actions.openAssetRecord', { defaultValue: 'Open asset record' })}
           </Button>
-          <RemoteAccessButton asset={asset} variant="default" size="sm" hasTemplateLinks={hasTemplateLinks} />
+          <RemoteAccessButton asset={asset} variant="default" size="sm" hasTemplateLinks={hasTemplateLinks} surface="asset-drawer" />
           <CreateTicketFromAssetButton asset={asset} defaultBoardId={defaultBoardId} variant="default" size="sm" />
           <DeleteAssetButton
             assetId={asset.asset_id}

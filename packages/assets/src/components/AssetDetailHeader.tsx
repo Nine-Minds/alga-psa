@@ -201,7 +201,7 @@ export const AssetDetailHeader: React.FC<AssetDetailHeaderProps> = ({
             id="asset-detail-print-button"
             variant="outline"
           />
-          <RemoteAccessButton asset={asset} variant="default" hasTemplateLinks={hasTemplateLinks} />
+          <RemoteAccessButton asset={asset} variant="default" hasTemplateLinks={hasTemplateLinks} surface="asset-header" />
           
           <Button 
             id="create-ticket-header-btn"

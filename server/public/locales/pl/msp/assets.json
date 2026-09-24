@@ -776,7 +776,7 @@
       "save": "Save",
       "label": "Button label",
       "template": "URL template",
-      "tokens": "Placeholders: {asset.name}, {asset.asset_tag}, {asset.serial_number}, {client.name}, and {field.key}.",
+      "tokens": "Use {field.<key>} with custom field keys defined in Settings → Assets → Asset types.",
       "errors": {
         "load": "Failed to load remote access links.",
         "save": "Failed to save the remote access link.",
@@ -784,13 +784,21 @@
         "templateHttp": "Template must begin with http:// or https:// and a literal host.",
         "templatePlaceholder": "Template contains an unsupported placeholder.",
         "templateUrl": "Template must produce a valid http or https URL.",
-        "required": "A label and URL template are required."
+        "required": "A label and URL template are required.",
+        "partialDelete": "Could not delete {{count}} selected link(s)."
       },
       "loading": "Ładowanie opcji zdalnego dostępu…",
       "noneAvailable": "Brak dostępnych opcji zdalnego dostępu.",
       "unavailable": "Niedostępne dla tego zasobu",
       "confirmDeleteTitle": "Usunąć łącze zdalnego dostępu?",
-      "confirmDeleteMessage": "Czy na pewno usunąć „{{label}}”? Tej operacji nie można cofnąć."
+      "confirmDeleteMessage": "Czy na pewno usunąć „{{label}}”? Tej operacji nie można cofnąć.",
+      "actions": "Actions",
+      "openMenu": "Open menu",
+      "selectLabel": "Select {{label}}",
+      "selectAll": "Select all links",
+      "confirmBulkDeleteTitle": "Delete selected links?",
+      "confirmBulkDeleteMessage": "Delete {{count}} selected remote access link(s)?",
+      "selectedCount": "{{count}} selected"
     }
   },
   "assetListErrors": {

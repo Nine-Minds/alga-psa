@@ -176,12 +176,11 @@ describe('CustomTypeDetailsPanel (T315)', () => {
     expect(value.tagName).not.toBe('A');
   });
 
-  it('renders nothing for a built-in asset and never fetches the registry', () => {
+  it('loads built-in schemas to render additional values', () => {
     const { container } = render(
       <CustomTypeDetailsPanel asset={baseAsset('workstation', { vendor: 'irrelevant' })} />
     );
-    expect(container.innerHTML).toBe('');
-    expect(mockGetAssetTypes).not.toHaveBeenCalled();
+    expect(mockGetAssetTypes).toHaveBeenCalled();
   });
 
   it('renders nothing for an unregistered custom slug', async () => {

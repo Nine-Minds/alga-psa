@@ -514,6 +514,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                             variant="link"
                                             size="sm"
                                             onClick={() => openDrawerForAsset(asset)}
+                                            title={asset.name}
                                             className="h-auto min-w-0 max-w-full p-0 text-sm font-medium truncate text-left justify-start"
                                         >
                                             {asset.name}
@@ -547,6 +548,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                                 variant="ghost"
                                                 size="sm"
                                                 hasTemplateLinks={hasTemplateLinks}
+                                                surface="ticket-sidebar"
                                                 iconOnly
                                             />
                                         )}

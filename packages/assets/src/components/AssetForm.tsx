@@ -115,7 +115,7 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
     [registryEntries, t]
   );
   const selectedCustomType = useMemo(
-    () => findCustomAssetType(registryEntries, formData.asset_type),
+    () => registryEntries?.find((entry) => entry.slug === formData.asset_type) ?? null,
     [registryEntries, formData.asset_type]
   );
   const customTypeFields = selectedCustomType?.fields_schema ?? [];
@@ -971,7 +971,7 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
         serial_number: formData.serial_number?.trim() || undefined,
         // F309/F310: submit only schema-declared keys — the server merges into
         // assets.attributes so sibling namespaces (e.g. hudu_fields) survive.
-        attributes: selectedCustomType
+        attributes: customTypeFields.length > 0
           ? pickSchemaAttributes(customTypeFields, customAttributes)
           : undefined,
       };
@@ -1392,12 +1392,12 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
           </div>
         </Card>
 
-        {selectedCustomType && customTypeFields.length > 0 && (
+        {customTypeFields.length > 0 && (
           <Card id="custom-type-details" className="p-4 border border-[rgb(var(--color-border-200))]">
             <Text size="5" weight="medium" className="block mb-3 text-[rgb(var(--color-text-900))]">
               {t('assetForm.typeDetails.custom', {
                 defaultValue: '{{typeName}} Details',
-                typeName: selectedCustomType.name
+                typeName: selectedCustomType?.is_builtin ? t('assetForm.additionalFields', { defaultValue: 'Additional fields' }) : selectedCustomType?.name
               })}
             </Text>
             <CustomTypeFieldsPanel

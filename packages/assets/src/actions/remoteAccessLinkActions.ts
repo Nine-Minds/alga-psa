@@ -41,7 +41,10 @@ function validateTemplate(template: string): AssetActionError | null {
   const tokenPattern = /\{(asset|client|field)\.([a-zA-Z0-9_-]+)\}/g;
   const tokens = [...template.matchAll(tokenPattern)];
   const residue = template.replace(tokenPattern, '');
-  if (/[{}]/.test(residue)) {
+  if (/[{}]/.test(residue) || tokens.some(([, scope, key]) =>
+    (scope === 'asset' && !['name', 'asset_tag', 'serial_number'].includes(key)) ||
+    (scope === 'client' && key !== 'name')
+  )) {
     return actionError('Template contains an unsupported placeholder.', 'msp/assets:remoteAccess.links.errors.templatePlaceholder');
   }
   for (const [, scope, key] of tokens) {
@@ -95,6 +98,26 @@ export const deleteRemoteAccessLink = withAuth(async (
     .table('asset_remote_access_links')
     .where({ link_id: linkId })
     .delete();
+});
+
+export const deleteRemoteAccessLinks = withAuth(async (
+  user,
+  { tenant },
+  linkIds: string[]
+): Promise<{ deletedIds: string[]; failedIds: string[] } | AssetActionError> => {
+  const permissionFailure = await requireManagePermission(user);
+  if (permissionFailure) return permissionFailure;
+  const ids = [...new Set(linkIds)];
+  if (ids.length === 0) return { deletedIds: [], failedIds: [] };
+  const { knex } = await createTenantKnex();
+  const deletedRows = await tenantDb(knex, tenant)
+    .table('asset_remote_access_links')
+    .whereIn('link_id', ids)
+    .delete()
+    .returning('link_id');
+  const deletedIds = deletedRows.map((row: { link_id: string } | string) => typeof row === 'string' ? row : row.link_id);
+  const deletedSet = new Set(deletedIds);
+  return { deletedIds, failedIds: ids.filter((id) => !deletedSet.has(id)) };
 });
 
 export interface RenderedRemoteAccessLink {

@@ -368,6 +368,14 @@ describe('createAsset with custom asset types (T313)', () => {
     expect(h.dbState.assets).toHaveLength(0);
   });
 
+  it('validates workstation additional fields during create', async () => {
+    h.dbState.asset_type_registry.push({ tenant: TENANT, slug: 'workstation', name: 'Workstation', is_builtin: true, fields_schema: JSON.stringify([{ key: 'sc_session', label: 'ScreenConnect Session', kind: 'number' }]) });
+    await createAsset({ ...baseCreateRequest, asset_type: 'workstation', attributes: { sc_session: 'bad' } }).catch((error: Error) => {
+      expect(JSON.parse(error.message).issues[0].path).toEqual(['attributes', 'sc_session']);
+    });
+    expect(h.dbState.assets).toHaveLength(0);
+  });
+
   it('built-in regression: workstation create still lands extension data, no registry lookup, no attributes', async () => {
     // Registry intentionally EMPTY — built-ins must not require a registry row.
     const created = await createAsset({
@@ -446,6 +454,16 @@ describe('updateAsset with custom asset types (T313)', () => {
       account_name: 'Old Name',
       hudu_fields: [{ label: 'Plan', value: 'Gold' }],
     });
+  });
+
+  it('validates built-in additional fields and merge-preserves sibling namespaces', async () => {
+    h.dbState.asset_type_registry.push({ tenant: TENANT, slug: 'workstation', name: 'Workstation', is_builtin: true, fields_schema: JSON.stringify([{ key: 'sc_session', label: 'Session', kind: 'text' }]) });
+    const asset = seedAsset({ asset_type: 'workstation', attributes: { hudu_fields: [{ label: 'Plan', value: 'Gold' }] } });
+    await updateAsset(asset.asset_id, { attributes: { sc_session: 123 } }).catch((error: Error) => {
+      expect(JSON.parse(error.message).issues[0].path).toEqual(['attributes', 'sc_session']);
+    });
+    await updateAsset(asset.asset_id, { attributes: { sc_session: 'sess-1' } });
+    expect(h.dbState.assets[0].attributes).toEqual({ sc_session: 'sess-1', hudu_fields: [{ label: 'Plan', value: 'Gold' }] });
   });
 
   it('allows partial updates that omit required fields (merge keeps stored values)', async () => {

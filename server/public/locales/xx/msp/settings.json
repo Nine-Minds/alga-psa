@@ -3141,7 +3141,8 @@
           "invalidOptions": "⟦Ȯƥŧīȯƞş ḿŭşŧ ƀḗ ƞȯƞ-ḗḿƥŧẏ ṽȧŀŭḗş.⟧",
           "invalidField": "⟦Ŧħīş ƒīḗŀḓ īş īƞṽȧŀīḓ.⟧"
         }
-      }
+      },
+      "additionalFields": "Additional fields"
     }
   },
   "mcpServer": {
