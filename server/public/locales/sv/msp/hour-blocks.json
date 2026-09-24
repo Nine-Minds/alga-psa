@@ -1,7 +1,7 @@
 {
   "section": {
     "title": "Timpotter",
-    "description": "Förbetalda timpotter som köps vid ett tillfälle. Tid som inte täcks av en avtalsrad dras från dessa timpotter, med den som löper ut först i första hand.",
+    "description": "Förbetalda timpotter som köps vid ett tillfälle. Tid som inte täcks av en avtalsrad dras från dessa timpotter, med början i den som löper ut först.",
     "availableBalance": "Tillgänglig tid: {{hours}} h",
     "noBlocks": "Inga timpotter ännu. Sälj en timpott till den här kunden eller tilldela kostnadsfria timmar.",
     "loadFailed": "Det gick inte att ladda timpotterna. Försök igen."
@@ -101,7 +101,7 @@
     "voided": "Timpotten har makulerats."
   },
   "detail": {
-    "title": "Timpottens detaljer",
+    "title": "Information om timpotten",
     "purchased": "Köpt {{date}}",
     "granted": "Tilldelad {{date}}",
     "pending": "Väntande — slutför fakturautkastet för att aktivera timpotten",
@@ -125,7 +125,7 @@
     "manuallyExpired": "Utgången manuellt",
     "autoExpired": "Utgången automatiskt",
     "voidedLabel": "Makulerad",
-    "purchaseReversed": "Köpet har återförts (fakturan har återställts till utkast)",
+    "purchaseReversed": "Köp återfört (fakturan återställd till utkast)",
     "unknownUser": "System"
   },
   "expire": {
@@ -134,7 +134,7 @@
     "reasonLabel": "Orsak",
     "reasonPlaceholder": "Obligatorisk",
     "reasonRequired": "En orsak krävs.",
-    "remaining": "Oanvänd tid som går förlorad: {{hours}} h.",
+    "remaining": "{{hours}} h oanvänd tid går förlorad.",
     "submit": "Låt timpotten löpa ut",
     "title": "Låt timpotten löpa ut"
   },
