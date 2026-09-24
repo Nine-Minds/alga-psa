@@ -97,9 +97,9 @@
     },
     "execution": {
       "title": "Körning",
-      "executionProvider": "Tjänsteleverantör för körning",
-      "formBehaviorProvider": "Tjänsteleverantör för formulärbeteende",
-      "visibilityProvider": "Tjänsteleverantör för synlighet",
+      "executionProvider": "Leverantör för körning",
+      "formBehaviorProvider": "Leverantör för formulärbeteende",
+      "visibilityProvider": "Leverantör för synlighet",
       "providerDisplay": "{{displayName}} ({{executionMode}})",
       "ticketRouting": {
         "title": "Inställningar för ärendestyrning",
@@ -108,7 +108,7 @@
         "status": "Status",
         "statusPlaceholder": "Välj status",
         "assignedUser": "Tilldelad användare",
-        "assignedUserPlaceholder": "Inte tilldelat",
+        "assignedUserPlaceholder": "Inte tilldelad",
         "category": "Kategori",
         "categoryPlaceholder": "Välj kategori",
         "priority": "Prioritet",
@@ -125,7 +125,7 @@
         "save": "Spara ärendestyrning"
       },
       "storeOnly": {
-        "title": "Lagra endast",
+        "title": "Endast lagring",
         "description": "Inskickade förfrågningar sparas med sina svar och bilagor i förfrågningshistoriken. Inget supportärende skapas."
       },
       "workflow": {
@@ -147,10 +147,10 @@
         "save": "Spara synlighetsinställningar"
       },
       "fields": {
-        "executionProvider": "Tjänsteleverantör för körning",
+        "executionProvider": "Leverantör för körning",
         "executionConfig": "Körningsinställningar",
-        "formBehaviorProvider": "Tjänsteleverantör för formulärbeteende",
-        "visibilityProvider": "Tjänsteleverantör för synlighet"
+        "formBehaviorProvider": "Leverantör för formulärbeteende",
+        "visibilityProvider": "Leverantör för synlighet"
       },
       "itilImpact": {
         "1": "1 - Hög (kritisk verksamhetsfunktion påverkas)",
@@ -184,9 +184,9 @@
         "executionStatusRequired": "Körning: Status krävs för ärendestyrning",
         "executionPriorityRequired": "Körning: Prioritet krävs för ärendestyrning",
         "executionItilImpactUrgencyMismatch": "Körning: Ärendestyrning kräver både ITIL-påverkan och brådska när prioritet inte är angiven",
-        "unknownExecutionProvider": "Okänd tjänsteleverantör för körning: {{key}}",
-        "unknownFormBehaviorProvider": "Okänd tjänsteleverantör för formulärbeteende: {{key}}",
-        "unknownVisibilityProvider": "Okänd tjänsteleverantör för synlighet: {{key}}"
+        "unknownExecutionProvider": "Okänd leverantör för körning: {{key}}",
+        "unknownFormBehaviorProvider": "Okänd leverantör för formulärbeteende: {{key}}",
+        "unknownVisibilityProvider": "Okänd leverantör för synlighet: {{key}}"
       }
     },
     "submissions": {
@@ -239,7 +239,7 @@
           "before": "Före",
           "after": "Efter",
           "status": "Resultat",
-          "detail": "Detalj"
+          "detail": "Detaljer"
         },
         "emptyValue": "—",
         "unresolvedTarget": "Inte identifierat",
@@ -295,7 +295,7 @@
         "question": "Fråga",
         "destinationKind": "Målplats",
         "targetField": "Fält",
-        "assetStrategy": "Så hittas tillgången",
+        "assetStrategy": "Hur tillgången ska hittas",
         "assetRefQuestion": "Fråga vars svar identifierar tillgången",
         "matchAttribute": "Matcha mot",
         "matchQuestion": "Fråga vars svar ska matchas",
@@ -381,9 +381,9 @@
       "linkedService": "{{name}} har kopplats",
       "fieldAdded": "Fältet har lagts till",
       "fieldRemoved": "Fältet har tagits bort",
-      "executionProviderUpdated": "Tjänsteleverantören för körning har uppdaterats",
-      "formBehaviorProviderUpdated": "Tjänsteleverantören för formulärbeteende har uppdaterats",
-      "visibilityProviderUpdated": "Tjänsteleverantören för synlighet har uppdaterats",
+      "executionProviderUpdated": "Leverantören för körning har uppdaterats",
+      "formBehaviorProviderUpdated": "Leverantören för formulärbeteende har uppdaterats",
+      "visibilityProviderUpdated": "Leverantören för synlighet har uppdaterats",
       "ticketRoutingUpdated": "Inställningarna för ärendestyrning har uppdaterats",
       "workflowConfigurationUpdated": "Arbetsflödesinställningarna har uppdaterats",
       "formBehaviorConfigUpdated": "Inställningarna för formulärbeteende har uppdaterats",
@@ -401,9 +401,9 @@
       "publishBlockedByValidation": "Det går inte att publicera ännu — åtgärda valideringsfelen ({{count}}) i avsnittet Validering inför publicering nedan.",
       "basicsUpdateFailed": "Det gick inte att uppdatera grunduppgifterna",
       "addFieldFailed": "Det gick inte att lägga till formulärfältet",
-      "executionProviderUpdateFailed": "Det gick inte att uppdatera tjänsteleverantören för körning",
-      "formBehaviorProviderUpdateFailed": "Det gick inte att uppdatera tjänsteleverantören för formulärbeteende",
-      "visibilityProviderUpdateFailed": "Det gick inte att uppdatera tjänsteleverantören för synlighet",
+      "executionProviderUpdateFailed": "Det gick inte att uppdatera leverantören för körning",
+      "formBehaviorProviderUpdateFailed": "Det gick inte att uppdatera leverantören för formulärbeteende",
+      "visibilityProviderUpdateFailed": "Det gick inte att uppdatera leverantören för synlighet",
       "workflowMappingNotObject": "Mappningen av indata för arbetsflödet måste vara ett JSON-objekt",
       "workflowConfigurationInvalid": "Ogiltig JSON för arbetsflödesinställningar",
       "formBehaviorNotObject": "Inställningarna för formulärbeteende måste vara ett JSON-objekt",
