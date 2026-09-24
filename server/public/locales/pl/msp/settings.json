@@ -1319,7 +1319,7 @@
     },
     "domain": {
       "title": "Domena niestandardowa",
-      "description": "Skonfiguruj firmową nazwę hosta dla portalu klienta. Po zweryfikowaniu DNS automatycznie wystawimy certyfikaty TLS.",
+      "description": "Skonfiguruj firmową nazwę hosta dla portalu klienta.",
       "currentStatus": "Aktualny status",
       "noDomainConfigured": "Nie skonfigurowano domeny niestandardowej",
       "defaultStatusMessage": "Nie zarejestrowano jeszcze żadnej domeny niestandardowej.",
@@ -1361,7 +1361,8 @@
         "step3": "Uzyskaj i utrzymuj certyfikat TLS dla domeny na swoim proxy.",
         "step4": "Zapisz domenę tutaj — aktywuje się natychmiast. Najpierw skonfiguruj DNS i proxy, ponieważ linki portalu od razu przełączą się na tę domenę.",
         "docLinkText": "Przewodnik konfiguracji i rozwiązywania problemów z reverse proxy",
-        "neverSeenWarning": "Żadne żądania nie dotarły jeszcze do {{domain}}. Sprawdź, czy Twój reverse proxy przekazuje oryginalny nagłówek Host."
+        "neverSeenWarning": "Żadne żądania nie dotarły jeszcze do {{domain}}. Sprawdź, czy Twój reverse proxy przekazuje oryginalny nagłówek Host.",
+        "tlsNote": "TLS jest terminowany na Twoim reverse proxy. Uzyskaj i utrzymuj certyfikat TLS dla domeny na swoim proxy."
       },
       "badges": {
         "pending_dns": "Oczekuje na DNS",
@@ -1386,7 +1387,8 @@
         "refreshFailed": "Nie udało się odświeżyć statusu domeny.",
         "retryFailed": "Ponowienie nie powiodło się.",
         "disableFailed": "Nie udało się wyłączyć domeny niestandardowej."
-      }
+      },
+      "hostedTlsNote": "Po zweryfikowaniu DNS automatycznie wystawimy certyfikaty TLS."
     },
     "yourCompanyName": "Nazwa Twojej firmy",
     "brandingPreviewMode": "Tryb motywu podglądu marki",

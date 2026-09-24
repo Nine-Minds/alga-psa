@@ -1313,7 +1313,7 @@
     },
     "domain": {
       "title": "Aangepast domein",
-      "description": "Configureer een hostnaam met huisstijl voor uw klantenportaal. We voorzien automatisch in TLS-certificaten zodra DNS is geverifieerd.",
+      "description": "Configureer een hostnaam met huisstijl voor uw klantenportaal.",
       "currentStatus": "Huidige status",
       "noDomainConfigured": "Geen aangepast domein geconfigureerd",
       "defaultStatusMessage": "Nog geen aangepast domein geregistreerd.",
@@ -1355,7 +1355,8 @@
         "step3": "Verkrijg en onderhoud het TLS-certificaat voor het domein op uw proxy.",
         "step4": "Sla het domein hier op — het wordt onmiddellijk geactiveerd. Configureer eerst DNS en uw proxy, omdat portallinks meteen naar dit domein overschakelen.",
         "docLinkText": "Handleiding voor reverse proxy instellen en probleemoplossing",
-        "neverSeenWarning": "Er hebben nog geen verzoeken {{domain}} bereikt. Controleer of uw reverse proxy de oorspronkelijke Host-header doorstuurt."
+        "neverSeenWarning": "Er hebben nog geen verzoeken {{domain}} bereikt. Controleer of uw reverse proxy de oorspronkelijke Host-header doorstuurt.",
+        "tlsNote": "TLS wordt beëindigd op uw reverse proxy. Verkrijg en onderhoud het TLS-certificaat voor het domein op uw proxy."
       },
       "badges": {
         "pending_dns": "DNS in behandeling",
@@ -1380,7 +1381,8 @@
         "refreshFailed": "Kan domeinstatus niet vernieuwen.",
         "retryFailed": "Opnieuw proberen mislukt.",
         "disableFailed": "Kan aangepast domein niet uitschakelen."
-      }
+      },
+      "hostedTlsNote": "We voorzien automatisch in TLS-certificaten zodra DNS is geverifieerd."
     },
     "yourCompanyName": "Naam van uw bedrijf",
     "brandingPreviewMode": "Branding-voorbeeldthemamodus",

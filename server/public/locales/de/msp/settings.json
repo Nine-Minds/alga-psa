@@ -1313,7 +1313,7 @@
     },
     "domain": {
       "title": "Benutzerdefinierte Domain",
-      "description": "Konfigurieren Sie einen markenspezifischen Hostnamen für Ihr Kundenportal. TLS-Zertifikate werden automatisch bereitgestellt, sobald DNS verifiziert ist.",
+      "description": "Konfigurieren Sie einen markenspezifischen Hostnamen für Ihr Kundenportal.",
       "currentStatus": "Aktueller Status",
       "noDomainConfigured": "Keine benutzerdefinierte Domain konfiguriert",
       "defaultStatusMessage": "Noch keine benutzerdefinierte Domain registriert.",
@@ -1355,7 +1355,8 @@
         "step3": "Beschaffen und pflegen Sie das TLS-Zertifikat für die Domain auf Ihrem Proxy.",
         "step4": "Speichern Sie die Domain hier — sie wird sofort aktiviert. Richten Sie zuerst DNS und Ihren Proxy ein, da Portal-Links sofort auf diese Domain umgestellt werden.",
         "docLinkText": "Anleitung zur Reverse-Proxy-Einrichtung und Fehlerbehebung",
-        "neverSeenWarning": "Es haben noch keine Anfragen {{domain}} erreicht. Prüfen Sie, ob Ihr Reverse-Proxy den ursprünglichen Host-Header weiterleitet."
+        "neverSeenWarning": "Es haben noch keine Anfragen {{domain}} erreicht. Prüfen Sie, ob Ihr Reverse-Proxy den ursprünglichen Host-Header weiterleitet.",
+        "tlsNote": "TLS wird auf Ihrem Reverse-Proxy terminiert. Beschaffen und pflegen Sie das TLS-Zertifikat für die Domain auf Ihrem Proxy."
       },
       "badges": {
         "pending_dns": "DNS ausstehend",
@@ -1380,7 +1381,8 @@
         "refreshFailed": "Domain-Status konnte nicht aktualisiert werden.",
         "retryFailed": "Wiederholung fehlgeschlagen.",
         "disableFailed": "Benutzerdefinierte Domain konnte nicht deaktiviert werden."
-      }
+      },
+      "hostedTlsNote": "TLS-Zertifikate werden automatisch bereitgestellt, sobald DNS verifiziert ist."
     },
     "yourCompanyName": "Name Ihres Unternehmens",
     "brandingPreviewMode": "Branding-Vorschau-Themenmodus",
