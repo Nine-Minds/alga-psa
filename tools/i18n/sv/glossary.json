@@ -654,7 +654,7 @@
       "via {{channels}}",
       "Metadata (JSON)", "Export", "Batch", "({{size}} KB)", "https://cipp.yourdomain.com", "{{clients}}", "CIPP", "UPN", "{{runType}} · {{status}}", "Gmail: {{scopes}}", "Server", "https://your-instance.huducloud.com", "{{name}} — {{description}}", "{{label}} · ID {{id}}", "{{name}} ({{rate}})", "https://example.cloud.tanium.com/plugin/products/asset", "https://example.cloud.tanium.com", "ID: {{id}}", "Status: ", "Realm", "scheduler@acme.com", "Destination", "External Invoice ID", "Source System",
       "CVV", "via", "your.email@company.com",
-      "Filter", "Information", "Status", "Support", "{{entityType}}", "{{thankYouText}}",
+      "Filter", "Information", "Status", "Support", "{{entityType}}", "{{thankYouText}}", "{{rating}} - {{label}}",
       "3CX", "Acme IT Solutions", "Alga", "AlgaDesk", "AlgaPSA", "Android", "App Store (iOS)",
       "CIPP (CyberDrain Improved Partner Portal)", "Datto", "Entra ID", "Excel", "Gmail", "Google",
       "Google Calendar", "Google Cloud Console", "Google OAuth", "Google Play (Android)", "Google Workspace",

@@ -1,0 +1,503 @@
+{
+  "common": {
+    "loading": "Laddar…"
+  },
+  "moduleFrame": {
+    "title": "Kundnöjdhetsenkäter",
+    "description": "Följ svarskvaliteten, analysera trender i kundnöjdheten och följ upp återkoppling.",
+    "badge": "Insikter om kundnöjdhet",
+    "nav": {
+      "dashboard": "Översiktspanel",
+      "responses": "Svar",
+      "analytics": "Analys",
+      "setup": "Konfiguration"
+    }
+  },
+  "settings": {
+    "tabLabel": "Enkäter",
+    "title": "Kundnöjdhetsenkäter",
+    "subtitle": "Konfigurera mallar, utlösare och utskick för att samla in återkoppling efter avslutade ärenden.",
+    "tabs": {
+      "templates": "Mallar",
+      "triggers": "Utlösare"
+    },
+    "templateList": {
+      "title": "Enkätmallar",
+      "description": "Hantera frågorna och betygsskalorna som skickas till dina kunder.",
+      "createButton": "Ny mall",
+      "emptyTitle": "Inga enkätmallar ännu",
+      "emptyDescription": "Skapa din första mall för att ange enkätens formuleringar och betygsskala.",
+      "defaultBadge": "Standard",
+      "table": {
+        "name": "Mall",
+        "rating": "Betygsskala",
+        "status": "Status",
+        "updated": "Uppdaterad",
+        "actions": "Åtgärder"
+      },
+      "status": {
+        "enabled": "Aktiverad",
+        "disabled": "Inaktiverad"
+      },
+      "actions": {
+        "setDefault": "Ange som standard"
+      },
+      "toasts": {
+        "created": "Mallen har skapats",
+        "updated": "Mallen har uppdaterats",
+        "deleted": "Mallen har raderats",
+        "error": "Det gick inte att spara mallen",
+        "setDefault": "Standardmallen har uppdaterats"
+      },
+      "errors": {
+        "load": "Det gick inte att ladda enkätmallarna."
+      },
+      "delete": {
+        "validationFailed": "Det gick inte att validera raderingen. Försök igen.",
+        "error": "Det gick inte att radera mallen",
+        "entityFallback": "den här enkätmallen"
+      },
+      "actionsMenuAria": "Öppna åtgärder för {{name}}"
+    },
+    "templateForm": {
+      "titleCreate": "Skapa enkätmall",
+      "titleEdit": "Redigera enkätmall",
+      "ratingTypes": {
+        "stars": "Stjärnor",
+        "numbers": "Siffror",
+        "emojis": "Emojier"
+      },
+      "defaults": {
+        "promptText": "Enkätfråga",
+        "commentPrompt": "Ytterligare kommentarer (valfritt)",
+        "thankYouText": "Tack."
+      },
+      "labels": {
+        "name": "Mallnamn",
+        "ratingType": "Betygstyp",
+        "ratingScale": "Betygsskala",
+        "ratingLabels": "Betygsetiketter",
+        "preview": "Förhandsgranskning",
+        "promptText": "Enkätfråga",
+        "commentPrompt": "Uppmaning att kommentera",
+        "thankYouText": "Tackmeddelande",
+        "isDefault": "Ange som standardmall",
+        "enabled": "Mallen är aktiverad"
+      },
+      "placeholders": {
+        "ratingLabels": "Exempel:\nMycket dåligt\nDåligt\nMedelbra\nBra\nUtmärkt"
+      },
+      "help": {
+        "ratingLabels": "Ange en etikett per rad, från lägsta till högsta betyg."
+      },
+      "actions": {
+        "create": "Skapa mall",
+        "save": "Spara ändringar",
+        "delete": "Radera mall"
+      },
+      "delete": {
+        "validationFailed": "Det gick inte att validera raderingen. Försök igen.",
+        "error": "Det gick inte att radera mallen",
+        "entityFallback": "den här enkätmallen"
+      }
+    },
+    "triggerList": {
+      "title": "Enkätutlösare",
+      "description": "Skicka inbjudningar automatiskt när ärenden eller projekt slutförs.",
+      "createButton": "Ny utlösare",
+      "emptyTitle": "Inga enkätutlösare har konfigurerats",
+      "emptyDescription": "Skapa en utlösare för att skicka enkäter när ärenden stängs eller projekt slutförs.",
+      "table": {
+        "template": "Mall",
+        "type": "Utlösare",
+        "conditions": "Villkor",
+        "status": "Status",
+        "updated": "Uppdaterad",
+        "actions": "Åtgärder"
+      },
+      "status": {
+        "enabled": "Aktiverad",
+        "disabled": "Inaktiverad"
+      },
+      "conditions": {
+        "unrestricted": "Gäller alla ärenden och projekt",
+        "boards": "Tavlor",
+        "statuses": "Statusar",
+        "priorities": "Prioriteter",
+        "any": "Alla"
+      },
+      "toasts": {
+        "created": "Utlösaren har skapats",
+        "updated": "Utlösaren har uppdaterats",
+        "deleted": "Utlösaren har raderats",
+        "error": "Det gick inte att spara utlösaren",
+        "deleteError": "Det gick inte att radera utlösaren"
+      },
+      "errors": {
+        "load": "Det gick inte att ladda enkätutlösarna."
+      },
+      "deleteConfirm": "Vill du radera den här utlösaren? Inbjudningar som redan köats kommer fortfarande att skickas.",
+      "actionsMenuAria": "Öppna åtgärder för utlösaren som gäller {{target}}"
+    },
+    "triggerForm": {
+      "titleCreate": "Skapa enkätutlösare",
+      "titleEdit": "Redigera enkätutlösare",
+      "triggerTypes": {
+        "ticket_closed": "Ärende stängt",
+        "project_completed": "Projekt slutfört"
+      },
+      "labels": {
+        "template": "Enkätmall",
+        "triggerType": "Utlösartyp",
+        "boardIds": "Tavlor",
+        "statusIds": "Statusar",
+        "priorities": "Prioriteter",
+        "enabled": "Utlösaren är aktiverad"
+      },
+      "placeholders": {
+        "boardIds": "Välj tavla",
+        "statusIds": "Lägg till status",
+        "priorities": "Lägg till prioritet"
+      },
+      "boardFilters": {
+        "active": "Aktiva tavlor",
+        "inactive": "Inaktiva tavlor",
+        "all": "Alla tavlor"
+      },
+      "help": {
+        "conditions": "Lämna ett fält tomt för att matcha alla värden."
+      },
+      "actions": {
+        "create": "Skapa utlösare",
+        "save": "Spara ändringar",
+        "delete": "Radera utlösare"
+      },
+      "noTemplates": "Skapa en enkätmall innan du lägger till utlösare.",
+      "prioritiesMixed": "De valda tavlorna använder olika prioritetstyper. Alla prioriteter visas.",
+      "errors": {
+        "reference": "Det gick inte att ladda utlösaralternativen. Försök igen."
+      }
+    }
+  },
+  "response": {
+    "pageTitle": "Kundnöjdhetsenkät",
+    "invalidTitle": "Enkäten är inte tillgänglig",
+    "invalidMessage": "Den här återkopplingslänken är inte längre giltig eller har redan använts.",
+    "ratingPrompt": "Hur var din upplevelse?",
+    "ratingAssistive": "Välj ett betyg från 1 till {{scale}}",
+    "commentLabel": "Ytterligare kommentarer (valfritt)",
+    "submitButton": "Skicka in återkoppling",
+    "submitting": "Skickar in återkoppling…",
+    "submittedTitle": "Tack för ditt svar.",
+    "submittedMessage": "{{thankYouText}}",
+    "ratingSubmitted": "Återkopplingen har skickats in",
+    "retryButton": "Försök igen",
+    "selectRatingError": "Välj ett betyg innan du skickar in.",
+    "errorMessage": "Vi kunde inte registrera din återkoppling. Försök igen.",
+    "supportMessage": "Kontakta din tekniker om du har frågor."
+  },
+  "rating": {
+    "buttonAriaWithLabel": "{{rating}} - {{label}}",
+    "buttonAria": "Betyg {{rating}} av {{scale}}",
+    "defaults": {
+      "3": {
+        "1": "Dåligt",
+        "2": "Bra",
+        "3": "Utmärkt"
+      },
+      "5": {
+        "1": "Mycket dåligt",
+        "2": "Dåligt",
+        "3": "Medelbra",
+        "4": "Bra",
+        "5": "Utmärkt"
+      },
+      "10": {
+        "1": "Uselt",
+        "2": "Mycket dåligt",
+        "3": "Dåligt",
+        "4": "Under genomsnittet",
+        "5": "Medelbra",
+        "6": "Över genomsnittet",
+        "7": "Bra",
+        "8": "Mycket bra",
+        "9": "Utmärkt",
+        "10": "Perfekt"
+      }
+    }
+  },
+  "responses": {
+    "filters": {
+      "labels": {
+        "template": "Mall",
+        "technician": "Tekniker",
+        "client": "Kund",
+        "dateRange": "Datumintervall"
+      },
+      "placeholders": {
+        "allTemplates": "Alla mallar",
+        "allTechnicians": "Alla tekniker",
+        "allClients": "Alla kunder"
+      },
+      "actions": {
+        "apply": "Tillämpa",
+        "reset": "Återställ"
+      }
+    },
+    "page": {
+      "filterTitle": "Filtrera svar",
+      "loading": "Laddar om svar…",
+      "error": "Det gick inte att ladda enkätsvaren. Försök igen.",
+      "pageSizeOptions": {
+        "10": "10 per sida",
+        "25": "25 per sida",
+        "50": "50 per sida"
+      },
+      "itemLabel": "svar"
+    },
+    "detail": {
+      "title": "Detaljer om enkätsvar",
+      "empty": "Inget svar har valts.",
+      "labels": {
+        "submittedAt": "Inskickat",
+        "client": "Kund",
+        "contact": "Kontakt",
+        "technician": "Tekniker",
+        "ticket": "Ärende",
+        "rating": "Betyg",
+        "comment": "Kommentar",
+        "project": "Projekt"
+      },
+      "fallbacks": {
+        "unknown": "Okänd",
+        "unassigned": "Ej tilldelad",
+        "none": "-",
+        "noComment": "Ingen kommentar har lämnats."
+      }
+    }
+  },
+  "dashboard": {
+    "loadingInsights": "Laddar enkätinsikter…",
+    "printTitle": "Översiktspanel för enkäter",
+    "responseMetrics": {
+      "cards": {
+        "sent": "Skickade inbjudningar",
+        "responses": "Mottagna svar",
+        "responseRate": "Svarsfrekvens",
+        "averageRating": "Genomsnittligt betyg",
+        "outstanding": "Obesvarade inbjudningar",
+        "negative": "Negativa svar (<= 2 stjärnor)"
+      },
+      "badges": {
+        "awaitingResponses": "Väntar på svar",
+        "needsReview": "Behöver granskas"
+      }
+    },
+    "responseTrend": {
+      "title": "Svarstrend",
+      "emptyTitle": "Inga svar har registrerats för den valda perioden.",
+      "emptyDescription": "Återkom när kunderna har lämnat återkoppling.",
+      "tooltip": {
+        "averageRating": "Genomsnittligt betyg",
+        "responses": "Svar",
+        "date": "Datum: {{label}}"
+      }
+    },
+    "responsesList": {
+      "title": "Senaste svaren",
+      "emptyTitle": "Inga enkätsvar finns tillgängliga ännu.",
+      "emptyDescription": "Uppmuntra kunderna att lämna återkoppling så att svar visas här.",
+      "table": {
+        "submitted": "Inskickat",
+        "client": "Kund",
+        "technician": "Tekniker",
+        "rating": "Betyg",
+        "comment": "Kommentar",
+        "ticket": "Ärende",
+        "subject": "Ärende / projekt"
+      },
+      "fallbacks": {
+        "unknownClient": "Okänd kund",
+        "unassigned": "Ej tilldelad",
+        "noComment": "Ingen kommentar"
+      }
+    },
+    "satisfactionDistribution": {
+      "title": "Fördelning av kundnöjdhet",
+      "emptyTitle": "Inga enkätbetyg har registrerats ännu.",
+      "emptyDescription": "Fördelningen visas när återkoppling har samlats in.",
+      "axes": {
+        "rating": "Betyg",
+        "responses": "Svar"
+      },
+      "tooltip": {
+        "percent": "Procent",
+        "responses": "Svar",
+        "rating": "Betyg: {{label}}"
+      }
+    },
+    "topIssues": {
+      "title": "Viktigaste problemen",
+      "emptyTitle": "Ingen negativ återkoppling har registrerats för de valda filtren.",
+      "emptyDescription": "Det är ett gott tecken. Fortsätt med det goda arbetet.",
+      "fallbacks": {
+        "unknownClient": "Okänd kund",
+        "ticket": "Ärende {{ticket}}",
+        "noComment": "Ingen kommentar har lämnats.",
+        "assignedTo": "Tilldelat till: {{name}}",
+        "project": "Projekt {{project}}"
+      }
+    }
+  },
+  "analytics": {
+    "filters": {
+      "labels": {
+        "customerSegment": "Kundsegment",
+        "surveyTemplate": "Enkätmall",
+        "timeframe": "Tidsperiod",
+        "calendarView": "Kalendervy"
+      },
+      "defaults": {
+        "segments": {
+          "all": "Alla kunder",
+          "managed": "Kunder med förvaltade tjänster",
+          "project": "Kunder med enbart projekt"
+        },
+        "templates": {
+          "all": "Alla mallar",
+          "default": "CSAT-mall för fas 1"
+        },
+        "timeframes": {
+          "30d": "Senaste 30 dagarna",
+          "90d": "Senaste 90 dagarna",
+          "365d": "Hittills i år"
+        }
+      },
+      "actions": {
+        "apply": "Tillämpa filter",
+        "reset": "Återställ",
+        "calendar": "Kommer snart"
+      }
+    },
+    "page": {
+      "filtersTitle": "Analysfilter",
+      "overviewTitle": "Översikt över kundnöjdhet",
+      "overviewDescription": "Jämför genomsnittlig kundnöjdhet och svarsfrekvens över tid. Fler segmenteringsalternativ kommer i senare versioner."
+    },
+    "chart": {
+      "empty": "Välj filter ovan för att utforska avancerad analys. (Kommer snart)",
+      "tooltip": {
+        "averageRating": "Genomsnittligt betyg",
+        "responseRate": "Svarsfrekvens"
+      },
+      "legend": {
+        "averageRating": "Genomsnittligt betyg",
+        "responseRate": "Svarsfrekvens"
+      }
+    },
+    "export": {
+      "csv": "Exportera CSV",
+      "shareSnapshot": "Dela ögonblicksbild",
+      "emailDigest": "Skicka sammanfattning via e-post"
+    }
+  },
+  "clientSummary": {
+    "title": "Kundnöjdhet",
+    "empty": "Inga enkätdata finns tillgängliga för den här kunden ännu. Enkäter som skickas efter att ärenden stängts ger data till den här vyn.",
+    "labels": {
+      "averageRating": "Genomsnittligt betyg",
+      "responseRate": "Svarsfrekvens",
+      "totalResponses": "Totalt antal svar",
+      "lastResponse": "Senaste svaret",
+      "rollingTrend": "Rullande trend"
+    },
+    "fallbacks": {
+      "none": "-",
+      "noResponsesYet": "Inga svar ännu"
+    }
+  },
+  "ticketSummary": {
+    "title": "Kundåterkoppling",
+    "empty": "Inga enkätsvar har tagits emot för det här ärendet ännu.",
+    "labels": {
+      "latestRating": "Senaste betyget",
+      "comment": "Kommentar",
+      "totalResponses": "Totalt antal svar"
+    },
+    "fallbacks": {
+      "none": "-"
+    }
+  },
+  "print": {
+    "emptyValue": "—",
+    "columns": {
+      "date": "Datum",
+      "averageRating": "Genomsnittligt betyg",
+      "responses": "Svar",
+      "rating": "Betyg",
+      "share": "Andel",
+      "ticket": "Ärende",
+      "client": "Kund",
+      "contact": "Kontakt",
+      "agent": "Handläggare",
+      "technician": "Tekniker",
+      "submitted": "Inskickat",
+      "comment": "Kommentar",
+      "subject": "Ärende / projekt"
+    },
+    "metrics": {
+      "invitations": "Inbjudningar",
+      "responses": "Svar",
+      "responseRate": "Svarsfrekvens",
+      "averageRating": "Genomsnittligt betyg",
+      "outstanding": "Obesvarade",
+      "recentNegative": "Senaste negativa svaren"
+    },
+    "sections": {
+      "trend": "Svarstrend",
+      "distribution": "Fördelning av kundnöjdhet",
+      "topIssues": "Viktigaste problemen",
+      "recentResponses": "Senaste svaren"
+    },
+    "empty": {
+      "trend": "Inga svar under den här perioden.",
+      "distribution": "Inga svar med betyg under den här perioden.",
+      "topIssues": "Inga negativa svar under den här perioden.",
+      "recentResponses": "Inga svar under den här perioden."
+    }
+  },
+  "errors": {
+    "template": {
+      "notFound": "Enkätmallen hittades inte. Den kan ha raderats. Ladda om och försök igen."
+    },
+    "trigger": {
+      "notFound": "Enkätutlösaren hittades inte. Den kan ha raderats. Ladda om och försök igen.",
+      "templateRequired": "Välj en befintlig enkätmall innan du sparar utlösaren."
+    },
+    "survey": {
+      "invalidValue": "Ett av de valda enkätvärdena är ogiltigt. Ladda om och försök igen.",
+      "referenceMissing": "Den valda enkätmallen eller den relaterade posten finns inte längre. Ladda om och försök igen.",
+      "duplicate": "En enkätpost med dessa uppgifter finns redan.",
+      "notAllowed": "Ett av enkätvärdena är inte tillåtet. Granska formuläret och försök igen.",
+      "missingField": "Ett obligatoriskt enkätfält saknas.",
+      "missingFieldNamed": "Ett obligatoriskt enkätfält saknas: {{field}}.",
+      "invalidData": "Enkätdata är ogiltiga. Granska formuläret och försök igen."
+    },
+    "options": {
+      "boardsFailed": "Det gick inte att ladda tavlorna.",
+      "statusesFailed": "Det gick inte att ladda statusarna.",
+      "prioritiesFailed": "Det gick inte att ladda prioriteterna.",
+      "triggerOptionsFailed": "Det gick inte att ladda alternativen för enkätutlösaren. Försök igen."
+    },
+    "response": {
+      "linkInvalidOrUsed": "Den här återkopplingslänken är inte längre giltig eller har redan använts.",
+      "ratingRequired": "Välj ett betyg bland de visade alternativen innan du skickar in.",
+      "linkInvalidOrExpired": "Den här återkopplingslänken är ogiltig eller har gått ut.",
+      "ticketInactive": "Den här återkopplingslänken är inte längre kopplad till ett aktivt ärende. Kontakta din tekniker.",
+      "alreadyCompleted": "Den här enkäten har redan besvarats.",
+      "missingField": "Ett obligatoriskt återkopplingsfält saknas.",
+      "missingFieldNamed": "Ett obligatoriskt återkopplingsfält saknas: {{field}}.",
+      "invalidData": "Enkätsvarets data är ogiltiga. Granska din återkoppling och försök igen."
+    }
+  }
+}
