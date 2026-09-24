@@ -7,7 +7,9 @@
  * and after each apply watch `location.search` for three seconds. A late
  * `HistoryUpdater` rewrite (Next re-canonicalising a stale URL after the
  * `fetchTickets` server action settles) shows up as a mismatch inside that
- * window. It then reloads to prove the applied view survives.
+ * window. It then reloads to prove the applied view survives. A second test
+ * runs the same watch over a loop of plain filter changes (typing in search)
+ * and a Default-view clear, since those writes race the same server action.
  *
  * The three views are seeded directly: this test is about the URL write, and
  * seeding avoids depending on the save dialog.
@@ -29,9 +31,11 @@ applyTestEnvDefaults();
 const BASE_URL = getBaseUrl();
 
 const APPLY_CYCLES = 30;
+const FILTER_CYCLES = 12;
 const POST_APPLY_WATCH_MS = 3_000;
 const POLL_INTERVAL_MS = 50;
 const PICKER_ID = 'tickets-view-picker';
+const SEARCH_INPUT_ID = 'ticketing-dashboard-search-tickets-input';
 
 type SeededView = {
   viewId: string;
@@ -77,17 +81,40 @@ async function readViewParam(page: Page): Promise<string | null> {
   return page.evaluate(() => new URLSearchParams(window.location.search).get('view'));
 }
 
-async function applyAndWatch(
+/**
+ * Poll `location.search` for a window and assert `expectation` returns null
+ * (no problem) every time. A late `HistoryUpdater` rewrite of a stale URL is
+ * exactly the kind of drift this catches.
+ */
+async function watchSearchStable(
   page: Page,
-  view: SeededView,
-  triggerText: string,
+  expectation: (params: URLSearchParams) => string | null,
+  durationMs = POST_APPLY_WATCH_MS,
 ): Promise<void> {
+  const deadline = Date.now() + durationMs;
+  while (Date.now() < deadline) {
+    const search = await page.evaluate(() => window.location.search);
+    const problem = expectation(new URLSearchParams(search));
+    expect(problem, problem ? `${problem} (search=${search})` : undefined).toBeNull();
+    await page.waitForTimeout(POLL_INTERVAL_MS);
+  }
+}
+
+async function applyView(page: Page, view: SeededView): Promise<void> {
   await page.locator(`#${PICKER_ID}-trigger`).click();
   const applyButton = page.locator(
     `#${PICKER_ID}-apply-mine-view-button[data-view-id="${view.viewId}"]`,
   );
   await expect(applyButton).toBeVisible({ timeout: 15_000 });
   await applyButton.click();
+}
+
+async function applyAndWatch(
+  page: Page,
+  view: SeededView,
+  triggerText: string,
+): Promise<void> {
+  await applyView(page, view);
 
   // The write can trail the click by a beat; wait for it to name the view first.
   await page.waitForFunction(
@@ -97,15 +124,15 @@ async function applyAndWatch(
   );
 
   // Now hold still: the defect rewrites the URL 100–450 ms after the apply.
-  const deadline = Date.now() + POST_APPLY_WATCH_MS;
-  while (Date.now() < deadline) {
-    const search = await page.evaluate(() => window.location.search);
-    const params = new URLSearchParams(search);
-    expect(params.get('view'), `view param after ${POST_APPLY_WATCH_MS}ms watch`).toBe(view.viewId);
-    expect(params.get(view.param[0]), `${view.param[0]} while ${view.name} applied`).toBe(view.param[1]);
-    expect(await readViewParam(page)).toBe(view.viewId);
-    await page.waitForTimeout(POLL_INTERVAL_MS);
-  }
+  await watchSearchStable(page, (params) => {
+    if (params.get('view') !== view.viewId) {
+      return `view param during ${POST_APPLY_WATCH_MS}ms watch`;
+    }
+    if (params.get(view.param[0]) !== view.param[1]) {
+      return `${view.param[0]} while ${view.name} applied`;
+    }
+    return null;
+  });
 
   // The picker must agree with the URL.
   await expect(page.locator(`#${PICKER_ID}-trigger`)).toContainText(triggerText);
@@ -145,6 +172,82 @@ test.describe('named list views on tickets under the real router', () => {
         timeout: 30_000,
       });
       expect(await readViewParam(page)).toBe(views[(APPLY_CYCLES - 1) % views.length].viewId);
+    } finally {
+      await db.destroy().catch(() => undefined);
+    }
+  });
+
+  test('T-FILTER: plain filter changes keep naming the applied view', async ({ page }) => {
+    test.setTimeout(300_000);
+
+    const db = createTestDbConnection();
+
+    try {
+      const tenantData = await createTenantAndLogin(db, page, {
+        companyName: `Named Views Filter ${uuidv4().slice(0, 6)}`,
+      });
+      const tenantId = tenantData.tenant.tenantId;
+      const userId = tenantData.adminUser.userId;
+      const views = await seedViews(db, tenantId, userId);
+      const view = views[0];
+
+      await page.goto(`${BASE_URL}/msp/tickets`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 60_000,
+      });
+      const trigger = page.locator(`#${PICKER_ID}-trigger`);
+      await expect(trigger).toBeVisible({ timeout: 30_000 });
+
+      await applyView(page, view);
+      await page.waitForFunction(
+        (viewId) => new URLSearchParams(window.location.search).get('view') === viewId,
+        view.viewId,
+        { timeout: 10_000 },
+      );
+
+      // Each keystroke-driven filter change writes the URL once, then fires its
+      // debounced fetch. The fetch settling must not re-canonicalise a stale URL.
+      const searchInput = page.locator(`#${SEARCH_INPUT_ID}`);
+      await expect(searchInput).toBeVisible({ timeout: 30_000 });
+      for (let cycle = 0; cycle < FILTER_CYCLES; cycle += 1) {
+        const query = `race-filter-${cycle}`;
+        await searchInput.fill(query);
+        await page.waitForFunction(
+          (value) => new URLSearchParams(window.location.search).get('searchQuery') === value,
+          query,
+          { timeout: 10_000 },
+        );
+
+        await watchSearchStable(page, (params) => {
+          if (params.get('view') !== view.viewId) {
+            return `view lost after plain filter change ${cycle}`;
+          }
+          if (params.get(view.param[0]) !== view.param[1]) {
+            return `${view.param[0]} dropped by plain filter change ${cycle}`;
+          }
+          if (params.get('searchQuery') !== query) {
+            return `searchQuery reverted during plain filter change ${cycle}`;
+          }
+          return null;
+        });
+      }
+
+      // The picker must still name the view after all the refining.
+      await expect(trigger).toContainText(view.name);
+
+      // Clearing back to the baseline view drops `?view=` in one write and the
+      // dropped view must not come back when the fetch settles.
+      await trigger.click();
+      await page.locator(`#${PICKER_ID}-apply-default-view-button`).click();
+      await page.waitForFunction(
+        () => new URLSearchParams(window.location.search).get('view') === null,
+        undefined,
+        { timeout: 10_000 },
+      );
+      await watchSearchStable(page, (params) => (
+        params.get('view') === null ? null : 'view reappeared after Default view'
+      ));
+      await expect(trigger).toContainText('Default view');
     } finally {
       await db.destroy().catch(() => undefined);
     }

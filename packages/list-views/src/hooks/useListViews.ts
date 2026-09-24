@@ -64,6 +64,11 @@ export interface UseListViewsOptions<TLive, F> {
    * can settle on the older URL. Lists that carry only `?view=` (Clients,
    * Contacts, Assets) leave this off and the hook writes the parameter for them.
    */
+  // LEVERAGE: friction list-view-url-ownership — URL ownership is split between
+  // this hook and each list (lists that mirror filters opt into `ownsUrl` and
+  // write `?view=` themselves; the rest let the hook append it). Two writers for
+  // one address bar race Next's action queue. Collapse to a single list-URL
+  // writer once the list-query state machine has one home.
   ownsUrl?: boolean;
   /** Hold off first-load resolution until the list can apply a view (e.g. options loaded). */
   ready?: boolean;
