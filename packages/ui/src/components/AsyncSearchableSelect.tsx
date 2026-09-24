@@ -301,6 +301,7 @@ export function AsyncSearchableSelect({
                 <Command.Item
                   key={option.value}
                   value={option.value}
+                  disabled={option.disabled}
                   onSelect={() => {
                     if (option.disabled) return;
                     onChange(option.value, option);
