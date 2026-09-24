@@ -7,6 +7,7 @@
  */
 
 import { z } from 'zod';
+import { normalizeLocale } from '@alga-psa/core/i18n/config';
 import {
   uuidSchema,
   createListQuerySchema,
@@ -37,6 +38,14 @@ const {
 } = clientLocationCoreFieldsSchema.shape;
 
 // Client properties schema
+const defaultLocaleSchema = z.string().transform((locale, ctx) => {
+  const normalizedLocale = normalizeLocale(locale);
+  if (!normalizedLocale) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Unsupported locale: ${locale}` });
+    return z.NEVER;
+  }
+  return normalizedLocale;
+});
 const clientPropertiesSchema = z.object({
   industry: z.string().optional(),
   company_size: z.string().optional(),
@@ -53,7 +62,8 @@ const clientPropertiesSchema = z.object({
   parent_client_id: uuidSchema.optional(),
   parent_client_name: z.string().optional(),
   last_contact_date: z.string().datetime().optional(),
-  logo: z.string().optional()
+  logo: z.string().optional(),
+  defaultLocale: defaultLocaleSchema.optional()
 }).optional();
 
 // Create client schema

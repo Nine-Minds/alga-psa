@@ -46,6 +46,7 @@ import { normalizeClientType } from '../lib/normalizeClientType';
 import { clientCoreFieldsSchema, normalizePhone, parseSubmittedFields } from '@alga-psa/validation';
 import { isStructuralFailure, type StructuralResult } from '../lib/structuralResult';
 import { resolveTenantDefaultCountry } from '@alga-psa/tenancy/lib/tenantDefaultCountry';
+import { mergeClientWebsiteUpdate } from '../lib/clientWebsiteUpdate';
 
 const CLIENT_PORTAL_MUTABLE_CLIENT_PROPERTIES = new Set([
   'website',
@@ -325,36 +326,13 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
       }
       permittedUpdateData = structural.data;
 
-      // Handle properties separately
-      if (permittedUpdateData.properties) {
-        const currentProperties = currentClient.properties || {};
-        const newProperties = permittedUpdateData.properties;
-
-        updateObject.properties = { ...currentProperties, ...newProperties };
-
-        // Sync website field with url if website is being updated
-        if ('website' in newProperties) {
-          updateObject.url = newProperties.website || '';
-        }
-      }
-
-      // Handle url field to sync with properties.website
-      if (permittedUpdateData.url !== undefined) {
-        updateObject.url = permittedUpdateData.url;
-
-        // Update properties.website to match url
-        if (!updateObject.properties) {
-          updateObject.properties = {
-            ...(currentClient.properties || {}),
-            website: permittedUpdateData.url
-          };
-        } else {
-          updateObject.properties = {
-            ...updateObject.properties,
-            website: permittedUpdateData.url
-          };
-        }
-      }
+      // Preserve partial property updates and only synchronize website copies
+      // when url or properties.website was explicitly provided.
+      Object.assign(updateObject, mergeClientWebsiteUpdate(
+        currentClient.url,
+        currentClient.properties,
+        permittedUpdateData
+      ));
 
       // Handle all other fields
       Object.entries(permittedUpdateData).forEach(([key, value]) => {
