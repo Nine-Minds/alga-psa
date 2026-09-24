@@ -1356,7 +1356,7 @@
         "step4": "Guarde el dominio aquí — se activa de inmediato. Configure primero el DNS y su proxy, ya que los enlaces del portal cambian a este dominio de inmediato.",
         "docLinkText": "Guía de configuración y resolución de problemas del proxy inverso",
         "neverSeenWarning": "Aún no han llegado solicitudes a {{domain}}. Compruebe que su proxy inverso reenvía el encabezado Host original.",
-        "tlsNote": "El TLS se termina en su proxy inverso. Obtenga y mantenga el certificado TLS para el dominio en su proxy."
+        "tlsNote": "El TLS termina en su proxy inverso, que conserva el certificado."
       },
       "badges": {
         "pending_dns": "DNS pendiente",

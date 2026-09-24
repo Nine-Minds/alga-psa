@@ -1356,7 +1356,7 @@
         "step4": "Sla het domein hier op — het wordt onmiddellijk geactiveerd. Configureer eerst DNS en uw proxy, omdat portallinks meteen naar dit domein overschakelen.",
         "docLinkText": "Handleiding voor reverse proxy instellen en probleemoplossing",
         "neverSeenWarning": "Er hebben nog geen verzoeken {{domain}} bereikt. Controleer of uw reverse proxy de oorspronkelijke Host-header doorstuurt.",
-        "tlsNote": "TLS wordt beëindigd op uw reverse proxy. Verkrijg en onderhoud het TLS-certificaat voor het domein op uw proxy."
+        "tlsNote": "TLS eindigt op uw reverse proxy, die het certificaat beheert."
       },
       "badges": {
         "pending_dns": "DNS in behandeling",

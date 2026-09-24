@@ -20,7 +20,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
       'clientPortal.domain.title': 'Custom Domain',
       'clientPortal.domain.description': 'Configure a branded hostname for your client portal.',
       'clientPortal.domain.hostedTlsNote': 'We will provision TLS certificates automatically once DNS is verified.',
-      'clientPortal.domain.appliance.tlsNote': 'TLS terminates at your reverse proxy. Obtain and maintain the TLS certificate for the domain on your proxy.',
+      'clientPortal.domain.appliance.tlsNote': 'TLS terminates at your reverse proxy, which holds the certificate.',
     }[key] ?? key),
   }),
 }));
@@ -71,11 +71,20 @@ describe('client portal custom domain header TLS note', () => {
     expect(await screen.findByText(/Configure a branded hostname.*We will provision TLS certificates automatically once DNS is verified\./)).toBeTruthy();
   });
 
-  it('shows the proxy certificate note in direct mode, including the CE omitted-mode status', async () => {
-    getStatus.mockResolvedValue({ ...status('direct'), mode: undefined });
+  it('shows the proxy certificate note in direct mode, including CE', async () => {
+    getStatus.mockResolvedValue(status('direct', 'ce'));
     render(<ClientPortalDomainSettings />);
 
-    expect(await screen.findByText(/Configure a branded hostname.*TLS terminates at your reverse proxy\. Obtain and maintain/)).toBeTruthy();
+    expect(await screen.findByText(/Configure a branded hostname.*TLS terminates at your reverse proxy, which holds the certificate\./)).toBeTruthy();
     expect(screen.queryByText(/We will provision TLS certificates automatically/)).toBeNull();
+  });
+
+  it('shows only neutral copy when the loaded mode is unrecognized', async () => {
+    getStatus.mockResolvedValue({ ...status('direct'), mode: 'unknown' });
+    render(<ClientPortalDomainSettings />);
+
+    expect(await screen.findByText('Configure a branded hostname for your client portal.')).toBeTruthy();
+    expect(screen.queryByText(/TLS certificates automatically/)).toBeNull();
+    expect(screen.queryByText(/TLS terminates at your reverse proxy/)).toBeNull();
   });
 });

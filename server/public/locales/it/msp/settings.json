@@ -1356,7 +1356,7 @@
         "step4": "Salva il dominio qui — si attiva immediatamente. Configura prima il DNS e il tuo proxy, poiché i link del portale passano subito a questo dominio.",
         "docLinkText": "Guida alla configurazione e risoluzione dei problemi del reverse proxy",
         "neverSeenWarning": "Nessuna richiesta ha ancora raggiunto {{domain}}. Verifica che il tuo reverse proxy inoltri l'header Host originale.",
-        "tlsNote": "TLS termina sul tuo reverse proxy. Ottieni e mantieni il certificato TLS per il dominio sul tuo proxy."
+        "tlsNote": "Il TLS termina sul tuo reverse proxy, che conserva il certificato."
       },
       "badges": {
         "pending_dns": "DNS in attesa",

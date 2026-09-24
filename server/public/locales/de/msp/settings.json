@@ -1356,7 +1356,7 @@
         "step4": "Speichern Sie die Domain hier — sie wird sofort aktiviert. Richten Sie zuerst DNS und Ihren Proxy ein, da Portal-Links sofort auf diese Domain umgestellt werden.",
         "docLinkText": "Anleitung zur Reverse-Proxy-Einrichtung und Fehlerbehebung",
         "neverSeenWarning": "Es haben noch keine Anfragen {{domain}} erreicht. Prüfen Sie, ob Ihr Reverse-Proxy den ursprünglichen Host-Header weiterleitet.",
-        "tlsNote": "TLS wird auf Ihrem Reverse-Proxy terminiert. Beschaffen und pflegen Sie das TLS-Zertifikat für die Domain auf Ihrem Proxy."
+        "tlsNote": "TLS endet an Ihrem Reverse-Proxy, der das Zertifikat verwaltet."
       },
       "badges": {
         "pending_dns": "DNS ausstehend",

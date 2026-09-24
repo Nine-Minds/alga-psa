@@ -278,11 +278,8 @@ const ClientPortalDomainSettings = ({ headerAction }: ClientPortalDomainSettings
   // Direct-mode deployments (CE, EE appliance) do their own DNS/TLS/routing via an
   // operator-managed reverse proxy, so the UI shows the proxy contract instead
   // of the hosted CNAME-to-canonical instructions.
-  // The CE status stub omits mode; CE has no hosted provisioner, so it uses
-  // the direct reverse-proxy contract. Keep a missing status/mode neutral.
-  const isDirectMode =
-    portalStatus?.mode === 'direct' ||
-    (portalStatus !== null && portalStatus.mode === undefined && portalStatus.edition === 'ce');
+  // Keep a missing or unrecognized status/mode neutral.
+  const isDirectMode = portalStatus?.mode === 'direct';
   const showNeverSeenWarning = isDirectMode && Boolean(portalStatus?.neverSeenOnHost);
   const proxyTargetHost = portalStatus?.domain ?? t('clientPortal.domain.checklist.canonicalHostFallback');
 

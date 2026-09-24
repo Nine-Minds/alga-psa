@@ -1362,7 +1362,7 @@
         "step4": "Zapisz domenę tutaj — aktywuje się natychmiast. Najpierw skonfiguruj DNS i proxy, ponieważ linki portalu od razu przełączą się na tę domenę.",
         "docLinkText": "Przewodnik konfiguracji i rozwiązywania problemów z reverse proxy",
         "neverSeenWarning": "Żadne żądania nie dotarły jeszcze do {{domain}}. Sprawdź, czy Twój reverse proxy przekazuje oryginalny nagłówek Host.",
-        "tlsNote": "TLS jest terminowany na Twoim reverse proxy. Uzyskaj i utrzymuj certyfikat TLS dla domeny na swoim proxy."
+        "tlsNote": "TLS kończy się na Twoim reverse proxy, który przechowuje certyfikat."
       },
       "badges": {
         "pending_dns": "Oczekuje na DNS",
