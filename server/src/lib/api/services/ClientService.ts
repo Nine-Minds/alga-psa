@@ -26,6 +26,8 @@ import {
 } from '../schemas/client';
 import { ListOptions } from '../controllers/types';
 import { runWithTenant } from 'server/src/lib/db';
+import { analytics } from '../../analytics/posthog';
+import { AnalyticsEvents } from '../../analytics/events';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import {
   buildClientArchivedPayload,
@@ -1114,6 +1116,19 @@ export class ClientService extends BaseService<IClient> {
         idempotencyKey: `client_merged:${result.mergeId}`,
       });
     });
+
+    // Same telemetry the server action sends, so a merge driven through the API
+    // or the MCP is not invisible next to one driven from the UI.
+    analytics.capture(AnalyticsEvents.CLIENT_MERGED, {
+      merge_id: result.mergeId,
+      source_client_id: result.sourceClientId,
+      target_client_id: result.targetClientId,
+      moved_profile_count: result.movedProfileIds.length,
+      moved_counts: result.counts,
+      pinned_portal_grants: input.pinPortalGrants !== false,
+      contract_decision_count: input.contractDecisions?.length ?? 0,
+      via: 'api',
+    }, typeof context.userId === 'string' ? context.userId : undefined);
 
     return result;
   }

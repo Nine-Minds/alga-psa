@@ -11,7 +11,7 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
-import { assertMspPermission } from '../lib/authHelpers';
+import { assertMspPermission, getAnalyticsAsync } from '../lib/authHelpers';
 import {
   ClientMergeBlockedError,
   applyExternalRemaps,
@@ -123,6 +123,25 @@ export const mergeClientIntoParent = withAuth(async (
       },
       idempotencyKey: `client_merged:${result.mergeId}`,
     });
+
+    // Telemetry, not a record: the durable account of a merge is the
+    // client_merges row and the workflow event above. Counts are sent so the
+    // shape of real merges (how many profiles, how much history) is visible
+    // without reading any tenant's data.
+    try {
+      const { analytics, AnalyticsEvents } = await getAnalyticsAsync();
+      analytics.capture(AnalyticsEvents.CLIENT_MERGED, {
+        merge_id: result.mergeId,
+        source_client_id: result.sourceClientId,
+        target_client_id: result.targetClientId,
+        moved_profile_count: result.movedProfileIds.length,
+        moved_counts: result.counts,
+        pinned_portal_grants: input.pinPortalGrants !== false,
+        contract_decision_count: input.contractDecisions?.length ?? 0,
+      }, user.user_id);
+    } catch {
+      // The merge has committed; failing telemetry must not fail the action.
+    }
 
     return result;
   } catch (error) {
