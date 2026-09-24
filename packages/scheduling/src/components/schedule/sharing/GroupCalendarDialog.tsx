@@ -72,11 +72,11 @@ const GroupCalendarDialog: React.FC<GroupCalendarDialogProps> = ({
       ]);
       if (!active) return;
       if (teamsResult.success) setTeams(teamsResult.data);
-      if (usersResult.success) setUsers(usersResult.data);
-      else setError(usersResult.error);
+      if (usersResult.success === false) setError(usersResult.error);
+      else setUsers(usersResult.data);
       if (membersResult) {
-        if (membersResult.success) setMembers(membersResult.data);
-        else setError(membersResult.error);
+        if (membersResult.success === false) setError(membersResult.error);
+        else setMembers(membersResult.data);
       }
     };
     load()
@@ -104,18 +104,18 @@ const GroupCalendarDialog: React.FC<GroupCalendarDialogProps> = ({
     try {
       if (isEditing && calendar?.calendar_id) {
         const updated = await updateGroupCalendar(calendar.calendar_id, { name, color, description });
-        if (!updated.success) {
+        if (updated.success === false) {
           setError(updated.error);
           return;
         }
         const shared = await setGroupCalendarShares(calendar.calendar_id, toInputs(members));
-        if (!shared.success) {
+        if (shared.success === false) {
           setError(shared.error);
           return;
         }
       } else {
         const created = await createGroupCalendar({ name, color, description, members: toInputs(members) });
-        if (!created.success) {
+        if (created.success === false) {
           setError(created.error);
           return;
         }
@@ -137,7 +137,7 @@ const GroupCalendarDialog: React.FC<GroupCalendarDialogProps> = ({
       const result = calendar.is_archived
         ? await restoreGroupCalendar(calendar.calendar_id)
         : await archiveGroupCalendar(calendar.calendar_id);
-      if (!result.success) {
+      if (result.success === false) {
         setError(result.error);
         return;
       }

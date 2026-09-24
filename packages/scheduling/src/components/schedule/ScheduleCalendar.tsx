@@ -371,10 +371,10 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
   const loadCapabilities = useCallback(async () => {
     try {
       const result = await getCalendarsVisibleToMe();
-      if (result.success) {
-        setCapabilities(result.data);
-      } else {
+      if (result.success === false) {
         console.error('Failed to load visible calendars:', result.error);
+      } else {
+        setCapabilities(result.data);
       }
     } catch (err) {
       console.error('Failed to load visible calendars:', err);

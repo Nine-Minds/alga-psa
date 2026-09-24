@@ -279,9 +279,9 @@ export const getMyCalendarShares = withAuth(async (
   try {
     const { knex: db } = await createTenantKnex();
     const base = await checkBaseAccess(user, db);
-    if (!base.ok) return fail(base.error);
+    if (base.ok === false) return fail(base.error);
     const owner = resolvePersonalOwner(user, base.canUpdate, ownerUserId);
-    if (!owner.ok) return fail(owner.error);
+    if (owner.ok === false) return fail(owner.error);
 
     const shares = await withTransaction(db, async (trx: Knex.Transaction) => {
       const calendar = await tenantDb(trx, tenant).table('calendars')
@@ -306,9 +306,9 @@ export const setMyCalendarShares = withAuth(async (
   try {
     const { knex: db } = await createTenantKnex();
     const base = await checkBaseAccess(user, db);
-    if (!base.ok) return fail(base.error);
+    if (base.ok === false) return fail(base.error);
     const owner = resolvePersonalOwner(user, base.canUpdate, ownerUserId);
-    if (!owner.ok) return fail(owner.error);
+    if (owner.ok === false) return fail(owner.error);
 
     const outcome = await withTransaction(db, async (trx: Knex.Transaction) => {
       const validationError = await validateShares(trx, tenant, shares, PERSONAL_ACCESS_LEVELS, owner.ownerUserId);
@@ -340,7 +340,7 @@ export const getCalendarsVisibleToMe = withAuth(async (
   try {
     const { knex: db } = await createTenantKnex();
     const base = await checkBaseAccess(user, db);
-    if (!base.ok) return fail(base.error);
+    if (base.ok === false) return fail(base.error);
 
     const capabilities = await withTransaction(db, async (trx: Knex.Transaction) => {
       const scoped = tenantDb(trx, tenant);
@@ -458,7 +458,7 @@ export const createGroupCalendar = withAuth(async (
   try {
     const { knex: db } = await createTenantKnex();
     const base = await checkBaseAccess(user, db);
-    if (!base.ok) return fail(base.error);
+    if (base.ok === false) return fail(base.error);
 
     const fields = normalizeGroupInput(input);
     if (!fields) return fail('Calendar name is required.');
@@ -524,7 +524,7 @@ export const updateGroupCalendar = withAuth(async (
   try {
     const { knex: db } = await createTenantKnex();
     const base = await checkBaseAccess(user, db);
-    if (!base.ok) return fail(base.error);
+    if (base.ok === false) return fail(base.error);
     const fields = normalizeGroupInput(input);
     if (!fields) return fail('Calendar name is required.');
 
@@ -552,7 +552,7 @@ export const getGroupCalendarShares = withAuth(async (
   try {
     const { knex: db } = await createTenantKnex();
     const base = await checkBaseAccess(user, db);
-    if (!base.ok) return fail(base.error);
+    if (base.ok === false) return fail(base.error);
 
     const outcome = await withTransaction(db, async (trx: Knex.Transaction) => {
       const loaded = await loadManagedGroupCalendar(trx, tenant, user, base.canUpdate, calendarId);
@@ -576,7 +576,7 @@ export const setGroupCalendarShares = withAuth(async (
   try {
     const { knex: db } = await createTenantKnex();
     const base = await checkBaseAccess(user, db);
-    if (!base.ok) return fail(base.error);
+    if (base.ok === false) return fail(base.error);
 
     const outcome = await withTransaction(db, async (trx: Knex.Transaction) => {
       const loaded = await loadManagedGroupCalendar(trx, tenant, user, base.canUpdate, calendarId);
@@ -610,7 +610,7 @@ async function setGroupCalendarArchived(
 ): Promise<CalendarSharingResult<null>> {
   const { knex: db } = await createTenantKnex();
   const base = await checkBaseAccess(user, db);
-  if (!base.ok) return fail(base.error);
+  if (base.ok === false) return fail(base.error);
 
   const outcome = await withTransaction(db, async (trx: Knex.Transaction) => {
     const loaded = await loadManagedGroupCalendar(trx, tenant, user, base.canUpdate, calendarId);
@@ -669,7 +669,7 @@ export const getShareableUsers = withAuth(async (
   try {
     const { knex: db } = await createTenantKnex();
     const base = await checkBaseAccess(user, db);
-    if (!base.ok) return fail(base.error);
+    if (base.ok === false) return fail(base.error);
 
     const extraIds = Array.from(new Set(includeUserIds.filter((id) => Boolean(id))));
     const users = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -701,7 +701,7 @@ export const getShareableTeams = withAuth(async (
   try {
     const { knex: db } = await createTenantKnex();
     const base = await checkBaseAccess(user, db);
-    if (!base.ok) return fail(base.error);
+    if (base.ok === false) return fail(base.error);
 
     const teams = await withTransaction(db, async (trx: Knex.Transaction) => {
       const scoped = tenantDb(trx, tenant);

@@ -46,11 +46,11 @@ const ShareCalendarDialog: React.FC<ShareCalendarDialogProps> = ({
     Promise.all([getMyCalendarShares(), getShareableTeams(), getShareableUsers()])
       .then(([sharesResult, teamsResult, usersResult]) => {
         if (!active) return;
-        if (sharesResult.success) setShares(sharesResult.data);
-        else setError(sharesResult.error);
+        if (sharesResult.success === false) setError(sharesResult.error);
+        else setShares(sharesResult.data);
         if (teamsResult.success) setTeams(teamsResult.data);
-        if (usersResult.success) setUsers(usersResult.data);
-        else setError(usersResult.error);
+        if (usersResult.success === false) setError(usersResult.error);
+        else setUsers(usersResult.data);
       })
       .catch(() => {
         if (active) setError(t('sharing.errors.load', { defaultValue: 'Failed to load calendar sharing.' }));
@@ -70,7 +70,7 @@ const ShareCalendarDialog: React.FC<ShareCalendarDialogProps> = ({
       const result = await setMyCalendarShares(
         shares.map(({ grantee_type, grantee_id, access_level }) => ({ grantee_type, grantee_id, access_level }))
       );
-      if (!result.success) {
+      if (result.success === false) {
         setError(result.error);
         return;
       }
