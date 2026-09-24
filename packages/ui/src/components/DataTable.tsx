@@ -310,7 +310,8 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
   const safeData = useMemo(() => (Array.isArray(data) ? data : []), [data]);
   const generatedTableId = React.useId();
   // LEVERAGE: pattern datatable-page-size-state — callers with legacy per-table persistence opt out here to keep one source of truth.
-  const pageSizePreference = useDataTablePageSizePreference(persistPageSize ? id : undefined);
+  const supportsPageSizeChange = totalItems === undefined || !!onItemsPerPageChange;
+  const pageSizePreference = useDataTablePageSizePreference(persistPageSize && supportsPageSizeChange ? id : undefined);
 
   // Reference to the table container for measuring available width
   const tableContainerRef = useRef<HTMLDivElement>(null);
@@ -934,7 +935,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
             </tbody>
           </table>
         </div>
-        {pagination && safeData.length > 0 && (
+        {pagination && safeData.length > 0 && (totalPages > 1 || onItemsPerPageChange || pageSizePreference.enabled) && (
           <div className="border-t border-[rgb(var(--color-border-200)/0.7)]">
             <Pagination
               id={`${id || generatedTableId}-pagination`}
@@ -955,14 +956,14 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
               }}
               onItemsPerPageChange={(nextSize) => {
                 pageSizeChangedRef.current = true;
-                pageSizePreference.savePageSize(nextSize);
+                if (supportsPageSizeChange) pageSizePreference.savePageSize(nextSize);
                 setPagination(prev => ({ ...prev, pageIndex: 0, pageSize: nextSize }));
                 onItemsPerPageChange?.(nextSize);
                 if (currentPage !== 1) onPageChange?.(1);
               }}
-              showItemsPerPage={total > Math.max(10, Math.min(...(itemsPerPageOptions || defaultItemsPerPageOptions).map(option => Number(option.value))))}
+              showItemsPerPage={supportsPageSizeChange && (!pageSizePreference.enabled || total > Math.max(10, Math.min(...(itemsPerPageOptions || defaultItemsPerPageOptions).map(option => Number(option.value)))))}
               itemsPerPageOptions={itemsPerPageOptions || defaultItemsPerPageOptions}
-              variant="clients"
+              variant={onItemsPerPageChange || pageSizePreference.enabled ? "clients" : "compact"}
             />
           </div>
         )}

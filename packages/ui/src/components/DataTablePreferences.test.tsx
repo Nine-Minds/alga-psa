@@ -72,8 +72,9 @@ describe('DataTable page size preference', () => {
 
   it('does not persist a table without an id', () => {
     const onSave = vi.fn();
+    const onItemsPerPageChange = vi.fn();
     render(<DataTablePreferencesProvider pageSizes={{ stable: 50 }} onPageSizesChange={onSave}>
-      <DataTable data={rows} columns={columns} />
+      <DataTable data={rows} columns={columns} onItemsPerPageChange={onItemsPerPageChange} />
     </DataTablePreferencesProvider>);
     expect(screen.getByRole('combobox').textContent).toContain('10 per page');
     fireEvent.click(screen.getByRole('combobox'));
@@ -107,6 +108,14 @@ describe('DataTable page size preference', () => {
     expect(screen.getByRole('combobox').textContent).toContain('25 per page');
   });
 
+  it('ignores saved size and hides the selector for manual pagination without a size callback', () => {
+    render(<DataTablePreferencesProvider pageSizes={{ manual: 50 }} onPageSizesChange={vi.fn()}>
+      <DataTable id="manual" data={rows.slice(0, 10)} columns={columns} totalItems={60} pageSize={10} />
+    </DataTablePreferencesProvider>);
+    expect(screen.queryByRole('combobox')).toBeNull();
+    expect(screen.getByText('Page 1 of 6')).toBeTruthy();
+  });
+
   it('sends a saved size to a controlled table once after preferences load', async () => {
     const onItemsPerPageChange = vi.fn();
     render(<DataTablePreferencesProvider pageSizes={{ controlled: 50 }} onPageSizesChange={vi.fn()}>
@@ -117,9 +126,13 @@ describe('DataTable page size preference', () => {
   });
 
   it('syncs later uncontrolled pageSize prop changes', async () => {
-    const view = render(<DataTable id="prop-sync" data={rows} columns={columns} pageSize={25} />);
+    const view = render(<DataTablePreferencesProvider pageSizes={{}} onPageSizesChange={vi.fn()}>
+      <DataTable id="prop-sync" data={rows} columns={columns} pageSize={25} />
+    </DataTablePreferencesProvider>);
     expect(screen.getByRole('combobox').textContent).toContain('25 per page');
-    view.rerender(<DataTable id="prop-sync" data={rows} columns={columns} pageSize={50} />);
+    view.rerender(<DataTablePreferencesProvider pageSizes={{}} onPageSizesChange={vi.fn()}>
+      <DataTable id="prop-sync" data={rows} columns={columns} pageSize={50} />
+    </DataTablePreferencesProvider>);
     await waitFor(() => expect(screen.getByRole('combobox').textContent).toContain('50 per page'));
   });
 });
