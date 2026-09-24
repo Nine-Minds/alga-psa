@@ -356,7 +356,7 @@
         },
         "maxAmount": {
           "label": "Maximibelopp (lämna tomt för ingen gräns)",
-          "placeholder": "T.ex. 10 000 eller tomt"
+          "placeholder": "T.ex. 10000 eller tomt"
         },
         "rate": {
           "label": "Skattesats (%) *",
@@ -464,9 +464,9 @@
       "loading": "Laddar skattebefrielseperioder…",
       "empty": "Inga skattebefrielseperioder har definierats. Lägg till perioder för att tillfälligt undanta den här skatten under angivna perioder.",
       "summary": {
-        "active": "{{count}} aktiva",
-        "upcoming": "{{count}} kommande",
-        "expired": "{{count}} utgångna"
+        "active": "Aktiva: {{count}}",
+        "upcoming": "Kommande: {{count}}",
+        "expired": "Utgångna: {{count}}"
       },
       "dialog": {
         "addTitle": "Lägg till skattebefrielseperiod",
@@ -774,7 +774,7 @@
       "saveChanges": "Spara ändringar"
     },
     "bulk": {
-      "selectedCount": "{{count}} markerade",
+      "selectedCount": "Markerade: {{count}}",
       "selectAll": "Markera alla tjänster",
       "clear": "Rensa",
       "actions": {
@@ -789,15 +789,15 @@
       "feedback": {
         "activateSuccess": "Antal aktiverade tjänster: {{count}}",
         "activatePartial": "Antal aktiverade tjänster: {{count}}. Kunde inte aktiveras: {{failed}}",
-        "activateError": "Det gick inte att aktivera följande antal tjänster: {{count}}",
+        "activateError": "Antal tjänster som inte kunde aktiveras: {{count}}",
         "deactivateSuccess": "Antal inaktiverade tjänster: {{count}}",
         "deactivatePartial": "Antal inaktiverade tjänster: {{count}}. Kunde inte inaktiveras: {{failed}}",
-        "deactivateError": "Det gick inte att inaktivera följande antal tjänster: {{count}}",
+        "deactivateError": "Antal tjänster som inte kunde inaktiveras: {{count}}",
         "deleteSuccess": "Antal raderade tjänster: {{count}}",
         "deletePartial": "Antal raderade tjänster: {{count}}. Kunde inte raderas: {{failed}}",
         "deletePartialBlocked": "Antal raderade tjänster: {{count}}. Kunde inte raderas: {{failed}} ({{names}})",
-        "deleteBlocked": "Det gick inte att radera följande antal tjänster: {{count}}. Används fortfarande: {{names}}",
-        "deleteError": "Det gick inte att radera följande antal tjänster: {{count}}"
+        "deleteBlocked": "Antal tjänster som inte kunde raderas: {{count}}. Används fortfarande: {{names}}",
+        "deleteError": "Antal tjänster som inte kunde raderas: {{count}}"
       }
     },
     "table": {
@@ -841,7 +841,7 @@
       "delete": "Radera"
     },
     "bulk": {
-      "selectedCount": "{{count}} markerade",
+      "selectedCount": "Markerade: {{count}}",
       "selectAll": "Markera alla produkter",
       "clear": "Rensa",
       "actions": {
@@ -856,15 +856,15 @@
       "feedback": {
         "archiveSuccess": "Antal arkiverade produkter: {{count}}",
         "archivePartial": "Antal arkiverade produkter: {{count}}. Kunde inte arkiveras: {{failed}}",
-        "archiveError": "Det gick inte att arkivera följande antal produkter: {{count}}",
+        "archiveError": "Antal produkter som inte kunde arkiveras: {{count}}",
         "restoreSuccess": "Antal återställda produkter: {{count}}",
         "restorePartial": "Antal återställda produkter: {{count}}. Kunde inte återställas: {{failed}}",
-        "restoreError": "Det gick inte att återställa följande antal produkter: {{count}}",
+        "restoreError": "Antal produkter som inte kunde återställas: {{count}}",
         "deleteSuccess": "Antal permanent raderade produkter: {{count}}",
         "deletePartial": "Antal raderade produkter: {{count}}. Kunde inte raderas: {{failed}}",
         "deletePartialBlocked": "Antal raderade produkter: {{count}}. Kunde inte raderas: {{failed}} ({{names}})",
-        "deleteBlocked": "Det gick inte att radera följande antal produkter: {{count}}. Används fortfarande: {{names}}",
-        "deleteError": "Det gick inte att radera följande antal produkter: {{count}}"
+        "deleteBlocked": "Antal produkter som inte kunde raderas: {{count}}. Används fortfarande: {{names}}",
+        "deleteError": "Antal produkter som inte kunde raderas: {{count}}"
       }
     },
     "filters": {
@@ -1057,7 +1057,7 @@
       },
       "unitOfMeasure": {
         "label": "Måttenhet *",
-        "placeholder": "T.ex. styck, post, licens"
+        "placeholder": "T.ex. styck, artikel, licens"
       },
       "license": {
         "label": "Licens?"
@@ -1126,9 +1126,9 @@
       "taxExemptUpdateError": "Det gick inte att uppdatera skattebefrielsestatusen"
     },
     "validation": {
-      "thresholdNegativeMin": "Tröskel {{index}} har ett negativt minimibelopp",
-      "thresholdMaxLessThanMin": "Tröskel {{index}} har ett maximibelopp som är lägre än minimibeloppet",
-      "thresholdNegativeRate": "Tröskel {{index}} har en negativ skattesats",
+      "thresholdNegativeMin": "Skatteintervall {{index}} har ett negativt minimibelopp",
+      "thresholdMaxLessThanMin": "Skatteintervall {{index}} har ett maximibelopp som är lägre än minimibeloppet",
+      "thresholdNegativeRate": "Skatteintervall {{index}} har en negativ skattesats",
       "holidayMissingDates": "Skattebefrielseperiod {{index}} saknar start- eller slutdatum",
       "holidayEndBeforeStart": "Skattebefrielseperiod {{index}} har ett slutdatum som infaller före startdatumet"
     },
@@ -1232,7 +1232,7 @@
     },
     "licenseTerm": {
       "monthly": "Månadsvis",
-      "annual": "Årlig",
+      "annual": "Årsvis",
       "perpetual": "Permanent"
     },
     "statuses": {
@@ -1445,7 +1445,7 @@
         "configuredTitle": "Webhookar har konfigurerats automatiskt",
         "configuredDescription": "AlgaPSA tar emot betalningsaviseringar för:",
         "failedTitle": "Webhookkonfigurationen misslyckades",
-        "failedDescription": "Den automatiska webhookkonfigurationen misslyckades. Klicka på Försök igen för att försöka konfigurera på nytt.",
+        "failedDescription": "Den automatiska webhookkonfigurationen misslyckades. Klicka på Försök konfigurera igen för att göra ett nytt försök.",
         "configuring": "Konfigurerar…",
         "retry": "Försök konfigurera igen"
       },
@@ -1543,7 +1543,7 @@
     "formats": {
       "noRate": "—",
       "hourlyRate": "{{amount}}/h",
-      "dateRange": "{{start}} - {{end}}",
+      "dateRange": "{{start}} – {{end}}",
       "openDateRange": "{{start}} – tills vidare"
     },
     "status": {
@@ -1566,10 +1566,10 @@
     "willChange": "Kommer att ändras",
     "noInheritedLines": "Inga rader med ärvd taxa ändras vid detta datum.",
     "custom": "Ändras inte – anpassad taxa",
-    "unreviewed": "Ändras inte – ännu inte klassificerad",
+    "unreviewed": "Ändras inte – ännu inte klassificerade",
     "unreviewedAlert": "Dessa rader debiteras oförändrat tills du granskar dem.",
     "reviewRates": "Granska taxor",
-    "excluded": "Undantagen – redan fakturerad",
+    "excluded": "Undantagna – redan fakturerade",
     "none": "Inga.",
     "totalMonthlyDelta": "Total förändring av månadsintäkter",
     "acrossAllInherited": "För alla rader med ärvd taxa ({{lines}}).",
