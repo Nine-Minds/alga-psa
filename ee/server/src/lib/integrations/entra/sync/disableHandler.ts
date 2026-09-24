@@ -9,7 +9,8 @@ export interface EntraIdentityRef {
 async function markIdentityInactive(
   tenantId: string,
   identity: EntraIdentityRef,
-  reason: string
+  reason: string,
+  accountEnabled = false
 ): Promise<number> {
   return runWithTenant(tenantId, async () => {
     const { knex } = await createTenantKnex();
@@ -33,7 +34,7 @@ async function markIdentityInactive(
         .whereIn('contact_name_id', contactIds)
         .update({
           is_inactive: true,
-          entra_account_enabled: false,
+          entra_account_enabled: accountEnabled,
           entra_sync_status: 'inactive',
           entra_sync_status_reason: reason,
           last_entra_sync_at: now,
@@ -129,7 +130,7 @@ export async function markDisabledEntraUsersInactive(
 
 export async function markExcludedEntraUsersInactive(tenantId: string, identities: EntraIdentityRef[]): Promise<number> {
   let updated = 0;
-  for (const identity of identities) updated += await markIdentityInactive(tenantId, identity, 'excluded_by_filter');
+  for (const identity of identities) updated += await markIdentityInactive(tenantId, identity, 'excluded_by_filter', true);
   return updated;
 }
 

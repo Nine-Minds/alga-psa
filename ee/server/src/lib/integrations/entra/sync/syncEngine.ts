@@ -6,6 +6,7 @@ import {
   linkExistingMatchedContact,
   previewLinkedContactChange,
   queueAmbiguousContactMatch,
+  reactivateExcludedEntraContact,
 } from './contactReconciler';
 import {
   evaluateClientPortalProvisioningEligibility,
@@ -42,6 +43,10 @@ export interface EntraDisabledIdentityInput extends EntraIdentityRef {
   userPrincipalName?: string | null;
 }
 
+export interface EntraExcludedIdentityInput extends EntraDisabledIdentityInput {
+  reason: string;
+}
+
 export interface ExecuteEntraSyncInput {
   tenantId: string;
   clientId: string;
@@ -66,9 +71,10 @@ export interface ExecuteEntraSyncInput {
    * function and outside the flag.
    */
   disabledIdentities?: EntraDisabledIdentityInput[];
-  excludedIdentities?: EntraDisabledIdentityInput[];
+  excludedIdentities?: EntraExcludedIdentityInput[];
   deactivateExcludedContacts?: boolean;
   enabledSourceUserCount?: number;
+  entraTenantId?: string;
 }
 
 export interface ExecuteEntraSyncResult {
@@ -84,6 +90,7 @@ export interface ExecuteEntraSyncResult {
   /** Per-identity classification. Only collected on a dry run. */
   preview?: EntraSyncPreviewIdentity[];
   warnings?: string[];
+  excludedContactsOutOfScope: number;
 }
 
 function isInactivationEnabled(config: Record<string, unknown> | undefined): boolean {
@@ -116,6 +123,7 @@ export async function executeEntraSync(
   const counters = new EntraSyncResultAggregator();
   const preview: EntraSyncPreviewIdentity[] | undefined = dryRun ? [] : undefined;
   const warnings: string[] = [];
+  let excludedContactsOutOfScope = 0;
 
   for (const user of input.users) {
     const userWithEntitlement: EntraSyncUser = input.portalEntitlement
@@ -160,6 +168,7 @@ export async function executeEntraSync(
         if (outcome.fieldsWouldChange) {
           counters.increment('updated');
         }
+        if (await reactivateExcludedEntraContact(input.tenantId, candidates[0].contactNameId, true)) counters.increment('updated');
         preview?.push(
           describeUser(
             user,
@@ -179,6 +188,7 @@ export async function executeEntraSync(
         if (linkedContact.fieldsUpdated) {
           counters.increment('updated');
         }
+        await reactivateExcludedEntraContact(input.tenantId, linkedContact.contactNameId, false);
         const eligibility = evaluateClientPortalProvisioningEligibility(
           userWithEntitlement,
           input.portalEntitlement
@@ -338,23 +348,28 @@ export async function executeEntraSync(
     const { tenantDb } = await import('@alga-psa/db');
     const linkedCount = await runWithTenant(input.tenantId, async () => {
       const { knex } = await createTenantKnex();
-      return Number(await tenantDb(knex, input.tenantId).table('entra_contact_links')
-        .whereIn('entra_object_id', excludedIdentities.map((item) => item.entraObjectId))
-        .whereIn('entra_tenant_id', [...new Set(excludedIdentities.map((item) => item.entraTenantId))])
+      const query = tenantDb(knex, input.tenantId).table('entra_contact_links')
+        .whereIn('entra_object_id', excludedIdentities.filter(item => ['guest_user','unlicensed','tenant_custom_pattern','excluded_group','not_in_included_group'].includes(item.reason)).map((item) => item.entraObjectId));
+      if (input.entraTenantId) query.andWhere('entra_tenant_id', input.entraTenantId);
+      else query.andWhere('entra_tenant_id', excludedIdentities[0].entraTenantId);
+      return Number(await query
         .count('* as count').first().then((row: any) => row?.count || 0));
     });
+    const allowedExcludedIdentities = excludedIdentities.filter(item => ['guest_user','unlicensed','tenant_custom_pattern','excluded_group','not_in_included_group'].includes(item.reason));
     const everyUserExcluded = (input.enabledSourceUserCount ?? 0) > 0 && input.users.length === 0;
     if (everyUserExcluded && linkedCount > 0) {
       warnings.push('Excluded contacts were left active because the filter excludes every enabled user and linked contacts exist.');
     } else if (dryRun) {
-      const linked = await selectLinkedEntraIdentities(input.tenantId, excludedIdentities);
+      const linked = await selectLinkedEntraIdentities(input.tenantId, allowedExcludedIdentities);
       for (const entry of linked) {
         for (let index = 0; index < entry.linkedContactCount; index += 1) counters.increment('inactivated');
+        excludedContactsOutOfScope += entry.linkedContactCount;
         preview?.push({ bucket: 'mark_inactive', entraObjectId: entry.identity.entraObjectId, displayName: entry.identity.displayName ?? null, email: entry.identity.email ?? null, userPrincipalName: entry.identity.userPrincipalName ?? null });
       }
     } else {
-      const inactivated = await markExcludedEntraUsersInactive(input.tenantId, excludedIdentities);
+      const inactivated = await markExcludedEntraUsersInactive(input.tenantId, allowedExcludedIdentities);
       for (let index = 0; index < inactivated; index += 1) counters.increment('inactivated');
+      excludedContactsOutOfScope = inactivated;
     }
   }
 
@@ -363,5 +378,6 @@ export async function executeEntraSync(
     counters: counters.toJSON(),
     ...(warnings.length ? { warnings } : {}),
     ...(preview ? { preview } : {}),
+    excludedContactsOutOfScope,
   };
 }

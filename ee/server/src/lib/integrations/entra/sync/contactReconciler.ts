@@ -262,11 +262,6 @@ export async function linkExistingMatchedContact(
         user,
         fieldSyncConfig
       );
-      // Re-enter scope only reverses the deactivation this feature made. Manual,
-      // disabled-upstream, and deleted-upstream inactivation remain untouched.
-      await tenantDb(trx, tenantId).table('contacts')
-        .where({ contact_name_id: matchedContact.contactNameId, entra_sync_status_reason: 'excluded_by_filter' })
-        .update({ is_inactive: false, entra_account_enabled: true, entra_sync_status: 'active', entra_sync_status_reason: null, updated_at: trx.fn.now() });
       return changed;
     });
   });
@@ -280,6 +275,18 @@ export async function linkExistingMatchedContact(
       entraObjectId: user.entraObjectId,
     },
   };
+}
+
+/** Reactivate only contacts this filter previously deactivated. Dry runs report the change without writing. */
+export async function reactivateExcludedEntraContact(tenantId: string, contactNameId: string, dryRun: boolean): Promise<boolean> {
+  return runWithTenant(tenantId, async () => {
+    const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenantId);
+    const query = db.table('contacts').where({ contact_name_id: contactNameId, entra_sync_status_reason: 'excluded_by_filter' });
+    if (dryRun) return Boolean(await query.first('contact_name_id'));
+    const changed = await query.update({ is_inactive: false, entra_account_enabled: true, entra_sync_status: 'active', entra_sync_status_reason: null, updated_at: knex.fn.now() });
+    return Number(changed) > 0;
+  });
 }
 
 export async function createContactForEntraUser(

@@ -121,5 +121,12 @@ describe('filterEntraUsers', () => {
     const result = filterEntraUsers(users, { memberUsersOnly: true, licensedUsersOnly: true, includeGroupIds: ['allow'], excludeMemberIds: new Set(['excluded']), includeMemberIds: new Set(['unknown']) });
     expect(result.excluded.map((item) => item.reason)).toEqual(['guest_user', 'unlicensed', 'excluded_group']);
     expect(result.included.map((user) => user.entraObjectId)).toEqual(['unknown']);
+    expect(result.unknownFieldCounts).toEqual({ userType: 1, assignedLicenseCount: 1 });
+  });
+
+  it('keeps missing licensed data and reports it when only license filtering is enabled', () => {
+    const result = filterEntraUsers([buildUser({ userType: null, assignedLicenseCount: null })], { licensedUsersOnly: true });
+    expect(result.included).toHaveLength(1);
+    expect(result.unknownFieldCounts.assignedLicenseCount).toBe(1);
   });
 });

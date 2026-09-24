@@ -11,7 +11,9 @@ const handleIneligibleClientPortalLifecycleMock = vi.fn();
 const publishWorkflowManagedPortalProvisioningEventMock = vi.fn();
 const previewLinkedContactChangeMock = vi.fn();
 const markDisabledEntraUsersInactiveMock = vi.fn();
+const markExcludedEntraUsersInactiveMock = vi.fn();
 const selectLinkedEntraIdentitiesMock = vi.fn();
+const reactivateExcludedEntraContactMock = vi.fn();
 
 /**
  * The engine consults the portal-provisioning hooks on every non-dry-run
@@ -40,10 +42,12 @@ vi.mock('@ee/lib/integrations/entra/sync/contactReconciler', () => ({
   linkExistingMatchedContact: linkExistingMatchedContactMock,
   createContactForEntraUser: createContactForEntraUserMock,
   previewLinkedContactChange: previewLinkedContactChangeMock,
+  reactivateExcludedEntraContact: reactivateExcludedEntraContactMock,
 }));
 
 vi.mock('@ee/lib/integrations/entra/sync/disableHandler', () => ({
   markDisabledEntraUsersInactive: markDisabledEntraUsersInactiveMock,
+  markExcludedEntraUsersInactive: markExcludedEntraUsersInactiveMock,
   selectLinkedEntraIdentities: selectLinkedEntraIdentitiesMock,
 }));
 

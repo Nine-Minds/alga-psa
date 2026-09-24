@@ -186,6 +186,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   email_templates: { scope: 'tenant' },
   entra_partner_connections: { scope: 'tenant' },
   entra_managed_tenants: { scope: 'tenant' },
+  entra_managed_tenant_user_filters: { scope: 'tenant' },
   entra_client_tenant_mappings: { scope: 'tenant' },
   entra_contact_links: { scope: 'tenant' },
   entra_contact_reconciliation_queue: { scope: 'tenant' },

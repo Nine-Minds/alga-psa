@@ -44,6 +44,7 @@ export interface EntraPreflightResult {
   excludedByReason: Record<string, number>;
   unknownFieldCounts: { userType: number; assignedLicenseCount: number };
   warnings: string[];
+  excludedContactsOutOfScope: number;
   counters: {
     created: number;
     linked: number;
@@ -214,7 +215,7 @@ export async function runEntraPreflight(params: {
     }));
   const excludedIdentities = filtered.deactivateExcludedContacts ? filtered.excluded
     .filter((entry) => ['guest_user', 'unlicensed', 'tenant_custom_pattern', 'excluded_group', 'not_in_included_group'].includes(entry.reason))
-    .map(({ user }) => ({ entraTenantId: user.entraTenantId, entraObjectId: user.entraObjectId, displayName: user.displayName, email: user.email, userPrincipalName: user.userPrincipalName })) : [];
+    .map(({ user, reason }) => ({ reason, entraTenantId: user.entraTenantId, entraObjectId: user.entraObjectId, displayName: user.displayName, email: user.email, userPrincipalName: user.userPrincipalName })) : [];
   const excludedByReason = filtered.excluded.reduce<Record<string, number>>((counts, entry) => { counts[entry.reason] = (counts[entry.reason] || 0) + 1; return counts; }, {});
 
   const result = await executeEntraSync({
@@ -228,6 +229,7 @@ export async function runEntraPreflight(params: {
     excludedIdentities,
     deactivateExcludedContacts: filtered.deactivateExcludedContacts,
     enabledSourceUserCount: users.filter((user) => user.accountEnabled).length,
+    entraTenantId: mapping.entraTenantId,
   });
 
   const preview = result.preview || [];
@@ -249,6 +251,7 @@ export async function runEntraPreflight(params: {
     excludedByReason,
     unknownFieldCounts: filtered.unknownFieldCounts,
     warnings: result.warnings || [],
+    excludedContactsOutOfScope: result.excludedContactsOutOfScope ?? 0,
     counters: result.counters,
     buckets: bucketize(preview, params.sampleLimit ?? DEFAULT_SAMPLE_LIMIT),
   };

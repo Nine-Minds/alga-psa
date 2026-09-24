@@ -11,15 +11,16 @@ export interface EntraUserFilterSettings { exclusionPatterns: string[] }
 export class GroupMembershipResolver {
   private readonly groups = new Map<string, Promise<Set<string>>>();
   constructor(private readonly input: { tenant: string; entraTenantId: string; adapter: EntraProviderAdapter; users?: EntraSyncUser[] }) {}
-  members(groupId: string): Promise<Set<string>> {
-    let result = this.groups.get(groupId);
+  members(groupId: string, membershipMode: 'direct' | 'transitive' = 'transitive'): Promise<Set<string>> {
+    const key = `${groupId}:${membershipMode}`;
+    let result = this.groups.get(key);
     if (!result) {
-      result = this.input.adapter.listSecurityGroupMemberIds({ tenant: this.input.tenant, managedTenantId: this.input.entraTenantId, groupId, membershipMode: 'transitive', users: this.input.users });
-      this.groups.set(groupId, result);
+      result = this.input.adapter.listSecurityGroupMemberIds({ tenant: this.input.tenant, managedTenantId: this.input.entraTenantId, groupId, membershipMode, users: this.input.users });
+      this.groups.set(key, result);
     }
     return result;
   }
-  async isMember(groupId: string, userId: string): Promise<boolean> { return (await this.members(groupId)).has(userId); }
+  async isMember(groupId: string, userId: string, membershipMode: 'direct' | 'transitive' = 'transitive'): Promise<boolean> { return (await this.members(groupId, membershipMode)).has(userId); }
 }
 export async function getEntraUserFilterSettings(tenant: string): Promise<EntraUserFilterSettings> {
   return runWithTenant(tenant, async () => {
@@ -56,7 +57,7 @@ export async function resolveEntraUserFilterPolicy(input: {
     const ids = await resolver.members(groupId);
     for (const id of ids) excludeMemberIds.add(id);
   }
-  return { customExclusionPatterns: effective.exclusionPatterns, memberUsersOnly: effective.memberUsersOnly || effective.licensedUsersOnly, licensedUsersOnly: effective.licensedUsersOnly, includeGroupIds: effective.includeGroupIds, excludeGroupIds: effective.excludeGroupIds, includeMemberIds, excludeMemberIds, deactivateExcludedContacts: effective.deactivateExcludedContacts, groupMembershipResolver: resolver } as EntraUserFilterOptions;
+  return { customExclusionPatterns: effective.exclusionPatterns, memberUsersOnly: effective.memberUsersOnly, licensedUsersOnly: effective.licensedUsersOnly, includeGroupIds: effective.includeGroupIds, excludeGroupIds: effective.excludeGroupIds, includeMemberIds, excludeMemberIds, deactivateExcludedContacts: effective.deactivateExcludedContacts, groupMembershipResolver: resolver };
 }
 
 export async function filterEntraUsersForManagedTenant(input: Parameters<typeof resolveEntraUserFilterPolicy>[0]): Promise<EntraUserFilterResult> {

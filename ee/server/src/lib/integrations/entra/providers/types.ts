@@ -32,13 +32,13 @@ export interface EntraProviderAdapter {
     managedTenantId: string;
     userEntraObjectId: string;
     groupId: string;
-    membershipMode: 'transitive';
+    membershipMode: 'direct' | 'transitive';
   }): Promise<boolean>;
   listSecurityGroupMemberIds(input: {
     tenant: string;
     managedTenantId: string;
     groupId: string;
-    membershipMode: 'transitive';
+    membershipMode: 'direct' | 'transitive';
     users?: EntraManagedUserRecord[];
   }): Promise<Set<string>>;
 }

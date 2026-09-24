@@ -19,7 +19,7 @@ export interface EntraUserFilterOptions {
   includeMemberIds?: Set<string>;
   excludeMemberIds?: Set<string>;
   deactivateExcludedContacts?: boolean;
-  groupMembershipResolver?: { isMember(groupId: string, userId: string): Promise<boolean> };
+  groupMembershipResolver?: { isMember(groupId: string, userId: string, membershipMode?: 'direct' | 'transitive'): Promise<boolean> };
 }
 
 export interface EntraFilteredOutUser {
@@ -32,8 +32,10 @@ export interface EntraUserFilterResult {
   excluded: EntraFilteredOutUser[];
   deactivateExcludedContacts: boolean;
   unknownFieldCounts: { userType: number; assignedLicenseCount: number };
-  groupMembershipResolver?: EntraUserFilterOptions['groupMembershipResolver'];
+  groupMembershipResolver: NonNullable<EntraUserFilterOptions['groupMembershipResolver']>;
 }
+
+const EMPTY_GROUP_MEMBERSHIP_RESOLVER = { isMember: async () => false };
 
 function normalizeString(value: string | null | undefined): string {
   return typeof value === 'string' ? value.trim().toLowerCase() : '';
@@ -138,7 +140,7 @@ export function filterEntraUsers(
     excluded,
     deactivateExcludedContacts: Boolean(options.deactivateExcludedContacts),
     unknownFieldCounts,
-    groupMembershipResolver: options.groupMembershipResolver,
+    groupMembershipResolver: options.groupMembershipResolver ?? EMPTY_GROUP_MEMBERSHIP_RESOLVER,
   };
 }
 

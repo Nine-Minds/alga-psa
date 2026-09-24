@@ -10,11 +10,17 @@ const {
   runEntraPreflightMock,
   startEntraSyncMock,
   unmapEntraTenantMock,
+  getEntraManagedTenantUserFilterMock,
+  listEntraMappingGroupsMock,
+  updateEntraManagedTenantUserFilterMock,
 } = vi.hoisted(() => ({
   getEntraSyncRunDetailMock: vi.fn(),
   runEntraPreflightMock: vi.fn(),
   startEntraSyncMock: vi.fn(),
   unmapEntraTenantMock: vi.fn(),
+  getEntraManagedTenantUserFilterMock: vi.fn(),
+  listEntraMappingGroupsMock: vi.fn(),
+  updateEntraManagedTenantUserFilterMock: vi.fn(),
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
@@ -27,6 +33,9 @@ vi.mock('@alga-psa/integrations/actions', () => ({
   runEntraPreflight: runEntraPreflightMock,
   startEntraSync: startEntraSyncMock,
   unmapEntraTenant: unmapEntraTenantMock,
+  getEntraManagedTenantUserFilter: getEntraManagedTenantUserFilterMock,
+  listEntraMappingGroups: listEntraMappingGroupsMock,
+  updateEntraManagedTenantUserFilter: updateEntraManagedTenantUserFilterMock,
 }));
 
 vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({
@@ -81,6 +90,9 @@ describe('EntraClientsTab', () => {
     runEntraPreflightMock.mockReset();
     startEntraSyncMock.mockReset();
     unmapEntraTenantMock.mockReset();
+    getEntraManagedTenantUserFilterMock.mockReset();
+    listEntraMappingGroupsMock.mockReset();
+    updateEntraManagedTenantUserFilterMock.mockReset();
     startEntraSyncMock.mockResolvedValue({
       success: true,
       data: { accepted: true, runId: 'run-1', workflowId: 'workflow-1' },
@@ -90,6 +102,9 @@ describe('EntraClientsTab', () => {
       data: { run: { status: 'completed' }, tenantResults: [] },
     });
     unmapEntraTenantMock.mockResolvedValue({ success: true, data: {} });
+    getEntraManagedTenantUserFilterMock.mockResolvedValue({ success: true, data: { override: null, effective: { version: 1, memberUsersOnly: false, licensedUsersOnly: false, includeGroupIds: [], excludeGroupIds: [], exclusionPatterns: [], deactivateExcludedContacts: false } } });
+    listEntraMappingGroupsMock.mockResolvedValue({ success: true, data: { groups: [] } });
+    updateEntraManagedTenantUserFilterMock.mockResolvedValue({ success: true, data: {} });
   });
 
   const renderTab = (mappings: EntraConfirmedMapping[], onOpenConnection?: () => void) =>

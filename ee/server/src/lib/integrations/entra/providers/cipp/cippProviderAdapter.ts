@@ -480,7 +480,7 @@ export class CippProviderAdapter implements EntraProviderAdapter {
     managedTenantId: string;
     userEntraObjectId: string;
     groupId: string;
-    membershipMode: 'transitive';
+    membershipMode: 'direct' | 'transitive';
   }): Promise<boolean> {
     const credentials = await getEntraCippCredentials(input.tenant);
     if (!credentials) {
@@ -507,7 +507,7 @@ export class CippProviderAdapter implements EntraProviderAdapter {
     return groupIds.has(input.groupId);
   }
 
-  public async listSecurityGroupMemberIds(input: { tenant: string; managedTenantId: string; groupId: string; membershipMode: 'transitive'; users?: EntraManagedUserRecord[] }): Promise<Set<string>> {
+  public async listSecurityGroupMemberIds(input: { tenant: string; managedTenantId: string; groupId: string; membershipMode: 'direct' | 'transitive'; users?: EntraManagedUserRecord[] }): Promise<Set<string>> {
     if (!input.users) throw new Error('CIPP group membership fallback requires the tenant user list.');
     const matching: Array<{ id: string; member: boolean }> = [];
     for (let offset = 0; offset < input.users.length; offset += 8) {

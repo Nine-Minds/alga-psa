@@ -29,7 +29,7 @@ const hoisted = vi.hoisted(() => {
     mappings: [mapping('c1', 'entra-1'), mapping('c2', 'entra-2')],
     mintError: null as any,
     users: [] as any[],
-    filterResult: { included: [], excluded: [] } as any,
+    filterResult: { included: [], excluded: [], unknownFieldCounts: { userType: 0, assignedLicenseCount: 0 }, deactivateExcludedContacts: false, groupMembershipResolver: { isMember: async () => false } } as any,
     cippUsers: [] as any[],
     cippError: null as any,
     pageNextLink: null as string | null,
@@ -57,6 +57,11 @@ vi.mock('@ee/lib/integrations/entra/mapping/confirmedMappingsService', () => ({
 }));
 
 vi.mock('../../lib/integrations/entra/settingsService', () => ({
+  filterEntraUsersForManagedTenant: vi.fn(async () => hoisted.filterResult),
+  resolveEntraUserFilterPolicy: vi.fn(async () => ({})),
+}));
+
+vi.mock('@ee/lib/integrations/entra/settingsService', () => ({
   filterEntraUsersForManagedTenant: vi.fn(async () => hoisted.filterResult),
   resolveEntraUserFilterPolicy: vi.fn(async () => ({})),
 }));
@@ -110,11 +115,6 @@ vi.mock('@ee/lib/integrations/entra/providers/cipp/cippProviderAdapter', () => (
 
 vi.mock('@ee/lib/integrations/entra/providers/cipp/cippSecretStore', () => ({
   getEntraCippCredentials: vi.fn(async () => ({ baseUrl: 'https://cipp.test', apiToken: 'k' })),
-}));
-
-vi.mock('@ee/lib/integrations/entra/settingsService', () => ({
-  filterEntraUsersForManagedTenant: vi.fn(async () => hoisted.filterResult),
-  resolveEntraUserFilterPolicy: vi.fn(async () => ({})),
 }));
 
 vi.mock('@ee/lib/integrations/entra/sync/userFilterPipeline', () => ({

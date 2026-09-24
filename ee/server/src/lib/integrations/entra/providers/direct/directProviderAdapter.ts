@@ -760,8 +760,11 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
     managedTenantId: string;
     userEntraObjectId: string;
     groupId: string;
-    membershipMode: 'transitive';
+    membershipMode: 'direct' | 'transitive';
   }): Promise<boolean> {
+    if (input.membershipMode === 'direct') {
+      return (await this.listSecurityGroupMemberIds({ ...input, membershipMode: 'direct' })).has(input.userEntraObjectId);
+    }
     const encodedUser = encodeURIComponent(input.userEntraObjectId);
     const endpoint = `${graphBaseUrl()}/users/${encodedUser}/checkMemberGroups`;
     const payload = await this.managedTenantGraphRequest(
@@ -781,10 +784,10 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
     return values.some((value) => getNullableString(value) === input.groupId);
   }
 
-  public async listSecurityGroupMemberIds(input: { tenant: string; managedTenantId: string; groupId: string; membershipMode: 'transitive' }): Promise<Set<string>> {
+  public async listSecurityGroupMemberIds(input: { tenant: string; managedTenantId: string; groupId: string; membershipMode: 'direct' | 'transitive' }): Promise<Set<string>> {
     const ids = new Set<string>();
     const groupId = encodeURIComponent(input.groupId);
-    let nextUrl = `${graphBaseUrl()}/groups/${groupId}/transitiveMembers/microsoft.graph.user?$select=id&$top=999`;
+    let nextUrl = `${graphBaseUrl()}/groups/${groupId}/${input.membershipMode === 'direct' ? 'members' : 'transitiveMembers'}/microsoft.graph.user?$select=id&$top=999`;
     while (nextUrl) {
       const pageUrl = nextUrl;
       const payload = await this.managedTenantGraphRequest(input.tenant, input.managedTenantId, (accessToken) =>

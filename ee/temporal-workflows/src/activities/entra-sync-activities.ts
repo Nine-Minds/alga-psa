@@ -351,7 +351,7 @@ export async function syncTenantUsersActivity(
         filteredUsers.included,
         8,
         async (user) => {
-          const isMember = await filteredUsers.groupMembershipResolver!.isMember(portalEntitlementGroupId, user.entraObjectId);
+          const isMember = await filteredUsers.groupMembershipResolver.isMember(portalEntitlementGroupId, user.entraObjectId, portalEntitlementMode);
           return {
             ...user,
             clientPortalEntitlement: {
@@ -403,7 +403,7 @@ export async function syncTenantUsersActivity(
     }));
   const excludedIdentities = filteredUsers.deactivateExcludedContacts
     ? filteredUsers.excluded.filter((entry) => ['guest_user', 'unlicensed', 'tenant_custom_pattern', 'excluded_group', 'not_in_included_group'].includes(entry.reason)).map((entry) => ({
-        entraTenantId: entry.user.entraTenantId, entraObjectId: entry.user.entraObjectId, displayName: entry.user.displayName, email: entry.user.email, userPrincipalName: entry.user.userPrincipalName,
+        reason: entry.reason, entraTenantId: entry.user.entraTenantId, entraObjectId: entry.user.entraObjectId, displayName: entry.user.displayName, email: entry.user.email, userPrincipalName: entry.user.userPrincipalName,
       }))
     : [];
 
@@ -420,6 +420,7 @@ export async function syncTenantUsersActivity(
     excludedIdentities,
     deactivateExcludedContacts: Boolean(filteredUsers.deactivateExcludedContacts),
     enabledSourceUserCount: users.filter((user) => user.accountEnabled).length,
+    entraTenantId: input.mapping.entraTenantId,
     portalEntitlement: {
       provisioningMode: input.mapping.clientPortalEntraProvisioningMode || 'disabled',
       groupId: input.mapping.clientPortalEntitlementGroupId || null,
@@ -514,6 +515,7 @@ export async function syncTenantUsersActivity(
     updated: syncResult.counters.updated,
     ambiguous: syncResult.counters.ambiguous,
     inactivated: syncResult.counters.inactivated + portalDisabledCount,
+    warnings: syncResult.warnings || [],
     skipped: syncResult.counters.skipped,
     errorMessage: null,
   };
