@@ -543,7 +543,7 @@ export const updateEntraFieldSyncConfig = withAuth(async (
   } as const;
 });
 
-export type EntraUserFilterActionConfig = { version: 1; memberUsersOnly: boolean; licensedUsersOnly: boolean; includeGroupIds: string[]; excludeGroupIds: string[]; exclusionPatterns: string[]; deactivateExcludedContacts: boolean };
+export type EntraUserFilterActionConfig = { version: 1; memberUsersOnly: boolean; licensedUsersOnly: boolean; includeGroupIds: string[]; excludeGroupIds: string[]; exclusionPatterns: string[]; deactivateExcludedContacts: boolean; importSharedMailboxes: boolean };
 type EntraManagedTenantUserFilterData = { defaults: EntraUserFilterActionConfig; override: Partial<EntraUserFilterActionConfig> | null; effective: EntraUserFilterActionConfig };
 
 export const getEntraUserFilterDefaults = withAuth(async (user, { tenant }) => {

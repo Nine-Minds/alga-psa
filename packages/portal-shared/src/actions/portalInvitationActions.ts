@@ -243,6 +243,11 @@ export const createClientPortalUser = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
 
+    if (params.contactId) {
+      const target = await tenantDb(knex, tenant).table('contacts').where({ contact_name_id: params.contactId }).first('contact_kind');
+      if (target?.contact_kind === 'shared_mailbox') return { success: false, error: 'Shared mailbox contacts cannot be invited to the client portal.', errorCode: 'PERMISSION_DENIED_CREATE' };
+    }
+
     const normalizedContactClientId = params.contact?.clientId && params.contact.clientId.trim() !== '' ? params.contact.clientId : null;
     const existingContactForAuth = params.contactId
       ? await getContactAuthContext(knex, tenant, params.contactId)
@@ -340,6 +345,10 @@ export const createClientPortalUser = withAuth(async (
       if (!contact) {
         // Could not resolve contact
         throw new Error('Contact not found. Provide contact details to create a new contact.');
+      }
+
+      if (contact.contact_kind === 'shared_mailbox') {
+        throw new PortalInvitationError('Shared mailbox contacts cannot be invited to the client portal.', 'PERMISSION_DENIED_CREATE');
       }
 
       // Validate the resolved contact's email before creating the user account.
@@ -484,6 +493,9 @@ export const sendPortalInvitation = withAuth(async (
 ): Promise<SendInvitationResult> => {
   try {
     const { knex } = await createTenantKnex();
+
+    const target = await tenantDb(knex, tenant).table('contacts').where({ contact_name_id: contactId }).first('contact_kind');
+    if (target?.contact_kind === 'shared_mailbox') return { success: false, error: 'Shared mailbox contacts cannot be invited to the client portal.', errorCode: 'PERMISSION_DENIED_INVITE' };
 
     const canInvite = await canManageClientPortalTargetContact(user, tenant, knex, 'invite', contactId);
     if (!canInvite) {

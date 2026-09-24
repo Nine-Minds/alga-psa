@@ -18,7 +18,7 @@ describe('Entra user import filter translations', () => {
       for (const match of source.matchAll(/t\(['"`]integrations\.entra\.userImportFilter\.([A-Za-z0-9_$]+)['"`]/g)) keys.add(match[1]);
     }
     // These computed keys are rendered from the toggle list and the marker helper.
-    for (const key of ['memberUsersOnly', 'licensedUsersOnly', 'deactivateExcludedContacts', 'include', 'exclude', 'inherited', 'overridden']) keys.add(key);
+    for (const key of ['memberUsersOnly', 'licensedUsersOnly', 'deactivateExcludedContacts', 'importSharedMailboxes', 'sharedMailboxReason', 'include', 'exclude', 'inherited', 'overridden']) keys.add(key);
     expect(keys.size).toBeGreaterThan(0);
     for (const locale of locales) {
       const file = path.join(root, `server/public/locales/${locale}/msp/integrations.json`);

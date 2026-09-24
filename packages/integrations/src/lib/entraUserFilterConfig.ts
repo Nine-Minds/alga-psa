@@ -6,6 +6,7 @@ export interface EntraUserFilterConfig {
   excludeGroupIds: string[];
   exclusionPatterns: string[];
   deactivateExcludedContacts: boolean;
+  importSharedMailboxes: boolean;
 }
 
 export function mergeEntraUserFilterConfig(
@@ -29,5 +30,6 @@ export function mergeEntraUserFilterConfig(
     excludeGroupIds: [...new Set([...defaults.excludeGroupIds, ...(override.excludeGroupIds ?? [])])],
     exclusionPatterns: [...new Set([...defaults.exclusionPatterns, ...(override.exclusionPatterns ?? [])])],
     deactivateExcludedContacts: override.deactivateExcludedContacts ?? defaults.deactivateExcludedContacts,
+    importSharedMailboxes: override.importSharedMailboxes ?? defaults.importSharedMailboxes,
   };
 }

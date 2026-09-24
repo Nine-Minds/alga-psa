@@ -263,7 +263,8 @@ describe('runEntraClientAccessDiagnostics', () => {
     expect(second.clients[0].clientId).toBe('c4');
     expect(second.completed).toBe(4);
     expect(second.isDone).toBe(true);
-    expect(second.overallStatus).toBe('pass');
+    expect(second.overallStatus).toBe('warn');
+    expect(second.clients[0].steps.find(step => step.id === 'shared_mailbox_detection')?.status).toBe('warn');
   });
 
   it('does not finalize a client whose resumable preview is incomplete', async () => {
@@ -304,7 +305,7 @@ describe('runEntraClientAccessDiagnostics', () => {
 
     const c1 = result.clients.find((c) => c.clientId === 'c1');
     const c2 = result.clients.find((c) => c.clientId === 'c2');
-    expect(c1?.overallStatus).toBe('pass');
+    expect(c1?.overallStatus).toBe('warn');
     expect(c2?.category).toBe('need_consent');
 
     const consentAction = c2?.steps

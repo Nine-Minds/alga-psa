@@ -15,7 +15,7 @@ exports.up = async function up(knex) {
   }
   const { rows } = await knex.raw("SELECT 1 FROM pg_proc WHERE proname = 'create_distributed_table' LIMIT 1");
   if (rows.length) {
-    const { rows: distributed } = await knex.raw("SELECT 1 FROM citus_tables WHERE table_name = ? LIMIT 1", [TABLE]);
+    const { rows: distributed } = await knex.raw("SELECT 1 FROM citus_tables WHERE table_name = to_regclass(?) LIMIT 1", [TABLE]);
     if (!distributed.length) await knex.raw("SELECT create_distributed_table(?::regclass, 'tenant', colocate_with => 'entra_managed_tenants')", [TABLE]);
   }
 };

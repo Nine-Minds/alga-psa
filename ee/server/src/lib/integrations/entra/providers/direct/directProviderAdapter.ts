@@ -244,6 +244,7 @@ function extractPrimaryDomain(raw: Record<string, unknown>): string | null {
 
 export class DirectProviderAdapter implements EntraProviderAdapter {
   public readonly connectionType = 'direct' as const;
+  public async listSharedMailboxIds(): Promise<Set<string> | null> { return null; }
   private readonly managedTenantTokenCache = new Map<
     string,
     { accessToken: string; expiresAt: number }

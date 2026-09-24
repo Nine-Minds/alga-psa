@@ -420,7 +420,7 @@ export async function syncTenantUsersActivity(
     disabledIdentities,
     excludedIdentities,
     deactivateExcludedContacts: Boolean(filteredUsers.deactivateExcludedContacts),
-    enabledSourceUserCount: users.filter((user) => user.accountEnabled).length,
+    enabledSourceUserCount: users.filter((user) => user.accountEnabled && user.mailboxKind !== 'shared').length,
     entraTenantId: input.mapping.entraTenantId,
     portalEntitlement: {
       provisioningMode: input.mapping.clientPortalEntraProvisioningMode || 'disabled',

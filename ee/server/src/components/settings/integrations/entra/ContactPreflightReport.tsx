@@ -140,7 +140,7 @@ export function ContactPreflightReport({
             <p className="font-medium">{t('integrations.entra.userImportFilter.exclusions')}</p>
             <ul className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
               {Object.entries(report.excludedByReason ?? {}).filter(([, count]) => count > 0).map(([reason, count]) => (
-                <li key={reason}>{reason.replaceAll('_', ' ')}: <span className="font-semibold tabular-nums">{count}</span></li>
+                <li key={reason}>{reason === 'shared_mailbox' ? t('integrations.entra.userImportFilter.sharedMailboxReason') : reason.replaceAll('_', ' ')}: <span className="font-semibold tabular-nums">{count}</span></li>
               ))}
             </ul>
           </div>

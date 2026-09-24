@@ -23,9 +23,10 @@ export async function POST(request: Request): Promise<Response> {
   const body = await parseJsonBody(request);
   const validation = validateEntraUserFilterConfig(body.config);
   if (!validation.config) return badRequest(validation.error || 'Invalid filter configuration.');
+  const now = new Date().toISOString();
   await runWithTenant(access.tenantId, async () => {
     const { knex } = await createTenantKnex();
-    await tenantDb(knex, access.tenantId).table('entra_sync_settings').insert({ tenant: access.tenantId, user_filter_config: knex.raw('?::jsonb', [JSON.stringify(validation.config)]), updated_at: knex.fn.now() }).onConflict('tenant').merge({ user_filter_config: knex.raw('?::jsonb', [JSON.stringify(validation.config)]), updated_at: knex.fn.now() });
+    await tenantDb(knex, access.tenantId).table('entra_sync_settings').insert({ tenant: access.tenantId, user_filter_config: knex.raw('?::jsonb', [JSON.stringify(validation.config)]), updated_at: now }).onConflict('tenant').merge({ user_filter_config: knex.raw('?::jsonb', [JSON.stringify(validation.config)]), updated_at: now });
   });
   return ok({ config: validation.config });
 }

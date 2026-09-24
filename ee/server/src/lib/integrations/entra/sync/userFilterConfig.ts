@@ -12,6 +12,7 @@ export const EMPTY_ENTRA_USER_FILTER_CONFIG: EntraUserFilterConfig = {
   excludeGroupIds: [],
   exclusionPatterns: [],
   deactivateExcludedContacts: false,
+  importSharedMailboxes: false,
 };
 
 const asObject = (value: unknown): Record<string, unknown> =>
@@ -31,6 +32,7 @@ export function parseEntraUserFilterConfig(value: unknown): EntraUserFilterConfi
     excludeGroupIds: strings(raw.excludeGroupIds),
     exclusionPatterns: [...new Set([...strings(raw.exclusionPatterns), ...strings(raw.excludePatterns), ...strings(raw.excludeUpnPatterns), ...strings(raw.excludedUpnPatterns)])],
     deactivateExcludedContacts: bool(raw.deactivateExcludedContacts),
+    importSharedMailboxes: bool(raw.importSharedMailboxes),
   };
 }
 
@@ -52,7 +54,7 @@ export function parseEntraUserFilterOverride(value: unknown): Partial<EntraUserF
   const raw = asObject(value);
   const parsed = parseEntraUserFilterConfig(raw);
   const result: Partial<EntraUserFilterConfig> = { version: 1 };
-  for (const key of ['memberUsersOnly', 'licensedUsersOnly', 'includeGroupIds', 'excludeGroupIds', 'exclusionPatterns', 'deactivateExcludedContacts'] as const) {
+  for (const key of ['memberUsersOnly', 'licensedUsersOnly', 'includeGroupIds', 'excludeGroupIds', 'exclusionPatterns', 'deactivateExcludedContacts', 'importSharedMailboxes'] as const) {
     if (raw[key] !== undefined || (key === 'exclusionPatterns' && ['excludePatterns', 'excludeUpnPatterns', 'excludedUpnPatterns'].some(alias => raw[alias] !== undefined))) result[key] = parsed[key] as never;
   }
   return result;

@@ -57,6 +57,7 @@ export interface ContactPhoneNumberInput {
 
 export interface IContact extends TenantEntity, ITaggable {
   contact_name_id: string;
+  contact_kind?: 'person' | 'shared_mailbox';
   full_name: string;
   client_id: string | null;
   phone_numbers: IContactPhoneNumber[];
@@ -135,6 +136,7 @@ export type MappableField =
  * Input type for creating a new contact.
  */
 export interface CreateContactInput {
+  contact_kind?: 'person' | 'shared_mailbox';
   full_name: string;
   email?: string;
   primary_email_canonical_type?: ContactEmailCanonicalType | null;

@@ -27,6 +27,7 @@ export interface EntraProviderAdapter {
   listSecurityGroupsForTenant(
     input: EntraListUsersForTenantInput
   ): Promise<Array<{ id: string; displayName: string | null }>>;
+  listSharedMailboxIds?(input: EntraListUsersForTenantInput): Promise<Set<string> | null>;
   isUserInSecurityGroup(input: {
     tenant: string;
     managedTenantId: string;

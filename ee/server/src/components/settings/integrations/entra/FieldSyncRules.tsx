@@ -71,7 +71,7 @@ export function FieldSyncRules({
   const [previewClient, setPreviewClient] = React.useState<string>('');
   const [previewBusy, setPreviewBusy] = React.useState(false);
   const [preview, setPreview] = React.useState<EntraPreflightResponse | null>(null);
-  const [userFilter, setUserFilter] = React.useState({ version: 1 as const, memberUsersOnly: false, licensedUsersOnly: false, includeGroupIds: [] as string[], excludeGroupIds: [] as string[], exclusionPatterns: [] as string[], deactivateExcludedContacts: false });
+  const [userFilter, setUserFilter] = React.useState({ version: 1 as const, memberUsersOnly: false, licensedUsersOnly: false, includeGroupIds: [] as string[], excludeGroupIds: [] as string[], exclusionPatterns: [] as string[], deactivateExcludedContacts: false, importSharedMailboxes: false });
   const [patternDraft, setPatternDraft] = React.useState('');
   const [filterSaving, setFilterSaving] = React.useState(false);
 
@@ -245,7 +245,7 @@ export function FieldSyncRules({
         <h3 className="text-sm font-semibold">{t('integrations.entra.userImportFilter.title')}</h3>
         <p className="mb-3 text-xs text-muted-foreground">{t('integrations.entra.userImportFilter.defaultsDescription', { defaultValue: 'These settings are the defaults for managed tenants. Managed tenants can override them.' })}</p>
         <div className="space-y-2">
-          {(['memberUsersOnly', 'licensedUsersOnly', 'deactivateExcludedContacts'] as const).map(key => (
+          {(['memberUsersOnly', 'licensedUsersOnly', 'deactivateExcludedContacts', 'importSharedMailboxes'] as const).map(key => (
             <label key={key} className="flex items-center gap-2 text-sm">
               <input id={`entra-user-filter-${key}`} type="checkbox" checked={userFilter[key]} disabled={filterSaving} onChange={event => setUserFilter(current => ({ ...current, [key]: event.target.checked }))} />
               {t(`integrations.entra.userImportFilter.${key}`, { defaultValue: key === 'memberUsersOnly' ? 'Members only' : key === 'licensedUsersOnly' ? 'Licensed users only' : 'Deactivate excluded contacts' })}

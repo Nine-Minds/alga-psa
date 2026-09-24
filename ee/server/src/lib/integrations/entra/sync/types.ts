@@ -9,6 +9,7 @@ export interface EntraSyncUser {
   accountEnabled: boolean;
   userType?: 'Member' | 'Guest' | null;
   assignedLicenseCount?: number | null;
+  mailboxKind?: 'shared' | null;
   jobTitle: string | null;
   mobilePhone: string | null;
   businessPhones: string[];

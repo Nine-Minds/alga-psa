@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import type { IClient, IContact, IDocument, IInteraction, ITag } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
@@ -398,6 +399,7 @@ export function ContactBentoLayout({
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="truncate text-lg font-bold text-[rgb(var(--color-text-900))]">{contact.full_name}</h1>
+              {contact.contact_kind === 'shared_mailbox' && <Badge variant="default-muted">{t('contactsPage.sharedMailbox')}</Badge>}
               <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${statusChipClass(!contact.is_inactive)}`}>
                 {contact.is_inactive ? 'Inactive' : 'Active'}
               </span>

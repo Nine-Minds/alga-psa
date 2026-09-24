@@ -240,6 +240,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
           >
             {record.full_name}
           </div>
+          {record.contact_kind === 'shared_mailbox' && <span className="ml-2 rounded-full border px-2 py-0.5 text-xs">{t('contactsPage.sharedMailbox', { defaultValue: 'Shared mailbox' })}</span>}
         </div>
       ),
     },

@@ -1,19 +1,46 @@
 # Plan — alga-2026-0002578: Entra user sync filter (security group / licensed users / exclusions)
 
-## Implementation addendum — shared mailboxes (2026-09-23)
+## Implementation addendum — shared mailboxes (captain ruling 2026-09-24)
 
-The captain's instruction supersedes §4: investigate and support shared mailboxes as service contacts
-where the current consent and contact model permit. Investigation found no reliable shared-mailbox
-signal in the fetched user records: Graph `/users` under the existing `Directory.Read.All` scope does
-not expose Exchange `recipientTypeDetails`, and CIPP's fetched Graph user records likewise contain
-no verified Exchange recipient-type field. The contacts model has no service-contact kind or type.
-The existing `shared[-_. ]?mailbox` display-name/identity regex is only a heuristic, so treating its
-matches as service contacts would misclassify ordinary users. No speculative classification is added.
-The import-as-service-contact requirement therefore needs a captain ruling on either granting an
-Exchange recipient read scope and adding a contact classification, or accepting that it moves to a
-follow-up card. With no reliable signal, the current code also cannot safely distinguish a disabled
-shared mailbox from another disabled account to suppress only that contact's `disabled_upstream`
-deactivation. This limitation is surfaced in `draftSummary` for review.
+Supersedes the 2026-09-23 addendum and §4's first bullet. That addendum was right that Graph
+`/users` and CIPP `listusers` carry no mailbox type. It missed CIPP's `ListMailboxes` endpoint, which does.
+
+**Signal (CIPP only in this card).** `GET /api/ListMailboxes?tenantFilter=<tenant>&RecipientTypeDetails=SharedMailbox`
+(CIPP-API `Invoke-ListMailboxes.ps1`, role `Exchange.Mailbox.Read`) runs Exchange `Get-Mailbox`.
+Each row has `recipientTypeDetails` and `ExternalDirectoryObjectId`, and `ExternalDirectoryObjectId`
+is the Entra user id we already fetch. Fetch it once per managed tenant per run, the same way the
+group sets are resolved. `EntraSyncUser` gains `mailboxKind: 'shared' | null`, where `null` means unknown.
+- The detected set covers `SharedMailbox` only. Room and equipment mailboxes are out of scope.
+- If CIPP returns 401/403 or the API key lacks `Exchange.Mailbox.Read`, the tenant is not failed.
+  Nothing is classified, the tenant keeps today's behaviour, and the preview and diagnostics show a
+  warning that shared-mailbox detection is unavailable.
+- Direct (Graph) mode: no classification, same warning. A reliable bulk source there needs the
+  Exchange admin API and a new `Exchange.Manage` consent, which is a follow-up.
+- Name or identity heuristics are never used.
+
+**Contact model.** Add `contacts.contact_kind` (CE migration, text, not null, default `'person'`,
+check constraint `IN ('person','shared_mailbox')`). Add it to `IContact` and the contact
+interfaces/schema-alignment tests. Show a "Shared mailbox" badge on the contact list and detail pages.
+A `shared_mailbox` contact can never be made a client admin or invited to the client portal
+(enforced server side and hidden in the UI). Sync sets the kind when it creates or links a shared mailbox.
+
+**Sync behaviour.** New filter config field `importSharedMailboxes: boolean` (default false). It is
+a scalar override like the other toggles and gets a toggle on both the tenant-default and the
+managed-tenant panel. In the pipeline, a user classified `shared` is evaluated **before**
+`account_disabled` and `unlicensed`:
+- toggle off → excluded with the new reason `shared_mailbox` (its own label and count, instead of
+  "disabled account")
+- toggle on → kept even though sign-in is disabled and it has no licence. Group and pattern filters
+  still apply. The contact gets `contact_kind='shared_mailbox'`. A disabled sign-in on a detected
+  shared mailbox never feeds `disabledIdentities`, so it is never deactivated as `disabled_upstream`.
+- `shared_mailbox` is not in the `deactivateExcludedContacts` reason set, so turning the toggle off
+  does not deactivate contacts that were already imported.
+- Shared mailboxes do not count toward the 100%-excluded safety brake denominator.
+
+Verification: unit tests for the pipeline order, the CIPP ListMailboxes mapping and the 403
+fallback; an integration test for the migration and the sync with the toggle on and off; the CIPP
+simulator (`tools/smoke-sim/entra-filter-cipp-sim.mjs`) gains `/api/ListMailboxes` and one disabled
+shared mailbox for Northwind.
 
 Branch `feature/alga-2026-0002578-entra-user-sync-filter-import`, worktree base `9fd1ddb58b` (v1.6.4).
 Author: card officer (design author; no captain design session). The captain should rule on the

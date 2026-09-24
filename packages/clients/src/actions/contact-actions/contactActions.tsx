@@ -1684,6 +1684,11 @@ export const updateContactPortalAdminStatus = withAuth(async (
         'You do not have permission to update client users'
       );
 
+      if (isPortalAdmin) {
+        const contactKind = await tenantScopedTable(trx, 'contacts', tenant).where({ contact_name_id: contactId }).first('contact_kind');
+        if (contactKind?.contact_kind === 'shared_mailbox') throw new Error('Shared mailbox contacts cannot be client admins.');
+      }
+
       const updated = await tenantScopedTable(trx, 'contacts', tenant)
         .where({ contact_name_id: contactId })
         .update({

@@ -50,6 +50,7 @@ const emailRowInputSchema = z.object({
 // =============================================================================
 
 export const contactFormSchema = z.object({
+  contact_kind: z.enum(['person', 'shared_mailbox']).optional(),
   full_name: z.string().trim().min(1, 'Full name is required'),
   // Validate with the same pattern the action/model/client all use, and surface a
   // single clear message. A z.union([...email(), '', null]) here reported a confusing
@@ -77,6 +78,7 @@ export const contactFormSchema = z.object({
 });
 
 export const contactSchema = z.object({
+  contact_kind: z.enum(['person', 'shared_mailbox']).optional(),
   contact_name_id: z.string().uuid(),
   tenant: z.string().uuid(),
   full_name: z.string(),
@@ -750,6 +752,7 @@ export class ContactModel {
     const primaryEmailCustomTypeId = await this.resolvePrimaryCustomEmailTypeId(validatedInput, tenant, trx, now);
 
     const insertData = {
+      contact_kind: input.contact_kind ?? 'person',
       contact_name_id: contactId,
       tenant,
       full_name: input.full_name.trim(),

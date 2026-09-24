@@ -194,6 +194,30 @@ const CIPP_TENANT_LIST_CANDIDATES = [
 export class CippProviderAdapter implements EntraProviderAdapter {
   public readonly connectionType = 'cipp' as const;
 
+  public async listSharedMailboxIds(input: EntraListUsersForTenantInput): Promise<Set<string> | null> {
+    const credentials = await getEntraCippCredentials(input.tenant);
+    if (!credentials) return null;
+    try {
+      const tenantId = encodeURIComponent(input.managedTenantId);
+      const payload = await this.requestFromCandidates(credentials.baseUrl, credentials.apiToken, [
+        `/api/ListMailboxes?tenantFilter=${tenantId}&RecipientTypeDetails=SharedMailbox`,
+      ]);
+      const ids = new Set<string>();
+      for (const item of extractCollection(payload)) {
+        const row = toObject(item);
+        const get = (key: string) => row[key] ?? row[key[0].toUpperCase() + key.slice(1)];
+        if (get('recipientTypeDetails') === 'SharedMailbox') {
+          const id = toStringOrNull(get('externalDirectoryObjectId'));
+          if (id) ids.add(id);
+        }
+      }
+      return ids;
+    } catch (error: unknown) {
+      if ((axios.isAxiosError(error) || error instanceof EntraOperatorError) && ((error as any).response?.status === 401 || (error as any).code === 'credential-rejected')) return null;
+      throw error;
+    }
+  }
+
   private async requestFromCandidates(
     baseUrl: string,
     apiToken: string,

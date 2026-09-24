@@ -42,10 +42,11 @@ export async function POST(request: Request, context: Context): Promise<Response
   const validation = validateEntraUserFilterConfig(body.override);
   if (!validation.config) return badRequest(validation.error || 'Invalid filter configuration.');
   const override = parseEntraUserFilterOverride(body.override);
+  const now = new Date().toISOString();
   await runWithTenant(access.tenantId, async () => {
     const { knex } = await createTenantKnex();
     const db = tenantDb(knex, access.tenantId);
-    await db.table('entra_managed_tenant_user_filters').insert({ tenant: access.tenantId, managed_tenant_id: managedTenantId, filter_config: knex.raw('?::jsonb', [JSON.stringify(override)]), updated_by: access.userId, updated_at: knex.fn.now() }).onConflict(['tenant', 'managed_tenant_id']).merge({ filter_config: knex.raw('?::jsonb', [JSON.stringify(override)]), updated_by: access.userId, updated_at: knex.fn.now() });
+    await db.table('entra_managed_tenant_user_filters').insert({ tenant: access.tenantId, managed_tenant_id: managedTenantId, filter_config: knex.raw('?::jsonb', [JSON.stringify(override)]), updated_by: access.userId, updated_at: now }).onConflict(['tenant', 'managed_tenant_id']).merge({ filter_config: knex.raw('?::jsonb', [JSON.stringify(override)]), updated_by: access.userId, updated_at: now });
   });
   return ok(await read(access, managedTenantId));
 }

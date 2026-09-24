@@ -231,7 +231,7 @@ export async function runEntraPreflight(params: {
     disabledIdentities,
     excludedIdentities,
     deactivateExcludedContacts: filtered.deactivateExcludedContacts,
-    enabledSourceUserCount: users.filter((user) => user.accountEnabled).length,
+    enabledSourceUserCount: users.filter((user) => user.accountEnabled && user.mailboxKind !== 'shared').length,
     entraTenantId: mapping.entraTenantId,
   });
 
@@ -255,6 +255,7 @@ export async function runEntraPreflight(params: {
     unknownFieldCounts: filtered.unknownFieldCounts,
     warnings: [
       ...(result.warnings || []),
+      ...(filtered.warnings || []),
       ...(filtered.unknownFieldCounts.userType > 0 ? [`User type data unavailable for ${filtered.unknownFieldCounts.userType} users; unknown users were kept.`] : []),
       ...(filtered.unknownFieldCounts.assignedLicenseCount > 0 ? [`License data unavailable for ${filtered.unknownFieldCounts.assignedLicenseCount} users; unknown users were kept.`] : []),
     ],

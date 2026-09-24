@@ -70,6 +70,7 @@ const contactEmailAddressResponseSchema = z.object({
 
 // Create contact schema
 export const createContactSchema = z.object({
+  contact_kind: z.enum(['person', 'shared_mailbox']).optional(),
   full_name: contactNameField,
   client_id: uuidSchema.optional(),
   phone_numbers: z.array(contactPhoneNumberInputSchema).optional().default([]),
@@ -104,6 +105,7 @@ export const contactListQuerySchema = createListQuerySchema(contactFilterSchema)
 
 // Contact response schema
 export const contactResponseSchema = z.object({
+  contact_kind: z.enum(['person', 'shared_mailbox']).optional(),
   contact_name_id: uuidSchema,
   full_name: z.string(),
   client_id: uuidSchema.nullable(),

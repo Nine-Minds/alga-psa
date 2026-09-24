@@ -214,4 +214,16 @@ describe('Entra interfaces and migration schema alignment', () => {
     expect(migration).toContain("colocate_with => 'entra_managed_tenants'");
     expect(migration).toContain("table.foreign(['tenant', 'managed_tenant_id'])");
   });
+
+  it('contact_kind migration and contact contracts allow only person and shared_mailbox', () => {
+    const migration = readRepoFile('server/migrations/20260924120000_add_contact_kind.cjs');
+    const contactModel = readRepoFile('shared/models/contactModel.ts');
+    const contactSchema = readRepoFile('server/src/lib/api/schemas/contact.ts');
+    const contactInterfaces = readRepoFile('shared/interfaces/contact.interfaces.ts');
+    expect(migration).toContain("contact_kind text NOT NULL DEFAULT 'person'");
+    expect(migration).toContain("CHECK (contact_kind IN ('person', 'shared_mailbox'))");
+    expect(contactModel).toContain("z.enum(['person', 'shared_mailbox'])");
+    expect(contactSchema).toContain("z.enum(['person', 'shared_mailbox'])");
+    expect(contactInterfaces).toContain("contact_kind?: 'person' | 'shared_mailbox'");
+  });
 });

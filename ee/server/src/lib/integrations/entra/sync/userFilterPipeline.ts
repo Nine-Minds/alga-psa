@@ -6,7 +6,6 @@ const DEFAULT_SERVICE_ACCOUNT_PATTERNS = [
   '^system[-_.]',
   '^service[-_.]?account',
   'noreply|no-reply|do[-_.]?not[-_.]?reply|donotreply',
-  'shared[-_. ]?mailbox',
   'automation|automated|daemon|bot',
 ];
 
@@ -19,12 +18,15 @@ export interface EntraUserFilterOptions {
   includeMemberIds?: Set<string>;
   excludeMemberIds?: Set<string>;
   deactivateExcludedContacts?: boolean;
+  importSharedMailboxes?: boolean;
+  mailboxDetectionWarning?: string;
+  sharedMailboxIds?: Set<string>;
   groupMembershipResolver?: { isMember(groupId: string, userId: string, membershipMode?: 'direct' | 'transitive'): Promise<boolean> };
 }
 
 export interface EntraFilteredOutUser {
   user: EntraSyncUser;
-  reason: 'account_disabled' | 'missing_identity' | 'guest_user' | 'unlicensed' | 'service_account' | 'tenant_custom_pattern' | 'excluded_group' | 'not_in_included_group';
+  reason: 'account_disabled' | 'missing_identity' | 'guest_user' | 'unlicensed' | 'service_account' | 'tenant_custom_pattern' | 'excluded_group' | 'not_in_included_group' | 'shared_mailbox';
 }
 
 export const DEACTIVATABLE_EXCLUSION_REASONS = [
@@ -41,6 +43,7 @@ export interface EntraUserFilterResult {
   deactivateExcludedContacts: boolean;
   unknownFieldCounts: { userType: number; assignedLicenseCount: number };
   groupMembershipResolver: NonNullable<EntraUserFilterOptions['groupMembershipResolver']>;
+  warnings: string[];
 }
 
 const EMPTY_GROUP_MEMBERSHIP_RESOLVER = { isMember: async () => false };
@@ -100,9 +103,14 @@ export function filterEntraUsers(
   const unknownFieldCounts = { userType: 0, assignedLicenseCount: 0 };
 
   for (const user of users) {
+    if (user.mailboxKind == null && options.sharedMailboxIds?.has(user.entraObjectId)) user.mailboxKind = 'shared';
     const unknownUserType = Boolean(options.memberUsersOnly && user.userType == null);
     const unknownLicenseCount = Boolean(options.licensedUsersOnly && user.assignedLicenseCount == null);
-    if (!user.accountEnabled) {
+    if (user.mailboxKind === 'shared' && !options.importSharedMailboxes) {
+      excluded.push({ user, reason: 'shared_mailbox' });
+      continue;
+    }
+    if (!user.accountEnabled && user.mailboxKind !== 'shared') {
       excluded.push({ user, reason: 'account_disabled' });
       continue;
     }
@@ -114,10 +122,10 @@ export function filterEntraUsers(
     }
 
     // Missing provider data is deliberately fail-open and is counted by callers.
-    if (options.memberUsersOnly) {
+    if (options.memberUsersOnly && user.mailboxKind !== 'shared') {
       if (user.userType === 'Guest') { excluded.push({ user, reason: 'guest_user' }); continue; }
     }
-    if (options.licensedUsersOnly) {
+    if (options.licensedUsersOnly && user.mailboxKind !== 'shared') {
       if (user.assignedLicenseCount === 0) { excluded.push({ user, reason: 'unlicensed' }); continue; }
     }
 
@@ -151,6 +159,7 @@ export function filterEntraUsers(
     deactivateExcludedContacts: Boolean(options.deactivateExcludedContacts),
     unknownFieldCounts,
     groupMembershipResolver: options.groupMembershipResolver ?? EMPTY_GROUP_MEMBERSHIP_RESOLVER,
+    warnings: options.mailboxDetectionWarning ? [options.mailboxDetectionWarning] : [],
   };
 }
 

@@ -21,7 +21,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
 });
 vi.mock('@ee/components/settings/integrations/entra/ContactPreflightReport', () => ({ ContactPreflightReport: () => null }));
 
-const config = { version: 1 as const, memberUsersOnly: false, licensedUsersOnly: false, includeGroupIds: [] as string[], excludeGroupIds: [] as string[], exclusionPatterns: [] as string[], deactivateExcludedContacts: false };
+const config = { version: 1 as const, memberUsersOnly: false, licensedUsersOnly: false, includeGroupIds: [] as string[], excludeGroupIds: [] as string[], exclusionPatterns: [] as string[], deactivateExcludedContacts: false, importSharedMailboxes: false };
 type Override = Partial<typeof config>;
 const mapping = { managedTenantId: 'managed-1' } as EntraConfirmedMapping;
 let defaults = config;
@@ -75,6 +75,14 @@ describe('ManagedTenantUserFilterPanel', () => {
     expect(document.getElementById('entra-user-filter-unsaved-managed-1')).toBeNull();
     expect(document.getElementById('entra-filter-memberUsersOnly-managed-1')?.parentElement?.textContent).toContain('Overridden');
     expect(document.getElementById('entra-filter-deactivateExcludedContacts-managed-1')?.parentElement?.textContent).toContain('Inherited');
+  });
+
+  it('keeps omitted empty override arrays sparse and omits the empty effective-pattern line', async () => {
+    savedOverride = { version: 1, memberUsersOnly: false };
+    renderPanel();
+    await waitForPanel();
+    expect((document.getElementById('entra-filter-save-managed-1') as HTMLButtonElement).disabled).toBe(true);
+    expect(document.querySelector('#entra-user-filter-managed-1')?.textContent).not.toContain('Effective patterns:');
   });
 
   it('marks edits on a saved override as unsaved', async () => {

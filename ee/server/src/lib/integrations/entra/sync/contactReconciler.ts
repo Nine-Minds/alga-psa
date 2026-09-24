@@ -157,6 +157,7 @@ async function upsertContactLink(
       contact_name_id: contactNameId,
     })
     .update({
+      contact_kind: user.mailboxKind === 'shared' ? 'shared_mailbox' : 'person',
       entra_object_id: user.entraObjectId,
       entra_sync_source: 'entra_sync',
       last_entra_sync_at: now,
@@ -330,6 +331,7 @@ export async function createContactForEntraUser(
           phone_numbers: buildEntraContactPhoneNumbers(user),
           role: user.jobTitle || undefined,
           is_inactive: false,
+          contact_kind: user.mailboxKind === 'shared' ? 'shared_mailbox' : 'person',
         },
         tenantId,
         trx

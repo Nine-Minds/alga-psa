@@ -147,4 +147,14 @@ describe('filterEntraUsers', () => {
     expect(result.included.map(user => user.entraObjectId)).toEqual(['included']);
     expect(result.unknownFieldCounts).toEqual({ userType: 1, assignedLicenseCount: 1 });
   });
+
+  it('classifies shared mailboxes before disabled and unlicensed checks and applies later filters when enabled', () => {
+    const shared = buildUser({ entraObjectId: 'shared', mailboxKind: 'shared', accountEnabled: false, assignedLicenseCount: 0 });
+    expect(filterEntraUsers([shared]).excluded[0].reason).toBe('shared_mailbox');
+    expect(filterEntraUsers([shared], { importSharedMailboxes: true }).included).toEqual([shared]);
+    expect(filterEntraUsers([shared], { importSharedMailboxes: true, customExclusionPatterns: ['normal'] }).excluded[0].reason).toBe('tenant_custom_pattern');
+    expect(filterEntraUsers([shared], { importSharedMailboxes: true, includeGroupIds: ['g'], includeMemberIds: new Set() }).excluded[0].reason).toBe('not_in_included_group');
+    expect(filterEntraUsers([shared], { importSharedMailboxes: true, deactivateExcludedContacts: true }).excluded).toEqual([]);
+    expect(filterEntraUsers([shared], { importSharedMailboxes: false, deactivateExcludedContacts: true }).excluded[0].reason).toBe('shared_mailbox');
+  });
 });

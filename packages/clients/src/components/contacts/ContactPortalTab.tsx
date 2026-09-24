@@ -728,7 +728,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
           {!existingUser ? (
             <div className="space-y-6">
               {/* Portal Admin Setting - Only shows when no user exists */}
-              <div className="flex items-center justify-between">
+              {contact.contact_kind !== 'shared_mailbox' && <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label htmlFor="portal-admin" className="text-base">
                     {t('contactPortalTab.portalAdmin.label', { defaultValue: 'Portal Administrator' })}
@@ -743,9 +743,9 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                   onCheckedChange={handlePortalAdminToggle}
                   disabled={!currentUserPermissions.canUpdateRoles || isUpdating}
                 />
-              </div>
+              </div>}
 
-              <div className="border-t pt-6">
+              {contact.contact_kind !== 'shared_mailbox' && <div className="border-t pt-6">
                 <div className="space-y-4">
                 <Alert className="mb-4">
                   <Info className="h-4 w-4" />
@@ -776,7 +776,11 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                     </Button>
                   </div>
                 </div>
-              </div>
+              </div>}
+            </div>
+          ) : contact.contact_kind === 'shared_mailbox' ? (
+            <div className="rounded-md border p-3 text-sm text-muted-foreground">
+              <Badge variant="default-muted">{t('contactsPage.sharedMailbox')}</Badge>
             </div>
           ) : (
             <div className="border-t pt-6">

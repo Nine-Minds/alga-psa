@@ -21,6 +21,7 @@ import { filterEntraUsersForManagedTenant } from '@ee/lib/integrations/entra/set
 import { executeEntraSync } from '@ee/lib/integrations/entra/sync/syncEngine';
 import { markExcludedEntraUsersInactive } from '@ee/lib/integrations/entra/sync/disableHandler';
 import filterMigration from '../../../migrations/20260923120000_entra_managed_tenant_user_filters.cjs';
+import contactKindMigration from '../../../../../server/migrations/20260924120000_add_contact_kind.cjs';
 
 function adminPassword(): string {
   const composeSecret = process.env.POSTGRES_PASSWORD_FILE?.startsWith('/run/secrets/')
@@ -59,6 +60,7 @@ describe('Entra user filter PostgreSQL integration', () => {
   beforeEach(async () => {
     state.trx = await db.transaction();
     await filterMigration.up(state.trx);
+    await contactKindMigration.up(state.trx);
     state.tenant = randomUUID();
     state.userId = randomUUID();
     managedTenantId = randomUUID();
@@ -108,6 +110,35 @@ describe('Entra user filter PostgreSQL integration', () => {
     const contacts = await state.trx('contacts').where({ tenant: state.tenant, client_id: clientId }).select('email');
     expect(contacts.map((contact: any) => contact.email)).toEqual(['included@example.test']);
     await state.trx.rollback();
+  });
+
+  it('migrates contact_kind transactionally and imports or preserves shared mailboxes according to the toggle', async () => {
+    expect(await state.trx.schema.hasColumn('contacts', 'contact_kind')).toBe(true);
+    await contactKindMigration.down(state.trx);
+    expect(await state.trx.schema.hasColumn('contacts', 'contact_kind')).toBe(false);
+    await contactKindMigration.up(state.trx);
+    await expect(state.trx.transaction(async (trx) => trx('contacts').insert({ tenant: state.tenant, contact_name_id: randomUUID(), full_name: 'Invalid kind', email: `${randomUUID()}@example.test`, contact_kind: 'room' }))).rejects.toThrow();
+
+    const mailbox = buildUser('shared-mailbox', { mailboxKind: null, accountEnabled: false, assignedLicenseCount: 0 });
+    const adapter = { listSharedMailboxIds: async () => new Set([mailbox.entraObjectId, 'shared-existing']), listSecurityGroupMemberIds: async () => new Set() } as any;
+    await state.trx('entra_managed_tenant_user_filters').insert({ tenant: state.tenant, managed_tenant_id: managedTenantId, filter_config: JSON.stringify({ importSharedMailboxes: true }) });
+    const enabled = await filterEntraUsersForManagedTenant({ tenant: state.tenant, managedTenantId, entraTenantId, adapter, users: [mailbox] });
+    expect(enabled.included[0]).toMatchObject({ mailboxKind: 'shared', accountEnabled: false });
+    await executeEntraSync({ tenantId: state.tenant, clientId, managedTenantId, users: enabled.included });
+    let contact = await state.trx('contacts').where({ tenant: state.tenant, email: mailbox.email }).first();
+    expect(contact.contact_kind).toBe('shared_mailbox');
+    expect(contact.is_inactive).toBe(false);
+
+    const imported = await ContactModel.createContact({ full_name: 'Existing mailbox', email: 'existing-shared@example.test', client_id: clientId }, state.tenant, state.trx);
+    await state.trx('contacts').where({ tenant: state.tenant, contact_name_id: imported.contact_name_id }).update({ contact_kind: 'shared_mailbox' });
+    await state.trx('entra_contact_links').insert({ tenant: state.tenant, contact_name_id: imported.contact_name_id, client_id: clientId, entra_tenant_id: entraTenantId, entra_object_id: 'shared-existing', link_status: 'active', is_active: true });
+    await state.trx('entra_managed_tenant_user_filters').where({ tenant: state.tenant, managed_tenant_id: managedTenantId }).update({ filter_config: JSON.stringify({ importSharedMailboxes: false }) });
+    const disabled = await filterEntraUsersForManagedTenant({ tenant: state.tenant, managedTenantId, entraTenantId, adapter, users: [buildUser('shared-existing', { mailboxKind: null, accountEnabled: false, assignedLicenseCount: 0 })] });
+    expect(disabled.excluded[0].reason).toBe('shared_mailbox');
+    expect(disabled.deactivateExcludedContacts).toBe(false);
+    await executeEntraSync({ tenantId: state.tenant, clientId, managedTenantId, users: disabled.included, disabledIdentities: [] });
+    contact = await state.trx('contacts').where({ tenant: state.tenant, contact_name_id: imported.contact_name_id }).first();
+    expect(contact).toMatchObject({ contact_kind: 'shared_mailbox', is_inactive: false });
   });
 
   it('only reactivates filter-deactivated contacts, and the all-excluded brake preserves contacts', async () => {

@@ -32,7 +32,7 @@ export async function getEntraUserFilterSettings(tenant: string): Promise<EntraU
 }
 
 export async function resolveEntraUserFilterPolicy(input: {
-  tenant: string; managedTenantId: string; entraTenantId: string; adapter: EntraProviderAdapter; users?: EntraSyncUser[]; configOverride?: EntraUserFilterConfig;
+  tenant: string; managedTenantId: string; entraTenantId: string; adapter: EntraProviderAdapter; users?: EntraSyncUser[]; configOverride?: EntraUserFilterConfig; sharedMailboxIds?: Set<string> | null;
 }): Promise<EntraUserFilterOptions> {
   const { defaults, override } = await runWithTenant(input.tenant, async () => {
     const { knex } = await createTenantKnex();
@@ -47,6 +47,11 @@ export async function resolveEntraUserFilterPolicy(input: {
     return { defaults: parseEntraUserFilterConfig(settings?.user_filter_config), override: tenantOverride ? parseEntraUserFilterOverride(tenantOverride.filter_config) : null };
   });
   const effective: EntraUserFilterConfig = input.configOverride ?? mergeEntraUserFilterConfig(defaults || EMPTY_ENTRA_USER_FILTER_CONFIG, override);
+  const sharedMailboxIds = Object.prototype.hasOwnProperty.call(input, 'sharedMailboxIds')
+    ? input.sharedMailboxIds ?? null
+    : input.adapter.listSharedMailboxIds
+      ? await input.adapter.listSharedMailboxIds({ tenant: input.tenant, managedTenantId: input.entraTenantId })
+      : null;
   const resolver = new GroupMembershipResolver({ tenant: input.tenant, entraTenantId: input.entraTenantId, adapter: input.adapter, users: input.users });
   const includeMemberIds = new Set<string>();
   const excludeMemberIds = new Set<string>();
@@ -58,7 +63,7 @@ export async function resolveEntraUserFilterPolicy(input: {
     const ids = await resolver.members(groupId);
     for (const id of ids) excludeMemberIds.add(id);
   }
-  return { customExclusionPatterns: effective.exclusionPatterns, memberUsersOnly: effective.memberUsersOnly, licensedUsersOnly: effective.licensedUsersOnly, includeGroupIds: effective.includeGroupIds, excludeGroupIds: effective.excludeGroupIds, includeMemberIds, excludeMemberIds, deactivateExcludedContacts: effective.deactivateExcludedContacts, groupMembershipResolver: resolver };
+  return { customExclusionPatterns: effective.exclusionPatterns, memberUsersOnly: effective.memberUsersOnly, licensedUsersOnly: effective.licensedUsersOnly, importSharedMailboxes: effective.importSharedMailboxes, sharedMailboxIds: sharedMailboxIds ?? undefined, mailboxDetectionWarning: sharedMailboxIds === null ? 'Shared mailbox detection is unavailable for this connection; no users were classified as shared mailboxes.' : undefined, includeGroupIds: effective.includeGroupIds, excludeGroupIds: effective.excludeGroupIds, includeMemberIds, excludeMemberIds, deactivateExcludedContacts: effective.deactivateExcludedContacts, groupMembershipResolver: resolver };
 }
 
 export async function filterEntraUsersForManagedTenant(input: Parameters<typeof resolveEntraUserFilterPolicy>[0]): Promise<EntraUserFilterResult> {

@@ -139,6 +139,21 @@ describe('CippProviderAdapter seams', () => {
     expect(users[1].accountEnabled).toBe(false);
   });
 
+  it('maps only SharedMailbox ListMailboxes rows and uses ExternalDirectoryObjectId casing', async () => {
+    hoisted.get.mockResolvedValueOnce({ data: [
+      { ExternalDirectoryObjectId: 'shared-id', RecipientTypeDetails: 'SharedMailbox' },
+      { externalDirectoryObjectId: 'room-id', recipientTypeDetails: 'RoomMailbox' },
+    ] });
+    const ids = await new CippProviderAdapter().listSharedMailboxIds({ tenant: 't1', managedTenantId: 'm1' });
+    expect(ids).toEqual(new Set(['shared-id']));
+    expect(hoisted.get.mock.calls[0][0]).toBe('https://cipp.test/api/ListMailboxes?tenantFilter=m1&RecipientTypeDetails=SharedMailbox');
+  });
+
+  it('does not classify shared mailboxes when ListMailboxes returns 403', async () => {
+    hoisted.get.mockRejectedValueOnce({ isAxiosError: true, response: { status: 403 } });
+    expect(await new CippProviderAdapter().listSharedMailboxIds({ tenant: 't1', managedTenantId: 'm1' })).toBeNull();
+  });
+
   it('uses CIPP per-user group checks when bulk transitive membership is unavailable', async () => {
     hoisted.get.mockImplementation(async (url: string) => ({ data: url.includes('userId=u1') ? [{ id: 'g1' }] : [{ id: 'g2' }] }));
     const adapter = new CippProviderAdapter();

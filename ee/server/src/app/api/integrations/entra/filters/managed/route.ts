@@ -31,6 +31,7 @@ export async function POST(request: Request): Promise<Response> {
   if (!managedTenantId) return badRequest('managedTenantId is required.');
   const validation = body.override === null ? null : validateEntraUserFilterConfig(body.override);
   if (validation && !validation.config) return badRequest(validation.error || 'Invalid filter configuration.');
+  const now = new Date().toISOString();
   const result = await runWithTenant(access.tenantId, async () => {
     const { knex } = await createTenantKnex();
     const db = tenantDb(knex, access.tenantId);
@@ -39,7 +40,7 @@ export async function POST(request: Request): Promise<Response> {
     if (body.override === null) await db.table('entra_managed_tenant_user_filters').where({ tenant: access.tenantId, managed_tenant_id: managedTenantId }).del();
     else {
       const override = parseEntraUserFilterOverride(body.override);
-      await db.table('entra_managed_tenant_user_filters').insert({ tenant: access.tenantId, managed_tenant_id: managedTenantId, filter_config: knex.raw('?::jsonb', [JSON.stringify(override)]), updated_by: access.userId, updated_at: knex.fn.now() }).onConflict(['tenant', 'managed_tenant_id']).merge({ filter_config: knex.raw('?::jsonb', [JSON.stringify(override)]), updated_by: access.userId, updated_at: knex.fn.now() });
+      await db.table('entra_managed_tenant_user_filters').insert({ tenant: access.tenantId, managed_tenant_id: managedTenantId, filter_config: knex.raw('?::jsonb', [JSON.stringify(override)]), updated_by: access.userId, updated_at: now }).onConflict(['tenant', 'managed_tenant_id']).merge({ filter_config: knex.raw('?::jsonb', [JSON.stringify(override)]), updated_by: access.userId, updated_at: now });
     }
     const [settings, row] = await Promise.all([db.table('entra_sync_settings').where({ tenant: access.tenantId }).first('user_filter_config'), db.table('entra_managed_tenant_user_filters').where({ tenant: access.tenantId, managed_tenant_id: managedTenantId }).first('filter_config')]);
     const override = row ? parseEntraUserFilterOverride(row.filter_config) : null;
