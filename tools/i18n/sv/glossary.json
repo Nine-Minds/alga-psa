@@ -470,7 +470,7 @@
     {"term":"tags","preferred":"taggar","enWhen":"^(?:all |select )?tags(?:[ :*]|$)","reason":"English plural; Swedish metadata labels are taggar."},
     {"term":"servers","preferred":"servrar","enWhen":"^(?:all )?servers$","reason":"Use the Swedish plural of server."},
     {"term":"webhooks","preferred":"webhookar","enWhen":"^(?:all |manage )?webhooks$","reason":"This glossary uses the Swedish plural webhookar; preserve machine identifiers separately."},
-    {"term":"teams","preferred":"team","enWhen":"^(?:all |assigned |select )?teams$","keyUnless":"(?:microsoft|integration|provider)","reason":"The Swedish plural of ett team is team. Microsoft Teams is an unchanged brand, exempt in integration/provider keys."},
+    {"term":"teams","preferred":"team","enWhen":"^(?:all |assigned |select )?teams$","keyUnless":"(?:microsoft|integration|provider)|^metadata:teams\\.tab\\.title$","reason":"The Swedish plural of ett team is team. Microsoft Teams is an unchanged brand, exempt in integration/provider keys and the Teams tab title."},
     {"term":"total","preferred":"totalt","enWhen":"^total:?$","reason":"Standalone sum label is Totalt; the adjective total remains valid before a common-gender noun."},
     {"term":"subtotal","preferred":"delsumma","enWhen":"^subtotal:?$","reason":"Use the Swedish billing subtotal noun."},
     {"term":"email","preferred":"e-post","enWhen":"^(?:email|email address|primary email|email label)(?:[ :*]|$)","reason":"Use consistent Swedish e-post terminology in generic labels; real addresses and official provider names stay unchanged."},
