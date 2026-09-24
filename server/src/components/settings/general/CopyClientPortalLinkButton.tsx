@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { Button } from '@alga-psa/ui/components/Button';
+import { copyTextToClipboard } from '@alga-psa/ui/lib/clipboard';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getTenantPortalLoginLink } from '@alga-psa/client-portal/actions/portal-actions/clientPortalLinkActions';
@@ -11,37 +12,6 @@ interface CopyClientPortalLinkButtonProps {
   id?: string;
   className?: string;
 }
-
-// LEVERAGE: pattern clipboard-copy-fallback — Clipboard API → hidden-textarea execCommand fallback, 3rd copy (portal link button, keyboard cheatsheet, appliance PodAccessPanel)
-const copyTextWithFallback = async (text: string): Promise<boolean> => {
-  if (typeof navigator !== 'undefined' && navigator.clipboard) {
-    try {
-      await navigator.clipboard.writeText(text);
-      return true;
-    } catch {
-      // Clipboard API can exist but reject outside a secure context.
-    }
-  }
-
-  const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-  const textarea = document.createElement('textarea');
-  textarea.value = text;
-  textarea.setAttribute('readonly', '');
-  textarea.style.position = 'fixed';
-  textarea.style.opacity = '0';
-  document.body.appendChild(textarea);
-
-  try {
-    textarea.focus();
-    textarea.select();
-    return document.execCommand('copy');
-  } catch {
-    return false;
-  } finally {
-    textarea.remove();
-    previousFocus?.focus();
-  }
-};
 
 /**
  * Copies the tenant's portal sign-in URL — the vanity domain when one is live,
@@ -69,7 +39,7 @@ export const CopyClientPortalLinkButton = ({
       }
 
       const portalLink = linkResult.data;
-      const copied = await copyTextWithFallback(portalLink.url);
+      const copied = await copyTextToClipboard(portalLink.url);
       if (copied) {
         toast.success(
           portalLink.source === 'vanity'
