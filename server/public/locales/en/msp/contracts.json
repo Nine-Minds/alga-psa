@@ -261,7 +261,8 @@
       "lines": "Contract Lines",
       "overview": "Overview",
       "pricing": "Pricing Schedules",
-      "simulator": "Simulate"
+      "simulator": "Simulate",
+      "discounts": "Discounts"
     },
     "validation": {
       "billingFrequencyRequired": "Billing frequency is required.",
@@ -532,7 +533,8 @@
       "name": "Name",
       "rate": "Rate",
       "services": "Services",
-      "type": "Type"
+      "type": "Type",
+      "dates": "Dates"
     },
     "configuration": {
       "description": "Settings that apply to this contract line",
@@ -543,7 +545,14 @@
       "minutesValue": "{{count}} minutes",
       "roundUpToNearest": "Round Up To Nearest (minutes)",
       "title": "Contract Line Configuration",
-      "usageInfo": "Usage-based contract lines are configured per service with unit rates."
+      "usageInfo": "Usage-based contract lines are configured per service with unit rates.",
+      "invoiceText": "Invoice line text",
+      "invoiceTextPlaceholder": "Printed on the invoice; defaults to the line name",
+      "invoiceTextDefault": "Uses the line name",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "inheritsContract": "Contract start",
+      "inheritsContractEnd": "Contract end"
     },
     "customRate": "Custom",
     "description": {
@@ -622,7 +631,10 @@
     },
     "fields": {
       "billingTimingQuestion": "When should this line be billed?",
-      "rate": "Rate"
+      "rate": "Rate",
+      "invoiceText": "Invoice line text",
+      "invoiceTextPlaceholder": "Printed on the invoice; defaults to the line name",
+      "invoiceTextHelp": "This text prints verbatim on the recurring invoice line."
     },
     "sections": {
       "billingTiming": "Billing Timing",
@@ -815,7 +827,12 @@
     "fixedServicesPricingExplanation": "Bundle allocations share the line base rate. Recurring seats bill the agreed quantity × unit rate each period without usage records.",
     "recurringQuantity": "Recurring quantity",
     "allocationQuantity": "Allocation quantity",
-    "bundleBaseRateHelp": "Recurring fee for bundle-priced services. Recurring seats are billed separately at quantity × unit rate."
+    "bundleBaseRateHelp": "Recurring fee for bundle-priced services. Recurring seats are billed separately at quantity × unit rate.",
+    "invoiceTextLabel": "Invoice line text",
+    "invoiceTextPlaceholder": "Printed on the invoice; defaults to the line name",
+    "invoiceTextHelp": "This text prints verbatim on the recurring invoice line.",
+    "startDateLabel": "Line start date",
+    "endDateLabel": "Line end date"
   },
   "pricingSchedules": {
     "list": {
@@ -2487,5 +2504,48 @@
       "contractNotActive": "The activated renewal contract is no longer active. Please refresh and try again.",
       "manualRetryDueOnly": "Manual retry is only available for due renewal cycles."
     }
+  },
+  "contractDiscounts": {
+    "title": "Discounts",
+    "description": "Configured discounts are applied automatically on each eligible draft invoice for this client.",
+    "loading": "Loading discounts…",
+    "empty": "No discounts are configured for this contract yet.",
+    "actions.add": "Add Discount",
+    "actions.cancel": "Cancel",
+    "actions.save": "Save",
+    "actions.saving": "Saving…",
+    "columns.name": "Name",
+    "columns.value": "Value",
+    "columns.scope": "Scope",
+    "columns.line": "Contract line",
+    "columns.dates": "Dates",
+    "columns.status": "Status",
+    "status.active": "Active",
+    "status.inactive": "Inactive",
+    "scopes.invoice": "All eligible charges",
+    "scopes.contract": "This contract",
+    "scopes.service": "A service",
+    "values.unnamedLine": "Unnamed line",
+    "types.percentage": "Percentage",
+    "types.fixed": "Fixed amount",
+    "fields.name": "Name",
+    "fields.namePlaceholder": "e.g. Loyalty 10%",
+    "fields.type": "Type",
+    "fields.percentValue": "Percent (0–100)",
+    "fields.fixedValue": "Amount",
+    "fields.startDate": "Start date",
+    "fields.endDate": "End date",
+    "fields.line": "Contract line",
+    "fields.linePlaceholder": "Select a contract line",
+    "fields.scope": "Scope",
+    "fields.priority": "Priority",
+    "fields.priorityPlaceholder": "Optional",
+    "fields.service": "Service",
+    "fields.servicePlaceholder": "Select a service",
+    "fields.active": "Active",
+    "dialog.createTitle": "Add discount",
+    "dialog.editTitle": "Edit discount",
+    "errors.loadFailed": "Failed to load discounts.",
+    "errors.saveFailed": "Failed to save the discount."
   }
 }

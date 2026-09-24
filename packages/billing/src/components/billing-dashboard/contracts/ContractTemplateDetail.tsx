@@ -1978,6 +1978,7 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
     contractLineId: string,
     rateCents: number,
     billingTiming: "arrears" | "advance",
+    invoiceLineDescription: string | null,
   ) => {
     try {
       const result = await updateContractLineRate(
@@ -1985,6 +1986,7 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
         contractLineId,
         rateCents,
         billingTiming,
+        invoiceLineDescription,
       );
       if (isReturnedActionError(result)) {
         throw new Error(getErrorMessage(result));
@@ -2081,6 +2083,7 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
             contract_line_name: editingLine.contract_line_name,
             rate: editingLine.rate ?? undefined,
             billing_timing: editingLine.billing_timing,
+            invoice_line_description: editingLine.invoice_line_description ?? null,
           }}
           onClose={() => setEditingLine(null)}
           onSave={handleSaveRate}

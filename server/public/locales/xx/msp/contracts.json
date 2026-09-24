@@ -261,7 +261,8 @@
       "lines": "⟦Ƈȯƞŧřȧƈŧ Ŀīƞḗş⟧",
       "overview": "⟦Ȯṽḗřṽīḗẇ⟧",
       "pricing": "⟦Ƥřīƈīƞɠ Şƈħḗḓŭŀḗş⟧",
-      "simulator": "⟦Şīḿŭŀȧŧḗ⟧"
+      "simulator": "⟦Şīḿŭŀȧŧḗ⟧",
+      "discounts": "⟦Ḓīşƈȯŭƞŧş⟧"
     },
     "validation": {
       "billingFrequencyRequired": "⟦Ɓīŀŀīƞɠ ƒřḗʠŭḗƞƈẏ īş řḗʠŭīřḗḓ.⟧",
@@ -532,7 +533,8 @@
       "name": "⟦Ƞȧḿḗ⟧",
       "rate": "⟦Řȧŧḗ⟧",
       "services": "⟦Şḗřṽīƈḗş⟧",
-      "type": "⟦Ŧẏƥḗ⟧"
+      "type": "⟦Ŧẏƥḗ⟧",
+      "dates": "⟦Ḓȧŧḗş⟧"
     },
     "configuration": {
       "description": "⟦Şḗŧŧīƞɠş ŧħȧŧ ȧƥƥŀẏ ŧȯ ŧħīş ƈȯƞŧřȧƈŧ ŀīƞḗ⟧",
@@ -543,7 +545,14 @@
       "minutesValue": "⟦{{count}} ḿīƞŭŧḗş⟧",
       "roundUpToNearest": "⟦Řȯŭƞḓ Ŭƥ Ŧȯ Ƞḗȧřḗşŧ (ḿīƞŭŧḗş)⟧",
       "title": "⟦Ƈȯƞŧřȧƈŧ Ŀīƞḗ Ƈȯƞƒīɠŭřȧŧīȯƞ⟧",
-      "usageInfo": "⟦Ŭşȧɠḗ-ƀȧşḗḓ ƈȯƞŧřȧƈŧ ŀīƞḗş ȧřḗ ƈȯƞƒīɠŭřḗḓ ƥḗř şḗřṽīƈḗ ẇīŧħ ŭƞīŧ řȧŧḗş.⟧"
+      "usageInfo": "⟦Ŭşȧɠḗ-ƀȧşḗḓ ƈȯƞŧřȧƈŧ ŀīƞḗş ȧřḗ ƈȯƞƒīɠŭřḗḓ ƥḗř şḗřṽīƈḗ ẇīŧħ ŭƞīŧ řȧŧḗş.⟧",
+      "invoiceText": "⟦Īƞṽȯīƈḗ ŀīƞḗ ŧḗẋŧ⟧",
+      "invoiceTextPlaceholder": "⟦Ƥřīƞŧḗḓ ȯƞ ŧħḗ īƞṽȯīƈḗ; ḓḗƒȧŭŀŧş ŧȯ ŧħḗ ŀīƞḗ ƞȧḿḗ⟧",
+      "invoiceTextDefault": "⟦Ŭşḗş ŧħḗ ŀīƞḗ ƞȧḿḗ⟧",
+      "startDate": "⟦Şŧȧřŧ ḓȧŧḗ⟧",
+      "endDate": "⟦Ḗƞḓ ḓȧŧḗ⟧",
+      "inheritsContract": "⟦Ƈȯƞŧřȧƈŧ şŧȧřŧ⟧",
+      "inheritsContractEnd": "⟦Ƈȯƞŧřȧƈŧ ḗƞḓ⟧"
     },
     "customRate": "⟦Ƈŭşŧȯḿ⟧",
     "description": {
@@ -622,7 +631,10 @@
     },
     "fields": {
       "billingTimingQuestion": "⟦Ẇħḗƞ şħȯŭŀḓ ŧħīş ŀīƞḗ ƀḗ ƀīŀŀḗḓ?⟧",
-      "rate": "⟦Řȧŧḗ⟧"
+      "rate": "⟦Řȧŧḗ⟧",
+      "invoiceText": "⟦Īƞṽȯīƈḗ ŀīƞḗ ŧḗẋŧ⟧",
+      "invoiceTextPlaceholder": "⟦Ƥřīƞŧḗḓ ȯƞ ŧħḗ īƞṽȯīƈḗ; ḓḗƒȧŭŀŧş ŧȯ ŧħḗ ŀīƞḗ ƞȧḿḗ⟧",
+      "invoiceTextHelp": "⟦Ŧħīş ŧḗẋŧ ƥřīƞŧş ṽḗřƀȧŧīḿ ȯƞ ŧħḗ řḗƈŭřřīƞɠ īƞṽȯīƈḗ ŀīƞḗ.⟧"
     },
     "sections": {
       "billingTiming": "⟦Ɓīŀŀīƞɠ Ŧīḿīƞɠ⟧",
@@ -815,7 +827,12 @@
     "fixedServicesPricingExplanation": "⟦Ɓŭƞḓŀḗ ȧŀŀȯƈȧŧīȯƞş şħȧřḗ ŧħḗ ŀīƞḗ ƀȧşḗ řȧŧḗ. Řḗƈŭřřīƞɠ şḗȧŧş ƀīŀŀ ŧħḗ ȧɠřḗḗḓ ʠŭȧƞŧīŧẏ × ŭƞīŧ řȧŧḗ ḗȧƈħ ƥḗřīȯḓ ẇīŧħȯŭŧ ŭşȧɠḗ řḗƈȯřḓş.⟧",
     "recurringQuantity": "⟦Řḗƈŭřřīƞɠ ʠŭȧƞŧīŧẏ⟧",
     "allocationQuantity": "⟦Ȧŀŀȯƈȧŧīȯƞ ʠŭȧƞŧīŧẏ⟧",
-    "bundleBaseRateHelp": "⟦Řḗƈŭřřīƞɠ ƒḗḗ ƒȯř ƀŭƞḓŀḗ-ƥřīƈḗḓ şḗřṽīƈḗş. Řḗƈŭřřīƞɠ şḗȧŧş ȧřḗ ƀīŀŀḗḓ şḗƥȧřȧŧḗŀẏ ȧŧ ʠŭȧƞŧīŧẏ × ŭƞīŧ řȧŧḗ.⟧"
+    "bundleBaseRateHelp": "⟦Řḗƈŭřřīƞɠ ƒḗḗ ƒȯř ƀŭƞḓŀḗ-ƥřīƈḗḓ şḗřṽīƈḗş. Řḗƈŭřřīƞɠ şḗȧŧş ȧřḗ ƀīŀŀḗḓ şḗƥȧřȧŧḗŀẏ ȧŧ ʠŭȧƞŧīŧẏ × ŭƞīŧ řȧŧḗ.⟧",
+    "invoiceTextLabel": "⟦Īƞṽȯīƈḗ ŀīƞḗ ŧḗẋŧ⟧",
+    "invoiceTextPlaceholder": "⟦Ƥřīƞŧḗḓ ȯƞ ŧħḗ īƞṽȯīƈḗ; ḓḗƒȧŭŀŧş ŧȯ ŧħḗ ŀīƞḗ ƞȧḿḗ⟧",
+    "invoiceTextHelp": "⟦Ŧħīş ŧḗẋŧ ƥřīƞŧş ṽḗřƀȧŧīḿ ȯƞ ŧħḗ řḗƈŭřřīƞɠ īƞṽȯīƈḗ ŀīƞḗ.⟧",
+    "startDateLabel": "⟦Ŀīƞḗ şŧȧřŧ ḓȧŧḗ⟧",
+    "endDateLabel": "⟦Ŀīƞḗ ḗƞḓ ḓȧŧḗ⟧"
   },
   "pricingSchedules": {
     "list": {
@@ -2487,5 +2504,48 @@
       "contractNotActive": "⟦Ŧħḗ ȧƈŧīṽȧŧḗḓ řḗƞḗẇȧŀ ƈȯƞŧřȧƈŧ īş ƞȯ ŀȯƞɠḗř ȧƈŧīṽḗ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ.⟧",
       "manualRetryDueOnly": "⟦Ḿȧƞŭȧŀ řḗŧřẏ īş ȯƞŀẏ ȧṽȧīŀȧƀŀḗ ƒȯř ḓŭḗ řḗƞḗẇȧŀ ƈẏƈŀḗş.⟧"
     }
+  },
+  "contractDiscounts": {
+    "title": "⟦Ḓīşƈȯŭƞŧş⟧",
+    "description": "⟦Ƈȯƞƒīɠŭřḗḓ ḓīşƈȯŭƞŧş ȧřḗ ȧƥƥŀīḗḓ ȧŭŧȯḿȧŧīƈȧŀŀẏ ȯƞ ḗȧƈħ ḗŀīɠīƀŀḗ ḓřȧƒŧ īƞṽȯīƈḗ ƒȯř ŧħīş ƈŀīḗƞŧ.⟧",
+    "loading": "⟦Ŀȯȧḓīƞɠ ḓīşƈȯŭƞŧş…⟧",
+    "empty": "⟦Ƞȯ ḓīşƈȯŭƞŧş ȧřḗ ƈȯƞƒīɠŭřḗḓ ƒȯř ŧħīş ƈȯƞŧřȧƈŧ ẏḗŧ.⟧",
+    "actions.add": "⟦Ȧḓḓ Ḓīşƈȯŭƞŧ⟧",
+    "actions.cancel": "⟦Ƈȧƞƈḗŀ⟧",
+    "actions.save": "⟦Şȧṽḗ⟧",
+    "actions.saving": "⟦Şȧṽīƞɠ…⟧",
+    "columns.name": "⟦Ƞȧḿḗ⟧",
+    "columns.value": "⟦Ṽȧŀŭḗ⟧",
+    "columns.scope": "⟦Şƈȯƥḗ⟧",
+    "columns.line": "⟦Ƈȯƞŧřȧƈŧ ŀīƞḗ⟧",
+    "columns.dates": "⟦Ḓȧŧḗş⟧",
+    "columns.status": "⟦Şŧȧŧŭş⟧",
+    "status.active": "⟦Ȧƈŧīṽḗ⟧",
+    "status.inactive": "⟦Īƞȧƈŧīṽḗ⟧",
+    "scopes.invoice": "⟦Ȧŀŀ ḗŀīɠīƀŀḗ ƈħȧřɠḗş⟧",
+    "scopes.contract": "⟦Ŧħīş ƈȯƞŧřȧƈŧ⟧",
+    "scopes.service": "⟦Ȧ şḗřṽīƈḗ⟧",
+    "values.unnamedLine": "⟦Ŭƞƞȧḿḗḓ ŀīƞḗ⟧",
+    "types.percentage": "⟦Ƥḗřƈḗƞŧȧɠḗ⟧",
+    "types.fixed": "⟦Ƒīẋḗḓ ȧḿȯŭƞŧ⟧",
+    "fields.name": "⟦Ƞȧḿḗ⟧",
+    "fields.namePlaceholder": "⟦ḗ.ɠ. Ŀȯẏȧŀŧẏ 10%⟧",
+    "fields.type": "⟦Ŧẏƥḗ⟧",
+    "fields.percentValue": "⟦Ƥḗřƈḗƞŧ (0–100)⟧",
+    "fields.fixedValue": "⟦Ȧḿȯŭƞŧ⟧",
+    "fields.startDate": "⟦Şŧȧřŧ ḓȧŧḗ⟧",
+    "fields.endDate": "⟦Ḗƞḓ ḓȧŧḗ⟧",
+    "fields.line": "⟦Ƈȯƞŧřȧƈŧ ŀīƞḗ⟧",
+    "fields.linePlaceholder": "⟦Şḗŀḗƈŧ ȧ ƈȯƞŧřȧƈŧ ŀīƞḗ⟧",
+    "fields.scope": "⟦Şƈȯƥḗ⟧",
+    "fields.priority": "⟦Ƥřīȯřīŧẏ⟧",
+    "fields.priorityPlaceholder": "⟦Ȯƥŧīȯƞȧŀ⟧",
+    "fields.service": "⟦Şḗřṽīƈḗ⟧",
+    "fields.servicePlaceholder": "⟦Şḗŀḗƈŧ ȧ şḗřṽīƈḗ⟧",
+    "fields.active": "⟦Ȧƈŧīṽḗ⟧",
+    "dialog.createTitle": "⟦Ȧḓḓ ḓīşƈȯŭƞŧ⟧",
+    "dialog.editTitle": "⟦Ḗḓīŧ ḓīşƈȯŭƞŧ⟧",
+    "errors.loadFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ḓīşƈȯŭƞŧş.⟧",
+    "errors.saveFailed": "⟦Ƒȧīŀḗḓ ŧȯ şȧṽḗ ŧħḗ ḓīşƈȯŭƞŧ.⟧"
   }
 }

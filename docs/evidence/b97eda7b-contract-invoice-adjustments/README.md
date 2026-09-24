@@ -368,3 +368,85 @@ Verification snapshot this round (all green, sequential DB runs):
   inventing product behaviour. The manual partial-period path covers both
   increase and decrease directions and is the supported way to settle a
   partial period.
+
+## Recurring contract terms repair (2026-09-24 scope addition)
+
+Captain scope addition: recurring client-specific terms are authored on the
+client contract and billed through the existing evaluator, not copied forward as
+manual invoice lines. This round finishes that capability on the existing
+layers.
+
+### What changed
+
+- **Fixed-discount unit fixed.** `discounts.value` is `decimal(10,2)`: a fixed
+  discount stores a decimal currency amount (`50.00` = $50.00) while a
+  percentage stores a fraction (`0.10` = 10%). `buildAutomaticDiscountPolicies`
+  passed the raw value to an evaluator that treats fixed values as minor units,
+  so a configured $50 discount billed $0.50. The conversion now happens exactly
+  once at that adapter boundary
+  (`storedDiscountValueToPolicyValue`, `contractInvoiceAdjustments.ts`).
+- **Configured discounts are authorable.** New `Discounts` tab on the client
+  contract (`ContractDetail.tsx` → `ContractDiscounts.tsx`) backed by
+  tenant-scoped, permissioned `discountActions.ts` (list/create/update/
+  deactivate) that writes the existing `discounts` +
+  `contract_line_discounts` model. Fixed/percentage value, start/end date, line
+  association, scope (invoice / contract / service), priority and active flag are
+  validated; item scope is rejected as non-authorable because an invoice
+  charge's `item_id` is per-invoice.
+- **Negative recurring rates blocked.** `custom_rate >= 0` is enforced in
+  `createCustomContractLine`, `copyPresetToContractLine`, `updateContractLine`,
+  `updateContractLineFixedConfig`, `updatePlanServiceFixedConfigRate` and
+  `updateContractLineRate`, plus a tenant-safe database
+  `CHECK (custom_rate IS NULL OR custom_rate >= 0)` added `NOT VALID` (then
+  validated when no legacy negatives exist) with the existing negatives logged.
+- **Editable invoice text.** `invoice_line_description` is now authorable in
+  `CreateCustomContractLineDialog`, the live inline editor in `ContractLines.tsx`
+  and `ContractLineEditDialog` (template lines gained the column; the template
+  clone copies it onto the live line). The unused `ContractLineTypeRouter` was
+  removed; `FixedContractLineConfiguration` stays as a tested component.
+- **Authored line windows.** Nullable `start_date`/`end_date` on `contract_lines`
+  (half-open), validated against the active `client_contracts` assignment,
+  intersected with the assignment window in the billing engine and in both
+  recurring-service-period materializers so partial first/last periods prorate
+  through `enable_proration` and an ended line produces no later in-advance
+  period. `contract_lines.is_active` is now filtered in the recurring line
+  selection (it was not before).
+- **Manual-row tax preservation.** Opening a taxable row with no stored
+  `tax_region` and no service no longer resolves to `null` (Non-taxable) and
+  strips its tax. The resolver falls back to the invoice client's default region
+  so the reported Florida 6% case shows `US-FL`, and returns `undefined` for an
+  unresolvable taxable row so an untouched open/save leaves the stored treatment
+  alone. Extracted to `manualInvoiceTaxResolution.ts`.
+
+### Verification
+
+Sequential runs; the DB suites recreate the isolated `test_database` on
+Postgres 5472.
+
+| Suite | Result |
+| --- | --- |
+| `packages/billing` unit (`npx vitest run`) | 313 files / 1574 tests |
+| `contractInvoiceAdjustments.db.test.ts` | 26 tests (fixed USD/EUR, window/assignment, negative-rate constraint) |
+| `contractInvoiceManualCredit.test.ts` | 7 tests |
+| `billingInvoiceGeneration_discounts.test.ts` | 4 tests |
+| `contractDetailTabSwitch.ui.test.tsx` | 2 tests |
+| `resolveEffectiveContractLineWindow` / `resolveInitialManualTaxRateId` | 13 tests |
+| `node scripts/validate-translations.cjs` | 51 files, 0 errors |
+| `node tools/i18n/find-untranslated-ui.cjs --fail-on-high` | passed |
+| `tsc --noEmit` billing / types / db | pass |
+| `packages/billing` `npx tsup` | pass |
+
+### Live UI smoke limitation
+
+The worktree app server (`:3185`) is deliberately stopped for this step and the
+card browser panes still fail (`Session with given id not found`), so no new
+in-browser pass was captured this round. The prior UI smoke evidence above still
+describes the manual-adjustment editor; the new Discounts tab, line date fields
+and invoice-text fields are covered by automated tests only. A reviewer should
+exercise them live when a running service is available.
+
+### Review guide
+
+The served guide (`/home/robert/alga-review/b97eda7b-contract-invoice-adjustments/`)
+now names the baseline tax rate **Florida Sales Tax (US-FL, 6%)** and identifies
+step 2's manual row as **"Review one-time support"**.

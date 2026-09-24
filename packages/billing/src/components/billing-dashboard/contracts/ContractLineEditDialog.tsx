@@ -20,10 +20,17 @@ interface ContractLineEditDialogProps {
     /** Stored in cents. */
     custom_rate?: number | null;
     billing_timing?: 'arrears' | 'advance';
+    /** Verbatim invoice line text; falls back to the line name when null. */
+    invoice_line_description?: string | null;
   };
   currencyCode: string;
   onClose: () => void;
-  onSave: (contractLineId: string, rateCents: number, billingTiming: 'arrears' | 'advance') => Promise<void>;
+  onSave: (
+    contractLineId: string,
+    rateCents: number,
+    billingTiming: 'arrears' | 'advance',
+    invoiceLineDescription: string | null,
+  ) => Promise<void>;
 }
 
 export function ContractLineEditDialog({ line, currencyCode, onClose, onSave }: ContractLineEditDialogProps) {
@@ -38,6 +45,9 @@ export function ContractLineEditDialog({ line, currencyCode, onClose, onSave }: 
   const [rateInput, setRateInput] = useState<string>(() => (initialRateCents / 100).toFixed(2));
   const [billingTiming, setBillingTiming] = useState<'arrears' | 'advance'>(
     line.billing_timing || 'arrears'
+  );
+  const [invoiceLineDescription, setInvoiceLineDescription] = useState<string>(
+    line.invoice_line_description ?? ''
   );
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -59,7 +69,7 @@ export function ContractLineEditDialog({ line, currencyCode, onClose, onSave }: 
 
     setIsSaving(true);
     try {
-      await onSave(line.contract_line_id, rateCents, billingTiming);
+      await onSave(line.contract_line_id, rateCents, billingTiming, invoiceLineDescription.trim() || null);
     } catch (err) {
       console.error('Failed to save contract line:', err);
       setError(err instanceof Error
@@ -151,6 +161,26 @@ export function ContractLineEditDialog({ line, currencyCode, onClose, onSave }: 
                   className="pl-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
               </div>
+            </div>
+
+            <div>
+              <Label htmlFor="contract-line-invoice-text">
+                {t('contractLineEdit.fields.invoiceText', { defaultValue: 'Invoice line text' })}
+              </Label>
+              <Input
+                id="contract-line-invoice-text"
+                type="text"
+                value={invoiceLineDescription}
+                onChange={(e) => setInvoiceLineDescription(e.target.value)}
+                placeholder={t('contractLineEdit.fields.invoiceTextPlaceholder', {
+                  defaultValue: 'Printed on the invoice; defaults to the line name',
+                })}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                {t('contractLineEdit.fields.invoiceTextHelp', {
+                  defaultValue: 'This text prints verbatim on the recurring invoice line.',
+                })}
+              </p>
             </div>
           </div>
 

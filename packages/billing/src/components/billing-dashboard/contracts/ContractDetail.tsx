@@ -56,6 +56,7 @@ import ContractHeader from './ContractHeader';
 import ContractLines from './ContractLines';
 import ContractOverview from './ContractOverview';
 import PricingSchedules from './PricingSchedules';
+import ContractDiscounts from './ContractDiscounts';
 import InvoicePreviewPanel from '../invoicing/InvoicePreviewPanel';
 import { Temporal } from '@js-temporal/polyfill';
 import { toPlainDate, toISODate } from '@alga-psa/core';
@@ -194,7 +195,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   const [contract, setContract] = useState<IContract | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const validTabs = useMemo(() => new Set(['edit', 'lines', 'pricing', 'documents', 'invoices', 'simulator']), []);
+  const validTabs = useMemo(() => new Set(['edit', 'lines', 'pricing', 'discounts', 'documents', 'invoices', 'simulator']), []);
   const initialTab = useMemo(() => {
     const requested = searchParams?.get('contractView');
     if (!requested || !validTabs.has(requested)) {
@@ -1408,6 +1409,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
           </TabsTrigger>
           <TabsTrigger value="pricing" disabled={isSystemManagedDefault}>
             {t('contractDetail.tabs.pricing', { defaultValue: 'Pricing Schedules' })}
+          </TabsTrigger>
+          <TabsTrigger value="discounts" disabled={isSystemManagedDefault}>
+            {t('contractDetail.tabs.discounts', { defaultValue: 'Discounts' })}
           </TabsTrigger>
           <TabsTrigger value="documents">
             {t('contractDetail.tabs.documents', { defaultValue: 'Documents' })}
@@ -2632,6 +2636,13 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
           <PricingSchedules
             contractId={contract.contract_id}
             currencyCode={currencyMeta.currencyCode}
+            isReadOnly={isSystemManagedDefault}
+          />
+        </TabsContent>
+
+        <TabsContent value="discounts">
+          <ContractDiscounts
+            contractId={contract.contract_id}
             isReadOnly={isSystemManagedDefault}
           />
         </TabsContent>

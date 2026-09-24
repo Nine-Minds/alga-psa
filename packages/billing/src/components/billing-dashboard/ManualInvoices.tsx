@@ -27,6 +27,7 @@ import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { Card } from '@alga-psa/ui/components/Card';
 import { LineItem, ServiceOption, EditableItem as LineItemEditableItem, resolveLineItemAmount } from './LineItem'; // Import EditableItem type from LineItem
+import { resolveInitialManualTaxRateId } from './manualInvoiceTaxResolution';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import type { IClient } from '@alga-psa/types';
@@ -1170,24 +1171,23 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
 
   // Preselects a one-time line's tax treatment: an explicit operator choice
   // wins, otherwise derive from the selected service, otherwise match the
-  // stored region. Discounts/credits are never taxed.
-  const resolveInitialTaxRateId = (item: EditableInvoiceItem): string | null => {
-    if (item.is_discount) return null;
-    // An in-session choice always wins over anything re-derived from storage.
-    if (item.tax_rate_id !== undefined) return item.tax_rate_id ?? null;
-    const metadataRateId = item.manual_line_metadata?.tax_rate_id;
-    if (typeof metadataRateId === 'string' && metadataRateId) return metadataRateId;
-    // A row explicitly persisted as non-taxable stays non-taxable regardless of
-    // the region fallback stored alongside it.
-    if (item.is_taxable === false) return null;
-    // Prefer the exact region persisted on the charge (what the operator chose
-    // or last saved) over the selected service's current default.
-    if (item.tax_region) {
-      const storedRateId = taxRateByRegion.get(item.tax_region);
-      if (storedRateId) return storedRateId;
-    }
-    const serviceRateId = services.find((service) => service.service_id === item.service_id)?.tax_rate_id;
-    return serviceRateId ?? null;
+  // stored region. Discounts/credits are never taxed. A taxable row whose rate
+  // cannot be reconstructed resolves to `undefined` so opening and saving it
+  // preserves the stored treatment instead of stripping it.
+  const resolveInitialTaxRateId = (item: EditableInvoiceItem): string | null | undefined => {
+    const invoiceClientId = currentInvoiceData?.client_id || invoice?.client_id || selectedClient;
+    const clientRegion = clientOptions.find((client) => client.client_id === invoiceClientId)?.region_code ?? null;
+    return resolveInitialManualTaxRateId({
+      isDiscount: Boolean(item.is_discount),
+      explicitTaxRateId: item.tax_rate_id,
+      metadataTaxRateId: item.manual_line_metadata?.tax_rate_id,
+      isTaxable: item.is_taxable,
+      taxRegion: item.tax_region ?? null,
+      serviceId: item.service_id ?? null,
+      serviceTaxRateId: services.find((service) => service.service_id === item.service_id)?.tax_rate_id ?? null,
+      clientRegion,
+      taxRateByRegion,
+    });
   };
 
   // Helper to prepare item prop for LineItem component

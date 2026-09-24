@@ -3,6 +3,7 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection, wireLocalTestDbEnv } from '../actions/_dbTestUtils';
 import { computePartialPeriodAmount } from '../lib/billing/compute/contractInvoiceAdjustments';
+import { validateContractLineWindow } from '../lib/billing/contractLineWindow';
 import { inspectInvoiceEditable } from './invoiceAdjustmentEditability';
 import { BillingEngine } from '../lib/billing/billingEngine';
 
@@ -1082,6 +1083,91 @@ describe('contract invoice adjustments (DB-backed)', () => {
     }
   });
 
+  it('bills a configured fixed discount as its decimal currency value in USD and a non-USD currency', async () => {
+    await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: false });
+    const fixedDiscountId = uuidv4();
+    // `discounts.value` is decimal(10,2): 50.00 means $50.00, not 50 minor units.
+    await db('discounts').insert({
+      tenant,
+      discount_id: fixedDiscountId,
+      discount_name: 'Flat $50',
+      discount_type: 'fixed',
+      value: 50.0,
+      start_date: '2026-01-01T00:00:00.000Z',
+      end_date: null,
+      is_active: true,
+      scope: 'invoice',
+    });
+    await db('contract_line_discounts').insert({
+      tenant,
+      discount_id: fixedDiscountId,
+      contract_line_id: contractLineId,
+      client_id: clientId,
+    });
+
+    const draftWithCharge = async (currencyCode: string): Promise<string> => {
+      const invoiceId = uuidv4();
+      await db('invoices').insert({
+        tenant,
+        invoice_id: invoiceId,
+        invoice_number: `ADJ-FIXED-${invoiceId.slice(0, 8)}`,
+        invoice_date: '2026-09-01T00:00:00.000Z',
+        due_date: '2026-09-30T00:00:00.000Z',
+        subtotal: 390000,
+        tax: 0,
+        total_amount: 390000,
+        status: 'draft',
+        client_id: clientId,
+        currency_code: currencyCode,
+        is_manual: false,
+        client_contract_id: clientContractId,
+      });
+      await db('invoice_charges').insert({
+        tenant,
+        item_id: uuidv4(),
+        invoice_id: invoiceId,
+        service_id: serviceId,
+        description: 'Recurring support',
+        quantity: 1,
+        unit_price: 390000,
+        net_amount: 390000,
+        total_price: 390000,
+        tax_amount: 0,
+        tax_rate: 0,
+        is_manual: false,
+        is_discount: false,
+        is_taxable: false,
+        client_contract_id: clientContractId,
+      });
+      return invoiceId;
+    };
+
+    try {
+      for (const currency of ['USD', 'EUR']) {
+        const invoiceId = await draftWithCharge(currency);
+        const result = await db.transaction(async (trx) =>
+          reconcileAutomaticInvoiceAdjustments(trx, tenant, invoiceId),
+        );
+        expect(result.automaticDiscountAmount).toBe(5_000);
+        const rows = await db('invoice_charges')
+          .where({ tenant, invoice_id: invoiceId, adjustment_source_kind: 'discount' });
+        expect(rows).toHaveLength(1);
+        expect(Number(rows[0].net_amount)).toBe(-5_000);
+        expect(Number(rows[0].adjustment_base_amount)).toBe(390_000);
+      }
+    } finally {
+      await db('contract_line_discounts').where({ tenant, discount_id: fixedDiscountId }).delete();
+      await db('invoice_charges').where({ tenant, adjustment_source_id: fixedDiscountId }).delete();
+      await db('invoice_charges').whereIn(
+        'invoice_id',
+        db('invoices').where({ tenant, client_id: clientId }).where('invoice_number', 'like', 'ADJ-FIXED-%').select('invoice_id'),
+      ).delete();
+      await db('invoices').where({ tenant, client_id: clientId }).where('invoice_number', 'like', 'ADJ-FIXED-%').delete();
+      await db('discounts').where({ tenant, discount_id: fixedDiscountId }).delete();
+      await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: true });
+    }
+  });
+
   it('does not apply a configured discount from another contract of the same client', async () => {
     const otherContractId = uuidv4();
     const otherContractLineId = uuidv4();
@@ -1419,6 +1505,51 @@ describe('contract invoice adjustments (DB-backed)', () => {
         .delete();
       await db('discounts').whereIn('discount_id', [firstDiscountId, secondDiscountId]).delete();
       await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: true });
+    }
+  });
+
+  it('constrains authored line dates to the client contract period', async () => {
+    // seedContractDiscount assigns the contract from 2026-01-01 with no end.
+    await expect(
+      validateContractLineWindow(db as never, tenant, contractId, { start_date: '2025-12-31' }),
+    ).resolves.toMatch(/before the client contract starts/);
+
+    await expect(
+      validateContractLineWindow(db as never, tenant, contractId, {
+        start_date: '2026-05-01',
+        end_date: '2026-04-01',
+      }),
+    ).resolves.toMatch(/after the line start date/);
+
+    await expect(
+      validateContractLineWindow(db as never, tenant, contractId, { start_date: '2026-02-01' }),
+    ).resolves.toBeNull();
+
+    await expect(
+      validateContractLineWindow(db as never, tenant, contractId, {}),
+    ).resolves.toBeNull();
+  });
+
+  it('rejects a negative contract-line custom_rate at the database', async () => {
+    const negativeLineId = uuidv4();
+    await db('contract_lines').insert({
+      tenant,
+      contract_line_id: negativeLineId,
+      contract_line_name: 'Negative rate line',
+      contract_id: contractId,
+      billing_frequency: 'monthly',
+      contract_line_type: 'fixed',
+      custom_rate: 0,
+      is_active: true,
+    });
+    try {
+      await expect(
+        db('contract_lines')
+          .where({ tenant, contract_line_id: negativeLineId })
+          .update({ custom_rate: -1 }),
+      ).rejects.toMatchObject({ code: '23514' });
+    } finally {
+      await db('contract_lines').where({ tenant, contract_line_id: negativeLineId }).delete();
     }
   });
 });

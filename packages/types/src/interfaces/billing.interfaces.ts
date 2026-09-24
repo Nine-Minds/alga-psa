@@ -510,6 +510,10 @@ export interface IContractLine extends TenantEntity {
   location_id?: string | null;
   is_custom?: boolean; // Whether this is a custom contract line (not from preset)
   is_active?: boolean;
+  /** Authored line start (inclusive); null inherits the contract assignment start. */
+  start_date?: ISO8601String | null;
+  /** Authored line end (exclusive, half-open); null inherits the contract assignment end. */
+  end_date?: ISO8601String | null;
   // Hourly contract line fields (contract-line-level, same for all services)
   hourly_rate?: number | null; // Deprecated: Use service-level hourly_rate instead
   minimum_billable_time?: number | null; // Minimum time to bill for hourly services

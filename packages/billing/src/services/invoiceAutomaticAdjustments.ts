@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
 import {
   evaluateContractInvoiceAdjustments,
+  storedDiscountValueToPolicyValue,
   type AutomaticDiscountPolicy,
   type DiscountScope,
   type InvoiceAdjustmentCharge,
@@ -157,7 +158,7 @@ export function buildAutomaticDiscountPolicies(
       discount_id: row.discount_id,
       discount_name: row.discount_name,
       discount_type: row.discount_type,
-      value: Number(row.value) || 0,
+      value: storedDiscountValueToPolicyValue(row.discount_type, row.value),
       scope,
       applies_to_service_id: scope === 'service' ? (row.scope_service_id ?? null) : null,
       applies_to_item_id: scope === 'item' ? (row.applies_to_item_id ?? null) : null,

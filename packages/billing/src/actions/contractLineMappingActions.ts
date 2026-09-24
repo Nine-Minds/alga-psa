@@ -688,6 +688,9 @@ export const updateContractLineAssociation = withAuth(async (
       if (dbUpdateData.custom_rate === undefined) {
         dbUpdateData.custom_rate = null;
       }
+      if (dbUpdateData.custom_rate !== null && (!Number.isFinite(Number(dbUpdateData.custom_rate)) || Number(dbUpdateData.custom_rate) < 0)) {
+        throw new ContractLineMappingDomainError('Rate must be zero or greater.');
+      }
 
       // Remove tenant field if present to prevent override
       delete dbUpdateData.tenant;

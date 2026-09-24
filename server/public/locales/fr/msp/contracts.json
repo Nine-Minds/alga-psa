@@ -261,7 +261,8 @@
       "lines": "Lignes de contrat",
       "overview": "Aperçu",
       "pricing": "Barèmes de prix",
-      "simulator": "Simuler"
+      "simulator": "Simuler",
+      "discounts": "Remises"
     },
     "validation": {
       "billingFrequencyRequired": "La fréquence de facturation est requise.",
@@ -532,7 +533,8 @@
       "name": "Nom",
       "rate": "Tarif",
       "services": "Services",
-      "type": "Type"
+      "type": "Type",
+      "dates": "Dates"
     },
     "configuration": {
       "description": "Paramètres qui s'appliquent à cette ligne de contrat",
@@ -543,7 +545,14 @@
       "minutesValue": "{{count}} minutes",
       "roundUpToNearest": "Arrondir au plus proche (minutes)",
       "title": "Configuration de la ligne de contrat",
-      "usageInfo": "Les lignes de contrat à l'usage sont configurées par service avec des tarifs unitaires."
+      "usageInfo": "Les lignes de contrat à l'usage sont configurées par service avec des tarifs unitaires.",
+      "invoiceText": "Texte de la ligne de facture",
+      "invoiceTextPlaceholder": "Imprimé sur la facture ; par défaut, le nom de la ligne",
+      "invoiceTextDefault": "Utilise le nom de la ligne",
+      "startDate": "Date de début",
+      "endDate": "Date de fin",
+      "inheritsContract": "Début du contrat",
+      "inheritsContractEnd": "Fin du contrat"
     },
     "customRate": "Personnalisé",
     "description": {
@@ -622,7 +631,10 @@
     },
     "fields": {
       "billingTimingQuestion": "Quand cette ligne doit-elle être facturée ?",
-      "rate": "Tarif"
+      "rate": "Tarif",
+      "invoiceText": "Texte de la ligne de facture",
+      "invoiceTextPlaceholder": "Imprimé sur la facture ; par défaut, le nom de la ligne",
+      "invoiceTextHelp": "Ce texte est imprimé tel quel sur la ligne de facture récurrente."
     },
     "sections": {
       "billingTiming": "Moment de facturation",
@@ -815,7 +827,12 @@
     "fixedServicesPricingExplanation": "Les allocations au forfait se partagent le tarif de base de la ligne. Les postes récurrents facturent la quantité convenue × tarif unitaire à chaque période, sans enregistrement de consommation.",
     "recurringQuantity": "Quantité récurrente",
     "allocationQuantity": "Quantité allouée",
-    "bundleBaseRateHelp": "Frais récurrents pour les services au forfait. Les postes récurrents sont facturés à part, en quantité × tarif unitaire."
+    "bundleBaseRateHelp": "Frais récurrents pour les services au forfait. Les postes récurrents sont facturés à part, en quantité × tarif unitaire.",
+    "invoiceTextLabel": "Texte de la ligne de facture",
+    "invoiceTextPlaceholder": "Imprimé sur la facture ; par défaut, le nom de la ligne",
+    "invoiceTextHelp": "Ce texte est imprimé tel quel sur la ligne de facture récurrente.",
+    "startDateLabel": "Date de début de la ligne",
+    "endDateLabel": "Date de fin de la ligne"
   },
   "pricingSchedules": {
     "list": {
@@ -2487,5 +2504,48 @@
       "contractNotActive": "Le contrat de renouvellement activé n’est plus actif. Veuillez actualiser la page et réessayer.",
       "manualRetryDueOnly": "La relance manuelle n’est possible que pour les cycles de renouvellement échus."
     }
+  },
+  "contractDiscounts": {
+    "title": "Remises",
+    "description": "Les remises configurées sont appliquées automatiquement sur chaque facture brouillon éligible de ce client.",
+    "loading": "Chargement des remises…",
+    "empty": "Aucune remise n'est encore configurée pour ce contrat.",
+    "actions.add": "Ajouter une remise",
+    "actions.cancel": "Annuler",
+    "actions.save": "Enregistrer",
+    "actions.saving": "Enregistrement…",
+    "columns.name": "Nom",
+    "columns.value": "Valeur",
+    "columns.scope": "Portée",
+    "columns.line": "Ligne de contrat",
+    "columns.dates": "Dates",
+    "columns.status": "Statut",
+    "status.active": "Active",
+    "status.inactive": "Inactive",
+    "scopes.invoice": "Tous les frais éligibles",
+    "scopes.contract": "Ce contrat",
+    "scopes.service": "Un service",
+    "values.unnamedLine": "Ligne sans nom",
+    "types.percentage": "Pourcentage",
+    "types.fixed": "Montant fixe",
+    "fields.name": "Nom",
+    "fields.namePlaceholder": "ex. Fidélité 10 %",
+    "fields.type": "Type",
+    "fields.percentValue": "Pourcentage (0–100)",
+    "fields.fixedValue": "Montant",
+    "fields.startDate": "Date de début",
+    "fields.endDate": "Date de fin",
+    "fields.line": "Ligne de contrat",
+    "fields.linePlaceholder": "Sélectionner une ligne de contrat",
+    "fields.scope": "Portée",
+    "fields.priority": "Priorité",
+    "fields.priorityPlaceholder": "Facultatif",
+    "fields.service": "Service",
+    "fields.servicePlaceholder": "Sélectionner un service",
+    "fields.active": "Active",
+    "dialog.createTitle": "Ajouter une remise",
+    "dialog.editTitle": "Modifier la remise",
+    "errors.loadFailed": "Échec du chargement des remises.",
+    "errors.saveFailed": "Échec de l'enregistrement de la remise."
   }
 }

@@ -261,7 +261,8 @@
       "lines": "Linie kontraktowe",
       "overview": "Przegląd",
       "pricing": "Harmonogramy cenowe",
-      "simulator": "Symuluj"
+      "simulator": "Symuluj",
+      "discounts": "Rabaty"
     },
     "validation": {
       "billingFrequencyRequired": "Wymagana jest częstotliwość rozliczeń.",
@@ -532,7 +533,8 @@
       "name": "Nazwa",
       "rate": "Stawka",
       "services": "Usługi",
-      "type": "Typ"
+      "type": "Typ",
+      "dates": "Daty"
     },
     "configuration": {
       "description": "Ustawienia stosowane do tej linii kontraktowej",
@@ -543,7 +545,14 @@
       "minutesValue": "{{count}} min",
       "roundUpToNearest": "Zaokrąglij w górę do najbliższych (minuty)",
       "title": "Konfiguracja linii kontraktowej",
-      "usageInfo": "Linie kontraktowe rozliczane według zużycia są konfigurowane osobno dla każdej usługi ze stawkami jednostkowymi."
+      "usageInfo": "Linie kontraktowe rozliczane według zużycia są konfigurowane osobno dla każdej usługi ze stawkami jednostkowymi.",
+      "invoiceText": "Tekst wiersza faktury",
+      "invoiceTextPlaceholder": "Drukowany na fakturze; domyślnie nazwa wiersza",
+      "invoiceTextDefault": "Używa nazwy wiersza",
+      "startDate": "Data rozpoczęcia",
+      "endDate": "Data zakończenia",
+      "inheritsContract": "Początek kontraktu",
+      "inheritsContractEnd": "Koniec kontraktu"
     },
     "customRate": "Niestandardowy",
     "description": {
@@ -622,7 +631,10 @@
     },
     "fields": {
       "billingTimingQuestion": "Kiedy powinna być rozliczana ta linia?",
-      "rate": "Stawka"
+      "rate": "Stawka",
+      "invoiceText": "Tekst wiersza faktury",
+      "invoiceTextPlaceholder": "Drukowany na fakturze; domyślnie nazwa wiersza",
+      "invoiceTextHelp": "Ten tekst jest drukowany dosłownie w wierszu faktury cyklicznej."
     },
     "sections": {
       "billingTiming": "Termin rozliczeń",
@@ -815,7 +827,12 @@
     "fixedServicesPricingExplanation": "Alokacje pakietowe dzielą stawkę bazową linii. Cykliczne stanowiska rozliczają uzgodnioną ilość × stawkę jednostkową w każdym okresie bez wpisów zużycia.",
     "recurringQuantity": "Ilość cykliczna",
     "allocationQuantity": "Ilość alokacji",
-    "bundleBaseRateHelp": "Cykliczna opłata za usługi w cenie pakietowej. Cykliczne stanowiska są rozliczane osobno według ilości × stawki jednostkowej."
+    "bundleBaseRateHelp": "Cykliczna opłata za usługi w cenie pakietowej. Cykliczne stanowiska są rozliczane osobno według ilości × stawki jednostkowej.",
+    "invoiceTextLabel": "Tekst wiersza faktury",
+    "invoiceTextPlaceholder": "Drukowany na fakturze; domyślnie nazwa wiersza",
+    "invoiceTextHelp": "Ten tekst jest drukowany dosłownie w wierszu faktury cyklicznej.",
+    "startDateLabel": "Data rozpoczęcia wiersza",
+    "endDateLabel": "Data zakończenia wiersza"
   },
   "pricingSchedules": {
     "list": {
@@ -2491,5 +2508,48 @@
       "contractNotActive": "Aktywowana umowa odnowienia nie jest już aktywna. Odśwież stronę i spróbuj ponownie.",
       "manualRetryDueOnly": "Ręczne ponowienie jest dostępne tylko dla wymagalnych cykli odnowienia."
     }
+  },
+  "contractDiscounts": {
+    "title": "Rabaty",
+    "description": "Skonfigurowane rabaty są automatycznie stosowane do każdej kwalifikującej się faktury roboczej tego klienta.",
+    "loading": "Ładowanie rabatów…",
+    "empty": "Dla tego kontraktu nie skonfigurowano jeszcze żadnych rabatów.",
+    "actions.add": "Dodaj rabat",
+    "actions.cancel": "Anuluj",
+    "actions.save": "Zapisz",
+    "actions.saving": "Zapisywanie…",
+    "columns.name": "Nazwa",
+    "columns.value": "Wartość",
+    "columns.scope": "Zakres",
+    "columns.line": "Wiersz kontraktu",
+    "columns.dates": "Daty",
+    "columns.status": "Status",
+    "status.active": "Aktywny",
+    "status.inactive": "Nieaktywny",
+    "scopes.invoice": "Wszystkie kwalifikujące się opłaty",
+    "scopes.contract": "Ten kontrakt",
+    "scopes.service": "Usługa",
+    "values.unnamedLine": "Wiersz bez nazwy",
+    "types.percentage": "Procent",
+    "types.fixed": "Kwota stała",
+    "fields.name": "Nazwa",
+    "fields.namePlaceholder": "np. Lojalność 10%",
+    "fields.type": "Typ",
+    "fields.percentValue": "Procent (0–100)",
+    "fields.fixedValue": "Kwota",
+    "fields.startDate": "Data rozpoczęcia",
+    "fields.endDate": "Data zakończenia",
+    "fields.line": "Wiersz kontraktu",
+    "fields.linePlaceholder": "Wybierz wiersz kontraktu",
+    "fields.scope": "Zakres",
+    "fields.priority": "Priorytet",
+    "fields.priorityPlaceholder": "Opcjonalne",
+    "fields.service": "Usługa",
+    "fields.servicePlaceholder": "Wybierz usługę",
+    "fields.active": "Aktywny",
+    "dialog.createTitle": "Dodaj rabat",
+    "dialog.editTitle": "Edytuj rabat",
+    "errors.loadFailed": "Nie udało się załadować rabatów.",
+    "errors.saveFailed": "Nie udało się zapisać rabatu."
   }
 }

@@ -143,6 +143,7 @@ import {
 } from "../../models/projectBillingModelUtils";
 import { isProjectMaterialEligible } from "@alga-psa/inventory/lib";
 import { joinEffectiveServicePrice } from "./pricing/joinEffectiveServicePrice";
+import { resolveEffectiveContractLineWindow } from "./contractLineWindow";
 // Workflow imports removed as event emission is moved back to the calling action
 
 type DiscountQueryRow = IDiscount & {
@@ -3064,6 +3065,9 @@ export class BillingEngine {
         "cc.client_id": clientId,
         "cc.is_active": true,
         "cc.tenant": this.tenant,
+        // A line deactivated on the contract must stop billing even though its
+        // assignment is still active.
+        "cl.is_active": true,
       })
       // [start, end) semantics: a contract starting exactly on period end is not active within the period.
       .where("cc.start_date", "<", billingPeriod.endDate)
@@ -3080,6 +3084,9 @@ export class BillingEngine {
         "cl.service_category",
         "cc.start_date",
         "cc.end_date",
+        // Authored line bounds narrow the assignment window; resolved below.
+        "cl.start_date as line_start_date",
+        "cl.end_date as line_end_date",
         "cc.is_active",
         "cc.client_contract_id",
         "cc.template_contract_id",
@@ -3107,12 +3114,21 @@ export class BillingEngine {
       JSON.stringify(clientContractLines, null, 2),
     );
 
-    // Convert dates from the DB into plain ISO strings and normalize values
+    // Convert dates from the DB into plain ISO strings and normalize values.
+    // The effective line window is the intersection of the contract assignment
+    // (`cc.start_date`/`cc.end_date`) and the authored line bounds
+    // (`cl.start_date`/`cl.end_date`), half-open. A null bound inherits the
+    // assignment bound, so a line with no authored dates behaves exactly as
+    // before.
     clientContractLines.forEach((plan: any) => {
-      plan.start_date = toISODate(toPlainDate(plan.start_date));
-      plan.end_date = plan.end_date
-        ? toISODate(toPlainDate(plan.end_date))
-        : null;
+      const effectiveWindow = resolveEffectiveContractLineWindow(
+        { start_date: plan.start_date, end_date: plan.end_date },
+        { start_date: plan.line_start_date, end_date: plan.line_end_date },
+      );
+      plan.start_date = effectiveWindow.start_date;
+      plan.end_date = effectiveWindow.end_date;
+      delete plan.line_start_date;
+      delete plan.line_end_date;
 
       // Normalize billing_timing default
       plan.billing_timing = (plan.billing_timing ?? "arrears") as

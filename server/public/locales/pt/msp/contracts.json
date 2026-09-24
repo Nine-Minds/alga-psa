@@ -261,7 +261,8 @@
       "lines": "Linhas de Contrato",
       "overview": "Visão geral",
       "pricing": "Cronogramas de preços",
-      "simulator": "Simular"
+      "simulator": "Simular",
+      "discounts": "Descontos"
     },
     "validation": {
       "billingFrequencyRequired": "A frequência de cobrança é obrigatória.",
@@ -532,7 +533,8 @@
       "name": "Nome",
       "rate": "Avaliar",
       "services": "Serviços",
-      "type": "Tipo"
+      "type": "Tipo",
+      "dates": "Datas"
     },
     "configuration": {
       "description": "Configurações que se aplicam a esta linha de contrato",
@@ -543,7 +545,14 @@
       "minutesValue": "{{count}} minutos",
       "roundUpToNearest": "Arredondar para o mais próximo (minutos)",
       "title": "Configuração da linha de contrato",
-      "usageInfo": "As linhas de contrato baseadas no uso são configuradas por serviço com taxas unitárias."
+      "usageInfo": "As linhas de contrato baseadas no uso são configuradas por serviço com taxas unitárias.",
+      "invoiceText": "Texto da linha da fatura",
+      "invoiceTextPlaceholder": "Impresso na fatura; por padrão, o nome da linha",
+      "invoiceTextDefault": "Usa o nome da linha",
+      "startDate": "Data de início",
+      "endDate": "Data de término",
+      "inheritsContract": "Início do contrato",
+      "inheritsContractEnd": "Fim do contrato"
     },
     "customRate": "Personalizado",
     "description": {
@@ -622,7 +631,10 @@
     },
     "fields": {
       "billingTimingQuestion": "Quando esta linha deve ser faturada?",
-      "rate": "Avaliar"
+      "rate": "Avaliar",
+      "invoiceText": "Texto da linha da fatura",
+      "invoiceTextPlaceholder": "Impresso na fatura; por padrão, o nome da linha",
+      "invoiceTextHelp": "Este texto é impresso literalmente na linha de fatura recorrente."
     },
     "sections": {
       "billingTiming": "Tempo de faturamento",
@@ -815,7 +827,12 @@
     "fixedServicesPricingExplanation": "As alocações de pacote compartilham a taxa básica da linha. Os postos recorrentes faturam a quantidade acordada × taxa unitária a cada período, sem registros de uso.",
     "recurringQuantity": "Quantidade recorrente",
     "allocationQuantity": "Quantidade de alocação",
-    "bundleBaseRateHelp": "Taxa recorrente para os serviços com preço de pacote. Os postos recorrentes são faturados separadamente por quantidade × taxa unitária."
+    "bundleBaseRateHelp": "Taxa recorrente para os serviços com preço de pacote. Os postos recorrentes são faturados separadamente por quantidade × taxa unitária.",
+    "invoiceTextLabel": "Texto da linha da fatura",
+    "invoiceTextPlaceholder": "Impresso na fatura; por padrão, o nome da linha",
+    "invoiceTextHelp": "Este texto é impresso literalmente na linha de fatura recorrente.",
+    "startDateLabel": "Data de início da linha",
+    "endDateLabel": "Data de término da linha"
   },
   "pricingSchedules": {
     "list": {
@@ -2487,5 +2504,48 @@
       "contractNotActive": "O contrato de renovação ativado não está mais ativo. Atualize a página e tente novamente.",
       "manualRetryDueOnly": "A nova tentativa manual só está disponível para ciclos de renovação vencidos."
     }
+  },
+  "contractDiscounts": {
+    "title": "Descontos",
+    "description": "Os descontos configurados são aplicados automaticamente em cada rascunho de fatura elegível deste cliente.",
+    "loading": "Carregando descontos…",
+    "empty": "Ainda não há descontos configurados para este contrato.",
+    "actions.add": "Adicionar desconto",
+    "actions.cancel": "Cancelar",
+    "actions.save": "Salvar",
+    "actions.saving": "Salvando…",
+    "columns.name": "Nome",
+    "columns.value": "Valor",
+    "columns.scope": "Escopo",
+    "columns.line": "Linha do contrato",
+    "columns.dates": "Datas",
+    "columns.status": "Status",
+    "status.active": "Ativo",
+    "status.inactive": "Inativo",
+    "scopes.invoice": "Todos os encargos elegíveis",
+    "scopes.contract": "Este contrato",
+    "scopes.service": "Um serviço",
+    "values.unnamedLine": "Linha sem nome",
+    "types.percentage": "Percentual",
+    "types.fixed": "Valor fixo",
+    "fields.name": "Nome",
+    "fields.namePlaceholder": "ex.: Fidelidade 10%",
+    "fields.type": "Tipo",
+    "fields.percentValue": "Percentual (0–100)",
+    "fields.fixedValue": "Valor",
+    "fields.startDate": "Data de início",
+    "fields.endDate": "Data de término",
+    "fields.line": "Linha do contrato",
+    "fields.linePlaceholder": "Selecione uma linha do contrato",
+    "fields.scope": "Escopo",
+    "fields.priority": "Prioridade",
+    "fields.priorityPlaceholder": "Opcional",
+    "fields.service": "Serviço",
+    "fields.servicePlaceholder": "Selecione um serviço",
+    "fields.active": "Ativo",
+    "dialog.createTitle": "Adicionar desconto",
+    "dialog.editTitle": "Editar desconto",
+    "errors.loadFailed": "Falha ao carregar os descontos.",
+    "errors.saveFailed": "Falha ao salvar o desconto."
   }
 }

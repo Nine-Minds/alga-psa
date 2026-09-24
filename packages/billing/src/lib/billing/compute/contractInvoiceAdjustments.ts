@@ -130,6 +130,27 @@ export function normalizeDiscountValue(policy: Pick<AutomaticDiscountPolicy, 'di
   return percent;
 }
 
+/**
+ * Converts a persisted `discounts.value` into the evaluator's policy units.
+ *
+ * `discounts.value` is `decimal(10,2)`, and its meaning depends on the type:
+ * a **fixed** discount stores a decimal currency amount (`50.00` = $50.00) while
+ * a **percentage** stores a fraction (`0.10` = 10%). The evaluator works in
+ * integer minor units, so a fixed value is converted exactly once here; a
+ * percentage keeps its stored fraction and is normalized during evaluation.
+ * Non-finite and null inputs resolve to zero rather than propagating `NaN`.
+ */
+export function storedDiscountValueToPolicyValue(
+  discount_type: 'percentage' | 'fixed',
+  value: number | string | null | undefined,
+): number {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return 0;
+  }
+  return discount_type === 'fixed' ? Math.round(numeric * 100) : numeric;
+}
+
 function isEligibleCharge(charge: InvoiceAdjustmentCharge): boolean {
   // Discount rows, credits and negative true-up reversals are never a positive
   // discount base; including them would grant the discount twice.

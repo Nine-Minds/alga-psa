@@ -5,6 +5,7 @@ import {
   computePartialPeriodAmount,
   evaluateContractInvoiceAdjustments,
   normalizeDiscountValue,
+  storedDiscountValueToPolicyValue,
   type AutomaticDiscountPolicy,
   type InvoiceAdjustmentCharge,
 } from './contractInvoiceAdjustments';
@@ -66,6 +67,44 @@ describe('normalizeDiscountValue', () => {
 
   it('accepts already-normalized percentages', () => {
     expect(normalizeDiscountValue({ discount_type: 'percentage', value: 10, valueUnit: 'percent' })).toBe(10);
+  });
+});
+
+describe('storedDiscountValueToPolicyValue', () => {
+  it('converts a fixed decimal currency value to minor units exactly once', () => {
+    expect(storedDiscountValueToPolicyValue('fixed', '50.00')).toBe(5_000);
+    expect(storedDiscountValueToPolicyValue('fixed', 50)).toBe(5_000);
+    expect(storedDiscountValueToPolicyValue('fixed', 12.34)).toBe(1_234);
+  });
+
+  it('keeps a percentage fraction readable for legacy rows', () => {
+    expect(storedDiscountValueToPolicyValue('percentage', '0.10')).toBeCloseTo(0.1);
+    expect(storedDiscountValueToPolicyValue('percentage', 10)).toBe(10);
+  });
+
+  it('resolves null, undefined and non-finite values to zero instead of NaN', () => {
+    expect(storedDiscountValueToPolicyValue('fixed', null)).toBe(0);
+    expect(storedDiscountValueToPolicyValue('fixed', undefined)).toBe(0);
+    expect(storedDiscountValueToPolicyValue('percentage', Number.NaN)).toBe(0);
+  });
+
+  it('bills a configured $50 fixed discount as exactly $50 in USD and a non-USD currency', () => {
+    const policy = (): AutomaticDiscountPolicy => ({
+      discount_id: 'flat-fifty',
+      discount_name: 'Flat $50',
+      discount_type: 'fixed',
+      value: storedDiscountValueToPolicyValue('fixed', '50.00'),
+      scope: 'invoice',
+    });
+
+    for (const currency of ['USD', 'EUR']) {
+      const result = evaluateContractInvoiceAdjustments({
+        charges: [charge({ item_id: `${currency}-recurring`, net_amount: 390_000 })],
+        automaticDiscounts: [policy()],
+      });
+      expect(result.automaticDiscountAmount).toBe(5_000);
+      expect(result.netAmount).toBe(385_000);
+    }
   });
 });
 
