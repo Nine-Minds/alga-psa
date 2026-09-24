@@ -511,6 +511,9 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "Version:",
+      "Version: {{version}}",
+      "{{name}} v{{version}}",
       "{{templateName}} ({{providerDisplayName}})",
       "{{displayName}} ({{executionMode}})",
       "v{{number}}",
