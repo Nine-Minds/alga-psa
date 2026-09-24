@@ -447,7 +447,10 @@ const resolveExpressionValue = (
     case 'literal':
       return expression.value;
     case 'binding':
-      return evaluation.bindings[expression.bindingId];
+      // LEVERAGE: pattern binding-fallback-resolution — blank optional bindings use their localized default.
+      return evaluation.bindings[expression.bindingId] == null || evaluation.bindings[expression.bindingId] === ''
+        ? displayText(expression.fallback)
+        : evaluation.bindings[expression.bindingId];
     case 'path': {
       const parsedPath = decodeTemplatePathExpression(expression.path);
       const rowValue = scope.row ? getPathValue(scope.row, parsedPath.path) : undefined;

@@ -541,7 +541,7 @@ const buildStandardQuoteGroupedAst = (): TemplateAst => ({
       {
         id: 'monthly-section-label',
         type: 'text',
-        content: { type: 'i18n', i18nKey: 'labels.monthlyItems', defaultValue: 'Monthly Items' },
+        content: { type: 'binding', bindingId: 'recurringSectionTitle', fallback: { i18nKey: 'labels.monthlyItems', defaultValue: 'Monthly Items' } },
         style: { inline: { fontSize: '14px', fontWeight: 700, color: '#ffffff', backgroundColor: '#7c45d3', padding: '6px 12px', borderRadius: '6px 6px 0 0', margin: '0' } },
       },
       {
@@ -562,7 +562,7 @@ const buildStandardQuoteGroupedAst = (): TemplateAst => ({
       {
         id: 'onetime-section-label',
         type: 'text',
-        content: { type: 'i18n', i18nKey: 'labels.oneTimeItems', defaultValue: 'One-time Items' },
+        content: { type: 'binding', bindingId: 'onetimeSectionTitle', fallback: { i18nKey: 'labels.oneTimeItems', defaultValue: 'One-time Items' } },
         style: { inline: { fontSize: '14px', fontWeight: 700, color: '#ffffff', backgroundColor: '#7c45d3', padding: '6px 12px', borderRadius: '6px 6px 0 0', margin: '0' } },
       },
       {

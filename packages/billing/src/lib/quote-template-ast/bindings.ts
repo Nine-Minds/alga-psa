@@ -12,6 +12,8 @@ export const QUOTE_TEMPLATE_VALUE_BINDINGS: QuoteTemplateValueBindings = {
   title: { id: 'title', kind: 'value', path: 'title' },
   scope: { id: 'scope', kind: 'value', path: 'scope_of_work', fallback: '' },
   poNumber: { id: 'poNumber', kind: 'value', path: 'po_number' },
+  recurringSectionTitle: { id: 'recurringSectionTitle', kind: 'value', path: 'recurring_section_title' },
+  onetimeSectionTitle: { id: 'onetimeSectionTitle', kind: 'value', path: 'onetime_section_title' },
   subtotal: { id: 'subtotal', kind: 'value', path: 'subtotal' },
   discountTotal: { id: 'discountTotal', kind: 'value', path: 'discount_total' },
   tax: { id: 'tax', kind: 'value', path: 'tax' },

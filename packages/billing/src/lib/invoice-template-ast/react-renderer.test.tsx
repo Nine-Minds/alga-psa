@@ -5,6 +5,7 @@ import type { TemplateEvaluationResult } from './evaluator';
 import { evaluateTemplateAst } from './evaluator';
 import { formatTemplateFieldValue } from './fieldFormatting';
 import { renderEvaluatedTemplateAst } from './react-renderer';
+import { resolveTemplateAstI18n } from './i18nLabels';
 
 const invoiceFixture = {
   invoiceNumber: 'INV-1001',
@@ -18,6 +19,37 @@ const invoiceFixture = {
 };
 
 describe('renderEvaluatedTemplateAst', () => {
+  it.each([['custom title', 'custom title'], [null, 'Localized Monthly'], ['', 'Localized Monthly']] as const)(
+    'renders binding value %s or its localized fallback', async (value, expected) => {
+      const ast: TemplateAst = {
+        kind: 'invoice-template-ast', version: TEMPLATE_AST_VERSION,
+        bindings: { values: {}, collections: {} },
+        layout: { id: 'root', type: 'document', children: [{
+          id: 'heading', type: 'text', content: { type: 'binding', bindingId: 'heading', fallback: { i18nKey: 'labels.monthlyItems', defaultValue: 'Monthly Items' } },
+        }] },
+      };
+      const localizedAst = resolveTemplateAstI18n(ast, () => 'Localized Monthly');
+      const evaluation = { bindings: { heading: value }, rows: {}, aggregates: {} } as unknown as TemplateEvaluationResult;
+      const rendered = await renderEvaluatedTemplateAst(localizedAst, evaluation);
+      expect(rendered.html).toContain(expected);
+      expect(rendered.html).not.toContain('[object Object]');
+    }
+  );
+
+  it('uses authored default text if a binding fallback reaches the renderer without localization', async () => {
+    const ast: TemplateAst = {
+      kind: 'invoice-template-ast', version: TEMPLATE_AST_VERSION,
+      bindings: { values: {}, collections: {} },
+      layout: { id: 'root', type: 'document', children: [{
+        id: 'heading', type: 'text', content: { type: 'binding', bindingId: 'heading', fallback: { i18nKey: 'labels.monthlyItems', defaultValue: 'Monthly Items' } },
+      }] },
+    };
+    const evaluation = { bindings: { heading: null }, rows: {}, aggregates: {} } as unknown as TemplateEvaluationResult;
+    const rendered = await renderEvaluatedTemplateAst(ast, evaluation);
+    expect(rendered.html).toContain('Monthly Items');
+    expect(rendered.html).not.toContain('[object Object]');
+  });
+
   it('renders HTML for text/field/table/totals node combinations', async () => {
     const ast: TemplateAst = {
       kind: 'invoice-template-ast',

@@ -348,6 +348,12 @@
       "customLayout": "⟦Ƈŭşŧȯḿ⟧",
       "tenantDefault": "⟦Ŧḗƞȧƞŧ ḓḗƒȧŭŀŧ⟧",
       "changeLayout": "⟦Ƈħȧƞɠḗ⟧"
+    },
+    "sectionTitles": {
+      "title": "⟦Ɠŕȯŭƥḗḓ ɋŭȯŧḗ şḗƈŧīȯƞ ŧīŧŀḗş⟧",
+      "description": "⟦Ȯƥŧīȯƞȧŀ ħḗȧḓīƞɠş ŭşḗḓ ƀẏ ŧħḗ Şŧȧƞḓȧŕḓ ɋŭȯŧḗ Ɠŕȯŭƥḗḓ ŀȧẏȯŭŧ.⟧",
+      "monthlyLabel": "⟦Ḿȯƞŧħŀẏ şḗƈŧīȯƞ ŧīŧŀḗ⟧",
+      "oneTimeLabel": "⟦Ȯƞḗ-ŧīḿḗ şḗƈŧīȯƞ ŧīŧŀḗ⟧"
     }
   },
   "quoteDetail": {

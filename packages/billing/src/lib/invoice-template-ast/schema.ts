@@ -126,6 +126,7 @@ const valueExpressionSchema: z.ZodTypeAny = z.lazy(() =>
     z.object({
       type: z.literal('binding'),
       bindingId: z.string().min(1),
+      fallback: i18nTextSchema.optional(),
     }).strict(),
     z.object({
       type: z.literal('path'),

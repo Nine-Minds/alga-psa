@@ -348,6 +348,12 @@
       "customLayout": "Personalizado",
       "tenantDefault": "Padrão do locatário",
       "changeLayout": "Mudar"
+    },
+    "sectionTitles": {
+      "title": "Títulos das seções da cotação agrupada",
+      "description": "Cabeçalhos opcionais do layout padrão de cotação agrupada.",
+      "monthlyLabel": "Título da seção mensal",
+      "oneTimeLabel": "Título da seção avulsa"
     }
   },
   "quoteDetail": {

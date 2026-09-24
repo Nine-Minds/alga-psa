@@ -575,6 +575,8 @@ export async function mapLoadedQuoteToViewModel(
     status: quote.status ?? null,
     version: Number(quote.version ?? 1),
     po_number: quote.po_number ?? null,
+    recurring_section_title: quote.recurring_section_title?.trim() || null,
+    onetime_section_title: quote.onetime_section_title?.trim() || null,
     currency_code: quote.currency_code,
     subtotal: derivedSubtotal,
     discount_total: derivedDiscountTotal,
