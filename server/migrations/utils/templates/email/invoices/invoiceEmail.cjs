@@ -186,6 +186,7 @@ const COPY = {
   },
 };
 SUBJECTS.pt = 'Fatura {{invoice.number}} de {{company.name}}';
+SUBJECTS.sv = 'Faktura {{invoice.number}} från {{company.name}}';
 COPY.pt = {
   headerLabel: 'Fatura',
   greeting: 'Olá {{recipient.name}},',
@@ -207,6 +208,28 @@ COPY.pt = {
   textGreeting: 'Olá {{recipient.name}},',
   textIntro: 'Segue em anexo sua fatura de {{company.name}}.',
   textDetailsHeader: 'Detalhes da fatura:',
+};
+COPY.sv = {
+  headerLabel: 'Faktura',
+  greeting: 'Hej {{recipient.name}},',
+  intro: 'Din faktura från <strong>{{company.name}}</strong> bifogas.',
+  invoiceNumberLabel: 'Fakturanummer',
+  amountDueLabel: 'Belopp att betala',
+  invoiceDateLabel: 'Fakturadatum',
+  dueDateLabel: 'Förfallodatum',
+  customMessageLabel: 'Meddelande från {{company.name}}',
+  attachmentNote: 'Fakturan bifogas som PDF-fil i detta e-postmeddelande. Kontakta oss om du har några frågor.',
+  payNowLabel: 'Betala nu',
+  viewInvoiceLabel: 'Visa faktura i kundportalen',
+  textPayNow: 'Betala din faktura online:',
+  textViewInvoice: 'Visa din faktura i kundportalen:',
+  thankYou: 'Tack för ditt förtroende.',
+  bestRegards: 'Med vänliga hälsningar,',
+  footer: 'Drivs av AlgaPSA',
+  textHeader: 'Faktura {{invoice.number}} från {{company.name}}',
+  textGreeting: 'Hej {{recipient.name}},',
+  textIntro: 'Din faktura från {{company.name}} bifogas.',
+  textDetailsHeader: 'Fakturauppgifter:',
 };
 
 /* eslint-enable max-len */
@@ -257,7 +280,7 @@ function buildBodyHtml(c) {
                 <p style="margin:16px 0 0 0;font-size:15px;color:#1f2933;line-height:1.5;">${c.bestRegards}<br><strong>{{company.name}}</strong></p>`;
 }
 
-function buildText(c) {
+function buildText(c, lang) {
   return `${c.textHeader}
 
 ${c.textGreeting}
@@ -271,7 +294,7 @@ ${c.textDetailsHeader}
 - ${c.dueDateLabel}: {{invoice.dueDate}}
 
 {{#if customMessage}}
-Note: {{customMessage}}
+${lang === 'sv' ? 'Meddelande' : 'Note'}: {{customMessage}}
 {{/if}}
 
 {{#if invoice.paymentUrl}}
@@ -300,11 +323,11 @@ function getTemplate() {
         language: lang,
         headerLabel: copy.headerLabel,
         headerTitle: '{{invoice.number}}',
-        headerMeta: 'From {{company.name}}',
+        headerMeta: lang === 'sv' ? 'Från {{company.name}}' : 'From {{company.name}}',
         bodyHtml: buildBodyHtml(copy),
         footerText: copy.footer,
       }),
-      textContent: buildText(copy),
+      textContent: buildText(copy, lang),
     })),
   };
 }

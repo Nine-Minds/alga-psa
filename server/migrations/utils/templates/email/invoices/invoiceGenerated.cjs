@@ -113,6 +113,7 @@ const COPY = {
   },
 };
 SUBJECTS.pt = 'Nova fatura #{{invoice.number}}';
+SUBJECTS.sv = 'Ny faktura #{{invoice.number}}';
 COPY.pt = {
   headerLabel: 'Nova fatura',
   intro: 'Uma nova fatura foi gerada para sua revisão.',
@@ -124,6 +125,18 @@ COPY.pt = {
   footer: 'Powered by AlgaPSA &middot; Mantendo as equipes alinhadas',
   textHeader: 'Fatura {{invoice.number}}',
   textIntro: 'Uma nova fatura foi gerada para sua revisão:',
+};
+COPY.sv = {
+  headerLabel: 'Ny faktura',
+  intro: 'En ny faktura har skapats för din granskning.',
+  invoiceNumberLabel: 'Fakturanummer',
+  amountLabel: 'Belopp',
+  dueDateLabel: 'Förfallodatum',
+  clientLabel: 'Kund',
+  viewButton: 'Visa faktura',
+  footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+  textHeader: 'Faktura {{invoice.number}}',
+  textIntro: 'En ny faktura har skapats för din granskning:',
 };
 
 /* eslint-enable max-len */
