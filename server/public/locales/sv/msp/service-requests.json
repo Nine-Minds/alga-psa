@@ -1,0 +1,416 @@
+{
+  "management": {
+    "title": "Tjänsteförfrågningar",
+    "description": "Hantera utkast samt publicerade och arkiverade definitioner av tjänsteförfrågningar.",
+    "showArchived": "Visa arkiverade",
+    "showArchivedWithCount": "Visa arkiverade ({{count}})",
+    "createBlank": "Skapa tom definition",
+    "startFromExample": "Utgå från exempel",
+    "loading": "Laddar tjänsteförfrågningar…",
+    "columns": {
+      "name": "Namn",
+      "description": "Beskrivning",
+      "state": "Status",
+      "updated": "Uppdaterad",
+      "actions": "Åtgärder"
+    },
+    "actionsFor": "Åtgärder för {{name}}",
+    "actions": {
+      "duplicate": "Duplicera",
+      "archive": "Arkivera",
+      "unarchive": "Återställ från arkivet"
+    },
+    "lifecycleLabels": {
+      "published": "Publicerad",
+      "archived": "Arkiverad",
+      "draftChanges": "Utkaständringar",
+      "draft": "Utkast"
+    },
+    "templateOption": "{{templateName}} ({{providerDisplayName}})"
+  },
+  "editor": {
+    "backNav": "Tillbaka till tjänsteförfrågningar",
+    "loading": "Laddar definitionsredigeraren…",
+    "notFound": "Definitionen av tjänsteförfrågan hittades inte.",
+    "currentState": "Aktuell status: {{state}}",
+    "saveDraft": "Spara utkast",
+    "createDraft": "Skapa utkast",
+    "publish": "Publicera",
+    "publishing": "Publicerar…",
+    "basics": {
+      "title": "Grunduppgifter",
+      "name": "Namn",
+      "icon": "Ikon",
+      "iconSelected": "Vald: {{label}}",
+      "noIconSelected": "Ingen ikon vald",
+      "description": "Beskrivning",
+      "category": "Kategori",
+      "sortOrder": "Sorteringsordning",
+      "save": "Spara grunduppgifter",
+      "uncategorized": "Utan kategori"
+    },
+    "preview": {
+      "title": "Förhandsgranskning",
+      "badge": "Förhandsgranskning i realtid",
+      "cardSubheading": "Katalogkort",
+      "formSubheading": "Förfrågningsformulär"
+    },
+    "linkage": {
+      "title": "Koppling",
+      "linkedService": "Kopplad tjänst",
+      "searchPlaceholder": "Sök i tjänstekatalogen",
+      "search": "Sök",
+      "clear": "Rensa",
+      "select": "Välj",
+      "noDescription": "Ingen beskrivning",
+      "unset": "-"
+    },
+    "form": {
+      "title": "Formulär",
+      "authorFields": "Utforma fält",
+      "fieldType": "Fälttyp",
+      "addField": "Lägg till fält",
+      "noFields": "Inga fält har konfigurerats.",
+      "preview": "Förhandsgranskning av det renderade formuläret",
+      "label": "Etikett",
+      "helpText": "Hjälptext",
+      "required": "Obligatoriskt",
+      "defaultValue": "Standardvärde",
+      "options": "Alternativ (ett per rad: value:label)",
+      "moveUp": "Flytta upp",
+      "moveDown": "Flytta ner",
+      "remove": "Ta bort",
+      "selectOption": "Välj ett alternativ",
+      "checkboxDefaults": {
+        "none": "Inget standardvärde",
+        "checked": "Markerad",
+        "unchecked": "Omarkerad"
+      },
+      "types": {
+        "short-text": "Kort text",
+        "long-text": "Lång text",
+        "select": "Vallista",
+        "checkbox": "Kryssruta",
+        "date": "Datum",
+        "file-upload": "Filuppladdning"
+      }
+    },
+    "execution": {
+      "title": "Körning",
+      "executionProvider": "Tjänsteleverantör för körning",
+      "formBehaviorProvider": "Tjänsteleverantör för formulärbeteende",
+      "visibilityProvider": "Tjänsteleverantör för synlighet",
+      "providerDisplay": "{{displayName}} ({{executionMode}})",
+      "ticketRouting": {
+        "title": "Inställningar för ärendestyrning",
+        "board": "Tavla",
+        "boardPlaceholder": "Välj tavla",
+        "status": "Status",
+        "statusPlaceholder": "Välj status",
+        "assignedUser": "Tilldelad användare",
+        "assignedUserPlaceholder": "Inte tilldelat",
+        "category": "Kategori",
+        "categoryPlaceholder": "Välj kategori",
+        "priority": "Prioritet",
+        "priorityPlaceholder": "Välj prioritet",
+        "impact": "Påverkan",
+        "impactPlaceholder": "Välj påverkan",
+        "urgency": "Brådska",
+        "urgencyPlaceholder": "Välj brådska",
+        "priorityCalculated": "Prioritet (beräknad)",
+        "selectImpactAndUrgency": "Välj påverkan och brådska",
+        "priorityFormula": "{{label}} (påverkan {{impact}} x brådska {{urgency}})",
+        "titleFieldKey": "Fältnyckel för titel",
+        "descriptionPrefix": "Beskrivningsprefix",
+        "save": "Spara ärendestyrning"
+      },
+      "storeOnly": {
+        "title": "Lagra endast",
+        "description": "Inskickade förfrågningar sparas med sina svar och bilagor i förfrågningshistoriken. Inget supportärende skapas."
+      },
+      "workflow": {
+        "title": "Arbetsflödesinställningar",
+        "workflowId": "Arbetsflödes-ID",
+        "workflowIdPlaceholder": "workflow-id",
+        "inputMapping": "Mappning av indata för arbetsflödet (JSON-objekt)",
+        "inputMappingExample": "Exempel: {\"requestedBy\":\"payload.request_title\",\"ticketReference\":\"ticketId\"}",
+        "save": "Spara arbetsflödesinställningar"
+      },
+      "advanced": {
+        "title": "Avancerat formulärbeteende",
+        "config": "Inställningar för formulärbeteende (JSON-objekt)",
+        "save": "Spara inställningar för formulärbeteende"
+      },
+      "visibility": {
+        "title": "Synlighetsinställningar",
+        "config": "Synlighetsinställningar (JSON-objekt)",
+        "save": "Spara synlighetsinställningar"
+      },
+      "fields": {
+        "executionProvider": "Tjänsteleverantör för körning",
+        "executionConfig": "Körningsinställningar",
+        "formBehaviorProvider": "Tjänsteleverantör för formulärbeteende",
+        "visibilityProvider": "Tjänsteleverantör för synlighet"
+      },
+      "itilImpact": {
+        "1": "1 - Hög (kritisk verksamhetsfunktion påverkas)",
+        "2": "2 - Medelhög (viktig funktion påverkas)",
+        "3": "3 - Medel (mindre funktion påverkas)",
+        "4": "4 - Medellåg (minimal påverkan)",
+        "5": "5 - Låg (ingen verksamhetspåverkan)"
+      },
+      "itilUrgency": {
+        "1": "1 - Hög (arbetet kan inte fortsätta)",
+        "2": "2 - Medelhög (arbetet försvåras kraftigt)",
+        "3": "3 - Medel (arbetet fortsätter med begränsningar)",
+        "4": "4 - Medellåg (mindre olägenhet)",
+        "5": "5 - Låg (arbetet fortsätter som vanligt)"
+      }
+    },
+    "publishSection": {
+      "title": "Publicera",
+      "currentDraftState": "Utkastets aktuella status",
+      "lastPublishedVersion": "Senast publicerade version",
+      "versionPrefix": "v{{number}}",
+      "neverPublished": "Aldrig publicerad",
+      "publishedAt": "Publicerad",
+      "draftUpdatedAt": "Utkastet uppdaterat",
+      "validationTitle": "Validering inför publicering",
+      "validationPassed": "Valideringen inför publicering godkändes.",
+      "errors": {
+        "nameRequired": "Namn krävs",
+        "linkedServiceMissing": "Den kopplade tjänsten finns inte längre",
+        "executionBoardRequired": "Körning: Tavla krävs för ärendestyrning",
+        "executionStatusRequired": "Körning: Status krävs för ärendestyrning",
+        "executionPriorityRequired": "Körning: Prioritet krävs för ärendestyrning",
+        "executionItilImpactUrgencyMismatch": "Körning: Ärendestyrning kräver både ITIL-påverkan och brådska när prioritet inte är angiven",
+        "unknownExecutionProvider": "Okänd tjänsteleverantör för körning: {{key}}",
+        "unknownFormBehaviorProvider": "Okänd tjänsteleverantör för formulärbeteende: {{key}}",
+        "unknownVisibilityProvider": "Okänd tjänsteleverantör för synlighet: {{key}}"
+      }
+    },
+    "submissions": {
+      "title": "Inskickade förfrågningar",
+      "empty": "Inga förfrågningar har skickats in för den här definitionen ännu.",
+      "viewDetail": "Visa detaljer",
+      "detailTitle": "Detaljer om inskickad förfrågan",
+      "submissionId": "ID för inskickad förfrågan",
+      "requesterUser": "Användare som skickade förfrågan",
+      "client": "Kund",
+      "contact": "Kontakt",
+      "ticketReference": "Ärendereferens",
+      "workflowReference": "Arbetsflödesreferens",
+      "executionError": "Körningsfel",
+      "submittedAtStatus": "{{date}} · {{status}}",
+      "loadingTicket": "Laddar…",
+      "ticketLoadError": "Det gick inte att ladda ärendedetaljerna.",
+      "formVersion": "Formulärversion",
+      "formVersionValue": "Version {{version}}",
+      "historyTitle": "Historik",
+      "historyEmpty": "Ingen historik har registrerats för den här förfrågan.",
+      "historyActor": "av {{actor}}",
+      "historyOperations": {
+        "service_request_submission_created": "Inskickad förfrågan skapad",
+        "service_request_submission_execution_succeeded": "Körningen lyckades",
+        "service_request_submission_execution_failed": "Körningen misslyckades",
+        "service_request_submission_mapping_applied": "Svarsmappning tillämpad",
+        "service_request_submission_mapping_field_applied": "Mappat fält uppdaterat",
+        "service_request_submission_mapping_field_failed": "Uppdatering av mappat fält misslyckades"
+      },
+      "mapping": {
+        "title": "Svarsmappning",
+        "description": "Tillämpa den publicerade svarsmappningen för att uppdatera kontot och dess tillgångar utifrån den här inskickade förfrågan. Det ursprungliga svaret ändras aldrig.",
+        "noPublishedMapping": "Det finns ingen publicerad svarsmappning för den här definitionen. Publicera en i avsnittet Svarsmappning ovan.",
+        "preview": "Förhandsgranska",
+        "previewing": "Förhandsgranskar…",
+        "apply": "Tillämpa mappning",
+        "applying": "Tillämpar…",
+        "previewTitle": "Förhandsgranskning (inga ändringar sparas) · mappning v{{version}}",
+        "resultsTitle": "Tillämpade körningar",
+        "noRuns": "Ingen mappning har tillämpats på den här inskickade förfrågan ännu.",
+        "runLabel": "Körning {{date}} · {{status}}",
+        "runActor": "av {{actor}}",
+        "replayed": "Den här körningen har redan tillämpats. Resultaten som visas är det registrerade utfallet.",
+        "summary": "{{applied}} tillämpade · {{skipped}} överhoppade · {{failed}} misslyckade",
+        "columns": {
+          "question": "Fråga",
+          "destination": "Målplats",
+          "target": "Mål",
+          "before": "Före",
+          "after": "Efter",
+          "status": "Resultat",
+          "detail": "Detalj"
+        },
+        "emptyValue": "—",
+        "unresolvedTarget": "Inte identifierat",
+        "status": {
+          "applied": "Tillämpad",
+          "skipped_answer_absent": "Överhoppad — inget svar",
+          "skipped_no_change": "Överhoppad — redan uppdaterad",
+          "failed_validation": "Misslyckades — ogiltigt värde",
+          "failed_type_conversion": "Misslyckades — fel typ",
+          "failed_permission": "Misslyckades — åtkomst nekad",
+          "failed_asset_unresolved": "Misslyckades — tillgången hittades inte",
+          "failed_asset_ambiguous": "Misslyckades — flera tillgångar matchar"
+        },
+        "runStatus": {
+          "pending": "Pågår",
+          "applied": "Tillämpad",
+          "partially_applied": "Delvis tillämpad",
+          "failed": "Misslyckades",
+          "no_op": "Inga ändringar"
+        }
+      }
+    },
+    "answerMapping": {
+      "title": "Svarsmappning",
+      "description": "Mappa frågor till konto- och tillgångsfält. När en inskickad förfrågan tillämpas uppdateras endast de mappade fälten. De sparade svaren ändras aldrig.",
+      "loading": "Laddar mappning…",
+      "noQuestions": "Lägg till formulärfält innan du mappar svar.",
+      "noRules": "Inga mappningsregler ännu.",
+      "addRule": "Lägg till regel",
+      "editRule": "Redigera",
+      "removeRule": "Ta bort",
+      "actionsFor": "Åtgärder för {{question}}",
+      "selection": {
+        "selectPage": "Markera regler på den här sidan",
+        "selectRule": "Markera {{question}}",
+        "selectedCount": "Antal markerade: {{count}}",
+        "removeSelected": "Ta bort markerade",
+        "clear": "Avmarkera alla",
+        "confirmTitle": "Ta bort markerade regler?",
+        "confirmMessage": "Vill du ta bort markerade regler ({{count}}) från mappningsutkastet? Publicerade versioner förblir oförändrade tills du publicerar igen."
+      },
+      "save": "Spara regel",
+      "cancel": "Avbryt",
+      "publish": "Publicera mappning",
+      "publishing": "Publicerar…",
+      "state": {
+        "neverPublished": "Aldrig publicerad",
+        "published": "Publicerad v{{version}}",
+        "unpublishedChanges": "Opublicerade ändringar",
+        "upToDate": "Den publicerade versionen är aktuell"
+      },
+      "fields": {
+        "question": "Fråga",
+        "destinationKind": "Målplats",
+        "targetField": "Fält",
+        "assetStrategy": "Så hittas tillgången",
+        "assetRefQuestion": "Fråga vars svar identifierar tillgången",
+        "matchAttribute": "Matcha mot",
+        "matchQuestion": "Fråga vars svar ska matchas",
+        "attributeKey": "Nyckel för anpassat attribut"
+      },
+      "placeholders": {
+        "question": "Välj en fråga",
+        "destinationKind": "Välj en målplats",
+        "targetField": "Välj ett fält",
+        "attributeKey": "t.ex. rack_position"
+      },
+      "targetFieldGroups": {
+        "attribute": "Anpassat attribut…"
+      },
+      "strategies": {
+        "answer-asset-ref": "Svaret är tillgången",
+        "match-attribute": "Matcha ett svar mot ett tillgångsattribut"
+      },
+      "matchAttributes": {
+        "asset_tag": "Inventarienummer",
+        "serial_number": "Serienummer",
+        "name": "Tillgångsnamn"
+      },
+      "columns": {
+        "question": "Fråga",
+        "destination": "Målplats",
+        "field": "Fält",
+        "selector": "Tillgångsval",
+        "actions": "Åtgärder"
+      },
+      "selectorSummary": {
+        "account": "Kontot för den inskickade förfrågan",
+        "answerAssetRef": "Tillgång från ”{{question}}”",
+        "matchAttribute": "{{attribute}} = ”{{question}}”"
+      },
+      "unknownQuestion": "Frågan saknas ({{key}})",
+      "messages": {
+        "ruleSaved": "Mappningsregeln har sparats",
+        "ruleRemoved": "Mappningsregeln har tagits bort",
+        "rulesRemoved_one": "Mappningsregeln har tagits bort",
+        "rulesRemoved_other": "{{count}} mappningsregler har tagits bort",
+        "published": "Svarsmappningen har publicerats",
+        "saveFailed": "Det gick inte att spara mappningsregeln",
+        "removeFailed": "Det gick inte att ta bort mappningsregeln",
+        "publishFailed": "Det gick inte att publicera svarsmappningen",
+        "previewFailed": "Det gick inte att förhandsgranska svarsmappningen",
+        "applyFailed": "Det gick inte att tillämpa svarsmappningen",
+        "applied": "Svarsmappningen har tillämpats"
+      }
+    }
+  },
+  "icons": {
+    "file-text": "Allmän förfrågan",
+    "user-plus": "Ny användare",
+    "user-minus": "Avslut av användarkonto",
+    "shield-check": "Säkerhet",
+    "key-round": "Åtkomst",
+    "laptop": "Bärbar dator",
+    "monitor": "Arbetsstation",
+    "printer": "Skrivare",
+    "hard-drive": "Lagring",
+    "server": "Server",
+    "network": "Nätverk",
+    "wifi": "Wi-Fi",
+    "app-window": "Programvara",
+    "mail": "E-post",
+    "phone": "Telefon",
+    "folder-open": "Delade filer",
+    "badge-help": "Hjälp",
+    "clear": "Ta bort ikon"
+  },
+  "messages": {
+    "success": {
+      "definitionDuplicated": "Definitionen har duplicerats",
+      "definitionArchived": "Definitionen har arkiverats",
+      "definitionUnarchived": "Definitionen har återställts från arkivet",
+      "draftCreated": "Utkastet har skapats",
+      "draftCreatedFromExample": "Utkastet har skapats från exemplet: {{name}}",
+      "draftSaved": "Utkastet har sparats",
+      "definitionPublished": "Definitionen har publicerats",
+      "basicsUpdated": "Grunduppgifterna har uppdaterats",
+      "linkedServiceCleared": "Kopplingen till tjänsten har tagits bort",
+      "linkedService": "{{name}} har kopplats",
+      "fieldAdded": "Fältet har lagts till",
+      "fieldRemoved": "Fältet har tagits bort",
+      "executionProviderUpdated": "Tjänsteleverantören för körning har uppdaterats",
+      "formBehaviorProviderUpdated": "Tjänsteleverantören för formulärbeteende har uppdaterats",
+      "visibilityProviderUpdated": "Tjänsteleverantören för synlighet har uppdaterats",
+      "ticketRoutingUpdated": "Inställningarna för ärendestyrning har uppdaterats",
+      "workflowConfigurationUpdated": "Arbetsflödesinställningarna har uppdaterats",
+      "formBehaviorConfigUpdated": "Inställningarna för formulärbeteende har uppdaterats",
+      "visibilityConfigUpdated": "Synlighetsinställningarna har uppdaterats"
+    },
+    "error": {
+      "loadFailed": "Det gick inte att ladda tjänsteförfrågningar",
+      "duplicateFailed": "Det gick inte att duplicera definitionen",
+      "archiveFailed": "Det gick inte att arkivera definitionen",
+      "unarchiveFailed": "Det gick inte att återställa definitionen från arkivet",
+      "createDraftFailed": "Det gick inte att skapa utkastet",
+      "createFromExampleFailed": "Det gick inte att skapa från exemplet",
+      "saveDraftFailed": "Det gick inte att spara utkastet",
+      "publishFailed": "Det gick inte att publicera definitionen",
+      "publishBlockedByValidation": "Det går inte att publicera ännu — åtgärda valideringsfelen ({{count}}) i avsnittet Validering inför publicering nedan.",
+      "basicsUpdateFailed": "Det gick inte att uppdatera grunduppgifterna",
+      "addFieldFailed": "Det gick inte att lägga till formulärfältet",
+      "executionProviderUpdateFailed": "Det gick inte att uppdatera tjänsteleverantören för körning",
+      "formBehaviorProviderUpdateFailed": "Det gick inte att uppdatera tjänsteleverantören för formulärbeteende",
+      "visibilityProviderUpdateFailed": "Det gick inte att uppdatera tjänsteleverantören för synlighet",
+      "workflowMappingNotObject": "Mappningen av indata för arbetsflödet måste vara ett JSON-objekt",
+      "workflowConfigurationInvalid": "Ogiltig JSON för arbetsflödesinställningar",
+      "formBehaviorNotObject": "Inställningarna för formulärbeteende måste vara ett JSON-objekt",
+      "formBehaviorInvalid": "Ogiltig JSON för formulärbeteende",
+      "visibilityNotObject": "Synlighetsinställningarna måste vara ett JSON-objekt",
+      "visibilityInvalid": "Ogiltig JSON för synlighet",
+      "saveAllPartial": "Vissa avsnitt kunde inte sparas: {{sections}}"
+    }
+  }
+}

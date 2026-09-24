@@ -511,6 +511,10 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "{{templateName}} ({{providerDisplayName}})",
+      "{{displayName}} ({{executionMode}})",
+      "v{{number}}",
+      "{{date}} · {{status}}",
       "{{type}} • {{client}}",
       "QBO",
       "#{{number}} {{title}}",
