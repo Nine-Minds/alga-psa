@@ -20,6 +20,7 @@ import { NinjaOneSyncEngine } from '../sync/syncEngine';
 import { processRmmAlertEvent } from '@alga-psa/shared/rmm/alerts';
 import { buildRmmAlertPipelineDeps } from '@alga-psa/integrations/lib/rmm/alerts/pipelineDeps';
 import { mapNinjaOneWebhookToAlertEvent } from '../alerts/normalizer';
+import { enrichMissingDeviceDetails } from '../alerts/reconciliationFetcher';
 import {
   NinjaOneWebhookPayload,
   NinjaOneActivityType,
@@ -644,8 +645,12 @@ async function handleAlertConditionEvent(
       return { success: true, processed: false, action: 'alert_ignored' };
     }
 
-    const { knex } = await createTenantKnex();
-    const result = await processRmmAlertEvent({ knex, deps: buildRmmAlertPipelineDeps({ logger }) }, event);
+    const { knex } = await createTenantKnex(tenantId);
+    const [enrichedEvent] = await enrichMissingDeviceDetails([event], tenantId);
+    const result = await processRmmAlertEvent(
+      { knex, deps: buildRmmAlertPipelineDeps({ logger }) },
+      enrichedEvent
+    );
 
     for (const warning of result.warnings) {
       logger.warn('[NinjaOne Webhook] Alert pipeline warning', { tenantId, warning });
