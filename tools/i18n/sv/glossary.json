@@ -653,7 +653,12 @@
       "you@example.com",
       "support@example.com",
       "notifications@example.com",
-      "alias"
+      "alias",
+      "587",
+      "re_xxxxxxxxxxxxxxxxxx",
+      "noreply@yourdomain.com",
+      "Status:",
+      "Metadata"
     ],
     "caseInsensitive": [
       "adapter", "budget", "fax", "filter", "kanban", "layout", "offline", "online", "router", "server", "status", "support", "team", "webhook"

@@ -1,0 +1,830 @@
+{
+  "common": {
+    "actions": {
+      "save": "Spara inställningar",
+      "saving": "Sparar…",
+      "reset": "Återställ",
+      "refresh": "Ladda om",
+      "close": "Stäng",
+      "edit": "Redigera",
+      "delete": "Radera",
+      "deleting": "Raderar…",
+      "verify": "Verifiera"
+    },
+    "states": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "loading": "Laddar…"
+    }
+  },
+  "telemetry": {
+    "loading": {
+      "title": "Organisationens telemetriinställningar",
+      "description": "Laddar…"
+    },
+    "empty": {
+      "title": "Organisationens telemetriinställningar",
+      "description": "Fel vid inläsning av inställningar",
+      "body": "Det gick inte att läsa in telemetriinställningarna"
+    },
+    "page": {
+      "title": "Organisationens telemetri och analys",
+      "description": "Konfigurera telemetriinställningarna för hela organisationen. Telemetri är aktiverad som standard för att förbättra plattformen, men användare kan välja att avstå individuellt om du inte inaktiverar det alternativet."
+    },
+    "toggles": {
+      "enableTelemetry": {
+        "title": "Aktivera telemetri",
+        "description": "Tillåt insamling av anonyma användningsdata för att förbättra plattformen (aktiverat som standard)"
+      },
+      "allowUserOptOut": {
+        "title": "Tillåt användare att avstå",
+        "description": "Tillåt enskilda användare att avstå från telemetriinsamling"
+      }
+    },
+    "alerts": {
+      "enabled": "✓ Telemetri är aktiverad. Alla kategorier är aktiverade som standard för nya användare, men de kan välja att avstå individuellt.",
+      "centralizedControl": "Central styrning: Användare kan inte avstå individuellt. Säkerställ att lokala dataskyddsregler följs."
+    },
+    "anonymization": {
+      "title": "Nivå av dataanonymisering",
+      "description": "Välj hur mycket data som ska anonymiseras före insamling",
+      "options": {
+        "none": {
+          "title": "Ingen anonymisering",
+          "description": "Samla in data i befintligt skick (rekommenderas inte)"
+        },
+        "partial": {
+          "title": "Delvis anonymisering",
+          "description": "Ta bort personuppgifter, behåll korrelations-ID:n"
+        },
+        "full": {
+          "title": "Fullständig anonymisering",
+          "description": "Maximalt integritetsskydd, minimal korrelation"
+        }
+      }
+    },
+    "compliance": {
+      "title": "Information om regelefterlevnad"
+    },
+    "privacy": {
+      "collectTitle": "Vad vi samlar in",
+      "collectItems": {
+        "errors": "• Felinformation (inga känsliga data)",
+        "performance": "• Prestandamått (sidornas laddningstider, API-svarstider)",
+        "usage": "• Användningsmönster för funktioner (vilka funktioner som används)",
+        "system": "• Systemmått (för optimering av infrastrukturen)"
+      },
+      "excludeTitle": "Vad vi inte samlar in",
+      "excludeItems": {
+        "personalInfo": "• Personuppgifter (namn, e-postadresser, adresser)",
+        "clientData": "• Kunddata eller affärsinformation",
+        "passwords": "• Lösenord eller autentiseringstoken",
+        "files": "• Filinnehåll eller dokument"
+      }
+    },
+    "footer": {
+      "lastUpdated": "Senast uppdaterad: {{value}}",
+      "updatedBy": " av {{user}}"
+    },
+    "errors": {
+      "loadTenantTelemetrySettings": "Det gick inte att läsa in klientorganisationens telemetriinställningar",
+      "loadSettings": "Det gick inte att läsa in inställningarna",
+      "saveTelemetrySettings": "Det gick inte att spara telemetriinställningarna",
+      "saveSettings": "Det gick inte att spara inställningarna"
+    }
+  },
+  "email": {
+    "loading": "Läser in e-postinställningarna…",
+    "error": "Fel: {{error}}",
+    "tabs": {
+      "inbound": "Inkommande e-post",
+      "outbound": "Utgående e-post"
+    },
+    "descriptions": {
+      "outbound": "Konfigurera SMTP- eller API-inställningar för att skicka e-post från din applikation",
+      "inbound": "Konfigurera e-postleverantörer för att ta emot och behandla e-post som ärenden"
+    },
+    "providerConfig": {
+      "title": "Konfiguration av e-postleverantör",
+      "providerLabel": "E-postleverantör",
+      "options": {
+        "smtp": "SMTP (traditionell e-postserver)",
+        "resend": "Resend (modern API-tjänst)",
+        "microsoft": "Microsoft 365 (Microsoft Graph)"
+      },
+      "placeholder": "Välj e-postleverantör",
+      "descriptions": {
+        "smtp": "Konfigurera inställningar för en traditionell SMTP-server för e-post",
+        "resend": "Konfigurera Resend API för modern e-postleverans",
+        "microsoft": "Skicka via den OAuth-anslutna Microsoft 365-postlådan som används för inkommande e-post"
+      },
+      "status": {
+        "provider": "Tjänsteleverantör: {{provider}}"
+      }
+    },
+    "smtp": {
+      "host": {
+        "label": "SMTP-värd",
+        "placeholder": "smtp.example.com"
+      },
+      "port": {
+        "label": "Port",
+        "placeholder": "587"
+      },
+      "username": {
+        "label": "Användarnamn",
+        "placeholder": "your-email@example.com"
+      },
+      "password": {
+        "label": "Lösenord",
+        "placeholder": "Ange lösenord"
+      },
+      "fromAddress": {
+        "label": "Avsändaradress",
+        "placeholder": "noreply@example.com"
+      },
+      "authHint": "Lämna användarnamn och lösenord tomma om din reläserver accepterar e-post utan autentisering.",
+      "security": {
+        "title": "Anslutningssäkerhet",
+        "secure": "Använd implicit TLS (SSL vid anslutning, vanligtvis port 465)",
+        "requireTls": "Kräv uppgradering med STARTTLS (port 587 / 25)",
+        "verifyCert": "Verifiera servercertifikat",
+        "verifyCertHint": "Inaktivera detta endast för en betrodd reläserver i ditt eget nätverk som använder ett självsignerat certifikat."
+      }
+    },
+    "resend": {
+      "apiKey": {
+        "label": "API-nyckel för Resend",
+        "placeholder": "re_xxxxxxxxxxxxxxxxxx",
+        "helpPrefix": "Hämta din API-nyckel från"
+      },
+      "fromAddress": {
+        "label": "Avsändaradress",
+        "placeholder": "noreply@yourdomain.com",
+        "help": "Måste tillhöra en verifierad domän. Använd fliken Domäner för att lägga till egna domäner."
+      }
+    },
+    "microsoft": {
+      "mailbox": {
+        "label": "Avsändarpostlåda",
+        "placeholder": "Välj en ansluten Microsoft 365-postlåda",
+        "none": "Lägg först till och auktorisera en Microsoft 365-leverantör på fliken Inkommande e-post.",
+        "help": "Meddelanden skickas från den här postlådan via Microsoft Graph och sparas i Skickat. Återanslut befintliga postlådor för att bevilja Mail.Send."
+      }
+    },
+    "domains": {
+      "verified": "Verifierad",
+      "failed": "Misslyckades",
+      "pending": "Väntande",
+      "requiredDnsRecords": "Obligatoriska DNS-poster:"
+    },
+    "general": {
+      "title": "Allmänna inställningar",
+      "trackingEnabled": "Aktivera e-postspårning",
+      "dailyLimit": "Daglig gräns för e-post"
+    },
+    "errors": {
+      "loadEmailSettings": "Det gick inte att läsa in e-postinställningarna",
+      "saveSettings": "Det gick inte att spara inställningarna",
+      "addDomain": "Det gick inte att lägga till domänen",
+      "verifyDomain": "Det gick inte att verifiera domänen",
+      "testOutbound": "Det gick inte att testa utgående e-post"
+    },
+    "test": {
+      "title": "Testa utgående e-post",
+      "description": "Sparar de aktuella inställningarna och verifierar sedan anslutningen till tjänsteleverantören. Ange en adress för att även skicka ett testmeddelande.",
+      "recipientLabel": "Skicka test till (valfritt)",
+      "recipientPlaceholder": "you@example.com",
+      "run": "Testa anslutning",
+      "testing": "Testar…"
+    },
+    "senderIdentities": {
+      "ticket": {
+        "title": "Avsändaridentitet för ärendens e-post",
+        "description": "Svar på ärendens e-post måste skickas till den här adressen så att de kan matchas och läggas till i ärendet. Använd en ansluten inkorg som bevakas.",
+        "connectedInboxLabel": "Ansluten inkorg",
+        "connectedInboxHelp": "En ansluten inkorg håller kundens svar samlade i ärendets konversation.",
+        "customAddressOption": "Använd en annan adress",
+        "addressLabel": "Avsändaradress",
+        "addressPlaceholder": "support@example.com",
+        "addressHelp": "Den här adressen styr svarsroutningen endast för ärendens e-post.",
+        "nameLabel": "Avsändarens visningsnamn",
+        "namePlaceholder": "Support",
+        "nameHelp": "Lämna tomt för att använda den anslutna postlådans namn eller ärendetavlans namn.",
+        "notConnectedWarning": "Den här adressen är inte en ansluten inkorg, så svar på ärenden kanske inte läses in.",
+        "microsoftMismatch": "E-postadressen för ärenden måste matcha den valda Microsoft 365-postlådan ({{mailbox}})."
+      },
+      "notification": {
+        "title": "Avsändaridentitet för all annan e-post",
+        "description": "Anpassa avsändaridentiteten för portalinbjudningar, lösenordsåterställningar, fakturor, projektuppdateringar och allmänna aviseringar oberoende av ärenderoutningen.",
+        "addressLabel": "Avsändaradress",
+        "addressPlaceholder": "notifications@example.com",
+        "addressHelp": "SMTP och Resend använder den här adressen. Microsoft 365 använder den valda avsändarpostlådan.",
+        "nameLabel": "Avsändarens visningsnamn",
+        "namePlaceholder": "Ditt företagsnamn",
+        "nameHelp": "Lämna tomt för att använda {{company}} automatiskt.",
+        "companyFallback": "din klientorganisations företag"
+      },
+      "warningTitle": "Kontrollera svarsroutningen",
+      "errorTitle": "Korrigera avsändaridentiteten för ärenden"
+    }
+  },
+  "microsoft365": {
+    "title": {
+      "microsoft": "Microsoft 365-diagnostik",
+      "default": "Diagnostik"
+    },
+    "description": "Kör en direktkontroll mot Graph (inklusive att skapa och radera en prenumeration) för att diagnostisera problem med postlådor, mappar och behörigheter.",
+    "note": {
+      "label": "Obs:",
+      "body": "Diagnostiken skapar en tillfällig Microsoft Graph-prenumeration och raderar den sedan. Om raderingen misslyckas kan du behöva ta bort prenumerationen manuellt i Microsoft 365."
+    },
+    "labels": {
+      "provider": "Tjänsteleverantör:",
+      "mailbox": "Postlåda:",
+      "overall": "Samlat resultat:",
+      "resource": "Resurs: {{resource}}",
+      "recommendations": "Rekommendationer",
+      "error": "Fel"
+    },
+    "actions": {
+      "copySupportBundle": "Kopiera supportpaket",
+      "copied": "Kopierat"
+    },
+    "states": {
+      "running": "Kör diagnostik…",
+      "diagnosticsFailed": "Diagnostiken misslyckades"
+    },
+    "statuses": {
+      "pass": "Godkänd",
+      "warn": "Varning",
+      "fail": "Misslyckades",
+      "skip": "Överhoppad"
+    }
+  },
+  "inboundDefaults": {
+    "loading": "Läser in standardinställningar för ärenden…",
+    "header": {
+      "title": "Standardinställningar för inkommande ärenden",
+      "description": "Konfigurera standardvärden för ärenden som skapas från e-post"
+    },
+    "actions": {
+      "addDefaults": "Lägg till standardinställningar"
+    },
+    "form": {
+      "editTitle": "Redigera standardinställningar för ärenden",
+      "createTitle": "Skapa standardinställningar för ärenden",
+      "description": "Konfigurera de standardvärden som ska tillämpas på ärenden som skapas från e-post"
+    },
+    "empty": {
+      "title": "Inga standardinställningar för ärenden har konfigurerats",
+      "description": "Skapa din första konfiguration för att ange standardvärden för ärenden som skapas från e-post"
+    },
+    "badges": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv"
+    },
+    "fields": {
+      "board": "Tavla:",
+      "status": "Status:",
+      "priority": "Prioritet:",
+      "enteredBy": "Registrerat av:"
+    },
+    "fallbacks": {
+      "notSet": "Inte angivet",
+      "system": "System"
+    },
+    "menu": {
+      "edit": "Redigera",
+      "delete": "Radera",
+      "deleting": "Raderar…"
+    },
+    "help": {
+      "title": "Så fungerar det",
+      "items": {
+        "providerReference": "• Varje e-postleverantör kan hänvisa till en konfiguration med standardinställningar för ärenden",
+        "requiredValues": "• När ett e-postmeddelande skapar ett ärende anger dessa standardinställningar värden för obligatoriska fält",
+        "systemCreator": "• Systemgenererade ärenden visar ”System” som skapare när entered_by är null",
+        "scenarios": "• Du kan skapa olika standardinställningar för olika e-postscenarier (support, debitering osv.)"
+      }
+    },
+    "errors": {
+      "load": "Det gick inte att läsa in standardinställningarna för ärenden",
+      "delete": "Det gick inte att radera standardinställningarna för ärenden"
+    }
+  },
+  "policyManagement": {
+    "resourceSections": {
+      "tickets": "Ärenden",
+      "documents": "Dokument",
+      "time": "Tid",
+      "projects": "Projekt",
+      "assets": "Tillgångar",
+      "billing": "Debitering"
+    },
+    "targetTypes": {
+      "role": "Roll",
+      "team": "Team",
+      "user": "Användare",
+      "apiKey": "API-nyckel"
+    },
+    "templateSummaries": {
+      "own": "poster som ägs av säkerhetsidentiteten",
+      "assigned": "poster som tilldelats säkerhetsidentiteten",
+      "managed": "poster som ägs av hanterade användare",
+      "ownOrAssigned": "poster som ägs av eller tilldelats säkerhetsidentiteten",
+      "ownOrManaged": "poster som ägs av säkerhetsidentiteten eller hanterade användare",
+      "sameClient": "poster för samma kund",
+      "clientPortfolio": "poster för säkerhetsidentitetens kundportfölj",
+      "selectedClients": "poster för valda kunder",
+      "sameTeam": "poster som ägs av samma team",
+      "selectedBoards": "poster på valda tavlor"
+    },
+    "constraintSummaries": {
+      "notSelfApprover": "blockerar självgodkännande",
+      "clientVisibleOnly": "kräver poster som är synliga för kunden",
+      "hideSensitiveFields": "maskerar känsliga fält"
+    },
+    "dates": {
+      "unknown": "Okänt"
+    },
+    "ruleSummary": {
+      "base": "Begränsa {{action}} för {{resourceType}} till {{scope}}.",
+      "withConstraint": "Begränsa {{action}} för {{resourceType}} till {{scope}}; {{constraint}}."
+    },
+    "upsell": {
+      "title": "Behörighetspaket",
+      "description": "Avancerad hantering av behörighetspaket är tillgänglig på Pro-nivån. Uppgradera för att hantera återanvändbara paket som begränsar åtkomsten."
+    },
+    "hero": {
+      "badge": "Pro-arbetsyta",
+      "title": "Behörighetspaket",
+      "subtitle": "Hantera åtkomstbegränsningar i Pro med utkastversioner, avgränsade tilldelningar och säker simulering från en samlad kontrollpanel.",
+      "newBundle": "Nytt paket",
+      "addStarters": "Lägg till startpaket",
+      "addingStarters": "Lägger till startpaket…"
+    },
+    "metrics": {
+      "activeBundles": {
+        "title": "Aktiva paket",
+        "subtitle": "Återanvändbara begränsningspaket som kan tilldelas nu"
+      },
+      "activeAssignments": {
+        "title": "Aktiva tilldelningar",
+        "subtitle": "Aktiva tilldelningar till roller, team, användare och API-nycklar"
+      },
+      "starterBundles": {
+        "title": "Startpaket",
+        "subtitle": "Medföljande förinställningar baserade på relationer, redo att anpassas"
+      },
+      "archivedBundles": {
+        "title": "Arkiverade paket",
+        "subtitle": "Avvecklade paket som bevaras för granskning och återanvändning"
+      }
+    },
+    "library": {
+      "eyebrow": "Bibliotek",
+      "title": "Bibliotek med behörighetspaket",
+      "description": "Se paketens status, hantera deras livscykel och öppna en arbetsyta för ett paket i taget.",
+      "searchPlaceholder": "Sök paket efter namn eller beskrivning",
+      "showArchived": "Visa arkiverade",
+      "columns": {
+        "bundle": "Paket",
+        "status": "Status",
+        "type": "Typ",
+        "assignments": "Tilldelningar",
+        "updated": "Uppdaterat",
+        "actions": "Åtgärder"
+      },
+      "statusLabels": {
+        "active": "aktivt",
+        "archived": "arkiverat"
+      },
+      "typeLabels": {
+        "system": "System",
+        "custom": "Anpassat"
+      },
+      "badges": {
+        "starter": "Startpaket"
+      },
+      "descriptions": {
+        "systemStarter": "Systemets startpaket.",
+        "customBundle": "Anpassat begränsningspaket för tilldelning till roller, team, användare eller API-nycklar."
+      },
+      "effectiveSummary": "Aktuell sammanfattning: {{status}} paket. Aktiva tilldelningar: {{count}}.",
+      "empty": "Inga behörighetspaket hittades.",
+      "loading": "Läser in behörighetspaket…",
+      "actions": {
+        "openEditor": "Öppna redigeraren",
+        "assignments": "Tilldelningar",
+        "simulator": "Simulator",
+        "clone": "Klona",
+        "archive": "Arkivera",
+        "openMenu": "Öppna meny"
+      }
+    },
+    "workspace": {
+      "backToLibrary": "Tillbaka till biblioteket",
+      "updatedWithAssignments": "Uppdaterat {{date}} · Aktiva tilldelningar: {{count}}",
+      "eyebrow": "Paketets arbetsyta",
+      "fallbackBundleName": "Valt paket",
+      "fallbackDescription": "Använd utkastredigeraren, tilldelningshanteraren och simulatorn för att införa säkra ändringar av åtkomstbegränsningar.",
+      "tabs": {
+        "editor": "Utkastredigerare",
+        "assignments": "Tilldelningar",
+        "simulator": "Simulator"
+      }
+    },
+    "editor": {
+      "header": "Paketredigerare",
+      "editingDraftPrefix": "Redigerar utkastversionen för ",
+      "editingDraftSuffix": ". Ändringar sparas i utkastet tills det publiceras.",
+      "viewingPublishedPrefix": "Visar den publicerade versionen för ",
+      "viewingPublishedSuffix": ". Det finns ingen aktiv utkastversion just nu.",
+      "publishDraft": "Publicera utkast",
+      "publishing": "Publicerar…",
+      "publishedBadge": "Publicerad",
+      "loading": "Läser in utkastredigeraren…",
+      "revisionSummary": "Versionssammanfattning: {{summary}}",
+      "ruleCount": "Antal regler ({{revisionType}}): {{count}}",
+      "revisionType": {
+        "draft": "utkast",
+        "published": "publicerad"
+      },
+      "emptyRules": "Inga regler ännu för {{resource}} ({{revisionType}}).",
+      "ruleForm": {
+        "addDraftTitle": "Lägg till regel i utkast",
+        "editDraftTitle": "Redigera regel i utkast",
+        "createDraftTitle": "Skapa regel i utkast",
+        "editPublishedTitle": "Redigera publicerad regel som utkast",
+        "helperEditPublished": "När du sparar skapas en ny utkastversion med dina ändringar av den publicerade regeln.",
+        "helperCreateDraft": "När du sparar skapas en ny utkastversion för paketet.",
+        "reset": "Återställ",
+        "action": "Åtgärd",
+        "template": "Mall",
+        "constraint": "Begränsning (valfri)",
+        "constraintNone": "ingen",
+        "saveDraftRule": "Spara regel i utkast",
+        "addDraftRule": "Lägg till regel i utkast",
+        "saveAsDraftChange": "Spara som utkaständring",
+        "createDraftRule": "Skapa regel i utkast"
+      },
+      "rule": {
+        "edit": "Redigera",
+        "remove": "Ta bort",
+        "removeAsDraft": "Ta bort i utkast",
+        "removeDraftTooltip": "Ta bort den här regeln från utkastet.",
+        "removePublishedTooltip": "Skapa en ny utkastversion där den här publicerade regeln tas bort.",
+        "selectedClientScopes": "Omfattning: valda kunder",
+        "selectedBoardScopes": "Omfattning: valda tavlor",
+        "redactedFields": "Maskerade fält"
+      },
+      "scopes": {
+        "clientTitle": "Omfattning: valda kunder",
+        "boardTitle": "Omfattning: valda tavlor",
+        "selectClient": "Välj kund",
+        "selectBoard": "Välj tavla",
+        "addClientScope": "Lägg till kund i omfattningen",
+        "addBoardScope": "Lägg till tavla i omfattningen",
+        "noClientScopes": "Inga kunder har lagts till i omfattningen ännu.",
+        "noBoardScopes": "Inga tavlor har lagts till i omfattningen ännu.",
+        "remove": "Ta bort"
+      },
+      "redaction": {
+        "label": "Maskerade fält",
+        "placeholder": "internal_cost, margin",
+        "helper": "Kommaavgränsade fältnamn som ska maskeras när den här regeln tillåter åtkomst."
+      }
+    },
+    "assignments": {
+      "header": "Tilldelningshanterare",
+      "description": "Visa och hantera de roller, team, användare och API-nycklar som paketet för närvarande tillämpas på.",
+      "loading": "Läser in tilldelningar…",
+      "addAssignment": "Lägg till tilldelning",
+      "selectTargetPlaceholder": "Välj {{target}}",
+      "addButton": "Lägg till tilldelning",
+      "adding": "Lägger till…",
+      "empty": "Inga tilldelningar för det här paketet ännu.",
+      "groupEmpty": "Inga tilldelningar för {{target}}.",
+      "statusActions": {
+        "disable": "Inaktivera",
+        "enable": "Aktivera",
+        "saving": "Sparar…"
+      },
+      "statusLabels": {
+        "active": "aktiv",
+        "disabled": "inaktiverad"
+      }
+    },
+    "simulator": {
+      "header": "Åtkomstsimulator",
+      "description": "Simulera hur paketets utkastversion och publicerade version fungerar för en verklig säkerhetsidentitet och en befintlig post.",
+      "inputTitle": "Simuleringsindata",
+      "resource": "Resurs",
+      "action": "Åtgärd",
+      "principal": "Användare",
+      "record": "Post",
+      "useSynthetic": "Använd ett scenario med en syntetisk post",
+      "syntheticOwnerPlaceholder": "Ägarens användar-ID (valfritt)",
+      "syntheticClientPlaceholder": "Kund-ID (valfritt)",
+      "syntheticBoardPlaceholder": "Tavlans ID (valfritt)",
+      "clientVisible": "Synlig för kunden",
+      "run": "Kör simulering",
+      "running": "Kör simulering…",
+      "resultTitle": "Simuleringsresultat",
+      "draftRevision": "Utkastversion",
+      "publishedRevision": "Publicerad version",
+      "allowed": "Tillåten",
+      "denied": "Nekad",
+      "empty": "Kör en simulering för att jämföra utkastets och den publicerade versionens beteende."
+    },
+    "createDialog": {
+      "title": "Skapa behörighetspaket",
+      "cancel": "Avbryt",
+      "create": "Skapa paket",
+      "creating": "Skapar…",
+      "nameLabel": "Namn",
+      "namePlaceholder": "Ekonomigranskare väst",
+      "descriptionLabel": "Beskrivning",
+      "descriptionPlaceholder": "Återanvändbart begränsningspaket för ett visst team, en kundgrupp eller ett arbetsflöde."
+    },
+    "clone": {
+      "copySuffix": "{{name}} – kopia"
+    },
+    "errors": {
+      "loadBundles": "Det gick inte att läsa in paketen.",
+      "loadEditor": "Det gick inte att läsa in paketredigeraren.",
+      "loadAssignments": "Det gick inte att läsa in paketets tilldelningar.",
+      "cloneBundle": "Det gick inte att klona paketet.",
+      "archiveBundle": "Det gick inte att arkivera paketet.",
+      "seedStarters": "Det gick inte att lägga till startpaketen.",
+      "bundleNameRequired": "Paketnamn krävs.",
+      "createBundle": "Det gick inte att skapa paketet.",
+      "publishDraft": "Det gick inte att publicera paketutkastet.",
+      "selectTemplate": "Välj en mall innan du sparar en regel.",
+      "selectClientRequired": "Lägg till minst en vald kund innan du sparar den här regeln.",
+      "selectBoardRequired": "Lägg till minst en vald tavla innan du sparar den här regeln.",
+      "redactedFieldRequired": "Ange minst ett fält som ska maskeras innan du sparar den här regeln.",
+      "saveRule": "Det gick inte att spara regeln i utkastet.",
+      "removeRule": "Det gick inte att ta bort regeln.",
+      "selectTarget": "Välj ett mål innan du lägger till en tilldelning.",
+      "addAssignment": "Det gick inte att lägga till tilldelningen.",
+      "updateAssignmentStatus": "Det gick inte att uppdatera tilldelningens status.",
+      "selectPrincipal": "Välj en säkerhetsidentitet innan du kör simuleringen.",
+      "selectRecord": "Välj en post innan du kör simuleringen.",
+      "runSimulation": "Det gick inte att köra simuleringen.",
+      "simulator": {
+        "unsupportedAction": "Simulatorn stöder för närvarande endast kontroller av Läs och Godkänn. Välj någon av dessa åtgärder och försök igen.",
+        "unsupportedResource": "Den här posttypen är ännu inte tillgänglig i simulatorn. Välj en posttyp som stöds och försök igen.",
+        "clientTicketNotSupported": "Ärendekontroller för kundanvändare är ännu inte tillgängliga i simulatorn eftersom ärendetavlornas synlighet inte ingår. Prova med en intern användare eller kontrollera kundens ärendeåtkomst i appen."
+      }
+    }
+  },
+  "emailLogs": {
+    "page": {
+      "title": "E-postloggar",
+      "description": "Granska utgående e-postaktivitet och felsök leveransen av aviseringar."
+    },
+    "metrics": {
+      "totalSent": "Totalt skickade",
+      "failedRate": "Andel misslyckade",
+      "today": "Idag"
+    },
+    "filters": {
+      "startDate": "Startdatum",
+      "endDate": "Slutdatum",
+      "status": "Status",
+      "recipient": "Mottagare",
+      "recipientPlaceholder": "Sök e-postadress…",
+      "ticket": "Ärende",
+      "ticketPlaceholder": "Ärende nr …",
+      "statusOptions": {
+        "all": "Alla",
+        "sent": "Skickat",
+        "failed": "Misslyckades"
+      }
+    },
+    "table": {
+      "time": "Tid",
+      "ticket": "Ärende",
+      "recipient": "Mottagare",
+      "subject": "Ämne",
+      "status": "Status"
+    },
+    "loading": "Laddar…",
+    "results_one": "{{count}} resultat",
+    "results_other": "{{count}} resultat",
+    "refresh": "Ladda om",
+    "close": "Stäng",
+    "detail": {
+      "title": "Information om e-postloggen",
+      "noSubject": "Inget ämne",
+      "sentAt": "Skickat",
+      "status": "Status",
+      "provider": "Tjänsteleverantör",
+      "messageId": "Meddelande-ID",
+      "to": "Till",
+      "from": "Från",
+      "error": "Fel",
+      "metadata": "Metadata"
+    }
+  },
+  "gmailDiagnostics": {
+    "title": "Diagnostik av Gmail-leverans",
+    "description": "Kontrollerar Pub/Sub-ämnet, dess behörigheter, push-slutpunkten och målgruppen, Gmail-bevakningen och när den senaste push-aviseringen kom fram.",
+    "labels": {
+      "provider": "Tjänsteleverantör:",
+      "mailbox": "Postlåda:",
+      "overall": "Samlat resultat:",
+      "recommendations": "Rekommendationer",
+      "error": "Fel"
+    },
+    "audienceMismatch": {
+      "title": "Målgruppen för push matchar inte den här instansen",
+      "expected": "Förväntat:",
+      "actual": "Google använder:"
+    },
+    "actions": {
+      "copySupportBundle": "Kopiera supportpaket",
+      "copied": "Kopierat"
+    },
+    "states": {
+      "running": "Kör diagnostik…",
+      "diagnosticsFailed": "Diagnostiken misslyckades"
+    },
+    "statuses": {
+      "pass": "Godkänd",
+      "warn": "Varning",
+      "fail": "Misslyckades",
+      "skip": "Överhoppad"
+    }
+  },
+  "integrations": {
+    "entra": {
+      "diagnostics": {
+        "title": "Entra-diagnostik",
+        "description": "Kontroller av Entra-anslutningen, partnerautentiseringen, identifieringen och synkroniseringsstatusen utan att ändra data.",
+        "run": "Kör diagnostik",
+        "labels": {
+          "overall": "Samlat resultat",
+          "connectionType": "Anslutning",
+          "status": "Status",
+          "mappedClients": "Mappade kunder",
+          "managedTenants": "Hanterade klientorganisationer",
+          "recommendations": "Rekommendationer",
+          "blockedBy": "Blockeras av",
+          "error": "Fel",
+          "readiness": "Åtkomstförutsättningar"
+        },
+        "statuses": {
+          "pass": "Godkänd",
+          "warn": "Varning",
+          "fail": "Misslyckades",
+          "skip": "Överhoppad"
+        },
+        "steps": {
+          "edition_tier_rbac": "Utgåva, nivå och åtkomstförutsättningar",
+          "connection_row": "Aktiv Entra-anslutning",
+          "app_registration_binding": "Koppling till Microsoft-appregistrering",
+          "client_secret_present": "Appregistreringens klienthemlighet",
+          "expected_app_registration_values": "Förväntade värden för appregistreringen",
+          "sync_worker_and_schedule": "Synkroniseringsprocess och schema",
+          "token_set_present": "Lagrade token för direkt OAuth",
+          "token_refresh": "Förnya partnerns åtkomsttoken",
+          "token_claims": "Avkoda åtkomsttokenens anspråk och omfång",
+          "graph_me": "Grundkontroll av Microsoft Graph /me",
+          "managed_tenants_endpoint": "Nåbarhet för slutpunkten för hanterade klientorganisationer",
+          "managed_tenants_count": "Identifiering av hanterade klientorganisationer",
+          "mappings_vs_discovery": "Bekräftade mappningar jämfört med aktuell identifiering",
+          "cipp_credentials_present": "CIPP-autentiseringsuppgifter",
+          "cipp_reachable": "Nåbarhet för CIPP API",
+          "cipp_auth": "Autentiseringsuppgift för CIPP API",
+          "cipp_tenant_list": "CIPP-lista över klientorganisationer",
+          "cipp_mappings_vs_list": "Bekräftade mappningar jämfört med CIPP-listan över klientorganisationer",
+          "last_runs": "Senaste synkroniseringskörningar",
+          "per_tenant_last_result": "Resultat per klientorganisation för den senaste synkroniseringen",
+          "reconciliation_queue": "Avstämningskö",
+          "tenant_token_mint": "Utfärda token för kundens klientorganisation",
+          "users_read": "Läs kataloganvändare",
+          "groups_read": "Läs kataloggrupper",
+          "entitlement_group_resolves": "Slå upp behörighetsgrupp",
+          "user_yield_preview": "Förhandsgranskning av användarurval",
+          "per_tenant_users": "CIPP-användare per klientorganisation"
+        },
+        "readiness": {
+          "authenticated": "Inloggad",
+          "notClientPortal": "Inte en kundportalanvändare",
+          "edition": "Enterprise-utgåvan",
+          "integrationsTier": "Integreringsnivå",
+          "entraSyncTier": "Nivå för Entra-synkronisering (Pro)",
+          "systemSettingsRead": "Läsbehörighet för system_settings"
+        },
+        "states": {
+          "running": "Kör diagnostik…"
+        },
+        "errors": {
+          "failed": "Diagnostiken misslyckades",
+          "clientFailed": "Kunddiagnostiken misslyckades"
+        },
+        "actions": {
+          "copySupportBundle": "Kopiera supportpaket",
+          "copied": "Kopierat",
+          "downloadJson": "Ladda ner JSON",
+          "copy": "Kopiera",
+          "open": "Öppna",
+          "open_url": "Öppna",
+          "navigate": "Gå till",
+          "goToStep": "Gå till steg",
+          "includeIdentifiers": "Ta med identifierare i exporten"
+        },
+        "clients": {
+          "title": "Diagnostik för valda kunder",
+          "selectedCount": "Antal valda: {{count}}",
+          "yieldToggle": "Förhandsgranskning av användarurval (mer resurskrävande)",
+          "run": "Kör kunddiagnostik",
+          "progress": "{{completed}} av {{total}} slutförda",
+          "confirmTitle": "Kör diagnostik för många kunder?",
+          "confirmMessage": "Du har valt {{count}} kunder. För varje kund utfärdas en token och görs ett fåtal Graph-anrop.",
+          "confirmRun": "Kör",
+          "unavailableName": "Namnet är inte tillgängligt",
+          "selectAll": "Markera alla",
+          "clear": "Rensa",
+          "categories": {
+            "ok": "OK",
+            "need_consent": "Samtycke krävs",
+            "conditional_access": "Villkorsstyrd åtkomst",
+            "missing_role": "Roll saknas",
+            "other": "Annat"
+          },
+          "details": {
+            "completed": "Slutförd",
+            "latestSyncFailure": "Senaste synkroniseringsfel"
+          },
+          "columns": {
+            "client": "Kund",
+            "tenant": "Klientorganisation",
+            "status": "Status",
+            "remedy": "Åtgärd",
+            "complete": "Slutförd",
+            "details": "Detaljer"
+          },
+          "complete": "Slutförd",
+          "partial": "Delvis"
+        },
+        "remedies": {
+          "connectEntra": "Anslut Microsoft Entra via Inställningar > Integreringar > Entra.",
+          "selectAppRegistration": "Välj en Microsoft-appregistrering för Entra och återanslut sedan.",
+          "selectExistingApp": "Den kopplade Microsoft-appen finns inte längre. Välj en befintlig appregistrering och återanslut sedan.",
+          "chooseAnotherApp": "Den kopplade Microsoft-appregistreringen är arkiverad. Välj en annan appregistrering och återanslut sedan.",
+          "addEntraCapability": "Redigera appregistreringen under Inställningar > Integreringar > Microsoft och aktivera Entra-funktionen.",
+          "secretExpiryUnknown": "Klienthemlighetens utgångsdatum är okänt. Microsofts klienthemligheter upphör att gälla efter 6–24 månader. Rotera dem enligt schemat i Azure.",
+          "clientSecretMissing": "Appregistreringens klienthemlighet saknas eller är tom. Rotera hemligheten i Azure och uppdatera appregistreringen under Inställningar > Integreringar > Microsoft.",
+          "entraAccessDenied": "Åtkomst till Entra-diagnostik nekas för den här användaren eller arbetsytan.",
+          "temporalUnreachable": "Det gick inte att nå Temporals frontend. Automatisk synkronisering kan inte köras förrän den är tillgänglig.",
+          "temporalNoWorkers": "Temporal går att nå, men ingen arbetsprocess hämtar uppgifter från Entras uppgiftskö. Schemalagda synkroniseringar kommer inte att behandlas.",
+          "syncDisabled": "Automatisk Entra-synkronisering är inaktiverad för den här arbetsytan.",
+          "scheduleLookupFailed": "Det gick inte att granska Temporal-schemat. Kontrollera behörigheter och anslutning till Temporal.",
+          "scheduleMissing": "Automatisk synkronisering är aktiverad, men inget Temporal-schema hittades. Spara schemat för att tillämpa det.",
+          "scheduleIntervalMismatch": "Temporal-schemats intervall ({{interval}} min) matchar inte den sparade inställningen ({{configured}} min). Spara schemat för att få dem att stämma överens.",
+          "reconnectEntra": "Ingen uppdateringstoken finns lagrad. Återanslut Microsoft Entra.",
+          "noManagedTenants": "Inga hanterade klientorganisationer returnerades. Partnern måste vara ansluten till Microsoft 365 Lighthouse med aktiva GDAP-relationer.",
+          "mappedTenantMissing": "Den mappade klientorganisationen ”{{client}}” returnerades inte vid identifieringen. GDAP kan ha upphört att gälla eller avslutats.",
+          "mappingsLookupFailed": "Det gick inte att läsa de bekräftade klientorganisationsmappningarna. Kör diagnostiken igen. Om problemet kvarstår, granska klientorganisationsmappningarna.",
+          "cippCredentialsMissing": "CIPP:s bas-URL och API-token krävs. Konfigurera dem på fliken Anslutning.",
+          "cippAuthRejected": "CIPP avvisade API-autentiseringsuppgiften. Rotera CIPP:s API-nyckel under Inställningar > CIPP > API-åtkomst. Detta är inte en Azure-klienthemlighet.",
+          "cippEmptyTenantList": "CIPP returnerade inga klientorganisationer. Kontrollera kundernas synlighet och konfigurationen i CIPP.",
+          "cippUnreachable": "Det gick inte att nå CIPP. Kontrollera bas-URL:en, DNS/TLS och utgående anslutning.",
+          "cippPerTenantFailed": "CIPP kunde inte läsa den här klientorganisationens katalog.",
+          "consecutiveSyncFailures": "De två senaste synkroniseringarna slutfördes inte utan fel. Granska synkroniseringshistoriken och felen per klientorganisation.",
+          "reconciliationOpenItems": "Antal väntande poster i granskningskön: {{count}}. Tvetydiga matchningar länkas aldrig automatiskt.",
+          "customerConsentRequired": "Appen behöver administratörssamtycke i kundens klientorganisation. Att återansluta partnern hjälper inte. Öppna samtyckeslänken och ge samtycke som kundens administratör.",
+          "entitlementGroupNotSecurity": "Den konfigurerade behörighetsgruppen är inte en säkerhetsgrupp. Medlemskapskravet kanske inte kan upprätthållas.",
+          "entitlementGroupMissing": "Den konfigurerade behörighetsgruppen finns inte längre i kundens klientorganisation.",
+          "allUsersExcluded": "Alla användare i katalogen uteslöts av de aktuella filterreglerna. Synkroniseringen skulle inte skapa några kontakter.",
+          "yieldTruncated": "Förhandsgranskningen av användarurvalet avbröts i förtid eftersom katalogen är stor. Antalen är minimivärden och omfattar inte hela katalogen.",
+          "yieldFailed": "Det gick inte att beräkna förhandsgranskningen av användarurvalet.",
+          "missingScope": "Tokenen saknar {{scope}}. Ge administratörssamtycke och återanslut sedan Microsoft Entra.",
+          "appClientIdMismatch": "Tokenen utfärdades för en annan applikation än den kopplade appregistreringen. Återanslut Microsoft Entra med rätt app.",
+          "client_secret_invalid": "Microsoft avvisade appens autentiseringsuppgift (invalid_client / AADSTS7000222). Rotera klienthemligheten i Azure, uppdatera Microsoft-appregistreringen under Inställningar > Integreringar > Microsoft och återanslut sedan.",
+          "app_not_found": "Microsoft kunde inte hitta applikationen (AADSTS700016). Kontrollera det kopplade klient-ID:t och att appen stöder flera klientorganisationer.",
+          "partner_consent_required": "Administratörssamtycke saknas i partnerns klientorganisation (AADSTS65001 / consent_required). Ge administratörssamtycke för appen i partnerns klientorganisation och återanslut sedan.",
+          "conditional_access": "Villkorsstyrd åtkomst blockerade begäran (AADSTS50076/AADSTS50079). Kontot som ansluter måste uppfylla policyn för MFA och enheter som uppfyller kraven.",
+          "refresh_token_invalid": "Behörigheten att förnya token har upphört att gälla eller återkallats. Återanslut Microsoft Entra för att utfärda en ny uppdateringstoken.",
+          "tenant_not_found": "Microsoft kunde inte hitta klientorganisationen (AADSTS90002). Kontrollera klientorganisations-ID:t i anslutningen eller mappningen.",
+          "account_not_allowed": "Kontot som ansluter är inte tillåtet i klientorganisationen (AADSTS50020). Kontrollera att kontot har åtkomst eller är ett gästkonto.",
+          "network_unreachable": "Det gick inte att nå Microsoft Graph. Kontrollera utgående anslutning, DNS och betrodda TLS-certifikat.",
+          "token_rejected": "Microsoft avvisade tokenen (401). Återanslut Microsoft Entra eller kontrollera kundens samtycke.",
+          "forbidden": "Microsoft Graph returnerade 403 (Forbidden). Kontrollera delegerade behörigheter, samtycke och rolltilldelningar.",
+          "request_failed": "Begäran till Microsoft misslyckades. Expandera steget för att se felkod och korrelations-ID.",
+          "customer_directory_role_missing": "Microsoft Graph nekade läsning av kundens katalog (403). Det delegerade kontot behöver en roll med läsbehörighet för katalogen i kundens klientorganisation, vanligtvis tilldelad via GDAP (till exempel Katalogläsare).",
+          "managedTenantsEndpointFault": "Graph avvisade managedTenants-anropet. Detta är ett fel i slutpunkten på Algas sida. Kontakta supporten och ange anrops-ID:t.",
+          "cippHttpError": "CIPP svarade med HTTP {{status}} för varje slutpunkt för klientorganisationslistor. Detta är ett listfel på CIPP:s sida, inte en tom lista över klientorganisationer.",
+          "cippInvalidPayload": "CIPP returnerade ett svar som inte är en lista över klientorganisationer. Kontrollera CIPP-API-versionen och slutpunkten.",
+          "schedulePaused": "Automatisk synkronisering är aktiverad, men Temporal-schemat är pausat. Inga körningar startas.",
+          "temporalWorkerUnknown": "Temporal går att nå, men uppgifter om arbetsprocessernas avsökning saknas. Det gick inte att bekräfta att arbetsprocesser är tillgängliga.",
+          "managedTenantConsentMissing": "Microsoft accepterade inloggningen men nekade åtkomst till listan över hanterade klientorganisationer. En global administratör måste ge administratörssamtycke för de begärda behörigheterna."
+        }
+      }
+    }
+  }
+}
