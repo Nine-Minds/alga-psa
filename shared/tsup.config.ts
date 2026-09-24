@@ -71,6 +71,7 @@ export default defineConfig({
     'extensions/installs': 'extensions/installs.ts',
     'extensions/types': 'extensions/types.ts',
     'billingClients/resolveFixedLineRate': 'billingClients/resolveFixedLineRate.ts',
+    'billingClients/recurringUnitPricing': 'billingClients/recurringUnitPricing.ts',
     'billingClients/index': 'billingClients/index.ts',
     // packages/jobs runs vitest from its own root, so this resolves through the
     // exports map into dist/ rather than being transpiled from source the way

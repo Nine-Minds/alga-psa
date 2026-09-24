@@ -48,6 +48,17 @@ export interface FixedPlanServiceRow {
    * fixed-bundle semantics where the line total is authoritative).
    */
   pricing_basis?: 'unit' | 'bundle' | string | null;
+  /** Set by the engine when a scheduled unit revision applies to this period. */
+  effective_pricing?: {
+    quantity: number;
+    pricePolicy: 'override' | 'catalog';
+    unitRateCents: number | null;
+    revisionId: string;
+    version: number;
+    effectivePeriodStart: string;
+    catalogPriceId?: string | null;
+    catalogEffectiveDate?: string | null;
+  } | null;
 }
 
 /**
@@ -546,6 +557,28 @@ export function computeFixedCharges(
         is_taxable: isTaxable,
         config_id: service.config_id,
         base_rate: rate,
+        servicePeriodStart,
+        servicePeriodEnd,
+        ...(service.effective_pricing
+          ? {
+              recurringPricingSource: {
+                revisionId: service.effective_pricing.revisionId,
+                version: service.effective_pricing.version,
+                pricePolicy: service.effective_pricing.pricePolicy,
+                unitRateCents: rate,
+                effectivePeriodStart:
+                  service.effective_pricing.effectivePeriodStart,
+                catalogPriceId:
+                  service.effective_pricing.pricePolicy === 'catalog'
+                    ? service.effective_pricing.catalogPriceId ?? null
+                    : null,
+                catalogEffectiveDate:
+                  service.effective_pricing.pricePolicy === 'catalog'
+                    ? service.effective_pricing.catalogEffectiveDate ?? null
+                    : null,
+              },
+            }
+          : {}),
       };
       unitCharges.push(unitCharge);
 

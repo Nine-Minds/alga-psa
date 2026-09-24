@@ -41,6 +41,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { AddContractLinesDialog } from './AddContractLinesDialog';
 import { CreateCustomContractLineDialog } from './CreateCustomContractLineDialog';
 import { BucketPoolEditor } from './BucketPoolEditor';
+import { RecurringUnitSchedulePanel } from './RecurringUnitSchedulePanel';
 import { listBucketBusinessHoursSchedules } from '@alga-psa/billing/actions/bucketPoolActions';
 import {
   ServiceSelectionDialog,
@@ -126,6 +127,8 @@ interface ServiceConfiguration {
     service_name: string;
     service_type?: string;
     billing_method?: string;
+    /** `product` marks a catalog product billed through the recurring product path. */
+    item_kind?: string | null;
   };
   configuration: {
     config_id: string;
@@ -1585,7 +1588,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                               )}
 
                               {/* Fixed contract line - show info message */}
-                              {line.contract_line_type === 'Fixed' && !services.some(service => service.typeConfig?.pricing_basis === 'unit' || service.configuration.configuration_type === 'Usage') && (
+                              {line.contract_line_type === 'Fixed' && !services.some(service => service.service.item_kind === 'product' || service.typeConfig?.pricing_basis === 'unit' || service.configuration.configuration_type === 'Usage') && (
                                 <div className="col-span-2 space-y-2">
                                   <p className="text-sm text-muted-foreground">
                                     {t('contractLines.configuration.fixedInfo', {
@@ -1662,6 +1665,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                               <div className="space-y-3">
                                 {services.filter(s => s.configuration.configuration_type !== 'Bucket').map((serviceConfig, idx) => {
                                   const isUnitPriced = serviceConfig.typeConfig?.pricing_basis === 'unit';
+                                  const isRecurringProduct = serviceConfig.service.item_kind === 'product';
                                   const isEditing = editingLineId === line.contract_line_id && (!pricingOnly || isUnitPriced || serviceConfig.configuration.configuration_type === 'Usage');
                                   const configId = serviceConfig.configuration.config_id;
                                   const editData = editServiceConfigs[configId] || {};
@@ -1726,7 +1730,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                           && serviceConfig.configuration.configuration_type !== 'Usage' && (
                                           <div>
                                             <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                                              {isUnitPriced ? t('contractLines.services.recurringUnits', {defaultValue: 'Recurring seats/units'}) : line.contract_line_type === 'Fixed'
+                                              {isUnitPriced || isRecurringProduct ? t('contractLines.services.recurringUnits', {defaultValue: 'Recurring seats/units'}) : line.contract_line_type === 'Fixed'
                                                 ? t('contractLines.services.quantityTaxAllocation', {
                                                   defaultValue: 'Quantity (for tax allocation)',
                                                 })
@@ -1760,7 +1764,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                           <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                                             {serviceConfig.configuration.configuration_type === 'Hourly'
                                               ? t('contractLines.services.hourlyRate', { defaultValue: 'Hourly Rate' })
-                                              : serviceConfig.configuration.configuration_type === 'Usage' || isUnitPriced
+                                              : serviceConfig.configuration.configuration_type === 'Usage' || isUnitPriced || isRecurringProduct
                                               ? t('contractLines.services.unitRate', { defaultValue: 'Unit Rate' })
                                               : t('contractLines.services.rateTaxAllocation', { defaultValue: 'Rate (for tax allocation)' })}
                                           </Label>
@@ -1926,6 +1930,27 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                             </div>
                                           </div>
                                         </div>
+                                      )}
+
+                                      {serviceConfig.configuration.configuration_type === 'Fixed'
+                                        && (serviceConfig.typeConfig?.pricing_basis === 'unit'
+                                          || serviceConfig.service.item_kind === 'product') && (
+                                        <details className="pt-2">
+                                          <summary className="cursor-pointer text-sm font-medium text-[rgb(var(--color-primary-700))]">
+                                            {t('contractLines.recurringSchedule.openPanel', {
+                                              defaultValue: 'Schedule recurring change & history',
+                                            })}
+                                          </summary>
+                                          <div className="mt-3">
+                                            <RecurringUnitSchedulePanel
+                                              contractLineId={line.contract_line_id}
+                                              serviceId={serviceConfig.service.service_id}
+                                              configId={serviceConfig.configuration.config_id}
+                                              currencyCode={contract.currency_code || 'USD'}
+                                              disabled={isSavingLine}
+                                            />
+                                          </div>
+                                        </details>
                                       )}
                                     </div>
                                   );

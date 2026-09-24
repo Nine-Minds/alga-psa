@@ -3,6 +3,7 @@ import type {
   IClientContractLine,
   ILicenseCharge,
   IProductCharge,
+  IRecurringPricingSource,
 } from "@alga-psa/types";
 import type {
   ChargeComputeClient,
@@ -11,6 +12,24 @@ import type {
   ChargeProfileAssignments,
 } from "./types";
 import { resolveChargeProfileFor } from "../billingProfileResolution";
+
+/**
+ * Effective pricing selected from a scheduled revision for the covered service
+ * period. Presence means the item is on the strict, revision-billing path:
+ * quantity zero is a real zero, catalog policy needs a currency price only when
+ * there are billable units, and the source is attributable back to the revision.
+ */
+export interface RecurringQuantityEffectivePricing {
+  quantity: number;
+  pricePolicy: "override" | "catalog";
+  unitRateCents: number | null;
+  revisionId: string;
+  version: number;
+  effectivePeriodStart: string;
+  /** `service_prices` identity that supplied a catalog-policy rate. */
+  catalogPriceId?: string | null;
+  catalogEffectiveDate?: string | null;
+}
 
 export interface RecurringQuantityServiceRow {
   service_id: string;
@@ -24,6 +43,8 @@ export interface RecurringQuantityServiceRow {
   configuration_custom_rate?: number | string | null;
   /** Currency-specific service_prices row. */
   price_rate?: number | string | null;
+  /** Set by the engine when a scheduled revision applies to this period. */
+  effective_pricing?: RecurringQuantityEffectivePricing | null;
 }
 
 export interface RecurringQuantityChargeComputeInputs {
@@ -73,27 +94,106 @@ export function computeRecurringQuantityCharges(
   const explanations: ChargeExplanation[] = [];
 
   const charges = services.map((service): IProductCharge | ILicenseCharge => {
-    const hasOverride =
-      service.configuration_custom_rate != null ||
-      service.service_line_custom_rate != null;
-    const hasCatalogPrice = service.price_rate != null;
-    if (!hasOverride && !hasCatalogPrice) {
-      throw new Error(
-        `Missing pricing for ${chargeType} "${service.service_name}" (${service.service_id}) in ${contractCurrency}. ` +
-          `Add a ${contractCurrency} price in the product catalog or set a custom rate on the contract line.`,
-      );
+    const missingPriceMessage =
+      `Missing pricing for ${chargeType} "${service.service_name}" (${service.service_id}) in ${contractCurrency}. ` +
+      `Add a ${contractCurrency} price in the product catalog or set a custom rate on the contract line.`;
+
+    const effective = service.effective_pricing ?? null;
+    let quantity: number;
+    let originalRate: number;
+    let rateSource: string;
+    let revisionApplied = false;
+    let recurringPricingSource: IRecurringPricingSource | null = null;
+
+    if (effective) {
+      revisionApplied = true;
+      const rawQuantity = Number(effective.quantity);
+      quantity =
+        Number.isFinite(rawQuantity) && rawQuantity > 0
+          ? Math.round(rawQuantity)
+          : Math.max(0, Math.round(Number.isFinite(rawQuantity) ? rawQuantity : 0));
+
+      if (effective.pricePolicy === "override") {
+        const explicitRate =
+          effective.unitRateCents === null || effective.unitRateCents === undefined
+            ? null
+            : Number(effective.unitRateCents);
+        if (quantity === 0) {
+          // A stopped item needs no rate to reach a deliberate zero outcome.
+          originalRate = explicitRate !== null && Number.isFinite(explicitRate) ? Math.round(explicitRate) : 0;
+          rateSource = "scheduled override";
+        } else if (
+          explicitRate === null ||
+          !Number.isFinite(explicitRate) ||
+          explicitRate < 0
+        ) {
+          throw new Error(
+            `Scheduled revision ${effective.revisionId} for ${chargeType} "${service.service_name}" (${service.service_id}) has no valid unit rate override.`,
+          );
+        } else {
+          originalRate = Math.round(explicitRate);
+          rateSource = "scheduled override";
+        }
+      } else {
+        const catalogRate =
+          service.price_rate === null || service.price_rate === undefined
+            ? null
+            : Number(service.price_rate);
+        if (quantity === 0) {
+          // A stopped item must not be blocked by a missing catalog price.
+          originalRate = catalogRate !== null && Number.isFinite(catalogRate) ? Math.round(catalogRate) : 0;
+          rateSource = "scheduled catalog price";
+        } else if (catalogRate === null || !Number.isFinite(catalogRate)) {
+          throw new Error(missingPriceMessage);
+        } else {
+          originalRate = Math.round(catalogRate);
+          rateSource = "scheduled catalog price";
+        }
+      }
+    } else {
+      // Legacy path: untouched products keep their exact prior behavior,
+      // including the historical zero/null -> one coercion. Strict zero only
+      // applies once an item has an explicit scheduled revision.
+      const hasOverride =
+        service.configuration_custom_rate != null ||
+        service.service_line_custom_rate != null;
+      const hasCatalogPrice = service.price_rate != null;
+      if (!hasOverride && !hasCatalogPrice) {
+        throw new Error(missingPriceMessage);
+      }
+
+      const rateCandidate =
+        service.configuration_custom_rate ??
+        service.service_line_custom_rate ??
+        service.price_rate ??
+        service.default_rate ??
+        0;
+      originalRate = Math.round(Number(rateCandidate) || 0);
+      const quantityCandidate =
+        service.configuration_quantity ?? service.service_quantity ?? 1;
+      quantity = Math.max(1, Math.round(Number(quantityCandidate) || 1));
+      rateSource =
+        service.configuration_custom_rate != null
+          ? "configuration override"
+          : service.service_line_custom_rate != null
+            ? "service override"
+            : "currency catalog price";
     }
 
-    const rateCandidate =
-      service.configuration_custom_rate ??
-      service.service_line_custom_rate ??
-      service.price_rate ??
-      service.default_rate ??
-      0;
-    const originalRate = Math.round(Number(rateCandidate) || 0);
-    const quantityCandidate =
-      service.configuration_quantity ?? service.service_quantity ?? 1;
-    const quantity = Math.max(1, Math.round(Number(quantityCandidate) || 1));
+    if (effective) {
+      // Carry the resolved revision/catalog provenance so preview can hand it
+      // back to generation and the persisted detail can prove what was billed.
+      recurringPricingSource = {
+        revisionId: effective.revisionId,
+        version: effective.version,
+        pricePolicy: effective.pricePolicy,
+        unitRateCents: originalRate,
+        effectivePeriodStart: effective.effectivePeriodStart,
+        catalogPriceId: effective.catalogPriceId ?? null,
+        catalogEffectiveDate: effective.catalogEffectiveDate ?? null,
+      };
+    }
+
     const originalTotal = originalRate * quantity;
 
     const { taxRegion: serviceTaxRegion, isTaxable } =
@@ -136,18 +236,28 @@ export function computeRecurringQuantityCharges(
       }
     }
 
-    const shouldProrate = Boolean(clientContractLine.enable_proration);
+    // Zero quantity is a deliberate stop: no monetary charge, no division by
+    // zero, and no coincidence with proration. Coverage proration only applies
+    // while there are billable units.
+    const shouldProrate =
+      Boolean(clientContractLine.enable_proration) && quantity > 0;
     const coverageRatio = shouldProrate
       ? Math.max(0, Math.min(timing.coverageRatio, 1))
       : 1;
     const proratedTotal = Math.ceil(Math.ceil(originalTotal) * coverageRatio);
-    const rate = shouldProrate
-      ? Math.ceil(proratedTotal / quantity)
-      : originalRate;
-    const total = rate * quantity;
-    const taxAmount = shouldProrate
-      ? Math.ceil(Math.ceil(originalTaxAmount) * coverageRatio)
-      : originalTaxAmount;
+    const rate =
+      quantity === 0
+        ? 0
+        : shouldProrate
+          ? Math.ceil(proratedTotal / quantity)
+          : originalRate;
+    const total = quantity === 0 ? 0 : rate * quantity;
+    const taxAmount =
+      quantity === 0
+        ? 0
+        : shouldProrate
+          ? Math.ceil(Math.ceil(originalTaxAmount) * coverageRatio)
+          : originalTaxAmount;
 
     const charge: IProductCharge | ILicenseCharge = {
       type: chargeType,
@@ -171,6 +281,7 @@ export function computeRecurringQuantityCharges(
       location_id: clientContractLine.location_id ?? null,
       billing_profile_id: resolvedProfile?.billingProfileId ?? null,
       billing_profile_source: resolvedProfile?.source ?? null,
+      recurringPricingSource,
       ...(chargeType === "license"
         ? {
             period_start: timing.servicePeriodStart,
@@ -181,12 +292,8 @@ export function computeRecurringQuantityCharges(
 
     const markers: ChargeExplanation["markers"] = [];
     if (shouldProrate && coverageRatio < 1) markers.push("proration");
-    const rateSource =
-      service.configuration_custom_rate != null
-        ? "configuration override"
-        : service.service_line_custom_rate != null
-          ? "service override"
-          : "currency catalog price";
+    if (quantity === 0) markers.push("zero_quantity");
+    if (revisionApplied) markers.push("scheduled_revision");
     explanations.push({
       chargeKey: `${service.config_id ?? clientContractLine.client_contract_line_id}:${service.service_id}`,
       serviceName: service.service_name,
@@ -213,9 +320,11 @@ export function computeRecurringQuantityCharges(
           : []),
       ],
       note:
-        shouldProrate && coverageRatio < 1
-          ? "Prorated to the covered portion of the service period."
-          : undefined,
+        quantity === 0
+          ? "Stopped for this service period: zero units, so no recurring charge is due."
+          : shouldProrate && coverageRatio < 1
+            ? "Prorated to the covered portion of the service period."
+            : undefined,
       markers,
     });
 

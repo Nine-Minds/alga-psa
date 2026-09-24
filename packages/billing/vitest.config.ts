@@ -17,6 +17,10 @@ export default defineConfig({
       'src/lib/taxRateApplicability.test.ts',
       'src/lib/billing/compute/**/*.test.ts',
       'src/lib/billing/pricing/**/*.test.ts',
+      // Preview/generation consistency for scheduled recurring quantity/price
+      // revisions — listed explicitly so this package's own `npm test` target
+      // covers the stale-source comparison, not only the server-wide glob.
+      'src/lib/billing/recurringPricingIdentity.test.ts',
       'src/schemas/**/*.test.ts',
       // Colocated suites for the document-preview tenant-branding seam. Most
       // src/ tests are reached only through server/vitest.config.ts (which globs

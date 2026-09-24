@@ -226,6 +226,26 @@ export interface IBillingCharge extends TenantEntity {
   servicePeriodRecordId?: string | null;
   billingTiming?: 'arrears' | 'advance';
   recurringDetailPeriods?: IRecurringChargeDetailPeriod[];
+  /**
+   * Effective recurring pricing provenance for a charge priced by a scheduled
+   * quantity/price revision (product, license or unit-priced service). Present
+   * only when a revision applied. Carried through preview, persisted on the
+   * invoice detail, and used to reject generation after the reviewed revision or
+   * its catalog source changed.
+   */
+  recurringPricingSource?: IRecurringPricingSource | null;
+}
+
+export interface IRecurringPricingSource {
+  revisionId: string;
+  version: number;
+  pricePolicy: 'override' | 'catalog';
+  unitRateCents: number | null;
+  /** Canonical service-period boundary the revision took effect at. */
+  effectivePeriodStart: string;
+  /** `service_prices` row that supplied a catalog-policy rate, when applicable. */
+  catalogPriceId?: string | null;
+  catalogEffectiveDate?: string | null;
 }
 
 export interface IDiscount extends TenantEntity {

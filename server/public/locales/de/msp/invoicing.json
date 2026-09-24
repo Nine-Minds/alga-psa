@@ -384,7 +384,8 @@
       "USAGE_CALCULATION_ERROR": "Der Verbrauch für {{services}} im Leistungszeitraum {{periodStart}} bis {{periodEnd}} ist erfasst, konnte aber nicht bepreist werden. Korrigiere die Dienstpreise (Katalogpreis in der Vertragswährung, ein individueller Satz oder Preisstaffeln) und versuche es erneut. Erfasse keinen Ersatzverbrauch.",
       "SOURCE_ALREADY_BILLED": "Einige ausgewählte Positionen sind nicht mehr abrechenbar (bereits abgerechnet, nicht genehmigt oder entfernt). Aktualisieren und erneut versuchen.",
       "SOURCE_NOT_ELIGIBLE": "Eine ausgewählte Position gehört nicht zu den abrechenbaren Positionen dieses Tickets oder ist nicht mehr zulässig. Aktualisieren und erneut versuchen.",
-      "SOURCE_CURRENCY_MISMATCH": "Einige ausgewählte Produkte sind in einer anderen Währung bepreist als die Rechnungswährung dieses Kunden. Sie können nicht hinzugefügt werden. Rechnen Sie sie in ihrer eigenen Währung getrennt ab."
+      "SOURCE_CURRENCY_MISMATCH": "Einige ausgewählte Produkte sind in einer anderen Währung bepreist als die Rechnungswährung dieses Kunden. Sie können nicht hinzugefügt werden. Rechnen Sie sie in ihrer eigenen Währung getrennt ab.",
+      "RECURRING_PRICING_STALE": "The preview is out of date: {{details}}. Re-run the preview to see the current numbers, then generate again."
     },
     "warnings": {
       "noBillingEmail": "Für diesen Kunden ist keine Rechnungs-E-Mail-Adresse hinterlegt. Lege vor dem Generieren der Rechnung einen Rechnungskontakt, eine Rechnungs-E-Mail-Adresse des Kunden oder eine E-Mail-Adresse am Rechnungs- oder Standardstandort fest."
