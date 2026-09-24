@@ -353,7 +353,9 @@
       "title": "Titres des sections du devis groupé",
       "description": "Titres facultatifs utilisés par la mise en page de devis standard groupé.",
       "monthlyLabel": "Titre de la section mensuelle",
-      "oneTimeLabel": "Titre de la section ponctuelle"
+      "oneTimeLabel": "Titre de la section ponctuelle",
+      "monthlyPlaceholder": "Articles mensuels",
+      "oneTimePlaceholder": "Articles ponctuels"
     }
   },
   "quoteDetail": {

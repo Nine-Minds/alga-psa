@@ -1594,11 +1594,11 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="flex flex-col gap-1 text-sm font-medium">
                   {t('quoteForm.sectionTitles.monthlyLabel', { defaultValue: 'Monthly section title' })}
-                  <Input id="quote-monthly-section-title" value={form.recurring_section_title} maxLength={255} placeholder={t('documents:labels.monthlyItems', { defaultValue: 'Monthly Items' })} onChange={(event) => handleChange('recurring_section_title', event.target.value)} disabled={isReadOnly} />
+                  <Input id="quote-monthly-section-title" value={form.recurring_section_title} maxLength={255} placeholder={t('quoteForm.sectionTitles.monthlyPlaceholder')} onChange={(event) => handleChange('recurring_section_title', event.target.value)} disabled={isReadOnly} />
                 </label>
                 <label className="flex flex-col gap-1 text-sm font-medium">
                   {t('quoteForm.sectionTitles.oneTimeLabel', { defaultValue: 'One-time section title' })}
-                  <Input id="quote-onetime-section-title" value={form.onetime_section_title} maxLength={255} placeholder={t('documents:labels.oneTimeItems', { defaultValue: 'One-time Items' })} onChange={(event) => handleChange('onetime_section_title', event.target.value)} disabled={isReadOnly} />
+                  <Input id="quote-onetime-section-title" value={form.onetime_section_title} maxLength={255} placeholder={t('quoteForm.sectionTitles.oneTimePlaceholder')} onChange={(event) => handleChange('onetime_section_title', event.target.value)} disabled={isReadOnly} />
                 </label>
               </div>
             </section>

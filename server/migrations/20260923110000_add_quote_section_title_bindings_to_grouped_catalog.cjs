@@ -13,6 +13,22 @@ const DEFINITIONS = {
 
 const isRecord = (value) => typeof value === 'object' && value !== null && !Array.isArray(value);
 
+const VALUE_BINDINGS = Object.fromEntries(Object.values(DEFINITIONS).map(({ bindingId }) => [bindingId, {
+  id: bindingId,
+  kind: 'value',
+  path: bindingId === 'recurringSectionTitle' ? 'recurring_section_title' : 'onetime_section_title',
+}]));
+
+function transformBindings(bindings, direction) {
+  const current = isRecord(bindings) ? bindings : {};
+  const values = isRecord(current.values) ? { ...current.values } : {};
+  for (const [id, definition] of Object.entries(VALUE_BINDINGS)) {
+    if (direction === 'up' && !Object.prototype.hasOwnProperty.call(values, id)) values[id] = definition;
+    if (direction === 'down' && JSON.stringify(values[id]) === JSON.stringify(definition)) delete values[id];
+  }
+  return { ...current, values };
+}
+
 function transformNode(node, direction) {
   if (!isRecord(node)) return node;
   const next = { ...node };
@@ -33,7 +49,9 @@ function transformNode(node, direction) {
 }
 
 const transformAst = (ast, direction) =>
-  isRecord(ast) && isRecord(ast.layout) ? { ...ast, layout: transformNode(ast.layout, direction) } : ast;
+  isRecord(ast) && isRecord(ast.layout)
+    ? { ...ast, bindings: transformBindings(ast.bindings, direction), layout: transformNode(ast.layout, direction) }
+    : ast;
 
 async function updateCatalog(knex, direction) {
   const table = 'standard_quote_document_templates';

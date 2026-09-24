@@ -353,7 +353,9 @@
       "title": "Títulos de sección de cotización agrupada",
       "description": "Encabezados opcionales del diseño de cotización estándar agrupada.",
       "monthlyLabel": "Título de la sección mensual",
-      "oneTimeLabel": "Título de la sección única"
+      "oneTimeLabel": "Título de la sección única",
+      "monthlyPlaceholder": "Artículos mensuales",
+      "oneTimePlaceholder": "Artículos únicos"
     }
   },
   "quoteDetail": {

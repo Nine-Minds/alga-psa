@@ -7,6 +7,8 @@ import { formatTemplateFieldValue } from './fieldFormatting';
 import { renderEvaluatedTemplateAst } from './react-renderer';
 import { resolveTemplateAstI18n } from './i18nLabels';
 
+const { __transformAst: transformGroupedCatalogAst } = require('../../../../../server/migrations/20260923110000_add_quote_section_title_bindings_to_grouped_catalog.cjs');
+
 const invoiceFixture = {
   invoiceNumber: 'INV-1001',
   subtotal: 300,
@@ -49,6 +51,32 @@ describe('renderEvaluatedTemplateAst', () => {
     const rendered = await renderEvaluatedTemplateAst(localizedAst, evaluation);
     expect(rendered.html).toContain('Custom heading');
     expect(rendered.html).not.toContain('Localized Monthly');
+  });
+
+  it.each([
+    ['Retainer', 'Retainer'],
+    [null, 'Localized Monthly'],
+    ['', 'Localized Monthly'],
+    ['   ', 'Localized Monthly'],
+  ] as const)('renders a migrated catalog AST with section title %s', async (title, expected) => {
+    // This fixture represents the shipped catalog AST before migration, not the code-authored template.
+    const preMigrationCatalogAst = {
+      kind: 'invoice-template-ast', version: TEMPLATE_AST_VERSION,
+      bindings: { values: {}, collections: {} },
+      layout: { id: 'root', type: 'document', children: [
+        { id: 'monthly-section-label', type: 'text', content: { type: 'i18n', i18nKey: 'labels.monthlyItems', defaultValue: 'Monthly Items' } },
+        { id: 'onetime-section-label', type: 'text', content: { type: 'i18n', i18nKey: 'labels.oneTimeItems', defaultValue: 'One-time Items' } },
+      ] },
+    };
+    const migratedAst = transformGroupedCatalogAst(preMigrationCatalogAst, 'up') as TemplateAst;
+    const localizedAst = resolveTemplateAstI18n(migratedAst, () => 'Localized Monthly');
+    const evaluation = evaluateTemplateAst(localizedAst, {
+      recurring_section_title: title,
+      onetime_section_title: null,
+    });
+    const rendered = await renderEvaluatedTemplateAst(localizedAst, evaluation);
+    expect(rendered.html).toContain(expected);
+    expect(rendered.html).toContain('Localized Monthly');
   });
 
   it('uses authored default text if a binding fallback reaches the renderer without localization', async () => {
