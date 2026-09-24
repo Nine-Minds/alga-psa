@@ -329,6 +329,9 @@ export async function previewClientMerge(
     counts[entry.label] = await countRows(trx, tenant, entry.table, { client_id: source.clientId });
   }
   counts['billing profile'] = sourceProfiles.length;
+  counts['owned contract'] = await countRows(trx, tenant, 'contracts', {
+    owner_client_id: source.clientId,
+  });
 
   const contactRows = await scoped(trx, tenant, 'contacts')
     .where({ client_id: source.clientId })
@@ -539,14 +542,27 @@ export async function executeClientMerge(
 
   // --- 2. Billing history that carries a redundant client_id -------------
   for (const entry of PROFILE_HISTORY_TABLES) {
-    if (movedProfileIds.length === 0) break;
+    // A null profile is legitimate on three of these tables and is still
+    // written today (a sales-order invoice and its transaction, a transferred
+    // credit). Stamp those onto the moved default first — otherwise they match
+    // no moved profile, keep `client_id` pointing at the tombstone, and drop out
+    // of the target's credit balance and AR rollups for good.
+    if (entry.nullableBillingProfile && movedDefaultProfileId) {
+      await scoped(trx, tenant, entry.table)
+        .where({ client_id: source.clientId })
+        .whereNull('billing_profile_id')
+        .update({ billing_profile_id: movedDefaultProfileId });
+    }
+    // Every profile the source owned moves, so "the source's rows" and "rows on
+    // a moved profile" are the same set once the nulls are stamped, and keying
+    // the move on `client_id` alone guarantees nothing is left behind.
     counts[entry.label] = await scoped(trx, tenant, entry.table)
       .where({ client_id: source.clientId })
-      .whereIn('billing_profile_id', movedProfileIds)
       .update({ client_id: target.clientId });
   }
   // `invoice_charges` and `credit_allocations` hold a billing profile but no
-  // client column, so the profile move already carried them.
+  // client column, so the profile move already carried them; a null there
+  // resolves through the parent invoice or transaction, which has just moved.
 
   // --- 3. Contracts, per the operator's per-contract decision ------------
   const decisionsById = new Map(
@@ -614,6 +630,29 @@ export async function executeClientMerge(
   }
   counts['contract moved'] = movedContracts;
   counts['contract cut over'] = cutOverContracts;
+
+  // A client-owned contract's owner has to follow its assignments. The whole
+  // recurring chain reads `contracts.owner_client_id`: materialization keys the
+  // client cadence off it (recurringServicePeriodSync) and generation joins
+  // through it to match the cycle's client, so an owner left on the tombstone
+  // makes every moved recurring contract unbillable — invoice generation fails
+  // with "Recurring service periods were not materialized for this recurring
+  // execution window" rather than producing a wrong number.
+  const targetOwnsDefaultContract = await scoped(trx, tenant, 'contracts')
+    .where({ owner_client_id: target.clientId, is_system_managed_default: true })
+    .first('contract_id');
+  if (targetOwnsDefaultContract) {
+    // `contracts_system_managed_default_unique_per_client` allows one per owner,
+    // and the parent already has its container contract. The incoming one
+    // arrives as an ordinary client-owned contract — the same demotion the
+    // source's default billing profile gets.
+    await scoped(trx, tenant, 'contracts')
+      .where({ owner_client_id: source.clientId, is_system_managed_default: true })
+      .update({ is_system_managed_default: false });
+  }
+  counts['owned contract'] = await scoped(trx, tenant, 'contracts')
+    .where({ owner_client_id: source.clientId })
+    .update({ owner_client_id: target.clientId });
 
   // --- 4. Visibility groups (renamed on collision, then moved) -----------
   const sourceGroups = await scoped(trx, tenant, 'client_portal_visibility_groups')

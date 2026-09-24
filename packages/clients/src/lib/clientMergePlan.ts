@@ -341,16 +341,32 @@ export const CLIENT_OWNED_MOVE_TABLES: Array<{
 ];
 
 /**
- * Billing history that hangs off a moved profile. `billing_profile_id` is never
- * touched — the profile moved, so the history moved with it. Only the redundant
- * `client_id` column is re-stamped, because client-level rollups read it and
- * every consumer assumes `profile.client_id == row.client_id`.
+ * Billing history that hangs off a moved profile. For a row that already names a
+ * profile, `billing_profile_id` is never touched — the profile moved, so the
+ * history moved with it — and only the redundant `client_id` column is
+ * re-stamped, because client-level rollups read it and every consumer assumes
+ * `profile.client_id == row.client_id`.
+ *
+ * `nullableBillingProfile` marks the tables where `billing_profile_id` is
+ * nullable by design (20260818050000, 20260818060000: invoices predate profiles
+ * entirely, and the ledger treats a profile as a property of the invoice or
+ * credit it references rather than an independent fact). Live write paths still
+ * produce nulls — a sales-order invoice and its transaction, a transferred
+ * credit — and a null matches no moved profile, so those rows are stamped with
+ * the moved default *before* the move. Stamping, rather than leaving them null,
+ * is what keeps the blast radius: a client-wide credit of the absorbed client
+ * must stay inside its own segment instead of becoming a credit the whole parent
+ * can spend.
  */
-export const PROFILE_HISTORY_TABLES: Array<{ table: string; label: string }> = [
-  { table: 'invoices', label: 'invoice' },
+export const PROFILE_HISTORY_TABLES: Array<{
+  table: string;
+  label: string;
+  nullableBillingProfile?: boolean;
+}> = [
+  { table: 'invoices', label: 'invoice', nullableBillingProfile: true },
   { table: 'client_billing_cycles', label: 'billing cycle' },
   { table: 'payment_methods', label: 'payment method' },
-  { table: 'transactions', label: 'transaction' },
-  { table: 'credit_tracking', label: 'credit' },
+  { table: 'transactions', label: 'transaction', nullableBillingProfile: true },
+  { table: 'credit_tracking', label: 'credit', nullableBillingProfile: true },
   { table: 'client_tax_settings', label: 'tax setting' },
 ];

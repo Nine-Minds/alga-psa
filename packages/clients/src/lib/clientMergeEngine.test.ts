@@ -370,6 +370,42 @@ describe('executeClientMerge', () => {
     expect(table('client_billing_cycles')[0]).toMatchObject({ client_id: 'target', billing_profile_id: 'src-plant' });
   });
 
+  it('stamps unattributed billing history so it cannot be stranded on the tombstone', async () => {
+    // Three live write paths still produce a null profile: a sales-order invoice
+    // and its transaction (salesOrderInvoicingActions) and a credit transfer
+    // (creditActions). Left alone they match no moved profile, keep client_id on
+    // the archived source, and drop out of the target's credit balance and AR.
+    table('invoices').push(
+      { tenant: TENANT, invoice_id: 'inv-so', client_id: 'source', billing_profile_id: null },
+    );
+    table('transactions').push(
+      { tenant: TENANT, transaction_id: 'txn-so', client_id: 'source', billing_profile_id: null },
+    );
+    table('credit_tracking').push(
+      { tenant: TENANT, credit_id: 'credit-transfer', client_id: 'source', billing_profile_id: null },
+    );
+
+    await executeClientMerge(fakeTrx, TENANT, 'actor-1', {
+      sourceClientId: 'source',
+      targetClientId: 'target',
+    });
+
+    for (const [tableName, key, id] of [
+      ['invoices', 'invoice_id', 'inv-so'],
+      ['transactions', 'transaction_id', 'txn-so'],
+      ['credit_tracking', 'credit_id', 'credit-transfer'],
+    ] as const) {
+      expect(table(tableName).find((row) => row[key] === id)).toMatchObject({
+        client_id: 'target',
+        // The moved default, not the parent's own default: an absorbed client's
+        // client-wide credit must stay inside its own segment.
+        billing_profile_id: 'src-default',
+      });
+    }
+    // What moved is what the dry run counted.
+    expect(table('invoices').filter((row) => row.client_id === 'source')).toEqual([]);
+  });
+
   it('stamps unattributed work items with the moved default instead of letting them fall to the parent', async () => {
     await executeClientMerge(fakeTrx, TENANT, 'actor-1', {
       sourceClientId: 'source',
@@ -586,6 +622,51 @@ describe('executeClientMerge contract handling', () => {
       end_date: null,
       is_active: true,
       billing_profile_id: 'src-default',
+    });
+  });
+
+  it('re-points the owner of a client-owned contract, demoting it behind the parent\'s own default', async () => {
+    // The recurring chain reads contracts.owner_client_id — materialization keys
+    // the client cadence off it and generation joins through it to match the
+    // cycle's client — so an owner left behind makes the moved contract
+    // unbillable rather than merely mis-labelled.
+    table('contracts')[0].owner_client_id = 'source';
+    table('contracts')[0].is_system_managed_default = true;
+    table('contracts').push({
+      tenant: TENANT,
+      contract_id: 'contract-parent',
+      contract_name: 'Group Services',
+      owner_client_id: 'target',
+      is_system_managed_default: true,
+    });
+
+    await executeClientMerge(fakeTrx, TENANT, 'actor-1', {
+      sourceClientId: 'source',
+      targetClientId: 'target',
+    });
+
+    expect(table('contracts').find((row) => row.contract_id === 'contract-1')).toMatchObject({
+      owner_client_id: 'target',
+      // contracts_system_managed_default_unique_per_client allows one per owner,
+      // and the parent already has its container contract.
+      is_system_managed_default: false,
+    });
+    expect(table('contracts').find((row) => row.contract_id === 'contract-parent'))
+      .toMatchObject({ owner_client_id: 'target', is_system_managed_default: true });
+  });
+
+  it('keeps the incoming contract system-managed when the parent has no default of its own', async () => {
+    table('contracts')[0].owner_client_id = 'source';
+    table('contracts')[0].is_system_managed_default = true;
+
+    await executeClientMerge(fakeTrx, TENANT, 'actor-1', {
+      sourceClientId: 'source',
+      targetClientId: 'target',
+    });
+
+    expect(table('contracts')[0]).toMatchObject({
+      owner_client_id: 'target',
+      is_system_managed_default: true,
     });
   });
 
