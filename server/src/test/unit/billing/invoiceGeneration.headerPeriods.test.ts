@@ -95,6 +95,13 @@ const mocks = vi.hoisted(() => {
   });
   const getNextNumber = vi.fn(async () => 'INV-1000');
   const persistInvoiceCharges = vi.fn(async () => 4200);
+  // The shared automatic-adjustment evaluator reads persisted invoice rows and
+  // discount configuration; these header-period suites mock knex, so it is
+  // stubbed to its no-discount result. Discount settlement itself is covered by
+  // the contract-invoice-adjustment DB suites.
+  const reconcileAutomaticInvoiceAdjustments = vi.fn(async () => ({
+    automaticDiscountAmount: 0,
+  }));
   const calculateAndDistributeTax = vi.fn(async () => 550);
   const updateInvoiceTotalsAndRecordTransaction = vi.fn(async () => undefined);
   const getClientDetails = vi.fn(async () => ({
@@ -124,6 +131,7 @@ const mocks = vi.hoisted(() => {
     knexStub,
     getNextNumber,
     persistInvoiceCharges,
+    reconcileAutomaticInvoiceAdjustments,
     calculateAndDistributeTax,
     updateInvoiceTotalsAndRecordTransaction,
     getClientDetails,
@@ -218,6 +226,10 @@ vi.mock('../../../../../packages/billing/src/services/invoiceService', () => ({
   updateInvoiceTotalsAndRecordTransaction: mocks.updateInvoiceTotalsAndRecordTransaction,
   getClientDetails: mocks.getClientDetails,
   validateClientBillingEmail: vi.fn(),
+}));
+
+vi.mock('../../../../../packages/billing/src/services/invoiceAutomaticAdjustments', () => ({
+  reconcileAutomaticInvoiceAdjustments: mocks.reconcileAutomaticInvoiceAdjustments,
 }));
 
 vi.mock('../../../../../packages/billing/src/actions/billingAndTax', () => ({
