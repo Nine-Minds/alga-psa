@@ -4,6 +4,7 @@ import type { Knex } from 'knex';
 
 import { createTenantKnex, runWithTenant, tenantDb, withTransaction } from '@alga-psa/db';
 import { countryDateFormat, type CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
+import { buildDocumentFileName } from '@alga-psa/core/fileNames';
 import {
   resolveClientCountry,
   resolveTenantDefaultCountry,
@@ -372,7 +373,11 @@ export class PDFGenerationService {
     }
 
     if (options.quoteId) {
-      const quoteNumber = options.quoteNumber || options.quoteId;
+      const quote = await tenantDb(knex, this.tenant).table('quotes')
+        .where({ quote_id: options.quoteId })
+        .first<{ title?: string | null; quote_number?: string | null } | undefined>('title', 'quote_number');
+      const quoteNumber = options.quoteNumber || quote?.quote_number || options.quoteId;
+      const fileName = buildDocumentFileName(quote?.title, `Quote_${quoteNumber}`);
       return {
         sourceType: 'quote',
         entityId: options.quoteId,
@@ -380,8 +385,8 @@ export class PDFGenerationService {
         clientId: null,
         folderPath: '/Quotes/Generated',
         isClientVisible: true,
-        documentName: `Quote_${quoteNumber}.pdf`,
-        fileBaseName: quoteNumber,
+        documentName: fileName,
+        fileBaseName: fileName.replace(/\.pdf$/i, ''),
         // A quote is re-rendered on every send, and each send is its own artifact.
         mode: 'append',
       };

@@ -35,6 +35,7 @@ export * from './lib/templateUtils';
 
 // Formatting utilities
 export * from './lib/formatters';
+export * from './lib/fileNames';
 export * from './lib/projectBillingStatus';
 
 // Barcode / GTIN utilities

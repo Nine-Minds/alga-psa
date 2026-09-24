@@ -22,6 +22,10 @@
       "import": "./dist/lib/formatters.js",
       "types": "./src/lib/formatters.ts"
     },
+    "./fileNames": {
+      "import": "./dist/lib/fileNames.js",
+      "types": "./src/lib/fileNames.ts"
+    },
     "./workSchedule": {
       "import": "./dist/lib/workSchedule.js",
       "types": "./src/lib/workSchedule.ts"

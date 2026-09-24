@@ -1215,7 +1215,7 @@ describe('quoteActions', () => {
     const sendableQuote = {
       quote_id: QUOTE_ID,
       quote_number: 'Q-0001',
-      title: 'Quote',
+      title: 'Estimate',
       total_amount: 5000,
       currency_code: 'USD',
       valid_until: '2026-03-20T00:00:00.000Z',
@@ -1235,7 +1235,32 @@ describe('quoteActions', () => {
       subject: 'Quote Q-0001 from Acme MSP',
       html: expect.stringContaining('Q-0001'),
       text: expect.stringContaining('Valid Until:'),
-      attachments: [expect.objectContaining({ filename: 'Quote_Q-0001.pdf', content: Buffer.from('pdf-content') })],
+      attachments: [expect.objectContaining({ filename: 'Estimate.pdf', content: Buffer.from('pdf-content') })],
+    }));
+  });
+
+  it('uses the quote number fallback for a blank-title email attachment', async () => {
+    const blankTitleQuote = {
+      quote_id: QUOTE_ID,
+      quote_number: 'Q-0001',
+      title: '   ',
+      total_amount: 5000,
+      currency_code: 'USD',
+      valid_until: '2026-03-20T00:00:00.000Z',
+      status: 'draft',
+      is_template: false,
+      client_id: null,
+      contact_id: null,
+    };
+    vi.spyOn(Quote, 'getById')
+      .mockResolvedValueOnce(blankTitleQuote as any)
+      .mockResolvedValueOnce({ ...blankTitleQuote, status: 'sent' } as any);
+
+    const { sendQuote } = await import('../../src/actions/quoteActions');
+    await sendQuote(QUOTE_ID, { email_addresses: ['client@example.com'] });
+
+    expect(sendEmailMock).toHaveBeenCalledWith(expect.objectContaining({
+      attachments: [expect.objectContaining({ filename: 'Quote_Q-0001.pdf' })],
     }));
   });
 

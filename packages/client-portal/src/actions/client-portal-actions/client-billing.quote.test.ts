@@ -501,7 +501,7 @@ describe('client quote billing actions', () => {
     const { downloadClientQuotePdf } = await import('./client-billing');
     const result = await downloadClientQuotePdf('quote-1');
 
-    expect(result).toEqual({ success: true, fileId: 'stored-pdf-file-1' });
+    expect(result).toEqual({ success: true, fileId: 'stored-pdf-file-1', fileName: 'Managed Services Proposal.pdf' });
   });
 
   it('T137: downloadClientQuotePdf generates PDF on the fly when none stored', async () => {
@@ -537,7 +537,7 @@ describe('client quote billing actions', () => {
     const { downloadClientQuotePdf } = await import('./client-billing');
     const result = await downloadClientQuotePdf('quote-1');
 
-    expect(result).toEqual({ success: true, fileId: expect.any(String) });
+    expect(result).toEqual({ success: true, fileId: expect.any(String), fileName: 'Managed Services Proposal.pdf' });
   });
 
   it('T138: downloadClientQuotePdf rejects access to other client\'s quotes', async () => {

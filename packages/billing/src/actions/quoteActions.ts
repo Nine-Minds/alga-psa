@@ -32,6 +32,7 @@ import {
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
 import { formatCurrency } from '@alga-psa/core/lib/formatters';
+import { getQuotePdfFileName } from '../lib/quoteFileNames';
 import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { onQuoteAccepted, onQuoteSent } from '@alga-psa/opportunities/lib/quoteLifecycleHooks';
 
@@ -593,8 +594,6 @@ const sendQuoteEmailWithAttachment = async ({
 }) => {
   const actorId = getActorUserId(user);
   const pdfBuffer = await createPDFGenerationService(tenant).generatePDF({ quoteId: quote.quote_id, userId: actorId ?? '' });
-  const resolvedQuoteNumber = quote.quote_number ?? quote.quote_id;
-
   return await TenantEmailService.getInstance(tenant).sendEmail({
     tenantId: tenant,
     to: recipients,
@@ -603,7 +602,7 @@ const sendQuoteEmailWithAttachment = async ({
     text,
     attachments: [
       {
-        filename: `Quote_${resolvedQuoteNumber}.pdf`,
+        filename: getQuotePdfFileName(quote),
         content: pdfBuffer,
         contentType: 'application/pdf',
       },
@@ -2167,7 +2166,7 @@ export const downloadQuotePdf = withAuth(async (
   user,
   { tenant },
   quoteId: string,
-): Promise<{ pdfData: number[]; quoteNumber: string } | QuoteActionError> => {
+): Promise<{ pdfData: number[]; fileName: string } | QuoteActionError> => {
   return withQuoteActionErrors(async () => {
   const denied = await requireBillingReadPermission(user);
   if (denied) {
@@ -2185,7 +2184,7 @@ export const downloadQuotePdf = withAuth(async (
 
   return {
     pdfData: Array.from(pdfBuffer),
-    quoteNumber: quote.quote_number ?? quote.quote_id,
+    fileName: getQuotePdfFileName(quote),
   };
   });
 });

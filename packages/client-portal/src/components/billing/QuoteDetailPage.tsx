@@ -304,7 +304,7 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
         const downloadUrl = `/api/documents/download/${result.fileId}`;
         const link = document.createElement('a');
         link.href = downloadUrl;
-        link.download = '';
+        link.download = result.fileName ?? '';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);

@@ -117,6 +117,10 @@ export default defineConfig({
         replacement: `${path.resolve(__dirname, '../../ee/packages/workflows/src')}/$1`,
       },
       {
+        find: /^@alga-psa\/core\/fileNames$/,
+        replacement: `${path.resolve(__dirname, '../core/src/lib/fileNames.ts')}`,
+      },
+      {
         find: /^@alga-psa\/core\/logger$/,
         replacement: `${path.resolve(__dirname, '../core/src/lib/logger.ts')}`,
       },
