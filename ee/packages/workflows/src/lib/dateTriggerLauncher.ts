@@ -4,7 +4,7 @@ import { listPublishedWorkflowDefinitions } from '@alga-psa/workflows/persistenc
 import { getSchemaRegistry, initializeWorkflowRuntimeV2 } from '@alga-psa/workflows/runtime/core';
 import { launchPublishedWorkflowRun } from './workflowRunLauncher';
 import logger from '@alga-psa/core/logger';
-import type { DateTriggerSource } from '@alga-psa/jobs/date-triggers';
+import type { DateTriggerSource } from './dateTriggerSource';
 
 const LOOKBACK_DAYS = 3;
 const MAX_LAUNCHES_PER_TICK = 500;

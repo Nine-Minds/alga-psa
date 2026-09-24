@@ -1,10 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { knex as createKnex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import { getPlaywrightDbConfig } from '../../../ee/server/src/__tests__/integration/utils/playwrightDatabaseConfig';
-import { assetWarrantyEndSource } from '../src/lib/dateTriggers/sources/assetWarrantyEnd';
-import { clientAnniversarySource } from '../src/lib/dateTriggers/sources/clientAnniversary';
-import { contractRenewalDecisionSource } from '../src/lib/dateTriggers/sources/contractRenewalDecision';
+import { getPlaywrightDbConfig } from './utils/playwrightDatabaseConfig';
+import { assetWarrantyEndSource } from '../../../../../packages/jobs/src/lib/dateTriggers/sources/assetWarrantyEnd';
+import { clientAnniversarySource } from '../../../../../packages/jobs/src/lib/dateTriggers/sources/clientAnniversary';
+import { contractRenewalDecisionSource } from '../../../../../packages/jobs/src/lib/dateTriggers/sources/contractRenewalDecision';
 
 const enabled = process.env.DATE_TRIGGER_INTEGRATION === '1';
 

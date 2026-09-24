@@ -1,6 +1,5 @@
 import { Temporal } from '@js-temporal/polyfill';
-import { createTenantKnex } from '@alga-psa/db';
-import { getTenantTimezone } from '@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions';
+import { createTenantKnex, resolveEffectiveTimeZone } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { emitDateDomainEventOnce } from '@alga-psa/event-bus/workflow/dateDomainEvents';
 import { dateTriggerSources } from '../dateTriggers/registry';
@@ -18,13 +17,13 @@ function localDate(timeZone: string, instant: Date): string {
 export function createDateTriggerScanHandler(
   launchDateTriggeredWorkflows?: DateWorkflowLauncher,
   clock: () => Date = () => new Date(),
-  resolveTimezone: (tenantId: string) => Promise<string | null | undefined> = getTenantTimezone,
+  resolveTimezone: (knex: Knex, tenantId: string) => Promise<string> = resolveEffectiveTimeZone,
   openTenantDb: (tenantId: string) => Promise<{ knex: Knex }> = createTenantKnex,
 ) {
   return async function dateTriggerScanHandler(data: DateTriggerScanJobData): Promise<void> {
     if (!data.tenantId) throw new Error('Tenant ID is required for date-trigger-scan');
     const { knex } = await openTenantDb(data.tenantId);
-    const timezone = await resolveTimezone(data.tenantId) ?? 'UTC';
+    const timezone = await resolveTimezone(knex, data.tenantId);
     const now = data.now ? new Date(data.now) : clock();
     if (Number.isNaN(now.getTime())) throw new Error(`Invalid date-trigger-scan clock value: ${data.now}`);
     const today = localDate(timezone, now);

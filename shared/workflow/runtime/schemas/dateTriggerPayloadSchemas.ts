@@ -16,7 +16,7 @@ export const dateTriggerPayloadSchemas = {
 // editing all of them:
 //   - shared/workflow/runtime/types.ts              workflowDateTriggerSchema.source zod enum
 //   - this file                                     payload schema + dateTriggerPayloadSchemaRefs entry
-//   - packages/jobs/src/lib/dateTriggers/types.ts   DateTriggerSourceId union
+//   - ee/packages/workflows/src/lib/dateTriggerSource.ts  DateTriggerSourceId union
 //   - packages/jobs/src/lib/dateTriggers/sources/*  the query, which repeats payloadSchemaRef
 //   - packages/jobs/src/lib/dateTriggers/registry.ts
 //   - ee/server/src/components/workflow-designer/dateTriggerPayloadSchemas.ts  copy of this map

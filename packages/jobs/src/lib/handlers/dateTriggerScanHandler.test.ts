@@ -2,15 +2,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   createTenantKnex: vi.fn(),
-  getTenantTimezone: vi.fn(),
+  resolveEffectiveTimeZone: vi.fn(),
   emitDateDomainEventOnce: vi.fn(),
   loggerError: vi.fn(),
   findOccurrences: vi.fn(),
   source: {} as any,
 }));
 
-vi.mock('@alga-psa/db', () => ({ createTenantKnex: mocks.createTenantKnex }));
-vi.mock('@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions', () => ({ getTenantTimezone: mocks.getTenantTimezone }));
+vi.mock('@alga-psa/db', () => ({ createTenantKnex: mocks.createTenantKnex, resolveEffectiveTimeZone: mocks.resolveEffectiveTimeZone }));
 vi.mock('@alga-psa/core/logger', () => ({ default: { info: vi.fn(), error: mocks.loggerError } }));
 vi.mock('@alga-psa/event-bus/workflow/dateDomainEvents', () => ({ emitDateDomainEventOnce: mocks.emitDateDomainEventOnce }));
 vi.mock('../dateTriggers/registry', () => ({ dateTriggerSources: [mocks.source] }));
@@ -23,7 +22,7 @@ describe('date-trigger-scan handler', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.createTenantKnex.mockResolvedValue({ knex });
-    mocks.getTenantTimezone.mockResolvedValue('Pacific/Kiritimati');
+    mocks.resolveEffectiveTimeZone.mockResolvedValue('Pacific/Kiritimati');
     mocks.findOccurrences.mockResolvedValue([{
       entityId: 'client-1', clientId: 'client-1', occursOn: '2026-09-24', cycleKey: '2026-09-24', payload: {},
     }]);
@@ -47,6 +46,7 @@ describe('date-trigger-scan handler', () => {
     expect(launch).toHaveBeenCalledWith(expect.objectContaining({
       tenantId: 'tenant-1', today: '2026-09-25', timezone: 'Pacific/Kiritimati', now: new Date('2026-09-24T10:30:00.000Z'), knex,
     }));
+    expect(mocks.resolveEffectiveTimeZone).toHaveBeenCalledWith(knex, 'tenant-1');
     expect(knex.destroy).not.toHaveBeenCalled();
   });
 

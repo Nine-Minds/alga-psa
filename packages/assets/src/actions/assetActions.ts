@@ -63,7 +63,7 @@ import { advanceMaintenanceDate } from '../lib/maintenanceRecurrence';
 import { localizeActionError, withAuth, hasPermission } from '@alga-psa/auth';
 import { toCalendarDateString, toISOTimestamp, toPlainDate } from '@alga-psa/core';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import { getTenantTimezone } from '@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions';
+import { resolveEffectiveTimeZone } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/db';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -1024,7 +1024,7 @@ export async function createAssetRecord(
             });
 
             if (warranty) {
-                const warrantyDate = toTenantLocalDate(warranty.expiresAt, await getTenantTimezone(tenant) ?? 'UTC');
+                const warrantyDate = toTenantLocalDate(warranty.expiresAt, await resolveEffectiveTimeZone(knex, tenant));
                 await emitDateDomainEventOnce(knex, tenant, {
                     eventType: 'ASSET_WARRANTY_EXPIRING', entityId: created.asset_id,
                     cycleKey: warrantyDate, occursOn: warrantyDate,
@@ -1318,7 +1318,7 @@ export async function updateAssetRecord(
         });
 
         if (warranty) {
-            const warrantyDate = toTenantLocalDate(warranty.expiresAt, await getTenantTimezone(tenant) ?? 'UTC');
+            const warrantyDate = toTenantLocalDate(warranty.expiresAt, await resolveEffectiveTimeZone(knex, tenant));
             await emitDateDomainEventOnce(knex, tenant, {
                 eventType: 'ASSET_WARRANTY_EXPIRING', entityId: asset_id,
                 cycleKey: warrantyDate, occursOn: warrantyDate,

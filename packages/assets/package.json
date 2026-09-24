@@ -55,7 +55,6 @@
     "@alga-psa/event-bus": "*",
     "@alga-psa/formatting": "*",
     "@alga-psa/shared": "*",
-    "@alga-psa/tenancy": "*",
     "@alga-psa/types": "*",
     "@alga-psa/ui": "*",
     "@alga-psa/validation": "*",

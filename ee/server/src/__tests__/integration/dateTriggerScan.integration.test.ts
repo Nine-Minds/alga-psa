@@ -1,16 +1,15 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { knex as createKnex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import { getPlaywrightDbConfig } from '../../../../server/src/__tests__/integration/utils/playwrightDatabaseConfig';
+import { getPlaywrightDbConfig } from './utils/playwrightDatabaseConfig';
 import { createDateTriggerScanHandler } from '../../../../../packages/jobs/src/lib/handlers/dateTriggerScanHandler';
 import { emitDateDomainEventOnce, normalizeDateDomainKeyDate, toTenantLocalDate } from '../../../../../packages/event-bus/src/workflow/dateDomainEvents';
-import { launchDateTriggeredWorkflows, buildDateTriggerFireKey } from './dateTriggerLauncher';
+import { launchDateTriggeredWorkflows, buildDateTriggerFireKey } from '../../../../packages/workflows/src/lib/dateTriggerLauncher';
 
 const mocks = vi.hoisted(() => ({ publish: vi.fn(), temporalStart: vi.fn() }));
 vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: mocks.publish }));
-vi.mock('@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions', () => ({ getTenantTimezone: vi.fn(async () => 'UTC') }));
-vi.mock('./workflowRuntimeV2Temporal', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('./workflowRuntimeV2Temporal')>()),
+vi.mock('../../../../packages/workflows/src/lib/workflowRuntimeV2Temporal', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../packages/workflows/src/lib/workflowRuntimeV2Temporal')>()),
   startWorkflowRuntimeV2TemporalRun: mocks.temporalStart,
 }));
 

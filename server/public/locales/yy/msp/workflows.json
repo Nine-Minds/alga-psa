@@ -686,6 +686,8 @@
       "before": "⟪Before⟫",
       "onDate": "⟪On the day⟫",
       "after": "⟪After⟫",
+      "daysBefore": "⟪days before⟫",
+      "daysAfter": "⟪days after⟫",
       "localTime": "⟪Local time⟫",
       "timezoneOptional": "⟪Timezone (optional)⟫",
       "tenantTimezoneDefault": "⟪Tenant timezone⟫",
