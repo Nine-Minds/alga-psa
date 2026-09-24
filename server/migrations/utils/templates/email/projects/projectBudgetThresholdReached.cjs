@@ -13,6 +13,7 @@ const COPY = {
   it: { subject: 'Soglia budget del progetto raggiunta: {{project.name}}', label: 'Soglia budget raggiunta', intro: 'Questo progetto ha superato una soglia di notifica del budget configurata.', threshold: 'Soglia', billed: 'Fatturato', cap: 'Limite budget', button: 'Rivedi progetto', footer: 'Powered by AlgaPSA' },
   pl: { subject: 'Osiągnięto próg budżetu projektu: {{project.name}}', label: 'Osiągnięto próg budżetu', intro: 'Projekt przekroczył skonfigurowany próg powiadomienia o budżecie.', threshold: 'Próg', billed: 'Zafakturowano', cap: 'Limit budżetu', button: 'Sprawdź projekt', footer: 'Powered by AlgaPSA' },
   pt: { subject: 'Limite de orçamento do projeto atingido: {{project.name}}', label: 'Limite de orçamento atingido', intro: 'Este projeto ultrapassou um limite configurado de notificação de orçamento.', threshold: 'Limite', billed: 'Faturado', cap: 'Teto do orçamento', button: 'Revisar projeto', footer: 'Desenvolvido por AlgaPSA' },
+  sv: { subject: 'Projektets budgetgräns nådd: {{project.name}}', label: 'Budgetgräns nådd', intro: 'Projektet har passerat en inställd gräns för budgetaviseringar.', threshold: 'Gräns', billed: 'Fakturerat', cap: 'Budgettak', button: 'Granska projekt', footer: 'Drivs av AlgaPSA' },
 };
 
 function body(c) {

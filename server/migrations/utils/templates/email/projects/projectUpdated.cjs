@@ -121,6 +121,7 @@ const COPY = {
   },
 };
 SUBJECTS.pt = 'Projeto atualizado: {{project.name}}';
+SUBJECTS.sv = 'Projekt uppdaterat: {{project.name}}';
 COPY.pt = {
   headerLabel: 'Projeto atualizado',
   intro: 'Um projeto foi atualizado:',
@@ -133,6 +134,19 @@ COPY.pt = {
   textHeader: 'Projeto atualizado',
   textIntro: 'Um projeto foi atualizado:',
   textView: 'Ver projeto em',
+};
+COPY.sv = {
+  headerLabel: 'Projekt uppdaterat',
+  intro: 'Ett projekt har uppdaterats:',
+  projectName: 'Projektnamn',
+  status: 'Status',
+  changes: 'Ändringar',
+  updatedBy: 'Uppdaterat av',
+  viewButton: 'Visa projekt',
+  footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+  textHeader: 'Projekt uppdaterat',
+  textIntro: 'Ett projekt har uppdaterats:',
+  textView: 'Visa projekt på',
 };
 
 /* eslint-enable max-len */

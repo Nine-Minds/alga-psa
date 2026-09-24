@@ -166,6 +166,7 @@ const COPY = {
   },
 };
 SUBJECTS.pt = 'Você foi atribuído à tarefa: {{task.name}}';
+SUBJECTS.sv = 'Du har tilldelats uppgiften: {{task.name}}';
 COPY.pt = {
   headerLabel: 'Atribuição de tarefa',
   intro: 'Olá{{#if recipientName}} {{recipientName}}{{/if}}, você foi atribuído(a) como recurso principal de uma tarefa do projeto.',
@@ -184,6 +185,25 @@ COPY.pt = {
   textHeader: 'Atribuição de tarefa',
   textIntro: 'Você foi atribuído(a) como responsável principal por esta tarefa:',
   textView: 'Ver tarefa em',
+};
+COPY.sv = {
+  headerLabel: 'Uppgiftstilldelning',
+  intro: 'Hej{{#if recipientName}} {{recipientName}}{{/if}}, du har tilldelats huvudansvaret för en projektuppgift.',
+  assignedBadge: 'Huvudansvarig',
+  badgeBg: BADGE_BG,
+  badgeColor: BRAND_DARK,
+  taskLabel: 'Uppgift',
+  projectLabel: 'Projekt',
+  dueDateLabel: 'Förfallodatum',
+  assignedByLabel: 'Tilldelad av',
+  roleLabel: 'Roll',
+  descriptionTitle: 'Beskrivning',
+  viewButton: 'Visa uppgift',
+  buttonColor: BRAND_PRIMARY,
+  footer: 'Drivs av AlgaPSA',
+  textHeader: 'Uppgiftstilldelning',
+  textIntro: 'Du har tilldelats huvudansvaret för den här uppgiften:',
+  textView: 'Visa uppgift på',
 };
 
 /* eslint-enable max-len */

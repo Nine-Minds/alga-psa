@@ -13,6 +13,7 @@ const COPY = {
   it: { subject: 'Pronto per la fatturazione: {{entry.description}}', label: 'Traguardo pronto', intro: 'Una voce del piano di fatturazione del progetto è pronta.', entry: 'Voce del piano', amount: 'Importo', trigger: 'Attivazione', button: 'Rivedi progetto', footer: 'Powered by AlgaPSA' },
   pl: { subject: 'Gotowe do rozliczenia: {{entry.description}}', label: 'Kamień milowy gotowy', intro: 'Pozycja harmonogramu projektu jest gotowa do rozliczenia.', entry: 'Pozycja harmonogramu', amount: 'Kwota', trigger: 'Wyzwalacz', button: 'Sprawdź projekt', footer: 'Powered by AlgaPSA' },
   pt: { subject: 'Pronto para faturar: {{entry.description}}', label: 'Marco pronto', intro: 'Uma entrada do cronograma do projeto está pronta para faturamento.', entry: 'Entrada do cronograma', amount: 'Valor', trigger: 'Gatilho', button: 'Revisar projeto', footer: 'Desenvolvido por AlgaPSA' },
+  sv: { subject: 'Klar för fakturering: {{entry.description}}', label: 'Milstolpe klar', intro: 'En post i projektets schema är klar för fakturering.', entry: 'Schemapost', amount: 'Belopp', trigger: 'Utlösare', button: 'Granska projekt', footer: 'Drivs av AlgaPSA' },
 };
 
 function body(c) {

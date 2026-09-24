@@ -121,6 +121,7 @@ const COPY = {
   },
 };
 SUBJECTS.pt = 'Novo projeto criado: {{project.name}}';
+SUBJECTS.sv = 'Nytt projekt skapat: {{project.name}}';
 COPY.pt = {
   headerLabel: 'Novo projeto criado',
   intro: 'Um novo projeto foi criado:',
@@ -133,6 +134,19 @@ COPY.pt = {
   textHeader: 'Novo projeto criado',
   textIntro: 'Um novo projeto foi criado:',
   textView: 'Ver projeto em',
+};
+COPY.sv = {
+  headerLabel: 'Nytt projekt skapat',
+  intro: 'Ett nytt projekt har skapats:',
+  projectName: 'Projektnamn',
+  description: 'Beskrivning',
+  startDate: 'Startdatum',
+  projectManager: 'Projektledare',
+  viewButton: 'Visa projekt',
+  footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+  textHeader: 'Nytt projekt skapat',
+  textIntro: 'Ett nytt projekt har skapats:',
+  textView: 'Visa projekt på',
 };
 
 /* eslint-enable max-len */
