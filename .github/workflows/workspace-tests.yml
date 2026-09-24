@@ -140,11 +140,17 @@ jobs:
         if: matrix.suite == 'workspace-runtime'
         shell: bash
         run: |
+          # MinIO's own registries stopped serving anonymous pulls (quay.io and
+          # docker.io/minio both answer "unauthorized" now), which failed this
+          # step on every run. Same MinIO release — 2025.4.22 is
+          # RELEASE.2025-04-22T22-12-26Z — from a repository that still allows
+          # them. This packaging launches the server itself, so it takes no
+          # trailing `server /data` arguments.
           docker run -d --name workspace-test-minio \
             -p 127.0.0.1:59000:9000 \
             -e MINIO_ROOT_USER=regression-test \
             -e MINIO_ROOT_PASSWORD=regression-test-password \
-            quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z server /data
+            bitnamilegacy/minio:2025.4.22-debian-12-r2
           for ((attempt = 1; attempt <= 60; attempt++)); do
             if curl --fail --silent http://127.0.0.1:59000/minio/health/ready; then exit 0; fi
             sleep 1
