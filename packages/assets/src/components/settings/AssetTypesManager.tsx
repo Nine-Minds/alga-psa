@@ -564,8 +564,12 @@ const AssetTypesManager: React.FC = () => {
                   defaultValue: 'The standard built-in form stays fixed. These additional fields are tenant-defined.',
                 })}
               </p>
-              <Label className="text-sm font-medium">{t('settings.assetTypes.additionalFields', { defaultValue: 'Additional fields' })}</Label>
-              <AssetTypeSchemaEditor fields={editorFields} onChange={setEditorFields} issues={schemaIssues} />
+              <AssetTypeSchemaEditor
+                fields={editorFields}
+                onChange={setEditorFields}
+                issues={schemaIssues}
+                title={t('settings.assetTypes.additionalFields', { defaultValue: 'Additional fields' })}
+              />
             </div>
           ) : (
             <AssetTypeSchemaEditor

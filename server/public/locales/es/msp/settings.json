@@ -3083,7 +3083,7 @@
         "namePlaceholder": "p. ej., Firewall",
         "displayOrderLabel": "Orden de visualización",
         "iconLabel": "Icono",
-        "builtinSchemaHint": "Los tipos integrados usan formularios fijos administrados por AlgaPSA, por lo que su esquema de campos no se puede editar. Aún puede cambiar el nombre del tipo o su icono."
+        "builtinSchemaHint": "El formulario estándar integrado permanece fijo. Estos campos adicionales se definen para cada tenant."
       },
       "deleteDialog": {
         "title": "Eliminar tipo de activo",

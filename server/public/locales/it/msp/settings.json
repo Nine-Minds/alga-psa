@@ -3083,7 +3083,7 @@
         "namePlaceholder": "es. Firewall",
         "displayOrderLabel": "Ordine di visualizzazione",
         "iconLabel": "Icona",
-        "builtinSchemaHint": "I tipi integrati usano moduli fissi gestiti da AlgaPSA, quindi il loro schema di campi non può essere modificato. Puoi comunque rinominare il tipo o cambiarne l'icona."
+        "builtinSchemaHint": "Il modulo standard integrato resta fisso. Questi campi aggiuntivi sono definiti per ciascun tenant."
       },
       "deleteDialog": {
         "title": "Elimina tipo di asset",

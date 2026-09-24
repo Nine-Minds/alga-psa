@@ -3111,7 +3111,7 @@
         "namePlaceholder": "np. Firewall",
         "displayOrderLabel": "Kolejność wyświetlania",
         "iconLabel": "Ikona",
-        "builtinSchemaHint": "Typy wbudowane używają stałych formularzy zarządzanych przez AlgaPSA, więc ich schematu pól nie można edytować. Nadal możesz zmienić nazwę typu lub jego ikonę."
+        "builtinSchemaHint": "Standardowy wbudowany formularz pozostaje niezmienny. Te dodatkowe pola są definiowane dla danego tenanta."
       },
       "deleteDialog": {
         "title": "Usuń typ zasobu",

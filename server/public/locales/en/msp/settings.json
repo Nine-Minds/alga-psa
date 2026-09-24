@@ -3083,7 +3083,7 @@
         "namePlaceholder": "e.g. Firewall",
         "displayOrderLabel": "Display Order",
         "iconLabel": "Icon",
-        "builtinSchemaHint": "Built-in types use fixed forms managed by AlgaPSA, so their field schema cannot be edited. You can still rename the type or change its icon."
+        "builtinSchemaHint": "The standard built-in form stays fixed. These additional fields are tenant-defined."
       },
       "deleteDialog": {
         "title": "Delete Asset Type",

@@ -405,6 +405,19 @@ describe('AssetTypesManager (T308)', () => {
     expect(mockGetAssetTypes).toHaveBeenCalledTimes(2);
     expect(mockToastSuccess).toHaveBeenCalledWith('Asset type deleted');
   });
+
+  it('shows one Additional fields heading for built-ins and Fields for custom types', async () => {
+    const user = userEvent.setup();
+    await renderManager();
+
+    await user.click(byId('assets-types-edit-workstation')!);
+    expect(screen.getAllByText('Additional fields')).toHaveLength(1);
+    expect(screen.queryByText('Fields')).toBeNull();
+
+    await user.click(byId('assets-types-cancel-button')!);
+    await user.click(byId('assets-types-edit-firewall')!);
+    expect(screen.getAllByText('Fields')).toHaveLength(1);
+  });
 });
 
 describe('AssetTypeSchemaEditor inside the manager (T309)', () => {

@@ -3083,7 +3083,7 @@
         "namePlaceholder": "z. B. Firewall",
         "displayOrderLabel": "Anzeigereihenfolge",
         "iconLabel": "Symbol",
-        "builtinSchemaHint": "Integrierte Typen verwenden feste, von AlgaPSA verwaltete Formulare; ihr Feldschema kann daher nicht bearbeitet werden. Sie können den Typ weiterhin umbenennen oder sein Symbol ändern."
+        "builtinSchemaHint": "Das standardmäßige integrierte Formular bleibt unverändert. Diese zusätzlichen Felder werden vom jeweiligen Mandanten definiert."
       },
       "deleteDialog": {
         "title": "Asset-Typ löschen",

@@ -776,7 +776,7 @@
       "save": "Save",
       "label": "Button label",
       "template": "URL template",
-      "tokens": "Use {field.<key>} with custom field keys defined in Settings → Assets → Asset types.",
+      "tokens": "Verwenden Sie {asset.name}, {asset.asset_tag}, {asset.serial_number}, {client.name} und {field.<key>} mit benutzerdefinierten Feldschlüsseln unter Einstellungen → Assets → Assettypen.",
       "errors": {
         "load": "Failed to load remote access links.",
         "save": "Failed to save the remote access link.",

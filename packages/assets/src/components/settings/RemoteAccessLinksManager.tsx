@@ -157,7 +157,9 @@ export default function RemoteAccessLinksManager() {
               {t('remoteAccess.links.template')}
               <Input id="remote-access-link-template" value={urlTemplate} onChange={(event) => setUrlTemplate(event.target.value)} />
             </label>
-            <p className="text-xs text-[rgb(var(--color-text-500))]">{t('remoteAccess.links.tokens')}</p>
+            <p className="text-xs text-[rgb(var(--color-text-500))]">{t('remoteAccess.links.tokens', {
+              defaultValue: 'Use {asset.name}, {asset.asset_tag}, {asset.serial_number}, {client.name}, and {field.<key>} with custom field keys defined in Settings → Assets → Asset types.',
+            })}</p>
           </div>
         </DialogContent>
       </Dialog>

@@ -3083,7 +3083,7 @@
         "namePlaceholder": "p. ex. Pare-feu",
         "displayOrderLabel": "Ordre d'affichage",
         "iconLabel": "Icône",
-        "builtinSchemaHint": "Les types intégrés utilisent des formulaires fixes gérés par AlgaPSA ; leur schéma de champs ne peut donc pas être modifié. Vous pouvez toujours renommer le type ou changer son icône."
+        "builtinSchemaHint": "Le formulaire standard intégré reste fixe. Ces champs supplémentaires sont définis pour chaque tenant."
       },
       "deleteDialog": {
         "title": "Supprimer le type d'actif",
