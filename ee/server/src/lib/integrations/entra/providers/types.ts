@@ -34,4 +34,11 @@ export interface EntraProviderAdapter {
     groupId: string;
     membershipMode: 'transitive';
   }): Promise<boolean>;
+  listSecurityGroupMemberIds(input: {
+    tenant: string;
+    managedTenantId: string;
+    groupId: string;
+    membershipMode: 'transitive';
+    users?: EntraManagedUserRecord[];
+  }): Promise<Set<string>>;
 }

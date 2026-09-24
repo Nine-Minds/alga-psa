@@ -207,4 +207,11 @@ describe('Entra interfaces and migration schema alignment', () => {
       expect(migration).toContain(`'${column}'`);
     }
   });
+
+  it('managed tenant user-filter migration uses tenant-scoped colocated keys', () => {
+    const migration = readRepoFile('ee/server/migrations/20260923120000_entra_managed_tenant_user_filters.cjs');
+    expect(migration).toContain("table.primary(['tenant', 'managed_tenant_id'])");
+    expect(migration).toContain("colocate_with => 'entra_managed_tenants'");
+    expect(migration).toContain("table.foreign(['tenant', 'managed_tenant_id'])");
+  });
 });

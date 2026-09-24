@@ -7,6 +7,8 @@ export interface EntraSyncUser {
   givenName: string | null;
   surname: string | null;
   accountEnabled: boolean;
+  userType?: 'Member' | 'Guest' | null;
+  assignedLicenseCount?: number | null;
   jobTitle: string | null;
   mobilePhone: string | null;
   businessPhones: string[];
@@ -25,8 +27,8 @@ export interface EntraSyncTenantContext {
 }
 
 export function normalizeEntraSyncUser(
-  input: Omit<EntraSyncUser, 'businessPhones' | 'raw'> &
-    Partial<Pick<EntraSyncUser, 'businessPhones' | 'raw'>>
+  input: Omit<EntraSyncUser, 'businessPhones' | 'raw' | 'userType' | 'assignedLicenseCount'> &
+    Partial<Pick<EntraSyncUser, 'businessPhones' | 'raw' | 'userType' | 'assignedLicenseCount'>>
 ): EntraSyncUser {
   const businessPhones = Array.isArray(input.businessPhones)
     ? input.businessPhones
@@ -36,6 +38,8 @@ export function normalizeEntraSyncUser(
 
   return {
     ...input,
+    userType: input.userType === 'Member' || input.userType === 'Guest' ? input.userType : null,
+    assignedLicenseCount: typeof input.assignedLicenseCount === 'number' && Number.isFinite(input.assignedLicenseCount) ? input.assignedLicenseCount : null,
     userPrincipalName: typeof input.userPrincipalName === 'string' ? input.userPrincipalName.trim() : null,
     email: typeof input.email === 'string' ? input.email.trim() : null,
     displayName: typeof input.displayName === 'string' ? input.displayName.trim() : null,

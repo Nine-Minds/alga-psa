@@ -135,6 +135,24 @@ export function ContactPreflightReport({
     >
 
       <div className="mt-4 space-y-2">
+        {Object.entries(report.excludedByReason ?? {}).filter(([, count]) => count > 0).length > 0 ? (
+          <div className="rounded-md border border-warning/40 bg-warning/10 p-3 text-sm" id="entra-preflight-filter-exclusions">
+            <p className="font-medium">{t('integrations.entra.userImportFilter.exclusions')}</p>
+            <ul className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
+              {Object.entries(report.excludedByReason ?? {}).filter(([, count]) => count > 0).map(([reason, count]) => (
+                <li key={reason}>{reason.replaceAll('_', ' ')}: <span className="font-semibold tabular-nums">{count}</span></li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+        {(report.unknownFieldCounts?.userType || report.unknownFieldCounts?.assignedLicenseCount) ? (
+          <p className="text-sm text-warning-700 dark:text-warning-300" id="entra-preflight-unknown-filter-fields">
+            {t('integrations.entra.userImportFilter.unknown')}
+            {report.unknownFieldCounts.userType ? ` ${t('integrations.entra.userImportFilter.userType', { count: report.unknownFieldCounts.userType })}` : ''}
+            {report.unknownFieldCounts.assignedLicenseCount ? ` ${t('integrations.entra.userImportFilter.license', { count: report.unknownFieldCounts.assignedLicenseCount })}` : ''}
+          </p>
+        ) : null}
+        {report.warnings?.map((warning, index) => <p key={`${index}-${warning}`} className="text-sm text-warning-700 dark:text-warning-300">{warning}</p>)}
         {BUCKET_ORDER.map((bucketId) => {
           const bucket = bucketsById.get(bucketId);
           const count = bucket?.count ?? 0;

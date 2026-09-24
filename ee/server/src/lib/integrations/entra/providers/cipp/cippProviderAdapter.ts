@@ -425,6 +425,8 @@ export class CippProviderAdapter implements EntraProviderAdapter {
           toBoolean(raw.accountEnabled, true) &&
           toBoolean(raw.enabled, true) &&
           toBoolean(raw.isEnabled, true),
+        userType: raw.userType === 'Member' || raw.userType === 'Guest' ? raw.userType : null,
+        assignedLicenseCount: Array.isArray(raw.assignedLicenses) ? raw.assignedLicenses.length : null,
         jobTitle: toStringOrNull(raw.jobTitle) || toStringOrNull(raw.title),
         mobilePhone: toStringOrNull(raw.mobilePhone) || toStringOrNull(raw.phoneNumber),
         businessPhones:
@@ -503,6 +505,18 @@ export class CippProviderAdapter implements EntraProviderAdapter {
         .filter((value): value is string => Boolean(value))
     );
     return groupIds.has(input.groupId);
+  }
+
+  public async listSecurityGroupMemberIds(input: { tenant: string; managedTenantId: string; groupId: string; membershipMode: 'transitive'; users?: EntraManagedUserRecord[] }): Promise<Set<string>> {
+    if (!input.users) throw new Error('CIPP group membership fallback requires the tenant user list.');
+    const matching: Array<{ id: string; member: boolean }> = [];
+    for (let offset = 0; offset < input.users.length; offset += 8) {
+      const page = input.users.slice(offset, offset + 8);
+      matching.push(...await Promise.all(page.map(async (user) => ({ id: user.entraObjectId, member: await this.isUserInSecurityGroup({
+        tenant: input.tenant, managedTenantId: input.managedTenantId, userEntraObjectId: user.entraObjectId, groupId: input.groupId, membershipMode: input.membershipMode,
+      }) }))));
+    }
+    return new Set(matching.filter((entry) => entry.member).map((entry) => entry.id));
   }
 }
 

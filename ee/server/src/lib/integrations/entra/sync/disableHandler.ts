@@ -127,6 +127,12 @@ export async function markDisabledEntraUsersInactive(
   return updated;
 }
 
+export async function markExcludedEntraUsersInactive(tenantId: string, identities: EntraIdentityRef[]): Promise<number> {
+  let updated = 0;
+  for (const identity of identities) updated += await markIdentityInactive(tenantId, identity, 'excluded_by_filter');
+  return updated;
+}
+
 export async function markDeletedEntraUsersInactive(
   tenantId: string,
   identities: EntraIdentityRef[]

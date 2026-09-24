@@ -1148,6 +1148,33 @@
           "unmatched": "Incomparável"
         },
         "title": "Visualização do mapeamento de locatário"
+      },
+      "userImportFilter": {
+        "title": "Filtro de importação",
+        "licensed": "Somente membros licenciados",
+        "include": "Incluir grupo de segurança",
+        "exclude": "Excluir grupo de segurança",
+        "none": "Nenhum grupo",
+        "patterns": "Padrões de exclusão adicionais (uma expressão regular por linha)",
+        "deactivate": "Desativar contatos vinculados fora deste filtro",
+        "save": "Salvar filtro",
+        "loading": "Carregando filtro de importação…",
+        "saved": "Salvo",
+        "invalid": "Expressão regular inválida: {{pattern}}",
+        "exclusions": "Exclusões do filtro de importação",
+        "unknown": "Os dados do provedor necessários ao filtro estão indisponíveis. Os usuários afetados foram mantidos.",
+        "userType": "Tipo de usuário indisponível: {{count}}.",
+        "license": "Dados de licença indisponíveis: {{count}}.",
+        "transitive": "A associação é transitiva no Direct; o CIPP pode retornar apenas membros diretos.",
+        "defaultsDescription": "These settings are the defaults for managed tenants. Managed tenants can override them.",
+        "memberUsersOnly": "Members only",
+        "licensedUsersOnly": "Licensed users only",
+        "patternPlaceholder": "Exclusion regular expression",
+        "invalidPattern": "Invalid regular expression.",
+        "addPattern": "Add pattern",
+        "remove": "Remove",
+        "saving": "Saving…",
+        "saveFailed": "Could not save the import filter."
       }
     },
     "google": {

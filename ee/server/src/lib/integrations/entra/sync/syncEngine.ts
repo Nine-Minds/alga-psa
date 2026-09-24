@@ -15,6 +15,7 @@ import {
 import { publishWorkflowManagedPortalProvisioningEvent } from './workflowManagedProvisioning';
 import {
   markDisabledEntraUsersInactive,
+  markExcludedEntraUsersInactive,
   selectLinkedEntraIdentities,
   type EntraIdentityRef,
 } from './disableHandler';
@@ -65,6 +66,9 @@ export interface ExecuteEntraSyncInput {
    * function and outside the flag.
    */
   disabledIdentities?: EntraDisabledIdentityInput[];
+  excludedIdentities?: EntraDisabledIdentityInput[];
+  deactivateExcludedContacts?: boolean;
+  enabledSourceUserCount?: number;
 }
 
 export interface ExecuteEntraSyncResult {
@@ -79,6 +83,7 @@ export interface ExecuteEntraSyncResult {
   };
   /** Per-identity classification. Only collected on a dry run. */
   preview?: EntraSyncPreviewIdentity[];
+  warnings?: string[];
 }
 
 function isInactivationEnabled(config: Record<string, unknown> | undefined): boolean {
@@ -110,6 +115,7 @@ export async function executeEntraSync(
   const dryRun = Boolean(input.dryRun);
   const counters = new EntraSyncResultAggregator();
   const preview: EntraSyncPreviewIdentity[] | undefined = dryRun ? [] : undefined;
+  const warnings: string[] = [];
 
   for (const user of input.users) {
     const userWithEntitlement: EntraSyncUser = input.portalEntitlement
@@ -325,9 +331,37 @@ export async function executeEntraSync(
     }
   }
 
+  const excludedIdentities = input.deactivateExcludedContacts ? (input.excludedIdentities || []) : [];
+  if (excludedIdentities.length > 0) {
+    // The 100% brake needs linked contacts as evidence that a filter mistake could be destructive.
+    const { createTenantKnex, runWithTenant } = await import('@/lib/db');
+    const { tenantDb } = await import('@alga-psa/db');
+    const linkedCount = await runWithTenant(input.tenantId, async () => {
+      const { knex } = await createTenantKnex();
+      return Number(await tenantDb(knex, input.tenantId).table('entra_contact_links')
+        .whereIn('entra_object_id', excludedIdentities.map((item) => item.entraObjectId))
+        .whereIn('entra_tenant_id', [...new Set(excludedIdentities.map((item) => item.entraTenantId))])
+        .count('* as count').first().then((row: any) => row?.count || 0));
+    });
+    const everyUserExcluded = (input.enabledSourceUserCount ?? 0) > 0 && input.users.length === 0;
+    if (everyUserExcluded && linkedCount > 0) {
+      warnings.push('Excluded contacts were left active because the filter excludes every enabled user and linked contacts exist.');
+    } else if (dryRun) {
+      const linked = await selectLinkedEntraIdentities(input.tenantId, excludedIdentities);
+      for (const entry of linked) {
+        for (let index = 0; index < entry.linkedContactCount; index += 1) counters.increment('inactivated');
+        preview?.push({ bucket: 'mark_inactive', entraObjectId: entry.identity.entraObjectId, displayName: entry.identity.displayName ?? null, email: entry.identity.email ?? null, userPrincipalName: entry.identity.userPrincipalName ?? null });
+      }
+    } else {
+      const inactivated = await markExcludedEntraUsersInactive(input.tenantId, excludedIdentities);
+      for (let index = 0; index < inactivated; index += 1) counters.increment('inactivated');
+    }
+  }
+
   return {
     dryRun,
     counters: counters.toJSON(),
+    ...(warnings.length ? { warnings } : {}),
     ...(preview ? { preview } : {}),
   };
 }

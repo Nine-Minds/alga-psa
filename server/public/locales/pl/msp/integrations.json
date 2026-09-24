@@ -1148,6 +1148,33 @@
           "unmatched": "Niedopasowane"
         },
         "title": "Podgląd mapowania tenantów"
+      },
+      "userImportFilter": {
+        "title": "Filtr importu",
+        "licensed": "Tylko licencjonowani członkowie",
+        "include": "Uwzględnij grupę zabezpieczeń",
+        "exclude": "Wyklucz grupę zabezpieczeń",
+        "none": "Brak grupy",
+        "patterns": "Dodatkowe wzorce wykluczeń (jedno wyrażenie regularne w wierszu)",
+        "deactivate": "Dezaktywuj powiązane kontakty poza tym filtrem",
+        "save": "Zapisz filtr",
+        "loading": "Wczytywanie filtru importu…",
+        "saved": "Zapisano",
+        "invalid": "Nieprawidłowe wyrażenie regularne: {{pattern}}",
+        "exclusions": "Wykluczenia filtru importu",
+        "unknown": "Brak danych dostawcy wymaganych przez filtr. Dotknięci użytkownicy pozostali uwzględnieni.",
+        "userType": "Brak typu użytkownika: {{count}}.",
+        "license": "Brak danych licencji: {{count}}.",
+        "transitive": "Członkostwo jest przechodnie w Direct; CIPP może zwracać tylko bezpośrednich członków.",
+        "defaultsDescription": "These settings are the defaults for managed tenants. Managed tenants can override them.",
+        "memberUsersOnly": "Members only",
+        "licensedUsersOnly": "Licensed users only",
+        "patternPlaceholder": "Exclusion regular expression",
+        "invalidPattern": "Invalid regular expression.",
+        "addPattern": "Add pattern",
+        "remove": "Remove",
+        "saving": "Saving…",
+        "saveFailed": "Could not save the import filter."
       }
     },
     "google": {

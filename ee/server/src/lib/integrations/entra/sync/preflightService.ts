@@ -3,7 +3,7 @@ import { createTenantKnex, runWithTenant } from '@/lib/db';
 import { tenantDb } from '@alga-psa/db';
 import { getEntraProviderAdapter } from '../providers';
 import { getActiveEntraPartnerConnection } from '../connectionRepository';
-import { filterEntraUsersForTenant } from '../settingsService';
+import { filterEntraUsersForManagedTenant } from '../settingsService';
 import {
   executeEntraSync,
   type EntraSyncPreviewBucket,
@@ -41,6 +41,9 @@ export interface EntraPreflightResult {
   clientId: string;
   checkedAt: string;
   totalIdentities: number;
+  excludedByReason: Record<string, number>;
+  unknownFieldCounts: { userType: number; assignedLicenseCount: number };
+  warnings: string[];
   counters: {
     created: number;
     linked: number;
@@ -186,7 +189,7 @@ export async function runEntraPreflight(params: {
     tenant: params.tenantId,
     managedTenantId: mapping.entraTenantId,
   });
-  const filtered = await filterEntraUsersForTenant(params.tenantId, users);
+  const filtered = await filterEntraUsersForManagedTenant({ tenant: params.tenantId, managedTenantId: mapping.managedTenantId, entraTenantId: mapping.entraTenantId, adapter, users });
 
   const fieldSyncConfig = params.fieldSyncConfigOverride
     ? params.fieldSyncConfigOverride
@@ -209,6 +212,10 @@ export async function runEntraPreflight(params: {
       email: entry.user.email,
       userPrincipalName: entry.user.userPrincipalName,
     }));
+  const excludedIdentities = filtered.deactivateExcludedContacts ? filtered.excluded
+    .filter((entry) => ['guest_user', 'unlicensed', 'tenant_custom_pattern', 'excluded_group', 'not_in_included_group'].includes(entry.reason))
+    .map(({ user }) => ({ entraTenantId: user.entraTenantId, entraObjectId: user.entraObjectId, displayName: user.displayName, email: user.email, userPrincipalName: user.userPrincipalName })) : [];
+  const excludedByReason = filtered.excluded.reduce<Record<string, number>>((counts, entry) => { counts[entry.reason] = (counts[entry.reason] || 0) + 1; return counts; }, {});
 
   const result = await executeEntraSync({
     tenantId: params.tenantId,
@@ -218,6 +225,9 @@ export async function runEntraPreflight(params: {
     fieldSyncConfig,
     dryRun: true,
     disabledIdentities,
+    excludedIdentities,
+    deactivateExcludedContacts: filtered.deactivateExcludedContacts,
+    enabledSourceUserCount: users.filter((user) => user.accountEnabled).length,
   });
 
   const preview = result.preview || [];
@@ -236,6 +246,9 @@ export async function runEntraPreflight(params: {
     clientId: mapping.clientId,
     checkedAt: new Date().toISOString(),
     totalIdentities: preview.length,
+    excludedByReason,
+    unknownFieldCounts: filtered.unknownFieldCounts,
+    warnings: result.warnings || [],
     counters: result.counters,
     buckets: bucketize(preview, params.sampleLimit ?? DEFAULT_SAMPLE_LIMIT),
   };

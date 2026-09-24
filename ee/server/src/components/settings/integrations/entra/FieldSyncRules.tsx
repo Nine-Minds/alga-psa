@@ -11,6 +11,8 @@ import {
   getEntraConfirmedMappings,
   runEntraPreflight,
   updateEntraFieldSyncConfig,
+  getEntraUserFilterDefaults,
+  updateEntraUserFilterDefaults,
   type EntraConfirmedMapping,
   type EntraFieldSyncConfig,
   type EntraPreflightResponse,
@@ -69,6 +71,30 @@ export function FieldSyncRules({
   const [previewClient, setPreviewClient] = React.useState<string>('');
   const [previewBusy, setPreviewBusy] = React.useState(false);
   const [preview, setPreview] = React.useState<EntraPreflightResponse | null>(null);
+  const [userFilter, setUserFilter] = React.useState({ version: 1 as const, memberUsersOnly: false, licensedUsersOnly: false, includeGroupIds: [] as string[], excludeGroupIds: [] as string[], exclusionPatterns: [] as string[], deactivateExcludedContacts: false });
+  const [patternDraft, setPatternDraft] = React.useState('');
+  const [filterSaving, setFilterSaving] = React.useState(false);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    void getEntraUserFilterDefaults().then(result => {
+      if (!cancelled && !('error' in result) && result.data) {
+        const data = 'config' in result.data ? result.data.config : result.data;
+        setUserFilter(data);
+      }
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  const saveUserFilter = async () => {
+    setFilterSaving(true);
+    setError(null);
+    try {
+      const result = await updateEntraUserFilterDefaults(userFilter);
+      if ('error' in result) setError(result.error || t('integrations.entra.userImportFilter.saveFailed'));
+      else setMessage(t('integrations.entra.userImportFilter.saved'));
+    } finally { setFilterSaving(false); }
+  };
 
   React.useEffect(() => {
     let cancelled = false;
@@ -213,6 +239,25 @@ export function FieldSyncRules({
             disabled={saving}
           />
         </div>
+      </div>
+
+      <div className="mt-5 rounded-md border border-border/60 p-3" id="entra-who-gets-imported-panel">
+        <h3 className="text-sm font-semibold">{t('integrations.entra.userImportFilter.title')}</h3>
+        <p className="mb-3 text-xs text-muted-foreground">{t('integrations.entra.userImportFilter.defaultsDescription', { defaultValue: 'These settings are the defaults for managed tenants. Managed tenants can override them.' })}</p>
+        <div className="space-y-2">
+          {(['memberUsersOnly', 'licensedUsersOnly', 'deactivateExcludedContacts'] as const).map(key => (
+            <label key={key} className="flex items-center gap-2 text-sm">
+              <input id={`entra-user-filter-${key}`} type="checkbox" checked={userFilter[key]} disabled={filterSaving} onChange={event => setUserFilter(current => ({ ...current, [key]: event.target.checked }))} />
+              {t(`integrations.entra.userImportFilter.${key}`, { defaultValue: key === 'memberUsersOnly' ? 'Members only' : key === 'licensedUsersOnly' ? 'Licensed users only' : 'Deactivate excluded contacts' })}
+            </label>
+          ))}
+        </div>
+        <div className="mt-3 flex gap-2">
+          <input id="entra-user-filter-pattern-input" className="min-w-0 flex-1 rounded border bg-background px-2 py-1 text-sm" value={patternDraft} onChange={event => setPatternDraft(event.target.value)} placeholder={t('integrations.entra.userImportFilter.patternPlaceholder', { defaultValue: 'Exclusion regular expression' })} />
+          <Button id="entra-user-filter-add-pattern-button" type="button" variant="outline" onClick={() => { try { new RegExp(patternDraft, 'i'); setUserFilter(current => ({ ...current, exclusionPatterns: [...new Set([...current.exclusionPatterns, patternDraft])] })); setPatternDraft(''); setError(null); } catch { setError(t('integrations.entra.userImportFilter.invalidPattern', { defaultValue: 'Invalid regular expression.' })); } }}>{t('integrations.entra.userImportFilter.addPattern', { defaultValue: 'Add pattern' })}</Button>
+        </div>
+        <ul className="mt-2 space-y-1 text-sm">{userFilter.exclusionPatterns.map(pattern => <li key={pattern} className="flex items-center justify-between"><code>{pattern}</code><button id={`entra-user-filter-remove-pattern-${userFilter.exclusionPatterns.indexOf(pattern)}`} type="button" className="text-destructive" onClick={() => setUserFilter(current => ({ ...current, exclusionPatterns: current.exclusionPatterns.filter(item => item !== pattern) }))}>{t('integrations.entra.userImportFilter.remove', { defaultValue: 'Remove' })}</button></li>)}</ul>
+        <Button id="entra-user-filter-save-button" className="mt-3" type="button" size="sm" disabled={filterSaving} onClick={() => void saveUserFilter()}>{filterSaving ? t('integrations.entra.userImportFilter.saving', { defaultValue: 'Saving…' }) : t('integrations.entra.userImportFilter.save', { defaultValue: 'Save filter' })}</Button>
       </div>
 
       {/* Save commits the rules above; the preview is a separate job against a

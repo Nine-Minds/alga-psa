@@ -73,6 +73,24 @@ describe('DirectProviderAdapter.listUsersForTenantWithToken', () => {
       'carol@acme.example',
     ]);
     expect(result.users[1].accountEnabled).toBe(false);
+    expect(result.users[0].userType).toBeNull();
+    expect(hoisted.get.mock.calls[0][0]).toContain('userType,assignedLicenses');
+  });
+
+  it('pages transitive Graph group members and collects user IDs', async () => {
+    const adapter = new DirectProviderAdapter() as any;
+    const urls: string[] = [];
+    adapter.managedTenantGraphRequest = vi.fn(async (_tenant: string, _managed: string, request: (token: string) => Promise<any>) => {
+      const response = await request('token');
+      urls.push(response.config.url);
+      return response.data;
+    });
+    hoisted.get.mockResolvedValueOnce({ config: { url: 'https://graph.test/groups/g1/transitiveMembers/microsoft.graph.user?$select=id&$top=999' }, data: { value: [{ id: 'u1' }], '@odata.nextLink': 'https://graph.test/next' } })
+      .mockResolvedValueOnce({ config: { url: 'https://graph.test/next' }, data: { value: [{ id: 'u2' }] } });
+    const ids = await adapter.listSecurityGroupMemberIds({ tenant: 't1', managedTenantId: 'm1', groupId: 'g1', membershipMode: 'transitive' });
+    expect(ids).toEqual(new Set(['u1', 'u2']));
+    expect(urls[0]).toContain('/groups/g1/transitiveMembers/microsoft.graph.user?$select=id&$top=999');
+    expect(urls[1]).toBe('https://graph.test/next');
   });
 
   it('reports truncation honestly when the page budget is exhausted', async () => {
@@ -119,6 +137,17 @@ describe('CippProviderAdapter seams', () => {
     expect(users.map((u) => u.entraObjectId)).toEqual(['c1', 'c2']);
     expect(users.map((u) => u.email)).toEqual(['alice@acme.example', 'bob@acme.example']);
     expect(users[1].accountEnabled).toBe(false);
+  });
+
+  it('uses CIPP per-user group checks when bulk transitive membership is unavailable', async () => {
+    hoisted.get.mockImplementation(async (url: string) => ({ data: url.includes('userId=u1') ? [{ id: 'g1' }] : [{ id: 'g2' }] }));
+    const adapter = new CippProviderAdapter();
+    const ids = await adapter.listSecurityGroupMemberIds({ tenant: 't1', managedTenantId: 'customer-1', groupId: 'g1', membershipMode: 'transitive', users: [
+      { entraTenantId: 'customer-1', entraObjectId: 'u1' } as any,
+      { entraTenantId: 'customer-1', entraObjectId: 'u2' } as any,
+    ] });
+    expect(ids).toEqual(new Set(['u1']));
+    expect(hoisted.get).toHaveBeenCalledTimes(2);
   });
 
   it('falls back across tenant-list endpoints and reports the answering endpoint', async () => {

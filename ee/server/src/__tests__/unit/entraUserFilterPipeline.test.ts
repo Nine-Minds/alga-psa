@@ -12,6 +12,8 @@ function buildUser(overrides: Partial<EntraSyncUser>): EntraSyncUser {
     givenName: 'Normal',
     surname: 'User',
     accountEnabled: true,
+    userType: 'Member',
+    assignedLicenseCount: 1,
     jobTitle: null,
     mobilePhone: null,
     businessPhones: [],
@@ -21,6 +23,20 @@ function buildUser(overrides: Partial<EntraSyncUser>): EntraSyncUser {
 }
 
 describe('filterEntraUsers', () => {
+  it('keeps the legacy filtering result with an empty configuration', () => {
+    const users = [
+      buildUser({ entraObjectId: 'member', userPrincipalName: 'person@example.com' }),
+      buildUser({ entraObjectId: 'disabled', accountEnabled: false }),
+      buildUser({ entraObjectId: 'service', userPrincipalName: 'svc-backup@example.com' }),
+    ];
+    const result = filterEntraUsers(users, {});
+    expect(result.included.map(user => user.entraObjectId)).toEqual(['member']);
+    expect(result.excluded.map(item => [item.user.entraObjectId, item.reason])).toEqual([
+      ['disabled', 'account_disabled'],
+      ['service', 'service_account'],
+    ]);
+  });
+
   it('T091: excludes disabled Entra users (accountEnabled=false)', () => {
     const result = filterEntraUsers([
       buildUser({
@@ -93,5 +109,17 @@ describe('filterEntraUsers', () => {
       reason: 'tenant_custom_pattern',
       user: expect.objectContaining({ entraObjectId: 'custom-94' }),
     });
+  });
+
+  it('applies licensed and group rules in a stable order while retaining unknown provider data', () => {
+    const users = [
+      buildUser({ entraObjectId: 'guest', userType: 'Guest', assignedLicenseCount: 0 }),
+      buildUser({ entraObjectId: 'unlicensed', assignedLicenseCount: 0 }),
+      buildUser({ entraObjectId: 'excluded', assignedLicenseCount: 1 }),
+      buildUser({ entraObjectId: 'unknown', userType: null, assignedLicenseCount: null }),
+    ];
+    const result = filterEntraUsers(users, { memberUsersOnly: true, licensedUsersOnly: true, includeGroupIds: ['allow'], excludeMemberIds: new Set(['excluded']), includeMemberIds: new Set(['unknown']) });
+    expect(result.excluded.map((item) => item.reason)).toEqual(['guest_user', 'unlicensed', 'excluded_group']);
+    expect(result.included.map((user) => user.entraObjectId)).toEqual(['unknown']);
   });
 });

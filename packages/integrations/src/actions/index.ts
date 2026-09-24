@@ -238,6 +238,10 @@ export {
   type EntraPreflightIdentity,
   type EntraPreflightResponse,
   type EntraSyncScheduleSettings,
+  getEntraUserFilterDefaults,
+  updateEntraUserFilterDefaults,
+  getEntraManagedTenantUserFilter,
+  updateEntraManagedTenantUserFilter,
 } from './integrations/entraActions';
 export {
   runEntraConnectionDiagnostics,

@@ -261,6 +261,9 @@ export type EntraPreflightResponse = {
   clientId: string;
   checkedAt: string;
   totalIdentities: number;
+  excludedByReason: Record<string, number>;
+  unknownFieldCounts: { userType: number; assignedLicenseCount: number };
+  warnings: string[];
   counters: {
     created: number;
     linked: number;
@@ -537,6 +540,34 @@ export const updateEntraFieldSyncConfig = withAuth(async (
     success: true,
     data: normalizedConfig,
   } as const;
+});
+
+export type EntraUserFilterActionConfig = { version: 1; memberUsersOnly: boolean; licensedUsersOnly: boolean; includeGroupIds: string[]; excludeGroupIds: string[]; exclusionPatterns: string[]; deactivateExcludedContacts: boolean };
+
+export const getEntraUserFilterDefaults = withAuth(async (user, { tenant }) => {
+  if (!isEnterpriseEdition) return eeUnavailableResult<EntraUserFilterActionConfig>();
+  if (isClientPortalUser(user) || !(await hasPermission(user as any, 'system_settings', 'read'))) return { success: false, error: 'Forbidden' } as const;
+  const result = await callEeRoute<{ config: EntraUserFilterActionConfig }>({ importFn: routes.userFilterDefaultsRoute, method: 'GET' });
+  return result.success ? { success: true, data: (result.data as { config: EntraUserFilterActionConfig }).config } as const : result;
+});
+
+export const updateEntraUserFilterDefaults = withAuth(async (user, { tenant }, config: EntraUserFilterActionConfig) => {
+  if (!isEnterpriseEdition) return eeUnavailableResult<EntraUserFilterActionConfig>();
+  if (isClientPortalUser(user) || !(await hasPermission(user as any, 'system_settings', 'update'))) return { success: false, error: 'Forbidden' } as const;
+  const result = await callEeRoute<{ config: EntraUserFilterActionConfig }>({ importFn: routes.userFilterDefaultsRoute, method: 'POST', body: { config } });
+  return result.success ? { success: true, data: result.data.config } as const : result;
+});
+
+export const getEntraManagedTenantUserFilter = withAuth(async (user, { tenant }, input: { managedTenantId: string }) => {
+  if (!isEnterpriseEdition) return eeUnavailableResult<{ override: Partial<EntraUserFilterActionConfig> | null; effective: EntraUserFilterActionConfig }>();
+  if (isClientPortalUser(user) || !(await hasPermission(user as any, 'system_settings', 'read'))) return { success: false, error: 'Forbidden' } as const;
+  return callEeRoute<{ override: Partial<EntraUserFilterActionConfig> | null; effective: EntraUserFilterActionConfig }>({ importFn: routes.managedUserFilterRoute, method: 'GET', query: { managedTenantId: input.managedTenantId } });
+});
+
+export const updateEntraManagedTenantUserFilter = withAuth(async (user, { tenant }, input: { managedTenantId: string; override: Partial<EntraUserFilterActionConfig> | null }) => {
+  if (!isEnterpriseEdition) return eeUnavailableResult<{ override: Partial<EntraUserFilterActionConfig> | null; effective: EntraUserFilterActionConfig }>();
+  if (isClientPortalUser(user) || !(await hasPermission(user as any, 'system_settings', 'update'))) return { success: false, error: 'Forbidden' } as const;
+  return callEeRoute<{ override: Partial<EntraUserFilterActionConfig> | null; effective: EntraUserFilterActionConfig }>({ importFn: routes.managedUserFilterRoute, method: 'POST', body: input });
 });
 
 export const connectEntraIntegration = withAuth(async (

@@ -12,16 +12,27 @@ const DEFAULT_SERVICE_ACCOUNT_PATTERNS = [
 
 export interface EntraUserFilterOptions {
   customExclusionPatterns?: string[];
+  memberUsersOnly?: boolean;
+  licensedUsersOnly?: boolean;
+  includeGroupIds?: string[];
+  excludeGroupIds?: string[];
+  includeMemberIds?: Set<string>;
+  excludeMemberIds?: Set<string>;
+  deactivateExcludedContacts?: boolean;
+  groupMembershipResolver?: { isMember(groupId: string, userId: string): Promise<boolean> };
 }
 
 export interface EntraFilteredOutUser {
   user: EntraSyncUser;
-  reason: 'account_disabled' | 'missing_identity' | 'service_account' | 'tenant_custom_pattern';
+  reason: 'account_disabled' | 'missing_identity' | 'guest_user' | 'unlicensed' | 'service_account' | 'tenant_custom_pattern' | 'excluded_group' | 'not_in_included_group';
 }
 
 export interface EntraUserFilterResult {
   included: EntraSyncUser[];
   excluded: EntraFilteredOutUser[];
+  deactivateExcludedContacts: boolean;
+  unknownFieldCounts: { userType: number; assignedLicenseCount: number };
+  groupMembershipResolver?: EntraUserFilterOptions['groupMembershipResolver'];
 }
 
 function normalizeString(value: string | null | undefined): string {
@@ -76,6 +87,7 @@ export function filterEntraUsers(
   const tenantCustomPatterns = compilePatterns(options.customExclusionPatterns || []);
   const included: EntraSyncUser[] = [];
   const excluded: EntraFilteredOutUser[] = [];
+  const unknownFieldCounts = { userType: 0, assignedLicenseCount: 0 };
 
   for (const user of users) {
     if (!user.accountEnabled) {
@@ -89,6 +101,16 @@ export function filterEntraUsers(
       continue;
     }
 
+    // Missing provider data is deliberately fail-open and is counted by callers.
+    if (options.memberUsersOnly) {
+      if (user.userType === 'Guest') { excluded.push({ user, reason: 'guest_user' }); continue; }
+      if (user.userType == null) unknownFieldCounts.userType += 1;
+    }
+    if (options.licensedUsersOnly) {
+      if (user.assignedLicenseCount === 0) { excluded.push({ user, reason: 'unlicensed' }); continue; }
+      if (user.assignedLicenseCount == null) unknownFieldCounts.assignedLicenseCount += 1;
+    }
+
     if (userMatchesPatterns(user, serviceAccountPatterns)) {
       excluded.push({ user, reason: 'service_account' });
       continue;
@@ -99,12 +121,24 @@ export function filterEntraUsers(
       continue;
     }
 
+    if (options.excludeMemberIds?.has(user.entraObjectId)) {
+      excluded.push({ user, reason: 'excluded_group' });
+      continue;
+    }
+    if ((options.includeGroupIds?.length || 0) > 0 && !options.includeMemberIds?.has(user.entraObjectId)) {
+      excluded.push({ user, reason: 'not_in_included_group' });
+      continue;
+    }
+
     included.push(user);
   }
 
   return {
     included,
     excluded,
+    deactivateExcludedContacts: Boolean(options.deactivateExcludedContacts),
+    unknownFieldCounts,
+    groupMembershipResolver: options.groupMembershipResolver,
   };
 }
 

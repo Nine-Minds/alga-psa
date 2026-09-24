@@ -1148,6 +1148,33 @@
           "unmatched": "Sin coincidencia"
         },
         "title": "Vista previa de asignación de inquilinos"
+      },
+      "userImportFilter": {
+        "title": "Filtro de importación",
+        "licensed": "Solo miembros con licencia",
+        "include": "Incluir grupo de seguridad",
+        "exclude": "Excluir grupo de seguridad",
+        "none": "Ningún grupo",
+        "patterns": "Patrones de exclusión adicionales (una expresión regular por línea)",
+        "deactivate": "Desactivar contactos vinculados fuera de este filtro",
+        "save": "Guardar filtro",
+        "loading": "Cargando filtro de importación…",
+        "saved": "Guardado",
+        "invalid": "Expresión regular no válida: {{pattern}}",
+        "exclusions": "Exclusiones del filtro de importación",
+        "unknown": "No hay datos del proveedor necesarios para el filtro. Los usuarios afectados se mantienen incluidos.",
+        "userType": "Tipo de usuario no disponible: {{count}}.",
+        "license": "Datos de licencia no disponibles: {{count}}.",
+        "transitive": "La pertenencia a grupos es transitiva con Direct; CIPP puede devolver solo miembros directos.",
+        "defaultsDescription": "These settings are the defaults for managed tenants. Managed tenants can override them.",
+        "memberUsersOnly": "Members only",
+        "licensedUsersOnly": "Licensed users only",
+        "patternPlaceholder": "Exclusion regular expression",
+        "invalidPattern": "Invalid regular expression.",
+        "addPattern": "Add pattern",
+        "remove": "Remove",
+        "saving": "Saving…",
+        "saveFailed": "Could not save the import filter."
       }
     },
     "google": {

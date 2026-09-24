@@ -1148,6 +1148,33 @@
           "unmatched": "Nicht zugeordnet"
         },
         "title": "Mandantenzuordnungsvorschau"
+      },
+      "userImportFilter": {
+        "title": "Importfilter",
+        "licensed": "Nur lizenzierte Mitglieder",
+        "include": "Sicherheitsgruppe einschließen",
+        "exclude": "Sicherheitsgruppe ausschließen",
+        "none": "Keine Gruppe",
+        "patterns": "Zusätzliche Ausschlussmuster (ein regulärer Ausdruck pro Zeile)",
+        "deactivate": "Verknüpfte Kontakte außerhalb dieses Filters deaktivieren",
+        "save": "Filter speichern",
+        "loading": "Importfilter wird geladen…",
+        "saved": "Gespeichert",
+        "invalid": "Ungültiger regulärer Ausdruck: {{pattern}}",
+        "exclusions": "Vom Importfilter ausgeschlossen",
+        "unknown": "Für den Filter erforderliche Anbieterdaten sind nicht verfügbar. Betroffene Benutzer bleiben eingeschlossen.",
+        "userType": "Benutzertyp nicht verfügbar: {{count}}.",
+        "license": "Lizenzdaten nicht verfügbar: {{count}}.",
+        "transitive": "Die Gruppenmitgliedschaft ist bei Direct transitiv; CIPP liefert möglicherweise nur direkte Mitglieder.",
+        "defaultsDescription": "These settings are the defaults for managed tenants. Managed tenants can override them.",
+        "memberUsersOnly": "Members only",
+        "licensedUsersOnly": "Licensed users only",
+        "patternPlaceholder": "Exclusion regular expression",
+        "invalidPattern": "Invalid regular expression.",
+        "addPattern": "Add pattern",
+        "remove": "Remove",
+        "saving": "Saving…",
+        "saveFailed": "Could not save the import filter."
       }
     },
     "google": {

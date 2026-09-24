@@ -56,6 +56,11 @@ vi.mock('@ee/lib/integrations/entra/mapping/confirmedMappingsService', () => ({
   listConfirmedEntraMappingsWithDb: vi.fn(async () => hoisted.mappings),
 }));
 
+vi.mock('../../lib/integrations/entra/settingsService', () => ({
+  filterEntraUsersForManagedTenant: vi.fn(async () => hoisted.filterResult),
+  resolveEntraUserFilterPolicy: vi.fn(async () => ({})),
+}));
+
 vi.mock('@ee/lib/integrations/entra/auth/refreshDirectToken', () => ({
   refreshEntraDirectToken: vi.fn(),
   refreshEntraDirectAccessTokenForTenant: vi.fn(async (_tenant: string, authority: string) => {
@@ -108,7 +113,12 @@ vi.mock('@ee/lib/integrations/entra/providers/cipp/cippSecretStore', () => ({
 }));
 
 vi.mock('@ee/lib/integrations/entra/settingsService', () => ({
-  filterEntraUsersForTenant: vi.fn(async () => hoisted.filterResult),
+  filterEntraUsersForManagedTenant: vi.fn(async () => hoisted.filterResult),
+  resolveEntraUserFilterPolicy: vi.fn(async () => ({})),
+}));
+
+vi.mock('@ee/lib/integrations/entra/sync/userFilterPipeline', () => ({
+  filterEntraUsers: vi.fn(() => hoisted.filterResult),
 }));
 
 vi.mock('@alga-psa/db', () => ({

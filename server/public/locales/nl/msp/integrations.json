@@ -1148,6 +1148,33 @@
           "unmatched": "Niet gekoppeld"
         },
         "title": "Tenant-toewijzingsvoorbeeld"
+      },
+      "userImportFilter": {
+        "title": "Importfilter",
+        "licensed": "Alleen leden met licentie",
+        "include": "Beveiligingsgroep opnemen",
+        "exclude": "Beveiligingsgroep uitsluiten",
+        "none": "Geen groep",
+        "patterns": "Extra uitsluitingspatronen (één reguliere expressie per regel)",
+        "deactivate": "Gekoppelde contacten buiten dit filter deactiveren",
+        "save": "Filter opslaan",
+        "loading": "Importfilter laden…",
+        "saved": "Opgeslagen",
+        "invalid": "Ongeldige reguliere expressie: {{pattern}}",
+        "exclusions": "Uitsluitingen door importfilter",
+        "unknown": "Gegevens van de provider die nodig zijn voor het filter ontbreken. Betrokken gebruikers blijven opgenomen.",
+        "userType": "Gebruikerstype ontbreekt: {{count}}.",
+        "license": "Licentiegegevens ontbreken: {{count}}.",
+        "transitive": "Groepslidmaatschap is transitief met Direct; CIPP retourneert mogelijk alleen directe leden.",
+        "defaultsDescription": "These settings are the defaults for managed tenants. Managed tenants can override them.",
+        "memberUsersOnly": "Members only",
+        "licensedUsersOnly": "Licensed users only",
+        "patternPlaceholder": "Exclusion regular expression",
+        "invalidPattern": "Invalid regular expression.",
+        "addPattern": "Add pattern",
+        "remove": "Remove",
+        "saving": "Saving…",
+        "saveFailed": "Could not save the import filter."
       }
     },
     "google": {

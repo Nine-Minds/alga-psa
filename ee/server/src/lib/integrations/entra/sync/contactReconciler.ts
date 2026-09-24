@@ -254,7 +254,7 @@ export async function linkExistingMatchedContact(
   const fieldsUpdated = await runWithTenant(tenantId, async () => {
     const { knex } = await createTenantKnex();
     return knex.transaction(async (trx) => {
-      return upsertContactLink(
+      const changed = await upsertContactLink(
         trx,
         tenantId,
         clientId,
@@ -262,6 +262,12 @@ export async function linkExistingMatchedContact(
         user,
         fieldSyncConfig
       );
+      // Re-enter scope only reverses the deactivation this feature made. Manual,
+      // disabled-upstream, and deleted-upstream inactivation remain untouched.
+      await tenantDb(trx, tenantId).table('contacts')
+        .where({ contact_name_id: matchedContact.contactNameId, entra_sync_status_reason: 'excluded_by_filter' })
+        .update({ is_inactive: false, entra_account_enabled: true, entra_sync_status: 'active', entra_sync_status_reason: null, updated_at: trx.fn.now() });
+      return changed;
     });
   });
 
