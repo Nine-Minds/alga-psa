@@ -50,7 +50,7 @@ describe('Entra user filter PostgreSQL integration', () => {
     dotenv.config({ path: resolve(repoRoot, 'server/.env') });
     dotenv.config({ path: resolve(repoRoot, 'server/.env.local') });
     db = knex({ client: 'pg', connection: {
-      host: '127.0.0.1', port: 5472,
+      host: process.env.DB_HOST || '127.0.0.1', port: Number(process.env.DB_PORT || 5472),
       database: process.env.ENTRA_DIAGNOSTICS_TEST_DB || process.env.TEST_DB_NAME || process.env.DB_NAME || 'server',
       user: process.env.DB_USER_ADMIN || 'postgres', password: adminPassword(),
     }, pool: { min: 0, max: 2 } });

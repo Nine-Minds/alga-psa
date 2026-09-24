@@ -173,7 +173,8 @@ describe('Entra diagnostics: migrated DB and Microsoft Graph emulator', () => {
     expect(connection.steps.find(s => s.id === 'managed_tenants_endpoint')?.http?.requestId).toBeTruthy();
     const clients = await runEntraClientAccessDiagnostics(tenant, 'operator', { includeUserYield: true });
     expect(clients.isDone).toBe(true);
-    expect(clients.clients[0].overallStatus, JSON.stringify(clients.clients[0].steps)).toBe('pass');
+    expect(clients.clients[0].overallStatus, JSON.stringify(clients.clients[0].steps)).toBe('warn');
+    expect(clients.clients[0].steps.find(s => s.id === 'shared_mailbox_detection')?.status).toBe('warn');
     expect(clients.clients[0].steps.find(s => s.id === 'user_yield_preview')?.data).toMatchObject({ totalUsers: 1, includedUsers: 1 });
     expect(JSON.stringify(connection.supportBundle)).not.toContain(secret);
     expect(context.writes.length).toBeGreaterThan(0);
@@ -302,7 +303,7 @@ describe('Entra diagnostics: migrated DB and Microsoft Graph emulator', () => {
       previous = result.completed; batches++;
     }
     expect(result.isDone).toBe(true); expect(result.completed).toBe(50);
-    expect(result.aggregate.ok).toBe(50); expect(batches).toBe(17);
+    expect(result.aggregate.other).toBe(50); expect(batches).toBe(17);
     expect(requests.filter(path => path.startsWith('POST '))).toHaveLength(50);
   });
 
