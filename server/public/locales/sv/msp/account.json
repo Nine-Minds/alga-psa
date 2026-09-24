@@ -8,12 +8,12 @@
     "loadAccountFailed": "Det gick inte att ladda kontoinformationen",
     "openPaymentPortalFailed": "Det gick inte att öppna betalningsportalen",
     "updatePaymentFailed": "Det gick inte att uppdatera betalningsmetoden",
-    "feedbackSendFailed": "Det gick inte att skicka återkopplingen",
+    "feedbackSendFailed": "Det gick inte att skicka din återkoppling",
     "cancelSubscriptionFailed": "Det gick inte att säga upp abonnemanget",
     "pricingPreviewFailed": "Det gick inte att hämta prisförhandsgranskningen",
     "upgradePricingFailed": "Det gick inte att hämta priset för uppgraderingen",
-    "intervalSwitchAnnual": "Debiteringen ändras till årlig debitering vid slutet av den nuvarande perioden.",
-    "intervalSwitchMonthly": "Debiteringen ändras till månadsvis debitering vid slutet av den nuvarande perioden.",
+    "intervalSwitchAnnual": "Debiteringsintervallet ändras till årligen vid slutet av den nuvarande perioden.",
+    "intervalSwitchMonthly": "Debiteringsintervallet ändras till månadsvis vid slutet av den nuvarande perioden.",
     "intervalSwitchFailed": "Det gick inte att ändra debiteringsintervallet",
     "soloProTrialStarted": "Provperioden för Pro har startat. Pro-funktionerna är tillgängliga fram till {{end}} medan du fortsätter att debiteras för Solo.",
     "soloProTrialStartFailed": "Det gick inte att starta provperioden för Pro",
@@ -49,11 +49,11 @@
   "features": {
     "integrations": "Integreringar — anslut kalender, Teams, Entra och andra externa tjänster",
     "extensions": "Tillägg — installera och hantera tillägg från marknadsplatsen för din arbetsyta",
-    "sso": "Enkel inloggning — konfigurera identitetsleverantörer för SSO och OAuth för ditt team",
-    "advancedAssets": "Avancerad tillgångshantering — få tillgång till RMM-kopplad tillgångsidentifiering och utökade hanteringsfunktioner",
+    "sso": "Enkel inloggning — konfigurera SSO- och OAuth-identitetsleverantörer för ditt team",
+    "advancedAssets": "Avancerad tillgångshantering — lås upp RMM-kopplad tillgångsidentifiering och utökade hanteringsfunktioner",
     "clientPortalAdmin": "Administration av kundportalen — hantera avancerad varumärkesanpassning och administration av kundportalen",
     "workflowDesigner": "Arbetsflödesdesigner — skapa och underhåll anpassade automatiseringar av arbetsflöden",
-    "mobileAccess": "Mobil åtkomst — logga in från AlgaPSA:s mobilapp",
+    "mobileAccess": "Mobil åtkomst — logga in från AlgaPSA-mobilappen",
     "entraSync": "Microsoft Entra-synkronisering — identifiera klientorganisationer automatiskt och synkronisera kontakter från Entra ID",
     "cipp": "CIPP-integrering — anslut din CIPP-instans för Entra-hantering av flera klientorganisationer",
     "teamsIntegration": "Microsoft Teams — mötesintegrering och Teams-bot för ärendeaviseringar",
@@ -72,7 +72,7 @@
     "upgradePendingTitle": "Din uppgradering väntar",
     "upgradePendingBody": "Apple fortsätter att debitera dig för Solo fram till {{date}}. Därefter tar ditt uppgraderade abonnemang över automatiskt.",
     "autoRenewWarningStrong": "Automatisk förnyelse är aktiverad för ditt Apple-abonnemang",
-    "autoRenewWarningBody": "Inaktivera den i iOS under Inställningar → Apple-ID → Abonnemang → AlgaPSA, annars debiterar Apple dig igen och uppgraderingen fördröjs.",
+    "autoRenewWarningBody": "inaktivera den i iOS under Inställningar → Apple-ID → Abonnemang → AlgaPSA, annars debiterar Apple dig igen och uppgraderingen fördröjs.",
     "cancelUpgrade": "Avbryt uppgradering",
     "appleManagedBody": "Ditt abonnemang hanteras av Apple. Den nuvarande debiteringsperioden slutar {{date}}. Du kan när som helst uppgradera till ett större abonnemang — vi anpassar den nya debiteringen till din Apple-period så att du aldrig betalar för båda samtidigt."
   },
@@ -198,7 +198,7 @@
     "noInvoices": "Inga fakturor hittades"
   },
   "dangerZone": {
-    "title": "Riskområde",
+    "title": "Riskzon",
     "body": "Om du säger upp abonnemanget inaktiveras åtkomsten för alla användare vid slutet av den nuvarande debiteringsperioden.",
     "cancelSubscription": "Säg upp abonnemang",
     "scheduledBody": "Ditt abonnemang avslutas {{date}}. Alla kan fortsätta använda AlgaPSA fram till dess."
@@ -326,7 +326,7 @@
     "footer": "Integreringar, hanterad e-post, arbetsflödesdesign och mobil åtkomst är inte längre tillgängliga efter nedgraderingen."
   },
   "soloProTrialDialog": {
-    "title": "Starta en 30 dagars provperiod för Pro",
+    "title": "Starta 30 dagars provperiod för Pro",
     "starting": "Startar…",
     "confirm": "Starta provperiod för Pro",
     "intro": "Du är på väg att starta en <strong>kostnadsfri provperiod på 30 dagar</strong> med Pro-funktioner.",
