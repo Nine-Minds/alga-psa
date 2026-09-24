@@ -688,7 +688,8 @@
       "localTime": "Local time",
       "timezoneOptional": "Timezone (optional)",
       "tenantTimezoneDefault": "Tenant timezone",
-      "dateTriggerSummary": "Runs {{days}} {{direction}} {{source}} at {{time}} ({{timezone}})"
+      "dateTriggerSummary": "Runs {{days}} {{direction}} {{source}} at {{time}} ({{timezone}})",
+      "inputDataDatePrefix": "Este flujo de trabajo recibe la carga útil definida por"
     },
     "stepPanel": {
       "readOnly": "Acceso de solo lectura: la edición de pasos está deshabilitada.",

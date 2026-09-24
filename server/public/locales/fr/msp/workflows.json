@@ -688,7 +688,8 @@
       "localTime": "Local time",
       "timezoneOptional": "Timezone (optional)",
       "tenantTimezoneDefault": "Tenant timezone",
-      "dateTriggerSummary": "Runs {{days}} {{direction}} {{source}} at {{time}} ({{timezone}})"
+      "dateTriggerSummary": "Runs {{days}} {{direction}} {{source}} at {{time}} ({{timezone}})",
+      "inputDataDatePrefix": "Ce workflow reçoit la charge utile définie par"
     },
     "stepPanel": {
       "readOnly": "Accès en lecture seule : l’édition des étapes est désactivée.",

@@ -688,7 +688,8 @@
       "localTime": "Local time",
       "timezoneOptional": "Timezone (optional)",
       "tenantTimezoneDefault": "Tenant timezone",
-      "dateTriggerSummary": "Runs {{days}} {{direction}} {{source}} at {{time}} ({{timezone}})"
+      "dateTriggerSummary": "Runs {{days}} {{direction}} {{source}} at {{time}} ({{timezone}})",
+      "inputDataDatePrefix": "This workflow receives the payload defined by"
     },
     "stepPanel": {
       "readOnly": "Read-only access: step editing is disabled.",

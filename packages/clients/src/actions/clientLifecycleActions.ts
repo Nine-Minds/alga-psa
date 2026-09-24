@@ -5,12 +5,11 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildClientStatusChangedPayload } from '@alga-psa/workflow-streams';
-import type { ClientLifecycleStatus, IClient } from '@alga-psa/types';
+import { normalizeDateOnly, type ClientLifecycleStatus, type IClient } from '@alga-psa/types';
 import { ClientLifecycleStatusSchema } from '../schemas/client.schema';
-import { normalizeDateDomainKeyDate } from '@alga-psa/event-bus/workflow/dateDomainEvents';
 
 function normalizeClient(client: IClient): IClient {
-  return client.client_since == null ? client : { ...client, client_since: normalizeDateDomainKeyDate(client.client_since as string | Date) };
+  return client.client_since == null ? client : { ...client, client_since: normalizeDateOnly(client.client_since as string | Date) };
 }
 
 export const setClientLifecycleStatus = withAuth(async (
