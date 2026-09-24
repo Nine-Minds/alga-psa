@@ -43,13 +43,28 @@ export interface UseListViewsOptions<TLive, F> {
   adapter: ListViewAdapter<TLive, F>;
   /** The list's live state, as the adapter understands it. */
   live: TLive;
-  /** Replaces the list's live state (a view, or the baseline when `viewId` is null). */
+  /**
+   * Replaces the list's live state (a view, or the baseline when `viewId` is
+   * null). When `ownsUrl` is set, the list is also the URL writer: it must
+   * write one URL — the applied filters plus `?view=<meta.viewId>` — here.
+   */
   onApply: (next: TLive, meta: { viewId: string | null }) => void;
   /**
    * The URL the list was opened with already expresses the list's state
    * (explicit filter params). A personal default must not override a link.
    */
   urlHasExplicitState?: boolean;
+  /**
+   * The list mirrors its full state (filters and `?view=`) into the address bar
+   * itself, so it must be the only writer. When true, the hook never rewrites
+   * `?view=` on an apply: `onApply` receives the `viewId` and writes the single,
+   * router-authoritative URL. This matters because the patched `history`
+   * `replaceState` turns every null-state call into a router action, and a
+   * filter write immediately followed by a second view write races itself and
+   * can settle on the older URL. Lists that carry only `?view=` (Clients,
+   * Contacts, Assets) leave this off and the hook writes the parameter for them.
+   */
+  ownsUrl?: boolean;
   /** Hold off first-load resolution until the list can apply a view (e.g. options loaded). */
   ready?: boolean;
 }
@@ -111,6 +126,7 @@ export function useListViews<TLive, F = Record<string, unknown>>({
   live,
   onApply,
   urlHasExplicitState = false,
+  ownsUrl = false,
   ready = true,
 }: UseListViewsOptions<TLive, F>): ListViewsController<F> {
   const { t } = useTranslation('common');
@@ -129,6 +145,8 @@ export function useListViews<TLive, F = Record<string, unknown>>({
   adapterRef.current = adapter;
   const resolvedInitialRef = useRef(false);
   const urlHasExplicitStateRef = useRef(urlHasExplicitState);
+  const ownsUrlRef = useRef(ownsUrl);
+  ownsUrlRef.current = ownsUrl;
 
   const reportFailure = useCallback((result: unknown, fallbackKey: string, fallback: string) => {
     const message = isFailure(result) ? getErrorMessage(result) : null;
@@ -160,11 +178,15 @@ export function useListViews<TLive, F = Record<string, unknown>>({
 
   const applySummary = useCallback((view: ListViewSummary<F> | null) => {
     const currentAdapter = adapterRef.current;
+    // A list that owns its URL writes the applied filters and `view=` together in
+    // onApply; writing here too would be the second, racing history write this
+    // option exists to remove.
+    const listWritesUrl = ownsUrlRef.current;
     if (!view) {
       onApplyRef.current(currentAdapter.apply(null, liveRef.current), { viewId: null });
       setActiveViewId(null);
       setAppliedSettings(null);
-      writeViewParam(null);
+      if (!listWritesUrl) writeViewParam(null);
       return;
     }
     const { settings, dropped } = currentAdapter.sanitize(view.settings);
@@ -179,7 +201,7 @@ export function useListViews<TLive, F = Record<string, unknown>>({
     onApplyRef.current(currentAdapter.apply(settings, liveRef.current), { viewId: view.view_id });
     setActiveViewId(view.view_id);
     setAppliedSettings(settings);
-    writeViewParam(view.view_id);
+    if (!listWritesUrl) writeViewParam(view.view_id);
   }, [t]);
 
   // First-load resolution: `?view=` → personal default → baseline. Runs once.

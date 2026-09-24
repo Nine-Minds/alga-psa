@@ -323,6 +323,7 @@ export default function TicketingDashboardContainer({
     page?: number,
     pageSize?: number,
     historyMode: 'replace' | 'push' = 'replace',
+    namedViewId?: string | null,
   ) => {
     // The list is no longer the page being described: writing here would replace
     // the history entry the router just pushed for the ticket detail and bounce
@@ -404,9 +405,14 @@ export default function TicketingDashboardContainer({
     if (filters.bundleView && filters.bundleView !== 'bundled') {
       params.set('bundleView', filters.bundleView);
     }
-    // The applied named view is owned by useListViews; carry it through every
-    // filter rewrite so the address bar keeps naming the view being refined.
-    const activeNamedView = new URLSearchParams(window.location.search).get(LIST_VIEW_URL_PARAM);
+    // The applied named view is carried through every filter rewrite so the
+    // address bar keeps naming the view being refined. An apply passes the view
+    // it just put on screen (or null for "Default view") so the filters and the
+    // view are a single write; a plain edit passes nothing and reads the live
+    // view back out of the address bar.
+    const activeNamedView = namedViewId === undefined
+      ? new URLSearchParams(window.location.search).get(LIST_VIEW_URL_PARAM)
+      : namedViewId;
     if (activeNamedView) {
       params.set(LIST_VIEW_URL_PARAM, activeNamedView);
     }
@@ -1013,7 +1019,7 @@ export default function TicketingDashboardContainer({
     known: listViewKnownIds,
   }), [neutralListFilters, resolveViewForBoard, knownFilterIds, listViewKnownIds]);
 
-  const handleListViewApply = useCallback((next: TicketListLiveState) => {
+  const handleListViewApply = useCallback((next: TicketListLiveState, meta: { viewId: string | null }) => {
     if (filterFetchTimeoutRef.current) {
       clearTimeout(filterFetchTimeoutRef.current);
       filterFetchTimeoutRef.current = null;
@@ -1032,7 +1038,11 @@ export default function TicketingDashboardContainer({
       // The remembered page size would otherwise pull the list straight back.
       setStoredPageSize(next.pageSize);
     }
-    updateURLWithFilters(next.filters, 1, next.pageSize);
+    // One write, router-authoritative: the applied filters and the view id go
+    // into the address bar together. The hook's own `?view=` write is disabled
+    // (ownsUrl below) so there is never a second, competing history write for
+    // the server action to race.
+    updateURLWithFilters(next.filters, 1, next.pageSize, 'replace', meta.viewId);
     void fetchTicketsRef.current(next.filters, 1, next.pageSize, {
       sortBy: nextSortBy,
       sortDirection: nextSortDirection,
@@ -1045,6 +1055,9 @@ export default function TicketingDashboardContainer({
     onApply: handleListViewApply,
     // A link that names filters wins over the user's personal default.
     urlHasExplicitState: entryUrlHasFilterOpinion.current,
+    // Tickets mirror their filters into the URL; they write filters + view as a
+    // single history entry rather than letting the hook append a second one.
+    ownsUrl: true,
   });
 
   const mappedAndFilteredBoards = effectiveOptions.boardOptions.map(board => ({

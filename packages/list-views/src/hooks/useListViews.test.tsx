@@ -270,11 +270,15 @@ describe('useListViews ?view= under the Next router', () => {
     window.history.replaceState(null, '', '/msp/tickets?boardIds=x');
   });
 
-  function renderTickets(onApply: (next: Live, meta: { viewId: string | null }) => void = listOnApply) {
+  function renderTickets(
+    onApply: (next: Live, meta: { viewId: string | null }) => void = listOnApply,
+    ownsUrl = false,
+  ) {
     return renderHook(() => useListViews<Live, Filters>({
       adapter: { ...adapter, listKey: 'tickets' },
       live: { status: 'active', tags: [] } as Live,
       onApply,
+      ownsUrl,
     }));
   }
 
@@ -287,7 +291,7 @@ describe('useListViews ?view= under the Next router', () => {
     replaceStateSpy = undefined;
   });
 
-  it('keeps view= alongside the filters URL that onApply writes', async () => {
+  it('writes view= for a list that does not own the URL', async () => {
     actions.listListViews.mockResolvedValue(collection());
     setTicketsUrl('?boardIds=x');
     const replaceState = emulateNextHistory();
@@ -297,7 +301,35 @@ describe('useListViews ?view= under the Next router', () => {
 
     act(() => result.current.applyView(VIEW_A));
 
+    // No ownsUrl: the hook appends the view to whatever the list wrote.
     expect(replaceState).toHaveBeenCalledWith(null, '', expect.any(String));
+    const search = window.location.search;
+    expect(new URLSearchParams(search).get('view')).toBe(VIEW_A);
+    expect(new URLSearchParams(search).get('boardIds')).toBe('x');
+  });
+
+  it('leaves the single URL write to a list that owns it (ownsUrl)', async () => {
+    actions.listListViews.mockResolvedValue(collection());
+    setTicketsUrl('?boardIds=x');
+    const replaceState = emulateNextHistory();
+
+    // A ticket-like list builds filters + view in one URL and writes it once.
+    const owningOnApply = vi.fn((_next: Live, meta: { viewId: string | null }) => {
+      const url = new URL(window.location.href);
+      if (meta.viewId) url.searchParams.set('view', meta.viewId);
+      else url.searchParams.delete('view');
+      window.history.replaceState(null, '', `${url.pathname}${url.search}`);
+    });
+
+    const { result } = renderTickets(owningOnApply, true);
+    await waitFor(() => expect(result.current.views).toHaveLength(2));
+    replaceState.mockClear();
+
+    act(() => result.current.applyView(VIEW_A));
+
+    expect(owningOnApply).toHaveBeenCalledWith(expect.anything(), { viewId: VIEW_A });
+    // The hook never appends its own `view=` write after the list's.
+    expect(replaceState).toHaveBeenCalledTimes(1);
     const search = window.location.search;
     expect(new URLSearchParams(search).get('view')).toBe(VIEW_A);
     expect(new URLSearchParams(search).get('boardIds')).toBe('x');

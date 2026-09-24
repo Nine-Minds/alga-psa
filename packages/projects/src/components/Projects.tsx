@@ -276,11 +276,15 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
   }, [activeFilters.deadlineType, activeFilters.deadlineDate, activeFilters.deadlineEndDate]);
 
   // Sync filter state to URL
-  const updateURLWithFilters = useCallback((filters: ProjectListFilters) => {
+  const updateURLWithFilters = useCallback((filters: ProjectListFilters, namedViewId?: string | null) => {
     let newURL = buildURLFromFilters(filters);
-    // The applied named view is owned by useListViews; keep naming it while
-    // its filters are refined.
-    const activeNamedView = new URLSearchParams(window.location.search).get(LIST_VIEW_URL_PARAM);
+    // Keep naming the applied view while its filters are refined. An apply
+    // passes the view it just put on screen (or null for "Default view") so the
+    // filters and the view are one history write; a plain edit passes nothing
+    // and reads the live view back out of the address bar.
+    const activeNamedView = namedViewId === undefined
+      ? new URLSearchParams(window.location.search).get(LIST_VIEW_URL_PARAM)
+      : namedViewId;
     if (activeNamedView) {
       newURL += `${newURL.includes('?') ? '&' : '?'}${LIST_VIEW_URL_PARAM}=${encodeURIComponent(activeNamedView)}`;
     }
@@ -407,7 +411,7 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
     known: { clientIds: new Set(clients.map((client) => client.client_id)) },
   }), [clients]);
 
-  const handleListViewApply = useCallback((next: ProjectListLiveState) => {
+  const handleListViewApply = useCallback((next: ProjectListLiveState, meta: { viewId: string | null }) => {
     if (filterUpdateTimeoutRef.current) {
       clearTimeout(filterUpdateTimeoutRef.current);
       filterUpdateTimeoutRef.current = null;
@@ -421,7 +425,8 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
     };
     setActiveFilters(nextFilters);
     activeFiltersRef.current = nextFilters;
-    updateURLWithFilters(nextFilters);
+    // Filters and view in one write; the hook's own write is disabled (ownsUrl).
+    updateURLWithFilters(nextFilters, meta.viewId);
     setTableSort(next.sort);
     setColumnSizing(next.columnSizing);
     setViewApplyToken((token) => token + 1);
@@ -432,6 +437,8 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
     live: listViewLive,
     onApply: handleListViewApply,
     urlHasExplicitState: entryUrlHasFilters.current,
+    // Projects mirror their filters into the URL, so they own the single write.
+    ownsUrl: true,
   });
 
   const handleTagsChange = (projectId: string, tags: ITag[]) => {
