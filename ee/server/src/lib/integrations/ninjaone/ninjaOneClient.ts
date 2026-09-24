@@ -159,6 +159,8 @@ export class NinjaOneClient {
   private refreshPromise: Promise<void> | null = null;
   private workflowContext?: NinjaOneClientConfig['workflowContext'];
 
+  getDashboardBaseUrl(): string { return this.instanceUrl.replace(/\/+$/, ''); }
+
   constructor(config: NinjaOneClientConfig) {
     this.tenantId = config.tenantId;
     this.instanceUrl = config.instanceUrl || NINJAONE_REGIONS[config.region || 'US'];

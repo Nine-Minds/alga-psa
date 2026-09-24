@@ -747,6 +747,26 @@
       "offline": "Offline",
       "available": "Remote-Zugriff verfügbar",
       "deviceOffline": "Gerät offline"
+    },
+    "links": {
+      "title": "Remote access links",
+      "description": "Configure URL templates for ScreenConnect and other remote tools.",
+      "add": "Add link",
+      "empty": "No remote access links are configured.",
+      "edit": "Edit",
+      "delete": "Delete",
+      "addTitle": "Add remote access link",
+      "editTitle": "Edit remote access link",
+      "cancel": "Cancel",
+      "save": "Save",
+      "label": "Button label",
+      "template": "URL template",
+      "tokens": "Placeholders: {asset.name}, {asset.asset_tag}, {asset.serial_number}, {client.name}, and {field.key}.",
+      "errors": {
+        "load": "Failed to load remote access links.",
+        "save": "Failed to save the remote access link.",
+        "delete": "Failed to delete the remote access link."
+      }
     }
   },
   "assetListErrors": {

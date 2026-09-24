@@ -9,6 +9,33 @@ export interface TacticalBetaPage<T> {
   results?: T[];
 }
 
+export interface TacticalMeshCentralLinks {
+  control?: string | null;
+  terminal?: string | null;
+  file?: string | null;
+}
+
+function mapTacticalMeshCentralLinks(value: unknown): TacticalMeshCentralLinks {
+  // This endpoint's response contract needs live verification; tolerate absent or unexpected fields.
+  if (!value || typeof value !== 'object') return {};
+  const response = value as Record<string, unknown>;
+  const mesh = response.meshcentral && typeof response.meshcentral === 'object'
+    ? response.meshcentral as Record<string, unknown>
+    : response;
+  const link = (...keys: string[]) => {
+    for (const key of keys) {
+      const candidate = mesh[key];
+      if (typeof candidate === 'string' && candidate.trim()) return candidate;
+    }
+    return null;
+  };
+  return {
+    control: link('control', 'control_url', 'meshcentral_url'),
+    terminal: link('terminal', 'terminal_url', 'shell', 'shell_url'),
+    file: link('file', 'file_url'),
+  };
+}
+
 export function normalizeTacticalBaseUrl(input: string): string {
   const raw = (input || '').trim();
   if (!raw) return '';
@@ -134,6 +161,14 @@ export class TacticalRmmClient {
     return results;
   }
 
+  async getAgentMeshCentralLinks(agentId: string): Promise<TacticalMeshCentralLinks> {
+    const response = await this.request<unknown>({
+      method: 'GET',
+      path: `/agents/${encodeURIComponent(agentId)}/meshcentral/`,
+    });
+    return mapTacticalMeshCentralLinks(response);
+  }
+
   async checkCreds(input: { username: string; password: string }): Promise<{ totp: boolean }> {
     const res = await axios.post(new URL('/v2/checkcreds/', this.ax.defaults.baseURL!).toString(), input, {
       timeout: 30_000,
@@ -156,4 +191,3 @@ export class TacticalRmmClient {
     return { token };
   }
 }
-

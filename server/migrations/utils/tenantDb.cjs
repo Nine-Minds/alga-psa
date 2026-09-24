@@ -22,6 +22,7 @@ const TENANT_TABLE_METADATA = {
   accounting_sync_operations: { scope: 'tenant' },
   asset_types: { scope: 'tenant' },
   asset_type_registry: { scope: 'tenant' },
+  asset_remote_access_links: { scope: 'tenant' },
   apple_iap_subscriptions: { scope: 'tenant' },
   // Reference table for tenantless Apple sign-in discovery, but tenant-known operations must scope by tenant.
   apple_user_identities: { scope: 'tenant' },

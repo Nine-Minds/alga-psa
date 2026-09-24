@@ -23,6 +23,15 @@ export interface AssetRelationship {
 // RMM Provider types
 export type RmmProvider = 'ninjaone' | 'tacticalrmm' | 'tanium' | 'levelio' | 'datto' | 'connectwise_automate' | 'huntress';
 export type RmmAgentStatus = 'online' | 'offline' | 'overdue' | 'unknown';
+export interface AssetRemoteAccessLink {
+  link_id: string;
+  label: string;
+  url_template: string;
+  asset_type_slugs: string[] | null;
+  requires_field_key: string | null;
+  is_enabled: boolean;
+  display_order: number;
+}
 export type AssetFactSourceType = 'integration' | 'manual' | 'system';
 
 export interface AssetFact {
