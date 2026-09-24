@@ -2078,6 +2078,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   const triggerSchemaPolicy = useMemo(() => {
     const dateTrigger = activeDefinition?.trigger?.type === 'date' ? activeDefinition.trigger : null;
     if (dateTrigger) {
+      // LEVERAGE: pattern date-trigger-source-list — third copy of the source-to-schema map; use the shared one.
       const expectedRefs: Record<string, string> = {
         'client.anniversary': 'payload.ClientAnniversary.v1',
         'contract.renewal_decision': 'payload.ContractRenewalDate.v1',
@@ -4250,6 +4251,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                     value={dateTrigger.source}
                                     disabled={!canManage}
                                     showPlaceholderInDropdown={false}
+                                    // LEVERAGE: pattern date-trigger-source-list — build from the shared source definitions (id + labelKey).
                                     options={[
                                       { value: 'client.anniversary', label: t('designer.form.dateSourceAnniversary', { defaultValue: 'Client anniversary' }) },
                                       { value: 'contract.renewal_decision', label: t('designer.form.dateSourceRenewal', { defaultValue: 'Contract renewal decision date' }) },

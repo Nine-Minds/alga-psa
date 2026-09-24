@@ -7,6 +7,7 @@ export const contractRenewalDecisionSource: DateTriggerSource = {
   id: 'contract.renewal_decision', payloadSchemaRef: 'payload.ContractRenewalDate.v1',
   domainEvent: { eventType: 'CONTRACT_RENEWAL_UPCOMING', windowDays: 90, buildPayload: (occurrence, daysUntil) => buildContractRenewalUpcomingPayload({ contractId: String(occurrence.payload.contractId), clientId: occurrence.clientId, renewalAt: String(occurrence.payload.endDate ?? occurrence.occursOn), decisionDueDate: occurrence.occursOn, daysUntilRenewal: daysUntil, daysUntilDecisionDue: daysUntil, renewalCycleKey: occurrence.cycleKey }) },
   async findOccurrences(knex: Knex, tenant: string, fromDate: string, toDate: string) {
+    // LEVERAGE: pattern contract-date-source-query — same join as contractEnd.ts.
     const rows = await tenantDb(knex, tenant).table('client_contracts as cc').join('clients as c', function joinClient() { this.on('c.client_id', '=', 'cc.client_id').andOn('c.tenant', '=', 'cc.tenant'); })
       .select('cc.client_contract_id', 'cc.contract_id', 'cc.client_id', 'cc.renewal_cycle_key', 'cc.renewal_mode', 'c.client_name')
       .select(knex.raw('cc.decision_due_date::text as decision_due_date, cc.end_date::text as end_date'))
