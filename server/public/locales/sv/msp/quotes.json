@@ -26,7 +26,7 @@
       "sendReminder": "Skicka påminnelse",
       "sendToClient": "Skicka till kund",
       "setAsDefault": "Ange som standard",
-      "submitForApproval": "Skicka för godkännande",
+      "submitForApproval": "Skicka in för godkännande",
       "done": "Klart"
     },
     "badges": {
@@ -131,7 +131,7 @@
   },
   "quoteForm": {
     "actions": {
-      "cancelQuote": "Avbryt offert",
+      "cancelQuote": "Annullera offert",
       "convertToBoth": "Konvertera till båda",
       "convertToContract": "Konvertera till avtal",
       "convertToInvoice": "Konvertera till faktura",
@@ -182,7 +182,7 @@
       "selectClient": "Välj kund",
       "selectContact": "Välj kontakt",
       "selectCurrency": "Välj valuta",
-      "startFromScratch": "Börja från början",
+      "startFromScratch": "Börja från grunden",
       "useDefaultLayout": "Använd standardlayout"
     },
     "alerts": {
@@ -217,12 +217,12 @@
     },
     "errorActions": {
       "approveQuote": "godkänna offerten",
-      "cancelQuote": "avbryta offerten",
+      "cancelQuote": "annullera offerten",
       "requestChanges": "begära ändringar",
       "resendQuote": "skicka offerten igen",
       "sendQuote": "skicka offerten",
       "sendReminder": "skicka påminnelsen",
-      "submitForApproval": "skicka för godkännande"
+      "submitForApproval": "skicka in för godkännande"
     },
     "errors": {
       "convert": "Det gick inte att konvertera offerten",
@@ -240,7 +240,7 @@
     "loading": "Laddar offertformulär…",
     "notices": {
       "approved": "Offerten har godkänts och är klar att skickas.",
-      "cancelled": "Offerten har avbrutits.",
+      "cancelled": "Offerten har annullerats.",
       "createdDraftContract": "Avtalsutkastet {{name}} har skapats.",
       "createdDraftContractAndInvoice": "Avtalsutkastet {{contractName}} och fakturautkastet {{invoiceName}} har skapats.",
       "createdDraftInvoice": "Fakturautkastet {{name}} har skapats.",
@@ -248,7 +248,7 @@
       "requestedChanges": "Offerten har återställts till utkast med begärda ändringar.",
       "resent": "Offerten har skickats igen.",
       "sent": "Offerten har skickats till kunden.",
-      "submittedForApproval": "Offerten har skickats för internt godkännande."
+      "submittedForApproval": "Offerten har skickats in för internt godkännande."
     },
     "readOnlyNotice": "Den här offerten är skrivskyddad. Skapa en ny revision för att göra ändringar.",
     "validation": {
@@ -363,7 +363,7 @@
     },
     "sections": {
       "activityLog": "Aktivitetslogg",
-      "clientNotes": "Kundanteckningar",
+      "clientNotes": "Anteckningar till kund",
       "internalNotes": "Interna anteckningar",
       "lineItems": "Rader",
       "quoteLayout": "Offertlayout",
@@ -405,7 +405,7 @@
     "errors": {
       "approve": "Det gick inte att godkänna offerten",
       "assignTemplate": "Det gick inte att tilldela mallen",
-      "cancel": "Det gick inte att avbryta offerten",
+      "cancel": "Det gick inte att annullera offerten",
       "convert": "Det gick inte att konvertera offerten",
       "delete": "Det gick inte att radera offerten",
       "deleteUnavailable": "Offerten kunde inte raderas",
@@ -421,7 +421,7 @@
       "saveAsTemplate": "Det gick inte att spara offerten som mall",
       "send": "Det gick inte att skicka offerten",
       "sendReminder": "Det gick inte att skicka offertpåminnelsen",
-      "submitForApproval": "Det gick inte att skicka offerten för godkännande"
+      "submitForApproval": "Det gick inte att skicka in offerten för godkännande"
     },
     "labels": {
       "phase": "Fas: {{phase}}",
@@ -437,7 +437,7 @@
       "requestedChanges": "Offerten har återställts till utkast med begärda ändringar.",
       "resent": "Offerten har skickats igen till de konfigurerade faktureringsmottagarna.",
       "sent": "Offerten har skickats till kunden.",
-      "submittedForApproval": "Offerten har skickats för internt godkännande.",
+      "submittedForApproval": "Offerten har skickats in för internt godkännande.",
       "templateAssigned": "Dokumentmallen har tilldelats.",
       "templateCleared": "Dokumentmallen har tagits bort (standardmallen används).",
       "createdSalesOrder": "Försäljningsorderutkastet {{number}} har skapats. Produktraderna faktureras vid leverans."
@@ -662,7 +662,7 @@
       "pendingApproval": "Väntar på godkännande"
     },
     "empty": {
-      "approved": "Det finns inga offerter i kön för godkända offerter just nu.",
+      "approved": "Det finns inga godkända offerter i kön just nu.",
       "pendingApproval": "Det finns inga offerter som väntar på godkännande just nu.",
       "title": "Inga offerter hittades"
     },
@@ -731,7 +731,7 @@
     "description": "Utforma offertlayouten i den visuella redigeraren och förhandsgranska sedan med exempeldata.",
     "errors": {
       "exportAst": "Det gick inte att exportera mallens AST från den visuella arbetsytan: {{message}}",
-      "load": "Det gick inte att ladda offertmallredigeraren",
+      "load": "Det gick inte att ladda redigeraren för offertmallar",
       "nameRequired": "Mallnamn krävs.",
       "notFound": "Dokumentmallen för offerten hittades inte.",
       "previewPipeline": "Förhandsgranskningsprocessen misslyckades.",
