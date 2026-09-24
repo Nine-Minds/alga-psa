@@ -59,6 +59,14 @@ interface ContractChoiceState {
   cutoverDate: string;
 }
 
+interface ContactAssignmentState {
+  billingProfileId: string;
+  /** A label — who runs this segment. At most one contact per profile. */
+  isManager: boolean;
+  /** The portal grant, separate and opt-in (Q6). */
+  canViewProfileTickets: boolean;
+}
+
 const toDate = (value: string | null | undefined): Date | undefined => {
   if (!value) return undefined;
   const parsed = new Date(value.length === 10 ? `${value}T00:00:00.000Z` : value);
@@ -83,7 +91,7 @@ export const MergeClientsDialog: React.FC<MergeClientsDialogProps> = ({
   const [preview, setPreview] = useState<ClientMergePreview | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [isMerging, setIsMerging] = useState(false);
-  const [contactProfiles, setContactProfiles] = useState<Record<string, string>>({});
+  const [contactProfiles, setContactProfiles] = useState<Record<string, ContactAssignmentState>>({});
   const [contractChoices, setContractChoices] = useState<Record<string, ContractChoiceState>>({});
   const [pinPortalGrants, setPinPortalGrants] = useState(true);
   const [confirmText, setConfirmText] = useState('');
@@ -142,7 +150,14 @@ export const MergeClientsDialog: React.FC<MergeClientsDialogProps> = ({
       setContactProfiles(Object.fromEntries(
         result.contacts
           .filter((contact) => contact.suggestedBillingProfileId)
-          .map((contact) => [contact.contactNameId, contact.suggestedBillingProfileId as string]),
+          .map((contact) => [contact.contactNameId, {
+            billingProfileId: contact.suggestedBillingProfileId as string,
+            // Neither flag is suggested: naming a manager is an organisational
+            // fact the MSP knows, and the ticket grant widens what someone can
+            // read, so both stay off until asked for.
+            isManager: false,
+            canViewProfileTickets: false,
+          }]),
       ));
       setContractChoices(Object.fromEntries(result.contracts.map((contract) => [
         contract.clientContractId,
@@ -161,6 +176,34 @@ export const MergeClientsDialog: React.FC<MergeClientsDialogProps> = ({
       setIsLoadingPreview(false);
     }
   }, [sourceClientId, targetClientId]);
+
+  /**
+   * One manager per profile is a partial unique index, and a second one would
+   * abort the whole merge at COMMIT rather than fail this row — so the picker
+   * moves the flag instead of letting the operator create the conflict.
+   */
+  const updateContactAssignment = useCallback((
+    contactNameId: string,
+    patch: Partial<ContactAssignmentState>,
+  ) => {
+    setContactProfiles((current) => {
+      const existing = current[contactNameId] ?? {
+        billingProfileId: '',
+        isManager: false,
+        canViewProfileTickets: false,
+      };
+      const next = { ...current, [contactNameId]: { ...existing, ...patch } };
+      const row = next[contactNameId];
+      if (row.isManager) {
+        for (const [otherId, other] of Object.entries(next)) {
+          if (otherId !== contactNameId && other.isManager && other.billingProfileId === row.billingProfileId) {
+            next[otherId] = { ...other, isManager: false };
+          }
+        }
+      }
+      return next;
+    });
+  }, []);
 
   const profileOptions = useMemo(
     () => (preview?.profiles ?? []).map((profile) => ({
@@ -195,9 +238,11 @@ export const MergeClientsDialog: React.FC<MergeClientsDialogProps> = ({
       const result = await mergeClientIntoParent({
         sourceClientId,
         targetClientId,
-        contactAssignments: Object.entries(contactProfiles).map(([contactNameId, billingProfileId]) => ({
+        contactAssignments: Object.entries(contactProfiles).map(([contactNameId, assignment]) => ({
           contactNameId,
-          billingProfileId,
+          billingProfileId: assignment.billingProfileId,
+          isManager: assignment.isManager,
+          canViewProfileTickets: assignment.canViewProfileTickets,
         })),
         contractDecisions: Object.entries(contractChoices).map(([clientContractId, choice]) => ({
           clientContractId,
@@ -351,7 +396,7 @@ export const MergeClientsDialog: React.FC<MergeClientsDialogProps> = ({
       <p className="text-sm text-gray-600">
         {t('mergeClients.contactsDescription', {
           defaultValue:
-            'Every contact moves to the destination client. Choose which billing profile each one belongs to — this is what lets a site manager be given their site\'s tickets later.',
+            'Every contact moves to the destination client. Choose which billing profile each one belongs to, and name the manager of a segment here if you already know who it is. The ticket checkbox is a separate grant: it lets that person see every ticket attributed to their profile in the portal.',
         })}
       </p>
       {(preview?.contacts.length ?? 0) === 0 ? (
@@ -359,26 +404,63 @@ export const MergeClientsDialog: React.FC<MergeClientsDialogProps> = ({
           {t('mergeClients.noContacts', { defaultValue: 'This client has no contacts.' })}
         </p>
       ) : (
-        <ul className="divide-y divide-gray-200 rounded-md border border-gray-200">
-          {preview?.contacts.map((contact) => (
-            <li key={contact.contactNameId} className="flex items-center justify-between gap-3 px-3 py-2">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium">{contact.fullName}</p>
-                {contact.email && <p className="truncate text-xs text-gray-500">{contact.email}</p>}
-              </div>
-              <CustomSelect
-                id={`merge-contact-profile-${contact.contactNameId}`}
-                options={profileOptions}
-                value={contactProfiles[contact.contactNameId] ?? null}
-                onValueChange={(value) =>
-                  setContactProfiles((current) => ({ ...current, [contact.contactNameId]: value }))
-                }
-                placeholder={t('mergeClients.noProfile', { defaultValue: 'No profile' })}
-                className="w-56"
-              />
-            </li>
-          ))}
-        </ul>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left text-xs uppercase tracking-wide text-gray-500">
+              <th className="py-1">{t('mergeClients.contactColumn', { defaultValue: 'Contact' })}</th>
+              <th className="py-1">{t('mergeClients.profileColumn', { defaultValue: 'Billing profile' })}</th>
+              <th className="w-20 py-1">{t('mergeClients.managerColumn', { defaultValue: 'Manager' })}</th>
+              <th className="w-32 py-1">
+                {t('mergeClients.seesTicketsColumn', { defaultValue: 'Sees profile tickets' })}
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200">
+            {preview?.contacts.map((contact) => {
+              const assignment = contactProfiles[contact.contactNameId];
+              return (
+                <tr key={contact.contactNameId}>
+                  <td className="py-1.5 pr-3">
+                    <p className="truncate text-sm font-medium">{contact.fullName}</p>
+                    {contact.email && <p className="truncate text-xs text-gray-500">{contact.email}</p>}
+                  </td>
+                  <td className="pr-3">
+                    <CustomSelect
+                      id={`merge-contact-profile-${contact.contactNameId}`}
+                      options={profileOptions}
+                      value={assignment?.billingProfileId ?? null}
+                      onValueChange={(value) => updateContactAssignment(contact.contactNameId, {
+                        billingProfileId: value,
+                      })}
+                      placeholder={t('mergeClients.noProfile', { defaultValue: 'No profile' })}
+                      className="w-56"
+                    />
+                  </td>
+                  <td>
+                    <Checkbox
+                      id={`merge-contact-manager-${contact.contactNameId}`}
+                      checked={Boolean(assignment?.isManager)}
+                      disabled={!assignment?.billingProfileId}
+                      onChange={(event) => updateContactAssignment(contact.contactNameId, {
+                        isManager: event.target.checked,
+                      })}
+                    />
+                  </td>
+                  <td>
+                    <Checkbox
+                      id={`merge-contact-tickets-${contact.contactNameId}`}
+                      checked={Boolean(assignment?.canViewProfileTickets)}
+                      disabled={!assignment?.billingProfileId}
+                      onChange={(event) => updateContactAssignment(contact.contactNameId, {
+                        canViewProfileTickets: event.target.checked,
+                      })}
+                    />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       )}
     </div>
   );
