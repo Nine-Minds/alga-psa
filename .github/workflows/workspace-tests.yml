@@ -139,12 +139,14 @@ jobs:
       - name: Start disposable object storage
         if: matrix.suite == 'workspace-runtime'
         shell: bash
+        # quay.io/minio/minio went private (anonymous pulls return 401); bitnamilegacy
+        # is a frozen public mirror of the same MinIO release and needs no command.
         run: |
           docker run -d --name workspace-test-minio \
             -p 127.0.0.1:59000:9000 \
             -e MINIO_ROOT_USER=regression-test \
             -e MINIO_ROOT_PASSWORD=regression-test-password \
-            quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z server /data
+            bitnamilegacy/minio:2025.4.22
           for ((attempt = 1; attempt <= 60; attempt++)); do
             if curl --fail --silent http://127.0.0.1:59000/minio/health/ready; then exit 0; fi
             sleep 1
