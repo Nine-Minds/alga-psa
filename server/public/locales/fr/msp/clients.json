@@ -307,8 +307,7 @@
     "parentClientSelf": "Un client ne peut pas être son propre parent",
     "parentClientPlaceholder": "Aucun client parent",
     "parentClientClear": "Effacer",
-    "parentClientLegacy": "Précédemment saisi comme texte : {{name}}",
-    "clientSince": "Client since"
+    "parentClientLegacy": "Précédemment saisi comme texte : {{name}}"
   },
   "clientCommandCenter": {
     "cards": {

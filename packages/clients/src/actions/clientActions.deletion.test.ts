@@ -182,46 +182,6 @@ describe('client deletion actions', () => {
   });
 
   describe('updateClient', () => {
-    it('preserves a stored client_since date when an unrelated field is updated', async () => {
-      const currentClient = {
-        client_id: 'client-1', client_name: 'Acme', client_since: new Date(2021, 9, 24),
-        tenant: 'tenant-1', is_inactive: false, properties: {}, payment_terms: 'Net 30',
-        created_at: '2021-10-24T00:00:00.000Z', updated_at: '2026-01-01T00:00:00.000Z',
-      };
-      let resultingClient: Record<string, unknown> = currentClient;
-      createTenantKnexMock.mockResolvedValue({ knex: {} });
-      withTransactionMock.mockImplementation(async (_db: unknown, callback: TransactionCallback) => {
-        const trx = ((table: string) => {
-          if (table !== 'clients') throw new Error(`Unexpected table ${table}`);
-          return {
-            where: vi.fn(() => ({
-              first: vi.fn(async () => currentClient),
-              update: vi.fn((changes: Record<string, unknown>) => ({
-                returning: vi.fn(async () => {
-                  resultingClient = { ...currentClient, ...changes, client_since: new Date(2021, 9, 24) };
-                  return [resultingClient];
-                }),
-              })),
-            })),
-          };
-        }) as LookupTransaction;
-        return callback(trx);
-      });
-
-      const { updateClient } = await import('./clientActions');
-      const result = await updateClient('client-1', {
-        client_since: '2021-10-24T00:00:00.000Z', payment_terms: 'Net 45',
-      } as any);
-
-      expect(result).not.toHaveProperty('actionError');
-      expect(result).toMatchObject({ client_since: '2021-10-24' });
-      expect(resultingClient.client_since).toBeInstanceOf(Date);
-      expect((resultingClient.client_since as Date).getFullYear()).toBe(2021);
-      expect((resultingClient.client_since as Date).getMonth()).toBe(9);
-      expect((resultingClient.client_since as Date).getDate()).toBe(24);
-      expect(resultingClient.payment_terms).toBe('Net 45');
-    });
-
     it('limits client portal updates to self-service client fields', async () => {
       authUserRef.value = {
         user_id: 'client-user-1',

@@ -11,7 +11,6 @@ import type { ISlaPolicy } from '@alga-psa/types';
 import { BillingCycleType } from '@alga-psa/types';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { translateFieldValidation, validateClientNameField } from '@alga-psa/validation';
-import { normalizeClientSinceDate } from '@alga-psa/validation';
 import ClientContactsList from '../contacts/ClientContactsList';
 import QuickAddContact from '../contacts/QuickAddContact';
 import { Flex, Text, Heading } from '@radix-ui/themes';
@@ -1542,23 +1541,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       content: (
         <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm">
           <div className="grid grid-cols-2 gap-4">
-            <FieldContainer
-              label={t('clientDetails.clientSince', { defaultValue: 'Client since' })}
-              fieldType="textField"
-              value={editedClient.client_since == null ? '' : String(normalizeClientSinceDate(editedClient.client_since))}
-              helperText=""
-              automationId="client-since-field"
-            >
-              <Text as="label" size="2" className="text-gray-700 font-medium" htmlFor="client-since-date">
-                {t('clientDetails.clientSince', { defaultValue: 'Client since' })}
-              </Text>
-              <Input
-                id="client-since-date"
-                type="date"
-                value={editedClient.client_since == null ? '' : String(normalizeClientSinceDate(editedClient.client_since))}
-                onChange={(event) => handleFieldChange('client_since', event.target.value || null)}
-              />
-            </FieldContainer>
             <FieldContainer
               label={t('clientDetails.lifecycleStatus', { defaultValue: 'Lifecycle' })}
               fieldType="select"

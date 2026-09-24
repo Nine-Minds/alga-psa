@@ -90,13 +90,11 @@ interface DateTriggerSource {
 - Every source query uses `tenantDb(...)` scoping, like the per-tenant jobs in `server/src/lib/jobs/initializeScheduledJobs.ts:18-33`.
 - The yearly recurrence arithmetic lives in one pure helper, `nextAnnualOccurrence(anchor, from, to)`, with its own tests.
 
-### New column: `clients.client_since`
+### Anchor column: `clients.client_since`
 
-Add `clients.client_since date NULL`.
+`clients.client_since date NULL` ships on main (`server/migrations/20260923120000_add_client_since_to_clients.cjs`), along with its details-tab field, REST/CSV/webhook plumbing, Pulse card and the `packages/clients/src/lib/clientSince.ts` helpers. This work only reads it.
 
 - The anniversary source uses it, falling back to `created_at`.
-- The Pulse "Client since" card reads it the same way. Change `clientPulseActions.ts:397` to `client_since ?? created_at`.
-- It is editable on the client details form and exposed in the REST client schema. Imported MSP clients are the reason it is needed.
 
 ### Dedupe ledger: `date_trigger_emissions`
 
@@ -152,16 +150,10 @@ Registration:
 
 ### Phase B: data and engine
 
-6. New migration `server/migrations/<ts>_add_client_since_and_date_trigger_emissions.cjs`:
-   - `clients.client_since date NULL`
+6. New migration `server/migrations/20260923130000_add_date_trigger_emissions.cjs` (after main's `client_since` migration):
    - The `date_trigger_emissions(tenant uuid, dedupe_key text, event_type text, entity_id uuid, occurs_on date, emitted_at timestamptz, PRIMARY KEY (tenant, dedupe_key))` table, distributed on `tenant` in the same way as the other tenant tables. Check the recent Citus migration pattern.
    - An index on `clients (tenant, client_since)` for the anniversary scan. `client_contracts (tenant, decision_due_date, status)` already has one (`202602211130_...:69-70`). Add `assets (tenant, warranty_end_date)` if it is missing.
-7. Client type and model:
-   - `packages/types/src/interfaces/client.interfaces.ts:~30`: add `client_since?: string | null`.
-   - Client create/update actions and the zod schema: accept it.
-   - The REST client schema, in `server/src/lib/api/schemas/`: expose it.
-   - `packages/clients/src/actions/clientPulseActions.ts:397`: `clientSince` becomes `client_since ?? created_at`.
-   - The client details form: add a date field. i18n keys go in the clients locale namespace.
+7. Client model: no changes here. `client_since` (type, schemas, REST, details form, Pulse card) comes from main. `setClientLifecycleStatus` returns its row through main's `withClientSinceDateString` so the details form keeps the stored day.
 8. `packages/jobs/src/lib/dateTriggers/`:
    - `types.ts`
    - `annual.ts`, holding `nextAnnualOccurrence` and the leap-day rule
@@ -218,7 +210,7 @@ See section 6.
 | Risk | Mitigation |
 |---|---|
 | **The first deploy floods tenants.** Every in-window contract and warranty, and every client whose anniversary is within 30 days, emits an event on the first scan. | Ledger dedupe limits this to one event per occurrence. It is still a one-time burst of real events. **Recommendation:** the migration pre-seeds the ledger for occurrences already inside their window at deploy time, so only records that newly enter the window emit. Date-triggered workflows are new, so they have no backlog. |
-| **Anniversary dates based on `created_at` are wrong for imported clients.** | Add `client_since`, and label the Pulse card and the form field clearly. The anniversary payload reports `anniversarySource: 'client_since' \| 'created_at'` so workflows can filter on it. |
+| **Anniversary dates based on `created_at` are wrong for imported clients.** | Anchor on main's `client_since`, falling back to `created_at`. The anniversary payload reports `anniversarySource: 'client_since' \| 'created_at'` so workflows can filter on it. |
 | **A timezone or DST boundary fires on the wrong day, or fires twice.** | All date maths runs on tenant-local calendar dates (`YYYY-MM-DD` strings), never on UTC instants, and the fire key contains `occursOn` and `offsetDays`. Unit tests cover DST transitions and UTC±12 tenants. |
 | **Save-time emitters and the scan both fire for one occurrence.** | One ledger helper handles both paths, and the deterministic `eventId` dedupes again at the workflow worker. |
 | **A large tenant's scan cost or burst of runs.** | Every source query is a range query on an indexed date column. Launches are capped at 500 per tick, and the remainder is carried to the next tick by the idempotent re-scan. |

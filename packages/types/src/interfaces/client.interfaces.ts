@@ -13,7 +13,6 @@ export interface IClientSummary extends TenantEntity {
 export interface IClient extends TenantEntity, ITaggable {
   client_id: string;
   client_name: string;
-  client_since?: ISO8601String | null;
   client_type?: 'company' | 'individual' | null;
   lifecycle_status?: ClientLifecycleStatus;
   url: string;

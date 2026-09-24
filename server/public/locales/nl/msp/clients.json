@@ -307,8 +307,7 @@
     "parentClientSelf": "Een klant kan niet zijn eigen bovenliggende klant zijn",
     "parentClientPlaceholder": "Geen bovenliggende klant",
     "parentClientClear": "Wissen",
-    "parentClientLegacy": "Eerder als tekst ingevoerd: {{name}}",
-    "clientSince": "Client since"
+    "parentClientLegacy": "Eerder als tekst ingevoerd: {{name}}"
   },
   "clientCommandCenter": {
     "cards": {

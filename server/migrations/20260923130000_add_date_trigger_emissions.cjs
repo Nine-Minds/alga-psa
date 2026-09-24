@@ -2,10 +2,8 @@
 
 const { ensureTenantDistribution } = require('./utils/citusDistribution.cjs');
 
+// clients.client_since itself comes from 20260923120000_add_client_since_to_clients.
 exports.up = async function up(knex) {
-  if (!(await knex.schema.hasColumn('clients', 'client_since'))) {
-    await knex.schema.alterTable('clients', (table) => table.date('client_since').nullable());
-  }
   await knex.raw('CREATE INDEX IF NOT EXISTS idx_clients_tenant_client_since ON clients (tenant, client_since)');
   await knex.raw('CREATE INDEX IF NOT EXISTS idx_assets_tenant_warranty_end_date ON assets (tenant, warranty_end_date)');
   await knex.raw(`
@@ -70,7 +68,4 @@ exports.down = async function down(knex) {
   await knex.schema.dropTableIfExists('date_trigger_emissions');
   await knex.raw('DROP INDEX IF EXISTS idx_assets_tenant_warranty_end_date');
   await knex.raw('DROP INDEX IF EXISTS idx_clients_tenant_client_since');
-  if (await knex.schema.hasColumn('clients', 'client_since')) {
-    await knex.schema.alterTable('clients', (table) => table.dropColumn('client_since'));
-  }
 };

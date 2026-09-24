@@ -18,15 +18,13 @@ import {
 } from './common';
 import {
   clientCoreFieldsSchema,
-  clientLocationCoreFieldsSchema,
-  normalizeClientSinceDate
+  clientLocationCoreFieldsSchema
 } from '@alga-psa/validation';
 
 // Structural rules for name/email/url/phone come from @alga-psa/validation so the
 // REST API and the server actions accept and reject exactly the same inputs.
 const {
   client_name: clientNameField,
-  client_since: clientSinceField,
   email: clientEmailField,
   url: clientUrlField,
   phone_no: clientPhoneField
@@ -71,7 +69,6 @@ const clientPropertiesSchema = z.object({
 // Create client schema
 export const createClientSchema = z.object({
   client_name: clientNameField,
-  client_since: clientSinceField,
   phone_no: clientPhoneField,
   email: clientEmailField,
   url: clientUrlField,
@@ -128,7 +125,6 @@ export const clientListQuerySchema = createListQuerySchema(clientFilterSchema);
 export const clientResponseSchema = z.object({
   client_id: uuidSchema,
   client_name: z.string(),
-  client_since: z.preprocess(normalizeClientSinceDate, z.string().date().nullable()),
   phone_no: z.string().nullable(),
   credit_balance: z.number(),
   email: z.string().nullable(),
