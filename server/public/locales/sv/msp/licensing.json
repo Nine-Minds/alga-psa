@@ -5,7 +5,7 @@
   },
   "purchaseForm": {
     "title": "Licensköp",
-    "enterpriseOnlyHosted": "Licensköp är tillgängliga i Pro för installationer med extern drift.",
+    "enterpriseOnlyHosted": "Licensköp är tillgängligt i Pro för installationer med extern drift.",
     "communityEditionUnlimited": "Community Edition med egen drift har ett obegränsat antal användare utan extra kostnad."
   },
   "purchasePage": {
@@ -67,7 +67,7 @@
       "paymentMethod": "Betalningsmetod",
       "changePaymentMethod": "Ändra",
       "immediateChargeTitle": "Omedelbar debitering",
-      "immediateChargeDescription": "Du debiteras det proportionellt beräknade beloppet {{amountDue}} nu.",
+      "immediateChargeDescription": "Du debiteras nu det proportionellt beräknade beloppet {{amountDue}}.",
       "prorationDescription": "Proportionell beräkning: {{amount}} för resten av den här debiteringsperioden",
       "scheduledTitle": "Schemalagt till periodens slut",
       "scheduledDescription": "Minskningen av antalet licenser träder i kraft {{date}}, vid slutet av din nuvarande debiteringsperiod.",
@@ -160,7 +160,7 @@
     "userPlural": "användare",
     "licenseCount": "{{count}} {{licenseLabel}}",
     "perInterval": "{{amount}}/{{interval}}",
-    "none": "Ingen",
+    "none": "Inget",
     "intervals": {
       "month": "månad",
       "year": "år"
@@ -182,7 +182,7 @@
       "missing": "Samtycke saknas"
     },
     "unreachable": "Det gick inte att nå AI-tjänsten för att läsa in aktuell samtyckesstatus. Försök igen om en stund.",
-    "explainer": "När AI är aktiverat skickas innehållet som AI arbetar med, bland annat ärendetexter, e-postmeddelanden och chattmeddelanden, från den här installationen till Nine Minds molnbaserade AI-tjänst och därifrån till externa modellleverantörer för att generera svar. Inget skickas förrän du lämnar ditt samtycke nedan.",
+    "explainer": "När AI är aktiverat skickas innehållet som AI arbetar med, bland annat ärendetexter, e-postmeddelanden och chattmeddelanden, från den här installationen till Nine Minds molnbaserade AI-tjänst och därifrån till externa modelleverantörer för att generera svar. Inget skickas förrän du lämnar ditt samtycke nedan.",
     "termsVersion": "Villkorsversion",
     "grantedAt": "Lämnat",
     "revoke": "Återkalla samtycke",
@@ -191,7 +191,7 @@
       "title": "Aktivera datadelning för AI?",
       "confirming": "Aktiverar…",
       "confirm": "Jag samtycker, aktivera AI",
-      "body": "Genom att fortsätta samtycker du till att AI-funktioner får överföra innehåll i ärenden, e-post och chattar från den här installationen till Nine Minds molnbaserade AI-tjänst och vidare till externa modellleverantörer för behandling.",
+      "body": "Genom att fortsätta samtycker du till att AI-funktioner får överföra innehåll i ärenden, e-post och chattar från den här installationen till Nine Minds molnbaserade AI-tjänst och vidare till externa modelleverantörer för behandling.",
       "termsVersion": "Version av villkoren för datadelning: {{version}}"
     },
     "revokeDialog": {
@@ -286,7 +286,7 @@
       "essentials": {
         "eyebrow": "Essentials",
         "title": "Du använder Essentials",
-        "description": "Essentials är aktivt i den här installationen. Fortsätt använda grundfunktionerna eller starta en 15 dagars provperiod för Pro som kan utnyttjas en gång.",
+        "description": "Essentials är aktivt i den här installationen. Fortsätt använda grundfunktionerna eller starta en 15 dagars provperiod för Pro, som bara kan startas en gång.",
         "badge": "Essentials är aktivt"
       }
     },
@@ -303,7 +303,7 @@
       "refreshLabel": "Licensuppdatering",
       "connected": "Ansluten",
       "lastCheckIn": "Senaste kontakt: {{timestamp}}",
-      "refreshHelp": "Tillämpar omedelbart ändringar av antalet användarlicenser eller abonnemanget som gjorts i portalen."
+      "refreshHelp": "Tillämpar omedelbart de ändringar av användarlicenser eller abonnemang som gjorts i portalen."
     },
     "portal": {
       "manageTitle": "Användarlicenser, debitering och aktiveringskoder",
@@ -336,15 +336,15 @@
       "refreshing": "Uppdaterar…",
       "manageInPortal": "Hantera licensen i portalen",
       "buyInPortal": "Köp Pro i portalen",
-      "applyClaimCode": "Tillämpa aktiveringskod",
+      "applyClaimCode": "Använd aktiveringskod",
       "activateLicenseKey": "Aktivera licensnyckel",
       "activating": "Aktiverar…"
     },
     "success": {
       "licenseKeyActivated": "Licensnyckeln har aktiverats. Betalfunktioner är nu tillgängliga i den här installationen.",
-      "claimCodeActivated": "Aktiveringskoden har aktiverats. Automatisk licensuppdatering är nu konfigurerad.",
+      "claimCodeActivated": "Aktiveringskoden har registrerats. Automatisk licensuppdatering är nu konfigurerad.",
       "trialStarted": "En 15 dagars provperiod för Pro har startats.",
-      "licenseRefreshed": "Licensen har uppdaterats. Ändringar av antalet användarlicenser eller abonnemanget från portalen gäller nu."
+      "licenseRefreshed": "Licensen har uppdaterats. Ändringar av användarlicenser eller abonnemang från portalen gäller nu."
     },
     "errors": {
       "loadStatus": "Det gick inte att läsa in licensstatus.",
