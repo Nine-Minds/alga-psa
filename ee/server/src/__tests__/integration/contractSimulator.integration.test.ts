@@ -91,6 +91,143 @@ function compareSemanticLines(
   );
 }
 
+/** Mirrors the customer's "Managed Care" template: Fixed (1 service) + Hourly (3 services). */
+async function seedCustomerShapedTemplate(
+  context: TestContext,
+  fixture: SimulatorFixture,
+): Promise<{
+  templateId: string;
+  fixedLineId: string;
+  hourlyLineId: string;
+  hourlyServices: string[];
+}> {
+  const templateId = uuidv4();
+  const fixedLineId = uuidv4();
+  const hourlyLineId = uuidv4();
+  const hourlyServices = [fixture.services.hourly];
+  for (let index = 0; index < 2; index += 1) {
+    hourlyServices.push(
+      await createTestService(context, {
+        service_name: `Template hourly service ${index + 2} ${templateId}`,
+        default_rate: 12_500,
+      }),
+    );
+  }
+  const now = new Date().toISOString();
+  await context.db("contract_templates").insert({
+    tenant: context.tenantId,
+    template_id: templateId,
+    template_name: `Managed Care ${templateId}`,
+    default_billing_frequency: "monthly",
+    template_status: "published",
+    created_at: now,
+    updated_at: now,
+  });
+  await context.db("contract_template_lines").insert([
+    {
+      tenant: context.tenantId,
+      template_line_id: fixedLineId,
+      template_id: templateId,
+      template_line_name: "Managed Care - Fixed Fee",
+      line_type: "Fixed",
+      billing_frequency: "monthly",
+      billing_timing: "advance",
+      cadence_owner: "client",
+      custom_rate: 30_000,
+      display_order: 0,
+      is_active: true,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      tenant: context.tenantId,
+      template_line_id: hourlyLineId,
+      template_id: templateId,
+      template_line_name: "Managed Care - Hourly",
+      line_type: "Hourly",
+      billing_frequency: "monthly",
+      billing_timing: "arrears",
+      cadence_owner: "client",
+      display_order: 1,
+      minimum_billable_time: 15,
+      round_up_to_nearest: 15,
+      is_active: true,
+      created_at: now,
+      updated_at: now,
+    },
+  ]);
+  await context.db("contract_template_line_fixed_config").insert({
+    tenant: context.tenantId,
+    template_line_id: fixedLineId,
+    base_rate: 30_000,
+    enable_proration: true,
+    billing_cycle_alignment: "prorated",
+    created_at: now,
+    updated_at: now,
+  });
+  const fixedService = fixture.services.fixed;
+  await context.db("contract_template_line_services").insert({
+    tenant: context.tenantId,
+    template_line_id: fixedLineId,
+    service_id: fixedService,
+    quantity: 1,
+    custom_rate: 30_000,
+    created_at: now,
+    updated_at: now,
+  });
+  await context.db("contract_template_line_service_configuration").insert({
+    tenant: context.tenantId,
+    config_id: uuidv4(),
+    template_line_id: fixedLineId,
+    service_id: fixedService,
+    configuration_type: "Fixed",
+    quantity: 1,
+    custom_rate: 30_000,
+    created_at: now,
+    updated_at: now,
+  });
+  await context.db("contract_template_line_services").insert(
+    hourlyServices.map((serviceId, index) => ({
+      tenant: context.tenantId,
+      template_line_id: hourlyLineId,
+      service_id: serviceId,
+      quantity: null,
+      custom_rate: 12_500,
+      display_order: index,
+      created_at: now,
+      updated_at: now,
+    })),
+  );
+  const hourlyConfigs = hourlyServices.map((serviceId) => ({
+    tenant: context.tenantId,
+    config_id: uuidv4(),
+    template_line_id: hourlyLineId,
+    service_id: serviceId,
+    configuration_type: "Hourly",
+    quantity: null,
+    custom_rate: 12_500,
+    created_at: now,
+    updated_at: now,
+  }));
+  await context
+    .db("contract_template_line_service_configuration")
+    .insert(hourlyConfigs);
+  await context.db("contract_template_line_service_hourly_config").insert(
+    hourlyConfigs.map((config) => ({
+      tenant: context.tenantId,
+      config_id: config.config_id,
+      hourly_rate: 12_500,
+      minimum_billable_time: 15,
+      round_up_to_nearest: 15,
+      enable_overtime: false,
+      enable_after_hours_rate: false,
+      created_at: now,
+      updated_at: now,
+    })),
+  );
+  return { templateId, fixedLineId, hourlyLineId, hourlyServices };
+}
+
 describe("Contract simulator – migrated-schema integration", () => {
   const helpers = TestContext.createHelpers();
   let context: TestContext;
@@ -193,6 +330,79 @@ describe("Contract simulator – migrated-schema integration", () => {
         }),
       ]),
     );
+  });
+
+  it("snapshots and simulates a customer-shaped contract template for profile and client contexts", async () => {
+    const { templateId, hourlyLineId, hourlyServices } =
+      await seedCustomerShapedTemplate(context, fixture);
+
+    for (const binding of [
+      { forceProfile: true },
+      { clientId: context.clientId },
+    ]) {
+      const scenario = await snapshotContractToScenario(
+        context.db,
+        context.tenantId,
+        { contractId: templateId, clientContractId: null, ...binding },
+      );
+      expect(scenario.contract_id).toBe(templateId);
+      expect(scenario.lines).toHaveLength(2);
+      expect(
+        scenario.lines.find((line) => line.key === hourlyLineId)?.services,
+      ).toHaveLength(3);
+      scenario.horizon = {
+        start_date: "2025-05-15T00:00:00Z",
+        period_count: 1,
+      };
+      scenario.assumptions[assumptionKey(hourlyLineId, hourlyServices[0])] = {
+        flat: 3,
+      };
+      scenario.assumptions[assumptionKey(hourlyLineId, hourlyServices[1])] = {
+        flat: 1,
+      };
+      const result = await simulateContractScenario(
+        context.db,
+        context.tenantId,
+        scenario,
+      );
+      expect(result.periods).toHaveLength(1);
+      expect(result.periods[0].lines.length).toBeGreaterThan(0);
+      expect(result.periods[0].total).toBeGreaterThan(0);
+    }
+  });
+
+  it("rejects unknown contract ids and template line references outside the template", async () => {
+    const { templateId } = await seedCustomerShapedTemplate(context, fixture);
+    const otherTemplate = await seedCustomerShapedTemplate(context, fixture);
+    const scenario = await snapshotContractToScenario(
+      context.db,
+      context.tenantId,
+      { contractId: templateId, clientContractId: null, forceProfile: true },
+    );
+    scenario.horizon = { start_date: "2025-05-15T00:00:00Z", period_count: 1 };
+
+    const unknownContract = structuredClone(scenario);
+    unknownContract.contract_id = uuidv4();
+    await expect(
+      simulateContractScenario(context.db, context.tenantId, unknownContract),
+    ).rejects.toThrow("Scenario contract is not available");
+
+    const bogusLine = structuredClone(scenario);
+    bogusLine.lines[0].origin_contract_line_id = uuidv4();
+    await expect(
+      simulateContractScenario(context.db, context.tenantId, bogusLine),
+    ).rejects.toThrow("invalid contract line reference");
+
+    const otherTemplateLine = structuredClone(scenario);
+    otherTemplateLine.lines[0].origin_contract_line_id =
+      otherTemplate.fixedLineId;
+    await expect(
+      simulateContractScenario(
+        context.db,
+        context.tenantId,
+        otherTemplateLine,
+      ),
+    ).rejects.toThrow("invalid contract line reference");
   });
 
   it("simulates mixed fixed, hourly, usage, bucket, product, and license charges with tax and explanations", async () => {
