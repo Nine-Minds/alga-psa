@@ -9,7 +9,7 @@
     "usageMetrics": "Förbrukningsmått",
     "segments": "Per segment"
   },
-  "currentContractLine": "Aktuell avtalsrad",
+  "currentContractLine": "Nuvarande avtalsrad",
   "nextInvoice": "Nästa faktura",
   "viewContractLineDetails": "Visa avtalsradens detaljer",
   "viewAllInvoices": "Visa alla fakturor",
@@ -33,7 +33,7 @@
     "overdue": "Förfallen",
     "partial": "Delbetald",
     "draft": "Utkast",
-    "finalized": "Slutförd",
+    "finalized": "Fastställd",
     "sendEmail": "Skicka via e-post",
     "sendEmailFailed": "Det gick inte att skicka fakturan via e-post. Försök igen.",
     "loadFailed": "Det gick inte att läsa in fakturadetaljerna. Försök igen.",
@@ -62,8 +62,8 @@
     "downloadComplete": "PDF-filen har laddats ner.",
     "emailStarted": "Skickar fakturan via e-post…",
     "emailSent": "Fakturan har skickats via e-post.",
-    "advanceTiming": "I förskott",
-    "arrearsTiming": "I efterskott",
+    "advanceTiming": "Förskott",
+    "arrearsTiming": "Efterskott",
     "paymentSummaryServicePeriods": "Betalningen reglerar fakturans saldo för dessa återkommande tjänsteperioder. Öppna fakturadetaljerna nedan för en fullständig specifikation rad för rad.",
     "creditNote": "Kreditfaktura",
     "prepayment": "Förskottsbetalning"
@@ -90,7 +90,7 @@
   },
   "contractLine": {
     "detailsTitle": "Avtalsradens detaljer",
-    "name": "Avtalsradens namn",
+    "name": "Avtalsradsnamn",
     "frequency": "Debiteringsintervall",
     "startDate": "Startdatum",
     "endDate": "Slutdatum",
@@ -105,9 +105,9 @@
     "cadenceOwnerClientDescription": "Återkommande tjänsteperioder för den här raden följer kundens debiteringsschema.",
     "cadenceOwnerContract": "Avtalets årsdag",
     "cadenceOwnerClient": "Kundens debiteringsschema",
-    "billingTimingAdvance": "I förskott",
-    "billingTimingArrears": "I efterskott",
-    "cadenceOwner": "Styrning av intervall",
+    "billingTimingAdvance": "Förskott",
+    "billingTimingArrears": "Efterskott",
+    "cadenceOwner": "Styrande schema",
     "billingTiming": "Debiteringstidpunkt"
   },
   "payment": {
@@ -268,12 +268,12 @@
       "approve": "Godkänn",
       "revise": "Revidera",
       "createNewRevision": "Skapa ny revision",
-      "convertToContract": "Omvandla till avtal",
-      "convertToInvoice": "Omvandla till faktura",
-      "convertToBoth": "Omvandla till båda",
+      "convertToContract": "Konvertera till avtal",
+      "convertToInvoice": "Konvertera till faktura",
+      "convertToBoth": "Konvertera till båda",
       "resend": "Skicka igen",
       "sendReminder": "Skicka påminnelse",
-      "cancelQuote": "Avbryt offert"
+      "cancelQuote": "Annullera offert"
     },
     "banners": {
       "acceptedTitle": "Offerten har accepterats",
@@ -282,8 +282,8 @@
       "rejectedTitle": "Offerten har avböjts",
       "rejectedOn": "Avböjd den: {{date}}",
       "rejectedReason": "Orsak: {{reason}}",
-      "convertedTitle": "Offerten har omvandlats",
-      "convertedDescription": "Den här offerten har omvandlats till ett avtal och/eller en faktura."
+      "convertedTitle": "Offerten har konverterats",
+      "convertedDescription": "Den här offerten har konverterats till ett avtal och/eller en faktura."
     },
     "essentials": {
       "title": "Grunduppgifter",
@@ -305,7 +305,7 @@
       "title": "Offertrader",
       "subtitleEmpty": "Inga rader ännu.",
       "subtitleCount": "Antal rader: {{count}} · {{mix}}",
-      "mixBoth": "återkommande debiteringar och engångsdebiteringar",
+      "mixBoth": "återkommande och engångsdebiteringar",
       "mixRecurring": "återkommande debiteringar",
       "mixOneTime": "engångsdebiteringar",
       "addLocation": "+ Lägg till plats",
@@ -322,7 +322,7 @@
       "subtitle": "Inköpsordernummer, affärsmöjlighet, PDF-layout",
       "poNumber": "Inköpsordernummer",
       "opportunity": "Affärsmöjlighet",
-      "opportunityPlaceholder": "Affärsmöjlighetens ID (valfritt)",
+      "opportunityPlaceholder": "Affärsmöjlighets-ID (valfritt)",
       "pdfLayout": "PDF-layout",
       "pdfLayoutPlaceholder": "Använd standardlayout",
       "pdfLayoutHelp": "Välj vilken layout kunden ska se. Behåll standardvalet för att använda klientorganisationens standardinställning."
@@ -369,8 +369,8 @@
       "accepted": "Accepterad",
       "rejected": "Avböjd",
       "expired": "Utgången",
-      "converted": "Omvandlad",
-      "cancelled": "Avbruten",
+      "converted": "Konverterad",
+      "cancelled": "Annullerad",
       "superseded": "Ersatt",
       "archived": "Arkiverad"
     },
@@ -382,8 +382,8 @@
       "accepted": "Kunden har accepterat offerten",
       "rejected": "Kunden har avböjt offerten",
       "expired": "Offertens giltighetstid har löpt ut",
-      "converted": "Offerten har omvandlats till debiteringsposter",
-      "cancelled": "Offerten avbröts före omvandling",
+      "converted": "Offerten har konverterats till debiteringsposter",
+      "cancelled": "Offerten annullerades före konverteringen",
       "superseded": "Offerten har ersatts av en revision",
       "archived": "Offerten är arkiverad och skrivskyddad"
     },
@@ -399,9 +399,9 @@
     },
     "invoiceStatusDescription": {
       "draft": "Fakturor som är under arbete och inte har skickats till kunden",
-      "sent": "Fakturor som har slutförts och skickats till kunden",
+      "sent": "Fakturor som har fastställts och skickats till kunden",
       "paid": "Helt betalda fakturor som är klara för avstämning",
-      "overdue": "Slutförda fakturor vars förfallodatum har passerat",
+      "overdue": "Fastställda fakturor vars förfallodatum har passerat",
       "cancelled": "Fakturor som har makulerats eller avbrutits",
       "pending": "Fakturor som väntar på godkännande eller ytterligare behandling",
       "prepayment": "Fakturor för förskottsbetalning eller deposition",
@@ -435,8 +435,8 @@
     "viewBilling": "Visa debitering"
   },
   "hourBlocks": {
-    "title": "Förbetalda timpotter",
-    "blockLabel": "Timpott för {{service}}",
+    "title": "Förbetalda timblock",
+    "blockLabel": "Timblock för {{service}}",
     "expiringSoon": "Dagar till utgång: {{days}}",
     "hoursLeft": "{{hours}} h kvar",
     "expires": "Löper ut {{date}}",
