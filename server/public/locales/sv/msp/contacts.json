@@ -111,7 +111,7 @@
       "client": "Kund",
       "email": "E-post",
       "role": "Roll",
-      "inboundTicketDestinationOverride": "Åsidosätt destination för inkommande ärenden",
+      "inboundTicketDestinationOverride": "Åsidosättning av destination för inkommande ärenden",
       "useClientDestination": "Använd kundens destination",
       "inboundTicketDestinationHelp": "Om detta anges åsidosätts kundens destination för just denna avsändarkontakt. Prioritetsordning: Kontaktens åsidosättning -> Kundens destination -> Tjänsteleverantörens standardinställning.",
       "tags": "Taggar",
@@ -121,7 +121,7 @@
     },
     "status": {
       "label": "Status",
-      "helper": "Ange kontaktens status som aktiv eller inaktiv",
+      "helper": "Ange om kontakten ska vara aktiv eller inaktiv",
       "active": "Aktiv",
       "inactive": "Inaktiv"
     },
@@ -205,7 +205,7 @@
     },
     "results": {
       "title": "Importresultat",
-      "downloadFailedRecords": "Ladda ner poster som inte kunde importeras"
+      "downloadFailedRecords": "Ladda ner misslyckade poster"
     },
     "table": {
       "status": "Status",
@@ -275,7 +275,7 @@
     "emailTypes": {
       "work": "Arbete",
       "personal": "Privat",
-      "billing": "Debitering",
+      "billing": "Fakturering",
       "other": "Annat",
       "custom": "Anpassad"
     },
@@ -449,7 +449,7 @@
         "userExistsForContact": "Ett användarkonto finns redan för den här kontakten. Använd lösenordsåterställning i stället för att skicka en inbjudan.",
         "noDefaultClient": "Ingen standardkund har konfigurerats för den här klientorganisationen. Ange en standardkund i Allmänna inställningar.",
         "noDefaultLocation": "Standardkunden måste ha en standardplats konfigurerad för att portalinbjudningar ska kunna skickas.",
-        "noLocationEmail": "Standardkundens plats måste ha en e-postadress för kontakt konfigurerad.",
+        "noLocationEmail": "Standardkundens plats måste ha en konfigurerad kontakt-e-postadress.",
         "noBaseUrl": "Bas-URL har inte konfigurerats för portalinbjudningar.",
         "invitationNotFound": "Inbjudan hittades inte eller har redan använts."
       },
@@ -497,12 +497,12 @@
     },
     "toasts": {
       "warningTitle": "Varning",
-      "tagsFailed": "Kunde inte skapa följande antal taggar: {{count}}",
+      "tagsFailed": "{{count}} tagg(ar) kunde inte skapas",
       "contactCreated": "Kontakten har skapats",
       "contactAdded": "{{name}} har lagts till."
     },
     "errors": {
-      "createContactTitle": "Fel när kontakten skulle skapas",
+      "createContactTitle": "Fel vid skapande av kontakt",
       "unexpected": "Ett oväntat fel uppstod. Försök igen.",
       "validationTitle": "Valideringsfel",
       "emailExistsTitle": "E-postadressen finns redan",
@@ -510,7 +510,7 @@
       "systemTitle": "Systemfel",
       "genericTitle": "Fel",
       "closeMessage": "Stäng felmeddelandet",
-      "createContactHeading": "Fel när kontakten skulle skapas:",
+      "createContactHeading": "Fel vid skapande av kontakt:",
       "validationPrefix": "Åtgärda följande:",
       "emailExistsPrefix": "E-postadressen finns redan:",
       "invalidReferencePrefix": "Ogiltig referens:",
@@ -541,7 +541,7 @@
       "role": "Roll",
       "rolePlaceholder": "T.ex. chef, utvecklare osv.",
       "phoneNumbers": "Telefonnummer:",
-      "inboundTicketDestinationOverride": "Åsidosätt destination för inkommande ärenden:",
+      "inboundTicketDestinationOverride": "Åsidosättning av destination för inkommande ärenden:",
       "inboundTicketDestinationHelp": "Prioritetsordning: Kontaktens åsidosättning -> Kundens destination -> Tjänsteleverantörens standardinställning.",
       "useClientDestination": "Använd kundens destination",
       "client": "Kund:",
@@ -720,7 +720,7 @@
       "invalidDataRefresh": "Ogiltiga kontaktuppgifter har angetts. Ladda om och försök igen.",
       "invalidDataFields": "Ogiltiga kontaktuppgifter har angetts. Kontrollera alla fält och försök igen.",
       "bulkEmailExists": "En eller flera kontakter har redan den här e-postadressen",
-      "invalidReference": "Ogiltig referens i uppgifterna för uppdatering",
+      "invalidReference": "Ogiltig referens i uppdateringsdata",
       "visibilityMissingField": "Ett obligatoriskt fält för synlighetsgruppen saknas.",
       "visibilityMissingFieldNamed": "Ett obligatoriskt fält för synlighetsgruppen saknas: {{field}}.",
       "visibilityReferenceInvalid": "Den valda kontakten, synlighetsgruppen eller tavlan är inte längre giltig. Ladda om och försök igen.",
