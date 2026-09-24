@@ -35,7 +35,14 @@ import {
 
 export type ClientMergeActionError = ActionMessageError | ActionPermissionError;
 
-export type { ClientMergePreview, ClientMergeResult, ClientMergeInput };
+// Re-exported with the from-clause on purpose: in a 'use server' module the
+// server-actions transform turns `export type { X }` over an imported binding
+// into a value reference, which breaks every page that loads this module.
+export type {
+  ClientMergePreview,
+  ClientMergeResult,
+  ClientMergeInput,
+} from '../lib/clientMergeEngine';
 
 function mergeActionErrorFrom(error: unknown): ClientMergeActionError | null {
   if (error instanceof ClientMergeBlockedError) {
