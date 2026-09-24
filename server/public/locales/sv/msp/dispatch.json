@@ -33,7 +33,7 @@
     "compareAll": "Jämför alla",
     "clearAll": "Avmarkera alla",
     "compare": "Jämför",
-    "stopComparing": "Avsluta jämförelse",
+    "stopComparing": "Sluta jämföra",
     "compareAria": "Jämför {{name}}",
     "compareAriaInactive": "Jämför {{name}} (inaktiv)"
   },
@@ -50,7 +50,7 @@
       "client": "Kund",
       "contact": "Kontakt",
       "company": "Företag",
-      "requester": "Förfrågans avsändare",
+      "requester": "Beställare",
       "email": "E-post",
       "phone": "Telefon",
       "requestedDate": "Önskat datum",
@@ -58,12 +58,12 @@
       "duration": "Varaktighet",
       "preferredTechnician": "Önskad tekniker",
       "description": "Beskrivning",
-      "declineReason": "Orsak till avslag",
+      "declineReason": "Orsak till avböjande",
       "approvedBy": "Godkänd av:",
       "approvedAt": "Godkänd den:",
       "opportunity": "Affärsmöjlighet",
-      "assignedTo": "Tilldelad till",
-      "dueDate": "Ska vara klar"
+      "assignedTo": "Tilldelat till",
+      "dueDate": "Ska vara klart"
     },
     "messages": {
       "notAvailable": "Ej tillgängligt",
@@ -72,10 +72,10 @@
     "toasts": {
       "noUsersAvailable": "Inga användare är tillgängliga i systemet",
       "noUserSession": "Ingen användarsession hittades",
-      "failedToLoadTicketData": "Det gick inte att läsa in ärendeuppgifterna",
+      "failedToLoadTicketData": "Det gick inte att läsa in ärendets data",
       "failedToLoadProjectTaskData": "Det gick inte att läsa in projektuppgiftens data",
       "failedToLoadAdHocEntryData": "Det gick inte att läsa in ad hoc-postens data",
-      "failedToLoadInteractionData": "Det gick inte att läsa in interaktionsuppgifterna",
+      "failedToLoadInteractionData": "Det gick inte att läsa in interaktionens data",
       "failedToLoadAppointmentRequestData": "Det gick inte att läsa in bokningsförfrågans data",
       "failedToLoadOpportunityStepData": "Det gick inte att läsa in affärsstegets data"
     },
