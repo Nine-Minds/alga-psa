@@ -293,6 +293,12 @@ const servicePeriodPostInventoryRefs = new Set([
   // persisted boundaries and were added after the historical snapshot.
   'packages/billing/src/actions/contractCadenceCoverageAudit.ts',
   'server/src/test/infrastructure/billing/invoices/contractCadenceCoverageAudit.test.ts',
+  // Contract invoice adjustments (card b97eda7b) reconcile automatic discounts
+  // against the invoice's persisted service window and surface each generated
+  // charge's period in the draft editor; both readers landed after the
+  // pass-0 snapshot.
+  'packages/billing/src/services/invoiceAutomaticAdjustments.ts',
+  'packages/billing/src/components/billing-dashboard/ManualInvoices.tsx',
 ]);
 
 // Files whose persisted service-period field references were removed after the

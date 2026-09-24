@@ -21,6 +21,9 @@ export type DetailedContractLine = IContractLineMapping & {
   billing_frequency?: string;
   rate?: number | null;
   enable_proration?: boolean;
+  invoice_line_description?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
   billing_cycle_alignment?: 'start' | 'end' | 'prorated';
 };
 
@@ -120,6 +123,7 @@ export async function fetchDetailedContractLines(
         'lines.custom_rate',
         'lines.billing_timing',
         'lines.cadence_owner',
+        'lines.invoice_line_description',
         'lines.created_at',
         'lines.template_line_name as contract_line_name',
         'lines.line_type as contract_line_type',
@@ -148,6 +152,7 @@ export async function fetchDetailedContractLines(
             ? Number(row.default_rate)
             : null,
       enable_proration: row.template_enable_proration ?? false,
+      invoice_line_description: row.invoice_line_description ?? null,
       billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
         billingCycleAlignment: row.template_billing_cycle_alignment,
         enableProration: row.template_enable_proration,
@@ -168,6 +173,9 @@ export async function fetchDetailedContractLines(
       'cl.cadence_owner',
       'cl.location_id',
       'cl.billing_profile_id',
+      'cl.invoice_line_description',
+      'cl.start_date',
+      'cl.end_date',
       'cl.created_at',
       'cl.contract_line_name',
       'cl.contract_line_type',
@@ -189,6 +197,9 @@ export async function fetchDetailedContractLines(
       billing_frequency: row.billing_frequency,
     rate: row.custom_rate !== undefined && row.custom_rate !== null ? Number(row.custom_rate) : null,
     enable_proration: row.enable_proration ?? false,
+    invoice_line_description: row.invoice_line_description ?? null,
+    start_date: row.start_date ?? null,
+    end_date: row.end_date ?? null,
     billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
       billingCycleAlignment: row.billing_cycle_alignment,
       enableProration: row.enable_proration,
@@ -678,8 +689,12 @@ export async function updateContractLineRate(
   contractId: string,
   contractLineId: string,
   rate: number | null,
-  billingTiming?: 'arrears' | 'advance'
+  billingTiming?: 'arrears' | 'advance',
+  invoiceLineDescription?: string | null
 ): Promise<void> {
+  if (rate !== null && rate !== undefined && (!Number.isFinite(Number(rate)) || Number(rate) < 0)) {
+    throw new Error('Rate must be zero or greater.');
+  }
   const now = knex.fn.now();
   const template = await isTemplateContract(knex, tenant, contractId);
 
@@ -698,6 +713,9 @@ export async function updateContractLineRate(
       .update({
         custom_rate: rate,
         billing_timing: recurringAuthoringPolicy.billingTiming,
+        ...(invoiceLineDescription !== undefined
+          ? { invoice_line_description: invoiceLineDescription?.trim() || null }
+          : {}),
         updated_at: now,
       });
     return;
@@ -718,6 +736,9 @@ export async function updateContractLineRate(
         custom_rate: rate,
         rate_provenance: rate === null ? 'inherited' : 'custom',
         billing_timing: recurringAuthoringPolicy.billingTiming,
+        ...(invoiceLineDescription !== undefined
+          ? { invoice_line_description: invoiceLineDescription?.trim() || null }
+          : {}),
         updated_at: now,
       });
 }

@@ -433,10 +433,15 @@ export const updateContractLineRate = withAuth(async (
   contractId: string,
   contractLineId: string,
   rate: number,
-  billingTiming?: 'arrears' | 'advance'
+  billingTiming?: 'arrears' | 'advance',
+  invoiceLineDescription?: string | null
 ): Promise<void | ContractActionError> => {
   try {
     const { knex } = await createTenantKnex();
+
+    if (rate !== null && rate !== undefined && (!Number.isFinite(Number(rate)) || Number(rate) < 0)) {
+      return actionError('Rate must be zero or greater.');
+    }
 
     const canUpdate = await hasPermission(user, 'billing', 'update');
     if (!canUpdate) {
@@ -444,7 +449,7 @@ export const updateContractLineRate = withAuth(async (
     }
 
     await knex.transaction(async (trx) => {
-      await repoUpdateContractLineRate(trx, tenant, contractId, contractLineId, rate, billingTiming);
+      await repoUpdateContractLineRate(trx, tenant, contractId, contractLineId, rate, billingTiming, invoiceLineDescription);
       await syncRecurringServicePeriodsForContractLine(trx, {
         tenant,
         contractLineId,

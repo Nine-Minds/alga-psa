@@ -6,7 +6,7 @@ import { createClient } from '../../../../../test-utils/testDataFactory';
 import { createTestDate, createTestDateISO } from '../../../test-utils/dateUtils';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { generateInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
-import { addManualItemsToInvoice } from '@alga-psa/billing/actions/invoiceModification';
+import { addManualItemsToInvoice, updateInvoiceManualItems } from '@alga-psa/billing/actions/invoiceModification';
 import type { IInvoiceCharge } from 'server/src/interfaces/invoice.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -264,7 +264,11 @@ describe('Contract Invoice Manual Credit', () => {
       tenant: context.tenantId
     };
 
-    const updatedInvoice = await addManualItemsToInvoice(invoiceId, [manualCredit]);
+    const operationId = uuidv4();
+    const updatedInvoice = await addManualItemsToInvoice(invoiceId, [manualCredit], {
+      operationId,
+      expectedRevision: 0,
+    });
 
     const baseSubtotal = Number(generatedInvoice!.subtotal);
     const baseTax = Number(generatedInvoice!.tax);
@@ -330,6 +334,519 @@ describe('Contract Invoice Manual Credit', () => {
       });
 
     expect(creditDetails.length).toBe(0);
+
+    // --- Retry idempotency: replaying the same operation must not append ---
+    const replayedInvoice = await addManualItemsToInvoice(invoiceId, [manualCredit], {
+      operationId,
+      expectedRevision: 1,
+    });
+    const creditsAfterReplay = await context.db('invoice_charges')
+      .where({ invoice_id: invoiceId, tenant: context.tenantId, is_manual: true, is_discount: true });
+    expect(creditsAfterReplay).toHaveLength(1);
+    expect(Number(replayedInvoice.total_amount)).toBe(expectedTotal);
+    expect(replayedInvoice.draft_adjustment_revision).toBe(1);
+
+    // --- A stale revision with a fresh operation is rejected before any write ---
+    const staleCredit = { ...manualCredit, item_id: uuidv4() };
+    const beforeStale = await context.db('invoice_charges')
+      .where({ invoice_id: invoiceId, tenant: context.tenantId });
+    await expect(
+      addManualItemsToInvoice(invoiceId, [staleCredit], {
+        operationId: uuidv4(),
+        expectedRevision: 0,
+      }),
+    ).rejects.toMatchObject({ code: 'STALE_ADJUSTMENT_REVISION' });
+    const afterStale = await context.db('invoice_charges')
+      .where({ invoice_id: invoiceId, tenant: context.tenantId });
+    expect(afterStale).toHaveLength(beforeStale.length);
+  });
+
+  it('T231: preserves a quantity>1 negative-rate credit through resave, tax and totals', async () => {
+    const clientId = context.clientId;
+    const invoiceId = await context.createEntity('invoices', {
+      invoice_number: `CREDIT-${uuidv4().slice(0, 8)}`,
+      invoice_date: createTestDateISO({ year: 2025, month: 1, day: 1 }),
+      due_date: createTestDateISO({ year: 2025, month: 2, day: 1 }),
+      status: 'draft',
+      client_id: clientId,
+      currency_code: 'USD',
+      is_manual: false,
+      total_amount: 0,
+    }, 'invoice_id');
+
+    const positiveItem: IInvoiceCharge = {
+      item_id: uuidv4(),
+      invoice_id: invoiceId,
+      service_id: undefined,
+      description: 'Manual service charge',
+      quantity: 1,
+      rate: 50000,
+      unit_price: 50000,
+      total_price: 50000,
+      net_amount: 50000,
+      tax_amount: 0,
+      tax_region: undefined,
+      tax_rate: 0,
+      is_manual: true,
+      is_taxable: false,
+      is_discount: false,
+      tenant: context.tenantId,
+    };
+    const creditItemId = uuidv4();
+    const creditItem: IInvoiceCharge = {
+      item_id: creditItemId,
+      invoice_id: invoiceId,
+      service_id: undefined,
+      description: 'Goodwill credit 3 x $100',
+      quantity: 3,
+      rate: -10000,
+      unit_price: -10000,
+      total_price: -30000,
+      net_amount: -30000,
+      tax_amount: 0,
+      tax_region: undefined,
+      tax_rate: 0,
+      is_manual: true,
+      is_taxable: false,
+      // The editor adds it as a charge; the negative rate makes it a credit,
+      // which the persistence layer stores as a fixed discount-like row.
+      is_discount: false,
+      tenant: context.tenantId,
+    };
+
+    await addManualItemsToInvoice(invoiceId, [positiveItem, creditItem], {
+      operationId: uuidv4(),
+      expectedRevision: 0,
+    });
+
+    const afterAdd = await context.db('invoice_charges')
+      .where({ item_id: creditItemId, tenant: context.tenantId })
+      .first();
+    expect(afterAdd).toBeTruthy();
+    expect(Number(afterAdd.quantity)).toBe(3);
+    expect(afterAdd.is_discount).toBe(true);
+    expect(Number(afterAdd.net_amount)).toBe(-30000);
+    expect(Number(afterAdd.total_price)).toBe(-30000);
+
+    // Reload, then resave the row exactly as the editor does: it is now a fixed
+    // discount carrying quantity 3 and rate -10000. Before the repair the
+    // fixed-discount recalc wrote -abs(unit_price) = -10000 here.
+    const resavedInvoice = await updateInvoiceManualItems(invoiceId, {
+      updatedItems: [
+        {
+          item_id: creditItemId,
+          description: 'Goodwill credit 3 x $100',
+          quantity: 3,
+          rate: -10000,
+          is_discount: true,
+          discount_type: 'fixed',
+          is_taxable: false,
+        },
+      ],
+      newItems: [],
+      removedItemIds: [],
+    } as any, { operationId: uuidv4(), expectedRevision: 1 });
+
+    const afterResave = await context.db('invoice_charges')
+      .where({ item_id: creditItemId, tenant: context.tenantId })
+      .first();
+    expect(Number(afterResave.quantity)).toBe(3);
+    expect(Number(afterResave.net_amount)).toBe(-30000);
+    expect(Number(afterResave.total_price)).toBe(-30000);
+
+    // Totals carry the full credit (50000 - 30000 = 20000), not -10000.
+    expect(Number((resavedInvoice as any).subtotal)).toBe(20000);
+    expect(Number((resavedInvoice as any).tax)).toBe(0);
+    expect(Number((resavedInvoice as any).total_amount)).toBe(20000);
+  });
+
+  it('T232: an authored fixed discount stays quantity-independent when resaved', async () => {
+    const clientId = context.clientId;
+    const invoiceId = await context.createEntity('invoices', {
+      invoice_number: `DISCOUNT-${uuidv4().slice(0, 8)}`,
+      invoice_date: createTestDateISO({ year: 2025, month: 1, day: 1 }),
+      due_date: createTestDateISO({ year: 2025, month: 2, day: 1 }),
+      status: 'draft',
+      client_id: clientId,
+      currency_code: 'USD',
+      is_manual: false,
+      total_amount: 0,
+    }, 'invoice_id');
+
+    const positiveItem: IInvoiceCharge = {
+      item_id: uuidv4(),
+      invoice_id: invoiceId,
+      service_id: undefined,
+      description: 'Manual service charge',
+      quantity: 1,
+      rate: 50000,
+      unit_price: 50000,
+      total_price: 50000,
+      net_amount: 50000,
+      tax_amount: 0,
+      tax_region: undefined,
+      tax_rate: 0,
+      is_manual: true,
+      is_taxable: false,
+      is_discount: false,
+      tenant: context.tenantId,
+    };
+    const discountItemId = uuidv4();
+    // An authored fixed discount: the operator entered a $100 amount on the
+    // Add Discount flow, which carries `is_discount: true`. The quantity is 1
+    // in the editor, but the row must stay $100 even if a quantity is present:
+    // the amount is quantity-independent (calculateNetAmount uses -abs(rate)).
+    const discountItem: IInvoiceCharge = {
+      item_id: discountItemId,
+      invoice_id: invoiceId,
+      service_id: undefined,
+      description: 'Authored $100 discount',
+      quantity: 3,
+      rate: -10000,
+      unit_price: -10000,
+      total_price: -10000,
+      net_amount: -10000,
+      tax_amount: 0,
+      tax_region: undefined,
+      tax_rate: 0,
+      is_manual: true,
+      is_taxable: false,
+      is_discount: true,
+      discount_type: 'fixed',
+      tenant: context.tenantId,
+    };
+
+    await addManualItemsToInvoice(invoiceId, [positiveItem, discountItem], {
+      operationId: uuidv4(),
+      expectedRevision: 0,
+    });
+
+    const afterAdd = await context.db('invoice_charges')
+      .where({ item_id: discountItemId, tenant: context.tenantId })
+      .first();
+    expect(afterAdd).toBeTruthy();
+    // Quantity-independent: -abs(rate), not quantity x rate.
+    expect(Number(afterAdd.net_amount)).toBe(-10000);
+    // It is not a quantity-derived credit, so the edit path must not scale it.
+    expect(afterAdd.is_manual_credit).toBe(false);
+
+    const resavedInvoice = await updateInvoiceManualItems(invoiceId, {
+      updatedItems: [
+        {
+          item_id: discountItemId,
+          description: 'Authored $100 discount',
+          quantity: 3,
+          rate: -10000,
+          is_discount: true,
+          discount_type: 'fixed',
+          is_taxable: false,
+        },
+      ],
+      newItems: [],
+      removedItemIds: [],
+    } as any, { operationId: uuidv4(), expectedRevision: 1 });
+
+    const afterResave = await context.db('invoice_charges')
+      .where({ item_id: discountItemId, tenant: context.tenantId })
+      .first();
+    expect(Number(afterResave.net_amount)).toBe(-10000);
+    expect(Number(afterResave.total_price)).toBe(-10000);
+
+    // 50000 - 10000 = 40000; a $300 discount would have been wrong here.
+    expect(Number((resavedInvoice as any).subtotal)).toBe(40000);
+    expect(Number((resavedInvoice as any).total_amount)).toBe(40000);
+  });
+
+  it('T233: persists an explicit freeform tax treatment and clears it through the edit path', async () => {
+    const clientId = context.clientId;
+    const invoiceId = await context.createEntity('invoices', {
+      invoice_number: `TAXTREATMENT-${uuidv4().slice(0, 8)}`,
+      invoice_date: createTestDateISO({ year: 2025, month: 1, day: 1 }),
+      due_date: createTestDateISO({ year: 2025, month: 2, day: 1 }),
+      status: 'draft',
+      client_id: clientId,
+      currency_code: 'USD',
+      is_manual: false,
+      total_amount: 0,
+    }, 'invoice_id');
+
+    const taxRate = await context.db('tax_rates')
+      .where({ tenant: context.tenantId, region_code: 'US-NY', is_active: true })
+      .first();
+    expect(taxRate?.tax_rate_id).toBeTruthy();
+
+    const itemId = uuidv4();
+    const addedInvoice = await addManualItemsToInvoice(invoiceId, [{
+      item_id: itemId,
+      invoice_id: invoiceId,
+      service_id: undefined,
+      description: 'Taxable freeform charge',
+      quantity: 1,
+      rate: 10000,
+      unit_price: 10000,
+      total_price: 10000,
+      net_amount: 10000,
+      tax_amount: 0,
+      tax_region: undefined,
+      tax_rate: 0,
+      is_manual: true,
+      is_taxable: true,
+      is_discount: false,
+      tenant: context.tenantId,
+      // Authoring-only field: the server resolves it to the charge's region.
+      tax_rate_id: taxRate.tax_rate_id,
+    } as any], { operationId: uuidv4(), expectedRevision: 0 });
+
+    const afterAdd = await context.db('invoice_charges')
+      .where({ item_id: itemId, tenant: context.tenantId })
+      .first();
+    expect(afterAdd.is_taxable).toBe(true);
+    expect(afterAdd.tax_region).toBe('US-NY');
+    // The chosen treatment is not just stored: the tax pass taxes the $100 line
+    // at the region's 10%, and the invoice total carries it ($100 + $10).
+    expect(Number((addedInvoice as any).tax)).toBe(1000);
+    expect(Number((addedInvoice as any).total_amount)).toBe(11000);
+
+    // Clearing the treatment through the edit path drops the taxable flag; the
+    // invoice tax returns to zero.
+    const clearedInvoice = await updateInvoiceManualItems(invoiceId, {
+      updatedItems: [{
+        item_id: itemId,
+        description: 'Taxable freeform charge',
+        quantity: 1,
+        rate: 10000,
+        is_taxable: false,
+        tax_rate_id: null,
+      }],
+      newItems: [],
+      removedItemIds: [],
+    } as any, { operationId: uuidv4(), expectedRevision: 1 });
+
+    const afterClear = await context.db('invoice_charges')
+      .where({ item_id: itemId, tenant: context.tenantId })
+      .first();
+    expect(afterClear.is_taxable).toBe(false);
+    expect(Number((clearedInvoice as any).tax)).toBe(0);
+    expect(Number((clearedInvoice as any).total_amount)).toBe(10000);
+
+    // Re-applying the treatment restores both the taxable flag, its region and
+    // the taxed total.
+    const reappliedInvoice = await updateInvoiceManualItems(invoiceId, {
+      updatedItems: [{
+        item_id: itemId,
+        description: 'Taxable freeform charge',
+        quantity: 1,
+        rate: 10000,
+        is_taxable: true,
+        tax_rate_id: taxRate.tax_rate_id,
+      }],
+      newItems: [],
+      removedItemIds: [],
+    } as any, { operationId: uuidv4(), expectedRevision: 2 });
+
+    const afterReapply = await context.db('invoice_charges')
+      .where({ item_id: itemId, tenant: context.tenantId })
+      .first();
+    expect(afterReapply.is_taxable).toBe(true);
+    expect(afterReapply.tax_region).toBe('US-NY');
+    expect(Number((reappliedInvoice as any).tax)).toBe(1000);
+    expect(Number((reappliedInvoice as any).total_amount)).toBe(11000);
+  });
+
+  it('T234: an explicit Non-taxable override beats a taxable catalog service on add and edit', async () => {
+    const clientId = context.clientId;
+    const invoiceId = await context.createEntity('invoices', {
+      invoice_number: `CATNONTAX-${uuidv4().slice(0, 8)}`,
+      invoice_date: createTestDateISO({ year: 2025, month: 1, day: 1 }),
+      due_date: createTestDateISO({ year: 2025, month: 2, day: 1 }),
+      status: 'draft',
+      client_id: clientId,
+      currency_code: 'USD',
+      is_manual: false,
+      total_amount: 0,
+    }, 'invoice_id');
+
+    // A taxable catalog service: createTestService with a tax region assigns it
+    // the NY 10% rate configured in beforeEach.
+    const serviceId = await createTestService(context, {
+      service_name: 'Taxable Catalog Service',
+      billing_method: 'fixed',
+      default_rate: 10000,
+      tax_region: 'US-NY',
+    });
+    const service = await context.db('service_catalog')
+      .where({ tenant: context.tenantId, service_id: serviceId })
+      .first();
+    expect(service?.tax_rate_id).toBeTruthy();
+    const taxRate = await context.db('tax_rates')
+      .where({ tenant: context.tenantId, region_code: 'US-NY', is_active: true })
+      .first();
+    expect(taxRate?.tax_rate_id).toBeTruthy();
+
+    // NEW catalog line: an explicit Non-taxable selection must beat the
+    // service's taxable default. Before the fix, `requestItem.tax_rate_id ??
+    // service.tax_rate_id` fell through the null and taxed the line.
+    const itemId = uuidv4();
+    const addedInvoice = await addManualItemsToInvoice(invoiceId, [{
+      item_id: itemId,
+      invoice_id: invoiceId,
+      service_id: serviceId,
+      description: 'Catalog line overridden to non-taxable',
+      quantity: 1,
+      rate: 10000,
+      unit_price: 10000,
+      total_price: 10000,
+      net_amount: 10000,
+      tax_amount: 0,
+      tax_region: undefined,
+      tax_rate: 0,
+      is_manual: true,
+      is_taxable: false,
+      is_discount: false,
+      tenant: context.tenantId,
+      // Explicit Non-taxable.
+      tax_rate_id: null,
+    } as any], { operationId: uuidv4(), expectedRevision: 0 });
+
+    const afterAdd = await context.db('invoice_charges')
+      .where({ item_id: itemId, tenant: context.tenantId })
+      .first();
+    expect(afterAdd.is_taxable).toBe(false);
+    expect(afterAdd.tax_region).toBeNull();
+    expect(Number((addedInvoice as any).tax)).toBe(0);
+    expect(Number((addedInvoice as any).total_amount)).toBe(10000);
+
+    // Make the same catalog line taxable through the edit path first...
+    const taxedInvoice = await updateInvoiceManualItems(invoiceId, {
+      updatedItems: [{
+        item_id: itemId,
+        service_id: serviceId,
+        description: 'Catalog line overridden to non-taxable',
+        quantity: 1,
+        rate: 10000,
+        is_taxable: true,
+        tax_rate_id: taxRate.tax_rate_id,
+      }],
+      newItems: [],
+      removedItemIds: [],
+    } as any, { operationId: uuidv4(), expectedRevision: 1 });
+
+    const afterTaxed = await context.db('invoice_charges')
+      .where({ item_id: itemId, tenant: context.tenantId })
+      .first();
+    expect(afterTaxed.is_taxable).toBe(true);
+    expect(afterTaxed.tax_region).toBe('US-NY');
+    expect(Number((taxedInvoice as any).tax)).toBe(1000);
+    expect(Number((taxedInvoice as any).total_amount)).toBe(11000);
+
+    // ...then override it back to Non-taxable. The payload deliberately carries
+    // the stale `is_taxable: true` a naive editor would send; the selected
+    // treatment must still win.
+    const overriddenInvoice = await updateInvoiceManualItems(invoiceId, {
+      updatedItems: [{
+        item_id: itemId,
+        service_id: serviceId,
+        description: 'Catalog line overridden to non-taxable',
+        quantity: 1,
+        rate: 10000,
+        is_taxable: true,
+        tax_rate_id: null,
+      }],
+      newItems: [],
+      removedItemIds: [],
+    } as any, { operationId: uuidv4(), expectedRevision: 2 });
+
+    const afterOverride = await context.db('invoice_charges')
+      .where({ item_id: itemId, tenant: context.tenantId })
+      .first();
+    expect(afterOverride.is_taxable).toBe(false);
+    expect(afterOverride.tax_region).toBeNull();
+    expect(Number((overriddenInvoice as any).tax)).toBe(0);
+    expect(Number((overriddenInvoice as any).total_amount)).toBe(10000);
+    // Reload surface: a non-taxable stored flag is what the editor's collapsed
+    // badge resolves from (resolveInitialTaxRateId returns null when
+    // is_taxable === false), so the persisted state is non-taxable and clean.
+    expect(Number((overriddenInvoice as any).subtotal)).toBe(10000);
+  });
+
+  it('T235: rejects an edit with an unknown tax rate without changing the line or invoice totals', async () => {
+    const clientId = context.clientId;
+    const invoiceId = await context.createEntity('invoices', {
+      invoice_number: `CATUNKNOWNRATE-${uuidv4().slice(0, 8)}`,
+      invoice_date: createTestDateISO({ year: 2025, month: 1, day: 1 }),
+      due_date: createTestDateISO({ year: 2025, month: 2, day: 1 }),
+      status: 'draft',
+      client_id: clientId,
+      currency_code: 'USD',
+      is_manual: false,
+      total_amount: 0,
+    }, 'invoice_id');
+
+    const itemId = uuidv4();
+    const addedInvoice = await addManualItemsToInvoice(invoiceId, [{
+      item_id: itemId,
+      invoice_id: invoiceId,
+      service_id: undefined,
+      description: 'Unknown rate target',
+      quantity: 1,
+      rate: 10000,
+      unit_price: 10000,
+      total_price: 10000,
+      net_amount: 10000,
+      tax_amount: 0,
+      tax_region: undefined,
+      tax_rate: 0,
+      is_manual: true,
+      is_taxable: false,
+      is_discount: false,
+      tenant: context.tenantId,
+      tax_rate_id: null,
+    } as any], { operationId: uuidv4(), expectedRevision: 0 });
+
+    const before = await context.db('invoice_charges')
+      .where({ item_id: itemId, tenant: context.tenantId })
+      .first();
+    expect(before.is_taxable).toBe(false);
+    expect(before.tax_region).toBeNull();
+    expect(Number((addedInvoice as any).tax)).toBe(0);
+    expect(Number((addedInvoice as any).total_amount)).toBe(10000);
+
+    // An id that this tenant does not own cannot be resolved to a region. The
+    // edit must fail before any row is written rather than store
+    // is_taxable=true with a null region (which would let tax fall back to the
+    // client region).
+    const unknownRateId = uuidv4();
+    const result = await updateInvoiceManualItems(invoiceId, {
+      updatedItems: [{
+        item_id: itemId,
+        description: 'Unknown rate target',
+        quantity: 1,
+        rate: 10000,
+        is_taxable: true,
+        tax_rate_id: unknownRateId,
+      }],
+      newItems: [],
+      removedItemIds: [],
+    } as any, { operationId: uuidv4(), expectedRevision: 1 });
+
+    expect(result).toMatchObject({ success: false, code: 'TAX_RATE_NOT_FOUND' });
+
+    // The rejected edit must not have changed the line...
+    const after = await context.db('invoice_charges')
+      .where({ item_id: itemId, tenant: context.tenantId })
+      .first();
+    expect(after.is_taxable).toBe(false);
+    expect(after.tax_region).toBeNull();
+    expect(Number(after.unit_price)).toBe(10000);
+    expect(Number(after.net_amount)).toBe(10000);
+    expect(after.description).toBe('Unknown rate target');
+
+    // ...nor the invoice totals.
+    const reloadedInvoice = await context.db('invoices')
+      .where({ invoice_id: invoiceId, tenant: context.tenantId })
+      .first();
+    expect(Number(reloadedInvoice.tax)).toBe(0);
+    expect(Number(reloadedInvoice.total_amount)).toBe(10000);
   });
 
   it('T022: invoice generation succeeds for a cloned assignment with duplicated contract-line configuration after migration', async () => {

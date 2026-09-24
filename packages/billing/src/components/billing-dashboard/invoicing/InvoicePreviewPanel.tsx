@@ -31,6 +31,7 @@ import { InvoiceSyncBadge, qboInvoiceDeepLink, xeroInvoiceDeepLink } from '../..
 import { useInvoiceSyncStatuses } from '../../invoices/useInvoiceSyncStatuses';
 import { resolveTemplatePrintSettingsFromAst } from '../../../lib/invoice-template-ast/printSettings';
 import DraftInvoiceDetailsCard, { type DraftInvoiceDetailsSummary } from './DraftInvoiceDetailsCard';
+import DraftInvoiceAdjustmentsCard from './DraftInvoiceAdjustmentsCard';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getErrorMessage,
@@ -405,6 +406,23 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
           <DraftInvoiceDetailsCard
             invoice={draftInvoiceEditorSummary}
             onSaved={handleDraftInvoiceUpdated}
+          />
+        ) : null}
+
+        {!readOnly && !isFinalized && draftInvoiceSummary && draftInvoiceSummary.status === 'draft' ? (
+          <DraftInvoiceAdjustmentsCard
+            invoice={draftInvoiceSummary}
+            blockedReason={
+              syncStatus?.state === 'synced'
+                ? t('draftInvoiceAdjustments.blocked.exported', {
+                    defaultValue:
+                      'This invoice is synced to an accounting system. Void it or issue a separate credit instead of editing its lines.',
+                  })
+                : null
+            }
+            onUpdated={async () => {
+              setPreviewRefreshCounter((current) => current + 1);
+            }}
           />
         ) : null}
 

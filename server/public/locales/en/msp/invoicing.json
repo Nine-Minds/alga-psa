@@ -330,7 +330,8 @@
       "title": "Automated Line Items",
       "service": "Service",
       "total": "Total",
-      "unknownService": "Unknown Service"
+      "unknownService": "Unknown Service",
+      "period": "Period"
     },
     "lineItems": {
       "manual": "Manual Line Items",
@@ -343,7 +344,8 @@
       "saveChanges": "Save Changes",
       "processing": "Processing...",
       "generateSalesOrderInvoice": "Generate Sales Order Invoice",
-      "clearSalesOrderSource": "Clear sales order source"
+      "clearSalesOrderSource": "Clear sales order source",
+      "addPartialPeriodCharge": "Add partial-period charge"
     },
     "labels": {
       "total": "Total"
@@ -395,6 +397,32 @@
     },
     "salesOrderContext": {
       "summary": "{{quantity}} item(s) ready to invoice from {{lineCount}} line(s). This draft will be linked back to the sales order."
+    },
+    "draftAdjustments": {
+      "title": "Invoice adjustments",
+      "description": "Add one-time charges, discounts or credits. Generated contract charges stay read-only; correct the source contract or add an adjustment."
+    },
+    "partialPeriod": {
+      "title": "Partial-period charge",
+      "help": "Resolved as units × period unit price × covered days / full-period days. The inputs are kept with the line so it stays intelligible.",
+      "direction": "Direction",
+      "increase": "Increase",
+      "decrease": "Decrease (credit)",
+      "units": "Units",
+      "unitPrice": "Unit price",
+      "coveredDays": "Covered days",
+      "fullPeriodDays": "Full-period days",
+      "description": "Description (optional)",
+      "reason": "Reason (optional)",
+      "previewUnavailable": "Enter a valid calculation.",
+      "resolvedAmount": "Resolved amount: {{amount}}",
+      "addCharge": "Add charge",
+      "creditDescription": "Credit: {{proration}}",
+      "errors": {
+        "units": "Units must be greater than zero.",
+        "unitPrice": "Unit price must be a number.",
+        "invalid": "Enter a valid partial period."
+      }
     }
   },
   "quickInvoice": {
@@ -2205,5 +2233,11 @@
     "saving": "Saving…",
     "saveCorrection": "Save correction",
     "save": "Save"
+  },
+  "draftInvoiceAdjustments": {
+    "blockedTitle": "Invoice adjustments unavailable",
+    "blocked": {
+      "exported": "This invoice is synced to an accounting system. Void it or issue a separate credit instead of editing its lines."
+    }
   }
 }

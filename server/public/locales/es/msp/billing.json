@@ -230,12 +230,14 @@
       "selectService": "Seleccionar Servicio",
       "taxable": "(Imponible)",
       "nonTaxable": "(No imponible)",
-      "calculatedOnSave": "(calculado al guardar)"
+      "calculatedOnSave": "(calculado al guardar)",
+      "credit": "Crédito"
     },
     "expanded": {
       "discount": "Descuento",
       "item": "Artículo {{number}}",
-      "markedForRemoval": "Marcado para su eliminación"
+      "markedForRemoval": "Marcado para su eliminación",
+      "credit": "Crédito"
     },
     "fields": {
       "service": "Servicio",
@@ -247,10 +249,18 @@
       "applyDiscountTo": "Aplicar descuento a",
       "entireInvoice": "Factura completa",
       "rate": "Tarifa ({{currencySymbol}})",
-      "description": "Descripción"
+      "description": "Descripción",
+      "creditUnit": "Crédito por unidad ({{currencySymbol}})",
+      "taxTreatment": "Tratamiento fiscal",
+      "nonTaxable": "No imponible",
+      "location": "Ubicación",
+      "clientDefaultLocation": "Predeterminado del cliente",
+      "billingProfile": "Perfil de facturación",
+      "clientDefaultProfile": "Predeterminado del cliente"
     },
     "placeholders": {
-      "discountDescription": "por ejemplo, descuento por pago anticipado"
+      "discountDescription": "por ejemplo, descuento por pago anticipado",
+      "creditDescription": "p. ej., crédito de cortesía"
     },
     "actions": {
       "add": "Agregar",
@@ -267,7 +277,8 @@
       "invoiceTotal": "{{percentage}}% del total de la factura",
       "amount": "Cantidad: -{{currencySymbol}}{{amount}}",
       "appliedTo": "Aplicado a: {{description}}",
-      "subtotal": "Subtotal: {{currencySymbol}}{{amount}}"
+      "subtotal": "Subtotal: {{currencySymbol}}{{amount}}",
+      "credit": "Crédito"
     },
     "options": {
       "percentage": "Porcentaje",

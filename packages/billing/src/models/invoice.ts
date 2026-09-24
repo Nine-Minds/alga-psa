@@ -651,6 +651,7 @@ const Invoice = {
       credit_applied: creditApplied,
       billing_cycle_id: invoice.billing_cycle_id,
       is_manual: Boolean(invoice.is_manual),
+      draft_adjustment_revision: Number((invoice as { draft_adjustment_revision?: number }).draft_adjustment_revision ?? 0),
       tax_source: invoice.tax_source || 'internal',
       recurring_service_period_start: recurringServicePeriodStarts[0] || null,
       recurring_service_period_end: recurringServicePeriodEnds[recurringServicePeriodEnds.length - 1] || null,
@@ -742,12 +743,17 @@ const Invoice = {
           'ic.description as name',
           'ic.description',
           'ic.is_discount',
+          'ic.is_manual_credit',
           knexOrTrx.raw('CAST(ic.quantity AS DOUBLE PRECISION) as quantity'),
           knexOrTrx.raw('CAST(ic.unit_price AS BIGINT) as unit_price'),
           knexOrTrx.raw('CAST(ic.total_price AS BIGINT) as total_price'),
           knexOrTrx.raw('CAST(ic.tax_amount AS BIGINT) as tax_amount'),
           knexOrTrx.raw('CAST(ic.net_amount AS BIGINT) as net_amount'),
           'ic.is_manual',
+          'ic.is_taxable',
+          'ic.tax_region',
+          'ic.billing_profile_id',
+          'ic.manual_line_metadata',
           'ic.location_id'
         )
         .where('ic.invoice_id', invoiceId);

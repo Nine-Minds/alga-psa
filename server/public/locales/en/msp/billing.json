@@ -230,12 +230,14 @@
       "selectService": "Select Service",
       "taxable": "(Taxable)",
       "nonTaxable": "(Non-Taxable)",
-      "calculatedOnSave": "(calculated on save)"
+      "calculatedOnSave": "(calculated on save)",
+      "credit": "Credit"
     },
     "expanded": {
       "discount": "Discount",
       "item": "Item {{number}}",
-      "markedForRemoval": "Marked for removal"
+      "markedForRemoval": "Marked for removal",
+      "credit": "Credit"
     },
     "fields": {
       "service": "Service",
@@ -247,10 +249,18 @@
       "applyDiscountTo": "Apply Discount To",
       "entireInvoice": "Entire Invoice",
       "rate": "Rate ({{currencySymbol}})",
-      "description": "Description"
+      "description": "Description",
+      "creditUnit": "Unit credit ({{currencySymbol}})",
+      "taxTreatment": "Tax treatment",
+      "nonTaxable": "Non-taxable",
+      "location": "Location",
+      "clientDefaultLocation": "Client default",
+      "billingProfile": "Billing profile",
+      "clientDefaultProfile": "Client default"
     },
     "placeholders": {
-      "discountDescription": "e.g., Early Payment Discount"
+      "discountDescription": "e.g., Early Payment Discount",
+      "creditDescription": "e.g., Goodwill credit"
     },
     "actions": {
       "add": "Add",
@@ -267,7 +277,8 @@
       "invoiceTotal": "{{percentage}}% of invoice total",
       "amount": "Amount: -{{currencySymbol}}{{amount}}",
       "appliedTo": "Applied to: {{description}}",
-      "subtotal": "Subtotal: {{currencySymbol}}{{amount}}"
+      "subtotal": "Subtotal: {{currencySymbol}}{{amount}}",
+      "credit": "Credit"
     },
     "options": {
       "percentage": "Percentage",

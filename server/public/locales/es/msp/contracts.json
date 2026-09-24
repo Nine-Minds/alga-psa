@@ -261,7 +261,8 @@
       "lines": "Líneas de contrato",
       "overview": "Descripción general",
       "pricing": "Horarios de precios",
-      "simulator": "Simular"
+      "simulator": "Simular",
+      "discounts": "Descuentos"
     },
     "validation": {
       "billingFrequencyRequired": "Se requiere frecuencia de facturación.",
@@ -532,7 +533,8 @@
       "name": "Nombre",
       "rate": "Tarifa",
       "services": "Servicios",
-      "type": "Tipo"
+      "type": "Tipo",
+      "dates": "Fechas"
     },
     "configuration": {
       "description": "Configuración que se aplica a esta línea de contrato",
@@ -543,7 +545,14 @@
       "minutesValue": "{{count}} minutos",
       "roundUpToNearest": "Redondear al más cercano (minutos)",
       "title": "Configuración de la línea de contrato",
-      "usageInfo": "Las líneas de contrato basadas en uso se configuran por servicio con tarifas por unidad."
+      "usageInfo": "Las líneas de contrato basadas en uso se configuran por servicio con tarifas por unidad.",
+      "invoiceText": "Texto de la línea de factura",
+      "invoiceTextPlaceholder": "Se imprime en la factura; por defecto, el nombre de la línea",
+      "invoiceTextDefault": "Usa el nombre de la línea",
+      "startDate": "Fecha de inicio",
+      "endDate": "Fecha de fin",
+      "inheritsContract": "Inicio del contrato",
+      "inheritsContractEnd": "Fin del contrato"
     },
     "customRate": "Personalizado",
     "description": {
@@ -622,7 +631,10 @@
     },
     "fields": {
       "billingTimingQuestion": "¿Cuándo se debe facturar esta línea?",
-      "rate": "Tarifa"
+      "rate": "Tarifa",
+      "invoiceText": "Texto de la línea de factura",
+      "invoiceTextPlaceholder": "Se imprime en la factura; por defecto, el nombre de la línea",
+      "invoiceTextHelp": "Este texto se imprime textualmente en la línea de factura recurrente."
     },
     "sections": {
       "billingTiming": "Momento de facturación",
@@ -815,7 +827,12 @@
     "fixedServicesPricingExplanation": "Las asignaciones del paquete comparten la tarifa base de la línea. Los puestos recurrentes facturan la cantidad acordada × tarifa por unidad en cada período sin registros de uso.",
     "recurringQuantity": "Cantidad recurrente",
     "allocationQuantity": "Cantidad de asignación",
-    "bundleBaseRateHelp": "Tarifa recurrente para los servicios con precio de paquete. Los puestos recurrentes se facturan por separado a cantidad × tarifa por unidad."
+    "bundleBaseRateHelp": "Tarifa recurrente para los servicios con precio de paquete. Los puestos recurrentes se facturan por separado a cantidad × tarifa por unidad.",
+    "invoiceTextLabel": "Texto de la línea de factura",
+    "invoiceTextPlaceholder": "Se imprime en la factura; por defecto, el nombre de la línea",
+    "invoiceTextHelp": "Este texto se imprime textualmente en la línea de factura recurrente.",
+    "startDateLabel": "Fecha de inicio de la línea",
+    "endDateLabel": "Fecha de fin de la línea"
   },
   "pricingSchedules": {
     "list": {
@@ -2487,5 +2504,48 @@
       "contractNotActive": "El contrato de renovación activado ya no está activo. Actualice la página e inténtelo de nuevo.",
       "manualRetryDueOnly": "El reintento manual solo está disponible para los ciclos de renovación vencidos."
     }
+  },
+  "contractDiscounts": {
+    "title": "Descuentos",
+    "description": "Los descuentos configurados se aplican automáticamente en cada factura borrador elegible de este cliente.",
+    "loading": "Cargando descuentos…",
+    "empty": "Este contrato aún no tiene descuentos configurados.",
+    "actions.add": "Añadir descuento",
+    "actions.cancel": "Cancelar",
+    "actions.save": "Guardar",
+    "actions.saving": "Guardando…",
+    "columns.name": "Nombre",
+    "columns.value": "Valor",
+    "columns.scope": "Ámbito",
+    "columns.line": "Línea de contrato",
+    "columns.dates": "Fechas",
+    "columns.status": "Estado",
+    "status.active": "Activo",
+    "status.inactive": "Inactivo",
+    "scopes.invoice": "Todos los cargos elegibles",
+    "scopes.contract": "Este contrato",
+    "scopes.service": "Un servicio",
+    "values.unnamedLine": "Línea sin nombre",
+    "types.percentage": "Porcentaje",
+    "types.fixed": "Importe fijo",
+    "fields.name": "Nombre",
+    "fields.namePlaceholder": "p. ej. Fidelidad 10 %",
+    "fields.type": "Tipo",
+    "fields.percentValue": "Porcentaje (0–100)",
+    "fields.fixedValue": "Importe",
+    "fields.startDate": "Fecha de inicio",
+    "fields.endDate": "Fecha de fin",
+    "fields.line": "Línea de contrato",
+    "fields.linePlaceholder": "Selecciona una línea de contrato",
+    "fields.scope": "Ámbito",
+    "fields.priority": "Prioridad",
+    "fields.priorityPlaceholder": "Opcional",
+    "fields.service": "Servicio",
+    "fields.servicePlaceholder": "Selecciona un servicio",
+    "fields.active": "Activo",
+    "dialog.createTitle": "Añadir descuento",
+    "dialog.editTitle": "Editar descuento",
+    "errors.loadFailed": "No se pudieron cargar los descuentos.",
+    "errors.saveFailed": "No se pudo guardar el descuento."
   }
 }

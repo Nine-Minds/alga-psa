@@ -77,11 +77,14 @@ export async function cloneTemplateContractLine(
   const appliedCustomRate = overrideRate ?? templateCustomRate;
 
   // Update the contract_line's custom_rate directly (no separate pricing table needed)
-  if (appliedCustomRate !== null) {
+  const templateInvoiceText = (templateLine as { invoice_line_description?: string | null })
+    .invoice_line_description ?? null;
+  if (appliedCustomRate !== null || templateInvoiceText !== null) {
     await tenantDb(trx, tenant).table('contract_lines')
       .where({ contract_line_id: targetContractLineId })
       .update({
-        custom_rate: appliedCustomRate,
+        ...(appliedCustomRate !== null ? { custom_rate: appliedCustomRate } : {}),
+        invoice_line_description: templateInvoiceText,
         updated_at: trx.fn.now()
       });
   }

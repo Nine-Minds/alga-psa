@@ -330,7 +330,8 @@
       "title": "Geautomatiseerde regelitems",
       "service": "Dienst",
       "total": "Totaal",
-      "unknownService": "Onbekende dienst"
+      "unknownService": "Onbekende dienst",
+      "period": "Periode"
     },
     "lineItems": {
       "manual": "Handmatige regelitems",
@@ -343,7 +344,8 @@
       "saveChanges": "Wijzigingen opslaan",
       "processing": "Verwerken...",
       "generateSalesOrderInvoice": "Verkooporderfactuur genereren",
-      "clearSalesOrderSource": "Bronverkooporder wissen"
+      "clearSalesOrderSource": "Bronverkooporder wissen",
+      "addPartialPeriodCharge": "Kosten voor deelperiode toevoegen"
     },
     "labels": {
       "total": "Totaal"
@@ -395,6 +397,32 @@
     },
     "salesOrderContext": {
       "summary": "{{quantity}} artikelen uit {{lineCount}} regels gereed voor facturering. Dit concept wordt aan de verkooporder gekoppeld."
+    },
+    "draftAdjustments": {
+      "title": "Factuuraanpassingen",
+      "description": "Voeg eenmalige kosten, kortingen of kredieten toe. Gegenereerde contractkosten blijven alleen-lezen; corrigeer het broncontract of voeg een aanpassing toe."
+    },
+    "partialPeriod": {
+      "title": "Kosten voor deelperiode",
+      "help": "Berekend als eenheden × stukprijs van de periode × gedekte dagen / dagen van de volledige periode. De invoer blijft bij de regel bewaard zodat die begrijpelijk blijft.",
+      "direction": "Richting",
+      "increase": "Verhoging",
+      "decrease": "Verlaging (krediet)",
+      "units": "Eenheden",
+      "unitPrice": "Stukprijs",
+      "coveredDays": "Gedekte dagen",
+      "fullPeriodDays": "Dagen van de volledige periode",
+      "description": "Beschrijving (optioneel)",
+      "reason": "Reden (optioneel)",
+      "previewUnavailable": "Voer een geldige berekening in.",
+      "resolvedAmount": "Berekend bedrag: {{amount}}",
+      "addCharge": "Kosten toevoegen",
+      "creditDescription": "Krediet: {{proration}}",
+      "errors": {
+        "units": "Eenheden moeten groter dan nul zijn.",
+        "unitPrice": "Stukprijs moet een getal zijn.",
+        "invalid": "Voer een geldige deelperiode in."
+      }
     }
   },
   "quickInvoice": {
@@ -2205,5 +2233,11 @@
     "saving": "Opslaan…",
     "saveCorrection": "Correctie opslaan",
     "save": "Opslaan"
+  },
+  "draftInvoiceAdjustments": {
+    "blockedTitle": "Factuuraanpassingen niet beschikbaar",
+    "blocked": {
+      "exported": "Deze factuur is gesynchroniseerd met een boekhoudsysteem. Maak haar ongeldig of geef een apart krediet uit in plaats van de regels te bewerken."
+    }
   }
 }

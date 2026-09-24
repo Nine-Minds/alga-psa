@@ -22,6 +22,7 @@ import {
     normalizeTemplateRecurringStorage,
 } from '@shared/billingClients/recurrenceStorageModel';
 import { syncRecurringServicePeriodsForContractLine } from './recurringServicePeriodSync';
+import { validateContractLineWindow, normalizeContractLineDate } from '../lib/billing/contractLineWindow';
 import { actionError, getErrorMessage, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
@@ -43,6 +44,12 @@ function contractLineActionErrorFrom(error: unknown): ContractLineActionError | 
             return actionError(error.message);
         }
         if (error.message.startsWith('Cannot update fixed')) {
+            return actionError(error.message);
+        }
+        if (error.message.includes('must be zero or greater')) {
+            return actionError(error.message);
+        }
+        if (error.message.startsWith('Line start date') || error.message.startsWith('Line end date')) {
             return actionError(error.message);
         }
     }
@@ -71,6 +78,19 @@ function contractLineActionErrorFrom(error: unknown): ContractLineActionError | 
     }
 
     return null;
+}
+
+/**
+ * A stored contract-line rate is a recurring charge, never a credit. Negative
+ * values are rejected at every write path and by a database check; recurring
+ * credits are authored only through configured discounts.
+ */
+function assertNonNegativeContractLineRate(value: unknown, label = 'Rate'): void {
+    if (value === null || value === undefined) return;
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric) || numeric < 0) {
+        throw new Error(`${label} must be zero or greater.`);
+    }
 }
 
 async function assertContractLineIsAuthorable(
@@ -207,6 +227,7 @@ export const createContractLine = withAuth(async (
 
             // Remove tenant field if present in planData to prevent override
             const { tenant: _, ...safePlanData } = planData;
+            assertNonNegativeContractLineRate(safePlanData.custom_rate);
             const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
                 cadenceOwner: safePlanData.cadence_owner,
                 defaultCadenceOwner: DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
@@ -272,6 +293,34 @@ export const updateContractLine = withAuth(async (
 
             // Remove tenant field if present in updateData to prevent override
             const { tenant: _, ...safeUpdateData } = updateData;
+            assertNonNegativeContractLineRate(safeUpdateData.custom_rate);
+            if (existingPlan.contract_id) {
+                const windowError = await validateContractLineWindow(
+                    trx,
+                    tenant,
+                    existingPlan.contract_id,
+                    {
+                        start_date: safeUpdateData.start_date,
+                        end_date: safeUpdateData.end_date,
+                    },
+                    {
+                        start_date: existingPlan.start_date,
+                        end_date: existingPlan.end_date,
+                    },
+                );
+                if (windowError) {
+                    throw new Error(windowError);
+                }
+            }
+            if ('start_date' in safeUpdateData) {
+                safeUpdateData.start_date = normalizeContractLineDate(safeUpdateData.start_date);
+            }
+            if ('end_date' in safeUpdateData) {
+                safeUpdateData.end_date = normalizeContractLineDate(safeUpdateData.end_date);
+            }
+            if (typeof safeUpdateData.invoice_line_description === 'string') {
+                safeUpdateData.invoice_line_description = safeUpdateData.invoice_line_description.trim() || null;
+            }
             const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
                 cadenceOwner: safeUpdateData.cadence_owner,
                 fallbackCadenceOwner: existingPlan.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
@@ -585,6 +634,8 @@ export const updateContractLineFixedConfig = withAuth(async (
                 throw new Error(`Cannot update fixed plan configuration for non-fixed plan type: ${existingPlan.contract_line_type}`);
             }
 
+            assertNonNegativeContractLineRate(configData.base_rate, 'Base rate');
+
             const model = new ContractLineFixedConfig(trx, tenant);
             const existingConfig = await model.getByPlanId(planId);
 
@@ -648,6 +699,8 @@ export const updatePlanServiceFixedConfigRate = withAuth(async (
             if (existingPlan.contract_line_type !== 'Fixed') {
                 throw new Error(`Cannot update fixed service config rate for non-fixed plan type: ${existingPlan.contract_line_type}`);
             }
+
+            assertNonNegativeContractLineRate(baseRate, 'Base rate');
 
             // Create configuration service
             const configService = new ContractLineServiceConfigurationService(trx, tenant);

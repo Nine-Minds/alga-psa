@@ -2,12 +2,14 @@ import { Knex } from 'knex';
 
 const ACCOUNTING_INTEGRATION_TYPE = 'quickbooks_online';
 
-export type ExportedInvoiceAction = 'unfinalize' | 'delete';
+export type ExportedInvoiceAction = 'unfinalize' | 'delete' | 'edit';
 
 const BLOCK_MESSAGES: Record<ExportedInvoiceAction, string> = {
   unfinalize:
     'This invoice is synced to an accounting system — it cannot be reopened. Void it and reissue, or issue a credit note for the difference.',
-  delete: 'This invoice is synced to an accounting system — void it instead of deleting.'
+  delete: 'This invoice is synced to an accounting system — void it instead of deleting.',
+  edit:
+    'This invoice is synced to an accounting system — adjustments are locked. Void it and reissue, or issue a credit note for the difference.'
 };
 
 export async function findInvoiceAccountingMapping(

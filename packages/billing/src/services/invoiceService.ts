@@ -486,6 +486,12 @@ export async function validateClientBillingEmail(knex: Knex, tenant: string, cli
 
 // Renamed interface for clarity within manual context
 interface ManualInvoiceItemInput extends NetAmountItem {
+  /**
+   * Client-supplied stable line id. When present it is reused so a repeated
+   * save of the same editor payload updates the same row instead of minting a
+   * new UUID (idempotent manual save); absent ids are generated.
+   */
+  item_id?: string;
   service_id?: string; // Optional for manual items
   description: string;
   is_taxable?: boolean; // Still needed for purely manual items without a service
@@ -504,6 +510,18 @@ interface ManualInvoiceItemInput extends NetAmountItem {
   /** Per-line tax override: takes precedence over the service's tax_rate_id (F045). */
   tax_rate_id?: string | null;
   /**
+   * Provenance for automatic discounts/true-ups and manual adjustments. Manual
+   * lines keep `is_manual = true`; these fields record what produced the row
+   * and, for partial-period charges, the inputs behind the resolved amount.
+   */
+  adjustment_source_kind?: 'discount' | 'contract_change' | 'manual_adjustment' | null;
+  adjustment_source_id?: string | null;
+  adjustment_source_revision?: number | null;
+  adjustment_scope?: 'invoice' | 'contract' | 'service' | 'item' | null;
+  adjustment_base_amount?: number | null;
+  adjustment_reason?: string | null;
+  manual_line_metadata?: Record<string, unknown> | null;
+  /**
    * Ticket source record this line claims (quick-invoice-a-ticket). When set,
    * the owning time entry / ticket material is marked billed and linked in the
    * same transaction as the charge, so an already-billed selection aborts.
@@ -511,6 +529,22 @@ interface ManualInvoiceItemInput extends NetAmountItem {
   source_link?: ManualInvoiceSourceLink;
 }
 
+
+/**
+ * Resolves the region code a per-line tax treatment selects. A caller-provided
+ * tax rate is validated against the tenant; an unknown or foreign id yields
+ * null so the line is not silently taxed in the wrong region.
+ */
+export async function resolveTaxRegionCodeForRate(
+  tx: Knex.Transaction,
+  tenant: string,
+  taxRateId: string,
+): Promise<string | null> {
+  const rate = await tenantScopedTable(tx, tenant, 'tax_rates')
+    .where({ tax_rate_id: taxRateId, tenant })
+    .first('region_code');
+  return (rate?.region_code as string | null) ?? null;
+}
 
 export function calculateNetAmount(
   requestItem: NetAmountItem,
@@ -536,6 +570,15 @@ export function calculateNetAmount(
   }
 }
 
+/**
+ * A row produced by automatic reconciliation (automatic discount, contract
+ * settlement) rather than authored by an operator. It carries both a source
+ * kind and a stable source id; manual lines carry a kind but no source id.
+ */
+function isSourceLinkedSettlement(item: ManualInvoiceItem): boolean {
+  return Boolean(item.adjustment_source_kind) && Boolean(item.adjustment_source_id);
+}
+
 export async function recalculatePercentageDiscountInvoiceCharges(
   tx: Knex.Transaction,
   invoiceId: string,
@@ -547,11 +590,18 @@ export async function recalculatePercentageDiscountInvoiceCharges(
       .where('invoice_id', invoiceId)
       .select('*');
 
+  // Automatic discounts are source-linked settlements: their scope, cap and
+  // per-charge allocation are owned by reconcileAutomaticInvoiceAdjustments.
+  // Recomputing them here from the whole invoice subtotal (or a single target
+  // item) would discard that scope/cap and let the stored rows disagree with
+  // the totals. Legacy/manual percentage discounts carry no source id and keep
+  // the historical whole-invoice/target-item recalculation.
   const percentageDiscountItems = invoiceItems.filter(
     (item) =>
       item.is_discount === true &&
       item.discount_type === 'percentage' &&
-      item.discount_percentage != null,
+      item.discount_percentage != null &&
+      !isSourceLinkedSettlement(item),
   );
 
   if (percentageDiscountItems.length === 0) {
@@ -581,7 +631,7 @@ export async function recalculatePercentageDiscountInvoiceCharges(
       Number(discountItem.total_price || 0) !== recalculatedNetAmount
     ) {
       await tenantScopedTable(tx, tenant, 'invoice_charges')
-        .where('item_id', discountItem.item_id)
+        .where({ item_id: discountItem.item_id, invoice_id: invoiceId })
         .update({
           net_amount: recalculatedNetAmount,
           total_price: recalculatedNetAmount,
@@ -738,6 +788,90 @@ async function claimManualChargeSource(
 }
 
 /**
+ * Rejects operator-supplied attribution that does not belong to the invoice's
+ * client. The editor's location/billing-profile selects only constrain the
+ * browser: a forged or stale id must not be persisted just because it exists
+ * for another client.
+ */
+export async function validateManualChargeAttribution(
+  tx: Knex.Transaction,
+  tenant: string,
+  clientId: string,
+  items: Array<{
+    location_id?: string | null;
+    billing_profile_id?: string | null;
+    tax_rate_id?: string | null;
+  }>,
+): Promise<void> {
+  const locationIds = [...new Set(
+    items
+      .map((item) => item.location_id)
+      .filter((value): value is string => Boolean(value)),
+  )];
+  if (locationIds.length > 0) {
+    const owned = await tenantScopedTable(tx, tenant, 'client_locations')
+      .where({ tenant, client_id: clientId })
+      .whereIn('location_id', locationIds)
+      .pluck('location_id');
+    const ownedSet = new Set(owned as string[]);
+    const foreign = locationIds.find((id) => !ownedSet.has(id));
+    if (foreign) {
+      throw new ManualInvoiceError(
+        'LOCATION_NOT_FOUND',
+        "The selected location does not belong to this invoice's client.",
+        { locationId: foreign },
+      );
+    }
+  }
+
+  const profileIds = [...new Set(
+    items
+      .map((item) => item.billing_profile_id)
+      .filter((value): value is string => Boolean(value)),
+  )];
+  if (profileIds.length > 0) {
+    const owned = await tenantScopedTable(tx, tenant, 'client_billing_profiles')
+      .where({ tenant, client_id: clientId })
+      .whereIn('billing_profile_id', profileIds)
+      .pluck('billing_profile_id');
+    const ownedSet = new Set(owned as string[]);
+    const foreign = profileIds.find((id) => !ownedSet.has(id));
+    if (foreign) {
+      throw new ManualInvoiceError(
+        'BILLING_PROFILE_NOT_FOUND',
+        "The selected billing profile does not belong to this invoice's client.",
+        { billingProfileId: foreign },
+      );
+    }
+  }
+
+  // Tax treatments are tenant-wide (not client-scoped). An explicit per-line
+  // tax_rate_id that does not resolve inside this tenant is a forged or stale
+  // selection; reject it before any row is written rather than silently
+  // persisting a taxable line with no region.
+  const taxRateIds = [...new Set(
+    items
+      .map((item) => item.tax_rate_id)
+      .filter((value): value is string => Boolean(value)),
+  )];
+  if (taxRateIds.length > 0) {
+    const owned = await tenantScopedTable(tx, tenant, 'tax_rates')
+      .where({ tenant })
+      .whereIn('tax_rate_id', taxRateIds)
+      .pluck('tax_rate_id');
+    const ownedSet = new Set(owned as string[]);
+    const unknown = taxRateIds.find((id) => !ownedSet.has(id));
+    if (unknown) {
+      throw new ManualInvoiceError(
+        'TAX_RATE_NOT_FOUND',
+        "The selected tax treatment was not found for this tenant.",
+        { taxRateId: unknown },
+      );
+    }
+  }
+}
+
+/**
  * Persists manual invoice items to the database.
  * Handles both regular manual items and manual discount items.
  * Resolves service ID references for discounts.
@@ -754,6 +888,7 @@ export async function persistManualInvoiceCharges(
   tenant: string
 ): Promise<number> {
   const sourceSnapshots = await validateManualTicketSources(tx, tenant, invoiceId, client.client_id, manualItems);
+  await validateManualChargeAttribution(tx, tenant, client.client_id, manualItems);
   let subtotal = 0;
   const serviceToItemMap = new Map<string, string>(); // Maps service_id to item_id for discount resolution
   const now = Temporal.Now.instant().toString();
@@ -791,39 +926,39 @@ export async function persistManualInvoiceCharges(
       }
     }
     // --- Determine Tax Info based on the item's (or service's) Tax Rate ID ---
-    // A per-item tax_rate_id (e.g. from a sales-order line — F045) overrides the
-    // service default.
-    const effectiveTaxRateId = requestItem.tax_rate_id ?? service?.tax_rate_id ?? null;
+    // An explicit per-item `tax_rate_id` is authoritative: a string taxes the
+    // line in that rate's region, while an explicit `null` means the operator
+    // chose Non-taxable and MUST override a taxable service default (otherwise a
+    // catalog line can never be made non-taxable). Only an absent choice
+    // (`undefined`) falls through to the linked service — this preserves legacy
+    // callers such as sales-order lines that never saw the tax-treatment control.
+    const hasExplicitTaxTreatment = requestItem.tax_rate_id !== undefined;
+    const explicitTaxRateId = requestItem.tax_rate_id || null;
+    const effectiveTaxRateId = hasExplicitTaxTreatment
+      ? explicitTaxRateId
+      : service?.tax_rate_id ?? null;
     let serviceTaxRegion: string | null = null;
     let serviceIsTaxable = true; // Default for purely manual items if no service
-    if (service) {
-      if (effectiveTaxRateId) {
-        const taxRateInfo = await tenantScopedTable(tx, tenant, 'tax_rates')
-          .where('tax_rate_id', effectiveTaxRateId)
-          // Add validity checks if needed (e.g., is_active, date range)
-          // For now, just fetch the region code associated with the ID
-          .select('region_code')
-          .first();
-        if (taxRateInfo) {
-          serviceTaxRegion = taxRateInfo.region_code;
-          serviceIsTaxable = true; // A valid tax_rate_id means taxable
-        } else {
-          // tax_rate_id exists but doesn't link to a valid rate? Treat as non-taxable.
-          console.warn(`Service ${service.service_id} has tax_rate_id ${effectiveTaxRateId} but no matching tax_rate found.`);
-          serviceIsTaxable = false;
-          serviceTaxRegion = null;
-        }
+    if (effectiveTaxRateId) {
+      serviceTaxRegion = await resolveTaxRegionCodeForRate(tx, tenant, effectiveTaxRateId);
+      if (serviceTaxRegion) {
+        serviceIsTaxable = true; // A valid tax_rate_id means taxable
       } else {
-        // Service exists but tax_rate_id is NULL, so it's non-taxable
+        // tax_rate_id exists but doesn't link to a valid rate? Treat as non-taxable.
+        console.warn(`Manual charge references tax_rate_id ${effectiveTaxRateId} but no matching tax_rate found.`);
         serviceIsTaxable = false;
-        serviceTaxRegion = null;
       }
+    } else if (hasExplicitTaxTreatment) {
+      // Explicit Non-taxable selection: authoritative even when the linked
+      // service is taxable.
+      serviceIsTaxable = false;
+    } else if (service) {
+      // Service exists but tax_rate_id is NULL, so it's non-taxable
+      serviceIsTaxable = false;
     } else {
-      // No service linked, use fallback logic below for purely manual items
-      serviceIsTaxable = requestItem.is_taxable ?? true; // Existing fallback
-      // serviceTaxRegion is derived from tax_rate_id now, or client default if no service/rate
-      // No direct tax_region on requestItem anymore
-      serviceTaxRegion = client.region_code ?? null; // Fallback to client default region if no service linked
+      // No service and no explicit treatment: purely manual fallback.
+      serviceIsTaxable = requestItem.is_taxable ?? true;
+      serviceTaxRegion = client.region_code ?? null;
     }
     // --- End Determine Tax Info ---
 
@@ -837,8 +972,23 @@ export async function persistManualInvoiceCharges(
     const isCredit = !requestItem.is_discount && requestItem.rate < 0;
     const itemProfile = resolveItemProfile(requestItem);
 
+    if (requestItem.item_id) {
+      const alreadyPersisted = await tenantScopedTable(tx, tenant, 'invoice_charges')
+        .where({ item_id: requestItem.item_id, invoice_id: invoiceId })
+        .first();
+      if (alreadyPersisted) {
+        // Idempotent re-submission: the same editor payload arrived twice, so
+        // reuse the row instead of minting a duplicate charge.
+        if (requestItem.service_id) {
+          serviceToItemMap.set(requestItem.service_id, alreadyPersisted.item_id);
+        }
+        subtotal += Number(alreadyPersisted.net_amount ?? 0);
+        continue;
+      }
+    }
+
     const invoiceItem = {
-      item_id: uuidv4(),
+      item_id: requestItem.item_id ?? uuidv4(),
       invoice_id: invoiceId,
       service_id: requestItem.service_id || null,
       description: requestItem.description,
@@ -846,11 +996,14 @@ export async function persistManualInvoiceCharges(
       unit_price: Math.round(requestItem.rate), // Store the actual rate
       net_amount: netAmount,
       tax_amount: 0, // Placeholder
-      tax_region: service ? serviceTaxRegion : (client.region_code ?? null), // Fallback to client region if no service
+      tax_region: serviceTaxRegion, // Explicit treatment region, service region, or client fallback
       tax_rate: 0, // Placeholder
       total_price: netAmount, // Placeholder
       is_manual: true,
       is_discount: isCredit, // Mark manual credits as discounts for tax base calculation logic
+      // Records that the amount is quantity × rate. Authored fixed discounts,
+      // which are quantity-independent, keep the default false.
+      is_manual_credit: isCredit,
       is_taxable: isCredit ? false : serviceIsTaxable, // Use derived taxable status
       discount_type: isCredit ? 'fixed' : undefined, // Credits are like fixed discounts
       applies_to_item_id: null, // Manual non-discounts don't apply to others
@@ -859,6 +1012,15 @@ export async function persistManualInvoiceCharges(
       billing_profile_id: itemProfile.billingProfileId,
       billing_profile_source: itemProfile.source,
       so_line_id: requestItem.so_line_id ?? null,
+      adjustment_source_kind: requestItem.adjustment_source_kind ?? 'manual_adjustment',
+      adjustment_source_id: requestItem.adjustment_source_id ?? null,
+      adjustment_source_revision: requestItem.adjustment_source_revision ?? null,
+      adjustment_scope: requestItem.adjustment_scope ?? null,
+      adjustment_base_amount: requestItem.adjustment_base_amount ?? null,
+      adjustment_reason: requestItem.adjustment_reason ?? null,
+      manual_line_metadata: requestItem.manual_line_metadata
+        ? JSON.stringify(requestItem.manual_line_metadata)
+        : null,
       created_by: session.user.id,
       created_at: now,
       tenant
@@ -903,12 +1065,21 @@ export async function persistManualInvoiceCharges(
       }
     }
 
-    // Get applicable item amount for percentage discounts
+    // Get applicable item amount for percentage discounts. Scope the lookup to
+    // this invoice so a client-supplied target that belongs to a different
+    // invoice cannot be used as the discount base.
     if (applicableItemId) {
       const applicableItem = await tenantScopedTable(tx, tenant, 'invoice_charges')
-        .where('item_id', applicableItemId)
+        .where({ item_id: applicableItemId, invoice_id: invoiceId })
         .first();
-      applicableAmount = applicableItem?.net_amount;
+      if (!applicableItem) {
+        throw new ManualInvoiceError(
+          'DISCOUNT_TARGET_NOT_FOUND',
+          'The selected discount target is not a line on this invoice.',
+          { itemId: applicableItemId },
+        );
+      }
+      applicableAmount = applicableItem.net_amount;
     }
 
     const netAmount = calculateNetAmount(
@@ -942,8 +1113,19 @@ export async function persistManualInvoiceCharges(
     // --- End Determine Tax Region ---
 
     const discountProfile = resolveItemProfile(requestItem);
+
+    if (requestItem.item_id) {
+      const alreadyPersisted = await tenantScopedTable(tx, tenant, 'invoice_charges')
+        .where({ item_id: requestItem.item_id, invoice_id: invoiceId })
+        .first();
+      if (alreadyPersisted) {
+        subtotal += Number(alreadyPersisted.net_amount ?? 0);
+        continue;
+      }
+    }
+
     const invoiceItem = {
-      item_id: uuidv4(),
+      item_id: requestItem.item_id ?? uuidv4(),
       invoice_id: invoiceId,
       service_id: requestItem.service_id || null,
       description: requestItem.description,
@@ -965,6 +1147,15 @@ export async function persistManualInvoiceCharges(
       location_id: requestItem.location_id ?? null,
       billing_profile_id: discountProfile.billingProfileId,
       billing_profile_source: discountProfile.source,
+      adjustment_source_kind: requestItem.adjustment_source_kind ?? 'manual_adjustment',
+      adjustment_source_id: requestItem.adjustment_source_id ?? null,
+      adjustment_source_revision: requestItem.adjustment_source_revision ?? null,
+      adjustment_scope: requestItem.adjustment_scope ?? null,
+      adjustment_base_amount: requestItem.adjustment_base_amount ?? null,
+      adjustment_reason: requestItem.adjustment_reason ?? null,
+      manual_line_metadata: requestItem.manual_line_metadata
+        ? JSON.stringify(requestItem.manual_line_metadata)
+        : null,
       created_by: session.user.id,
       created_at: now,
       tenant
@@ -976,6 +1167,15 @@ export async function persistManualInvoiceCharges(
 
   return subtotal;
 }
+
+
+// Automatic discount settlement lives in a dedicated service so generation,
+// preview and draft refresh share one evaluator.
+export {
+  reconcileAutomaticInvoiceDiscounts,
+  reconcileAutomaticInvoiceAdjustments,
+} from "./invoiceAutomaticAdjustments";
+
 
 /**
  * Persists fixed-price invoice items generated by the billing engine.

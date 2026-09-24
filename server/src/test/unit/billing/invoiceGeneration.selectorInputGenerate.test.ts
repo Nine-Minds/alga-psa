@@ -278,6 +278,7 @@ const mocks = vi.hoisted(() => {
     calculateAndDistributeTax: vi.fn(async () => 200),
     claimRecurringServicePeriodsForSelectionInputs: vi.fn(async () => undefined),
     persistInvoiceCharges: vi.fn(async () => 4200),
+    reconcileAutomaticInvoiceAdjustments: vi.fn(async () => ({ automaticDiscountAmount: 0 })),
     updateInvoiceTotalsAndRecordTransaction: vi.fn(async () => undefined),
     getNextBillingDate: vi.fn(async () => '2025-03-01T00:00:00.000Z'),
     getDueDate: vi.fn(async () => '2025-03-15'),
@@ -365,6 +366,10 @@ vi.mock('../../../../../packages/billing/src/services/invoiceService', () => ({
   claimRecurringServicePeriodsForSelectionInputs: mocks.claimRecurringServicePeriodsForSelectionInputs,
   persistInvoiceCharges: mocks.persistInvoiceCharges,
   updateInvoiceTotalsAndRecordTransaction: mocks.updateInvoiceTotalsAndRecordTransaction,
+}));
+
+vi.mock('../../../../../packages/billing/src/services/invoiceAutomaticAdjustments', () => ({
+  reconcileAutomaticInvoiceAdjustments: mocks.reconcileAutomaticInvoiceAdjustments,
 }));
 
 vi.mock('../../../../../packages/billing/src/actions/billingAndTax', () => ({

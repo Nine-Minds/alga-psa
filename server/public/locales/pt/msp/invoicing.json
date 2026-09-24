@@ -330,7 +330,8 @@
       "title": "Itens de linha automatizados",
       "service": "Serviço",
       "total": "Total",
-      "unknownService": "Serviço desconhecido"
+      "unknownService": "Serviço desconhecido",
+      "period": "Período"
     },
     "lineItems": {
       "manual": "Itens de linha manuais",
@@ -343,7 +344,8 @@
       "saveChanges": "Salvar alterações",
       "processing": "Processamento...",
       "generateSalesOrderInvoice": "Gerar fatura do pedido de venda",
-      "clearSalesOrderSource": "Limpar pedido de venda de origem"
+      "clearSalesOrderSource": "Limpar pedido de venda de origem",
+      "addPartialPeriodCharge": "Adicionar cobrança de período parcial"
     },
     "labels": {
       "total": "Total"
@@ -395,6 +397,32 @@
     },
     "salesOrderContext": {
       "summary": "{{quantity}} item(ns) de {{lineCount}} linha(s) pronto(s) para faturar. Este rascunho será vinculado ao pedido de venda."
+    },
+    "draftAdjustments": {
+      "title": "Ajustes da fatura",
+      "description": "Adicione cobranças, descontos ou créditos únicos. As cobranças de contrato geradas permanecem somente leitura; corrija o contrato de origem ou adicione um ajuste."
+    },
+    "partialPeriod": {
+      "title": "Cobrança de período parcial",
+      "help": "Calculado como unidades × preço unitário do período × dias cobertos / dias do período completo. Os valores permanecem com o item para que continue compreensível.",
+      "direction": "Direção",
+      "increase": "Aumento",
+      "decrease": "Redução (crédito)",
+      "units": "Unidades",
+      "unitPrice": "Preço unitário",
+      "coveredDays": "Dias cobertos",
+      "fullPeriodDays": "Dias do período completo",
+      "description": "Descrição (opcional)",
+      "reason": "Motivo (opcional)",
+      "previewUnavailable": "Insira um cálculo válido.",
+      "resolvedAmount": "Valor calculado: {{amount}}",
+      "addCharge": "Adicionar cobrança",
+      "creditDescription": "Crédito: {{proration}}",
+      "errors": {
+        "units": "As unidades devem ser maiores que zero.",
+        "unitPrice": "O preço unitário deve ser um número.",
+        "invalid": "Insira um período parcial válido."
+      }
     }
   },
   "quickInvoice": {
@@ -2205,5 +2233,11 @@
     "saving": "Salvando…",
     "saveCorrection": "Salvar correção",
     "save": "Salvar"
+  },
+  "draftInvoiceAdjustments": {
+    "blockedTitle": "Ajustes da fatura indisponíveis",
+    "blocked": {
+      "exported": "Esta fatura está sincronizada com um sistema de contabilidade. Anule-a ou emita um crédito separado em vez de editar os seus itens."
+    }
   }
 }

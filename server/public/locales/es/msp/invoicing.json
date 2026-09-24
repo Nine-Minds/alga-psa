@@ -330,7 +330,8 @@
       "title": "Líneas de pedido automatizadas",
       "service": "Servicio",
       "total": "Total",
-      "unknownService": "Servicio desconocido"
+      "unknownService": "Servicio desconocido",
+      "period": "Período"
     },
     "lineItems": {
       "manual": "Elementos de línea manuales",
@@ -343,7 +344,8 @@
       "saveChanges": "Guardar cambios",
       "processing": "Procesando...",
       "generateSalesOrderInvoice": "Generar factura de la orden de venta",
-      "clearSalesOrderSource": "Quitar la orden de venta de origen"
+      "clearSalesOrderSource": "Quitar la orden de venta de origen",
+      "addPartialPeriodCharge": "Agregar cargo de período parcial"
     },
     "labels": {
       "total": "Total"
@@ -395,6 +397,32 @@
     },
     "salesOrderContext": {
       "summary": "{{quantity}} artículo(s) de {{lineCount}} línea(s) listo(s) para facturar. Este borrador se vinculará a la orden de venta."
+    },
+    "draftAdjustments": {
+      "title": "Ajustes de factura",
+      "description": "Agregue cargos, descuentos o créditos únicos. Los cargos de contrato generados permanecen de solo lectura; corrija el contrato de origen o agregue un ajuste."
+    },
+    "partialPeriod": {
+      "title": "Cargo de período parcial",
+      "help": "Se calcula como unidades × precio unitario del período × días cubiertos / días del período completo. Las entradas se conservan con el concepto para que siga siendo comprensible.",
+      "direction": "Dirección",
+      "increase": "Aumento",
+      "decrease": "Reducción (crédito)",
+      "units": "Unidades",
+      "unitPrice": "Precio unitario",
+      "coveredDays": "Días cubiertos",
+      "fullPeriodDays": "Días del período completo",
+      "description": "Descripción (opcional)",
+      "reason": "Motivo (opcional)",
+      "previewUnavailable": "Introduzca un cálculo válido.",
+      "resolvedAmount": "Importe calculado: {{amount}}",
+      "addCharge": "Agregar cargo",
+      "creditDescription": "Crédito: {{proration}}",
+      "errors": {
+        "units": "Las unidades deben ser mayores que cero.",
+        "unitPrice": "El precio unitario debe ser un número.",
+        "invalid": "Introduzca un período parcial válido."
+      }
     }
   },
   "quickInvoice": {
@@ -2205,5 +2233,11 @@
     "saving": "Guardando…",
     "saveCorrection": "Guardar corrección",
     "save": "Guardar"
+  },
+  "draftInvoiceAdjustments": {
+    "blockedTitle": "Ajustes de factura no disponibles",
+    "blocked": {
+      "exported": "Esta factura está sincronizada con un sistema de contabilidad. Anúlela o emita un crédito por separado en lugar de editar sus conceptos."
+    }
   }
 }

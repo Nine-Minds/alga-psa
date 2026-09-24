@@ -44,6 +44,7 @@ function createBuilder(table: string) {
     return builder;
   });
   builder.select = vi.fn(() => builder);
+  builder.forUpdate = vi.fn(() => builder);
   builder.delete = vi.fn(async () => 1);
   builder.update = vi.fn(async (payload: Record<string, any>) => {
     state.updates.push({ table, payload });

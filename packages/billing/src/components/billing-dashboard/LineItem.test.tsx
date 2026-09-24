@@ -3,10 +3,16 @@ import React from 'react';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
-import { LineItem, type EditableItem } from './LineItem';
+import { LineItem, resolveLineItemAmount, type EditableItem } from './LineItem';
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
-  useTranslation: () => ({ t: (_key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? _key }),
+  useTranslation: () => ({
+    t: (_key: string, options?: Record<string, unknown>) => {
+      const template = (options?.defaultValue as string | undefined) ?? _key;
+      return template.replace(/\{\{(\w+)\}\}/g, (_match, name: string) =>
+        String(options?.[name] ?? ''));
+    },
+  }),
 }));
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
   default: ({ id, options, value, onValueChange }: any) => (
@@ -94,4 +100,122 @@ it('re-syncs the editor when the item data genuinely changes', () => {
   expect((document.getElementById('service-select') as HTMLSelectElement).value).toBe('svc-2');
   expect((document.getElementById('quantity-input') as HTMLInputElement).value).toBe('5');
   expect((document.getElementById('rate-input') as HTMLInputElement).value).toBe('9');
+});
+
+it('resolves a quantity-derived credit as quantity × rate', () => {
+  expect(resolveLineItemAmount({
+    is_discount: true,
+    discount_type: 'fixed',
+    is_manual_credit: true,
+    quantity: 3,
+    rate: -10000,
+  })).toBe(-30000);
+});
+
+it('resolves an authored fixed discount as quantity-independent', () => {
+  expect(resolveLineItemAmount({
+    is_discount: true,
+    discount_type: 'fixed',
+    is_manual_credit: false,
+    quantity: 3,
+    rate: -10000,
+  })).toBe(-10000);
+  // A missing flag (legacy rows before the column existed) is authored-shaped.
+  expect(resolveLineItemAmount({
+    is_discount: true,
+    discount_type: 'fixed',
+    quantity: 3,
+    rate: -10000,
+  })).toBe(-10000);
+});
+
+it('shows a quantity-derived credit row at quantity × rate', () => {
+  renderLineItem({
+    ...baseItem,
+    is_discount: true,
+    discount_type: 'fixed',
+    is_manual_credit: true,
+    quantity: 3,
+    rate: -10000,
+  });
+
+  expect(screen.getByText('Amount: -$300.00')).toBeTruthy();
+});
+
+it('shows an authored fixed discount row as quantity-independent', () => {
+  renderLineItem({
+    ...baseItem,
+    is_discount: true,
+    discount_type: 'fixed',
+    is_manual_credit: false,
+    quantity: 3,
+    rate: -10000,
+  });
+
+  expect(screen.getByText('Amount: -$100.00')).toBeTruthy();
+});
+
+it('reports the operator tax-treatment choice when the row is committed', () => {
+  const onChange = vi.fn();
+  render(
+    <LineItem
+      item={baseItem}
+      index={0}
+      isExpanded
+      serviceOptions={serviceOptions}
+      onRemove={vi.fn()}
+      onChange={onChange}
+      onToggleExpand={vi.fn()}
+      currencyCode="USD"
+      taxRateOptions={[
+        { value: 'rate-ny', label: 'NY Sales (8.875%)' },
+        { value: 'rate-ca', label: 'CA Sales (7.25%)' },
+      ]}
+    />,
+  );
+
+  const select = document.getElementById('line-item-tax-treatment-select') as HTMLSelectElement;
+  expect(select).toBeTruthy();
+  fireEvent.change(select, { target: { value: 'rate-ny' } });
+  fireEvent.click(document.getElementById('collapse-line-item-button')!);
+
+  expect(onChange).toHaveBeenCalledWith(
+    expect.objectContaining({ tax_rate_id: 'rate-ny' }),
+  );
+});
+
+it('omits the tax-treatment control when no rates are supplied', () => {
+  renderLineItem(baseItem);
+
+  expect(document.getElementById('line-item-tax-treatment-select')).toBeNull();
+});
+
+it('reflects the effective tax treatment on the collapsed row', () => {
+  // A taxable catalog service (svc-taxable has a non-null tax_rate_id). The
+  // operator's explicit treatment still wins: null renders Non-Taxable even
+  // though the selected service is taxable.
+  const catalogServiceOptions = [
+    ...serviceOptions,
+    { value: 'svc-taxable', label: 'Taxable Support', rate: 100, tax_rate_id: 'rate-svc' },
+  ];
+  const collapsed = (taxRateId: string | null) => (
+    <LineItem
+      item={{ ...baseItem, service_id: 'svc-taxable', tax_rate_id: taxRateId }}
+      index={0}
+      isExpanded={false}
+      serviceOptions={catalogServiceOptions}
+      onRemove={vi.fn()}
+      onChange={vi.fn()}
+      onToggleExpand={vi.fn()}
+      currencyCode="USD"
+      taxRateOptions={[{ value: 'rate-ny', label: 'NY Sales (8.875%)' }]}
+    />
+  );
+
+  const taxable = render(collapsed('rate-svc'));
+  expect(screen.getByText('(Taxable)')).toBeTruthy();
+  taxable.unmount();
+
+  render(collapsed(null));
+  expect(screen.getByText('(Non-Taxable)')).toBeTruthy();
 });

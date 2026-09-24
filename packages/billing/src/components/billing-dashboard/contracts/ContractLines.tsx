@@ -92,6 +92,11 @@ interface DetailedContractLineMapping {
   location_id?: string | null;
   /** Step 2 of the charge-attribution chain; overrides the contract's profile. */
   billing_profile_id?: string | null;
+  /** Verbatim invoice line text; falls back to the line name when null. */
+  invoice_line_description?: string | null;
+  /** Authored line window (half-open), constrained to the client contract. */
+  start_date?: string | null;
+  end_date?: string | null;
 }
 
 /**
@@ -645,6 +650,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
         minimum_billable_time: line.minimum_billable_time,
         round_up_to_nearest: line.round_up_to_nearest,
         location_id: line.location_id ?? defaultLocationId ?? null,
+        invoice_line_description: line.invoice_line_description ?? null,
+        start_date: line.start_date ?? null,
+        end_date: line.end_date ?? null,
       });
       initializeServiceConfigEdits(effectiveServices);
       resetServiceMembershipDraft();
@@ -771,6 +779,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
         minimum_billable_time: editLineData.minimum_billable_time,
         round_up_to_nearest: editLineData.round_up_to_nearest,
         location_id: editLineData.location_id ?? null,
+        invoice_line_description: editLineData.invoice_line_description?.trim() || null,
+        start_date: editLineData.start_date || null,
+        end_date: editLineData.end_date || null,
       });
       if (isReturnedActionError(updateResult)) {
         setError(getErrorMessage(updateResult));
@@ -1271,6 +1282,15 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                             </>
                           );
                         })()}
+                        {(line.start_date || line.end_date) && (
+                          <>
+                            <span>•</span>
+                            <span>
+                              {t('contractLines.columns.dates', { defaultValue: 'Dates' })}:{' '}
+                              {line.start_date || '—'} → {line.end_date || '—'}
+                            </span>
+                          </>
+                        )}
                         {line.location_id && (
                           <>
                             <span>•</span>
@@ -1521,8 +1541,79 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                               </div>
                             </div>
 
+                            {/* Invoice text and authored line window. The invoice
+                                text prints verbatim on the recurring charge; the
+                                dates bound this line inside the contract period. */}
+                            <div className="grid gap-4 md:grid-cols-3">
+                              <div className="md:col-span-1">
+                                <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                                  {t('contractLines.configuration.invoiceText', { defaultValue: 'Invoice line text' })}
+                                </Label>
+                                {editingLineId === line.contract_line_id && !pricingOnly ? (
+                                  <Input
+                                    id={`invoice-text-${line.contract_line_id}`}
+                                    value={editLineData.invoice_line_description ?? ''}
+                                    onChange={(e) => setEditLineData({
+                                      ...editLineData,
+                                      invoice_line_description: e.target.value,
+                                    })}
+                                    placeholder={t('contractLines.configuration.invoiceTextPlaceholder', {
+                                      defaultValue: 'Printed on the invoice; defaults to the line name',
+                                    })}
+                                    className="mt-1"
+                                  />
+                                ) : (
+                                  <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
+                                    {line.invoice_line_description
+                                      || t('contractLines.configuration.invoiceTextDefault', { defaultValue: 'Uses the line name' })}
+                                  </p>
+                                )}
+                              </div>
+                              <div>
+                                <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                                  {t('contractLines.configuration.startDate', { defaultValue: 'Start date' })}
+                                </Label>
+                                {editingLineId === line.contract_line_id && !pricingOnly ? (
+                                  <Input
+                                    id={`line-start-date-${line.contract_line_id}`}
+                                    type="date"
+                                    value={editLineData.start_date ?? ''}
+                                    onChange={(e) => setEditLineData({
+                                      ...editLineData,
+                                      start_date: e.target.value || null,
+                                    })}
+                                    className="mt-1"
+                                  />
+                                ) : (
+                                  <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
+                                    {line.start_date || t('contractLines.configuration.inheritsContract', { defaultValue: 'Contract start' })}
+                                  </p>
+                                )}
+                              </div>
+                              <div>
+                                <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                                  {t('contractLines.configuration.endDate', { defaultValue: 'End date' })}
+                                </Label>
+                                {editingLineId === line.contract_line_id && !pricingOnly ? (
+                                  <Input
+                                    id={`line-end-date-${line.contract_line_id}`}
+                                    type="date"
+                                    value={editLineData.end_date ?? ''}
+                                    onChange={(e) => setEditLineData({
+                                      ...editLineData,
+                                      end_date: e.target.value || null,
+                                    })}
+                                    className="mt-1"
+                                  />
+                                ) : (
+                                  <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
+                                    {line.end_date || t('contractLines.configuration.inheritsContractEnd', { defaultValue: 'Contract end' })}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+
                             <div className="grid gap-4 md:grid-cols-2">
-                              {/* Hourly contract line fields */}
                               {line.contract_line_type === 'Hourly' && (
                                 <>
                                   <div>

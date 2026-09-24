@@ -261,7 +261,8 @@
       "lines": "Vertragslinien",
       "overview": "Überblick",
       "pricing": "Preispläne",
-      "simulator": "Simulieren"
+      "simulator": "Simulieren",
+      "discounts": "Rabatte"
     },
     "validation": {
       "billingFrequencyRequired": "Die Häufigkeit der Abrechnung ist erforderlich.",
@@ -532,7 +533,8 @@
       "name": "Name",
       "rate": "Tarif",
       "services": "Dienste",
-      "type": "Typ"
+      "type": "Typ",
+      "dates": "Daten"
     },
     "configuration": {
       "description": "Einstellungen, die für diese Vertragslinie gelten",
@@ -543,7 +545,14 @@
       "minutesValue": "{{count}} Minuten",
       "roundUpToNearest": "Aufrunden auf (Minuten)",
       "title": "Vertragslinienkonfiguration",
-      "usageInfo": "Nutzungsbasierte Vertragslinien werden pro Service mit Einheitstarifen konfiguriert."
+      "usageInfo": "Nutzungsbasierte Vertragslinien werden pro Service mit Einheitstarifen konfiguriert.",
+      "invoiceText": "Rechnungspositionstext",
+      "invoiceTextPlaceholder": "Wird auf der Rechnung gedruckt; standardmäßig der Zeilenname",
+      "invoiceTextDefault": "Verwendet den Zeilennamen",
+      "startDate": "Startdatum",
+      "endDate": "Enddatum",
+      "inheritsContract": "Vertragsbeginn",
+      "inheritsContractEnd": "Vertragsende"
     },
     "customRate": "Benutzerdefiniert",
     "description": {
@@ -622,7 +631,10 @@
     },
     "fields": {
       "billingTimingQuestion": "Wann soll diese Linie abgerechnet werden?",
-      "rate": "Tarif"
+      "rate": "Tarif",
+      "invoiceText": "Rechnungspositionstext",
+      "invoiceTextPlaceholder": "Wird auf der Rechnung gedruckt; standardmäßig der Zeilenname",
+      "invoiceTextHelp": "Dieser Text wird wörtlich auf der wiederkehrenden Rechnungsposition gedruckt."
     },
     "sections": {
       "billingTiming": "Abrechnungszeitpunkt",
@@ -815,7 +827,12 @@
     "fixedServicesPricingExplanation": "Paketverteilungen teilen sich den Grundtarif der Vertragslinie. Wiederkehrende Plätze rechnen in jeder Periode die vereinbarte Menge × Einheitstarif ohne Verbrauchsdatensätze ab.",
     "recurringQuantity": "Wiederkehrende Menge",
     "allocationQuantity": "Verteilungsmenge",
-    "bundleBaseRateHelp": "Wiederkehrende Gebühr für Services mit Paketpreis. Wiederkehrende Plätze werden separat mit Menge × Einheitstarif abgerechnet."
+    "bundleBaseRateHelp": "Wiederkehrende Gebühr für Services mit Paketpreis. Wiederkehrende Plätze werden separat mit Menge × Einheitstarif abgerechnet.",
+    "invoiceTextLabel": "Rechnungspositionstext",
+    "invoiceTextPlaceholder": "Wird auf der Rechnung gedruckt; standardmäßig der Zeilenname",
+    "invoiceTextHelp": "Dieser Text wird wörtlich auf der wiederkehrenden Rechnungsposition gedruckt.",
+    "startDateLabel": "Startdatum der Zeile",
+    "endDateLabel": "Enddatum der Zeile"
   },
   "pricingSchedules": {
     "list": {
@@ -2487,5 +2504,48 @@
       "contractNotActive": "Der aktivierte Verlängerungsvertrag ist nicht mehr aktiv. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "manualRetryDueOnly": "Ein manueller Wiederholungsversuch ist nur für fällige Verlängerungszyklen möglich."
     }
+  },
+  "contractDiscounts": {
+    "title": "Rabatte",
+    "description": "Konfigurierte Rabatte werden automatisch auf jede berechtigte Entwurfsrechnung dieses Kunden angewendet.",
+    "loading": "Rabatte werden geladen…",
+    "empty": "Für diesen Vertrag sind noch keine Rabatte konfiguriert.",
+    "actions.add": "Rabatt hinzufügen",
+    "actions.cancel": "Abbrechen",
+    "actions.save": "Speichern",
+    "actions.saving": "Speichern…",
+    "columns.name": "Name",
+    "columns.value": "Wert",
+    "columns.scope": "Geltungsbereich",
+    "columns.line": "Vertragszeile",
+    "columns.dates": "Daten",
+    "columns.status": "Status",
+    "status.active": "Aktiv",
+    "status.inactive": "Inaktiv",
+    "scopes.invoice": "Alle anspruchsberechtigten Positionen",
+    "scopes.contract": "Dieser Vertrag",
+    "scopes.service": "Ein Service",
+    "values.unnamedLine": "Unbenannte Zeile",
+    "types.percentage": "Prozentsatz",
+    "types.fixed": "Festbetrag",
+    "fields.name": "Name",
+    "fields.namePlaceholder": "z. B. Treue 10 %",
+    "fields.type": "Typ",
+    "fields.percentValue": "Prozent (0–100)",
+    "fields.fixedValue": "Betrag",
+    "fields.startDate": "Startdatum",
+    "fields.endDate": "Enddatum",
+    "fields.line": "Vertragszeile",
+    "fields.linePlaceholder": "Vertragszeile auswählen",
+    "fields.scope": "Geltungsbereich",
+    "fields.priority": "Priorität",
+    "fields.priorityPlaceholder": "Optional",
+    "fields.service": "Service",
+    "fields.servicePlaceholder": "Service auswählen",
+    "fields.active": "Aktiv",
+    "dialog.createTitle": "Rabatt hinzufügen",
+    "dialog.editTitle": "Rabatt bearbeiten",
+    "errors.loadFailed": "Rabatte konnten nicht geladen werden.",
+    "errors.saveFailed": "Der Rabatt konnte nicht gespeichert werden."
   }
 }
