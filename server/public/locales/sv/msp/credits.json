@@ -3,7 +3,7 @@
     "title": "Hantera tillgodohavanden"
   },
   "columns": {
-    "creditId": "Krediterings-ID",
+    "creditId": "Tillgodohavande-ID",
     "client": "Kund",
     "balance": "Saldo",
     "balanceOf": "av {{amount}}",
@@ -58,10 +58,10 @@
     "editInSettings": "Redigera i debiteringsinställningarna"
   },
   "stats": {
-    "totalActiveCredits": "Totalt aktiva tillgodohavanden",
+    "totalActiveCredits": "Aktiva tillgodohavanden totalt",
     "expiringIn30Days": "Går ut inom 30 dagar",
-    "totalCreditsApplied": "Totalt använda tillgodohavanden",
-    "totalCreditsExpired": "Totalt utgångna tillgodohavanden"
+    "totalCreditsApplied": "Använda tillgodohavanden totalt",
+    "totalCreditsExpired": "Utgångna tillgodohavanden totalt"
   },
   "management": {
     "title": "Hantera tillgodohavanden",
@@ -79,7 +79,7 @@
     },
     "placeholders": {
       "amount": "Ange belopp",
-      "description": "Orsak till krediteringen",
+      "description": "Orsak till tillgodohavandet",
       "expirationDate": "Välj utgångsdatum"
     },
     "hints": {
@@ -102,9 +102,9 @@
     "invoiceAmount": "Fakturabelopp:",
     "selectCreditToApply": "Välj tillgodohavande att använda",
     "amountToApply": "Belopp att använda",
-    "creditOrderNoteExpirationFirst": "Tillgodohavanden används i utgångsdatumordning (tidigast först)",
-    "creditOrderNoteOldestFirst": "Tillgodohavanden används i skapandedatumordning (äldst först)",
-    "creditOrderNoteNewestFirst": "Tillgodohavanden används i skapandedatumordning (nyast först)",
+    "creditOrderNoteExpirationFirst": "Tillgodohavanden används i ordning efter utgångsdatum (tidigast först)",
+    "creditOrderNoteOldestFirst": "Tillgodohavanden används i ordning efter skapandedatum (äldst först)",
+    "creditOrderNoteNewestFirst": "Tillgodohavanden används i ordning efter skapandedatum (nyast först)",
     "noCreditsAvailable": "Inga tillgodohavanden är tillgängliga för denna kund",
     "failedToLoadCredits": "Det gick inte att läsa in tillgängliga tillgodohavanden",
     "selectCreditError": "Välj ett tillgodohavande och ange ett giltigt belopp",
@@ -119,7 +119,7 @@
     "noDetails": "Inga detaljer om tillgodohavandet är tillgängliga",
     "failedToLoad": "Det gick inte att läsa in detaljer om tillgodohavandet",
     "never": "Aldrig",
-    "creditOrderNote": "Tillgodohavanden används i utgångsdatumordning (äldst först)"
+    "creditOrderNote": "Tillgodohavanden används i ordning efter utgångsdatum (äldst först)"
   },
   "expirationDialog": {
     "title": "Redigera utgångsdatum",
@@ -129,10 +129,10 @@
     "currentExpiration": "Nuvarande utgångsdatum",
     "noExpiration": "Inget utgångsdatum",
     "newExpirationDate": "Nytt utgångsdatum",
-    "pastDateError": "Utgångsdatumet får inte ligga i det förflutna",
+    "pastDateError": "Utgångsdatumet får inte ha passerat",
     "updateError": "Ett fel uppstod när utgångsdatumet skulle uppdateras",
     "updateSuccess": "Tillgodohavandets utgångsdatum har uppdaterats",
-    "clearHint": "Rensa datumet för att ta bort tidsgränsen."
+    "clearHint": "Rensa datumet för att ta bort utgångsdatumet."
   },
   "viewDialog": {
     "title": "Detaljer om tillgodohavandet",
@@ -158,7 +158,7 @@
   },
   "transferDialog": {
     "title": "Överför tillgodohavande",
-    "description": "Flytta tillgodohavande från denna kund till en annan.",
+    "description": "Flytta tillgodohavandet från denna kund till en annan.",
     "fields": {
       "targetClient": "Till kund",
       "amount": "Belopp",
@@ -188,7 +188,7 @@
   },
   "context": {
     "lineageMissing": "Ursprungskoppling saknas",
-    "lineageMissingDescription": "Ursprungsfakturans metadata kunde inte återställas. Utgå enbart från det finansiella datumet tills ursprungskopplingen har återställts.",
+    "lineageMissingDescription": "Ursprungsfakturans metadata kunde inte hämtas. Utgå enbart från det finansiella datumet tills ursprungskopplingen har återställts.",
     "transferredRecurringCredit": "Överfört tillgodohavande från återkommande debitering",
     "recurringSource": "Källa i återkommande debitering",
     "servicePeriod": "Tjänsteperiod: {{period}}",
