@@ -27,6 +27,7 @@ const SUBJECTS = {
   it: 'Promemoria: il preventivo {{quote.number}} scade il {{quote.validUntil}}',
   pl: 'Przypomnienie: wycena {{quote.number}} wygasa {{quote.validUntil}}',
   pt: 'Lembrete: a cotação {{quote.number}} expira em {{quote.validUntil}}',
+  sv: 'Påminnelse: Offert {{quote.number}} går ut {{quote.validUntil}}',
 };
 
 /* eslint-disable max-len */
@@ -174,6 +175,24 @@ const COPY = {
     textHeader: 'Lembrete: a cotação {{quote.number}} expira em {{quote.validUntil}}',
     textDetailsHeader: 'Detalhes da cotação:',
     textNoteLabel: 'Observação',
+  },
+  sv: {
+    headerLabel: 'Offertpåminnelse',
+    headerMeta: 'Från {{company.name}}',
+    greeting: 'Hej,',
+    intro: 'Vi påminner dig om att din offert från <strong>{{company.name}}</strong> går ut <strong>{{quote.validUntil}}</strong>.',
+    textIntro: 'Vi påminner dig om att din offert från {{company.name}} går ut {{quote.validUntil}}.',
+    quoteNumberLabel: 'Offertnummer',
+    totalLabel: 'Totalt',
+    validUntilLabel: 'Giltig till',
+    customMessageLabel: 'Meddelande från {{company.name}}',
+    portalLinkLabel: 'Granska denna offert i kundportalen',
+    closingNote: 'Kontakta oss om du har några frågor om denna offert.',
+    thankYou: 'Med vänliga hälsningar,',
+    footer: 'Drivs av AlgaPSA',
+    textHeader: 'Påminnelse: Offert {{quote.number}} går ut {{quote.validUntil}}',
+    textDetailsHeader: 'Offertdetaljer:',
+    textNoteLabel: 'Anteckning',
   },
 };
 /* eslint-enable max-len */

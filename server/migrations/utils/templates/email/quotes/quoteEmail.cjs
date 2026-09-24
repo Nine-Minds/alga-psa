@@ -27,6 +27,7 @@ const SUBJECTS = {
   it: 'Preventivo {{quote.number}} da {{company.name}}',
   pl: 'Wycena {{quote.number}} od {{company.name}}',
   pt: 'Cotação {{quote.number}} de {{company.name}}',
+  sv: 'Offert {{quote.number}} från {{company.name}}',
 };
 
 /* eslint-disable max-len */
@@ -174,6 +175,24 @@ const COPY = {
     textHeader: 'Cotação {{quote.number}} de {{company.name}}',
     textDetailsHeader: 'Detalhes da cotação:',
     textNoteLabel: 'Observação',
+  },
+  sv: {
+    headerLabel: 'Offert',
+    headerMeta: 'Från {{company.name}}',
+    greeting: 'Hej,',
+    intro: 'Din offert från <strong>{{company.name}}</strong> är bifogad och klar för granskning.',
+    textIntro: 'Din offert från {{company.name}} är bifogad och klar för granskning.',
+    quoteNumberLabel: 'Offertnummer',
+    totalLabel: 'Totalt',
+    validUntilLabel: 'Giltig till',
+    customMessageLabel: 'Meddelande från {{company.name}}',
+    portalLinkLabel: 'Granska denna offert i kundportalen',
+    attachmentNote: 'Offerten bifogas detta e-postmeddelande som PDF. Kontakta oss om du har några frågor.',
+    thankYou: 'Med vänliga hälsningar,',
+    footer: 'Drivs av AlgaPSA',
+    textHeader: 'Offert {{quote.number}} från {{company.name}}',
+    textDetailsHeader: 'Offertdetaljer:',
+    textNoteLabel: 'Anteckning',
   },
 };
 /* eslint-enable max-len */
