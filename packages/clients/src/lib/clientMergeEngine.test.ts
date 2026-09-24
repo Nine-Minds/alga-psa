@@ -510,6 +510,68 @@ describe('executeClientMerge', () => {
     expect(table('client_locations')[0]).toMatchObject({ client_id: 'target', is_default: true });
   });
 
+  it('demotes the incoming logo the target already has a slot for', async () => {
+    // Two logo rows on one entity abort the merge on
+    // uq_document_associations_single_true_logo — the failure an operator hit
+    // merging two clients that both had an avatar.
+    table('document_associations').push(
+      { tenant: TENANT, association_id: 'assoc-source', document_id: 'doc-source', entity_id: 'source', entity_type: 'client', is_entity_logo: true, entity_logo_variant: 'default' },
+      { tenant: TENANT, association_id: 'assoc-target', document_id: 'doc-target', entity_id: 'target', entity_type: 'client', is_entity_logo: true, entity_logo_variant: 'default' },
+    );
+
+    await executeClientMerge(fakeTrx, TENANT, 'actor-1', {
+      sourceClientId: 'source',
+      targetClientId: 'target',
+    });
+
+    const associations = table('document_associations');
+    expect(associations.filter((row) => row.entity_id === 'target' && row.is_entity_logo)).toHaveLength(1);
+    // The target keeps its own branding and the absorbed logo still arrives,
+    // as a plain document that can be re-flagged from the UI.
+    expect(associations.find((row) => row.document_id === 'doc-target')).toMatchObject({ is_entity_logo: true });
+    expect(associations.find((row) => row.document_id === 'doc-source')).toMatchObject({
+      entity_id: 'target',
+      is_entity_logo: false,
+    });
+  });
+
+  it('lets an incoming logo keep a variant the target does not use', async () => {
+    table('document_associations').push(
+      { tenant: TENANT, association_id: 'assoc-source', document_id: 'doc-source', entity_id: 'source', entity_type: 'client', is_entity_logo: true, entity_logo_variant: 'wide' },
+      { tenant: TENANT, association_id: 'assoc-target', document_id: 'doc-target', entity_id: 'target', entity_type: 'client', is_entity_logo: true, entity_logo_variant: 'default' },
+    );
+
+    await executeClientMerge(fakeTrx, TENANT, 'actor-1', {
+      sourceClientId: 'source',
+      targetClientId: 'target',
+    });
+
+    // Separate slots in the index, so the group keeps both.
+    expect(table('document_associations').find((row) => row.document_id === 'doc-source')).toMatchObject({
+      entity_id: 'target',
+      is_entity_logo: true,
+      entity_logo_variant: 'wide',
+    });
+  });
+
+  it('hands the logo to the surviving row when both clients file the same document', async () => {
+    table('document_associations').push(
+      { tenant: TENANT, association_id: 'assoc-source', document_id: 'doc-shared', entity_id: 'source', entity_type: 'client', is_entity_logo: true, entity_logo_variant: 'default' },
+      { tenant: TENANT, association_id: 'assoc-target', document_id: 'doc-shared', entity_id: 'target', entity_type: 'client', is_entity_logo: false, entity_logo_variant: 'default' },
+    );
+
+    await executeClientMerge(fakeTrx, TENANT, 'actor-1', {
+      sourceClientId: 'source',
+      targetClientId: 'target',
+    });
+
+    // The duplicate association is dropped rather than moved, so without the
+    // hand-off the logo would vanish from a slot nothing else claimed.
+    const associations = table('document_associations').filter((row) => row.document_id === 'doc-shared');
+    expect(associations).toHaveLength(1);
+    expect(associations[0]).toMatchObject({ entity_id: 'target', is_entity_logo: true });
+  });
+
   it('archives the source, re-points its children and records an audit row', async () => {
     const result = await executeClientMerge(fakeTrx, TENANT, 'actor-1', {
       sourceClientId: 'source',

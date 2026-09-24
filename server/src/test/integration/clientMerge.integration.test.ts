@@ -28,7 +28,9 @@ import {
  * does not disturb the parent's money, that the absorbed client's own billing
  * keeps producing the same invoice from the other side of the merge, and that
  * the portal grant a site manager holds means the same thing before and after.
- * Those are TM010, TM011 and TM012.
+ * Those are TM010, TM011 and TM012. TM016 covers the other thing only a real
+ * database has: the partial unique indexes a merge collides with — two clients
+ * that each have a logo.
  *
  * The nullable-profile history case is here rather than only in the unit tests
  * on purpose: `invoices`, `transactions` and `credit_tracking` allow a null
@@ -270,6 +272,30 @@ async function invoiceMoneyProjection(invoiceId: string): Promise<string> {
   );
 }
 
+/** A client avatar, as entityImageService files one: a document plus a flagged association. */
+async function seedLogo(clientId: string, fileName: string, variant: string): Promise<string> {
+  const documentId = uuidv4();
+  await table('documents').insert({
+    tenant: tenantId,
+    document_id: documentId,
+    document_name: fileName,
+    user_id: userId,
+    created_by: userId,
+    mime_type: 'image/png',
+    entered_at: db.fn.now(),
+  });
+  await table('document_associations').insert({
+    tenant: tenantId,
+    association_id: uuidv4(),
+    document_id: documentId,
+    entity_id: clientId,
+    entity_type: 'client',
+    is_entity_logo: true,
+    entity_logo_variant: variant,
+  });
+  return documentId;
+}
+
 async function visibleTicketIds(contactId: string): Promise<string[]> {
   return db.transaction(async (trx) => {
     const visibility = await getClientContactVisibilityContext(trx, tenantId, contactId);
@@ -286,7 +312,7 @@ async function visibleTicketIds(contactId: string): Promise<string[]> {
   });
 }
 
-describe('client merge into a billing profile (TM010, TM011, TM012)', () => {
+describe('client merge into a billing profile (TM010, TM011, TM012, TM016)', () => {
   beforeAll(async () => {
     process.env.APP_ENV = process.env.APP_ENV || 'test';
     // A dedicated database: the shared `test_database` is recreated by every
@@ -666,5 +692,36 @@ describe('client merge into a billing profile (TM010, TM011, TM012)', () => {
     expect(await visibleTicketIds(manager)).toEqual([ownTicket, profileTicket].sort());
     expect(await visibleTicketIds(manager)).not.toContain(parentTicket);
     expect(await visibleTicketIds(colleague)).toEqual([profileTicket, otherProfileTicket].sort());
+  }, HOOK_TIMEOUT);
+
+  it('TM016: merges two clients that both have a logo, and the target keeps its own', async () => {
+    const target = await seedClient('Logo Group');
+    const source = await seedClient('Logo North');
+    await ensureDefaultBillingProfile({ db, tenantId }, target);
+    await ensureDefaultBillingProfile({ db, tenantId }, source);
+
+    const sourceLogo = await seedLogo(source, 'north-logo.png', 'default');
+    const targetLogo = await seedLogo(target, 'group-logo.png', 'default');
+    // A wide variant only the absorbed client has: a different slot in
+    // uq_document_associations_single_true_logo, so it is free to arrive.
+    const sourceWideLogo = await seedLogo(source, 'north-wide.png', 'wide');
+
+    // Both logos are `is_entity_logo` rows on their own client, which is the
+    // state that used to abort the merge with "duplicate key value violates
+    // unique constraint uq_document_associations_single_true_logo".
+    await db.transaction((trx) =>
+      executeClientMerge(trx, tenantId, userId, { sourceClientId: source, targetClientId: target }));
+
+    const associations = await table('document_associations').where({ entity_id: target });
+    expect(associations.map((row: any) => row.document_id).sort())
+      .toEqual([sourceLogo, targetLogo, sourceWideLogo].sort());
+    // The target's branding is untouched and the absorbed one arrives as a
+    // plain document that can be re-flagged from the UI.
+    expect(associations.find((row: any) => row.document_id === targetLogo))
+      .toMatchObject({ is_entity_logo: true, entity_logo_variant: 'default' });
+    expect(associations.find((row: any) => row.document_id === sourceLogo))
+      .toMatchObject({ is_entity_logo: false });
+    expect(associations.find((row: any) => row.document_id === sourceWideLogo))
+      .toMatchObject({ is_entity_logo: true, entity_logo_variant: 'wide' });
   }, HOOK_TIMEOUT);
 });

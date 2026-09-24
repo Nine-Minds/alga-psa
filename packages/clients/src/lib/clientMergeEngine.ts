@@ -706,11 +706,18 @@ export async function executeClientMerge(
   }
 
   // --- 6. Polymorphic associations ---------------------------------------
+  counts['logo demoted'] = await demoteCollidingLogos(
+    trx,
+    tenant,
+    CLIENT_DOCUMENT_ENTITY_TYPES,
+    source.clientId,
+    target.clientId,
+  );
   counts.document = await movePolymorphic(
     trx,
     tenant,
     'document_associations',
-    ['client', 'company'],
+    CLIENT_DOCUMENT_ENTITY_TYPES,
     source.clientId,
     target.clientId,
     ['document_id', 'entity_type'],
@@ -814,6 +821,77 @@ export async function executeClientMerge(
     remappedExternalMappingIds: remapped,
     skippedExternalMappingIds: skipped,
   };
+}
+
+/** Client documents are filed under the current type and the legacy one. */
+const CLIENT_DOCUMENT_ENTITY_TYPES = ['client', 'company'];
+
+/**
+ * A client's logo is a `document_associations` row flagged `is_entity_logo`, and
+ * `uq_document_associations_single_true_logo` allows exactly one per
+ * (entity, entity_type, logo variant). Both clients in a merge normally have
+ * one, so moving the source's row onto the target hits that index and aborts the
+ * whole merge with a duplicate-key error.
+ *
+ * The target keeps its own branding: where it already fills a logo slot, the
+ * incoming row is demoted to a plain association — precisely what uploading a
+ * replacement logo does to the previous one (entityImageService), so the
+ * document still arrives and can be re-flagged from the UI. A slot the target
+ * leaves empty is inherited instead, either by letting the move carry the flag
+ * or, when the target already files the same document, by promoting the row that
+ * survives deduplication.
+ */
+async function demoteCollidingLogos(
+  trx: Knex.Transaction,
+  tenant: string,
+  entityTypes: string[],
+  sourceClientId: string,
+  targetClientId: string,
+): Promise<number> {
+  const slotOf = (row: { entity_type: string; entity_logo_variant: string | null }) =>
+    `${row.entity_type}::${row.entity_logo_variant ?? 'default'}`;
+
+  const sourceLogos = await scoped(trx, tenant, 'document_associations')
+    .where({ entity_id: sourceClientId, is_entity_logo: true })
+    .whereIn('entity_type', entityTypes)
+    .select('document_id', 'entity_type', 'entity_logo_variant');
+  if (sourceLogos.length === 0) return 0;
+
+  const targetLogos = await scoped(trx, tenant, 'document_associations')
+    .where({ entity_id: targetClientId, is_entity_logo: true })
+    .whereIn('entity_type', entityTypes)
+    .select('entity_type', 'entity_logo_variant');
+  const taken = new Set((targetLogos as Array<any>).map(slotOf));
+
+  let demoted = 0;
+  for (const logo of sourceLogos as Array<any>) {
+    if (!taken.has(slotOf(logo))) {
+      taken.add(slotOf(logo));
+      const duplicate = await scoped(trx, tenant, 'document_associations')
+        .where({
+          entity_id: targetClientId,
+          entity_type: logo.entity_type,
+          document_id: logo.document_id,
+        })
+        .first('association_id');
+      // No duplicate: movePolymorphic carries the row, flag and all.
+      if (!duplicate) continue;
+      await scoped(trx, tenant, 'document_associations')
+        .where({ association_id: (duplicate as any).association_id })
+        .update({
+          is_entity_logo: true,
+          entity_logo_variant: logo.entity_logo_variant ?? 'default',
+        });
+    }
+    demoted += await scoped(trx, tenant, 'document_associations')
+      .where({
+        entity_id: sourceClientId,
+        entity_type: logo.entity_type,
+        document_id: logo.document_id,
+      })
+      .update({ is_entity_logo: false });
+  }
+  return demoted;
 }
 
 /**
