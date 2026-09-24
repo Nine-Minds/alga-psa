@@ -700,7 +700,10 @@
       "re_xxxxxxxxxxxxxxxxxx",
       "noreply@yourdomain.com",
       "Status:",
-      "Metadata"
+      "Metadata",
+      "Essentials",
+      "{{amount}}/{{interval}}",
+      "{{count}} {{licenseLabel}}"
     ],
     "caseInsensitive": [
       "adapter", "budget", "fax", "filter", "kanban", "layout", "offline", "online", "router", "server", "status", "support", "team", "webhook"
