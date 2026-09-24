@@ -2026,6 +2026,26 @@ async function updateManualInvoiceItemsInternal(
 
     // Process updates
     if (changes.updatedItems && changes.updatedItems.length > 0) {
+      // Resolve every explicit tax treatment before touching any row. A rate id
+      // that cannot resolve to a region (unknown, cross-tenant, or otherwise
+      // unusable) must fail the whole edit rather than persist is_taxable=true
+      // with a null region — that would let tax calculation fall back to the
+      // client region and charge the wrong tax. Resolving up front guarantees no
+      // row is updated before the failure.
+      const resolvedTaxRegions = new Map<string, string>();
+      for (const item of changes.updatedItems) {
+        if (!item.tax_rate_id) continue;
+        const region = await resolveTaxRegionCodeForRate(trx, tenant, item.tax_rate_id);
+        if (!region) {
+          throw new ManualInvoiceError(
+            'TAX_RATE_NOT_FOUND',
+            'The selected tax treatment was not found for this tenant.',
+            { taxRateId: item.tax_rate_id },
+          );
+        }
+        resolvedTaxRegions.set(item.item_id, region);
+      }
+
       // First pass: Update all items with their new values
       for (const item of changes.updatedItems) {
         // The selected tax treatment is authoritative for an edited line: a
@@ -2037,7 +2057,7 @@ async function updateManualInvoiceItemsInternal(
         const explicitTaxRateId = item.tax_rate_id || null;
         const resolvedTaxRegion = hasExplicitTaxTreatment
           ? explicitTaxRateId
-            ? (await resolveTaxRegionCodeForRate(trx, tenant, explicitTaxRateId)) ?? null
+            ? resolvedTaxRegions.get(item.item_id) ?? null
             : null
           : undefined;
         const updateData = {

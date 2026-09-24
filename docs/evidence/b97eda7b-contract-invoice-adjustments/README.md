@@ -320,6 +320,17 @@ plan requires, without changing the legacy manual-invoice generator.
   total `$100`), taxes it, then overrides a taxable catalog line back to
   Non-taxable with a deliberately stale `is_taxable: true` (stays non-taxable,
   `tax=0`, total `$100`). Both halves fail against the pre-fix source.
+- The edit path now resolves every explicit tax treatment before updating any
+  row and returns `TAX_RATE_NOT_FOUND` if a rate id cannot resolve to a region,
+  so an unknown/cross-tenant (or otherwise unusable) id can never persist
+  `is_taxable=true` with a null region and let tax fall back to the client
+  region. `contractInvoiceManualCredit.test.ts` T235 sends an unknown tax rate
+  on an existing line, asserts the action returns
+  `{ success: false, code: 'TAX_RATE_NOT_FOUND' }`, and asserts the line
+  (`is_taxable`, `tax_region`, `unit_price`, `net_amount`, description) and the
+  invoice `tax`/`total_amount` are unchanged. With both the up-front guard and
+  the attribution guard temporarily disabled the edit succeeds and the total
+  wrongly becomes `$110`, proving the test is non-vacuous.
 - Behavioral coverage: `LineItem.test.tsx` (the control reports the operator
   choice; it is absent with no options; the collapsed badge tracks the explicit
   treatment, including Non-Taxable on a taxable catalog service),
@@ -335,7 +346,7 @@ Verification snapshot this round (all green, sequential DB runs):
 | --- | --- |
 | `packages/billing` unit (`npx vitest run`) | 311 files / 1558 tests |
 | `contractInvoiceAdjustments.db.test.ts` | 20 tests |
-| `contractInvoiceManualCredit.test.ts` | 6 tests |
+| `contractInvoiceManualCredit.test.ts` | 7 tests |
 | `billingInvoiceGeneration_discounts.test.ts` | 4 tests |
 | `exportReadiness.test.ts` + `invoiceExportGuards.test.ts` | 13 tests |
 | `GenerateTab.test.tsx` + `InvoicePreviewPanel.test.tsx` | 6 tests |

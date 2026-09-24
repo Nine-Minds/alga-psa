@@ -769,6 +769,86 @@ describe('Contract Invoice Manual Credit', () => {
     expect(Number((overriddenInvoice as any).subtotal)).toBe(10000);
   });
 
+  it('T235: rejects an edit with an unknown tax rate without changing the line or invoice totals', async () => {
+    const clientId = context.clientId;
+    const invoiceId = await context.createEntity('invoices', {
+      invoice_number: `CATUNKNOWNRATE-${uuidv4().slice(0, 8)}`,
+      invoice_date: createTestDateISO({ year: 2025, month: 1, day: 1 }),
+      due_date: createTestDateISO({ year: 2025, month: 2, day: 1 }),
+      status: 'draft',
+      client_id: clientId,
+      currency_code: 'USD',
+      is_manual: false,
+      total_amount: 0,
+    }, 'invoice_id');
+
+    const itemId = uuidv4();
+    const addedInvoice = await addManualItemsToInvoice(invoiceId, [{
+      item_id: itemId,
+      invoice_id: invoiceId,
+      service_id: undefined,
+      description: 'Unknown rate target',
+      quantity: 1,
+      rate: 10000,
+      unit_price: 10000,
+      total_price: 10000,
+      net_amount: 10000,
+      tax_amount: 0,
+      tax_region: undefined,
+      tax_rate: 0,
+      is_manual: true,
+      is_taxable: false,
+      is_discount: false,
+      tenant: context.tenantId,
+      tax_rate_id: null,
+    } as any], { operationId: uuidv4(), expectedRevision: 0 });
+
+    const before = await context.db('invoice_charges')
+      .where({ item_id: itemId, tenant: context.tenantId })
+      .first();
+    expect(before.is_taxable).toBe(false);
+    expect(before.tax_region).toBeNull();
+    expect(Number((addedInvoice as any).tax)).toBe(0);
+    expect(Number((addedInvoice as any).total_amount)).toBe(10000);
+
+    // An id that this tenant does not own cannot be resolved to a region. The
+    // edit must fail before any row is written rather than store
+    // is_taxable=true with a null region (which would let tax fall back to the
+    // client region).
+    const unknownRateId = uuidv4();
+    const result = await updateInvoiceManualItems(invoiceId, {
+      updatedItems: [{
+        item_id: itemId,
+        description: 'Unknown rate target',
+        quantity: 1,
+        rate: 10000,
+        is_taxable: true,
+        tax_rate_id: unknownRateId,
+      }],
+      newItems: [],
+      removedItemIds: [],
+    } as any, { operationId: uuidv4(), expectedRevision: 1 });
+
+    expect(result).toMatchObject({ success: false, code: 'TAX_RATE_NOT_FOUND' });
+
+    // The rejected edit must not have changed the line...
+    const after = await context.db('invoice_charges')
+      .where({ item_id: itemId, tenant: context.tenantId })
+      .first();
+    expect(after.is_taxable).toBe(false);
+    expect(after.tax_region).toBeNull();
+    expect(Number(after.unit_price)).toBe(10000);
+    expect(Number(after.net_amount)).toBe(10000);
+    expect(after.description).toBe('Unknown rate target');
+
+    // ...nor the invoice totals.
+    const reloadedInvoice = await context.db('invoices')
+      .where({ invoice_id: invoiceId, tenant: context.tenantId })
+      .first();
+    expect(Number(reloadedInvoice.tax)).toBe(0);
+    expect(Number(reloadedInvoice.total_amount)).toBe(10000);
+  });
+
   it('T022: invoice generation succeeds for a cloned assignment with duplicated contract-line configuration after migration', async () => {
     const preservedClientId = context.clientId;
     const clonedClientId = await createClient(context.db, context.tenantId, 'Cloned Contract Billing Client');
