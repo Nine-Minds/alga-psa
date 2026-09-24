@@ -32,7 +32,7 @@
     "schedulingFor": "Schemaläggning",
     "selectSlotHint": "Dra för att skapa, flytta eller ändra längden på poster. Klicka på en post för att redigera den.",
     "readOnlyHint": "Du kan visa det här schemat, men behöver behörighet att uppdatera schemat för att lägga till eller ändra poster.",
-    "workItemLegend": "Det här arbetsobjektet",
+    "workItemLegend": "Den här arbetsposten",
     "schedulingForAgent": "Schemaläggning för {{name}}",
     "otherWorkLegend": "Annat arbete",
     "workItemTypeLabel": {
@@ -168,8 +168,8 @@
       "title": "Bokningsförfrågningar",
       "badgeTotal": "Totalt",
       "loading": "Laddar förfrågningar…",
-      "empty": "Inga förfrågningar hittades med status {{status}}",
-      "duration": "{{count}} min",
+      "empty": "Ingen {{status}} förfrågan hittades",
+      "duration": "{{count}} minuter",
       "ticketFallback": "Ärende #{{ticket}}",
       "fallbacks": {
         "publicRequest": "Offentlig förfrågan"
@@ -184,7 +184,7 @@
       "labels": {
         "reference": "Referens",
         "client": "Kund",
-        "requester": "Avsändare",
+        "requester": "Beställare",
         "contact": "Kontakt",
         "email": "E-post",
         "phone": "Telefon",
@@ -314,7 +314,7 @@
         "help": "Företagsgemensamma godkännare för bokningsförfrågningar som kräver manuellt godkännande. Lägg till flera användare och/eller team – alla som väljs aviseras och kan godkänna. Detta kan åsidosättas per tekniker under Bokningsbara tider."
       },
       "advanceBookingDays": {
-        "label": "Bokning i förväg som standard (dagar)"
+        "label": "Förhandsbokning som standard (dagar)"
       },
       "minimumNoticeHours": {
         "label": "Minsta framförhållning (timmar)"
@@ -495,7 +495,7 @@
         "empty": "Inga undantag har konfigurerats",
         "status": {
           "available": "Tillgänglig",
-          "unavailable": "Inte tillgänglig"
+          "unavailable": "Ej tillgänglig"
         }
       },
       "feedback": {
@@ -528,7 +528,7 @@
       },
       "organizer": {
         "title": "Mötesorganisatör",
-        "label": "Microsoft-användarens objekt-ID för standardorganisatör",
+        "label": "Objekt-ID för Microsoft-användaren som är standardorganisatör",
         "help": "Godkända bokningar skapar Teams-möten som den här Microsoft-användaren. Använd objekt-ID:t från Entra. UPN-värden kan ge 404 från Microsoft Graph onlineMeetings.",
         "placeholder": "00000000-0000-0000-0000-000000000000"
       },
@@ -600,9 +600,9 @@
       "delete": "Radera post"
     },
     "workItem": {
-      "adHocFallback": "Ad hoc-post (utan arbetsobjekt)",
+      "adHocFallback": "Ad hoc-post (utan arbetspost)",
       "openDetails": "Detaljer",
-      "loading": "Laddar arbetsobjekt…",
+      "loading": "Laddar arbetspost…",
       "openTicket": "Öppna ärende",
       "openTask": "Öppna uppgift",
       "openInteraction": "Öppna interaktion"
@@ -630,7 +630,7 @@
         "description": "Den här bokningsförfrågan avbokades av kunden."
       },
       "requesterInfo": {
-        "title": "Avsändaruppgifter",
+        "title": "Beställaruppgifter",
         "company": "Företag",
         "name": "Namn",
         "email": "E-post",
@@ -699,7 +699,7 @@
       "all": "Alla händelser"
     },
     "errors": {
-      "loadWorkItem": "Kunde inte läsa in arbetsobjektet."
+      "loadWorkItem": "Kunde inte läsa in arbetsposten."
     },
     "teamsMeeting": {
       "create": "Skapa Teams-möte",
@@ -749,10 +749,10 @@
     },
     "workItem": {
       "adHocTimesRequired": "Starttid och sluttid krävs för ad hoc-poster.",
-      "typeUnsupported": "Den här typen av arbetsobjekt stöds inte för schemaläggning.",
+      "typeUnsupported": "Den här typen av arbetspost stöds inte för schemaläggning.",
       "entryOrUserUnavailable": "Den valda schemaposten eller användaren är inte längre tillgänglig. Ladda om och försök igen.",
-      "invalid": "Det valda arbetsobjektet är ogiltigt. Ladda om och försök igen.",
-      "referenceMissing": "Valet av arbetsobjekt, schemapost eller ansvarig är inte längre giltigt. Ladda om och försök igen.",
+      "invalid": "Den valda arbetsposten är ogiltig. Ladda om och försök igen.",
+      "referenceMissing": "Valet av arbetspost, schemapost eller ansvarig är inte längre giltigt. Ladda om och försök igen.",
       "duplicateEntry": "Schemaposten finns redan. Ladda om och försök igen.",
       "missingField": "Ett obligatoriskt schemafält saknas.",
       "missingFieldNamed": "Ett obligatoriskt schemafält saknas: {{field}}."
