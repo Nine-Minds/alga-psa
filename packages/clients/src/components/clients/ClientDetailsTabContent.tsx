@@ -9,14 +9,18 @@ import { translateFieldValidation, validateAnnualRevenueField, validateClientNam
 import { Button } from '@alga-psa/ui/components/Button';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import { DrawerFooter } from '@alga-psa/ui/components/Drawer';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { FieldWarnings } from '@alga-psa/ui/components/FieldWarnings';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { FormFieldComponent } from '@alga-psa/ui/ui-reflection/types';
+import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Flex, Text } from '@radix-ui/themes';
+import { clientSinceInputValue } from '../../lib/clientSince';
 import QuickAddContact from '../contacts/QuickAddContact';
 import { ClientLanguagePreference } from './ClientLanguagePreference';
 import ClientLocations from './ClientLocations';
@@ -539,6 +543,34 @@ export function ClientDetailsTabContent({
             />
           </FieldContainer>
 
+          <FieldContainer
+            label={t('clientDetails.clientSince', { defaultValue: 'Client since' })}
+            fieldType="textField"
+            value={clientSinceInputValue(editedClient.client_since)}
+            helperText={t('clientDetails.clientSinceHelper', {
+              defaultValue: 'When the relationship started. Leave it empty to use the date this client was added here.',
+            })}
+            automationId="client-since-field"
+          >
+            <Text as="label" size="2" className="text-gray-700 font-medium">
+              {t('clientDetails.clientSince', { defaultValue: 'Client since' })}
+            </Text>
+            <DatePicker
+              id="client-since-picker"
+              label={t('clientDetails.clientSince', { defaultValue: 'Client since' })}
+              placeholder={t('clientDetails.clientSincePlaceholder', { defaultValue: 'Date this client was added' })}
+              clearable
+              className="w-full"
+              value={dateFromString(clientSinceInputValue(editedClient.client_since))}
+              onChange={(date) => onFieldChange('client_since', dateToString(date) || null)}
+            />
+            <Text size="1" className="text-gray-500">
+              {t('clientDetails.clientSinceHelper', {
+                defaultValue: 'When the relationship started. Leave it empty to use the date this client was added here.',
+              })}
+            </Text>
+          </FieldContainer>
+
           <TextDetailItem
             label={t('quickAddClient.websiteUrl', { defaultValue: 'Website URL' })}
             value={editedClient.properties?.website || ''}
@@ -650,7 +682,7 @@ export function ClientDetailsTabContent({
         </div>
       </div>
 
-      <Flex gap="4" justify="end" align="center" className="pt-6">
+      <DrawerFooter className="items-center gap-4 pt-6">
         {hasAttemptedSubmit && Object.keys(fieldErrors).some(key => fieldErrors[key]) && (
           <Text size="2" className="text-red-600 mr-2" role="alert">
             {t('clientDetails.requiredFields', { defaultValue: 'Please fill in all required fields' })}
@@ -672,7 +704,7 @@ export function ClientDetailsTabContent({
         >
           {t('clientDetails.addTicket', { defaultValue: 'Add ticket' })}
         </Button>
-      </Flex>
+      </DrawerFooter>
     </div>
   );
 }
