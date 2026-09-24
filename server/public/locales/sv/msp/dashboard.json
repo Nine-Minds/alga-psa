@@ -1,0 +1,217 @@
+{
+  "greeting": {
+    "morning": "God morgon",
+    "morningWithName": "God morgon, {{name}}",
+    "afternoon": "God eftermiddag",
+    "afternoonWithName": "God eftermiddag, {{name}}",
+    "evening": "God kväll",
+    "eveningWithName": "God kväll, {{name}}"
+  },
+  "welcome": {
+    "title": "Välkommen till din MSP-central",
+    "description": "Följ introduktionens förlopp, konfigurera kritiska tjänster och ge alla kunder en enhetlig upplevelse.",
+    "titleCommunity": "Välkommen tillbaka",
+    "descriptionCommunity": "Gå direkt till ärenden, schemaläggning, projekt och rapportering från din översiktspanel."
+  },
+  "algadesk": {
+    "welcome": {
+      "title": "Välkommen till AlgaDesk",
+      "description": "Följ arbetsbelastningen för ärenden, övervaka e-postkanalernas funktion och håll koll på varje konversation."
+    },
+    "metrics": {
+      "openTickets": "Öppna ärenden",
+      "awaitingCustomer": "Väntar på kund",
+      "awaitingInternal": "Väntar på internt svar",
+      "activeEmailChannels": "Aktiva e-postkanaler"
+    },
+    "aging": {
+      "title": "Ärendenas ålder",
+      "under2Days": "Under 2 dagar",
+      "days2To7": "2 till 7 dagar",
+      "over7Days": "Över 7 dagar"
+    },
+    "emailHealth": {
+      "title": "E-postkanalernas funktion",
+      "summary": "{{healthy}} av {{active}} aktiva kanaler är anslutna.",
+      "totalConfigured": "Totalt antal konfigurerade kanaler: {{total}}"
+    },
+    "recentTickets": {
+      "title": "Nyligen uppdaterade ärenden",
+      "empty": "Ingen ärendeaktivitet den senaste tiden."
+    }
+  },
+  "features": {
+    "heading": "Plattformens funktioner",
+    "comingSoon": "Kommer snart",
+    "tickets": {
+      "title": "Ärendehantering",
+      "description": "Effektivisera supporten med ärendestyrning, SLA-uppföljning och vägledda arbetsflöden."
+    },
+    "monitoring": {
+      "title": "Systemövervakning",
+      "description": "Övervaka kritiska signaler hos kunderna och utlös automatisering vid behov."
+    },
+    "security": {
+      "title": "Säkerhetshantering",
+      "description": "Hantera policyer, godkännanden och svar på revisionsfrågor på ett ställe."
+    },
+    "projects": {
+      "title": "Projekthantering",
+      "description": "Organisera leveransplaner, uppgifter och milstolpar för varje uppdrag."
+    },
+    "reports": {
+      "title": "Rapportering och analys",
+      "description": "Skapa sammanställningar av beläggning, SLA-uppfyllelse och lönsamhet."
+    },
+    "schedule": {
+      "title": "Schemahantering",
+      "description": "Samordna besök på plats och fjärrsessioner med dubbelriktad synkronisering."
+    }
+  },
+  "knowledgeBase": {
+    "title": "Vill du fördjupa dig?",
+    "description": "Utforska driftsättningsinstruktioner och rekommenderade arbetssätt i kunskapsbasen.",
+    "cta": "Visa resurser"
+  },
+  "mobileApp": {
+    "title": "Ladda ner mobilappen AlgaPSA",
+    "description": "Skanna en QR-kod med din telefon för att ladda ner mobilappen AlgaPSA.",
+    "selfHostDescription": "1. Skanna en QR-kod för en appbutik för att installera appen. 2. Tryck på ”Byt server” → ”Skanna QR-kod” i appen och skanna koden ”Anslut den här servern”.",
+    "appStore": "App Store (iOS)",
+    "playStore": "Google Play (Android)",
+    "appStoreQrAlt": "QR-kod som länkar till AlgaPSA-appen i Apple App Store",
+    "playStoreQrAlt": "QR-kod som länkar till AlgaPSA-appen på Google Play",
+    "connectServer": "Anslut den här servern",
+    "connectServerQrAlt": "QR-kod som ansluter mobilappen AlgaPSA till den här servern",
+    "zoomAria": "Förstora QR-koden för {{label}}",
+    "hide": "Dölj",
+    "hiding": "Döljer…",
+    "dismissAria": "Dölj kortet för mobilappen",
+    "dismissError": "Det gick inte att dölja kortet.",
+    "restore": "Skaffa mobilappen AlgaPSA",
+    "restoring": "Återställer…",
+    "restoreError": "Det gick inte att återställa kortet.",
+    "hidden": {
+      "title": "Dolt kort för mobilappen",
+      "subtitle": "Återställ det om du behöver det senare."
+    }
+  },
+  "onboarding": {
+    "completeTitle": "Introduktionen är slutförd",
+    "incompleteTitle": "Slutför konfigurationen",
+    "completeDescription": "Du är redo att använda alla funktioner i MSP-översiktspanelen.",
+    "incompleteDescription": "Gå igenom varje steg för att få tillgång till alla funktioner i MSP-översiktspanelen.",
+    "stepLabel": "Steg {{index}}",
+    "badges": {
+      "complete": "Slutfört",
+      "notStarted": "Inte påbörjat",
+      "inProgress": "Pågår",
+      "blocked": "Blockerat"
+    },
+    "progress": {
+      "label": "Förlopp",
+      "steps": "{{completed}} av {{total}} steg",
+      "messageStart": "Nu är du igång",
+      "messageComplete": "Allt är klart – bra jobbat",
+      "messageInProgress": "Fortsätt – du klarar det"
+    },
+    "substeps": {
+      "dataImport": "Slutför din första import eller skapa 5 kontakter",
+      "identity": {
+        "addProvider": "Lägg till en SSO-tjänsteleverantör",
+        "linkTeamMember": "Koppla den första teammedlemmen"
+      },
+      "portal": {
+        "customDomain": "Egen domän för portalen",
+        "branding": "Anpassningar av portalens färger och logotyp",
+        "inviteFirstContact": "Bjud in din första kontakt till portalen"
+      },
+      "createContacts": "Skapa dina första 5 kontakter",
+      "calendar": {
+        "addProvider": "Lägg till en kalendertjänsteleverantör",
+        "connectAuthorize": "Anslut tjänsteleverantören och ge åtkomst"
+      },
+      "email": {
+        "configureInbound": "Konfigurera inkommande e-post",
+        "configureOutboundDomain": "Konfigurera en egen domän för utgående e-post"
+      }
+    },
+    "cta": {
+      "completed": "Slutfört",
+      "hiding": "Döljer…",
+      "hide": "Dölj",
+      "dismiss": "Dölj {{title}}",
+      "restoring": "Återställer…"
+    },
+    "hidden": {
+      "title": "Dolda konfigurationskort ({{count}})",
+      "subtitle": "Återställ ett kort om du behöver det senare.",
+      "titleCombined": "Dolda kort ({{count}})"
+    },
+    "checklist": {
+      "title": "Checklista för introduktion",
+      "progress": "{{completed}} av {{total}} uppgifter slutförda",
+      "completeTitle": "Konfigurationen är slutförd",
+      "completeDescription": "Bjud in kunder till portalen med din grafiska profil.",
+      "inviteCta": "Bjud in kunder",
+      "viewButton": "Visa checklistan för introduktion"
+    },
+    "steps": {
+      "identity": {
+        "title": "Säker identitet och SSO",
+        "description": "Anslut Google Workspace eller Microsoft 365 så att administratörer kan logga in med hanterade identiteter.",
+        "cta": "Anslut SSO"
+      },
+      "portal": {
+        "title": "Konfigurera kundportalen",
+        "description": "Konfigurera portalen så att kunder kan logga in på din domän med din grafiska profil.",
+        "cta": "Öppna portalinställningar"
+      },
+      "dataImport": {
+        "title": "Importera grunddata",
+        "description": "Lägg till kontakter så att du kan börja arbeta för kunder och hålla arbetsflödena igång.",
+        "cta": "Skapa kontakter"
+      },
+      "calendar": {
+        "title": "Kalendersynkronisering",
+        "description": "Anslut Google- eller Outlook-kalendrar för att samordna resursplanering och kundbokningar.",
+        "cta": "Konfigurera kalender"
+      },
+      "email": {
+        "title": "Konfigurera e-post",
+        "description": "Konfigurera inkommande e-post för ärenden och verifiera en avsändardomän för tillförlitlig leverans.",
+        "cta": "Konfigurera e-post"
+      }
+    },
+    "blockers": {
+      "identity": {
+        "linkedAccountsUnavailable": "Det går inte att verifiera kopplade teammedlemmar just nu.",
+        "noLinkedUsers": "Inga användare är kopplade till en identitetstjänsteleverantör ännu. Be en MSP-administratör att ansluta Google eller Microsoft.",
+        "addProviderCredentials": "Lägg till autentiseringsuppgifter för Google Workspace eller Microsoft 365 för att aktivera SSO för ditt team.",
+        "configurationUnavailable": "Konfiguration av SSO-tjänsteleverantörer är inte tillgänglig i den här miljön.",
+        "loadFailed": "Det gick inte att läsa in status för SSO-konfigurationen."
+      },
+      "portal": {
+        "loadFailed": "Det gick inte att läsa in domänstatus för kundportalen."
+      },
+      "import": {
+        "loadFailed": "Det gick inte att läsa in importhistoriken."
+      },
+      "calendar": {
+        "providerAttention": "{{provider}} kräver åtgärd innan synkroniseringen kan återupptas.",
+        "loadFailed": "Det gick inte att läsa in kalenderintegreringarna."
+      },
+      "email": {
+        "enterpriseOnly": "Hanterade e-postdomäner är endast tillgängliga i Pro.",
+        "tenantRequired": "Klientorganisationskontext krävs för att läsa in status för e-postintroduktionen.",
+        "loadFailed": "Det gick inte att läsa in hanterade e-postdomäner.",
+        "verificationFailed": "Verifieringen av {{domain}} misslyckades."
+      }
+    },
+    "errors": {
+      "dismissFailed": "Det gick inte att dölja introduktionssteget.",
+      "restoreFailed": "Det gick inte att återställa introduktionssteget."
+    }
+  },
+  "mspDashboard": "MSP-översiktspanel"
+}
