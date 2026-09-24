@@ -753,7 +753,9 @@
     "deviceOffline": "〖Ḓḗṽīƈḗ īş ȯƒƒŀīƞḗ ·······〗",
     "errors": {
       "urlFetchFailed": "〖Ƒȧīŀḗḓ ŧȯ ɠḗŧ řḗḿȯŧḗ ȧƈƈḗşş ŬŘĿ ·············〗",
-      "initiateFailed": "〖Ƒȧīŀḗḓ ŧȯ īƞīŧīȧŧḗ řḗḿȯŧḗ ȧƈƈḗşş ·············〗"
+      "initiateFailed": "〖Ƒȧīŀḗḓ ŧȯ īƞīŧīȧŧḗ řḗḿȯŧḗ ȧƈƈḗşş ·············〗",
+      "managePermission": "Permission denied: Cannot manage asset settings.",
+      "readPermission": "Permission denied: Cannot read assets."
     },
     "indicator": {
       "online": "〖Ȯƞŀīƞḗ ···〗",
@@ -778,7 +780,11 @@
       "errors": {
         "load": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ řḗḿȯŧḗ ȧƈƈḗşş ŀīƞķş. ··············〗",
         "save": "〖Ƒȧīŀḗḓ ŧȯ şȧṽḗ ŧħḗ řḗḿȯŧḗ ȧƈƈḗşş ŀīƞķ. ················〗",
-        "delete": "〖Ƒȧīŀḗḓ ŧȯ ḓḗŀḗŧḗ ŧħḗ řḗḿȯŧḗ ȧƈƈḗşş ŀīƞķ. ················〗"
+        "delete": "〖Ƒȧīŀḗḓ ŧȯ ḓḗŀḗŧḗ ŧħḗ řḗḿȯŧḗ ȧƈƈḗşş ŀīƞķ. ················〗",
+        "templateHttp": "Template must begin with http:// or https:// and a literal host.",
+        "templatePlaceholder": "Template contains an unsupported placeholder.",
+        "templateUrl": "Template must produce a valid http or https URL.",
+        "required": "A label and URL template are required."
       },
       "loading": "〖Ŀȯȧḓīƞɠ řḗḿȯŧḗ ȧƈƈḗşş ȯƥŧīȯƞş… ·······〗",
       "noneAvailable": "〖Ƞȯ řḗḿȯŧḗ ȧƈƈḗşş ȯƥŧīȯƞş ȧřḗ ȧṽȧīŀȧƀŀḗ. ·········〗",

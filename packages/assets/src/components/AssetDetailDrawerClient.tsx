@@ -100,7 +100,7 @@ export function AssetDetailDrawerClient({
   const clientDrawer = useClientDrawer();
   const desiredTab = activeTab;
   const [hasTemplateLinks, setHasTemplateLinks] = useState(false);
-  useEffect(() => { void hasRemoteAccessLinks().then(setHasTemplateLinks).catch(() => setHasTemplateLinks(false)); }, []);
+  useEffect(() => { void hasRemoteAccessLinks().then((result) => setHasTemplateLinks(result === true)).catch(() => setHasTemplateLinks(false)); }, []);
 
   const tabLabels = useMemo(() => ({
     [ASSET_DRAWER_TABS.OVERVIEW]: t('assetDetailDrawer.tabs.overview', { defaultValue: 'Overview' }),

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => {
+  const hasPermission = vi.fn(async () => true);
   const asset = {
     asset_type: 'workstation',
     name: 'Workstation One',
@@ -27,12 +28,12 @@ const mocks = vi.hoisted(() => {
     table: vi.fn((table: string) => table === 'assets' ? assetQuery : linkQuery),
     tenantJoin: vi.fn(),
   };
-  return { asset, links, assetQuery, linkQuery, db };
+  return { asset, links, assetQuery, linkQuery, db, hasPermission };
 });
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => (...args: any[]) => action({ user_id: 'user-1' }, { tenant: 'tenant-1' }, ...args),
-  hasPermission: vi.fn(async () => true),
+  hasPermission: mocks.hasPermission,
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -40,15 +41,28 @@ vi.mock('@alga-psa/db', () => ({
   tenantDb: () => mocks.db,
 }));
 
-import { getRemoteAccessLinksForAsset } from './remoteAccessLinkActions';
+import { getRemoteAccessLinksForAsset, saveRemoteAccessLink, listRemoteAccessLinks } from './remoteAccessLinkActions';
 
 describe('getRemoteAccessLinksForAsset', () => {
   beforeEach(() => {
+    mocks.hasPermission.mockReset();
+    mocks.hasPermission.mockResolvedValue(true);
     mocks.assetQuery.select.mockClear();
     mocks.assetQuery.where.mockClear();
     mocks.db.tenantJoin.mockClear();
     mocks.db.table.mockClear();
     mocks.linkQuery.orderBy.mockClear();
+  });
+
+  it('returns an actionError for an invalid template without throwing', async () => {
+    const result = await saveRemoteAccessLink({ label: 'Bad', url_template: 'ftp://remote.example' });
+    expect(result).toMatchObject({ actionError: 'Template must begin with http:// or https:// and a literal host.' });
+  });
+
+  it('returns a permissionError when settings permission is missing', async () => {
+    mocks.hasPermission.mockResolvedValue(false);
+    const result = await listRemoteAccessLinks();
+    expect(result).toMatchObject({ permissionError: 'Permission denied: Cannot manage asset settings.' });
   });
 
   it('returns each template independently when an asset is missing a placeholder value', async () => {

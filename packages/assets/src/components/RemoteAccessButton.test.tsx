@@ -39,6 +39,13 @@ describe('RemoteAccessButton availability', () => {
     expect(mockRmm.getAssetRemoteControlTypes).not.toHaveBeenCalled();
   });
 
+  it('supports a compact icon-only trigger with an accessible label', () => {
+    render(<RemoteAccessButton asset={asset({ rmm_provider: 'ninjaone', rmm_device_id: '123' })} iconOnly />);
+    const button = screen.getByRole('button', { name: 'remoteAccess.remoteAccess' });
+    expect(button).toBeTruthy();
+    expect(button.textContent).toBe('');
+  });
+
   it('shows an empty state after opening when no options are available', async () => {
     mockGetLinks.mockResolvedValue([]);
     mockRmm.getAssetRemoteControlTypes.mockResolvedValue([]);
@@ -46,6 +53,14 @@ describe('RemoteAccessButton availability', () => {
     fireEvent.click(screen.getByTestId('open-menu'));
     await vi.waitFor(() => expect(mockRmm.getAssetRemoteControlTypes).toHaveBeenCalledWith('asset-1'));
     expect(await screen.findByText('remoteAccess.links.noneAvailable')).toBeTruthy();
+  });
+
+  it('treats a returned action error as a failed options load', async () => {
+    mockGetLinks.mockResolvedValue({ actionError: 'Permission denied' });
+    mockRmm.getAssetRemoteControlTypes.mockResolvedValue([]);
+    render(<RemoteAccessButton asset={asset({ rmm_provider: 'ninjaone', rmm_device_id: '123' })} />);
+    fireEvent.click(screen.getByTestId('open-menu'));
+    expect(await screen.findByText('remoteAccess.errors.urlFetchFailed')).toBeTruthy();
   });
 
   it('keeps Desktop and Shell options available for an RMM asset', async () => {

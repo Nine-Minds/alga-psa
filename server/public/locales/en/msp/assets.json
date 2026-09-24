@@ -753,7 +753,9 @@
     "deviceOffline": "Device is offline",
     "errors": {
       "urlFetchFailed": "Failed to get remote access URL",
-      "initiateFailed": "Failed to initiate remote access"
+      "initiateFailed": "Failed to initiate remote access",
+      "managePermission": "Permission denied: Cannot manage asset settings.",
+      "readPermission": "Permission denied: Cannot read assets."
     },
     "indicator": {
       "online": "Online",
@@ -778,7 +780,11 @@
       "errors": {
         "load": "Failed to load remote access links.",
         "save": "Failed to save the remote access link.",
-        "delete": "Failed to delete the remote access link."
+        "delete": "Failed to delete the remote access link.",
+        "templateHttp": "Template must begin with http:// or https:// and a literal host.",
+        "templatePlaceholder": "Template contains an unsupported placeholder.",
+        "templateUrl": "Template must produce a valid http or https URL.",
+        "required": "A label and URL template are required."
       },
       "loading": "Loading remote access options…",
       "noneAvailable": "No remote access options are available.",

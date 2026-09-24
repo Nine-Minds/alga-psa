@@ -8,6 +8,7 @@ import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { AssetRemoteAccessLink } from '@alga-psa/types';
+import { assetActionErrorMessage, isAssetActionError, unwrapAssetActionResult } from '../../actions/assetActionErrors';
 import { deleteRemoteAccessLink, listRemoteAccessLinks, saveRemoteAccessLink } from '../../actions/remoteAccessLinkActions';
 
 export default function RemoteAccessLinksManager() {
@@ -21,7 +22,7 @@ export default function RemoteAccessLinksManager() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const loadLinks = useCallback(async () => {
-    setRows(await listRemoteAccessLinks());
+    setRows(unwrapAssetActionResult(await listRemoteAccessLinks()));
   }, []);
 
   useEffect(() => {
@@ -39,11 +40,15 @@ export default function RemoteAccessLinksManager() {
 
   const save = async () => {
     try {
-      await saveRemoteAccessLink({
+      const result = await saveRemoteAccessLink({
         link_id: editing?.link_id,
         label,
         url_template: urlTemplate,
       });
+      if (isAssetActionError(result)) {
+        toast.error(assetActionErrorMessage(result) || t('remoteAccess.links.errors.save'));
+        return;
+      }
       setIsOpen(false);
       await loadLinks();
     } catch (error) {
@@ -55,7 +60,11 @@ export default function RemoteAccessLinksManager() {
     if (!deleting) return;
     setIsDeleting(true);
     try {
-      await deleteRemoteAccessLink(deleting.link_id);
+      const result = await deleteRemoteAccessLink(deleting.link_id);
+      if (isAssetActionError(result)) {
+        toast.error(assetActionErrorMessage(result) || t('remoteAccess.links.errors.delete'));
+        return;
+      }
       setDeleting(null);
       await loadLinks();
     } catch (error) {

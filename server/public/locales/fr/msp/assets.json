@@ -753,7 +753,9 @@
     "deviceOffline": "L'appareil est hors ligne",
     "errors": {
       "urlFetchFailed": "Échec de l'obtention de l'URL d'accès à distance",
-      "initiateFailed": "Échec du lancement de l'accès à distance"
+      "initiateFailed": "Échec du lancement de l'accès à distance",
+      "managePermission": "Permission denied: Cannot manage asset settings.",
+      "readPermission": "Permission denied: Cannot read assets."
     },
     "indicator": {
       "online": "En ligne",
@@ -778,7 +780,11 @@
       "errors": {
         "load": "Failed to load remote access links.",
         "save": "Failed to save the remote access link.",
-        "delete": "Failed to delete the remote access link."
+        "delete": "Failed to delete the remote access link.",
+        "templateHttp": "Template must begin with http:// or https:// and a literal host.",
+        "templatePlaceholder": "Template contains an unsupported placeholder.",
+        "templateUrl": "Template must produce a valid http or https URL.",
+        "required": "A label and URL template are required."
       },
       "loading": "Chargement des options d’accès à distance…",
       "noneAvailable": "Aucune option d’accès à distance n’est disponible.",

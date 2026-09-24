@@ -3,6 +3,8 @@
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { AssetRemoteAccessLink } from '@alga-psa/types';
+import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
+import type { AssetActionError } from './assetActionErrors';
 import { hasLiteralHttpAuthority, renderRemoteAccessTemplate } from '../lib/remoteAccessTemplate';
 
 type RemoteAccessLinkInput = Partial<AssetRemoteAccessLink> & {
@@ -10,14 +12,16 @@ type RemoteAccessLinkInput = Partial<AssetRemoteAccessLink> & {
   url_template: string;
 };
 
-async function requireManagePermission(user: Parameters<typeof hasPermission>[0]): Promise<void> {
+async function requireManagePermission(user: Parameters<typeof hasPermission>[0]): Promise<AssetActionError | null> {
   if (!await hasPermission(user, 'system_settings', 'update')) {
-    throw new Error('Permission denied: Cannot manage asset settings.');
+    return permissionError('Permission denied: Cannot manage asset settings.', 'msp/assets:remoteAccess.errors.managePermission');
   }
+  return null;
 }
 
-export const listRemoteAccessLinks = withAuth(async (user, { tenant }): Promise<AssetRemoteAccessLink[]> => {
-  await requireManagePermission(user);
+export const listRemoteAccessLinks = withAuth(async (user, { tenant }): Promise<AssetRemoteAccessLink[] | AssetActionError> => {
+  const permissionFailure = await requireManagePermission(user);
+  if (permissionFailure) return permissionFailure;
   const { knex } = await createTenantKnex();
   return tenantDb(knex, tenant)
     .table('asset_remote_access_links')
@@ -25,9 +29,9 @@ export const listRemoteAccessLinks = withAuth(async (user, { tenant }): Promise<
     .orderBy('label');
 });
 
-function validateTemplate(template: string): void {
+function validateTemplate(template: string): AssetActionError | null {
   if (!hasLiteralHttpAuthority(template)) {
-    throw new Error('Template must begin with http:// or https:// and a literal host.');
+    return actionError('Template must begin with http:// or https:// and a literal host.', 'msp/assets:remoteAccess.links.errors.templateHttp');
   }
   const sampleContext = {
     asset: {} as Record<string, unknown>,
@@ -38,28 +42,31 @@ function validateTemplate(template: string): void {
   const tokens = [...template.matchAll(tokenPattern)];
   const residue = template.replace(tokenPattern, '');
   if (/[{}]/.test(residue)) {
-    throw new Error('Template contains an unsupported placeholder.');
+    return actionError('Template contains an unsupported placeholder.', 'msp/assets:remoteAccess.links.errors.templatePlaceholder');
   }
   for (const [, scope, key] of tokens) {
     sampleContext[scope as keyof typeof sampleContext][key] = 'sample-value';
   }
   if (!renderRemoteAccessTemplate(template, sampleContext)) {
-    throw new Error('Template must produce a valid http or https URL.');
+    return actionError('Template must produce a valid http or https URL.', 'msp/assets:remoteAccess.links.errors.templateUrl');
   }
+  return null;
 }
 
 export const saveRemoteAccessLink = withAuth(async (
   user,
   { tenant },
   link: RemoteAccessLinkInput
-): Promise<void> => {
-  await requireManagePermission(user);
+): Promise<void | AssetActionError> => {
+  const permissionFailure = await requireManagePermission(user);
+  if (permissionFailure) return permissionFailure;
   const label = link.label.trim();
   const urlTemplate = link.url_template.trim();
   if (!label || !urlTemplate) {
-    throw new Error('A label and URL template are required.');
+    return actionError('A label and URL template are required.', 'msp/assets:remoteAccess.links.errors.required');
   }
-  validateTemplate(urlTemplate);
+  const validationFailure = validateTemplate(urlTemplate);
+  if (validationFailure) return validationFailure;
 
   const { knex } = await createTenantKnex();
   const db = tenantDb(knex, tenant);
@@ -80,8 +87,9 @@ export const deleteRemoteAccessLink = withAuth(async (
   user,
   { tenant },
   linkId: string
-): Promise<void> => {
-  await requireManagePermission(user);
+): Promise<void | AssetActionError> => {
+  const permissionFailure = await requireManagePermission(user);
+  if (permissionFailure) return permissionFailure;
   const { knex } = await createTenantKnex();
   await tenantDb(knex, tenant)
     .table('asset_remote_access_links')
@@ -94,9 +102,9 @@ export interface RenderedRemoteAccessLink {
   url: string | null;
 }
 
-export const hasRemoteAccessLinks = withAuth(async (user, { tenant }): Promise<boolean> => {
+export const hasRemoteAccessLinks = withAuth(async (user, { tenant }): Promise<boolean | AssetActionError> => {
   if (!await hasPermission(user, 'asset', 'read')) {
-    throw new Error('Permission denied: Cannot read assets.');
+    return permissionError('Permission denied: Cannot read assets.', 'msp/assets:remoteAccess.errors.readPermission');
   }
   const { knex } = await createTenantKnex();
   const link = await tenantDb(knex, tenant)
@@ -110,9 +118,9 @@ export const getRemoteAccessLinksForAsset = withAuth(async (
   user,
   { tenant },
   assetId: string
-): Promise<RenderedRemoteAccessLink[]> => {
+): Promise<RenderedRemoteAccessLink[] | AssetActionError> => {
   if (!await hasPermission(user, 'asset', 'read')) {
-    throw new Error('Permission denied: Cannot read assets.');
+    return permissionError('Permission denied: Cannot read assets.', 'msp/assets:remoteAccess.errors.readPermission');
   }
   const { knex } = await createTenantKnex();
   const db = tenantDb(knex, tenant);

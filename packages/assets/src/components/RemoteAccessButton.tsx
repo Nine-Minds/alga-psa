@@ -9,6 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useAssetCrossFeature, type AssetRemoteConnectionType } from '../context/AssetCrossFeatureContext';
 import { getRemoteAccessLinksForAsset, type RenderedRemoteAccessLink } from '../actions/remoteAccessLinkActions';
+import { assetActionErrorMessage, isAssetActionError } from '../actions/assetActionErrors';
 
 export interface RemoteAccessButtonProps {
   asset: Asset;
@@ -16,6 +17,7 @@ export interface RemoteAccessButtonProps {
   size?: 'default' | 'sm' | 'lg';
   className?: string;
   hasTemplateLinks?: boolean;
+  iconOnly?: boolean;
 }
 
 const ninjaOneTypes: AssetRemoteConnectionType[] = ['splashtop', 'teamviewer', 'vnc', 'rdp', 'shell'];
@@ -30,7 +32,7 @@ function connectionLabel(type: AssetRemoteConnectionType, t: (key: string) => st
   return t(`remoteAccess.connectionTypes.${type}`);
 }
 
-export function RemoteAccessButton({ asset, variant = 'default', size = 'sm', className = '', hasTemplateLinks = false }: RemoteAccessButtonProps) {
+export function RemoteAccessButton({ asset, variant = 'default', size = 'sm', className = '', hasTemplateLinks = false, iconOnly = false }: RemoteAccessButtonProps) {
   const { t } = useTranslation('msp/assets');
   const { rmm } = useAssetCrossFeature();
   const [availableTypes, setAvailableTypes] = useState<AssetRemoteConnectionType[] | null>(null);
@@ -53,7 +55,10 @@ export function RemoteAccessButton({ asset, variant = 'default', size = 'sm', cl
           .catch(() => { setAvailableTypes([]); setLoadFailed(true); })
       : Promise.resolve().then(() => setAvailableTypes([]));
     const linkRequest = getRemoteAccessLinksForAsset(asset.asset_id)
-      .then(setAssetLinks)
+      .then((result) => {
+        if (isAssetActionError(result)) throw new Error(assetActionErrorMessage(result));
+        setAssetLinks(result);
+      })
       .catch(() => { setAssetLinks([]); setLoadFailed(true); });
     await Promise.all([typeRequest, linkRequest]);
     setHasLoadedOptions(true);
@@ -91,9 +96,9 @@ export function RemoteAccessButton({ asset, variant = 'default', size = 'sm', cl
     <div className="relative">
       <DropdownMenu onOpenChange={(open) => { if (open) void loadOptions(); }}>
         <DropdownMenuTrigger asChild>
-          <Button id={`remote-access-button-${asset.asset_id}`} data-asset-id={asset.asset_id} variant={variant} size={size} className={`gap-2 ${className}`} disabled={isPending}>
+          <Button id={`remote-access-button-${asset.asset_id}`} data-asset-id={asset.asset_id} aria-label={iconOnly ? t('remoteAccess.remoteAccess') : undefined} title={iconOnly ? t('remoteAccess.remoteAccess') : undefined} variant={variant} size={size} className={`${iconOnly ? 'px-2' : 'gap-2'} ${className}`} disabled={isPending}>
             {isPending || isLoadingOptions ? <Loader2 className="h-4 w-4 animate-spin" /> : <Monitor className="h-4 w-4" />}
-            {t('remoteAccess.remoteAccess')}
+            {!iconOnly && t('remoteAccess.remoteAccess')}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">

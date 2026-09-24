@@ -74,7 +74,7 @@ export const AssetDetailHeader: React.FC<AssetDetailHeaderProps> = ({
   onEdit
 }) => {
   const [hasTemplateLinks, setHasTemplateLinks] = useState(false);
-  useEffect(() => { void hasRemoteAccessLinks().then(setHasTemplateLinks).catch(() => setHasTemplateLinks(false)); }, []);
+  useEffect(() => { void hasRemoteAccessLinks().then((result) => setHasTemplateLinks(result === true)).catch(() => setHasTemplateLinks(false)); }, []);
   const { t } = useTranslation('msp/assets');
   const router = useRouter();
   const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false);

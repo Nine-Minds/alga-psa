@@ -54,7 +54,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
 }: AssociatedAssetsProps) {
     const { t } = useTranslation('msp/assets');
     const [hasTemplateLinks, setHasTemplateLinks] = useState(false);
-    useEffect(() => { void hasRemoteAccessLinks().then(setHasTemplateLinks).catch(() => setHasTemplateLinks(false)); }, []);
+    useEffect(() => { void hasRemoteAccessLinks().then((result) => setHasTemplateLinks(result === true)).catch(() => setHasTemplateLinks(false)); }, []);
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [associatedAssets, setAssociatedAssets] = useState<AssetAssociation[]>([]);
@@ -504,7 +504,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                             >
                                 {/* Row 1: Name + Status + Remove */}
                                 <div className="flex items-center justify-between gap-2">
-                                    <div className="flex items-center gap-2 min-w-0">
+                                    <div className="flex min-w-0 flex-1 items-center gap-2">
                                 {association.asset ? (
                                     (() => {
                                         const asset = association.asset;
@@ -514,7 +514,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                             variant="link"
                                             size="sm"
                                             onClick={() => openDrawerForAsset(asset)}
-                                            className="h-auto p-0 text-sm font-medium truncate text-left justify-start"
+                                            className="h-auto min-w-0 max-w-full p-0 text-sm font-medium truncate text-left justify-start"
                                         >
                                             {asset.name}
                                         </Button>
@@ -531,7 +531,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                             <RmmStatusIndicator asset={association.asset} size="sm" />
                                         )}
                                     </div>
-                                    <div className="flex items-center gap-2 flex-shrink-0">
+                                    <div className="flex flex-shrink-0 items-center gap-2">
                                         {association.asset && (
                                             <Badge variant={
                                                 association.asset.status === 'active' ? 'success' :
@@ -547,6 +547,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                                 variant="ghost"
                                                 size="sm"
                                                 hasTemplateLinks={hasTemplateLinks}
+                                                iconOnly
                                             />
                                         )}
                                         <Button
