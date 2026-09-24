@@ -560,6 +560,73 @@ describe('contract invoice adjustments (DB-backed)', () => {
     });
   });
 
+  it('removes a stale pre-upgrade automatic discount when its sole source is deactivated, keeping manual discounts', async () => {
+    const fixture = await createDraftWithGeneratedChargeAndLegacyDiscount();
+    const manualDiscountItemId = uuidv4();
+    await db('invoice_charges').insert({
+      tenant,
+      item_id: manualDiscountItemId,
+      invoice_id: fixture.invoiceId,
+      description: 'Goodwill discount',
+      quantity: 1,
+      unit_price: -5_000,
+      net_amount: -5_000,
+      total_price: -5_000,
+      tax_amount: 0,
+      tax_rate: 0,
+      is_manual: true,
+      is_discount: true,
+      is_taxable: false,
+      discount_type: 'fixed',
+    });
+
+    await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: false });
+    try {
+      // First post-upgrade reconciliation has no desired settlement (the only
+      // configured discount is inactive), yet it must still remove the stale
+      // legacy automatic row and recompute totals.
+      await db.transaction(async (trx) => {
+        await reconcileAutomaticInvoiceDiscounts(trx, tenant, fixture.invoiceId);
+        await new BillingEngine().recalculateInvoice(fixture.invoiceId, trx, tenant);
+      });
+
+      expect(await automaticDiscountRows(fixture.invoiceId)).toHaveLength(0);
+      const legacy = await db('invoice_charges')
+        .where({ tenant, item_id: fixture.automaticDiscountItemId })
+        .first();
+      expect(legacy).toBeUndefined();
+
+      // The authored manual discount survives untouched.
+      const manual = await db('invoice_charges').where({ tenant, item_id: manualDiscountItemId }).first();
+      expect(manual.is_manual).toBe(true);
+      expect(manual.adjustment_source_kind).toBeNull();
+      expect(Number(manual.net_amount)).toBe(-5_000);
+
+      expect(await sumChargeNet(fixture.invoiceId)).toEqual({
+        gross: 390_000,
+        discounts: -5_000,
+        net: 385_000,
+      });
+      const invoice = await db('invoices').where({ tenant, invoice_id: fixture.invoiceId }).first();
+      expect(Number(invoice.subtotal)).toBe(385_000);
+      expect(Number(invoice.tax)).toBe(0);
+      expect(Number(invoice.total_amount)).toBe(385_000);
+
+      // A repeat reconciliation stays clean and idempotent.
+      await db.transaction(async (trx) => {
+        await reconcileAutomaticInvoiceDiscounts(trx, tenant, fixture.invoiceId);
+      });
+      expect(await automaticDiscountRows(fixture.invoiceId)).toHaveLength(0);
+      expect(await sumChargeNet(fixture.invoiceId)).toEqual({
+        gross: 390_000,
+        discounts: -5_000,
+        net: 385_000,
+      });
+    } finally {
+      await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: true });
+    }
+  });
+
   it('removes only its own automatic settlement when the source is deactivated', async () => {
     const fixture = await createDraftWithGeneratedChargeAndDiscount();
     const manual = await insertManualPartialPeriodCharge({

@@ -364,9 +364,10 @@ async function applySettlementRows(
   // The only stable signal a pre-provenance row carries is its description, which
   // the legacy generation path set to the configured discount name. A row can be
   // claimed at most once, and matching is deterministic by `created_at`/`item_id`.
-  const legacyRows = desired.length > 0
-    ? await loadLegacyAutomaticDiscountRows(tx, tenant, invoiceId)
-    : [];
+  // Loaded even when there is nothing desired: this reconcile owns automatic
+  // discounts for the invoice, so a legacy row whose source was deactivated or
+  // became ineligible must be removed just like a stale source-linked row.
+  const legacyRows = await loadLegacyAutomaticDiscountRows(tx, tenant, invoiceId);
   const legacyByDescription = new Map<string, LegacyAutomaticDiscountRow[]>();
   for (const legacy of legacyRows) {
     const key = (legacy.description ?? '').trim();
@@ -452,13 +453,12 @@ async function applySettlementRows(
       .delete();
   }
 
-  // Replace any legacy automatic row this reconcile did not adopt: it has been
-  // superseded by a source-linked settlement (or its source no longer applies),
-  // and leaving it would double the discount. Desired is non-empty here by
-  // construction, so reconcile only prunes when it actually owns an automatic
-  // settlement for this invoice; an invoice whose source cannot be re-derived
-  // keeps its saved legacy row. The `whereNull` guard makes adoption doubly
-  // safe even if the claim set were ever wrong.
+  // Remove any legacy automatic row this reconcile did not adopt, mirroring the
+  // stale source-linked removal above: it was superseded by a source-linked
+  // settlement, its source was deactivated, or it is no longer eligible. Leaving
+  // it would double the discount, or leave a discount the current configuration
+  // no longer grants. The `whereNull` guard makes adoption doubly safe even if
+  // the claim set were ever wrong.
   for (const legacy of legacyRows) {
     if (adoptedLegacyItemIds.has(legacy.item_id)) continue;
     await tenantScopedTable(tx, tenant, 'invoice_charges')
