@@ -446,10 +446,12 @@ const resolveExpressionValue = (
   switch (expression.type) {
     case 'literal':
       return expression.value;
-    case 'binding':
-      return evaluation.bindings[expression.bindingId] == null || evaluation.bindings[expression.bindingId] === ''
+    case 'binding': {
+      const value = evaluation.bindings[expression.bindingId];
+      return value == null || (typeof value === 'string' && value.trim() === '')
         ? displayText(expression.fallback)
-        : evaluation.bindings[expression.bindingId];
+        : value;
+    }
     case 'path': {
       const parsedPath = decodeTemplatePathExpression(expression.path);
       const rowValue = scope.row ? getPathValue(scope.row, parsedPath.path) : undefined;

@@ -19,7 +19,7 @@ const invoiceFixture = {
 };
 
 describe('renderEvaluatedTemplateAst', () => {
-  it.each([['custom title', 'custom title'], [null, 'Localized Monthly'], ['', 'Localized Monthly']] as const)(
+  it.each([['custom title', 'custom title'], [null, 'Localized Monthly'], [undefined, 'Localized Monthly'], ['', 'Localized Monthly'], ['   ', 'Localized Monthly']] as const)(
     'renders binding value %s or its localized fallback', async (value, expected) => {
       const ast: TemplateAst = {
         kind: 'invoice-template-ast', version: TEMPLATE_AST_VERSION,
@@ -35,6 +35,21 @@ describe('renderEvaluatedTemplateAst', () => {
       expect(rendered.html).not.toContain('[object Object]');
     }
   );
+
+  it('resolves quote section titles through the evaluator path used by PDF generation', async () => {
+    const ast: TemplateAst = {
+      kind: 'invoice-template-ast', version: TEMPLATE_AST_VERSION,
+      bindings: { values: { recurringSectionTitle: { id: 'recurringSectionTitle', kind: 'value', path: 'recurring_section_title' } }, collections: {} },
+      layout: { id: 'root', type: 'document', children: [{
+        id: 'heading', type: 'text', content: { type: 'binding', bindingId: 'recurringSectionTitle', fallback: { i18nKey: 'labels.monthlyItems', defaultValue: 'Monthly Items' } },
+      }] },
+    };
+    const localizedAst = resolveTemplateAstI18n(ast, () => 'Localized Monthly');
+    const evaluation = evaluateTemplateAst(localizedAst, { recurring_section_title: 'Custom heading' });
+    const rendered = await renderEvaluatedTemplateAst(localizedAst, evaluation);
+    expect(rendered.html).toContain('Custom heading');
+    expect(rendered.html).not.toContain('Localized Monthly');
+  });
 
   it('uses authored default text if a binding fallback reaches the renderer without localization', async () => {
     const ast: TemplateAst = {
