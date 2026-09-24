@@ -24,8 +24,10 @@ describe('renderRemoteAccessTemplate', () => {
     )).toBeNull();
   });
 
-  it('rejects javascript URLs and malformed placeholders', () => {
+  it('rejects non-http(s) URLs and malformed placeholders', () => {
     expect(renderRemoteAccessTemplate('javascript:alert(1)', { asset: {}, client: {} })).toBeNull();
+    expect(renderRemoteAccessTemplate('data:text/html,hello', { asset: {}, client: {} })).toBeNull();
     expect(renderRemoteAccessTemplate('https://remote.example/{unknown.value}', { asset: {}, client: {} })).toBeNull();
+    expect(renderRemoteAccessTemplate('https://remote.example/{asset.hostname}', { asset: { hostname: 'host' }, client: {} })).toBeNull();
   });
 });

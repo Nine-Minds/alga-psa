@@ -26,7 +26,7 @@ const providerTypes: Record<string, AssetRemoteConnectionType[]> = {
 function connectionLabel(type: AssetRemoteConnectionType, t: (key: string) => string): string {
   if (type === 'splashtop') return t('remoteAccess.remoteDesktop');
   if (type === 'shell') return t('remoteAccess.remoteShell');
-  return type === 'teamviewer' ? 'TeamViewer' : type.toUpperCase();
+  return t(`remoteAccess.connectionTypes.${type}`);
 }
 
 export function RemoteAccessButton({ asset, variant = 'default', size = 'sm', className = '' }: RemoteAccessButtonProps) {

@@ -198,7 +198,7 @@ export const getAssetRemoteControlUrl = withAuth(async (
   assetId: string,
   connectionType: RmmRemoteConnectionType = 'splashtop'
 ): Promise<string | null> => {
-  await requireAssetPermission(user, 'update');
+  await requireAssetPermission(user, 'read');
   const { ref, actions } = await resolveDevice(tenant, assetId);
   if (!actions.remoteControlUrl) return null;
   try {

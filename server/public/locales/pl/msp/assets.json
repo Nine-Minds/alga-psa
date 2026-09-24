@@ -741,6 +741,7 @@
     "more": "+{{count}} więcej"
   },
   "remoteAccess": {
+    "connectionTypes": {"teamviewer":"TeamViewer","vnc":"VNC","rdp":"RDP"},
     "remoteDesktop": "Pulpit zdalny",
     "remoteShell": "Powłoka zdalna",
     "remoteAccess": "Dostęp zdalny",

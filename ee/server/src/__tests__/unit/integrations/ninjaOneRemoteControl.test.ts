@@ -21,5 +21,7 @@ describe('NinjaOne remote control mapping', () => {
       .resolves.toEqual(['splashtop', 'shell']);
     await expect(ninjaOneAssetDeviceActions.remoteControlUrl?.(ref, 'splashtop'))
       .resolves.toBe('https://ninja/desktop');
+    await expect(ninjaOneAssetDeviceActions.remoteControlUrl?.(ref, 'shell'))
+      .resolves.toBe('https://ninja/shell');
   });
 });

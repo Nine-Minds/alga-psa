@@ -733,6 +733,7 @@
     "more": "〖+{{count}} ḿȯřḗ ······〗"
   },
   "remoteAccess": {
+    "connectionTypes": {"teamviewer":"〖Ŧḗȧḿṽīḗẇḗř ·······〗","vnc":"〖ṼȠƇ ···〗","rdp":"〖ŘḒƤ ···〗"},
     "remoteDesktop": "〖Řḗḿȯŧḗ Ḓḗşķŧȯƥ ······〗",
     "remoteShell": "〖Řḗḿȯŧḗ Şħḗŀŀ ·····〗",
     "remoteAccess": "〖Řḗḿȯŧḗ Ȧƈƈḗşş ······〗",

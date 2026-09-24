@@ -52,8 +52,8 @@ export const tacticalRmmAssetDeviceActions: RmmAssetDeviceActions = {
     try {
       const links = await client.getAgentMeshCentralLinks(ref.deviceId);
       const url = connectionType === 'splashtop' ? links.control : links.terminal;
-      if (!url) throw new Error(`Tactical RMM did not return a ${connectionType === 'shell' ? 'terminal' : 'Take Control'} link for this agent.`);
-      return url;
+      // Tactical's response shape varies by version; a missing link means this action is unavailable.
+      return typeof url === 'string' && url.trim() ? url : null;
     } catch (err) {
       throw tacticalCommandError(err, 'Tactical RMM could not create a MeshCentral session.');
     }

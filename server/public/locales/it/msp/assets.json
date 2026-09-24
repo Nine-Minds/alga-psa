@@ -733,6 +733,7 @@
     "more": "+{{count}} altri"
   },
   "remoteAccess": {
+    "connectionTypes": {"teamviewer":"TeamViewer","vnc":"VNC","rdp":"RDP"},
     "remoteDesktop": "Desktop remoto",
     "remoteShell": "Shell remota",
     "remoteAccess": "Accesso remoto",

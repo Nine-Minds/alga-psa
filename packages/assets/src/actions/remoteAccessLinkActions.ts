@@ -106,10 +106,13 @@ export const getRemoteAccessLinksForAsset = withAuth(async (
   }
   const { knex } = await createTenantKnex();
   const db = tenantDb(knex, tenant);
-  const asset = await db.table('assets')
-    .leftJoin('clients', 'assets.client_id', 'clients.client_id')
+  const assetQuery = db.table('assets')
+    .select(['assets.asset_type', 'assets.name', 'assets.asset_tag', 'assets.serial_number', 'assets.attributes', 'clients.client_name']);
+  // pattern tenant-safe-client-join — tenantJoin scopes client rows to the same tenant as the asset.
+  db.tenantJoin(assetQuery, 'clients', 'clients.client_id', 'assets.client_id', { type: 'left' });
+  const asset = await assetQuery
     .where({ 'assets.asset_id': assetId })
-    .first(['assets.asset_type', 'assets.name', 'assets.asset_tag', 'assets.serial_number', 'assets.attributes', 'clients.client_name']);
+    .first();
   if (!asset) return [];
 
   const links = await db.table('asset_remote_access_links')

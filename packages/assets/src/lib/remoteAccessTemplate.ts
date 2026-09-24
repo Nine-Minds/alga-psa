@@ -13,6 +13,12 @@ export function renderRemoteAccessTemplate(
 ): string | null {
   let hasMissingValue = false;
   const rendered = template.replace(PLACEHOLDER_PATTERN, (_token, scope: string, key: string) => {
+    const isSupportedAssetKey = scope !== 'asset' || ['name', 'asset_tag', 'serial_number'].includes(key);
+    const isSupportedClientKey = scope !== 'client' || key === 'name';
+    if (!isSupportedAssetKey || !isSupportedClientKey) {
+      hasMissingValue = true;
+      return '';
+    }
     const values = scope === 'field'
       ? context.field
       : context[scope as 'asset' | 'client'];

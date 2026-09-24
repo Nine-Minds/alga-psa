@@ -28,10 +28,13 @@ describe('Tactical RMM remote control URLs', () => {
     await expect(tacticalRmmAssetDeviceActions.remoteControlTypes?.(ref)).resolves.toEqual(['splashtop']);
   });
 
-  it('returns a clear error when the requested link is missing', async () => {
+  it('returns null when the requested link is missing or has an unexpected shape', async () => {
     mockClient.getAgentMeshCentralLinks.mockResolvedValue({ control: null, terminal: undefined });
     await expect(tacticalRmmAssetDeviceActions.remoteControlUrl?.(ref, 'splashtop'))
-      .rejects.toThrow('Tactical RMM did not return a Take Control link for this agent.');
+      .resolves.toBeNull();
+    mockClient.getAgentMeshCentralLinks.mockResolvedValue({ control: { url: 'https://mesh/control' } });
+    await expect(tacticalRmmAssetDeviceActions.remoteControlUrl?.(ref, 'splashtop'))
+      .resolves.toBeNull();
   });
 
   it('returns null for unsupported types without calling the API', async () => {
