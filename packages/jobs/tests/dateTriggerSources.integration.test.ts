@@ -27,6 +27,8 @@ describe.skipIf(!enabled)('date trigger source database integration', () => {
     const retiredAssetId = uuidv4();
     const contractId = uuidv4();
     const clientContractId = uuidv4();
+    const inactiveClientContractId = uuidv4();
+    const nonRenewingClientContractId = uuidv4();
 
     const trx = await db.transaction();
     try {
@@ -46,17 +48,41 @@ describe.skipIf(!enabled)('date trigger source database integration', () => {
         { tenant: tenantId, asset_id: retiredAssetId, asset_tag: `date-${retiredAssetId}`, name: 'Retired warranty fixture', status: 'retired', asset_type: 'hardware', client_id: clientId, warranty_end_date: '2099-06-15T18:30:00.000Z' },
       ]);
       await trx('contracts').insert({ tenant: tenantId, contract_id: contractId, contract_name: `Date trigger contract ${contractId}` });
-      await trx('client_contracts').insert({
-        tenant: tenantId,
-        client_contract_id: clientContractId,
-        client_id: clientId,
-        contract_id: contractId,
-        start_date: '2020-01-01T00:00:00.000Z',
-        decision_due_date: '2099-06-15',
-        renewal_cycle_key: '2099-06-15:1',
-        renewal_mode: 'manual',
-        is_active: true,
-      });
+      await trx('client_contracts').insert([
+        {
+          tenant: tenantId,
+          client_contract_id: clientContractId,
+          client_id: clientId,
+          contract_id: contractId,
+          start_date: '2020-01-01T00:00:00.000Z',
+          decision_due_date: '2099-06-15',
+          renewal_cycle_key: '2099-06-15:1',
+          renewal_mode: 'manual',
+          is_active: true,
+        },
+        {
+          tenant: tenantId,
+          client_contract_id: inactiveClientContractId,
+          client_id: clientId,
+          contract_id: contractId,
+          start_date: '2020-01-01T00:00:00.000Z',
+          decision_due_date: '2099-06-15',
+          renewal_cycle_key: 'inactive:2099-06-15',
+          renewal_mode: 'manual',
+          is_active: false,
+        },
+        {
+          tenant: tenantId,
+          client_contract_id: nonRenewingClientContractId,
+          client_id: clientId,
+          contract_id: contractId,
+          start_date: '2020-01-01T00:00:00.000Z',
+          decision_due_date: '2099-06-15',
+          renewal_cycle_key: 'none:2099-06-15',
+          renewal_mode: 'none',
+          is_active: true,
+        },
+      ]);
 
       const anniversaries = await clientAnniversarySource.findOccurrences(trx, tenantId, '2099-06-15', '2099-06-15');
       const warranties = await assetWarrantyEndSource.findOccurrences(trx, tenantId, '2099-06-15', '2099-06-15');
@@ -73,6 +99,7 @@ describe.skipIf(!enabled)('date trigger source database integration', () => {
       expect(renewals.find((row) => row.entityId === clientContractId)).toMatchObject({
         occursOn: '2099-06-15', cycleKey: '2099-06-15:1', payload: { contractId, clientContractId, renewalMode: 'manual' },
       });
+      expect(renewals.some((row) => [inactiveClientContractId, nonRenewingClientContractId].includes(row.entityId))).toBe(false);
     } finally {
       await trx.rollback();
     }

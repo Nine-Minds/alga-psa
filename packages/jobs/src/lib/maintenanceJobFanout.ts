@@ -20,7 +20,7 @@ import { expiringHourBlocksNotificationHandler } from './handlers/expiringHourBl
 import { handleReconcileBucketUsage } from './handlers/reconcileBucketUsageHandler';
 import { handleReconcileHourBlockAllocations } from './handlers/reconcileHourBlockAllocationsHandler';
 import { processRenewalQueueHandler } from './handlers/processRenewalQueueHandler';
-import { dateTriggerScanHandler } from './handlers/dateTriggerScanHandler';
+import { createDateTriggerScanHandler, type DateWorkflowLauncher } from './handlers/dateTriggerScanHandler';
 import { autoCloseTicketsHandler } from './handlers/autoCloseTicketsHandler';
 import { SEARCH_RECONCILE_JOB_NAME, searchReconcileHandler } from './handlers/searchReconcileHandler';
 import { verifyGoogleCalendarProvisioning } from './handlers/calendarWebhookMaintenanceHandler';
@@ -43,6 +43,12 @@ import { inboundEmailRecoveryHandler } from './handlers/inboundEmailRecoveryHand
 import { providerDisconnectRetryHandler } from './handlers/providerDisconnectRetryHandler';
 
 const RENEWAL_HORIZON_DAYS = 90;
+let enterpriseDateWorkflowLauncher: DateWorkflowLauncher | undefined;
+
+/** Inject the EE workflow launcher from server startup; this package stays CE-safe. */
+export function configureDateTriggerWorkflowLauncher(launcher?: DateWorkflowLauncher): void {
+  enterpriseDateWorkflowLauncher = launcher;
+}
 const WORKFLOW_QUOTA_RESUME_BATCH_SIZE = 100;
 
 // Narrows a tenant job to the tenants that can actually do its work (the
@@ -124,7 +130,7 @@ const MAINTENANCE_JOBS: Record<string, MaintenanceJobDef> = {
   'expiring-hour-blocks-notification': { scope: 'tenant', run: (tenantId) => expiringHourBlocksNotificationHandler({ tenantId }) },
   'reconcile-bucket-usage': { scope: 'tenant', run: (tenantId) => handleReconcileBucketUsage({ id: `fanout:${tenantId}`, data: { tenantId } } as any) },
   'reconcile-hour-block-allocations': { scope: 'tenant', run: (tenantId) => handleReconcileHourBlockAllocations({ id: `fanout:${tenantId}`, data: { tenantId } } as any) },
-  'date-trigger-scan': { scope: 'tenant', run: (tenantId) => dateTriggerScanHandler({ tenantId }) },
+  'date-trigger-scan': { scope: 'tenant', run: (tenantId) => createDateTriggerScanHandler(enterpriseDateWorkflowLauncher)({ tenantId }) },
   'process-renewal-queue': { scope: 'tenant', run: (tenantId) => processRenewalQueueHandler({ tenantId, horizonDays: RENEWAL_HORIZON_DAYS }) },
   'auto-close-tickets': { scope: 'tenant', run: (tenantId) => autoCloseTicketsHandler({ tenantId }) },
   [SEARCH_RECONCILE_JOB_NAME]: { scope: 'tenant', run: (tenantId) => searchReconcileHandler({ tenantId }) },

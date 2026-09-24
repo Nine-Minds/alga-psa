@@ -41,10 +41,15 @@ export async function emitDateDomainEventOnce(knex: Knex, tenant: string, params
     occurs_on: params.occursOn,
   }).onConflict(['tenant', 'dedupe_key']).ignore().returning('dedupe_key');
   if (inserted.length === 0) return false;
-  await publishWorkflowEvent({
-    eventType: params.eventType as never,
-    payload: params.payload,
-    ctx: params.ctx ?? { tenantId: tenant, actor: { actorType: 'SYSTEM' } },
-  }, { eventId: uuidv5(dedupeKey, EVENT_ID_NAMESPACE) });
+  try {
+    await publishWorkflowEvent({
+      eventType: params.eventType as never,
+      payload: params.payload,
+      ctx: params.ctx ?? { tenantId: tenant, actor: { actorType: 'SYSTEM' } },
+    }, { eventId: uuidv5(dedupeKey, EVENT_ID_NAMESPACE) });
+  } catch (error) {
+    await tenantDb(knex, tenant).table('date_trigger_emissions').where({ tenant, dedupe_key: dedupeKey }).delete();
+    throw error;
+  }
   return true;
 }

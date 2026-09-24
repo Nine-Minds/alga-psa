@@ -1731,7 +1731,8 @@
     "event": "Zdarzenie",
     "eventWithType": "Zdarzenie: {{eventType}}",
     "oneTimeSchedule": "Harmonogram jednorazowy",
-    "recurringSchedule": "Harmonogram cykliczny"
+    "recurringSchedule": "Harmonogram cykliczny",
+    "date": "Data"
   },
   "scheduleStatus": {
     "unknown": "Nieznany",

@@ -1729,7 +1729,8 @@
     "event": "Événement",
     "eventWithType": "Événement : {{eventType}}",
     "oneTimeSchedule": "Planification ponctuelle",
-    "recurringSchedule": "Planification récurrente"
+    "recurringSchedule": "Planification récurrente",
+    "date": "Date"
   },
   "scheduleStatus": {
     "unknown": "Inconnu",

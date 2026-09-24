@@ -1729,7 +1729,8 @@
     "event": "Ereignis",
     "eventWithType": "Ereignis: {{eventType}}",
     "oneTimeSchedule": "Einmaliger Zeitplan",
-    "recurringSchedule": "Wiederkehrender Zeitplan"
+    "recurringSchedule": "Wiederkehrender Zeitplan",
+    "date": "Datum"
   },
   "scheduleStatus": {
     "unknown": "Unbekannt",

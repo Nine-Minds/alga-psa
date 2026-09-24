@@ -1729,7 +1729,8 @@
     "event": "Gebeurtenis",
     "eventWithType": "Gebeurtenis: {{eventType}}",
     "oneTimeSchedule": "Eenmalige planning",
-    "recurringSchedule": "Terugkerende planning"
+    "recurringSchedule": "Terugkerende planning",
+    "date": "Datum"
   },
   "scheduleStatus": {
     "unknown": "Onbekend",

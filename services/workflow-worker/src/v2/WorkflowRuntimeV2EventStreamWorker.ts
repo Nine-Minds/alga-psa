@@ -459,7 +459,7 @@ export class WorkflowRuntimeV2EventStreamWorker {
       eventId: event.event_id,
       eventType: event.event_type,
       tenant: event.tenant,
-      totalWorkflows: workflows.length,
+      totalWorkflows: publishedDefinitions.length,
       matchingWorkflows: matching.length,
       startedRuns: startedRuns.length,
       signaledRuns: signaledRuns.size,

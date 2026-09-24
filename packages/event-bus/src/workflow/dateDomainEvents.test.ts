@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ publish: vi.fn(), insert: vi.fn() }));
+const mocks = vi.hoisted(() => ({ publish: vi.fn(), insert: vi.fn(), delete: vi.fn() }));
 vi.mock('../publishers', () => ({ publishWorkflowEvent: mocks.publish }));
 vi.mock('@alga-psa/db', () => ({
-  tenantDb: () => ({ table: () => ({ insert: () => ({ onConflict: () => ({ ignore: () => ({ returning: mocks.insert }) }) }) }) }),
+  tenantDb: () => ({ table: () => ({ insert: () => ({ onConflict: () => ({ ignore: () => ({ returning: mocks.insert }) }) }), where: () => ({ delete: mocks.delete }) }) }),
 }));
 
 beforeEach(() => vi.clearAllMocks());
@@ -16,6 +16,13 @@ describe('date domain event helpers', () => {
     expect(date).toBe('2026-09-22');
     expect(buildDateDomainEventDedupeKey('ASSET_WARRANTY_EXPIRING', 'asset-1', date))
       .toBe('event:ASSET_WARRANTY_EXPIRING:asset-1:2026-09-22');
+  });
+
+  it('projects dates across a DST boundary and the UTC-12 / UTC+12 extremes', () => {
+    expect(toTenantLocalDate('2026-03-08T04:59:00.000Z', 'America/New_York')).toBe('2026-03-07');
+    expect(toTenantLocalDate('2026-03-08T05:00:00.000Z', 'America/New_York')).toBe('2026-03-08');
+    expect(toTenantLocalDate('2026-09-23T00:30:00.000Z', 'Etc/GMT+12')).toBe('2026-09-22');
+    expect(toTenantLocalDate('2026-09-22T12:30:00.000Z', 'Pacific/Kiritimati')).toBe('2026-09-23');
   });
 
   it('publishes only when it inserts the dedupe key', async () => {
@@ -34,5 +41,14 @@ describe('date domain event helpers', () => {
     await emitDateDomainEventOnce({} as never, 'tenant-1', params);
     await emitDateDomainEventOnce({} as never, 'tenant-1', params);
     expect(mocks.publish.mock.calls[0][1]).toEqual(mocks.publish.mock.calls[1][1]);
+  });
+
+  it('removes its ledger row when publishing fails so a later scan can retry', async () => {
+    mocks.insert.mockResolvedValue([{ dedupe_key: 'inserted' }]);
+    mocks.delete.mockResolvedValue(1);
+    mocks.publish.mockRejectedValueOnce(new Error('publish unavailable'));
+    const params = { eventType: 'CLIENT_ANNIVERSARY_UPCOMING', entityId: 'client-1', cycleKey: '2026-09-22', occursOn: '2026-09-22', payload: {} };
+    await expect(emitDateDomainEventOnce({} as never, 'tenant-1', params)).rejects.toThrow('publish unavailable');
+    expect(mocks.delete).toHaveBeenCalledOnce();
   });
 });

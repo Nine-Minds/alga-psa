@@ -7,7 +7,7 @@ vi.mock('@alga-psa/workflows/runtime/core', () => ({
   getSchemaRegistry: () => ({ has: () => true, get: () => ({ safeParse: mocks.safeParse }) }),
 }));
 vi.mock('./workflowRunLauncher', () => ({ launchPublishedWorkflowRun: mocks.launch }));
-vi.mock('@alga-psa/core/logger', () => ({ default: { info: vi.fn() } }));
+vi.mock('@alga-psa/core/logger', () => ({ default: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 
 import { buildDateTriggerFireKey, getDateTriggerOccurrenceRange, launchDateTriggeredWorkflows } from './dateTriggerLauncher';
 
@@ -72,5 +72,23 @@ describe('date trigger launcher', () => {
       tenantId: 'tenant', today: '2026-09-23', now: new Date('2026-09-23T12:00:00Z'), timezone: 'UTC', knex: {} as any, sources: [source],
     });
     expect(mocks.launch).toHaveBeenCalledTimes(500);
+  });
+
+  it('continues to later workflows when one launch fails', async () => {
+    const source = {
+      id: 'client.anniversary', payloadSchemaRef: 'payload.ClientAnniversary.v1',
+      findOccurrences: vi.fn().mockResolvedValue([{ entityId: 'client-1', clientId: 'client-1', occursOn: '2026-09-23', cycleKey: '2026-09-23', payload: {} }]),
+    } as any;
+    mocks.published.mockResolvedValue(['wf-1', 'wf-2'].map((workflow_id) => ({
+      workflow: { workflow_id },
+      definition: { trigger: { type: 'date', source: source.id, offsetDays: 0, localTime: '00:00' }, payloadSchemaRef: source.payloadSchemaRef },
+    })));
+    mocks.launch.mockRejectedValueOnce(new Error('first workflow unavailable')).mockResolvedValueOnce({ runId: 'run-2', workflowVersion: 1 });
+
+    await launchDateTriggeredWorkflows({
+      tenantId: 'tenant', today: '2026-09-23', now: new Date('2026-09-23T12:00:00Z'), timezone: 'UTC', knex: {} as any, sources: [source],
+    });
+
+    expect(mocks.launch).toHaveBeenCalledTimes(2);
   });
 });

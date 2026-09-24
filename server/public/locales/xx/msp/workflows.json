@@ -1607,7 +1607,8 @@
     "event": "⟦Ḗṽḗƞŧ⟧",
     "eventWithType": "⟦Ḗṽḗƞŧ: {{eventType}}⟧",
     "oneTimeSchedule": "⟦Ȯƞḗ-ŧīḿḗ şƈħḗḓŭŀḗ⟧",
-    "recurringSchedule": "⟦Řḗƈŭřřīƞɠ şƈħḗḓŭŀḗ⟧"
+    "recurringSchedule": "⟦Řḗƈŭřřīƞɠ şƈħḗḓŭŀḗ⟧",
+    "date": "⟦Ḓȧŧḗ⟧"
   },
   "scheduleStatus": {
     "unknown": "⟦Ŭƞķƞȯẇƞ⟧",

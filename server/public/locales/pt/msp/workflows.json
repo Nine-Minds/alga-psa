@@ -1607,7 +1607,8 @@
     "event": "Evento",
     "eventWithType": "Evento: {{eventType}}",
     "oneTimeSchedule": "Agendamento único",
-    "recurringSchedule": "Cronograma recorrente"
+    "recurringSchedule": "Cronograma recorrente",
+    "date": "Data"
   },
   "scheduleStatus": {
     "unknown": "Desconhecido",
