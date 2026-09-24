@@ -138,5 +138,14 @@
       "M030",
       "M031"
     ]
+  },
+  {
+    "id": "TM016",
+    "description": "Integration: merging two clients that each have a logo succeeds; the target keeps its own logo, the absorbed one arrives demoted to a plain document, and a variant the target does not use is inherited.",
+    "implemented": true,
+    "featureIds": [
+      "M034"
+    ],
+    "note": "server/src/test/integration/clientMerge.integration.test.ts seeds an is_entity_logo association on both clients against a real database. Without the fix it reproduces the operator's failure verbatim: duplicate key value violates unique constraint \"uq_document_associations_single_true_logo\". The three slot outcomes (taken, free, shared document) are unit-tested in packages/clients/src/lib/clientMergeEngine.test.ts."
   }
 ]

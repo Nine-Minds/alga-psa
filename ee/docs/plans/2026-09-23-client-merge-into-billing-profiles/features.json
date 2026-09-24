@@ -196,5 +196,11 @@
     "description": "A client-owned contract's owner (contracts.owner_client_id) follows its moved assignments, because the recurring chain keys the client cadence off it and invoice generation joins through it; the source's system-managed default contract is demoted when the target already owns one, so contracts_system_managed_default_unique_per_client holds.",
     "implemented": true,
     "prdRefs": ["Design / D2 — Contracts: original dates or cutover, operator's call (Q2)"]
+  },
+  {
+    "id": "M034",
+    "description": "A merge survives uq_document_associations_single_true_logo, the partial unique index behind one logo per (entity, entity type, logo variant). Where the target already fills a slot the incoming logo is demoted to a plain association — what uploading a replacement logo does — so the target keeps its branding and the document still arrives; a slot the target leaves empty is inherited, including by the association that survives deduplication when both clients file the same document.",
+    "implemented": true,
+    "prdRefs": ["Goals"]
   }
 ]

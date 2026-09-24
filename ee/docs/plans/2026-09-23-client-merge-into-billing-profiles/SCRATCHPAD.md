@@ -185,3 +185,33 @@ Two fixture notes worth keeping:
 - A `vi.hoisted()` collector array passed to the `@alga-psa/event-bus/publishers` mock
   factory never received pushes even though `mock.calls` recorded the call; the test
   reads the published events off `vi.mocked(publishWorkflowEvent).mock.calls` instead.
+
+## Round 3 — the merge an operator actually ran
+
+The first real merge from the UI aborted at the document move:
+
+```
+update "document_associations" set "entity_id" = $1 ...
+  - duplicate key value violates unique constraint "uq_document_associations_single_true_logo"
+```
+
+A client avatar is a `document_associations` row flagged `is_entity_logo`, and
+`20260814090000` keeps one per `(tenant, entity_id, entity_type,
+entity_logo_variant)`. Both clients in a merge normally have one, so the move
+put two logos on the target. `movePolymorphic` only deduplicates on
+`(document_id, entity_type)`, which is a different index, so nothing caught it.
+
+The merge now demotes the incoming logo where the target already fills the slot
+— the same thing uploading a replacement logo does in `entityImageService` — so
+the target keeps its branding and the document still arrives, re-flaggable from
+the UI. Slots the target leaves empty (a `wide` variant, say) are inherited
+instead, and when both clients filed the *same* document the row that survives
+deduplication takes the flag so it cannot vanish from a free slot (M034, TM016).
+
+Every other partial unique index a merge can collide with was re-checked against
+the schema: `ux_client_locations_default_per_client` and
+`contracts_system_managed_default_unique_per_client` were already demoted,
+`client_portal_visibility_groups`'s per-client name is renamed, and the rest
+(`client_billing_cycles`, `payment_methods`, `client_tax_settings`) key on
+`billing_profile_id`, which is unique per tenant and moves with the row — so
+there is nothing for the target to already hold.
