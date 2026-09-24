@@ -191,6 +191,7 @@ const COPY = {
   },
 };
 SUBJECTS.pt = 'Ticket atualizado • {{ticket.title}} ({{ticket.priority}})';
+SUBJECTS.sv = 'Ärende uppdaterat • {{ticket.title}} ({{ticket.priority}})';
 COPY.pt = {
   headerLabel: 'Ticket atualizado',
   intro: 'Um ticket para <strong>{{ticket.clientName}}</strong> foi atualizado. Revise as alterações abaixo.',
@@ -213,6 +214,29 @@ COPY.pt = {
   textRequester: 'Solicitante',
   textChanges: 'Alterações realizadas',
   textView: 'Ver ticket',
+};
+COPY.sv = {
+  headerLabel: 'Ärende uppdaterat',
+  intro: 'Ett ärende för <strong>{{ticket.clientName}}</strong> har uppdaterats. Granska ändringarna nedan.',
+  badgePrefix: 'Ärende #',
+  priority: 'Prioritet',
+  status: 'Status',
+  updatedBy: 'Uppdaterat av',
+  assignedTo: 'Tilldelat till',
+  requester: 'Beställare',
+  board: 'Tavla',
+  category: 'Kategori',
+  location: 'Plats',
+  changesLabel: 'Gjorda ändringar',
+  changesVar: '{{{ticket.changes}}}',
+  viewButton: 'Visa ärende',
+  footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+  textHeader: 'Ärende uppdaterat',
+  textUpdatedBy: 'Uppdaterat av',
+  textAssigned: 'Tilldelat till',
+  textRequester: 'Beställare',
+  textChanges: 'Gjorda ändringar',
+  textView: 'Visa ärende',
 };
 
 /* eslint-enable max-len */

@@ -200,6 +200,7 @@ const COPY = {
   },
 };
 SUBJECTS.pt = 'Novo comentário • {{ticket.title}}';
+SUBJECTS.sv = 'Ny kommentar • {{ticket.title}}';
 COPY.pt = {
   headerLabel: 'Novo comentário adicionado',
   intro: 'Um novo comentário foi adicionado a um ticket para <strong>{{ticket.clientName}}</strong>.',
@@ -223,6 +224,30 @@ COPY.pt = {
   textRequester: 'Solicitante',
   textComment: 'Comentário',
   textView: 'Ver ticket',
+};
+COPY.sv = {
+  headerLabel: 'Ny kommentar tillagd',
+  intro: 'En ny kommentar har lagts till i ett ärende för <strong>{{ticket.clientName}}</strong>.',
+  badgePrefix: 'Ärende #',
+  priority: 'Prioritet',
+  status: 'Status',
+  commentBy: 'Kommenterat av',
+  commentByVar: '{{comment.author}}',
+  assignedTo: 'Tilldelat till',
+  requester: 'Beställare',
+  board: 'Tavla',
+  category: 'Kategori',
+  location: 'Plats',
+  commentLabel: '&#x1F4AC; Kommentar',
+  commentVar: '{{{comment.content}}}',
+  viewButton: 'Visa ärende',
+  footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+  textHeader: 'Ny kommentar tillagd',
+  textCommentBy: 'Kommenterat av',
+  textAssigned: 'Tilldelat till',
+  textRequester: 'Beställare',
+  textComment: 'Kommentar',
+  textView: 'Visa ärende',
 };
 
 /* eslint-enable max-len */

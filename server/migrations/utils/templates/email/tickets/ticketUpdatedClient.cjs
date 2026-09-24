@@ -130,6 +130,7 @@ const COPY = {
   },
 };
 SUBJECTS.pt = 'Seu ticket foi atualizado • {{ticket.title}}';
+SUBJECTS.sv = 'Ditt ärende har uppdaterats • {{ticket.title}}';
 COPY.pt = {
   headerLabel: 'Ticket atualizado',
   intro: 'Seu ticket para <strong>{{ticket.clientName}}</strong> foi atualizado. Veja abaixo um resumo das alterações.',
@@ -143,6 +144,20 @@ COPY.pt = {
   textHeader: 'Seu ticket foi atualizado',
   textChanges: 'O que mudou',
   textView: 'Ver ticket',
+};
+COPY.sv = {
+  headerLabel: 'Ärende uppdaterat',
+  intro: 'Ditt ärende för <strong>{{ticket.clientName}}</strong> har uppdaterats. Se en sammanfattning av ändringarna nedan.',
+  badgePrefix: 'Ärende #',
+  priority: 'Prioritet',
+  status: 'Status',
+  assignedTo: 'Tilldelat till',
+  changesLabel: 'Vad som har ändrats',
+  viewButton: 'Visa ärende',
+  footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+  textHeader: 'Ditt ärende har uppdaterats',
+  textChanges: 'Vad som har ändrats',
+  textView: 'Visa ärende',
 };
 
 /* eslint-enable max-len */
