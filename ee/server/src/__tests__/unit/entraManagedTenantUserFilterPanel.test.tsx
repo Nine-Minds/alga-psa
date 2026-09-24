@@ -54,14 +54,14 @@ describe('ManagedTenantUserFilterPanel', () => {
     expect((document.getElementById('entra-filter-memberUsersOnly-managed-1') as HTMLInputElement).checked).toBe(true);
     expect((document.getElementById('entra-filter-licensedUsersOnly-managed-1') as HTMLInputElement).checked).toBe(true);
 
+    fireEvent.click(document.getElementById('entra-filter-preview-managed-1') as HTMLButtonElement);
+    await waitFor(() => expect(runPreview).toHaveBeenCalledTimes(1));
+    const previewConfig = runPreview.mock.calls[0][0].userFilterConfig;
     fireEvent.click(document.getElementById('entra-filter-save-managed-1') as HTMLButtonElement);
     await waitFor(() => expect(updateFilter).toHaveBeenCalledTimes(1));
     expect(updateFilter.mock.calls[0][0].override).toEqual({ memberUsersOnly: true, licensedUsersOnly: true });
-    fireEvent.click(document.getElementById('entra-filter-preview-managed-1') as HTMLButtonElement);
-    await waitFor(() => expect(runPreview).toHaveBeenCalledTimes(1));
-    expect(runPreview.mock.calls[0][0].userFilterConfig).toEqual(
-      mergeEntraUserFilterConfig(defaults, { memberUsersOnly: true, licensedUsersOnly: true }),
-    );
+    expect(mergeEntraUserFilterConfig(defaults, updateFilter.mock.calls[0][0].override)).toEqual(previewConfig);
+    expect((document.getElementById('entra-filter-licensedUsersOnly-managed-1') as HTMLInputElement).checked).toBe(true);
   });
 
   it('preserves an existing sparse override and does not copy tenant-default exclusions when editing a key', async () => {
