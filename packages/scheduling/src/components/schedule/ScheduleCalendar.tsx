@@ -31,8 +31,8 @@ import { CalendarStyleProvider } from './CalendarStyleProvider';
 import TechnicianSidebar from './TechnicianSidebar';
 import WeeklyScheduleEvent from './WeeklyScheduleEvent';
 import { ScheduleCalendarEventContext, ScheduleCalendarEventRenderer } from './ScheduleCalendarEventRenderer';
-import { getScheduleEntries, addScheduleEntry, updateScheduleEntry as updateScheduleEntryAction, deleteScheduleEntry, getAppointmentRequestById, IAppointmentRequest, getCalendarsVisibleToMe } from '@alga-psa/scheduling/actions';
-import { IEditScope, IScheduleEntry, DeletionValidationResult, IScheduleViewerCapabilities, IVisibleCalendar } from '@alga-psa/types';
+import { getScheduleEntries, addScheduleEntry, updateScheduleEntry as updateScheduleEntryAction, deleteScheduleEntry, getAppointmentRequestById, IAppointmentRequest, getCalendarsVisibleToMe, getShareableUsers } from '@alga-psa/scheduling/actions';
+import { IEditScope, IScheduleEntry, DeletionValidationResult, IScheduleViewerCapabilities, IVisibleCalendar, IUser } from '@alga-psa/types';
 import ShareCalendarDialog from './sharing/ShareCalendarDialog';
 import GroupCalendarDialog from './sharing/GroupCalendarDialog';
 import { personalCalendarColor } from '../../lib/calendarColors';
@@ -120,6 +120,10 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
     calendar: null,
   });
   const [busyEntry, setBusyEntry] = useState<IScheduleEntry | null>(null);
+  // Assignee candidates for the entry popup, fed by the `user_schedule:read`
+  // gated action rather than useUsers()/getAllUsers, which needs `user:read`.
+  const [popupUsers, setPopupUsers] = useState<IUser[]>([]);
+  const [popupUsersLoading, setPopupUsersLoading] = useState(false);
   const {
     value: overlayPreferenceValue,
     setValue: setOverlayPreference,
@@ -331,7 +335,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
     </div>
   );
 
-  const { users: allTechnicians, loading: usersLoading, error: usersError } = useUsers();
+  const { users: allTechnicians } = useUsers();
 
   // Filter technicians based on showInactiveUsers toggle
   const displayedTechnicians = useMemo(() => {
@@ -564,6 +568,35 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
     fetchEvents();
   }, [fetchEvents]);
 
+  // Load the popup's assignee candidates when it opens. The entry's stored
+  // assignees are passed through so their real names resolve even when they are
+  // inactive or otherwise outside the viewer's assignable set.
+  // LEVERAGE: pattern gated-user-list-self-fetch — ShareCalendarDialog,
+  // GroupCalendarDialog and this calendar each load-error-loading-wrap a
+  // getShareableUsers() call; a shared gated-user-list hook would collapse them.
+  useEffect(() => {
+    if (!showEntryPopup) return;
+    const assignedIds = selectedEvent?.assigned_user_ids ?? selectedSlot?.assigned_user_ids ?? [];
+    let active = true;
+    setPopupUsersLoading(true);
+    getShareableUsers(assignedIds)
+      .then((result) => {
+        if (!active) return;
+        setPopupUsers(result.success ? result.data : []);
+      })
+      .catch((err) => {
+        if (!active) return;
+        console.error('Failed to load assignable users:', err);
+        setPopupUsers([]);
+      })
+      .finally(() => {
+        if (active) setPopupUsersLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [showEntryPopup, selectedEvent, selectedSlot]);
+
   const handleSelectSlot = (slotInfo: any) => {
     // A date-only (month) selection is pinned to 8am for one grid step.
     const adjustedSlotInfo = {
@@ -750,9 +783,9 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
         calendarOptions={editableGroupCalendars}
         visibleGroupCalendars={visibleGroups}
         assignableUserIds={assignableUserIds}
-        users={usersLoading ? [] : displayedTechnicians}
-        loading={usersLoading}
-        error={usersError}
+        users={popupUsersLoading ? [] : popupUsers}
+        loading={popupUsersLoading}
+        error={null}
       />
     );
   };

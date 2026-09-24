@@ -19,6 +19,7 @@ export default defineConfig({
       'tests/SchedulePage.dialogRestore.test.tsx',
       'tests/SchedulePage.headerStability.test.tsx',
       'tests/entryPopup.slotDraftPersistence.test.tsx',
+      'tests/entryPopup.assigneeOptions.test.tsx',
       'tests/entryPopup.teamsMeetingRefresh.test.tsx',
       'tests/scheduleCalendar.teamsMeetingRefresh.test.tsx',
     ],

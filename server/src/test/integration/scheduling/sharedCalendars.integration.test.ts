@@ -473,6 +473,17 @@ describe('Shared calendars integration', () => {
     expect(returnedIds).not.toContain(clientUser);
     expect(usersResult.data.every((u) => u.user_type === 'internal' && u.is_inactive === false)).toBe(true);
 
+    // A stored assignee who has since been deactivated still resolves by id, so
+    // an entry popup can render their real name; a client id never does.
+    const withInactive = await getShareableUsers([inactiveD]);
+    expect(withInactive.success).toBe(true);
+    if (!withInactive.success) throw new Error(withInactive.error);
+    expect(withInactive.data.find((u) => u.user_id === inactiveD)?.is_inactive).toBe(true);
+    const withClient = await getShareableUsers([clientUser]);
+    expect(withClient.success).toBe(true);
+    if (!withClient.success) throw new Error(withClient.error);
+    expect(withClient.data.map((u) => u.user_id)).not.toContain(clientUser);
+
     const teamsResult = await getShareableTeams();
     expect(teamsResult.success).toBe(true);
     if (!teamsResult.success) throw new Error(teamsResult.error);

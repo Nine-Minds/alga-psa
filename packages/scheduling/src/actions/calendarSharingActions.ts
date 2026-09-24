@@ -654,21 +654,37 @@ export const restoreGroupCalendar = withAuth(async (
  * Active internal users that can receive a calendar share. Gated by
  * `user_schedule:read`, not `user:read`: a Technician can pick colleagues to
  * share with without holding the broader user-read permission.
+ *
+ * `includeUserIds` unions in specific internal users regardless of their active
+ * state. The schedule entry assignee picker uses it to resolve the name of an
+ * assignee who has since been deactivated: the general list intentionally drops
+ * inactive users, but an entry already assigned to one must still render them.
+ * Non-internal ids are ignored, so this cannot widen the picker past MSP users.
  */
 export const getShareableUsers = withAuth(async (
   user,
-  { tenant }
+  { tenant },
+  includeUserIds: string[] = []
 ): Promise<CalendarSharingResult<IUser[]>> => {
   try {
     const { knex: db } = await createTenantKnex();
     const base = await checkBaseAccess(user, db);
     if (!base.ok) return fail(base.error);
 
+    const extraIds = Array.from(new Set(includeUserIds.filter((id) => Boolean(id))));
     const users = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return tenantDb(trx, tenant).table('users')
-        .where({ user_type: 'internal', is_inactive: false })
+      const query = tenantDb(trx, tenant).table('users')
+        .where({ user_type: 'internal' })
         .select('user_id', 'first_name', 'last_name', 'email', 'user_type', 'is_inactive')
         .orderBy([{ column: 'first_name' }, { column: 'last_name' }]);
+      if (extraIds.length > 0) {
+        query.where(function () {
+          this.where({ is_inactive: false }).orWhereIn('user_id', extraIds);
+        });
+      } else {
+        query.where({ is_inactive: false });
+      }
+      return query;
     });
     return { success: true, data: users as IUser[] };
   } catch (error) {
