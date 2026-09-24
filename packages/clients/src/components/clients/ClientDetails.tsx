@@ -11,6 +11,7 @@ import type { ISlaPolicy } from '@alga-psa/types';
 import { BillingCycleType } from '@alga-psa/types';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { translateFieldValidation, validateClientNameField } from '@alga-psa/validation';
+import { normalizeClientSinceDate } from '@alga-psa/validation';
 import ClientContactsList from '../contacts/ClientContactsList';
 import QuickAddContact from '../contacts/QuickAddContact';
 import { Flex, Text, Heading } from '@radix-ui/themes';
@@ -1544,7 +1545,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             <FieldContainer
               label={t('clientDetails.clientSince', { defaultValue: 'Client since' })}
               fieldType="textField"
-              value={editedClient.client_since ?? ''}
+              value={editedClient.client_since == null ? '' : String(normalizeClientSinceDate(editedClient.client_since))}
               helperText=""
               automationId="client-since-field"
             >
@@ -1554,7 +1555,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
               <Input
                 id="client-since-date"
                 type="date"
-                value={editedClient.client_since ?? ''}
+                value={editedClient.client_since == null ? '' : String(normalizeClientSinceDate(editedClient.client_since))}
                 onChange={(event) => handleFieldChange('client_since', event.target.value || null)}
               />
             </FieldContainer>

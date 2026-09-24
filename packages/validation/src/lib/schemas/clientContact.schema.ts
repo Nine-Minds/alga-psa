@@ -14,6 +14,7 @@
 
 import { z } from 'zod';
 import { normalizePhone, PHONE_EXTENSION_MAX_LENGTH } from '../phone';
+import { normalizeDateOnly } from '@alga-psa/types';
 
 export const CLIENT_CONTACT_FIELD_LIMITS = {
   clientName: 255,
@@ -25,6 +26,16 @@ export const CLIENT_CONTACT_FIELD_LIMITS = {
 } as const;
 
 const trimmed = () => z.string().transform((value) => value.trim());
+
+export function normalizeClientSinceDate(value: unknown): unknown {
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? value : normalizeDateOnly(value);
+  }
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}(?:T.*)?$/.test(value)
+    ? normalizeDateOnly(value)
+    : value;
+}
+export const clientSinceSchema = z.preprocess(normalizeClientSinceDate, z.string().date().nullable().optional());
 
 /** Prefix a bare host with https:// so `acme.com` and `https://acme.com` agree. */
 export function withDefaultScheme(url: string): string {
@@ -134,7 +145,7 @@ function isBlank(value: unknown): boolean {
  */
 export const clientCoreFieldsSchema = z.object({
   client_name: clientNameSchema,
-  client_since: z.string().date().nullable().optional(),
+  client_since: clientSinceSchema,
   email: optional(emailFieldSchema),
   url: optional(urlFieldSchema),
   phone_no: optional(phoneFieldSchema),
@@ -184,6 +195,12 @@ export function isUnchangedFromStored(submitted: unknown, stored: unknown): bool
   }
   if (isBlank(submitted) || isBlank(stored)) {
     return false;
+  }
+  if (submitted instanceof Date || stored instanceof Date) {
+    const normalize = (value: unknown) => value instanceof Date
+      ? normalizeClientSinceDate(value)
+      : normalizeClientSinceDate(typeof value === 'string' ? value.trim() : value);
+    return normalize(submitted) === normalize(stored);
   }
   return String(submitted).trim() === String(stored).trim();
 }

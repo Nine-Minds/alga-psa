@@ -67,6 +67,18 @@ export function validateWorkflowDefinition(
         message: `Date trigger source "${definition.trigger.source}" requires payload schema "${expectedSchemaRef}".`
       });
     }
+    if (definition.trigger.timezone) {
+      try {
+        new Intl.DateTimeFormat('en-US', { timeZone: definition.trigger.timezone });
+      } catch {
+        errors.push({
+          severity: 'error',
+          stepPath: 'trigger',
+          code: 'INVALID_TRIGGER_TIMEZONE',
+          message: `Date trigger timezone "${definition.trigger.timezone}" is not a valid IANA timezone.`,
+        });
+      }
+    }
   }
 
   try {

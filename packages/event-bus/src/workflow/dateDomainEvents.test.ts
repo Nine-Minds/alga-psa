@@ -1,16 +1,27 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ publish: vi.fn(), insert: vi.fn(), delete: vi.fn() }));
+const mocks = vi.hoisted(() => ({ publish: vi.fn(), insert: vi.fn(), delete: vi.fn(), insertRow: undefined as Record<string, unknown> | undefined }));
 vi.mock('../publishers', () => ({ publishWorkflowEvent: mocks.publish }));
 vi.mock('@alga-psa/db', () => ({
-  tenantDb: () => ({ table: () => ({ insert: () => ({ onConflict: () => ({ ignore: () => ({ returning: mocks.insert }) }) }), where: () => ({ delete: mocks.delete }) }) }),
+  tenantDb: () => ({ table: () => ({
+    insert: (row: Record<string, unknown>) => {
+      mocks.insertRow = row;
+      return { onConflict: () => ({ ignore: () => ({ returning: mocks.insert }) }) };
+    },
+    where: () => ({ delete: mocks.delete }),
+  }) }),
 }));
 
 beforeEach(() => vi.clearAllMocks());
 
-import { buildDateDomainEventDedupeKey, emitDateDomainEventOnce, toTenantLocalDate } from './dateDomainEvents';
+import { buildDateDomainEventDedupeKey, emitDateDomainEventOnce, normalizeDateDomainKeyDate, toTenantLocalDate } from './dateDomainEvents';
 
 describe('date domain event helpers', () => {
+  it('normalizes Postgres dates from local calendar fields and datetime strings from their date part', () => {
+    expect(normalizeDateDomainKeyDate(new Date(2021, 9, 24))).toBe('2021-10-24');
+    expect(normalizeDateDomainKeyDate('2021-10-24T00:00:00.000Z')).toBe('2021-10-24');
+  });
+
   it('projects warranty instants into the tenant local calendar date', () => {
     const date = toTenantLocalDate('2026-09-23T03:00:00.000Z', 'America/Los_Angeles');
     expect(date).toBe('2026-09-22');
@@ -32,6 +43,7 @@ describe('date domain event helpers', () => {
     await expect(emitDateDomainEventOnce({} as never, 'tenant-1', params)).resolves.toBe(true);
     await expect(emitDateDomainEventOnce({} as never, 'tenant-1', params)).resolves.toBe(false);
     expect(mocks.publish).toHaveBeenCalledOnce();
+    expect(mocks.insertRow?.emitted_at).toBeInstanceOf(Date);
   });
 
   it('uses a stable event id for the same event key', async () => {

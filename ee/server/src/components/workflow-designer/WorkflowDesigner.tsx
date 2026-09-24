@@ -153,6 +153,8 @@ import type {
 } from '@alga-psa/workflows/runtime/client';
 import { WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF } from '@alga-psa/workflows/authoring';
 import { EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF } from '@alga-psa/shared/workflow/runtime/schemas/emptyWorkflowPayloadSchema';
+import { DATE_TRIGGER_PAYLOAD_SCHEMA_REFS } from './dateTriggerPayloadSchemas';
+
 import {
   isWorkflowAiInferAction,
   isWorkflowComposeTextAction,
@@ -4247,6 +4249,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                     id="workflow-date-source"
                                     value={dateTrigger.source}
                                     disabled={!canManage}
+                                    showPlaceholderInDropdown={false}
                                     options={[
                                       { value: 'client.anniversary', label: t('designer.form.dateSourceAnniversary', { defaultValue: 'Client anniversary' }) },
                                       { value: 'contract.renewal_decision', label: t('designer.form.dateSourceRenewal', { defaultValue: 'Contract renewal decision date' }) },
@@ -4254,13 +4257,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                       { value: 'asset.warranty_end', label: t('designer.form.dateSourceWarranty', { defaultValue: 'Asset warranty end' }) },
                                     ]}
                                     onValueChange={(value) => {
-                                      const schemaRefs: Record<string, string> = {
-                                        'client.anniversary': 'payload.ClientAnniversary.v1',
-                                        'contract.renewal_decision': 'payload.ContractRenewalDate.v1',
-                                        'contract.end': 'payload.ContractEndDate.v1',
-                                        'asset.warranty_end': 'payload.AssetWarrantyEnd.v1',
-                                      };
-                                      handleDefinitionChange({ trigger: { ...dateTrigger, source: value as typeof dateTrigger.source }, payloadSchemaRef: schemaRefs[value] });
+                                      handleDefinitionChange({ trigger: { ...dateTrigger, source: value as typeof dateTrigger.source }, payloadSchemaRef: DATE_TRIGGER_PAYLOAD_SCHEMA_REFS[value] });
                                     }}
                                   />
                                 </div>
@@ -4508,6 +4505,11 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                       <div className="text-xs text-gray-500">
                         {activeDefinition?.trigger?.type === 'event' ? (
                           t('designer.form.inputDataEvent', { defaultValue: 'Your steps read data from the selected trigger.' })
+                        ) : activeDefinition?.trigger?.type === 'date' ? (
+                          <>
+                            {t('designer.form.inputDataDatePrefix', { defaultValue: 'This workflow receives the date source payload defined by' })}{' '}
+                            <span className="font-mono">{DATE_TRIGGER_PAYLOAD_SCHEMA_REFS[activeDefinition.trigger.source]}</span>.
+                          </>
                         ) : isTimeTrigger(activeDefinition?.trigger) ? (
                           <>
                             {t('designer.form.inputDataTimePrefix', {

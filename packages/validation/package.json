@@ -26,6 +26,7 @@
     "lint": "eslint src/"
   },
   "dependencies": {
+    "@alga-psa/types": "file:../types",
     "@js-temporal/polyfill": "^0.4.4",
     "libphonenumber-js": "^1.13.11",
     "zod": "^3.22.4"

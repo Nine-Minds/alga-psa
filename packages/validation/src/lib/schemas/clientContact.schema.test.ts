@@ -9,6 +9,13 @@ import {
 } from './clientContact.schema';
 
 describe('clientCoreFieldsSchema', () => {
+  it('normalizes date-only values from Date and ISO datetime inputs', () => {
+    const localMidnight = new Date(2021, 9, 24);
+    for (const client_since of [localMidnight, '2021-10-24T00:00:00.000Z', '2021-10-24']) {
+      expect(clientCoreFieldsSchema.parse({ client_name: 'Acme', client_since }).client_since).toBe('2021-10-24');
+    }
+    expect(clientCoreFieldsSchema.safeParse({ client_name: 'Acme', client_since: 'garbage' }).success).toBe(false);
+  });
   it('normalizes as it validates', () => {
     const parsed = clientCoreFieldsSchema.parse({
       client_name: '  Acme Corp  ',
@@ -149,6 +156,8 @@ describe('isUnchangedFromStored', () => {
     expect(isUnchangedFromStored('  +15551234567 ', '+15551234567')).toBe(true);
     expect(isUnchangedFromStored('+15551234568', '+15551234567')).toBe(false);
     expect(isUnchangedFromStored('ACME.com', 'acme.com')).toBe(false);
+    expect(isUnchangedFromStored('2021-10-24', new Date(2021, 9, 24))).toBe(true);
+    expect(isUnchangedFromStored('2021-10-24T00:00:00.000Z', new Date(2021, 9, 24))).toBe(true);
   });
 
   it('counts clearing a stored value as a change', () => {

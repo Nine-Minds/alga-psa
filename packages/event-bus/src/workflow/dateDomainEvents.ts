@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import { v5 as uuidv5 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
 import { publishWorkflowEvent } from '../publishers';
+import { normalizeDateOnly } from '@alga-psa/types';
 import type { WorkflowEventPublishContext } from '../workflow/workflowEventPublishHelpers';
 
 const EVENT_ID_NAMESPACE = '4e2f55ec-8a63-5e7b-ae61-745387c70d42';
@@ -13,13 +14,7 @@ export function buildDateDomainEventDedupeKey(eventType: string, entityId: strin
 // LEVERAGE: Save-time event keys, scan occurrences and migration pre-seeds share this calendar-date normalization.
 /** Normalize PostgreSQL date values (which pg parses as local-midnight Dates) to calendar strings. */
 export function normalizeDateDomainKeyDate(value: string | Date): string {
-  if (value instanceof Date) {
-    if (Number.isNaN(value.getTime())) throw new Error('Invalid date-domain key date');
-    return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
-  }
-  const match = /^(\d{4}-\d{2}-\d{2})/.exec(value);
-  if (!match) throw new Error(`Invalid date-domain key date: ${value}`);
-  return match[1];
+  return normalizeDateOnly(value);
 }
 
 /** Project an instant onto the calendar date seen in the tenant's timezone. */
@@ -51,6 +46,7 @@ export async function emitDateDomainEventOnce(knex: Knex, tenant: string, params
     event_type: params.eventType,
     entity_id: params.entityId,
     occurs_on: params.occursOn,
+    emitted_at: new Date(),
   }).onConflict(['tenant', 'dedupe_key']).ignore().returning('dedupe_key');
   if (inserted.length === 0) return false;
   try {

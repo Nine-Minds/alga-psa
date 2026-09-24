@@ -18,7 +18,8 @@ import {
 } from './common';
 import {
   clientCoreFieldsSchema,
-  clientLocationCoreFieldsSchema
+  clientLocationCoreFieldsSchema,
+  normalizeClientSinceDate
 } from '@alga-psa/validation';
 
 // Structural rules for name/email/url/phone come from @alga-psa/validation so the
@@ -127,7 +128,7 @@ export const clientListQuerySchema = createListQuerySchema(clientFilterSchema);
 export const clientResponseSchema = z.object({
   client_id: uuidSchema,
   client_name: z.string(),
-  client_since: z.string().date().nullable(),
+  client_since: z.preprocess(normalizeClientSinceDate, z.string().date().nullable()),
   phone_no: z.string().nullable(),
   credit_balance: z.number(),
   email: z.string().nullable(),

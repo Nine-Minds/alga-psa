@@ -7,6 +7,11 @@ import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildClientStatusChangedPayload } from '@alga-psa/workflow-streams';
 import type { ClientLifecycleStatus, IClient } from '@alga-psa/types';
 import { ClientLifecycleStatusSchema } from '../schemas/client.schema';
+import { normalizeDateDomainKeyDate } from '@alga-psa/event-bus/workflow/dateDomainEvents';
+
+function normalizeClient(client: IClient): IClient {
+  return client.client_since == null ? client : { ...client, client_since: normalizeDateDomainKeyDate(client.client_since as string | Date) };
+}
 
 export const setClientLifecycleStatus = withAuth(async (
   user,
@@ -23,7 +28,7 @@ export const setClientLifecycleStatus = withAuth(async (
     const db = tenantDb(trx, tenant);
     const current = await db.table('clients').where({ client_id: clientId }).forUpdate().first<IClient>();
     if (!current) throw new Error('Client not found');
-    if (current.lifecycle_status === nextStatus) return current;
+    if (current.lifecycle_status === nextStatus) return normalizeClient(current);
     const changedAt = new Date().toISOString();
     const [updated] = await db.table('clients').where({ client_id: clientId }).update({ lifecycle_status: nextStatus, updated_at: changedAt }).returning('*') as IClient[];
     const payload = buildClientStatusChangedPayload({ clientId, previousStatus: current.lifecycle_status ?? 'active', newStatus: nextStatus, changedAt });
@@ -31,6 +36,6 @@ export const setClientLifecycleStatus = withAuth(async (
       eventType: 'CLIENT_STATUS_CHANGED', payload, ctx: { tenantId: tenant, occurredAt: changedAt, actor: { actorType: 'USER', actorUserId: user.user_id } },
       idempotencyKey: `client_status_changed:${clientId}:${changedAt}`,
     }), `CLIENT_STATUS_CHANGED client=${clientId}`);
-    return updated;
+    return normalizeClient(updated);
   });
 });

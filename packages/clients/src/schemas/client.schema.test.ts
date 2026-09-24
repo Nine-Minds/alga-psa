@@ -2,6 +2,17 @@ import { describe, expect, it } from 'vitest';
 import { ClientSchema, CreateClientSchema } from './client.schema';
 
 describe('CreateClientSchema', () => {
+  it('normalizes Date and ISO datetime client_since inputs', () => {
+    const createSince = CreateClientSchema.pick({ client_since: true });
+    const clientSince = ClientSchema.pick({ client_since: true });
+    for (const schema of [createSince, clientSince]) {
+      expect(schema.parse({ client_since: new Date(2021, 9, 24) }).client_since).toBe('2021-10-24');
+      expect(schema.parse({ client_since: '2021-10-24T00:00:00Z' }).client_since).toBe('2021-10-24');
+      expect(schema.parse({ client_since: '2021-10-24' }).client_since).toBe('2021-10-24');
+      expect(schema.safeParse({ client_since: 'garbage' }).success).toBe(false);
+    }
+  });
+
   it('requires client_name', () => {
     const result = CreateClientSchema.safeParse({});
     expect(result.success).toBe(false);

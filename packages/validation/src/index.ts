@@ -61,6 +61,8 @@ export {
   CLIENT_CONTACT_FIELD_LIMITS,
   clientCoreFieldsSchema,
   clientCoreFieldsUpdateSchema,
+  clientSinceSchema,
+  normalizeClientSinceDate,
   clientLocationCoreFieldsSchema,
   clientLocationCoreFieldsUpdateSchema,
   clientNameSchema,
