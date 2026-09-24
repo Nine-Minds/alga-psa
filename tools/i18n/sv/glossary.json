@@ -511,6 +511,8 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "{{amount}} MRR",
+      "{{amount}} NRR",
       "Start: {{dateTime}}",
       "00000000-0000-0000-0000-000000000000",
       "Adapter",
