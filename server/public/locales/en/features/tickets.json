@@ -1023,6 +1023,13 @@
       "filterByBoard": "Filter by board",
       "addCategory": "Add Category",
       "importStandardCategories": "Import from Standard Categories",
+      "copyToBoard": "Copy categories to another board",
+      "copyTitle": "Copy categories to another board",
+      "copySourceBoard": "Select source board",
+      "copyTargetBoard": "Select target board",
+      "copySelected": "Copy selected",
+      "copySuccess": "Copied {{created}} categories; skipped {{skipped}} already present.",
+      "copyFailed": "Failed to copy categories",
       "editCategory": "Edit Category",
       "categoryName": "Category Name *",
       "enterCategoryName": "Enter category name",
@@ -1082,7 +1089,12 @@
       "selectParentCategory": "Select parent category",
       "parentHelpWithBoard": "Select a parent to create a subcategory, or leave empty for top-level",
       "parentHelpWithoutBoard": "Select a board first, or pick a parent category to inherit its board",
-      "creating": "Creating..."
+      "creating": "Creating...",
+      "copySourceLabel": "Source board",
+      "copyTargetLabel": "Target board",
+      "copyEmpty": "No categories on this board.",
+      "copying": "Copying…",
+      "copyConflicts": "{{count}} skipped categories have a different parent on the target board."
     },
     "display": {
       "responseStateTrackingTitle": "Response State Tracking",

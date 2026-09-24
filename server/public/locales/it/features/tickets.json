@@ -1074,7 +1074,19 @@
       "selectParentCategory": "Seleziona categoria padre",
       "parentHelpWithBoard": "Seleziona una categoria padre per creare una sottocategoria, oppure lascia vuoto per il livello superiore",
       "parentHelpWithoutBoard": "Seleziona prima una bacheca oppure scegli una categoria padre per ereditarne la bacheca",
-      "creating": "Creazione..."
+      "creating": "Creazione...",
+      "copyToBoard": "Copia categorie su un’altra scheda",
+      "copyTitle": "Copia categorie su un’altra scheda",
+      "copySourceLabel": "Seleziona scheda di origine",
+      "copyTargetLabel": "Seleziona scheda di destinazione",
+      "copySelected": "Copia selezionate",
+      "copySuccess": "Copiate {{created}} categorie; {{skipped}} già presenti ignorate.",
+      "copyFailed": "Impossibile copiare le categorie",
+      "copyEmpty": "Nessuna categoria in questa scheda.",
+      "copying": "Copia in corso…",
+      "copyConflicts": "{{count}} categorie ignorate hanno una categoria padre diversa nella scheda di destinazione.",
+      "copySourceBoard": "Seleziona scheda di origine",
+      "copyTargetBoard": "Seleziona scheda di destinazione"
     },
     "display": {
       "responseStateTrackingTitle": "Tracciamento dello stato di risposta",

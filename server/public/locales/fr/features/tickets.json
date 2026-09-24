@@ -1074,7 +1074,19 @@
       "selectParentCategory": "Sélectionnez une catégorie parente",
       "parentHelpWithBoard": "Sélectionnez une catégorie parente pour créer une sous-catégorie, ou laissez vide pour le niveau supérieur",
       "parentHelpWithoutBoard": "Sélectionnez d'abord un tableau ou choisissez une catégorie parente pour hériter de son tableau",
-      "creating": "Création..."
+      "creating": "Création...",
+      "copyToBoard": "Copier les catégories vers un autre tableau",
+      "copyTitle": "Copier les catégories vers un autre tableau",
+      "copySourceLabel": "Sélectionner le tableau source",
+      "copyTargetLabel": "Sélectionner le tableau cible",
+      "copySelected": "Copier la sélection",
+      "copySuccess": "{{created}} catégories copiées ; {{skipped}} déjà présentes ignorées.",
+      "copyFailed": "Échec de la copie des catégories",
+      "copyEmpty": "Aucune catégorie sur ce tableau.",
+      "copying": "Copie en cours…",
+      "copyConflicts": "{{count}} catégories ignorées ont une catégorie parente différente sur le tableau cible.",
+      "copySourceBoard": "Sélectionner le tableau source",
+      "copyTargetBoard": "Sélectionner le tableau cible"
     },
     "display": {
       "responseStateTrackingTitle": "Suivi de l'état de réponse",

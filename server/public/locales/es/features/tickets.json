@@ -1074,7 +1074,19 @@
       "selectParentCategory": "Seleccione la categoría principal",
       "parentHelpWithBoard": "Seleccione una categoría principal para crear una subcategoría o déjelo vacío para el nivel superior",
       "parentHelpWithoutBoard": "Seleccione primero un tablero o elija una categoría principal para heredar su tablero",
-      "creating": "Creando..."
+      "creating": "Creando...",
+      "copyToBoard": "Copiar categorías a otro tablero",
+      "copyTitle": "Copiar categorías a otro tablero",
+      "copySourceLabel": "Seleccionar tablero de origen",
+      "copyTargetLabel": "Seleccionar tablero de destino",
+      "copySelected": "Copiar seleccionadas",
+      "copySuccess": "Se copiaron {{created}} categorías; se omitieron {{skipped}} que ya existían.",
+      "copyFailed": "No se pudieron copiar las categorías",
+      "copyEmpty": "No hay categorías en este tablero.",
+      "copying": "Copiando…",
+      "copyConflicts": "{{count}} categorías omitidas tienen una categoría superior distinta en el tablero de destino.",
+      "copySourceBoard": "Seleccionar tablero de origen",
+      "copyTargetBoard": "Seleccionar tablero de destino"
     },
     "display": {
       "responseStateTrackingTitle": "Seguimiento del estado de respuesta",

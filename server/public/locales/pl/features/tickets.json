@@ -1184,7 +1184,19 @@
       "selectParentCategory": "Wybierz kategorię nadrzędną",
       "parentHelpWithBoard": "Wybierz kategorię nadrzędną, aby utworzyć podkategorię, lub pozostaw puste dla poziomu najwyższego",
       "parentHelpWithoutBoard": "Najpierw wybierz tablicę albo kategorię nadrzędną, aby odziedziczyć jej tablicę",
-      "creating": "Tworzenie..."
+      "creating": "Tworzenie...",
+      "copyToBoard": "Kopiuj kategorie do innej tablicy",
+      "copyTitle": "Kopiuj kategorie do innej tablicy",
+      "copySourceLabel": "Wybierz tablicę źródłową",
+      "copyTargetLabel": "Wybierz tablicę docelową",
+      "copySelected": "Kopiuj wybrane",
+      "copySuccess": "Skopiowano {{created}} kategorii; pominięto {{skipped}} już istniejących.",
+      "copyFailed": "Nie udało się skopiować kategorii",
+      "copyEmpty": "Brak kategorii na tej tablicy.",
+      "copying": "Kopiowanie…",
+      "copyConflicts": "{{count}} pominiętych kategorii ma inną kategorię nadrzędną na tablicy docelowej.",
+      "copySourceBoard": "Wybierz tablicę źródłową",
+      "copyTargetBoard": "Wybierz tablicę docelową"
     },
     "display": {
       "responseStateTrackingTitle": "Śledzenie stanu odpowiedzi",

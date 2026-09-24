@@ -22,6 +22,24 @@ afterAll(() => {
 });
 
 describe('CategoryPicker search', () => {
+  it('bolds the parent in the selected single-category trigger label', () => {
+    render(
+      <CategoryPicker
+        id="ticket-category-picker"
+        categories={[
+          { category_id: 'hardware', category_name: 'Hardware' },
+          { category_id: 'laptops', category_name: 'Laptops', parent_category: 'hardware' },
+        ]}
+        selectedCategories={['laptops']}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    const trigger = screen.getByRole('combobox');
+    expect(trigger.querySelector('strong')).toHaveTextContent('Hardware');
+    expect(trigger).toHaveTextContent('Hardware → Laptops');
+  });
+
   it('filters the category tree by a matching subcategory and keeps it selectable', async () => {
     const onSelect = vi.fn();
 

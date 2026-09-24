@@ -8,7 +8,8 @@ import {
   getAllCategories,
   updateCategory,
   deleteCategory,
-  validateCategoryDeletion
+  validateCategoryDeletion,
+  copyTicketCategoriesToBoard
 } from '../../actions/ticketCategoryActions';
 import { getAllBoards } from '../../actions/board-actions/boardActions';
 import type { IBoard } from '@alga-psa/types';
@@ -75,6 +76,17 @@ const CategoriesSettings = (): React.JSX.Element => {
   const [importTargetBoard, setImportTargetBoard] = useState<string>('');
   const [boards, setBoards] = useState<IBoard[]>([]);
   const [boardFilter, setBoardFilter] = useState<string>('all');
+  const [showCopyDialog, setShowCopyDialog] = useState(false);
+  const [copySourceBoard, setCopySourceBoard] = useState('');
+  const [copyTargetBoard, setCopyTargetBoard] = useState('');
+  const [selectedCopyCategories, setSelectedCopyCategories] = useState<string[]>([]);
+  const [isCopyingCategories, setIsCopyingCategories] = useState(false);
+
+  const resetCopyDialog = () => {
+    setCopySourceBoard('');
+    setCopyTargetBoard('');
+    setSelectedCopyCategories([]);
+  };
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -128,6 +140,32 @@ const CategoriesSettings = (): React.JSX.Element => {
       setBoards(allBoards.filter(ch => !ch.is_inactive));
     } catch (error) {
       console.error('Error fetching boards:', error);
+    }
+  };
+
+  const handleCopyCategories = async () => {
+    setIsCopyingCategories(true);
+    try {
+      const result = await copyTicketCategoriesToBoard(copySourceBoard, copyTargetBoard, selectedCopyCategories);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      const successMessage = t('settings.categories.copySuccess', 'Copied {{created}} categories; skipped {{skipped}} already present.', {
+        created: result.created,
+        skipped: result.skipped,
+      });
+      const conflictMessage = result.conflicts > 0
+        ? ` ${t('settings.categories.copyConflicts', '{{count}} skipped categories have a different parent on the target board.', { count: result.conflicts })}`
+        : '';
+      toast.success(successMessage + conflictMessage);
+      setShowCopyDialog(false);
+      resetCopyDialog();
+      await fetchCategories();
+    } catch (error) {
+      handleError(error, t('settings.categories.copyFailed', 'Failed to copy categories'));
+    } finally {
+      setIsCopyingCategories(false);
     }
   };
 
@@ -472,6 +510,9 @@ const CategoriesSettings = (): React.JSX.Element => {
           >
             {t('settings.categories.importStandardCategories', 'Import from Standard Categories')}
           </Button>
+          <Button id="copy-categories-button" variant="outline" onClick={() => { resetCopyDialog(); setShowCopyDialog(true); }}>
+            {t('settings.categories.copyToBoard', 'Copy categories to another board')}
+          </Button>
         </div>
       </div>
 
@@ -486,6 +527,46 @@ const CategoriesSettings = (): React.JSX.Element => {
         isValidating={isDeleteValidating}
         isDeleting={isDeleteProcessing}
       />
+
+      <Dialog isOpen={showCopyDialog} onClose={() => { setShowCopyDialog(false); resetCopyDialog(); }} title={t('settings.categories.copyTitle', 'Copy categories to another board')} className="max-w-2xl" footer={(
+        <div className="flex justify-end gap-2">
+          <Button id="cancel-copy-categories" variant="outline" disabled={isCopyingCategories} onClick={() => { setShowCopyDialog(false); resetCopyDialog(); }}>{t('actions.cancel', 'Cancel')}</Button>
+          <Button id="confirm-copy-categories" onClick={handleCopyCategories} disabled={isCopyingCategories || !copySourceBoard || !copyTargetBoard || !selectedCopyCategories.length}>{isCopyingCategories ? t('settings.categories.copying', 'Copying…') : t('settings.categories.copySelected', 'Copy selected')}</Button>
+        </div>
+      )}>
+        <DialogContent>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="copy-source-board">{t('settings.categories.copySourceLabel', 'Source board')}</Label>
+              <CustomSelect id="copy-source-board" value={copySourceBoard} disabled={isCopyingCategories} onValueChange={(value) => { setCopySourceBoard(value); setCopyTargetBoard(''); setSelectedCopyCategories([]); }} options={boards.map(board => ({ value: board.board_id || '', label: board.board_name || '' }))} placeholder={t('settings.categories.copySourceBoard', 'Select source board')} className="w-full" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="copy-target-board">{t('settings.categories.copyTargetLabel', 'Target board')}</Label>
+              <CustomSelect id="copy-target-board" value={copyTargetBoard} disabled={isCopyingCategories} onValueChange={setCopyTargetBoard} options={boards.filter(board => board.board_id !== copySourceBoard).map(board => ({ value: board.board_id || '', label: board.board_name || '' }))} placeholder={t('settings.categories.copyTargetBoard', 'Select target board')} className="w-full" />
+            </div>
+            {copySourceBoard && (() => {
+              const sourceCategories = categories.filter(category => category.board_id === copySourceBoard);
+              const parents = sourceCategories.filter(category => !category.parent_category);
+              if (parents.length === 0) return <p className="text-sm text-[rgb(var(--color-text-500))]">{t('settings.categories.copyEmpty', 'No categories on this board.')}</p>;
+              return <div className="space-y-3" aria-busy={isCopyingCategories}>
+                {parents.map(parent => {
+                  const children = sourceCategories.filter(category => category.parent_category === parent.category_id);
+                  return <div key={parent.category_id}>
+                    <label className="flex items-center gap-2">
+                      <Checkbox id={`copy-category-${parent.category_id}`} disabled={isCopyingCategories} checked={selectedCopyCategories.includes(parent.category_id)} onChange={(event) => setSelectedCopyCategories(event.target.checked ? [...new Set([...selectedCopyCategories, parent.category_id, ...children.map(child => child.category_id)])] : selectedCopyCategories.filter(id => id !== parent.category_id && !children.some(child => child.category_id === id)))} />
+                      {parent.category_name}
+                    </label>
+                    {children.map(child => <label key={child.category_id} className="ml-6 flex items-center gap-2">
+                      <Checkbox id={`copy-category-${child.category_id}`} disabled={isCopyingCategories} checked={selectedCopyCategories.includes(child.category_id)} onChange={(event) => setSelectedCopyCategories(event.target.checked ? [...new Set([...selectedCopyCategories, parent.category_id, child.category_id])] : selectedCopyCategories.filter(id => id !== child.category_id))} />
+                      {child.category_name}
+                    </label>)}
+                  </div>;
+                })}
+              </div>;
+            })()}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <QuickAddCategory
         isOpen={showAddEditDialog && !editingCategory}

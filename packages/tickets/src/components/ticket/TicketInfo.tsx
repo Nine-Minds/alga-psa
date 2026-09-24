@@ -859,7 +859,12 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
       case 'category_id': {
         const categoryLookup = effectiveCategories.find((category) => category.category_id === ticket.subcategory_id)
           ?? effectiveCategories.find((category) => category.category_id === ticket.category_id);
-        return categoryLookup?.category_name ?? t('properties.notAvailable', 'N/A');
+        const parentLookup = categoryLookup?.parent_category
+          ? effectiveCategories.find((category) => category.category_id === categoryLookup.parent_category)
+          : undefined;
+        return categoryLookup
+          ? <>{parentLookup && <><strong className="font-semibold">{parentLookup.category_name}</strong> → </>}{categoryLookup.category_name}</>
+          : t('properties.notAvailable', 'N/A');
       }
       case 'priority_id':
         return priorityOptions.find((option) => option.value === ticket.priority_id)?.label ?? t('properties.notAvailable', 'N/A');

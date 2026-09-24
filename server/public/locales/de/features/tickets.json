@@ -1074,7 +1074,19 @@
       "selectParentCategory": "Übergeordnete Kategorie auswählen",
       "parentHelpWithBoard": "Wählen Sie eine übergeordnete Kategorie aus, um eine Unterkategorie zu erstellen, oder lassen Sie das Feld für die oberste Ebene leer",
       "parentHelpWithoutBoard": "Wählen Sie zuerst ein Board oder eine übergeordnete Kategorie aus, um deren Board zu übernehmen",
-      "creating": "Wird erstellt..."
+      "creating": "Wird erstellt...",
+      "copyToBoard": "Kategorien auf ein anderes Board kopieren",
+      "copyTitle": "Kategorien auf ein anderes Board kopieren",
+      "copySourceLabel": "Quellboard auswählen",
+      "copyTargetLabel": "Zielboard auswählen",
+      "copySelected": "Ausgewählte kopieren",
+      "copySuccess": "{{created}} Kategorien kopiert; {{skipped}} bereits vorhandene übersprungen.",
+      "copyFailed": "Kopieren fehlgeschlagen",
+      "copyEmpty": "Keine Kategorien auf diesem Board.",
+      "copying": "Wird kopiert…",
+      "copyConflicts": "{{count}} übersprungene Kategorien haben auf dem Zielboard eine andere übergeordnete Kategorie.",
+      "copySourceBoard": "Quellboard auswählen",
+      "copyTargetBoard": "Zielboard auswählen"
     },
     "display": {
       "responseStateTrackingTitle": "Antwortstatus-Tracking",

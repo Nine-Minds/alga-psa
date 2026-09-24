@@ -47,6 +47,7 @@ interface TreeSelectProps<T extends string = string> extends AutomationProps {
   value: string;
   onValueChange: (value: string, type: T, excluded: boolean, path?: TreeSelectPath) => void;
   placeholder?: string;
+  selectedDisplayLabel?: React.ReactNode;
   className?: string;
   disabled?: boolean;
   label?: string;
@@ -83,6 +84,7 @@ function TreeSelect<T extends string>({
   value,
   onValueChange,
   placeholder,
+  selectedDisplayLabel,
   className,
   disabled,
   label,
@@ -628,8 +630,8 @@ function TreeSelect<T extends string>({
               placeholder={placeholder}
               className="flex-1 text-left"
             >
-              <span className={!displayLabel ? 'text-gray-400' : ''}>
-                {displayLabel || placeholder}
+              <span className={!displayLabel && !selectedDisplayLabel ? 'text-gray-400' : ''}>
+                {selectedDisplayLabel ?? (displayLabel || placeholder)}
               </span>
             </RadixSelect.Value>
             <div className="flex items-center gap-2">

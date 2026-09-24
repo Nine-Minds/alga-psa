@@ -1074,7 +1074,19 @@
       "selectParentCategory": "Selecione a categoria pai",
       "parentHelpWithBoard": "Selecione um pai para criar uma subcategoria ou deixe em branco para o nível superior",
       "parentHelpWithoutBoard": "Selecione um quadro primeiro ou escolha uma categoria pai para herdar seu quadro",
-      "creating": "Criando..."
+      "creating": "Criando...",
+      "copyToBoard": "Copiar categorias para outro quadro",
+      "copyTitle": "Copiar categorias para outro quadro",
+      "copySourceLabel": "Selecionar quadro de origem",
+      "copyTargetLabel": "Selecionar quadro de destino",
+      "copySelected": "Copiar selecionadas",
+      "copySuccess": "{{created}} categorias copiadas; {{skipped}} existentes ignoradas.",
+      "copyFailed": "Falha ao copiar categorias",
+      "copyEmpty": "Não há categorias neste quadro.",
+      "copying": "Copiando…",
+      "copyConflicts": "{{count}} categorias ignoradas têm uma categoria pai diferente no quadro de destino.",
+      "copySourceBoard": "Selecionar quadro de origem",
+      "copyTargetBoard": "Selecionar quadro de destino"
     },
     "display": {
       "responseStateTrackingTitle": "Acompanhamento do estado de resposta",

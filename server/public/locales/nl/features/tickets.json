@@ -1074,7 +1074,19 @@
       "selectParentCategory": "Selecteer bovenliggende categorie",
       "parentHelpWithBoard": "Selecteer een bovenliggende categorie om een subcategorie te maken, of laat leeg voor het hoogste niveau",
       "parentHelpWithoutBoard": "Selecteer eerst een bord of kies een bovenliggende categorie om het bord daarvan over te nemen",
-      "creating": "Bezig met aanmaken..."
+      "creating": "Bezig met aanmaken...",
+      "copyToBoard": "Categorieën naar een ander bord kopiëren",
+      "copyTitle": "Categorieën naar een ander bord kopiëren",
+      "copySourceLabel": "Selecteer bronbord",
+      "copyTargetLabel": "Selecteer doelbord",
+      "copySelected": "Geselecteerde kopiëren",
+      "copySuccess": "{{created}} categorieën gekopieerd; {{skipped}} bestaande categorieën overgeslagen.",
+      "copyFailed": "Categorieën kopiëren mislukt",
+      "copyEmpty": "Geen categorieën op dit bord.",
+      "copying": "Kopiëren…",
+      "copyConflicts": "{{count}} overgeslagen categorieën hebben een andere bovenliggende categorie op het doelbord.",
+      "copySourceBoard": "Selecteer bronbord",
+      "copyTargetBoard": "Selecteer doelbord"
     },
     "display": {
       "responseStateTrackingTitle": "Reactiestatusbewaking",
