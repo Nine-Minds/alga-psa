@@ -399,7 +399,10 @@
       "selectClientFirst": "Wählen Sie zuerst einen Kunden aus",
       "startDateLabel": "Startdatum *",
       "useTenantDefaultsDescription": "Einstellungen für Verlängerungsmodus und Kündigungsfrist auf Organisationsebene anwenden.",
-      "useTenantDefaultsLabel": "Mandanten-Verlängerungsstandards verwenden"
+      "useTenantDefaultsLabel": "Mandanten-Verlängerungsstandards verwenden",
+      "billingProfileLabel": "Abrechnungsprofil",
+      "billingProfileNone": "Standardprofil des Kunden verwenden",
+      "billingProfileHint": "Positionen dieses Vertrags werden diesem Profil zugeordnet."
     },
     "po": {
       "amountLabel": "Bestellbetrag (optional)",
@@ -1520,6 +1523,11 @@
       },
       "selectTemplateOptional": "Vorlage auswählen (optional)",
       "startFromTemplate": "Aus Vorlage starten"
+    },
+    "billingProfile": {
+      "label": "Abrechnungsprofil",
+      "none": "Standardprofil des Kunden verwenden",
+      "hint": "Positionen dieses Vertrags werden diesem Profil zugeordnet, sofern keine Vertragsposition dies überschreibt."
     }
   },
   "wizardFixed": {

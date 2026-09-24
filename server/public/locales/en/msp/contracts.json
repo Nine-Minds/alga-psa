@@ -399,7 +399,10 @@
       "selectClientFirst": "Select a client first",
       "startDateLabel": "Start Date *",
       "useTenantDefaultsDescription": "Apply organization-level renewal mode and notice period settings.",
-      "useTenantDefaultsLabel": "Use Tenant Renewal Defaults"
+      "useTenantDefaultsLabel": "Use Tenant Renewal Defaults",
+      "billingProfileLabel": "Billing Profile",
+      "billingProfileNone": "Use the client's default profile",
+      "billingProfileHint": "Charges from this contract are billed to this profile."
     },
     "po": {
       "amountLabel": "PO Amount (Optional)",
@@ -1520,6 +1523,11 @@
       },
       "selectTemplateOptional": "Select a template (optional)",
       "startFromTemplate": "Start From Template"
+    },
+    "billingProfile": {
+      "label": "Billing profile",
+      "none": "Use the client's default profile",
+      "hint": "Charges from this contract are billed to this profile unless a line overrides it."
     }
   },
   "wizardFixed": {

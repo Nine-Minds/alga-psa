@@ -399,7 +399,10 @@
       "selectClientFirst": "Sélectionnez d'abord un client",
       "startDateLabel": "Date de début *",
       "useTenantDefaultsDescription": "Appliquer les paramètres de mode de renouvellement et de période de préavis au niveau de l'organisation.",
-      "useTenantDefaultsLabel": "Utiliser les valeurs par défaut de renouvellement du locataire"
+      "useTenantDefaultsLabel": "Utiliser les valeurs par défaut de renouvellement du locataire",
+      "billingProfileLabel": "Profil de facturation",
+      "billingProfileNone": "Utiliser le profil par défaut du client",
+      "billingProfileHint": "Les charges de ce contrat sont facturées à ce profil."
     },
     "po": {
       "amountLabel": "Montant du bon de commande (facultatif)",
@@ -1520,6 +1523,11 @@
       },
       "selectTemplateOptional": "Sélectionnez un modèle (facultatif)",
       "startFromTemplate": "Démarrer à partir d'un modèle"
+    },
+    "billingProfile": {
+      "label": "Profil de facturation",
+      "none": "Utiliser le profil par défaut du client",
+      "hint": "Les charges de ce contrat sont facturées à ce profil, sauf si une ligne le remplace."
     }
   },
   "wizardFixed": {

@@ -399,7 +399,10 @@
       "selectClientFirst": "Selecteer eerst een klant",
       "startDateLabel": "Startdatum *",
       "useTenantDefaultsDescription": "Pas de verlengingsmodus en opzegtermijninstellingen op organisatieniveau toe.",
-      "useTenantDefaultsLabel": "Standaardverlengingswaarden tenant gebruiken"
+      "useTenantDefaultsLabel": "Standaardverlengingswaarden tenant gebruiken",
+      "billingProfileLabel": "Facturatieprofiel",
+      "billingProfileNone": "Standaardprofiel van de klant gebruiken",
+      "billingProfileHint": "Kosten uit dit contract worden aan dit profiel toegerekend."
     },
     "po": {
       "amountLabel": "PO-bedrag (optioneel)",
@@ -1520,6 +1523,11 @@
       },
       "selectTemplateOptional": "Selecteer een sjabloon (optioneel)",
       "startFromTemplate": "Starten vanaf sjabloon"
+    },
+    "billingProfile": {
+      "label": "Facturatieprofiel",
+      "none": "Standaardprofiel van de klant gebruiken",
+      "hint": "Kosten uit dit contract worden aan dit profiel toegerekend, tenzij een regel dit overschrijft."
     }
   },
   "wizardFixed": {

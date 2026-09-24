@@ -399,7 +399,10 @@
       "selectClientFirst": "Seleziona prima un cliente",
       "startDateLabel": "Data di inizio *",
       "useTenantDefaultsDescription": "Applica le impostazioni di modalità di rinnovo e periodo di preavviso a livello organizzativo.",
-      "useTenantDefaultsLabel": "Utilizza le impostazioni predefinite di rinnovo del tenant"
+      "useTenantDefaultsLabel": "Utilizza le impostazioni predefinite di rinnovo del tenant",
+      "billingProfileLabel": "Profilo di fatturazione",
+      "billingProfileNone": "Usa il profilo predefinito del cliente",
+      "billingProfileHint": "Gli addebiti di questo contratto vengono fatturati a questo profilo."
     },
     "po": {
       "amountLabel": "Importo OdA (opzionale)",
@@ -1520,6 +1523,11 @@
       },
       "selectTemplateOptional": "Seleziona un modello (opzionale)",
       "startFromTemplate": "Inizia da un modello"
+    },
+    "billingProfile": {
+      "label": "Profilo di fatturazione",
+      "none": "Usa il profilo predefinito del cliente",
+      "hint": "Gli addebiti di questo contratto vengono fatturati a questo profilo, salvo override di una riga."
     }
   },
   "wizardFixed": {

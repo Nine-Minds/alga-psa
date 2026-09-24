@@ -490,6 +490,19 @@ export async function createClientContractAssignment(
     }
   }
 
+  // Step 3 of the charge-attribution chain, chosen at creation time rather than
+  // left for a later edit. A profile of another client would silently
+  // misattribute every charge the contract produces, so it is rejected here.
+  const billingProfileId = input.billing_profile_id ?? null;
+  if (billingProfileId) {
+    const profile = await db.table('client_billing_profiles')
+      .where({ billing_profile_id: billingProfileId })
+      .first('client_id');
+    if (!profile || profile.client_id !== input.client_id) {
+      throw new Error('That billing profile belongs to a different client.');
+    }
+  }
+
   const timestamp = new Date().toISOString();
   const insertPayload: Record<string, unknown> = {
     client_contract_id: uuidv4(),
@@ -499,6 +512,7 @@ export async function createClientContractAssignment(
     start_date: input.start_date,
     end_date: input.end_date,
     is_active: input.is_active,
+    billing_profile_id: billingProfileId,
     tenant,
     created_at: timestamp,
     updated_at: timestamp,

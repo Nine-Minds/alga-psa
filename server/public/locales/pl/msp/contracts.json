@@ -399,7 +399,10 @@
       "selectClientFirst": "Najpierw wybierz klienta",
       "startDateLabel": "Data rozpoczęcia *",
       "useTenantDefaultsDescription": "Zastosuj ustawienia trybu odnowienia i okresu wypowiedzenia z poziomu organizacji.",
-      "useTenantDefaultsLabel": "Użyj domyślnych ustawień odnowień tenanta"
+      "useTenantDefaultsLabel": "Użyj domyślnych ustawień odnowień tenanta",
+      "billingProfileLabel": "Profil rozliczeniowy",
+      "billingProfileNone": "Użyj domyślnego profilu klienta",
+      "billingProfileHint": "Opłaty z tej umowy są rozliczane w tym profilu."
     },
     "po": {
       "amountLabel": "Kwota PO (opcjonalnie)",
@@ -1524,6 +1527,11 @@
       },
       "selectTemplateOptional": "Wybierz szablon (opcjonalnie)",
       "startFromTemplate": "Rozpocznij z szablonu"
+    },
+    "billingProfile": {
+      "label": "Profil rozliczeniowy",
+      "none": "Użyj domyślnego profilu klienta",
+      "hint": "Opłaty z tej umowy są rozliczane w tym profilu, chyba że pozycja go zastąpi."
     }
   },
   "wizardFixed": {

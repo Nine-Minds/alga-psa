@@ -24,6 +24,8 @@ import {
 import { CURRENCY_OPTIONS } from '@alga-psa/core';
 import { HelpCircle, Info, Plus, XCircle, ChevronDown, ChevronUp, Search, Coins } from 'lucide-react';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { BillingProfilePicker } from '@alga-psa/ui/components/BillingProfilePicker';
+import { getClientBillingProfilesForBilling } from '@alga-psa/billing/actions/billingProfileActions';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { getContractLinePresetServices, getContractLinePresetServiceCounts, getContractLinePresetFixedConfig } from '@alga-psa/billing/actions/contractLinePresetActions';
@@ -40,6 +42,8 @@ import {
 
 const isReturnedActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
+
+const loadBillingProfiles = (clientId: string) => getClientBillingProfilesForBilling(clientId);
 
 interface ContractLinePresetServiceWithName extends IContractLinePresetService {
   service_name?: string;
@@ -94,6 +98,7 @@ export function ContractDialog({
   const [contractDescription, setContractDescription] = useState(editingContract?.contract_description ?? '');
   const [status, setStatus] = useState<string>(editingContract?.status ?? 'active');
   const [clientId, setClientId] = useState<string>(initialClientId ?? '');
+  const [billingProfileId, setBillingProfileId] = useState<string | null>(null);
   const [billingFrequency, setBillingFrequency] = useState<string>('monthly');
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
@@ -469,6 +474,7 @@ export function ContractDialog({
         const assignmentResult = await createClientContractForBilling({
           client_id: clientId,
           contract_id: contract.contract_id,
+          billing_profile_id: billingProfileId,
           start_date: startDate.toISOString().split('T')[0],
           end_date: endDate ? endDate.toISOString().split('T')[0] : null,
           is_active: saveAsActive,
@@ -622,6 +628,8 @@ export function ContractDialog({
                 selectedClientId={clientId}
                 onSelect={(id) => {
                   setClientId(id || '');
+                  // Profiles belong to one client; a stale pick would be rejected on save.
+                  setBillingProfileId(null);
                   clearErrorIfSubmitted();
                 }}
                 filterState={filterState}
@@ -635,6 +643,22 @@ export function ContractDialog({
                 onAddNew={() => setIsQuickAddClientOpen(true)}
               />
             </div>
+
+            {/* Billing profile — rendered only for a segmented client */}
+            <BillingProfilePicker
+              id="contract-dialog-billing-profile"
+              clientId={clientId || null}
+              loadProfiles={loadBillingProfiles}
+              value={billingProfileId}
+              onChange={setBillingProfileId}
+              label={t('contractDialog.form.billingProfileLabel', { defaultValue: 'Billing Profile' })}
+              unassignedLabel={t('contractDialog.form.billingProfileNone', {
+                defaultValue: "Use the client's default profile",
+              })}
+              hint={t('contractDialog.form.billingProfileHint', {
+                defaultValue: 'Charges from this contract are billed to this profile.',
+              })}
+            />
 
             {/* Contract Name */}
             <div>

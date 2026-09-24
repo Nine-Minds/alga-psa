@@ -399,7 +399,10 @@
       "selectClientFirst": "Selecione um cliente primeiro",
       "startDateLabel": "Data de início *",
       "useTenantDefaultsDescription": "Aplique o modo de renovação no nível da organização e as configurações do período de aviso prévio.",
-      "useTenantDefaultsLabel": "Usar padrões de renovação de locatário"
+      "useTenantDefaultsLabel": "Usar padrões de renovação de locatário",
+      "billingProfileLabel": "Perfil de faturação",
+      "billingProfileNone": "Utilizar o perfil predefinido do cliente",
+      "billingProfileHint": "Os encargos deste contrato são faturados neste perfil."
     },
     "po": {
       "amountLabel": "Valor do pedido de compra (opcional)",
@@ -1520,6 +1523,11 @@
       },
       "selectTemplateOptional": "Selecione um modelo (opcional)",
       "startFromTemplate": "Começar a partir do modelo"
+    },
+    "billingProfile": {
+      "label": "Perfil de faturação",
+      "none": "Utilizar o perfil predefinido do cliente",
+      "hint": "Os encargos deste contrato são faturados neste perfil, salvo se uma linha o substituir."
     }
   },
   "wizardFixed": {

@@ -399,7 +399,10 @@
       "selectClientFirst": "Seleccione primero un cliente",
       "startDateLabel": "Fecha de inicio *",
       "useTenantDefaultsDescription": "Aplicar la configuración de modo de renovación y período de aviso a nivel de organización.",
-      "useTenantDefaultsLabel": "Usar los valores predeterminados de renovación del inquilino"
+      "useTenantDefaultsLabel": "Usar los valores predeterminados de renovación del inquilino",
+      "billingProfileLabel": "Perfil de facturación",
+      "billingProfileNone": "Usar el perfil predeterminado del cliente",
+      "billingProfileHint": "Los cargos de este contrato se facturan a este perfil."
     },
     "po": {
       "amountLabel": "Importe de OC (opcional)",
@@ -1520,6 +1523,11 @@
       },
       "selectTemplateOptional": "Seleccione una plantilla (opcional)",
       "startFromTemplate": "Comenzar desde una plantilla"
+    },
+    "billingProfile": {
+      "label": "Perfil de facturación",
+      "none": "Usar el perfil predeterminado del cliente",
+      "hint": "Los cargos de este contrato se facturan a este perfil, salvo que una línea lo sustituya."
     }
   },
   "wizardFixed": {
