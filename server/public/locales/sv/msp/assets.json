@@ -24,7 +24,7 @@
       "active": "Aktiv",
       "inactive": "Inaktiv",
       "loading": "Läser in…",
-      "na": "Ej tillämpligt",
+      "na": "Saknas",
       "none": "Ingen"
     },
     "no": "Nej",
@@ -115,7 +115,7 @@
     },
     "table": {
       "name": "Namn",
-      "tag": "Tagg",
+      "tag": "Inventarienummer",
       "type": "Typ",
       "details": "Detaljer",
       "status": "Status",
@@ -190,7 +190,7 @@
       "printer": "Skrivare"
     },
     "columns": {
-      "select": "Välj",
+      "select": "Markering",
       "name": "Namn",
       "asset_tag": "Inventarienummer",
       "asset_type": "Tillgångstyp",
@@ -209,7 +209,7 @@
       "emptyValue": "-",
       "columns": {
         "name": "Namn",
-        "tag": "Tagg",
+        "tag": "Inventarienummer",
         "type": "Typ",
         "status": "Status",
         "client": "Kund",
@@ -224,7 +224,7 @@
       "actionBar": {
         "clear": "Rensa",
         "delete": "Radera",
-        "selectedCount": "{{count}} markerade",
+        "selectedCount": "Markerade: {{count}}",
         "setLocation": "Ange plats",
         "setStatus": "Ange status"
       },
@@ -256,12 +256,12 @@
         "selectLocation": "Välj plats",
         "title": "Ange tillgångens plats"
       },
-      "partialFailure": "{{action}} slutfördes för följande antal tillgångar: {{succeeded}}. Misslyckades för: {{failed}}.",
+      "partialFailure": "{{action}} slutfördes för {{succeeded}} av tillgångarna; {{failed}} misslyckades.",
       "statusDialog": {
         "description": "Uppdatera markerade tillgångar ({{count}}).",
         "title": "Ange tillgångens status"
       },
-      "success": "{{action}} slutfördes för följande antal tillgångar: {{count}}."
+      "success": "{{action}} slutfördes. Antal tillgångar: {{count}}."
     }
   },
   "assetDashboardGrid": {
@@ -711,9 +711,9 @@
       "daysAgo": "för {{count}} dagar sedan"
     },
     "labels": {
-      "osPatches": "Operativsystemspatchar",
+      "osPatches": "OS-patchar",
       "software": "Programvara",
-      "failed": "Misslyckades",
+      "failed": "Misslyckade",
       "lastScan": "Senaste genomsökning",
       "pending": "väntande",
       "patches": "patchar"
@@ -1084,7 +1084,7 @@
     },
     "patchStatus": {
       "critical": "Kritisk",
-      "atRisk": "Utsatt för risk",
+      "atRisk": "Riskutsatt",
       "missingPatches": "- {{count}} kritiska operativsystemspatchar saknas.",
       "upToDate": "✔ Uppdaterad"
     },
@@ -1112,7 +1112,7 @@
       "critical": "Kritisk",
       "unknown": "Okänd",
       "secure": "Säker",
-      "at_risk": "Utsatt för risk",
+      "at_risk": "Riskutsatt",
       "active": "Aktiv",
       "expiring_soon": "Löper snart ut",
       "expired": "Utgången"
@@ -1290,7 +1290,7 @@
         "select": "Välj"
       },
       "actions": {
-        "selected": "Markerad",
+        "selected": "Vald",
         "linking": "Kopplar…",
         "confirm": "Koppla tillgång"
       }
@@ -1378,7 +1378,7 @@
     "openTickets": "Öppna ärenden",
     "warranty": "Garanti",
     "identity": "Identitet",
-    "tag": "Tagg",
+    "tag": "Inventarienummer",
     "serial": "Serienummer",
     "status": "Status",
     "location": "Plats",
@@ -1414,7 +1414,7 @@
     "viewAll": "Visa alla",
     "open": "Öppna",
     "close": "Stäng",
-    "packagesReported": "{{count}} paket rapporterade",
+    "packagesReported": "{{count}} rapporterade paket",
     "noSoftware": "Ingen programvaruinventering rapporterad.",
     "noService": "Inga ärenden hänvisar till den här tillgången.",
     "activeSchedules": "Aktiva scheman",
