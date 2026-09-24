@@ -62,11 +62,12 @@ export function replaceClientPropertiesPreservingLegacyTaxId(properties: any, pr
   return replacement;
 }
 
-function stripLegacyClientTaxId<T extends { properties?: any }>(client: T): T {
-  if (!client.properties || typeof client.properties !== 'object') return client;
-  const properties = { ...client.properties };
+function stripLegacyClientTaxId<T>(client: T): T {
+  const record = client as T & { properties?: any };
+  if (!record.properties || typeof record.properties !== 'object') return client;
+  const properties = { ...record.properties };
   delete properties.tax_id;
-  return { ...client, properties };
+  return { ...record, properties };
 }
 
 function maybeUserActorFromContext(context: ServiceContext) {
