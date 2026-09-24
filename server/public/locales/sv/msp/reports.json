@@ -191,12 +191,12 @@
       "status": "Status",
       "processed": "Bearbetade",
       "tickets": "Ärenden",
-      "avgEmailToTicket": "Genomsnittlig tid från e-post till ärende",
+      "avgEmailToTicket": "Genomsn. e-post till ärende",
       "assignee": "Ansvarig",
       "created": "Skapade",
       "closed": "Stängda",
       "open": "Öppna",
-      "avgResolution": "Genomsnittlig lösningstid",
+      "avgResolution": "Genomsn. lösningstid",
       "user": "Användare",
       "totalHours": "Totalt antal timmar",
       "billableHours": "Debiterbara timmar",
@@ -267,7 +267,7 @@
       "revenue": {
         "title": "Rapport över avtalsintäkter",
         "description": "Översikt över återkommande månadsintäkter och fakturerade tjänsteperioder hittills i år per avtal.",
-        "empty": "Inga data om avtalsintäkter tillgängliga"
+        "empty": "Inga tillgängliga data om avtalsintäkter"
       },
       "expiration": {
         "title": "Avtalsslut och förnyelsebeslut",
@@ -335,7 +335,7 @@
         "margin": "Marginal",
         "marginPct": "Marginal i %",
         "hours": "Timmar",
-        "ehr": "Effektiv timtaxa",
+        "ehr": "Eff. timtaxa",
         "client": "Kund",
         "agreement": "Avtal",
         "ticket": "Ärende",
@@ -370,10 +370,10 @@
       "timingTooltip": "Intäkter filtreras efter fakturadatum. Arbetskostnader filtreras efter arbetsdatum. Fakturerade materialkostnader följer fakturadatum; ofakturerade materialkostnader följer datumet då posten skapades.",
       "empty": {
         "costRates": "Kostnadssatser är inte konfigurerade. Arbetstimmar visas utan beräknad kostnad tills en standardsats för klientorganisationen eller en användarspecifik sats har angetts.",
-        "clients": "Inga lönsamhetsdata för kunder tillgängliga för det här intervallet.",
+        "clients": "Inga tillgängliga lönsamhetsdata för kunder i det här intervallet.",
         "lines": "Inga detaljer på radnivå för den här raden.",
-        "tickets": "Inga lönsamhetsdata för ärenden tillgängliga för det här urvalet.",
-        "agreements": "Inga lönsamhetsdata för avtal tillgängliga för det här urvalet."
+        "tickets": "Inga tillgängliga lönsamhetsdata för ärenden i det här urvalet.",
+        "agreements": "Inga tillgängliga lönsamhetsdata för avtal i det här urvalet."
       },
       "print": {
         "dateRange": "{{start}} till {{end}}",
@@ -509,7 +509,7 @@
     },
     "detail": {
       "credits": "Tillgodohavanden",
-      "noCredits": "Inga tillgodohavandeposter.",
+      "noCredits": "Inga poster för tillgodohavanden.",
       "date": "Utfärdat",
       "description": "Beskrivning",
       "remaining": "Återstående",
