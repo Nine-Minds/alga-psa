@@ -13,6 +13,14 @@ const DEFINITIONS = {
 
 const isRecord = (value) => typeof value === 'object' && value !== null && !Array.isArray(value);
 
+const stableStringify = (value) => {
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
+  if (isRecord(value)) {
+    return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`).join(',')}}`;
+  }
+  return JSON.stringify(value);
+};
+
 const VALUE_BINDINGS = Object.fromEntries(Object.values(DEFINITIONS).map(({ bindingId }) => [bindingId, {
   id: bindingId,
   kind: 'value',
@@ -24,7 +32,7 @@ function transformBindings(bindings, direction) {
   const values = isRecord(current.values) ? { ...current.values } : {};
   for (const [id, definition] of Object.entries(VALUE_BINDINGS)) {
     if (direction === 'up' && !Object.prototype.hasOwnProperty.call(values, id)) values[id] = definition;
-    if (direction === 'down' && JSON.stringify(values[id]) === JSON.stringify(definition)) delete values[id];
+    if (direction === 'down' && stableStringify(values[id]) === stableStringify(definition)) delete values[id];
   }
   return { ...current, values };
 }
@@ -42,8 +50,8 @@ function transformNode(node, direction) {
       bindingId: definition.bindingId,
       fallback: { i18nKey: definition.i18nKey, defaultValue: definition.defaultValue },
     };
-    if (direction === 'up' && JSON.stringify(node.content) === JSON.stringify(original)) next.content = updated;
-    if (direction === 'down' && JSON.stringify(node.content) === JSON.stringify(updated)) next.content = original;
+    if (direction === 'up' && stableStringify(node.content) === stableStringify(original)) next.content = updated;
+    if (direction === 'down' && stableStringify(node.content) === stableStringify(updated)) next.content = original;
   }
   return next;
 }

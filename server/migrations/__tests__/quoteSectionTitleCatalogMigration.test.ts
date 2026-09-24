@@ -34,6 +34,29 @@ describe('grouped quote section title catalog migration', () => {
     expect(__transformAst(__transformAst(ast, 'up'), 'down')).toEqual(ast);
   });
 
+  it('reverses migrated expressions when JSONB key order differs', () => {
+    const migrated = __transformAst(ast, 'up');
+    const reordered = JSON.parse(JSON.stringify(migrated));
+    reordered.bindings.values.recurringSectionTitle = { path: 'recurring_section_title', kind: 'value', id: 'recurringSectionTitle' };
+    reordered.bindings.values.onetimeSectionTitle = { path: 'onetime_section_title', kind: 'value', id: 'onetimeSectionTitle' };
+    reordered.layout.children[0].content = {
+      fallback: { defaultValue: 'Monthly Items', i18nKey: 'labels.monthlyItems' },
+      bindingId: 'recurringSectionTitle',
+      type: 'binding',
+    };
+    reordered.layout.children[1].content = {
+      fallback: { defaultValue: 'One-time Items', i18nKey: 'labels.oneTimeItems' },
+      bindingId: 'onetimeSectionTitle',
+      type: 'binding',
+    };
+
+    const rolledBack = __transformAst(reordered, 'down');
+    expect(rolledBack.bindings.values).not.toHaveProperty('recurringSectionTitle');
+    expect(rolledBack.bindings.values).not.toHaveProperty('onetimeSectionTitle');
+    expect(rolledBack.layout.children[0].content).toEqual({ type: 'i18n', i18nKey: 'labels.monthlyItems', defaultValue: 'Monthly Items' });
+    expect(rolledBack.layout.children[1].content).toEqual({ type: 'i18n', i18nKey: 'labels.oneTimeItems', defaultValue: 'One-time Items' });
+  });
+
   it('preserves preexisting custom value bindings on up and down', () => {
     const custom = {
       ...ast,
