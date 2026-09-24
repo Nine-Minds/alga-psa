@@ -11,7 +11,7 @@
   "detail": {
     "version": "Version {{version}}",
     "submitted": "Förfrågan har skickats in",
-    "requestIdLabel": "Förfrågans ID: ",
+    "requestIdLabel": "Förfrågnings-ID: ",
     "ticketIdLabel": "Ärende-ID: ",
     "unableToSubmit": "Det gick inte att skicka in förfrågan",
     "formTitle": "Förfrågningsformulär",
@@ -45,7 +45,7 @@
   },
   "submissionDetail": {
     "backToMyRequests": "Tillbaka till mina förfrågningar",
-    "requestIdLabel": "Förfrågans ID:",
+    "requestIdLabel": "Förfrågnings-ID:",
     "statusSection": "Status",
     "submittedAt": "Inskickad: {{date}}",
     "executionStatus": "Körningsstatus: {{status}}",
@@ -72,7 +72,7 @@
     "viewAll": "Visa alla",
     "empty": "Inga förfrågningar har skickats in än.",
     "ticket": "Ärende #{{number}}",
-    "noTicket": "Inget ärende än"
+    "noTicket": "Inget ärende ännu"
   },
   "myRequestsAll": {
     "title": "Dina förfrågningar"
