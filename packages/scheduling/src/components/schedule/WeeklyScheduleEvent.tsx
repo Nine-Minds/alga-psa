@@ -4,10 +4,10 @@ import React, { useEffect, useRef } from 'react';
 import { IScheduleEntry } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Trash, CalendarDays } from 'lucide-react';
-import { WorkItemType } from '@alga-psa/types';
 import { useIsCompactEvent } from '@alga-psa/ui/hooks';
 import { useSurfaceIsLight } from '@alga-psa/ui/hooks/useSurfaceIsLight';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { fillTokenFor, inkForFill } from '../../lib/scheduleChipInk';
 
 interface WeeklyScheduleEventProps {
   event: IScheduleEntry;
@@ -21,37 +21,6 @@ interface WeeklyScheduleEventProps {
   onResizeStart: (e: React.MouseEvent, event: IScheduleEntry, direction: 'top' | 'bottom') => void;
   technicianMap?: Record<string, { first_name: string; last_name: string }>;
 }
-
-const workItemFills: Record<WorkItemType, string> = {
-  ticket: '--color-primary-200',
-  project_task: '--color-secondary-100',
-  non_billable_category: '--color-event-non-billable',
-  ad_hoc: '--color-border-200',
-  interaction: '--color-event-interaction',
-  appointment_request: '--color-event-appointment',
-  opportunity_step: '--color-event-opportunity',
-};
-
-const workItemHoverFills: Record<WorkItemType, string> = {
-  ticket: '--color-primary-300',
-  project_task: '--color-secondary-200',
-  non_billable_category: '--color-event-non-billable-hover',
-  ad_hoc: '--color-border-300',
-  interaction: '--color-event-interaction-hover',
-  appointment_request: '--color-event-appointment-hover',
-  opportunity_step: '--color-event-opportunity-hover',
-};
-
-const DEFAULT_FILL = '--color-border-200';
-const DEFAULT_HOVER_FILL = '--color-border-300';
-
-// The fills above are theme tokens, and across the nine pairs they land
-// anywhere from near-black (ad hoc on the dark pairs) to near-white (ad hoc on
-// high-contrast dark), so neither the mode nor a single text token decides what
-// is readable on them — the fill itself does. Worst measured pair over every
-// theme, work item type and hover state is 4.76:1, all others clear AA by more.
-const INK_ON_LIGHT_FILL = 'rgb(3 7 18)';
-const INK_ON_DARK_FILL = 'rgb(255 255 255)';
 
 const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
   event,
@@ -92,17 +61,14 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
     }
   }, [isComparison]);
 
-  const baseFill = workItemFills[event.work_item_type] || DEFAULT_FILL;
-  const hoverFill = workItemHoverFills[event.work_item_type] || DEFAULT_HOVER_FILL;
-
-  const fill = isHovered ? hoverFill : baseFill;
+  const fill = fillTokenFor(event.work_item_type, isHovered);
   const backgroundColor = `rgb(var(${fill}))`;
   const opacity = isPrimary ? 1 : (isComparison ? 0.6 : 1);
 
   // Ink follows the fill the chip is painted with, so it stays readable in every
   // theme — and on hover, where some fills cross from dark to light.
   const fillIsLight = useSurfaceIsLight(eventRef, fill);
-  const textColor = fillIsLight ? INK_ON_LIGHT_FILL : INK_ON_DARK_FILL;
+  const textColor = inkForFill(fillIsLight);
 
   // Find assigned technician names for tooltip
   const assignedTechnicians = event.assigned_user_ids?.map(userId => {
