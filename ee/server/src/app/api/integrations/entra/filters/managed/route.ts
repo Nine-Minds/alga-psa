@@ -1,8 +1,8 @@
 import { badRequest, dynamic, ok, parseJsonBody, runtime } from '../../_responses';
 import { requireEntraAccess } from '../../_guards';
-import { createTenantKnex, runWithTenant } from '@enterprise/lib/db';
+import { createTenantKnex, runWithTenant } from '@ee/lib/db';
 import { tenantDb } from '@alga-psa/db';
-import { parseEntraUserFilterConfig, parseEntraUserFilterOverride, mergeEntraUserFilterConfig, validateEntraUserFilterConfig } from '@enterprise/lib/integrations/entra/sync/userFilterConfig';
+import { parseEntraUserFilterConfig, parseEntraUserFilterOverride, mergeEntraUserFilterConfig, validateEntraUserFilterConfig } from '@ee/lib/integrations/entra/sync/userFilterConfig';
 export { dynamic, runtime };
 
 export async function GET(request: Request): Promise<Response> {

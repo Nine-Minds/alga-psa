@@ -5,6 +5,7 @@ import { getEntraProviderAdapter } from '../providers';
 import { getActiveEntraPartnerConnection } from '../connectionRepository';
 import { filterEntraUsersForManagedTenant } from '../settingsService';
 import type { EntraUserFilterConfig } from './userFilterConfig';
+import { DEACTIVATABLE_EXCLUSION_REASONS } from './userFilterPipeline';
 import {
   executeEntraSync,
   type EntraSyncPreviewBucket,
@@ -216,7 +217,7 @@ export async function runEntraPreflight(params: {
       userPrincipalName: entry.user.userPrincipalName,
     }));
   const excludedIdentities = filtered.deactivateExcludedContacts ? filtered.excluded
-    .filter((entry) => ['guest_user', 'unlicensed', 'tenant_custom_pattern', 'excluded_group', 'not_in_included_group'].includes(entry.reason))
+    .filter((entry) => DEACTIVATABLE_EXCLUSION_REASONS.includes(entry.reason as typeof DEACTIVATABLE_EXCLUSION_REASONS[number]))
     .map(({ user, reason }) => ({ reason, entraTenantId: user.entraTenantId, entraObjectId: user.entraObjectId, displayName: user.displayName, email: user.email, userPrincipalName: user.userPrincipalName })) : [];
   const excludedByReason = filtered.excluded.reduce<Record<string, number>>((counts, entry) => { counts[entry.reason] = (counts[entry.reason] || 0) + 1; return counts; }, {});
 

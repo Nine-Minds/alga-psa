@@ -173,7 +173,7 @@ describe('Entra diagnostics: migrated DB and Microsoft Graph emulator', () => {
     expect(connection.steps.find(s => s.id === 'managed_tenants_endpoint')?.http?.requestId).toBeTruthy();
     const clients = await runEntraClientAccessDiagnostics(tenant, 'operator', { includeUserYield: true });
     expect(clients.isDone).toBe(true);
-    expect(clients.clients[0].overallStatus).toBe('pass');
+    expect(clients.clients[0].overallStatus, JSON.stringify(clients.clients[0].steps)).toBe('pass');
     expect(clients.clients[0].steps.find(s => s.id === 'user_yield_preview')?.data).toMatchObject({ totalUsers: 1, includedUsers: 1 });
     expect(JSON.stringify(connection.supportBundle)).not.toContain(secret);
     expect(context.writes.length).toBeGreaterThan(0);

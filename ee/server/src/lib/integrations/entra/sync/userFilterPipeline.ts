@@ -27,6 +27,14 @@ export interface EntraFilteredOutUser {
   reason: 'account_disabled' | 'missing_identity' | 'guest_user' | 'unlicensed' | 'service_account' | 'tenant_custom_pattern' | 'excluded_group' | 'not_in_included_group';
 }
 
+export const DEACTIVATABLE_EXCLUSION_REASONS = [
+  'guest_user',
+  'unlicensed',
+  'tenant_custom_pattern',
+  'excluded_group',
+  'not_in_included_group',
+] as const satisfies readonly EntraFilteredOutUser['reason'][];
+
 export interface EntraUserFilterResult {
   included: EntraSyncUser[];
   excluded: EntraFilteredOutUser[];

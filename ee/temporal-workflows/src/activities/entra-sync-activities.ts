@@ -18,6 +18,7 @@ import { publishWorkflowManagedPortalProvisioningEvent } from '@ee/lib/integrati
 import { provisionEntraClientForMapping } from '@ee/lib/integrations/entra/sync/clientProvisioningService';
 import { projectCompletedSyncUserCount } from '@ee/lib/integrations/entra/sync/completedSyncUserCountService';
 import { filterEntraUsersForManagedTenant } from '@ee/lib/integrations/entra/settingsService';
+import { DEACTIVATABLE_EXCLUSION_REASONS } from '@ee/lib/integrations/entra/sync/userFilterPipeline';
 import { decideEntraRunNotifications } from '@ee/lib/integrations/entra/notifications/entraSyncNotificationRules';
 import {
   deliverEntraNotifications,
@@ -402,7 +403,7 @@ export async function syncTenantUsersActivity(
       userPrincipalName: entry.user.userPrincipalName,
     }));
   const excludedIdentities = filteredUsers.deactivateExcludedContacts
-    ? filteredUsers.excluded.filter((entry) => ['guest_user', 'unlicensed', 'tenant_custom_pattern', 'excluded_group', 'not_in_included_group'].includes(entry.reason)).map((entry) => ({
+    ? filteredUsers.excluded.filter((entry) => DEACTIVATABLE_EXCLUSION_REASONS.includes(entry.reason as typeof DEACTIVATABLE_EXCLUSION_REASONS[number])).map((entry) => ({
         reason: entry.reason, entraTenantId: entry.user.entraTenantId, entraObjectId: entry.user.entraObjectId, displayName: entry.user.displayName, email: entry.user.email, userPrincipalName: entry.user.userPrincipalName,
       }))
     : [];

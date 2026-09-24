@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { filterEntraUsers } from '@ee/lib/integrations/entra/sync/userFilterPipeline';
+import { EMPTY_ENTRA_USER_FILTER_CONFIG } from '@ee/lib/integrations/entra/sync/userFilterConfig';
 import type { EntraSyncUser } from '@ee/lib/integrations/entra/sync/types';
 
 function buildUser(overrides: Partial<EntraSyncUser>): EntraSyncUser {
@@ -29,7 +30,8 @@ describe('filterEntraUsers', () => {
       buildUser({ entraObjectId: 'disabled', accountEnabled: false }),
       buildUser({ entraObjectId: 'service', userPrincipalName: 'svc-backup@example.com' }),
     ];
-    const result = filterEntraUsers(users, {});
+    const result = filterEntraUsers(users, EMPTY_ENTRA_USER_FILTER_CONFIG);
+    expect(result).toEqual(filterEntraUsers(users));
     expect(result.included.map(user => user.entraObjectId)).toEqual(['member']);
     expect(result.excluded.map(item => [item.user.entraObjectId, item.reason])).toEqual([
       ['disabled', 'account_disabled'],

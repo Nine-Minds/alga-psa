@@ -1,4 +1,5 @@
 import type { EntraSyncUser } from './types';
+import { DEACTIVATABLE_EXCLUSION_REASONS } from './userFilterPipeline';
 import { EntraSyncResultAggregator } from './syncResultAggregator';
 import { findContactMatchesByEmail } from './contactMatcher';
 import {
@@ -17,6 +18,7 @@ import { publishWorkflowManagedPortalProvisioningEvent } from './workflowManaged
 import {
   markDisabledEntraUsersInactive,
   markExcludedEntraUsersInactive,
+  selectDeactivatableExcludedEntraIdentities,
   selectLinkedEntraIdentities,
   type EntraIdentityRef,
 } from './disableHandler';
@@ -188,7 +190,9 @@ export async function executeEntraSync(
         if (linkedContact.fieldsUpdated) {
           counters.increment('updated');
         }
-        await reactivateExcludedEntraContact(input.tenantId, linkedContact.contactNameId, false);
+        if (await reactivateExcludedEntraContact(input.tenantId, linkedContact.contactNameId, false)) {
+          counters.increment('updated');
+        }
         const eligibility = evaluateClientPortalProvisioningEligibility(
           userWithEntitlement,
           input.portalEntitlement
@@ -344,26 +348,16 @@ export async function executeEntraSync(
     }
   }
 
-  const excludedIdentities = input.deactivateExcludedContacts ? (input.excludedIdentities || []) : [];
-  if (excludedIdentities.length > 0) {
-    // The 100% brake needs linked contacts as evidence that a filter mistake could be destructive.
-    const { createTenantKnex, runWithTenant } = await import('@/lib/db');
-    const { tenantDb } = await import('@alga-psa/db');
-    const linkedCount = await runWithTenant(input.tenantId, async () => {
-      const { knex } = await createTenantKnex();
-      const query = tenantDb(knex, input.tenantId).table('entra_contact_links')
-        .whereIn('entra_object_id', excludedIdentities.filter(item => ['guest_user','unlicensed','tenant_custom_pattern','excluded_group','not_in_included_group'].includes(item.reason)).map((item) => item.entraObjectId));
-      if (input.entraTenantId) query.andWhere('entra_tenant_id', input.entraTenantId);
-      else query.andWhere('entra_tenant_id', excludedIdentities[0].entraTenantId);
-      return Number(await query
-        .count('* as count').first().then((row: any) => row?.count || 0));
-    });
-    const allowedExcludedIdentities = excludedIdentities.filter(item => ['guest_user','unlicensed','tenant_custom_pattern','excluded_group','not_in_included_group'].includes(item.reason));
+  const allowedExcludedIdentities = input.deactivateExcludedContacts
+    ? (input.excludedIdentities || []).filter((item) => DEACTIVATABLE_EXCLUSION_REASONS.includes(item.reason as typeof DEACTIVATABLE_EXCLUSION_REASONS[number]))
+    : [];
+  if (allowedExcludedIdentities.length > 0) {
+    const linked = await selectDeactivatableExcludedEntraIdentities(input.tenantId, allowedExcludedIdentities);
+    const linkedCount = linked.reduce((total, entry) => total + entry.linkedContactCount, 0);
     const everyUserExcluded = (input.enabledSourceUserCount ?? 0) > 0 && input.users.length === 0;
     if (everyUserExcluded && linkedCount > 0) {
       warnings.push('Excluded contacts were left active because the filter excludes every enabled user and linked contacts exist.');
     } else if (dryRun) {
-      const linked = await selectLinkedEntraIdentities(input.tenantId, allowedExcludedIdentities);
       for (const entry of linked) {
         for (let index = 0; index < entry.linkedContactCount; index += 1) counters.increment('inactivated');
         excludedContactsOutOfScope += entry.linkedContactCount;
