@@ -232,6 +232,7 @@ const COPY = {
   },
 };
 SUBJECTS.pt = 'Agendamento atribuído - {{serviceName}} em {{appointmentDate}}';
+SUBJECTS.sv = 'Bokning tilldelad - {{serviceName}} den {{appointmentDate}}';
 COPY.pt = {
   headerLabel: 'Agendamento atribuído',
   headerSub: 'Você tem um novo agendamento',
@@ -258,6 +259,34 @@ COPY.pt = {
   textClient: 'Cliente',
   textNotes: 'Observações',
   textCalendar: 'Adicionar ao calendário',
+};
+
+COPY.sv = {
+  headerLabel: 'Bokning tilldelad',
+  headerSub: 'Du har en ny bokning',
+  greeting: 'Hej {{technicianName}},',
+  intro: 'Du har tilldelats en ny bokning. Granska detaljerna nedan.',
+  appointmentTitle: 'Bokningsdetaljer',
+  service: 'Tjänst',
+  date: 'Datum',
+  time: 'Klockslag',
+  duration: 'Varaktighet',
+  durationUnit: 'minuter',
+  clientTitle: 'Kund',
+  notesTitle: 'Anteckningar',
+  calendarButton: 'Lägg till i kalendern',
+  contactMsg: 'Om du har frågor, kontakta {{contactEmail}}{{#if contactPhone}} eller ring {{contactPhone}}{{/if}}.',
+  footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+  textHeader: 'Bokning tilldelad',
+  textAppointmentHeader: 'Bokningsdetaljer',
+  textService: 'Tjänst',
+  textDate: 'Datum',
+  textTime: 'Klockslag',
+  textDuration: 'Varaktighet',
+  textDurationUnit: 'minuter',
+  textClient: 'Kund',
+  textNotes: 'Anteckningar',
+  textCalendar: 'Lägg till i kalendern',
 };
 
 /* eslint-enable max-len */

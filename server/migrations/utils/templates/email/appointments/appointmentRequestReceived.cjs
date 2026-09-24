@@ -228,6 +228,7 @@ const COPY = {
   },
 };
 SUBJECTS.pt = 'Solicitação de agendamento recebida - {{serviceName}}';
+SUBJECTS.sv = 'Bokningsförfrågan mottagen - {{serviceName}}';
 COPY.pt = {
   headerLabel: 'Solicitação recebida',
   headerSub: 'Recebemos sua solicitação de agendamento',
@@ -255,6 +256,35 @@ COPY.pt = {
   textDurationUnit: 'minutos',
   textPreferredTechnician: 'Técnico preferido',
   textNextHeader: 'O QUE ACONTECE AGORA?',
+};
+
+COPY.sv = {
+  headerLabel: 'Förfrågan mottagen',
+  headerSub: 'Vi har tagit emot din bokningsförfrågan',
+  greeting: 'Hej{{#if requesterName}} {{requesterName}}{{/if}},',
+  intro: 'Tack för att du skickade in din bokningsförfrågan. Vi har tagit emot din förfrågan och vårt team granskar den inom kort.',
+  referencePrefix: 'Referens: ',
+  detailsTitle: 'Förfrågans detaljer',
+  service: 'Tjänst:',
+  requestedDate: 'Önskat datum:',
+  requestedTime: 'Önskad tid:',
+  duration: 'Varaktighet:',
+  durationUnit: 'minuter',
+  preferredTechnician: 'Önskad tekniker:',
+  nextTitle: 'Vad händer nu?',
+  nextBody: 'Vårt team granskar din förfrågan och bekräftar tillgängligheten. Du får en avisering via e-post när din bokning har godkänts eller om några ändringar behövs. Vi svarar vanligtvis inom {{responseTime}}.',
+  contactMsg: 'Om du har frågor eller behöver ändra din förfrågan, kontakta oss på {{contactEmail}}{{#if contactPhone}} eller ring {{contactPhone}}{{/if}}.',
+  footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+  textHeader: 'Bokningsförfrågan mottagen',
+  textRefLabel: 'Referensnummer',
+  textDetailsHeader: 'Förfrågans detaljer',
+  textService: 'Tjänst',
+  textRequestedDate: 'Önskat datum',
+  textRequestedTime: 'Önskad tid',
+  textDuration: 'Varaktighet',
+  textDurationUnit: 'minuter',
+  textPreferredTechnician: 'Önskad tekniker',
+  textNextHeader: 'Vad händer nu?',
 };
 
 /* eslint-enable max-len */
