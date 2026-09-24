@@ -1086,7 +1086,8 @@
       "copying": "Copie en cours…",
       "copyConflicts": "{{count}} catégories ignorées ont une catégorie parente différente sur le tableau cible.",
       "copySourceBoard": "Sélectionner le tableau source",
-      "copyTargetBoard": "Sélectionner le tableau cible"
+      "copyTargetBoard": "Sélectionner le tableau cible",
+      "copyBoardTypeMismatch": "Les catégories de tickets ne peuvent être copiées qu’entre des tableaux du même type de catégorie."
     },
     "display": {
       "responseStateTrackingTitle": "Suivi de l'état de réponse",

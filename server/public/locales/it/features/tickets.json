@@ -1086,7 +1086,8 @@
       "copying": "Copia in corso…",
       "copyConflicts": "{{count}} categorie ignorate hanno una categoria padre diversa nella scheda di destinazione.",
       "copySourceBoard": "Seleziona scheda di origine",
-      "copyTargetBoard": "Seleziona scheda di destinazione"
+      "copyTargetBoard": "Seleziona scheda di destinazione",
+      "copyBoardTypeMismatch": "Le categorie dei ticket possono essere copiate solo tra bacheche dello stesso tipo di categoria."
     },
     "display": {
       "responseStateTrackingTitle": "Tracciamento dello stato di risposta",

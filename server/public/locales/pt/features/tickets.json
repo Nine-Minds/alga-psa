@@ -1086,7 +1086,8 @@
       "copying": "Copiando…",
       "copyConflicts": "{{count}} categorias ignoradas têm uma categoria pai diferente no quadro de destino.",
       "copySourceBoard": "Selecionar quadro de origem",
-      "copyTargetBoard": "Selecionar quadro de destino"
+      "copyTargetBoard": "Selecionar quadro de destino",
+      "copyBoardTypeMismatch": "As categorias de tickets só podem ser copiadas entre quadros com o mesmo tipo de categoria."
     },
     "display": {
       "responseStateTrackingTitle": "Acompanhamento do estado de resposta",

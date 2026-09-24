@@ -1086,7 +1086,8 @@
       "copying": "Copiando…",
       "copyConflicts": "{{count}} categorías omitidas tienen una categoría superior distinta en el tablero de destino.",
       "copySourceBoard": "Seleccionar tablero de origen",
-      "copyTargetBoard": "Seleccionar tablero de destino"
+      "copyTargetBoard": "Seleccionar tablero de destino",
+      "copyBoardTypeMismatch": "Las categorías de tickets solo se pueden copiar entre tableros del mismo tipo de categoría."
     },
     "display": {
       "responseStateTrackingTitle": "Seguimiento del estado de respuesta",

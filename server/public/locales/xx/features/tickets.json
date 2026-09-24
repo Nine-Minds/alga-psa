@@ -1094,7 +1094,8 @@
       "copyTargetLabel": "⟦Ŧȧřɠḗŧ ƀȯȧřḓ⟧",
       "copyEmpty": "⟦Ƞȯ ƈȧŧḗɠȯřīḗş ȯƞ ŧħīş ƀȯȧřḓ.⟧",
       "copying": "⟦Ƈȯƥẏīƞɠ…⟧",
-      "copyConflicts": "⟦{{count}} şķīƥƥḗḓ ƈȧŧḗɠȯřīḗş ħȧṽḗ ȧ ḓīƒƒḗřḗƞŧ ƥȧřḗƞŧ ȯƞ ŧħḗ ŧȧřɠḗŧ ƀȯȧřḓ.⟧"
+      "copyConflicts": "⟦{{count}} şķīƥƥḗḓ ƈȧŧḗɠȯřīḗş ħȧṽḗ ȧ ḓīƒƒḗřḗƞŧ ƥȧřḗƞŧ ȯƞ ŧħḗ ŧȧřɠḗŧ ƀȯȧřḓ.⟧",
+      "copyBoardTypeMismatch": "[Ticket categories can only be copied between boards with the same category type.]"
     },
     "display": {
       "responseStateTrackingTitle": "⟦Řḗşƥȯƞşḗ Şŧȧŧḗ Ŧřȧƈķīƞɠ⟧",

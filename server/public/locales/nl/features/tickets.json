@@ -1086,7 +1086,8 @@
       "copying": "Kopiëren…",
       "copyConflicts": "{{count}} overgeslagen categorieën hebben een andere bovenliggende categorie op het doelbord.",
       "copySourceBoard": "Selecteer bronbord",
-      "copyTargetBoard": "Selecteer doelbord"
+      "copyTargetBoard": "Selecteer doelbord",
+      "copyBoardTypeMismatch": "Ticketcategorieën kunnen alleen worden gekopieerd tussen borden met hetzelfde categorietype."
     },
     "display": {
       "responseStateTrackingTitle": "Reactiestatusbewaking",

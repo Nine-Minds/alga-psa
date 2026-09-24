@@ -28,13 +28,20 @@ const EXPECTED_CATEGORY_MESSAGES = [
   'Source and target boards must be different',
   'Category selection is required',
   'Cannot copy subcategories without their parent categories',
-  'ITIL categories can only be copied to an ITIL board',
+  'Ticket categories can only be copied between boards with the same category type',
+  'Permission denied: Cannot update ticket settings',
 ];
 
 function categoryActionErrorFrom(error: unknown): CategoryActionError | null {
   if (error instanceof Error) {
     if (isAuthorizationThrow(error)) {
       return permissionError(error.message);
+    }
+    if (error.message === 'Ticket categories can only be copied between boards with the same category type') {
+      return actionError(
+        error.message,
+        'features/tickets:settings.categories.copyBoardTypeMismatch',
+      );
     }
     if (EXPECTED_CATEGORY_MESSAGES.some((message) => error.message.startsWith(message))) {
       return actionError(error.message);
@@ -192,7 +199,7 @@ export const copyTicketCategoriesToBoard = withAuth(async (user, { tenant }, sou
     if (!Array.isArray(categoryIds) || categoryIds.length === 0) throw new Error('Category selection is required');
 
     const { knex: db } = await createTenantKnex();
-    return await withTransaction(db, async (trx: Knex.Transaction) => {
+    const { result, events } = await withTransaction(db, async (trx: Knex.Transaction) => {
       if (!await hasPermission(user, 'ticket_settings', 'update', trx)) {
         throw new Error('Permission denied: Cannot update ticket settings');
       }
@@ -210,7 +217,7 @@ export const copyTicketCategoriesToBoard = withAuth(async (user, { tenant }, sou
         throw new Error('Cannot copy subcategories without their parent categories');
       }
       if ((sourceBoard?.category_type === 'itil') !== (targetBoard?.category_type === 'itil')) {
-        throw new Error('ITIL categories can only be copied to an ITIL board');
+        throw new Error('Ticket categories can only be copied between boards with the same category type');
       }
 
       const targetCategories = await tenantScopedTable<ITicketCategory>(trx, 'categories', tenant)
@@ -219,6 +226,7 @@ export const copyTicketCategoriesToBoard = withAuth(async (user, { tenant }, sou
       let created = 0;
       let skipped = 0;
       let conflicts = 0;
+      const events: Array<{ category: ITicketCategory }> = [];
       const ordered = [...selected.filter(category => !category.parent_category), ...selected.filter(category => category.parent_category)];
       for (const category of ordered) {
         const targetParent = category.parent_category ? mappedIds.get(category.parent_category) : undefined;
@@ -244,20 +252,24 @@ export const copyTicketCategoriesToBoard = withAuth(async (user, { tenant }, sou
         targetCategories.push(copy);
         mappedIds.set(category.category_id, copy.category_id);
         created++;
-        await publishEvent({
-          eventType: 'CATEGORY_CREATED',
-          payload: {
-            tenantId: tenant,
-            categoryId: copy.category_id,
-            boardId: copy.board_id ?? null,
-            userId: user.user_id,
-            changes: { after: copy },
-            timestamp: new Date().toISOString(),
-          },
-        });
+        events.push({ category: copy });
       }
-      return { created, skipped, conflicts };
+      return { result: { created, skipped, conflicts }, events };
     });
+    for (const { category } of events) {
+      await publishEvent({
+        eventType: 'CATEGORY_CREATED',
+        payload: {
+          tenantId: tenant,
+          categoryId: category.category_id,
+          boardId: category.board_id ?? null,
+          userId: user.user_id,
+          changes: { after: category },
+          timestamp: new Date().toISOString(),
+        },
+      });
+    }
+    return result;
   } catch (error) {
     const expected = categoryActionErrorFrom(error);
     if (expected) return expected;

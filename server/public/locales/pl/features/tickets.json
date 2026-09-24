@@ -1196,7 +1196,8 @@
       "copying": "Kopiowanie…",
       "copyConflicts": "{{count}} pominiętych kategorii ma inną kategorię nadrzędną na tablicy docelowej.",
       "copySourceBoard": "Wybierz tablicę źródłową",
-      "copyTargetBoard": "Wybierz tablicę docelową"
+      "copyTargetBoard": "Wybierz tablicę docelową",
+      "copyBoardTypeMismatch": "Kategorie zgłoszeń można kopiować tylko między tablicami tego samego typu kategorii."
     },
     "display": {
       "responseStateTrackingTitle": "Śledzenie stanu odpowiedzi",

@@ -1086,7 +1086,8 @@
       "copying": "Wird kopiert…",
       "copyConflicts": "{{count}} übersprungene Kategorien haben auf dem Zielboard eine andere übergeordnete Kategorie.",
       "copySourceBoard": "Quellboard auswählen",
-      "copyTargetBoard": "Zielboard auswählen"
+      "copyTargetBoard": "Zielboard auswählen",
+      "copyBoardTypeMismatch": "Ticketkategorien können nur zwischen Boards mit demselben Kategorietyp kopiert werden."
     },
     "display": {
       "responseStateTrackingTitle": "Antwortstatus-Tracking",
