@@ -11,7 +11,7 @@
     "previousMonth": "Föregående månad",
     "nextMonth": "Nästa månad",
     "cellWithCount": "{{date}}, antal bokningar: {{count}}",
-    "moreAria": "Visa {{count}} fler den {{date}}",
+    "moreAria": "Visa {{count}} fler för {{date}}",
     "requestOnDate": "Skicka bokningsförfrågan för {{date}}"
   },
   "modal": {
@@ -57,8 +57,8 @@
   },
   "step4": {
     "title": "Granska och bekräfta",
-    "description": "Lägg till eventuella ytterligare uppgifter och granska din bokningsförfrågan",
-    "descriptionPlaceholder": "Ange eventuella ytterligare uppgifter om din förfrågan…",
+    "description": "Lägg till eventuell ytterligare information och granska din bokningsförfrågan",
+    "descriptionPlaceholder": "Ange eventuell ytterligare information om din förfrågan…",
     "summaryTitle": "Bokningsöversikt",
     "service": "Tjänst",
     "dateTime": "Datum och tid",
