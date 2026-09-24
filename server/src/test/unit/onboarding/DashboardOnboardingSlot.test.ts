@@ -8,4 +8,9 @@ describe('shouldHideCompletedOnboardingSection', () => {
     expect(shouldHideCompletedOnboardingSection(true, false)).toBe(false);
     expect(shouldHideCompletedOnboardingSection(false, false)).toBe(false);
   });
+
+  it('shows the section when the preference lookup fails', () => {
+    // The slot maps failed lookups to dismissed=false, so the completion gate fails open.
+    expect(shouldHideCompletedOnboardingSection(true, false)).toBe(false);
+  });
 });

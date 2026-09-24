@@ -28,17 +28,20 @@ describe('dashboard onboarding section preference actions', () => {
   });
 
   it('reads the preference for the authenticated user only', async () => {
-    await getDashboardOnboardingSectionDismissedAction();
+    expect(await getDashboardOnboardingSectionDismissedAction()).toMatchObject({ success: true, data: { dismissed: false } });
     expect(mocks.where).toHaveBeenCalledWith({ user_id: 'user-123', setting_name: 'dashboardOnboardingSectionDismissed' });
   });
 
-  it('writes and deletes the preference for the authenticated user only', async () => {
+  it('writes and reads back the preference, then deletes it for the authenticated user', async () => {
     await dismissDashboardOnboardingSectionAction();
     const inserted = mocks.insert.mock.calls[0][0];
     expect(inserted).toMatchObject({ tenant: 'tenant-1', user_id: 'user-123', setting_name: 'dashboardOnboardingSectionDismissed' });
     expect(inserted.setting_value).toBe('true');
     expect(mocks.onConflict).toHaveBeenCalledWith(['tenant', 'user_id', 'setting_name']);
     expect(mocks.merge).toHaveBeenCalledWith(expect.objectContaining({ setting_value: 'true' }));
+
+    mocks.first.mockResolvedValueOnce({ setting_value: 'true' });
+    expect(await getDashboardOnboardingSectionDismissedAction()).toMatchObject({ success: true, data: { dismissed: true } });
 
     await restoreDashboardOnboardingSectionAction();
     expect(mocks.where).toHaveBeenCalledWith({ user_id: 'user-123', setting_name: 'dashboardOnboardingSectionDismissed' });
