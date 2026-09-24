@@ -4,7 +4,7 @@
   },
   "moduleFrame": {
     "title": "Kundnöjdhetsenkäter",
-    "description": "Följ svarskvaliteten, analysera trender i kundnöjdheten och följ upp återkoppling.",
+    "description": "Bevaka svarskvaliteten, analysera trender i kundnöjdheten och följ upp återkopplingen.",
     "badge": "Insikter om kundnöjdhet",
     "nav": {
       "dashboard": "Översiktspanel",
@@ -79,13 +79,13 @@
         "ratingLabels": "Betygsetiketter",
         "preview": "Förhandsgranskning",
         "promptText": "Enkätfråga",
-        "commentPrompt": "Uppmaning att kommentera",
+        "commentPrompt": "Kommentarsfråga",
         "thankYouText": "Tackmeddelande",
         "isDefault": "Ange som standardmall",
         "enabled": "Mallen är aktiverad"
       },
       "placeholders": {
-        "ratingLabels": "Exempel:\nMycket dåligt\nDåligt\nMedelbra\nBra\nUtmärkt"
+        "ratingLabels": "Exempel:\nMycket dåligt\nDåligt\nGenomsnittligt\nBra\nUtmärkt"
       },
       "help": {
         "ratingLabels": "Ange en etikett per rad, från lägsta till högsta betyg."
@@ -136,7 +136,7 @@
       "errors": {
         "load": "Det gick inte att ladda enkätutlösarna."
       },
-      "deleteConfirm": "Vill du radera den här utlösaren? Inbjudningar som redan köats kommer fortfarande att skickas.",
+      "deleteConfirm": "Vill du radera den här utlösaren? Inbjudningar som redan ligger i kö skickas ändå.",
       "actionsMenuAria": "Öppna åtgärder för utlösaren som gäller {{target}}"
     },
     "triggerForm": {
@@ -188,7 +188,7 @@
     "commentLabel": "Ytterligare kommentarer (valfritt)",
     "submitButton": "Skicka in återkoppling",
     "submitting": "Skickar in återkoppling…",
-    "submittedTitle": "Tack för ditt svar.",
+    "submittedTitle": "Tack för ditt svar",
     "submittedMessage": "{{thankYouText}}",
     "ratingSubmitted": "Återkopplingen har skickats in",
     "retryButton": "Försök igen",
@@ -208,7 +208,7 @@
       "5": {
         "1": "Mycket dåligt",
         "2": "Dåligt",
-        "3": "Medelbra",
+        "3": "Genomsnittligt",
         "4": "Bra",
         "5": "Utmärkt"
       },
@@ -217,7 +217,7 @@
         "2": "Mycket dåligt",
         "3": "Dåligt",
         "4": "Under genomsnittet",
-        "5": "Medelbra",
+        "5": "Genomsnittligt",
         "6": "Över genomsnittet",
         "7": "Bra",
         "8": "Mycket bra",
@@ -339,7 +339,7 @@
     "topIssues": {
       "title": "Viktigaste problemen",
       "emptyTitle": "Ingen negativ återkoppling har registrerats för de valda filtren.",
-      "emptyDescription": "Det är ett gott tecken. Fortsätt med det goda arbetet.",
+      "emptyDescription": "Det är ett gott tecken. Fortsätt så.",
       "fallbacks": {
         "unknownClient": "Okänd kund",
         "ticket": "Ärende {{ticket}}",
@@ -360,7 +360,7 @@
       "defaults": {
         "segments": {
           "all": "Alla kunder",
-          "managed": "Kunder med förvaltade tjänster",
+          "managed": "Kunder med hanterade tjänster",
           "project": "Kunder med enbart projekt"
         },
         "templates": {
@@ -398,12 +398,12 @@
     "export": {
       "csv": "Exportera CSV",
       "shareSnapshot": "Dela ögonblicksbild",
-      "emailDigest": "Skicka sammanfattning via e-post"
+      "emailDigest": "Sammanfattning via e-post"
     }
   },
   "clientSummary": {
     "title": "Kundnöjdhet",
-    "empty": "Inga enkätdata finns tillgängliga för den här kunden ännu. Enkäter som skickas efter att ärenden stängts ger data till den här vyn.",
+    "empty": "Inga enkätdata finns tillgängliga för den här kunden ännu. Enkäter som skickas efter att ärenden stängts visas här.",
     "labels": {
       "averageRating": "Genomsnittligt betyg",
       "responseRate": "Svarsfrekvens",
