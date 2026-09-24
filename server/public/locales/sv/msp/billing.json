@@ -172,7 +172,7 @@
     },
     "states": {
       "loadingRecords": "Läser in förbrukningsposter",
-      "noActiveBucketPlans": "Inga aktiva timpottplaner hittades."
+      "noActiveBucketPlans": "Inga aktiva timpottsplaner hittades."
     },
     "dialog": {
       "addTitle": "Lägg till förbrukningspost",
@@ -229,7 +229,7 @@
       "appliedTo": "Tillämpas på: {{description}}",
       "selectService": "Välj tjänst",
       "taxable": "(Skattepliktig)",
-      "nonTaxable": "(Inte skattepliktig)",
+      "nonTaxable": "(Ej skattepliktig)",
       "calculatedOnSave": "(beräknas när du sparar)"
     },
     "expanded": {
@@ -483,7 +483,7 @@
       "selectAction": "Välj åtgärd",
       "show": "Visa",
       "hide": "Dölj",
-      "format": "Format",
+      "format": "Formatera",
       "conditionPlaceholder": "Villkor",
       "targetPlaceholder": "Mål",
       "addRule": "Lägg till regel"
@@ -538,7 +538,7 @@
       "net": "Netto",
       "tax": "Skatt",
       "total": "Totalt",
-      "unattributed": "Kopplades till standardprofilen",
+      "unattributed": "Hamnade på standardprofilen",
       "priorTotal": "Föregående periods totalsumma",
       "change": "Förändring"
     }
@@ -572,7 +572,7 @@
     "title": "Poster utan avtalsrad",
     "description": "Dessa poster är ännu inte kopplade till en avtalsrad och skulle därför debiteras enligt tjänstekatalogens taxa.",
     "catalogPricingCaveat": "Katalogprissättningen tar inte hänsyn till avtalstaxan, avrundning, minsta debiterbara tid, övertid eller eventuella prissättningsscheman.",
-    "ambiguousBlocked": "Antal poster som omfattas av ett avtal men matchade flera avtalsrader: {{count}}. De faktureras inte förrän du tilldelar en rad eller väljer katalogprissättning för dem.",
+    "ambiguousBlocked": "{{count}} post(er) omfattas av ett avtal men matchade fler än en avtalsrad. De faktureras inte förrän du tilldelar en rad eller väljer katalogprissättning för dem.",
     "unknownService": "Okänd tjänst",
     "timeEntry": "Tidpost · {{minutes}} min",
     "usageRecord": "Förbrukningspost · {{quantity}}",
@@ -584,7 +584,7 @@
     "catalogPricingAccepted": "Katalogprissättning har valts för denna post.",
     "catalogPricingRevoked": "Katalogprissättningen har återkallats.",
     "uncoveredExplanation": "Inget avtal omfattar denna tjänst, så katalogtaxan är den enda tillgängliga taxan. Den används utan ändringar vid debiteringen.",
-    "ambiguousExplanation": "Ett avtal omfattar denna tjänst, så det finns en avtalad taxa. Välj den avtalsrad som tjänsten tillhör.",
+    "ambiguousExplanation": "Ett avtal omfattar denna tjänst, så det finns en avtalad taxa. Välj den avtalsrad som posten tillhör.",
     "reason": {
       "uncovered": "Omfattas inte av något avtal",
       "ambiguous": "Fler än en avtalsrad matchar"
