@@ -156,7 +156,9 @@ const CategoriesSettings = (): React.JSX.Element => {
         skipped: result.skipped,
       });
       const conflictMessage = result.conflicts > 0
-        ? ` ${t('settings.categories.copyConflicts', '{{count}} skipped categories have a different parent on the target board.', { count: result.conflicts })}`
+        ? ` ${t('settings.categories.copyConflicts', result.conflicts === 1
+          ? '{{count}} skipped category has a different parent on the target board.'
+          : '{{count}} skipped categories have a different parent on the target board.', { count: result.conflicts })}`
         : '';
       toast.success(successMessage + conflictMessage);
       setShowCopyDialog(false);

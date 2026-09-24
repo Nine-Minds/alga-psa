@@ -1084,10 +1084,11 @@
       "copyFailed": "Échec de la copie des catégories",
       "copyEmpty": "Aucune catégorie sur ce tableau.",
       "copying": "Copie en cours…",
-      "copyConflicts": "{{count}} catégories ignorées ont une catégorie parente différente sur le tableau cible.",
       "copySourceBoard": "Sélectionner le tableau source",
       "copyTargetBoard": "Sélectionner le tableau cible",
-      "copyBoardTypeMismatch": "Les catégories de tickets ne peuvent être copiées qu’entre des tableaux du même type de catégorie."
+      "copyBoardTypeMismatch": "Les catégories de tickets ne peuvent être copiées qu’entre des tableaux du même type de catégorie.",
+      "copyConflicts_one": "{{count}} catégorie ignorée a une catégorie parente différente sur le tableau cible.",
+      "copyConflicts_other": "{{count}} catégories ignorées ont une catégorie parente différente sur le tableau cible."
     },
     "display": {
       "responseStateTrackingTitle": "Suivi de l'état de réponse",

@@ -1084,10 +1084,11 @@
       "copyFailed": "Falha ao copiar categorias",
       "copyEmpty": "Não há categorias neste quadro.",
       "copying": "Copiando…",
-      "copyConflicts": "{{count}} categorias ignoradas têm uma categoria pai diferente no quadro de destino.",
       "copySourceBoard": "Selecionar quadro de origem",
       "copyTargetBoard": "Selecionar quadro de destino",
-      "copyBoardTypeMismatch": "As categorias de tickets só podem ser copiadas entre quadros com o mesmo tipo de categoria."
+      "copyBoardTypeMismatch": "As categorias de tickets só podem ser copiadas entre quadros com o mesmo tipo de categoria.",
+      "copyConflicts_one": "{{count}} categoria ignorada tem uma categoria pai diferente no quadro de destino.",
+      "copyConflicts_other": "{{count}} categorias ignoradas têm uma categoria pai diferente no quadro de destino."
     },
     "display": {
       "responseStateTrackingTitle": "Acompanhamento do estado de resposta",

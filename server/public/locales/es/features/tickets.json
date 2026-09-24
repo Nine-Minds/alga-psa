@@ -1084,10 +1084,11 @@
       "copyFailed": "No se pudieron copiar las categorías",
       "copyEmpty": "No hay categorías en este tablero.",
       "copying": "Copiando…",
-      "copyConflicts": "{{count}} categorías omitidas tienen una categoría superior distinta en el tablero de destino.",
       "copySourceBoard": "Seleccionar tablero de origen",
       "copyTargetBoard": "Seleccionar tablero de destino",
-      "copyBoardTypeMismatch": "Las categorías de tickets solo se pueden copiar entre tableros del mismo tipo de categoría."
+      "copyBoardTypeMismatch": "Las categorías de tickets solo se pueden copiar entre tableros del mismo tipo de categoría.",
+      "copyConflicts_one": "{{count}} categoría omitida tiene una categoría superior distinta en el tablero de destino.",
+      "copyConflicts_other": "{{count}} categorías omitidas tienen una categoría superior distinta en el tablero de destino."
     },
     "display": {
       "responseStateTrackingTitle": "Seguimiento del estado de respuesta",

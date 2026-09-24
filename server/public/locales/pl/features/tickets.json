@@ -1194,10 +1194,13 @@
       "copyFailed": "Nie udało się skopiować kategorii",
       "copyEmpty": "Brak kategorii na tej tablicy.",
       "copying": "Kopiowanie…",
-      "copyConflicts": "{{count}} pominiętych kategorii ma inną kategorię nadrzędną na tablicy docelowej.",
       "copySourceBoard": "Wybierz tablicę źródłową",
       "copyTargetBoard": "Wybierz tablicę docelową",
-      "copyBoardTypeMismatch": "Kategorie zgłoszeń można kopiować tylko między tablicami tego samego typu kategorii."
+      "copyBoardTypeMismatch": "Kategorie zgłoszeń można kopiować tylko między tablicami tego samego typu kategorii.",
+      "copyConflicts_one": "{{count}} pominięta kategoria ma inną kategorię nadrzędną na tablicy docelowej.",
+      "copyConflicts_other": "{{count}} pominięte kategorie mają inną kategorię nadrzędną na tablicy docelowej.",
+      "copyConflicts_few": "{{count}} pominięte kategorie mają inną kategorię nadrzędną na tablicy docelowej.",
+      "copyConflicts_many": "{{count}} pominiętych kategorii ma inną kategorię nadrzędną na tablicy docelowej."
     },
     "display": {
       "responseStateTrackingTitle": "Śledzenie stanu odpowiedzi",

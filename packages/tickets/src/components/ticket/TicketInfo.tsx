@@ -1105,6 +1105,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   }, [handleDiscardChanges]);
 
   const handleCategoryChange = (categoryIds: string[]) => {
+    // LEVERAGE: pattern ticket-category-selection — Grid and Entry both stage parent/subcategory IDs.
     if (categoryIds.length === 0 || categoryIds[0] === 'no-category' || categoryIds[0] === '') {
       handlePendingChange('category_id', null);
       handlePendingChange('subcategory_id', null);

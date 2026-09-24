@@ -1084,10 +1084,11 @@
       "copyFailed": "Categorieën kopiëren mislukt",
       "copyEmpty": "Geen categorieën op dit bord.",
       "copying": "Kopiëren…",
-      "copyConflicts": "{{count}} overgeslagen categorieën hebben een andere bovenliggende categorie op het doelbord.",
       "copySourceBoard": "Selecteer bronbord",
       "copyTargetBoard": "Selecteer doelbord",
-      "copyBoardTypeMismatch": "Ticketcategorieën kunnen alleen worden gekopieerd tussen borden met hetzelfde categorietype."
+      "copyBoardTypeMismatch": "Ticketcategorieën kunnen alleen worden gekopieerd tussen borden met hetzelfde categorietype.",
+      "copyConflicts_one": "{{count}} overgeslagen categorie heeft een andere bovenliggende categorie op het doelbord.",
+      "copyConflicts_other": "{{count}} overgeslagen categorieën hebben een andere bovenliggende categorie op het doelbord."
     },
     "display": {
       "responseStateTrackingTitle": "Reactiestatusbewaking",

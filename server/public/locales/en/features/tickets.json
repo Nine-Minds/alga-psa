@@ -1094,8 +1094,9 @@
       "copyTargetLabel": "Target board",
       "copyEmpty": "No categories on this board.",
       "copying": "Copying…",
-      "copyConflicts": "{{count}} skipped categories have a different parent on the target board.",
-      "copyBoardTypeMismatch": "Ticket categories can only be copied between boards with the same category type."
+      "copyBoardTypeMismatch": "Ticket categories can only be copied between boards with the same category type.",
+      "copyConflicts_one": "{{count}} skipped category has a different parent on the target board.",
+      "copyConflicts_other": "{{count}} skipped categories have a different parent on the target board."
     },
     "display": {
       "responseStateTrackingTitle": "Response State Tracking",
