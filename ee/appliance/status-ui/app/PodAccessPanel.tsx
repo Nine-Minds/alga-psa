@@ -153,6 +153,7 @@ function responseError(data: unknown, fallback: string) {
   return fallback;
 }
 
+// LEVERAGE: pattern clipboard-copy-fallback — Clipboard API → hidden-textarea execCommand fallback, 3rd copy (portal link button, keyboard cheatsheet, appliance PodAccessPanel)
 async function copyText(value: string) {
   if (navigator.clipboard?.writeText) {
     try {

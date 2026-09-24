@@ -12,6 +12,37 @@ interface CopyClientPortalLinkButtonProps {
   className?: string;
 }
 
+// LEVERAGE: pattern clipboard-copy-fallback — Clipboard API → hidden-textarea execCommand fallback, 3rd copy (portal link button, keyboard cheatsheet, appliance PodAccessPanel)
+const copyTextWithFallback = async (text: string): Promise<boolean> => {
+  if (typeof navigator !== 'undefined' && navigator.clipboard) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      // Clipboard API can exist but reject outside a secure context.
+    }
+  }
+
+  const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.opacity = '0';
+  document.body.appendChild(textarea);
+
+  try {
+    textarea.focus();
+    textarea.select();
+    return document.execCommand('copy');
+  } catch {
+    return false;
+  } finally {
+    textarea.remove();
+    previousFocus?.focus();
+  }
+};
+
 /**
  * Copies the tenant's portal sign-in URL — the vanity domain when one is live,
  * the slugged canonical address otherwise. Shared so the user list and the
@@ -38,8 +69,8 @@ export const CopyClientPortalLinkButton = ({
       }
 
       const portalLink = linkResult.data;
-      if (typeof navigator !== 'undefined' && navigator.clipboard) {
-        await navigator.clipboard.writeText(portalLink.url);
+      const copied = await copyTextWithFallback(portalLink.url);
+      if (copied) {
         toast.success(
           portalLink.source === 'vanity'
             ? t('users.messages.success.copiedVanityLink')

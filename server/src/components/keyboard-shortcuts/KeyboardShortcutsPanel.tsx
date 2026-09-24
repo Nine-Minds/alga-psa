@@ -269,6 +269,7 @@ export default function KeyboardShortcutsPanel(): React.JSX.Element {
     return groups;
   }, [platform, resolved, t]);
 
+  // LEVERAGE: pattern clipboard-copy-fallback — Clipboard API → hidden-textarea execCommand fallback, 3rd copy (portal link button, keyboard cheatsheet, appliance PodAccessPanel)
   const copyCheatsheet = useCallback(async () => {
     const groups = buildCheatsheetGroups();
     const title = t('settings.title', { defaultValue: 'Keyboard Shortcuts' });
