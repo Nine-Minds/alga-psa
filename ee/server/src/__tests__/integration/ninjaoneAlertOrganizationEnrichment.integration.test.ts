@@ -4,14 +4,17 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection } from '@main-test-utils/dbConfig';
 import {
+  createTicketForAlert,
   processRmmAlertEvent,
+  rmmAlertRuleActionsSchema,
   createTicketForAlertId,
   registerRmmAlertFetcher,
   runRmmAlertReconciliation,
   type NormalizedRmmAlertEvent,
   type RmmAlertProcessingResult,
 } from '@alga-psa/shared/rmm/alerts';
-import { enrichMissingDeviceDetails, ninjaOneAlertFetcher } from '@ee/lib/integrations/ninjaone/alerts/reconciliationFetcher';
+import { enrichMissingDeviceDetails } from '@ee/lib/integrations/ninjaone/alerts/deviceDetailsEnrichment';
+import { ninjaOneAlertFetcher } from '@ee/lib/integrations/ninjaone/alerts/reconciliationFetcher';
 import { mapNinjaOneWebhookToAlertEvent } from '@ee/lib/integrations/ninjaone/alerts/normalizer';
 import type { NinjaOneAlert } from '@ee/interfaces/ninjaone.interfaces';
 
@@ -462,7 +465,7 @@ describe('sparse NinjaOne alert normalization + organization enrichment', { shuf
     await seedDeviceMapping(tenantId, 900008, '500', 'ninjaone', uuid());
     await seedMappedAsset(tenantId, fixture.clientId, 900009, '500', uuid(), 'ninjaone', 'FRONTDESK-PC');
     await seedMappedAsset(tenantId, fixture.clientId, 900010, '500', uuid(), 'ninjaone', 'mapped-device-name');
-    await seedMappedAsset(tenantId, fixture.clientId, 900010, '500', uuid(), 'ninjaone', 'another-device-name');
+    await seedMappedAsset(tenantId, fixture.clientId, 900010, '501', uuid(), 'ninjaone', 'another-device-name');
     await seedMappedAsset(tenantId, fixture.clientId, 900011, '500', uuid(), 'tacticalrmm', 'wrong-provider-name');
     await seedMappedAsset(otherTenantId, fixture.clientId, 900012, '500', uuid(), 'ninjaone', 'other-tenant-name');
   }, HOOK_TIMEOUT);
@@ -522,6 +525,24 @@ describe('sparse NinjaOne alert normalization + organization enrichment', { shuf
     expect(events.map((event) => event.deviceName)).toEqual([null, null, null, null]);
   });
 
+  it('keeps an ambiguous asset name unresolved so ticket templates fall back to the device ID', async () => {
+    mockState.remoteAlerts = [sparseAlert({ uid: 'ambiguous-ticket-name', deviceId: 900010 })];
+    const [event] = await ninjaOneAlertFetcher.fetchActiveAlerts({ tenantId, integrationId });
+    expect(event.deviceName).toBeNull();
+    const created = await db.transaction((trx) => createTicketForAlert(trx, {
+      event,
+      actions: rmmAlertRuleActionsSchema.parse({
+        createTicket: true,
+        boardId: fixture.boardId,
+        ticketTemplate: { titleTemplate: '{{device}} alert' },
+      }),
+      clientId: fixture.clientId,
+    }));
+    const ticket = await tenantTable(tenantId, 'tickets')
+      .where({ tenant: tenantId, ticket_id: created.ticket_id }).first();
+    expect(ticket.title).toBe('900010 alert');
+  });
+
   it('leaves missing, null-realm, ambiguous, cross-provider, and cross-tenant devices unresolved', async () => {
     const alerts: NinjaOneAlert[] = [
       sparseAlert({ uid: 'adapter-missing', deviceId: 900003, message: 'no mapping' }),
@@ -557,7 +578,7 @@ describe('enriched sparse alerts reach the normal ticket pipeline', { shuffle: f
     });
 
   beforeAll(async () => {
-    await seedMappedAsset(tenantId, fixture.clientId, happyDevice, '500');
+    await seedMappedAsset(tenantId, fixture.clientId, happyDevice, '500', uuid(), 'ninjaone', 'FRONTDESK-PC');
     remoteAlerts.push(happyAlert());
     mockState.remoteAlerts = remoteAlerts;
   }, HOOK_TIMEOUT);
@@ -623,6 +644,19 @@ describe('enriched sparse alerts reach the normal ticket pipeline', { shuffle: f
     const refreshed = await tenantTable(tenantId, 'rmm_alerts')
       .where({ tenant: tenantId, external_alert_id: 'name-refresh' }).first();
     expect(refreshed.device_name).toBe('REFRESHED-NAME');
+  });
+
+  it('does not replace an existing device name on alert redelivery', async () => {
+    const event = sparseAlert({ uid: 'name-preserve', deviceId: 900014 });
+    await seedMappedAsset(tenantId, fixture.clientId, 900014, '500', uuid(), 'ninjaone', 'MAPPED-NAME');
+    await fetchAndProcess(tenantId, integrationId, [event]);
+    await tenantTable(tenantId, 'rmm_alerts')
+      .where({ tenant: tenantId, external_alert_id: 'name-preserve' })
+      .update({ device_name: 'EXISTING-NAME' });
+    await fetchAndProcess(tenantId, integrationId, [event]);
+    const preserved = await tenantTable(tenantId, 'rmm_alerts')
+      .where({ tenant: tenantId, external_alert_id: 'name-preserve' }).first();
+    expect(preserved.device_name).toBe('EXISTING-NAME');
   });
 
   it('uses the mapped asset name for manually created tickets when the alert name is null', async () => {

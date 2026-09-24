@@ -20,7 +20,7 @@ import { NinjaOneSyncEngine } from '../sync/syncEngine';
 import { processRmmAlertEvent } from '@alga-psa/shared/rmm/alerts';
 import { buildRmmAlertPipelineDeps } from '@alga-psa/integrations/lib/rmm/alerts/pipelineDeps';
 import { mapNinjaOneWebhookToAlertEvent } from '../alerts/normalizer';
-import { enrichMissingDeviceDetails } from '../alerts/reconciliationFetcher';
+import { enrichMissingDeviceDetails } from '../alerts/deviceDetailsEnrichment';
 import {
   NinjaOneWebhookPayload,
   NinjaOneActivityType,
