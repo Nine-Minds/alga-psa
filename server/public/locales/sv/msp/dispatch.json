@@ -1,0 +1,159 @@
+{
+  "page": {
+    "title": "Resursplanering",
+    "filteredWorkItems": "Visar filtrerade arbetsposter"
+  },
+  "workItems": {
+    "title": "Arbetsposter",
+    "searchPlaceholder": "Sök arbetsposter…",
+    "filterPlaceholder": "Filtrera efter status…",
+    "status": {
+      "unscheduled": "Ej schemalagda",
+      "scheduled": "Schemalagda"
+    },
+    "pagination": {
+      "previous": "Föregående",
+      "next": "Nästa",
+      "pageInfo": "Sida {{current}} av {{total}}",
+      "showing": "Visar {{count}} av {{total}} poster"
+    }
+  },
+  "schedule": {
+    "showInactive": "Visa inaktiva användare",
+    "prev": "< Föregående",
+    "next": "Nästa >",
+    "today": "Idag",
+    "viewDay": "Dag",
+    "viewWeek": "Vecka",
+    "prevAria": "Föregående {{mode}}",
+    "nextAria": "Nästa {{mode}}",
+    "viewWeekTooltip": "Visa vecka",
+    "viewWeekAria": "Visa vecka för {{name}}",
+    "viewWeekAriaInactive": "Visa vecka för {{name}} (inaktiv)",
+    "compareAll": "Jämför alla",
+    "clearAll": "Avmarkera alla",
+    "compare": "Jämför",
+    "stopComparing": "Avsluta jämförelse",
+    "compareAria": "Jämför {{name}}",
+    "compareAriaInactive": "Jämför {{name}} (inaktiv)"
+  },
+  "details": {
+    "appointmentRequest": {
+      "title": "Detaljer om bokningsförfrågan"
+    },
+    "sections": {
+      "approvalInformation": "Information om godkännande"
+    },
+    "fields": {
+      "service": "Tjänst",
+      "status": "Status",
+      "client": "Kund",
+      "contact": "Kontakt",
+      "company": "Företag",
+      "requester": "Förfrågans avsändare",
+      "email": "E-post",
+      "phone": "Telefon",
+      "requestedDate": "Önskat datum",
+      "requestedTime": "Önskad tid",
+      "duration": "Varaktighet",
+      "preferredTechnician": "Önskad tekniker",
+      "description": "Beskrivning",
+      "declineReason": "Orsak till avslag",
+      "approvedBy": "Godkänd av:",
+      "approvedAt": "Godkänd den:",
+      "opportunity": "Affärsmöjlighet",
+      "assignedTo": "Tilldelad till",
+      "dueDate": "Ska vara klar"
+    },
+    "messages": {
+      "notAvailable": "Ej tillgängligt",
+      "unsupportedWorkItemType": "Arbetsposttypen stöds inte"
+    },
+    "toasts": {
+      "noUsersAvailable": "Inga användare är tillgängliga i systemet",
+      "noUserSession": "Ingen användarsession hittades",
+      "failedToLoadTicketData": "Det gick inte att läsa in ärendeuppgifterna",
+      "failedToLoadProjectTaskData": "Det gick inte att läsa in projektuppgiftens data",
+      "failedToLoadAdHocEntryData": "Det gick inte att läsa in ad hoc-postens data",
+      "failedToLoadInteractionData": "Det gick inte att läsa in interaktionsuppgifterna",
+      "failedToLoadAppointmentRequestData": "Det gick inte att läsa in bokningsförfrågans data",
+      "failedToLoadOpportunityStepData": "Det gick inte att läsa in affärsstegets data"
+    },
+    "errors": {
+      "loadUsers": "Det gick inte att läsa in användarna. Försök ladda om sidan.",
+      "loadingContent": "Fel vid inläsning av innehåll",
+      "tryAgain": "Försök igen"
+    },
+    "units": {
+      "minutes": "minuter"
+    },
+    "actions": {
+      "openOpportunity": "Öppna affärsmöjlighet"
+    }
+  },
+  "dashboard": {
+    "filters": {
+      "allOpen": "Alla öppna",
+      "allClosed": "Alla stängda"
+    },
+    "messages": {
+      "accessDenied": "Åtkomst nekad: Du har inte behörighet att visa översiktspanelen för resursplanering.",
+      "unknownError": "Ett okänt fel uppstod.",
+      "permissionDeniedSchedule": "Du har inte behörighet att schemalägga arbete för den här teknikern.",
+      "couldNotLoadWorkItemDetails": "Det gick inte att läsa in arbetspostens detaljer."
+    },
+    "errors": {
+      "searchWorkItems": "Det gick inte att söka efter arbetsposter",
+      "loadStatusFilterOptions": "Det gick inte att läsa in statusfiltrets alternativ.",
+      "refreshScheduleEntries": "Det gick inte att ladda om schemaposterna",
+      "refreshData": "Det gick inte att ladda om data",
+      "loadPermissions": "Det gick inte att läsa in behörigheterna.",
+      "fetchScheduleEntries": "Det gick inte att hämta schemaposterna",
+      "fetchData": "Det gick inte att hämta data",
+      "updateSchedule": "Det gick inte att uppdatera schemat",
+      "createScheduleEntry": "Det gick inte att skapa schemaposten",
+      "deleteScheduleEntry": "Det gick inte att radera schemaposten",
+      "updateTask": "Det gick inte att uppdatera uppgiften",
+      "updateScheduleEntry": "Det gick inte att uppdatera schemaposten",
+      "saveScheduleEntry": "Det gick inte att spara schemaposten",
+      "openWorkItemDetails": "Det gick inte att öppna arbetspostens detaljer."
+    },
+    "success": {
+      "taskUpdated": "Uppgiften har uppdaterats",
+      "scheduleEntryUpdated": "Schemaposten har uppdaterats",
+      "scheduleEntryCreated": "Schemaposten har skapats"
+    }
+  },
+  "events": {
+    "actions": {
+      "viewDetails": "Visa detaljer",
+      "delete": "Radera",
+      "deleteScheduleEntry": "Radera schemapost"
+    },
+    "fallbacks": {
+      "busy": "Upptagen",
+      "unknown": "Okänd",
+      "unassigned": "Ej tilldelad",
+      "unknownAgent": "Okänd handläggare",
+      "untitled": "Utan titel",
+      "thisScheduleEntry": "den här schemaposten"
+    },
+    "tooltip": {
+      "privateEvent": "Upptagen\nStart: {{start}}\nSlut: {{end}}",
+      "eventDetails": "{{title}}\nTilldelad till: {{assigned}}\nStart: {{start}}\nSlut: {{end}}"
+    },
+    "errors": {
+      "validateDeletion": "Det gick inte att validera raderingen. Försök igen."
+    }
+  },
+  "badges": {
+    "needsDispatch": "Behöver resursplanering",
+    "needsDispatchFor": "Behöver resursplanering för: {{agents}}"
+  },
+  "time": {
+    "suffixes": {
+      "am": " fm.",
+      "pm": " em."
+    }
+  }
+}
