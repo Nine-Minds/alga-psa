@@ -12,6 +12,7 @@ import {
   getEntityImageUrl,
 } from '@alga-psa/formatting/avatarUtils';
 import { hasPermissionAsync } from '../lib/authHelpers';
+import { withClientSinceDateString } from '../lib/clientSince';
 import InteractionModel from '../models/interactions';
 import {
   actionError,
@@ -231,11 +232,11 @@ export const getClientById = withAuth(async (user, { tenant }, clientId: string)
     getEntityImageUrl('client', clientId, tenant, 'wide'),
   ]);
 
-  return {
+  return withClientSinceDateString({
     ...clientData,
     logoUrl,
     logoWideUrl,
-  } as IClientWithLocation;
+  }) as IClientWithLocation;
 });
 
 export const getAllClients = withAuth(async (user, { tenant }, includeInactive: boolean = true): Promise<IClient[]> => {
@@ -262,7 +263,7 @@ export const getAllClients = withAuth(async (user, { tenant }, includeInactive: 
   const clientIds = clients.map((client: any) => client.client_id);
   const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
 
-  const clientsWithLogos = clients.map((client: any) => ({
+  const clientsWithLogos = clients.map((client: any) => withClientSinceDateString({
     ...client,
     properties: client.properties || {},
     logoUrl: logoUrlsMap.get(client.client_id) || null,
