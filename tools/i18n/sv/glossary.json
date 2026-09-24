@@ -511,6 +511,8 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "YOLO",
+      "Session: {{chatId}}",
       "Outlook Calendar",
       "Microsoft Outlook Calendar",
       "primary",
