@@ -8,9 +8,9 @@ import { DataTablePreferencesProvider } from './DataTablePreferences';
 vi.mock('../lib/i18n/client', () => ({
   useTranslation: () => ({ t: (_key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? '' }),
 }));
-vi.mock('./CustomSelect', () => ({
+  vi.mock('./CustomSelect', () => ({
   default: ({ id, value, options, onValueChange }: { id: string; value: string; options: Array<{ value: string; label: string }>; onValueChange: (value: string) => void }) => (
-    <button id={id} role="combobox" onClick={() => onValueChange(options.find(option => option.value !== value)?.value ?? value)}>
+    <button id={id} role="combobox" data-option-values={options.map(option => option.value).join(',')} onClick={() => onValueChange(options.find(option => option.value !== value)?.value ?? value)}>
       {options.find(option => option.value === value)?.label}
     </button>
   ),
@@ -61,6 +61,15 @@ describe('DataTable page size preference', () => {
       <DataTable id="stable" data={rows} columns={columns} pageSize={25} />
     </DataTablePreferencesProvider>);
     expect(screen.getByRole('combobox').textContent).toContain('25 per page');
+  });
+
+  it('includes a non-standard current page size in the selector options', () => {
+    render(<DataTablePreferencesProvider pageSizes={{}} onPageSizesChange={vi.fn()}>
+      <DataTable id="custom-default" data={rows} columns={columns} pageSize={15} />
+    </DataTablePreferencesProvider>);
+    const selector = screen.getByRole('combobox');
+    expect(selector.textContent).toContain('15 per page');
+    expect(selector.getAttribute('data-option-values')?.split(',')).toEqual(['10', '15', '25', '50', '100']);
   });
 
   it('works without a provider', () => {

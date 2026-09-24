@@ -307,6 +307,16 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     { value: '50', label: t('pagination.itemsPerPageOption', { count: 50, defaultValue: '50 per page' }) },
     { value: '100', label: t('pagination.itemsPerPageOption', { count: 100, defaultValue: '100 per page' }) },
   ], [t]);
+  const pageSizeOptions = useMemo(() => {
+    const options = [...(itemsPerPageOptions || defaultItemsPerPageOptions)];
+    if (!options.some(option => Number(option.value) === pageSize)) {
+      options.push({
+        value: String(pageSize),
+        label: t('pagination.itemsPerPageOption', { count: pageSize, defaultValue: `${pageSize} per page` }),
+      });
+    }
+    return options.sort((a, b) => Number(a.value) - Number(b.value));
+  }, [itemsPerPageOptions, defaultItemsPerPageOptions, pageSize, t]);
   const safeData = useMemo(() => (Array.isArray(data) ? data : []), [data]);
   const generatedTableId = React.useId();
   // LEVERAGE: pattern datatable-page-size-state — callers with legacy per-table persistence opt out here to keep one source of truth.
@@ -495,7 +505,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
 
   React.useEffect(() => {
     const savedPageSize = pageSizePreference.pageSize;
-    if (!pageSizePreference.hasLoaded || pageSizeChangedRef.current || appliedSavedSizeRef.current || !isValidPageSizePreference(savedPageSize, itemsPerPageOptions)) return;
+    if (!pageSizePreference.hasLoaded || pageSizeChangedRef.current || appliedSavedSizeRef.current || !isValidPageSizePreference(savedPageSize, pageSizeOptions)) return;
     appliedSavedSizeRef.current = true;
     if (onItemsPerPageChange && savedPageSize !== pageSize) {
       onItemsPerPageChange(savedPageSize);
@@ -503,7 +513,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     } else if (!onItemsPerPageChange) {
       setPagination(prev => ({ ...prev, pageIndex: 0, pageSize: savedPageSize }));
     }
-  }, [pageSizePreference.hasLoaded, pageSizePreference.pageSize, itemsPerPageOptions, onItemsPerPageChange, onPageChange, pageSize, currentPage]);
+  }, [pageSizePreference.hasLoaded, pageSizePreference.pageSize, pageSizeOptions, onItemsPerPageChange, onPageChange, pageSize, currentPage]);
 
   // Keep internal pagination state synced with props
   const previousPageSizePropRef = useRef(pageSize);
@@ -961,8 +971,8 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                 onItemsPerPageChange?.(nextSize);
                 if (currentPage !== 1) onPageChange?.(1);
               }}
-              showItemsPerPage={supportsPageSizeChange && (!pageSizePreference.enabled || total > Math.max(10, Math.min(...(itemsPerPageOptions || defaultItemsPerPageOptions).map(option => Number(option.value)))))}
-              itemsPerPageOptions={itemsPerPageOptions || defaultItemsPerPageOptions}
+              showItemsPerPage={supportsPageSizeChange && (!pageSizePreference.enabled || total > Math.max(10, Math.min(...pageSizeOptions.map(option => Number(option.value)))))}
+              itemsPerPageOptions={pageSizeOptions}
               variant={onItemsPerPageChange || pageSizePreference.enabled ? "clients" : "compact"}
             />
           </div>
