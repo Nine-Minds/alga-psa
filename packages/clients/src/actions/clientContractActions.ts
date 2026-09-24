@@ -17,7 +17,7 @@ import {
 } from '@alga-psa/shared/billingClients';
 import { withAuth } from '@alga-psa/auth';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import { emitDateDomainEventOnce } from '@alga-psa/jobs/date-triggers';
+import { emitDateDomainEventOnce } from '@alga-psa/event-bus/workflow/dateDomainEvents';
 import {
   buildContractCreatedPayload,
   buildContractRenewalUpcomingPayload,

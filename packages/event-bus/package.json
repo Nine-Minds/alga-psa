@@ -22,6 +22,10 @@
       "types": "./src/publishers/*.ts",
       "import": "./dist/publishers/*.js"
     },
+    "./workflow/dateDomainEvents": {
+      "types": "./src/workflow/dateDomainEvents.ts",
+      "import": "./dist/workflow/dateDomainEvents.js"
+    },
     "./ticket-live-updates": {
       "types": "./src/ticket-live-updates.ts",
       "import": "./dist/ticket-live-updates.js"

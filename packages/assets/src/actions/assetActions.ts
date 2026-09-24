@@ -63,10 +63,11 @@ import { advanceMaintenanceDate } from '../lib/maintenanceRecurrence';
 import { localizeActionError, withAuth, hasPermission } from '@alga-psa/auth';
 import { toCalendarDateString, toISOTimestamp, toPlainDate } from '@alga-psa/core';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { getTenantTimezone } from '@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions';
 import { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/db';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import { emitDateDomainEventOnce } from '@alga-psa/jobs/date-triggers';
+import { emitDateDomainEventOnce, toTenantLocalDate } from '@alga-psa/event-bus/workflow/dateDomainEvents';
 import {
     buildAssetAssignedPayload,
     buildAssetCreatedPayload,
@@ -1023,9 +1024,10 @@ export async function createAssetRecord(
             });
 
             if (warranty) {
+                const warrantyDate = toTenantLocalDate(warranty.expiresAt, await getTenantTimezone(tenant) ?? 'UTC');
                 await emitDateDomainEventOnce(knex, tenant, {
                     eventType: 'ASSET_WARRANTY_EXPIRING', entityId: created.asset_id,
-                    cycleKey: warranty.expiresAt.slice(0, 10), occursOn: warranty.expiresAt.slice(0, 10),
+                    cycleKey: warrantyDate, occursOn: warrantyDate,
                     payload: buildAssetWarrantyExpiringPayload({
                         assetId: created.asset_id,
                         clientId: created.client_id || undefined,
@@ -1316,9 +1318,10 @@ export async function updateAssetRecord(
         });
 
         if (warranty) {
+            const warrantyDate = toTenantLocalDate(warranty.expiresAt, await getTenantTimezone(tenant) ?? 'UTC');
             await emitDateDomainEventOnce(knex, tenant, {
                 eventType: 'ASSET_WARRANTY_EXPIRING', entityId: asset_id,
-                cycleKey: warranty.expiresAt.slice(0, 10), occursOn: warranty.expiresAt.slice(0, 10),
+                cycleKey: warrantyDate, occursOn: warrantyDate,
                 payload: buildAssetWarrantyExpiringPayload({
                     assetId: asset_id,
                     clientId: newClientId || previousClientId,

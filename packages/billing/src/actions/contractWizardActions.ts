@@ -9,7 +9,7 @@ import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import { emitDateDomainEventOnce } from '@alga-psa/jobs/date-triggers';
+import { emitDateDomainEventOnce } from '@alga-psa/event-bus/workflow/dateDomainEvents';
 import {
   buildContractCreatedPayload,
   buildContractRenewalUpcomingPayload,
@@ -1544,7 +1544,8 @@ export const createClientContractFromWizard = withAuth(async (
     renewalForWorkflow = endDate
       ? computeContractRenewalUpcoming({
           renewalAt: endDate,
-          decisionDueAt: decisionDueAtForWorkflow ?? undefined,
+          decisionDueAt: clientContractAssignment.decision_due_date ?? decisionDueAtForWorkflow ?? undefined,
+          renewalCycleKey: clientContractAssignment.renewal_cycle_key ?? undefined,
           now: now.toISOString(),
         })
       : null;

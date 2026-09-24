@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { buildDateDomainEventDedupeKey } from '@alga-psa/event-bus/workflow/dateDomainEvents';
 
 const contractWizardActionsSource = readFileSync(
   new URL('../src/actions/contractWizardActions.ts', import.meta.url),
@@ -28,7 +29,7 @@ describe('contract renewal upcoming event queue-compatible payload wiring', () =
     expect(contractWizardActionsSource).toContain('decisionDueDate: renewal.decisionDueDate,');
     expect(contractWizardActionsSource).toContain('daysUntilDecisionDue: renewal.daysUntilDecisionDue,');
     expect(contractWizardActionsSource).toContain('renewalCycleKey: renewal.renewalCycleKey,');
-    expect(contractWizardActionsSource).toContain('decisionDueAt: decisionDueAtForWorkflow ?? undefined,');
+    expect(contractWizardActionsSource).toContain('decisionDueAt: clientContractAssignment.decision_due_date ?? decisionDueAtForWorkflow ?? undefined,');
     expect(contractWizardActionsSource).toContain('emitDateDomainEventOnce(knex, tenant, {');
     expect(contractWizardActionsSource).toContain("eventType: 'CONTRACT_RENEWAL_UPCOMING', entityId: wfData.clientContractId,");
 
@@ -39,5 +40,12 @@ describe('contract renewal upcoming event queue-compatible payload wiring', () =
     expect(clientContractActionsSource).toContain('emitDateDomainEventOnce(knex, tenant, {');
     expect(clientContractActionsSource).toContain('emitDateDomainEventOnce(db, tenant, {');
     expect(clientContractActionsSource).toContain("eventType: 'CONTRACT_RENEWAL_UPCOMING', entityId: clientContract.client_contract_id,");
+    expect(clientContractActionsSource).toContain('cycleKey: renewal.renewalCycleKey ?? renewal.decisionDueDate ?? renewal.renewalAt');
+    expect(contractWizardActionsSource).toContain('renewalCycleKey: clientContractAssignment.renewal_cycle_key ?? undefined');
+    const persistedCycleKey = 'fixed-term:2099-06-15';
+    const saveCycleKey = persistedCycleKey ?? '2099-06-15';
+    const scanCycleKey = persistedCycleKey ?? '2099-06-15';
+    expect(buildDateDomainEventDedupeKey('CONTRACT_RENEWAL_UPCOMING', 'client-contract-1', saveCycleKey))
+      .toBe(buildDateDomainEventDedupeKey('CONTRACT_RENEWAL_UPCOMING', 'client-contract-1', scanCycleKey));
   });
 });
