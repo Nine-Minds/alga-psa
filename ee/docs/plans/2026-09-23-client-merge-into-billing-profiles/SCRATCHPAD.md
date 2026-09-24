@@ -215,3 +215,43 @@ the schema: `ux_client_locations_default_per_client` and
 (`client_billing_cycles`, `payment_methods`, `client_tax_settings`) key on
 `billing_profile_id`, which is unique per tenant and moves with the row — so
 there is nothing for the target to already hold.
+
+## Round 4 — billing the profile you just merged in
+
+The merge lands the profile, but nothing downstream let an operator aim at it:
+
+- **Generate → Manual Invoice** had a client picker and no profile picker, so a
+  manual invoice was always attributed by fallback (`persistManualInvoiceCharges`
+  resolves the client default) and `invoices.billing_profile_id` stayed NULL —
+  only cycle-driven invoices were ever stamped (`createInvoiceFromBillingResult`).
+- **Creating a contract** offered no profile at all. `client_contracts.
+  billing_profile_id` existed since 20260816010000 and is step 3 of the chain,
+  but only `assignContractBillingProfile` — an edit on an existing row — ever
+  wrote it, so a contract could not be born attributed.
+
+Both now ask, and only where asking makes sense: the picker is behind
+`useClientBillingProfiles().isSegmented`, the one place the D6 invisibility rule
+lives, so a client with a single profile sees no new control anywhere.
+
+Deliberate asymmetry between the two surfaces. An invoice must bill exactly one
+profile, so the manual screen pre-selects the default and has no "unassigned"
+choice. A contract's assignment is optional by design (D3/F044 — a line may
+override it, and NULL means "the client default"), so it uses the shared
+`BillingProfilePicker` with its "Use the client's default profile" entry,
+matching contract lines, locations, tickets and projects.
+
+Attribution is left alone where nobody chose: an unpicked manual invoice keeps
+`billing_profile_id` NULL and its items are passed through untouched, so the
+unsegmented path is byte-identical to before rather than newly stamped.
+
+Validation lives at the write, not in the dialog: both paths reject a profile
+whose `client_id` is not the client being billed (and the invoice path also
+rejects an archived one). That is the merge-shaped failure — profiles move
+between clients, and a stale id in a resumed draft or a replayed request would
+otherwise bill the wrong customer. Changing the client in either dialog clears
+the pick for the same reason.
+
+Two write paths were carried along so a chosen profile is not quietly lost:
+`getDraftContractForResume` returns it, and the renewals queue copies it onto
+the renewal draft — otherwise the first renewal would silently fall back to the
+client default.

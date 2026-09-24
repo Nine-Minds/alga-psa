@@ -202,5 +202,17 @@
     "description": "A merge survives uq_document_associations_single_true_logo, the partial unique index behind one logo per (entity, entity type, logo variant). Where the target already fills a slot the incoming logo is demoted to a plain association — what uploading a replacement logo does — so the target keeps its branding and the document still arrives; a slot the target leaves empty is inherited, including by the association that survives deduplication when both clients file the same document.",
     "implemented": true,
     "prdRefs": ["Goals"]
+  },
+  {
+    "id": "M035",
+    "description": "A merged-in billing profile can be billed on purpose: the manual-invoice screen offers the client's profiles (default pre-selected) whenever a client holds more than one, stamps invoices.billing_profile_id with the pick, and defaults every manual line to it. A single-profile client sees no control and its invoices are attributed exactly as before; a profile owned by another client, or an archived one, is refused with BILLING_PROFILE_NOT_FOUND.",
+    "implemented": true,
+    "prdRefs": ["Design / D1 — Profiles move, they are not copied (Q1)"]
+  },
+  {
+    "id": "M036",
+    "description": "A contract chooses its billing profile when it is created — in the contract wizard and in Quick Add — instead of only in a later edit. The pick is written to client_contracts.billing_profile_id through createClientContractAssignment, which refuses a profile owned by another client; it survives a draft resume and is carried onto a renewal draft. No pick leaves the column NULL, falling through to the client default.",
+    "implemented": true,
+    "prdRefs": ["Design / D2 — Contracts: original dates or cutover, operator's call (Q2)"]
   }
 ]

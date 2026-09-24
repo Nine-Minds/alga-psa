@@ -147,5 +147,23 @@
       "M034"
     ],
     "note": "server/src/test/integration/clientMerge.integration.test.ts seeds an is_entity_logo association on both clients against a real database. Without the fix it reproduces the operator's failure verbatim: duplicate key value violates unique constraint \"uq_document_associations_single_true_logo\". The three slot outcomes (taken, free, shared document) are unit-tested in packages/clients/src/lib/clientMergeEngine.test.ts."
+  },
+  {
+    "id": "TM017",
+    "description": "Unit: generateManualInvoice bills the profile the operator picked — invoice row and every line stamped with it, a per-line override left ahead of it, a foreign or archived profile refused, and an unpicked invoice attributed exactly as before.",
+    "implemented": true,
+    "featureIds": [
+      "M035"
+    ],
+    "note": "server/src/test/unit/billing/manualInvoiceActions.billingProfile.test.ts"
+  },
+  {
+    "id": "TM018",
+    "description": "Unit: createClientContractAssignment stores the chosen billing profile, refuses one belonging to another client, and writes NULL when none is chosen.",
+    "implemented": true,
+    "featureIds": [
+      "M036"
+    ],
+    "note": "shared/billingClients/__tests__/clientContracts.billingProfileAssignment.test.ts"
   }
 ]
