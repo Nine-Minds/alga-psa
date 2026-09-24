@@ -511,6 +511,9 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "QBO",
+      "#{{number}} {{title}}",
+      ", ",
       "{{amount}} MRR",
       "{{amount}} NRR",
       "Start: {{dateTime}}",
