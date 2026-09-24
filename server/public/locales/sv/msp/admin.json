@@ -46,7 +46,7 @@
       "centralizedControl": "Central styrning: Användare kan inte avstå individuellt. Säkerställ att lokala dataskyddsregler följs."
     },
     "anonymization": {
-      "title": "Nivå av dataanonymisering",
+      "title": "Nivå för dataanonymisering",
       "description": "Välj hur mycket data som ska anonymiseras före insamling",
       "options": {
         "none": {
@@ -102,17 +102,17 @@
     },
     "descriptions": {
       "outbound": "Konfigurera SMTP- eller API-inställningar för att skicka e-post från din applikation",
-      "inbound": "Konfigurera e-postleverantörer för att ta emot och behandla e-post som ärenden"
+      "inbound": "Konfigurera e-posttjänsteleverantörer för att ta emot och behandla e-post som ärenden"
     },
     "providerConfig": {
-      "title": "Konfiguration av e-postleverantör",
-      "providerLabel": "E-postleverantör",
+      "title": "Konfiguration av e-posttjänsteleverantör",
+      "providerLabel": "E-posttjänsteleverantör",
       "options": {
         "smtp": "SMTP (traditionell e-postserver)",
         "resend": "Resend (modern API-tjänst)",
         "microsoft": "Microsoft 365 (Microsoft Graph)"
       },
-      "placeholder": "Välj e-postleverantör",
+      "placeholder": "Välj e-posttjänsteleverantör",
       "descriptions": {
         "smtp": "Konfigurera inställningar för en traditionell SMTP-server för e-post",
         "resend": "Konfigurera Resend API för modern e-postleverans",
@@ -147,7 +147,7 @@
       "security": {
         "title": "Anslutningssäkerhet",
         "secure": "Använd implicit TLS (SSL vid anslutning, vanligtvis port 465)",
-        "requireTls": "Kräv uppgradering med STARTTLS (port 587 / 25)",
+        "requireTls": "Kräv uppgradering till STARTTLS (portarna 587 / 25)",
         "verifyCert": "Verifiera servercertifikat",
         "verifyCertHint": "Inaktivera detta endast för en betrodd reläserver i ditt eget nätverk som använder ett självsignerat certifikat."
       }
@@ -168,7 +168,7 @@
       "mailbox": {
         "label": "Avsändarpostlåda",
         "placeholder": "Välj en ansluten Microsoft 365-postlåda",
-        "none": "Lägg först till och auktorisera en Microsoft 365-leverantör på fliken Inkommande e-post.",
+        "none": "Lägg först till och auktorisera en Microsoft 365-tjänsteleverantör på fliken Inkommande e-post.",
         "help": "Meddelanden skickas från den här postlådan via Microsoft Graph och sparas i Skickat. Återanslut befintliga postlådor för att bevilja Mail.Send."
       }
     },
@@ -200,22 +200,22 @@
     },
     "senderIdentities": {
       "ticket": {
-        "title": "Avsändaridentitet för ärendens e-post",
-        "description": "Svar på ärendens e-post måste skickas till den här adressen så att de kan matchas och läggas till i ärendet. Använd en ansluten inkorg som bevakas.",
+        "title": "E-postidentitet för ärendemeddelanden",
+        "description": "Svar på ärendemeddelanden måste skickas tillbaka till den här adressen så att de kan matchas och läggas till i ärendet. Använd en ansluten, bevakad inkorg.",
         "connectedInboxLabel": "Ansluten inkorg",
         "connectedInboxHelp": "En ansluten inkorg håller kundens svar samlade i ärendets konversation.",
         "customAddressOption": "Använd en annan adress",
         "addressLabel": "Avsändaradress",
         "addressPlaceholder": "support@example.com",
-        "addressHelp": "Den här adressen styr svarsroutningen endast för ärendens e-post.",
+        "addressHelp": "Den här adressen styr vart svar skickas enbart för ärendemeddelanden.",
         "nameLabel": "Avsändarens visningsnamn",
         "namePlaceholder": "Support",
         "nameHelp": "Lämna tomt för att använda den anslutna postlådans namn eller ärendetavlans namn.",
         "notConnectedWarning": "Den här adressen är inte en ansluten inkorg, så svar på ärenden kanske inte läses in.",
-        "microsoftMismatch": "E-postadressen för ärenden måste matcha den valda Microsoft 365-postlådan ({{mailbox}})."
+        "microsoftMismatch": "E-postadressen för ärendemeddelanden måste matcha den valda Microsoft 365-postlådan ({{mailbox}})."
       },
       "notification": {
-        "title": "Avsändaridentitet för all annan e-post",
+        "title": "E-postidentitet för all annan e-post",
         "description": "Anpassa avsändaridentiteten för portalinbjudningar, lösenordsåterställningar, fakturor, projektuppdateringar och allmänna aviseringar oberoende av ärenderoutningen.",
         "addressLabel": "Avsändaradress",
         "addressPlaceholder": "notifications@example.com",
@@ -223,10 +223,10 @@
         "nameLabel": "Avsändarens visningsnamn",
         "namePlaceholder": "Ditt företagsnamn",
         "nameHelp": "Lämna tomt för att använda {{company}} automatiskt.",
-        "companyFallback": "din klientorganisations företag"
+        "companyFallback": "din klientorganisations namn"
       },
       "warningTitle": "Kontrollera svarsroutningen",
-      "errorTitle": "Korrigera avsändaridentiteten för ärenden"
+      "errorTitle": "Rätta identiteten för ärendemeddelanden"
     }
   },
   "microsoft365": {
@@ -258,7 +258,7 @@
     "statuses": {
       "pass": "Godkänd",
       "warn": "Varning",
-      "fail": "Misslyckades",
+      "fail": "Underkänd",
       "skip": "Överhoppad"
     }
   },
@@ -449,7 +449,7 @@
       "ruleCount": "Antal regler ({{revisionType}}): {{count}}",
       "revisionType": {
         "draft": "utkast",
-        "published": "publicerad"
+        "published": "publicerade"
       },
       "emptyRules": "Inga regler ännu för {{resource}} ({{revisionType}}).",
       "ruleForm": {
@@ -472,7 +472,7 @@
       "rule": {
         "edit": "Redigera",
         "remove": "Ta bort",
-        "removeAsDraft": "Ta bort i utkast",
+        "removeAsDraft": "Ta bort som utkaständring",
         "removeDraftTooltip": "Ta bort den här regeln från utkastet.",
         "removePublishedTooltip": "Skapa en ny utkastversion där den här publicerade regeln tas bort.",
         "selectedClientScopes": "Omfattning: valda kunder",
@@ -655,7 +655,7 @@
     "statuses": {
       "pass": "Godkänd",
       "warn": "Varning",
-      "fail": "Misslyckades",
+      "fail": "Underkänd",
       "skip": "Överhoppad"
     }
   },
@@ -679,7 +679,7 @@
         "statuses": {
           "pass": "Godkänd",
           "warn": "Varning",
-          "fail": "Misslyckades",
+          "fail": "Underkänd",
           "skip": "Överhoppad"
         },
         "steps": {
@@ -697,8 +697,8 @@
           "managed_tenants_count": "Identifiering av hanterade klientorganisationer",
           "mappings_vs_discovery": "Bekräftade mappningar jämfört med aktuell identifiering",
           "cipp_credentials_present": "CIPP-autentiseringsuppgifter",
-          "cipp_reachable": "Nåbarhet för CIPP API",
-          "cipp_auth": "Autentiseringsuppgift för CIPP API",
+          "cipp_reachable": "Nåbarhet för CIPP-API",
+          "cipp_auth": "Autentiseringsuppgift för CIPP-API",
           "cipp_tenant_list": "CIPP-lista över klientorganisationer",
           "cipp_mappings_vs_list": "Bekräftade mappningar jämfört med CIPP-listan över klientorganisationer",
           "last_runs": "Senaste synkroniseringskörningar",
