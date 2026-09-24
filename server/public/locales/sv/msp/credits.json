@@ -1,0 +1,218 @@
+{
+  "page": {
+    "title": "Hantera tillgodohavanden"
+  },
+  "columns": {
+    "creditId": "Krediterings-ID",
+    "client": "Kund",
+    "balance": "Saldo",
+    "balanceOf": "av {{amount}}",
+    "created": "Skapad",
+    "description": "Beskrivning",
+    "context": "Sammanhang",
+    "originalAmount": "Ursprungligt belopp",
+    "remaining": "Återstående",
+    "expires": "Går ut",
+    "status": "Status",
+    "actions": "Åtgärder",
+    "amountAvailable": "Tillgängligt belopp",
+    "expiration": "Utgångsdatum",
+    "select": "Välj"
+  },
+  "filters": {
+    "allClients": "Alla kunder",
+    "allStatuses": "Alla statusar"
+  },
+  "status": {
+    "active": "Aktivt",
+    "expired": "Utgånget",
+    "never": "Aldrig",
+    "na": "Ej tillämpligt",
+    "depleted": "Förbrukat",
+    "expiringSoonShort": "Går snart ut",
+    "expiringSoon_one": "Går ut om {{count}} dag",
+    "expiringSoon_other": "Går ut om {{count}} dagar"
+  },
+  "actions": {
+    "view": "Visa",
+    "edit": "Redigera",
+    "expire": "Låt upphöra",
+    "addCredit": "Lägg till tillgodohavande",
+    "cancel": "Avbryt",
+    "viewAllCredits": "Visa alla tillgodohavanden",
+    "running": "Körs…",
+    "reset": "Återställ",
+    "applyCredit": "Använd tillgodohavande",
+    "applying": "Använder…",
+    "select": "Välj",
+    "selected": "Valt",
+    "saveChanges": "Spara ändringar",
+    "saving": "Sparar…",
+    "transfer": "Överför"
+  },
+  "settings": {
+    "loadErrorPrefix": "Fel vid inläsning av inställningar för tillgodohavandens giltighetstid:",
+    "captionEnabled": "Tillgodohavandens giltighetstid: {{days}} dagar",
+    "captionDisabled": "Tillgodohavandens giltighetstid: avstängd",
+    "captionReminders": "påminnelser {{reminders}} dagar innan",
+    "editInSettings": "Redigera i debiteringsinställningarna"
+  },
+  "stats": {
+    "totalActiveCredits": "Totalt aktiva tillgodohavanden",
+    "expiringIn30Days": "Går ut inom 30 dagar",
+    "totalCreditsApplied": "Totalt använda tillgodohavanden",
+    "totalCreditsExpired": "Totalt utgångna tillgodohavanden"
+  },
+  "management": {
+    "title": "Hantera tillgodohavanden",
+    "noCreditsFound": "Inga tillgodohavanden hittades",
+    "noMatchingCredits": "Inga tillgodohavanden matchar dessa filter",
+    "loadFailed": "Det gick inte att läsa in tillgodohavanden. Försök igen."
+  },
+  "addCredit": {
+    "description": "Tillgodohavandet är tillgängligt för kunden direkt.",
+    "fields": {
+      "client": "Kund",
+      "amount": "Belopp",
+      "description": "Beskrivning (valfri)",
+      "expirationDate": "Utgångsdatum (valfritt)"
+    },
+    "placeholders": {
+      "amount": "Ange belopp",
+      "description": "Orsak till krediteringen",
+      "expirationDate": "Välj utgångsdatum"
+    },
+    "hints": {
+      "expirationDate": "Lämna tomt för att använda standardinställningen för giltighetstid."
+    },
+    "submitting": "Lägger till…",
+    "success": "Tillgodohavandet har lagts till",
+    "errors": {
+      "allFieldsRequired": "Välj en kund och ange ett belopp",
+      "validAmount": "Ange ett giltigt belopp",
+      "loadClientsFailed": "Det gick inte att läsa in kunder. Försök igen.",
+      "submitFailed": "Det gick inte att lägga till tillgodohavandet. Försök igen."
+    }
+  },
+  "application": {
+    "title": "Använd tillgodohavande",
+    "applyToInvoice": "Använd tillgängliga tillgodohavanden på denna faktura",
+    "applyToBalance": "Använd tillgodohavanden för att minska kundens saldo",
+    "totalAvailableCredit": "Totalt tillgängligt tillgodohavande:",
+    "invoiceAmount": "Fakturabelopp:",
+    "selectCreditToApply": "Välj tillgodohavande att använda",
+    "amountToApply": "Belopp att använda",
+    "creditOrderNoteExpirationFirst": "Tillgodohavanden används i utgångsdatumordning (tidigast först)",
+    "creditOrderNoteOldestFirst": "Tillgodohavanden används i skapandedatumordning (äldst först)",
+    "creditOrderNoteNewestFirst": "Tillgodohavanden används i skapandedatumordning (nyast först)",
+    "noCreditsAvailable": "Inga tillgodohavanden är tillgängliga för denna kund",
+    "failedToLoadCredits": "Det gick inte att läsa in tillgängliga tillgodohavanden",
+    "selectCreditError": "Välj ett tillgodohavande och ange ett giltigt belopp",
+    "failedToApply": "Det gick inte att använda tillgodohavandet"
+  },
+  "expiration": {
+    "appliedCredits": "Använda tillgodohavanden",
+    "creditsAppliedToInvoice": "Tillgodohavanden som använts på denna faktura: {{amount}}",
+    "creditAmount": "Tillgodohavandets belopp:",
+    "created": "Skapad:",
+    "expiration": "Utgångsdatum:",
+    "noDetails": "Inga detaljer om tillgodohavandet är tillgängliga",
+    "failedToLoad": "Det gick inte att läsa in detaljer om tillgodohavandet",
+    "never": "Aldrig",
+    "creditOrderNote": "Tillgodohavanden används i utgångsdatumordning (äldst först)"
+  },
+  "expirationDialog": {
+    "title": "Redigera utgångsdatum",
+    "creditAmount": "Ursprungligt belopp",
+    "remainingAmount": "Återstående",
+    "created": "Skapad:",
+    "currentExpiration": "Nuvarande utgångsdatum",
+    "noExpiration": "Inget utgångsdatum",
+    "newExpirationDate": "Nytt utgångsdatum",
+    "pastDateError": "Utgångsdatumet får inte ligga i det förflutna",
+    "updateError": "Ett fel uppstod när utgångsdatumet skulle uppdateras",
+    "updateSuccess": "Tillgodohavandets utgångsdatum har uppdaterats",
+    "clearHint": "Rensa datumet för att ta bort tidsgränsen."
+  },
+  "viewDialog": {
+    "title": "Detaljer om tillgodohavandet",
+    "loadFailed": "Det gick inte att läsa in detaljer om tillgodohavandet.",
+    "invoice": "Faktura",
+    "transactions": "Relaterade transaktioner",
+    "transactionType": "Typ",
+    "date": "Datum",
+    "amount": "Belopp",
+    "noTransactions": "Inga relaterade transaktioner hittades."
+  },
+  "expireDialog": {
+    "title": "Låt tillgodohavandet upphöra",
+    "reasonLabel": "Orsak (valfri)",
+    "reasonPlaceholder": "Förklara varför detta tillgodohavande ska upphöra…",
+    "success": "Tillgodohavandet har upphört",
+    "error": "Ett fel uppstod när tillgodohavandet skulle upphöra",
+    "expiring": "Låter upphöra…",
+    "confirm": "Låt tillgodohavandet upphöra",
+    "creditAmount": "Ursprungligt belopp",
+    "remainingAmount": "Återstående",
+    "warning": "Kunden förlorar det återstående beloppet på {{amount}}. Du kan inte ångra detta."
+  },
+  "transferDialog": {
+    "title": "Överför tillgodohavande",
+    "description": "Flytta tillgodohavande från denna kund till en annan.",
+    "fields": {
+      "targetClient": "Till kund",
+      "amount": "Belopp",
+      "reason": "Orsak (valfri)"
+    },
+    "placeholders": {
+      "reason": "Varför överförs detta tillgodohavande?"
+    },
+    "hints": {
+      "amount": "Upp till {{amount}} tillgängligt",
+      "currencyMatch": "Den valda kunden använder samma valuta.",
+      "currencyMismatch": "Den valda kunden använder en annan valuta; valutaomräkning kan ske."
+    },
+    "impact": {
+      "current": "Återstående belopp nu",
+      "after": "Återstående belopp efter överföring"
+    },
+    "errors": {
+      "selectClient": "Välj en kund att överföra till",
+      "validAmount": "Ange ett belopp större än noll",
+      "exceedsRemaining": "Överföringen får inte överstiga det återstående beloppet på {{amount}}"
+    },
+    "success": "Tillgodohavandet har överförts",
+    "error": "Ett fel uppstod när tillgodohavandet skulle överföras",
+    "transferring": "Överför…",
+    "confirm": "Överför tillgodohavande"
+  },
+  "context": {
+    "lineageMissing": "Ursprungskoppling saknas",
+    "lineageMissingDescription": "Ursprungsfakturans metadata kunde inte återställas. Utgå enbart från det finansiella datumet tills ursprungskopplingen har återställts.",
+    "transferredRecurringCredit": "Överfört tillgodohavande från återkommande debitering",
+    "recurringSource": "Källa i återkommande debitering",
+    "servicePeriod": "Tjänsteperiod: {{period}}",
+    "recurringLineagePreserved": "Kopplingen till källan i återkommande debitering har bevarats",
+    "financialOnly": "Endast finansiellt",
+    "noRecurringServicePeriod": "Ingen återkommande tjänsteperiod"
+  },
+  "errors": {
+    "credit": {
+      "notFoundRefresh": "Tillgodohavandet hittades inte. Det kan ha uppdaterats eller raderats. Ladda om och försök igen.",
+      "originalTransactionMissing": "Den ursprungliga krediteringstransaktionen kunde inte hittas. Ladda om och försök igen.",
+      "sourceNotFound": "Ursprungstillgodohavandet hittades inte. Det kan ha uppdaterats eller raderats. Ladda om och försök igen.",
+      "targetClientNotFound": "Mottagande kund hittades inte. Kunden kan ha uppdaterats eller raderats. Ladda om och försök igen.",
+      "insufficientTransferAmount": "Det återstående beloppet räcker inte för överföringen.",
+      "invalidValue": "Ett av de valda värdena för tillgodohavandet är ogiltigt. Ladda om och försök igen.",
+      "referenceMissing": "Det valda tillgodohavandet, kunden, fakturan eller transaktionen finns inte längre. Ladda om och försök igen.",
+      "duplicate": "En krediteringstransaktion som står i konflikt med denna finns redan. Ladda om och försök igen.",
+      "notAllowed": "Ett av värdena för tillgodohavandet är inte tillåtet. Kontrollera formuläret och försök igen.",
+      "missingField": "Ett obligatoriskt fält för tillgodohavandet saknas.",
+      "missingFieldNamed": "Ett obligatoriskt fält för tillgodohavandet saknas: {{field}}."
+    },
+    "prepaidAlerts": {
+      "settingsInvalid": "Ogiltiga inställningar för aviseringar om förbetalt saldo",
+      "updateFailed": "Det gick inte att uppdatera inställningarna för aviseringar om förbetalt saldo"
+    }
+  }
+}
