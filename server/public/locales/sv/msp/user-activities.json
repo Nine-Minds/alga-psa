@@ -1,0 +1,537 @@
+{
+  "dashboard": {
+    "title": "Användaraktiviteter",
+    "viewSwitcher": {
+      "cards": "Kort",
+      "table": "Tabell"
+    },
+    "sections": {
+      "notifications": "Aviseringar",
+      "schedule": "Schema"
+    },
+    "filteredTitle": "Filtrerade aktiviteter",
+    "allActivitiesTitle": "Alla aktiviteter"
+  },
+  "table": {
+    "title": {
+      "all": "Alla aktiviteter"
+    },
+    "columns": {
+      "type": "Typ",
+      "title": "Titel",
+      "status": "Status",
+      "priority": "Prioritet",
+      "dueDate": "Förfallodatum",
+      "actions": "Åtgärder"
+    },
+    "values": {
+      "noDueDate": "Inget förfallodatum",
+      "emDash": "—",
+      "unread": "Oläst",
+      "recurringEvent": "Återkommande händelse",
+      "adHocBadge": "Ad hoc"
+    },
+    "actions": {
+      "refresh": "Ladda om",
+      "print": "Skriv ut"
+    },
+    "viewSwitcher": {
+      "flat": "Ogrupperad",
+      "grouped": "Grupperad"
+    },
+    "states": {
+      "noActivities": "Inga aktiviteter hittades",
+      "noMatching": "Inga aktiviteter matchar filtren"
+    },
+    "errors": {
+      "loadFailed": "Det gick inte att ladda aktiviteterna. Försök igen senare.",
+      "addAdHocFailed": "Det gick inte att lägga till ad hoc-posten. Försök igen."
+    },
+    "activityTypes": {
+      "schedule": "Schema",
+      "projectTask": "Projektuppgift",
+      "ticket": "Ärende",
+      "timeEntry": "Tidpost",
+      "workflowTask": "Arbetsflödesuppgift",
+      "notification": "Avisering",
+      "unknown": "Okänd",
+      "activity": "Aktivitet"
+    },
+    "print": {
+      "optionsDialog": {
+        "title": "Utskriftsalternativ",
+        "description": "Välj vilka kolumner som ska ingå när du skriver ut aktiviteter."
+      }
+    },
+    "adHoc": {
+      "addPlaceholder": "Lägg till aktivitet",
+      "addButton": "Lägg till",
+      "markDone": "Markera som klar",
+      "markNotDone": "Markera som inte klar",
+      "convertToTicket": "Omvandla till ärende",
+      "convertToTask": "Omvandla till projektuppgift"
+    },
+    "viewingUser": {
+      "label": "Visar:",
+      "me": "Mina aktiviteter"
+    }
+  },
+  "card": {
+    "noDescription": "Ingen beskrivning angiven",
+    "due": "Ska vara klar: {{date}}",
+    "recurringEvent": "Återkommande händelse",
+    "unread": "Oläst",
+    "noMessage": "Inget meddelande",
+    "estimatedHours": "Uppskattat: {{hours}} h",
+    "duration": "Varaktighet: {{hours}} h",
+    "hasForm": "Har formulär",
+    "roles": "Roller: {{roles}}"
+  },
+  "drawer": {
+    "loading": "Laddar…",
+    "errorLoadingTitle": "Fel vid inläsning av aktivitetsdetaljer",
+    "errorLoadingMessage": "Det gick inte att ladda aktivitetsdetaljerna. Försök igen senare.",
+    "userNotAuthenticated": "Användaren är inte autentiserad",
+    "scheduleEntryNotFound": "Schemaposten hittades inte",
+    "timeEntryNotFound": "Tidposten hittades inte",
+    "unknownWorkItem": "Okänt arbetsobjekt",
+    "timeEntryDetailsTitle": "Detaljer om tidposten",
+    "errorLoadingTimeEntry": "Fel vid inläsning av tidposten",
+    "workflowTaskTitle": "Arbetsflödesuppgift",
+    "noAdditionalDetails": "Inga ytterligare detaljer finns tillgängliga.",
+    "failedToLoadDocument": "Det gick inte att ladda dokumentets innehåll",
+    "notificationNotFound": "Aviseringen hittades inte",
+    "failedToLoadTicket": "Det gick inte att ladda ärendedetaljerna",
+    "failedToLoadTask": "Det gick inte att ladda uppgiftsdetaljerna",
+    "unsupportedTitle": "Aktivitetstypen stöds inte",
+    "unsupportedDescription": "Den här aktivitetstypen ({{activityType}}) stöds inte i detaljvyn.",
+    "saveDocumentSuccess": "Dokumentet har sparats",
+    "saveDocumentError": "Det gick inte att spara dokumentet",
+    "timeEntryUpdatedSuccess": "Tidposten har uppdaterats",
+    "timeEntryUpdatedError": "Det gick inte att uppdatera tidposten",
+    "backToNotification": "Tillbaka till aviseringen",
+    "documentTitleEdit": "Redigera dokument",
+    "documentTitleViewer": "Dokumentvisare",
+    "actions": {
+      "edit": "Redigera",
+      "cancel": "Avbryt",
+      "save": "Spara",
+      "saving": "Sparar…"
+    },
+    "menu": {
+      "openMenu": "Öppna meny",
+      "goToPage": "Gå till sidan",
+      "dismissError": "Det gick inte att avfärda uppgiften: {{message}}"
+    },
+    "retryLater": "Försök igen senare.",
+    "adHoc": {
+      "endBeforeStart": "Sluttiden måste vara efter starttiden.",
+      "fields": {
+        "end": "Slut (valfritt)",
+        "noTime": "Ingen tid",
+        "notes": "Anteckningar",
+        "notesPlaceholder": "Lägg till anteckningar…",
+        "start": "Start (valfritt)",
+        "title": "Titel",
+        "titlePlaceholder": "Titel"
+      },
+      "loadError": "Det gick inte att ladda den här posten. Försök igen senare.",
+      "saveError": "Det gick inte att spara posten.",
+      "saveSuccess": "Posten har sparats",
+      "statusDone": "Klar",
+      "statusOpen": "Öppen",
+      "title": "Ad hoc-post",
+      "toggleDoneError": "Det gick inte att uppdatera posten."
+    },
+    "enterpriseOnly": "Arbetsflödesuppgifter är en Pro-funktion.",
+    "nextAction": "Nästa åtgärd",
+    "overdueSince": "Försenad sedan {{date}}",
+    "dueOn": "Ska vara klar {{date}}",
+    "stage": "Steg",
+    "confidence": "Tilltro till avslut",
+    "owner": "Ägare",
+    "expectedClose": "Förväntat avslut",
+    "mrr": "MRR",
+    "nrr": "NRR",
+    "hardware": "Hårdvara",
+    "contact": "Kontakt",
+    "linkedQuotes": "Länkade offerter",
+    "openOpportunity": "Öppna affärsmöjlighet",
+    "opportunityNotFound": "Affärsmöjligheten hittades inte."
+  },
+  "groupedView": {
+    "addGroup": "Lägg till grupp",
+    "groupNamePlaceholder": "Gruppnamn",
+    "ariaLabels": {
+      "dragToReorder": "Dra för att ändra ordningen",
+      "dragToReorderGroup": "Dra för att ändra gruppens ordning",
+      "expandGroup": "Expandera grupp",
+      "collapseGroup": "Fäll ihop grupp",
+      "renameGroup": "Byt namn på grupp",
+      "deleteGroup": "Radera grupp"
+    },
+    "dropActivitiesHere": "Släpp aktiviteter här",
+    "ungroupedHeading": "Ogrupperade",
+    "allInGroups": "Alla aktiviteter är grupperade",
+    "columns": {
+      "title": "Titel",
+      "status": "Status",
+      "priority": "Prioritet",
+      "dueDate": "Förfallodatum"
+    }
+  },
+  "printable": {
+    "defaultTitle": "Aktiviteter",
+    "ungroupedHeading": "Ogrupperade",
+    "empty": "(tom)"
+  },
+  "sections": {
+    "projects": {
+      "title": "Projektuppgifter",
+      "actions": {
+        "refresh": "Ladda om",
+        "filter": "Filter",
+        "reset": "Återställ",
+        "viewAll": "Visa alla"
+      },
+      "ariaLabels": {
+        "refresh": "Ladda om projektuppgifter",
+        "filter": "Filtrera projektuppgifter"
+      },
+      "states": {
+        "loading": "Laddar projektaktiviteter…",
+        "empty": "Inga projektaktiviteter hittades"
+      },
+      "errors": {
+        "loadFailed": "Det gick inte att ladda projektaktiviteterna. Försök igen senare."
+      },
+      "filterDialog": {
+        "title": "Filtrera projektuppgifter",
+        "description": "Välj kriterier för att filtrera aktiviteter för projektuppgifter.",
+        "fields": {
+          "search": "Sök",
+          "searchPlaceholder": "Sök i titel och beskrivning",
+          "project": "Projekt",
+          "projectPlaceholder": "Välj projekt…",
+          "allProjects": "Alla projekt",
+          "phase": "Fas",
+          "phasePlaceholder": "Välj fas…",
+          "phaseLoadingPlaceholder": "Laddar faser…",
+          "phaseSelectFirstPlaceholder": "Välj ett projekt först",
+          "allPhases": "Alla faser",
+          "priority": "Prioritet",
+          "priorityPlaceholder": "Välj prioritet…",
+          "allPriorities": "Alla prioriteter",
+          "dueDateRange": "Intervall för förfallodatum",
+          "createdDateRange": "Intervall för skapandedatum",
+          "showClosedTasks": "Visa stängda uppgifter"
+        },
+        "actions": {
+          "reset": "Återställ",
+          "cancel": "Avbryt",
+          "apply": "Tillämpa filter",
+          "clearDates": "Rensa"
+        }
+      }
+    },
+    "tickets": {
+      "title": "Ärenden",
+      "actions": {
+        "refresh": "Ladda om",
+        "filter": "Filter",
+        "reset": "Återställ",
+        "viewAll": "Visa alla"
+      },
+      "ariaLabels": {
+        "refresh": "Ladda om ärenden",
+        "filter": "Filtrera ärenden"
+      },
+      "states": {
+        "loading": "Laddar ärendeaktiviteter…",
+        "empty": "Inga ärendeaktiviteter hittades"
+      },
+      "errors": {
+        "loadFailed": "Det gick inte att ladda ärendeaktiviteterna. Försök igen senare."
+      },
+      "filterDialog": {
+        "title": "Filtrera ärenden",
+        "description": "Välj kriterier för att filtrera ärendeaktiviteter.",
+        "fields": {
+          "search": "Sök",
+          "searchPlaceholder": "Sök i titel, beskrivning och ärendenummer",
+          "client": "Kund",
+          "contact": "Kontakt",
+          "status": "Status",
+          "statusPlaceholder": "Välj status…",
+          "allStatuses": "Alla statusar",
+          "priority": "Prioritet",
+          "priorityPlaceholder": "Välj prioritet…",
+          "allPriorities": "Alla prioriteter",
+          "dueDateRange": "Intervall för förfallodatum",
+          "createdDateRange": "Intervall för skapandedatum",
+          "showClosedTickets": "Visa stängda ärenden"
+        },
+        "actions": {
+          "reset": "Återställ",
+          "cancel": "Avbryt",
+          "apply": "Tillämpa filter",
+          "clearDates": "Rensa"
+        }
+      }
+    },
+    "workflowTasks": {
+      "title": "Arbetsflödesuppgifter",
+      "drawerTitle": "Arbetsflödesuppgifter",
+      "actions": {
+        "refresh": "Ladda om",
+        "filter": "Filter",
+        "reset": "Återställ",
+        "viewAll": "Visa alla"
+      },
+      "ariaLabels": {
+        "refresh": "Ladda om arbetsflödesuppgifter",
+        "filter": "Filtrera arbetsflödesuppgifter"
+      },
+      "states": {
+        "loading": "Laddar aktiviteter för arbetsflödesuppgifter…",
+        "empty": "Inga aktiviteter för arbetsflödesuppgifter hittades"
+      },
+      "errors": {
+        "loadFailed": "Det gick inte att ladda aktiviteterna för arbetsflödesuppgifter. Försök igen senare."
+      },
+      "filterDialog": {
+        "title": "Filtrera arbetsflödesuppgifter",
+        "description": "Välj kriterier för att filtrera aktiviteter för arbetsflödesuppgifter.",
+        "fields": {
+          "search": "Sök",
+          "searchPlaceholder": "Sök i titel och beskrivning",
+          "workflowExecution": "Arbetsflödeskörning",
+          "workflowExecutionPlaceholder": "Välj arbetsflödeskörning…",
+          "allExecutions": "Alla körningar",
+          "priority": "Prioritet",
+          "priorityPlaceholder": "Välj prioritet…",
+          "allPriorities": "Alla prioriteter",
+          "priorityHigh": "Hög",
+          "priorityMedium": "Medel",
+          "priorityLow": "Låg",
+          "dueDateRange": "Intervall för förfallodatum",
+          "createdDateRange": "Intervall för skapandedatum",
+          "showClosedTasks": "Visa stängda uppgifter",
+          "includeHiddenTasks": "Inkludera dolda uppgifter"
+        },
+        "actions": {
+          "reset": "Återställ",
+          "cancel": "Avbryt",
+          "apply": "Tillämpa filter",
+          "clearDates": "Rensa"
+        }
+      },
+      "listDrawer": {
+        "searchPlaceholder": "Sök uppgifter…",
+        "filters": "Filter",
+        "refresh": "Ladda om",
+        "sortBy": "Sortera efter:",
+        "sortOptions": {
+          "priority": "Prioritet",
+          "dueDate": "Förfallodatum",
+          "createdAt": "Skapandedatum",
+          "title": "Titel"
+        },
+        "ascending": "Stigande",
+        "descending": "Fallande",
+        "states": {
+          "loading": "Laddar arbetsflödesuppgifter…",
+          "empty": "Inga arbetsflödesuppgifter hittades"
+        },
+        "errors": {
+          "loadFailed": "Det gick inte att ladda arbetsflödesuppgifterna. Försök igen senare."
+        }
+      }
+    },
+    "schedule": {
+      "title": "Schema",
+      "actions": {
+        "refresh": "Ladda om",
+        "filter": "Filter",
+        "reset": "Återställ",
+        "viewAll": "Visa alla"
+      },
+      "states": {
+        "loading": "Laddar schemaaktiviteter…",
+        "empty": "Inga schemaaktiviteter hittades"
+      },
+      "errors": {
+        "loadFailed": "Det gick inte att ladda schemaaktiviteterna. Försök igen senare.",
+        "refreshFailed": "Det gick inte att ladda om schemaaktiviteterna. Försök igen senare.",
+        "addAdHocFailed": "Det gick inte att lägga till aktiviteten. Försök igen."
+      },
+      "filterDialog": {
+        "title": "Filtrera schemaposter",
+        "description": "Välj kriterier för att filtrera schemaaktiviteter.",
+        "fields": {
+          "search": "Sök",
+          "searchPlaceholder": "Sök i titel och beskrivning",
+          "dateRange": "Datumintervall",
+          "workItemType": "Typ av relaterat arbetsobjekt",
+          "workItemTypePlaceholder": "Välj typ av arbetsobjekt…",
+          "allTypes": "Alla typer",
+          "ticket": "Ärende",
+          "projectTask": "Projektuppgift",
+          "workflowTask": "Arbetsflödesuppgift",
+          "showClosedEntries": "Visa stängda poster",
+          "showRecurringOnly": "Visa endast återkommande"
+        },
+        "actions": {
+          "reset": "Återställ",
+          "cancel": "Avbryt",
+          "apply": "Tillämpa filter"
+        }
+      }
+    },
+    "notifications": {
+      "title": "Aviseringar",
+      "actions": {
+        "refresh": "Ladda om",
+        "filter": "Filter",
+        "reset": "Återställ",
+        "viewAll": "Visa alla"
+      },
+      "ariaLabels": {
+        "refresh": "Ladda om aviseringar",
+        "filter": "Filtrera aviseringar"
+      },
+      "tabs": {
+        "unread": "Olästa",
+        "all": "Alla",
+        "read": "Lästa"
+      },
+      "states": {
+        "loading": "Laddar aviseringsaktiviteter…",
+        "empty": "Inga aviseringsaktiviteter hittades"
+      },
+      "errors": {
+        "loadFailed": "Det gick inte att ladda aviseringsaktiviteterna. Försök igen senare."
+      },
+      "filterDialog": {
+        "title": "Filtrera aviseringar",
+        "description": "Välj kriterier för att filtrera aviseringsaktiviteter.",
+        "fields": {
+          "status": "Status",
+          "unreadOnly": "Endast olästa",
+          "showRead": "Visa lästa",
+          "category": "Kategori",
+          "categoryPlaceholder": "Välj kategori…",
+          "allCategories": "Alla kategorier",
+          "categories": {
+            "tickets": "Ärenden",
+            "projects": "Projekt",
+            "invoices": "Fakturor",
+            "system": "System"
+          },
+          "dateRange": "Datumintervall"
+        },
+        "actions": {
+          "reset": "Återställ",
+          "cancel": "Avbryt",
+          "apply": "Tillämpa filter"
+        }
+      },
+      "priority": {
+        "label": "Prioritet",
+        "all": "Alla",
+        "allPriorities": "Alla prioriteter",
+        "placeholder": "Välj prioritet…",
+        "high": "Hög",
+        "normal": "Normal",
+        "low": "Låg"
+      }
+    }
+  },
+  "pickers": {
+    "priority": {
+      "loading": "Laddar…",
+      "empty": "Inga prioriteter tillgängliga",
+      "none": "Ingen"
+    },
+    "status": {
+      "loading": "Laddar…",
+      "empty": "Inga statusar tillgängliga",
+      "closedSuffix": "stängd"
+    }
+  },
+  "filters": {
+    "labels": {
+      "types": "Typer:",
+      "tickets": "Ärenden:",
+      "tasks": "Uppgifter:",
+      "priority": "Prioritet",
+      "search": "Sök",
+      "dueDate": "Förfallodatum",
+      "showClosed": "Visa stängda",
+      "client": "Kund",
+      "dueDateShort": "Ska vara klar",
+      "createdShort": "Skapad",
+      "tags": "Taggar",
+      "tagsSelected": "{{count}} taggar",
+      "tasksCompact": "Uppgifter",
+      "ticketsCompact": "Ärenden",
+      "opportunityScope": "Arbete med affärsmöjligheter"
+    },
+    "activityTypeOptions": {
+      "schedule": "Schema",
+      "projectTask": "Projektuppgifter",
+      "ticket": "Ärenden",
+      "workflowTask": "Arbetsflödesuppgifter"
+    },
+    "placeholders": {
+      "allBoards": "Alla tavlor",
+      "allStatuses": "Alla statusar",
+      "allProjects": "Alla projekt",
+      "allPriorities": "Alla prioriteter",
+      "selectPriority": "Välj prioritet…",
+      "search": "Sök aktiviteter…",
+      "searchBoards": "Sök tavlor…",
+      "searchStatuses": "Sök statusar…",
+      "searchProjects": "Sök projekt…",
+      "allClients": "Alla kunder",
+      "fromDateShort": "Från",
+      "projectTaskTags": "Filtrera uppgiftstaggar…",
+      "ticketTags": "Filtrera ärendetaggar…",
+      "toDateShort": "Till"
+    },
+    "actions": {
+      "reset": "Återställ",
+      "clearClient": "Rensa kundfilter",
+      "clearDueDate": "Rensa filter för förfallodatum",
+      "clearCreatedDate": "Rensa filter för skapandedatum"
+    },
+    "statusClosedSuffix": " (stängd)",
+    "summary": {
+      "boards_one": "{{count}} tavla",
+      "boards_other": "{{count}} tavlor",
+      "statuses_one": "{{count}} status",
+      "statuses_other": "{{count}} statusar",
+      "projects_one": "{{count}} projekt",
+      "projects_other": "{{count}} projekt",
+      "phases_one": "{{count}} fas",
+      "phases_other": "{{count}} faser",
+      "excludingName": "exkl. {{name}}",
+      "excludingCount_one": "exkl. {{count}}",
+      "excludingCount_other": "exkl. {{count}}",
+      "boards": "{{count}} tavlor",
+      "excludingCount": "exkl. {{count}}",
+      "phases": "{{count}} faser",
+      "projects": "{{count}} projekt",
+      "statuses": "{{count}} statusar"
+    },
+    "opportunityScopeOptions": {
+      "assigned": "Tilldelade steg i affärsmöjligheter",
+      "owned": "Steg i egna affärsmöjligheter",
+      "all": "Tilldelade steg eller steg i egna affärsmöjligheter"
+    }
+  },
+  "actions": {
+    "print": "Skriv ut",
+    "printOptions": "Utskriftsalternativ"
+  }
+}
