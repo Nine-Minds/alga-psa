@@ -319,6 +319,11 @@ describe('contract invoice adjustments (DB-backed)', () => {
     expect(Number(discountRows[0].net_amount)).toBe(-40_500);
     expect(discountRows[0].adjustment_source_id).toBe(discountId);
     expect(Number(discountRows[0].adjustment_base_amount)).toBe(405_000);
+    // The affected period and calculation reason are surfaced (the editor renders
+    // `adjustment_reason`), not just persisted: with no service-period details the
+    // window falls back to the invoice date.
+    expect(String(discountRows[0].adjustment_reason)).toContain('2026-09-01');
+    expect(String(discountRows[0].adjustment_reason)).toContain('405000');
 
     const totals = await sumChargeNet(fixture.invoiceId);
     expect(totals.gross).toBe(405_000);
@@ -639,6 +644,98 @@ describe('contract invoice adjustments (DB-backed)', () => {
     const manualRows = await db('invoice_charges')
       .where({ tenant, invoice_id: fixture.invoiceId, is_manual: true });
     expect(manualRows).toHaveLength(0);
+  });
+
+  it('persists an explicit per-line tax treatment and rejects a tax rate outside the tenant', async () => {
+    const fixture = await createDraftWithGeneratedChargeAndDiscount();
+
+    const region = await db('tax_regions').where({ tenant }).first('region_code');
+    expect(region?.region_code).toBeTruthy();
+    const taxRateId = uuidv4();
+    await db('tax_rates').insert({
+      tenant,
+      tax_rate_id: taxRateId,
+      region_code: region.region_code,
+      tax_percentage: 8.5,
+      description: 'Explicit treatment rate',
+      start_date: '2026-01-01',
+      is_active: true,
+    });
+
+    const taxableItemId = uuidv4();
+    const exemptItemId = uuidv4();
+    await db.transaction(async (trx) => {
+      await persistManualInvoiceCharges(
+        trx,
+        fixture.invoiceId,
+        [
+          {
+            item_id: taxableItemId,
+            description: 'Taxable freeform charge',
+            quantity: 1,
+            rate: 10_000,
+            tax_rate_id: taxRateId,
+            is_taxable: true,
+          },
+          {
+            item_id: exemptItemId,
+            description: 'Exempt freeform charge',
+            quantity: 1,
+            rate: 5_000,
+            tax_rate_id: null,
+            is_taxable: false,
+          },
+        ],
+        { client_id: clientId, region_code: null, default_currency_code: 'USD' },
+        { user: { id: userId } } as never,
+        tenant,
+      );
+    });
+
+    // A serviceless freeform line becomes taxable in the chosen rate's region.
+    const taxable = await db('invoice_charges')
+      .where({ tenant, item_id: taxableItemId })
+      .first();
+    expect(taxable.is_taxable).toBe(true);
+    expect(taxable.tax_region).toBe(region.region_code);
+
+    // An explicitly non-taxable line is not dragged into the region fallback.
+    const exempt = await db('invoice_charges')
+      .where({ tenant, item_id: exemptItemId })
+      .first();
+    expect(exempt.is_taxable).toBe(false);
+
+    // An unknown / foreign tax rate id is rejected before any row is written.
+    const countBefore = await db('invoice_charges')
+      .where({ tenant, invoice_id: fixture.invoiceId })
+      .count<{ count: string }>('item_id as count')
+      .first();
+    await expect(
+      db.transaction(async (trx) => {
+        await persistManualInvoiceCharges(
+          trx,
+          fixture.invoiceId,
+          [
+            {
+              item_id: uuidv4(),
+              description: 'Forged tax treatment',
+              quantity: 1,
+              rate: 1_000,
+              tax_rate_id: uuidv4(),
+              is_taxable: true,
+            },
+          ],
+          { client_id: clientId, region_code: null, default_currency_code: 'USD' },
+          { user: { id: userId } } as never,
+          tenant,
+        );
+      }),
+    ).rejects.toMatchObject({ code: 'TAX_RATE_NOT_FOUND' });
+    const countAfter = await db('invoice_charges')
+      .where({ tenant, invoice_id: fixture.invoiceId })
+      .count<{ count: string }>('item_id as count')
+      .first();
+    expect(Number(countAfter?.count)).toBe(Number(countBefore?.count));
   });
 
   it('applies a configured service-scoped discount only to matching service rows', async () => {

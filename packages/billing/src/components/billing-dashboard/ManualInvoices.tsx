@@ -13,6 +13,7 @@ import {
 import { getInvoiceLineItems } from '@alga-psa/billing/actions/invoiceQueries';
 import { getActiveClientLocationsForBilling } from '@alga-psa/billing/actions/billingClientLocationActions';
 import { getClientBillingProfilesForBilling } from '@alga-psa/billing/actions/billingProfileActions';
+import { getTaxRates } from '@alga-psa/billing/actions/taxRateActions';
 import type { ManualInvoiceUpdate } from '@alga-psa/billing/actions/invoiceActions'; // Import the specific type
 import type { ManualInvoiceItem as ManualInvoiceItemForAction } from '@alga-psa/billing/actions/manualInvoiceActions'; // Import and alias
 import type {
@@ -55,6 +56,16 @@ interface SelectOption {
   label: string;
 }
 
+/** The subset of a tenant tax rate the per-line tax treatment needs. */
+interface TaxRateChoice {
+  tax_rate_id: string;
+  region_code: string;
+  tax_percentage: number;
+  name?: string | null;
+  description?: string | null;
+  is_active?: boolean;
+}
+
 interface ManualInvoicesProps {
   clients: IClient[];
   services: IService[];
@@ -88,9 +99,10 @@ const isManualInvoiceFailure = (result: unknown): result is ManualInvoiceFailure
 
 // This is the primary state type for manual items within this component
 // Reverted: Keep is_taxable, remove tax_rate_id
-interface EditableInvoiceItem extends Omit<IInvoiceCharge, 'tenant' | 'created_at' | 'updated_at' | 'created_by' | 'updated_by' | 'tax_region' | 'tax_rate' | 'tax_amount' | 'net_amount' | 'total_price' | 'unit_price'> {
+interface EditableInvoiceItem extends Omit<IInvoiceCharge, 'tenant' | 'created_at' | 'updated_at' | 'created_by' | 'updated_by' | 'tax_rate' | 'tax_amount' | 'net_amount' | 'total_price' | 'unit_price'> {
   rate: number; // Represents unit_price for editing (in cents)
-  // tax_rate_id?: string | null; // Removed
+  /** Chosen tax treatment for one-time lines; null/empty means non-taxable. */
+  tax_rate_id?: string | null;
   is_taxable?: boolean; // Add is_taxable back to the interface
   isExisting?: boolean;
   isRemoved?: boolean;
@@ -124,7 +136,7 @@ const baseDefaultItem: Omit<EditableInvoiceItem, 'invoice_id'> = {
   isExisting: false,
   isRemoved: false,
   is_taxable: false, // Default to non-taxable until a service with tax_rate_id is selected
-  // tax_rate_id: null, // Removed
+  tax_rate_id: null,
   discount_type: undefined,
   discount_percentage: undefined,
   applies_to_item_id: undefined,
@@ -281,7 +293,10 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
         parent_item_id: item.parent_item_id,
         is_manual: true,
         is_taxable: item.is_taxable, // Include is_taxable from the item
-        // tax_rate_id: item.tax_rate_id || null, // Removed
+        // Carried so the per-line tax treatment control can restore the chosen
+        // rate on reload; a non-taxable line keeps is_taxable=false and resolves
+        // to no rate regardless of its stored region.
+        tax_region: item.tax_region ?? undefined,
         manual_line_metadata: (item as IInvoiceCharge).manual_line_metadata ?? null,
         location_id: item.location_id ?? null,
         billing_profile_id: item.billing_profile_id ?? null,
@@ -318,6 +333,10 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   // client. The standard manual-invoice generator leaves these undefined.
   const [locationOptions, setLocationOptions] = useState<SelectOption[]>([]);
   const [billingProfileOptions, setBillingProfileOptions] = useState<SelectOption[]>([]);
+  // Tenant tax rates for the per-line tax treatment control. Loaded once; an
+  // empty list simply hides the control rather than defaulting a line to a
+  // taxability the operator did not choose.
+  const [taxRates, setTaxRates] = useState<TaxRateChoice[]>([]);
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [loading, setLoading] = useState(false);
@@ -481,6 +500,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
               parent_item_id: item.parent_item_id,
               is_manual: true,
               is_taxable: item.is_taxable,
+              tax_region: item.tax_region ?? undefined,
               manual_line_metadata: (item as IInvoiceCharge).manual_line_metadata ?? null,
               location_id: item.location_id ?? null,
               billing_profile_id: item.billing_profile_id ?? null,
@@ -563,6 +583,33 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
       cancelled = true;
     };
   }, [attributionClientId]);
+
+  // Tax treatments are tenant-wide, so they are loaded once. Only the
+  // draft-adjustment editor exposes the control; the manual generator keeps its
+  // legacy behavior by leaving taxRateOptions undefined.
+  useEffect(() => {
+    if (!isDraftAdjustments) return;
+    let cancelled = false;
+    const loadTaxRates = async () => {
+      try {
+        const result = await getTaxRates();
+        if (cancelled) return;
+        if (isActionMessageError(result) || isActionPermissionError(result)) {
+          console.warn('[ManualInvoices] Tax rates unavailable for the tax treatment control');
+          return;
+        }
+        setTaxRates((result as TaxRateChoice[]) ?? []);
+      } catch (error) {
+        if (!cancelled) {
+          console.warn('[ManualInvoices] Failed to load tax rates', error);
+        }
+      }
+    };
+    void loadTaxRates();
+    return () => {
+      cancelled = true;
+    };
+  }, [isDraftAdjustments]);
 
   const handleAddItem = (isDiscount: boolean = false) => {
     const newItem: EditableInvoiceItem = {
@@ -775,8 +822,29 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           .filter(item => item.isExisting && item.isRemoved && item.item_id)
           .map(item => item.item_id!); // item_id is guaranteed here by filter
 
-        // Map EditableInvoiceItem to IInvoiceCharge for newItems
-        const mapToNewItemSaveFormat = (item: EditableInvoiceItem): IInvoiceCharge => ({
+        // Carries the operator's tax-treatment choice alongside the partial-period
+        // inputs. The charge has no tax_rate_id column, so this echo is what lets
+        // a reload restore the exact rate (the charge's tax_region alone cannot
+        // disambiguate two rates that share a region). The server still resolves
+        // and validates tax_rate_id into tax_region/is_taxable independently.
+        const withTaxTreatmentMetadata = (
+          item: EditableInvoiceItem,
+        ): ManualLineMetadata | null => {
+          const next: Record<string, unknown> = { ...(item.manual_line_metadata ?? {}) };
+          if (item.tax_rate_id) {
+            next.tax_rate_id = item.tax_rate_id;
+          } else {
+            delete next.tax_rate_id;
+          }
+          return Object.keys(next).length > 0 ? (next as ManualLineMetadata) : null;
+        };
+
+        // Map EditableInvoiceItem to IInvoiceCharge for newItems. `tax_rate_id`
+        // is an authoring override (there is no such column); the server turns it
+        // into the charge's tax_region/is_taxable.
+        const mapToNewItemSaveFormat = (
+          item: EditableInvoiceItem,
+        ): IInvoiceCharge & { tax_rate_id?: string | null } => ({
           item_id: item.item_id || uuidv4(), // Ensure ID exists
           invoice_id: item.invoice_id,
           tenant: '', // Backend handles tenant
@@ -788,8 +856,8 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           tax_amount: 0, // Calculated backend
           net_amount: 0, // Calculated backend
           is_manual: true,
-          is_taxable: item.is_taxable, // Include is_taxable property
-          // tax_rate_id: item.tax_rate_id, // Removed
+          is_taxable: item.is_discount ? false : (item.tax_rate_id ? true : item.is_taxable), // Include is_taxable property
+          tax_rate_id: item.tax_rate_id ?? null,
           is_discount: item.is_discount,
           discount_type: item.discount_type,
           discount_percentage: item.discount_percentage,
@@ -801,7 +869,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           is_bundle_header: item.is_bundle_header as any,
           parent_item_id: item.parent_item_id,
           rate: item.rate, // Add the missing rate property
-          manual_line_metadata: item.manual_line_metadata ?? null,
+          manual_line_metadata: withTaxTreatmentMetadata(item),
           location_id: item.location_id ?? null,
           billing_profile_id: item.billing_profile_id ?? null,
           // Omit audit fields
@@ -818,9 +886,9 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           discount_type: item.discount_type,
           discount_percentage: item.discount_percentage,
           applies_to_item_id: item.applies_to_item_id,
-          is_taxable: item.is_taxable, // Include is_taxable property
-          // tax_rate_id: item.tax_rate_id, // Removed
-          manual_line_metadata: item.manual_line_metadata ?? null,
+          is_taxable: item.is_discount ? false : (item.tax_rate_id ? true : item.is_taxable),
+          tax_rate_id: item.tax_rate_id,
+          manual_line_metadata: withTaxTreatmentMetadata(item),
           location_id: item.location_id ?? null,
           billing_profile_id: item.billing_profile_id ?? null,
         });
@@ -905,6 +973,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
             parent_item_id: item.parent_item_id,
             is_manual: true,
             is_taxable: item.is_taxable, // Include is_taxable from the item
+            tax_region: item.tax_region ?? undefined,
             manual_line_metadata: (item as IInvoiceCharge).manual_line_metadata ?? null,
             location_id: item.location_id ?? null,
             billing_profile_id: item.billing_profile_id ?? null,
@@ -1076,6 +1145,40 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
       };
     });
 
+  const taxRateOptions: SelectOption[] = taxRates.map((rate) => ({
+    value: rate.tax_rate_id,
+    label: `${rate.name || rate.description || rate.region_code} (${rate.tax_percentage}%)`,
+  }));
+
+  const taxRateByRegion = new Map<string, string>();
+  for (const rate of taxRates) {
+    if (rate.region_code && !taxRateByRegion.has(rate.region_code)) {
+      taxRateByRegion.set(rate.region_code, rate.tax_rate_id);
+    }
+  }
+
+  // Preselects a one-time line's tax treatment: an explicit operator choice
+  // wins, otherwise derive from the selected service, otherwise match the
+  // stored region. Discounts/credits are never taxed.
+  const resolveInitialTaxRateId = (item: EditableInvoiceItem): string | null => {
+    if (item.is_discount) return null;
+    // An in-session choice always wins over anything re-derived from storage.
+    if (item.tax_rate_id !== undefined) return item.tax_rate_id ?? null;
+    const metadataRateId = item.manual_line_metadata?.tax_rate_id;
+    if (typeof metadataRateId === 'string' && metadataRateId) return metadataRateId;
+    // A row explicitly persisted as non-taxable stays non-taxable regardless of
+    // the region fallback stored alongside it.
+    if (item.is_taxable === false) return null;
+    // Prefer the exact region persisted on the charge (what the operator chose
+    // or last saved) over the selected service's current default.
+    if (item.tax_region) {
+      const storedRateId = taxRateByRegion.get(item.tax_region);
+      if (storedRateId) return storedRateId;
+    }
+    const serviceRateId = services.find((service) => service.service_id === item.service_id)?.tax_rate_id;
+    return serviceRateId ?? null;
+  };
+
   // Helper to prepare item prop for LineItem component
   const mapToLineItemEditable = (item: EditableInvoiceItem): LineItemEditableItem => ({
       item_id: item.item_id,
@@ -1083,8 +1186,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
       quantity: item.quantity,
       description: item.description,
       rate: item.rate, // Pass rate in cents
-      // tax_rate_id: item.tax_rate_id, // Removed
-      // is_taxable removed; derived from selectedService.tax_rate_id
+      tax_rate_id: resolveInitialTaxRateId(item),
       isExisting: item.isExisting,
       isRemoved: item.isRemoved,
       is_discount: item.is_discount,
@@ -1421,6 +1523,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                       currencyCode={currencyCode}
                       locationOptions={isDraftAdjustments ? locationOptions : undefined}
                       billingProfileOptions={isDraftAdjustments ? billingProfileOptions : undefined}
+                      taxRateOptions={isDraftAdjustments ? taxRateOptions : undefined}
                     />
                   ))}
                 </div>

@@ -16,6 +16,8 @@ export interface ManualInvoiceUpdate { // Add export
   discount_percentage?: number;
   applies_to_item_id?: string;
   is_taxable?: boolean; // Keep for purely manual items without service
+  /** Per-line tax treatment override; null/omitted keeps the stored treatment. */
+  tax_rate_id?: string | null;
   location_id?: string | null;
   billing_profile_id?: string | null;
   applies_to_service_id?: string;

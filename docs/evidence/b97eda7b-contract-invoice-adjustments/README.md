@@ -287,6 +287,48 @@ processes corrupt the shared `test_database`):
 | `tsc --noEmit` billing / types / db | pass |
 | `packages/billing` `npx tsup` | pass |
 
+## Per-line tax treatment (Draft Implementation follow-up, 2026-09-23)
+
+The draft-adjustment editor now exposes the Add Charge **tax treatment** the
+plan requires, without changing the legacy manual-invoice generator.
+
+- `LineItem` accepts optional `taxRateOptions` and renders a `Tax treatment`
+  select (a `Non-taxable` default plus the tenant's rates) for non-discount
+  charges only when options are supplied. `ManualInvoices` loads them through
+  `getTaxRates()` only in `variant="draftAdjustments"`, so the legacy generator
+  keeps its prior behavior (no control) and an empty/permission-denied result
+  hides the control rather than defaulting taxability.
+- The authoring field rides through `ManualInvoiceUpdate.tax_rate_id` and the
+  new-item mapping. `resolveTaxRegionCodeForRate` resolves the id inside the
+  tenant to the charge's `tax_region`/`is_taxable`; `validateManualChargeAttribution`
+  rejects a foreign/unknown rate with `TAX_RATE_NOT_FOUND` before any row is
+  written. The chosen id is echoed in `manual_line_metadata.tax_rate_id` so a
+  reload restores the exact rate (region alone cannot disambiguate).
+- The collapsed row's taxable badge now reflects the effective per-line
+  treatment (`editState.tax_rate_id`) instead of only the selected service's
+  default, so a freeform line with an explicit rate — or a service line whose
+  operator overrode it to non-taxable — is labelled correctly while collapsed.
+- Behavioral coverage: `LineItem.test.tsx` (the control reports the operator
+  choice; it is absent with no options; the collapsed badge tracks the explicit
+  treatment), `contractInvoiceAdjustments.db.test.ts` "persists an explicit
+  per-line tax treatment and rejects a tax rate outside the tenant", and
+  `contractInvoiceManualCredit.test.ts` T233, which now proves the taxable `$100`
+  freeform line lands `$10` tax / `$110` total through the real action and
+  returns to `0` when the treatment is cleared.
+
+Verification snapshot this round (all green, sequential DB runs):
+
+| Suite | Result |
+| --- | --- |
+| `packages/billing` unit (`npx vitest run`) | 311 files / 1558 tests |
+| `contractInvoiceAdjustments.db.test.ts` | 20 tests |
+| `contractInvoiceManualCredit.test.ts` | 5 tests |
+| `billingInvoiceGeneration_discounts.test.ts` | 4 tests |
+| `exportReadiness.test.ts` + `invoiceExportGuards.test.ts` | 13 tests |
+| `GenerateTab.test.tsx` + `InvoicePreviewPanel.test.tsx` | 6 tests |
+| `tsc --noEmit` billing / types / db | pass |
+| `packages/billing` `npx tsup` | pass |
+
 ## Cleanup / caveats
 
 - The seeded discount is active for the synthetic client and will keep applying

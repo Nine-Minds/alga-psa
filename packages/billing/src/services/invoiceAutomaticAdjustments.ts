@@ -451,7 +451,10 @@ export async function reconcileAutomaticInvoiceDiscounts(
     sourceId: discount.discount_id,
     description: discount.discount_name,
     netAmount: -discount.amount,
-    reason: `Automatic discount: ${discount.discount_name}${discount.base_amount !== undefined ? ` (${discount.scope} scope, base ${discount.base_amount})` : ''}`,
+    // The editor renders this reason for read-only automatic rows; carrying the
+    // affected period and eligible base makes the settlement auditable without
+    // re-deriving it from the source configuration.
+    reason: `Automatic discount: ${discount.discount_name} (${discount.scope} scope, base ${discount.base_amount}, period ${window.start} to ${window.end})`,
     periodStart: window.start,
     periodEnd: window.end,
     isDiscount: true,

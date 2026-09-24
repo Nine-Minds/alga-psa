@@ -35,6 +35,13 @@ export interface EditableItem { // Add export
   discount_type?: DiscountType;
   discount_percentage?: number;
   applies_to_item_id?: string;
+  /**
+   * Chosen tax treatment. `null`/empty means non-taxable; a tax rate id taxes
+   * the line in that rate's region. Persisted on the charge as
+   * `tax_region`/`is_taxable` (there is no tax_rate_id column on
+   * `invoice_charges`) and echoed in `manual_line_metadata.tax_rate_id`.
+   */
+  tax_rate_id?: string | null;
   /** Client location this one-time line is attributed to. */
   location_id?: string | null;
   /** Billing profile this one-time line is attributed to. */
@@ -77,6 +84,12 @@ interface LineItemProps {
   locationOptions?: SelectOption[];
   /** When provided, one-time charges expose a billing-profile attribution select. */
   billingProfileOptions?: SelectOption[];
+  /**
+   * Tenant tax rates for the per-line tax treatment. When omitted (or empty) the
+   * line stays non-taxable and no control is rendered, preserving the legacy
+   * manual-invoice generator.
+   */
+  taxRateOptions?: SelectOption[];
 }
 
 export const LineItem: React.FC<LineItemProps> = ({
@@ -91,6 +104,7 @@ export const LineItem: React.FC<LineItemProps> = ({
   currencyCode = 'USD',
   locationOptions,
   billingProfileOptions,
+  taxRateOptions,
 }) => {
   const { t } = useTranslation('msp/billing');
   const currencySymbol = getCurrencySymbol(currencyCode);
@@ -128,6 +142,7 @@ export const LineItem: React.FC<LineItemProps> = ({
     discount_type: item.discount_type,
     discount_percentage: item.discount_percentage,
     applies_to_item_id: item.applies_to_item_id,
+    tax_rate_id: item.tax_rate_id,
     location_id: item.location_id,
     billing_profile_id: item.billing_profile_id,
     isRemoved: item.isRemoved,
@@ -181,6 +196,12 @@ export const LineItem: React.FC<LineItemProps> = ({
   
   // Calculate subtotal (percentage discounts are priced server-side as 0 here)
   const subtotal = resolveLineItemAmount(editState);
+
+  // A manual credit is a negative-rate charge persisted as a fixed
+  // discount-like row. It keeps its quantity semantics, so it renders with a
+  // quantity and a unit-credit amount rather than the authored-discount shape.
+  const isQuantityCredit = Boolean(editState.is_discount && editState.is_manual_credit);
+  const creditUnitInDollars = Math.abs(editState.rate) / 100;
 
   // Convert rate to dollars for display (only for non-percentage discounts)
   const rateInDollars = editState.rate / 100;
@@ -238,7 +259,11 @@ export const LineItem: React.FC<LineItemProps> = ({
           if (service) {
             newState.rate = service.rate ?? 0; // Use service rate, default 0
             newState.description = service.label.toString();
-            // is_taxable removed; derived from selectedService.tax_rate_id
+            // Seed the tax treatment from the service default; the operator can
+            // still override it below.
+            newState.tax_rate_id = service.tax_rate_id ?? null;
+          } else {
+            newState.tax_rate_id = null;
           }
         }
           break;
@@ -260,6 +285,9 @@ export const LineItem: React.FC<LineItemProps> = ({
         case 'location_id':
         case 'billing_profile_id':
           newState[field] = (value as string) || null;
+          break;
+        case 'tax_rate_id':
+          newState.tax_rate_id = (value as string) || null;
           break;
         case 'is_discount':
           newState.is_discount = value as boolean;
@@ -302,9 +330,11 @@ export const LineItem: React.FC<LineItemProps> = ({
           {editState.is_discount ? (
             <>
               <span className="font-medium text-blue-600">
-                {editState.applies_to_item_id
-                  ? t('lineItem.collapsed.itemDiscount', { defaultValue: 'Item Discount' })
-                  : t('lineItem.collapsed.invoiceDiscount', { defaultValue: 'Invoice Discount' })}
+                {isQuantityCredit
+                  ? t('lineItem.collapsed.credit', { defaultValue: 'Credit' })
+                  : editState.applies_to_item_id
+                    ? t('lineItem.collapsed.itemDiscount', { defaultValue: 'Item Discount' })
+                    : t('lineItem.collapsed.invoiceDiscount', { defaultValue: 'Invoice Discount' })}
               </span>
               <span className="mx-2 text-muted-foreground">|</span>
               <span className="text-muted-foreground">
@@ -329,9 +359,11 @@ export const LineItem: React.FC<LineItemProps> = ({
               <span className="font-medium">
                 {selectedService?.label || t('lineItem.collapsed.selectService', { defaultValue: 'Select Service' })}
               </span>
-              {/* Derive taxable status directly from tax_rate_id */}
+              {/* Reflect the effective per-line tax treatment, which can differ
+                  from the selected service's default (an explicit override or a
+                  freeform line with its own chosen rate). */}
               <span className="text-xs text-muted-foreground ml-1">
-                {!!selectedService?.tax_rate_id
+                {!!editState.tax_rate_id
                   ? t('lineItem.collapsed.taxable', { defaultValue: '(Taxable)' })
                   : t('lineItem.collapsed.nonTaxable', { defaultValue: '(Non-Taxable)' })}
               </span>
@@ -368,12 +400,14 @@ export const LineItem: React.FC<LineItemProps> = ({
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-medium">
-            {editState.is_discount
-              ? t('lineItem.expanded.discount', { defaultValue: 'Discount' })
-              : t('lineItem.expanded.item', {
-                  defaultValue: 'Item {{number}}',
-                  number: index + 1,
-                })}
+            {isQuantityCredit
+              ? t('lineItem.expanded.credit', { defaultValue: 'Credit' })
+              : editState.is_discount
+                ? t('lineItem.expanded.discount', { defaultValue: 'Discount' })
+                : t('lineItem.expanded.item', {
+                    defaultValue: 'Item {{number}}',
+                    number: index + 1,
+                  })}
           </h3>
           {editState.isRemoved && (
             <span className="text-xs text-destructive bg-destructive/10 px-2 py-1 rounded">
@@ -434,6 +468,51 @@ export const LineItem: React.FC<LineItemProps> = ({
                 step="0.01"
                 value={editState.quantity}
                 onChange={(e) => handleLocalChange('quantity', parseFloat(e.target.value) || 0)}
+                className="w-full"
+                disabled={editState.isRemoved}
+              />
+            </div>
+          </>
+        ) : isQuantityCredit ? (
+          // Quantity-derived credit: quantity x unit credit. It persists as a
+          // fixed discount-like row, but stays quantity-editable.
+          <>
+            <div>
+              <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                {t('lineItem.fields.quantity', { defaultValue: 'Quantity' })}
+              </label>
+              <Input
+                id='quantity-input'
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={editState.quantity}
+                onChange={(e) => handleLocalChange('quantity', parseFloat(e.target.value) || 0)}
+                className="w-full"
+                disabled={editState.isRemoved}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                {t('lineItem.fields.creditUnit', {
+                  defaultValue: 'Unit credit ({{currencySymbol}})',
+                  currencySymbol,
+                })}
+              </label>
+              <Input
+                id='credit-unit-input'
+                type="number"
+                min="0"
+                step="0.01"
+                value={creditUnitInDollars}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  const cents = raw.includes('.')
+                    ? Math.round(parseFloat(raw) * 100)
+                    : parseInt(raw, 10) * 100;
+                  handleLocalChange('rate', cents || 0);
+                }}
                 className="w-full"
                 disabled={editState.isRemoved}
               />
@@ -523,7 +602,9 @@ export const LineItem: React.FC<LineItemProps> = ({
           <>
             <div className="col-span-2">
               <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
-                {t('lineItem.fields.discountDescription', { defaultValue: 'Discount Description' })}
+                {isQuantityCredit
+                  ? t('lineItem.fields.description', { defaultValue: 'Description' })
+                  : t('lineItem.fields.discountDescription', { defaultValue: 'Discount Description' })}
               </label>
               <Input
                 id='discount-description-input'
@@ -532,13 +613,15 @@ export const LineItem: React.FC<LineItemProps> = ({
                 onChange={(e) => handleLocalChange('description', e.target.value)}
                 className="w-full"
                 disabled={editState.isRemoved}
-                placeholder={t('lineItem.placeholders.discountDescription', {
-                  defaultValue: 'e.g., Early Payment Discount',
-                })}
+                placeholder={isQuantityCredit
+                  ? t('lineItem.placeholders.creditDescription', { defaultValue: 'e.g., Goodwill credit' })
+                  : t('lineItem.placeholders.discountDescription', {
+                      defaultValue: 'e.g., Early Payment Discount',
+                    })}
               />
             </div>
 
-            {invoiceItems && invoiceItems.length > 0 && (
+            {!isQuantityCredit && invoiceItems && invoiceItems.length > 0 && (
               <div className="col-span-2">
                 <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
                   {t('lineItem.fields.applyDiscountTo', { defaultValue: 'Apply Discount To' })}
@@ -588,12 +671,34 @@ export const LineItem: React.FC<LineItemProps> = ({
                     : parseInt(value, 10) * 100;
                   handleLocalChange('rate', rateInCents || 0);
                 }}
-                className="w-full"
-                disabled={editState.isRemoved}
-              />
-            </div>
+                 className="w-full"
+                 disabled={editState.isRemoved}
+               />
+             </div>
 
-            {locationOptions && locationOptions.length > 0 && (
+             {taxRateOptions && taxRateOptions.length > 0 && (
+               <div className="col-span-1">
+                 <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                   {t('lineItem.fields.taxTreatment', { defaultValue: 'Tax treatment' })}
+                 </label>
+                 <CustomSelect
+                   id='line-item-tax-treatment-select'
+                   value={editState.tax_rate_id || ''}
+                   onValueChange={(value) => handleLocalChange('tax_rate_id', value)}
+                   options={[
+                     {
+                       value: '',
+                       label: t('lineItem.fields.nonTaxable', { defaultValue: 'Non-taxable' }),
+                     },
+                     ...taxRateOptions,
+                   ]}
+                   className="w-full"
+                   disabled={editState.isRemoved}
+                 />
+               </div>
+             )}
+
+             {locationOptions && locationOptions.length > 0 && (
               <div className="col-span-1">
                 <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
                   {t('lineItem.fields.location', { defaultValue: 'Location' })}
@@ -665,9 +770,11 @@ export const LineItem: React.FC<LineItemProps> = ({
         {editState.is_discount ? (
           <>
             <span className="text-blue-600 font-medium">
-              {editState.discount_type === 'percentage'
-                ? t('lineItem.summary.percentageDiscount', { defaultValue: 'Percentage Discount' })
-                : t('lineItem.summary.fixedDiscount', { defaultValue: 'Fixed Discount' })}
+              {isQuantityCredit
+                ? t('lineItem.summary.credit', { defaultValue: 'Credit' })
+                : editState.discount_type === 'percentage'
+                  ? t('lineItem.summary.percentageDiscount', { defaultValue: 'Percentage Discount' })
+                  : t('lineItem.summary.fixedDiscount', { defaultValue: 'Fixed Discount' })}
             </span>
             <span className="mx-2">|</span>
             <span>

@@ -16,7 +16,7 @@ import { IInvoiceCharge, InvoiceViewModel, DiscountType } from '@alga-psa/types'
 import { BillingEngine } from '../lib/billing/billingEngine';
 import ProjectBillingCapUsage from '../models/projectBillingCapUsage';
 import ProjectBillingScheduleEntry from '../models/projectBillingScheduleEntry';
-import { persistInvoiceCharges, persistManualInvoiceCharges, validateManualChargeAttribution } from '../services/invoiceService'; // Import persistManualInvoiceCharges
+import { persistInvoiceCharges, persistManualInvoiceCharges, resolveTaxRegionCodeForRate, validateManualChargeAttribution } from '../services/invoiceService'; // Import persistManualInvoiceCharges
 import { reconcileAutomaticInvoiceAdjustments } from '../services/invoiceAutomaticAdjustments';
 import Invoice from '@alga-psa/billing/models/invoice';
 import { v4 as uuidv4 } from 'uuid';
@@ -2028,6 +2028,13 @@ async function updateManualInvoiceItemsInternal(
     if (changes.updatedItems && changes.updatedItems.length > 0) {
       // First pass: Update all items with their new values
       for (const item of changes.updatedItems) {
+        // A per-line tax treatment resolves to the charge's region. An explicit
+        // rate id sets the region; null/undefined (non-taxable or untouched)
+        // leaves the stored region alone.
+        const explicitTaxRateId = item.tax_rate_id;
+        const resolvedTaxRegion = typeof explicitTaxRateId === 'string' && explicitTaxRateId
+          ? (await resolveTaxRegionCodeForRate(trx, tenant, explicitTaxRateId)) ?? undefined
+          : undefined;
         const updateData = {
           service_id: item.service_id,
           description: item.description,
@@ -2042,6 +2049,7 @@ async function updateManualInvoiceItemsInternal(
           location_id: item.location_id,
           billing_profile_id: item.billing_profile_id,
           is_taxable: item.is_taxable,
+          tax_region: resolvedTaxRegion,
           manual_line_metadata: item.manual_line_metadata !== undefined
             ? (item.manual_line_metadata ? JSON.stringify(item.manual_line_metadata) : null)
             : undefined,

@@ -530,6 +530,22 @@ interface ManualInvoiceItemInput extends NetAmountItem {
 }
 
 
+/**
+ * Resolves the region code a per-line tax treatment selects. A caller-provided
+ * tax rate is validated against the tenant; an unknown or foreign id yields
+ * null so the line is not silently taxed in the wrong region.
+ */
+export async function resolveTaxRegionCodeForRate(
+  tx: Knex.Transaction,
+  tenant: string,
+  taxRateId: string,
+): Promise<string | null> {
+  const rate = await tenantScopedTable(tx, tenant, 'tax_rates')
+    .where({ tax_rate_id: taxRateId, tenant })
+    .first('region_code');
+  return (rate?.region_code as string | null) ?? null;
+}
+
 export function calculateNetAmount(
   requestItem: NetAmountItem,
   currentSubtotal: number,
@@ -781,7 +797,11 @@ export async function validateManualChargeAttribution(
   tx: Knex.Transaction,
   tenant: string,
   clientId: string,
-  items: Array<{ location_id?: string | null; billing_profile_id?: string | null }>,
+  items: Array<{
+    location_id?: string | null;
+    billing_profile_id?: string | null;
+    tax_rate_id?: string | null;
+  }>,
 ): Promise<void> {
   const locationIds = [...new Set(
     items
@@ -821,6 +841,31 @@ export async function validateManualChargeAttribution(
         'BILLING_PROFILE_NOT_FOUND',
         "The selected billing profile does not belong to this invoice's client.",
         { billingProfileId: foreign },
+      );
+    }
+  }
+
+  // Tax treatments are tenant-wide (not client-scoped). An explicit per-line
+  // tax_rate_id that does not resolve inside this tenant is a forged or stale
+  // selection; reject it before any row is written rather than silently
+  // persisting a taxable line with no region.
+  const taxRateIds = [...new Set(
+    items
+      .map((item) => item.tax_rate_id)
+      .filter((value): value is string => Boolean(value)),
+  )];
+  if (taxRateIds.length > 0) {
+    const owned = await tenantScopedTable(tx, tenant, 'tax_rates')
+      .where({ tenant })
+      .whereIn('tax_rate_id', taxRateIds)
+      .pluck('tax_rate_id');
+    const ownedSet = new Set(owned as string[]);
+    const unknown = taxRateIds.find((id) => !ownedSet.has(id));
+    if (unknown) {
+      throw new ManualInvoiceError(
+        'TAX_RATE_NOT_FOUND',
+        "The selected tax treatment was not found for this tenant.",
+        { taxRateId: unknown },
       );
     }
   }
@@ -881,39 +926,30 @@ export async function persistManualInvoiceCharges(
       }
     }
     // --- Determine Tax Info based on the item's (or service's) Tax Rate ID ---
-    // A per-item tax_rate_id (e.g. from a sales-order line — F045) overrides the
-    // service default.
-    const effectiveTaxRateId = requestItem.tax_rate_id ?? service?.tax_rate_id ?? null;
+    // A per-item tax_rate_id (an explicit operator treatment, e.g. a freeform
+    // charge or a sales-order line — F045) overrides the service default. This
+    // is what lets a serviceless freeform line be taxable without inventing a
+    // service.
+    const explicitTaxRateId = requestItem.tax_rate_id ?? null;
+    const effectiveTaxRateId = explicitTaxRateId ?? service?.tax_rate_id ?? null;
     let serviceTaxRegion: string | null = null;
     let serviceIsTaxable = true; // Default for purely manual items if no service
-    if (service) {
-      if (effectiveTaxRateId) {
-        const taxRateInfo = await tenantScopedTable(tx, tenant, 'tax_rates')
-          .where('tax_rate_id', effectiveTaxRateId)
-          // Add validity checks if needed (e.g., is_active, date range)
-          // For now, just fetch the region code associated with the ID
-          .select('region_code')
-          .first();
-        if (taxRateInfo) {
-          serviceTaxRegion = taxRateInfo.region_code;
-          serviceIsTaxable = true; // A valid tax_rate_id means taxable
-        } else {
-          // tax_rate_id exists but doesn't link to a valid rate? Treat as non-taxable.
-          console.warn(`Service ${service.service_id} has tax_rate_id ${effectiveTaxRateId} but no matching tax_rate found.`);
-          serviceIsTaxable = false;
-          serviceTaxRegion = null;
-        }
+    if (effectiveTaxRateId) {
+      serviceTaxRegion = await resolveTaxRegionCodeForRate(tx, tenant, effectiveTaxRateId);
+      if (serviceTaxRegion) {
+        serviceIsTaxable = true; // A valid tax_rate_id means taxable
       } else {
-        // Service exists but tax_rate_id is NULL, so it's non-taxable
+        // tax_rate_id exists but doesn't link to a valid rate? Treat as non-taxable.
+        console.warn(`Manual charge references tax_rate_id ${effectiveTaxRateId} but no matching tax_rate found.`);
         serviceIsTaxable = false;
-        serviceTaxRegion = null;
       }
+    } else if (service) {
+      // Service exists but tax_rate_id is NULL, so it's non-taxable
+      serviceIsTaxable = false;
     } else {
-      // No service linked, use fallback logic below for purely manual items
-      serviceIsTaxable = requestItem.is_taxable ?? true; // Existing fallback
-      // serviceTaxRegion is derived from tax_rate_id now, or client default if no service/rate
-      // No direct tax_region on requestItem anymore
-      serviceTaxRegion = client.region_code ?? null; // Fallback to client default region if no service linked
+      // No service and no explicit treatment: purely manual fallback.
+      serviceIsTaxable = requestItem.is_taxable ?? true;
+      serviceTaxRegion = client.region_code ?? null;
     }
     // --- End Determine Tax Info ---
 
@@ -951,7 +987,7 @@ export async function persistManualInvoiceCharges(
       unit_price: Math.round(requestItem.rate), // Store the actual rate
       net_amount: netAmount,
       tax_amount: 0, // Placeholder
-      tax_region: service ? serviceTaxRegion : (client.region_code ?? null), // Fallback to client region if no service
+      tax_region: serviceTaxRegion, // Explicit treatment region, service region, or client fallback
       tax_rate: 0, // Placeholder
       total_price: netAmount, // Placeholder
       is_manual: true,

@@ -557,6 +557,102 @@ describe('Contract Invoice Manual Credit', () => {
     expect(Number((resavedInvoice as any).total_amount)).toBe(40000);
   });
 
+  it('T233: persists an explicit freeform tax treatment and clears it through the edit path', async () => {
+    const clientId = context.clientId;
+    const invoiceId = await context.createEntity('invoices', {
+      invoice_number: `TAXTREATMENT-${uuidv4().slice(0, 8)}`,
+      invoice_date: createTestDateISO({ year: 2025, month: 1, day: 1 }),
+      due_date: createTestDateISO({ year: 2025, month: 2, day: 1 }),
+      status: 'draft',
+      client_id: clientId,
+      currency_code: 'USD',
+      is_manual: false,
+      total_amount: 0,
+    }, 'invoice_id');
+
+    const taxRate = await context.db('tax_rates')
+      .where({ tenant: context.tenantId, region_code: 'US-NY', is_active: true })
+      .first();
+    expect(taxRate?.tax_rate_id).toBeTruthy();
+
+    const itemId = uuidv4();
+    const addedInvoice = await addManualItemsToInvoice(invoiceId, [{
+      item_id: itemId,
+      invoice_id: invoiceId,
+      service_id: undefined,
+      description: 'Taxable freeform charge',
+      quantity: 1,
+      rate: 10000,
+      unit_price: 10000,
+      total_price: 10000,
+      net_amount: 10000,
+      tax_amount: 0,
+      tax_region: undefined,
+      tax_rate: 0,
+      is_manual: true,
+      is_taxable: true,
+      is_discount: false,
+      tenant: context.tenantId,
+      // Authoring-only field: the server resolves it to the charge's region.
+      tax_rate_id: taxRate.tax_rate_id,
+    } as any], { operationId: uuidv4(), expectedRevision: 0 });
+
+    const afterAdd = await context.db('invoice_charges')
+      .where({ item_id: itemId, tenant: context.tenantId })
+      .first();
+    expect(afterAdd.is_taxable).toBe(true);
+    expect(afterAdd.tax_region).toBe('US-NY');
+    // The chosen treatment is not just stored: the tax pass taxes the $100 line
+    // at the region's 10%, and the invoice total carries it ($100 + $10).
+    expect(Number((addedInvoice as any).tax)).toBe(1000);
+    expect(Number((addedInvoice as any).total_amount)).toBe(11000);
+
+    // Clearing the treatment through the edit path drops the taxable flag; the
+    // invoice tax returns to zero.
+    const clearedInvoice = await updateInvoiceManualItems(invoiceId, {
+      updatedItems: [{
+        item_id: itemId,
+        description: 'Taxable freeform charge',
+        quantity: 1,
+        rate: 10000,
+        is_taxable: false,
+        tax_rate_id: null,
+      }],
+      newItems: [],
+      removedItemIds: [],
+    } as any, { operationId: uuidv4(), expectedRevision: 1 });
+
+    const afterClear = await context.db('invoice_charges')
+      .where({ item_id: itemId, tenant: context.tenantId })
+      .first();
+    expect(afterClear.is_taxable).toBe(false);
+    expect(Number((clearedInvoice as any).tax)).toBe(0);
+    expect(Number((clearedInvoice as any).total_amount)).toBe(10000);
+
+    // Re-applying the treatment restores both the taxable flag, its region and
+    // the taxed total.
+    const reappliedInvoice = await updateInvoiceManualItems(invoiceId, {
+      updatedItems: [{
+        item_id: itemId,
+        description: 'Taxable freeform charge',
+        quantity: 1,
+        rate: 10000,
+        is_taxable: true,
+        tax_rate_id: taxRate.tax_rate_id,
+      }],
+      newItems: [],
+      removedItemIds: [],
+    } as any, { operationId: uuidv4(), expectedRevision: 2 });
+
+    const afterReapply = await context.db('invoice_charges')
+      .where({ item_id: itemId, tenant: context.tenantId })
+      .first();
+    expect(afterReapply.is_taxable).toBe(true);
+    expect(afterReapply.tax_region).toBe('US-NY');
+    expect(Number((reappliedInvoice as any).tax)).toBe(1000);
+    expect(Number((reappliedInvoice as any).total_amount)).toBe(11000);
+  });
+
   it('T022: invoice generation succeeds for a cloned assignment with duplicated contract-line configuration after migration', async () => {
     const preservedClientId = context.clientId;
     const clonedClientId = await createClient(context.db, context.tenantId, 'Cloned Contract Billing Client');

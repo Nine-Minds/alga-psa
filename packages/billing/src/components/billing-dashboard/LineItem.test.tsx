@@ -154,3 +154,61 @@ it('shows an authored fixed discount row as quantity-independent', () => {
 
   expect(screen.getByText('Amount: -$100.00')).toBeTruthy();
 });
+
+it('reports the operator tax-treatment choice when the row is committed', () => {
+  const onChange = vi.fn();
+  render(
+    <LineItem
+      item={baseItem}
+      index={0}
+      isExpanded
+      serviceOptions={serviceOptions}
+      onRemove={vi.fn()}
+      onChange={onChange}
+      onToggleExpand={vi.fn()}
+      currencyCode="USD"
+      taxRateOptions={[
+        { value: 'rate-ny', label: 'NY Sales (8.875%)' },
+        { value: 'rate-ca', label: 'CA Sales (7.25%)' },
+      ]}
+    />,
+  );
+
+  const select = document.getElementById('line-item-tax-treatment-select') as HTMLSelectElement;
+  expect(select).toBeTruthy();
+  fireEvent.change(select, { target: { value: 'rate-ny' } });
+  fireEvent.click(document.getElementById('collapse-line-item-button')!);
+
+  expect(onChange).toHaveBeenCalledWith(
+    expect.objectContaining({ tax_rate_id: 'rate-ny' }),
+  );
+});
+
+it('omits the tax-treatment control when no rates are supplied', () => {
+  renderLineItem(baseItem);
+
+  expect(document.getElementById('line-item-tax-treatment-select')).toBeNull();
+});
+
+it('reflects the effective tax treatment on the collapsed row', () => {
+  const collapsed = (taxRateId: string | null) => (
+    <LineItem
+      item={{ ...baseItem, tax_rate_id: taxRateId }}
+      index={0}
+      isExpanded={false}
+      serviceOptions={serviceOptions}
+      onRemove={vi.fn()}
+      onChange={vi.fn()}
+      onToggleExpand={vi.fn()}
+      currencyCode="USD"
+      taxRateOptions={[{ value: 'rate-ny', label: 'NY Sales (8.875%)' }]}
+    />
+  );
+
+  const taxable = render(collapsed('rate-ny'));
+  expect(screen.getByText('(Taxable)')).toBeTruthy();
+  taxable.unmount();
+
+  render(collapsed(null));
+  expect(screen.getByText('(Non-Taxable)')).toBeTruthy();
+});
