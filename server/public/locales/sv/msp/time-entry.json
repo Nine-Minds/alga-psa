@@ -99,22 +99,22 @@
       "none": "Inga tidposter"
     },
     "bulk": {
-      "selectedCount": "{{count}} markerade"
+      "selectedCount": "Markerade: {{count}}"
     },
     "delete": {
-      "success": "{{count}} tidrapporter har tagits bort",
-      "partialFailure": "{{count}} tidrapporter kunde inte tas bort",
+      "success": "{{count}} tidrapport(er) har tagits bort",
+      "partialFailure": "{{count}} tidrapport(er) kunde inte tas bort",
       "error": "Det gick inte att ta bort tidrapporter"
     },
     "removePeriod": {
-      "success": "{{count}} tidsperioder har tagits bort",
-      "partialFailure": "{{count}} tidsperioder kunde inte tas bort",
+      "success": "{{count}} tidsperiod(er) har tagits bort",
+      "partialFailure": "{{count}} tidsperiod(er) kunde inte tas bort",
       "error": "Det gick inte att ta bort tidsperioder"
     },
     "remove": {
       "title": "Ta bort oanvända poster",
-      "message": "Vill du ta bort {{count}} markerade perioder? Oanvända löneperioder tas bort för hela organisationen tillsammans med eventuella tomma tidrapporter i utkastform för dessa perioder. Detta kan inte ångras.",
-      "timesheetMessage": "Vill du ta bort {{count}} oanvända tidrapporter? Endast tomma tidrapporter i utkastform tas bort och detta kan inte ångras."
+      "message": "Vill du ta bort {{count}} markerad(e) period(er)? Oanvända löneperioder tas bort för hela organisationen tillsammans med eventuella tomma tidrapporter i utkastform för dessa perioder. Detta kan inte ångras.",
+      "timesheetMessage": "Vill du ta bort {{count}} oanvänd(a) tidrapport(er)? Endast tomma tidrapporter i utkastform tas bort och detta kan inte ångras."
     }
   },
   "timeEntryForm": {
@@ -170,7 +170,7 @@
       "noWorkItems": "Inga arbetsposter hittades"
     },
     "paymentWarningTitle": "Varning om betalningskrav",
-    "paymentWarning": "Betalning krävs för en flaggad faktureringsmilstolpe i projektet och har inte bekräftats. Bekräfta betalningen innan du fortsätter arbetet."
+    "paymentWarning": "Betalning krävs för en flaggad debiteringsmilstolpe i projektet och har inte bekräftats. Bekräfta betalningen innan du fortsätter arbetet."
   },
   "workItemList": {
     "meta": {
@@ -227,8 +227,8 @@
       "period": "Period",
       "submitted": "Inskickad",
       "total": "Totalt",
-      "billable": "Debiterbar",
-      "nonBillable": "Icke-debiterbar",
+      "billable": "Debiterbar tid",
+      "nonBillable": "Icke-debiterbar tid",
       "workItem": "Arbetspost",
       "service": "Tjänst",
       "duration": "Varaktighet",
@@ -242,7 +242,7 @@
       "workItem": "Arbetspost",
       "start": "Start",
       "end": "Slut",
-      "billable": "Debiterbar",
+      "billable": "Debiterbar tid",
       "status": "Status"
     },
     "comments": {
@@ -305,7 +305,7 @@
     },
     "bulk": {
       "actionBar": {
-        "selectedCount": "{{count}} markerade",
+        "selectedCount": "Markerade: {{count}}",
         "clear": "Rensa"
       }
     }
@@ -360,7 +360,7 @@
       "entryOne": "tidpost",
       "entryOther": "tidposter",
       "total": "Totalt: {{value}}",
-      "billable": "Debiterbar: {{value}}"
+      "billable": "Debiterbar tid: {{value}}"
     },
     "empty": {
       "title": "Inga tidposter ännu",
@@ -446,8 +446,8 @@
   "addWorkItemDialog": {
     "title": "Lägg till arbetspost",
     "description": "Välj en arbetspost att lägga till i tidrapporten",
-    "close": "Stäng dialogrutan för att lägga till arbetspost",
-    "focus": "Fokusera dialogrutan för att lägga till arbetspost"
+    "close": "Stäng dialogrutan ”Lägg till arbetspost”",
+    "focus": "Fokusera dialogrutan ”Lägg till arbetspost”"
   },
   "timeEntryReadOnly": {
     "viewEntryDetails": "Visa tidpostens detaljer"
