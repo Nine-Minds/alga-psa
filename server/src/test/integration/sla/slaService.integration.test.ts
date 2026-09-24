@@ -668,6 +668,68 @@ describe('SLA Service Integration Tests', () => {
       const status = await getSlaStatus(db, tenantId, ticketId);
       expect(status).toBeNull();
     });
+
+    it('starts SLA and skips recurring and one-off holidays loaded from DATE rows', async () => {
+      const schedule = tenantTable(db, tenantId, 'business_hours_schedules');
+      const targets = tenantTable(db, tenantId, 'sla_policy_targets');
+      await schedule.where({ schedule_id: businessHoursScheduleId }).update({ is_24x7: false });
+      await targets.where({ sla_policy_id: slaPolicyId }).update({ is_24x7: false });
+      for (let day = 0; day <= 6; day += 1) {
+        await tenantTable(db, tenantId, 'business_hours_entries').insert({
+          tenant: tenantId, entry_id: uuidv4(), schedule_id: businessHoursScheduleId,
+          day_of_week: day, start_time: '09:00', end_time: '17:00', is_enabled: day >= 1 && day <= 5,
+        });
+      }
+
+      try {
+        for (const [date, recurring, shouldDelay] of [
+          ['2020-07-13', true, true],
+          ['2026-07-13', false, true],
+          ['2026-07-14', false, false],
+        ] as const) {
+          // Each case must see exactly one holiday so the control case proves
+          // that a nearby date remains a business day.
+          await tenantTable(db, tenantId, 'holidays').where({ schedule_id: businessHoursScheduleId }).delete();
+          await tenantTable(db, tenantId, 'holidays').insert({
+            tenant: tenantId, holiday_id: uuidv4(), schedule_id: businessHoursScheduleId,
+            holiday_name: `Regression ${recurring ? 'recurring' : 'one-off'}`,
+            holiday_date: date, is_recurring: recurring,
+          });
+          const loadedHoliday = await tenantTable(db, tenantId, 'holidays')
+            .where({ schedule_id: businessHoursScheduleId, holiday_date: date }).first();
+          expect(loadedHoliday.holiday_date).toBeInstanceOf(Date);
+          const ticketId = uuidv4();
+          const createdAt = new Date('2026-07-13T10:00:00Z');
+          await insertTicket(db, {
+            tenant: tenantId, ticketId, ticketNumber: `SLA-${uuidv4().slice(0, 6)}`,
+            title: 'Holiday SLA regression', clientId, contactId, statusId: statusOpenId,
+            priorityId: priorityHighId, boardId,
+          });
+          const result = await db.transaction((trx) => startSlaForTicket(
+            trx, tenantId, ticketId, clientId, boardId, priorityHighId, createdAt,
+          ));
+          expect(result.success).toBe(true);
+          expect(result.sla_policy_id).toBe(slaPolicyId);
+          expect(result.sla_started_at).toEqual(createdAt);
+          expect(result.sla_response_due_at!.toISOString()).toBe(shouldDelay
+            ? '2026-07-14T09:31:00.000Z'
+            : '2026-07-13T10:30:00.000Z');
+          expect(result.sla_resolution_due_at!.toISOString()).toBe(shouldDelay
+            ? '2026-07-14T11:01:00.000Z'
+            : '2026-07-13T12:00:00.000Z');
+          const savedTicket = await tenantTable(db, tenantId, 'tickets').where({ ticket_id: ticketId }).first();
+          expect(savedTicket.sla_policy_id).toBe(slaPolicyId);
+          expect(savedTicket.sla_started_at).toBeTruthy();
+          expect(savedTicket.sla_response_due_at).toBeTruthy();
+          expect(savedTicket.sla_resolution_due_at).toBeTruthy();
+        }
+      } finally {
+        await tenantTable(db, tenantId, 'holidays').where({ schedule_id: businessHoursScheduleId }).delete();
+        await tenantTable(db, tenantId, 'business_hours_entries').where({ schedule_id: businessHoursScheduleId }).delete();
+        await schedule.where({ schedule_id: businessHoursScheduleId }).update({ is_24x7: true });
+        await targets.where({ sla_policy_id: slaPolicyId }).update({ is_24x7: true });
+      }
+    });
   });
 });
 

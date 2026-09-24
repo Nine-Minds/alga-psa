@@ -4,6 +4,7 @@ import type { Knex } from 'knex';
 import cronParser from 'cron-parser';
 import type { WorkflowScheduleDayTypeFilter } from '@alga-psa/workflows/persistence';
 import { workflowTenantTable } from './workflowTenantDb';
+import { toCalendarDateString } from '@alga-psa/core';
 const { parseExpression } = cronParser;
 
 type BusinessHoursScheduleRow = {
@@ -108,18 +109,18 @@ const toLocalDateInfo = (occurrence: Date, timezone: string): LocalDateInfo => {
 };
 
 const normalizeHolidayDate = (value: string | Date): string => {
-  if (value instanceof Date) {
-    return value.toISOString().slice(0, 10);
+  try {
+    return toCalendarDateString(value) ?? '';
+  } catch {
+    return '';
   }
-
-  const text = String(value).trim();
-  return text.includes('T') ? text.slice(0, 10) : text;
 };
 
-const normalizeHolidayRows = (holidays: HolidayRow[]): HolidayRow[] => holidays.map((holiday) => ({
-  ...holiday,
-  holiday_date: normalizeHolidayDate(holiday.holiday_date)
-}));
+const normalizeHolidayRows = (holidays: HolidayRow[]): HolidayRow[] => holidays.flatMap((holiday) => {
+  // LEVERAGE: pattern holiday-date-normalize — skip malformed DATE rows at the workflow loader boundary.
+  const holidayDate = normalizeHolidayDate(holiday.holiday_date);
+  return holidayDate ? [{ ...holiday, holiday_date: holidayDate }] : [];
+});
 
 const isHolidayForLocalDate = (
   holidays: HolidayRow[],
