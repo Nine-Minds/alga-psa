@@ -5,6 +5,17 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { BillingProfilePicker } from './BillingProfilePicker';
 
+// Radix scrolls the active option into view as the listbox opens; jsdom has no
+// such API. configurable: the unit suite shares one fork with siblings that
+// redefine this.
+if (typeof HTMLElement.prototype.scrollIntoView !== 'function') {
+  Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+    value: vi.fn(),
+    configurable: true,
+    writable: true,
+  });
+}
+
 /**
  * The picker is how a contract is aimed at a billing profile as it is created,
  * so a pick has to survive the round trip through the controlled value — Radix
