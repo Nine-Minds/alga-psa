@@ -97,7 +97,7 @@ type I18nTextInput = string | { i18nKey: string; defaultValue: string };
 
 type ValueExpressionInput =
   | { type: 'literal'; value: string | number | boolean | null }
-  | { type: 'binding'; bindingId: string }
+  | { type: 'binding'; bindingId: string; fallback?: I18nTextInput }
   | { type: 'path'; path: string }
   | { type: 'template'; template: string; args?: Record<string, ValueExpressionInput> }
   | { type: 'i18n'; i18nKey: string; defaultValue: string };

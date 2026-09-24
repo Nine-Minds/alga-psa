@@ -447,7 +447,6 @@ const resolveExpressionValue = (
     case 'literal':
       return expression.value;
     case 'binding':
-      // LEVERAGE: pattern binding-fallback-resolution — blank optional bindings use their localized default.
       return evaluation.bindings[expression.bindingId] == null || evaluation.bindings[expression.bindingId] === ''
         ? displayText(expression.fallback)
         : evaluation.bindings[expression.bindingId];
