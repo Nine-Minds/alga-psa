@@ -4,13 +4,14 @@ const mocks = vi.hoisted(() => ({
   createTenantKnex: vi.fn(),
   getTenantTimezone: vi.fn(),
   emitDateDomainEventOnce: vi.fn(),
+  loggerError: vi.fn(),
   findOccurrences: vi.fn(),
   source: {} as any,
 }));
 
 vi.mock('@alga-psa/db', () => ({ createTenantKnex: mocks.createTenantKnex }));
 vi.mock('@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions', () => ({ getTenantTimezone: mocks.getTenantTimezone }));
-vi.mock('@alga-psa/core/logger', () => ({ default: { info: vi.fn() } }));
+vi.mock('@alga-psa/core/logger', () => ({ default: { info: vi.fn(), error: mocks.loggerError } }));
 vi.mock('@alga-psa/event-bus/workflow/dateDomainEvents', () => ({ emitDateDomainEventOnce: mocks.emitDateDomainEventOnce }));
 vi.mock('../dateTriggers/registry', () => ({ dateTriggerSources: [mocks.source] }));
 
@@ -58,6 +59,26 @@ describe('date-trigger-scan handler', () => {
     const utcMinusTwelve = createDateTriggerScanHandler(undefined, () => new Date('2026-09-24T10:30:00.000Z'), async () => 'Etc/GMT+12');
     await utcMinusTwelve({ tenantId: 'tenant-1' });
     expect(mocks.findOccurrences).toHaveBeenLastCalledWith(knex, 'tenant-1', '2026-09-23', '2026-10-23');
+  });
+
+  it('continues to later event occurrences and launches workflows after one event publish fails', async () => {
+    const publishError = new Error('event bus unavailable');
+    mocks.findOccurrences.mockResolvedValue([
+      { entityId: 'client-1', clientId: 'client-1', occursOn: '2026-09-24', cycleKey: '2026-09-24', payload: {} },
+      { entityId: 'client-2', clientId: 'client-2', occursOn: '2026-09-25', cycleKey: '2026-09-25', payload: {} },
+    ]);
+    mocks.emitDateDomainEventOnce.mockRejectedValueOnce(publishError).mockResolvedValueOnce(true);
+    const launch = vi.fn().mockResolvedValue(undefined);
+    const handler = createDateTriggerScanHandler(launch, () => new Date('2026-09-24T10:30:00.000Z'));
+
+    await expect(handler({ tenantId: 'tenant-1' })).resolves.toBeUndefined();
+
+    expect(mocks.emitDateDomainEventOnce).toHaveBeenCalledTimes(2);
+    expect(mocks.loggerError).toHaveBeenCalledWith(
+      'Failed to emit date-trigger domain event; the ledger entry can retry on the next scan',
+      expect.objectContaining({ tenantId: 'tenant-1', eventType: 'CLIENT_ANNIVERSARY_UPCOMING', entityId: 'client-1', error: publishError }),
+    );
+    expect(launch).toHaveBeenCalledOnce();
   });
 
   it('rejects a missing tenant and leaves the shared connection open after a scan failure', async () => {

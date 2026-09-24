@@ -43,6 +43,7 @@ export type WorkflowRunLaunchRequest = {
 export type WorkflowRunLaunchResult = {
   runId: string;
   workflowVersion: number;
+  created: boolean;
 };
 
 type WorkflowRunLaunchFailureRequest = {
@@ -88,7 +89,8 @@ export async function recordFailedWorkflowRunLaunch(
     if (existingRun) {
       return {
         runId: existingRun.run_id,
-        workflowVersion: existingRun.workflow_version
+        workflowVersion: existingRun.workflow_version,
+        created: false,
       };
     }
   }
@@ -120,7 +122,8 @@ export async function recordFailedWorkflowRunLaunch(
 
   return {
     runId: run.run_id,
-    workflowVersion: run.workflow_version
+    workflowVersion: run.workflow_version,
+    created: true,
   };
 }
 
@@ -193,7 +196,8 @@ export async function launchPublishedWorkflowRun(
     if (existingRun) {
       return {
         runId: existingRun.run_id,
-        workflowVersion: existingRun.workflow_version
+        workflowVersion: existingRun.workflow_version,
+        created: false,
       };
     }
   }
@@ -228,7 +232,8 @@ export async function launchPublishedWorkflowRun(
 
     return {
       runId: existingRun.run_id,
-      workflowVersion: existingRun.workflow_version
+      workflowVersion: existingRun.workflow_version,
+      created: false,
     };
   }
 
@@ -263,6 +268,7 @@ export async function launchPublishedWorkflowRun(
 
   return {
     runId,
-    workflowVersion: versionRecord.version
+    workflowVersion: versionRecord.version,
+    created: true,
   };
 }

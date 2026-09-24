@@ -110,6 +110,7 @@ describe('workflowRunLauncher', () => {
     expect(result).toEqual({
       runId: 'run-1',
       workflowVersion: 3,
+      created: true,
     });
   });
 
@@ -124,7 +125,7 @@ describe('workflowRunLauncher', () => {
       triggerFireKey: 'date:wf-1:client.anniversary:client-1:2026-09-23:0',
     });
 
-    expect(result).toEqual({ runId: 'existing-run', workflowVersion: 3 });
+    expect(result).toEqual({ runId: 'existing-run', workflowVersion: 3, created: false });
     expect(startRunMock).not.toHaveBeenCalled();
     expect(startWorkflowRuntimeV2TemporalRunMock).not.toHaveBeenCalled();
   });

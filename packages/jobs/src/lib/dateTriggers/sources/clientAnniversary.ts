@@ -13,7 +13,8 @@ export const clientAnniversarySource: DateTriggerSource = {
       .leftJoin('tenant_settings as ts', 'ts.tenant', 'c.tenant')
       .select('c.client_id', 'c.client_name', 'c.client_since')
       .select(knex.raw("COALESCE(c.client_since, (c.created_at AT TIME ZONE COALESCE(ts.settings->>'timezone', 'UTC'))::date)::text as anniversary_anchor"))
-      .where('c.is_inactive', false);
+      .where('c.is_inactive', false)
+      .orderBy('c.client_id', 'asc');
     return rows.flatMap((row) => {
       const anchor = String(row.anniversary_anchor);
       return nextAnnualOccurrence(anchor, fromDate, toDate).map(({ occursOn, yearsAsClient }) => ({

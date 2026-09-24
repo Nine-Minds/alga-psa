@@ -35,10 +35,19 @@ export function createDateTriggerScanHandler(
       for (const occurrence of occurrences) {
         const distance = daysUntil(today, occurrence.occursOn);
         const eventPayload = source.domainEvent.buildPayload(occurrence, distance);
-        await emitDateDomainEventOnce(knex, data.tenantId, {
-          eventType: source.domainEvent.eventType, entityId: occurrence.entityId, cycleKey: occurrence.cycleKey,
-          occursOn: occurrence.occursOn, payload: eventPayload,
-        });
+        try {
+          await emitDateDomainEventOnce(knex, data.tenantId, {
+            eventType: source.domainEvent.eventType, entityId: occurrence.entityId, cycleKey: occurrence.cycleKey,
+            occursOn: occurrence.occursOn, payload: eventPayload,
+          });
+        } catch (error) {
+          logger.error('Failed to emit date-trigger domain event; the ledger entry can retry on the next scan', {
+            tenantId: data.tenantId,
+            eventType: source.domainEvent.eventType,
+            entityId: occurrence.entityId,
+            error,
+          });
+        }
       }
     }
     await launchDateTriggeredWorkflows?.({ tenantId: data.tenantId, today, now, timezone, knex, sources: dateTriggerSources });

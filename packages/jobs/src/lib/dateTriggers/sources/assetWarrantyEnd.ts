@@ -14,7 +14,8 @@ export const assetWarrantyEndSource: DateTriggerSource = {
       .select('a.asset_id', 'a.client_id', 'a.name as asset_name', 'a.warranty_end_date', 'c.client_name', 'ts.settings')
       .whereNotNull('a.warranty_end_date')
       .whereRaw("a.warranty_end_date >= (?::date::timestamp AT TIME ZONE COALESCE(ts.settings->>'timezone', 'UTC')) AND a.warranty_end_date < ((?::date + 1)::timestamp AT TIME ZONE COALESCE(ts.settings->>'timezone', 'UTC'))", [fromDate, toDate])
-      .whereNotIn('a.status', ['retired', 'disposed']);
+      .whereNotIn('a.status', ['retired', 'disposed'])
+      .orderBy('a.asset_id', 'asc');
     return rows.map((r) => {
       const timezone = typeof r.settings?.timezone === 'string' ? r.settings.timezone : 'UTC';
       const occursOn = toTenantLocalDate(r.warranty_end_date, timezone);

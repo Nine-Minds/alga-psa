@@ -26,6 +26,17 @@ function localTimeAt(instant: Date, timezone: string): string {
   return `${values.hour}:${values.minute}`;
 }
 
+function localDateAt(instant: Date, timezone: string): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(instant);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
 export async function launchDateTriggeredWorkflows(params: {
   tenantId: string;
   today: string;
@@ -50,8 +61,10 @@ export async function launchDateTriggeredWorkflows(params: {
     }
     const localTime = trigger.localTime ?? '08:00';
     const localTimezone = trigger.timezone ?? params.timezone;
+    let workflowToday: string;
     try {
       if (localTimeAt(params.now, localTimezone) < localTime) continue;
+      workflowToday = localDateAt(params.now, localTimezone);
     } catch (error) {
       logger.warn('Skipping date workflow with invalid timezone', { tenantId: params.tenantId, workflowId: workflow.workflow_id, source: trigger.source, entityId: null, timezone: localTimezone, error });
       continue;
@@ -61,7 +74,7 @@ export async function launchDateTriggeredWorkflows(params: {
     const schemaMatches = Boolean(expectedSchemaRef && schemaRef === expectedSchemaRef && schemaRegistry.has(schemaRef));
 
     const offsetDays = trigger.offsetDays as number;
-    const { fromDate, toDate } = getDateTriggerOccurrenceRange(params.today, offsetDays);
+    const { fromDate, toDate } = getDateTriggerOccurrenceRange(workflowToday, offsetDays);
     let occurrences: Awaited<ReturnType<DateTriggerSource['findOccurrences']>>;
     try {
       occurrences = await source.findOccurrences(params.knex, params.tenantId, fromDate, toDate);
@@ -76,7 +89,7 @@ export async function launchDateTriggeredWorkflows(params: {
         continue;
       }
       const fireDate = Temporal.PlainDate.from(occurrence.occursOn).add({ days: offsetDays }).toString();
-      const missedDays = Temporal.PlainDate.from(fireDate).until(Temporal.PlainDate.from(params.today), { largestUnit: 'day' }).days;
+      const missedDays = Temporal.PlainDate.from(fireDate).until(Temporal.PlainDate.from(workflowToday), { largestUnit: 'day' }).days;
       if (missedDays < 0 || missedDays > LOOKBACK_DAYS) continue;
       const payload = { ...occurrence.payload, occursOn: occurrence.occursOn, fireDate, offsetDays };
       const validation = schemaRegistry.get(schemaRef).safeParse(payload);
@@ -87,7 +100,7 @@ export async function launchDateTriggeredWorkflows(params: {
       if (launched >= MAX_LAUNCHES_PER_TICK) { remaining += 1; continue; }
       const triggerFireKey = buildDateTriggerFireKey(workflow.workflow_id, trigger.source, occurrence.entityId, occurrence.occursOn, offsetDays);
       try {
-        await launchPublishedWorkflowRun(params.knex, {
+        const result = await launchPublishedWorkflowRun(params.knex, {
         workflowId: workflow.workflow_id,
         tenantId: params.tenantId,
         payload,
@@ -96,7 +109,7 @@ export async function launchDateTriggeredWorkflows(params: {
         triggerMetadata: { source: trigger.source, occursOn: occurrence.occursOn, offsetDays, entityId: occurrence.entityId },
         sourcePayloadSchemaRef: schemaRef,
         });
-        launched += 1;
+        if (result.created) launched += 1;
       } catch (error) {
         logger.error('Failed to launch date-triggered workflow occurrence', { tenantId: params.tenantId, workflowId: workflow.workflow_id, source: trigger.source, entityId: occurrence.entityId, error });
       }
