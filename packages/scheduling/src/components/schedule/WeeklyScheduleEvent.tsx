@@ -86,8 +86,8 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
   const backgroundColor = isHovered ? hoverColor : baseColor;
   const opacity = isPrimary ? 1 : (isComparison ? 0.6 : 1);
   
-  // Determine text color based on background color
-  const textColor = event.work_item_type === 'ticket' ? 'text-primary-950' : 'text-gray-950';
+  // Theme-aware foreground so chips stay legible in dark themes
+  const textColor = 'text-[rgb(var(--color-text-900))]';
 
   // Find assigned technician names for tooltip
   const assignedTechnicians = event.assigned_user_ids?.map(userId => {
