@@ -16,7 +16,7 @@
   "algadesk": {
     "welcome": {
       "title": "Välkommen till AlgaDesk",
-      "description": "Följ arbetsbelastningen för ärenden, övervaka e-postkanalernas funktion och håll koll på varje konversation."
+      "description": "Följ arbetsbelastningen för ärenden, övervaka e-postkanalernas status och håll koll på varje konversation."
     },
     "metrics": {
       "openTickets": "Öppna ärenden",
@@ -31,7 +31,7 @@
       "over7Days": "Över 7 dagar"
     },
     "emailHealth": {
-      "title": "E-postkanalernas funktion",
+      "title": "E-postkanalernas status",
       "summary": "{{healthy}} av {{active}} aktiva kanaler är anslutna.",
       "totalConfigured": "Totalt antal konfigurerade kanaler: {{total}}"
     },
@@ -76,7 +76,7 @@
   "mobileApp": {
     "title": "Ladda ner mobilappen AlgaPSA",
     "description": "Skanna en QR-kod med din telefon för att ladda ner mobilappen AlgaPSA.",
-    "selfHostDescription": "1. Skanna en QR-kod för en appbutik för att installera appen. 2. Tryck på ”Byt server” → ”Skanna QR-kod” i appen och skanna koden ”Anslut den här servern”.",
+    "selfHostDescription": "1. Skanna en appbutiks QR-kod för att installera appen. 2. Tryck i appen på ”Byt server” → ”Skanna QR-kod” och skanna koden ”Anslut den här servern”.",
     "appStore": "App Store (iOS)",
     "playStore": "Google Play (Android)",
     "appStoreQrAlt": "QR-kod som länkar till AlgaPSA-appen i Apple App Store",
