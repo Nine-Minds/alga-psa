@@ -141,7 +141,9 @@
       "hiding": "Döljer…",
       "hide": "Dölj",
       "dismiss": "Dölj {{title}}",
-      "restoring": "Återställer…"
+      "restoring": "Återställer…",
+      "hideSection": "Dölj avsnitt",
+      "hidingSection": "Döljer avsnitt…"
     },
     "hidden": {
       "title": "Dolda konfigurationskort ({{count}})",
@@ -210,7 +212,14 @@
     },
     "errors": {
       "dismissFailed": "Det gick inte att dölja introduktionssteget.",
-      "restoreFailed": "Det gick inte att återställa introduktionssteget."
+      "restoreFailed": "Det gick inte att återställa introduktionssteget.",
+      "dismissSectionFailed": "Det gick inte att dölja introduktionsavsnittet.",
+      "restoreSectionFailed": "Det gick inte att återställa introduktionsavsnittet."
+    },
+    "preferences": {
+      "title": "Inställningar för översiktspanelen",
+      "description": "Det slutförda introduktionsavsnittet är dolt på din översiktspanel.",
+      "restoreSection": "Återställ introduktionsavsnittet"
     }
   },
   "mspDashboard": "MSP-översiktspanel"
