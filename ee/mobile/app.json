@@ -2,7 +2,7 @@
   "expo": {
     "name": "AlgaPSA",
     "slug": "mobile",
-    "version": "1.6.1",
+    "version": "1.6.2",
     "scheme": "alga",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -15,11 +15,14 @@
     },
     "ios": {
       "bundleIdentifier": "com.nineminds.algapsa",
-      "buildNumber": "34",
+      "buildNumber": "35",
       "supportsTablet": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
-      }
+      },
+      "associatedDomains": [
+        "applinks:algapsa.com"
+      ]
     },
     "android": {
       "package": "com.alga.psa.mobile",
@@ -30,7 +33,24 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "googleServicesFile": "./google-services.json"
+      "googleServicesFile": "./google-services.json",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "algapsa.com",
+              "pathPrefix": "/msp/tickets/"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
