@@ -137,7 +137,7 @@
         "oneTimeToken": "Kopiera denna token nu",
         "oneTimeWarning": "Av säkerhetsskäl kan Alga inte visa detta värde igen.",
         "rotate": "Rotera token",
-        "revokePrevious": "Avsluta överlappning mellan token",
+        "revokePrevious": "Avsluta tokenöverlappning",
         "enabled": "Tillåt etableringsanrop",
         "disableWarning": "När etableringen pausas bevaras alla kopplingar och användarnas nuvarande tillstånd."
       },
@@ -554,7 +554,7 @@
           "name": "Namn",
           "status": "Status",
           "lastDelivery": "Senaste leverans",
-          "success": "Lyckades",
+          "success": "Andel lyckade",
           "actions": "Åtgärder"
         },
         "actions": {
@@ -581,7 +581,7 @@
         "columns": {
           "event": "Händelse",
           "status": "Status",
-          "attempted": "Försök gjort",
+          "attempted": "Tidpunkt för försök",
           "response": "Svar",
           "action": "Åtgärd"
         },
@@ -635,7 +635,7 @@
       "rateLimit": {
         "columnTitle": "Anropsgräns",
         "loading": "Laddar…",
-        "summary": "{{maxTokens}} i en anropstopp / {{refillPerMin}} per min",
+        "summary": "{{maxTokens}} vid anropstopp / {{refillPerMin}} per min",
         "source": "Källa: {{label}}",
         "sourceLabels": {
           "key": "Åsidosättning",
@@ -799,7 +799,7 @@
       "invalidInput": "Kontrollera inställningarna för inkommande webhookar och försök igen.",
       "workflowRequiresEe": "Arbetsflödeshanterare för inkommande webhookar kräver Enterprise-utgåvan.",
       "notFound": "Den inkommande webhooken hittades inte.",
-      "duplicateSlug": "URL-segmentet ”{{slug}}” för inkommande webhook finns redan.",
+      "duplicateSlug": "Det finns redan en inkommande webhook med URL-segmentet ”{{slug}}”.",
       "noSecretToRotate": "Inkommande webhookar med en lista över tillåtna IP-adresser har ingen hemlighet att rotera.",
       "unsupportedAuthType": "Autentiseringstypen för inkommande webhook stöds inte: {{authType}}.",
       "deliveryNotFound": "Den inkommande leveransen hittades inte.",
