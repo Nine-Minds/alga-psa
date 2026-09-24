@@ -1,0 +1,398 @@
+{
+  "settings": {
+    "title": "Tangentbordsgenvägar",
+    "description": "Anpassa tangentbordsgenvägar för den här enheten och det här kontot.",
+    "loading": "Laddar tangentbordsgenvägar…",
+    "capturePrompt": "Tryck på tangenter",
+    "columns": {
+      "action": "Åtgärd",
+      "scope": "Omfattning",
+      "default": "Standard",
+      "effective": "Gällande tangentkombination",
+      "enabled": "Aktiverad",
+      "reset": "Återställ"
+    },
+    "actions": {
+      "resetAll": "Återställ alla",
+      "replace": "Ersätt",
+      "copyCheatsheet": "Kopiera snabbguide",
+      "printCheatsheet": "Skriv ut",
+      "reassign": "Tilldela på nytt",
+      "rebind": "Ändra tangentkombination",
+      "reset": "Återställ",
+      "resetAllTo": "Återställ alla till {{profile}}"
+    },
+    "messages": {
+      "bindingUpdated": "Tangentbordsgenvägen har uppdaterats",
+      "enabledUpdated": "Tangentbordsgenvägen har uppdaterats",
+      "resetOne": "Tangentbordsgenvägen har återställts",
+      "resetAll": "Tangentbordsgenvägarna har återställts",
+      "cheatsheetCopied": "Snabbguiden har kopierats till urklipp",
+      "profileChanged": "Profilen har ändrats"
+    },
+    "errors": {
+      "saveFailed": "Det gick inte att spara inställningarna för tangentbordsgenvägar",
+      "copyFailed": "Det gick inte att kopiera snabbguiden",
+      "printFailed": "Det gick inte att öppna utskriftsfönstret. Tillåt popupfönster och försök igen."
+    },
+    "resetAll": {
+      "title": "Återställ alla genvägar?",
+      "message": "Alla anpassade tangentbordsgenvägar tas bort."
+    },
+    "conflict": {
+      "title": "Ersätt befintlig genväg?",
+      "message": "{{binding}} är redan tilldelad till {{action}}.",
+      "indicator": "Konflikt med en annan åtgärd"
+    },
+    "advisory": {
+      "hostileCombo": "{{binding}} kan stå i konflikt med webbläsarens eller operativsystemets genvägar för {{action}}."
+    },
+    "boundTo": "Kopplad till",
+    "chords": {
+      "empty": "Inga tangentsekvenser matchar.",
+      "search": "Sök…",
+      "title": "Genvägar med tangentsekvenser"
+    },
+    "hint": "Håll pekaren över en tangent för att förhandsgranska, klicka för att ändra tangentkombinationen. Växla mellan modifierarlagren ovan för att se genvägar med prefix.",
+    "modified": "Ändrad",
+    "notSet": "Inte angivet",
+    "modHint": "mod motsvarar {{modKey}} på den här enheten"
+  },
+  "help": {
+    "title": "Tangentbordsgenvägar",
+    "close": "Stäng tangentbordsgenvägar",
+    "custom": "Anpassad"
+  },
+  "commandPalette": {
+    "title": "Kommandopalett",
+    "placeholder": "Sök bland navigeringsalternativ och åtgärder",
+    "placeholderFulltext": "Sök bland poster, kommentarer och dokument…",
+    "loading": "Söker…",
+    "resultCount": "{{count}} resultat",
+    "seeAll": "Visa alla resultat",
+    "fulltextHint": "Skriv minst 2 tecken för att söka bland poster.",
+    "fulltextInlineHelp": "Söker bland poster, kommentarer och dokument.",
+    "modes": {
+      "ariaLabel": "Sökläge",
+      "navigation": "Navigation",
+      "fulltext": "Fulltext"
+    },
+    "syntax": {
+      "title": "Söktips",
+      "summary": "Skriv ett menynamn eller en åtgärd; använd /nav eller >action för att begränsa sökningen.",
+      "inlineHelp": "Använd /nav för navigering eller >action för åtgärder."
+    },
+    "types": {
+      "nav": "Navigation",
+      "action": "Åtgärd",
+      "record": "Post",
+      "help": "Hjälp"
+    }
+  },
+  "groups": {
+    "global": "Global",
+    "ai": "AI",
+    "page": "Sida",
+    "selection": "Markering",
+    "navigation": "Navigation",
+    "assets": "Tillgångar",
+    "dialog": "Dialog",
+    "panel": "Panel",
+    "record": "Post",
+    "editor": "Redigerare",
+    "scroll": "Rullning"
+  },
+  "actions": {
+    "global": {
+      "search": {
+        "label": "Sök",
+        "description": "Flytta fokus till sökfältet i sidofältet."
+      },
+      "commandPalette": {
+        "label": "Kommandopalett",
+        "description": "Öppna sökningen för navigering och åtgärder."
+      },
+      "toggleChat": {
+        "label": "Visa eller dölj AI-chatten",
+        "description": "Öppna AI-assistenten eller flytta fokus till den aktuella chatten."
+      },
+      "openShortcuts": {
+        "label": "Öppna tangentbordsgenvägar",
+        "description": "Visa översikten över tangentbordsgenvägar."
+      },
+      "quickCreate": {
+        "label": "Snabbskapa",
+        "description": "Öppna dialogrutan för att snabbskapa."
+      }
+    },
+    "ai": {
+      "quickAsk": {
+        "label": "Snabbfråga till AI",
+        "description": "Starta en snabbfråga till AI-assistenten."
+      }
+    },
+    "page": {
+      "create": {
+        "label": "Skapa på sidan",
+        "description": "Skapa en ny post på den aktuella sidan."
+      },
+      "save": {
+        "label": "Spara sidan",
+        "description": "Spara den aktuella sidan."
+      }
+    },
+    "selection": {
+      "previous": {
+        "label": "Föregående post",
+        "description": "Flytta markeringen till föregående post."
+      },
+      "next": {
+        "label": "Nästa post",
+        "description": "Flytta markeringen till nästa post."
+      },
+      "open": {
+        "label": "Öppna markering",
+        "description": "Öppna den markerade posten."
+      }
+    },
+    "navigation": {
+      "goTickets": {
+        "label": "Gå till ärenden",
+        "description": "Gå till ärendesidan."
+      },
+      "goAssets": {
+        "label": "Gå till tillgångar",
+        "description": "Gå till tillgångssidan."
+      },
+      "goClients": {
+        "label": "Gå till kunder",
+        "description": "Gå till kundsidan."
+      },
+      "goDashboard": {
+        "label": "Gå till översiktspanelen",
+        "description": "Gå till översiktspanelen."
+      },
+      "goProjects": {
+        "label": "Gå till projekt",
+        "description": "Gå till projektsidan."
+      },
+      "goBilling": {
+        "label": "Gå till debitering",
+        "description": "Gå till debitering."
+      },
+      "goSettings": {
+        "label": "Gå till inställningar",
+        "description": "Gå till inställningar."
+      },
+      "goSearch": {
+        "label": "Gå till global sökning",
+        "description": "Flytta fokus till det globala sökfältet."
+      },
+      "goHelp": {
+        "label": "Gå till hjälpen för tangentbordsgenvägar",
+        "description": "Öppna översikten över tangentbordsgenvägar."
+      },
+      "backToParent": {
+        "label": "Tillbaka till överordnad lista",
+        "description": "Aktivera sidans tillbakaknapp när den finns tillgänglig."
+      }
+    },
+    "assets": {
+      "commandPalette": {
+        "label": "Kommandopalett för tillgångar",
+        "description": "Öppna kommandon för tillgångssidan."
+      }
+    },
+    "dialog": {
+      "cancel": {
+        "label": "Avbryt dialogrutan",
+        "description": "Stäng eller avbryt den aktiva dialogrutan."
+      },
+      "submit": {
+        "label": "Skicka in dialogrutans formulär",
+        "description": "Skicka in formuläret i den aktiva dialogrutan."
+      }
+    },
+    "panel": {
+      "close": {
+        "label": "Stäng panelen",
+        "description": "Stäng den aktiva panelen eller sidopanelen."
+      },
+      "submit": {
+        "label": "Spara panelen",
+        "description": "Spara formuläret i den aktiva panelen eller sidopanelen."
+      }
+    },
+    "drawer": {
+      "historyBack": {
+        "label": "Bakåt i sidopanelen",
+        "description": "Gå bakåt i sidopanelens historik."
+      },
+      "historyForward": {
+        "label": "Framåt i sidopanelen",
+        "description": "Gå framåt i sidopanelens historik."
+      }
+    },
+    "record": {
+      "previous": {
+        "label": "Föregående post",
+        "description": "Öppna föregående post."
+      },
+      "next": {
+        "label": "Nästa post",
+        "description": "Öppna nästa post."
+      },
+      "addTime": {
+        "label": "Lägg till tidpost",
+        "description": "Öppna sidopanelen för tidregistrering för den aktuella posten."
+      }
+    },
+    "editor": {
+      "undo": {
+        "label": "Ångra",
+        "description": "Ångra ändringen i redigeraren."
+      },
+      "redo": {
+        "label": "Gör om",
+        "description": "Gör om ändringen i redigeraren."
+      },
+      "save": {
+        "label": "Spara i redigeraren",
+        "description": "Spara innehållet i redigeraren."
+      },
+      "deleteSelection": {
+        "label": "Radera markering",
+        "description": "Radera det markerade objektet i redigeraren."
+      },
+      "cancel": {
+        "label": "Avbryt åtgärden i redigeraren",
+        "description": "Avbryt den aktiva åtgärden i redigeraren."
+      },
+      "moveUp": {
+        "label": "Flytta upp",
+        "description": "Flytta det markerade objektet uppåt i redigeraren."
+      },
+      "moveDown": {
+        "label": "Flytta ner",
+        "description": "Flytta det markerade objektet neråt i redigeraren."
+      },
+      "moveLeft": {
+        "label": "Flytta åt vänster",
+        "description": "Flytta det markerade objektet åt vänster i redigeraren."
+      },
+      "moveRight": {
+        "label": "Flytta åt höger",
+        "description": "Flytta det markerade objektet åt höger i redigeraren."
+      }
+    },
+    "scroll": {
+      "halfDown": {
+        "label": "Rulla en halv sida neråt",
+        "description": "Rulla neråt en halv sida."
+      },
+      "halfUp": {
+        "label": "Rulla en halv sida uppåt",
+        "description": "Rulla uppåt en halv sida."
+      },
+      "fullDown": {
+        "label": "Rulla en hel sida neråt",
+        "description": "Rulla neråt en hel sida."
+      },
+      "fullUp": {
+        "label": "Rulla en hel sida uppåt",
+        "description": "Rulla uppåt en hel sida."
+      },
+      "top": {
+        "label": "Rulla till toppen",
+        "description": "Rulla till toppen av den aktuella sidan eller panelen."
+      },
+      "bottom": {
+        "label": "Rulla till botten",
+        "description": "Rulla till botten av den aktuella sidan eller panelen."
+      }
+    },
+    "focus": {
+      "primarySearch": {
+        "label": "Flytta fokus till sidsökningen",
+        "description": "Flytta fokus till det primära sökfältet på den aktuella sidan."
+      }
+    },
+    "table": {
+      "nextRow": {
+        "label": "Nästa tabellrad",
+        "description": "Flytta markören för aktiv rad till nästa valbara tabellrad."
+      },
+      "previousRow": {
+        "label": "Föregående tabellrad",
+        "description": "Flytta markören för aktiv rad till föregående valbara tabellrad."
+      },
+      "toggleRow": {
+        "label": "Markera eller avmarkera tabellrad",
+        "description": "Markera eller avmarkera den aktiva tabellraden."
+      },
+      "visualRange": {
+        "label": "Visuell radmarkering",
+        "description": "Börja eller sluta markera ett sammanhängande intervall av tabellrader."
+      },
+      "openRow": {
+        "label": "Öppna tabellrad",
+        "description": "Öppna den aktiva tabellraden."
+      }
+    },
+    "repeat": {
+      "lastAction": {
+        "label": "Upprepa senaste åtgärden",
+        "description": "Upprepa den senaste navigeringsåtgärden i Vim-stil."
+      }
+    },
+    "macro": {
+      "record": {
+        "label": "Spela in makro",
+        "description": "Börja eller sluta spela in ett navigeringsmakro i Vim-stil."
+      },
+      "play": {
+        "label": "Spela upp makro",
+        "description": "Spela upp ett inspelat navigeringsmakro i Vim-stil."
+      }
+    },
+    "linkhints": {
+      "show": {
+        "label": "Visa länktips",
+        "description": "Visa tangentbordstips för synliga länkar och kontroller."
+      },
+      "showNewTab": {
+        "label": "Visa länktips för ny flik",
+        "description": "Visa tangentbordstips och öppna länkar i en ny flik när det är möjligt."
+      }
+    }
+  },
+  "platform": {
+    "modifiers": {
+      "meta": "Meta",
+      "ctrl": "Ctrl",
+      "alt": "Alt",
+      "shift": "Shift"
+    },
+    "keys": {
+      "space": "Mellanslag"
+    },
+    "aria": {
+      "control": "Ctrl",
+      "meta": "Meta",
+      "alt": "Alt",
+      "shift": "Shift"
+    }
+  },
+  "hud": {
+    "combinations": "kombinationer",
+    "thenPress": "sedan…"
+  },
+  "vim": {
+    "macro": {
+      "recording": "Spelar in @{{register}}",
+      "recordPrompt": "Spela in makro: tryck på registertangenten",
+      "playPrompt": "Spela upp makro: tryck på registertangenten"
+    },
+    "visualRowRange": "Visuell radmarkering"
+  }
+}
