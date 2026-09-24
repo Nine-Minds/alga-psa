@@ -14,7 +14,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  *
  * What this cannot cover is billing output: proving that a moved cycle
  * regenerates an identical invoice needs the billing engine and a real
- * database. That is recorded in tests.json as unimplemented.
+ * database. That lives in server/src/test/integration/clientMerge.integration.test.ts
+ * (TM011).
  */
 
 type Row = Record<string, any>;

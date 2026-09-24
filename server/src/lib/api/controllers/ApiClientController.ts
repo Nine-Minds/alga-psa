@@ -240,7 +240,9 @@ export class ApiClientController extends ApiBaseController {
   /**
    * Dry run of a merge. Read-only, but a POST because the source client is a
    * body parameter rather than a filter — and because a preview is a request
-   * to compute something, not a resource to fetch.
+   * to compute something, not a resource to fetch. Writes nothing, so it is
+   * gated on `client:update` alone; the merge itself additionally requires
+   * `client:delete`.
    */
   mergePreview() {
     return async (req: NextRequest): Promise<NextResponse> => {

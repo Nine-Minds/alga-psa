@@ -138,14 +138,21 @@ caller. This effort is its first one.
   run from `sdk/` with its own tsconfig; run it as
   `npx tsx --tsconfig ../tsconfig.base.json scripts/generate-openapi.ts --edition ce`.
   Pre-existing — it fails the same way with this branch's changes stashed.
-- `x-chat-approval-required` is declared on `POST /clients/{id}/merge` (matching the
-  `emailTemplates` precedent) but does **not** reach the MCP registry: the spec
-  generator nests route extensions under an `extensions` object while
-  `ee/scripts/generate-chat-registry.mjs` reads `operation['x-chat-approval-required']`
-  from the operation root. Every route in the repo therefore emits
-  `approvalRequired: false`. Pre-existing generator gap; fixing it would flip the flag
-  on unrelated endpoints, so it is left alone and the metadata is declared correctly
-  for when it is fixed.
+- `x-chat-approval-required` declared on the route is **not** enough to gate the
+  endpoint. The spec generator nests route extensions under an `extensions` object
+  while `ee/scripts/generate-chat-registry.mjs` reads
+  `operation['x-chat-approval-required']` from the operation root, so the declaration
+  alone emits `approvalRequired: false`. The flag reaches the registry through the
+  curated overrides in `ee/docs/api-registry/*.json`, which the generator applies
+  after collecting the spec — the same route the 13 other approval-gated endpoints
+  (`PUT`/`DELETE /email/templates/{name}`, …) take. `ee/docs/api-registry/clients.json`
+  therefore carries `approvalRequired: true` for `POST /clients/{id}/merge` (plus
+  `rbacResource: client` for the four new endpoints, which the spec's nested
+  `x-rbac-resource` loses the same way), and
+  `server/src/test/unit/api/clientMerge.contract.test.ts` asserts the emitted entry in
+  both the CE and EE registries rather than the source string, so a regeneration
+  cannot silently drop the gate. The declaration on the route is kept so the metadata
+  is right if the generator is ever fixed.
 
 ---
 
@@ -240,9 +247,16 @@ override it, and NULL means "the client default"), so it uses the shared
 `BillingProfilePicker` with its "Use the client's default profile" entry,
 matching contract lines, locations, tickets and projects.
 
-Attribution is left alone where nobody chose: an unpicked manual invoice keeps
-`billing_profile_id` NULL and its items are passed through untouched, so the
-unsegmented path is byte-identical to before rather than newly stamped.
+Attribution is left alone where nobody chose: the pre-selection runs only for a
+segmented client, so a client with one profile submits `billing_profile_id`
+NULL and its items are passed through untouched — the unsegmented path is
+byte-identical to before rather than newly stamped, and the write path resolves
+an unattributed invoice to the client default exactly as it always did. Guarding
+that needs care in the test: `waitFor(loadProfiles called)` returns *before* the
+resolved list commits, so the single-profile case settles its promise inside
+`act` and asserts afterwards. Without the `isSegmented` guard the assertion
+fails with `"profile-default"`, which is what makes it a real guard rather than
+a race that happens to pass.
 
 Validation lives at the write, not in the dialog: both paths reject a profile
 whose `client_id` is not the client being billed (and the invoice path also

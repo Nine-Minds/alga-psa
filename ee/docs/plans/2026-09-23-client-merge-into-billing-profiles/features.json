@@ -91,7 +91,7 @@
   },
   {
     "id": "M016",
-    "description": "The client-keyed operational tables the plan enumerates (interactions, assets, documents, usage, buckets, materials, surveys, tags, inbound email domains, asset associations, locations, name aliases) move to the target. Client-keyed tables outside that matrix (opportunities, quotes, sales orders, hour blocks, client_billing_settings, rma_cases, client_tax_rates, client_payment_customers, ...) are deliberately not moved and stay on the archived source.",
+    "description": "The client-keyed operational tables the plan enumerates (interactions, assets, documents, usage, buckets, materials, surveys, tags, inbound email domains, asset associations, locations, name aliases) move to the target, alongside the rest of the matrix M037 made exhaustive (pre-sales, inventory, integration mappings, prepaid hours, tax rates, billing settings). Only the tables in CLIENT_KEYED_TABLES_LEFT_BEHIND stay on the archived source, each with its reason: the tenant's own client record, two dead tables with no live write path, and the columns that hold an OAuth application id rather than an Alga client. A row whose move is a decision about money at a payment provider (client_payment_customers on a collision) is left for a human instead.",
     "implemented": true,
     "prdRefs": ["Goals"]
   },
