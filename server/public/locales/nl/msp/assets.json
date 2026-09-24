@@ -103,6 +103,8 @@
       "selectAsset": "Selecteer item {{name}}",
       "selectedAssets_one": "{{count}} item geselecteerd",
       "selectedAssets_other": "{{count}} items geselecteerd",
+      "selectedAssets_few": "{{count}} items geselecteerd",
+      "selectedAssets_many": "{{count}} items geselecteerd",
       "clearSelection": "Duidelijke selectie",
       "bulkActionsComingSoon": "Bulkacties binnenkort beschikbaar"
     },
@@ -389,10 +391,16 @@
       "momentsAgo": "momenten geleden",
       "minutesAgo_one": "{{count}} minuut geleden",
       "minutesAgo_other": "{{count}} minuten geleden",
+      "minutesAgo_few": "{{count}} minuten geleden",
+      "minutesAgo_many": "{{count}} minuten geleden",
       "hoursAgo_one": "{{count}} uur geleden",
       "hoursAgo_other": "{{count}} uur geleden",
+      "hoursAgo_few": "{{count}} uur geleden",
+      "hoursAgo_many": "{{count}} uur geleden",
       "daysAgo_one": "{{count}} dag geleden",
-      "daysAgo_other": "{{count}} dagen geleden"
+      "daysAgo_other": "{{count}} dagen geleden",
+      "daysAgo_few": "{{count}} dagen geleden",
+      "daysAgo_many": "{{count}} dagen geleden"
     }
   },
   "assetDetailHeader": {
@@ -733,7 +741,11 @@
     "more": "+{{count}} meer"
   },
   "remoteAccess": {
-    "connectionTypes": {"teamviewer":"TeamViewer","vnc":"VNC","rdp":"RDP"},
+    "connectionTypes": {
+      "teamviewer": "TeamViewer",
+      "vnc": "VNC",
+      "rdp": "RDP"
+    },
     "remoteDesktop": "Extern bureaublad",
     "remoteShell": "Externe shell",
     "remoteAccess": "Externe toegang",
@@ -767,7 +779,11 @@
         "load": "Failed to load remote access links.",
         "save": "Failed to save the remote access link.",
         "delete": "Failed to delete the remote access link."
-      }
+      },
+      "loading": "Opties voor externe toegang laden…",
+      "noneAvailable": "Er zijn geen opties voor externe toegang beschikbaar.",
+      "confirmDeleteTitle": "Externe toegangslink verwijderen?",
+      "confirmDeleteMessage": "Weet je zeker dat je “{{label}}” wilt verwijderen? Dit kan niet ongedaan worden gemaakt."
     }
   },
   "assetListErrors": {
@@ -787,7 +803,9 @@
       "addAsset": "Voeg item toe",
       "showLess": "Laat minder zien",
       "moreAssets_one": "Nog {{count}} item",
-      "moreAssets_other": "Nog {{count}} items"
+      "moreAssets_other": "Nog {{count}} items",
+      "moreAssets_few": "Nog {{count}} items",
+      "moreAssets_many": "Nog {{count}} items"
     },
     "errors": {
       "loadAvailableAssets": "Kan beschikbare middelen niet laden",
@@ -801,8 +819,12 @@
     "success": {
       "associated_one": "{{count}} item is succesvol gekoppeld",
       "associated_other": "{{count}} items zijn succesvol gekoppeld",
+      "associated_few": "{{count}} items zijn succesvol gekoppeld",
+      "associated_many": "{{count}} items zijn succesvol gekoppeld",
       "associatedPartial_one": "{{count}} item succesvol gekoppeld, {{failed}} mislukt (mogelijk al gekoppeld)",
       "associatedPartial_other": "{{count}} items succesvol gekoppeld, {{failed}} mislukt (mogelijk al gekoppeld)",
+      "associatedPartial_few": "{{count}} items succesvol gekoppeld, {{failed}} mislukt (mogelijk al gekoppeld)",
+      "associatedPartial_many": "{{count}} items succesvol gekoppeld, {{failed}} mislukt (mogelijk al gekoppeld)",
       "removed": "Itemkoppeling verwijderd"
     },
     "empty": {
@@ -826,7 +848,9 @@
       },
       "actions": {
         "addAssets_one": "Item toevoegen",
-        "addAssets_other": "Items toevoegen"
+        "addAssets_other": "Items toevoegen",
+        "addAssets_few": "Items toevoegen",
+        "addAssets_many": "Items toevoegen"
       }
     },
     "table": {
@@ -1215,17 +1239,29 @@
     "frequency": {
       "every_one": "Elke {{frequency}}",
       "every_other": "Elke {{count}} {{frequency}}",
+      "every_few": "Elke {{count}} {{frequency}}",
+      "every_many": "Elke {{count}} {{frequency}}",
       "units": {
         "daily_one": "dag",
         "daily_other": "dagen",
+        "daily_few": "dagen",
+        "daily_many": "dagen",
         "weekly_one": "week",
         "weekly_other": "weken",
+        "weekly_few": "weken",
+        "weekly_many": "weken",
         "monthly_one": "maand",
         "monthly_other": "maanden",
+        "monthly_few": "maanden",
+        "monthly_many": "maanden",
         "quarterly_one": "kwartaal",
         "quarterly_other": "kwartalen",
+        "quarterly_few": "kwartalen",
+        "quarterly_many": "kwartalen",
         "yearly_one": "jaar",
-        "yearly_other": "jaren"
+        "yearly_other": "jaren",
+        "yearly_few": "jaren",
+        "yearly_many": "jaren"
       }
     },
     "status": {

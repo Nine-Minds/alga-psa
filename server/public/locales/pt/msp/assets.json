@@ -103,6 +103,8 @@
       "selectAsset": "Selecione o ativo {{name}}",
       "selectedAssets_one": "Ativo {{count}} selecionado",
       "selectedAssets_other": "Ativos {{count}} selecionados",
+      "selectedAssets_few": "Ativos {{count}} selecionados",
+      "selectedAssets_many": "Ativos {{count}} selecionados",
       "clearSelection": "Limpar seleção",
       "bulkActionsComingSoon": "Ações em massa em breve"
     },
@@ -389,10 +391,16 @@
       "momentsAgo": "momentos atrás",
       "minutesAgo_one": "{{count}} minuto atrás",
       "minutesAgo_other": "{{count}} minutos atrás",
+      "minutesAgo_few": "{{count}} minutos atrás",
+      "minutesAgo_many": "{{count}} minutos atrás",
       "hoursAgo_one": "{{count}} uma hora atrás",
       "hoursAgo_other": "{{count}} horas atrás",
+      "hoursAgo_few": "{{count}} horas atrás",
+      "hoursAgo_many": "{{count}} horas atrás",
       "daysAgo_one": "{{count}} dia atrás",
-      "daysAgo_other": "{{count}} dias atrás"
+      "daysAgo_other": "{{count}} dias atrás",
+      "daysAgo_few": "{{count}} dias atrás",
+      "daysAgo_many": "{{count}} dias atrás"
     }
   },
   "assetDetailHeader": {
@@ -733,7 +741,11 @@
     "more": "+{{count}} mais"
   },
   "remoteAccess": {
-    "connectionTypes": {"teamviewer":"TeamViewer","vnc":"VNC","rdp":"RDP"},
+    "connectionTypes": {
+      "teamviewer": "TeamViewer",
+      "vnc": "VNC",
+      "rdp": "RDP"
+    },
     "remoteDesktop": "Área de Trabalho Remota",
     "remoteShell": "Shell Remoto",
     "remoteAccess": "Acesso remoto",
@@ -767,7 +779,11 @@
         "load": "Failed to load remote access links.",
         "save": "Failed to save the remote access link.",
         "delete": "Failed to delete the remote access link."
-      }
+      },
+      "loading": "Carregando opções de acesso remoto…",
+      "noneAvailable": "Nenhuma opção de acesso remoto está disponível.",
+      "confirmDeleteTitle": "Excluir link de acesso remoto?",
+      "confirmDeleteMessage": "Tem certeza de que deseja excluir “{{label}}”? Esta ação não pode ser desfeita."
     }
   },
   "assetListErrors": {
@@ -787,7 +803,9 @@
       "addAsset": "Adicionar ativo",
       "showLess": "Mostrar menos",
       "moreAssets_one": "{{count}} mais ativo",
-      "moreAssets_other": "{{count}} mais ativos"
+      "moreAssets_other": "{{count}} mais ativos",
+      "moreAssets_few": "{{count}} mais ativos",
+      "moreAssets_many": "{{count}} mais ativos"
     },
     "errors": {
       "loadAvailableAssets": "Falha ao carregar os recursos disponíveis",
@@ -801,8 +819,12 @@
     "success": {
       "associated_one": "Ativo {{count}} associado com sucesso",
       "associated_other": "Ativos {{count}} associados com sucesso",
+      "associated_few": "Ativos {{count}} associados com sucesso",
+      "associated_many": "Ativos {{count}} associados com sucesso",
       "associatedPartial_one": "Ativo {{count}} associado com sucesso, {{failed}} falhou (pode já estar associado)",
       "associatedPartial_other": "Ativos {{count}} associados com sucesso, {{failed}} falhou (pode já estar associado)",
+      "associatedPartial_few": "Ativos {{count}} associados com sucesso, {{failed}} falhou (pode já estar associado)",
+      "associatedPartial_many": "Ativos {{count}} associados com sucesso, {{failed}} falhou (pode já estar associado)",
       "removed": "Associação de recursos removida"
     },
     "empty": {
@@ -826,7 +848,9 @@
       },
       "actions": {
         "addAssets_one": "Adicionar ativo",
-        "addAssets_other": "Adicionar ativos"
+        "addAssets_other": "Adicionar ativos",
+        "addAssets_few": "Adicionar ativos",
+        "addAssets_many": "Adicionar ativos"
       }
     },
     "table": {
@@ -1215,17 +1239,29 @@
     "frequency": {
       "every_one": "Cada {{frequency}}",
       "every_other": "Cada {{count}} {{frequency}}",
+      "every_few": "Cada {{count}} {{frequency}}",
+      "every_many": "Cada {{count}} {{frequency}}",
       "units": {
         "daily_one": "dia",
         "daily_other": "dias",
+        "daily_few": "dias",
+        "daily_many": "dias",
         "weekly_one": "semana",
         "weekly_other": "semanas",
+        "weekly_few": "semanas",
+        "weekly_many": "semanas",
         "monthly_one": "mês",
         "monthly_other": "meses",
+        "monthly_few": "meses",
+        "monthly_many": "meses",
         "quarterly_one": "trimestre",
         "quarterly_other": "trimestres",
+        "quarterly_few": "trimestres",
+        "quarterly_many": "trimestres",
         "yearly_one": "ano",
-        "yearly_other": "anos"
+        "yearly_other": "anos",
+        "yearly_few": "anos",
+        "yearly_many": "anos"
       }
     },
     "status": {

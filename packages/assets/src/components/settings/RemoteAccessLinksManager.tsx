@@ -5,6 +5,7 @@ import { toast } from 'react-hot-toast';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { AssetRemoteAccessLink } from '@alga-psa/types';
 import { deleteRemoteAccessLink, listRemoteAccessLinks, saveRemoteAccessLink } from '../../actions/remoteAccessLinkActions';
@@ -16,6 +17,8 @@ export default function RemoteAccessLinksManager() {
   const [editing, setEditing] = useState<AssetRemoteAccessLink | null>(null);
   const [label, setLabel] = useState('');
   const [urlTemplate, setUrlTemplate] = useState('');
+  const [deleting, setDeleting] = useState<AssetRemoteAccessLink | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const loadLinks = useCallback(async () => {
     setRows(await listRemoteAccessLinks());
@@ -48,12 +51,17 @@ export default function RemoteAccessLinksManager() {
     }
   };
 
-  const remove = async (linkId: string) => {
+  const confirmRemove = async () => {
+    if (!deleting) return;
+    setIsDeleting(true);
     try {
-      await deleteRemoteAccessLink(linkId);
+      await deleteRemoteAccessLink(deleting.link_id);
+      setDeleting(null);
       await loadLinks();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t('remoteAccess.links.errors.delete'));
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -83,7 +91,7 @@ export default function RemoteAccessLinksManager() {
                 <Button id="remote-access-link-edit" data-link-id={link.link_id} variant="secondary" onClick={() => openEditor(link)}>
                   {t('remoteAccess.links.edit')}
                 </Button>
-                <Button id="remote-access-link-delete" data-link-id={link.link_id} variant="secondary" onClick={() => void remove(link.link_id)}>
+                <Button id="remote-access-link-delete" data-link-id={link.link_id} variant="secondary" onClick={() => setDeleting(link)}>
                   {t('remoteAccess.links.delete')}
                 </Button>
               </div>
@@ -122,6 +130,17 @@ export default function RemoteAccessLinksManager() {
           </div>
         </DialogContent>
       </Dialog>
+      <ConfirmationDialog
+        id="remote-access-link-confirm-delete-dialog"
+        isOpen={Boolean(deleting)}
+        onClose={() => setDeleting(null)}
+        onConfirm={confirmRemove}
+        title={t('remoteAccess.links.confirmDeleteTitle')}
+        message={t('remoteAccess.links.confirmDeleteMessage', { label: deleting?.label ?? '' })}
+        confirmLabel={t('remoteAccess.links.delete')}
+        cancelLabel={t('remoteAccess.links.cancel')}
+        isConfirming={isDeleting}
+      />
     </section>
   );
 }

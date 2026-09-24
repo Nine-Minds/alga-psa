@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { RemoteAccessButton } from './RemoteAccessButton';
 
 const mockRmm = vi.hoisted(() => ({ getAssetRemoteControlTypes: vi.fn(), getAssetRemoteControlUrl: vi.fn() }));
@@ -11,13 +11,13 @@ vi.mock('../context/AssetCrossFeatureContext', () => ({ useAssetCrossFeature: ()
 vi.mock('../actions/remoteAccessLinkActions', () => ({ getRemoteAccessLinksForAsset: mockGetLinks }));
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock('@alga-psa/ui/components/DropdownMenu', () => ({
-  DropdownMenu: ({ children }: any) => <div>{children}</div>,
+  DropdownMenu: ({ children, onOpenChange }: any) => <div><button data-testid="open-menu" onClick={() => onOpenChange(true)}>Open menu</button>{children}</div>,
   DropdownMenuTrigger: ({ children }: any) => <>{children}</>,
   DropdownMenuContent: ({ children }: any) => <div>{children}</div>,
   DropdownMenuItem: ({ children, ...props }: any) => <button {...props}>{children}</button>,
 }));
 vi.mock('@alga-psa/ui/components/Button', () => ({ Button: ({ children, ...props }: any) => <button {...props}>{children}</button> }));
-vi.mock('@alga-psa/ui/components/Alert', () => ({ Alert: ({ children }: any) => <div>{children}</div>, AlertDescription: ({ children }: any) => <span>{children}</span> }));
+vi.mock('@alga-psa/ui/components/Alert', () => ({ Alert: ({ children, ...props }: any) => <div role="alert" {...props}>{children}</div>, AlertDescription: ({ children }: any) => <span>{children}</span> }));
 
 const asset = (overrides: Record<string, unknown> = {}) => ({
   asset_id: 'asset-1', name: 'Workstation', rmm_provider: null, rmm_device_id: null, ...overrides,
@@ -33,18 +33,20 @@ afterEach(() => {
 beforeEach(() => mockGetLinks.mockResolvedValue([]));
 
 describe('RemoteAccessButton availability', () => {
-  it('hides when the asset has no RMM mapping', () => {
+  it('stays visible and does not fetch options until the menu opens', () => {
     render(<RemoteAccessButton asset={asset()} />);
-    expect(screen.queryByText('remoteAccess.remoteAccess')).toBeNull();
+    expect(screen.getByText('remoteAccess.remoteAccess')).toBeTruthy();
     expect(mockRmm.getAssetRemoteControlTypes).not.toHaveBeenCalled();
+    expect(mockGetLinks).not.toHaveBeenCalled();
   });
 
-  it('hides when the resolved provider has no remote control types', async () => {
+  it('shows an empty state after opening when no options are available', async () => {
     mockGetLinks.mockResolvedValue([]);
     mockRmm.getAssetRemoteControlTypes.mockResolvedValue([]);
     render(<RemoteAccessButton asset={asset({ rmm_provider: 'ninjaone', rmm_device_id: '123' })} />);
+    fireEvent.click(screen.getByTestId('open-menu'));
     await vi.waitFor(() => expect(mockRmm.getAssetRemoteControlTypes).toHaveBeenCalledWith('asset-1'));
-    expect(screen.queryByText('remoteAccess.remoteAccess')).toBeNull();
+    expect(await screen.findByText('remoteAccess.links.noneAvailable')).toBeTruthy();
   });
 
   it('renders only provider-reported supported types and fetches the selected URL', async () => {
@@ -53,6 +55,8 @@ describe('RemoteAccessButton availability', () => {
     mockRmm.getAssetRemoteControlUrl.mockResolvedValue('https://remote.example/session');
     const open = vi.spyOn(window, 'open').mockImplementation(() => null);
     render(<RemoteAccessButton asset={asset({ rmm_provider: 'tacticalrmm', rmm_device_id: 'agent-1' })} />);
+    expect(mockRmm.getAssetRemoteControlTypes).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId('open-menu'));
 
     const typeItem = await screen.findByText('remoteAccess.remoteShell');
     expect(screen.queryByText('VNC')).toBeNull();
@@ -62,10 +66,24 @@ describe('RemoteAccessButton availability', () => {
     open.mockRestore();
   });
 
+  it('shows an error when the provider cannot resolve a session URL', async () => {
+    mockRmm.getAssetRemoteControlTypes.mockResolvedValue(['shell']);
+    mockRmm.getAssetRemoteControlUrl.mockResolvedValue(null);
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    render(<RemoteAccessButton asset={asset({ rmm_provider: 'ninjaone', rmm_device_id: '123' })} />);
+    fireEvent.click(screen.getByTestId('open-menu'));
+    const typeItem = await screen.findByText('remoteAccess.remoteShell');
+    typeItem.closest('button')?.click();
+    expect(await screen.findByRole('alert')).toBeTruthy();
+    expect(screen.getByText('remoteAccess.errors.urlFetchFailed')).toBeTruthy();
+    open.mockRestore();
+  });
+
   it('shows configured remote links on an asset without an RMM provider', async () => {
     mockGetLinks.mockResolvedValue([{ label: 'ScreenConnect', url: 'https://remote.example/asset' }]);
     const open = vi.spyOn(window, 'open').mockImplementation(() => null);
     render(<RemoteAccessButton asset={asset()} />);
+    fireEvent.click(screen.getByTestId('open-menu'));
     const link = await screen.findByText('ScreenConnect');
     link.closest('button')?.click();
     expect(open).toHaveBeenCalledWith('https://remote.example/asset', '_blank', 'noopener,noreferrer');

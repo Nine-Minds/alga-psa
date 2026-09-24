@@ -6,16 +6,31 @@ export interface RemoteAccessTemplateContext {
 
 const PLACEHOLDER_PATTERN = /\{(asset|client|field)\.([a-zA-Z0-9_-]+)\}/g;
 
+/** Templates must contain an explicit scheme and a literal, valid host. */
+export function hasLiteralHttpAuthority(template: string): boolean {
+  const normalizedTemplate = template.trim();
+  const match = normalizedTemplate.match(/^(https?):\/\/([^/?#]*)/i);
+  if (!match) return false;
+  const [, scheme, authority] = match;
+  if (!authority || /[{}\\\s]/.test(authority)) return false;
+  try {
+    const url = new URL(`${scheme}://${authority}/`);
+    return (url.protocol === 'http:' || url.protocol === 'https:')
+      && Boolean(url.hostname)
+      && !url.username
+      && !url.password;
+  } catch {
+    return false;
+  }
+}
+
 /** Renders an operator-authored URL template with encoded values and safe schemes. */
 export function renderRemoteAccessTemplate(
   template: string,
   context: RemoteAccessTemplateContext
 ): string | null {
   const normalizedTemplate = template.trim();
-  // Placeholders must never occur in the URL authority. Even encoded values
-  // such as `@evil.com` can be interpreted as userinfo/host syntax there.
-  const authority = normalizedTemplate.match(/^https?:\/\/([^/?#]*)/i)?.[1];
-  if (authority && /\{(?:asset|client|field)\.[^}]+\}/.test(authority)) return null;
+  if (!hasLiteralHttpAuthority(normalizedTemplate)) return null;
 
   let hasMissingValue = false;
   const rendered = normalizedTemplate.replace(PLACEHOLDER_PATTERN, (_token, scope: string, key: string) => {

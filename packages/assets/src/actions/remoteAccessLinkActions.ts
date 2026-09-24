@@ -3,7 +3,7 @@
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { AssetRemoteAccessLink } from '@alga-psa/types';
-import { renderRemoteAccessTemplate } from '../lib/remoteAccessTemplate';
+import { hasLiteralHttpAuthority, renderRemoteAccessTemplate } from '../lib/remoteAccessTemplate';
 
 type RemoteAccessLinkInput = Partial<AssetRemoteAccessLink> & {
   label: string;
@@ -22,11 +22,13 @@ export const listRemoteAccessLinks = withAuth(async (user, { tenant }): Promise<
   return tenantDb(knex, tenant)
     .table('asset_remote_access_links')
     .select('*')
-    .orderBy('display_order')
     .orderBy('label');
 });
 
 function validateTemplate(template: string): void {
+  if (!hasLiteralHttpAuthority(template)) {
+    throw new Error('Template must begin with http:// or https:// and a literal host.');
+  }
   const sampleContext = {
     asset: {} as Record<string, unknown>,
     client: {} as Record<string, unknown>,
@@ -64,10 +66,6 @@ export const saveRemoteAccessLink = withAuth(async (
   const values = {
     label,
     url_template: urlTemplate,
-    asset_type_slugs: link.asset_type_slugs ?? null,
-    requires_field_key: link.requires_field_key || null,
-    is_enabled: link.is_enabled ?? true,
-    display_order: link.display_order ?? 0,
     updated_at: knex.fn.now(),
   };
 
@@ -116,13 +114,9 @@ export const getRemoteAccessLinksForAsset = withAuth(async (
   if (!asset) return [];
 
   const links = await db.table('asset_remote_access_links')
-    .where({ is_enabled: true })
-    .orderBy('display_order')
     .orderBy('label');
   const fields = asset.attributes && typeof asset.attributes === 'object' ? asset.attributes : {};
-  return links.flatMap((link): RenderedRemoteAccessLink[] => {
-    if (link.asset_type_slugs && !link.asset_type_slugs.includes(asset.asset_type)) return [];
-    if (link.requires_field_key && !fields[link.requires_field_key]) return [];
+  const rendered = links.map((link): RenderedRemoteAccessLink | null => {
     const url = renderRemoteAccessTemplate(link.url_template, {
       asset: {
         name: asset.name,
@@ -132,6 +126,10 @@ export const getRemoteAccessLinksForAsset = withAuth(async (
       client: { name: asset.client_name ?? '' },
       field: fields,
     });
-    return url ? [{ label: link.label, url }] : [];
+    return url ? { label: link.label, url } : null;
   });
+  if (rendered.some((link) => link === null)) {
+    throw new Error('One or more remote access links could not be rendered.');
+  }
+  return rendered.filter((link): link is RenderedRemoteAccessLink => link !== null);
 });

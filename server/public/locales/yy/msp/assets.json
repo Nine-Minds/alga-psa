@@ -103,6 +103,8 @@
       "selectAsset": "〖Şḗŀḗƈŧ ȧşşḗŧ {{name}} ·········〗",
       "selectedAssets_one": "〖{{count}} ȧşşḗŧ şḗŀḗƈŧḗḓ ··········〗",
       "selectedAssets_other": "〖{{count}} ȧşşḗŧş şḗŀḗƈŧḗḓ ··········〗",
+      "selectedAssets_few": "〖{{count}} ȧşşḗŧş şḗŀḗƈŧḗḓ ··········〗",
+      "selectedAssets_many": "〖{{count}} ȧşşḗŧş şḗŀḗƈŧḗḓ ··········〗",
       "clearSelection": "〖Ƈŀḗȧř şḗŀḗƈŧīȯƞ ······〗",
       "bulkActionsComingSoon": "〖Ɓŭŀķ ȧƈŧīȯƞş ƈȯḿīƞɠ şȯȯƞ ··········〗"
     },
@@ -389,10 +391,16 @@
       "momentsAgo": "〖ḿȯḿḗƞŧş ȧɠȯ ·····〗",
       "minutesAgo_one": "〖{{count}} ḿīƞŭŧḗ ȧɠȯ ········〗",
       "minutesAgo_other": "〖{{count}} ḿīƞŭŧḗş ȧɠȯ ·········〗",
+      "minutesAgo_few": "〖{{count}} ḿīƞŭŧḗş ȧɠȯ ·········〗",
+      "minutesAgo_many": "〖{{count}} ḿīƞŭŧḗş ȧɠȯ ·········〗",
       "hoursAgo_one": "〖{{count}} ħȯŭř ȧɠȯ ········〗",
       "hoursAgo_other": "〖{{count}} ħȯŭřş ȧɠȯ ········〗",
+      "hoursAgo_few": "〖{{count}} ħȯŭřş ȧɠȯ ········〗",
+      "hoursAgo_many": "〖{{count}} ħȯŭřş ȧɠȯ ········〗",
       "daysAgo_one": "〖{{count}} ḓȧẏ ȧɠȯ ·······〗",
-      "daysAgo_other": "〖{{count}} ḓȧẏş ȧɠȯ ········〗"
+      "daysAgo_other": "〖{{count}} ḓȧẏş ȧɠȯ ········〗",
+      "daysAgo_few": "〖{{count}} ḓȧẏş ȧɠȯ ········〗",
+      "daysAgo_many": "〖{{count}} ḓȧẏş ȧɠȯ ········〗"
     }
   },
   "assetDetailHeader": {
@@ -733,7 +741,11 @@
     "more": "〖+{{count}} ḿȯřḗ ······〗"
   },
   "remoteAccess": {
-    "connectionTypes": {"teamviewer":"〖Ŧḗȧḿṽīḗẇḗř ·······〗","vnc":"〖ṼȠƇ ···〗","rdp":"〖ŘḒƤ ···〗"},
+    "connectionTypes": {
+      "teamviewer": "〖Ŧḗȧḿṽīḗẇḗř ·······〗",
+      "vnc": "〖ṼȠƇ ···〗",
+      "rdp": "〖ŘḒƤ ···〗"
+    },
     "remoteDesktop": "〖Řḗḿȯŧḗ Ḓḗşķŧȯƥ ······〗",
     "remoteShell": "〖Řḗḿȯŧḗ Şħḗŀŀ ·····〗",
     "remoteAccess": "〖Řḗḿȯŧḗ Ȧƈƈḗşş ······〗",
@@ -767,7 +779,11 @@
         "load": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ řḗḿȯŧḗ ȧƈƈḗşş ŀīƞķş. ··············〗",
         "save": "〖Ƒȧīŀḗḓ ŧȯ şȧṽḗ ŧħḗ řḗḿȯŧḗ ȧƈƈḗşş ŀīƞķ. ················〗",
         "delete": "〖Ƒȧīŀḗḓ ŧȯ ḓḗŀḗŧḗ ŧħḗ řḗḿȯŧḗ ȧƈƈḗşş ŀīƞķ. ················〗"
-      }
+      },
+      "loading": "〖Ŀȯȧḓīƞɠ řḗḿȯŧḗ ȧƈƈḗşş ȯƥŧīȯƞş… ·······〗",
+      "noneAvailable": "〖Ƞȯ řḗḿȯŧḗ ȧƈƈḗşş ȯƥŧīȯƞş ȧřḗ ȧṽȧīŀȧƀŀḗ. ·········〗",
+      "confirmDeleteTitle": "〖Ḓḗŀḗŧḗ řḗḿȯŧḗ ȧƈƈḗşş ŀīƞķ? ·····〗",
+      "confirmDeleteMessage": "〖Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ ḓḗŀḗŧḗ “{{label}}”? Ŧħīş ƈȧƞƞȯŧ ƀḗ ŭƞḓȯƞḗ. ·········〗"
     }
   },
   "assetListErrors": {
@@ -787,7 +803,9 @@
       "addAsset": "〖Ȧḓḓ Ȧşşḗŧ ····〗",
       "showLess": "〖Şħȯẇ ŀḗşş ····〗",
       "moreAssets_one": "〖{{count}} ḿȯřḗ ȧşşḗŧ ········〗",
-      "moreAssets_other": "〖{{count}} ḿȯřḗ ȧşşḗŧş ·········〗"
+      "moreAssets_other": "〖{{count}} ḿȯřḗ ȧşşḗŧş ·········〗",
+      "moreAssets_few": "〖{{count}} ḿȯřḗ ȧşşḗŧş ·········〗",
+      "moreAssets_many": "〖{{count}} ḿȯřḗ ȧşşḗŧş ·········〗"
     },
     "errors": {
       "loadAvailableAssets": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ȧṽȧīŀȧƀŀḗ ȧşşḗŧş ·············〗",
@@ -801,8 +819,12 @@
     "success": {
       "associated_one": "〖{{count}} ȧşşḗŧ ȧşşȯƈīȧŧḗḓ şŭƈƈḗşşƒŭŀŀẏ ················〗",
       "associated_other": "〖{{count}} ȧşşḗŧş ȧşşȯƈīȧŧḗḓ şŭƈƈḗşşƒŭŀŀẏ ················〗",
+      "associated_few": "〖{{count}} ȧşşḗŧş ȧşşȯƈīȧŧḗḓ şŭƈƈḗşşƒŭŀŀẏ ················〗",
+      "associated_many": "〖{{count}} ȧşşḗŧş ȧşşȯƈīȧŧḗḓ şŭƈƈḗşşƒŭŀŀẏ ················〗",
       "associatedPartial_one": "〖{{count}} ȧşşḗŧ ȧşşȯƈīȧŧḗḓ şŭƈƈḗşşƒŭŀŀẏ, {{failed}} ƒȧīŀḗḓ (ḿȧẏ ȧŀřḗȧḓẏ ƀḗ ȧşşȯƈīȧŧḗḓ) ···································〗",
       "associatedPartial_other": "〖{{count}} ȧşşḗŧş ȧşşȯƈīȧŧḗḓ şŭƈƈḗşşƒŭŀŀẏ, {{failed}} ƒȧīŀḗḓ (ḿȧẏ ȧŀřḗȧḓẏ ƀḗ ȧşşȯƈīȧŧḗḓ) ···································〗",
+      "associatedPartial_few": "〖{{count}} ȧşşḗŧş ȧşşȯƈīȧŧḗḓ şŭƈƈḗşşƒŭŀŀẏ, {{failed}} ƒȧīŀḗḓ (ḿȧẏ ȧŀřḗȧḓẏ ƀḗ ȧşşȯƈīȧŧḗḓ) ···································〗",
+      "associatedPartial_many": "〖{{count}} ȧşşḗŧş ȧşşȯƈīȧŧḗḓ şŭƈƈḗşşƒŭŀŀẏ, {{failed}} ƒȧīŀḗḓ (ḿȧẏ ȧŀřḗȧḓẏ ƀḗ ȧşşȯƈīȧŧḗḓ) ···································〗",
       "removed": "〖Ȧşşḗŧ ȧşşȯƈīȧŧīȯƞ řḗḿȯṽḗḓ ··········〗"
     },
     "empty": {
@@ -826,7 +848,9 @@
       },
       "actions": {
         "addAssets_one": "〖Ȧḓḓ Ȧşşḗŧ ····〗",
-        "addAssets_other": "〖Ȧḓḓ Ȧşşḗŧş ····〗"
+        "addAssets_other": "〖Ȧḓḓ Ȧşşḗŧş ····〗",
+        "addAssets_few": "〖Ȧḓḓ Ȧşşḗŧş ····〗",
+        "addAssets_many": "〖Ȧḓḓ Ȧşşḗŧş ····〗"
       }
     },
     "table": {
@@ -1215,17 +1239,29 @@
     "frequency": {
       "every_one": "〖Ḗṽḗřẏ {{frequency}} ········〗",
       "every_other": "〖Ḗṽḗřẏ {{count}} {{frequency}} ············〗",
+      "every_few": "〖Ḗṽḗřẏ {{count}} {{frequency}} ············〗",
+      "every_many": "〖Ḗṽḗřẏ {{count}} {{frequency}} ············〗",
       "units": {
         "daily_one": "〖ḓȧẏ ··〗",
         "daily_other": "〖ḓȧẏş ··〗",
+        "daily_few": "〖ḓȧẏş ··〗",
+        "daily_many": "〖ḓȧẏş ··〗",
         "weekly_one": "〖ẇḗḗķ ··〗",
         "weekly_other": "〖ẇḗḗķş ··〗",
+        "weekly_few": "〖ẇḗḗķş ··〗",
+        "weekly_many": "〖ẇḗḗķş ··〗",
         "monthly_one": "〖ḿȯƞŧħ ··〗",
         "monthly_other": "〖ḿȯƞŧħş ···〗",
+        "monthly_few": "〖ḿȯƞŧħş ···〗",
+        "monthly_many": "〖ḿȯƞŧħş ···〗",
         "quarterly_one": "〖ʠŭȧřŧḗř ···〗",
         "quarterly_other": "〖ʠŭȧřŧḗřş ····〗",
+        "quarterly_few": "〖ʠŭȧřŧḗřş ····〗",
+        "quarterly_many": "〖ʠŭȧřŧḗřş ····〗",
         "yearly_one": "〖ẏḗȧř ··〗",
-        "yearly_other": "〖ẏḗȧřş ··〗"
+        "yearly_other": "〖ẏḗȧřş ··〗",
+        "yearly_few": "〖ẏḗȧřş ··〗",
+        "yearly_many": "〖ẏḗȧřş ··〗"
       }
     },
     "status": {

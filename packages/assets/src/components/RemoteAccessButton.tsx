@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { AlertCircle, ExternalLink, Loader2, Monitor, Terminal } from 'lucide-react';
 import type { Asset } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -34,32 +34,31 @@ export function RemoteAccessButton({ asset, variant = 'default', size = 'sm', cl
   const { rmm } = useAssetCrossFeature();
   const [availableTypes, setAvailableTypes] = useState<AssetRemoteConnectionType[] | null>(null);
   const [isPending, setIsPending] = useState(false);
+  const [isLoadingOptions, setIsLoadingOptions] = useState(false);
+  const [hasLoadedOptions, setHasLoadedOptions] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [error, setError] = useState(false);
   const [assetLinks, setAssetLinks] = useState<RenderedRemoteAccessLink[]>([]);
   const candidates = useMemo(() => asset.rmm_provider ? providerTypes[asset.rmm_provider] ?? [] : [], [asset.rmm_provider]);
 
-  useEffect(() => {
-    let active = true;
-    setAvailableTypes(null);
-    if (!asset.rmm_provider || !asset.rmm_device_id || candidates.length === 0) { setAvailableTypes([]); return; }
-    rmm.getAssetRemoteControlTypes(asset.asset_id)
-      .then((types) => { if (active) setAvailableTypes(types.filter((type) => candidates.includes(type))); })
-      .catch(() => { if (active) setAvailableTypes([]); });
-    return () => { active = false; };
-  }, [asset.asset_id, asset.rmm_device_id, asset.rmm_provider, candidates, rmm]);
+  const loadOptions = useCallback(async () => {
+    if (hasLoadedOptions || isLoadingOptions) return;
+    setIsLoadingOptions(true);
+    setLoadFailed(false);
+    const typeRequest = asset.rmm_provider && asset.rmm_device_id && candidates.length > 0
+      ? rmm.getAssetRemoteControlTypes(asset.asset_id)
+          .then((types) => setAvailableTypes(types.filter((type) => candidates.includes(type))))
+          .catch(() => { setAvailableTypes([]); setLoadFailed(true); })
+      : Promise.resolve().then(() => setAvailableTypes([]));
+    const linkRequest = getRemoteAccessLinksForAsset(asset.asset_id)
+      .then(setAssetLinks)
+      .catch(() => { setAssetLinks([]); setLoadFailed(true); });
+    await Promise.all([typeRequest, linkRequest]);
+    setHasLoadedOptions(true);
+    setIsLoadingOptions(false);
+  }, [asset.asset_id, asset.rmm_device_id, asset.rmm_provider, candidates, hasLoadedOptions, isLoadingOptions, rmm]);
 
-  useEffect(() => {
-    let active = true;
-    getRemoteAccessLinksForAsset(asset.asset_id)
-      .then((links) => { if (active) setAssetLinks(links); })
-      .catch(() => { if (active) setAssetLinks([]); });
-    return () => { active = false; };
-  }, [asset.asset_id]);
-
-  const availableRmmTypes = asset.rmm_provider && asset.rmm_device_id && candidates.length > 0
-    ? availableTypes?.filter((type) => candidates.includes(type)) ?? []
-    : [];
-  if (!availableRmmTypes.length && !assetLinks.length) return null;
+  const availableRmmTypes = availableTypes?.filter((type) => candidates.includes(type)) ?? [];
 
   const connect = async (type: AssetRemoteConnectionType) => {
     setError(false);
@@ -86,14 +85,19 @@ export function RemoteAccessButton({ asset, variant = 'default', size = 'sm', cl
 
   return (
     <div className="relative">
-      <DropdownMenu>
+      <DropdownMenu onOpenChange={(open) => { if (open) void loadOptions(); }}>
         <DropdownMenuTrigger asChild>
           <Button id="remote-access-button" data-asset-id={asset.asset_id} variant={variant} size={size} className={`gap-2 ${className}`} disabled={isPending}>
-            {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Monitor className="h-4 w-4" />}
+            {isPending || isLoadingOptions ? <Loader2 className="h-4 w-4 animate-spin" /> : <Monitor className="h-4 w-4" />}
             {t('remoteAccess.remoteAccess')}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          {isLoadingOptions && <div role="status" className="px-2 py-1 text-sm">{t('remoteAccess.links.loading')}</div>}
+          {loadFailed && hasLoadedOptions && <div role="alert" className="px-2 py-1 text-sm">{t('remoteAccess.errors.urlFetchFailed')}</div>}
+          {hasLoadedOptions && !isLoadingOptions && !loadFailed && !availableRmmTypes.length && !assetLinks.length && (
+            <div className="px-2 py-1 text-sm text-muted-foreground">{t('remoteAccess.links.noneAvailable')}</div>
+          )}
           {availableRmmTypes.map((type) => (
             <DropdownMenuItem key={type} id={`remote-access-${type}`} data-asset-id={asset.asset_id} onClick={() => void connect(type)} disabled={isPending} className="gap-2">
               {type === 'shell' ? <Terminal className="h-4 w-4" /> : <Monitor className="h-4 w-4" />}

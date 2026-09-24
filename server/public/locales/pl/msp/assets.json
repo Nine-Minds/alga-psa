@@ -741,7 +741,11 @@
     "more": "+{{count}} więcej"
   },
   "remoteAccess": {
-    "connectionTypes": {"teamviewer":"TeamViewer","vnc":"VNC","rdp":"RDP"},
+    "connectionTypes": {
+      "teamviewer": "TeamViewer",
+      "vnc": "VNC",
+      "rdp": "RDP"
+    },
     "remoteDesktop": "Pulpit zdalny",
     "remoteShell": "Powłoka zdalna",
     "remoteAccess": "Dostęp zdalny",
@@ -775,7 +779,11 @@
         "load": "Failed to load remote access links.",
         "save": "Failed to save the remote access link.",
         "delete": "Failed to delete the remote access link."
-      }
+      },
+      "loading": "Ładowanie opcji zdalnego dostępu…",
+      "noneAvailable": "Brak dostępnych opcji zdalnego dostępu.",
+      "confirmDeleteTitle": "Usunąć łącze zdalnego dostępu?",
+      "confirmDeleteMessage": "Czy na pewno usunąć „{{label}}”? Tej operacji nie można cofnąć."
     }
   },
   "assetListErrors": {

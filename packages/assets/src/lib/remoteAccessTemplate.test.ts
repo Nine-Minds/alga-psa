@@ -46,4 +46,21 @@ describe('renderRemoteAccessTemplate', () => {
       { asset: {}, client: {}, field: { scheme: 'javascript', payload: 'alert(1)' } }
     )).toBeNull();
   });
+
+  it('requires a literal HTTP scheme and host before substituting values', () => {
+    const context = { asset: {}, client: {}, field: { x: 'evil.example', url: 'https://evil.example' } };
+    expect(renderRemoteAccessTemplate('https:{field.x}', context)).toBeNull();
+    expect(renderRemoteAccessTemplate('http:/{field.x}', context)).toBeNull();
+    expect(renderRemoteAccessTemplate(String.raw`https:\{field.x}`, context)).toBeNull();
+    expect(renderRemoteAccessTemplate('{field.url}', context)).toBeNull();
+    expect(renderRemoteAccessTemplate('https://{field.x}/connect', context)).toBeNull();
+    expect(renderRemoteAccessTemplate('https://user:pass@remote.example/connect', context)).toBeNull();
+  });
+
+  it('URL-encodes percent and user-info delimiters in substituted values', () => {
+    expect(renderRemoteAccessTemplate(
+      'https://remote.example/connect/{field.session}',
+      { asset: {}, client: {}, field: { session: 'a%b@c:d' } }
+    )).toBe('https://remote.example/connect/a%25b%40c%3Ad');
+  });
 });

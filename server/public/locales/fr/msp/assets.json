@@ -103,6 +103,8 @@
       "selectAsset": "Sélectionnez l'élément {{name}}",
       "selectedAssets_one": "{{count}} élément sélectionné",
       "selectedAssets_other": "{{count}} éléments sélectionnés",
+      "selectedAssets_few": "{{count}} éléments sélectionnés",
+      "selectedAssets_many": "{{count}} éléments sélectionnés",
       "clearSelection": "Effacer la sélection",
       "bulkActionsComingSoon": "Actions groupées à venir"
     },
@@ -389,10 +391,16 @@
       "momentsAgo": "il y a quelques instants",
       "minutesAgo_one": "Il y a {{count}} minute",
       "minutesAgo_other": "Il y a {{count}} minutes",
+      "minutesAgo_few": "Il y a {{count}} minutes",
+      "minutesAgo_many": "Il y a {{count}} minutes",
       "hoursAgo_one": "Il y a {{count}} heure",
       "hoursAgo_other": "Il y a {{count}} heures",
+      "hoursAgo_few": "Il y a {{count}} heures",
+      "hoursAgo_many": "Il y a {{count}} heures",
       "daysAgo_one": "Il y a {{count}} jour",
-      "daysAgo_other": "Il y a {{count}} jours"
+      "daysAgo_other": "Il y a {{count}} jours",
+      "daysAgo_few": "Il y a {{count}} jours",
+      "daysAgo_many": "Il y a {{count}} jours"
     }
   },
   "assetDetailHeader": {
@@ -733,7 +741,11 @@
     "more": "+{{count}} de plus"
   },
   "remoteAccess": {
-    "connectionTypes": {"teamviewer":"TeamViewer","vnc":"VNC","rdp":"RDP"},
+    "connectionTypes": {
+      "teamviewer": "TeamViewer",
+      "vnc": "VNC",
+      "rdp": "RDP"
+    },
     "remoteDesktop": "Bureau à distance",
     "remoteShell": "Shell à distance",
     "remoteAccess": "Accès à distance",
@@ -767,7 +779,11 @@
         "load": "Failed to load remote access links.",
         "save": "Failed to save the remote access link.",
         "delete": "Failed to delete the remote access link."
-      }
+      },
+      "loading": "Chargement des options d’accès à distance…",
+      "noneAvailable": "Aucune option d’accès à distance n’est disponible.",
+      "confirmDeleteTitle": "Supprimer le lien d’accès à distance ?",
+      "confirmDeleteMessage": "Voulez-vous supprimer « {{label}} » ? Cette action est irréversible."
     }
   },
   "assetListErrors": {
@@ -787,7 +803,9 @@
       "addAsset": "Ajouter un actif",
       "showLess": "Afficher moins",
       "moreAssets_one": "{{count}} actif de plus",
-      "moreAssets_other": "{{count}} actifs de plus"
+      "moreAssets_other": "{{count}} actifs de plus",
+      "moreAssets_few": "{{count}} actifs de plus",
+      "moreAssets_many": "{{count}} actifs de plus"
     },
     "errors": {
       "loadAvailableAssets": "Échec du chargement des ressources disponibles",
@@ -801,8 +819,12 @@
     "success": {
       "associated_one": "{{count}} actif associé avec succès",
       "associated_other": "{{count}} actifs associés avec succès",
+      "associated_few": "{{count}} actifs associés avec succès",
+      "associated_many": "{{count}} actifs associés avec succès",
       "associatedPartial_one": "{{count}} actif associé avec succès, {{failed}} en échec (peut-être déjà associé)",
       "associatedPartial_other": "{{count}} actifs associés avec succès, {{failed}} en échec (peut-être déjà associés)",
+      "associatedPartial_few": "{{count}} actifs associés avec succès, {{failed}} en échec (peut-être déjà associés)",
+      "associatedPartial_many": "{{count}} actifs associés avec succès, {{failed}} en échec (peut-être déjà associés)",
       "removed": "Association d'éléments supprimée"
     },
     "empty": {
@@ -826,7 +848,9 @@
       },
       "actions": {
         "addAssets_one": "Ajouter un actif",
-        "addAssets_other": "Ajouter des actifs"
+        "addAssets_other": "Ajouter des actifs",
+        "addAssets_few": "Ajouter des actifs",
+        "addAssets_many": "Ajouter des actifs"
       }
     },
     "table": {
@@ -1215,17 +1239,29 @@
     "frequency": {
       "every_one": "Chaque {{frequency}}",
       "every_other": "Tous les {{count}} {{frequency}}",
+      "every_few": "Tous les {{count}} {{frequency}}",
+      "every_many": "Tous les {{count}} {{frequency}}",
       "units": {
         "daily_one": "jour",
         "daily_other": "jours",
+        "daily_few": "jours",
+        "daily_many": "jours",
         "weekly_one": "semaine",
         "weekly_other": "semaines",
+        "weekly_few": "semaines",
+        "weekly_many": "semaines",
         "monthly_one": "mois",
         "monthly_other": "mois",
+        "monthly_few": "mois",
+        "monthly_many": "mois",
         "quarterly_one": "trimestre",
         "quarterly_other": "trimestres",
+        "quarterly_few": "trimestres",
+        "quarterly_many": "trimestres",
         "yearly_one": "année",
-        "yearly_other": "années"
+        "yearly_other": "années",
+        "yearly_few": "années",
+        "yearly_many": "années"
       }
     },
     "status": {
