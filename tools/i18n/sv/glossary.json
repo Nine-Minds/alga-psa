@@ -511,6 +511,18 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "contact@example.com",
+      "+1 (555) 123-4567",
+      "https://example.com",
+      "150",
+      "john.smith@example.com",
+      "john@acmeit.com",
+      "jane@youritcompany.com",
+      "• Server",
+      "• VPN",
+      "• Wi-Fi",
+      "• LAN/WAN",
+      "support@youritcompany.com",
       "40",
       "{{rate}} / {{unit}}",
       "0",
