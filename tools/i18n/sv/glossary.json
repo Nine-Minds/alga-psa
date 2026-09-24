@@ -511,6 +511,8 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "2FA",
+      "https://…",
       "Version:",
       "Version: {{version}}",
       "{{name}} v{{version}}",
