@@ -1,0 +1,368 @@
+{
+  "templatesSettings": {
+    "folderCount_one": "{{count}} mapp",
+    "folderCount_other": "{{count}} mappar"
+  },
+  "title": "Dokument",
+  "noDocuments": "Inga bifogade dokument",
+  "upload": "Ladda upp dokument",
+  "download": "Ladda ner",
+  "remove": "Ta bort",
+  "preview": "Förhandsgranska",
+  "linkDocuments": "Länka befintliga",
+  "editDocument": "Redigera dokument",
+  "viewDocument": "Visa dokument",
+  "downloadToPlay": "Ladda ner för att spela upp",
+  "delete": "Radera",
+  "previewUnavailable": "Förhandsgranskning är inte tillgänglig",
+  "newDocument": "Lägg till dokument",
+  "uploadFile": "Ladda upp fil",
+  "deleteTitle": "Radera dokument",
+  "deleteMessage": "Är du säker på att du vill radera ”{{name}}”? Åtgärden kan inte ångras.",
+  "deleteVideoTitle": "Radera video",
+  "deleteVideoMessage": "Är du säker på att du vill radera videon ”{{name}}”? Åtgärden kan inte ångras.",
+  "removeTitle": "Ta bort dokument",
+  "removeMessage": "Är du säker på att du vill ta bort ”{{name}}” från den här posten? Dokumentet finns fortfarande kvar i dokumentbiblioteket.",
+  "removeVideoTitle": "Ta bort video",
+  "removeVideoMessage": "Är du säker på att du vill ta bort videon ”{{name}}” från den här posten? Filen finns kvar i dokumentbiblioteket.",
+  "downloadFile": "Ladda ner fil",
+  "videoUnsupported": "Videoformatet ({{mimeType}}) stöds inte för uppspelning i webbläsaren",
+  "videoTagUnsupported": "Din webbläsare stöder inte videotaggen.",
+  "unnamed": "Utan titel",
+  "videoDownloadInfo": "Videon laddas ner och kan spelas upp med systemets standardvideospelare",
+  "previewUnavailableNoId": "Förhandsgranskning är inte tillgänglig (identifierare saknas)",
+  "previewLoadFailed": "Det gick inte att ladda förhandsgranskningen",
+  "videoCodecWarning": "Chrome kanske inte stöder denna videokodek. Prova att ladda ner videon eller använd Safari/Edge.",
+  "messages": {
+    "fetchFailed": "Det gick inte att hämta dokumenten.",
+    "folderCreated": "Mappen ”{{name}}” har skapats",
+    "folderCreateFailed": "Det gick inte att skapa mappen",
+    "moveDocumentsSuccess_one": "{{count}} dokument har flyttats till {{destination}}",
+    "moveDocumentsSuccess_other": "{{count}} dokument har flyttats till {{destination}}",
+    "moveDocumentsFailed": "Det gick inte att flytta dokumenten",
+    "deleteSuccess": "Dokumentet ”{{name}}” har raderats",
+    "deleteFailed": "Det gick inte att radera dokumentet",
+    "removeAssociationFailed": "Det gick inte att ta bort dokumentkopplingen",
+    "moveDocumentSuccess": "Dokumentet ”{{name}}” har flyttats",
+    "moveDocumentFailed": "Det gick inte att flytta dokumentet",
+    "createFailed": "Det gick inte att skapa dokumentet",
+    "saveFailed": "Det gick inte att spara dokumentet",
+    "loadContentFailed": "Det gick inte att ladda dokumentets innehåll",
+    "downloadFailed": "Det gick inte att ladda ner dokumentet",
+    "bulkDeleteFailed": "Det gick inte att radera vissa dokument",
+    "bulkDeleteSuccess_one": "{{count}} dokument har raderats",
+    "bulkDeleteSuccess_other": "{{count}} dokument har raderats",
+    "passwordRequired": "Lösenord krävs",
+    "shareLinkCreateFailed": "Det gick inte att skapa delningslänken",
+    "shareLinkCreated": "Delningslänken har skapats",
+    "linkCopied": "Länken har kopierats till urklipp",
+    "shareLinkRevokeFailed": "Det gick inte att återkalla delningslänken",
+    "shareLinkRevoked": "Delningslänken har återkallats",
+    "shareLinksLoadFailed": "Det gick inte att ladda delningslänkarna",
+    "folderPathRequired": "Mappsökväg krävs",
+    "folderAlreadyExists": "Mappen finns redan",
+    "defaultsSaveFailed": "Det gick inte att spara",
+    "defaultsRemoved": "Standardmapparna för {{entity}} har tagits bort",
+    "defaultsSaved": "Standardmapparna för {{entity}} har sparats",
+    "suggestedDefaultsAllLoaded": "Alla föreslagna standardinställningar har redan lästs in",
+    "suggestedDefaultsLoaded_one": "Standardinställningar för {{count}} entitetstyp har lästs in",
+    "suggestedDefaultsLoaded_other": "Standardinställningar för {{count}} entitetstyper har lästs in",
+    "suggestedDefaultsLoadFailed": "Det gick inte att läsa in föreslagna standardinställningar",
+    "entityTypesAllConfigured": "Alla entitetstyper har redan konfigurerade standardmappar",
+    "defaultFoldersLoadFailed": "Det gick inte att ladda standardmapparna",
+    "parseContentFailed": "Det gick inte att tolka dokumentets innehåll"
+  },
+  "validation": {
+    "nameRequired": "Dokumentnamn krävs",
+    "typeRequired": "Dokumenttyp krävs",
+    "userIdRequired": "Användar-ID krävs",
+    "orderNumberRequired": "Ordningsnummer krävs",
+    "contentRequired": "Innehåll krävs"
+  },
+  "bulkActions": {
+    "selected_one": "{{count}} dokument markerat",
+    "selected_other": "{{count}} dokument markerade",
+    "moveToFolder": "Flytta till mapp",
+    "deleteSelected": "Radera markerade",
+    "clearSelection": "Avmarkera alla"
+  },
+  "prompts": {
+    "confirmBulkDelete_one": "Är du säker på att du vill radera {{count}} dokument?",
+    "confirmBulkDelete_other": "Är du säker på att du vill radera {{count}} dokument?"
+  },
+  "pagination": {
+    "perPage": "{{count}} per sida"
+  },
+  "folderSelector": {
+    "defaultTitle": "Välj målmapp",
+    "defaultDescription": "Välj var dokumentet ska sparas",
+    "newDocumentTitle": "Välj mapp för nytt dokument",
+    "newDocumentDescription": "Välj var det nya dokumentet ska sparas",
+    "moveTitle": "Flytta dokument",
+    "moveDescriptionWithName": "Välj målmapp för ”{{name}}”",
+    "moveDescription": "Välj målmapp",
+    "bulkMoveTitle": "Flytta markerade dokument",
+    "bulkMoveDescription_one": "Välj målmapp för {{count}} dokument",
+    "bulkMoveDescription_other": "Välj målmapp för {{count}} dokument",
+    "errors": {
+      "nameRequired": "Ange ett mappnamn",
+      "invalidCharacters": "Mappnamnet får inte innehålla ”/”",
+      "createFailed": "Det gick inte att skapa mappen"
+    },
+    "creating": "Skapar…",
+    "createButton": "Skapa mapp",
+    "newFolderButton": "Ny mapp",
+    "parentLabel": "Överordnad mapp: {{folder}}",
+    "rootLabel": "/ (Rot)",
+    "namePlaceholder": "Ange mappnamn",
+    "loading": "Laddar mappar…",
+    "rootOption": "Rot (ingen mapp)",
+    "empty": "Inga mappar är tillgängliga. Dokument sparas i roten."
+  },
+  "filters": {
+    "searchLabel": "Sök dokument",
+    "searchPlaceholder": "Sök efter dokumentnamn…",
+    "typeLabel": "Dokumenttyp",
+    "entityTypeLabel": "Kopplad entitetstyp",
+    "uploadedByLabel": "Uppladdat av",
+    "uploadedByPlaceholder": "Alla användare",
+    "updatedStartLabel": "Uppdateringsdatum från",
+    "updatedEndLabel": "Uppdateringsdatum till",
+    "startDatePlaceholder": "Välj startdatum",
+    "endDatePlaceholder": "Välj slutdatum",
+    "sortByLabel": "Sortera efter",
+    "clear": "Rensa filter",
+    "typeOptions": {
+      "all": "Alla dokumenttyper",
+      "pdf": "PDF",
+      "image": "Bilder",
+      "text": "Dokument",
+      "video": "Video",
+      "other": "Annat"
+    },
+    "sortOptions": {
+      "updated_at": "Datum",
+      "document_name": "Dokumentnamn",
+      "file_size": "Filstorlek",
+      "created_by_full_name": "Skapat av"
+    },
+    "sortOrder": {
+      "default": {
+        "asc": "Visa i stigande ordning",
+        "desc": "Visa i fallande ordning"
+      },
+      "document_name": {
+        "asc": "Visa A–Z",
+        "desc": "Visa Z–A"
+      },
+      "updated_at": {
+        "asc": "Visa äldsta först",
+        "desc": "Visa nyaste först"
+      },
+      "file_size": {
+        "asc": "Visa minsta först",
+        "desc": "Visa största först"
+      },
+      "created_by_full_name": {
+        "asc": "Visa A–Z",
+        "desc": "Visa Z–A"
+      }
+    }
+  },
+  "selector": {
+    "title": "Välj dokument",
+    "reflectionLabel": "Dokumentväljare",
+    "searchPlaceholder": "Sök dokument…",
+    "foldersLabel": "Mappar",
+    "folderHint": "i mappen ”{{folder}}”",
+    "saving": "Sparar…",
+    "selectDocument": "Välj dokument",
+    "associateSelected": "Koppla markerade",
+    "errors": {
+      "configuration": "Konfigurationsfel: Entitetsinformation saknas",
+      "invalidData": "Ogiltiga dokumentdata togs emot",
+      "load": "Det gick inte att ladda dokumenten",
+      "save": "Det gick inte att spara dokumentvalet"
+    },
+    "configErrorTitle": "Konfigurationsfel",
+    "configErrorMessage": "Nödvändig konfiguration saknas. Kontakta supporten."
+  },
+  "uploadSection": {
+    "reflectionLabel": "Dokumentuppladdning",
+    "dragDrop": "Dra och släpp filen här, eller",
+    "browse": "Bläddra bland filer",
+    "uploading": "Laddar upp…",
+    "error": "Det gick inte att ladda upp dokumentet",
+    "fileError": "Det gick inte att ladda upp filen"
+  },
+  "folders": {
+    "root": "Rot",
+    "loadFailed": "Det gick inte att ladda mappträdet",
+    "deleteConfirm": "Är du säker på att du vill radera mappen ”{{name}}”? Det går bara om mappen är tom.",
+    "deleteSuccess": "Mappen ”{{name}}” har raderats",
+    "deleteFailed": "Det gick inte att radera mappen",
+    "deleteAction": "Radera mapp",
+    "loading": "Laddar mappar…",
+    "title": "Mappar",
+    "collapse": "Fäll ihop mappar",
+    "allDocuments": "Alla dokument"
+  },
+  "folderManager": {
+    "title": "Skapa ny mapp",
+    "nameLabel": "Mappnamn",
+    "namePlaceholder": "Ange mappnamn",
+    "willCreateIn": "Skapas i: {{folder}}"
+  },
+  "portal": {
+    "subtitle": "Visa och ladda ner dina delade dokument",
+    "searchPlaceholder": "Sök dokument…",
+    "showing": "{{count}} dokument",
+    "loadError": "Det gick inte att ladda dokumenten. Försök igen."
+  },
+  "kb": {
+    "title": "Kunskapsbas",
+    "subtitle": "Hitta svar på vanliga frågor och stegvisa guider",
+    "categories": "Kategorier",
+    "allArticles": "Alla artiklar",
+    "searchPlaceholder": "Sök artiklar…",
+    "articleCount": "{{count}} artiklar",
+    "noArticles": "Inga artiklar hittades",
+    "loadError": "Det gick inte att ladda artiklarna. Försök igen.",
+    "noContent": "Inget innehåll är tillgängligt",
+    "articleNotFound": "Artikeln hittades inte",
+    "backToArticles": "Tillbaka till artiklar",
+    "views": "visningar",
+    "wasHelpful": "Var den här artikeln till hjälp?",
+    "yes": "Ja",
+    "no": "Nej",
+    "feedbackThanks": "Tack för dina synpunkter.",
+    "feedbackError": "Det gick inte att skicka in synpunkterna",
+    "filterByTags": "Filtrera efter taggar…"
+  },
+  "visibility": {
+    "cascadeTitle": "Uppdatera dokumentens synlighet",
+    "cascadeMakeVisible": "Vill du också göra alla {{count}} dokument i ”{{name}}” synliga i kundportalen?",
+    "cascadeMakeHidden": "Vill du också dölja alla {{count}} dokument i ”{{name}}” i kundportalen?",
+    "cascadeYes": "Ja, uppdatera dokumenten",
+    "cascadeNo": "Nej, bara mappen",
+    "visibleToClients": "Synligt för kunder",
+    "hiddenFromClients": "Dolt för kunder"
+  },
+  "empty": {
+    "default": "Inga dokument hittades"
+  },
+  "shared": {
+    "statusLabels": {
+      "draft": "Utkast",
+      "review": "Under granskning",
+      "published": "Publicerad",
+      "archived": "Arkiverad"
+    },
+    "audienceLabels": {
+      "internal": "Intern",
+      "client": "Kund",
+      "public": "Offentlig"
+    },
+    "typeLabels": {
+      "how_to": "Instruktioner",
+      "faq": "Vanliga frågor",
+      "troubleshooting": "Felsökning",
+      "reference": "Referens"
+    }
+  },
+  "documents": {
+    "messages": {
+      "error": {
+        "noPermission": "Du har inte behörighet att visa dokument",
+        "invalidData": "Ogiltiga dokumentdata togs emot",
+        "fetchFailed": "Det gick inte att hämta dokumenten"
+      }
+    }
+  },
+  "uploadError": "Det gick inte att ladda upp dokumentet",
+  "downloadError": "Det gick inte att ladda ner dokumentet",
+  "uploadHint": "Ladda upp filer att dela med den här uppgiften",
+  "file": "fil",
+  "files": "filer",
+  "view": "Visa",
+  "common:pagination": {
+    "next": "Nästa",
+    "pageOf": "Sida {{current}} av {{total}}",
+    "previous": "Föregående"
+  },
+  "ticketDocuments": "Ärendedokument",
+  "actions": {
+    "save": "Spara",
+    "saving": "Sparar…",
+    "cancel": "Avbryt"
+  },
+  "card": {
+    "noDate": "Inget datum",
+    "reflectionLabel": "Dokumentkort"
+  },
+  "editor": {
+    "loading": "Laddar…",
+    "initializing": "Initierar redigeraren…",
+    "placeholder": "Börja skriva…",
+    "errorPrefix": "Fel: {{message}}",
+    "status": {
+      "offline": "Offline — ändringar synkroniseras när anslutningen återställs",
+      "allChangesSaved": "Alla ändringar har sparats",
+      "syncing": "{{status}} (synkroniserar)"
+    },
+    "connection": {
+      "connected": "Ansluten",
+      "connecting": "Ansluter",
+      "disconnected": "Frånkopplad"
+    },
+    "presence": {
+      "unknownUser": "Användare"
+    },
+    "toolbar": {
+      "bold": "Fetstil (Ctrl+B)",
+      "italic": "Kursiv (Ctrl+I)",
+      "underline": "Understruken (Ctrl+U)",
+      "strikethrough": "Genomstruken",
+      "code": "Kod",
+      "heading1": "Rubrik 1",
+      "heading2": "Rubrik 2",
+      "bulletList": "Punktlista",
+      "orderedList": "Numrerad lista",
+      "quote": "Offert",
+      "link": "Länk",
+      "image": "Infoga bild",
+      "linkPrompt": "URL",
+      "imagePrompt": "Bildens URL"
+    },
+    "imageUpload": {
+      "failed": "Det gick inte att ladda upp bilden",
+      "tooLarge": "Bilden överskrider uppladdningsgränsen på 10 MB",
+      "notAnImage": "Endast bildfiler kan infogas i redigeraren",
+      "noSession": "Logga in igen för att ladda upp bilder"
+    }
+  },
+  "form": {
+    "errorsHeading": "Rätta följande fel:",
+    "submit": "Skapa dokument",
+    "fields": {
+      "documentName": "Dokumentnamn *",
+      "documentType": "Dokumenttyp *",
+      "userId": "Användar-ID *",
+      "contactNameId": "Kontakt-ID",
+      "clientId": "Kund-ID",
+      "ticketId": "Ärende-ID",
+      "orderNumber": "Ordningsnummer *",
+      "content": "Innehåll *"
+    }
+  },
+  "previewPane": {
+    "loading": "Laddar förhandsgranskning…",
+    "pdfDocument": "PDF-dokument",
+    "videoFile": "Videofil",
+    "notAvailable": "Förhandsgranskning är inte tillgänglig",
+    "altPdf": "Förhandsgranskning av {{name}}",
+    "altVideoThumbnail": "Miniatyrbild av {{name}}",
+    "pageCount_one": "{{count}} sida",
+    "pageCount_other": "{{count}} sidor"
+  }
+}
