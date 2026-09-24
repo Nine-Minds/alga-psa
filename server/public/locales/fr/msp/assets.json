@@ -782,6 +782,7 @@
       },
       "loading": "Chargement des options d’accès à distance…",
       "noneAvailable": "Aucune option d’accès à distance n’est disponible.",
+      "unavailable": "Indisponible pour cet actif",
       "confirmDeleteTitle": "Supprimer le lien d’accès à distance ?",
       "confirmDeleteMessage": "Voulez-vous supprimer « {{label}} » ? Cette action est irréversible."
     }

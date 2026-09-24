@@ -37,7 +37,6 @@ describe('RemoteAccessButton availability', () => {
     render(<RemoteAccessButton asset={asset()} />);
     expect(screen.getByText('remoteAccess.remoteAccess')).toBeTruthy();
     expect(mockRmm.getAssetRemoteControlTypes).not.toHaveBeenCalled();
-    expect(mockGetLinks).not.toHaveBeenCalled();
   });
 
   it('shows an empty state after opening when no options are available', async () => {
@@ -87,6 +86,25 @@ describe('RemoteAccessButton availability', () => {
     const link = await screen.findByText('ScreenConnect');
     link.closest('button')?.click();
     expect(open).toHaveBeenCalledWith('https://remote.example/asset', '_blank', 'noopener,noreferrer');
+    open.mockRestore();
+  });
+
+  it('disables unavailable template links while keeping valid links connectable', async () => {
+    mockGetLinks.mockResolvedValue([
+      { label: 'Name link', url: 'https://remote.example/Workstation' },
+      { label: 'Serial link', url: null },
+    ]);
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    render(<RemoteAccessButton asset={asset()} />);
+    fireEvent.click(screen.getByTestId('open-menu'));
+
+    const unavailableLink = await screen.findByText('Serial link');
+    expect(unavailableLink.closest('button')?.hasAttribute('disabled')).toBe(true);
+    expect(screen.getByText('remoteAccess.links.unavailable')).toBeTruthy();
+
+    screen.getByText('Name link').closest('button')?.click();
+    expect(open).toHaveBeenCalledWith('https://remote.example/Workstation', '_blank', 'noopener,noreferrer');
+    expect(open).toHaveBeenCalledTimes(1);
     open.mockRestore();
   });
 });

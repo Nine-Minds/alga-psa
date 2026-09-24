@@ -782,6 +782,7 @@
       },
       "loading": "Ładowanie opcji zdalnego dostępu…",
       "noneAvailable": "Brak dostępnych opcji zdalnego dostępu.",
+      "unavailable": "Niedostępne dla tego zasobu",
       "confirmDeleteTitle": "Usunąć łącze zdalnego dostępu?",
       "confirmDeleteMessage": "Czy na pewno usunąć „{{label}}”? Tej operacji nie można cofnąć."
     }

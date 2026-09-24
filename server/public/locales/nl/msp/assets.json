@@ -782,6 +782,7 @@
       },
       "loading": "Opties voor externe toegang laden…",
       "noneAvailable": "Er zijn geen opties voor externe toegang beschikbaar.",
+      "unavailable": "Niet beschikbaar voor dit asset",
       "confirmDeleteTitle": "Externe toegangslink verwijderen?",
       "confirmDeleteMessage": "Weet je zeker dat je “{{label}}” wilt verwijderen? Dit kan niet ongedaan worden gemaakt."
     }

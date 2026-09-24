@@ -782,6 +782,7 @@
       },
       "loading": "Carregando opções de acesso remoto…",
       "noneAvailable": "Nenhuma opção de acesso remoto está disponível.",
+      "unavailable": "Indisponível para este ativo",
       "confirmDeleteTitle": "Excluir link de acesso remoto?",
       "confirmDeleteMessage": "Tem certeza de que deseja excluir “{{label}}”? Esta ação não pode ser desfeita."
     }

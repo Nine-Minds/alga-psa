@@ -91,7 +91,7 @@ export const deleteRemoteAccessLink = withAuth(async (
 
 export interface RenderedRemoteAccessLink {
   label: string;
-  url: string;
+  url: string | null;
 }
 
 export const getRemoteAccessLinksForAsset = withAuth(async (
@@ -116,7 +116,7 @@ export const getRemoteAccessLinksForAsset = withAuth(async (
   const links = await db.table('asset_remote_access_links')
     .orderBy('label');
   const fields = asset.attributes && typeof asset.attributes === 'object' ? asset.attributes : {};
-  const rendered = links.map((link): RenderedRemoteAccessLink | null => {
+  return links.map((link): RenderedRemoteAccessLink => {
     const url = renderRemoteAccessTemplate(link.url_template, {
       asset: {
         name: asset.name,
@@ -126,10 +126,6 @@ export const getRemoteAccessLinksForAsset = withAuth(async (
       client: { name: asset.client_name ?? '' },
       field: fields,
     });
-    return url ? { label: link.label, url } : null;
+    return { label: link.label, url };
   });
-  if (rendered.some((link) => link === null)) {
-    throw new Error('One or more remote access links could not be rendered.');
-  }
-  return rendered.filter((link): link is RenderedRemoteAccessLink => link !== null);
 });

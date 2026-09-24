@@ -88,10 +88,10 @@ export default function RemoteAccessLinksManager() {
                 <div className="truncate text-xs text-[rgb(var(--color-text-500))]">{link.url_template}</div>
               </div>
               <div className="flex shrink-0 gap-2">
-                <Button id="remote-access-link-edit" data-link-id={link.link_id} variant="secondary" onClick={() => openEditor(link)}>
+                <Button id={`remote-access-link-edit-${link.link_id}`} data-link-id={link.link_id} variant="secondary" onClick={() => openEditor(link)}>
                   {t('remoteAccess.links.edit')}
                 </Button>
-                <Button id="remote-access-link-delete" data-link-id={link.link_id} variant="secondary" onClick={() => setDeleting(link)}>
+                <Button id={`remote-access-link-delete-${link.link_id}`} data-link-id={link.link_id} variant="secondary" onClick={() => setDeleting(link)}>
                   {t('remoteAccess.links.delete')}
                 </Button>
               </div>

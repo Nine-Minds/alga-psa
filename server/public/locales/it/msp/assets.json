@@ -782,6 +782,7 @@
       },
       "loading": "Caricamento delle opzioni di accesso remoto…",
       "noneAvailable": "Nessuna opzione di accesso remoto disponibile.",
+      "unavailable": "Non disponibile per questa risorsa",
       "confirmDeleteTitle": "Eliminare il collegamento di accesso remoto?",
       "confirmDeleteMessage": "Vuoi eliminare “{{label}}”? Questa azione non può essere annullata."
     }

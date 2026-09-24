@@ -782,6 +782,7 @@
       },
       "loading": "Loading remote access options…",
       "noneAvailable": "No remote access options are available.",
+      "unavailable": "Unavailable for this asset",
       "confirmDeleteTitle": "Delete remote access link?",
       "confirmDeleteMessage": "Are you sure you want to delete “{{label}}”? This action cannot be undone."
     }

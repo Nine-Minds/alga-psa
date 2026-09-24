@@ -782,6 +782,7 @@
       },
       "loading": "Remotezugriffsoptionen werden geladen.",
       "noneAvailable": "Keine Remotezugriffsoptionen verfügbar.",
+      "unavailable": "Für dieses Asset nicht verfügbar",
       "confirmDeleteTitle": "Löschen bestätigen",
       "confirmDeleteMessage": "Möchten Sie den Remotezugriffslink „{{label}}“ löschen?"
     }

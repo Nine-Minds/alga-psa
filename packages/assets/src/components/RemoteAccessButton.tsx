@@ -87,7 +87,7 @@ export function RemoteAccessButton({ asset, variant = 'default', size = 'sm', cl
     <div className="relative">
       <DropdownMenu onOpenChange={(open) => { if (open) void loadOptions(); }}>
         <DropdownMenuTrigger asChild>
-          <Button id="remote-access-button" data-asset-id={asset.asset_id} variant={variant} size={size} className={`gap-2 ${className}`} disabled={isPending}>
+          <Button id={`remote-access-button-${asset.asset_id}`} data-asset-id={asset.asset_id} variant={variant} size={size} className={`gap-2 ${className}`} disabled={isPending}>
             {isPending || isLoadingOptions ? <Loader2 className="h-4 w-4 animate-spin" /> : <Monitor className="h-4 w-4" />}
             {t('remoteAccess.remoteAccess')}
           </Button>
@@ -99,25 +99,30 @@ export function RemoteAccessButton({ asset, variant = 'default', size = 'sm', cl
             <div className="px-2 py-1 text-sm text-muted-foreground">{t('remoteAccess.links.noneAvailable')}</div>
           )}
           {availableRmmTypes.map((type) => (
-            <DropdownMenuItem key={type} id={`remote-access-${type}`} data-asset-id={asset.asset_id} onClick={() => void connect(type)} disabled={isPending} className="gap-2">
+            <DropdownMenuItem key={type} id={`remote-access-${asset.asset_id}-${type}`} data-asset-id={asset.asset_id} onClick={() => void connect(type)} disabled={isPending} className="gap-2">
               {type === 'shell' ? <Terminal className="h-4 w-4" /> : <Monitor className="h-4 w-4" />}
               <span>{connectionLabel(type, t)}</span>
               <ExternalLink className="ml-auto h-3 w-3 text-muted-foreground" />
             </DropdownMenuItem>
           ))}
-          {assetLinks.map((link, index) => (
-            <DropdownMenuItem
-              key={`${link.label}-${index}`}
-              id="remote-access-template-link"
-              data-link-index={index}
-              data-asset-id={asset.asset_id}
-              onClick={() => window.open(link.url, '_blank', 'noopener,noreferrer')}
-              className="gap-2"
-            >
-              <ExternalLink className="h-4 w-4" />
-              <span>{link.label}</span>
-            </DropdownMenuItem>
-          ))}
+          {assetLinks.map((link, index) => {
+            const url = link.url;
+            return (
+              <DropdownMenuItem
+                key={`${link.label}-${index}`}
+                id={`remote-access-template-link-${asset.asset_id}-${index}`}
+                data-link-index={index}
+                data-asset-id={asset.asset_id}
+                onClick={url ? () => window.open(url, '_blank', 'noopener,noreferrer') : undefined}
+                disabled={!url}
+                className="gap-2"
+              >
+                <ExternalLink className="h-4 w-4" />
+                <span>{link.label}</span>
+                {!url && <span className="ml-auto text-xs text-muted-foreground">{t('remoteAccess.links.unavailable')}</span>}
+              </DropdownMenuItem>
+            );
+          })}
         </DropdownMenuContent>
       </DropdownMenu>
       {error && <div className="absolute left-0 right-0 top-full z-50 mt-2"><Alert variant="destructive" className="py-2"><AlertCircle className="h-4 w-4" /><AlertDescription className="text-xs">{t('remoteAccess.errors.urlFetchFailed')}</AlertDescription></Alert></div>}
