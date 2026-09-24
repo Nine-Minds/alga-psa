@@ -379,6 +379,31 @@ COPY.pt = {
   footerCopyright: '© {{currentYear}} {{tenantName}}. Todos os direitos reservados.',
 };
 
+COPY.sv = {
+  subject: 'Inbjudan till portalen - {{tenantName}}',
+  title: 'Inbjudan till portalåtkomst',
+  headerTitle: 'Välkommen till din kundportal',
+  headerSubtitle: 'Du är inbjuden att få åtkomst till ditt konto',
+  greeting: 'Hej {{contactName}},',
+  intro: 'Goda nyheter. Du är inbjuden till kundportalen för <strong>{{clientName}}</strong>. I den här säkra portalen kan du direkt:',
+  infoBoxTitle: '🎯 Det här får du tillgång till',
+  feature1: '✓ Visa och följa dina supportärenden',
+  feature2: '✓ Granska projektuppdateringar och dokumentation',
+  feature3: '✓ Kommunicera direkt med ditt supportteam',
+  tagline: 'Hantera dina tjänster smidigt med vår lättanvända portal. Här finns allt du behöver för att hålla dig informerad och hålla kontakten, samlat på en säker plats.',
+  buttonLabel: 'Konfigurera din portalåtkomst',
+  copyLinkHint: 'Eller kopiera och klistra in den här länken i din webbläsare:',
+  warningTitle: '⏰ Tidsbegränsad inbjudan',
+  warningText: 'Den här inbjudningslänken slutar gälla om <strong>{{expirationTime}}</strong>. Slutför konfigurationen av ditt konto innan dess för att säkerställa åtkomst utan avbrott.',
+  contactTitle: 'Behöver du hjälp?',
+  emailLabel: 'E-post',
+  phoneLabel: 'Telefon',
+  contactHelp: 'Vårt supportteam hjälper dig gärna att komma igång.',
+  footerSent: 'Det här e-postmeddelandet har skickats till {{contactName}} som en del av konfigurationen av din portalåtkomst.',
+  footerUnexpected: 'Om du inte förväntade dig den här inbjudan kan du kontakta oss på {{supportEmail}}.',
+  footerCopyright: '© {{currentYear}} {{tenantName}}. Alla rättigheter förbehållna.',
+};
+
 /* eslint-enable max-len */
 
 /* ------------------------------------------------------------------ */
