@@ -35,7 +35,10 @@ describe('validateDiscountInput', () => {
 
   it('rejects inverted or malformed dates', () => {
     expect(validateDiscountInput({ ...base, start_date: '01/01/2026' })).toMatch(/valid start date/);
+    expect(validateDiscountInput({ ...base, start_date: '2026-02-30' })).toMatch(/valid start date/);
+    expect(validateDiscountInput({ ...base, start_date: '2026-13-01' })).toMatch(/valid start date/);
     expect(validateDiscountInput({ ...base, end_date: '2025-12-31' })).toMatch(/after the start date/);
+    expect(validateDiscountInput({ ...base, end_date: '2026-02-30' })).toMatch(/valid date/);
     expect(validateDiscountInput({ ...base, end_date: '2026-12-31' })).toBeNull();
   });
 
@@ -56,15 +59,17 @@ describe('validateDiscountInput', () => {
 });
 
 describe('discount value conversion', () => {
-  it('stores a percentage as a fraction and a fixed value as decimal currency', () => {
+  it('stores a percentage as a fraction (including fractional percents) and a fixed value as decimal currency', () => {
     expect(toStoredDiscountValue({ discount_type: 'percentage', value: 10 })).toBeCloseTo(0.1);
-    expect(toStoredDiscountValue({ discount_type: 'percentage', value: 12 })).toBeCloseTo(0.12);
+    expect(toStoredDiscountValue({ discount_type: 'percentage', value: 12.5 })).toBeCloseTo(0.125);
+    expect(toStoredDiscountValue({ discount_type: 'percentage', value: 7.25 })).toBeCloseTo(0.0725);
     expect(toStoredDiscountValue({ discount_type: 'fixed', value: 50 })).toBe(50);
     expect(toStoredDiscountValue({ discount_type: 'fixed', value: 12.346 })).toBe(12.35);
   });
 
-  it('reads stored values back into authoring units', () => {
+  it('reads stored values back into authoring units, including legacy two-place fractions', () => {
     expect(toDisplayDiscountValue('percentage', 0.1)).toBeCloseTo(10);
+    expect(toDisplayDiscountValue('percentage', 0.125)).toBeCloseTo(12.5);
     expect(toDisplayDiscountValue('fixed', 50)).toBe(50);
   });
 

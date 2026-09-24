@@ -5,6 +5,9 @@
  * a database or auth context. The action module owns tenancy, permissions and
  * persistence; this module owns the shape rules.
  */
+import { isValidDateOnly } from './dateOnly';
+
+export { toDateOnly } from './dateOnly';
 
 export type DiscountAuthoringScope = 'invoice' | 'contract' | 'service' | 'item';
 
@@ -38,9 +41,13 @@ export function validateDiscountInput(input: DiscountAuthoringInput): string | n
   if (input.discount_type === 'fixed' && input.value < 0) {
     return 'Fixed discounts must not be negative.';
   }
-  if (!DATE_ONLY.test(input.start_date ?? '')) return 'A valid start date is required.';
+  if (!DATE_ONLY.test(input.start_date ?? '') || !isValidDateOnly(input.start_date)) {
+    return 'A valid start date is required.';
+  }
   if (input.end_date != null && input.end_date !== '') {
-    if (!DATE_ONLY.test(input.end_date)) return 'End date must be a valid date.';
+    if (!DATE_ONLY.test(input.end_date) || !isValidDateOnly(input.end_date)) {
+      return 'End date must be a valid date.';
+    }
     if (input.end_date <= input.start_date) return 'End date must be after the start date.';
   }
   if (!input.contract_line_id) return 'Select the contract line this discount applies to.';
@@ -60,10 +67,14 @@ export function validateDiscountInput(input: DiscountAuthoringInput): string | n
   return null;
 }
 
-/** Converts the authoring value to the `discounts.value` storage convention. */
+/**
+ * Converts the authoring value to the `discounts.value` storage convention.
+ * `discounts.value` is `decimal(10,4)`, so fractional percentages survive
+ * exactly (12.5% -> 0.125); fixed amounts keep two decimal currency places.
+ */
 export function toStoredDiscountValue(input: Pick<DiscountAuthoringInput, 'discount_type' | 'value'>): number {
   return input.discount_type === 'percentage'
-    ? Math.round((input.value / 100) * 100) / 100
+    ? Math.round((input.value / 100) * 1e4) / 1e4
     : Math.round(input.value * 100) / 100;
 }
 
@@ -73,14 +84,4 @@ export function toDisplayDiscountValue(
   storedValue: number,
 ): number {
   return discountType === 'percentage' ? storedValue * 100 : storedValue;
-}
-
-export function toDateOnly(value: unknown): string | null {
-  if (value === null || value === undefined) return null;
-  if (value instanceof Date) {
-    return Number.isNaN(value.getTime()) ? null : value.toISOString().slice(0, 10);
-  }
-  const text = String(value);
-  const match = text.match(/^(\d{4}-\d{2}-\d{2})/);
-  return match ? match[1] : null;
 }

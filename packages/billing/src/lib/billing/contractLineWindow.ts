@@ -1,79 +1,109 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { addDaysToDateOnly, isValidDateOnly, toDateOnly } from './dateOnly';
 
-/** Normalizes a date-ish value (Date, ISO timestamp, date-only) to `YYYY-MM-DD`. */
-export function normalizeContractLineDate(value: unknown): string | null {
-  if (value === null || value === undefined) return null;
-  if (value instanceof Date) {
-    return Number.isNaN(value.getTime()) ? null : value.toISOString().slice(0, 10);
-  }
-  const text = String(value).trim();
-  const match = text.match(/^(\d{4}-\d{2}-\d{2})/);
-  return match ? match[1] : null;
-}
+export { isValidDateOnly } from './dateOnly';
+
+/** Normalizes a date-ish value (Date, ISO timestamp, date-only) to a valid `YYYY-MM-DD`. */
+export const normalizeContractLineDate = toDateOnly;
 
 export interface ContractLineWindowInput {
   start_date?: string | null;
   end_date?: string | null;
 }
 
-export interface EffectiveContractLineWindow {
-  start_date: string | null;
-  end_date: string | null;
+export interface ContractLineBillingWindow {
+  /**
+   * Cadence anchor. Always the contract assignment start, never the authored
+   * line start, so the engine and the service-period materializer derive the
+   * same period boundaries.
+   */
+  anchorStart: string | null;
+  /** Effective coverage start: the later of the assignment and line starts. */
+  coverageStart: string | null;
+  /** Inclusive last billed day (`coverageEndExclusive - 1`), for charge rows. */
+  inclusiveEnd: string | null;
+  /** Half-open exclusive end used for activity/settlement windows. */
+  coverageEndExclusive: string | null;
 }
 
 /**
- * Intersects a contract assignment window with an authored line window.
+ * Resolves the billing window for one contract line.
  *
- * Both are half-open `[start, end)`. A null line bound inherits the assignment
- * bound, so a line with no authored dates keeps its previous behavior. When the
- * line window sits entirely before/after the assignment the result is an
- * inverted range (`start > end`); callers treat that as "no coverage" and bill
- * nothing rather than emitting a zero charge.
+ * The contract assignment end is persisted as an inclusive last day (the
+ * existing engine convention adds one day for an exclusive window), while the
+ * authored line `end_date` is half-open (`[start, end)`) like the plan states.
+ * The two are intersected in exclusive space so a line never bills past its own
+ * end and an unbounded line inherits the assignment exactly as before.
  */
-export function resolveEffectiveContractLineWindow(
+export function resolveContractLineBillingWindow(
   assignment: { start_date?: unknown; end_date?: unknown },
   line: { start_date?: unknown; end_date?: unknown },
-): EffectiveContractLineWindow {
+): ContractLineBillingWindow {
   const assignmentStart = normalizeContractLineDate(assignment.start_date);
   const assignmentEnd = normalizeContractLineDate(assignment.end_date);
   const lineStart = normalizeContractLineDate(line.start_date);
   const lineEnd = normalizeContractLineDate(line.end_date);
 
-  const start_date = lineStart && assignmentStart
+  const coverageStart = lineStart && assignmentStart
     ? (lineStart > assignmentStart ? lineStart : assignmentStart)
     : (lineStart ?? assignmentStart);
-  const end_date = lineEnd && assignmentEnd
-    ? (lineEnd < assignmentEnd ? lineEnd : assignmentEnd)
-    : (lineEnd ?? assignmentEnd);
 
-  return { start_date, end_date };
+  const assignmentEndExclusive = assignmentEnd
+    ? addDaysToDateOnly(assignmentEnd, 1)
+    : null;
+  const coverageEndExclusive = assignmentEndExclusive && lineEnd
+    ? (lineEnd < assignmentEndExclusive ? lineEnd : assignmentEndExclusive)
+    : (lineEnd ?? assignmentEndExclusive);
+
+  return {
+    anchorStart: assignmentStart,
+    coverageStart,
+    inclusiveEnd: coverageEndExclusive
+      ? addDaysToDateOnly(coverageEndExclusive, -1)
+      : null,
+    coverageEndExclusive,
+  };
 }
 
 /**
  * Validates authored contract-line start/end dates.
  *
- * Returns a user-safe error string, or null when the dates are valid. Dates are
- * half-open (`[start, end)`), must be real `YYYY-MM-DD` values, must not invert,
- * and must fall inside the active `client_contracts` assignment for the
- * contract. When the contract has no active assignment there is no client
- * period to constrain to, so only the intrinsic ordering is enforced.
+ * Returns a user-safe error string, or null when the dates are valid. Dates must
+ * be real calendar dates, must not invert, and must fall inside the active
+ * `client_contracts` assignment for the contract. A partial update merges with
+ * the line's existing bounds first, so changing only one side cannot silently
+ * produce an inverted window. When the contract has no active assignment there
+ * is no client period to constrain to, so only intrinsic ordering is enforced.
  */
 export async function validateContractLineWindow(
   trx: Knex.Transaction,
   tenant: string,
   contractId: string,
   input: ContractLineWindowInput,
+  existing?: ContractLineWindowInput,
 ): Promise<string | null> {
-  const start = normalizeContractLineDate(input.start_date);
-  const end = normalizeContractLineDate(input.end_date);
+  const startProvided = input.start_date !== undefined;
+  const endProvided = input.end_date !== undefined;
 
-  if (input.start_date != null && input.start_date !== '' && !start) {
+  // A provided null clears the bound; an omitted field keeps the existing one.
+  // Existing values may be driver `Date`s, so normalize them before comparing.
+  const startText = startProvided
+    ? (input.start_date == null ? null : String(input.start_date).trim())
+    : normalizeContractLineDate(existing?.start_date);
+  const endText = endProvided
+    ? (input.end_date == null ? null : String(input.end_date).trim())
+    : normalizeContractLineDate(existing?.end_date);
+
+  if (startText && !isValidDateOnly(startText)) {
     return 'Line start date must be a valid date.';
   }
-  if (input.end_date != null && input.end_date !== '' && !end) {
+  if (endText && !isValidDateOnly(endText)) {
     return 'Line end date must be a valid date.';
   }
+
+  const start = startText || null;
+  const end = endText || null;
   if (start && end && end <= start) {
     return 'Line end date must be after the line start date.';
   }

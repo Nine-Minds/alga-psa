@@ -143,7 +143,7 @@ import {
 } from "../../models/projectBillingModelUtils";
 import { isProjectMaterialEligible } from "@alga-psa/inventory/lib";
 import { joinEffectiveServicePrice } from "./pricing/joinEffectiveServicePrice";
-import { resolveEffectiveContractLineWindow } from "./contractLineWindow";
+import { resolveContractLineBillingWindow } from "./contractLineWindow";
 // Workflow imports removed as event emission is moved back to the calling action
 
 type DiscountQueryRow = IDiscount & {
@@ -3115,18 +3115,20 @@ export class BillingEngine {
     );
 
     // Convert dates from the DB into plain ISO strings and normalize values.
-    // The effective line window is the intersection of the contract assignment
-    // (`cc.start_date`/`cc.end_date`) and the authored line bounds
-    // (`cl.start_date`/`cl.end_date`), half-open. A null bound inherits the
-    // assignment bound, so a line with no authored dates behaves exactly as
-    // before.
+    // `start_date`/`end_date` stay the contract assignment window (the cadence
+    // anchor is the assignment start, matching the service-period materializer);
+    // the authored line bounds are carried separately as a coverage window. The
+    // assignment end is an inclusive last day, the line end is half-open, so the
+    // intersection is computed in exclusive space.
     clientContractLines.forEach((plan: any) => {
-      const effectiveWindow = resolveEffectiveContractLineWindow(
+      const billingWindow = resolveContractLineBillingWindow(
         { start_date: plan.start_date, end_date: plan.end_date },
         { start_date: plan.line_start_date, end_date: plan.line_end_date },
       );
-      plan.start_date = effectiveWindow.start_date;
-      plan.end_date = effectiveWindow.end_date;
+      plan.start_date = billingWindow.anchorStart;
+      plan.end_date = billingWindow.inclusiveEnd;
+      plan.coverage_start_date = billingWindow.coverageStart;
+      plan.coverage_end_date = billingWindow.coverageEndExclusive;
       delete plan.line_start_date;
       delete plan.line_end_date;
 
@@ -4638,13 +4640,26 @@ export class BillingEngine {
       chargeFamily: "fixed",
       tenant: this.tenant ?? undefined,
     });
+    // Coverage window: the effective (assignment ∩ authored line) window. The
+    // start is the later of the two and the end is already half-open
+    // (`coverage_end_date`), so an authored line end is never extended by a day.
+    // Callers that do not populate the coverage fields (legacy direct callers)
+    // fall back to the assignment window, preserving prior behavior.
+    const coverageLine = clientContractLine as IClientContractLine & {
+      coverage_start_date?: string | null;
+      coverage_end_date?: string | null;
+    };
     const activityWindow = {
-      start: clientContractLine.start_date
-        ? toISODate(toPlainDate(clientContractLine.start_date))
-        : undefined,
-      end: clientContractLine.end_date
-        ? toISODate(toPlainDate(clientContractLine.end_date).add({ days: 1 }))
-        : undefined,
+      start: coverageLine.coverage_start_date
+        ? toISODate(toPlainDate(coverageLine.coverage_start_date))
+        : clientContractLine.start_date
+          ? toISODate(toPlainDate(clientContractLine.start_date))
+          : undefined,
+      end: coverageLine.coverage_end_date
+        ? toISODate(toPlainDate(coverageLine.coverage_end_date))
+        : clientContractLine.end_date
+          ? toISODate(toPlainDate(clientContractLine.end_date).add({ days: 1 }))
+          : undefined,
       semantics: RECURRING_RANGE_SEMANTICS,
     };
 

@@ -450,3 +450,48 @@ exercise them live when a running service is available.
 The served guide (`/home/robert/alga-review/b97eda7b-contract-invoice-adjustments/`)
 now names the baseline tax rate **Florida Sales Tax (US-FL, 6%)** and identifies
 step 2's manual row as **"Review one-time support"**.
+
+## Review round: timing boundaries, fractional percentages, date validation
+
+Follow-up fixes from human review of the recurring-terms repair.
+
+- **Line end is half-open and never extended.** `buildRecurringChargeTimingSelection`
+  previously added a day to the new half-open line `end_date`, so an advance
+  period could start on or just past the line end. The engine now keeps the
+  assignment window for the cadence anchor (`start_date`/`end_date`, assignment
+  end inclusive) and carries a separate coverage window
+  (`coverage_start_date`/`coverage_end_date`, `resolveContractLineBillingWindow`)
+  where the authored line end is half-open. The assignment start remains the
+  cadence anchor, matching the service-period materializer.
+- **Billing-level timing regressions** in `billingEngine.timing.test.ts`:
+  T260 advance mid-period start, T261 arrears mid-period end, T262 advance
+  first period after the line end (null), T263 arrears first period wholly after
+  the line end (null), T264 contract-cadence anchor uses the assignment start,
+  T265 advance mid-period end, T266 arrears mid-period start. Plus the DB
+  `getClientContractLinesForBillingPeriod` test asserting anchor/coverage fields
+  and `is_active` exclusion.
+- **Fractional percentages preserved.** `discounts.value` widened from
+  `decimal(10,2)` to `decimal(10,4)` (migration
+  `20260924040000_widen_discounts_value_precision.cjs`), so 12.5% stores as
+  `0.125` instead of rounding to `0.13`; legacy `0.10` rows are untouched. A DB
+  test reconciles a 12.5% discount to `-$125.00` on `$1,000.00` and asserts the
+  stored value is `0.125`.
+- **Stricter date validation.** `isValidDateOnly` rejects impossible calendar
+  dates (`2026-02-30`, `2026-13-01`) for both contract-line and discount dates,
+  and `validateContractLineWindow` merges a partial update with the line's
+  existing bounds before checking ordering, so changing only the start or only
+  the end cannot silently invert the window.
+
+### Verification (this round)
+
+| Suite | Result |
+| --- | --- |
+| `packages/billing` unit (`npx vitest run`) | 314 files / 1584 tests |
+| `contractInvoiceAdjustments.db.test.ts` | 28 tests |
+| `billingEngine*.test.ts` unit (7 files) | 50 tests |
+| `billingInvoiceTiming.integration.test.ts` | 63 tests |
+| `contractInvoiceManualCredit.test.ts` + `billingInvoiceGeneration_discounts.test.ts` | 11 tests |
+| `contractLineWindow` / `discountAuthoring` / `manualInvoiceTaxResolution` | 23 tests |
+| `tsc --noEmit` billing / types / db | pass |
+| `eslint` changed + new files | 0 errors |
+| `packages/billing` `npx tsup` | pass |

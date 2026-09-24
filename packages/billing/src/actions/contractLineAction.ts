@@ -295,10 +295,19 @@ export const updateContractLine = withAuth(async (
             const { tenant: _, ...safeUpdateData } = updateData;
             assertNonNegativeContractLineRate(safeUpdateData.custom_rate);
             if (existingPlan.contract_id) {
-                const windowError = await validateContractLineWindow(trx, tenant, existingPlan.contract_id, {
-                    start_date: safeUpdateData.start_date,
-                    end_date: safeUpdateData.end_date,
-                });
+                const windowError = await validateContractLineWindow(
+                    trx,
+                    tenant,
+                    existingPlan.contract_id,
+                    {
+                        start_date: safeUpdateData.start_date,
+                        end_date: safeUpdateData.end_date,
+                    },
+                    {
+                        start_date: existingPlan.start_date,
+                        end_date: existingPlan.end_date,
+                    },
+                );
                 if (windowError) {
                     throw new Error(windowError);
                 }

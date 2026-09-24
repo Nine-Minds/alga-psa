@@ -1168,6 +1168,85 @@ describe('contract invoice adjustments (DB-backed)', () => {
     }
   });
 
+  it('persists and applies a fractional percentage discount (12.5%) without rounding to two places', async () => {
+    await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: false });
+    const fractionalDiscountId = uuidv4();
+    await db('discounts').insert({
+      tenant,
+      discount_id: fractionalDiscountId,
+      discount_name: 'Fractional 12.5%',
+      discount_type: 'percentage',
+      value: 0.125,
+      start_date: '2026-01-01T00:00:00.000Z',
+      end_date: null,
+      is_active: true,
+      scope: 'invoice',
+    });
+    await db('contract_line_discounts').insert({
+      tenant,
+      discount_id: fractionalDiscountId,
+      contract_line_id: contractLineId,
+      client_id: clientId,
+    });
+
+    const invoiceId = uuidv4();
+    await db('invoices').insert({
+      tenant,
+      invoice_id: invoiceId,
+      invoice_number: `ADJ-FRAC-${invoiceId.slice(0, 8)}`,
+      invoice_date: '2026-09-01T00:00:00.000Z',
+      due_date: '2026-09-30T00:00:00.000Z',
+      subtotal: 100_000,
+      tax: 0,
+      total_amount: 100_000,
+      status: 'draft',
+      client_id: clientId,
+      currency_code: 'USD',
+      is_manual: false,
+      client_contract_id: clientContractId,
+    });
+    await db('invoice_charges').insert({
+      tenant,
+      item_id: uuidv4(),
+      invoice_id: invoiceId,
+      service_id: serviceId,
+      description: 'Recurring support',
+      quantity: 1,
+      unit_price: 100_000,
+      net_amount: 100_000,
+      total_price: 100_000,
+      tax_amount: 0,
+      tax_rate: 0,
+      is_manual: false,
+      is_discount: false,
+      is_taxable: false,
+      client_contract_id: clientContractId,
+    });
+
+    try {
+      // The widened column keeps 0.125 intact (0.125 = 12.5%, not 0.13).
+      const stored = await db('discounts').where({ tenant, discount_id: fractionalDiscountId }).first('value');
+      expect(Number(stored.value)).toBeCloseTo(0.125, 6);
+
+      const result = await db.transaction(async (trx) =>
+        reconcileAutomaticInvoiceAdjustments(trx, tenant, invoiceId),
+      );
+      // 12.5% of $1,000.00 = $125.00.
+      expect(result.automaticDiscountAmount).toBe(12_500);
+      const rows = await db('invoice_charges')
+        .where({ tenant, invoice_id: invoiceId, adjustment_source_kind: 'discount' });
+      expect(rows).toHaveLength(1);
+      expect(Number(rows[0].net_amount)).toBe(-12_500);
+    } finally {
+      await db('contract_line_discounts').where({ tenant, discount_id: fractionalDiscountId }).delete();
+      await db('invoice_charges').where({ tenant, adjustment_source_id: fractionalDiscountId }).delete();
+      await db('invoice_charges').where({ tenant, invoice_id: invoiceId }).delete();
+      await db('invoices').where({ tenant, invoice_id: invoiceId }).delete();
+      await db('discounts').where({ tenant, discount_id: fractionalDiscountId }).delete();
+      await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: true });
+    }
+  });
+
   it('does not apply a configured discount from another contract of the same client', async () => {
     const otherContractId = uuidv4();
     const otherContractLineId = uuidv4();
@@ -1550,6 +1629,67 @@ describe('contract invoice adjustments (DB-backed)', () => {
       ).rejects.toMatchObject({ code: '23514' });
     } finally {
       await db('contract_lines').where({ tenant, contract_line_id: negativeLineId }).delete();
+    }
+  });
+
+  it('resolves the effective line coverage window, anchors on the assignment, and honors is_active', async () => {
+    const windowContractId = uuidv4();
+    const windowLineId = uuidv4();
+    const windowAssignmentId = uuidv4();
+    await db('contracts').insert({
+      tenant,
+      contract_id: windowContractId,
+      contract_name: 'Window contract',
+      billing_frequency: 'monthly',
+      is_active: true,
+    });
+    await db('contract_lines').insert({
+      tenant,
+      contract_line_id: windowLineId,
+      contract_line_name: 'Window line',
+      contract_id: windowContractId,
+      billing_frequency: 'monthly',
+      contract_line_type: 'fixed',
+      is_active: true,
+      start_date: '2026-02-10',
+      end_date: '2026-03-15',
+    });
+    await db('client_contracts').insert({
+      tenant,
+      client_contract_id: windowAssignmentId,
+      client_id: clientId,
+      contract_id: windowContractId,
+      start_date: '2026-01-01T00:00:00.000Z',
+      end_date: '2026-12-31T00:00:00.000Z',
+      is_active: true,
+    });
+
+    try {
+      const engine = new BillingEngine();
+      (engine as any).knex = db;
+      (engine as any).tenant = tenant;
+      const period = { startDate: '2026-02-01', endDate: '2026-03-01' };
+      const lines = await (engine as any).getClientContractLinesForBillingPeriod(clientId, period);
+      const line = (lines as Array<Record<string, any>>).find((row) => row.contract_line_id === windowLineId);
+      expect(line).toBeTruthy();
+      // Anchor stays the assignment start; coverage narrows to the authored line.
+      expect(line!.start_date).toBe('2026-01-01');
+      expect(line!.coverage_start_date).toBe('2026-02-10');
+      expect(line!.coverage_end_date).toBe('2026-03-15');
+      // Inclusive display end is the day before the half-open line end.
+      expect(line!.end_date).toBe('2026-03-14');
+
+      await db('contract_lines')
+        .where({ tenant, contract_line_id: windowLineId })
+        .update({ is_active: false });
+      const inactiveLines = await (engine as any).getClientContractLinesForBillingPeriod(clientId, period);
+      expect(
+        (inactiveLines as Array<Record<string, any>>).find((row) => row.contract_line_id === windowLineId),
+      ).toBeUndefined();
+    } finally {
+      await db('client_contracts').where({ tenant, client_contract_id: windowAssignmentId }).delete();
+      await db('contract_lines').where({ tenant, contract_line_id: windowLineId }).delete();
+      await db('contracts').where({ tenant, contract_id: windowContractId }).delete();
     }
   });
 });
