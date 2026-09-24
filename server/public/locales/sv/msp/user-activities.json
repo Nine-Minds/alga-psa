@@ -147,9 +147,9 @@
     "nextAction": "Nästa åtgärd",
     "overdueSince": "Försenad sedan {{date}}",
     "dueOn": "Ska vara klar {{date}}",
-    "stage": "Steg",
-    "confidence": "Tilltro till avslut",
-    "owner": "Ägare",
+    "stage": "Stadium",
+    "confidence": "Tilltro",
+    "owner": "Ansvarig",
     "expectedClose": "Förväntat avslut",
     "mrr": "MRR",
     "nrr": "NRR",
@@ -475,7 +475,7 @@
       "tagsSelected": "{{count}} taggar",
       "tasksCompact": "Uppgifter",
       "ticketsCompact": "Ärenden",
-      "opportunityScope": "Arbete med affärsmöjligheter"
+      "opportunityScope": "Arbete med affärer"
     },
     "activityTypeOptions": {
       "schedule": "Schema",
@@ -525,9 +525,9 @@
       "statuses": "{{count}} statusar"
     },
     "opportunityScopeOptions": {
-      "assigned": "Tilldelade steg i affärsmöjligheter",
-      "owned": "Steg i egna affärsmöjligheter",
-      "all": "Tilldelade steg eller steg i egna affärsmöjligheter"
+      "assigned": "Tilldelade affärssteg",
+      "owned": "Steg i egna affärer",
+      "all": "Tilldelade eller egna steg"
     }
   },
   "actions": {
