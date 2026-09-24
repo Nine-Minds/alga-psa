@@ -141,7 +141,7 @@ const INBOUND_DEFAULTS_SELECT_COLUMNS = [
   'location_id',
 ] as const;
 
-function createDefaultDeps(): InboundEmailRuleEngineDeps {
+export function createDefaultDeps(): InboundEmailRuleEngineDeps {
   const activeClientPredicate = (builder: Knex.QueryBuilder) => builder.where(function (this: Knex.QueryBuilder) {
     this.where('clients.is_inactive', false).orWhereNull('clients.is_inactive');
   });
@@ -206,7 +206,9 @@ function createDefaultDeps(): InboundEmailRuleEngineDeps {
           .where(function (this: Knex.QueryBuilder) {
             this.whereRaw('lower(contacts.email) = ?', [normalizedEmail])
               .orWhereIn('contacts.contact_name_id', additional);
-          }).whereNotNull('contacts.client_id').andWhere('contacts.is_inactive', false);
+          }).whereNotNull('contacts.client_id').where(function (this: Knex.QueryBuilder) {
+            this.where('contacts.is_inactive', false).orWhereNull('contacts.is_inactive');
+          });
         db.tenantJoin(rows, 'clients', 'contacts.client_id', 'clients.client_id');
         const activeRows = await activeClientPredicate(rows);
         const unique = new Map<string, any>();
@@ -237,7 +239,7 @@ function createDefaultDeps(): InboundEmailRuleEngineDeps {
         }
         if (byClient.size > 1) return { ambiguous: true as const, clientCount: byClient.size };
         const [clientId, assets] = byClient.entries().next().value ?? [];
-        return clientId ? { match: { clientId, matchedBy: 'asset_name' as const, ...(assets.length === 1 ? { assetId: assets[0].asset_id } : {}) } } : null;
+        return clientId ? { match: { clientId, matchedBy: 'asset_name' as const, ...(assets?.length === 1 ? { assetId: assets[0].asset_id } : {}) } } : null;
       });
     },
 
@@ -437,7 +439,7 @@ async function executeRuleAction(args: {
       if (normalized) {
         const targets = resolveMatchTargets(rule.action_config);
         const ambiguity: NonNullable<InboundEmailRuleTraceEntry['clientMatchAmbiguity']> = [];
-        const match = await resolveClientMatch({ targets, rawValue, normalized, deps, tenantId: params.tenantId, ambiguity });
+        const match = await resolveClientMatch({ targets, rawValue: rawValue ?? '', normalized, deps, tenantId: params.tenantId, ambiguity });
         if (ambiguity.length) base.clientMatchAmbiguity = ambiguity;
         base.clientMatch = match;
         if (match) {
