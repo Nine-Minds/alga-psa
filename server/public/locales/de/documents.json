@@ -77,7 +77,9 @@
       "pickedBy": "Kommissioniert von: ____________________     Datum: ____________",
       "preTaxTotals": "Die angegebenen Summen verstehen sich ohne Steuer. Die anfallende Steuer wird auf Ihrer Rechnung ausgewiesen.",
       "thankYouForOrder": "Vielen Dank für Ihren Auftrag."
-    }
+    },
+    "serialNumbers": "Seriennummern",
+    "allocatedSerialsNote": "Zugeordnete Seriennummern; können sich bei der Erfüllung ändern."
   },
   "errors": {
     "permissions": {

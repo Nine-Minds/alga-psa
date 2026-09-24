@@ -77,7 +77,9 @@
       "pickedBy": "Prélevé par : ____________________     Date : ____________",
       "preTaxTotals": "Les totaux indiqués sont hors taxes. Les taxes applicables sont calculées sur votre facture.",
       "thankYouForOrder": "Merci pour votre commande."
-    }
+    },
+    "serialNumbers": "Numéros de série",
+    "allocatedSerialsNote": "Numéros de série attribués ; susceptibles de changer lors de l’exécution."
   },
   "errors": {
     "permissions": {

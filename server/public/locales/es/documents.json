@@ -77,7 +77,9 @@
       "pickedBy": "Surtido por: ____________________     Fecha: ____________",
       "preTaxTotals": "Los totales mostrados no incluyen impuestos. El impuesto correspondiente se calcula en su factura.",
       "thankYouForOrder": "Gracias por su pedido."
-    }
+    },
+    "serialNumbers": "Números de serie",
+    "allocatedSerialsNote": "Números de serie asignados; pueden cambiar durante el cumplimiento."
   },
   "errors": {
     "permissions": {
