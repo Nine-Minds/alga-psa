@@ -330,7 +330,8 @@
       "title": "Elementi pubblicitari automatizzati",
       "service": "Servizio",
       "total": "Totale",
-      "unknownService": "Servizio sconosciuto"
+      "unknownService": "Servizio sconosciuto",
+      "period": "Periodo"
     },
     "lineItems": {
       "manual": "Elementi pubblicitari manuali",
@@ -343,7 +344,8 @@
       "saveChanges": "Salva modifiche",
       "processing": "Elaborazione...",
       "generateSalesOrderInvoice": "Genera fattura dell'ordine di vendita",
-      "clearSalesOrderSource": "Cancella ordine di vendita di origine"
+      "clearSalesOrderSource": "Cancella ordine di vendita di origine",
+      "addPartialPeriodCharge": "Aggiungi addebito per periodo parziale"
     },
     "labels": {
       "total": "Totale"
@@ -395,6 +397,32 @@
     },
     "salesOrderContext": {
       "summary": "{{quantity}} articoli pronti per la fatturazione da {{lineCount}} righe. Questa bozza verrà collegata all'ordine di vendita."
+    },
+    "draftAdjustments": {
+      "title": "Rettifiche fattura",
+      "description": "Aggiungi addebiti, sconti o crediti una tantum. Gli addebiti di contratto generati restano di sola lettura; correggi il contratto di origine o aggiungi una rettifica."
+    },
+    "partialPeriod": {
+      "title": "Addebito per periodo parziale",
+      "help": "Calcolato come unità × prezzo unitario del periodo × giorni coperti / giorni del periodo completo. I valori inseriti restano con la voce per mantenerla comprensibile.",
+      "direction": "Direzione",
+      "increase": "Aumento",
+      "decrease": "Riduzione (credito)",
+      "units": "Unità",
+      "unitPrice": "Prezzo unitario",
+      "coveredDays": "Giorni coperti",
+      "fullPeriodDays": "Giorni del periodo completo",
+      "description": "Descrizione (facoltativo)",
+      "reason": "Motivo (facoltativo)",
+      "previewUnavailable": "Inserisci un calcolo valido.",
+      "resolvedAmount": "Importo calcolato: {{amount}}",
+      "addCharge": "Aggiungi addebito",
+      "creditDescription": "Credito: {{proration}}",
+      "errors": {
+        "units": "Le unità devono essere maggiori di zero.",
+        "unitPrice": "Il prezzo unitario deve essere un numero.",
+        "invalid": "Inserisci un periodo parziale valido."
+      }
     }
   },
   "quickInvoice": {
@@ -2205,5 +2233,11 @@
     "saving": "Salvataggio…",
     "saveCorrection": "Salva correzione",
     "save": "Salva"
+  },
+  "draftInvoiceAdjustments": {
+    "blockedTitle": "Rettifiche fattura non disponibili",
+    "blocked": {
+      "exported": "Questa fattura è sincronizzata con un sistema contabile. Annullala o emetti un credito separato invece di modificarne le voci."
+    }
   }
 }

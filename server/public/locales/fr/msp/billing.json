@@ -230,12 +230,14 @@
       "selectService": "Sélectionnez un service",
       "taxable": "(Imposable)",
       "nonTaxable": "(Non imposable)",
-      "calculatedOnSave": "(calculé lors de la sauvegarde)"
+      "calculatedOnSave": "(calculé lors de la sauvegarde)",
+      "credit": "Crédit"
     },
     "expanded": {
       "discount": "Rabais",
       "item": "Article {{number}}",
-      "markedForRemoval": "Marqué pour suppression"
+      "markedForRemoval": "Marqué pour suppression",
+      "credit": "Crédit"
     },
     "fields": {
       "service": "Service",
@@ -247,10 +249,18 @@
       "applyDiscountTo": "Appliquer la réduction à",
       "entireInvoice": "Facture entière",
       "rate": "Taux ({{currencySymbol}})",
-      "description": "Description"
+      "description": "Description",
+      "creditUnit": "Crédit par unité ({{currencySymbol}})",
+      "taxTreatment": "Traitement fiscal",
+      "nonTaxable": "Non imposable",
+      "location": "Emplacement",
+      "clientDefaultLocation": "Par défaut du client",
+      "billingProfile": "Profil de facturation",
+      "clientDefaultProfile": "Par défaut du client"
     },
     "placeholders": {
-      "discountDescription": "par exemple, remise pour paiement anticipé"
+      "discountDescription": "par exemple, remise pour paiement anticipé",
+      "creditDescription": "par exemple, crédit de geste commercial"
     },
     "actions": {
       "add": "Ajouter",
@@ -267,7 +277,8 @@
       "invoiceTotal": "{{percentage}}% du total de la facture",
       "amount": "Montant : -{{currencySymbol}}{{amount}}",
       "appliedTo": "Appliqué à : {{description}}",
-      "subtotal": "Sous-total : {{currencySymbol}}{{amount}}"
+      "subtotal": "Sous-total : {{currencySymbol}}{{amount}}",
+      "credit": "Crédit"
     },
     "options": {
       "percentage": "Pourcentage",

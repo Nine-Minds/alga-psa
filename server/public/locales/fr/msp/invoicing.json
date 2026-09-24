@@ -330,7 +330,8 @@
       "title": "Éléments de campagne automatisés",
       "service": "Service",
       "total": "Total",
-      "unknownService": "Service inconnu"
+      "unknownService": "Service inconnu",
+      "period": "Période"
     },
     "lineItems": {
       "manual": "Éléments de campagne manuels",
@@ -343,7 +344,8 @@
       "saveChanges": "Enregistrer les modifications",
       "processing": "Traitement...",
       "generateSalesOrderInvoice": "Générer la facture de la commande client",
-      "clearSalesOrderSource": "Effacer la commande client source"
+      "clearSalesOrderSource": "Effacer la commande client source",
+      "addPartialPeriodCharge": "Ajouter des frais de période partielle"
     },
     "labels": {
       "total": "Total"
@@ -395,6 +397,32 @@
     },
     "salesOrderContext": {
       "summary": "Quantité prête à être facturée : {{quantity}} article(s) sur {{lineCount}} ligne(s). La facture provisoire sera liée à la commande client."
+    },
+    "draftAdjustments": {
+      "title": "Ajustements de facture",
+      "description": "Ajoutez des frais, des remises ou des crédits ponctuels. Les frais de contrat générés restent en lecture seule ; corrigez le contrat source ou ajoutez un ajustement."
+    },
+    "partialPeriod": {
+      "title": "Frais de période partielle",
+      "help": "Calculé comme unités × prix unitaire de la période × jours couverts / jours de la période complète. Les saisies sont conservées avec le poste pour qu'il reste compréhensible.",
+      "direction": "Sens",
+      "increase": "Augmentation",
+      "decrease": "Diminution (crédit)",
+      "units": "Unités",
+      "unitPrice": "Prix unitaire",
+      "coveredDays": "Jours couverts",
+      "fullPeriodDays": "Jours de la période complète",
+      "description": "Description (facultatif)",
+      "reason": "Motif (facultatif)",
+      "previewUnavailable": "Saisissez un calcul valide.",
+      "resolvedAmount": "Montant calculé : {{amount}}",
+      "addCharge": "Ajouter des frais",
+      "creditDescription": "Crédit : {{proration}}",
+      "errors": {
+        "units": "Les unités doivent être supérieures à zéro.",
+        "unitPrice": "Le prix unitaire doit être un nombre.",
+        "invalid": "Saisissez une période partielle valide."
+      }
     }
   },
   "quickInvoice": {
@@ -2205,5 +2233,11 @@
     "saving": "Enregistrement…",
     "saveCorrection": "Enregistrer la correction",
     "save": "Enregistrer"
+  },
+  "draftInvoiceAdjustments": {
+    "blockedTitle": "Ajustements de facture indisponibles",
+    "blocked": {
+      "exported": "Cette facture est synchronisée avec un système comptable. Annulez-la ou émettez un crédit distinct au lieu de modifier ses lignes."
+    }
   }
 }

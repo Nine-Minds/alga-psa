@@ -230,12 +230,14 @@
       "selectService": "〖Şḗŀḗƈŧ Şḗřṽīƈḗ ······〗",
       "taxable": "〖(Ŧȧẋȧƀŀḗ) ····〗",
       "nonTaxable": "〖(Ƞȯƞ-Ŧȧẋȧƀŀḗ) ······〗",
-      "calculatedOnSave": "〖(ƈȧŀƈŭŀȧŧḗḓ ȯƞ şȧṽḗ) ········〗"
+      "calculatedOnSave": "〖(ƈȧŀƈŭŀȧŧḗḓ ȯƞ şȧṽḗ) ········〗",
+      "credit": "〖Ƈřḗḓīŧ ···〗"
     },
     "expanded": {
       "discount": "〖Ḓīşƈȯŭƞŧ ····〗",
       "item": "〖Īŧḗḿ {{number}} ······〗",
-      "markedForRemoval": "〖Ḿȧřķḗḓ ƒȯř řḗḿȯṽȧŀ ········〗"
+      "markedForRemoval": "〖Ḿȧřķḗḓ ƒȯř řḗḿȯṽȧŀ ········〗",
+      "credit": "〖Ƈřḗḓīŧ ···〗"
     },
     "fields": {
       "service": "〖Şḗřṽīƈḗ ···〗",
@@ -247,10 +249,18 @@
       "applyDiscountTo": "〖Ȧƥƥŀẏ Ḓīşƈȯŭƞŧ Ŧȯ ·······〗",
       "entireInvoice": "〖Ḗƞŧīřḗ Īƞṽȯīƈḗ ······〗",
       "rate": "〖Řȧŧḗ ({{currencySymbol}}) ··········〗",
-      "description": "〖Ḓḗşƈřīƥŧīȯƞ ·····〗"
+      "description": "〖Ḓḗşƈřīƥŧīȯƞ ·····〗",
+      "creditUnit": "〖Ŭƞīŧ ƈřḗḓīŧ ({{currencySymbol}}) ·············〗",
+      "taxTreatment": "〖Ŧȧẋ ŧřḗȧŧḿḗƞŧ ······〗",
+      "nonTaxable": "〖Ƞȯƞ-ŧȧẋȧƀŀḗ ·····〗",
+      "location": "〖Ŀȯƈȧŧīȯƞ ····〗",
+      "clientDefaultLocation": "〖Ƈŀīḗƞŧ ḓḗƒȧŭŀŧ ······〗",
+      "billingProfile": "〖Ɓīŀŀīƞɠ ƥřȯƒīŀḗ ······〗",
+      "clientDefaultProfile": "〖Ƈŀīḗƞŧ ḓḗƒȧŭŀŧ ······〗"
     },
     "placeholders": {
-      "discountDescription": "〖ḗ.ɠ., Ḗȧřŀẏ Ƥȧẏḿḗƞŧ Ḓīşƈȯŭƞŧ ············〗"
+      "discountDescription": "〖ḗ.ɠ., Ḗȧřŀẏ Ƥȧẏḿḗƞŧ Ḓīşƈȯŭƞŧ ············〗",
+      "creditDescription": "〖ḗ.ɠ., Ɠȯȯḓẇīŀŀ ƈřḗḓīŧ ·········〗"
     },
     "actions": {
       "add": "〖Ȧḓḓ ··〗",
@@ -267,7 +277,8 @@
       "invoiceTotal": "〖{{percentage}}% ȯƒ īƞṽȯīƈḗ ŧȯŧȧŀ ·············〗",
       "amount": "〖Ȧḿȯŭƞŧ: -{{currencySymbol}}{{amount}} ···············〗",
       "appliedTo": "〖Ȧƥƥŀīḗḓ ŧȯ: {{description}} ···········〗",
-      "subtotal": "〖Şŭƀŧȯŧȧŀ: {{currencySymbol}}{{amount}} ················〗"
+      "subtotal": "〖Şŭƀŧȯŧȧŀ: {{currencySymbol}}{{amount}} ················〗",
+      "credit": "〖Ƈřḗḓīŧ ···〗"
     },
     "options": {
       "percentage": "〖Ƥḗřƈḗƞŧȧɠḗ ····〗",

@@ -330,7 +330,8 @@
       "title": "Automatisierte Werbebuchungen",
       "service": "Dienst",
       "total": "Gesamt",
-      "unknownService": "Unbekannter Dienst"
+      "unknownService": "Unbekannter Dienst",
+      "period": "Zeitraum"
     },
     "lineItems": {
       "manual": "Manuelle Einzelposten",
@@ -343,7 +344,8 @@
       "saveChanges": "Änderungen speichern",
       "processing": "Wird verarbeitet...",
       "generateSalesOrderInvoice": "Kundenauftragsrechnung erstellen",
-      "clearSalesOrderSource": "Kundenauftrag als Quelle entfernen"
+      "clearSalesOrderSource": "Kundenauftrag als Quelle entfernen",
+      "addPartialPeriodCharge": "Gebühr für Teilzeitraum hinzufügen"
     },
     "labels": {
       "total": "Gesamt"
@@ -395,6 +397,32 @@
     },
     "salesOrderContext": {
       "summary": "{{quantity}} Artikel aus {{lineCount}} Positionen können abgerechnet werden. Dieser Entwurf wird mit dem Kundenauftrag verknüpft."
+    },
+    "draftAdjustments": {
+      "title": "Rechnungsanpassungen",
+      "description": "Fügen Sie einmalige Gebühren, Rabatte oder Gutschriften hinzu. Generierte Vertragsgebühren bleiben schreibgeschützt; korrigieren Sie den Quellvertrag oder fügen Sie eine Anpassung hinzu."
+    },
+    "partialPeriod": {
+      "title": "Teilzeitraum-Gebühr",
+      "help": "Berechnet als Einheiten × Einzelpreis des Zeitraums × abgedeckte Tage / Tage des Gesamtzeitraums. Die Eingaben bleiben bei der Position erhalten, damit sie verständlich bleibt.",
+      "direction": "Richtung",
+      "increase": "Erhöhung",
+      "decrease": "Verringerung (Gutschrift)",
+      "units": "Einheiten",
+      "unitPrice": "Einzelpreis",
+      "coveredDays": "Abgedeckte Tage",
+      "fullPeriodDays": "Tage des Gesamtzeitraums",
+      "description": "Beschreibung (optional)",
+      "reason": "Grund (optional)",
+      "previewUnavailable": "Geben Sie eine gültige Berechnung ein.",
+      "resolvedAmount": "Aufgelöster Betrag: {{amount}}",
+      "addCharge": "Gebühr hinzufügen",
+      "creditDescription": "Gutschrift: {{proration}}",
+      "errors": {
+        "units": "Die Einheiten müssen größer als null sein.",
+        "unitPrice": "Der Einzelpreis muss eine Zahl sein.",
+        "invalid": "Geben Sie einen gültigen Teilzeitraum ein."
+      }
     }
   },
   "quickInvoice": {
@@ -2205,5 +2233,11 @@
     "saving": "Wird gespeichert …",
     "saveCorrection": "Korrektur speichern",
     "save": "Speichern"
+  },
+  "draftInvoiceAdjustments": {
+    "blockedTitle": "Rechnungsanpassungen nicht verfügbar",
+    "blocked": {
+      "exported": "Diese Rechnung ist mit einem Buchhaltungssystem synchronisiert. Stornieren Sie sie oder stellen Sie eine separate Gutschrift aus, anstatt ihre Positionen zu bearbeiten."
+    }
   }
 }

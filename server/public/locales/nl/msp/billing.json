@@ -230,12 +230,14 @@
       "selectService": "Selecteer Dienst",
       "taxable": "(belastbaar)",
       "nonTaxable": "(Niet-belastbaar)",
-      "calculatedOnSave": "(berekend bij opslaan)"
+      "calculatedOnSave": "(berekend bij opslaan)",
+      "credit": "Krediet"
     },
     "expanded": {
       "discount": "Korting",
       "item": "Artikel {{number}}",
-      "markedForRemoval": "Gemarkeerd voor verwijdering"
+      "markedForRemoval": "Gemarkeerd voor verwijdering",
+      "credit": "Krediet"
     },
     "fields": {
       "service": "Dienst",
@@ -247,10 +249,18 @@
       "applyDiscountTo": "Korting toepassen op",
       "entireInvoice": "Volledige factuur",
       "rate": "Tarief ({{currencySymbol}})",
-      "description": "Beschrijving"
+      "description": "Beschrijving",
+      "creditUnit": "Krediet per eenheid ({{currencySymbol}})",
+      "taxTreatment": "Fiscale behandeling",
+      "nonTaxable": "Niet-belastbaar",
+      "location": "Locatie",
+      "clientDefaultLocation": "Standaard van de klant",
+      "billingProfile": "Facturatieprofiel",
+      "clientDefaultProfile": "Standaard van de klant"
     },
     "placeholders": {
-      "discountDescription": "bijvoorbeeld korting op vroegtijdige betaling"
+      "discountDescription": "bijvoorbeeld korting op vroegtijdige betaling",
+      "creditDescription": "bijvoorbeeld krediet uit goodwill"
     },
     "actions": {
       "add": "Toevoegen",
@@ -267,7 +277,8 @@
       "invoiceTotal": "{{percentage}}% van het factuurtotaal",
       "amount": "Bedrag: -{{currencySymbol}}{{amount}}",
       "appliedTo": "Toegepast op: {{description}}",
-      "subtotal": "Subtotaal: {{currencySymbol}}{{amount}}"
+      "subtotal": "Subtotaal: {{currencySymbol}}{{amount}}",
+      "credit": "Krediet"
     },
     "options": {
       "percentage": "Percentage",

@@ -230,12 +230,14 @@
       "selectService": "Selecione o serviço",
       "taxable": "(Tributável)",
       "nonTaxable": "(Não Tributável)",
-      "calculatedOnSave": "(calculado ao salvar)"
+      "calculatedOnSave": "(calculado ao salvar)",
+      "credit": "Crédito"
     },
     "expanded": {
       "discount": "Desconto",
       "item": "Item {{number}}",
-      "markedForRemoval": "Marcado para remoção"
+      "markedForRemoval": "Marcado para remoção",
+      "credit": "Crédito"
     },
     "fields": {
       "service": "Serviço",
@@ -247,10 +249,18 @@
       "applyDiscountTo": "Aplicar desconto para",
       "entireInvoice": "Fatura completa",
       "rate": "Taxa ({{currencySymbol}})",
-      "description": "Descrição"
+      "description": "Descrição",
+      "creditUnit": "Crédito por unidade ({{currencySymbol}})",
+      "taxTreatment": "Tratamento fiscal",
+      "nonTaxable": "Não tributável",
+      "location": "Local",
+      "clientDefaultLocation": "Padrão do cliente",
+      "billingProfile": "Perfil de faturamento",
+      "clientDefaultProfile": "Padrão do cliente"
     },
     "placeholders": {
-      "discountDescription": "por exemplo, desconto por pagamento antecipado"
+      "discountDescription": "por exemplo, desconto por pagamento antecipado",
+      "creditDescription": "por exemplo, crédito de cortesia"
     },
     "actions": {
       "add": "Adicionar",
@@ -267,7 +277,8 @@
       "invoiceTotal": "{{percentage}}% do total da fatura",
       "amount": "Quantidade: -{{currencySymbol}}{{amount}}",
       "appliedTo": "Aplicado a: {{description}}",
-      "subtotal": "Subtotal: {{currencySymbol}}{{amount}}"
+      "subtotal": "Subtotal: {{currencySymbol}}{{amount}}",
+      "credit": "Crédito"
     },
     "options": {
       "percentage": "Percentagem",
