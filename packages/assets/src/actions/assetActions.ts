@@ -66,6 +66,7 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/db';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { emitDateDomainEventOnce } from '@alga-psa/jobs/date-triggers';
 import {
     buildAssetAssignedPayload,
     buildAssetCreatedPayload,
@@ -1022,8 +1023,9 @@ export async function createAssetRecord(
             });
 
             if (warranty) {
-                await publishWorkflowEvent({
-                    eventType: 'ASSET_WARRANTY_EXPIRING',
+                await emitDateDomainEventOnce(knex, tenant, {
+                    eventType: 'ASSET_WARRANTY_EXPIRING', entityId: created.asset_id,
+                    cycleKey: warranty.expiresAt.slice(0, 10), occursOn: warranty.expiresAt.slice(0, 10),
                     payload: buildAssetWarrantyExpiringPayload({
                         assetId: created.asset_id,
                         clientId: created.client_id || undefined,
@@ -1314,8 +1316,9 @@ export async function updateAssetRecord(
         });
 
         if (warranty) {
-            await publishWorkflowEvent({
-                eventType: 'ASSET_WARRANTY_EXPIRING',
+            await emitDateDomainEventOnce(knex, tenant, {
+                eventType: 'ASSET_WARRANTY_EXPIRING', entityId: asset_id,
+                cycleKey: warranty.expiresAt.slice(0, 10), occursOn: warranty.expiresAt.slice(0, 10),
                 payload: buildAssetWarrantyExpiringPayload({
                     assetId: asset_id,
                     clientId: newClientId || previousClientId,

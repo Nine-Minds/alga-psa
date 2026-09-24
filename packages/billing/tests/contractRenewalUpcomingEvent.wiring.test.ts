@@ -29,10 +29,15 @@ describe('contract renewal upcoming event queue-compatible payload wiring', () =
     expect(contractWizardActionsSource).toContain('daysUntilDecisionDue: renewal.daysUntilDecisionDue,');
     expect(contractWizardActionsSource).toContain('renewalCycleKey: renewal.renewalCycleKey,');
     expect(contractWizardActionsSource).toContain('decisionDueAt: decisionDueAtForWorkflow ?? undefined,');
+    expect(contractWizardActionsSource).toContain('emitDateDomainEventOnce(knex, tenant, {');
+    expect(contractWizardActionsSource).toContain("eventType: 'CONTRACT_RENEWAL_UPCOMING', entityId: wfData.clientContractId,");
 
     expect(clientContractActionsSource).toContain('decisionDueDate: renewal.decisionDueDate,');
     expect(clientContractActionsSource).toContain('daysUntilDecisionDue: renewal.daysUntilDecisionDue,');
     expect(clientContractActionsSource).toContain('renewalCycleKey: renewal.renewalCycleKey,');
     expect(clientContractActionsSource).toContain('decisionDueAt: (clientContract as any).decision_due_date ?? undefined,');
+    expect(clientContractActionsSource).toContain('emitDateDomainEventOnce(knex, tenant, {');
+    expect(clientContractActionsSource).toContain('emitDateDomainEventOnce(db, tenant, {');
+    expect(clientContractActionsSource).toContain("eventType: 'CONTRACT_RENEWAL_UPCOMING', entityId: clientContract.client_contract_id,");
   });
 });

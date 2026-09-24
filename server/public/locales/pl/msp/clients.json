@@ -337,7 +337,8 @@
     "parentClientSelf": "Klient nie może być swoim własnym klientem nadrzędnym",
     "parentClientPlaceholder": "Brak klienta nadrzędnego",
     "parentClientClear": "Wyczyść",
-    "parentClientLegacy": "Wcześniej wprowadzono jako tekst: {{name}}"
+    "parentClientLegacy": "Wcześniej wprowadzono jako tekst: {{name}}",
+    "clientSince": "Client since"
   },
   "clientCommandCenter": {
     "cards": {

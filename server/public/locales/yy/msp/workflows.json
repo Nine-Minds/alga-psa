@@ -674,7 +674,21 @@
       "workflowStepsListHint": "〖Ḓřȧɠ şŧḗƥş ŧȯ řḗȯřḓḗř ȯř ḿȯṽḗ ƀḗŧẇḗḗƞ ƥīƥḗş. ··················〗",
       "workflowStepsGraphHint": "〖Ƥȧƞ/ẑȯȯḿ ŧħḗ ɠřȧƥħ. Ɓřȧƞƈħḗş řḗƞḓḗř ȧş şḗƥȧřȧŧḗ ŀȧƞḗş. ······················〗",
       "workflowStepsViewAria": "〖Ẇȯřķƒŀȯẇ şŧḗƥş ṽīḗẇ ········〗",
-      "warningsCount": "〖{{count}} ẇȧřƞīƞɠş ········〗"
+      "warningsCount": "〖{{count}} ẇȧřƞīƞɠş ········〗",
+      "dateSource": "⟪Date source⟫",
+      "dateSourceAnniversary": "⟪Client anniversary⟫",
+      "dateSourceRenewal": "⟪Contract renewal decision date⟫",
+      "dateSourceContractEnd": "⟪Contract end date⟫",
+      "dateSourceWarranty": "⟪Asset warranty end⟫",
+      "dateOffset": "⟪Days⟫",
+      "dateDirection": "⟪Timing⟫",
+      "before": "⟪Before⟫",
+      "onDate": "⟪On the day⟫",
+      "after": "⟪After⟫",
+      "localTime": "⟪Local time⟫",
+      "timezoneOptional": "⟪Timezone (optional)⟫",
+      "tenantTimezoneDefault": "⟪Tenant timezone⟫",
+      "dateTriggerSummary": "⟪Runs {{days}} {{direction}} {{source}} at {{time}} ({{timezone}})⟫"
     },
     "stepPanel": {
       "readOnly": "〖Řḗȧḓ-ȯƞŀẏ ȧƈƈḗşş: şŧḗƥ ḗḓīŧīƞɠ īş ḓīşȧƀŀḗḓ. ··················〗",
@@ -2201,13 +2215,15 @@
         "event": "〖Ḗṽḗƞŧ-ƀȧşḗḓ ·····〗",
         "schedule": "〖Ȯƞḗ-ŧīḿḗ şƈħḗḓŭŀḗ ·······〗",
         "recurring": "〖Řḗƈŭřřīƞɠ şƈħḗḓŭŀḗ ········〗",
-        "manual": "〖Ḿȧƞŭȧŀ ···〗"
+        "manual": "〖Ḿȧƞŭȧŀ ···〗",
+        "date": "⟪Date-based⟫"
       },
       "triggerLabels": {
         "manual": "〖Ḿȧƞŭȧŀ ···〗",
         "schedule": "〖Ȯƞḗ-ŧīḿḗ şƈħḗḓŭŀḗ ·······〗",
         "recurring": "〖Řḗƈŭřřīƞɠ şƈħḗḓŭŀḗ ········〗",
-        "event": "〖Ḗṽḗƞŧ ··〗"
+        "event": "〖Ḗṽḗƞŧ ··〗",
+        "date": "⟪Date⟫"
       },
       "bulk": {
         "selectedSingular": "〖{{count}} ẇȯřķƒŀȯẇ şḗŀḗƈŧḗḓ ···········〗",

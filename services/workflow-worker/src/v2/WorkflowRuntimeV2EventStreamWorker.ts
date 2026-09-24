@@ -11,8 +11,7 @@ import {
   resolveInputMapping,
 } from '@alga-psa/workflows/runtime/core';
 import {
-  WorkflowDefinitionModelV2,
-  WorkflowDefinitionVersionModelV2,
+  listPublishedWorkflowDefinitions,
   WorkflowRuntimeEventModelV2,
   WorkflowRunModelV2,
   WorkflowRunWaitModelV2,
@@ -308,9 +307,9 @@ export class WorkflowRuntimeV2EventStreamWorker {
 
     const schemaRegistry = getSchemaRegistry();
 
-    const workflows = await WorkflowDefinitionModelV2.list(knex, event.tenant);
-    const matching = workflows.filter(
-      (workflow) => workflow.status === 'published' && (workflow.trigger as any)?.eventName === event.event_type
+    const publishedDefinitions = await listPublishedWorkflowDefinitions(knex, event.tenant);
+    const matching = publishedDefinitions.filter(({ workflow, definition }) =>
+      ((definition?.trigger as any) ?? workflow.trigger)?.eventName === event.event_type
     );
 
     const startedRuns: string[] = [];
@@ -322,16 +321,9 @@ export class WorkflowRuntimeV2EventStreamWorker {
       schemaMismatch: 0,
       payloadValidationFailed: 0,
     };
-    for (const workflow of matching) {
+    for (const { workflow, latestVersion: latest } of matching) {
       if (deliveryError) {
         break;
-      }
-
-      const versions = await WorkflowDefinitionVersionModelV2.listByWorkflow(knex, workflow.workflow_id);
-      const latest = versions[0];
-      if (!latest) {
-        skipStats.noVersion += 1;
-        continue;
       }
 
       const latestDefinition = latest.definition_json as any;

@@ -1,15 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { computeClientAnniversary, computeDateTrigger } from '../clientDateEventBuilders';
+import { buildClientAnniversaryUpcomingPayload } from '../clientDateEventBuilders';
 
-describe('client date trigger builders', () => {
-  it('returns upcoming client anniversary and handles leap day in non-leap years', () => {
-    expect(computeClientAnniversary({ createdAt: '2020-02-29', now: '2025-02-27' })).toEqual({
-      anniversaryDate: '2025-02-28', yearsAsClient: 5, daysUntil: 1,
+describe('client anniversary event payload builder', () => {
+  it('preserves the event contract fields', () => {
+    expect(buildClientAnniversaryUpcomingPayload({
+      clientId: 'client-1', clientName: 'Acme', anniversaryDate: '2026-10-01', yearsAsClient: 5, daysUntilAnniversary: 8,
+    })).toEqual({
+      clientId: 'client-1', clientName: 'Acme', anniversaryDate: '2026-10-01', yearsAsClient: 5, daysUntilAnniversary: 8,
     });
-  });
-
-  it('only emits configured threshold dates', () => {
-    expect(computeDateTrigger('2026-01-31', '2026-01-01')).toBe(30);
-    expect(computeDateTrigger('2026-01-29', '2026-01-01')).toBeNull();
   });
 });

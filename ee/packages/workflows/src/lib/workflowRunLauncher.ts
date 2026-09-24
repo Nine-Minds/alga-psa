@@ -31,7 +31,7 @@ export type WorkflowRunLaunchRequest = {
   tenantId: string | null;
   payload: Record<string, unknown>;
   workflowVersion?: number | null;
-  triggerType?: 'event' | 'schedule' | 'recurring' | null;
+  triggerType?: 'event' | 'schedule' | 'recurring' | 'date' | null;
   triggerMetadata?: Record<string, unknown> | null;
   triggerFireKey?: string | null;
   eventType?: string | null;
@@ -50,7 +50,7 @@ type WorkflowRunLaunchFailureRequest = {
   workflowVersion: number;
   tenantId: string | null;
   payload: Record<string, unknown>;
-  triggerType?: 'event' | 'schedule' | 'recurring' | null;
+  triggerType?: 'event' | 'schedule' | 'recurring' | 'date' | null;
   triggerMetadata?: Record<string, unknown> | null;
   triggerFireKey?: string | null;
   eventType?: string | null;

@@ -674,7 +674,21 @@
       "workflowStepsListHint": "Przeciągnij kroki, aby zmienić kolejność lub przenieść między potokami.",
       "workflowStepsGraphHint": "Przesuwaj/powiększaj graf. Gałęzie są wyświetlane w oddzielnych torach.",
       "workflowStepsViewAria": "Widok kroków workflow",
-      "warningsCount": "{{count}} ostrzeżeń"
+      "warningsCount": "{{count}} ostrzeżeń",
+      "dateSource": "Date source",
+      "dateSourceAnniversary": "Client anniversary",
+      "dateSourceRenewal": "Contract renewal decision date",
+      "dateSourceContractEnd": "Contract end date",
+      "dateSourceWarranty": "Asset warranty end",
+      "dateOffset": "Days",
+      "dateDirection": "Timing",
+      "before": "Before",
+      "onDate": "On the day",
+      "after": "After",
+      "localTime": "Local time",
+      "timezoneOptional": "Timezone (optional)",
+      "tenantTimezoneDefault": "Tenant timezone",
+      "dateTriggerSummary": "Runs {{days}} {{direction}} {{source}} at {{time}} ({{timezone}})"
     },
     "stepPanel": {
       "readOnly": "Dostęp tylko do odczytu: edycja kroków jest wyłączona.",
@@ -2325,13 +2339,15 @@
         "event": "Oparty na zdarzeniu",
         "schedule": "Harmonogram jednorazowy",
         "recurring": "Harmonogram cykliczny",
-        "manual": "Ręczny"
+        "manual": "Ręczny",
+        "date": "Date-based"
       },
       "triggerLabels": {
         "manual": "Ręczny",
         "schedule": "Harmonogram jednorazowy",
         "recurring": "Harmonogram cykliczny",
-        "event": "Zdarzenie"
+        "event": "Zdarzenie",
+        "date": "Date"
       },
       "bulk": {
         "selectedSingular": "Wybrano {{count}} workflow",

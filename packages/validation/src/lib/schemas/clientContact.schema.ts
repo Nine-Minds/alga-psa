@@ -134,6 +134,7 @@ function isBlank(value: unknown): boolean {
  */
 export const clientCoreFieldsSchema = z.object({
   client_name: clientNameSchema,
+  client_since: z.string().date().nullable().optional(),
   email: optional(emailFieldSchema),
   url: optional(urlFieldSchema),
   phone_no: optional(phoneFieldSchema),

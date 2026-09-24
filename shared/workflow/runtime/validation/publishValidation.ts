@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { WorkflowDefinition, PublishError, Step, NodeStep, InputMapping } from '../types';
 import { workflowDefinitionSchema } from '../types';
+import { dateTriggerPayloadSchemaRefs } from '../schemas/dateTriggerPayloadSchemas';
 import { getNodeTypeRegistry } from '../registries/nodeTypeRegistry';
 import { getActionRegistryV2 } from '../registries/actionRegistry';
 import { validateExpressionSource, describeExpressionError } from '../expressionEngine';
@@ -52,6 +53,18 @@ export function validateWorkflowDefinition(
         stepPath: 'root',
         code: 'INVALID_WORKFLOW_DEFINITION',
         message: 'Workflow definition failed schema validation'
+      });
+    }
+  }
+
+  if (definition.trigger?.type === 'date') {
+    const expectedSchemaRef = dateTriggerPayloadSchemaRefs[definition.trigger.source];
+    if (definition.payloadSchemaRef !== expectedSchemaRef) {
+      errors.push({
+        severity: 'error',
+        stepPath: 'trigger',
+        code: 'DATE_TRIGGER_SCHEMA_MISMATCH',
+        message: `Date trigger source "${definition.trigger.source}" requires payload schema "${expectedSchemaRef}".`
       });
     }
   }

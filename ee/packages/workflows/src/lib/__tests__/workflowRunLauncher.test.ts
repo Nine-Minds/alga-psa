@@ -113,6 +113,22 @@ describe('workflowRunLauncher', () => {
     });
   });
 
+  it('returns the existing run for a repeated date fire key', async () => {
+    getByTriggerFireKeyMock.mockResolvedValue({ run_id: 'existing-run', workflow_version: 3 });
+
+    const result = await launchPublishedWorkflowRun({} as any, {
+      workflowId: 'wf-1',
+      tenantId: 'tenant-1',
+      payload: { occursOn: '2026-09-23' },
+      triggerType: 'date',
+      triggerFireKey: 'date:wf-1:client.anniversary:client-1:2026-09-23:0',
+    });
+
+    expect(result).toEqual({ runId: 'existing-run', workflowVersion: 3 });
+    expect(startRunMock).not.toHaveBeenCalled();
+    expect(startWorkflowRuntimeV2TemporalRunMock).not.toHaveBeenCalled();
+  });
+
   it('ignores the retired engine-selection env flag', async () => {
     process.env.WORKFLOW_RUNTIME_V2_ENABLE_TEMPORAL_POLLING = 'false';
     try {

@@ -36,7 +36,7 @@ import {
 } from './handlers/providerDisconnectRetryHandler';
 import { renewGoogleGmailWatchSubscriptions, GoogleGmailWatchRenewalJobData } from '@alga-psa/jobs/handlers/googleGmailWatchRenewalHandler';
 import { processRenewalQueueHandler, RenewalQueueProcessorJobData } from '@alga-psa/jobs/handlers/processRenewalQueueHandler';
-import { workflowDateTriggerScanHandler, WorkflowDateTriggerScanJobData } from '@alga-psa/jobs/handlers/workflowDateTriggerScanHandler';
+import { dateTriggerScanHandler, DateTriggerScanJobData } from '@alga-psa/jobs/handlers/dateTriggerScanHandler';
 import { autoCloseTicketsHandler, AutoCloseTicketsJobData } from '@alga-psa/jobs/handlers/autoCloseTicketsHandler';
 import { lowStockNotificationHandler, LowStockNotificationJobData } from './handlers/lowStockNotificationHandler';
 import {
@@ -269,7 +269,7 @@ export const initializeScheduler = async (storageService?: StorageService) => {
       await providerDisconnectRetryJobHandler(job);
     });
 
-    jobScheduler.registerJobHandler<WorkflowDateTriggerScanJobData>('workflow-date-trigger-scan', async (job) => { await workflowDateTriggerScanHandler(job.data); });
+    jobScheduler.registerJobHandler<DateTriggerScanJobData>('date-trigger-scan', async (job) => { await dateTriggerScanHandler(job.data); });
 
     // Register renewal queue processing handler
     jobScheduler.registerJobHandler<RenewalQueueProcessorJobData>(
@@ -1044,8 +1044,14 @@ export const scheduleSearchReconcileJob = async (
   );
 };
 
-export const scheduleWorkflowDateTriggerScanJob = async (tenantId: string, cronExpression: string = '0 5 * * *'): Promise<string | null> => {
+export const scheduleDateTriggerScanJob = async (tenantId: string, cronExpression: string = '5 * * * *'): Promise<string | null> => {
   if (isEnterpriseWorkflowEdition()) return null;
-  const scheduler = await initializeScheduler();
-  return scheduler.scheduleRecurringJob<WorkflowDateTriggerScanJobData>('workflow-date-trigger-scan', cronExpression, { tenantId });
+  const runner = await getJobRunnerInstance();
+  const result = await runner.scheduleRecurringJob<DateTriggerScanJobData>(
+    'date-trigger-scan',
+    { tenantId },
+    cronExpression,
+    { singletonKey: `date-trigger-scan:${tenantId}` }
+  );
+  return result.jobId;
 };

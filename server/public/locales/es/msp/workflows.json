@@ -674,7 +674,21 @@
       "workflowStepsListHint": "Arrastre los pasos para reordenarlos o moverlos entre los canales.",
       "workflowStepsGraphHint": "Desplácese/acerque el gráfico. Las ramas se muestran en carriles separados.",
       "workflowStepsViewAria": "Vista de los pasos del flujo de trabajo",
-      "warningsCount": "{{count}} advertencias"
+      "warningsCount": "{{count}} advertencias",
+      "dateSource": "Date source",
+      "dateSourceAnniversary": "Client anniversary",
+      "dateSourceRenewal": "Contract renewal decision date",
+      "dateSourceContractEnd": "Contract end date",
+      "dateSourceWarranty": "Asset warranty end",
+      "dateOffset": "Days",
+      "dateDirection": "Timing",
+      "before": "Before",
+      "onDate": "On the day",
+      "after": "After",
+      "localTime": "Local time",
+      "timezoneOptional": "Timezone (optional)",
+      "tenantTimezoneDefault": "Tenant timezone",
+      "dateTriggerSummary": "Runs {{days}} {{direction}} {{source}} at {{time}} ({{timezone}})"
     },
     "stepPanel": {
       "readOnly": "Acceso de solo lectura: la edición de pasos está deshabilitada.",
@@ -2323,13 +2337,15 @@
         "event": "Basado en eventos",
         "schedule": "Programación única",
         "recurring": "Programación recurrente",
-        "manual": "Manual"
+        "manual": "Manual",
+        "date": "Date-based"
       },
       "triggerLabels": {
         "manual": "Manual",
         "schedule": "Programación única",
         "recurring": "Programación recurrente",
-        "event": "Evento"
+        "event": "Evento",
+        "date": "Date"
       },
       "bulk": {
         "selectedSingular": "{{count}} flujo de trabajo seleccionado",

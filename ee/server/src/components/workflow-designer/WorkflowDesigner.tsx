@@ -287,7 +287,7 @@ type WorkflowPlaywrightOverrides = {
   registryActions?: ActionRegistryItem[];
 };
 
-type TriggerTypeSelection = 'manual' | 'event';
+type TriggerTypeSelection = 'manual' | 'event' | 'date';
 
 const getWorkflowPlaywrightOverrides = (): WorkflowPlaywrightOverrides | null => {
   if (typeof window === 'undefined') return null;
@@ -2073,6 +2073,19 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   }, [activeDefinition?.trigger]);
 
   const triggerSchemaPolicy = useMemo(() => {
+    const dateTrigger = activeDefinition?.trigger?.type === 'date' ? activeDefinition.trigger : null;
+    if (dateTrigger) {
+      const expectedRefs: Record<string, string> = {
+        'client.anniversary': 'payload.ClientAnniversary.v1',
+        'contract.renewal_decision': 'payload.ContractRenewalDate.v1',
+        'contract.end': 'payload.ContractEndDate.v1',
+        'asset.warranty_end': 'payload.AssetWarrantyEnd.v1',
+      };
+      if (activeDefinition?.payloadSchemaRef !== expectedRefs[dateTrigger.source]) {
+        return { ok: false, level: 'error' as const, message: 'Date trigger payload schema must match its selected source.' };
+      }
+      return { ok: true, level: 'none' as const, message: '' };
+    }
     const eventName = activeDefinition?.trigger?.type === 'event' ? activeDefinition.trigger.eventName : '';
     if (!eventName) return { ok: true, level: 'none' as const, message: '' };
 
@@ -2223,7 +2236,8 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     if (actualTriggerType === 'event') {
       return 'event';
     }
-    return triggerTypeSelection === 'event' ? 'event' : 'manual';
+    if (actualTriggerType === 'date') return 'date';
+    return triggerTypeSelection;
   }, [activeDefinition?.trigger?.type, triggerTypeSelection]);
 
   const handleTriggerTypeSelectionChange = useCallback((nextType: TriggerTypeSelection) => {
@@ -2247,6 +2261,17 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
             }
           : current
       ));
+      return;
+    }
+
+    if (nextType === 'date') {
+      const source = 'client.anniversary';
+      setSelectedTriggerEventCategory('');
+      setActiveDefinition((current) => current ? {
+        ...current,
+        trigger: { type: 'date', source, offsetDays: -30, localTime: '08:00' },
+        payloadSchemaRef: 'payload.ClientAnniversary.v1',
+      } : current);
       return;
     }
 
@@ -3966,6 +3991,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                       : null;
                     const showTriggerSchemaDetails = contractSettingsExpanded;
                     const showEventConfiguration = currentTriggerSelection === 'event';
+                    const dateTrigger = activeDefinition?.trigger?.type === 'date' ? activeDefinition.trigger : null;
                     const eventCategoryOptions = buildWorkflowTriggerEventCategoryOptions(eventCatalogOptions, selectedEventName);
                     const eventOptions = buildWorkflowTriggerEventOptions(
                       eventCatalogOptions,
@@ -4202,6 +4228,60 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                     Failed to load the event catalog. Publishing and running are disabled for event-triggered workflows until this loads.
                                   </div>
                                 )}
+                              </div>
+                            )}
+
+                            {currentTriggerSelection === 'date' && dateTrigger && (
+                              <div className="space-y-3 rounded border border-[rgb(var(--color-border-200))] p-3">
+                                <div>
+                                  <label htmlFor="workflow-date-source" className="mb-1 block text-sm font-medium">{t('designer.form.dateSource', { defaultValue: 'Date source' })}</label>
+                                  <CustomSelect
+                                    id="workflow-date-source"
+                                    value={dateTrigger.source}
+                                    disabled={!canManage}
+                                    options={[
+                                      { value: 'client.anniversary', label: t('designer.form.dateSourceAnniversary', { defaultValue: 'Client anniversary' }) },
+                                      { value: 'contract.renewal_decision', label: t('designer.form.dateSourceRenewal', { defaultValue: 'Contract renewal decision date' }) },
+                                      { value: 'contract.end', label: t('designer.form.dateSourceContractEnd', { defaultValue: 'Contract end date' }) },
+                                      { value: 'asset.warranty_end', label: t('designer.form.dateSourceWarranty', { defaultValue: 'Asset warranty end' }) },
+                                    ]}
+                                    onValueChange={(value) => {
+                                      const schemaRefs: Record<string, string> = {
+                                        'client.anniversary': 'payload.ClientAnniversary.v1',
+                                        'contract.renewal_decision': 'payload.ContractRenewalDate.v1',
+                                        'contract.end': 'payload.ContractEndDate.v1',
+                                        'asset.warranty_end': 'payload.AssetWarrantyEnd.v1',
+                                      };
+                                      handleDefinitionChange({ trigger: { ...dateTrigger, source: value as typeof dateTrigger.source }, payloadSchemaRef: schemaRefs[value] });
+                                    }}
+                                  />
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div>
+                                    <label htmlFor="workflow-date-offset" className="mb-1 block text-sm font-medium">{t('designer.form.dateOffset', { defaultValue: 'Days' })}</label>
+                                    <Input id="workflow-date-offset" type="number" min={0} max={365} value={Math.abs(dateTrigger.offsetDays)} disabled={!canManage} onChange={(event) => {
+                                      const amount = Math.min(365, Math.max(0, Number(event.target.value) || 0));
+                                      const sign = dateTrigger.offsetDays < 0 ? -1 : dateTrigger.offsetDays > 0 ? 1 : 0;
+                                      handleDefinitionChange({ trigger: { ...dateTrigger, offsetDays: sign * amount } });
+                                    }} />
+                                  </div>
+                                  <div>
+                                    <label htmlFor="workflow-date-direction" className="mb-1 block text-sm font-medium">{t('designer.form.dateDirection', { defaultValue: 'Timing' })}</label>
+                                    <CustomSelect id="workflow-date-direction" value={dateTrigger.offsetDays < 0 ? 'before' : dateTrigger.offsetDays > 0 ? 'after' : 'on'} disabled={!canManage} options={[{value:'before',label:t('designer.form.before',{defaultValue:'Before'})},{value:'on',label:t('designer.form.onDate',{defaultValue:'On the day'})},{value:'after',label:t('designer.form.after',{defaultValue:'After'})}]} onValueChange={(value) => {
+                                      const days = Math.abs(dateTrigger.offsetDays);
+                                      handleDefinitionChange({ trigger: { ...dateTrigger, offsetDays: value === 'before' ? -days : value === 'after' ? days : 0 } });
+                                    }} />
+                                  </div>
+                                  <div>
+                                    <label htmlFor="workflow-date-local-time" className="mb-1 block text-sm font-medium">{t('designer.form.localTime', { defaultValue: 'Local time' })}</label>
+                                    <Input id="workflow-date-local-time" type="time" value={dateTrigger.localTime} disabled={!canManage} onChange={(event) => handleDefinitionChange({ trigger: { ...dateTrigger, localTime: event.target.value } })} />
+                                  </div>
+                                  <div>
+                                    <label htmlFor="workflow-date-timezone" className="mb-1 block text-sm font-medium">{t('designer.form.timezoneOptional', { defaultValue: 'Timezone (optional)' })}</label>
+                                    <Input id="workflow-date-timezone" value={dateTrigger.timezone ?? ''} disabled={!canManage} placeholder={t('designer.form.tenantTimezoneDefault', { defaultValue: 'Tenant timezone' })} onChange={(event) => handleDefinitionChange({ trigger: { ...dateTrigger, timezone: event.target.value || undefined } })} />
+                                  </div>
+                                </div>
+                                <p className="text-xs text-[rgb(var(--color-text-500))]">{t('designer.form.dateTriggerSummary', { defaultValue: 'Runs {{days}} {{direction}} {{source}} at {{time}} ({{timezone}})', days: Math.abs(dateTrigger.offsetDays), direction: t(dateTrigger.offsetDays < 0 ? 'designer.form.daysBefore' : dateTrigger.offsetDays > 0 ? 'designer.form.daysAfter' : 'designer.form.onDate', { defaultValue: dateTrigger.offsetDays < 0 ? 'days before' : dateTrigger.offsetDays > 0 ? 'days after' : 'on' }), source: t(({ 'client.anniversary': 'designer.form.dateSourceAnniversary', 'contract.renewal_decision': 'designer.form.dateSourceRenewal', 'contract.end': 'designer.form.dateSourceContractEnd', 'asset.warranty_end': 'designer.form.dateSourceWarranty' } as Record<string, string>)[dateTrigger.source], { defaultValue: dateTrigger.source }), time: dateTrigger.localTime, timezone: dateTrigger.timezone || t('designer.form.tenantTimezoneDefault', { defaultValue: 'tenant timezone' }) })}</p>
                               </div>
                             )}
 

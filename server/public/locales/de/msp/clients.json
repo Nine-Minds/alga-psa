@@ -307,7 +307,8 @@
     "parentClientSelf": "Ein Kunde kann nicht sein eigener übergeordneter Kunde sein",
     "parentClientPlaceholder": "Kein übergeordneter Kunde",
     "parentClientClear": "Löschen",
-    "parentClientLegacy": "Zuvor als Text eingegeben: {{name}}"
+    "parentClientLegacy": "Zuvor als Text eingegeben: {{name}}",
+    "clientSince": "Client since"
   },
   "clientCommandCenter": {
     "cards": {

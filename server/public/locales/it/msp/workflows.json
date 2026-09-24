@@ -674,7 +674,21 @@
       "workflowStepsListHint": "Trascina i passaggi per riordinarli o spostarli tra le pipeline.",
       "workflowStepsGraphHint": "Scorri/ingrandisci il grafo. I rami vengono visualizzati in corsie separate.",
       "workflowStepsViewAria": "Vista dei passaggi del workflow",
-      "warningsCount": "{{count}} avvisi"
+      "warningsCount": "{{count}} avvisi",
+      "dateSource": "Date source",
+      "dateSourceAnniversary": "Client anniversary",
+      "dateSourceRenewal": "Contract renewal decision date",
+      "dateSourceContractEnd": "Contract end date",
+      "dateSourceWarranty": "Asset warranty end",
+      "dateOffset": "Days",
+      "dateDirection": "Timing",
+      "before": "Before",
+      "onDate": "On the day",
+      "after": "After",
+      "localTime": "Local time",
+      "timezoneOptional": "Timezone (optional)",
+      "tenantTimezoneDefault": "Tenant timezone",
+      "dateTriggerSummary": "Runs {{days}} {{direction}} {{source}} at {{time}} ({{timezone}})"
     },
     "stepPanel": {
       "readOnly": "Accesso in sola lettura: la modifica dei passaggi è disabilitata.",
@@ -2323,13 +2337,15 @@
         "event": "Basato su evento",
         "schedule": "Pianificazione singola",
         "recurring": "Pianificazione ricorrente",
-        "manual": "Manuale"
+        "manual": "Manuale",
+        "date": "Date-based"
       },
       "triggerLabels": {
         "manual": "Manuale",
         "schedule": "Pianificazione singola",
         "recurring": "Pianificazione ricorrente",
-        "event": "Evento"
+        "event": "Evento",
+        "date": "Date"
       },
       "bulk": {
         "selectedSingular": "{{count}} workflow selezionato",

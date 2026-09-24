@@ -674,7 +674,21 @@
       "workflowStepsListHint": "Sleep stappen om ze te herschikken of tussen pipes te verplaatsen.",
       "workflowStepsGraphHint": "Verschuif/zoom de grafiek. Vertakkingen worden als aparte banen weergegeven.",
       "workflowStepsViewAria": "Weergave van workflowstappen",
-      "warningsCount": "{{count}} waarschuwingen"
+      "warningsCount": "{{count}} waarschuwingen",
+      "dateSource": "Date source",
+      "dateSourceAnniversary": "Client anniversary",
+      "dateSourceRenewal": "Contract renewal decision date",
+      "dateSourceContractEnd": "Contract end date",
+      "dateSourceWarranty": "Asset warranty end",
+      "dateOffset": "Days",
+      "dateDirection": "Timing",
+      "before": "Before",
+      "onDate": "On the day",
+      "after": "After",
+      "localTime": "Local time",
+      "timezoneOptional": "Timezone (optional)",
+      "tenantTimezoneDefault": "Tenant timezone",
+      "dateTriggerSummary": "Runs {{days}} {{direction}} {{source}} at {{time}} ({{timezone}})"
     },
     "stepPanel": {
       "readOnly": "Alleen-lezentoegang: het bewerken van stappen is uitgeschakeld.",
@@ -2323,13 +2337,15 @@
         "event": "Op basis van een gebeurtenis",
         "schedule": "Eenmalige planning",
         "recurring": "Terugkerende planning",
-        "manual": "Handmatig"
+        "manual": "Handmatig",
+        "date": "Date-based"
       },
       "triggerLabels": {
         "manual": "Handmatig",
         "schedule": "Eenmalige planning",
         "recurring": "Terugkerende planning",
-        "event": "Gebeurtenis"
+        "event": "Gebeurtenis",
+        "date": "Date"
       },
       "bulk": {
         "selectedSingular": "{{count}} workflow geselecteerd",

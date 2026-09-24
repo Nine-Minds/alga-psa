@@ -307,7 +307,8 @@
     "parentClientSelf": "⟦Ȧ ƈŀīḗƞŧ ƈȧƞƞȯŧ ƀḗ īŧş ȯẇƞ ƥȧřḗƞŧ⟧",
     "parentClientPlaceholder": "⟦Ƞȯ ƥȧřḗƞŧ ƈŀīḗƞŧ⟧",
     "parentClientClear": "⟦Ƈŀḗȧř⟧",
-    "parentClientLegacy": "⟦Ƥřḗṽīȯŭşŀẏ ḗƞŧḗřḗḓ ȧş ŧḗẋŧ: {{name}}⟧"
+    "parentClientLegacy": "⟦Ƥřḗṽīȯŭşŀẏ ḗƞŧḗřḗḓ ȧş ŧḗẋŧ: {{name}}⟧",
+    "clientSince": "⟦Client since⟧"
   },
   "clientCommandCenter": {
     "cards": {

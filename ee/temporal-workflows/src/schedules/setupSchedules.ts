@@ -478,7 +478,7 @@ export async function setupSchedules() {
       { jobName: 'cleanup-temporary-workflow-forms', cron: '0 2 * * *' },
       { jobName: 'reconcile-bucket-usage', cron: '0 3 * * *' },
       { jobName: 'process-renewal-queue', cron: '0 5 * * *' },
-      { jobName: 'workflow-date-trigger-scan', cron: '0 5 * * *' },
+      { jobName: 'date-trigger-scan', cron: '5 * * * *' },
       { jobName: 'search:reconcile', cron: '0 6 * * *' },
       { jobName: 'expiring-credits-notification', cron: '0 9 * * *' },
       { jobName: 'prepaid-balance-alert-scan', cron: '0 9 * * *' },

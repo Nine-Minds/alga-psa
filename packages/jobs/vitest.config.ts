@@ -22,6 +22,8 @@ export default defineConfig({
       { find: /^@alga-psa\/notifications\/(.*)$/, replacement: path.resolve(__dirname, '../notifications/src/$1') },
       { find: /^@alga-psa\/shared$/, replacement: path.resolve(__dirname, '../../shared') },
       { find: /^@alga-psa\/shared\/(.*)$/, replacement: path.resolve(__dirname, '../../shared/$1') },
+      { find: /^@alga-psa\/workflow-streams$/, replacement: path.resolve(__dirname, '../workflow-streams/src/index.ts') },
+      { find: /^@alga-psa\/tenancy\/actions\/tenant-settings-actions\/tenantSettingsActions$/, replacement: path.resolve(__dirname, '../tenancy/src/actions/tenant-settings-actions/tenantSettingsActions.ts') },
     ],
   },
 });

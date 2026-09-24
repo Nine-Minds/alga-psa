@@ -674,7 +674,21 @@
       "workflowStepsListHint": "Arraste as etapas para reordenar ou mover-se entre tubos.",
       "workflowStepsGraphHint": "Panorâmica/zoom o gráfico. Ramos são renderizados como pistas separadas.",
       "workflowStepsViewAria": "Visualização de etapas do fluxo de trabalho",
-      "warningsCount": "Avisos {{count}}"
+      "warningsCount": "Avisos {{count}}",
+      "dateSource": "Date source",
+      "dateSourceAnniversary": "Client anniversary",
+      "dateSourceRenewal": "Contract renewal decision date",
+      "dateSourceContractEnd": "Contract end date",
+      "dateSourceWarranty": "Asset warranty end",
+      "dateOffset": "Days",
+      "dateDirection": "Timing",
+      "before": "Before",
+      "onDate": "On the day",
+      "after": "After",
+      "localTime": "Local time",
+      "timezoneOptional": "Timezone (optional)",
+      "tenantTimezoneDefault": "Tenant timezone",
+      "dateTriggerSummary": "Runs {{days}} {{direction}} {{source}} at {{time}} ({{timezone}})"
     },
     "stepPanel": {
       "readOnly": "Acesso somente leitura: a edição de etapas está desativada.",
@@ -2201,13 +2215,15 @@
         "event": "Baseado em eventos",
         "schedule": "Agendamento único",
         "recurring": "Cronograma recorrente",
-        "manual": "Manual"
+        "manual": "Manual",
+        "date": "Date-based"
       },
       "triggerLabels": {
         "manual": "Manual",
         "schedule": "Agendamento único",
         "recurring": "Cronograma recorrente",
-        "event": "Evento"
+        "event": "Evento",
+        "date": "Date"
       },
       "bulk": {
         "selectedSingular": "Fluxo de trabalho {{count}} selecionado",

@@ -674,7 +674,21 @@
       "workflowStepsListHint": "Drag steps to reorder or move between pipes.",
       "workflowStepsGraphHint": "Pan/zoom the graph. Branches render as separate lanes.",
       "workflowStepsViewAria": "Workflow steps view",
-      "warningsCount": "{{count}} warnings"
+      "warningsCount": "{{count}} warnings",
+      "dateSource": "Date source",
+      "dateSourceAnniversary": "Client anniversary",
+      "dateSourceRenewal": "Contract renewal decision date",
+      "dateSourceContractEnd": "Contract end date",
+      "dateSourceWarranty": "Asset warranty end",
+      "dateOffset": "Days",
+      "dateDirection": "Timing",
+      "before": "Before",
+      "onDate": "On the day",
+      "after": "After",
+      "localTime": "Local time",
+      "timezoneOptional": "Timezone (optional)",
+      "tenantTimezoneDefault": "Tenant timezone",
+      "dateTriggerSummary": "Runs {{days}} {{direction}} {{source}} at {{time}} ({{timezone}})"
     },
     "stepPanel": {
       "readOnly": "Read-only access: step editing is disabled.",
@@ -2201,13 +2215,15 @@
         "event": "Event-based",
         "schedule": "One-time schedule",
         "recurring": "Recurring schedule",
-        "manual": "Manual"
+        "manual": "Manual",
+        "date": "Date-based"
       },
       "triggerLabels": {
         "manual": "Manual",
         "schedule": "One-time schedule",
         "recurring": "Recurring schedule",
-        "event": "Event"
+        "event": "Event",
+        "date": "Date"
       },
       "bulk": {
         "selectedSingular": "{{count}} workflow selected",

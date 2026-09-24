@@ -118,12 +118,13 @@ export const WORKFLOW_REFERENCE_SECTION_LABEL_DEFAULTS: Record<WorkflowReference
   forEach: 'Loop context',
 };
 
-export const WORKFLOW_TRIGGER_MODE_VALUES = ['manual', 'event'] as const;
+export const WORKFLOW_TRIGGER_MODE_VALUES = ['manual', 'event', 'date'] as const;
 export type WorkflowTriggerMode = (typeof WORKFLOW_TRIGGER_MODE_VALUES)[number];
 
 export const WORKFLOW_TRIGGER_MODE_LABEL_DEFAULTS: Record<WorkflowTriggerMode, string> = {
   manual: 'No trigger',
   event: 'Event',
+  date: 'Date',
 };
 
 export const WORKFLOW_CANVAS_VIEW_VALUES = ['list', 'graph'] as const;

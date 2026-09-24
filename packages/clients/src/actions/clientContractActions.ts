@@ -17,6 +17,7 @@ import {
 } from '@alga-psa/shared/billingClients';
 import { withAuth } from '@alga-psa/auth';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { emitDateDomainEventOnce } from '@alga-psa/jobs/date-triggers';
 import {
   buildContractCreatedPayload,
   buildContractRenewalUpcomingPayload,
@@ -236,6 +237,7 @@ export const assignContractToClient = withAuth(async (
   await assertCanCreateClientContracts(_user);
 
   try {
+    const { knex } = await createTenantKnex();
     const clientContract = await ClientContract.assignContractToClient(
       clientId,
       contractId,
@@ -296,8 +298,10 @@ export const assignContractToClient = withAuth(async (
         })
       : null;
     if (renewal) {
-      await publishWorkflowEvent({
-        eventType: 'CONTRACT_RENEWAL_UPCOMING',
+      await emitDateDomainEventOnce(knex, tenant, {
+        eventType: 'CONTRACT_RENEWAL_UPCOMING', entityId: clientContract.client_contract_id,
+        cycleKey: renewal.renewalCycleKey ?? renewal.decisionDueDate ?? renewal.renewalAt,
+        occursOn: renewal.decisionDueDate,
         payload: buildContractRenewalUpcomingPayload({
           contractId: clientContract.contract_id,
           clientId: clientContract.client_id,
@@ -312,7 +316,6 @@ export const assignContractToClient = withAuth(async (
           occurredAt: createdAt,
           actor: maybeUserActor(_user),
         },
-        idempotencyKey: `contract_renewal_upcoming:${clientContract.contract_id}:${clientContract.client_id}:${renewal.renewalCycleKey ?? renewal.decisionDueDate ?? renewal.renewalAt}`,
       });
     }
 
@@ -443,8 +446,10 @@ export const createClientContract = withAuth(async (
         })
       : null;
     if (renewal) {
-      await publishWorkflowEvent({
-        eventType: 'CONTRACT_RENEWAL_UPCOMING',
+      await emitDateDomainEventOnce(knex, tenant, {
+        eventType: 'CONTRACT_RENEWAL_UPCOMING', entityId: createdForEvent.client_contract_id,
+        cycleKey: renewal.renewalCycleKey ?? renewal.decisionDueDate ?? renewal.renewalAt,
+        occursOn: renewal.decisionDueDate,
         payload: buildContractRenewalUpcomingPayload({
           contractId: createdForEvent.contract_id,
           clientId: createdForEvent.client_id,
@@ -459,7 +464,6 @@ export const createClientContract = withAuth(async (
           occurredAt: createdAt,
           actor: maybeUserActor(_user),
         },
-        idempotencyKey: `contract_renewal_upcoming:${createdForEvent.contract_id}:${createdForEvent.client_id}:${renewal.renewalCycleKey ?? renewal.decisionDueDate ?? renewal.renewalAt}`,
       });
     }
   }
@@ -668,8 +672,10 @@ export const updateClientContract = withAuth(async (
         })
       : null;
     if (nextRenewal && !previousRenewal) {
-      await publishWorkflowEvent({
-        eventType: 'CONTRACT_RENEWAL_UPCOMING',
+      await emitDateDomainEventOnce(db, tenant, {
+        eventType: 'CONTRACT_RENEWAL_UPCOMING', entityId: updatedClientContract.client_contract_id,
+        cycleKey: nextRenewal.renewalCycleKey ?? nextRenewal.decisionDueDate ?? nextRenewal.renewalAt,
+        occursOn: nextRenewal.decisionDueDate,
         payload: buildContractRenewalUpcomingPayload({
           contractId: updatedClientContract.contract_id,
           clientId: updatedClientContract.client_id,
@@ -684,7 +690,6 @@ export const updateClientContract = withAuth(async (
           occurredAt: updatedAt,
           actor: maybeUserActor(_user),
         },
-        idempotencyKey: `contract_renewal_upcoming:${updatedClientContract.contract_id}:${updatedClientContract.client_id}:${nextRenewal.renewalCycleKey ?? nextRenewal.decisionDueDate ?? nextRenewal.renewalAt}:${updatedAt}`,
       });
     }
 

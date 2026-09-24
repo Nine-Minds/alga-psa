@@ -674,7 +674,21 @@
       "workflowStepsListHint": "Faites glisser les étapes pour les réordonner ou les déplacer entre les pipelines.",
       "workflowStepsGraphHint": "Déplacez/zoomez dans le graphe. Les branches s’affichent dans des voies séparées.",
       "workflowStepsViewAria": "Vue des étapes du workflow",
-      "warningsCount": "{{count}} avertissements"
+      "warningsCount": "{{count}} avertissements",
+      "dateSource": "Date source",
+      "dateSourceAnniversary": "Client anniversary",
+      "dateSourceRenewal": "Contract renewal decision date",
+      "dateSourceContractEnd": "Contract end date",
+      "dateSourceWarranty": "Asset warranty end",
+      "dateOffset": "Days",
+      "dateDirection": "Timing",
+      "before": "Before",
+      "onDate": "On the day",
+      "after": "After",
+      "localTime": "Local time",
+      "timezoneOptional": "Timezone (optional)",
+      "tenantTimezoneDefault": "Tenant timezone",
+      "dateTriggerSummary": "Runs {{days}} {{direction}} {{source}} at {{time}} ({{timezone}})"
     },
     "stepPanel": {
       "readOnly": "Accès en lecture seule : l’édition des étapes est désactivée.",
@@ -2323,13 +2337,15 @@
         "event": "Basé sur un événement",
         "schedule": "Planification ponctuelle",
         "recurring": "Planification récurrente",
-        "manual": "Manuel"
+        "manual": "Manuel",
+        "date": "Date-based"
       },
       "triggerLabels": {
         "manual": "Manuel",
         "schedule": "Planification ponctuelle",
         "recurring": "Planification récurrente",
-        "event": "Événement"
+        "event": "Événement",
+        "date": "Date"
       },
       "bulk": {
         "selectedSingular": "{{count}} workflow sélectionné",

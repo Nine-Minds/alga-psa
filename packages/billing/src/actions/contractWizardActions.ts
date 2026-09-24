@@ -9,6 +9,7 @@ import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { emitDateDomainEventOnce } from '@alga-psa/jobs/date-triggers';
 import {
   buildContractCreatedPayload,
   buildContractRenewalUpcomingPayload,
@@ -829,6 +830,7 @@ export const createClientContractFromWizard = withAuth(async (
   try {
   let createdForWorkflow: {
     contractId: string;
+    clientContractId: string;
     clientId: string;
     createdAt: string;
     startDate: string;
@@ -1484,7 +1486,7 @@ export const createClientContractFromWizard = withAuth(async (
       }
     }
 
-    await createClientContractAssignment(trx, tenant, {
+    const clientContractAssignment = await createClientContractAssignment(trx, tenant, {
       client_id: submission.client_id,
       contract_id: contractId,
       start_date: startDate,
@@ -1523,6 +1525,7 @@ export const createClientContractFromWizard = withAuth(async (
 
     createdForWorkflow = {
       contractId,
+      clientContractId: clientContractAssignment.client_contract_id,
       clientId: submission.client_id,
       createdAt: now.toISOString(),
       startDate,
@@ -1561,6 +1564,7 @@ export const createClientContractFromWizard = withAuth(async (
   if (createdForWorkflow) {
     const wfData: {
       contractId: string;
+      clientContractId: string;
       clientId: string;
       createdAt: string;
       startDate: string;
@@ -1597,8 +1601,10 @@ export const createClientContractFromWizard = withAuth(async (
         daysUntilDecisionDue: number;
         renewalCycleKey?: string;
       } = renewalForWorkflow as any;
-      await publishWorkflowEvent({
-        eventType: 'CONTRACT_RENEWAL_UPCOMING',
+      await emitDateDomainEventOnce(knex, tenant, {
+        eventType: 'CONTRACT_RENEWAL_UPCOMING', entityId: wfData.clientContractId,
+        cycleKey: renewal.renewalCycleKey ?? renewal.decisionDueDate ?? renewal.renewalAt,
+        occursOn: renewal.decisionDueDate,
         payload: buildContractRenewalUpcomingPayload({
           contractId: wfData.contractId,
           clientId: wfData.clientId,
@@ -1615,7 +1621,6 @@ export const createClientContractFromWizard = withAuth(async (
             ? { actorType: 'USER' as const, actorUserId: wfData.actorUserId }
             : undefined,
         },
-        idempotencyKey: `contract_renewal_upcoming:${wfData.contractId}:${wfData.clientId}:${renewal.renewalCycleKey ?? renewal.decisionDueDate ?? renewal.renewalAt}`,
       });
     }
   }
