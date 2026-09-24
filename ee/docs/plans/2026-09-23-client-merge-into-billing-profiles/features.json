@@ -61,7 +61,7 @@
   },
   {
     "id": "M011",
-    "description": "Billing history rows (invoices, client_billing_cycles, payment_methods, transactions, credit_tracking, credit_allocations, invoice_charges, client_tax_settings) are re-stamped client_id -> target for the moved profiles, with billing_profile_id values left untouched.",
+    "description": "Billing history rows (invoices, client_billing_cycles, payment_methods, transactions, credit_tracking, credit_allocations, invoice_charges, client_tax_settings) are re-stamped client_id -> target, with an existing billing_profile_id left untouched. On the three tables where billing_profile_id is nullable by design and live write paths still produce nulls (invoices, transactions, credit_tracking) the null is first stamped with the source's moved default, so a sales-order invoice or a transferred credit cannot be stranded on the tombstone and dropped from the target's AR and credit balance.",
     "implemented": true,
     "prdRefs": ["Design / D1 — Profiles move, they are not copied"]
   },
@@ -79,7 +79,7 @@
   },
   {
     "id": "M014",
-    "description": "All source contacts move to the target and each is written into billing_profile_contacts against the profile the operator mapped it to, with the manager flag settable inline.",
+    "description": "All source contacts move to the target and each is written into billing_profile_contacts against the profile the operator mapped it to, with the manager label and the ticket-visibility grant both settable inline in the wizard's contact step.",
     "implemented": true,
     "prdRefs": ["Design / D8 — All contacts move"]
   },
@@ -91,7 +91,7 @@
   },
   {
     "id": "M016",
-    "description": "The remaining client-keyed operational tables (interactions, assets, documents, usage, buckets, materials, surveys, tags, inbound email domains, asset associations, locations, notes, aliases) move to the target.",
+    "description": "The client-keyed operational tables the plan enumerates (interactions, assets, documents, usage, buckets, materials, surveys, tags, inbound email domains, asset associations, locations, name aliases) move to the target. Client-keyed tables outside that matrix (opportunities, quotes, sales orders, hour blocks, client_billing_settings, rma_cases, client_tax_rates, client_payment_customers, ...) are deliberately not moved and stay on the archived source.",
     "implemented": true,
     "prdRefs": ["Goals"]
   },
@@ -103,7 +103,7 @@
   },
   {
     "id": "M018",
-    "description": "The source client finishes inactive with merged_into_client_id / merged_at set, other clients' properties.parent_client_id re-pointed at the target, an audit row written and CLIENT_MERGED published.",
+    "description": "The source client finishes inactive with merged_into_client_id / merged_at set, other clients' properties.parent_client_id re-pointed at the target, an audit row written, CLIENT_MERGED published and a client_merged analytics event captured from both the server action and the API service.",
     "implemented": true,
     "prdRefs": ["Acceptance Criteria / Definition of Done"]
   },
@@ -187,8 +187,14 @@
   },
   {
     "id": "M032",
-    "description": "Merge and profile-contact user-facing strings are translatable, with keys in the MSP clients and client-portal locale bundles.",
+    "description": "Merge and profile-contact user-facing strings are translatable, with keys in the MSP clients locale bundle across every shipped locale. The client-portal bundle is untouched: the Phase-5 visibility change is query-level and adds no portal-facing string.",
     "implemented": true,
     "prdRefs": ["Users and Primary Flows"]
+  },
+  {
+    "id": "M033",
+    "description": "A client-owned contract's owner (contracts.owner_client_id) follows its moved assignments, because the recurring chain keys the client cadence off it and invoice generation joins through it; the source's system-managed default contract is demoted when the target already owns one, so contracts_system_managed_default_unique_per_client holds.",
+    "implemented": true,
+    "prdRefs": ["Design / D2 — Contracts: original dates or cutover, operator's call (Q2)"]
   }
 ]

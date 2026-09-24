@@ -87,17 +87,19 @@
       "M016",
       "M018"
     ],
-    "note": "packages/clients/src/lib/clientMergeEngine.test.ts drives the engine against an in-memory database. CLIENT_MERGED is published by the action and the API service rather than the engine, so it is not asserted here."
+    "note": "server/src/test/integration/clientMerge.integration.test.ts drives the merge through the server action against a real database (profiles, invoices, cycles, tickets, contacts, groups, inbound domains, audit row, CLIENT_MERGED, fresh default on the shell, re-merge refused), including invoices/transactions/credit_tracking rows that arrive with no billing profile. packages/clients/src/lib/clientMergeEngine.test.ts covers the same orchestration against an in-memory database."
   },
   {
     "id": "TM011",
     "description": "Integration: the parent's billing output is identical before and after a merge, and a moved billing cycle regenerates an identical invoice.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "M011",
-      "M012"
+      "M012",
+      "M013",
+      "M033"
     ],
-    "note": "Needs the billing engine and a real database to regenerate an invoice; no database was available to verify it."
+    "note": "server/src/test/integration/clientMerge.integration.test.ts: the parent's finalized invoice projection (totals, per-line amounts, tax, credit) is byte-identical after a merge, and the absorbed client's moved February cycle regenerates the money projection its pre-merge January cycle produced, with every charge still attributed to the moved profile rather than the parent's default. This test is what surfaced M033: without re-pointing contracts.owner_client_id the regeneration fails outright with 'Recurring service periods were not materialized for this recurring execution window'."
   },
   {
     "id": "TM012",
@@ -107,7 +109,7 @@
       "M021",
       "M022"
     ],
-    "note": "Covered at unit level by the granted/ungranted predicate tests; the pre/post-merge portal round trip still needs a database."
+    "note": "server/src/test/integration/clientMerge.integration.test.ts asserts the pre/post-merge portal round trip against a real database through getClientContactVisibilityContext + applyTicketVisibilityFilter: the granted manager sees own + profile tickets and not the parent's, the ungranted colleague sees only their own. The predicate shapes are additionally unit-tested in packages/tickets/src/lib/clientPortalVisibility.test.ts."
   },
   {
     "id": "TM013",

@@ -107,12 +107,12 @@ billing history:
 | Table | Column | Nullability |
 |---|---|---|
 | `client_billing_cycles` | `billing_profile_id` | NOT NULL |
-| `invoices` | `billing_profile_id` | NOT NULL |
 | `payment_methods` | `billing_profile_id` | NOT NULL |
+| `client_tax_settings` | keyed `(tenant, client_id, billing_profile_id)`, NOT NULL | — |
+| `invoices` | `billing_profile_id` | nullable (20260818050000: "historical invoices predate profiles entirely") |
+| `transactions`, `credit_tracking` | `billing_profile_id` | nullable (20260818060000, F107/F108) |
 | `invoice_charges` | `billing_profile_id` | nullable |
-| `transactions`, `credit_tracking` | `billing_profile_id` | nullable |
-| `credit_allocations` | via its transaction | — |
-| `client_tax_settings` | keyed `(tenant, client_id, billing_profile_id)` | — |
+| `credit_allocations` | via its transaction | nullable |
 
 Re-parenting the profile row itself (`client_id → target`, `is_default = false`,
 `is_system_managed_default = false`) makes **all** of that history follow the profile
@@ -120,6 +120,20 @@ with no history rewrite at all. The merge then re-stamps `client_id → target` 
 those history rows, because the codebase everywhere assumes
 `profile.client_id == row.client_id`, and client-level rollups read the client
 column.
+
+The nullable three matter for a second reason. Live write paths still produce a
+null profile — `salesOrderInvoicingActions` inserts an invoice and its
+transaction without one, a credit transfer in `creditActions` inserts
+`credit_tracking` without one — and a null matches no moved profile. Those rows
+are therefore stamped with the source's moved default *before* the move, exactly
+as tickets, projects and contracts are; otherwise they keep `client_id` pointing
+at the tombstone and fall out of the target's credit balance and AR rollups, and
+a transferred credit can never be applied again. Stamping (rather than moving
+them still-null) is also what preserves the blast radius: a client-wide credit of
+the absorbed client stays inside its own segment instead of becoming a credit the
+whole parent can spend. `invoice_charges` and `credit_allocations` carry no
+client column, so nothing of theirs is stranded; a null there still resolves
+through the parent invoice or transaction, which has moved.
 
 The source client keeps a freshly inserted system-managed default profile so the F002
 invariant ("every client has exactly one default") still holds for the archived
@@ -141,6 +155,18 @@ Per contract the wizard offers:
   parent starting at that date. The suggested default is the next period start; the
   operator decides.
 
+Either way the *owner* of a client-owned contract moves too:
+`contracts.owner_client_id → target`. This is not bookkeeping. The recurring chain
+reads the owner — `recurringServicePeriodSync` keys the client cadence off it, and
+`invoiceGeneration` joins `recurring_service_periods → contract_lines → contracts →
+clients` on it to match the cycle's client — so an owner left behind on the tombstone
+makes every moved recurring contract unbillable: generation fails with *"Recurring
+service periods were not materialized for this recurring execution window"* rather
+than producing a wrong number. `contracts_system_managed_default_unique_per_client`
+allows one system-managed default contract per owner, so when the parent already has
+its own container contract the incoming one is demoted to an ordinary client-owned
+contract — the same demotion the source's default billing profile gets.
+
 ### D3 — One profile per source, identity preserved (Q3)
 
 Every source profile moves 1:1 keeping its `billing_profile_id`, its name (the
@@ -153,6 +179,12 @@ A multi-profile source keeps full per-profile attribution.
 `client_merges` records the source and target, the moved profile ids, per-entity
 moved-row counts, the contract decisions, who and when. `clients` gains
 `merged_into_client_id` / `merged_at` so a stale link to the source is explainable.
+
+Two things are emitted after the transaction commits, from both the server action and
+the API service so a merge driven through the MCP is not invisible: the `CLIENT_MERGED`
+workflow event (`buildClientMergedPayload` — this is its first production caller) and a
+`client_merged` analytics event carrying the moved-row counts and the options taken,
+never tenant data. Analytics failure is swallowed: the merge has already committed.
 
 ### D5 — Visibility is per contact **and** per profile (Q5, Q6)
 
@@ -237,7 +269,12 @@ Both tables are tenant-distributed (Citus) and registered in
 - The parent's own billing output is unchanged by a merge, and a moved billing cycle
   regenerates the same invoice it would have produced before.
 - Tickets and projects that arrive with a NULL profile are stamped with the moved
-  profile, never left to fall back to the parent default.
+  profile, never left to fall back to the parent default. So are the billing-history
+  rows that legitimately carry no profile (invoices, ledger transactions, credits),
+  which would otherwise stay on the tombstone and drop out of the target's AR.
+- A moved billing cycle still regenerates the invoice it would have produced, with
+  its charges attributed to the moved profile — which requires the moved contract's
+  `owner_client_id` to follow it.
 - The source client ends `is_inactive`, with `merged_into_client_id` set, holding one
   fresh system-managed default profile and nothing else.
 - A second merge of the same source is refused.

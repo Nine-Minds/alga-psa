@@ -146,3 +146,42 @@ caller. This effort is its first one.
   `approvalRequired: false`. Pre-existing generator gap; fixing it would flip the flag
   on unrelated endpoints, so it is left alone and the metadata is declared correctly
   for when it is fixed.
+
+---
+
+## Round 2 — what the real-database test found
+
+`server/src/test/integration/clientMerge.integration.test.ts` now exists and runs
+against a real Postgres (`createTestDbConnection({ databaseName: 'test_db_client_merge' })`,
+the `billingProfileAttribution` recipe). Writing it surfaced two defects the
+in-memory engine test could not:
+
+1. **Client-owned contracts became unbillable.** Generating the moved February cycle
+   failed with *"Recurring service periods were not materialized for this recurring
+   execution window"* because `recurring_service_periods` has no client column at
+   all — the chain resolves the client through `contract_lines → contracts.owner_client_id`.
+   The merge now re-points that owner (M033), demoting the source's system-managed
+   default contract when the target already owns one
+   (`contracts_system_managed_default_unique_per_client`).
+2. **Billing history with a null profile was stranded.** `invoices`, `transactions`
+   and `credit_tracking` are nullable by design and live paths still write nulls
+   (`salesOrderInvoicingActions`, the `creditActions` transfer), so
+   `whereIn('billing_profile_id', movedProfileIds)` skipped them and left
+   `client_id` on the tombstone. They are now stamped with the moved default first,
+   and the move keys on `client_id` alone.
+
+Two fixture notes worth keeping:
+
+- The suite's `withTransaction` mock opens a **real** transaction when handed the root
+  connection, unlike the pass-through the other billing suites use. The
+  one-default-profile-per-client guard is a `DEFERRABLE INITIALLY DEFERRED` constraint
+  trigger (`20260817000000`), so a merge that auto-commits statement by statement
+  trips it on an intermediate state production never commits.
+- Per-profile invoice production is behind the `billing-profiles-separate-invoicing`
+  flag (off in tests), so a cycle bills everything its client owes in the period. The
+  TM011 fixture therefore ends the parent's line with January, and asserts that every
+  charge on the regenerated invoice carries the moved profile — a leaked parent charge
+  would fail both ways.
+- A `vi.hoisted()` collector array passed to the `@alga-psa/event-bus/publishers` mock
+  factory never received pushes even though `mock.calls` recorded the call; the test
+  reads the published events off `vi.mocked(publishWorkflowEvent).mock.calls` instead.
