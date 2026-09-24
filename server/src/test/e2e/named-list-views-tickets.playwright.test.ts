@@ -235,6 +235,19 @@ test.describe('named list views on tickets under the real router', () => {
       // The picker must still name the view after all the refining.
       await expect(trigger).toContainText(view.name);
 
+      // A reload (shared link) must reopen the view the picker names, even
+      // though the last thing the user did was refine its filters.
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await page.waitForFunction(
+        (viewId) => new URLSearchParams(window.location.search).get('view') === viewId,
+        view.viewId,
+        { timeout: 30_000 },
+      );
+      await watchSearchStable(page, (params) => (
+        params.get('view') === view.viewId ? null : 'view lost after reload'
+      ));
+      await expect(trigger).toContainText(view.name, { timeout: 30_000 });
+
       // Clearing back to the baseline view drops `?view=` in one write and the
       // dropped view must not come back when the fetch settles.
       await trigger.click();
