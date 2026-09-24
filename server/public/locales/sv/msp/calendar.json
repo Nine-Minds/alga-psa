@@ -13,7 +13,7 @@
         "addOutlookCalendar": "Lägg till Outlook Calendar"
       },
       "proTip": {
-        "label": "Tips",
+        "label": "Proffstips",
         "body": "För att importera en händelse från din externa kalender till Alga lägger du till"
       },
       "proTipSuffix": "i händelsens titel eller beskrivning.",
@@ -33,7 +33,7 @@
         "configuring": "Konfigureras"
       },
       "oauthStatus": {
-        "actionRequired": "Kräver åtgärd",
+        "actionRequired": "Åtgärd krävs",
         "complete": "OAuth slutfört"
       },
       "active": {
