@@ -511,6 +511,7 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "{{type}} • {{client}}",
       "QBO",
       "#{{number}} {{title}}",
       ", ",
