@@ -534,6 +534,7 @@
       "support@youritcompany.com",
       "40",
       "{{rate}} / {{unit}}",
+      "{{rate}} per {{unit}}",
       "0",
       "rmm-critical-alerts",
       "203.0.113.10\n198.51.100.0/24",
