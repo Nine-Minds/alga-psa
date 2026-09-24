@@ -460,6 +460,103 @@ describe('Contract Invoice Manual Credit', () => {
     expect(Number((resavedInvoice as any).total_amount)).toBe(20000);
   });
 
+  it('T232: an authored fixed discount stays quantity-independent when resaved', async () => {
+    const clientId = context.clientId;
+    const invoiceId = await context.createEntity('invoices', {
+      invoice_number: `DISCOUNT-${uuidv4().slice(0, 8)}`,
+      invoice_date: createTestDateISO({ year: 2025, month: 1, day: 1 }),
+      due_date: createTestDateISO({ year: 2025, month: 2, day: 1 }),
+      status: 'draft',
+      client_id: clientId,
+      currency_code: 'USD',
+      is_manual: false,
+      total_amount: 0,
+    }, 'invoice_id');
+
+    const positiveItem: IInvoiceCharge = {
+      item_id: uuidv4(),
+      invoice_id: invoiceId,
+      service_id: undefined,
+      description: 'Manual service charge',
+      quantity: 1,
+      rate: 50000,
+      unit_price: 50000,
+      total_price: 50000,
+      net_amount: 50000,
+      tax_amount: 0,
+      tax_region: undefined,
+      tax_rate: 0,
+      is_manual: true,
+      is_taxable: false,
+      is_discount: false,
+      tenant: context.tenantId,
+    };
+    const discountItemId = uuidv4();
+    // An authored fixed discount: the operator entered a $100 amount on the
+    // Add Discount flow, which carries `is_discount: true`. The quantity is 1
+    // in the editor, but the row must stay $100 even if a quantity is present:
+    // the amount is quantity-independent (calculateNetAmount uses -abs(rate)).
+    const discountItem: IInvoiceCharge = {
+      item_id: discountItemId,
+      invoice_id: invoiceId,
+      service_id: undefined,
+      description: 'Authored $100 discount',
+      quantity: 3,
+      rate: -10000,
+      unit_price: -10000,
+      total_price: -10000,
+      net_amount: -10000,
+      tax_amount: 0,
+      tax_region: undefined,
+      tax_rate: 0,
+      is_manual: true,
+      is_taxable: false,
+      is_discount: true,
+      discount_type: 'fixed',
+      tenant: context.tenantId,
+    };
+
+    await addManualItemsToInvoice(invoiceId, [positiveItem, discountItem], {
+      operationId: uuidv4(),
+      expectedRevision: 0,
+    });
+
+    const afterAdd = await context.db('invoice_charges')
+      .where({ item_id: discountItemId, tenant: context.tenantId })
+      .first();
+    expect(afterAdd).toBeTruthy();
+    // Quantity-independent: -abs(rate), not quantity x rate.
+    expect(Number(afterAdd.net_amount)).toBe(-10000);
+    // It is not a quantity-derived credit, so the edit path must not scale it.
+    expect(afterAdd.is_manual_credit).toBe(false);
+
+    const resavedInvoice = await updateInvoiceManualItems(invoiceId, {
+      updatedItems: [
+        {
+          item_id: discountItemId,
+          description: 'Authored $100 discount',
+          quantity: 3,
+          rate: -10000,
+          is_discount: true,
+          discount_type: 'fixed',
+          is_taxable: false,
+        },
+      ],
+      newItems: [],
+      removedItemIds: [],
+    } as any, { operationId: uuidv4(), expectedRevision: 1 });
+
+    const afterResave = await context.db('invoice_charges')
+      .where({ item_id: discountItemId, tenant: context.tenantId })
+      .first();
+    expect(Number(afterResave.net_amount)).toBe(-10000);
+    expect(Number(afterResave.total_price)).toBe(-10000);
+
+    // 50000 - 10000 = 40000; a $300 discount would have been wrong here.
+    expect(Number((resavedInvoice as any).subtotal)).toBe(40000);
+    expect(Number((resavedInvoice as any).total_amount)).toBe(40000);
+  });
+
   it('T022: invoice generation succeeds for a cloned assignment with duplicated contract-line configuration after migration', async () => {
     const preservedClientId = context.clientId;
     const clonedClientId = await createClient(context.db, context.tenantId, 'Cloned Contract Billing Client');

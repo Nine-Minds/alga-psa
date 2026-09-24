@@ -217,14 +217,22 @@ cd packages/billing && npx tsup
 - **Quantity>1 negative-rate credits.** A negative manual rate with quantity > 1
   is persisted through the first pass as a fixed discount-like credit with
   `net_amount = quantity × rate` (e.g. `3 × -$100 = -$300`) and `is_discount=true`;
-  the editor reloads it as a fixed discount. The update path's fixed-discount
-  recalc used `-abs(unit_price)` and dropped the quantity to `-$100` on edit or
-  resave. It now recomputes `-abs(quantity × unit_price)`, so the signed credit
-  survives save, edit, reload, tax and totals; a fixed discount authored with
-  quantity 1 is unchanged. Regression: `contractInvoiceManualCredit.test.ts`
-  `T231` adds a `3 × -$100` credit, resaves it through
-  `updateInvoiceManualItems`, and asserts the row stays `-$300` and the invoice
-  totals stay `$500 - $300 = $200`.
+  the editor reloads it as a fixed discount. An *authored* fixed discount is the
+  other shape: `calculateNetAmount` stores `-abs(rate)` independent of quantity.
+  Both shapes share `is_discount`/`discount_type='fixed'`, so the update path
+  could not tell them apart: it dropped a credit's quantity (or, in the first
+  fix, scaled an authored discount by quantity). `persistManualInvoiceCharges`
+  now stamps quantity-derived credits with `is_manual_credit=true` (authored
+  discounts stay `false`), and the fixed-discount recalc scales by quantity only
+  when that flag is set. Migration
+  `20260923020000_add_is_manual_credit_to_invoice_charges.cjs` adds the column
+  and backfills only provable legacy credits (`net_amount = round(quantity ×
+  unit_price)`, quantity ≠ 1), leaving authored discounts quantity-independent.
+  Regressions: `contractInvoiceManualCredit.test.ts` `T231` adds a `3 × -$100`
+  credit, resaves it through `updateInvoiceManualItems`, and asserts the row
+  stays `-$300` and the invoice totals stay `$500 - $300 = $200`; `T232` adds an
+  authored `$100` fixed discount with a stray quantity of 3, resaves it, and
+  asserts it stays `-$100` (`$500 - $100 = $400`) instead of scaling to `-$300`.
 - **Detail-backed sibling-line exclusion.** `contractInvoiceAdjustments.db.test.ts`
   now builds an invoice whose charge carries a canonical
   `invoice_charge_details.config_id → contract_line_service_configuration`

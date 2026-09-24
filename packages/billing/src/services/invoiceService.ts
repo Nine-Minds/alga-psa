@@ -956,6 +956,9 @@ export async function persistManualInvoiceCharges(
       total_price: netAmount, // Placeholder
       is_manual: true,
       is_discount: isCredit, // Mark manual credits as discounts for tax base calculation logic
+      // Records that the amount is quantity × rate. Authored fixed discounts,
+      // which are quantity-independent, keep the default false.
+      is_manual_credit: isCredit,
       is_taxable: isCredit ? false : serviceIsTaxable, // Use derived taxable status
       discount_type: isCredit ? 'fixed' : undefined, // Credits are like fixed discounts
       applies_to_item_id: null, // Manual non-discounts don't apply to others

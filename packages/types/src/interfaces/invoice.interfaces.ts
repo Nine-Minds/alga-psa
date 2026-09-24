@@ -147,6 +147,14 @@ export interface IInvoiceCharge extends TenantEntity, NetAmountItem {
   is_manual: boolean;
   is_taxable?: boolean;
   is_discount?: boolean;
+  /**
+   * True when a manual row's amount was derived from `quantity × unit_price`
+   * (an operator credit entered as a negative-rate charge), rather than an
+   * authored fixed discount whose amount is quantity-independent. The two
+   * shapes share `is_discount`/`discount_type='fixed'`, so the draft edit
+   * recalculation uses this flag to pick the right recompute rule.
+   */
+  is_manual_credit?: boolean;
   discount_type?: DiscountType;
   discount_percentage?: number;
   applies_to_item_id?: string;
