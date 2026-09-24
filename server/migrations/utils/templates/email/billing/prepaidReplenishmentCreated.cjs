@@ -23,6 +23,7 @@ const SUBJECTS = {
   it: 'Ricarica prepagata {{replenishment.statusLabel}}: {{client.name}}',
   pl: 'Doładowanie przedpłacone {{replenishment.statusLabel}}: {{client.name}}',
   pt: 'Reabastecimento pré-pago {{replenishment.statusLabel}}: {{client.name}}',
+  sv: 'Påfyllning av förbetalt saldo {{replenishment.statusLabel}}: {{client.name}}',
 };
 
 const COPY = {
@@ -82,6 +83,13 @@ const COPY = {
     viewButton: 'Ver o faturamento do cliente',
     textView: 'Ver o faturamento do cliente em',
   },
+  sv: {
+    headerLabel: 'Påfyllning av förbetalt saldo',
+    intro: 'Faktura {{replenishment.invoiceNumber}} för <strong>{{client.name}}</strong> {{replenishment.actionPhrase}}.',
+    textIntro: 'Faktura {{replenishment.invoiceNumber}} för {{client.name}} {{replenishment.actionPhrase}}.',
+    viewButton: 'Visa kundens debitering',
+    textView: 'Visa kundens debitering på',
+  },
 };
 
 function getTemplate() {
@@ -96,7 +104,7 @@ function getTemplate() {
         headerLabel: copy.headerLabel,
         headerTitle: '{{client.name}}',
         bodyHtml: `<p>${copy.intro}</p><p><a href="{{replenishment.link}}">${copy.viewButton}</a></p>`,
-        footerText: 'Powered by AlgaPSA',
+        footerText: language === 'sv' ? 'Drivs av AlgaPSA' : 'Powered by AlgaPSA',
       }),
       textContent: `${copy.textIntro}\n\n${copy.textView} {{replenishment.link}}`,
     })),

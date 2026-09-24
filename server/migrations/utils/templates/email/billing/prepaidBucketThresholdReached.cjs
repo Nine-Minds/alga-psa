@@ -139,6 +139,7 @@ const COPY = {
 };
 
 SUBJECTS.pt = 'Limite do pacote de horas pré-pago atingido: {{client.name}}';
+SUBJECTS.sv = 'Tröskelvärde för förbetald timpott uppnått: {{client.name}}';
 COPY.pt = {
   headerLabel: 'Limite do pacote de horas pré-pago atingido',
   intro: 'Um pacote de horas pré-pago de <strong>{{client.name}}</strong> atingiu {{alert.usedPercent}}% da capacidade.',
@@ -155,8 +156,25 @@ COPY.pt = {
   textClosingNote: 'Revise o pacote para que o uso não vire excedente.',
   textView: 'Ver cliente em',
 };
+COPY.sv = {
+  headerLabel: 'Tröskelvärde för förbetald timpott uppnått',
+  intro: 'En förbetald timpott för <strong>{{client.name}}</strong> har nått {{alert.usedPercent}}\u00a0% av sin kapacitet.',
+  capacity: 'Kapacitet',
+  used: 'Förbrukat',
+  consumedPercent: 'Förbrukad andel',
+  configuredPercent: 'Inställt tröskelvärde',
+  period: 'Förbrukningsperiod',
+  closingNote: 'Kontrollera timpotten så att förbrukningen inte överskrider den.',
+  viewButton: 'Visa kund',
+  footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+  textHeader: 'Tröskelvärde för förbetald timpott uppnått',
+  textIntro: 'En förbetald timpott för {{client.name}} har nått {{alert.usedPercent}}\u00a0% av sin kapacitet.',
+  textClosingNote: 'Kontrollera timpotten så att förbrukningen inte överskrider den.',
+  textView: 'Visa kund på',
+};
 
-function buildBodyHtml(c) {
+function buildBodyHtml(c, language) {
+  const percentSpace = language === 'sv' ? '\u00a0' : '';
   return `<p style="margin:0 0 16px 0;font-size:15px;color:#1f2933;line-height:1.5;">${c.intro}</p>
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:14px;color:#1f2933;">
                   <tr>
@@ -169,11 +187,11 @@ function buildBodyHtml(c) {
                   </tr>
                   <tr>
                     <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">${c.consumedPercent}</td>
-                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">{{alert.usedPercent}}%</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">{{alert.usedPercent}}${percentSpace}%</td>
                   </tr>
                   <tr>
                     <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">${c.configuredPercent}</td>
-                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">{{alert.percent}}%</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">{{alert.percent}}${percentSpace}%</td>
                   </tr>
                   <tr>
                     <td style="padding:12px 0;font-weight:600;color:#475467;">${c.period}</td>
@@ -184,15 +202,16 @@ function buildBodyHtml(c) {
                 <a href="{{alert.link}}" style="display:inline-block;background:${BRAND_PRIMARY};color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">${c.viewButton}</a>`;
 }
 
-function buildText(c) {
+function buildText(c, language) {
+  const percentSpace = language === 'sv' ? '\u00a0' : '';
   return `${c.textHeader}
 
 ${c.textIntro}
 
 ${c.capacity}: {{alert.capacity}}
 ${c.used}: {{alert.used}}
-${c.consumedPercent}: {{alert.usedPercent}}%
-${c.configuredPercent}: {{alert.percent}}%
+${c.consumedPercent}: {{alert.usedPercent}}${percentSpace}%
+${c.configuredPercent}: {{alert.percent}}${percentSpace}%
 ${c.period}: {{alert.periodStart}} - {{alert.periodEnd}}
 
 ${c.textClosingNote}
@@ -211,10 +230,10 @@ function getTemplate() {
         language,
         headerLabel: copy.headerLabel,
         headerTitle: '{{client.name}}',
-        bodyHtml: buildBodyHtml(copy),
+        bodyHtml: buildBodyHtml(copy, language),
         footerText: copy.footer,
       }),
-      textContent: buildText(copy),
+      textContent: buildText(copy, language),
     })),
   };
 }

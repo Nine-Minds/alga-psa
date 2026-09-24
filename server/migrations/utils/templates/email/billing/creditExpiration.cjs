@@ -165,6 +165,7 @@ const COPY = {
   },
 };
 SUBJECTS.pt = 'Créditos expiram em breve: {{client.name}}';
+SUBJECTS.sv = 'Tillgodohavanden löper snart ut: {{client.name}}';
 COPY.pt = {
   headerLabel: 'Créditos expiram em breve',
   intro: 'Os créditos abaixo de <strong>{{client.name}}</strong> expirarão em breve.',
@@ -184,6 +185,26 @@ COPY.pt = {
   textCreditDetails: 'Detalhes dos créditos',
   textClosingNote: 'Use estes créditos antes que expirem para evitar perdê-los.',
   textView: 'Ver créditos em',
+};
+COPY.sv = {
+  headerLabel: 'Tillgodohavanden löper snart ut',
+  intro: 'Följande tillgodohavanden för <strong>{{client.name}}</strong> löper snart ut.',
+  company: 'Företag',
+  totalAmount: 'Totalt belopp som löper ut',
+  expirationDate: 'Utgångsdatum',
+  daysRemaining: 'Dagar till utgångsdatum',
+  tableHeaderCreditId: 'Tillgodohavande-ID',
+  tableHeaderAmount: 'Belopp',
+  tableHeaderExpiration: 'Utgångsdatum',
+  tableHeaderTransaction: 'Ursprunglig transaktion',
+  closingNote: 'Använd dessa tillgodohavanden innan de löper ut för att undvika att förlora dem.',
+  viewButton: 'Visa tillgodohavanden',
+  footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+  textHeader: 'Tillgodohavanden löper snart ut',
+  textIntro: 'Följande tillgodohavanden för {{client.name}} löper snart ut:',
+  textCreditDetails: 'Information om tillgodohavanden',
+  textClosingNote: 'Använd dessa tillgodohavanden innan de löper ut för att undvika att förlora dem.',
+  textView: 'Visa tillgodohavanden på',
 };
 
 /* eslint-enable max-len */
