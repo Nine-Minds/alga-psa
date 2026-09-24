@@ -304,7 +304,11 @@
     "parentClientSelf": "Ein Kunde kann nicht sein eigener übergeordneter Kunde sein",
     "parentClientPlaceholder": "Kein übergeordneter Kunde",
     "parentClientClear": "Löschen",
-    "parentClientLegacy": "Zuvor als Text eingegeben: {{name}}"
+    "parentClientLegacy": "Zuvor als Text eingegeben: {{name}}",
+    "inboundDomainAutoCreateContacts": "Kontakte für neue Absender erstellen",
+    "inboundDomainAutoCreateHelp": "Zugeordnete Domains können für vertrauenswürdige neue Absender einen Kontakt erstellen.",
+    "inboundDomainAutoCreateUpdated": "Absendereinstellung aktualisiert.",
+    "inboundDomainAutoCreateUpdateFailed": "Absendereinstellung konnte nicht aktualisiert werden."
   },
   "clientCommandCenter": {
     "cards": {

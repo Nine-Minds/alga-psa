@@ -8,7 +8,8 @@ const findTicketByEmailThreadMock = vi.fn();
 const resolveInboundTicketDefaultsMock = vi.fn();
 const resolveEffectiveInboundTicketDefaultsMock = vi.fn();
 const findContactByEmailMock = vi.fn();
-const findClientIdByInboundEmailDomainMock = vi.fn();
+const findInboundEmailDomainMappingMock = vi.fn();
+const createContactForInboundSenderMock = vi.fn();
 const findValidClientPrimaryContactIdMock = vi.fn();
 const findEmailProviderMailboxAddressMock = vi.fn();
 const upsertTicketWatchListRecipientsMock = vi.fn();
@@ -73,7 +74,8 @@ vi.mock('../../../workflow/actions/emailWorkflowActions', () => ({
   resolveEffectiveInboundTicketDefaults: (...args: any[]) =>
     resolveEffectiveInboundTicketDefaultsMock(...args),
   findContactByEmail: (...args: any[]) => findContactByEmailMock(...args),
-  findClientIdByInboundEmailDomain: (...args: any[]) => findClientIdByInboundEmailDomainMock(...args),
+  findInboundEmailDomainMapping: (...args: any[]) => findInboundEmailDomainMappingMock(...args),
+  createContactForInboundSender: (...args: any[]) => createContactForInboundSenderMock(...args),
   findValidClientPrimaryContactId: (...args: any[]) => findValidClientPrimaryContactIdMock(...args),
   findEmailProviderMailboxAddress: (...args: any[]) => findEmailProviderMailboxAddressMock(...args),
   upsertTicketWatchListRecipients: (...args: any[]) => upsertTicketWatchListRecipientsMock(...args),
@@ -122,7 +124,7 @@ describe('processInboundEmailInApp: inbound email rules integration', () => {
     findTicketByReplyTokenMock.mockResolvedValue(null);
     findTicketByEmailThreadMock.mockResolvedValue(null);
     findContactByEmailMock.mockResolvedValue(null);
-    findClientIdByInboundEmailDomainMock.mockResolvedValue(null);
+    findInboundEmailDomainMappingMock.mockResolvedValue(null);
     findValidClientPrimaryContactIdMock.mockResolvedValue(null);
     findEmailProviderMailboxAddressMock.mockResolvedValue('support@example.com');
     upsertTicketWatchListRecipientsMock.mockResolvedValue({ updated: true, watchList: [] });
@@ -195,7 +197,7 @@ describe('processInboundEmailInApp: inbound email rules integration', () => {
     const result = await run();
 
     expect(result).toMatchObject({ outcome: 'created', ticketId: 'ticket-1' });
-    expect(findClientIdByInboundEmailDomainMock).not.toHaveBeenCalled();
+    expect(findInboundEmailDomainMappingMock).not.toHaveBeenCalled();
     expect(findValidClientPrimaryContactIdMock).toHaveBeenCalledWith('client-acme', 'tenant-1');
     expect(createTicketFromEmailMock).toHaveBeenCalledWith(
       expect.objectContaining({

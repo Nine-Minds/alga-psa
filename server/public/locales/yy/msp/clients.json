@@ -304,7 +304,11 @@
     "parentClientSelf": "〖Ȧ ƈŀīḗƞŧ ƈȧƞƞȯŧ ƀḗ īŧş ȯẇƞ ƥȧřḗƞŧ ··············〗",
     "parentClientPlaceholder": "〖Ƞȯ ƥȧřḗƞŧ ƈŀīḗƞŧ ·······〗",
     "parentClientClear": "〖Ƈŀḗȧř ··〗",
-    "parentClientLegacy": "〖Ƥřḗṽīȯŭşŀẏ ḗƞŧḗřḗḓ ȧş ŧḗẋŧ: {{name}} ···············〗"
+    "parentClientLegacy": "〖Ƥřḗṽīȯŭşŀẏ ḗƞŧḗřḗḓ ȧş ŧḗẋŧ: {{name}} ···············〗",
+    "inboundDomainAutoCreateContacts": "〖Create contacts for new senders〗",
+    "inboundDomainAutoCreateHelp": "〖Mapped domains can optionally create a contact for a trusted new sender.〗",
+    "inboundDomainAutoCreateUpdated": "〖Sender contact setting updated.〗",
+    "inboundDomainAutoCreateUpdateFailed": "〖Could not update sender contact setting.〗"
   },
   "clientCommandCenter": {
     "cards": {
