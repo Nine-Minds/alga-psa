@@ -511,6 +511,10 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "Outlook Calendar",
+      "Microsoft Outlook Calendar",
+      "primary",
+      "calendar",
       "Panel",
       "2FA",
       "https://…",
