@@ -10,6 +10,18 @@ export function buildDateDomainEventDedupeKey(eventType: string, entityId: strin
   return `event:${eventType}:${entityId}:${cycleKey}`;
 }
 
+// LEVERAGE: Save-time event keys, scan occurrences and migration pre-seeds share this calendar-date normalization.
+/** Normalize PostgreSQL date values (which pg parses as local-midnight Dates) to calendar strings. */
+export function normalizeDateDomainKeyDate(value: string | Date): string {
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) throw new Error('Invalid date-domain key date');
+    return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
+  }
+  const match = /^(\d{4}-\d{2}-\d{2})/.exec(value);
+  if (!match) throw new Error(`Invalid date-domain key date: ${value}`);
+  return match[1];
+}
+
 /** Project an instant onto the calendar date seen in the tenant's timezone. */
 export function toTenantLocalDate(instant: string | Date, timezone: string): string {
   const value = instant instanceof Date ? instant : new Date(instant);

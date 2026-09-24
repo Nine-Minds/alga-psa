@@ -9,7 +9,7 @@ import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import { emitDateDomainEventOnce } from '@alga-psa/event-bus/workflow/dateDomainEvents';
+import { emitDateDomainEventOnce, normalizeDateDomainKeyDate } from '@alga-psa/event-bus/workflow/dateDomainEvents';
 import {
   buildContractCreatedPayload,
   buildContractRenewalUpcomingPayload,
@@ -1604,13 +1604,13 @@ export const createClientContractFromWizard = withAuth(async (
       } = renewalForWorkflow as any;
       await emitDateDomainEventOnce(knex, tenant, {
         eventType: 'CONTRACT_RENEWAL_UPCOMING', entityId: wfData.clientContractId,
-        cycleKey: renewal.renewalCycleKey ?? renewal.decisionDueDate ?? renewal.renewalAt,
-        occursOn: renewal.decisionDueDate,
+        cycleKey: renewal.renewalCycleKey ?? normalizeDateDomainKeyDate(renewal.decisionDueDate ?? renewal.renewalAt),
+        occursOn: normalizeDateDomainKeyDate(renewal.decisionDueDate),
         payload: buildContractRenewalUpcomingPayload({
           contractId: wfData.contractId,
           clientId: wfData.clientId,
-          renewalAt: renewal.renewalAt,
-          decisionDueDate: renewal.decisionDueDate,
+          renewalAt: normalizeDateDomainKeyDate(renewal.renewalAt),
+          decisionDueDate: normalizeDateDomainKeyDate(renewal.decisionDueDate),
           daysUntilRenewal: renewal.daysUntilRenewal,
           daysUntilDecisionDue: renewal.daysUntilDecisionDue,
           renewalCycleKey: renewal.renewalCycleKey,

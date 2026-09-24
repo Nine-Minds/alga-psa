@@ -4,7 +4,9 @@ const runMaintenanceJobMock = vi.fn();
 const acquireLockMock = vi.fn();
 const releaseMock = vi.fn();
 const executeJobHandlerMock = vi.fn();
+const initializeJobRunnerMock = vi.fn();
 let subscribedHandler: ((event: unknown) => Promise<void>) | null = null;
+const registrationOrder: string[] = [];
 
 vi.mock('@alga-psa/core/logger', () => ({
   default: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -19,11 +21,13 @@ vi.mock('@alga-psa/db', () => ({
 vi.mock('../../../lib/eventBus/index', () => ({
   getEventBus: () => ({
     subscribe: async (_channel: string, handler: (event: unknown) => Promise<void>) => {
+      registrationOrder.push('subscribe');
       subscribedHandler = handler;
     },
     unsubscribe: async () => undefined,
   }),
 }));
+vi.mock('../../../lib/jobs/initializeJobRunner', () => ({ initializeJobRunner: (...args: unknown[]) => { registrationOrder.push('initialize'); return initializeJobRunnerMock(...args); } }));
 vi.mock('../../../lib/jobs/jobHandlerRegistry', () => ({
   executeJobHandler: (...args: unknown[]) => executeJobHandlerMock(...args),
 }));
@@ -50,8 +54,10 @@ function event(jobName: string, extra: Record<string, unknown> = {}) {
 describe('maintenanceJobSubscriber', () => {
   beforeAll(async () => {
     // The subscriber registers once per process; capture the handler it hands the bus.
+    initializeJobRunnerMock.mockResolvedValue({});
     await registerMaintenanceJobSubscriber();
     expect(subscribedHandler).toBeTypeOf('function');
+    expect(registrationOrder).toEqual(['initialize', 'subscribe']);
   });
 
   beforeEach(() => {

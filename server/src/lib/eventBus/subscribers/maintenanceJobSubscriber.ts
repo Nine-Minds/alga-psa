@@ -19,6 +19,7 @@ import { runMaintenanceJob, isKnownMaintenanceJob } from '@alga-psa/jobs/fanout'
 import { executeJobHandler } from '../../jobs/jobHandlerRegistry';
 import { runWithTenant } from '@alga-psa/db';
 import { acquireMaintenanceJobLock } from './maintenanceJobLock';
+import { initializeJobRunner } from '../../jobs/initializeJobRunner';
 
 let isRegistered = false;
 
@@ -27,6 +28,10 @@ export async function registerMaintenanceJobSubscriber(): Promise<void> {
     return;
   }
 
+  // registerAllJobHandlers injects the EE date-workflow launcher into the
+  // maintenance fanout. Finish that registration before accepting Temporal
+  // requests so an early date-trigger-scan cannot run without its launcher.
+  await initializeJobRunner();
   await getEventBus().subscribe('MAINTENANCE_JOB_REQUESTED', handleMaintenanceJobRequested);
 
   isRegistered = true;

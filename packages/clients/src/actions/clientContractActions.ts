@@ -17,7 +17,7 @@ import {
 } from '@alga-psa/shared/billingClients';
 import { withAuth } from '@alga-psa/auth';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import { emitDateDomainEventOnce } from '@alga-psa/event-bus/workflow/dateDomainEvents';
+import { emitDateDomainEventOnce, normalizeDateDomainKeyDate } from '@alga-psa/event-bus/workflow/dateDomainEvents';
 import {
   buildContractCreatedPayload,
   buildContractRenewalUpcomingPayload,
@@ -300,13 +300,13 @@ export const assignContractToClient = withAuth(async (
     if (renewal) {
       await emitDateDomainEventOnce(knex, tenant, {
         eventType: 'CONTRACT_RENEWAL_UPCOMING', entityId: clientContract.client_contract_id,
-        cycleKey: renewal.renewalCycleKey ?? renewal.decisionDueDate ?? renewal.renewalAt,
-        occursOn: renewal.decisionDueDate,
+        cycleKey: renewal.renewalCycleKey ?? normalizeDateDomainKeyDate(renewal.decisionDueDate ?? renewal.renewalAt),
+        occursOn: normalizeDateDomainKeyDate(renewal.decisionDueDate),
         payload: buildContractRenewalUpcomingPayload({
           contractId: clientContract.contract_id,
           clientId: clientContract.client_id,
-          renewalAt: renewal.renewalAt,
-          decisionDueDate: renewal.decisionDueDate,
+          renewalAt: normalizeDateDomainKeyDate(renewal.renewalAt),
+          decisionDueDate: normalizeDateDomainKeyDate(renewal.decisionDueDate),
           daysUntilRenewal: renewal.daysUntilRenewal,
           daysUntilDecisionDue: renewal.daysUntilDecisionDue,
           renewalCycleKey: renewal.renewalCycleKey,
@@ -448,13 +448,13 @@ export const createClientContract = withAuth(async (
     if (renewal) {
       await emitDateDomainEventOnce(knex, tenant, {
         eventType: 'CONTRACT_RENEWAL_UPCOMING', entityId: createdForEvent.client_contract_id,
-        cycleKey: renewal.renewalCycleKey ?? renewal.decisionDueDate ?? renewal.renewalAt,
-        occursOn: renewal.decisionDueDate,
+        cycleKey: renewal.renewalCycleKey ?? normalizeDateDomainKeyDate(renewal.decisionDueDate ?? renewal.renewalAt),
+        occursOn: normalizeDateDomainKeyDate(renewal.decisionDueDate),
         payload: buildContractRenewalUpcomingPayload({
           contractId: createdForEvent.contract_id,
           clientId: createdForEvent.client_id,
-          renewalAt: renewal.renewalAt,
-          decisionDueDate: renewal.decisionDueDate,
+          renewalAt: normalizeDateDomainKeyDate(renewal.renewalAt),
+          decisionDueDate: normalizeDateDomainKeyDate(renewal.decisionDueDate),
           daysUntilRenewal: renewal.daysUntilRenewal,
           daysUntilDecisionDue: renewal.daysUntilDecisionDue,
           renewalCycleKey: renewal.renewalCycleKey,
@@ -674,13 +674,13 @@ export const updateClientContract = withAuth(async (
     if (nextRenewal && !previousRenewal) {
       await emitDateDomainEventOnce(db, tenant, {
         eventType: 'CONTRACT_RENEWAL_UPCOMING', entityId: updatedClientContract.client_contract_id,
-        cycleKey: nextRenewal.renewalCycleKey ?? nextRenewal.decisionDueDate ?? nextRenewal.renewalAt,
-        occursOn: nextRenewal.decisionDueDate,
+        cycleKey: nextRenewal.renewalCycleKey ?? normalizeDateDomainKeyDate(nextRenewal.decisionDueDate ?? nextRenewal.renewalAt),
+        occursOn: normalizeDateDomainKeyDate(nextRenewal.decisionDueDate),
         payload: buildContractRenewalUpcomingPayload({
           contractId: updatedClientContract.contract_id,
           clientId: updatedClientContract.client_id,
-          renewalAt: nextRenewal.renewalAt,
-          decisionDueDate: nextRenewal.decisionDueDate,
+          renewalAt: normalizeDateDomainKeyDate(nextRenewal.renewalAt),
+          decisionDueDate: normalizeDateDomainKeyDate(nextRenewal.decisionDueDate),
           daysUntilRenewal: nextRenewal.daysUntilRenewal,
           daysUntilDecisionDue: nextRenewal.daysUntilDecisionDue,
           renewalCycleKey: nextRenewal.renewalCycleKey,

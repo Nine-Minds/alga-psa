@@ -4,7 +4,7 @@ import { getTenantTimezone } from '@alga-psa/tenancy/actions/tenant-settings-act
 import logger from '@alga-psa/core/logger';
 import { emitDateDomainEventOnce } from '@alga-psa/event-bus/workflow/dateDomainEvents';
 import { dateTriggerSources } from '../dateTriggers/registry';
-import type { DateOccurrence } from '../dateTriggers/types';
+import type { Knex } from 'knex';
 
 export interface DateTriggerScanJobData extends Record<string, unknown> { tenantId: string; now?: string; }
 export type DateWorkflowLauncher = (params: { tenantId: string; today: string; now: Date; timezone: string; knex: import('knex').Knex; sources: typeof dateTriggerSources }) => Promise<void>;
@@ -19,10 +19,11 @@ export function createDateTriggerScanHandler(
   launchDateTriggeredWorkflows?: DateWorkflowLauncher,
   clock: () => Date = () => new Date(),
   resolveTimezone: (tenantId: string) => Promise<string | null | undefined> = getTenantTimezone,
+  openTenantDb: (tenantId: string) => Promise<{ knex: Knex }> = createTenantKnex,
 ) {
   return async function dateTriggerScanHandler(data: DateTriggerScanJobData): Promise<void> {
     if (!data.tenantId) throw new Error('Tenant ID is required for date-trigger-scan');
-    const { knex } = await createTenantKnex(data.tenantId);
+    const { knex } = await openTenantDb(data.tenantId);
     const timezone = await resolveTimezone(data.tenantId) ?? 'UTC';
     const now = data.now ? new Date(data.now) : clock();
     if (Number.isNaN(now.getTime())) throw new Error(`Invalid date-trigger-scan clock value: ${data.now}`);
