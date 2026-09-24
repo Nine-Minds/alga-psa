@@ -14,6 +14,7 @@ const TEMPLATES = [
       it: { title: 'Nuova fattura generata', message: 'La fattura #{{invoiceNumber}} per {{clientName}} è stata generata' },
       pl: { title: 'Nowa faktura utworzona', message: 'Faktura #{{invoiceNumber}} dla {{clientName}} została utworzona' },
       pt: { title: 'Nova fatura gerada', message: 'A fatura #{{invoiceNumber}} para {{clientName}} foi gerada' },
+      sv: { title: 'Ny faktura skapad', message: 'Faktura #{{invoiceNumber}} för {{clientName}} har skapats' },
     },
   },
   {
@@ -28,6 +29,7 @@ const TEMPLATES = [
       it: { title: 'Pagamento ricevuto', message: 'Pagamento di {{amount}} ricevuto per la fattura #{{invoiceNumber}}' },
       pl: { title: 'Otrzymano płatność', message: 'Otrzymano płatność {{amount}} za fakturę #{{invoiceNumber}}' },
       pt: { title: 'Pagamento recebido', message: 'Pagamento de {{amount}} recebido pela fatura #{{invoiceNumber}}' },
+      sv: { title: 'Betalning mottagen', message: 'En betalning på {{amount}} har tagits emot för faktura #{{invoiceNumber}}' },
     },
   },
   {
@@ -42,6 +44,7 @@ const TEMPLATES = [
       it: { title: 'Pagamento scaduto', message: 'La fattura #{{invoiceNumber}} è scaduta da {{daysOverdue}} giorni' },
       pl: { title: 'Płatność po terminie', message: 'Faktura #{{invoiceNumber}} jest przeterminowana o {{daysOverdue}} dni' },
       pt: { title: 'Pagamento vencido', message: 'A fatura #{{invoiceNumber}} está com {{daysOverdue}} dias atrasada' },
+      sv: { title: 'Betalning förfallen', message: 'Faktura #{{invoiceNumber}} förföll för {{daysOverdue}} dagar sedan' },
     },
   },
 ];

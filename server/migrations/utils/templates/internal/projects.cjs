@@ -14,6 +14,7 @@ const TEMPLATES = [
       it: { title: 'Traguardo del progetto pronto', message: '"{{entryDescription}}" nel progetto "{{projectName}}" è pronta per la fatturazione ({{amount}})' },
       pl: { title: 'Kamień milowy projektu gotowy', message: '„{{entryDescription}}” w projekcie „{{projectName}}” jest gotowy do rozliczenia ({{amount}})' },
       pt: { title: 'Marco do projeto pronto', message: '"{{entryDescription}}" no projeto "{{projectName}}" está pronto para faturar ({{amount}})' },
+      sv: { title: 'Projektmilstolpe klar', message: '”{{entryDescription}}” i projektet ”{{projectName}}” är klar för fakturering ({{amount}})' },
     },
   },
   {
@@ -28,6 +29,7 @@ const TEMPLATES = [
       it: { title: 'Soglia budget del progetto raggiunta', message: 'Il progetto "{{projectName}}" ha raggiunto il {{threshold}} del budget ({{billed}} fatturati su {{cap}})' },
       pl: { title: 'Osiągnięto próg budżetu projektu', message: 'Projekt „{{projectName}}” osiągnął {{threshold}} budżetu (zafakturowano {{billed}} z {{cap}})' },
       pt: { title: 'Limite de orçamento do projeto atingido', message: 'O projeto "{{projectName}}" atingiu {{threshold}} do orçamento ({{billed}} faturados de {{cap}})' },
+      sv: { title: 'Tröskelvärde för projektbudget uppnått', message: 'Projektet ”{{projectName}}” nådde {{threshold}} av sin budget ({{billed}} fakturerat av {{cap}})' },
     },
   },
   {
@@ -42,6 +44,7 @@ const TEMPLATES = [
       it: { title: 'Budget del progetto superato', message: 'Il progetto "{{projectName}}" ha superato il budget di {{cap}}; {{writtenDown}} sono stati svalutati ({{billed}} fatturati)' },
       pl: { title: 'Przekroczono budżet projektu', message: 'Projekt „{{projectName}}” przekroczył budżet {{cap}}; odpisano {{writtenDown}} (zafakturowano {{billed}})' },
       pt: { title: 'Orçamento do projeto excedido', message: 'O projeto "{{projectName}}" excedeu o orçamento de {{cap}}; {{writtenDown}} foram baixados ({{billed}} faturados)' },
+      sv: { title: 'Projektbudget överskriden', message: 'Projektet ”{{projectName}}” överskred sin budget på {{cap}}; {{writtenDown}} skrevs ned ({{billed}} fakturerat)' },
     },
   },
   {
@@ -56,6 +59,7 @@ const TEMPLATES = [
       it: { title: 'Progetto assegnato', message: 'Il progetto "{{projectName}}" le è stato assegnato' },
       pl: { title: 'Projekt przypisany', message: 'Projekt "{{projectName}}" został do Ciebie przypisany' },
       pt: { title: 'Projeto atribuído', message: 'O projeto "{{projectName}}" foi atribuído a você' },
+      sv: { title: 'Projekt tilldelat', message: 'Projektet ”{{projectName}}” har tilldelats dig' },
     },
   },
   {
@@ -70,6 +74,7 @@ const TEMPLATES = [
       it: { title: 'Nuovo progetto creato', message: 'Il progetto "{{projectName}}" è stato creato per {{clientName}}' },
       pl: { title: 'Nowy projekt utworzony', message: 'Projekt "{{projectName}}" został utworzony dla {{clientName}}' },
       pt: { title: 'Novo projeto criado', message: 'O projeto "{{projectName}}" foi criado para {{clientName}}' },
+      sv: { title: 'Nytt projekt skapat', message: 'Projektet ”{{projectName}}” skapades för {{clientName}}' },
     },
   },
   {
@@ -84,6 +89,7 @@ const TEMPLATES = [
       it: { title: 'Attività assegnata', message: "L'attività \"{{taskName}}\" del progetto \"{{projectName}}\" le è stata assegnata" },
       pl: { title: 'Zadanie przypisane', message: 'Zadanie "{{taskName}}" w projekcie "{{projectName}}" zostało do Ciebie przypisane' },
       pt: { title: 'Tarefa atribuída', message: 'A tarefa "{{taskName}}" no projeto "{{projectName}}" foi atribuída a você' },
+      sv: { title: 'Uppgift tilldelad', message: 'Uppgiften ”{{taskName}}” i projektet ”{{projectName}}” har tilldelats dig' },
     },
   },
   {
@@ -98,6 +104,7 @@ const TEMPLATES = [
       it: { title: 'Nuovo commento sul task', message: '{{authorName}} ha aggiunto un commento al task "{{taskName}}"' },
       pl: { title: 'Nowy komentarz do zadania', message: '{{authorName}} dodał(a) komentarz do zadania "{{taskName}}"' },
       pt: { title: 'Comentário sobre nova tarefa', message: '{{authorName}} adicionou um comentário à tarefa "{{taskName}}"' },
+      sv: { title: 'Ny uppgiftskommentar', message: '{{authorName}} lade till en kommentar i uppgiften ”{{taskName}}”' },
     },
   },
   {
@@ -112,6 +119,7 @@ const TEMPLATES = [
       it: { title: 'Traguardo completato', message: 'Il traguardo "{{milestoneName}}" del progetto "{{projectName}}" è stato completato' },
       pl: { title: 'Kamień milowy ukończony', message: 'Kamień milowy "{{milestoneName}}" w projekcie "{{projectName}}" został ukończony' },
       pt: { title: 'Meta concluída', message: 'A meta "{{milestoneName}}" no projeto "{{projectName}}" foi concluída' },
+      sv: { title: 'Milstolpe slutförd', message: 'Milstolpen ”{{milestoneName}}” i projektet ”{{projectName}}” har slutförts' },
     },
   },
   {
@@ -126,6 +134,7 @@ const TEMPLATES = [
       it: { title: 'Aggiunto come agente aggiuntivo', message: 'Sei stato aggiunto come agente aggiuntivo al task "{{taskName}}" nel progetto "{{projectName}}"' },
       pl: { title: 'Dodano jako dodatkowego agenta', message: 'Zostałeś(aś) dodany(a) jako dodatkowy agent do zadania "{{taskName}}" w projekcie "{{projectName}}"' },
       pt: { title: 'Adicionado como agente adicional', message: 'Você foi adicionado como agente adicional na tarefa "{{taskName}}" no projeto "{{projectName}}"' },
+      sv: { title: 'Tillagd som ytterligare handläggare', message: 'Du har lagts till som ytterligare handläggare i uppgiften ”{{taskName}}” i projektet ”{{projectName}}”' },
     },
   },
   {
@@ -140,6 +149,7 @@ const TEMPLATES = [
       it: { title: 'Agente aggiuntivo aggiunto', message: '{{additionalAgentName}} è stato aggiunto come agente aggiuntivo al suo task "{{taskName}}" nel progetto "{{projectName}}"' },
       pl: { title: 'Dodano dodatkowego agenta', message: '{{additionalAgentName}} został(a) dodany(a) jako dodatkowy agent do Twojego zadania "{{taskName}}" w projekcie "{{projectName}}"' },
       pt: { title: 'Agente Adicional Adicionado', message: '{{additionalAgentName}} foi adicionado como agente adicional na sua tarefa "{{taskName}}" no projeto "{{projectName}}"' },
+      sv: { title: 'Ytterligare handläggare tillagd', message: '{{additionalAgentName}} har lagts till som ytterligare handläggare i din uppgift ”{{taskName}}” i projektet ”{{projectName}}”' },
     },
   },
   {
@@ -154,6 +164,7 @@ const TEMPLATES = [
       it: { title: 'Team assegnato al task', message: "Il team '{{teamName}}' è stato assegnato al task '{{taskName}}' nel progetto '{{projectName}}' da {{performedByName}}" },
       pl: { title: 'Zespół przypisany do zadania', message: "Zespół '{{teamName}}' został przypisany do zadania '{{taskName}}' w projekcie '{{projectName}}' przez {{performedByName}}" },
       pt: { title: 'Equipe atribuída à tarefa', message: 'A equipe \'{{teamName}}\' foi designada para a tarefa \'{{taskName}}\' no projeto \'{{projectName}}\' por {{performedByName}}' },
+      sv: { title: 'Team tilldelat uppgift', message: 'Teamet ”{{teamName}}” har tilldelats uppgiften ”{{taskName}}” i projektet ”{{projectName}}” av {{performedByName}}' },
     },
   },
 ];
