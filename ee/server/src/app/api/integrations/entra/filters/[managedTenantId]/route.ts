@@ -15,7 +15,8 @@ async function read(access: { tenantId: string }, managedTenantId: string) {
     if (!exists) return null;
     const [settings, row] = await Promise.all([db.table('entra_sync_settings').where({ tenant: access.tenantId }).first('user_filter_config'), db.table('entra_managed_tenant_user_filters').where({ tenant: access.tenantId, managed_tenant_id: managedTenantId }).first('filter_config')]);
     const override = row ? parseEntraUserFilterOverride(row.filter_config) : null;
-    return { override, effective: mergeEntraUserFilterConfig(parseEntraUserFilterConfig(settings?.user_filter_config), override) };
+    const defaults = parseEntraUserFilterConfig(settings?.user_filter_config);
+    return { defaults, override, effective: mergeEntraUserFilterConfig(defaults, override) };
   });
 }
 

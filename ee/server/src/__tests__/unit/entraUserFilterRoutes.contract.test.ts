@@ -7,6 +7,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const routes = path.resolve(here, '../../app/api/integrations/entra/filters');
 const defaults = fs.readFileSync(path.join(routes, 'route.ts'), 'utf8');
 const managed = fs.readFileSync(path.join(routes, '[managedTenantId]/route.ts'), 'utf8');
+const managedCollection = fs.readFileSync(path.join(routes, 'managed/route.ts'), 'utf8');
 
 describe('Entra user filter route contract', () => {
   it('gates defaults reads and writes with Entra read/update access and tenant-scoped storage', () => {
@@ -22,5 +23,7 @@ describe('Entra user filter route contract', () => {
     expect(managed).toContain("where({ tenant: access.tenantId, managed_tenant_id: managedTenantId })");
     expect(managed).toContain("body.override === null");
     expect(managed).toContain("onConflict(['tenant', 'managed_tenant_id'])");
+    expect(managed).toContain('return { defaults, override, effective:');
+    expect(managedCollection).toContain('return { defaults, override, effective:');
   });
 });

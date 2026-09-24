@@ -102,7 +102,7 @@ describe('EntraClientsTab', () => {
       data: { run: { status: 'completed' }, tenantResults: [] },
     });
     unmapEntraTenantMock.mockResolvedValue({ success: true, data: {} });
-    getEntraManagedTenantUserFilterMock.mockResolvedValue({ success: true, data: { override: null, effective: { version: 1, memberUsersOnly: false, licensedUsersOnly: false, includeGroupIds: [], excludeGroupIds: [], exclusionPatterns: [], deactivateExcludedContacts: false } } });
+    getEntraManagedTenantUserFilterMock.mockResolvedValue({ success: true, data: { defaults: { version: 1, memberUsersOnly: false, licensedUsersOnly: false, includeGroupIds: [], excludeGroupIds: [], exclusionPatterns: [], deactivateExcludedContacts: false }, override: null, effective: { version: 1, memberUsersOnly: false, licensedUsersOnly: false, includeGroupIds: [], excludeGroupIds: [], exclusionPatterns: [], deactivateExcludedContacts: false } } });
     listEntraMappingGroupsMock.mockResolvedValue({ success: true, data: { groups: [] } });
     updateEntraManagedTenantUserFilterMock.mockResolvedValue({ success: true, data: {} });
   });

@@ -1,12 +1,8 @@
-export interface EntraUserFilterConfig {
-  version: 1;
-  memberUsersOnly: boolean;
-  licensedUsersOnly: boolean;
-  includeGroupIds: string[];
-  excludeGroupIds: string[];
-  exclusionPatterns: string[];
-  deactivateExcludedContacts: boolean;
-}
+import { mergeEntraUserFilterConfig } from '@alga-psa/integrations/lib/entraUserFilterConfig';
+import type { EntraUserFilterConfig } from '@alga-psa/integrations/lib/entraUserFilterConfig';
+
+export { mergeEntraUserFilterConfig };
+export type { EntraUserFilterConfig };
 
 export const EMPTY_ENTRA_USER_FILTER_CONFIG: EntraUserFilterConfig = {
   version: 1,
@@ -60,17 +56,4 @@ export function parseEntraUserFilterOverride(value: unknown): Partial<EntraUserF
     if (raw[key] !== undefined || (key === 'exclusionPatterns' && ['excludePatterns', 'excludeUpnPatterns', 'excludedUpnPatterns'].some(alias => raw[alias] !== undefined))) result[key] = parsed[key] as never;
   }
   return result;
-}
-
-export function mergeEntraUserFilterConfig(defaults: EntraUserFilterConfig, override?: Partial<EntraUserFilterConfig> | null): EntraUserFilterConfig {
-  if (!override) return { ...defaults, includeGroupIds: [...defaults.includeGroupIds], excludeGroupIds: [...defaults.excludeGroupIds], exclusionPatterns: [...defaults.exclusionPatterns] };
-  return {
-    version: 1,
-    memberUsersOnly: override.memberUsersOnly ?? defaults.memberUsersOnly,
-    licensedUsersOnly: override.licensedUsersOnly ?? defaults.licensedUsersOnly,
-    includeGroupIds: override.includeGroupIds ?? defaults.includeGroupIds,
-    excludeGroupIds: [...new Set([...defaults.excludeGroupIds, ...(override.excludeGroupIds ?? [])])],
-    exclusionPatterns: [...new Set([...defaults.exclusionPatterns, ...(override.exclusionPatterns ?? [])])],
-    deactivateExcludedContacts: override.deactivateExcludedContacts ?? defaults.deactivateExcludedContacts,
-  };
 }
