@@ -35,7 +35,7 @@
       "justNow": "Nyss",
       "minutesAgo": "För {{count}} min sedan",
       "hoursAgo": "För {{count}} h sedan",
-      "daysAgo": "Dagar sedan: {{count}}"
+      "daysAgo": "För {{count}} dagar sedan"
     },
     "newChatConfirm": {
       "title": "Starta en ny chatt?",
@@ -59,7 +59,7 @@
     }
   },
   "chat": {
-    "greeting": "Jag är Alga! Din favoritassistent med AI. Ställ en fråga till mig.",
+    "greeting": "Jag är Alga! Din favorit-AI-assistent. Ställ en fråga till mig.",
     "avatarAlt": "Alga",
     "defaultFunctionName": "Funktionsanrop",
     "resultTruncated": "Resultatet var för stort och kortades ned.",
@@ -113,7 +113,7 @@
       "endpoint": "sök-/verktygskedja",
       "title": "Fortsätta samla in resultat?",
       "description": "Alga nådde gränsen för antalet verktygssteg under informationsinsamlingen.",
-      "status": "Sökningarna och anropen som enbart läser data ovan slutfördes. Fortsätt från samma punkt för att samla in mer information eller slutföra svaret.",
+      "status": "Sökningarna och anropen ovan, som enbart läser data, har slutförts. Fortsätt från samma punkt för att samla in mer information eller slutföra svaret.",
       "continue": "Fortsätt",
       "continueAriaLabel": "Fortsätt AI-svaret där verktygsgränsen nåddes",
       "defaultPrompt": "Fortsätt"
@@ -159,21 +159,21 @@
     "noResultsFound": "Inga resultat hittades"
   },
   "aiCredits": {
-    "indicatorTooltip": "{{credits}} AI-poäng kvar",
+    "indicatorTooltip": "{{credits}} AI-tillgodohavanden kvar",
     "noSubscription": {
       "title": "AI är ett betaltillägg",
-      "body": "Prenumerera på AI-tillägget för att använda Alga AI. Din prenumeration omfattar en månatlig tilldelning av poäng.",
-      "cta": "Visa inställningar för AI-användning"
+      "body": "Prenumerera på AI-tillägget för att använda Alga AI. Ditt abonnemang omfattar en månatlig tilldelning av tillgodohavanden.",
+      "cta": "Visa inställningar för AI-förbrukning"
     },
     "outOfCredits": {
-      "title": "AI-poängen är slut",
+      "title": "AI-tillgodohavandena är slut",
       "body": "Fyll på för att fortsätta använda Alga AI.",
-      "bodyWithBalance": "Ditt saldo är {{balance}} poäng. Fyll på för att fortsätta använda Alga AI.",
-      "cta": "Köp fler poäng"
+      "bodyWithBalance": "Ditt saldo är {{balance}} tillgodohavanden. Fyll på för att fortsätta använda Alga AI.",
+      "cta": "Köp tillgodohavanden för påfyllning"
     },
     "consentRequired": {
       "title": "Samtycke till datadelning krävs",
-      "body": "En administratör måste godkänna villkoren för datadelning med AI på den här enheten innan AI kan användas."
+      "body": "En administratör måste godkänna villkoren för datadelning för AI i den här installationen innan AI kan användas."
     }
   },
   "mentions": {
