@@ -30,4 +30,20 @@ describe('renderRemoteAccessTemplate', () => {
     expect(renderRemoteAccessTemplate('https://remote.example/{unknown.value}', { asset: {}, client: {} })).toBeNull();
     expect(renderRemoteAccessTemplate('https://remote.example/{asset.hostname}', { asset: { hostname: 'host' }, client: {} })).toBeNull();
   });
+
+  it('does not let substituted values inject or replace the URL host', () => {
+    expect(renderRemoteAccessTemplate(
+      'https://{field.host}/connect', { asset: {}, client: {}, field: { host: '@evil.com' } }
+    )).toBeNull();
+    expect(renderRemoteAccessTemplate(
+      'https://remote.example/{field.path}', { asset: {}, client: {}, field: { path: '//evil' } }
+    )).toBe('https://remote.example/%2F%2Fevil');
+  });
+
+  it('rejects schemes after substitution', () => {
+    expect(renderRemoteAccessTemplate(
+      '{field.scheme}://remote.example/{field.payload}',
+      { asset: {}, client: {}, field: { scheme: 'javascript', payload: 'alert(1)' } }
+    )).toBeNull();
+  });
 });

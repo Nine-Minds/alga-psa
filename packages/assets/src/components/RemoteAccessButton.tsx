@@ -88,14 +88,14 @@ export function RemoteAccessButton({ asset, variant = 'default', size = 'sm', cl
     <div className="relative">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button id={`remote-access-button-${asset.asset_id}`} variant={variant} size={size} className={`gap-2 ${className}`} disabled={isPending}>
+          <Button id="remote-access-button" data-asset-id={asset.asset_id} variant={variant} size={size} className={`gap-2 ${className}`} disabled={isPending}>
             {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Monitor className="h-4 w-4" />}
             {t('remoteAccess.remoteAccess')}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           {availableRmmTypes.map((type) => (
-            <DropdownMenuItem key={type} id={`remote-access-${type}-${asset.asset_id}`} onClick={() => void connect(type)} disabled={isPending} className="gap-2">
+            <DropdownMenuItem key={type} id={`remote-access-${type}`} data-asset-id={asset.asset_id} onClick={() => void connect(type)} disabled={isPending} className="gap-2">
               {type === 'shell' ? <Terminal className="h-4 w-4" /> : <Monitor className="h-4 w-4" />}
               <span>{connectionLabel(type, t)}</span>
               <ExternalLink className="ml-auto h-3 w-3 text-muted-foreground" />
@@ -104,7 +104,9 @@ export function RemoteAccessButton({ asset, variant = 'default', size = 'sm', cl
           {assetLinks.map((link, index) => (
             <DropdownMenuItem
               key={`${link.label}-${index}`}
-              id={`remote-access-link-${asset.asset_id}-${index}`}
+              id="remote-access-template-link"
+              data-link-index={index}
+              data-asset-id={asset.asset_id}
               onClick={() => window.open(link.url, '_blank', 'noopener,noreferrer')}
               className="gap-2"
             >

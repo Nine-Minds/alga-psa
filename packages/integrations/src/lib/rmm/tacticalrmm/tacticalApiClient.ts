@@ -16,7 +16,9 @@ export interface TacticalMeshCentralLinks {
 }
 
 function mapTacticalMeshCentralLinks(value: unknown): TacticalMeshCentralLinks {
-  // This endpoint's response contract needs live verification; tolerate absent or unexpected fields.
+  // Assumption pending live verification: the endpoint returns either the link fields at
+  // the root or under `meshcentral`, with string URLs in control/terminal/file fields.
+  // Ignore unexpected values so callers return unavailable instead of opening a bad URL.
   if (!value || typeof value !== 'object') return {};
   const response = value as Record<string, unknown>;
   const mesh = response.meshcentral && typeof response.meshcentral === 'object'

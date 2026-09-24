@@ -11,8 +11,14 @@ export function renderRemoteAccessTemplate(
   template: string,
   context: RemoteAccessTemplateContext
 ): string | null {
+  const normalizedTemplate = template.trim();
+  // Placeholders must never occur in the URL authority. Even encoded values
+  // such as `@evil.com` can be interpreted as userinfo/host syntax there.
+  const authority = normalizedTemplate.match(/^https?:\/\/([^/?#]*)/i)?.[1];
+  if (authority && /\{(?:asset|client|field)\.[^}]+\}/.test(authority)) return null;
+
   let hasMissingValue = false;
-  const rendered = template.replace(PLACEHOLDER_PATTERN, (_token, scope: string, key: string) => {
+  const rendered = normalizedTemplate.replace(PLACEHOLDER_PATTERN, (_token, scope: string, key: string) => {
     const isSupportedAssetKey = scope !== 'asset' || ['name', 'asset_tag', 'serial_number'].includes(key);
     const isSupportedClientKey = scope !== 'client' || key === 'name';
     if (!isSupportedAssetKey || !isSupportedClientKey) {
