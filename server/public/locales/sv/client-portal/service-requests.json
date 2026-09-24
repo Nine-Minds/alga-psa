@@ -1,0 +1,80 @@
+{
+  "catalog": {
+    "title": "Tjänsteförfrågningar",
+    "description": "Skicka in en strukturerad förfrågan så tar vi hand om resten.",
+    "myRequests": "Mina förfrågningar",
+    "empty": "Det finns för närvarande inga tjänster att skicka förfrågningar om.",
+    "fallbackCategory": "Tjänst",
+    "noDescription": "Ingen beskrivning angiven",
+    "newRequestHeading": "Skicka in en ny förfrågan"
+  },
+  "detail": {
+    "version": "Version {{version}}",
+    "submitted": "Förfrågan har skickats in",
+    "requestIdLabel": "Förfrågans ID: ",
+    "ticketIdLabel": "Ärende-ID: ",
+    "unableToSubmit": "Det gick inte att skicka in förfrågan",
+    "formTitle": "Förfrågningsformulär",
+    "noFields": "Inga fält har konfigurerats.",
+    "selectOption": "Välj ett alternativ",
+    "datePlaceholder": "Välj datum",
+    "optionLabel": "Alternativ {{index}}",
+    "submit": "Skicka in förfrågan",
+    "initialValuesTitle": "Startvärden",
+    "noInitialValues": "Inga statiska standardvärden har konfigurerats."
+  },
+  "myRequests": {
+    "title": "Mina förfrågningar",
+    "browseServices": "Bläddra bland tjänster",
+    "empty": "Du har inte skickat in några tjänsteförfrågningar än.",
+    "columns": {
+      "request": "Förfrågan",
+      "submitted": "Inskickad",
+      "status": "Status",
+      "details": "Detaljer",
+      "ticket": "Ärende"
+    },
+    "view": "Visa",
+    "unknownDate": "Okänt",
+    "statuses": {
+      "pending": "Väntande",
+      "succeeded": "Lyckades",
+      "failed": "Misslyckades"
+    },
+    "noTicket": "Inget ärende"
+  },
+  "submissionDetail": {
+    "backToMyRequests": "Tillbaka till mina förfrågningar",
+    "requestIdLabel": "Förfrågans ID:",
+    "statusSection": "Status",
+    "submittedAt": "Inskickad: {{date}}",
+    "executionStatus": "Körningsstatus: {{status}}",
+    "ticketLabel": "Ärende:",
+    "workflowLabel": "Arbetsflöde: {{id}}",
+    "submittedAnswersTitle": "Inskickade svar",
+    "noResponse": "Inget svar",
+    "attachmentsTitle": "Bilagor",
+    "noAttachments": "Inga bilagor har bifogats.",
+    "fileIdLabel": "Fil-ID: {{id}}",
+    "fileTypeLabel": "Typ: {{mime}}",
+    "versionLabel": "Version {{version}}",
+    "historyTitle": "Historik",
+    "historyEmpty": "Ingen historik har registrerats än.",
+    "historyActor": "av {{actor}}",
+    "historyOperations": {
+      "service_request_submission_created": "Förfrågan har skickats in",
+      "service_request_submission_execution_succeeded": "Behandlingen av förfrågan har slutförts",
+      "service_request_submission_execution_failed": "Behandlingen av förfrågan misslyckades"
+    }
+  },
+  "recent": {
+    "title": "Dina senaste förfrågningar",
+    "viewAll": "Visa alla",
+    "empty": "Inga förfrågningar har skickats in än.",
+    "ticket": "Ärende #{{number}}",
+    "noTicket": "Inget ärende än"
+  },
+  "myRequestsAll": {
+    "title": "Dina förfrågningar"
+  }
+}

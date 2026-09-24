@@ -712,7 +712,8 @@
       "Metadata",
       "Essentials",
       "{{amount}}/{{interval}}",
-      "{{count}} {{licenseLabel}}"
+      "{{count}} {{licenseLabel}}",
+      "Version {{version}}"
     ],
     "caseInsensitive": [
       "adapter", "budget", "fax", "filter", "kanban", "layout", "offline", "online", "router", "server", "status", "support", "team", "webhook"
