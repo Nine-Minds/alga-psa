@@ -28,7 +28,7 @@
   },
   "onboardingWizard": {
     "title": "Introduktionsguide",
-    "description": "Guidens ramverk för konfiguration av MSP-klientorganisationer med dialog- eller helskärmsvisning, förlopp, validering och slutförandeflöden",
+    "description": "Guidens ramverk för konfiguration av MSP-klientorganisationer med dialog- eller helsidesvisning, förlopp, validering och slutförandeflöden",
     "steps": {
       "clientInfo": "Ditt företag",
       "teamMembers": "Teammedlemmar",
@@ -147,7 +147,7 @@
         "fields": {
           "name": {
             "label": "Namn *",
-            "placeholder": "T.ex. utökad support"
+            "placeholder": "T.ex. Premiumsupport"
           },
           "description": {
             "label": "Beskrivning",
@@ -165,7 +165,7 @@
       },
       "import": {
         "title": "Föreslagna tjänstetyper",
-        "description": "Dessa är standard för de flesta MSP-företag. Avmarkera de du inte vill ha och bekräfta sedan för att lägga till resten. Du kan byta namn på eller ta bort dem senare.",
+        "description": "Dessa är standard för de flesta MSP-företag. Avmarkera dem du inte vill ha och bekräfta sedan för att lägga till resten. Du kan byta namn på eller ta bort dem senare.",
         "success": {
           "titleOne": "Tjänstetypen har importerats",
           "titleOther": "Tjänstetyperna har importerats",
@@ -385,9 +385,9 @@
       },
       "strength": {
         "label": "Lösenordsstyrka: {{strength}}",
-        "strong": "Starkt",
+        "strong": "Stark",
         "medium": "Medel",
-        "weak": "Svagt"
+        "weak": "Svag"
       }
     },
     "footer": {
@@ -400,8 +400,8 @@
     "license": {
       "limitReached": "Licensgränsen har nåtts ({{current}}/{{limit}}). Kontakta supporten för att höja din licensgräns.",
       "remaining": {
-        "one": "Du kan lägga till 1 teammedlem till.",
-        "other": "Du kan lägga till {{count}} teammedlemmar till."
+        "one": "Du kan lägga till ytterligare 1 teammedlem.",
+        "other": "Du kan lägga till ytterligare {{count}} teammedlemmar."
       },
       "summary": {
         "noLimit": "Användare: {{count}} (ingen gräns)",
