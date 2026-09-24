@@ -1633,7 +1633,7 @@
     },
     "labels": {
       "myDefault": "Mijn standaard",
-      "sharedByYou": "Door jou gedeeld"
+      "sharedByYou": "Door u gedeeld"
     },
     "visibility": {
       "private": "Privé",
@@ -1656,9 +1656,9 @@
       "nameLabel": "Naam",
       "nameInvalid": "Voer een naam in van 1 tot {{max}} tekens.",
       "visibilityLabel": "Wie kan hem zien",
-      "privateHint": "Alleen jij kunt deze weergave zien.",
+      "privateHint": "Alleen u kunt deze weergave zien.",
       "sharedHint": "Iedereen die deze lijst kan openen, kan hem zien en toepassen.",
-      "sharedDisabledHint": "Je hebt geen toestemming om weergaven te delen."
+      "sharedDisabledHint": "U hebt geen toestemming om weergaven te delen."
     },
     "deleteDialog": {
       "title": "Weergave verwijderen",
@@ -1678,15 +1678,15 @@
       "notFound": "Deze weergave is privé of bestaat niet meer.",
       "unknownList": "Onbekende lijst.",
       "invalidName": "Een weergavenaam moet 1 tot 100 tekens lang zijn.",
-      "duplicateName": "Je hebt al een weergave met de naam \"{{name}}\" in deze lijst.",
+      "duplicateName": "U hebt al een weergave met de naam \"{{name}}\" in deze lijst.",
       "invalidSettings": "De weergave kon niet worden opgeslagen: {{detail}}",
       "invalidVisibility": "Zichtbaarheid moet privé of gedeeld zijn.",
-      "cannotShare": "Je hebt geen toestemming om weergaven te delen.",
-      "cannotEdit": "Je hebt geen toestemming om deze weergave te wijzigen.",
-      "cannotReadList": "Je hebt geen toestemming om deze lijst te bekijken.",
+      "cannotShare": "U hebt geen toestemming om weergaven te delen.",
+      "cannotEdit": "U hebt geen toestemming om deze weergave te wijzigen.",
+      "cannotReadList": "U hebt geen toestemming om deze lijst te bekijken.",
       "saveFailed": "De weergave kon niet worden opgeslagen.",
       "deleteFailed": "De weergave kon niet worden verwijderd.",
-      "defaultFailed": "Je standaardweergave kon niet worden gewijzigd.",
+      "defaultFailed": "Uw standaardweergave kon niet worden gewijzigd.",
       "copyFailed": "De link kon niet worden gekopieerd."
     }
   }

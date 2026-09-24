@@ -250,6 +250,14 @@ describe('named list views', () => {
     });
     expect(isActionMessageError(searchNotStored)).toBe(true);
 
+    // Updates run the same schema gate and leave the stored settings untouched.
+    const existing = expectOk(await createListView('tickets', { name: 'Good', visibility: 'private', settings: { pageSize: 25 } }));
+    const badUpdate = await updateListView(existing.view_id, {
+      settings: { sort: { by: 'title', direction: 'sideways' } } as never,
+    });
+    expect(isActionMessageError(badUpdate)).toBe(true);
+    expect(expectOk(await getListView(existing.view_id)).settings).toEqual({ pageSize: 25 });
+
     expect(isActionMessageError(await createListView('invoices', { name: 'Bad', visibility: 'private', settings: {} }))).toBe(true);
     expect(isActionMessageError(await listListViews('invoices'))).toBe(true);
 

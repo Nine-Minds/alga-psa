@@ -162,6 +162,8 @@ function toSummary(
   };
 }
 
+// Callers narrow with `ok === false`, not `!ok`: the EE typecheck runs with
+// strict off, where truthiness does not narrow a discriminated union.
 function validateSettings(
   definition: ListViewDefinition,
   settings: unknown,
@@ -242,7 +244,7 @@ export const createListView = withAuth(async (
   if (!name) return invalidName();
   if (!isVisibility(input?.visibility)) return invalidVisibility();
   const validated = validateSettings(definition, input?.settings ?? {});
-  if (!validated.ok) return validated.error;
+  if (validated.ok === false) return validated.error;
 
   const { knex } = await createTenantKnex();
   try {
@@ -313,7 +315,7 @@ export const updateListView = withAuth(async (
       let settings: ListViewSettings | undefined;
       if (patch.settings !== undefined) {
         const validated = validateSettings(definition, patch.settings);
-        if (!validated.ok) return validated.error;
+        if (validated.ok === false) return validated.error;
         settings = validated.settings;
       }
 
