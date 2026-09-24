@@ -1577,3 +1577,4 @@ jobs:
           path: test-results/fresh-install-gate/
           if-no-files-found: error
           retention-days: 30
+          overwrite: true

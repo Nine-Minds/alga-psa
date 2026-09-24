@@ -42,6 +42,8 @@ export const clientFormSchema = z.object({
   zip: z.string().optional(),
   country: z.string().optional(),
   notes: z.string().optional(),
+  // Calendar date the relationship began; null keeps the created_at fallback.
+  client_since: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'client_since must be a YYYY-MM-DD date').optional().nullable(),
   properties: z.record(z.any()).optional(),
   parent_client_id: z.string().uuid().optional().nullable(),
   contract_line_id: z.string().uuid().optional().nullable()
@@ -131,7 +133,7 @@ export function cleanNullableFields(data: Record<string, any>): Record<string, a
   const cleaned = { ...data };
   const nullableFields = [
     'url', 'phone_no', 'email', 'address', 'address_2', 
-    'city', 'state', 'zip', 'country', 'notes', 
+    'city', 'state', 'zip', 'country', 'notes', 'client_since',
     'parent_client_id', 'contract_line_id'
   ];
   
@@ -300,6 +302,7 @@ export class ClientModel {
       tenant,
       url: clientData.url || null,
       notes: clientData.notes || null,
+      client_since: clientData.client_since || null,
       is_inactive: false,
       created_at: now.toISOString(),
       updated_at: now.toISOString(),
