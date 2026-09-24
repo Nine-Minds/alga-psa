@@ -169,6 +169,76 @@ async function createDraftWithGeneratedChargeAndDiscount(
   return { invoiceId, generatedChargeId, automaticDiscountItemId };
 }
 
+// The same instance, but the automatic discount was persisted before adjustment
+// provenance existed: `is_discount = true, is_manual = false` with no source
+// kind/id. Reconciliation must adopt this row rather than append a second one.
+async function createDraftWithGeneratedChargeAndLegacyDiscount(): Promise<InvoiceFixture> {
+  const invoiceId = uuidv4();
+  const generatedChargeId = uuidv4();
+  const automaticDiscountItemId = uuidv4();
+
+  await db('invoices').insert({
+    tenant,
+    invoice_id: invoiceId,
+    invoice_number: `ADJ-LEGACY-${invoiceId.slice(0, 8)}`,
+    invoice_date: '2026-09-01T00:00:00.000Z',
+    due_date: '2026-09-30T00:00:00.000Z',
+    subtotal: 351000,
+    tax: 0,
+    total_amount: 351000,
+    status: 'draft',
+    client_id: clientId,
+    currency_code: 'USD',
+    is_manual: false,
+    client_contract_id: clientContractId,
+  });
+
+  await db('invoice_charges').insert({
+    tenant,
+    item_id: generatedChargeId,
+    invoice_id: invoiceId,
+    service_id: serviceId,
+    description: 'Recurring support',
+    quantity: 1,
+    unit_price: 390000,
+    net_amount: 390000,
+    total_price: 390000,
+    tax_amount: 0,
+    tax_rate: 0,
+    is_manual: false,
+    is_discount: false,
+    is_taxable: false,
+    client_contract_id: clientContractId,
+  });
+
+  await db('invoice_charges').insert({
+    tenant,
+    item_id: automaticDiscountItemId,
+    invoice_id: invoiceId,
+    description: 'Loyalty 10%',
+    quantity: 1,
+    unit_price: -39000,
+    net_amount: -39000,
+    total_price: -39000,
+    tax_amount: 0,
+    tax_rate: 0,
+    is_manual: false,
+    is_discount: true,
+    is_taxable: false,
+    discount_type: 'percentage',
+    discount_percentage: 10,
+  });
+
+  return { invoiceId, generatedChargeId, automaticDiscountItemId };
+}
+
+function automaticDiscountRows(invoiceId: string) {
+  return db('invoice_charges')
+    .where({ tenant, invoice_id: invoiceId, adjustment_source_kind: 'discount' })
+    .orderBy('created_at', 'asc')
+    .orderBy('item_id', 'asc');
+}
+
 async function insertManualPartialPeriodCharge(params: {
   invoiceId: string;
   generatedChargeId: string;
@@ -376,6 +446,120 @@ describe('contract invoice adjustments (DB-backed)', () => {
     expect(Number(discountRows[0].net_amount)).toBe(-40_500);
   });
 
+  it('adopts a pre-upgrade automatic discount once across first reconcile, manual save and repeat reconcile', async () => {
+    const fixture = await createDraftWithGeneratedChargeAndLegacyDiscount();
+    await insertManualPartialPeriodCharge({
+      invoiceId: fixture.invoiceId,
+      generatedChargeId: fixture.generatedChargeId,
+    });
+
+    // First reconciliation after upgrade claims the legacy row in place rather
+    // than appending a second settlement.
+    await db.transaction(async (trx) => {
+      await reconcileAutomaticInvoiceDiscounts(trx, tenant, fixture.invoiceId);
+    });
+
+    let discounts = await automaticDiscountRows(fixture.invoiceId);
+    expect(discounts).toHaveLength(1);
+    expect(discounts[0].item_id).toBe(fixture.automaticDiscountItemId);
+    expect(discounts[0].adjustment_source_id).toBe(discountId);
+    expect(Number(discounts[0].net_amount)).toBe(-40_500);
+    expect(await sumChargeNet(fixture.invoiceId)).toEqual({
+      gross: 405_000,
+      discounts: -40_500,
+      net: 364_500,
+    });
+
+    // A manual save adds a line and reconciles in the same transaction, exactly
+    // as addManualItemsToInvoice does. There must still be one automatic row.
+    await db.transaction(async (trx) => {
+      await persistManualInvoiceCharges(
+        trx,
+        fixture.invoiceId,
+        [
+          {
+            item_id: uuidv4(),
+            description: 'Extra manual charge',
+            quantity: 1,
+            rate: 10_000,
+            is_taxable: false,
+          },
+        ],
+        { client_id: clientId, region_code: null, default_currency_code: 'USD' },
+        { user: { id: userId } } as never,
+        tenant,
+      );
+      await reconcileAutomaticInvoiceDiscounts(trx, tenant, fixture.invoiceId);
+    });
+
+    discounts = await automaticDiscountRows(fixture.invoiceId);
+    expect(discounts).toHaveLength(1);
+    expect(discounts[0].item_id).toBe(fixture.automaticDiscountItemId);
+    expect(Number(discounts[0].net_amount)).toBe(-41_500);
+    expect(await sumChargeNet(fixture.invoiceId)).toEqual({
+      gross: 415_000,
+      discounts: -41_500,
+      net: 373_500,
+    });
+
+    // Repeat reconciliation is idempotent.
+    await db.transaction(async (trx) => {
+      await reconcileAutomaticInvoiceDiscounts(trx, tenant, fixture.invoiceId);
+    });
+
+    discounts = await automaticDiscountRows(fixture.invoiceId);
+    expect(discounts).toHaveLength(1);
+    expect(Number(discounts[0].net_amount)).toBe(-41_500);
+    expect(await sumChargeNet(fixture.invoiceId)).toEqual({
+      gross: 415_000,
+      discounts: -41_500,
+      net: 373_500,
+    });
+  });
+
+  it('adopts the legacy automatic row and leaves an authored manual discount alone', async () => {
+    const fixture = await createDraftWithGeneratedChargeAndLegacyDiscount();
+    const manualDiscountItemId = uuidv4();
+    await db('invoice_charges').insert({
+      tenant,
+      item_id: manualDiscountItemId,
+      invoice_id: fixture.invoiceId,
+      description: 'Goodwill discount',
+      quantity: 1,
+      unit_price: -5_000,
+      net_amount: -5_000,
+      total_price: -5_000,
+      tax_amount: 0,
+      tax_rate: 0,
+      is_manual: true,
+      is_discount: true,
+      is_taxable: false,
+      discount_type: 'fixed',
+    });
+
+    await db.transaction(async (trx) => {
+      await reconcileAutomaticInvoiceDiscounts(trx, tenant, fixture.invoiceId);
+    });
+
+    // Exactly one automatic settlement, adopted from the legacy row; the manual
+    // discount is neither claimed nor removed.
+    const automatic = await automaticDiscountRows(fixture.invoiceId);
+    expect(automatic).toHaveLength(1);
+    expect(automatic[0].item_id).toBe(fixture.automaticDiscountItemId);
+    expect(Number(automatic[0].net_amount)).toBe(-39_000);
+
+    const manual = await db('invoice_charges').where({ tenant, item_id: manualDiscountItemId }).first();
+    expect(manual.is_manual).toBe(true);
+    expect(manual.adjustment_source_kind).toBeNull();
+    expect(Number(manual.net_amount)).toBe(-5_000);
+
+    expect(await sumChargeNet(fixture.invoiceId)).toEqual({
+      gross: 390_000,
+      discounts: -44_000,
+      net: 346_000,
+    });
+  });
+
   it('removes only its own automatic settlement when the source is deactivated', async () => {
     const fixture = await createDraftWithGeneratedChargeAndDiscount();
     const manual = await insertManualPartialPeriodCharge({
@@ -403,14 +587,14 @@ describe('contract invoice adjustments (DB-backed)', () => {
     }
   });
 
-  it('leaves legacy automatic discount rows without provenance untouched', async () => {
+  it('leaves an authored manual discount without provenance untouched', async () => {
     const fixture = await createDraftWithGeneratedChargeAndDiscount();
     const legacyItemId = uuidv4();
     await db('invoice_charges').insert({
       tenant,
       item_id: legacyItemId,
       invoice_id: fixture.invoiceId,
-      description: 'Legacy manual discount',
+      description: 'Authored manual discount',
       quantity: 1,
       unit_price: -5_000,
       net_amount: -5_000,

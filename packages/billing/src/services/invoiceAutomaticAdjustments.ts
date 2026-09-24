@@ -319,6 +319,31 @@ interface DesiredSettlementRow {
   metadata?: Record<string, unknown> | null;
 }
 
+interface LegacyAutomaticDiscountRow {
+  item_id: string;
+  description: string | null;
+}
+
+/**
+ * Automatic discounts persisted before adjustment provenance existed. The
+ * legacy generation path wrote `is_discount = true, is_manual = false` rows with
+ * no source link, so reconciliation cannot match them by `(source kind, source
+ * id)` and would otherwise append a second settlement next to them. Authored
+ * manual discounts/credits (`is_manual = true`) are never candidates.
+ */
+async function loadLegacyAutomaticDiscountRows(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  invoiceId: string,
+): Promise<LegacyAutomaticDiscountRow[]> {
+  return tenantScopedTable<LegacyAutomaticDiscountRow>(conn, tenant, 'invoice_charges')
+    .where({ invoice_id: invoiceId, tenant, is_discount: true, is_manual: false })
+    .whereNull('adjustment_source_kind')
+    .select('item_id', 'description')
+    .orderBy('created_at', 'asc')
+    .orderBy('item_id', 'asc');
+}
+
 async function applySettlementRows(
   tx: Knex.Transaction,
   tenant: string,
@@ -334,6 +359,30 @@ async function applySettlementRows(
   const existingBySource = new Map<string, Record<string, any>>(
     existing.map((row): [string, Record<string, any>] => [String(row.adjustment_source_id), row]),
   );
+
+  // Adopt a legacy automatic discount in place instead of inserting a duplicate.
+  // The only stable signal a pre-provenance row carries is its description, which
+  // the legacy generation path set to the configured discount name. A row can be
+  // claimed at most once, and matching is deterministic by `created_at`/`item_id`.
+  const legacyRows = desired.length > 0
+    ? await loadLegacyAutomaticDiscountRows(tx, tenant, invoiceId)
+    : [];
+  const legacyByDescription = new Map<string, LegacyAutomaticDiscountRow[]>();
+  for (const legacy of legacyRows) {
+    const key = (legacy.description ?? '').trim();
+    const queue = legacyByDescription.get(key) ?? [];
+    queue.push(legacy);
+    legacyByDescription.set(key, queue);
+  }
+  const adoptedLegacyItemIds = new Set<string>();
+  for (const row of desired) {
+    if (existingBySource.has(row.sourceId)) continue;
+    const match = legacyByDescription.get(row.description.trim())?.shift();
+    if (!match) continue;
+    existingBySource.set(row.sourceId, { item_id: match.item_id, adjustment_source_id: row.sourceId });
+    adoptedLegacyItemIds.add(match.item_id);
+  }
+
   const desiredIds = new Set(desired.map((row) => row.sourceId));
   const now = Temporal.Now.instant().toString();
 
@@ -400,6 +449,21 @@ async function applySettlementRows(
     if (desiredIds.has(String(row.adjustment_source_id))) continue;
     await tenantScopedTable(tx, tenant, 'invoice_charges')
       .where({ item_id: row.item_id, invoice_id: invoiceId, tenant, adjustment_source_kind: sourceKind })
+      .delete();
+  }
+
+  // Replace any legacy automatic row this reconcile did not adopt: it has been
+  // superseded by a source-linked settlement (or its source no longer applies),
+  // and leaving it would double the discount. Desired is non-empty here by
+  // construction, so reconcile only prunes when it actually owns an automatic
+  // settlement for this invoice; an invoice whose source cannot be re-derived
+  // keeps its saved legacy row. The `whereNull` guard makes adoption doubly
+  // safe even if the claim set were ever wrong.
+  for (const legacy of legacyRows) {
+    if (adoptedLegacyItemIds.has(legacy.item_id)) continue;
+    await tenantScopedTable(tx, tenant, 'invoice_charges')
+      .where({ item_id: legacy.item_id, invoice_id: invoiceId, tenant, is_discount: true, is_manual: false })
+      .whereNull('adjustment_source_kind')
       .delete();
   }
 
