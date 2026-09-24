@@ -1032,7 +1032,12 @@
       "saving": "Opslaan…",
       "startDelimiter": "Beginscheidingsteken",
       "update": "Regel bijwerken",
-      "valuePlaceholder": "Waarde"
+      "valuePlaceholder": "Waarde",
+      "matchTargets": "Vergelijk geëxtraheerde waarde met",
+      "matchClientName": "Klantnaam of alias",
+      "matchContactEmail": "E-mailadres contact",
+      "matchAssetName": "Apparaatnaam (asset)",
+      "matchTargetRequired": "Selecteer minstens één doel."
     },
     "header": {
       "description": "Match inkomende e-mail op afzender of onderwerp om ruis over te slaan, de juiste klant toe te wijzen of naar een bestemming te routeren. Regels worden op volgorde uitgevoerd; de eerste match wint.",
@@ -1090,7 +1095,10 @@
       "running": "Testen…",
       "subject": "Onderwerp",
       "title": "Deze regel testen",
-      "to": "Aan"
+      "to": "Aan",
+      "contactEmail": "e-mailadres contact",
+      "deviceName": "apparaatnaam",
+      "ambiguous": "{{target}} komt overeen bij {{count}} klanten — niet toegewezen"
     }
   },
   "errors": {

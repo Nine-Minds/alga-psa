@@ -166,6 +166,32 @@ describe('inboundEmailRules engine: extract_assign_client', () => {
     });
   });
 
+  it('assigns asset matches and carries the asset id', async () => {
+    const rule = { ...extractRule, action_config: { ...extractRule.action_config, match_by: ['asset_name'] } };
+    const matchClientByAssetName = vi.fn(async () => ({ match: { clientId: 'client-a', matchedBy: 'asset_name' as const, assetId: 'asset-a' } }));
+    const result = await evaluateInboundEmailRules({ tenantId: TENANT, providerId: PROVIDER, emailData: makeEmailData(), deps: makeDeps({ loadRules: vi.fn(async () => [rule]), matchClientByAssetName }) });
+    expect(matchClientByAssetName).toHaveBeenCalledWith(TENANT, 'acme corp');
+    expect(result.outcome).toMatchObject({ kind: 'assign_client', clientId: 'client-a', assetId: 'asset-a', matchedBy: 'asset_name' });
+  });
+
+  it('assigns contact email matches and carries the contact id', async () => {
+    const rule = { ...extractRule, action_config: { source: 'body_text', extraction: { type: 'after', marker: 'Contact:' }, match_by: ['contact_email'] } };
+    const matchClientByContactEmail = vi.fn(async () => ({ match: { clientId: 'client-a', matchedBy: 'contact_email' as const, contactId: 'contact-a' } }));
+    const result = await evaluateInboundEmailRules({ tenantId: TENANT, providerId: PROVIDER, emailData: makeEmailData({ body: { text: 'Contact: Jane Doe <jane@acme.com>' } }), deps: makeDeps({ loadRules: vi.fn(async () => [rule]), matchClientByContactEmail }) });
+    expect(matchClientByContactEmail).toHaveBeenCalledWith(TENANT, 'jane@acme.com');
+    expect(result.outcome).toMatchObject({ kind: 'assign_client', contactId: 'contact-a', matchedBy: 'contact_email' });
+  });
+
+  it('records ambiguity and continues to later targets in canonical order', async () => {
+    const rule = { ...extractRule, action_config: { source: 'body_text', extraction: { type: 'after', marker: 'Contact:' }, match_by: ['contact_email', 'asset_name'] } };
+    const matchClientByContactEmail = vi.fn(async () => ({ ambiguous: true as const, clientCount: 2 }));
+    const matchClientByAssetName = vi.fn(async () => ({ match: { clientId: 'client-asset', matchedBy: 'asset_name' as const, assetId: 'asset-a' } }));
+    const result = await evaluateInboundEmailRules({ tenantId: TENANT, providerId: PROVIDER, emailData: makeEmailData({ body: { text: 'Contact: jane@acme.com' } }), deps: makeDeps({ loadRules: vi.fn(async () => [rule]), matchClientByContactEmail, matchClientByAssetName }) });
+    expect(matchClientByContactEmail.mock.invocationCallOrder[0]).toBeLessThan(matchClientByAssetName.mock.invocationCallOrder[0]);
+    expect(result.outcome).toMatchObject({ kind: 'assign_client', clientId: 'client-asset' });
+    expect(result.trace[0].clientMatchAmbiguity).toEqual([{ target: 'contact_email', clientCount: 2 }]);
+  });
+
   it('on_no_match=proceed continues to later rules when no client matches', async () => {
     const deps = makeDeps({
       loadRules: vi.fn(async () => [

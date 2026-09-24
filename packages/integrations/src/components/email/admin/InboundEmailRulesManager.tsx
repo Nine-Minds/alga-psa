@@ -105,10 +105,16 @@ export function InboundEmailRulesManager({ onRulesChange }: InboundEmailRulesMan
         const source = (rule.action_config as any)?.source === 'body_text'
           ? t('inboundRules.fields.bodyText', { defaultValue: 'body text' })
           : t('inboundRules.fields.subject', { defaultValue: 'subject' });
+        const configuredTargets = (rule.action_config as any)?.match_by;
+        const targets: string[] = Array.isArray(configuredTargets) ? configuredTargets : ['client_name'];
+        const targetLabels = targets.filter((target) => ['client_name', 'contact_email', 'asset_name'].includes(target))
+          .map((target) => t(`inboundRules.form.match${target === 'client_name' ? 'ClientName' : target === 'contact_email' ? 'ContactEmail' : 'AssetName'}`, {
+            defaultValue: target === 'client_name' ? 'Client name or alias' : target === 'contact_email' ? 'Contact email' : 'Device (asset) name',
+          }));
         return t('inboundRules.summary.extractAssign', {
           defaultValue: 'Assign client from {{source}}',
           source,
-        });
+        }) + (targets.length === 1 && targets[0] === 'client_name' ? '' : ` · ${targetLabels.join(', ')}`);
       }
       case 'set_destination':
         return t('inboundRules.summary.setDestination', { defaultValue: 'Route to destination' });

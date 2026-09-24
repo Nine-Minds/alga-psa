@@ -18,12 +18,16 @@ import {
   evaluateConditions,
   extractValue,
   normalizeExtractedValue,
+  resolveMatchTargets,
+  extractEmailCandidate,
 } from './evaluator';
+import { normalizeEmailAddress } from '../../../lib/email/addressUtils';
 import { resolveInboundEmailAiClassifier } from './aiClassifier';
 import type {
   AiClassifyActionConfig,
   ExtractAssignClientActionConfig,
   InboundEmailClientMatch,
+  InboundEmailClientMatchTarget,
   InboundEmailRule,
   InboundEmailRuleEmailInput,
   InboundEmailRuleEvaluation,
@@ -33,10 +37,14 @@ import type {
 } from './types';
 
 const AI_BODY_EXCERPT_LENGTH = 4_000;
+// Keep in sync with idx_assets_tenant_normalized_name in the migration.
+const ASSET_NAME_NORMALIZATION_SQL = "lower(regexp_replace(trim(assets.name), '\\s+', ' ', 'g'))";
 
 export interface InboundEmailRuleEngineDeps {
   loadRules(tenantId: string): Promise<InboundEmailRule[]>;
   matchClientByName(tenantId: string, normalizedName: string): Promise<InboundEmailClientMatch | null>;
+  matchClientByContactEmail?(tenantId: string, normalizedEmail: string): Promise<{ match: InboundEmailClientMatch } | { ambiguous: true; clientCount: number } | null>;
+  matchClientByAssetName?(tenantId: string, normalizedName: string): Promise<{ match: InboundEmailClientMatch } | { ambiguous: true; clientCount: number } | null>;
   resolveDefaultsById(tenantId: string, defaultsId: string): Promise<Record<string, unknown> | null>;
   classifyWithAi(input: {
     tenantId: string;
@@ -134,6 +142,9 @@ const INBOUND_DEFAULTS_SELECT_COLUMNS = [
 ] as const;
 
 function createDefaultDeps(): InboundEmailRuleEngineDeps {
+  const activeClientPredicate = (builder: Knex.QueryBuilder) => builder.where(function (this: Knex.QueryBuilder) {
+    this.where('clients.is_inactive', false).orWhereNull('clients.is_inactive');
+  });
   return {
     async loadRules(tenantId) {
       const { tenantDb, withAdminTransaction } = await import('@alga-psa/db');
@@ -160,12 +171,7 @@ function createDefaultDeps(): InboundEmailRuleEngineDeps {
       const { tenantDb, withAdminTransaction } = await import('@alga-psa/db');
       return withAdminTransaction(async (trx: Knex.Transaction) => {
         const db = tenantDb(trx, tenantId);
-        const activeClients = (builder: Knex.QueryBuilder) =>
-          builder.where(function (this: Knex.QueryBuilder) {
-            this.where('clients.is_inactive', false).orWhereNull('clients.is_inactive');
-          });
-
-        const byName = await activeClients(
+        const byName = await activeClientPredicate(
           db.table('clients')
             .select('client_id')
             .andWhereRaw('lower(regexp_replace(trim(client_name), \'\\s+\', \' \', \'g\')) = ?', [normalizedName])
@@ -181,11 +187,57 @@ function createDefaultDeps(): InboundEmailRuleEngineDeps {
             normalizedName,
           ]);
         db.tenantJoin(aliasQuery, 'clients', 'client_name_aliases.client_id', 'clients.client_id');
-        const byAlias = await activeClients(aliasQuery).first();
+        const byAlias = await activeClientPredicate(aliasQuery).first();
 
         return (byAlias as any)?.client_id
           ? { clientId: (byAlias as any).client_id, matchedBy: 'alias' as const }
           : null;
+      });
+    },
+
+    async matchClientByContactEmail(tenantId, normalizedEmail) {
+      if (!normalizedEmail) return null;
+      const { tenantDb, withAdminTransaction } = await import('@alga-psa/db');
+      return withAdminTransaction(async (trx: Knex.Transaction) => {
+        const db = tenantDb(trx, tenantId);
+        const additional = db.table('contact_additional_email_addresses as ca')
+          .select('ca.contact_name_id').where('ca.normalized_email_address', normalizedEmail);
+        const rows = db.table('contacts').select('contacts.contact_name_id as contact_id', 'contacts.client_id')
+          .where(function (this: Knex.QueryBuilder) {
+            this.whereRaw('lower(contacts.email) = ?', [normalizedEmail])
+              .orWhereIn('contacts.contact_name_id', additional);
+          }).whereNotNull('contacts.client_id').andWhere('contacts.is_inactive', false);
+        db.tenantJoin(rows, 'clients', 'contacts.client_id', 'clients.client_id');
+        const activeRows = await activeClientPredicate(rows);
+        const unique = new Map<string, any>();
+        for (const row of activeRows as any[]) unique.set(`${row.client_id}:${row.contact_id}`, row);
+        const clients = new Map<string, any>();
+        for (const row of unique.values()) clients.set(row.client_id, row);
+        if (clients.size > 1) return { ambiguous: true as const, clientCount: clients.size };
+        const row = clients.values().next().value;
+        return row ? { match: { clientId: row.client_id, matchedBy: 'contact_email' as const, contactId: row.contact_id } } : null;
+      });
+    },
+
+    async matchClientByAssetName(tenantId, normalizedName) {
+      if (!normalizedName) return null;
+      const { tenantDb, withAdminTransaction } = await import('@alga-psa/db');
+      return withAdminTransaction(async (trx: Knex.Transaction) => {
+        const db = tenantDb(trx, tenantId);
+        const query = db.table('assets').select('assets.asset_id', 'assets.client_id')
+          .whereRaw(`${ASSET_NAME_NORMALIZATION_SQL} = ?`, [normalizedName])
+          .whereNotNull('assets.client_id').limit(50);
+        db.tenantJoin(query, 'clients', 'assets.client_id', 'clients.client_id');
+        const rows = await activeClientPredicate(query).select('clients.is_inactive');
+        const byClient = new Map<string, any[]>();
+        for (const row of rows as any[]) {
+          const list = byClient.get(row.client_id) ?? [];
+          list.push(row);
+          byClient.set(row.client_id, list);
+        }
+        if (byClient.size > 1) return { ambiguous: true as const, clientCount: byClient.size };
+        const [clientId, assets] = byClient.entries().next().value ?? [];
+        return clientId ? { match: { clientId, matchedBy: 'asset_name' as const, ...(assets.length === 1 ? { assetId: assets[0].asset_id } : {}) } } : null;
       });
     },
 
@@ -227,7 +279,8 @@ function isExtractAssignConfig(config: Record<string, unknown>): config is Recor
     Boolean(extraction) &&
     typeof extraction === 'object' &&
     typeof extraction.type === 'string' &&
-    ((config as any).source === 'subject' || (config as any).source === 'body_text')
+    ((config as any).source === 'subject' || (config as any).source === 'body_text') &&
+    ((config as any).match_by === undefined || Array.isArray((config as any).match_by))
   );
 }
 
@@ -382,7 +435,10 @@ async function executeRuleAction(args: {
       base.extractedValue = rawValue;
 
       if (normalized) {
-        const match = await deps.matchClientByName(params.tenantId, normalized);
+        const targets = resolveMatchTargets(rule.action_config);
+        const ambiguity: NonNullable<InboundEmailRuleTraceEntry['clientMatchAmbiguity']> = [];
+        const match = await resolveClientMatch({ targets, rawValue, normalized, deps, tenantId: params.tenantId, ambiguity });
+        if (ambiguity.length) base.clientMatchAmbiguity = ambiguity;
         base.clientMatch = match;
         if (match) {
           return {
@@ -393,6 +449,9 @@ async function executeRuleAction(args: {
               clientId: match.clientId,
               extractedValue: normalized,
               matchSource: 'rule_extraction',
+              matchedBy: match.matchedBy,
+              ...(match.contactId ? { contactId: match.contactId } : {}),
+              ...(match.assetId ? { assetId: match.assetId } : {}),
             },
             traceEntry: base,
           };
@@ -461,6 +520,7 @@ async function executeRuleAction(args: {
                 clientId: match.clientId,
                 extractedValue: normalized,
                 matchSource: 'rule_ai',
+                matchedBy: match.matchedBy,
               },
               traceEntry: base,
             };
@@ -482,6 +542,39 @@ async function executeRuleAction(args: {
         traceEntry: { ...base, resolution: 'dangling_reference', detail: `unknown action_type ${rule.action_type}` },
       };
   }
+}
+
+async function resolveClientMatch(args: {
+  targets: InboundEmailClientMatchTarget[];
+  rawValue: string;
+  normalized: string;
+  deps: InboundEmailRuleEngineDeps;
+  tenantId: string;
+  ambiguity: NonNullable<InboundEmailRuleTraceEntry['clientMatchAmbiguity']>;
+}): Promise<InboundEmailClientMatch | null> {
+  for (const target of args.targets) {
+    let result: { match: InboundEmailClientMatch } | { ambiguous: true; clientCount: number } | InboundEmailClientMatch | null;
+    if (target === 'client_name') {
+      const match = await args.deps.matchClientByName(args.tenantId, args.normalized);
+      if (match) return match;
+      continue;
+    }
+    if (target === 'contact_email') {
+      const candidate = extractEmailCandidate(args.rawValue);
+      const email = normalizeEmailAddress(candidate);
+      if (!email) continue;
+      result = args.deps.matchClientByContactEmail ? await args.deps.matchClientByContactEmail(args.tenantId, email) : null;
+    } else {
+      result = args.deps.matchClientByAssetName ? await args.deps.matchClientByAssetName(args.tenantId, args.normalized) : null;
+    }
+    if (!result) continue;
+    if ('ambiguous' in result) {
+      args.ambiguity.push({ target, clientCount: result.clientCount });
+      continue;
+    }
+    return 'match' in result ? result.match : result;
+  }
+  return null;
 }
 
 async function resolveNoMatch(args: {
