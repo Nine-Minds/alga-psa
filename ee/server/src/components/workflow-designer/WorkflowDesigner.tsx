@@ -1448,6 +1448,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   const [payloadSchemaModeDraft, setPayloadSchemaModeDraft] = useState<'inferred' | 'pinned'>('pinned');
   const [pinnedPayloadSchemaRefDraft, setPinnedPayloadSchemaRefDraft] = useState<string>('');
   const [triggerTypeSelection, setTriggerTypeSelection] = useState<TriggerTypeSelection>('manual');
+  const [dateOffsetDirection, setDateOffsetDirection] = useState<'before' | 'on' | 'after'>('on');
   const [selectedTriggerEventCategory, setSelectedTriggerEventCategory] = useState<string>('');
   const [isSavingMetadata, setIsSavingMetadata] = useState(false);
   const [stepsViewMode, setStepsViewMode] = useState<'list' | 'graph'>('list');
@@ -2244,6 +2245,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     setTriggerTypeSelection(nextType);
 
     if (nextType === 'manual') {
+      setDateOffsetDirection('on');
       setSelectedTriggerEventCategory('');
       setPayloadSchemaModeDraft('pinned');
       setSchemaInferenceEnabled(false);
@@ -2266,6 +2268,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
     if (nextType === 'date') {
       const source = 'client.anniversary';
+      setDateOffsetDirection('before');
       setSelectedTriggerEventCategory('');
       setActiveDefinition((current) => current ? {
         ...current,
@@ -2758,6 +2761,11 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     setActiveDefinition(normalizedDefinition);
     setActiveWorkflowId(record.workflow_id);
     setTriggerTypeSelection(normalizedDefinition.trigger?.type === 'event' ? 'event' : 'manual');
+    if (normalizedDefinition.trigger?.type === 'date') {
+      setDateOffsetDirection(normalizedDefinition.trigger.offsetDays < 0 ? 'before' : normalizedDefinition.trigger.offsetDays > 0 ? 'after' : 'on');
+    } else {
+      setDateOffsetDirection('on');
+    }
     setSelectedTriggerEventCategory('');
     setShowUseEventSchemaSuggestion(false);
     setPendingEventSchemaPrompt(null);
@@ -4261,15 +4269,19 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                     <label htmlFor="workflow-date-offset" className="mb-1 block text-sm font-medium">{t('designer.form.dateOffset', { defaultValue: 'Days' })}</label>
                                     <Input id="workflow-date-offset" type="number" min={0} max={365} value={Math.abs(dateTrigger.offsetDays)} disabled={!canManage} onChange={(event) => {
                                       const amount = Math.min(365, Math.max(0, Number(event.target.value) || 0));
-                                      const sign = dateTrigger.offsetDays < 0 ? -1 : dateTrigger.offsetDays > 0 ? 1 : 0;
+                                      const direction = amount === 0 ? 'on' : dateOffsetDirection === 'on' ? 'after' : dateOffsetDirection;
+                                      if (direction !== dateOffsetDirection) setDateOffsetDirection(direction);
+                                      const sign = direction === 'before' ? -1 : direction === 'after' ? 1 : 0;
                                       handleDefinitionChange({ trigger: { ...dateTrigger, offsetDays: sign * amount } });
                                     }} />
                                   </div>
                                   <div>
                                     <label htmlFor="workflow-date-direction" className="mb-1 block text-sm font-medium">{t('designer.form.dateDirection', { defaultValue: 'Timing' })}</label>
-                                    <CustomSelect id="workflow-date-direction" value={dateTrigger.offsetDays < 0 ? 'before' : dateTrigger.offsetDays > 0 ? 'after' : 'on'} disabled={!canManage} options={[{value:'before',label:t('designer.form.before',{defaultValue:'Before'})},{value:'on',label:t('designer.form.onDate',{defaultValue:'On the day'})},{value:'after',label:t('designer.form.after',{defaultValue:'After'})}]} onValueChange={(value) => {
+                                    <CustomSelect id="workflow-date-direction" value={dateOffsetDirection} disabled={!canManage} options={[{value:'before',label:t('designer.form.before',{defaultValue:'Before'})},{value:'on',label:t('designer.form.onDate',{defaultValue:'On the day'})},{value:'after',label:t('designer.form.after',{defaultValue:'After'})}]} onValueChange={(value) => {
                                       const days = Math.abs(dateTrigger.offsetDays);
-                                      handleDefinitionChange({ trigger: { ...dateTrigger, offsetDays: value === 'before' ? -days : value === 'after' ? days : 0 } });
+                                      const direction = value as 'before' | 'on' | 'after';
+                                      setDateOffsetDirection(direction);
+                                      handleDefinitionChange({ trigger: { ...dateTrigger, offsetDays: direction === 'before' ? -days : direction === 'after' ? days : 0 } });
                                     }} />
                                   </div>
                                   <div>
@@ -4281,7 +4293,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                     <Input id="workflow-date-timezone" value={dateTrigger.timezone ?? ''} disabled={!canManage} placeholder={t('designer.form.tenantTimezoneDefault', { defaultValue: 'Tenant timezone' })} onChange={(event) => handleDefinitionChange({ trigger: { ...dateTrigger, timezone: event.target.value || undefined } })} />
                                   </div>
                                 </div>
-                                <p className="text-xs text-[rgb(var(--color-text-500))]">{t('designer.form.dateTriggerSummary', { defaultValue: 'Runs {{days}} {{direction}} {{source}} at {{time}} ({{timezone}})', days: Math.abs(dateTrigger.offsetDays), direction: t(dateTrigger.offsetDays < 0 ? 'designer.form.daysBefore' : dateTrigger.offsetDays > 0 ? 'designer.form.daysAfter' : 'designer.form.onDate', { defaultValue: dateTrigger.offsetDays < 0 ? 'days before' : dateTrigger.offsetDays > 0 ? 'days after' : 'on' }), source: t(({ 'client.anniversary': 'designer.form.dateSourceAnniversary', 'contract.renewal_decision': 'designer.form.dateSourceRenewal', 'contract.end': 'designer.form.dateSourceContractEnd', 'asset.warranty_end': 'designer.form.dateSourceWarranty' } as Record<string, string>)[dateTrigger.source], { defaultValue: dateTrigger.source }), time: dateTrigger.localTime, timezone: dateTrigger.timezone || t('designer.form.tenantTimezoneDefault', { defaultValue: 'tenant timezone' }) })}</p>
+                                <p className="text-xs text-[rgb(var(--color-text-500))]">{t('designer.form.dateTriggerSummary', { defaultValue: 'Runs {{days}} {{direction}} {{source}} at {{time}} ({{timezone}})', days: Math.abs(dateTrigger.offsetDays), direction: t(dateOffsetDirection === 'before' ? 'designer.form.daysBefore' : dateOffsetDirection === 'after' ? 'designer.form.daysAfter' : 'designer.form.onDate', { defaultValue: dateOffsetDirection === 'before' ? 'days before' : dateOffsetDirection === 'after' ? 'days after' : 'on' }), source: t(({ 'client.anniversary': 'designer.form.dateSourceAnniversary', 'contract.renewal_decision': 'designer.form.dateSourceRenewal', 'contract.end': 'designer.form.dateSourceContractEnd', 'asset.warranty_end': 'designer.form.dateSourceWarranty' } as Record<string, string>)[dateTrigger.source], { defaultValue: dateTrigger.source }), time: dateTrigger.localTime, timezone: dateTrigger.timezone || t('designer.form.tenantTimezoneDefault', { defaultValue: 'tenant timezone' }) })}</p>
                               </div>
                             )}
 

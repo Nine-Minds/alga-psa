@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ published: vi.fn(), launch: vi.fn(), safeParse: vi.fn() }));
+const mocks = vi.hoisted(() => ({ published: vi.fn(), launch: vi.fn(), safeParse: vi.fn(), loggerInfo: vi.fn() }));
 vi.mock('@alga-psa/workflows/persistence', () => ({ listPublishedWorkflowDefinitions: mocks.published }));
 vi.mock('@alga-psa/workflows/runtime/core', () => ({
   initializeWorkflowRuntimeV2: vi.fn(),
   getSchemaRegistry: () => ({ has: () => true, get: () => ({ safeParse: mocks.safeParse }) }),
 }));
 vi.mock('./workflowRunLauncher', () => ({ launchPublishedWorkflowRun: mocks.launch }));
-vi.mock('@alga-psa/core/logger', () => ({ default: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
+vi.mock('@alga-psa/core/logger', () => ({ default: { info: mocks.loggerInfo, warn: vi.fn(), error: vi.fn() } }));
 
 import { buildDateTriggerFireKey, getDateTriggerOccurrenceRange, launchDateTriggeredWorkflows } from './dateTriggerLauncher';
 
@@ -72,6 +72,9 @@ describe('date trigger launcher', () => {
       tenantId: 'tenant', today: '2026-09-23', now: new Date('2026-09-23T12:00:00Z'), timezone: 'UTC', knex: {} as any, sources: [source],
     });
     expect(mocks.launch).toHaveBeenCalledTimes(500);
+    expect(mocks.loggerInfo).toHaveBeenCalledWith('Date-trigger scan reached the per-tenant launch cap', expect.objectContaining({
+      tenantId: 'tenant', launched: 500, remaining: 1,
+    }));
   });
 
   it('continues to later workflows when one launch fails', async () => {

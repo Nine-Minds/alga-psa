@@ -75,7 +75,7 @@ type WorkflowRunListItem = {
   workflow_version: number;
   tenant_id?: string | null;
   status: string;
-  trigger_type?: 'event' | 'schedule' | 'recurring' | null;
+  trigger_type?: 'event' | 'schedule' | 'recurring' | 'date' | null;
   source_payload_schema_ref?: string | null;
   trigger_mapping_applied?: boolean | null;
   started_at: string;
