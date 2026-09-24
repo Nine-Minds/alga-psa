@@ -448,6 +448,7 @@ const resolveExpressionValue = (
       return expression.value;
     case 'binding': {
       const value = evaluation.bindings[expression.bindingId];
+      // LEVERAGE: Binding expressions carry a localized fallback because the AST has no separate optional-binding node.
       return value == null || (typeof value === 'string' && value.trim() === '')
         ? displayText(expression.fallback)
         : value;
