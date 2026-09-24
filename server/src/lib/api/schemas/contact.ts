@@ -86,7 +86,9 @@ export const createContactSchema = z.object({
 }).strict();
 
 // Update contact schema (all fields optional)
-export const updateContactSchema = createUpdateSchema(createContactSchema);
+// Contact kind is established by sync or at creation. Generic updates cannot
+// downgrade a shared mailbox to person and bypass portal eligibility checks.
+export const updateContactSchema = createUpdateSchema(createContactSchema).omit({ contact_kind: true });
 
 // Contact filter schema
 export const contactFilterSchema = baseFilterSchema.extend({

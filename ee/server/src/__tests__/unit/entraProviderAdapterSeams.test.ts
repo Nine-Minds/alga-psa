@@ -154,6 +154,18 @@ describe('CippProviderAdapter seams', () => {
     expect(await new CippProviderAdapter().listSharedMailboxIds({ tenant: 't1', managedTenantId: 'm1' })).toBeNull();
   });
 
+  it('treats a missing ListMailboxes endpoint as unavailable detection', async () => {
+    hoisted.get.mockRejectedValueOnce({ isAxiosError: true, response: { status: 404 } });
+    expect(await new CippProviderAdapter().listSharedMailboxIds({ tenant: 't1', managedTenantId: 'm1' })).toBeNull();
+  });
+
+  it('treats malformed or unrecognised ListMailboxes payloads as unavailable', async () => {
+    hoisted.get.mockResolvedValueOnce({ data: { error: 'not-json-list-response' } });
+    expect(await new CippProviderAdapter().listSharedMailboxIds({ tenant: 't1', managedTenantId: 'm1' })).toBeNull();
+    hoisted.get.mockResolvedValueOnce({ data: [{ displayName: 'Mailbox without the documented fields' }] });
+    expect(await new CippProviderAdapter().listSharedMailboxIds({ tenant: 't1', managedTenantId: 'm1' })).toBeNull();
+  });
+
   it('uses CIPP per-user group checks when bulk transitive membership is unavailable', async () => {
     hoisted.get.mockImplementation(async (url: string) => ({ data: url.includes('userId=u1') ? [{ id: 'g1' }] : [{ id: 'g2' }] }));
     const adapter = new CippProviderAdapter();

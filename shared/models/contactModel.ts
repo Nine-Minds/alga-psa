@@ -26,6 +26,28 @@ import { ValidationResult } from '../interfaces/validation.interfaces';
 const canonicalPhoneTypeSchema = z.enum(CONTACT_PHONE_CANONICAL_TYPES);
 const canonicalEmailTypeSchema = z.enum(CONTACT_EMAIL_CANONICAL_TYPES);
 
+export async function isSharedMailboxContact(
+  db: Knex | Knex.Transaction,
+  tenant: string,
+  contactId: string
+): Promise<boolean> {
+  const contact = await tenantDb(db, tenant).table('contacts')
+    .where({ contact_name_id: contactId })
+    .first('contact_kind');
+  return contact?.contact_kind === 'shared_mailbox';
+}
+
+export async function assertContactIsNotSharedMailbox(
+  db: Knex | Knex.Transaction,
+  tenant: string,
+  contactId: string,
+  message = 'Shared mailbox contacts cannot have a client portal user.'
+): Promise<void> {
+  if (await isSharedMailboxContact(db, tenant, contactId)) {
+    throw new Error(message);
+  }
+}
+
 const phoneRowInputSchema = z.object({
   contact_phone_number_id: z.string().uuid().optional(),
   phone_number: z.string().trim().min(1, 'Phone number is required'),

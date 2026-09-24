@@ -129,6 +129,15 @@ describe('Entra user filter PostgreSQL integration', () => {
     expect(contact.contact_kind).toBe('shared_mailbox');
     expect(contact.is_inactive).toBe(false);
 
+    // If a later provider run cannot classify mailboxes, linking the same
+    // contact must preserve its stored shared kind.
+    await executeEntraSync({
+      tenantId: state.tenant, clientId, managedTenantId,
+      users: [{ ...mailbox, mailboxKind: null, accountEnabled: true }],
+    });
+    contact = await state.trx('contacts').where({ tenant: state.tenant, email: mailbox.email }).first();
+    expect(contact.contact_kind).toBe('shared_mailbox');
+
     const imported = await ContactModel.createContact({ full_name: 'Existing mailbox', email: 'existing-shared@example.test', client_id: clientId }, state.tenant, state.trx);
     await state.trx('contacts').where({ tenant: state.tenant, contact_name_id: imported.contact_name_id }).update({ contact_kind: 'shared_mailbox' });
     await state.trx('entra_contact_links').insert({ tenant: state.tenant, contact_name_id: imported.contact_name_id, client_id: clientId, entra_tenant_id: entraTenantId, entra_object_id: 'shared-existing', link_status: 'active', is_active: true });

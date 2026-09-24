@@ -202,18 +202,32 @@ export class CippProviderAdapter implements EntraProviderAdapter {
       const payload = await this.requestFromCandidates(credentials.baseUrl, credentials.apiToken, [
         `/api/ListMailboxes?tenantFilter=${tenantId}&RecipientTypeDetails=SharedMailbox`,
       ]);
+      const rows = Array.isArray(payload)
+        ? payload
+        : (() => {
+            const value = toObject(payload);
+            for (const key of ['data', 'value', 'items']) {
+              if (Array.isArray(value[key])) return value[key] as unknown[];
+            }
+            return null;
+          })();
+      if (!rows) return null;
       const ids = new Set<string>();
-      for (const item of extractCollection(payload)) {
+      for (const item of rows) {
         const row = toObject(item);
         const get = (key: string) => row[key] ?? row[key[0].toUpperCase() + key.slice(1)];
-        if (get('recipientTypeDetails') === 'SharedMailbox') {
-          const id = toStringOrNull(get('externalDirectoryObjectId'));
-          if (id) ids.add(id);
-        }
+        const recipientType = get('recipientTypeDetails');
+        const externalId = get('externalDirectoryObjectId');
+        if (typeof recipientType !== 'string' || typeof externalId !== 'string') return null;
+        if (recipientType === 'SharedMailbox' && externalId.trim()) ids.add(externalId.trim());
       }
       return ids;
     } catch (error: unknown) {
-      if ((axios.isAxiosError(error) || error instanceof EntraOperatorError) && ((error as any).response?.status === 401 || (error as any).code === 'credential-rejected')) return null;
+      if (
+        (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403 || error.response?.status === 404))
+        || (error instanceof EntraOperatorError && error.code === 'credential-rejected')
+        || (error instanceof EntraOperatorError && error.code === 'unreachable' && /HTTP 404\b/.test(error.message))
+      ) return null;
       throw error;
     }
   }

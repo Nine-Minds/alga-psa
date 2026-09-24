@@ -42,8 +42,9 @@ describe('portal invitation send flow tenant-scoped query contract', () => {
   });
 
   it('rejects shared mailbox contacts in every portal invitation entry point', () => {
-    expect(source).toContain("target?.contact_kind === 'shared_mailbox'");
+    expect(source).toContain('isSharedMailboxContact(knex, tenant, params.contactId)');
+    expect(source).toContain('isSharedMailboxContact(knex, tenant, contactId)');
     expect(source).toContain("contact.contact_kind === 'shared_mailbox'");
-    expect(source.match(/contact_kind === 'shared_mailbox'/g)).toHaveLength(3);
+    expect(source).toContain('isSharedMailboxContact(knex, tenant, contact.contact_name_id)');
   });
 });

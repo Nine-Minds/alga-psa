@@ -198,7 +198,9 @@ export async function executeEntraSync(
           userWithEntitlement,
           input.portalEntitlement
         );
-        if (eligibility.eligible) {
+        // A shared mailbox is never eligible for portal provisioning, including
+        // workflow-managed provisioning and existing-contact lifecycle actions.
+        if (userWithEntitlement.mailboxKind !== 'shared' && eligibility.eligible) {
           const provisioning = await handleEligibleClientPortalProvisioning(
             {
               tenantId: input.tenantId,
@@ -212,7 +214,7 @@ export async function executeEntraSync(
           if (provisioning.outcome === 'skipped_conflict') {
             counters.increment('skipped');
           }
-        } else if (eligibility.reason === 'workflow_managed') {
+        } else if (userWithEntitlement.mailboxKind !== 'shared' && eligibility.reason === 'workflow_managed') {
           await publishWorkflowManagedPortalProvisioningEvent(
             {
               tenantId: input.tenantId,
@@ -226,7 +228,7 @@ export async function executeEntraSync(
             },
             userWithEntitlement
           );
-        } else {
+        } else if (userWithEntitlement.mailboxKind !== 'shared') {
           const lifecycle = await handleIneligibleClientPortalLifecycle(
             {
               tenantId: input.tenantId,
@@ -262,7 +264,7 @@ export async function executeEntraSync(
         userWithEntitlement,
         input.portalEntitlement
       );
-      if (eligibility.eligible) {
+      if (userWithEntitlement.mailboxKind !== 'shared' && eligibility.eligible) {
         const provisioning = await handleEligibleClientPortalProvisioning(
           {
             tenantId: input.tenantId,
@@ -276,7 +278,7 @@ export async function executeEntraSync(
         if (provisioning.outcome === 'skipped_conflict') {
           counters.increment('skipped');
         }
-      } else if (eligibility.reason === 'workflow_managed') {
+      } else if (userWithEntitlement.mailboxKind !== 'shared' && eligibility.reason === 'workflow_managed') {
         await publishWorkflowManagedPortalProvisioningEvent(
           {
             tenantId: input.tenantId,
@@ -290,7 +292,7 @@ export async function executeEntraSync(
           },
           userWithEntitlement
         );
-      } else {
+      } else if (userWithEntitlement.mailboxKind !== 'shared') {
         const lifecycle = await handleIneligibleClientPortalLifecycle(
           {
             tenantId: input.tenantId,

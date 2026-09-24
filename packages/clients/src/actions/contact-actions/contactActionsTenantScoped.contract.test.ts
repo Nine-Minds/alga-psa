@@ -16,7 +16,7 @@ function sectionBetween(startMarker: string, endMarker: string): string {
 
 describe('contactActions tenant-scoped query contract', () => {
   it('rejects a shared mailbox when granting client admin access on the server', () => {
-    expect(source).toContain("contactKind?.contact_kind === 'shared_mailbox'");
+    expect(source).toContain('assertContactIsNotSharedMailbox(trx, tenant, contactId');
     expect(source).toContain('Shared mailbox contacts cannot be client admins.');
   });
 

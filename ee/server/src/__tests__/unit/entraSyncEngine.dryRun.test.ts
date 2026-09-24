@@ -635,6 +635,32 @@ describe('executeEntraSync dry-run behavior', () => {
     expect(handleEligibleClientPortalProvisioningMock).not.toHaveBeenCalled();
     expect(handleIneligibleClientPortalLifecycleMock).not.toHaveBeenCalled();
   });
+
+  it('never provisions or queues portal access for a shared mailbox, even when eligible', async () => {
+    findContactMatchesByEmailMock.mockReset();
+    linkExistingMatchedContactMock.mockReset();
+    resetPortalProvisioningMocks();
+    findContactMatchesByEmailMock.mockResolvedValueOnce([{
+      contactNameId: 'shared-contact', clientId: 'client-shared', email: 'shared@example.com',
+      fullName: 'Shared Mailbox', isInactive: false,
+    }]);
+    linkExistingMatchedContactMock.mockResolvedValue({ contactNameId: 'shared-contact' });
+    evaluateClientPortalProvisioningEligibilityMock.mockReturnValue({ eligible: true, reason: 'eligible' });
+
+    const { executeEntraSync } = await import('@ee/lib/integrations/entra/sync/syncEngine');
+    await executeEntraSync({
+      tenantId: 'tenant-shared', clientId: 'client-shared', managedTenantId: 'managed-shared',
+      dryRun: false,
+      users: [{ ...buildUser('shared'), mailboxKind: 'shared' }],
+      portalEntitlement: { provisioningMode: 'built_in', groupId: 'entitled', membershipMode: 'transitive' },
+    });
+
+    expect(linkExistingMatchedContactMock).toHaveBeenCalledOnce();
+    expect(evaluateClientPortalProvisioningEligibilityMock).toHaveBeenCalledOnce();
+    expect(handleEligibleClientPortalProvisioningMock).not.toHaveBeenCalled();
+    expect(publishWorkflowManagedPortalProvisioningEventMock).not.toHaveBeenCalled();
+    expect(handleIneligibleClientPortalLifecycleMock).not.toHaveBeenCalled();
+  });
 });
 
 describe('executeEntraSync updated counter', () => {

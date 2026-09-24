@@ -226,4 +226,10 @@ describe('Entra interfaces and migration schema alignment', () => {
     expect(contactSchema).toContain("z.enum(['person', 'shared_mailbox'])");
     expect(contactInterfaces).toContain("contact_kind?: 'person' | 'shared_mailbox'");
   });
+
+  it('REST contact updates cannot change contact kind or set client-admin status', () => {
+    const contactSchema = readRepoFile('server/src/lib/api/schemas/contact.ts');
+    expect(contactSchema).toContain('createUpdateSchema(createContactSchema).omit({ contact_kind: true })');
+    expect(contactSchema).not.toMatch(/is_client_admin\s*:/);
+  });
 });

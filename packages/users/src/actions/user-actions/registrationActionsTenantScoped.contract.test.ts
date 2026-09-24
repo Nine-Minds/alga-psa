@@ -27,6 +27,8 @@ describe('registration actions tenant-scoped query contract', () => {
     expect(section).toContain(".table('users");
     expect(section).toContain(".table('roles");
     expect(section).toContain('tenant: contact.tenant');
+    expect(section).toContain("contact_kind: 'contacts.contact_kind'");
+    expect(section).toContain("contact.contact_kind === 'shared_mailbox'");
     expect(section).toContain("const [user] = await tenantDb(trx, contact.tenant).table('users')");
     expect(section).toContain("await tenantDb(trx, contact.tenant).table('user_roles').insert({");
 
