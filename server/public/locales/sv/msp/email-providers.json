@@ -37,7 +37,7 @@
         "title": "Konfiguration av Microsoft 365",
         "ownApp": "Använd din egen Microsoft-app — registrera den i Azure AD (Microsoft Entra ID), ge den e-postbehörigheter och anslut den till din Microsoft 365-postlåda.",
         "providersPointer": "Konfigurationen av Microsoft-appen hanteras under Tjänsteleverantörer.",
-        "openProviders": "Öppna tjänsteleverantörer"
+        "openProviders": "Öppna Tjänsteleverantörer"
       },
       "gmail": {
         "title": "Konfiguration av Gmail",
@@ -128,7 +128,7 @@
     "subscription": {
       "expired": "Utgången",
       "expiresInHours": "Går ut om {{count}} h",
-      "expiresInDays": "Dagar till utgång: {{count}}"
+      "expiresInDays": "Går ut om {{count}} dygn"
     },
     "badges": {
       "disabled": "Inaktiverad",
@@ -145,7 +145,7 @@
       "justNow": "Nyss",
       "minutesAgo": "För {{count}} min sedan",
       "hoursAgo": "För {{count}} h sedan",
-      "daysAgo": "Dagar sedan: {{count}}"
+      "daysAgo": "För {{count}} dygn sedan"
     },
     "actions": {
       "edit": "Redigera konfiguration",
@@ -250,10 +250,10 @@
       "oauth": {
         "authorizing": "Auktoriserar…",
         "authorized": "Auktoriserad",
-        "authorizeAccess": "Godkänn åtkomst"
+        "authorizeAccess": "Auktorisera åtkomst"
       },
       "messages": {
-        "setupIncomplete": "Tjänsteleverantören har sparats men konfigurationen är inte slutförd: {{error}}"
+        "setupIncomplete": "Tjänsteleverantören har sparats, men konfigurationen är inte slutförd: {{error}}"
       }
     },
     "microsoft": {
@@ -293,7 +293,7 @@
         "signIn": "Logga in med Microsoft"
       },
       "readiness": {
-        "openProviders": "Öppna tjänsteleverantörer"
+        "openProviders": "Öppna Tjänsteleverantörer"
       },
       "issuer": {
         "title": "Microsoft-app som auktoriserar den här postlådan",
@@ -335,7 +335,7 @@
         "configureFailed": "Det gick inte att konfigurera Gmail-tjänsteleverantören"
       },
       "messages": {
-        "setupIncomplete": "Tjänsteleverantören har sparats men konfigurationen är inte slutförd: {{error}}",
+        "setupIncomplete": "Tjänsteleverantören har sparats, men konfigurationen är inte slutförd: {{error}}",
         "warningsTitle": "Konfigurationen slutfördes med varningar:",
         "settingUp": "Konfigurerar Gmail-aviseringar…"
       },
@@ -445,7 +445,7 @@
       "boardRequired": "Tavla krävs",
       "statusRequired": "Status krävs",
       "priorityRequired": "Prioritet krävs",
-      "clientRequired": "Företag krävs"
+      "clientRequired": "Kund krävs"
     },
     "fields": {
       "shortName": {
@@ -585,7 +585,7 @@
   "microsoftForm": {
     "header": {
       "title": "Microsoft 365-integrering",
-      "description": "Anslut ditt Microsoft 365-konto och konfigurera dina inställningar för e-postbehandling för att komma igång."
+      "description": "Kom igång genom att ansluta ditt Microsoft 365-konto och konfigurera dina inställningar för e-postbehandling."
     },
     "sections": {
       "accountSetup": {
@@ -711,11 +711,11 @@
     },
     "validation": {
       "requiredFieldsTitle": "Fyll i de obligatoriska fälten:",
-      "providerName": "Tjänsteleverantörens namn",
+      "providerName": "Konfigurationsnamn",
       "mailbox": "Gmail-adress"
     },
     "warnings": {
-      "setupIncomplete": "Tjänsteleverantören har sparats men konfigurationen är inte slutförd: {{error}}",
+      "setupIncomplete": "Tjänsteleverantören har sparats, men konfigurationen är inte slutförd: {{error}}",
       "setupWarningsTitle": "Konfigurationen slutfördes med varningar:"
     },
     "buttons": {
@@ -790,7 +790,7 @@
         "security": {
           "title": "Anslutningssäkerhet",
           "secure": "Använd implicit TLS (SSL vid anslutning, vanligtvis port 465)",
-          "requireTls": "Kräv uppgradering till STARTTLS (port 587 / 25)",
+          "requireTls": "Kräv uppgradering till STARTTLS (portarna 587 / 25)",
           "verifyCert": "Verifiera servercertifikat",
           "verifyCertHint": "Stäng endast av detta för ett betrott relä i ditt eget nätverk som använder ett självsignerat certifikat."
         },
@@ -863,12 +863,12 @@
           "description": "Anpassa avsändaridentiteten för portalinbjudningar, lösenordsåterställningar, fakturor, projektuppdateringar och allmänna aviseringar oberoende av ärenderoutningen.",
           "addressLabel": "Avsändaradress",
           "addressPlaceholder": "notifications@example.com",
-          "smtpAddressHelp": "Anges med avsändaradressen i SMTP-konfigurationen ovan. All e-post som inte gäller ärenden skickas från den.",
+          "smtpAddressHelp": "Bestäms av avsändaradressen i SMTP-konfigurationen ovan. All e-post som inte gäller ärenden skickas från den.",
           "lockedAddressHelp": "Den här adressen bestäms av den aktiva hanterade domänen eller den valda Microsoft 365-postlådan.",
           "nameLabel": "Avsändarens visningsnamn",
           "namePlaceholder": "Ditt företagsnamn",
           "nameHelp": "Lämna tomt för att använda {{company}} automatiskt.",
-          "companyFallback": "din klientorganisations företag"
+          "companyFallback": "din klientorganisations namn"
         },
         "warningTitle": "Kontrollera svarsroutningen",
         "errorTitle": "Rätta identiteten för ärendemeddelanden",
