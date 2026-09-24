@@ -1184,7 +1184,10 @@
         "reset": "Resetuj",
         "retry": "Ponów próbę",
         "recommendedHint": "Zalecane dla nowych konfiguracji: tylko członkowie i tylko użytkownicy z licencją. Niezaznaczone wartości odzwierciedlają zapisane ustawienia.",
-        "excludedContactInactive": "Wykluczono przez filtr importu; połączony kontakt zostałby oznaczony jako nieaktywny. Nic nie jest usuwane."
+        "excludedContactInactive": "Wykluczono przez filtr importu; połączony kontakt zostałby oznaczony jako nieaktywny. Nic nie jest usuwane.",
+        "recommendedUnsaved": "Zalecane — niezapisane",
+        "unsavedChange": "Niezapisana zmiana",
+        "unsavedNotice": "Te filtry zaczną działać dopiero po zapisaniu."
       }
     },
     "google": {

@@ -57,11 +57,51 @@ describe('ManagedTenantUserFilterPanel', () => {
     fireEvent.click(document.getElementById('entra-filter-preview-managed-1') as HTMLButtonElement);
     await waitFor(() => expect(runPreview).toHaveBeenCalledTimes(1));
     const previewConfig = runPreview.mock.calls[0][0].userFilterConfig;
+    expect(document.getElementById('entra-user-filter-unsaved-managed-1')).not.toBeNull();
+    expect((document.getElementById('entra-filter-save-managed-1') as HTMLButtonElement).disabled).toBe(false);
+    expect(document.getElementById('entra-filter-memberUsersOnly-managed-1')?.parentElement?.textContent).toContain('Recommended – not saved');
+    expect(document.getElementById('entra-filter-memberUsersOnly-managed-1')?.parentElement?.textContent).not.toContain('Inherited');
     fireEvent.click(document.getElementById('entra-filter-save-managed-1') as HTMLButtonElement);
     await waitFor(() => expect(updateFilter).toHaveBeenCalledTimes(1));
     expect(updateFilter.mock.calls[0][0].override).toEqual({ memberUsersOnly: true, licensedUsersOnly: true });
     expect(mergeEntraUserFilterConfig(defaults, updateFilter.mock.calls[0][0].override)).toEqual(previewConfig);
     expect((document.getElementById('entra-filter-licensedUsersOnly-managed-1') as HTMLInputElement).checked).toBe(true);
+  });
+
+  it('shows saved and inherited markers without an unsaved notice when the draft matches the override', async () => {
+    savedOverride = { version: 1, memberUsersOnly: true, licensedUsersOnly: true };
+    renderPanel();
+    await waitForPanel();
+    expect(document.getElementById('entra-user-filter-unsaved-managed-1')).toBeNull();
+    expect(document.getElementById('entra-filter-memberUsersOnly-managed-1')?.parentElement?.textContent).toContain('Overridden');
+    expect(document.getElementById('entra-filter-deactivateExcludedContacts-managed-1')?.parentElement?.textContent).toContain('Inherited');
+  });
+
+  it('marks edits on a saved override as unsaved', async () => {
+    savedOverride = { memberUsersOnly: false };
+    renderPanel();
+    await waitForPanel();
+    fireEvent.click(document.getElementById('entra-filter-memberUsersOnly-managed-1') as HTMLInputElement);
+    expect(document.getElementById('entra-user-filter-unsaved-managed-1')).not.toBeNull();
+    expect(document.getElementById('entra-filter-memberUsersOnly-managed-1')?.parentElement?.textContent).toContain('Unsaved change');
+  });
+
+  it('calls onSaved once after successful save/reset and not after an error', async () => {
+    const onSaved = vi.fn();
+    const view = render(<ManagedTenantUserFilterPanel mapping={mapping} onSaved={onSaved} />);
+    await waitForPanel();
+    fireEvent.click(document.getElementById('entra-filter-save-managed-1') as HTMLButtonElement);
+    await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
+    fireEvent.click(document.getElementById('entra-filter-reset-managed-1') as HTMLButtonElement);
+    await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(2));
+    view.unmount();
+    onSaved.mockClear();
+    updateFilter.mockResolvedValueOnce({ error: 'save failed' });
+    render(<ManagedTenantUserFilterPanel mapping={mapping} onSaved={onSaved} />);
+    await waitForPanel();
+    fireEvent.click(document.getElementById('entra-filter-save-managed-1') as HTMLButtonElement);
+    await waitFor(() => expect(updateFilter).toHaveBeenCalledTimes(3));
+    expect(onSaved).not.toHaveBeenCalled();
   });
 
   it('preserves an existing sparse override and does not copy tenant-default exclusions when editing a key', async () => {

@@ -131,4 +131,20 @@ describe('filterEntraUsers', () => {
     expect(result.included).toHaveLength(1);
     expect(result.unknownFieldCounts.assignedLicenseCount).toBe(1);
   });
+
+  it('counts unknown fields only for included users', () => {
+    const result = filterEntraUsers([
+      buildUser({ entraObjectId: 'pattern-excluded', userType: null, assignedLicenseCount: null, userPrincipalName: 'blocked@example.com' }),
+      buildUser({ entraObjectId: 'group-excluded', userType: null, assignedLicenseCount: null }),
+      buildUser({ entraObjectId: 'included', userType: null, assignedLicenseCount: null }),
+    ], {
+      memberUsersOnly: true,
+      licensedUsersOnly: true,
+      customExclusionPatterns: ['blocked'],
+      excludeMemberIds: new Set(['group-excluded']),
+    });
+    expect(result.excluded.map(item => item.reason)).toEqual(['tenant_custom_pattern', 'excluded_group']);
+    expect(result.included.map(user => user.entraObjectId)).toEqual(['included']);
+    expect(result.unknownFieldCounts).toEqual({ userType: 1, assignedLicenseCount: 1 });
+  });
 });

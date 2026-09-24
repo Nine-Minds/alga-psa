@@ -1184,7 +1184,10 @@
         "reset": "Zurücksetzen",
         "retry": "Erneut versuchen",
         "recommendedHint": "Für neue Einrichtungen empfohlen: Nur Mitglieder und nur lizenzierte Benutzer. Nicht markierte Werte entsprechen der gespeicherten Richtlinie.",
-        "excludedContactInactive": "Durch den Importfilter ausgeschlossen; der verknüpfte Kontakt würde inaktiv gesetzt. Es wird nichts gelöscht."
+        "excludedContactInactive": "Durch den Importfilter ausgeschlossen; der verknüpfte Kontakt würde inaktiv gesetzt. Es wird nichts gelöscht.",
+        "recommendedUnsaved": "Empfohlen – nicht gespeichert",
+        "unsavedChange": "Ungespeicherte Änderung",
+        "unsavedNotice": "Diese Filtereinstellungen gelten erst, wenn Sie sie speichern."
       }
     },
     "google": {

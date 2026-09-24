@@ -494,7 +494,7 @@ export function EntraClientsTab({
               );
             }
 
-            return <div><ManagedTenantUserFilterPanel mapping={mapping} />{preview ? (
+            return <div><ManagedTenantUserFilterPanel mapping={mapping} onSaved={() => void runPreview(mapping)} />{preview ? (
               <ContactPreflightReport
                 report={preview}
                 onRecheck={() => void runPreview(mapping)}

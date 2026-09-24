@@ -100,6 +100,8 @@ export function filterEntraUsers(
   const unknownFieldCounts = { userType: 0, assignedLicenseCount: 0 };
 
   for (const user of users) {
+    const unknownUserType = Boolean(options.memberUsersOnly && user.userType == null);
+    const unknownLicenseCount = Boolean(options.licensedUsersOnly && user.assignedLicenseCount == null);
     if (!user.accountEnabled) {
       excluded.push({ user, reason: 'account_disabled' });
       continue;
@@ -114,11 +116,9 @@ export function filterEntraUsers(
     // Missing provider data is deliberately fail-open and is counted by callers.
     if (options.memberUsersOnly) {
       if (user.userType === 'Guest') { excluded.push({ user, reason: 'guest_user' }); continue; }
-      if (user.userType == null) unknownFieldCounts.userType += 1;
     }
     if (options.licensedUsersOnly) {
       if (user.assignedLicenseCount === 0) { excluded.push({ user, reason: 'unlicensed' }); continue; }
-      if (user.assignedLicenseCount == null) unknownFieldCounts.assignedLicenseCount += 1;
     }
 
     if (userMatchesPatterns(user, serviceAccountPatterns)) {
@@ -141,6 +141,8 @@ export function filterEntraUsers(
     }
 
     included.push(user);
+    if (unknownUserType) unknownFieldCounts.userType += 1;
+    if (unknownLicenseCount) unknownFieldCounts.assignedLicenseCount += 1;
   }
 
   return {

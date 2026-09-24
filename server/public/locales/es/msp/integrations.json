@@ -1184,7 +1184,10 @@
         "reset": "Restablecer",
         "retry": "Reintentar",
         "recommendedHint": "Recomendado para nuevas configuraciones: solo miembros y usuarios con licencia. Los valores sin marcar reflejan la política guardada.",
-        "excludedContactInactive": "Excluido por el filtro de importación; el contacto vinculado se marcaría como inactivo. No se elimina nada."
+        "excludedContactInactive": "Excluido por el filtro de importación; el contacto vinculado se marcaría como inactivo. No se elimina nada.",
+        "recommendedUnsaved": "Recomendado: sin guardar",
+        "unsavedChange": "Cambio sin guardar",
+        "unsavedNotice": "Estos filtros no se aplicarán hasta que los guardes."
       }
     },
     "google": {

@@ -1184,7 +1184,10 @@
         "reset": "Herstellen",
         "retry": "Opnieuw proberen",
         "recommendedHint": "Aanbevolen voor nieuwe configuraties: alleen leden en alleen gebruikers met een licentie. Niet aangevinkte waarden volgen het opgeslagen beleid.",
-        "excludedContactInactive": "Uitgesloten door het importfilter; het gekoppelde contact zou inactief worden gemaakt. Er wordt niets verwijderd."
+        "excludedContactInactive": "Uitgesloten door het importfilter; het gekoppelde contact zou inactief worden gemaakt. Er wordt niets verwijderd.",
+        "recommendedUnsaved": "Aanbevolen — niet opgeslagen",
+        "unsavedChange": "Niet-opgeslagen wijziging",
+        "unsavedNotice": "Deze filters zijn pas van kracht nadat je ze hebt opgeslagen."
       }
     },
     "google": {

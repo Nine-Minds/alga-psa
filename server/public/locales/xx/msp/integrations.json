@@ -1184,7 +1184,10 @@
         "reset": "⟦Reset⟧",
         "retry": "⟦Retry⟧",
         "recommendedHint": "⟦Recommended for new setups: Members only and Licensed users only. These are suggestions; unchecked values reflect the saved policy until you change and save them.⟧",
-        "excludedContactInactive": "⟦Excluded by the import filter; the linked contact would be marked inactive. Nothing is deleted.⟧"
+        "excludedContactInactive": "⟦Excluded by the import filter; the linked contact would be marked inactive. Nothing is deleted.⟧",
+        "recommendedUnsaved": "⟦Recommended – not saved⟧",
+        "unsavedChange": "⟦Unsaved change⟧",
+        "unsavedNotice": "⟦These filter settings are not in effect until you save them.⟧"
       }
     },
     "google": {
