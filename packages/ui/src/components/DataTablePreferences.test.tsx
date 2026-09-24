@@ -36,6 +36,26 @@ describe('DataTable page size preference', () => {
     expect(update({ stable: 25, other: 50 })).toEqual({ stable: 10, other: 50 });
   });
 
+  it('applies a saved size to an uncontrolled table after preferences load', async () => {
+    const view = render(<DataTablePreferencesProvider pageSizes={{}} hasLoaded={false} onPageSizesChange={vi.fn()}>
+      <DataTable id="uncontrolled" data={rows} columns={columns} />
+    </DataTablePreferencesProvider>);
+    view.rerender(<DataTablePreferencesProvider pageSizes={{ uncontrolled: 50 }} hasLoaded onPageSizesChange={vi.fn()}>
+      <DataTable id="uncontrolled" data={rows} columns={columns} />
+    </DataTablePreferencesProvider>);
+    await waitFor(() => expect(screen.getByRole('combobox').textContent).toContain('50 per page'));
+  });
+
+  it('saves a user change for this table while preserving other table keys', () => {
+    const onSave = vi.fn();
+    render(<DataTablePreferencesProvider pageSizes={{ one: 25, two: 100 }} onPageSizesChange={onSave}>
+      <DataTable id="one" data={rows} columns={columns} />
+    </DataTablePreferencesProvider>);
+    fireEvent.click(screen.getByRole('combobox'));
+    const update = onSave.mock.calls[0][0] as (previous: Record<string, number>) => Record<string, number>;
+    expect(update({ one: 25, two: 100 })).toEqual({ one: 10, two: 100 });
+  });
+
   it('ignores an invalid saved size and falls back to the prop default', () => {
     render(<DataTablePreferencesProvider pageSizes={{ stable: 17 }} onPageSizesChange={vi.fn()}>
       <DataTable id="stable" data={rows} columns={columns} pageSize={25} />
@@ -75,7 +95,7 @@ describe('DataTable page size preference', () => {
     expect(container.querySelector('[data-automation-id="small-table-pagination"]')).toBeNull();
   });
 
-  it('does not overwrite a caller controlled legacy page size', () => {
+  it('does not read or write a table opted out of persistence', () => {
     const onItemsPerPageChange = vi.fn();
     const onSave = vi.fn();
     render(<DataTablePreferencesProvider pageSizes={{ legacy: 50 }} onPageSizesChange={onSave}>
@@ -84,6 +104,7 @@ describe('DataTable page size preference', () => {
     expect(screen.getByRole('combobox').textContent).toContain('25 per page');
     expect(onItemsPerPageChange).not.toHaveBeenCalled();
     expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByRole('combobox').textContent).toContain('25 per page');
   });
 
   it('sends a saved size to a controlled table once after preferences load', async () => {
