@@ -1,0 +1,815 @@
+{
+  "profile": {
+    "pageTitle": "Din profil",
+    "tabs": {
+      "profile": "Profil",
+      "security": "Säkerhet",
+      "sso": "Enkel inloggning",
+      "apiKeys": "API-nycklar",
+      "notifications": "Aviseringar",
+      "calendar": "Kalender",
+      "keyboardShortcuts": "Kortkommandon"
+    },
+    "basicInfo": {
+      "title": "Grundläggande uppgifter"
+    },
+    "fields": {
+      "firstName": {
+        "label": "Förnamn *"
+      },
+      "lastName": {
+        "label": "Efternamn *"
+      },
+      "email": {
+        "label": "E-post *"
+      },
+      "phoneNumber": {
+        "label": "Telefon"
+      },
+      "phoneExtension": {
+        "label": "Anknytning"
+      },
+      "timeZone": {
+        "label": "Tidszon"
+      }
+    },
+    "actions": {
+      "saveChanges": "Spara ändringar"
+    },
+    "notifications": {
+      "title": "Aviseringsinställningar",
+      "viewSwitcher": {
+        "email": "E-post",
+        "internal": "Interna"
+      }
+    },
+    "loading": "Laddar profil…",
+    "messages": {
+      "success": {
+        "profileUpdated": "Profilen har uppdaterats"
+      },
+      "error": {
+        "userNotFound": "Användaren hittades inte",
+        "fillRequiredFields": "Fyll i alla obligatoriska fält",
+        "loadFailed": "Det gick inte att ladda profilen",
+        "saveFailed": "Det gick inte att spara profilen",
+        "errorPrefix": "Fel: {{error}}"
+      }
+    },
+    "validation": {
+      "firstNameRequired": "Förnamn krävs",
+      "lastNameRequired": "Efternamn krävs"
+    },
+    "changePassword": {
+      "title": "Ändra lösenord",
+      "current": "Nuvarande lösenord",
+      "new": "Nytt lösenord",
+      "confirm": "Bekräfta nytt lösenord",
+      "validationFailed": "Lösenordet uppfyller inte alla krav",
+      "requirements": "Lösenordet måste innehålla minst 8 tecken",
+      "submit": "Ändra lösenord",
+      "success": "Lösenordet har ändrats",
+      "error": "Det gick inte att ändra lösenordet",
+      "passwordMismatch": "De nya lösenorden matchar inte",
+      "unknownError": "Ett fel uppstod när lösenordet skulle ändras"
+    },
+    "loadingStates": {
+      "sso": {
+        "title": "Enkel inloggning",
+        "description": "Laddar SSO-inställningar…"
+      },
+      "calendar": {
+        "title": "Kalender",
+        "description": "Laddar kalenderinställningar…"
+      }
+    }
+  },
+  "security": {
+    "title": "Säkerhetsinställningar",
+    "tabs": {
+      "roles": "Roller",
+      "sessions": "Sessioner",
+      "sso": "Enkel inloggning",
+      "permissions": "Behörigheter",
+      "userRoles": "Användarroller",
+      "policies": "Policyer",
+      "apiKeys": "API-nycklar",
+      "webhooks": "Webhookar",
+      "userProvisioning": "Användaretablering"
+    },
+    "loading": {
+      "roles": "Laddar rollkonfiguration…",
+      "permissions": "Laddar behörighetskonfiguration…",
+      "userRoles": "Laddar konfiguration för användarroller…",
+      "policies": "Laddar policykonfiguration…",
+      "apiKeys": "Laddar konfiguration för API-nycklar…",
+      "webhooks": "Laddar webhookkonfiguration…",
+      "sso": "Laddar verktyg för SSO-hantering…",
+      "sessions": "Laddar aktiva sessioner…",
+      "userProvisioning": "Laddar SCIM-etablering…"
+    },
+    "scim": {
+      "title": "Användaretablering",
+      "description": "Låt Microsoft Entra inaktivera och återaktivera befintliga interna användare. Alga förblir den styrande källan för profiler, roller, team och licenser.",
+      "loading": "Laddar användaretablering",
+      "status": {
+        "enabled": "Tar emot anrop",
+        "disabled": "Etableringen är pausad"
+      },
+      "errors": {
+        "load": "Det gick inte att ladda SCIM-etableringen.",
+        "update": "Det gick inte att uppdatera SCIM-etableringen."
+      },
+      "upgrade": {
+        "title": "Livscykelhantering via katalogetablering",
+        "description": "SCIM-användaretablering är tillgänglig med Pro och högre abonnemang."
+      },
+      "setup": {
+        "title": "Anslut Microsoft Entra",
+        "description": "Generera en slutpunkt för klientorganisationen och en bearer-token som visas en enda gång. SCIM skapar inga Alga-användare.",
+        "create": "Generera anslutning"
+      },
+      "connection": {
+        "title": "Entra-anslutning",
+        "description": "Använd dessa värden i avsnittet Etablering i ditt Entra-företagsprogram.",
+        "url": "Klientorganisationens URL",
+        "copyUrl": "Kopiera klientorganisationens URL",
+        "oneTimeToken": "Kopiera denna token nu",
+        "oneTimeWarning": "Av säkerhetsskäl kan Alga inte visa detta värde igen.",
+        "rotate": "Rotera token",
+        "revokePrevious": "Avsluta överlappning mellan token",
+        "enabled": "Tillåt etableringsanrop",
+        "disableWarning": "När etableringen pausas bevaras alla kopplingar och användarnas nuvarande tillstånd."
+      },
+      "health": {
+        "title": "Anslutningens hälsostatus",
+        "lastRequest": "Senaste autentiserade anrop",
+        "lastSuccess": "Senaste lyckade anrop",
+        "tokenAge": "Nuvarande token skapad",
+        "lastError": "Senaste fel"
+      },
+      "mapping": {
+        "title": "Attributmappning för Entra",
+        "description": "Behåll Entras standardvärden för userName, externalId, active, names, title och emails. Endast active styr åtkomsten till Alga.",
+        "match": "Inledande matchning",
+        "matchValue": "Endast exakt matchning av primär e-postadress",
+        "scope": "Etableringens omfattning",
+        "scopeValue": "Tilldelade användare och grupper",
+        "unsupported": "Stöds inte",
+        "unsupportedValue": "Grupper, lösenord, roller, team"
+      },
+      "links": {
+        "title": "Hanterade användare",
+        "user": "Alga-användare",
+        "directory": "Katalogidentitet",
+        "state": "Tillstånd",
+        "action": "Åtgärd",
+        "drift": "Avvikande e-postadress",
+        "active": "Aktiv i källsystemet",
+        "inactive": "Inaktiv i källsystemet",
+        "accessOn": "Åtkomst aktiverad",
+        "accessOff": "Åtkomst inaktiverad",
+        "unlink": "Ta bort koppling",
+        "empty": "Inga katalogidentiteter har kopplats ännu."
+      },
+      "unresolved": {
+        "title": "Behöver granskas",
+        "description": "Dessa identiteter avvisades utan att någon Alga-användare ändrades."
+      },
+      "state": {
+        "active": "Aktiv i källsystemet",
+        "inactive": "Inaktiv i källsystemet"
+      }
+    },
+    "sso": {
+      "advanced": {
+        "title": "Avancerat: anpassad routning till identitetsleverantör",
+        "description": "Styr SSO för MSP-inloggning till din egen identitetsleverantör med verifierade inloggningsdomäner. Behövs endast för anpassade eller lokala installationer.",
+        "inertNotice": "Ingen identitetsleverantör har konfigurerats för klientorganisationen, så domänanspråk har för närvarande ingen effekt. Konfigurera Keycloak ovan eller, i Enterprise Edition, autentiseringsuppgifterna för din Google- eller Microsoft-app. Gör sedan anspråk på personalens inloggningsdomän här."
+      }
+    },
+    "userRoles": {
+      "title": "Tilldela roller till användare",
+      "description": {
+        "msp": "Hantera rolltilldelningar för MSP-användare",
+        "client": "Hantera rolltilldelningar för kundportalens användare"
+      },
+      "viewSwitcher": {
+        "msp": "MSP",
+        "clientPortal": "Kundportal"
+      },
+      "showInactive": "Visa inaktiva användare",
+      "fields": {
+        "selectUser": "Välj användare",
+        "selectRole": "Välj roll"
+      },
+      "actions": {
+        "assignRole": "Tilldela roll"
+      },
+      "table": {
+        "user": "Användare",
+        "email": "E-post",
+        "roles": "Roller",
+        "actions": "Åtgärder"
+      },
+      "unnamedUser": "Användare utan namn",
+      "noRolesAssigned": "Inga roller tilldelade",
+      "removeRole": "Ta bort {{role}}",
+      "emptyState": {
+        "noUsers": "Inga användare av typen {{type}} hittades",
+        "inactiveHidden": "(inaktiva användare dolda)"
+      },
+      "inactiveTag": "(Inaktiv)",
+      "messages": {
+        "success": {
+          "roleAssigned": "Rollen har tilldelats",
+          "roleRemoved": "Rollen har tagits bort"
+        },
+        "error": {
+          "assignFailed": "Det gick inte att tilldela rollen. Försök igen.",
+          "removeFailed": "Det gick inte att ta bort rollen. Försök igen.",
+          "permissionDenied": "Du har inte behörighet att ändra användarroller."
+        }
+      }
+    },
+    "sessions": {
+      "title": "Alla användarsessioner",
+      "filters": {
+        "search": "Sök",
+        "searchPlaceholder": "Sök efter namn, e-postadress, enhet eller IP-adress…",
+        "user": "Användare",
+        "allUsers": "Alla användare",
+        "loginMethod": "Inloggningsmetod",
+        "allMethods": "Alla metoder",
+        "userType": "Användartyp",
+        "allTypes": "Alla typer",
+        "from": "Från",
+        "to": "Till",
+        "selectDate": "Välj datum",
+        "reset": "Återställ"
+      },
+      "loginMethods": {
+        "password": "Lösenord",
+        "google": "Google OAuth",
+        "microsoft": "Microsoft OAuth",
+        "keycloak": "Keycloak"
+      },
+      "userTypes": {
+        "internal": "Intern",
+        "client": "Kund"
+      },
+      "session": {
+        "yourSession": "Din session",
+        "unknownDevice": "Okänd enhet",
+        "lastActive": "Senast aktiv {{time}}",
+        "logout": "Logga ut",
+        "revoke": "Återkalla",
+        "revoking": "Återkallar…"
+      },
+      "oauthWarning": "Om du återkallar denna session återkallas inte OAuth-åtkomsten till {{provider}}. Återkalla åtkomsten i kontoinställningarna hos {{provider}}.",
+      "confirmLogout": "Är du säker på att du vill logga ut från denna enhet?",
+      "messages": {
+        "loadFailed": "Det gick inte att ladda sessionerna",
+        "loggingOut": "Loggar ut…",
+        "revoked": "Sessionen har återkallats",
+        "revokeFailed": "Det gick inte att återkalla sessionen"
+      },
+      "emptyState": {
+        "loading": "Laddar sessioner…",
+        "noMatch": "Inga sessioner matchar din sökning",
+        "noSessions": "Inga aktiva sessioner hittades"
+      },
+      "subtitle_one": "{{sessionCount}} aktiv session för {{userCount}} användare",
+      "subtitle_other": "{{sessionCount}} aktiva sessioner för {{userCount}} användare"
+    },
+    "webhooks": {
+      "title": "Utgående webhookar",
+      "description": "Skapa signerade prenumerationer på händelser under ärendens livscykel, filtrera dem efter specifika ärende-ID:n, granska leveranshistoriken och rotera hemligheter utan att lämna inställningarna.",
+      "newWebhook": "Ny webhook",
+      "tabs": {
+        "configuration": "Konfiguration",
+        "deliveries": "Leveranser",
+        "inbound": "Inkommande",
+        "outbound": "Utgående"
+      },
+      "inbound": {
+        "title": "Inkommande webhookar",
+        "description": "Ta emot autentiserade anrop från externa system och skicka dem vidare till direkta åtgärder eller arbetsflöden.",
+        "placeholder": "Konfigurera slutpunkter för inkommande webhookar som verifierar anrop, tar bort dubblettleveranser och skickar vidare till åtgärder eller arbetsflöden.",
+        "newWebhook": "Ny webhook",
+        "list": {
+          "title": "Konfigurerade inkommande webhookar",
+          "loading": "Laddar…",
+          "configuredCount": "Konfigurerade: {{count}}",
+          "empty": "Inga inkommande webhookar har konfigurerats ännu.",
+          "columns": {
+            "name": "Namn",
+            "handler": "Hanterare",
+            "lastDelivery": "Senaste leverans",
+            "active": "Aktiv",
+            "actions": "Åtgärder"
+          }
+        },
+        "handlers": {
+          "directAction": "Direkt åtgärd",
+          "workflow": "Arbetsflöde"
+        },
+        "status": {
+          "active": "Aktiv",
+          "inactive": "Inaktiv"
+        },
+        "messages": {
+          "loadFailed": "Det gick inte att ladda inkommande webhookar.",
+          "nameRequired": "Namn krävs.",
+          "slugRequired": "URL-segment krävs.",
+          "actionRequired": "Välj en åtgärd innan du sparar.",
+          "workflowRequired": "Välj ett arbetsflöde innan du sparar.",
+          "missingRequiredFields": "Mappa ett värde för obligatoriska fält: {{fields}}"
+        },
+        "dialog": {
+          "createTitle": "Skapa inkommande webhook",
+          "editTitle": "Redigera inkommande webhook",
+          "cancel": "Avbryt",
+          "create": "Skapa webhook",
+          "save": "Spara ändringar",
+          "saveUnavailable": "Fortsätt"
+        },
+        "identity": {
+          "title": "Identitet",
+          "help": "Namnge webhooken och välj ett URL-säkert segment för dess mottagarslutpunkt.",
+          "name": "Namn",
+          "namePlaceholder": "Kritiska RMM-larm",
+          "slug": "URL-segment",
+          "slugPlaceholder": "rmm-critical-alerts",
+          "description": "Beskrivning",
+          "descriptionPlaceholder": "Valfria anteckningar om källsystemet och nyttolasten."
+        },
+        "auth": {
+          "title": "Autentisering",
+          "help": "Välj hur inkommande anrop ska styrka sin behörighet att använda denna slutpunkt.",
+          "method": "Autentiseringsmetod",
+          "types": {
+            "hmacSha256": "HMAC-SHA256",
+            "bearer": "Bearer-token",
+            "ipAllowlist": "Lista över tillåtna IP-adresser",
+            "pathToken": "Delad hemlighet i sökvägen"
+          },
+          "signatureHeader": "Signaturhuvud",
+          "signatureHeaderPlaceholder": "X-Alga-Signature",
+          "bearerToken": "Bearer-token",
+          "bearerTokenPlaceholder": "Klistra in en token eller lämna tomt för att generera en",
+          "secretUnchangedPlaceholder": "Lämna tomt för att behålla den nuvarande hemligheten",
+          "ipCidrs": "Tillåtna IP-adresser / CIDR-intervall",
+          "ipCidrsPlaceholder": "203.0.113.10\n198.51.100.0/24",
+          "queryParam": "Frågeparameter",
+          "queryParamPlaceholder": "token",
+          "pathToken": "Sökvägstoken",
+          "pathTokenPlaceholder": "Klistra in en token eller lämna tomt för att generera en"
+        },
+        "secret": {
+          "label": "Webhookhemlighet",
+          "warning": "Detta värde visas bara nu. Spara det i källsystemet innan du stänger dialogrutan.",
+          "copy": "Kopiera",
+          "download": "Ladda ner som .txt",
+          "close": "Stäng"
+        },
+        "idempotency": {
+          "title": "Idempotens",
+          "help": "Använd en stabil nyckel för att upptäcka dubblettleveranser inom det konfigurerade tidsintervallet.",
+          "source": "Nyckelkälla",
+          "types": {
+            "header": "HTTP-huvud",
+            "jsonata": "JSONata-uttryck"
+          },
+          "headerName": "Huvudnamn",
+          "headerNamePlaceholder": "X-Idempotency-Key",
+          "jsonataExpression": "JSONata-uttryck",
+          "jsonataExpressionPlaceholder": "alert.id",
+          "windowSeconds": "Tidsintervall för dubblettkontroll (sekunder)"
+        },
+        "active": {
+          "title": "Aktivt tillstånd",
+          "help": "Pausa slutpunkten utan att radera dess URL, mappningar eller leveranshistorik.",
+          "toggle": "Webhooken är aktiv",
+          "autoDisabled": "Inaktiverades automatiskt {{date}} efter upprepade fel.",
+          "updateFailed": "Det gick inte att uppdatera den inkommande webhookens tillstånd."
+        },
+        "handler": {
+          "title": "Hanterare",
+          "help": "Välj vad Alga ska göra efter att anropet har verifierats och kontrollerats för dubbletter.",
+          "type": "Hanterartyp",
+          "types": {
+            "directAction": "Direkt åtgärd",
+            "workflow": "Arbetsflöde"
+          },
+          "directActionTitle": "Direkt åtgärd",
+          "directActionHelp": "Välj en inkommande åtgärd och mappa nyttolastens fält till åtgärdens målfält.",
+          "action": "Åtgärd",
+          "actionPlaceholder": "Välj en åtgärd",
+          "actionEmpty": "Inga inkommande åtgärder har registrerats. Kontrollera att servern har initierat åtgärdsregistret innan du sparar.",
+          "targetFields": "Målfält",
+          "required": "Obligatoriskt",
+          "optional": "Valfritt",
+          "mappingPlaceholder": "Ange ett JSONata-uttryck, t.ex. payload.field",
+          "workflowTitle": "Arbetsflöde",
+          "workflowHelp": "Välj ett arbetsflöde som ska startas med webhookens normaliserade meddelandehölje.",
+          "workflow": "Arbetsflöde",
+          "workflowPlaceholder": "Välj ett arbetsflöde",
+          "workflowEmpty": "Inga arbetsflöden är synliga i denna klientorganisation. Publicera eller visa ett dolt arbetsflöde för att använda arbetsflödeshanteraren.",
+          "envelopeTitle": "Meddelandehölje för arbetsflödets indata",
+          "fieldTypes": {
+            "string": "Sträng",
+            "int": "Heltal",
+            "number": "Tal",
+            "boolean": "Booleskt värde",
+            "enum": "Uppräkning",
+            "json": "JSON",
+            "ref": "Referens"
+          }
+        },
+        "sample": {
+          "title": "Exempelnyttolast",
+          "help": "Fånga nästa verifierade anrop för automatisk komplettering vid mappning.",
+          "createFirst": "Spara webhooken innan du fångar ett exempelanrop.",
+          "captureButton": "Fånga exempelanrop",
+          "captureActive": "Insamlingen är aktiv till {{expiresAt}}.",
+          "sampleAvailable": "Exempelnyttolasten har fångats.",
+          "noSample": "Inget exempel har fångats ännu.",
+          "captureFailed": "Det gick inte att aktivera insamling av exempel."
+        },
+        "sampleTree": {
+          "title": "Exempelsökvägar",
+          "help": "Klicka på en sökväg för att infoga den i {{field}}.",
+          "focusHelp": "Fokusera ett mappningsfält och klicka sedan på en sökväg för att infoga den.",
+          "empty": "Fånga en exempelnyttolast för att bläddra bland fälten."
+        },
+        "mapping": {
+          "modeStatic": "Statiskt värde",
+          "modeExpression": "Mappa från nyttolast",
+          "unknownReference": "Okänd referens",
+          "loading": "Laddar…",
+          "errors": {
+            "INVALID_INT": "Värdet ”{{value}}” måste vara ett heltal.",
+            "INVALID_NUMBER": "Värdet ”{{value}}” måste vara ett tal.",
+            "INVALID_BOOLEAN": "Värdet måste vara \"true\" eller \"false\".",
+            "INVALID_JSON": "Värdet måste vara giltig JSON."
+          }
+        },
+        "deliveryLog": {
+          "title": "Leveranslogg",
+          "help": "Senaste verifierade leveranser för denna inkommande webhook.",
+          "empty": "Inga leveranser har registrerats ännu.",
+          "loadFailed": "Det gick inte att ladda leveranser för den inkommande webhooken.",
+          "pageSummary": "Sida {{page}} av {{total}}",
+          "durationMs": "{{duration}} ms",
+          "allStatuses": "Alla statusar",
+          "columns": {
+            "received": "Mottagen",
+            "status": "Status",
+            "response": "Svar",
+            "duration": "Varaktighet",
+            "actions": "Åtgärder"
+          },
+          "view": "Visa",
+          "status": {
+            "pending": "Väntande",
+            "dispatched": "Vidarebefordrad",
+            "duplicate": "Dubblett",
+            "failed": "Misslyckades"
+          }
+        },
+        "deliveryDetail": {
+          "title": "Leveransdetaljer",
+          "close": "Stäng",
+          "replay": "Kör igen",
+          "replayConfirm": "Vill du skicka vidare denna leverans igen med den nuvarande webhookkonfigurationen? Alla följdåtgärder (skapande av ärenden, statusändringar osv.) utförs igen.",
+          "replayFailed": "Det gick inte att köra leveransen igen.",
+          "received": "Mottagen",
+          "status": "Status",
+          "responseStatus": "Svarsstatus",
+          "duration": "Varaktighet",
+          "sections": {
+            "headers": "Anropshuvuden",
+            "requestBody": "Anropskropp",
+            "responseBody": "Svarskropp",
+            "handlerOutcome": "Hanterarens resultat"
+          }
+        },
+        "test": {
+          "openButton": "Skicka test",
+          "title": "Skicka testanrop",
+          "body": "Anropskropp i JSON",
+          "headers": "Huvuden",
+          "cancel": "Avbryt",
+          "send": "Skicka test",
+          "sendFailed": "Det gick inte att skicka testet för inkommande webhook."
+        }
+      },
+      "stats": {
+        "total": "Totalt antal webhookar",
+        "active": "Aktiva",
+        "autoDisabled": "Automatiskt inaktiverade"
+      },
+      "secret": {
+        "label": "Signeringshemlighet",
+        "warning": "Detta värde visas bara nu. Spara det hos mottagaren innan du lämnar sidan.",
+        "copy": "Kopiera",
+        "copied": "Signeringshemligheten har kopierats till urklipp",
+        "copyFailed": "Det gick inte att kopiera signeringshemligheten till urklipp",
+        "close": "Stäng",
+        "download": "Ladda ner som .txt"
+      },
+      "form": {
+        "createTitle": "Skapa webhook",
+        "editTitle": "Redigera webhook",
+        "helper": "Inställningarna för nya försök sparas som JSON. Leveransförsöken i v1 använder fortfarande plattformens standardschema för ökande väntetider.",
+        "name": "Namn",
+        "namePlaceholder": "Flöde för ärendetilldelning",
+        "url": "URL",
+        "urlPlaceholder": "https://example.com/hooks/alga",
+        "events": "Händelser",
+        "customHeaders": "Anpassade huvuden",
+        "customHeadersPlaceholder": "Authorization: Bearer abc123\nX-Source: alga-psa",
+        "ticketFilter": "Ärendefilter",
+        "ticketFilterPlaceholder": "Ett ärende-UUID per rad. Lämna tomt för att ta emot alla matchande ärendehändelser.",
+        "retryConfig": "Inställningar för nya försök i JSON",
+        "verifySsl": "Verifiera SSL-certifikat",
+        "webhookActive": "Webhooken är aktiv",
+        "save": "Spara ändringar",
+        "saving": "Sparar…",
+        "create": "Skapa webhook",
+        "clear": "Rensa",
+        "delete": "Radera",
+        "payloadFields": "Levererade fält",
+        "payloadFieldsHelp": "Alla fält skickas som standard. Avmarkera ett fält för att utesluta det från leveransen. Entitetens korrelationsnyckel (t.ex. ticket_id) ingår alltid.",
+        "payloadFieldsSelectAll": "Markera alla",
+        "payloadFieldsClear": "Rensa"
+      },
+      "list": {
+        "title": "Konfigurerade webhookar",
+        "loading": "Laddar…",
+        "configuredCount": "Konfigurerade: {{count}}",
+        "empty": "Inga webhookar har konfigurerats ännu.",
+        "columns": {
+          "name": "Namn",
+          "status": "Status",
+          "lastDelivery": "Senaste leverans",
+          "success": "Lyckades",
+          "actions": "Åtgärder"
+        },
+        "actions": {
+          "selected": "Vald",
+          "manage": "Hantera",
+          "pause": "Pausa",
+          "resume": "Återuppta",
+          "view": "Visa",
+          "edit": "Redigera"
+        }
+      },
+      "detail": {
+        "summary": "{{total}} leveranser, {{successful}} lyckade, {{failed}} misslyckade.",
+        "sendTest": "Skicka test",
+        "sending": "Skickar…",
+        "rotateSecret": "Rotera hemlighet",
+        "rotating": "Roterar…",
+        "back": "Tillbaka till webhookar"
+      },
+      "deliveries": {
+        "title": "Leveranshistorik",
+        "page": "Sida {{page}} av {{total}}",
+        "empty": "Inga leveranser har registrerats ännu.",
+        "columns": {
+          "event": "Händelse",
+          "status": "Status",
+          "attempted": "Försök gjort",
+          "response": "Svar",
+          "action": "Åtgärd"
+        },
+        "testBadge": "Testleverans",
+        "attempt": "Försök {{number}}",
+        "noResponseCode": "Saknas",
+        "noResponseBody": "Ingen svarskropp har fångats.",
+        "retry": "Försök igen",
+        "previous": "Föregående",
+        "next": "Nästa"
+      },
+      "messages": {
+        "loadFailed": "Det gick inte att ladda webhookinställningarna.",
+        "loadDeliveriesFailed": "Det gick inte att ladda webhookleveranserna.",
+        "saveFailed": "Det gick inte att spara webhooken.",
+        "createSuccess": "Webhooken har skapats.",
+        "updateSuccess": "Webhooken har uppdaterats.",
+        "deleteConfirm": "Vill du radera webhooken ”{{name}}”?",
+        "deleteSuccess": "Webhooken har raderats.",
+        "deleteFailed": "Det gick inte att radera webhooken.",
+        "testSuccess": "Testet har skickats ({{statusCode}}).",
+        "testFailed": "Testet misslyckades: {{message}}",
+        "testRunFailed": "Det gick inte att skicka webhooktestet.",
+        "unknownError": "Okänt fel",
+        "secretRotated": "Signeringshemligheten har roterats.",
+        "rotateFailed": "Det gick inte att rotera webhookhemligheten.",
+        "resumed": "Webhooken har återupptagits.",
+        "paused": "Webhooken har pausats.",
+        "stateChangeFailed": "Det gick inte att uppdatera webhookens tillstånd.",
+        "retryQueued": "Ett nytt försök har köats för händelsen {{eventId}}.",
+        "retryFailed": "Det gick inte att försöka leverera igen.",
+        "invalidHeaderLine": "Ogiltig huvudrad: ”{{line}}”",
+        "invalidRetryConfig": "Inställningarna för nya försök måste vara ett JSON-objekt"
+      },
+      "common": {
+        "never": "Aldrig"
+      },
+      "health": {
+        "healthy": "Fungerar",
+        "failing": "Problem",
+        "disabled": "Inaktiverad"
+      },
+      "deliveryStatus": {
+        "delivered": "Levererad",
+        "retrying": "Försöker igen",
+        "abandoned": "Avbruten",
+        "pending": "Väntande"
+      }
+    },
+    "apiKeys": {
+      "rateLimit": {
+        "columnTitle": "Anropsgräns",
+        "loading": "Laddar…",
+        "summary": "{{maxTokens}} i en anropstopp / {{refillPerMin}} per min",
+        "source": "Källa: {{label}}",
+        "sourceLabels": {
+          "key": "Åsidosättning",
+          "tenant": "Klientorganisationens standardinställning",
+          "default": "Systemets standardinställning"
+        },
+        "remaining": " • Återstående: {{remaining}}/{{maxTokens}}",
+        "remainingUnavailable": " • Återstående: inte tillgängligt",
+        "actions": {
+          "edit": "Redigera",
+          "override": "Åsidosätt",
+          "save": "Spara",
+          "cancel": "Avbryt",
+          "reset": "Återställ"
+        },
+        "errors": {
+          "saveFailed": "Det gick inte att spara åsidosättningen av API-anropsgränsen.",
+          "clearFailed": "Det gick inte att ta bort åsidosättningen av API-anropsgränsen."
+        }
+      },
+      "generate": {
+        "title": "Generera API-nyckel",
+        "description": "Beskrivning",
+        "descriptionPlaceholder": "t.ex. API-nyckel för utveckling",
+        "expiration": "Utgångsdatum (valfritt)",
+        "submit": "Generera ny API-nyckel",
+        "createFailed": "Det gick inte att skapa API-nyckeln"
+      },
+      "list": {
+        "title": "Dina API-nycklar",
+        "searchPlaceholder": "Sök efter beskrivning",
+        "filters": {
+          "allStatuses": "Alla statusar",
+          "active": "Aktiv",
+          "inactive": "Inaktiv",
+          "lastUsedAfter": "Senast använd efter",
+          "expiresBefore": "Går ut före",
+          "reset": "Återställ"
+        },
+        "columns": {
+          "description": "Beskrivning",
+          "created": "Skapad",
+          "lastUsed": "Senast använd",
+          "expires": "Går ut",
+          "status": "Status",
+          "actions": "Åtgärder"
+        },
+        "never": "Aldrig",
+        "status": {
+          "active": "Aktiv",
+          "inactive": "Inaktiv"
+        },
+        "deactivate": "Inaktivera",
+        "deactivateFailed": "Det gick inte att inaktivera API-nyckeln"
+      },
+      "newKeyDialog": {
+        "title": "API-nyckel genererad",
+        "warning": "Kopiera din API-nyckel nu. Av säkerhetsskäl visas den inte igen.",
+        "copy": "Kopiera till urklipp",
+        "download": "Ladda ner som .txt",
+        "copySuccess": "API-nyckeln har kopierats till urklipp",
+        "copyFailed": "Det gick inte att kopiera API-nyckeln till urklipp",
+        "downloadFailed": "Det gick inte att ladda ner API-nyckeln"
+      },
+      "admin": {
+        "title": "Administration av API-nycklar",
+        "searchPlaceholder": "Sök efter användare eller beskrivning",
+        "columns": {
+          "user": "Användare"
+        },
+        "errors": {
+          "loadFailed": "Det gick inte att ladda API-nycklarna. Kontrollera att du har administratörsbehörighet.",
+          "deactivateFailed": "Det gick inte att inaktivera API-nyckeln. Kontrollera att du har administratörsbehörighet."
+        }
+      }
+    }
+  },
+  "platformUpdates": {
+    "detail": {
+      "back": "Tillbaka",
+      "labels": {
+        "info": "Info",
+        "warning": "Varning",
+        "destructive": "Kritisk",
+        "success": "Lyckades",
+        "default": "Meddelande"
+      }
+    }
+  },
+  "connectSso": {
+    "verify": {
+      "title": "Skydda ditt konto med SSO",
+      "description": "Koppla Azure AD eller Google Workspace för att använda organisationens policyer och slippa lokala uppmaningar om tvåfaktorsautentisering.",
+      "signedInAs": "Inloggad som",
+      "currentPassword": "Nuvarande lösenord",
+      "twoFactorCode": "Tvåfaktorskod",
+      "twoFactorPlaceholder": "123456",
+      "verifyCredentials": "Verifiera autentiseringsuppgifter",
+      "verifying": "Verifierar…",
+      "reset": "Återställ",
+      "linkedSuccess": "Tjänsteleverantören har kopplats.",
+      "credentialsVerified": "Autentiseringsuppgifterna har verifierats. Välj en tjänsteleverantör nedan för att slutföra kopplingen till ditt konto.",
+      "verifyFailed": "Det gick inte att verifiera autentiseringsuppgifterna.",
+      "verifyBeforeProvider": "Verifiera ditt lösenord (och din tvåfaktorskod om det krävs) innan du ansluter en tjänsteleverantör."
+    },
+    "providers": {
+      "title": "Anslut en tjänsteleverantör",
+      "description": "Välj en tjänsteleverantör för att slutföra SSO-kopplingen. Du omdirigeras till tjänsteleverantörens inloggningsflöde.",
+      "noneConfigured": "Inga SSO-leverantörer har konfigurerats för denna miljö. Be din administratör konfigurera autentiseringsuppgifter för Google eller Microsoft.",
+      "notConfigured": "Inte konfigurerad",
+      "branding": {
+        "google": "Fortsätt med Google",
+        "microsoft": "Fortsätt med Microsoft",
+        "keycloak": "Fortsätt med Keycloak",
+        "default": "Fortsätt"
+      }
+    },
+    "linked": {
+      "title": "Kopplade konton",
+      "description": "Vi uppdaterar kopplingen nästa gång du loggar in via en ansluten tjänsteleverantör.",
+      "empty": "Inga SSO-leverantörer har kopplats ännu. Slutför stegen ovan för att ansluta en.",
+      "linkedAt": "Kopplat {{date}}",
+      "lastUsed": "Senast använt {{date}}",
+      "notUsedYet": "Inte använt ännu"
+    }
+  },
+  "errors": {
+    "sessions": {
+      "viewAllPermission": "Åtkomst nekad: Du har inte behörighet att visa alla sessioner."
+    },
+    "permissions": {
+      "adminRequired": "Åtkomst nekad: Administratörsbehörighet krävs"
+    },
+    "apiKeys": {
+      "internalOnly": "Åtkomst nekad: Endast interna användare får hantera API-nycklar",
+      "configInternalOnly": "Åtkomst nekad: Endast interna användare får konfigurera API-nycklar",
+      "invalidExpiration": "Välj ett giltigt utgångsdatum för denna API-nyckel.",
+      "notFound": "API-nyckeln hittades inte.",
+      "rateLimitsPositive": "API-anropsgränser måste vara positiva heltal."
+    },
+    "webhooks": {
+      "invalidInput": "Kontrollera webhookinställningarna och försök igen.",
+      "notFound": "Webhooken hittades inte.",
+      "signingSecretMissing": "Webhookens signeringshemlighet saknas. Rotera signeringshemligheten och försök igen.",
+      "deliveryNotFound": "Leveransen hittades inte.",
+      "testNotRetryable": "Testleveranser kan inte skickas igen.",
+      "payloadInvalid": "Denna leverans kan inte skickas igen eftersom den sparade nyttolasten är ogiltig.",
+      "validation": {
+        "unknownEntity": "Okänd webhookentitet ”{{entity}}”.",
+        "unknownField": "Okänt fält ”{{field}}” för webhookentiteten ”{{entity}}”."
+      }
+    },
+    "inboundWebhooks": {
+      "permissions": {
+        "create": "Åtkomst nekad: Behörigheten inbound_webhook:create krävs",
+        "read": "Åtkomst nekad: Behörigheten inbound_webhook:read krävs",
+        "update": "Åtkomst nekad: Behörigheten inbound_webhook:update krävs",
+        "delete": "Åtkomst nekad: Behörigheten inbound_webhook:delete krävs",
+        "replay": "Åtkomst nekad: Behörigheten inbound_webhook:replay krävs"
+      },
+      "invalidInput": "Kontrollera inställningarna för inkommande webhookar och försök igen.",
+      "workflowRequiresEe": "Arbetsflödeshanterare för inkommande webhookar kräver Enterprise-utgåvan.",
+      "notFound": "Den inkommande webhooken hittades inte.",
+      "duplicateSlug": "URL-segmentet ”{{slug}}” för inkommande webhook finns redan.",
+      "noSecretToRotate": "Inkommande webhookar med en lista över tillåtna IP-adresser har ingen hemlighet att rotera.",
+      "unsupportedAuthType": "Autentiseringstypen för inkommande webhook stöds inte: {{authType}}.",
+      "deliveryNotFound": "Den inkommande leveransen hittades inte.",
+      "replayMissingConfig": "Det går inte att köra en inkommande leverans igen utan en webhookkonfiguration.",
+      "notFoundOrInactive": "Den inkommande webhooken hittades inte eller är inaktiv.",
+      "validation": {
+        "slugReserved": "Detta URL-segment är reserverat för en medföljande integrering.",
+        "authTypeMismatch": "Autentiseringskonfigurationens typ måste matcha den valda autentiseringstypen.",
+        "handlerTypeMismatch": "Hanterarkonfigurationens typ måste matcha den valda hanterartypen."
+      }
+    }
+  }
+}
