@@ -21,6 +21,7 @@ import type {
   CreateScheduleEntryOptions,
 } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
+import { toCalendarDateString } from '@alga-psa/core';
 import { generateOccurrences } from '../utils/recurrenceUtils';
 
 /** All-day dates use UTC-midnight boundaries and an exclusive end date. */
@@ -175,13 +176,23 @@ const ScheduleEntry = {
     const endDateStr = end.toISOString().split('T')[0];
     let holidays: IHoliday[] = [];
     try {
-      holidays = await tenantScopedTable(knexOrTrx, 'holidays', tenant)
+      const holidayRows = await tenantScopedTable(knexOrTrx, 'holidays', tenant)
         .whereNull('schedule_id') // Only global holidays (not schedule-specific SLA holidays)
         .where(function () {
           this.whereBetween('holiday_date', [startDateStr, endDateStr])
             .orWhere('is_recurring', true);
         })
-        .select('*') as IHoliday[];
+        .select('*') as Array<Omit<IHoliday, 'holiday_date'> & { holiday_date: string | Date }>;
+      holidays = holidayRows.flatMap((holiday) => {
+        let holidayDate: string | null;
+        try {
+          holidayDate = toCalendarDateString(holiday.holiday_date);
+        } catch {
+          holidayDate = null;
+        }
+        // LEVERAGE: pattern holiday-date-normalize — schedule-entry loader keeps the same DB boundary conversion.
+        return holidayDate ? [{ ...holiday, holiday_date: holidayDate } as IHoliday] : [];
+      });
     } catch {
       // holidays table may not exist yet — proceed without holiday filtering
     }

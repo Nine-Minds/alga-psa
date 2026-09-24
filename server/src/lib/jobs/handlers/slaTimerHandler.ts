@@ -19,6 +19,7 @@ import { calculateElapsedBusinessMinutes } from '@alga-psa/sla/services/business
 import type { IBusinessHoursScheduleWithEntries } from '@alga-psa/sla/types';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import logger from '@alga-psa/core/logger';
+import { normalizeHolidayRows } from '@alga-psa/sla/utils/holidayUtils';
 
 export interface SlaTimerJobData extends Record<string, unknown> {
   tenantId: string;
@@ -326,7 +327,7 @@ async function getBusinessHoursSchedule(
   return {
     ...schedule,
     entries,
-    holidays,
+    holidays: normalizeHolidayRows(holidays),
   };
 }
 

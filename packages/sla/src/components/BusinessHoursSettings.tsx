@@ -7,6 +7,8 @@ import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 import { Button } from '@alga-psa/ui/components/Button';
+import { toCalendarDateString, toCalendarDisplayDate } from '@alga-psa/core';
+import { formatHolidayDate } from './holidayDateDisplay';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -519,11 +521,7 @@ export function BusinessHoursSettings() {
       dataIndex: 'holiday_date',
       render: (value: string) => (
         <span className="text-muted-foreground">
-          {new Date(value).toLocaleDateString(undefined, {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-          })}
+          {formatHolidayDate(value)}
         </span>
       ),
     },
@@ -878,9 +876,9 @@ export function BusinessHoursSettings() {
             <Label htmlFor="holiday-date-field">Date *</Label>
             <DatePicker
               id="holiday-date-field"
-              value={holidayFormData.holiday_date ? new Date(holidayFormData.holiday_date + 'T00:00:00') : undefined}
+              value={toCalendarDisplayDate(holidayFormData.holiday_date) ?? undefined}
               onChange={(date) => {
-                const dateStr = date.toISOString().split('T')[0];
+                const dateStr = toCalendarDateString(date) ?? '';
                 setHolidayFormData(prev => ({ ...prev, holiday_date: dateStr }));
               }}
               placeholder="Select date"
