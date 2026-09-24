@@ -624,6 +624,7 @@
       "system",
       "corr-123",
       "Status: {{status}}",
+      " ({{date}})",
       "3",
       "CRM",
       "Block",
