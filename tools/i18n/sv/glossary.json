@@ -643,7 +643,17 @@
       "internal_cost, margin",
       "phase_name, task_description, assigned_to, estimated_hours, due_date, priority, service, task_type, status, tags",
       "email@example.com, another@example.com", "portal.example.com", "smtp.example.com", "support@{{domain}}",
-      "{{count}}", "{{count}} h", "{{hours}} h {{minutes}} min", "| null", ",", "%", "×", "—", "…", "...", "-", "+", "•"
+      "{{count}}", "{{count}} h", "{{hours}} h {{minutes}} min", "| null", ",", "%", "×", "—", "…", "...", "-", "+", "•",
+      "Gmail: {{gmail}} · Microsoft: {{microsoft}} · IMAP: {{imap}}",
+      "support@client.com",
+      "email-general",
+      "System (null)",
+      "example.com",
+      "your-email@example.com",
+      "you@example.com",
+      "support@example.com",
+      "notifications@example.com",
+      "alias"
     ],
     "caseInsensitive": [
       "adapter", "budget", "fax", "filter", "kanban", "layout", "offline", "online", "router", "server", "status", "support", "team", "webhook"
