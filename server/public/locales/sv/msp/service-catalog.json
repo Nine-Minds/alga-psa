@@ -70,12 +70,12 @@
       "clear": "Rensa skattetak",
       "hint": "Högsta skattebelopp från den här skattesatsen per beräkning. Lämna tomt för att inte ange något tak. Ange 0 för att inte debitera någon skatt i beräkningar som använder det här taket.",
       "scopeTitle": "Så tillämpas skattetak",
-      "scope": "En regional beräkning begränsar varje skattesats bidrag innan skatten summeras, inte regionens sammanlagda skattebelopp. Vid periodberäkningar tillämpas taket på varje skattesats i varje datumsegment. Flera segment kan tillsammans överskrida taket. En faktura kan omfatta flera beräkningar. Taket gäller inte per faktura, kund, projekt eller hel period. Debiteringstak för projekt begränsar debiterbara belopp, medan skattetak begränsar den beräknade skatten. Externa skattetjänsteleverantörer använder sin egen konfiguration.",
+      "scope": "En regional beräkning begränsar bidraget från varje skattesats innan skatten summeras, inte regionens sammanlagda skattebelopp. Vid periodberäkningar tillämpas taket på varje skattesats i varje datumsegment. Flera segment kan tillsammans överskrida taket. En faktura kan omfatta flera beräkningar. Taket gäller inte per faktura, kund, projekt eller hel period. Debiteringstak för projekt begränsar debiterbara belopp, medan skattetak begränsar den beräknade skatten. Externa leverantörer av skattetjänster använder sin egen konfiguration.",
       "applicability": "Den här skattesatsen gäller endast fakturor i {{currencyCode}}. Den väljs inte längre för andra valutor.",
       "composite": "Det här taket tillämpas när skattesatsen ingår i en regional beräkning. Komponentbaserade beräkningar tillämpar inte det här taket.",
       "legacy": "Valuta inte angiven · {{amount}} i valutans minsta enhet",
       "legacyHelp": "Det sparade taket tillämpas för närvarande i den minsta enheten för varje fakturas valuta. Välj en valuta och välj uttryckligen att behålla det sparade beloppet eller ange ett nytt tak. Om du ändrar något annat bevaras taket. Du kan också rensa det utan att välja en valuta.",
-      "resolve": "Använd det sparade beloppet i den minsta enheten för {{currencyCode}}",
+      "resolve": "Använd sparat belopp i minsta enhet för {{currencyCode}}",
       "reenter": "Ange taket på nytt i den nya valutan innan du sparar.",
       "example": "Exempel: {{amount}}; utan tusentalsavgränsare.",
       "errors": {
@@ -97,7 +97,7 @@
     "tabs": {
       "details": "Detaljer",
       "components": "Komponenter",
-      "brackets": "Skatteintervall",
+      "brackets": "Skatteskikt",
       "holidays": "Skattefria perioder"
     },
     "fields": {
@@ -131,8 +131,8 @@
       "enableCompositeMessage": "Markera skattesatsen som sammansatt när du redigerar den för att använda skattekomponenter."
     },
     "brackets": {
-      "intro": "Progressiva skatteintervall tillämpar olika skattesatser på olika delar av ett belopp.",
-      "precedence": "När intervall har angetts har de företräde framför den fasta procentsatsen."
+      "intro": "Progressiva skatteskikt tillämpar olika skattesatser på olika delar av ett belopp.",
+      "precedence": "När skatteskikt har angetts har de företräde framför den fasta procentsatsen."
     }
   },
   "serviceForm": {
@@ -198,7 +198,7 @@
       "empty": "Inga tjänster hittades"
     },
     "table": {
-      "itemName": "Postnamn",
+      "itemName": "Namn",
       "type": "Typ",
       "unit": "Enhet",
       "rate": "Taxa",
@@ -300,9 +300,9 @@
         "help": "Styr hur täckning för delperioder beräknas när den återkommande avgiften behöver anpassas till en kortare period än en hel tjänsteperiod."
       },
       "unitRate": {
-        "label": "Taxa per enhet",
+        "label": "Enhetstaxa",
         "placeholder": "0,00",
-        "help": "Taxa som debiteras för varje användarplats/enhet under varje tjänsteperiod."
+        "help": "Taxa som debiteras för varje licens/enhet under varje tjänsteperiod."
       }
     },
     "options": {
@@ -314,13 +314,13 @@
       "label": "Hur prissätts den här tjänsten?",
       "bundle": {
         "label": "Paketpris",
-        "description": "Det är avtalsradens fasta totalbelopp som debiteras. Antalet för den här tjänsten används bara för att fördela en andel av totalbeloppet för rapportering — det avser inte debiterbara användarplatser, och ändringar i antalet påverkar inte det debiterade beloppet.",
-        "allocationNote": "Fördelningsantal: {{quantity}} — används för att fördela paketets totalbelopp för rapportering och debiteras inte som användarplatser."
+        "description": "Det är avtalsradens fasta totalbelopp som debiteras. Antalet för den här tjänsten används bara för att fördela en andel av totalbeloppet för rapportering — det avser inte debiterbara licenser, och ändringar i antalet påverkar inte det debiterade beloppet.",
+        "allocationNote": "Fördelningsantal: {{quantity}} — används för att fördela paketets totalbelopp för rapportering och debiteras inte som licenser."
       },
       "unit": {
-        "label": "Återkommande användarplatser/enheter",
-        "description": "Debiterar antal × taxa per enhet varje period, utan att något totalbelopp för raden har företräde. Samma antal och taxa debiteras igen nästa period tills du schemalägger en ändring. Antalet noll ger ett debiterat belopp på noll.",
-        "summary": "{{quantity}} × {{rate}} (återkommande användarplatser) = {{total}} per period"
+        "label": "Återkommande licenser/enheter",
+        "description": "Debiterar antal × enhetstaxa varje period, utan att något totalbelopp för raden har företräde. Samma antal och taxa debiteras igen nästa period tills du schemalägger en ändring. Antalet noll ger ett debiterat belopp på noll.",
+        "summary": "{{quantity}} × {{rate}} (återkommande licenser) = {{total}} per period"
       }
     }
   },
@@ -369,7 +369,7 @@
   },
   "usageConfig": {
     "title": "Konfiguration för förbrukningsbaserad debitering",
-    "recordDrivenNote": "Förbrukningsbaserade tjänster debiteras utifrån den förbrukning som registreras i förbrukningsuppföljningen för varje tjänsteperiod. En period utan registrerad förbrukning ger ingen debitering — registrera förbrukningen (eller ett uttryckligt nollvärde) varje period för att debitera den här tjänsten.",
+    "recordDrivenNote": "Förbrukningsbaserade tjänster debiteras utifrån den förbrukning som registreras under Förbrukningsuppföljning för varje tjänsteperiod. En period utan registrerad förbrukning ger ingen debitering — registrera förbrukningen (eller ett uttryckligt nollvärde) varje period för att debitera den här tjänsten.",
     "defaults": {
       "unitOfMeasure": "Enhet"
     },
@@ -399,7 +399,7 @@
       "from": "Från ({{unit}})",
       "to": "Till ({{unit}})",
       "ratePer": "Taxa per {{unit}}",
-      "unlimited": "Obegränsad",
+      "unlimited": "Obegränsat",
       "help": "Konfigurera volymbaserade prisnivåer. Varje nivås taxa tillämpas på förbrukningen inom dess intervall.",
       "errors": {
         "onlyLastUnlimited": "Endast den sista nivån kan sakna övre gräns",
@@ -438,10 +438,10 @@
         "mismatch": "Timpottens debiteringsperiod ({{billingPeriod}}) bör matcha avtalsradens debiteringsintervall ({{contractLineBillingFrequency}})"
       },
       "overageRate": {
-        "label": "Taxa för överskjutande timmar",
-        "placeholder": "Ange taxa för överskjutande timmar",
+        "label": "Taxa för överförbrukning",
+        "placeholder": "Ange taxa för överförbrukning",
         "help": "Timtaxan som debiteras för timmar utöver timpottens gräns",
-        "errorNegative": "Taxan för överskjutande timmar kan inte vara negativ"
+        "errorNegative": "Taxan för överförbrukning kan inte vara negativ"
       },
       "allowRollover": "Tillåt att oanvända timmar förs över till nästa period"
     }
