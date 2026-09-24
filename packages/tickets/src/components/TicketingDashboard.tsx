@@ -2844,6 +2844,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               <DataTable
                 key={`${currentPage}-${pageSize}`}
                 {...withDataAutomationId({ id: `${id}-tickets-table` })}
+                persistPageSize={false}
                 data={ticketsWithIds}
                 columns={columns}
                 pagination={true}

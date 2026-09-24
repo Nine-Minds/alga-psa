@@ -31,6 +31,16 @@ import Pagination from './Pagination';
 import { Alert, AlertDescription } from './Alert';
 import { Tooltip } from './Tooltip';
 import { useTranslation } from '../lib/i18n/client';
+import { useDataTablePageSizePreference } from './DataTablePreferences';
+
+const DEFAULT_ITEMS_PER_PAGE_VALUES = ['10', '25', '50', '100'];
+
+const isValidPageSizePreference = (
+  value: unknown,
+  options?: Array<{ value: string }>
+): value is number => Number.isInteger(value) && (value as number) > 0 &&
+  (options || DEFAULT_ITEMS_PER_PAGE_VALUES.map(value => ({ value })))
+    .some(option => Number(option.value) === value);
 
 // Helper function to get nested property value
 const getNestedValue = (obj: unknown, path: string | string[]): unknown => {
@@ -262,6 +272,8 @@ const ReflectedTableCell = ({
 export interface ExtendedDataTableProps<T extends object> extends DataTableProps<T> {
   /** Unique identifier for UI reflection system */
   id?: string;
+  /** Set false for tables whose id is not a stable table identity. */
+  persistPageSize?: boolean;
 }
 
 export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): React.ReactElement => {
@@ -286,6 +298,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     onItemsPerPageChange,
     itemsPerPageOptions,
     expandedRowRender,
+    persistPageSize = true,
   } = props;
   const { t } = useTranslation('common');
   const defaultItemsPerPageOptions = useMemo(() => [
@@ -295,6 +308,9 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     { value: '100', label: t('pagination.itemsPerPageOption', { count: 100, defaultValue: '100 per page' }) },
   ], [t]);
   const safeData = useMemo(() => (Array.isArray(data) ? data : []), [data]);
+  const generatedTableId = React.useId();
+  // LEVERAGE: pattern datatable-page-size-state — callers with legacy per-table persistence opt out here to keep one source of truth.
+  const pageSizePreference = useDataTablePageSizePreference(persistPageSize ? id : undefined);
 
   // Reference to the table container for measuring available width
   const tableContainerRef = useRef<HTMLDivElement>(null);
@@ -473,15 +489,32 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     pageIndex: currentPage - 1,
     pageSize,
   });
+  const pageSizeChangedRef = useRef(false);
+  const appliedSavedSizeRef = useRef(false);
+
+  React.useEffect(() => {
+    const savedPageSize = pageSizePreference.pageSize;
+    if (!pageSizePreference.hasLoaded || pageSizeChangedRef.current || appliedSavedSizeRef.current || !isValidPageSizePreference(savedPageSize, itemsPerPageOptions)) return;
+    appliedSavedSizeRef.current = true;
+    if (onItemsPerPageChange && savedPageSize !== pageSize) {
+      onItemsPerPageChange(savedPageSize);
+      if (currentPage !== 1) onPageChange?.(1);
+    } else if (!onItemsPerPageChange) {
+      setPagination(prev => ({ ...prev, pageIndex: 0, pageSize: savedPageSize }));
+    }
+  }, [pageSizePreference.hasLoaded, pageSizePreference.pageSize, itemsPerPageOptions, onItemsPerPageChange, onPageChange, pageSize, currentPage]);
 
   // Keep internal pagination state synced with props
+  const previousPageSizePropRef = useRef(pageSize);
   React.useEffect(() => {
+    const pageSizePropChanged = previousPageSizePropRef.current !== pageSize;
+    previousPageSizePropRef.current = pageSize;
     setPagination(prev => ({
       ...prev,
       pageIndex: currentPage - 1,
-      pageSize: pageSize
+      pageSize: onItemsPerPageChange || pageSizePropChanged ? pageSize : prev.pageSize
     }));
-  }, [currentPage, pageSize]);
+  }, [currentPage, pageSize, onItemsPerPageChange]);
 
   // Calculate total pages based on totalItems if provided, otherwise use data length
   const total = totalItems ?? safeData.length;
@@ -901,10 +934,10 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
             </tbody>
           </table>
         </div>
-        {pagination && safeData.length > 0 && (totalPages > 1 || onItemsPerPageChange) && (
+        {pagination && safeData.length > 0 && (
           <div className="border-t border-[rgb(var(--color-border-200)/0.7)]">
             <Pagination
-              id={id ? `${id}-pagination` : 'datatable-pagination'}
+              id={`${id || generatedTableId}-pagination`}
               currentPage={pageIndex + 1}
               totalItems={total}
               itemsPerPage={currentPageSize}
@@ -920,9 +953,16 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                   onPageChange(page);
                 }
               }}
-              onItemsPerPageChange={onItemsPerPageChange}
+              onItemsPerPageChange={(nextSize) => {
+                pageSizeChangedRef.current = true;
+                pageSizePreference.savePageSize(nextSize);
+                setPagination(prev => ({ ...prev, pageIndex: 0, pageSize: nextSize }));
+                onItemsPerPageChange?.(nextSize);
+                if (currentPage !== 1) onPageChange?.(1);
+              }}
+              showItemsPerPage={total > Math.max(10, Math.min(...(itemsPerPageOptions || defaultItemsPerPageOptions).map(option => Number(option.value))))}
               itemsPerPageOptions={itemsPerPageOptions || defaultItemsPerPageOptions}
-              variant={onItemsPerPageChange ? "clients" : "compact"}
+              variant="clients"
             />
           </div>
         )}

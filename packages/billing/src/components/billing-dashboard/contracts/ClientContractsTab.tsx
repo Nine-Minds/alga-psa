@@ -850,7 +850,7 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
                   {t('clientContracts.empty.noMatches', { defaultValue: 'No client contracts match your search.' })}
                 </div>
               ) : (
-                <DataTable
+                <DataTable id="client-account-contracts-table"
                   data={filteredClientContracts}
                   columns={clientContractColumns}
                   pagination
@@ -923,7 +923,7 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
                   })}
                 </div>
               ) : (
-                <DataTable
+                <DataTable id="client-contract-renewals-table"
                   data={filteredUpcomingRenewals}
                   columns={upcomingRenewalColumns}
                   pagination

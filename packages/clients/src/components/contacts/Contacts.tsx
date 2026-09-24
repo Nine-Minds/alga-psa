@@ -1087,6 +1087,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
             <DataTable
               key={`${currentPage}-${pageSize}`}
               id="contacts-table"
+              persistPageSize={false}
               data={tableData}
               columns={columns}
               pagination={true}

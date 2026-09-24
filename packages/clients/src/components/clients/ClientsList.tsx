@@ -336,6 +336,7 @@ const ClientsList = ({
             <DataTable
                 key={`${currentPage}-${pageSize}`}
                 id="clients-table"
+                persistPageSize={false}
                 data={filteredClients}
                 columns={columns}
                 onRowClick={handleRowClick}

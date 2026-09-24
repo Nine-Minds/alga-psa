@@ -802,7 +802,7 @@ export default function McpServerSettings() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <DataTable
+            <DataTable id="mcp-audit-log-table"
               data={audit}
               columns={auditColumns}
               totalItems={auditTotal}
