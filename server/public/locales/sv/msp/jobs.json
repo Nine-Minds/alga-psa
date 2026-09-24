@@ -25,8 +25,8 @@
     },
     "time": {
       "justNow": "Nyss",
-      "minutesAgo": "För {{count}} min sedan",
-      "hoursAgo": "För {{count}} h sedan"
+      "minutesAgo": "För {{count}} min sedan",
+      "hoursAgo": "För {{count}} h sedan"
     },
     "duration": {
       "milliseconds": "{{count}} ms",
@@ -67,8 +67,8 @@
       "pgboss": "PG Boss",
       "temporal": "Temporal"
     },
-    "successRate": "{{count}} % lyckade körningar",
-    "successRateNone": "Inga avslutade bakgrundsjobb än"
+    "successRate": "{{count}} % lyckade bakgrundsjobb",
+    "successRateNone": "Inga avslutade bakgrundsjobb ännu"
   },
   "historyTable": {
     "columns": {
@@ -133,8 +133,8 @@
     "toast": {
       "none": "Inga matchande bakgrundsjobb att rensa.",
       "error": "Det gick inte att rensa bakgrundsjobbens historik. Försök igen.",
-      "success_one": "Rensade {{count}} bakgrundsjobb från historiken.",
-      "success_other": "Rensade {{count}} bakgrundsjobb från historiken."
+      "success_one": "{{count}} bakgrundsjobb har rensats från historiken.",
+      "success_other": "{{count}} bakgrundsjobb har rensats från historiken."
     }
   },
   "page": {
