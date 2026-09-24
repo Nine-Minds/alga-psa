@@ -1,0 +1,743 @@
+{
+  "common": {
+    "actions": {
+      "add": "Lägg till",
+      "back": "Tillbaka",
+      "cancel": "Avbryt",
+      "close": "Stäng",
+      "create": "Skapa",
+      "delete": "Radera",
+      "downloadCsv": "Ladda ner CSV",
+      "edit": "Redigera",
+      "import": "Importera",
+      "reactivate": "Återaktivera",
+      "remove": "Ta bort",
+      "retry": "Försök igen",
+      "save": "Spara",
+      "saving": "Sparar…",
+      "search": "Sök",
+      "select": "Välj",
+      "update": "Uppdatera",
+      "uploadCsv": "Ladda upp CSV",
+      "view": "Visa"
+    },
+    "states": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "loading": "Laddar…",
+      "na": "Ej tillämpligt",
+      "none": "Ingen"
+    },
+    "no": "Nej",
+    "yes": "Ja"
+  },
+  "contactsPage": {
+    "title": "Kontaktsida",
+    "description": "Huvudsida för kontakthantering med sökning, filter, listvy och massåtgärder",
+    "heading": "Kontakter",
+    "addContact": "+ Lägg till kontakt",
+    "actions": "Åtgärder",
+    "searchPlaceholder": "Sök bland kontakter, anteckningar och interaktioner",
+    "resetFilters": "Återställ",
+    "unknownClient": "Okänd kund",
+    "noClient": "Ingen kund",
+    "thisContact": "den här kontakten",
+    "actionsMenuSrOnly": "Öppna meny",
+    "quickView": "Snabbvy",
+    "deleteValidationError": "Det gick inte att validera raderingen. Försök igen.",
+    "deleteSuccess": "{{name}} har raderats.",
+    "deleteError": "Det gick inte att radera kontakten. Försök igen.",
+    "markInactiveSuccess": "{{name}} har markerats som inaktiv.",
+    "markInactiveError": "Ett fel uppstod när kontakten skulle markeras som inaktiv. Försök igen.",
+    "statusOptions": {
+      "all": "Alla kontakter",
+      "active": "Aktiva kontakter",
+      "inactive": "Inaktiva kontakter"
+    },
+    "table": {
+      "name": "Namn",
+      "created": "Skapad",
+      "email": "E-post",
+      "phoneNumber": "Telefonnummer",
+      "client": "Kund",
+      "tags": "Taggar",
+      "actions": "Åtgärder"
+    },
+    "lastPhoneTypeUsage": {
+      "title": "Sista användningen av telefontypen",
+      "message_one": "Följande anpassade telefontyp används inte längre av någon kontakt: {{labels}}. Vill du radera typdefinitionen eller behålla den för framtida bruk?",
+      "message_other": "Följande anpassade telefontyper används inte längre av någon kontakt: {{labels}}. Vill du radera typdefinitionerna eller behålla dem för framtida bruk?",
+      "deleteType": "Radera typ",
+      "keepType": "Behåll typ"
+    },
+    "print": {
+      "title": "Kontakter",
+      "subtitle": "{{count}} kontakter",
+      "noContacts": "Inga kontakter att skriva ut",
+      "emptyValue": "-",
+      "columns": {
+        "name": "Namn",
+        "email": "E-post",
+        "phone": "Telefon",
+        "client": "Kund",
+        "status": "Status"
+      },
+      "optionsDialog": {
+        "title": "Utskriftsalternativ",
+        "description": "Välj vilka kolumner som ska ingå när du skriver ut kontakter."
+      }
+    },
+    "shareTooltip": "Skriv ut, importera och exportera"
+  },
+  "contactDetails": {
+    "title": "Kontaktuppgifter",
+    "description": "Detaljvy för kontakter med flikar, direktredigering, portalåtkomst, taggar och anteckningar",
+    "backToContacts": "Tillbaka till kontakter",
+    "inactiveBadge": "inaktiv",
+    "actions": {
+      "goToContact": "Gå till kontakt",
+      "saveChanges": "Spara ändringar"
+    },
+    "tabs": {
+      "details": "Uppgifter",
+      "tickets": "Ärenden",
+      "documents": "Dokument",
+      "interactions": "Interaktioner",
+      "notes": "Anteckningar",
+      "portal": "Portal"
+    },
+    "fields": {
+      "fullName": "Fullständigt namn",
+      "client": "Kund",
+      "email": "E-post",
+      "role": "Roll",
+      "inboundTicketDestinationOverride": "Åsidosätt destination för inkommande ärenden",
+      "useClientDestination": "Använd kundens destination",
+      "inboundTicketDestinationHelp": "Om detta anges åsidosätts kundens destination för just denna avsändarkontakt. Prioritetsordning: Kontaktens åsidosättning -> Kundens destination -> Tjänsteleverantörens standardinställning.",
+      "tags": "Taggar",
+      "notes": "Anteckningar",
+      "status": "Status",
+      "phone": "Telefon"
+    },
+    "status": {
+      "label": "Status",
+      "helper": "Ange kontaktens status som aktiv eller inaktiv",
+      "active": "Aktiv",
+      "inactive": "Inaktiv"
+    },
+    "loading": {
+      "destinations": "Laddar destinationer…",
+      "ticketFilters": "Laddar ärendefilter…"
+    },
+    "empty": {
+      "notSet": "Inte angivet",
+      "unknownClient": "Okänd kund"
+    },
+    "client": {
+      "noClientAssigned": "Ingen kund tilldelad"
+    },
+    "delete": {
+      "successTitle": "Kontakten har raderats",
+      "successDescription": "Kontakten har raderats.",
+      "validationFailed": "Det gick inte att validera raderingen. Försök igen.",
+      "failed": "Det gick inte att radera kontakten. Försök igen."
+    },
+    "deactivate": {
+      "successTitle": "Kontakten har inaktiverats",
+      "successDescription": "Kontakten har markerats som inaktiv."
+    },
+    "reactivate": {
+      "successTitle": "Kontakten har återaktiverats",
+      "successDescription": "Kontakten har återaktiverats."
+    },
+    "update": {
+      "successTitle": "Kontakten har uppdaterats",
+      "successDescription": "Kontaktuppgifterna har sparats."
+    },
+    "saveFailed": {
+      "title": "Det gick inte att spara",
+      "description": "Det gick inte att spara kontaktuppgifterna. Försök igen."
+    },
+    "error": {
+      "title": "Fel"
+    },
+    "errors": {
+      "permissionDenied": "Åtkomst nekad. Kontakta din administratör om du behöver ytterligare behörigheter.",
+      "markInactiveFailed": "Ett fel uppstod när kontakten skulle markeras som inaktiv. Försök igen.",
+      "reactivateFailed": "Ett fel uppstod när kontakten skulle återaktiveras. Försök igen."
+    }
+  },
+  "contactsImportDialog": {
+    "title": "Importera kontakter",
+    "description": "Dialogruta för CSV-import av kontakter med mappning, förhandsgranskning, validering och resultat",
+    "fields": {
+      "name": "Namn *",
+      "email": "E-post *",
+      "defaultPhoneNumber": "Standardtelefonnummer",
+      "client": "Kund",
+      "tags": "Taggar",
+      "role": "Roll",
+      "notes": "Anteckningar",
+      "primaryEmailLabel": "Typ av primär e-postadress",
+      "additionalEmails": "Ytterligare e-postadresser"
+    },
+    "unassigned": "Välj fält",
+    "errors": {
+      "emptyCsv": "CSV-filen är tom eller ogiltig",
+      "readingCsv": "Fel vid läsning av CSV-filen: {{message}}",
+      "unknownError": "Okänt fel",
+      "requiredFieldNotMapped": "Det obligatoriska fältet ”{{field}}” är inte mappat",
+      "nameRequired": "Namn krävs",
+      "emailRequired": "E-post krävs",
+      "invalidEmail": "Ogiltigt format för e-postadress",
+      "processingCsv": "Fel vid bearbetning av CSV-data",
+      "importFailed": "Importen misslyckades"
+    },
+    "importOptions": {
+      "updateExisting": {
+        "title": "Uppdatera befintliga kontakter",
+        "description": "Ersätt uppgifter för befintliga kontakter"
+      },
+      "skipInvalid": {
+        "title": "Hoppa över ogiltiga poster",
+        "description": "Fortsätt importen även om vissa poster har valideringsfel"
+      }
+    },
+    "results": {
+      "title": "Importresultat",
+      "downloadFailedRecords": "Ladda ner poster som inte kunde importeras"
+    },
+    "table": {
+      "status": "Status",
+      "name": "Namn",
+      "email": "E-post",
+      "message": "Meddelande",
+      "exists": "Finns",
+      "issues": "Problem"
+    },
+    "tooltips": {
+      "importSuccessful": "Importen lyckades",
+      "importFailed": "Importen misslyckades",
+      "validReady": "Giltig – klar att importera",
+      "invalidHasErrors": "Ogiltig – innehåller fel"
+    },
+    "upload": {
+      "help": "Ladda upp en CSV-fil med kontaktuppgifter",
+      "requiredLabel": "Obligatoriskt:",
+      "contactFieldsLabel": "Kontaktfält:",
+      "contactFieldsDescription": "phone_number (importeras som standardnummer för arbetstelefon), role, notes, tags",
+      "clientFieldLabel": "Kundfält:",
+      "clientFieldDescription": "client (matchar befintliga kunder efter namn)",
+      "noteLabel": "Obs:",
+      "noteDescription": "CSV-import och CSV-export i v1 hanterar ett standardtelefonnummer per kontakt. Taggar ska vara kommaseparerade värden.",
+      "downloadTemplate": "Ladda ner CSV-mall",
+      "emailFieldsLabel": "E-postfält:",
+      "emailFieldsDescription": "primary_email_type (work/personal/billing/other eller en anpassad typ), additional_email_addresses (använd `label:email@example.com | label:email@example.com`)",
+      "hybridEmailNote": "CSV-import och CSV-export behåller `email` som kontaktens primära e-postadress och standardadress. Taggar ska vara kommaseparerade värden."
+    },
+    "mapping": {
+      "title": "Mappa kontaktfält till CSV-kolumner",
+      "description": "Välj vilken CSV-kolumn som innehåller uppgifterna för varje kontaktfält. Fält markerade med * är obligatoriska.",
+      "contactFieldHeader": "Kontaktfält",
+      "csvColumnHeader": "Välj CSV-kolumn",
+      "notMapped": "Inte mappat",
+      "requiredFieldsNote": "* Obligatoriska fält måste mappas för att importen ska kunna fortsätta",
+      "largeImportWarning": "Du importerar {{count}} poster. Bearbetningen kan ta en stund.",
+      "processing": "Bearbetar…",
+      "preview": "Förhandsgranska"
+    },
+    "preview": {
+      "title": "Förhandsgranska import",
+      "totalRecords": "Totalt antal poster:",
+      "valid": "Giltiga:",
+      "invalid": "Ogiltiga:"
+    },
+    "importing": {
+      "title": "Importerar kontakter",
+      "processing": "Bearbetar: {{current}} av {{total}}",
+      "currentItem": "Bearbetar nu: {{item}}"
+    },
+    "complete": {
+      "title": "Importen är slutförd",
+      "successMessage": "{{count}} kontakter har importerats"
+    },
+    "confirmUpdate": {
+      "title": "Uppdatera befintliga kontakter",
+      "message": "{{count}} kontakter finns redan. Vill du uppdatera dem med de nya uppgifterna?"
+    }
+  },
+  "contactEmailAddressesEditor": {
+    "title": "E-postadresser",
+    "description": "Lägg till en eller flera e-postadresser och välj exakt en standardadress.",
+    "actions": {
+      "addEmail": "Lägg till e-postadress"
+    },
+    "emailTypes": {
+      "work": "Arbete",
+      "personal": "Privat",
+      "billing": "Debitering",
+      "other": "Annat",
+      "custom": "Anpassad"
+    },
+    "primary": {
+      "title": "Primär e-postadress",
+      "description": "Den här adressen förblir standardadressen som sparas i kontaktposten"
+    },
+    "row": {
+      "title": "Ytterligare e-postadress {{number}}",
+      "secondaryDescription": "Sparas som en e-postadress som inte är standardadress",
+      "defaultLabel": "Standard",
+      "noEmailYet": "Ingen e-postadress angiven än",
+      "editLabel": "Redigera",
+      "edit": "Redigera ytterligare e-postadress {{number}}",
+      "doneLabel": "Klar",
+      "done": "Slutför redigeringen av ytterligare e-postadress {{number}}",
+      "moveUp": "Flytta upp ytterligare e-postadress {{number}}",
+      "moveDown": "Flytta ner ytterligare e-postadress {{number}}",
+      "remove": "Ta bort ytterligare e-postadress {{number}}"
+    },
+    "fields": {
+      "emailAddress": "E-postadress",
+      "emailPlaceholder": "name@example.com",
+      "emailLabel": "E-posttyp",
+      "customEmailLabel": "Anpassad e-posttyp",
+      "customTypePlaceholder": "Välj eller ange en anpassad e-posttyp",
+      "customTypeSearchPlaceholder": "Sök efter eller ange en anpassad e-posttyp…",
+      "customTypeEmpty": "Inga matchande anpassade e-posttyper.",
+      "customTypeUseValue": "Använd ”{{value}}”"
+    }
+  },
+  "contactPhoneNumbersEditor": {
+    "title": "Telefonnummer",
+    "description": "Redigerare för telefonnummer med typhantering, validering, standardinställningar och stöd för anknytningar",
+    "actions": {
+      "addPhone": "Lägg till telefonnummer"
+    },
+    "empty": "Inga telefonnummer än.",
+    "phoneTypes": {
+      "work": "Arbete",
+      "mobile": "Mobil",
+      "home": "Hem",
+      "fax": "Fax",
+      "other": "Annat",
+      "custom": "Anpassad"
+    },
+    "row": {
+      "title": "Telefon {{number}}",
+      "defaultDescription": "Standardtelefonnummer",
+      "secondaryDescription": "Sekundärt telefonnummer",
+      "defaultLabel": "Standard",
+      "moveUp": "Flytta upp telefon {{number}}",
+      "moveDown": "Flytta ner telefon {{number}}",
+      "remove": "Ta bort telefon {{number}}"
+    },
+    "fields": {
+      "phoneNumber": "Telefon",
+      "extension": "Anknytning",
+      "phoneType": "Telefontyp",
+      "customPhoneType": "Anpassad telefontyp",
+      "customTypePlaceholder": "Välj eller ange en anpassad telefontyp",
+      "customTypeSearchPlaceholder": "Sök efter eller ange en anpassad telefontyp…",
+      "customTypeEmpty": "Inga matchande anpassade telefontyper.",
+      "customTypeUseValue": "Använd ”{{value}}”"
+    },
+    "validation": {
+      "selectExactlyOneDefault": "Välj exakt ett standardtelefonnummer.",
+      "phoneRow": "Telefon {{number}}",
+      "enterCompletePhoneNumber": "Ange ett fullständigt telefonnummer.",
+      "includeCountryCallingCode": "Ta med landsnumret med + i början.",
+      "enterCustomPhoneType": "Ange en anpassad telefontyp.",
+      "customTypesUnique": "Namnen på anpassade telefontyper måste vara unika."
+    },
+    "lastTypeUsage": {
+      "title": "Sista användningen av telefontypen",
+      "message": "Detta är sista användningen av den anpassade telefontypen ”{{label}}”. Vill du radera typdefinitionen eller behålla den för framtida bruk?",
+      "removeAndDelete": "Ta bort och radera typ",
+      "removeAndKeep": "Ta bort och behåll typ"
+    }
+  },
+  "contactPortalTab": {
+    "boardCount_one": "{{count}} tavla",
+    "boardCount_other": "{{count}} tavlor",
+    "title": "Portalåtkomst",
+    "description": "Hantering av en kontakts åtkomst till kundportalen, inklusive inbjudningar och rolluppdateringar",
+    "loadingDescription": "Laddar portalinformation…",
+    "information": "Inbjudningar skickas från din organisations e-postsystem. Svar skickas till e-postadressen för kundens standardplats.",
+    "activeAccess": "Portalåtkomst aktiv",
+    "noAccess": {
+      "title": "Ingen portalåtkomst",
+      "description": "Den här kontakten har inte åtkomst till kundportalen än"
+    },
+    "noClient": {
+      "description": "Tilldela kontakten till en kund för att hantera portalåtkomst."
+    },
+    "portalAdmin": {
+      "label": "Portaladministratör",
+      "helper": "När inställningen är aktiverad skapas användaren med rollen ”Kundadministratör”. När den är inaktiverad får användaren rollen ”Kundanvändare”."
+    },
+    "roles": {
+      "label": "Portalroller",
+      "none": "Inga roller tilldelade",
+      "placeholder": "Välj roll att lägga till",
+      "addButton": "Lägg till roll"
+    },
+    "userStatus": {
+      "label": "Användarstatus",
+      "active": "Användaren är för närvarande aktiv",
+      "inactive": "Användaren är för närvarande inaktiv"
+    },
+    "lastLogin": {
+      "label": "Senaste inloggning",
+      "via": "via {{method}}"
+    },
+    "history": {
+      "title": "Inbjudningshistorik",
+      "description": "Senaste portalinbjudningarna som skickats till den här kontakten",
+      "empty": "Inga portalinbjudningar har skickats till den här kontakten än.",
+      "sentPrefix": "Skickad:",
+      "expiresPrefix": "Går ut:",
+      "usedPrefix": "Använd:",
+      "status": {
+        "pending": "Väntande",
+        "used": "Använd",
+        "expired": "Utgången",
+        "revoked": "Återkallad"
+      }
+    },
+    "actions": {
+      "sendInvitation": "Skicka portalinbjudan",
+      "sending": "Skickar…",
+      "refresh": "Ladda om",
+      "refreshing": "Laddar om…",
+      "resend": "Skicka igen",
+      "resending": "Skickar igen…",
+      "revoke": "Återkalla"
+    },
+    "toast": {
+      "successTitle": "Lyckades",
+      "errorTitle": "Fel",
+      "permissionDeniedTitle": "Åtkomst nekad",
+      "loadError": "Det gick inte att ladda portalinformationen",
+      "refreshHistoryError": "Det gick inte att ladda om inbjudningshistoriken",
+      "sendInvitePermissionDenied": "Du har inte behörighet att skicka inbjudningar",
+      "sendInviteSuccess": "Portalinbjudan har skickats",
+      "sendInviteFailed": "Det gick inte att skicka inbjudan",
+      "revokeInviteSuccess": "Inbjudan har återkallats",
+      "revokeInviteFailed": "Det gick inte att återkalla inbjudan",
+      "resendInviteSuccess": "Portalinbjudan har skickats igen",
+      "resendInviteFailed": "Det gick inte att skicka inbjudan igen",
+      "updatePortalSettingsPermissionDenied": "Du har inte behörighet att uppdatera kundinställningar",
+      "portalAdminEnabled": "Kontakten har markerats som administratör för kundportalen",
+      "portalAdminDisabled": "Kontakten är inte längre markerad som administratör för kundportalen",
+      "updatePortalAdminFailed": "Det gick inte att uppdatera statusen",
+      "updateAdminFailed": "Det gick inte att uppdatera administratörsmarkeringen",
+      "updateRolesPermissionDenied": "Du har inte behörighet att uppdatera användarroller",
+      "roleAdded": "Rollen har lagts till",
+      "addRoleFailed": "Det gick inte att lägga till rollen",
+      "roleRemoved": "Rollen har tagits bort",
+      "removeRoleFailed": "Det gick inte att ta bort rollen",
+      "updateStatusPermissionDenied": "Du har inte behörighet att uppdatera användarstatus",
+      "userActivated": "Användaren har aktiverats",
+      "userDeactivated": "Användaren har inaktiverats",
+      "updateUserStatusFailed": "Det gick inte att uppdatera användarstatusen",
+      "errors": {
+        "permissionDeniedInvite": "Du har inte behörighet att bjuda in användare.",
+        "emailNotConfigured": "E-posttjänsten är inaktiverad eller inte konfigurerad.",
+        "contactNotFound": "Kontakten hittades inte.",
+        "contactMissingEmail": "Kontakten saknar e-postadress. Lägg till en e-postadress för kontakten innan du skickar en inbjudan.",
+        "contactInvalidEmail": "Kontakten har en ogiltig e-postadress. Uppdatera kontakten med en giltig e-postadress innan du skickar en inbjudan.",
+        "userExistsForContact": "Ett användarkonto finns redan för den här kontakten. Använd lösenordsåterställning i stället för att skicka en inbjudan.",
+        "noDefaultClient": "Ingen standardkund har konfigurerats för den här klientorganisationen. Ange en standardkund i Allmänna inställningar.",
+        "noDefaultLocation": "Standardkunden måste ha en standardplats konfigurerad för att portalinbjudningar ska kunna skickas.",
+        "noLocationEmail": "Standardkundens plats måste ha en e-postadress för kontakt konfigurerad.",
+        "noBaseUrl": "Bas-URL har inte konfigurerats för portalinbjudningar.",
+        "invitationNotFound": "Inbjudan hittades inte eller har redan använts."
+      },
+      "userNotFound": "Kundanvändaren hittades inte"
+    }
+  },
+  "quickAddContact": {
+    "title": "Lägg till ny kontakt",
+    "description": "Formulär för att snabbt skapa en kontakt med fält för kund, roll, telefon och taggar",
+    "dialog": {
+      "title": "Lägg till ny kontakt"
+    },
+    "errorFallback": {
+      "title": "Något gick fel:",
+      "tryAgain": "Försök igen"
+    },
+    "actions": {
+      "submit": "Lägg till kontakt"
+    },
+    "fields": {
+      "fullName": "Fullständigt namn *",
+      "email": "E-post *",
+      "clientOptional": "Kund (valfritt)",
+      "role": "Roll",
+      "rolePlaceholder": "T.ex. chef, utvecklare osv.",
+      "notes": "Anteckningar",
+      "notesPlaceholder": "Lägg till ytterligare anteckningar om kontakten…"
+    },
+    "status": {
+      "label": "Status",
+      "active": "Aktiv",
+      "inactive": "Inaktiv"
+    },
+    "validation": {
+      "alertIntro": "Åtgärda följande fel:",
+      "fullNameRequired": "Fullständigt namn krävs",
+      "fullNameEmpty": "Fullständigt namn får inte vara tomt",
+      "fullNameSpaces": "Fullständigt namn får inte enbart innehålla blanksteg",
+      "emailRequired": "E-postadress krävs",
+      "emailSpaces": "E-postadressen får inte enbart innehålla blanksteg",
+      "roleSpaces": "Rollen får inte enbart innehålla blanksteg",
+      "roleLength": "Rollen får vara högst 100 tecken lång",
+      "roleCharacters": "Rollen måste innehålla bokstäver eller siffror",
+      "notesSpaces": "Anteckningarna får inte enbart innehålla blanksteg"
+    },
+    "toasts": {
+      "warningTitle": "Varning",
+      "tagsFailed": "Kunde inte skapa följande antal taggar: {{count}}",
+      "contactCreated": "Kontakten har skapats",
+      "contactAdded": "{{name}} har lagts till."
+    },
+    "errors": {
+      "createContactTitle": "Fel när kontakten skulle skapas",
+      "unexpected": "Ett oväntat fel uppstod. Försök igen.",
+      "validationTitle": "Valideringsfel",
+      "emailExistsTitle": "E-postadressen finns redan",
+      "invalidReferenceTitle": "Ogiltig referens",
+      "systemTitle": "Systemfel",
+      "genericTitle": "Fel",
+      "closeMessage": "Stäng felmeddelandet",
+      "createContactHeading": "Fel när kontakten skulle skapas:",
+      "validationPrefix": "Åtgärda följande:",
+      "emailExistsPrefix": "E-postadressen finns redan:",
+      "invalidReferencePrefix": "Ogiltig referens:",
+      "systemPrefix": "Systemfel:"
+    }
+  },
+  "contactDetailsEdit": {
+    "title": "Redigera kontakt – {{name}}",
+    "heading": "Redigera kontakt: {{name}}",
+    "inactiveBadge": "inaktiv",
+    "description": "Redigerbart kontaktformulär som används i detaljvyn och sidopaneler",
+    "validation": {
+      "fullNameRequired": "Fullständigt namn krävs",
+      "emailRequired": "E-postadress krävs",
+      "invalidEmail": "Ange en giltig e-postadress"
+    },
+    "errors": {
+      "validationPrefix": "Åtgärda följande:",
+      "emailExists": "E-postadressen finns redan: En kontakt med den här e-postadressen finns redan i systemet",
+      "invalidReferencePrefix": "Ogiltig referens:",
+      "systemPrefix": "Systemfel:",
+      "saveFailed": "Ett fel uppstod när uppgifterna skulle sparas. Försök igen.",
+      "unexpected": "Ett oväntat fel uppstod. Försök igen."
+    },
+    "fields": {
+      "fullName": "Fullständigt namn",
+      "email": "E-post",
+      "role": "Roll",
+      "rolePlaceholder": "T.ex. chef, utvecklare osv.",
+      "phoneNumbers": "Telefonnummer:",
+      "inboundTicketDestinationOverride": "Åsidosätt destination för inkommande ärenden:",
+      "inboundTicketDestinationHelp": "Prioritetsordning: Kontaktens åsidosättning -> Kundens destination -> Tjänsteleverantörens standardinställning.",
+      "useClientDestination": "Använd kundens destination",
+      "client": "Kund:",
+      "status": "Status:",
+      "notes": "Anteckningar:",
+      "notesPlaceholder": "Lägg till ytterligare anteckningar om kontakten…",
+      "tags": "Taggar:",
+      "emailAddresses": "E-postadresser:"
+    },
+    "loading": {
+      "destinations": "Laddar destinationer…"
+    },
+    "status": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv"
+    }
+  },
+  "contactDetailsView": {
+    "title": "Kontaktuppgifter – {{name}}",
+    "description": "Läsvy med sammanfattning av kontakten, tillhörande kund, telefonnummer och metadata",
+    "actions": {
+      "goToContact": "Gå till kontakt"
+    },
+    "empty": {
+      "notSet": "Inte angivet",
+      "unknownClient": "Okänd kund"
+    },
+    "phoneTypes": {
+      "work": "Arbete",
+      "mobile": "Mobil",
+      "home": "Hem",
+      "fax": "Fax",
+      "other": "Annat"
+    },
+    "fields": {
+      "fullName": "Fullständigt namn",
+      "email": "E-post",
+      "phone": "Telefon:",
+      "defaultPhone": "Standard",
+      "client": "Kund:",
+      "noClientAssigned": "Ingen kund tilldelad",
+      "role": "Roll",
+      "status": "Status",
+      "createdAt": "Skapad",
+      "updatedAt": "Uppdaterad",
+      "notes": "Anteckningar:",
+      "tags": "Taggar:",
+      "emailAddresses": "E-postadresser:",
+      "defaultEmail": "Standard"
+    },
+    "status": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv"
+    },
+    "sections": {
+      "documents": "Dokument"
+    },
+    "errors": {
+      "loadTagsSystem": "Ett oväntat fel uppstod när taggarna skulle laddas. Försök igen eller kontakta supporten.",
+      "loadTagsFailed": "Det gick inte att ladda taggarna. Försök ladda om sidan.",
+      "unexpected": "Ett oväntat fel uppstod. Försök igen.",
+      "clientNotFound": "Kunden hittades inte. Kunden kan ha raderats.",
+      "loadClientSystem": "Ett oväntat fel uppstod när kunduppgifterna skulle laddas. Försök igen eller kontakta supporten.",
+      "clientMissing": "Kunden finns inte längre i systemet.",
+      "loadClientFailed": "Det gick inte att ladda kunduppgifterna. Försök igen.",
+      "updateClientFailedWithMessage": "Det gick inte att uppdatera kunden: {{message}}",
+      "updateClientFailed": "Det gick inte att uppdatera kunden. Försök igen."
+    }
+  },
+  "clientContactsList": {
+    "title": "Kundkontakter",
+    "description": "Inbäddad kundspecifik kontaktlista med filter och radåtgärder",
+    "table": {
+      "name": "Namn",
+      "email": "E-post",
+      "phoneNumber": "Telefonnummer",
+      "actions": "Åtgärder",
+      "role": "Roll"
+    },
+    "filter": {
+      "show": "Visa:",
+      "active": "Aktiva kontakter",
+      "inactive": "Inaktiva kontakter",
+      "all": "Alla kontakter",
+      "searchPlaceholder": "Sök kontakter…"
+    },
+    "actions": {
+      "openMenu": "Öppna meny",
+      "quickView": "Snabbvy",
+      "addNewContact": "Lägg till kontakt"
+    },
+    "errors": {
+      "loadFailed": "Det gick inte att ladda kontakterna.",
+      "loadingTitle": "Fel vid laddning av kontakter",
+      "retryFailed": "Det gick inte att ladda kontakterna. Försök igen."
+    }
+  },
+  "contactsLayout": {
+    "title": "Kontaktlayout",
+    "description": "Ram och sidgränssnitt för kontaktsidor"
+  },
+  "contactsSkeleton": {
+    "title": "Laddningsläge för kontakter",
+    "description": "Platshållare under laddning av kontaktlistan och detaljvyer"
+  },
+  "contactAvatarUpload": {
+    "title": "Uppladdning av kontaktens profilbild",
+    "description": "Kontroll för att ladda upp profilbilder för kontakter"
+  },
+  "contactNotesPanel": {
+    "title": "Anteckningar",
+    "description": "Panel för anteckningar med formaterad text, visning av äldre anteckningar och åtgärder för att spara och försöka igen",
+    "legacy": {
+      "initialNote": "Ursprunglig anteckning"
+    },
+    "errors": {
+      "loadTitle": "Det gick inte att ladda anteckningarna",
+      "unknown": "Okänt fel"
+    },
+    "lastUpdated": "Senast uppdaterad: {{date}}"
+  },
+  "notes": {
+    "messages": {
+      "saveSuccess": "Anteckningarna har sparats",
+      "saveFailed": "Det gick inte att spara anteckningarna"
+    }
+  },
+  "actions": {
+    "print": "Skriv ut",
+    "printOptions": "Utskriftsalternativ"
+  },
+  "contactTabs": {
+    "tickets": {
+      "addTicket": "Lägg till ärende",
+      "empty": "Inga ärenden hittades för den här kontakten",
+      "filters": {
+        "allAssignees": "Alla ansvariga",
+        "allPriorities": "Alla prioriteter",
+        "categoryPlaceholder": "Filtrera efter kategori",
+        "reset": "Återställ",
+        "searchPlaceholder": "Sök ärenden…",
+        "statusPlaceholder": "Välj status"
+      },
+      "loadMore": {
+        "label": "Ladda fler ärenden",
+        "loading": "Laddar…"
+      },
+      "loading": "Laddar…",
+      "title": "Kontaktens ärenden",
+      "toasts": {
+        "clientNotFound": "Kunden hittades inte",
+        "loadClientFailed": "Det gick inte att ladda kunduppgifterna",
+        "loadTicketFailed": "Det gick inte att ladda ärendet",
+        "openTicketFailed": "Det gick inte att öppna ärendet",
+        "userNotAuthenticated": "Användaren är inte autentiserad"
+      }
+    }
+  },
+  "contactBento": {
+    "toast": {
+      "saved": "Kontakten har uppdaterats",
+      "saveFailed": "Det gick inte att uppdatera kontakten",
+      "saveFailedDescription": "Kontakten kunde inte uppdateras. Försök igen."
+    }
+  },
+  "errors": {
+    "contact": {
+      "notFound": "Kontakten hittades inte",
+      "otherClient": "Åtkomst nekad: Kan inte hantera kontakter för en annan kund",
+      "notAssociatedWithClient": "Kontakten är inte kopplad till en kund",
+      "emailExists": "En kontakt med den här e-postadressen finns redan i systemet",
+      "fieldRequired": "Fältet {{field}} är obligatoriskt",
+      "clientInvalid": "Den valda kunden är inte längre giltig",
+      "duplicate": "En kontakt med de här uppgifterna finns redan.",
+      "destinationInvalid": "Den valda kunden eller destinationen för inkommande ärenden är inte längre giltig",
+      "invalidDataRefresh": "Ogiltiga kontaktuppgifter har angetts. Ladda om och försök igen.",
+      "invalidDataFields": "Ogiltiga kontaktuppgifter har angetts. Kontrollera alla fält och försök igen.",
+      "bulkEmailExists": "En eller flera kontakter har redan den här e-postadressen",
+      "invalidReference": "Ogiltig referens i uppgifterna för uppdatering",
+      "visibilityMissingField": "Ett obligatoriskt fält för synlighetsgruppen saknas.",
+      "visibilityMissingFieldNamed": "Ett obligatoriskt fält för synlighetsgruppen saknas: {{field}}.",
+      "visibilityReferenceInvalid": "Den valda kontakten, synlighetsgruppen eller tavlan är inte längre giltig. Ladda om och försök igen.",
+      "visibilityDuplicate": "En synlighetsgrupp med de här uppgifterna finns redan för den här kunden.",
+      "visibilityInvalidData": "Ogiltiga uppgifter för synlighetsgruppen har angetts. Kontrollera gruppuppgifterna och de valda tavlorna.",
+      "groupNameRequired": "Gruppnamn krävs",
+      "readPermission": "Åtkomst nekad: Kan inte läsa kontakter"
+    }
+  },
+  "portal": {
+    "visibilityGroups": {
+      "scopeLabel": "Ärendesynlighet",
+      "scopeClient": "Alla den här kundens ärenden",
+      "scopeContact": "Endast egna ärenden",
+      "scopeClientDescription": "Medlemmar ser alla ärenden för den här kunden på de valda tavlorna.",
+      "scopeContactDescription": "Medlemmar ser endast ärenden där de är angivna som kontakt. Kundadministratörer ser alla ärenden på de valda tavlorna, även ärenden utan kontakt.",
+      "assignmentHelp": "Tilldela en grupp för att begränsa vilka tavlor och ärenden som visas, eller behåll full kundåtkomst."
+    }
+  }
+}

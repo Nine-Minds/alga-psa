@@ -511,6 +511,7 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "Fax",
       "contact@example.com",
       "+1 (555) 123-4567",
       "https://example.com",
