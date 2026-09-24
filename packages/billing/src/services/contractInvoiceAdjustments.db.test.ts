@@ -1247,6 +1247,43 @@ describe('contract invoice adjustments (DB-backed)', () => {
     }
   });
 
+  it('keeps the discount value column at decimal(12,4) so the prior whole-number range survives', async () => {
+    const bigDiscountId = uuidv4();
+    const typeRow = await db.raw(
+      `SELECT numeric_precision, numeric_scale
+         FROM information_schema.columns
+        WHERE table_name = 'discounts' AND column_name = 'value'`,
+    );
+    expect(Number(typeRow.rows[0].numeric_precision)).toBe(12);
+    expect(Number(typeRow.rows[0].numeric_scale)).toBe(4);
+
+    await db('discounts').insert({
+      tenant,
+      discount_id: bigDiscountId,
+      discount_name: 'Large fixed',
+      discount_type: 'fixed',
+      // The largest value the old decimal(10,2) column could hold.
+      value: 99_999_999.99,
+      start_date: '2026-01-01T00:00:00.000Z',
+      end_date: null,
+      is_active: true,
+      scope: 'invoice',
+    });
+
+    try {
+      const stored = await db('discounts').where({ tenant, discount_id: bigDiscountId }).first('value');
+      expect(Number(stored.value)).toBeCloseTo(99_999_999.99, 2);
+
+      await db('discounts')
+        .where({ tenant, discount_id: bigDiscountId })
+        .update({ discount_type: 'percentage', value: 0.125 });
+      const fractional = await db('discounts').where({ tenant, discount_id: bigDiscountId }).first('value');
+      expect(Number(fractional.value)).toBeCloseTo(0.125, 6);
+    } finally {
+      await db('discounts').where({ tenant, discount_id: bigDiscountId }).delete();
+    }
+  });
+
   it('does not apply a configured discount from another contract of the same client', async () => {
     const otherContractId = uuidv4();
     const otherContractLineId = uuidv4();
@@ -1635,6 +1672,8 @@ describe('contract invoice adjustments (DB-backed)', () => {
   it('resolves the effective line coverage window, anchors on the assignment, and honors is_active', async () => {
     const windowContractId = uuidv4();
     const windowLineId = uuidv4();
+    const assignmentOnlyLineId = uuidv4();
+    const contractEndLineId = uuidv4();
     const windowAssignmentId = uuidv4();
     await db('contracts').insert({
       tenant,
@@ -1643,17 +1682,40 @@ describe('contract invoice adjustments (DB-backed)', () => {
       billing_frequency: 'monthly',
       is_active: true,
     });
-    await db('contract_lines').insert({
-      tenant,
-      contract_line_id: windowLineId,
-      contract_line_name: 'Window line',
-      contract_id: windowContractId,
-      billing_frequency: 'monthly',
-      contract_line_type: 'fixed',
-      is_active: true,
-      start_date: '2026-02-10',
-      end_date: '2026-03-15',
-    });
+    await db('contract_lines').insert([
+      {
+        tenant,
+        contract_line_id: windowLineId,
+        contract_line_name: 'Window line',
+        contract_id: windowContractId,
+        billing_frequency: 'monthly',
+        contract_line_type: 'fixed',
+        is_active: true,
+        start_date: '2026-02-10',
+        end_date: '2026-03-15',
+      },
+      {
+        tenant,
+        contract_line_id: assignmentOnlyLineId,
+        contract_line_name: 'Assignment-only line',
+        contract_id: windowContractId,
+        billing_frequency: 'monthly',
+        contract_line_type: 'fixed',
+        is_active: true,
+      },
+      {
+        tenant,
+        contract_line_id: contractEndLineId,
+        contract_line_name: 'Contract-end line',
+        contract_id: windowContractId,
+        billing_frequency: 'monthly',
+        contract_line_type: 'fixed',
+        is_active: true,
+        start_date: '2026-01-01',
+        // Ends exactly at the assignment end; both paths must stop together.
+        end_date: '2026-12-31',
+      },
+    ]);
     await db('client_contracts').insert({
       tenant,
       client_contract_id: windowAssignmentId,
@@ -1670,7 +1732,11 @@ describe('contract invoice adjustments (DB-backed)', () => {
       (engine as any).tenant = tenant;
       const period = { startDate: '2026-02-01', endDate: '2026-03-01' };
       const lines = await (engine as any).getClientContractLinesForBillingPeriod(clientId, period);
-      const line = (lines as Array<Record<string, any>>).find((row) => row.contract_line_id === windowLineId);
+      const byLine = new Map(
+        (lines as Array<Record<string, any>>).map((row) => [row.contract_line_id, row]),
+      );
+
+      const line = byLine.get(windowLineId);
       expect(line).toBeTruthy();
       // Anchor stays the assignment start; coverage narrows to the authored line.
       expect(line!.start_date).toBe('2026-01-01');
@@ -1678,6 +1744,15 @@ describe('contract invoice adjustments (DB-backed)', () => {
       expect(line!.coverage_end_date).toBe('2026-03-15');
       // Inclusive display end is the day before the half-open line end.
       expect(line!.end_date).toBe('2026-03-14');
+
+      // Assignment-only and line-ending-at-contract-end both stop at the same
+      // half-open boundary the materializer uses.
+      for (const id of [assignmentOnlyLineId, contractEndLineId]) {
+        const row = byLine.get(id);
+        expect(row).toBeTruthy();
+        expect(row!.coverage_end_date).toBe('2026-12-31');
+        expect(row!.end_date).toBe('2026-12-30');
+      }
 
       await db('contract_lines')
         .where({ tenant, contract_line_id: windowLineId })
@@ -1688,6 +1763,8 @@ describe('contract invoice adjustments (DB-backed)', () => {
       ).toBeUndefined();
     } finally {
       await db('client_contracts').where({ tenant, client_contract_id: windowAssignmentId }).delete();
+      await db('contract_lines').where({ tenant, contract_line_id: contractEndLineId }).delete();
+      await db('contract_lines').where({ tenant, contract_line_id: assignmentOnlyLineId }).delete();
       await db('contract_lines').where({ tenant, contract_line_id: windowLineId }).delete();
       await db('contracts').where({ tenant, contract_id: windowContractId }).delete();
     }

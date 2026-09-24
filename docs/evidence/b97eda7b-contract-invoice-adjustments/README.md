@@ -495,3 +495,37 @@ Follow-up fixes from human review of the recurring-terms repair.
 | `tsc --noEmit` billing / types / db | pass |
 | `eslint` changed + new files | 0 errors |
 | `packages/billing` `npx tsup` | pass |
+
+## Review round 2: migration precision and assignment-end alignment
+
+- **Discount precision preserves the prior whole-number range.** The widening
+  migration now targets `decimal(12,4)` (was `decimal(10,4)`): `decimal(10,4)`
+  would have shortened the 8-digit integer range of `decimal(10,2)`
+  (99,999,999.99) to 6 digits and could fail deployment on an existing large
+  fixed value. `decimal(12,4)` keeps 8 integer digits (max 99,999,999.9999) and
+  adds the fractional places. The migration logs the largest existing
+  `|value|`, throws if it would not fit, and verifies the applied precision/scale
+  afterward. A DB test asserts the column is `decimal(12,4)`, round-trips
+  `99,999,999.99`, and still stores `0.125`.
+- **Assignment-end disagreement resolved.** `resolveContractLineBillingWindow`
+  now treats the `client_contracts` window as half-open as well, so the derived
+  engine path and the canonical service-period materializer
+  (`clipRecurringCandidatesToObligationBounds`) agree at the boundary. A
+  cross-path test feeds the same assignment/line to both and asserts the
+  activity window matches and a period starting on the boundary is dropped; the
+  DB query test adds an assignment-only line and a line ending exactly at the
+  contract end and asserts both stop at the same exclusive date.
+
+### Verification (round 2)
+
+| Suite | Result |
+| --- | --- |
+| `packages/billing` unit (`npx vitest run`) | 314 files / 1585 tests |
+| `contractInvoiceAdjustments.db.test.ts` | 29 tests |
+| `billingEngine*.test.ts` unit (7 files) | 50 tests |
+| `billingInvoiceTiming.integration.test.ts` | 63 tests |
+| `contractInvoiceManualCredit.test.ts` + `billingInvoiceGeneration_discounts.test.ts` | 11 tests |
+| `contractLineWindow` (incl. materializer cross-path) | 9 tests |
+| `tsc --noEmit` billing | pass |
+| `eslint` changed/new files | 0 errors |
+| `packages/billing` `npx tsup` | pass |

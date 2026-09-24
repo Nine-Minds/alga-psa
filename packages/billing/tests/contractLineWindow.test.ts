@@ -5,6 +5,7 @@ import {
   normalizeContractLineDate,
   resolveContractLineBillingWindow,
 } from '../src/lib/billing/contractLineWindow';
+import { clipRecurringCandidatesToObligationBounds } from '@alga-psa/shared/billingClients/clipRecurringCandidatesToObligationBounds';
 
 describe('resolveContractLineBillingWindow', () => {
   it('keeps the assignment window and anchor when the line has no authored dates', () => {
@@ -16,8 +17,8 @@ describe('resolveContractLineBillingWindow', () => {
     ).toEqual({
       anchorStart: '2026-01-01',
       coverageStart: '2026-01-01',
-      inclusiveEnd: '2026-12-31',
-      coverageEndExclusive: '2027-01-01',
+      inclusiveEnd: '2026-12-30',
+      coverageEndExclusive: '2026-12-31',
     });
   });
 
@@ -67,8 +68,8 @@ describe('resolveContractLineBillingWindow', () => {
     ).toEqual({
       anchorStart: '2026-01-01',
       coverageStart: '2026-03-01',
-      inclusiveEnd: '2026-09-30',
-      coverageEndExclusive: '2026-10-01',
+      inclusiveEnd: '2026-09-29',
+      coverageEndExclusive: '2026-09-30',
     });
   });
 
@@ -78,6 +79,52 @@ describe('resolveContractLineBillingWindow', () => {
       { start_date: '2026-06-01', end_date: '2026-06-30' },
     );
     expect(window.coverageStart! >= window.coverageEndExclusive!).toBe(true);
+  });
+
+  it('agrees with the service-period materializer for a line ending at the contract end', () => {
+    const assignment = { start_date: '2026-01-01', end_date: '2026-06-30' };
+    const line = { start_date: '2026-01-01', end_date: '2026-06-30' };
+
+    const window = resolveContractLineBillingWindow(assignment, line);
+    const clipped = clipRecurringCandidatesToObligationBounds(
+      [
+        {
+          servicePeriod: {
+            start: '2026-06-01',
+            end: '2026-07-01',
+            semantics: 'half_open' as never,
+          },
+        } as never,
+      ],
+      window.anchorStart as never,
+      window.coverageEndExclusive as never,
+    );
+
+    // Both paths stop at the same exclusive boundary and drop a period that
+    // starts on it, so an authored line ending at the contract end cannot bill
+    // past the line or the contract.
+    expect(window.coverageEndExclusive).toBe('2026-06-30');
+    expect(clipped).toHaveLength(1);
+    expect(clipped[0].activityWindow).toEqual({
+      start: '2026-06-01',
+      end: '2026-06-30',
+      semantics: 'half_open',
+    });
+
+    const dropped = clipRecurringCandidatesToObligationBounds(
+      [
+        {
+          servicePeriod: {
+            start: '2026-07-01',
+            end: '2026-08-01',
+            semantics: 'half_open' as never,
+          },
+        } as never,
+      ],
+      window.anchorStart as never,
+      window.coverageEndExclusive as never,
+    );
+    expect(dropped).toHaveLength(0);
   });
 });
 

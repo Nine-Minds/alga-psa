@@ -30,11 +30,12 @@ export interface ContractLineBillingWindow {
 /**
  * Resolves the billing window for one contract line.
  *
- * The contract assignment end is persisted as an inclusive last day (the
- * existing engine convention adds one day for an exclusive window), while the
- * authored line `end_date` is half-open (`[start, end)`) like the plan states.
- * The two are intersected in exclusive space so a line never bills past its own
- * end and an unbounded line inherits the assignment exactly as before.
+ * The contract assignment window and the authored line window are both
+ * half-open `[start, end)`, matching the canonical recurring service-period
+ * materializer (`clipRecurringCandidatesToObligationBounds`), so the derived
+ * engine path and the persisted path agree at the boundary. A null line bound
+ * inherits the assignment bound. `inclusiveEnd` is the last billed day for
+ * display/charge rows (`coverageEndExclusive - 1`).
  */
 export function resolveContractLineBillingWindow(
   assignment: { start_date?: unknown; end_date?: unknown },
@@ -49,12 +50,9 @@ export function resolveContractLineBillingWindow(
     ? (lineStart > assignmentStart ? lineStart : assignmentStart)
     : (lineStart ?? assignmentStart);
 
-  const assignmentEndExclusive = assignmentEnd
-    ? addDaysToDateOnly(assignmentEnd, 1)
-    : null;
-  const coverageEndExclusive = assignmentEndExclusive && lineEnd
-    ? (lineEnd < assignmentEndExclusive ? lineEnd : assignmentEndExclusive)
-    : (lineEnd ?? assignmentEndExclusive);
+  const coverageEndExclusive = assignmentEnd && lineEnd
+    ? (lineEnd < assignmentEnd ? lineEnd : assignmentEnd)
+    : (lineEnd ?? assignmentEnd);
 
   return {
     anchorStart: assignmentStart,
