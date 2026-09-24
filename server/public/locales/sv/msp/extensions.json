@@ -63,7 +63,7 @@
       "timezone": "Tidszon",
       "selectEndpoint": "Välj en slutpunkt",
       "payloadLabel": "Nyttolast (JSON, valfri)",
-      "payloadHelp": "För GET-slutpunkter ignoreras nyttolasten. För POST-slutpunkter blir nyttolasten anropets kropp. Undvik hemligheter i nyttolaster. Använd tilläggets konfiguration/hemligheter i stället.",
+      "payloadHelp": "För GET-slutpunkter ignoreras nyttolasten. För POST-slutpunkter blir nyttolasten anropets brödtext. Undvik hemligheter i nyttolaster. Använd tilläggets konfiguration/hemligheter i stället.",
       "create": "Skapa schema",
       "creating": "Skapar…",
       "refresh": "Ladda om",
@@ -281,14 +281,14 @@
     "installing": "Installerar…",
     "reset": "Återställ",
     "finalize": "Slutför",
-    "finalizing": "Slutför…",
+    "finalizing": "Slutförs…",
     "cancel": "Avbryt",
     "manageExtensions": "Hantera tillägg",
-    "installAnother": "Installera ytterligare ett tillägg",
+    "installAnother": "Installera ett till",
     "error": "Fel",
     "installed": "Tillägget har installerats",
     "installedName": "{{name}} v{{version}}",
-    "uploadNoKey": "Uppladdningen lyckades men ingen nyckel returnerades",
+    "uploadNoKey": "Uppladdningen lyckades, men ingen nyckel returnerades",
     "manifestMissing": "Det gick inte att extrahera ett giltigt manifest från paketet.",
     "finalizeError": "Ett oväntat fel uppstod när installationen skulle slutföras",
     "installCompleteError": "Tillägget har färdigställts, men installationen slutfördes inte",
@@ -299,7 +299,7 @@
   "installSimple": {
     "title": "Installera tillägg",
     "heading": "Installation av tillägg",
-    "description": "Använd det fullständiga installationsprogrammet för tillägg för att få tillgång till avancerade alternativ."
+    "description": "Använd det fullständiga installationsprogrammet för tillägg om du behöver avancerade alternativ."
   },
   "clientPortal": {
     "loadError": "Det gick inte att ladda information om tilläggets körmiljö",
