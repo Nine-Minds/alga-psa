@@ -277,12 +277,9 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     const showAssigneePicker = canAssignMultipleAgents || canDelegateAssign || isGroupCalendarEntry;
     const assigneeOptions = useMemo(() => {
       if (canAssignOthers || !assignableUserIds) return users;
-      // A group-calendar entry the viewer may edit/manage may be assigned to any
-      // active internal user, not just the viewer's own personal edit shares.
-      if (isGroupCalendarEntry && canEditFields) return users;
       const allowed = new Set([...assignableUserIds, ...(entryData.assigned_user_ids ?? [])]);
       return users.filter((user) => allowed.has(user.user_id));
-    }, [assignableUserIds, canAssignOthers, entryData.assigned_user_ids, users, isGroupCalendarEntry, canEditFields]);
+    }, [assignableUserIds, canAssignOthers, entryData.assigned_user_ids, users]);
     const calendarSelectOptions = useMemo(() => {
       const options = [
         { value: 'personal', label: t('entryPopup.fields.calendarPersonal', { defaultValue: 'Personal' }) },

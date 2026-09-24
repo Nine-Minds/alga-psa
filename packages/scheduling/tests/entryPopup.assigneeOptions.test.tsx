@@ -5,9 +5,10 @@
  * Regression for the EntryPopup assignee picker: the option list must come from
  * the host's `user_schedule:read`-gated user list (ScheduleCalendar feeds
  * getShareableUsers), not getAllUsers/user:read. A viewer without user:read must
- * still see active colleagues, a delegate must be limited to their assignable
- * set (plus the stored assignee), and a stored assignee's real name must render
- * even in a read-only entry — together with a "View Entry" title.
+ * still see active colleagues, a delegate (and a group-calendar editor without
+ * user_schedule:update) must be limited to their assignable set (plus stored
+ * assignees), and a stored assignee's real name must render even in a read-only
+ * entry — together with a "View Entry" title.
  */
 import React from 'react';
 import { render, screen } from '@testing-library/react';
@@ -258,22 +259,28 @@ describe('EntryPopup assignee options', () => {
     getUserAvatarUrlsBatchAction.mockResolvedValue({});
   });
 
-  it('offers any active internal user for a group-calendar entry the viewer can edit', async () => {
+  it('limits a group-calendar editor without user_schedule:update to the viewer, edit shares, and stored assignees', async () => {
     render(
       <EntryPopup
         {...baseProps}
         event={entry({ calendar_id: 'group-cal-1', can_edit: true })}
         users={[VIEWER, ALICE, TIN, CAROL]}
-        // A group edit must ignore the viewer's narrow personal-share set.
-        assignableUserIds={[VIEWER.user_id]}
+        // Group calendar edit access does not widen the assignee set: the server
+        // still rejects assignees the viewer has no edit share on (PRD l.122).
+        assignableUserIds={[VIEWER.user_id, ALICE.user_id]}
       />
     );
 
     expect(await screen.findByTestId('user-picker')).toBeInTheDocument();
-    // The arbitrary colleague is offered, proving the group branch bypasses the
-    // delegate filter.
-    expect(screen.getByTestId(`user-option-${CAROL.user_id}`)).toBeInTheDocument();
-    // The stored assignee's real name is displayed.
+    expect(screen.getByTestId(`user-option-${VIEWER.user_id}`)).toBeInTheDocument();
+    expect(screen.getByTestId(`user-option-${ALICE.user_id}`)).toBeInTheDocument();
+    // The stored assignee is kept even though they are outside the edit-share set.
+    expect(screen.getByTestId(`user-option-${TIN.user_id}`)).toBeInTheDocument();
+    // An arbitrary colleague outside the viewer/edit-share/stored sets is not offered.
+    expect(screen.queryByTestId(`user-option-${CAROL.user_id}`)).toBeNull();
+    expect(
+      screen.getByTestId('user-picker-options').querySelectorAll('li')
+    ).toHaveLength(3);
     expect(pickerValue()).toBe('Tin Woodman');
   });
 

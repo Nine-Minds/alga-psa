@@ -172,7 +172,7 @@
   },
   {
     "id": "T018",
-    "description": "Component: EntryPopup assignee picker is sourced from the user_schedule:read-gated shareable list (ScheduleCalendar feeds getShareableUsers, and passes stored assignee ids so inactive ones still resolve); a group-calendar editor may assign any active internal user; a delegate is limited to the viewer plus Edit-share owners plus the stored assignee; a read-only entry shows the stored assignee's real name and a 'View Entry' title.",
+    "description": "Component: EntryPopup assignee picker is sourced from the user_schedule:read-gated shareable list (ScheduleCalendar feeds getShareableUsers, and passes stored assignee ids so inactive ones still resolve); a group-calendar editor without user_schedule:update is limited to the viewer plus Edit-share owners plus stored assignees (mirroring the server's canAssignUser, PRD l.122); a delegate has the same limit; a read-only entry shows the stored assignee's real name and a 'View Entry' title.",
     "implemented": true,
     "featureIds": [
       "F039"
