@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
@@ -121,16 +121,31 @@ describe('ManualInvoices billing profile', () => {
   });
 
   it('shows no profile control for a client with a single profile', async () => {
-    mocks.loadProfiles.mockResolvedValue([profile('profile-default', 'Northstar Dental Group', true)]);
+    // Resolved inside `act` rather than with `mockResolvedValue`: the assertion
+    // that matters is about the state *after* the profile list lands, and a
+    // bare `waitFor(loadProfiles called)` returns before that update commits —
+    // which would let a pre-selection bug pass unnoticed.
+    let settleProfiles: (profiles: unknown[]) => void = () => {};
+    mocks.loadProfiles.mockReturnValue(
+      new Promise((resolve) => {
+        settleProfiles = resolve;
+      }),
+    );
 
     render(<ManualInvoices {...props} />);
     fireEvent.click(screen.getByText('pick client'));
 
     await waitFor(() => expect(mocks.loadProfiles).toHaveBeenCalledWith('client-1'));
+    await act(async () => {
+      settleProfiles([profile('profile-default', 'Northstar Dental Group', true)]);
+    });
+
     expect(screen.queryByRole('combobox')).toBeNull();
 
     fireEvent.click(screen.getByText('Generate Invoice'));
     await waitFor(() => expect(mocks.generateManualInvoice).toHaveBeenCalled());
+    // The single-profile path must record exactly what it recorded before this
+    // feature existed: no attribution at all.
     expect(mocks.generateManualInvoice.mock.calls[0][0].billingProfileId).toBeNull();
   });
 });

@@ -254,7 +254,9 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
   const [hasSelectedClientBillingEmail, setHasSelectedClientBillingEmail] = useState<boolean | null>(null);
   // Which of the client's billing profiles this invoice bills. A client with a
-  // single profile never sees the control (D6) and bills its default.
+  // single profile never sees the control (D6) and stays NULL — the write path
+  // already resolves an unattributed invoice to the client default, so the
+  // unsegmented path is byte-identical to before rather than newly stamped.
   const [selectedBillingProfileId, setSelectedBillingProfileId] = useState<string | null>(null);
   const {
     profiles: billingProfiles,
@@ -314,14 +316,17 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   }, [clients]);
 
   // Pre-select the client's default profile — the operator picks another only
-  // when this invoice belongs to a different segment.
+  // when this invoice belongs to a different segment. Only a segmented client
+  // gets a pick at all: with one profile there is nothing to choose and
+  // stamping it would change what an ordinary client's invoice records.
   useEffect(() => {
-    setSelectedBillingProfileId((current) =>
-      current && billingProfiles.some((profile) => profile.billing_profile_id === current)
+    setSelectedBillingProfileId((current) => {
+      if (!isBillingProfileSegmented) return null;
+      return current && billingProfiles.some((profile) => profile.billing_profile_id === current)
         ? current
-        : defaultBillingProfile?.billing_profile_id ?? null,
-    );
-  }, [billingProfiles, defaultBillingProfile]);
+        : defaultBillingProfile?.billing_profile_id ?? null;
+    });
+  }, [billingProfiles, defaultBillingProfile, isBillingProfileSegmented]);
 
   useEffect(() => {
     if (sourceSalesOrderId && invoiceableSalesOrders.some((so) => so.so_id === sourceSalesOrderId)) {
