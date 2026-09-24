@@ -3,10 +3,16 @@ import React from 'react';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
-import { LineItem, type EditableItem } from './LineItem';
+import { LineItem, resolveLineItemAmount, type EditableItem } from './LineItem';
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
-  useTranslation: () => ({ t: (_key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? _key }),
+  useTranslation: () => ({
+    t: (_key: string, options?: Record<string, unknown>) => {
+      const template = (options?.defaultValue as string | undefined) ?? _key;
+      return template.replace(/\{\{(\w+)\}\}/g, (_match, name: string) =>
+        String(options?.[name] ?? ''));
+    },
+  }),
 }));
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
   default: ({ id, options, value, onValueChange }: any) => (
@@ -94,4 +100,57 @@ it('re-syncs the editor when the item data genuinely changes', () => {
   expect((document.getElementById('service-select') as HTMLSelectElement).value).toBe('svc-2');
   expect((document.getElementById('quantity-input') as HTMLInputElement).value).toBe('5');
   expect((document.getElementById('rate-input') as HTMLInputElement).value).toBe('9');
+});
+
+it('resolves a quantity-derived credit as quantity × rate', () => {
+  expect(resolveLineItemAmount({
+    is_discount: true,
+    discount_type: 'fixed',
+    is_manual_credit: true,
+    quantity: 3,
+    rate: -10000,
+  })).toBe(-30000);
+});
+
+it('resolves an authored fixed discount as quantity-independent', () => {
+  expect(resolveLineItemAmount({
+    is_discount: true,
+    discount_type: 'fixed',
+    is_manual_credit: false,
+    quantity: 3,
+    rate: -10000,
+  })).toBe(-10000);
+  // A missing flag (legacy rows before the column existed) is authored-shaped.
+  expect(resolveLineItemAmount({
+    is_discount: true,
+    discount_type: 'fixed',
+    quantity: 3,
+    rate: -10000,
+  })).toBe(-10000);
+});
+
+it('shows a quantity-derived credit row at quantity × rate', () => {
+  renderLineItem({
+    ...baseItem,
+    is_discount: true,
+    discount_type: 'fixed',
+    is_manual_credit: true,
+    quantity: 3,
+    rate: -10000,
+  });
+
+  expect(screen.getByText('Amount: -$300.00')).toBeTruthy();
+});
+
+it('shows an authored fixed discount row as quantity-independent', () => {
+  renderLineItem({
+    ...baseItem,
+    is_discount: true,
+    discount_type: 'fixed',
+    is_manual_credit: false,
+    quantity: 3,
+    rate: -10000,
+  });
+
+  expect(screen.getByText('Amount: -$100.00')).toBeTruthy();
 });

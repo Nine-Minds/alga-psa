@@ -25,7 +25,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { Card } from '@alga-psa/ui/components/Card';
-import { LineItem, ServiceOption, EditableItem as LineItemEditableItem } from './LineItem'; // Import EditableItem type from LineItem
+import { LineItem, ServiceOption, EditableItem as LineItemEditableItem, resolveLineItemAmount } from './LineItem'; // Import EditableItem type from LineItem
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import type { IClient } from '@alga-psa/types';
@@ -120,6 +120,7 @@ const baseDefaultItem: Omit<EditableInvoiceItem, 'invoice_id'> = {
   rate: 0, // Represents unit_price in cents
   is_discount: false,
   is_manual: true,
+  is_manual_credit: false,
   isExisting: false,
   isRemoved: false,
   is_taxable: false, // Default to non-taxable until a service with tax_rate_id is selected
@@ -284,6 +285,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
         manual_line_metadata: (item as IInvoiceCharge).manual_line_metadata ?? null,
         location_id: item.location_id ?? null,
         billing_profile_id: item.billing_profile_id ?? null,
+        is_manual_credit: item.is_manual_credit ?? false,
         isExisting: true,
         isRemoved: false,
       });
@@ -482,6 +484,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
               manual_line_metadata: (item as IInvoiceCharge).manual_line_metadata ?? null,
               location_id: item.location_id ?? null,
               billing_profile_id: item.billing_profile_id ?? null,
+              is_manual_credit: item.is_manual_credit ?? false,
               isExisting: true,
               isRemoved: false,
             };
@@ -905,6 +908,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
             manual_line_metadata: (item as IInvoiceCharge).manual_line_metadata ?? null,
             location_id: item.location_id ?? null,
             billing_profile_id: item.billing_profile_id ?? null,
+            is_manual_credit: item.is_manual_credit ?? false,
             isExisting: true,
             isRemoved: false,
         }));
@@ -983,7 +987,9 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           : subtotal;
         total -= (applicableAmount * item.discount_percentage) / 100;
       } else if (item.discount_type === 'fixed') {
-        total += item.quantity * item.rate; // Rate is already negative and in cents
+        // Shared with the row summary; distinguishes an authored fixed discount
+        // (quantity-independent) from a quantity-derived operator credit.
+        total += resolveLineItemAmount(item);
       }
     }
     return Math.round(total); // Return total in cents
@@ -1082,6 +1088,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
       isExisting: item.isExisting,
       isRemoved: item.isRemoved,
       is_discount: item.is_discount,
+      is_manual_credit: item.is_manual_credit ?? false,
       discount_type: item.discount_type,
       discount_percentage: item.discount_percentage,
       applies_to_item_id: item.applies_to_item_id,

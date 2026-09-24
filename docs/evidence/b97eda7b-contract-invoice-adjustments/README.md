@@ -132,6 +132,14 @@ stale `net_amount` on edited one-time charges:
   `mapDbInvoiceToWasmViewModel` adapter that produced the verified preview and
   PDF, so the amounts it renders are the same rows; only the portal session and
   its own chrome were not exercised.
+- **Accounting export**: **not exercised against a live vendor and cannot pass
+  as-is by design.** The automatic settlement and a freeform one-time charge
+  carry no `service_id`, so `assertInvoiceExportReady`
+  (`packages/billing/src/services/accountingSync/exportReadiness.ts:135`) blocks
+  the QBO/Xero export with the actionable “line has no service assigned”
+  blocker until an operator classifies it. That is the plan's requirement
+  (“never fabricate recurring details to bypass this check”), not a defect; no
+  live QuickBooks/Xero export was attempted for this draft.
 
 ## Expected vs actual
 
@@ -241,6 +249,43 @@ cd packages/billing && npx tsup
   moving the same discount onto the billed line applies `25% × $3,900 = $975`).
   This proves the strict line-level eligibility change on the fixture it
   actually affects.
+
+## Completion round: manual-credit UI and currency regression (2026-09-23)
+
+The server half of the `is_manual_credit` distinction landed in `432b29a5bd`;
+this round finishes the UI half and closes the test-suite gap it exposed.
+
+- The editor now resolves a row's displayed amount through one shared helper,
+  `resolveLineItemAmount` (`packages/billing/src/components/billing-dashboard/LineItem.tsx`):
+  a quantity-derived operator credit (`is_manual_credit`) is `quantity × rate`,
+  an authored fixed discount is quantity-independent (`-abs(rate)`), a
+  percentage discount is `0` (priced server-side), and an ordinary charge is
+  `quantity × rate`. `ManualInvoices.calculateManualItemsTotal` and the loaded
+  row mapping use the same helper / flag, and
+  `models/invoice.ts` selects `ic.is_manual_credit`.
+- Non-USD regression added to
+  `packages/billing/src/services/contractInvoiceAdjustments.db.test.ts`:
+  an EUR draft with a manual partial-period line reconciles the same 10%
+  automatic discount to `-40_500` minor units and totals `405_000 / -40_500 /
+  364_500`, proving the adjustment path does not substitute USD or divide by
+  100. Three-decimal currency precision remains out of scope per the plan.
+- Repaired the `invoiceModification.updateDraftInvoiceProperties.test.ts`
+  query-builder mock, which lacked `forUpdate` and so failed the finalized-
+  invoice guard added by the editability work (a real regression from this
+  branch, not a product defect).
+
+Verification snapshot this round (all green, sequential runs — parallel vitest
+processes corrupt the shared `test_database`):
+
+| Suite | Result |
+| --- | --- |
+| `packages/billing` unit (full `npx vitest run`) | 311 files / 1555 tests |
+| `contractInvoiceAdjustments.db.test.ts` | 19 tests |
+| `contractInvoiceManualCredit.test.ts` | 4 tests |
+| `billingInvoiceGeneration_discounts.test.ts` | 4 tests |
+| `exportReadiness.test.ts` | 9 tests |
+| `tsc --noEmit` billing / types / db | pass |
+| `packages/billing` `npx tsup` | pass |
 
 ## Cleanup / caveats
 

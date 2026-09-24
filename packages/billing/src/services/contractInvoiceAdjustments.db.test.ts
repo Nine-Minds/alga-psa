@@ -100,7 +100,9 @@ interface InvoiceFixture {
   automaticDiscountItemId: string;
 }
 
-async function createDraftWithGeneratedChargeAndDiscount(): Promise<InvoiceFixture> {
+async function createDraftWithGeneratedChargeAndDiscount(
+  currencyCode = 'USD',
+): Promise<InvoiceFixture> {
   const invoiceId = uuidv4();
   const generatedChargeId = uuidv4();
   const automaticDiscountItemId = uuidv4();
@@ -116,7 +118,7 @@ async function createDraftWithGeneratedChargeAndDiscount(): Promise<InvoiceFixtu
     total_amount: 351000,
     status: 'draft',
     client_id: clientId,
-    currency_code: 'USD',
+    currency_code: currencyCode,
     is_manual: false,
     client_contract_id: clientContractId,
   });
@@ -317,6 +319,32 @@ describe('contract invoice adjustments (DB-backed)', () => {
     expect(Number(discountRows[0].net_amount)).toBe(-40_500);
     expect(discountRows[0].adjustment_source_id).toBe(discountId);
     expect(Number(discountRows[0].adjustment_base_amount)).toBe(405_000);
+
+    const totals = await sumChargeNet(fixture.invoiceId);
+    expect(totals.gross).toBe(405_000);
+    expect(totals.discounts).toBe(-40_500);
+    expect(totals.net).toBe(364_500);
+  });
+
+  it('keeps a non-USD invoice settlement in the invoice currency minor units', async () => {
+    const fixture = await createDraftWithGeneratedChargeAndDiscount('EUR');
+    await insertManualPartialPeriodCharge({
+      invoiceId: fixture.invoiceId,
+      generatedChargeId: fixture.generatedChargeId,
+    });
+
+    await db.transaction(async (trx) => {
+      await reconcileAutomaticInvoiceDiscounts(trx, tenant, fixture.invoiceId);
+    });
+
+    const invoice = await db('invoices').where({ tenant, invoice_id: fixture.invoiceId }).first();
+    // The adjustment path is currency-agnostic: it never substitutes USD, and
+    // the 10% discount stays the same integer minor-unit amount in EUR.
+    expect(invoice.currency_code).toBe('EUR');
+    const discountRows = await db('invoice_charges')
+      .where({ tenant, invoice_id: fixture.invoiceId, adjustment_source_kind: 'discount' });
+    expect(discountRows).toHaveLength(1);
+    expect(Number(discountRows[0].net_amount)).toBe(-40_500);
 
     const totals = await sumChargeNet(fixture.invoiceId);
     expect(totals.gross).toBe(405_000);

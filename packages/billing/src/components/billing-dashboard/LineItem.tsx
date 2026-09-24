@@ -26,6 +26,12 @@ export interface EditableItem { // Add export
   isExisting?: boolean;
   isRemoved?: boolean;
   is_discount?: boolean;
+  /**
+   * True for a quantity-derived operator credit (a negative-rate charge
+   * persisted as a fixed discount-like row). Authored fixed discounts leave it
+   * false and stay quantity-independent.
+   */
+  is_manual_credit?: boolean;
   discount_type?: DiscountType;
   discount_percentage?: number;
   applies_to_item_id?: string;
@@ -33,6 +39,28 @@ export interface EditableItem { // Add export
   location_id?: string | null;
   /** Billing profile this one-time line is attributed to. */
   billing_profile_id?: string | null;
+}
+
+/**
+ * Resolves a line's monetary amount the way the server persists it.
+ *
+ * An ordinary charge is `quantity × rate`. A percentage discount is priced by
+ * the billing engine (0 here). A fixed discount has two persisted shapes: an
+ * authored fixed discount is quantity-independent (`-abs(rate)`, matching
+ * `calculateNetAmount`), while a quantity-derived operator credit (a
+ * negative-rate charge reloaded as a fixed discount) is `quantity × rate`.
+ * `is_manual_credit` is the flag that distinguishes them.
+ */
+export function resolveLineItemAmount(
+  item: Pick<EditableItem, 'is_discount' | 'discount_type' | 'quantity' | 'rate' | 'is_manual_credit'>,
+): number {
+  if (!item.is_discount) {
+    return item.quantity * item.rate;
+  }
+  if (item.discount_type === 'percentage') {
+    return 0;
+  }
+  return item.is_manual_credit ? item.quantity * item.rate : -Math.abs(item.rate);
 }
 
 interface LineItemProps {
@@ -96,6 +124,7 @@ export const LineItem: React.FC<LineItemProps> = ({
     description: item.description,
     rate: item.rate,
     is_discount: item.is_discount,
+    is_manual_credit: item.is_manual_credit,
     discount_type: item.discount_type,
     discount_percentage: item.discount_percentage,
     applies_to_item_id: item.applies_to_item_id,
@@ -150,14 +179,8 @@ export const LineItem: React.FC<LineItemProps> = ({
 
   const selectedService = serviceOptions.find(s => s.value === editState.service_id) as ServiceOption | undefined;
   
-  // Calculate subtotal
-  let subtotal = editState.quantity * editState.rate;
-  
-  // For percentage discounts, we don't calculate a monetary value here
-  // since it will be calculated by the billing engine based on the total
-  if (editState.is_discount && editState.discount_type === 'percentage') {
-    subtotal = 0; // The actual amount will be calculated server-side
-  }
+  // Calculate subtotal (percentage discounts are priced server-side as 0 here)
+  const subtotal = resolveLineItemAmount(editState);
 
   // Convert rate to dollars for display (only for non-percentage discounts)
   const rateInDollars = editState.rate / 100;
@@ -287,7 +310,7 @@ export const LineItem: React.FC<LineItemProps> = ({
               <span className="text-muted-foreground">
                 {editState.discount_type === 'percentage'
                   ? `${editState.discount_percentage}%`
-                  : `${currencySymbol}${(Math.abs(editState.rate) / 100).toFixed(2)}`}
+                  : `${currencySymbol}${(Math.abs(subtotal) / 100).toFixed(2)}`}
                 {editState.applies_to_item_id && (
                   <>
                     <span className="mx-2 text-muted-foreground">|</span>
