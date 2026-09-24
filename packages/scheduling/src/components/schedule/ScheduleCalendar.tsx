@@ -30,7 +30,9 @@ import EntryPopup from './EntryPopup';
 import { CalendarStyleProvider } from './CalendarStyleProvider';
 import TechnicianSidebar from './TechnicianSidebar';
 import WeeklyScheduleEvent from './WeeklyScheduleEvent';
+import MonthScheduleChip from './MonthScheduleChip';
 import { ScheduleCalendarEventContext, ScheduleCalendarEventRenderer } from './ScheduleCalendarEventRenderer';
+import { workItemFills } from '../../lib/scheduleChipInk';
 import { getScheduleEntries, addScheduleEntry, updateScheduleEntry as updateScheduleEntryAction, deleteScheduleEntry, getAppointmentRequestById, IAppointmentRequest } from '@alga-psa/scheduling/actions';
 import { IEditScope, IScheduleEntry, DeletionValidationResult } from '@alga-psa/types';
 import { produce } from 'immer';
@@ -202,26 +204,6 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
     setSelectedEvent(null);
   };
 
-  const workItemColors: Record<WorkItemType, string> = {
-    ticket: 'rgb(var(--color-primary-200))',
-    project_task: 'rgb(var(--color-secondary-100))',
-    non_billable_category: 'rgb(var(--color-event-non-billable))',
-    ad_hoc: 'rgb(var(--color-border-200))',
-    interaction: 'rgb(var(--color-event-interaction))',
-    appointment_request: 'rgb(var(--color-event-appointment))',
-    opportunity_step: 'rgb(var(--color-event-opportunity))',
-  };
-
-  const workItemHoverColors: Record<WorkItemType, string> = {
-    ticket: 'rgb(var(--color-primary-200))',
-    project_task: 'rgb(var(--color-secondary-200))',
-    non_billable_category: 'rgb(var(--color-event-non-billable-hover))',
-    ad_hoc: 'rgb(var(--color-border-300))',
-    interaction: 'rgb(var(--color-event-interaction-hover))',
-    appointment_request: 'rgb(var(--color-event-appointment-hover))',
-    opportunity_step: 'rgb(var(--color-event-opportunity-hover))',
-  };
-
   const getViewLabel = useCallback((calendarView: View) => {
     const fallbackMap: Record<View, string> = {
       month: 'Month',
@@ -267,11 +249,11 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
   const Legend = () => (
     <div className="flex justify-between items-center mb-4 p-2 rounded-lg bg-opacity-50">
       <div className="flex justify-center space-x-4 flex-1">
-        {Object.entries(workItemColors).map(([type, color]): React.JSX.Element => (
+        {Object.entries(workItemFills).map(([type, fill]): React.JSX.Element => (
           <div key={type} className="flex items-center">
             <div
               className="w-4 h-4 mr-2 rounded"
-              style={{ backgroundColor: color }}
+              style={{ backgroundColor: `rgb(var(${fill}))` }}
             ></div>
             <span className="capitalize text-sm font-medium text-[rgb(var(--color-text-900))]">
               {getWorkItemLabel(type as WorkItemType)}
@@ -1045,24 +1027,20 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
       const opacity = isPrimary ? 1 : (isComparison ? 0.3 : 1);
 
       return (
-        <div
-          className={`h-full w-full p-1 rounded text-xs ${isPrimary ? 'font-semibold' : ''} flex items-center`}
-          style={{
-            backgroundColor: workItemColors[scheduleEvent.work_item_type] || 'rgb(var(--color-border-200))',
-            minHeight: '30px',
-            cursor: 'pointer',
-            opacity
-          }}
+        <MonthScheduleChip
+          workItemType={scheduleEvent.work_item_type}
+          isPrimary={Boolean(isPrimary)}
+          opacity={opacity}
+          tooltip={tooltipTitle}
           onClick={(e) => handleSelectEvent(scheduleEvent as unknown as object, e as unknown as React.SyntheticEvent<HTMLElement>)}
           onMouseEnter={() => setHoveredEventId(scheduleEvent.entry_id)}
           onMouseLeave={() => setHoveredEventId(null)}
-          title={tooltipTitle}
         >
           {isMultiDay && (
             <CalendarDaysIcon className="w-3 h-3 mr-1 opacity-70 flex-shrink-0" />
           )}
           <span className="truncate">{mainTitle}</span>
-        </div>
+        </MonthScheduleChip>
       );
     }
 
