@@ -14,6 +14,7 @@ import {
   resolveRecurringAuthoringPolicy,
 } from '@alga-psa/shared/billingClients/recurringAuthoringPolicy';
 import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
+import { toDateOnly } from '../lib/billing/dateOnly';
 
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -115,11 +116,18 @@ function normalizeDetailedContractLine<
   T extends {
     cadence_owner?: IContractLineMapping['cadence_owner'] | null;
     billing_timing?: IContractLineMapping['billing_timing'] | null;
+    start_date?: string | Date | null;
+    end_date?: string | Date | null;
   },
 >(
   line: T,
 ): T & Pick<IContractLineMapping, 'cadence_owner' | 'billing_timing'> {
-  return normalizeLiveRecurringStorage(line);
+  const normalized = normalizeLiveRecurringStorage(line);
+  return {
+    ...normalized,
+    ...('start_date' in line ? { start_date: toDateOnly(line.start_date) } : {}),
+    ...('end_date' in line ? { end_date: toDateOnly(line.end_date) } : {}),
+  } as T & Pick<IContractLineMapping, 'cadence_owner' | 'billing_timing'>;
 }
 
 type DetailedContractLineResultRow =
@@ -505,6 +513,7 @@ export const getDetailedContractLines = withAuth(async (user, { tenant }, contra
             'lines.display_order',
             'lines.custom_rate',
             'lines.cadence_owner',
+            'lines.invoice_line_description',
             'lines.created_at',
             'lines.template_line_name as contract_line_name',
             'lines.billing_frequency',
