@@ -94,6 +94,18 @@ export interface RenderedRemoteAccessLink {
   url: string | null;
 }
 
+export const hasRemoteAccessLinks = withAuth(async (user, { tenant }): Promise<boolean> => {
+  if (!await hasPermission(user, 'asset', 'read')) {
+    throw new Error('Permission denied: Cannot read assets.');
+  }
+  const { knex } = await createTenantKnex();
+  const link = await tenantDb(knex, tenant)
+    .table('asset_remote_access_links')
+    .select('link_id')
+    .first();
+  return Boolean(link);
+});
+
 export const getRemoteAccessLinksForAsset = withAuth(async (
   user,
   { tenant },

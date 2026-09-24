@@ -15,6 +15,7 @@ export interface RemoteAccessButtonProps {
   variant?: 'default' | 'secondary' | 'ghost' | 'outline';
   size?: 'default' | 'sm' | 'lg';
   className?: string;
+  hasTemplateLinks?: boolean;
 }
 
 const ninjaOneTypes: AssetRemoteConnectionType[] = ['splashtop', 'teamviewer', 'vnc', 'rdp', 'shell'];
@@ -29,7 +30,7 @@ function connectionLabel(type: AssetRemoteConnectionType, t: (key: string) => st
   return t(`remoteAccess.connectionTypes.${type}`);
 }
 
-export function RemoteAccessButton({ asset, variant = 'default', size = 'sm', className = '' }: RemoteAccessButtonProps) {
+export function RemoteAccessButton({ asset, variant = 'default', size = 'sm', className = '', hasTemplateLinks = false }: RemoteAccessButtonProps) {
   const { t } = useTranslation('msp/assets');
   const { rmm } = useAssetCrossFeature();
   const [availableTypes, setAvailableTypes] = useState<AssetRemoteConnectionType[] | null>(null);
@@ -40,6 +41,7 @@ export function RemoteAccessButton({ asset, variant = 'default', size = 'sm', cl
   const [error, setError] = useState(false);
   const [assetLinks, setAssetLinks] = useState<RenderedRemoteAccessLink[]>([]);
   const candidates = useMemo(() => asset.rmm_provider ? providerTypes[asset.rmm_provider] ?? [] : [], [asset.rmm_provider]);
+  const hasRmmCandidates = Boolean(asset.rmm_provider && asset.rmm_device_id && candidates.length > 0);
 
   const loadOptions = useCallback(async () => {
     if (hasLoadedOptions || isLoadingOptions) return;
@@ -59,6 +61,8 @@ export function RemoteAccessButton({ asset, variant = 'default', size = 'sm', cl
   }, [asset.asset_id, asset.rmm_device_id, asset.rmm_provider, candidates, hasLoadedOptions, isLoadingOptions, rmm]);
 
   const availableRmmTypes = availableTypes?.filter((type) => candidates.includes(type)) ?? [];
+
+  if (!hasRmmCandidates && !hasTemplateLinks) return null;
 
   const connect = async (type: AssetRemoteConnectionType) => {
     setError(false);

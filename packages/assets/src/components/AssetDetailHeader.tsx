@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState, useTransition } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSWRConfig } from 'swr';
 import {
@@ -26,6 +26,7 @@ import { getIconComponent } from '@alga-psa/ui/components/IconPicker';
 import type { Asset, DeletionValidationResult } from '@alga-psa/types';
 import { useAssetCrossFeature } from '../context/AssetCrossFeatureContext';
 import { RemoteAccessButton } from './RemoteAccessButton';
+import { hasRemoteAccessLinks } from '../actions/remoteAccessLinkActions';
 import { getRmmProviderDisplayName } from '../lib/rmmProviderDisplay';
 import { deleteAsset } from '../actions/assetActions';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
@@ -72,6 +73,8 @@ export const AssetDetailHeader: React.FC<AssetDetailHeaderProps> = ({
   isRebooting,
   onEdit
 }) => {
+  const [hasTemplateLinks, setHasTemplateLinks] = useState(false);
+  useEffect(() => { void hasRemoteAccessLinks().then(setHasTemplateLinks).catch(() => setHasTemplateLinks(false)); }, []);
   const { t } = useTranslation('msp/assets');
   const router = useRouter();
   const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false);
@@ -198,12 +201,7 @@ export const AssetDetailHeader: React.FC<AssetDetailHeaderProps> = ({
             id="asset-detail-print-button"
             variant="outline"
           />
-          {asset.rmm_provider && (
-            <RemoteAccessButton
-              asset={asset}
-              variant="default"
-            />
-          )}
+          <RemoteAccessButton asset={asset} variant="default" hasTemplateLinks={hasTemplateLinks} />
           
           <Button 
             id="create-ticket-header-btn"

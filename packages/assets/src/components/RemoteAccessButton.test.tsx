@@ -33,9 +33,9 @@ afterEach(() => {
 beforeEach(() => mockGetLinks.mockResolvedValue([]));
 
 describe('RemoteAccessButton availability', () => {
-  it('stays visible and does not fetch options until the menu opens', () => {
-    render(<RemoteAccessButton asset={asset()} />);
-    expect(screen.getByText('remoteAccess.remoteAccess')).toBeTruthy();
+  it('renders nothing without RMM candidates or configured template links', () => {
+    const { container } = render(<RemoteAccessButton asset={asset()} hasTemplateLinks={false} />);
+    expect(container.firstChild).toBeNull();
     expect(mockRmm.getAssetRemoteControlTypes).not.toHaveBeenCalled();
   });
 
@@ -46,6 +46,14 @@ describe('RemoteAccessButton availability', () => {
     fireEvent.click(screen.getByTestId('open-menu'));
     await vi.waitFor(() => expect(mockRmm.getAssetRemoteControlTypes).toHaveBeenCalledWith('asset-1'));
     expect(await screen.findByText('remoteAccess.links.noneAvailable')).toBeTruthy();
+  });
+
+  it('keeps Desktop and Shell options available for an RMM asset', async () => {
+    mockRmm.getAssetRemoteControlTypes.mockResolvedValue(['splashtop', 'shell']);
+    render(<RemoteAccessButton asset={asset({ rmm_provider: 'ninjaone', rmm_device_id: '123' })} />);
+    fireEvent.click(screen.getByTestId('open-menu'));
+    expect(await screen.findByText('remoteAccess.remoteDesktop')).toBeTruthy();
+    expect(await screen.findByText('remoteAccess.remoteShell')).toBeTruthy();
   });
 
   it('renders only provider-reported supported types and fetches the selected URL', async () => {
@@ -81,7 +89,7 @@ describe('RemoteAccessButton availability', () => {
   it('shows configured remote links on an asset without an RMM provider', async () => {
     mockGetLinks.mockResolvedValue([{ label: 'ScreenConnect', url: 'https://remote.example/asset' }]);
     const open = vi.spyOn(window, 'open').mockImplementation(() => null);
-    render(<RemoteAccessButton asset={asset()} />);
+    render(<RemoteAccessButton asset={asset()} hasTemplateLinks />);
     fireEvent.click(screen.getByTestId('open-menu'));
     const link = await screen.findByText('ScreenConnect');
     link.closest('button')?.click();
@@ -95,7 +103,7 @@ describe('RemoteAccessButton availability', () => {
       { label: 'Serial link', url: null },
     ]);
     const open = vi.spyOn(window, 'open').mockImplementation(() => null);
-    render(<RemoteAccessButton asset={asset()} />);
+    render(<RemoteAccessButton asset={asset()} hasTemplateLinks />);
     fireEvent.click(screen.getByTestId('open-menu'));
 
     const unavailableLink = await screen.findByText('Serial link');

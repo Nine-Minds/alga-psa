@@ -14,6 +14,7 @@ import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { RmmStatusIndicator } from './RmmStatusIndicator';
 import { RemoteAccessButton } from './RemoteAccessButton';
+import { hasRemoteAccessLinks } from '../actions/remoteAccessLinkActions';
 import { SearchInput } from '@alga-psa/ui/components/SearchInput';
 import Pagination from '@alga-psa/ui/components/Pagination';
 import { AssetDetailDrawerClient } from './AssetDetailDrawerClient';
@@ -52,6 +53,8 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
     initialAssets,
 }: AssociatedAssetsProps) {
     const { t } = useTranslation('msp/assets');
+    const [hasTemplateLinks, setHasTemplateLinks] = useState(false);
+    useEffect(() => { void hasRemoteAccessLinks().then(setHasTemplateLinks).catch(() => setHasTemplateLinks(false)); }, []);
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [associatedAssets, setAssociatedAssets] = useState<AssetAssociation[]>([]);
@@ -538,11 +541,12 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                                 {getAssetStatusLabel(association.asset.status)}
                                             </Badge>
                                         )}
-                                        {association.asset && association.asset.rmm_provider && association.asset.rmm_device_id && (
+                                        {association.asset && (
                                             <RemoteAccessButton
                                                 asset={association.asset}
                                                 variant="ghost"
                                                 size="sm"
+                                                hasTemplateLinks={hasTemplateLinks}
                                             />
                                         )}
                                         <Button
