@@ -317,14 +317,16 @@
       "client": "Kunde",
       "invoiceNumber": "Rechnungsnummer",
       "invoiceNumberOptional": "Rechnungsnummer (optional)",
-      "sourceSalesOrder": "Quellkundenauftrag (optional)"
+      "sourceSalesOrder": "Quellkundenauftrag (optional)",
+      "billingProfile": "Abrechnungsprofil"
     },
     "placeholders": {
       "selectClient": "Wählen Sie einen Kunden aus",
       "invoiceNumberOptional": "Für die automatische Generierung leer lassen",
       "sourceSalesOrder": "Ausgelieferten oder manuell abrechenbaren Kundenauftrag auswählen",
       "searchSalesOrders": "Kundenaufträge suchen…",
-      "noInvoiceableSalesOrders": "Keine abrechenbaren Kundenaufträge gefunden."
+      "noInvoiceableSalesOrders": "Keine abrechenbaren Kundenaufträge gefunden.",
+      "selectBillingProfile": "Abrechnungsprofil auswählen"
     },
     "automatedItems": {
       "title": "Automatisierte Werbebuchungen",
@@ -346,7 +348,8 @@
       "clearSalesOrderSource": "Kundenauftrag als Quelle entfernen"
     },
     "labels": {
-      "total": "Gesamt"
+      "total": "Gesamt",
+      "defaultBillingProfile": "{{name}} (Standard)"
     },
     "prepayment": {
       "label": "Dies ist eine Vorauszahlungsrechnung (erstellt Gutschrift)",
@@ -384,7 +387,8 @@
       "USAGE_CALCULATION_ERROR": "Der Verbrauch für {{services}} im Leistungszeitraum {{periodStart}} bis {{periodEnd}} ist erfasst, konnte aber nicht bepreist werden. Korrigiere die Dienstpreise (Katalogpreis in der Vertragswährung, ein individueller Satz oder Preisstaffeln) und versuche es erneut. Erfasse keinen Ersatzverbrauch.",
       "SOURCE_ALREADY_BILLED": "Einige ausgewählte Positionen sind nicht mehr abrechenbar (bereits abgerechnet, nicht genehmigt oder entfernt). Aktualisieren und erneut versuchen.",
       "SOURCE_NOT_ELIGIBLE": "Eine ausgewählte Position gehört nicht zu den abrechenbaren Positionen dieses Tickets oder ist nicht mehr zulässig. Aktualisieren und erneut versuchen.",
-      "SOURCE_CURRENCY_MISMATCH": "Einige ausgewählte Produkte sind in einer anderen Währung bepreist als die Rechnungswährung dieses Kunden. Sie können nicht hinzugefügt werden. Rechnen Sie sie in ihrer eigenen Währung getrennt ab."
+      "SOURCE_CURRENCY_MISMATCH": "Einige ausgewählte Produkte sind in einer anderen Währung bepreist als die Rechnungswährung dieses Kunden. Sie können nicht hinzugefügt werden. Rechnen Sie sie in ihrer eigenen Währung getrennt ab.",
+      "BILLING_PROFILE_NOT_FOUND": "Das ausgewählte Abrechnungsprofil ist für diesen Kunden nicht verfügbar. Aktualisiere die Seite und versuche es erneut."
     },
     "warnings": {
       "noBillingEmail": "Für diesen Kunden ist keine Rechnungs-E-Mail-Adresse hinterlegt. Lege vor dem Generieren der Rechnung einen Rechnungskontakt, eine Rechnungs-E-Mail-Adresse des Kunden oder eine E-Mail-Adresse am Rechnungs- oder Standardstandort fest."
@@ -395,6 +399,9 @@
     },
     "salesOrderContext": {
       "summary": "{{quantity}} Artikel aus {{lineCount}} Positionen können abgerechnet werden. Dieser Entwurf wird mit dem Kundenauftrag verknüpft."
+    },
+    "hints": {
+      "billingProfile": "Die Rechnung und ihre Positionen werden diesem Profil zugeordnet."
     }
   },
   "quickInvoice": {

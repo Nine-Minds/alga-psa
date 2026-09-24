@@ -317,14 +317,16 @@
       "client": "Klant",
       "invoiceNumber": "Factuurnummer",
       "invoiceNumberOptional": "Factuurnummer (optioneel)",
-      "sourceSalesOrder": "Bronverkooporder (optioneel)"
+      "sourceSalesOrder": "Bronverkooporder (optioneel)",
+      "billingProfile": "Facturatieprofiel"
     },
     "placeholders": {
       "selectClient": "Selecteer een klant",
       "invoiceNumberOptional": "Laat dit leeg om automatisch te genereren",
       "sourceSalesOrder": "Selecteer een afgehandelde of handmatig factureerbare verkooporder",
       "searchSalesOrders": "Verkooporders zoeken...",
-      "noInvoiceableSalesOrders": "Geen factureerbare verkooporders gevonden."
+      "noInvoiceableSalesOrders": "Geen factureerbare verkooporders gevonden.",
+      "selectBillingProfile": "Selecteer een facturatieprofiel"
     },
     "automatedItems": {
       "title": "Geautomatiseerde regelitems",
@@ -346,7 +348,8 @@
       "clearSalesOrderSource": "Bronverkooporder wissen"
     },
     "labels": {
-      "total": "Totaal"
+      "total": "Totaal",
+      "defaultBillingProfile": "{{name}} (standaard)"
     },
     "prepayment": {
       "label": "Dit is een vooruitbetalingsfactuur (creëert krediet)",
@@ -384,7 +387,8 @@
       "USAGE_CALCULATION_ERROR": "Het verbruik voor {{services}} in de serviceperiode {{periodStart}} tot {{periodEnd}} is geregistreerd maar kon niet worden geprijsd. Corrigeer de serviceprijzen (catalogusprijs in de contractvaluta, een aangepast tarief of tariefschijven) en probeer het opnieuw. Registreer geen vervangend verbruik.",
       "SOURCE_ALREADY_BILLED": "Sommige geselecteerde items zijn niet meer factureerbaar (al gefactureerd, niet goedgekeurd of verwijderd). Vernieuw en probeer opnieuw.",
       "SOURCE_NOT_ELIGIBLE": "Een geselecteerd item hoort niet bij dit ticket of is niet langer in aanmerking komend. Vernieuw en probeer opnieuw.",
-      "SOURCE_CURRENCY_MISMATCH": "Sommige geselecteerde producten zijn geprijsd in een andere valuta dan de factuurvaluta van deze klant en kunnen niet worden toegevoegd. Factureer ze apart in hun eigen valuta."
+      "SOURCE_CURRENCY_MISMATCH": "Sommige geselecteerde producten zijn geprijsd in een andere valuta dan de factuurvaluta van deze klant en kunnen niet worden toegevoegd. Factureer ze apart in hun eigen valuta.",
+      "BILLING_PROFILE_NOT_FOUND": "Het geselecteerde facturatieprofiel is niet beschikbaar voor deze klant. Vernieuw de pagina en probeer het opnieuw."
     },
     "warnings": {
       "noBillingEmail": "Deze klant heeft geen facturatie-e-mailadres. Stel een contactpersoon voor facturering, een facturatie-e-mailadres van de klant of een e-mailadres op de facturatielocatie of standaardlocatie in voordat u de factuur genereert."
@@ -395,6 +399,9 @@
     },
     "salesOrderContext": {
       "summary": "{{quantity}} artikelen uit {{lineCount}} regels gereed voor facturering. Dit concept wordt aan de verkooporder gekoppeld."
+    },
+    "hints": {
+      "billingProfile": "De factuur en de factuurregels worden aan dit profiel toegerekend."
     }
   },
   "quickInvoice": {

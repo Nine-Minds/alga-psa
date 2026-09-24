@@ -317,14 +317,16 @@
       "client": "Cliente",
       "invoiceNumber": "Número da fatura",
       "invoiceNumberOptional": "Número da fatura (opcional)",
-      "sourceSalesOrder": "Pedido de venda de origem (opcional)"
+      "sourceSalesOrder": "Pedido de venda de origem (opcional)",
+      "billingProfile": "Perfil de faturação"
     },
     "placeholders": {
       "selectClient": "Selecione um cliente",
       "invoiceNumberOptional": "Deixe em branco para gerar automaticamente",
       "sourceSalesOrder": "Selecione um pedido de venda atendido ou faturável manualmente",
       "searchSalesOrders": "Pesquisar pedidos de venda...",
-      "noInvoiceableSalesOrders": "Nenhum pedido de venda faturável encontrado."
+      "noInvoiceableSalesOrders": "Nenhum pedido de venda faturável encontrado.",
+      "selectBillingProfile": "Selecione um perfil de faturação"
     },
     "automatedItems": {
       "title": "Itens de linha automatizados",
@@ -346,7 +348,8 @@
       "clearSalesOrderSource": "Limpar pedido de venda de origem"
     },
     "labels": {
-      "total": "Total"
+      "total": "Total",
+      "defaultBillingProfile": "{{name}} (predefinido)"
     },
     "prepayment": {
       "label": "Esta é uma fatura de pré-pagamento (cria crédito)",
@@ -384,7 +387,8 @@
       "USAGE_CALCULATION_ERROR": "A utilização de {{services}} no período de serviço de {{periodStart}} a {{periodEnd}} está registada, mas não foi possível calcular o preço. Corrija os preços do serviço (preço de catálogo na moeda do contrato, uma tarifa personalizada ou escalões de tarifas) e tente novamente. Não registe utilização de substituição.",
       "SOURCE_ALREADY_BILLED": "Alguns itens selecionados já não são faturáveis (já faturados, não aprovados ou removidos). Atualize e tente novamente.",
       "SOURCE_NOT_ELIGIBLE": "Um item selecionado não pertence a este ticket ou já não é elegível. Atualize e tente novamente.",
-      "SOURCE_CURRENCY_MISMATCH": "Alguns produtos selecionados estão cotados numa moeda diferente da moeda de faturação deste cliente e não podem ser adicionados. Fature-os separadamente na sua própria moeda."
+      "SOURCE_CURRENCY_MISMATCH": "Alguns produtos selecionados estão cotados numa moeda diferente da moeda de faturação deste cliente e não podem ser adicionados. Fature-os separadamente na sua própria moeda.",
+      "BILLING_PROFILE_NOT_FOUND": "O perfil de faturação selecionado não está disponível para este cliente. Atualize a página e tente novamente."
     },
     "warnings": {
       "noBillingEmail": "Este cliente não tem um e-mail de faturação. Defina um contato de faturação, um e-mail de faturação do cliente ou um endereço de e-mail na localização de faturação ou predefinida antes de gerar a fatura."
@@ -395,6 +399,9 @@
     },
     "salesOrderContext": {
       "summary": "{{quantity}} item(ns) de {{lineCount}} linha(s) pronto(s) para faturar. Este rascunho será vinculado ao pedido de venda."
+    },
+    "hints": {
+      "billingProfile": "A fatura e as suas linhas são faturadas neste perfil."
     }
   },
   "quickInvoice": {

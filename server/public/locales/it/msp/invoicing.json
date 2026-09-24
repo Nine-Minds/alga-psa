@@ -317,14 +317,16 @@
       "client": "Cliente",
       "invoiceNumber": "Numero della fattura",
       "invoiceNumberOptional": "Numero fattura (facoltativo)",
-      "sourceSalesOrder": "Ordine di vendita di origine (opzionale)"
+      "sourceSalesOrder": "Ordine di vendita di origine (opzionale)",
+      "billingProfile": "Profilo di fatturazione"
     },
     "placeholders": {
       "selectClient": "Seleziona un cliente",
       "invoiceNumberOptional": "Lascia vuoto per generare automaticamente",
       "sourceSalesOrder": "Seleziona un ordine di vendita evaso o fatturabile manualmente",
       "searchSalesOrders": "Cerca ordini di vendita…",
-      "noInvoiceableSalesOrders": "Nessun ordine di vendita fatturabile trovato."
+      "noInvoiceableSalesOrders": "Nessun ordine di vendita fatturabile trovato.",
+      "selectBillingProfile": "Seleziona un profilo di fatturazione"
     },
     "automatedItems": {
       "title": "Elementi pubblicitari automatizzati",
@@ -346,7 +348,8 @@
       "clearSalesOrderSource": "Cancella ordine di vendita di origine"
     },
     "labels": {
-      "total": "Totale"
+      "total": "Totale",
+      "defaultBillingProfile": "{{name}} (predefinito)"
     },
     "prepayment": {
       "label": "Questa è una fattura di pagamento anticipato (crea credito)",
@@ -384,7 +387,8 @@
       "USAGE_CALCULATION_ERROR": "L'utilizzo di {{services}} nel periodo di servizio dal {{periodStart}} al {{periodEnd}} è registrato ma non è stato possibile prezzarlo. Correggi i prezzi del servizio (prezzo di listino nella valuta del contratto, una tariffa personalizzata o scaglioni tariffari) e riprova. Non registrare utilizzo sostitutivo.",
       "SOURCE_ALREADY_BILLED": "Alcuni elementi selezionati non sono più fatturabili (già fatturati, non approvati o rimossi). Aggiorna e riprova.",
       "SOURCE_NOT_ELIGIBLE": "Un elemento selezionato non appartiene a questo ticket o non è più idoneo. Aggiorna e riprova.",
-      "SOURCE_CURRENCY_MISMATCH": "Alcuni prodotti selezionati sono prezzati in una valuta diversa da quella di fatturazione di questo cliente e non possono essere aggiunti. Fatturali separatamente nella loro valuta."
+      "SOURCE_CURRENCY_MISMATCH": "Alcuni prodotti selezionati sono prezzati in una valuta diversa da quella di fatturazione di questo cliente e non possono essere aggiunti. Fatturali separatamente nella loro valuta.",
+      "BILLING_PROFILE_NOT_FOUND": "Il profilo di fatturazione selezionato non è disponibile per questo cliente. Aggiorna la pagina e riprova."
     },
     "warnings": {
       "noBillingEmail": "Questo cliente non ha un indirizzo e-mail di fatturazione. Imposta un contatto per la fatturazione, un indirizzo e-mail di fatturazione del cliente o un indirizzo e-mail nella sede di fatturazione o predefinita prima di generare la fattura."
@@ -395,6 +399,9 @@
     },
     "salesOrderContext": {
       "summary": "{{quantity}} articoli pronti per la fatturazione da {{lineCount}} righe. Questa bozza verrà collegata all'ordine di vendita."
+    },
+    "hints": {
+      "billingProfile": "La fattura e le sue righe vengono fatturate a questo profilo."
     }
   },
   "quickInvoice": {
