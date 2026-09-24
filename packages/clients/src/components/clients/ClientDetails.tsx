@@ -13,7 +13,8 @@ import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossF
 import { translateFieldValidation, validateClientNameField } from '@alga-psa/validation';
 import ClientContactsList from '../contacts/ClientContactsList';
 import QuickAddContact from '../contacts/QuickAddContact';
-import { Flex, Text, Heading } from '@radix-ui/themes';
+import { Text, Heading } from '@radix-ui/themes';
+import { DrawerFooter } from '@alga-psa/ui/components/Drawer';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import BillingConfiguration from './BillingConfiguration';
 import { getClientById } from '@alga-psa/clients/actions';
@@ -1617,7 +1618,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             </FieldContainer>
           </div>
           
-          <Flex gap="4" justify="end" align="center">
+          <DrawerFooter className="items-center gap-4">
             {hasAttemptedSubmit && Object.keys(fieldErrors).some(key => fieldErrors[key]) && (
               <Text size="2" className="text-red-600 mr-2" role="alert">
                 {t('clientDetails.requiredFields', { defaultValue: 'Please fill in all required fields' })}
@@ -1632,7 +1633,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                 ? t('common.actions.saving', { defaultValue: 'Saving...' })
                 : t('clientDetails.saveChanges', { defaultValue: 'Save' })}
             </Button>
-          </Flex>
+          </DrawerFooter>
         </div>
       )
     },
