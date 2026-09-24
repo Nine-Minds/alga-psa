@@ -46,6 +46,10 @@
       "import": "./src/lib/createContactRoute.ts",
       "types": "./src/lib/createContactRoute.ts"
     },
+    "./lib/clientWebsiteUpdate": {
+      "import": "./src/lib/clientWebsiteUpdate.ts",
+      "types": "./src/lib/clientWebsiteUpdate.ts"
+    },
     "./context/ClientCrossFeatureContext": {
       "types": "./src/context/ClientCrossFeatureContext.tsx",
       "import": "./dist/context/ClientCrossFeatureContext.js",

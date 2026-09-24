@@ -80,6 +80,7 @@ import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { usePageSaveShortcut } from '@alga-psa/ui/keyboard-shortcuts';
+import { clientWebsiteFieldsForSave } from '../../lib/clientWebsiteUpdate';
 import type { SurveyClientSatisfactionSummary } from '@alga-psa/types';
 import {
   formatEntraRunStatusLabel,
@@ -242,6 +243,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, renderHourBlocksSection, renderClientOpportunities, renderClientTickets, getSlaPolicies, openTicketDetails } = useClientCrossFeature();
   const { renderDocuments } = useDocumentsCrossFeature();
   const [editedClient, setEditedClient] = useState<IClient>(client);
+  // `client` is a prop and does not advance after this component saves. Keep
+  // the comparison baseline current so a later save is compared to last save.
+  const savedClientRef = useRef(client);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isQuickAddTicketOpen, setIsQuickAddTicketOpen] = useState(false);
   const [isAddContactOpen, setIsAddContactOpen] = useState(false);
@@ -732,6 +736,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           ...latestClientData,
           client_type: latestClientData.client_type || 'company'
         });
+        savedClientRef.current = latestClientData;
         setHasUnsavedChanges(false);
       }
     } catch (error) {
@@ -748,6 +753,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       ...client,
       client_type: client.client_type || 'company'
     });
+    savedClientRef.current = client;
     setHasUnsavedChanges(false);
   }, [client]);
 
@@ -943,7 +949,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       }
       
       // Compare with original client to determine if there are unsaved changes
-      return JSON.stringify(tempClient) !== JSON.stringify(client);
+      return JSON.stringify(tempClient) !== JSON.stringify(savedClientRef.current);
     });
   };
 
@@ -999,6 +1005,19 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         properties: restOfEditedClient.properties ? { ...restOfEditedClient.properties } : {},
         account_manager_id: editedClientRef.current.account_manager_id === '' ? null : editedClientRef.current.account_manager_id,
       };
+      const websiteFields = clientWebsiteFieldsForSave(editedClientRef.current, savedClientRef.current);
+      if (!websiteFields.changed) {
+        delete dataToUpdate.url;
+        if (dataToUpdate.properties) delete dataToUpdate.properties.website;
+      } else {
+        // The field handlers keep these copies in sync; submit the user's edit
+        // explicitly so a deliberate empty value clears both stored copies.
+        dataToUpdate.url = websiteFields.url;
+        dataToUpdate.properties = {
+          ...(dataToUpdate.properties ?? {}),
+          website: websiteFields.website,
+        };
+      }
       const updatedClientResult = await updateClient(client.client_id, dataToUpdate);
       if (isClientActionError(updatedClientResult)) {
         handleError(updatedClientResult);
@@ -1006,6 +1025,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       }
 
       const updatedClient = updatedClientResult as IClient;
+      savedClientRef.current = updatedClient;
       setEditedClient(updatedClient);
       setHasUnsavedChanges(false);
       setHasAttemptedSubmit(false);
@@ -1156,7 +1176,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       }
       (tempClient.properties as any).primary_contact_id = contactId;
       (tempClient.properties as any).primary_contact_name = selectedName;
-      return JSON.stringify(tempClient) !== JSON.stringify(client);
+      return JSON.stringify(tempClient) !== JSON.stringify(savedClientRef.current);
     });
   }, [clientActiveContacts, editedClient, client]);
 
@@ -1923,7 +1943,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             onTabUrlChange={handleFocusTabUrlChange}
             hasUnsavedRecordChanges={hasUnsavedChanges}
             onDiscardRecordChanges={() => {
-              setEditedClient(client);
+              setEditedClient(savedClientRef.current);
               setHasUnsavedChanges(false);
             }}
             onNewTicket={() => setIsQuickAddTicketOpen(true)}
