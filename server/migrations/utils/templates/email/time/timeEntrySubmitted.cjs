@@ -123,6 +123,7 @@ const COPY = {
   },
 };
 SUBJECTS.pt = 'Lançamento de horas enviado para revisão';
+SUBJECTS.sv = 'Tidpost inskickad för granskning';
 COPY.pt = {
   headerLabel: 'Lançamento de horas enviado',
   intro: 'Um lançamento de horas foi enviado para revisão.',
@@ -136,6 +137,20 @@ COPY.pt = {
   textHeader: 'Lançamento de horas enviado',
   textIntro: 'Um lançamento de horas foi enviado para revisão:',
   textView: 'Revisar lançamento de horas em',
+};
+COPY.sv = {
+  headerLabel: 'Tidpost inskickad',
+  intro: 'En tidpost har skickats in för granskning.',
+  submittedBy: 'Inskickad av',
+  date: 'Datum',
+  duration: 'Varaktighet',
+  project: 'Projekt',
+  task: 'Uppgift',
+  viewButton: 'Granska tidpost',
+  footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+  textHeader: 'Tidpost inskickad',
+  textIntro: 'En tidpost har skickats in för granskning:',
+  textView: 'Granska tidpost på',
 };
 
 /* eslint-enable max-len */
