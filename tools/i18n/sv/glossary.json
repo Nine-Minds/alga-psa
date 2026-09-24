@@ -511,6 +511,7 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "PG Boss",
       "YOLO",
       "Session: {{chatId}}",
       "Outlook Calendar",
