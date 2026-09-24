@@ -556,11 +556,12 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                             id={`remove-asset-${association.asset_id}`}
                                             variant="outline"
                                             size="sm"
+                                            aria-label={t('common.actions.remove', { defaultValue: 'Remove' })}
+                                            title={t('common.actions.remove', { defaultValue: 'Remove' })}
                                             onClick={() => handleRemoveAsset(association.asset_id)}
                                             className="text-gray-600 hover:text-gray-900"
                                         >
-                                            <span className="mr-1">×</span>
-                                            {t('common.actions.remove', { defaultValue: 'Remove' })}
+                                            <span aria-hidden="true">×</span>
                                         </Button>
                                     </div>
                                 </div>

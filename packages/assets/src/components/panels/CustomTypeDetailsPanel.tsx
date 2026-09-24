@@ -6,7 +6,6 @@ import type { Asset, AssetTypeField } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useContentCardVariant } from '@alga-psa/ui/components/ContentCard';
 import { BentoTile } from '@alga-psa/ui/components/bento';
-import { isBuiltinAssetTypeSlug } from '../../lib/assetTypeAttributes';
 import { useAssetTypeRegistry } from '../shared/useAssetTypeOptions';
 
 interface CustomTypeDetailsPanelProps {
@@ -63,8 +62,8 @@ function renderFieldValue(field: AssetTypeField, value: unknown, t: TranslateFn)
 
 /**
  * F312: read-only schema panel for a custom-type asset. Renders the type's
- * fields_schema rows with the asset's attributes[key] values; built-ins,
- * unregistered slugs, empty schemas, and value-less assets render nothing
+ * fields_schema rows with the asset's attributes[key] values; unregistered
+ * slugs, empty schemas, and value-less assets render nothing
  * (data-presence gate, like HuduDocumentationCard).
  */
 export const CustomTypeDetailsPanel: React.FC<CustomTypeDetailsPanelProps> = ({ asset }) => {

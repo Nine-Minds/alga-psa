@@ -9,7 +9,7 @@ import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect
 import { createAsset } from '../actions/assetActions';
 import { unwrapAssetActionResult } from '../actions/assetActionErrors';
 import { formatClientLocation } from '../lib/formatClientLocation';
-import { pickSchemaAttributes, validateAttributesAgainstSchema } from '../lib/assetTypeAttributes';
+import { isBuiltinAssetTypeSlug, pickSchemaAttributes, validateAttributesAgainstSchema } from '../lib/assetTypeAttributes';
 import { buildAssetTypeOptions, findCustomAssetType, useAssetTypeRegistry } from './shared/useAssetTypeOptions';
 import { CustomTypeFieldsPanel } from './shared/CustomTypeFieldsPanel';
 import type { CreateAssetRequest, IClient, IClientLocation } from '@alga-psa/types';
@@ -128,9 +128,9 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
     attributes: {}
   });
 
-  // F309: registry entry for the selected slug when it is a custom type.
-  const selectedCustomType = registryEntries?.find((entry) => entry.slug === formData.asset_type) ?? null;
-  const customTypeFields = selectedCustomType?.fields_schema ?? [];
+  // Built-in entries may also define tenant-specific additional fields.
+  const selectedTypeEntry = registryEntries?.find((entry) => entry.slug === formData.asset_type) ?? null;
+  const customTypeFields = selectedTypeEntry?.fields_schema ?? [];
 
   useEffect(() => {
     if (defaultOpen) {
@@ -371,7 +371,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
 
     // F309: custom types render their fields_schema instead of the built-in
     // extension panels; values read/write formData.attributes[key].
-    if (selectedCustomType && !selectedCustomType.is_builtin) {
+    if (selectedTypeEntry && !selectedTypeEntry.is_builtin) {
       return (
         <CustomTypeFieldsPanel
           fields={customTypeFields}
@@ -785,7 +785,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
               />
             </div>
 
-            {formData.asset_type && (!selectedCustomType || customTypeFields.length > 0) && (
+            {formData.asset_type && (isBuiltinAssetTypeSlug(formData.asset_type) || (!selectedTypeEntry?.is_builtin && customTypeFields.length > 0)) && (
               <div {...withDataAutomationId({ id: 'type-specific-details' })} className="border-t pt-4">
                 <h3 className="text-sm font-medium text-gray-700 mb-4">
                   {t('quickAddAsset.sections.typeSpecificDetails', {
@@ -793,7 +793,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
                   })}
                 </h3>
                 {renderTypeSpecificFields()}
-                {selectedCustomType?.is_builtin && customTypeFields.length > 0 && <CustomTypeFieldsPanel fields={customTypeFields} values={formData.attributes} errors={attributeErrors} onChange={(key, value) => setFormData((prev) => ({ ...prev, attributes: { ...prev.attributes, [key]: value } }))} idPrefix="quick-add-asset-additional" />}
+                {selectedTypeEntry?.is_builtin && customTypeFields.length > 0 && <CustomTypeFieldsPanel fields={customTypeFields} values={formData.attributes} errors={attributeErrors} onChange={(key, value) => setFormData((prev) => ({ ...prev, attributes: { ...prev.attributes, [key]: value } }))} idPrefix="quick-add-asset-additional" />}
               </div>
             )}
           </form>

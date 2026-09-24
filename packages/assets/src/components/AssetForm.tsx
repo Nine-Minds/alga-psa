@@ -26,7 +26,7 @@ import { getAsset, updateAsset } from '../actions/assetActions';
 import { unwrapAssetActionResult } from '../actions/assetActionErrors';
 import { formatClientLocation } from '../lib/formatClientLocation';
 import { pickSchemaAttributes, validateAttributesAgainstSchema } from '../lib/assetTypeAttributes';
-import { buildAssetTypeOptions, findCustomAssetType, useAssetTypeRegistry } from './shared/useAssetTypeOptions';
+import { buildAssetTypeOptions, useAssetTypeRegistry } from './shared/useAssetTypeOptions';
 import { CustomTypeFieldsPanel } from './shared/CustomTypeFieldsPanel';
 import { getAllClientsForAssets, getClientLocationsForAssets } from '../actions/clientLookupActions';
 import { useRouter } from 'next/navigation';
@@ -114,11 +114,11 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
     () => buildAssetTypeOptions(registryEntries, t, { includeUnknown: true }),
     [registryEntries, t]
   );
-  const selectedCustomType = useMemo(
+  const selectedTypeEntry = useMemo(
     () => registryEntries?.find((entry) => entry.slug === formData.asset_type) ?? null,
     [registryEntries, formData.asset_type]
   );
-  const customTypeFields = selectedCustomType?.fields_schema ?? [];
+  const customTypeFields = selectedTypeEntry?.fields_schema ?? [];
 
   const statusOptions = useMemo(() => (
     STATUS_OPTION_VALUES.map((value) => ({
@@ -937,7 +937,7 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
     if (!asset) return;
 
     // F309: required enforcement for custom-type schema fields, inline.
-    const attributeIssues = selectedCustomType
+    const attributeIssues = customTypeFields.length > 0
       ? validateAttributesAgainstSchema(customTypeFields, customAttributes, { requireAll: true })
       : [];
     if (attributeIssues.length > 0) {
@@ -1395,10 +1395,12 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
         {customTypeFields.length > 0 && (
           <Card id="custom-type-details" className="p-4 border border-[rgb(var(--color-border-200))]">
             <Text size="5" weight="medium" className="block mb-3 text-[rgb(var(--color-text-900))]">
-              {t('assetForm.typeDetails.custom', {
-                defaultValue: '{{typeName}} Details',
-                typeName: selectedCustomType?.is_builtin ? t('assetForm.additionalFields', { defaultValue: 'Additional fields' }) : selectedCustomType?.name
-              })}
+              {selectedTypeEntry?.is_builtin
+                ? t('assetForm.additionalFields', { defaultValue: 'Additional fields' })
+                : t('assetForm.typeDetails.custom', {
+                    defaultValue: '{{typeName}} Details',
+                    typeName: selectedTypeEntry?.name,
+                  })}
             </Text>
             <CustomTypeFieldsPanel
               fields={customTypeFields}
