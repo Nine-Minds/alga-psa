@@ -234,8 +234,8 @@ async function pageUserYield(options: {
     const filtered = filterEntraUsers(page.users, policy);
     counts.totalUsers += page.users.length;
     counts.includedUsers += filtered.included.length;
-    counts.unknownFieldCounts.userType += filtered.unknownFieldCounts.userType;
-    counts.unknownFieldCounts.assignedLicenseCount += filtered.unknownFieldCounts.assignedLicenseCount;
+    counts.unknownFieldCounts.userType += filtered.unknownFieldCounts?.userType ?? 0;
+    counts.unknownFieldCounts.assignedLicenseCount += filtered.unknownFieldCounts?.assignedLicenseCount ?? 0;
     for (const excluded of filtered.excluded) {
       counts.excluded[excluded.reason] = (counts.excluded[excluded.reason] ?? 0) + 1;
     }
@@ -797,7 +797,7 @@ async function runCippClient(options: {
                 },
               ]
             : [];
-          const unknown = filtered.unknownFieldCounts;
+          const unknown = filtered.unknownFieldCounts ?? { userType: 0, assignedLicenseCount: 0 };
           recState.recommendations.push(...recommendations);
           return {
             status: allExcluded || unknown.userType > 0 || unknown.assignedLicenseCount > 0 ? ('warn' as const) : ('pass' as const),

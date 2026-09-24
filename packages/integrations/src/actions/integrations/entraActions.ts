@@ -1344,6 +1344,8 @@ export const runEntraPreflight = withAuth(async (
     sampleLimit?: number;
     /** Preview these rules instead of the stored ones. */
     fieldSyncConfig?: EntraFieldSyncConfig;
+    /** Preview pending user-import filter rules without saving them. */
+    userFilterConfig?: EntraUserFilterActionConfig;
   }
 ) => {
   if (isClientPortalUser(user)) {
@@ -1367,6 +1369,7 @@ export const runEntraPreflight = withAuth(async (
       clientId: input.clientId,
       sampleLimit: input.sampleLimit,
       fieldSyncConfig: input.fieldSyncConfig,
+      userFilterConfig: input.userFilterConfig,
     },
   });
 });

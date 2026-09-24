@@ -318,7 +318,7 @@ describe('Entra diagnostics: migrated DB and Microsoft Graph emulator', () => {
 
   it('applies stored custom filters and all built-in exclusion reasons without creating sync data', async () => {
     await context.db('entra_sync_settings').where({ tenant }).update({
-      user_filter_config: JSON.stringify({ exclusionPatterns: ['contractor'] }) });
+      user_filter_config: JSON.stringify({ version: 1, memberUsersOnly: false, licensedUsersOnly: false, includeGroupIds: [], excludeGroupIds: [], exclusionPatterns: ['contractor'], deactivateExcludedContacts: false }) });
     before = await snapshot();
     core.addDirectoryUser({ userPrincipalName: 'disabled@cedar.example', accountEnabled: false });
     core.addDirectoryUser({ userPrincipalName: '', mail: null, accountEnabled: true });

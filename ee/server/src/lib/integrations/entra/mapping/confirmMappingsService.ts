@@ -124,6 +124,7 @@ export async function confirmEntraMappingsWithDb(
           mapping.clientPortalEntraProvisioningMode === undefined
             ? existingProvisioningMode
             : normalizeProvisioningMode(mapping.clientPortalEntraProvisioningMode);
+        // LEVERAGE: friction mapping-carry-forward — portal fields are hand-carried here when mapping rows are replaced.
         const clientPortalEntitlementGroupId =
           mapping.clientPortalEntitlementGroupId === undefined
             ? existingActive?.client_portal_entitlement_group_id

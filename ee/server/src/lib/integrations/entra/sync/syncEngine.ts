@@ -250,6 +250,9 @@ export async function executeEntraSync(
       preview?.push(describeUser(user, 'create'));
     } else {
       const createdContact = await createContactForEntraUser(input.tenantId, input.clientId, userWithEntitlement);
+      if (createdContact.action === 'linked' && await reactivateExcludedEntraContact(input.tenantId, createdContact.contactNameId, false)) {
+        counters.increment('updated');
+      }
       const eligibility = evaluateClientPortalProvisioningEligibility(
         userWithEntitlement,
         input.portalEntitlement

@@ -8,6 +8,7 @@ import { EMPTY_ENTRA_USER_FILTER_CONFIG, mergeEntraUserFilterConfig, parseEntraU
 export interface EntraUserFilterSettings { exclusionPatterns: string[] }
 
 /** Resolves each directory group once and shares the result across filters and portal entitlement. */
+// LEVERAGE: friction entra-shared-group-resolution — filter and portal entitlement now share this per-run cache.
 export class GroupMembershipResolver {
   private readonly groups = new Map<string, Promise<Set<string>>>();
   constructor(private readonly input: { tenant: string; entraTenantId: string; adapter: EntraProviderAdapter; users?: EntraSyncUser[] }) {}
@@ -31,7 +32,7 @@ export async function getEntraUserFilterSettings(tenant: string): Promise<EntraU
 }
 
 export async function resolveEntraUserFilterPolicy(input: {
-  tenant: string; managedTenantId: string; entraTenantId: string; adapter: EntraProviderAdapter; users?: EntraSyncUser[];
+  tenant: string; managedTenantId: string; entraTenantId: string; adapter: EntraProviderAdapter; users?: EntraSyncUser[]; configOverride?: EntraUserFilterConfig;
 }): Promise<EntraUserFilterOptions> {
   const { defaults, override } = await runWithTenant(input.tenant, async () => {
     const { knex } = await createTenantKnex();
@@ -45,7 +46,7 @@ export async function resolveEntraUserFilterPolicy(input: {
     ]);
     return { defaults: parseEntraUserFilterConfig(settings?.user_filter_config), override: tenantOverride ? parseEntraUserFilterOverride(tenantOverride.filter_config) : null };
   });
-  const effective: EntraUserFilterConfig = mergeEntraUserFilterConfig(defaults || EMPTY_ENTRA_USER_FILTER_CONFIG, override);
+  const effective: EntraUserFilterConfig = input.configOverride ?? mergeEntraUserFilterConfig(defaults || EMPTY_ENTRA_USER_FILTER_CONFIG, override);
   const resolver = new GroupMembershipResolver({ tenant: input.tenant, entraTenantId: input.entraTenantId, adapter: input.adapter, users: input.users });
   const includeMemberIds = new Set<string>();
   const excludeMemberIds = new Set<string>();

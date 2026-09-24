@@ -92,6 +92,8 @@ describe('runEntraPreflight', () => {
     getEntraProviderAdapterMock.mockReturnValue({ listUsersForTenant });
     filterEntraUsersForManagedTenantMock.mockResolvedValue({
       included: [{ entraObjectId: 'o1' }],
+      unknownFieldCounts: { userType: 0, assignedLicenseCount: 0 },
+      deactivateExcludedContacts: false,
       excluded: [
         {
           reason: 'account_disabled',

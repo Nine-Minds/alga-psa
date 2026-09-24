@@ -70,7 +70,16 @@ export function ManagedTenantUserFilterPanel({ mapping }: { mapping: EntraConfir
   };
   const runPreview = async () => {
     setPreviewing(true); setStatus('');
-    try { const result = await runEntraPreflight({ managedTenantId: mapping.managedTenantId }); if ('error' in result) setStatus(result.error); else setPreview(result.data); } finally { setPreviewing(false); }
+    const config: FilterConfig = {
+      ...effective,
+      ...draft,
+      memberUsersOnly: draft.memberUsersOnly ?? (override == null ? true : effective.memberUsersOnly),
+      licensedUsersOnly: draft.licensedUsersOnly ?? (override == null ? true : effective.licensedUsersOnly),
+      includeGroupIds: (draft.includeGroupIds ?? effective.includeGroupIds).slice(),
+      excludeGroupIds: (draft.excludeGroupIds ?? effective.excludeGroupIds).slice(),
+      exclusionPatterns: [...new Set([...effective.exclusionPatterns, ...(draft.exclusionPatterns ?? [])])],
+    };
+    try { const result = await runEntraPreflight({ managedTenantId: mapping.managedTenantId, userFilterConfig: config }); if ('error' in result) setStatus(result.error); else setPreview(result.data); } finally { setPreviewing(false); }
   };
   if (loadError) return <section className="mt-3 rounded-md border p-3 text-sm text-destructive" id="entra-user-filter-load-error">{loadError}<Button id={`entra-filter-reload-${mapping.managedTenantId}`} size="sm" variant="outline" onClick={() => void load()}>{t('integrations.entra.userImportFilter.retry')}</Button></section>;
   if (!effective) return <div id={`entra-user-filter-loading-${mapping.managedTenantId}`}>{t('integrations.entra.userImportFilter.loading')}</div>;
@@ -80,11 +89,13 @@ export function ManagedTenantUserFilterPanel({ mapping }: { mapping: EntraConfir
     change(key, current.includes(id) ? current.filter(item => item !== id) : [...current, id]);
   };
   const selectedNames = (key: 'includeGroupIds' | 'excludeGroupIds') => (effective[key] || []).map(id => groups.find(group => group.id === id)?.displayName).filter(Boolean);
+  const toggleValue = (key: 'memberUsersOnly' | 'licensedUsersOnly' | 'deactivateExcludedContacts') =>
+    draft[key] ?? (override == null && key !== 'deactivateExcludedContacts' ? true : effective[key]);
   const broad = [...selectedNames('includeGroupIds'), ...selectedNames('excludeGroupIds')].some(isBroadGroup);
   return <section className="mt-3 space-y-3 rounded-md border p-3" id={`entra-user-filter-${mapping.managedTenantId}`}>
     <h4 className="text-sm font-semibold">{t('integrations.entra.userImportFilter.title')}</h4>
-    {(['memberUsersOnly','licensedUsersOnly','deactivateExcludedContacts'] as const).map(key => <label key={key} className="flex gap-2 text-sm"><input id={`entra-filter-${key}-${mapping.managedTenantId}`} type="checkbox" checked={(draft[key] ?? effective[key]) as boolean} onChange={event => change(key, event.target.checked)}/>{t(`integrations.entra.userImportFilter.${key}`)} <span className="text-xs text-muted-foreground">{marker(key)}</span></label>)}
-    {(['includeGroupIds','excludeGroupIds'] as const).map(key => <fieldset key={key} className="text-sm"><legend>{t(key === 'includeGroupIds' ? 'integrations.entra.userImportFilter.include' : 'integrations.entra.userImportFilter.exclude')} <span className="text-xs text-muted-foreground">{marker(key)}</span></legend><div className="max-h-32 overflow-auto rounded border p-2">{groups.map(group => <label key={group.id} className="flex gap-2"><input type="checkbox" checked={((draft[key] ?? effective[key]) as string[]).includes(group.id)} onChange={() => setHas(key, group.id)}/>{group.displayName || group.id}</label>)}</div></fieldset>)}
+    {(['memberUsersOnly','licensedUsersOnly','deactivateExcludedContacts'] as const).map(key => <label key={key} className="flex gap-2 text-sm"><input id={`entra-filter-${key}-${mapping.managedTenantId}`} type="checkbox" checked={toggleValue(key)} onChange={event => change(key, event.target.checked)}/>{t(`integrations.entra.userImportFilter.${key}`)} <span className="text-xs text-muted-foreground">{marker(key)}</span></label>)}
+    {(['includeGroupIds','excludeGroupIds'] as const).map(key => <fieldset key={key} className="text-sm"><legend>{t(key === 'includeGroupIds' ? 'integrations.entra.userImportFilter.include' : 'integrations.entra.userImportFilter.exclude')} <span className="text-xs text-muted-foreground">{marker(key)}</span></legend><div className="max-h-32 overflow-auto rounded border p-2">{groups.map(group => <label key={group.id} className="flex gap-2"><input id={`entra-filter-${key}-${mapping.managedTenantId}-${group.id}`} type="checkbox" checked={((draft[key] ?? effective[key]) as string[]).includes(group.id)} onChange={() => setHas(key, group.id)}/>{group.displayName || group.id}</label>)}</div></fieldset>)}
     {groupError && <p id="entra-filter-groups-error" className="text-sm text-destructive">{groupError}</p>}
     {broad && <p id="entra-filter-broad-group-warning" className="text-sm text-warning-700">{t('integrations.entra.userImportFilter.broadGroupWarning')}</p>}
     <p className="text-xs text-muted-foreground">{t('integrations.entra.userImportFilter.transitive')}</p>
