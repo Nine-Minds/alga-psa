@@ -348,6 +348,14 @@
       "customLayout": "Aangepast",
       "tenantDefault": "Tenant-standaard",
       "changeLayout": "Wijzigen"
+    },
+    "sectionTitles": {
+      "title": "Sectietitels voor gegroepeerde offertes",
+      "description": "Optionele koppen voor de standaardindeling met gegroepeerde offerte.",
+      "monthlyLabel": "Titel van maandelijkse sectie",
+      "oneTimeLabel": "Titel van eenmalige sectie",
+      "monthlyPlaceholder": "Maandelijkse regels",
+      "oneTimePlaceholder": "Eenmalige regels"
     }
   },
   "quoteDetail": {

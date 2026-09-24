@@ -348,6 +348,14 @@
       "customLayout": "Personalizzato",
       "tenantDefault": "Predefinito tenant",
       "changeLayout": "Modifica"
+    },
+    "sectionTitles": {
+      "title": "Titoli delle sezioni del preventivo raggruppato",
+      "description": "Intestazioni facoltative del layout preventivo standard raggruppato.",
+      "monthlyLabel": "Titolo della sezione mensile",
+      "oneTimeLabel": "Titolo della sezione una tantum",
+      "monthlyPlaceholder": "Voci mensili",
+      "oneTimePlaceholder": "Voci una tantum"
     }
   },
   "quoteDetail": {

@@ -348,6 +348,14 @@
       "customLayout": "Custom",
       "tenantDefault": "Tenant default",
       "changeLayout": "Change"
+    },
+    "sectionTitles": {
+      "title": "Grouped quote section titles",
+      "description": "Optional headings used by the Standard Quote Grouped layout.",
+      "monthlyLabel": "Monthly section title",
+      "oneTimeLabel": "One-time section title",
+      "monthlyPlaceholder": "Monthly Items",
+      "oneTimePlaceholder": "One-time Items"
     }
   },
   "quoteDetail": {

@@ -84,7 +84,9 @@ const isTemplateValueExpression = (value: unknown): value is TemplateValueExpres
     return 'value' in value;
   }
   if (value.type === 'binding') {
-    return typeof value.bindingId === 'string';
+    return typeof value.bindingId === 'string' &&
+      (value.fallback === undefined || typeof value.fallback === 'string' ||
+        (isRecord(value.fallback) && typeof value.fallback.i18nKey === 'string' && typeof value.fallback.defaultValue === 'string'));
   }
   if (value.type === 'path') {
     return typeof value.path === 'string';

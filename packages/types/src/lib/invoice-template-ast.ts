@@ -298,7 +298,7 @@ export interface TemplateBindingRef {
 
 export type TemplateValueExpression =
   | { type: 'literal'; value: string | number | boolean | null }
-  | { type: 'binding'; bindingId: string }
+  | { type: 'binding'; bindingId: string; fallback?: TemplateI18nText }
   | { type: 'path'; path: string }
   | { type: 'template'; template: string; args?: Record<string, TemplateValueExpression> }
   // Standing headings authored as text nodes ("Bill To", "From",

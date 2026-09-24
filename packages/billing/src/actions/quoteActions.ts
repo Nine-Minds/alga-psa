@@ -1126,6 +1126,12 @@ export const createQuoteFromTemplate = withAuth(async (
       quote_date: input.quote_date,
       valid_until: input.valid_until,
       po_number: input.po_number ?? null,
+      recurring_section_title: input.recurring_section_title !== undefined
+        ? input.recurring_section_title
+        : template.recurring_section_title ?? null,
+      onetime_section_title: input.onetime_section_title !== undefined
+        ? input.onetime_section_title
+        : template.onetime_section_title ?? null,
       opportunity_id: input.opportunity_id ?? null,
       internal_notes: input.internal_notes ?? template.internal_notes ?? null,
       client_notes: input.client_notes ?? template.client_notes ?? null,
@@ -1190,6 +1196,8 @@ export const duplicateQuote = withAuth(async (
       quote_date: sourceQuote.quote_date ?? null,
       valid_until: sourceQuote.valid_until ?? null,
       po_number: sourceQuote.po_number ?? null,
+      recurring_section_title: sourceQuote.recurring_section_title?.trim() || null,
+      onetime_section_title: sourceQuote.onetime_section_title?.trim() || null,
       internal_notes: sourceQuote.internal_notes ?? null,
       client_notes: sourceQuote.client_notes ?? null,
       terms_and_conditions: sourceQuote.terms_and_conditions ?? null,
@@ -1263,6 +1271,8 @@ export const saveQuoteAsTemplate = withAuth(async (
       quote_date: null,
       valid_until: null,
       po_number: null,
+      recurring_section_title: sourceQuote.recurring_section_title?.trim() || null,
+      onetime_section_title: sourceQuote.onetime_section_title?.trim() || null,
       internal_notes: sourceQuote.internal_notes ?? null,
       client_notes: sourceQuote.client_notes ?? null,
       terms_and_conditions: sourceQuote.terms_and_conditions ?? null,

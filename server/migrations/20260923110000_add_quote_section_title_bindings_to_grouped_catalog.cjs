@@ -1,0 +1,86 @@
+const DEFINITIONS = {
+  'monthly-section-label': {
+    bindingId: 'recurringSectionTitle',
+    i18nKey: 'labels.monthlyItems',
+    defaultValue: 'Monthly Items',
+  },
+  'onetime-section-label': {
+    bindingId: 'onetimeSectionTitle',
+    i18nKey: 'labels.oneTimeItems',
+    defaultValue: 'One-time Items',
+  },
+};
+
+const isRecord = (value) => typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const stableStringify = (value) => {
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
+  if (isRecord(value)) {
+    return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`).join(',')}}`;
+  }
+  return JSON.stringify(value);
+};
+
+const VALUE_BINDINGS = Object.fromEntries(Object.values(DEFINITIONS).map(({ bindingId }) => [bindingId, {
+  id: bindingId,
+  kind: 'value',
+  path: bindingId === 'recurringSectionTitle' ? 'recurring_section_title' : 'onetime_section_title',
+}]));
+
+function transformBindings(bindings, direction) {
+  const current = isRecord(bindings) ? bindings : {};
+  const values = isRecord(current.values) ? { ...current.values } : {};
+  for (const [id, definition] of Object.entries(VALUE_BINDINGS)) {
+    if (direction === 'up' && !Object.prototype.hasOwnProperty.call(values, id)) values[id] = definition;
+    if (direction === 'down' && stableStringify(values[id]) === stableStringify(definition)) delete values[id];
+  }
+  return { ...current, values };
+}
+
+function transformNode(node, direction) {
+  if (!isRecord(node)) return node;
+  const next = { ...node };
+  if (Array.isArray(node.children)) next.children = node.children.map((child) => transformNode(child, direction));
+
+  const definition = DEFINITIONS[node.id];
+  if (node.type === 'text' && definition) {
+    const original = { type: 'i18n', i18nKey: definition.i18nKey, defaultValue: definition.defaultValue };
+    const updated = {
+      type: 'binding',
+      bindingId: definition.bindingId,
+      fallback: { i18nKey: definition.i18nKey, defaultValue: definition.defaultValue },
+    };
+    if (direction === 'up' && stableStringify(node.content) === stableStringify(original)) next.content = updated;
+    if (direction === 'down' && stableStringify(node.content) === stableStringify(updated)) next.content = original;
+  }
+  return next;
+}
+
+const transformAst = (ast, direction) =>
+  isRecord(ast) && isRecord(ast.layout)
+    ? { ...ast, bindings: transformBindings(ast.bindings, direction), layout: transformNode(ast.layout, direction) }
+    : ast;
+
+async function updateCatalog(knex, direction) {
+  const table = 'standard_quote_document_templates';
+  if (!(await knex.schema.hasTable(table)) || !(await knex.schema.hasColumn(table, 'templateAst'))) return;
+
+  // This is a global shipped catalog (no tenant shard key); select/transform/update
+  // each row so the migration is Citus safe and never rewrites tenant-owned copies.
+  const rows = await knex(table)
+    .select('template_id', 'standard_quote_document_template_code', 'templateAst')
+    .where('standard_quote_document_template_code', 'standard-quote-grouped');
+  for (const row of rows) {
+    const ast = typeof row.templateAst === 'string' ? JSON.parse(row.templateAst) : row.templateAst;
+    const transformed = transformAst(ast, direction);
+    if (JSON.stringify(transformed) === JSON.stringify(ast)) continue;
+    await knex(table).where({ template_id: row.template_id }).update({
+      templateAst: knex.raw('?::jsonb', [JSON.stringify(transformed)]),
+      updated_at: knex.fn.now(),
+    });
+  }
+}
+
+exports.up = (knex) => updateCatalog(knex, 'up');
+exports.down = (knex) => updateCatalog(knex, 'down');
+exports.__transformAst = transformAst;

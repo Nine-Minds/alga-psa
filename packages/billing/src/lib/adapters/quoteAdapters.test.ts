@@ -46,6 +46,15 @@ describe('quoteAdapters', () => {
     });
   });
 
+  it('maps custom quote section titles for document template bindings', async () => {
+    const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', buildQuote({
+      recurring_section_title: '  Retainer  ',
+      onetime_section_title: '  Setup  ',
+    }));
+    expect(viewModel.recurring_section_title).toBe('Retainer');
+    expect(viewModel.onetime_section_title).toBe('Setup');
+  });
+
   it('normalizes Date values and preserves trimmed ISO date strings', () => {
     expect(toIsoDateString(new Date('2026-07-17T12:30:00.000Z'))).toBe('2026-07-17T12:30:00.000Z');
     expect(toIsoDateString(' 2026-07-31T00:00:00.000Z ')).toBe('2026-07-31T00:00:00.000Z');

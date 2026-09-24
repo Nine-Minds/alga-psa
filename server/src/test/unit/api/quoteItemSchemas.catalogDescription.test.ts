@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createQuoteApiSchema,
   createQuoteItemSchema,
+  updateQuoteApiSchema,
   updateQuoteItemSchema,
 } from '../../../lib/api/schemas/quoteSchemas';
 
@@ -16,6 +17,29 @@ const forgedItem = {
 };
 
 describe('quote API item schemas: catalog_description is server-captured only', () => {
+  it('accepts and normalizes section titles on create and update', () => {
+    const create = createQuoteApiSchema.safeParse({
+      title: 'Managed services proposal',
+      recurring_section_title: '  Retainer  ',
+      onetime_section_title: '   ',
+    });
+    const update = updateQuoteApiSchema.safeParse({
+      recurring_section_title: '  Retainer  ',
+      onetime_section_title: '   ',
+    });
+
+    expect(create.success).toBe(true);
+    expect(update.success).toBe(true);
+    if (create.success) {
+      expect(create.data.recurring_section_title).toBe('Retainer');
+      expect(create.data.onetime_section_title).toBeNull();
+    }
+    if (update.success) {
+      expect(update.data.recurring_section_title).toBe('Retainer');
+      expect(update.data.onetime_section_title).toBeNull();
+    }
+  });
+
   it('createQuoteItemSchema strips a caller-supplied catalog_description', () => {
     const result = createQuoteItemSchema.safeParse(forgedItem);
 

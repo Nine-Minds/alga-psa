@@ -446,8 +446,13 @@ const resolveExpressionValue = (
   switch (expression.type) {
     case 'literal':
       return expression.value;
-    case 'binding':
-      return evaluation.bindings[expression.bindingId];
+    case 'binding': {
+      const value = evaluation.bindings[expression.bindingId];
+      // LEVERAGE: Binding expressions carry a localized fallback because the AST has no separate optional-binding node.
+      return value == null || (typeof value === 'string' && value.trim() === '')
+        ? displayText(expression.fallback)
+        : value;
+    }
     case 'path': {
       const parsedPath = decodeTemplatePathExpression(expression.path);
       const rowValue = scope.row ? getPathValue(scope.row, parsedPath.path) : undefined;
