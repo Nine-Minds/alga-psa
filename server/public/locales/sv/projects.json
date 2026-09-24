@@ -23,7 +23,7 @@
     },
     "project": {
       "notFound": "Projektet hittades inte",
-      "validationFailed": "Projektet kunde inte valideras. Kontrollera projektuppgifterna och försök igen.",
+      "validationFailed": "Projektet kunde inte valideras. Kontrollera projektets detaljer och försök igen.",
       "invalidValue": "Ett av de valda projektvärdena är ogiltigt. Ladda om och försök igen.",
       "referenceMissing": "En av de valda projektposterna finns inte längre. Ladda om och försök igen.",
       "conflict": "Den här projektändringen står i konflikt med en befintlig post. Ladda om och försök igen.",
@@ -32,7 +32,7 @@
       "missingFieldNamed": "Ett obligatoriskt projektfält saknas: {{field}}.",
       "statusesNotConfigured": "Projektstatusar är inte konfigurerade. Lägg till minst en projektstatus innan du skapar projekt.",
       "taskStatusesNotConfigured": "Statusar för projektuppgifter är inte konfigurerade. Lägg till minst en uppgiftsstatus innan du skapar projekt.",
-      "detailsUnavailableAfterCreate": "Projektet kunde inte skapas eftersom dess uppgifter inte kunde laddas. Försök igen."
+      "detailsUnavailableAfterCreate": "Projektet kunde inte skapas eftersom dess detaljer inte kunde läsas in. Försök igen."
     },
     "task": {
       "validationFailed": "Rätta uppgiftens detaljer: {{details}}",
@@ -47,7 +47,7 @@
       "internalOnly": "Endast interna användare kan kommentera uppgifter.",
       "taskNotFound": "Uppgiften hittades inte. Den kan ha raderats. Ladda om och försök igen.",
       "parentNotFound": "Kommentaren du svarar på hittades inte. Ladda om och försök igen.",
-      "sameThreadRequired": "Svar måste finnas i samma kommentarstråd för uppgiften. Ladda om och försök igen.",
+      "sameThreadRequired": "Svar måste ligga i samma kommentarstråd för uppgiften. Ladda om och försök igen.",
       "parentDeleted": "Du kan inte svara på en raderad kommentar.",
       "notFound": "Kommentaren hittades inte. Den kan ha raderats. Ladda om och försök igen.",
       "referenceMissing": "Den valda uppgiften eller kommentaren finns inte längre. Ladda om och försök igen.",
