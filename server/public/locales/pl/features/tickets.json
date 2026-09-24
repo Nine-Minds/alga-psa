@@ -719,15 +719,20 @@
       "masterSummary": "{{children}} zgłoszeń podrzędnych",
       "applyToChildren": "Zastosuj do podrzędnych",
       "mastersOnly": "Tylko nadrzędne",
-      "membersLabel": "Tickets in this bundle",
-      "addTicketSearchPlaceholder": "Search tickets by number or title",
-      "addTicketEmpty": "Search for tickets to add",
-      "badgeAdded": "Added",
-      "badgeInBundle": "In bundle #{{number}}",
-      "badgeMaster": "Bundle master",
-      "masterTag": "Master",
-      "removeMember": "Remove",
-      "needMoreTickets": "Add at least one more ticket to bundle."
+      "membersLabel": "Zgłoszenia w tym pakiecie",
+      "addTicketSearchPlaceholder": "Szukaj zgłoszeń po numerze lub tytule",
+      "addTicketEmpty": "Wyszukaj zgłoszenia do dodania",
+      "badgeAdded": "Dodano",
+      "badgeInBundle": "W pakiecie #{{number}}",
+      "badgeMaster": "Zgłoszenie nadrzędne pakietu",
+      "masterTag": "Nadrzędne",
+      "removeMember": "Usuń",
+      "needMoreTickets": "Dodaj co najmniej jedno zgłoszenie do pakietu.",
+      "unresolvedSelectedTickets_one": "Nie udało się załadować {{count}} wybranego zgłoszenia.",
+      "unresolvedSelectedTickets_other": "Nie udało się załadować {{count}} wybranego zgłoszenia.",
+      "badgeClosed": "Zamknięte",
+      "unresolvedSelectedTickets_few": "Nie udało się załadować {{count}} wybranych zgłoszeń.",
+      "unresolvedSelectedTickets_many": "Nie udało się załadować {{count}} wybranego zgłoszenia."
     },
     "auth": {
       "moveRequired": "Musisz być zalogowany, aby przenosić zgłoszenia",
@@ -756,7 +761,7 @@
       "more": "Więcej",
       "selectedCount_few": "Zaznaczono {{count}}",
       "selectedCount_many": "Zaznaczono {{count}}",
-      "bundleNeedsOne": "Select at least 1 ticket to bundle"
+      "bundleNeedsOne": "Wybierz co najmniej 1 zgłoszenie do połączenia"
     },
     "assign": {
       "dialogTitle": "Przypisz wybrane zgłoszenia",

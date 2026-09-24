@@ -43,6 +43,7 @@ vi.mock('./TicketingDashboard', () => ({
 
 vi.mock('../actions/optimizedTicketActions', () => ({
   fetchTicketsWithPagination: (...args: unknown[]) => fetchTicketsWithPagination(...(args as [])),
+  loadTicketListItemsByIds: vi.fn(),
 }));
 
 vi.mock('react-hot-toast', () => ({

@@ -681,7 +681,10 @@
       "badgeMaster": "Bundle master",
       "masterTag": "Master",
       "removeMember": "Remove",
-      "needMoreTickets": "Add at least one more ticket to bundle."
+      "needMoreTickets": "Add at least one more ticket to bundle.",
+      "unresolvedSelectedTickets_one": "Could not load {{count}} selected ticket.",
+      "unresolvedSelectedTickets_other": "Could not load {{count}} selected tickets.",
+      "badgeClosed": "Closed"
     },
     "auth": {
       "moveRequired": "You must be logged in to move tickets",

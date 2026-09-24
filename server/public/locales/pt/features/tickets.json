@@ -559,7 +559,7 @@
       "statusDisabledMultiBoard": "Os tickets selecionados estão em quadros diferentes",
       "statusResolvingBoards": "Verificando os quadros dos tickets selecionados…",
       "more": "Mais",
-      "bundleNeedsOne": "Select at least 1 ticket to bundle"
+      "bundleNeedsOne": "Selecione pelo menos 1 ticket para agrupar"
     },
     "moveDialogTitle": "Mover tickets selecionados",
     "moveDialogDescription": "Selecione um quadro de destino e status e confirme a movimentação dos tickets selecionados.",
@@ -665,15 +665,18 @@
       "masterSummary": "{{children}} ticket(s) filho(s)",
       "applyToChildren": "Aplicar aos filhos",
       "mastersOnly": "Somente mestres",
-      "membersLabel": "Tickets in this bundle",
-      "addTicketSearchPlaceholder": "Search tickets by number or title",
-      "addTicketEmpty": "Search for tickets to add",
-      "badgeAdded": "Added",
-      "badgeInBundle": "In bundle #{{number}}",
-      "badgeMaster": "Bundle master",
-      "masterTag": "Master",
-      "removeMember": "Remove",
-      "needMoreTickets": "Add at least one more ticket to bundle."
+      "membersLabel": "Tickets neste pacote",
+      "addTicketSearchPlaceholder": "Pesquisar tickets por número ou título",
+      "addTicketEmpty": "Pesquisar tickets para adicionar",
+      "badgeAdded": "Adicionado",
+      "badgeInBundle": "No pacote #{{number}}",
+      "badgeMaster": "Ticket principal do pacote",
+      "masterTag": "Principal",
+      "removeMember": "Remover",
+      "needMoreTickets": "Adicione pelo menos mais um ticket ao pacote.",
+      "unresolvedSelectedTickets_one": "Não foi possível carregar {{count}} ticket selecionado.",
+      "unresolvedSelectedTickets_other": "Não foi possível carregar {{count}} tickets selecionados.",
+      "badgeClosed": "Fechado"
     },
     "auth": {
       "moveRequired": "Você deve estar logado para mover tickets",

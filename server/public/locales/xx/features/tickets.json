@@ -681,7 +681,10 @@
       "badgeMaster": "⟦Ɓŭƞḓŀḗ ḿȧşŧḗř⟧",
       "masterTag": "⟦Ḿȧşŧḗř⟧",
       "removeMember": "⟦Řḗḿȯṽḗ⟧",
-      "needMoreTickets": "⟦Ȧḓḓ ȧŧ ŀḗȧşŧ ȯƞḗ ḿȯřḗ ŧīƈķḗŧ ŧȯ ƀŭƞḓŀḗ.⟧"
+      "needMoreTickets": "⟦Ȧḓḓ ȧŧ ŀḗȧşŧ ȯƞḗ ḿȯřḗ ŧīƈķḗŧ ŧȯ ƀŭƞḓŀḗ.⟧",
+      "unresolvedSelectedTickets_one": "⟦Ƈȯŭŀḓ ƞȯŧ ŀȯȧḓ {{count}} şḗŀḗƈŧḗḓ ŧīƈķḗŧ.⟧",
+      "unresolvedSelectedTickets_other": "⟦Ƈȯŭŀḓ ƞȯŧ ŀȯȧḓ {{count}} şḗŀḗƈŧḗḓ ŧīƈķḗŧş.⟧",
+      "badgeClosed": "⟦Ƈŀȯşḗḓ⟧"
     },
     "auth": {
       "moveRequired": "⟦Ẏȯŭ ḿŭşŧ ƀḗ ŀȯɠɠḗḓ īƞ ŧȯ ḿȯṽḗ ŧīƈķḗŧş⟧",

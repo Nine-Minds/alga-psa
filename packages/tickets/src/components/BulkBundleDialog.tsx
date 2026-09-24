@@ -32,6 +32,7 @@ export default function BulkBundleDialog({ id, isOpen, onClose, initialTicketIds
   const [masterId, setMasterId] = useState<string | null>(null);
   const [syncUpdates, setSyncUpdates] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const multipleMastersErrorRef = useRef<string | null>(null);
   const [existingMasterIds, setExistingMasterIds] = useState<Set<string>>(new Set());
   const [closedContext, setClosedContext] = useState<BundleMasterClosedContextActionResult | null>(null);
   const [closedChoice, setClosedChoice] = useState<ClosedMasterChoice | null>(null);
@@ -56,6 +57,7 @@ export default function BulkBundleDialog({ id, isOpen, onClose, initialTicketIds
 
     let cancelled = false;
     setError(null);
+    multipleMastersErrorRef.current = null;
     setSyncUpdates(true);
     setExistingMasterIds(new Set());
     setClosedContext(null);
@@ -87,13 +89,20 @@ export default function BulkBundleDialog({ id, isOpen, onClose, initialTicketIds
           });
           return Array.from(allMembers.values());
         });
+        const unresolvedIds = currentTicketIds.filter(ticketId => !resolved.has(ticketId));
+        if (unresolvedIds.length > 0) {
+          setError(t('bulk.bundle.unresolvedSelectedTickets', {
+            count: unresolvedIds.length,
+            defaultValue: 'Could not load {{count}} selected ticket(s).',
+          }));
+        }
       }).catch(loadError => {
         if (!cancelled) setError(getErrorMessage(loadError));
       });
     }
 
     return () => { cancelled = true; };
-  }, [isOpen, initialTicketKey]);
+  }, [isOpen, initialTicketKey, t]);
 
   useEffect(() => {
     if (!isOpen || !memberKey) return;
@@ -113,12 +122,15 @@ export default function BulkBundleDialog({ id, isOpen, onClose, initialTicketIds
         setMasterId(Array.from(masterIds)[0]);
       } else if (masterIds.size > 1) {
         setMasterId(null);
-        setError(t('bulk.bundle.multipleExistingMasters', {
+        const message = t('bulk.bundle.multipleExistingMasters', {
           count: masterIds.size,
           defaultValue: 'Multiple selected tickets are already bundle masters ({{count}}). Unbundle all but one before bundling.',
-        }));
+        });
+        multipleMastersErrorRef.current = message;
+        setError(message);
       } else {
-        setError(null);
+        setError(currentError => currentError === multipleMastersErrorRef.current ? null : currentError);
+        multipleMastersErrorRef.current = null;
       }
     }).catch(loadError => {
       if (!cancelled) setError(getErrorMessage(loadError));
@@ -188,13 +200,25 @@ export default function BulkBundleDialog({ id, isOpen, onClose, initialTicketIds
             ? t('bulk.bundle.badgeInBundle', { number: row.bundle_master_ticket_number ?? '', defaultValue: 'In bundle #{{number}}' })
             : isBundleMaster
               ? t('bulk.bundle.badgeMaster', 'Bundle master')
+              : row.is_closed
+                ? t('bulk.bundle.badgeClosed', 'Closed')
               : undefined;
+
+        const isClosedStatusBadge = Boolean(row.is_closed) && !inBundle && !isBundleMaster;
+        let badgeVariant: NonNullable<SelectOption['badge']>['variant'];
+        if (added || isClosedStatusBadge) {
+          badgeVariant = 'secondary';
+        } else if (inBundle) {
+          badgeVariant = 'warning';
+        } else {
+          badgeVariant = 'primary';
+        }
 
         return {
           value: row.ticket_id,
           label: `${row.ticket_number} – ${row.title} · ${row.client_name}`,
           disabled: added || inBundle,
-          ...(badge ? { badge: { text: badge, variant: added ? 'secondary' as const : inBundle ? 'warning' as const : 'primary' as const } } : {}),
+          ...(badge ? { badge: { text: badge, variant: badgeVariant } } : {}),
         };
       }),
     };
@@ -205,7 +229,6 @@ export default function BulkBundleDialog({ id, isOpen, onClose, initialTicketIds
     const row = knownRows.flat().find(candidate => candidate.ticket_id === ticketId)
       ?? searchRowsRef.current.get(ticketId);
     if (!row) {
-      setError(t('bulk.bundle.addTicketEmpty', 'Search for tickets to add'));
       return;
     }
 

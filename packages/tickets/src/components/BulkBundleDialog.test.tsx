@@ -91,6 +91,12 @@ function ticket(id: string, clientId = 'client-a', extra: Record<string, unknown
   } as never;
 }
 
+function getElement(id: string): HTMLElement {
+  const element = document.getElementById(id);
+  if (!element) throw new Error(`Expected element #${id} to exist`);
+  return element;
+}
+
 function renderDialog({
   initialTicketIds = ['one'],
   knownRows = [[ticket('one')]],
@@ -150,7 +156,13 @@ describe('BulkBundleDialog', () => {
     renderDialog({ initialTicketIds: ['one', 'off-page'], knownRows: [[ticket('one')]] });
     expect(await screen.findByText('OFF-PAGE')).toBeTruthy();
     expect(mocks.loadByIds).toHaveBeenCalledWith(expect.objectContaining({ boardFilterState: 'all' }), ['off-page']);
-    expect(within(document.getElementById('bundle-test-bundle-members')!).getAllByRole('listitem')).toHaveLength(2);
+    expect(within(getElement('bundle-test-bundle-members')).getAllByRole('listitem')).toHaveLength(2);
+  });
+
+  it('reports the count of selected tickets that could not be resolved', async () => {
+    mocks.loadByIds.mockResolvedValue({ tickets: [] });
+    renderDialog({ initialTicketIds: ['one', 'missing'], knownRows: [[ticket('one')]] });
+    expect(await screen.findByText('Could not load 1 selected ticket(s).')).toBeTruthy();
   });
 
   it('adds a search result and submits the selected master and children', async () => {
@@ -158,8 +170,14 @@ describe('BulkBundleDialog', () => {
     mocks.fetch.mockResolvedValue({ tickets: [ticket('two')], totalCount: 1 });
     expect(screen.getByRole('button', { name: 'Bundle Tickets' })).toBeDisabled();
     await openSearch();
+    expect(mocks.fetch).toHaveBeenCalledWith(expect.objectContaining({
+      searchQuery: 'TWO',
+      bundleView: 'individual',
+      boardFilterState: 'all',
+      showOpenOnly: false,
+    }), 1, 10);
     await chooseSearchResult(/TWO – Ticket two/);
-    await waitFor(() => expect(within(document.getElementById('bundle-test-bundle-members')!).getAllByRole('listitem')).toHaveLength(2));
+    await waitFor(() => expect(within(getElement('bundle-test-bundle-members')).getAllByRole('listitem')).toHaveLength(2));
     await waitFor(() => expect(screen.getByRole('button', { name: 'Bundle Tickets' })).toBeEnabled());
     expect(screen.getByRole('button', { name: 'Bundle Tickets' })).toBeEnabled();
     fireEvent.click(screen.getByRole('button', { name: 'Bundle Tickets' }));
@@ -185,9 +203,9 @@ describe('BulkBundleDialog', () => {
     const bundledOption = await within(list).findByRole('option', { name: /In bundle #M-1.*CHILD – Ticket child/ });
     expect(addedOption).toHaveAttribute('aria-disabled', 'true');
     expect(bundledOption).toHaveAttribute('aria-disabled', 'true');
-    fireEvent.click(addedOption!);
-    fireEvent.click(bundledOption!);
-    expect(within(document.getElementById('bundle-test-bundle-members')!).getAllByRole('listitem')).toHaveLength(2);
+    fireEvent.click(addedOption);
+    fireEvent.click(bundledOption);
+    expect(within(getElement('bundle-test-bundle-members')).getAllByRole('listitem')).toHaveLength(2);
   });
 
   it('adds a bundle master result and locks it as the master', async () => {
@@ -206,6 +224,16 @@ describe('BulkBundleDialog', () => {
     expect(screen.getByText('Master')).toBeTruthy();
   });
 
+  it('shows closed status for a selectable closed result', async () => {
+    mocks.fetch.mockResolvedValue({ tickets: [ticket('closed', 'client-a', { is_closed: true })], totalCount: 1 });
+    renderDialog();
+    await openSearch();
+    const closedOption = await screen.findByRole('option', { name: /Closed.*CLOSED – Ticket closed/ });
+    expect(closedOption).toHaveAttribute('aria-disabled', 'false');
+    await chooseSearchResult(/CLOSED – Ticket closed/);
+    await waitFor(() => expect(within(getElement('bundle-test-bundle-members')).getAllByRole('listitem')).toHaveLength(2));
+  });
+
   it('blocks confirm when two existing masters are present', async () => {
     mocks.status.mockResolvedValue({ masterTicketIds: ['one', 'two'] });
     renderDialog({ initialTicketIds: ['one', 'two'], knownRows: [[ticket('one'), ticket('two')]] });
@@ -216,10 +244,21 @@ describe('BulkBundleDialog', () => {
   it('removes a member and reassigns master to the first remaining member', async () => {
     renderDialog({ initialTicketIds: ['one', 'two'], knownRows: [[ticket('one'), ticket('two')]] });
     await waitFor(() => expect(mocks.status).toHaveBeenCalled());
-    fireEvent.click(document.getElementById('bundle-test-bundle-member-remove-one')!);
-    const members = document.getElementById('bundle-test-bundle-members');
-    expect(within(members!).getAllByRole('listitem')).toHaveLength(1);
-    expect(within(members!).getByText('TWO').closest('li')).toHaveTextContent('Master');
+    fireEvent.click(getElement('bundle-test-bundle-member-remove-one'));
+    const members = getElement('bundle-test-bundle-members');
+    expect(within(members).getAllByRole('listitem')).toHaveLength(1);
+    expect(within(members).getByText('TWO').closest('li')).toHaveTextContent('Master');
+  });
+
+  it('clears an existing-master lock when that member is removed', async () => {
+    mocks.status.mockImplementation(async ({ ticketIds }: { ticketIds: string[] }) => ({
+      masterTicketIds: ticketIds.includes('one') ? ['one'] : [],
+    }));
+    renderDialog({ initialTicketIds: ['one', 'two'], knownRows: [[ticket('one'), ticket('two')]] });
+    await waitFor(() => expect(document.getElementById('bundle-test-bundle-master-select')).toBeDisabled());
+    fireEvent.click(getElement('bundle-test-bundle-member-remove-one'));
+    await waitFor(() => expect(document.getElementById('bundle-test-bundle-master-select')).not.toBeDisabled());
+    expect(within(getElement('bundle-test-bundle-members')).getAllByRole('listitem')).toHaveLength(1);
   });
 
   it('requires two members before enabling confirm', async () => {
@@ -240,6 +279,17 @@ describe('BulkBundleDialog', () => {
     expect(mocks.bundle).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Proceed' }));
     await waitFor(() => expect(mocks.bundle).toHaveBeenCalledOnce());
+  });
+
+  it('includes off-page resolved clients in the multi-client confirmation', async () => {
+    mocks.loadByIds.mockResolvedValue({ tickets: [ticket('off-page', 'client-b')] });
+    renderDialog({ initialTicketIds: ['one', 'off-page'], knownRows: [[ticket('one')]] });
+    await screen.findByText('OFF-PAGE');
+    const confirmButton = screen.getByRole('button', { name: 'Bundle Tickets' });
+    await waitFor(() => expect(confirmButton).toBeEnabled());
+    fireEvent.click(confirmButton);
+    expect((await screen.findAllByText('This bundle includes tickets from multiple clients. Confirm that you want to proceed.')).length).toBeGreaterThan(0);
+    expect(mocks.bundle).not.toHaveBeenCalled();
   });
 
   it('shows a newly added result as Added on a subsequent search', async () => {

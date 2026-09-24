@@ -647,15 +647,18 @@
       "masterSummary": "{{children}} ticket(s) hijos",
       "applyToChildren": "Aplicar a los hijos",
       "mastersOnly": "Solo maestros",
-      "membersLabel": "Tickets in this bundle",
-      "addTicketSearchPlaceholder": "Search tickets by number or title",
-      "addTicketEmpty": "Search for tickets to add",
-      "badgeAdded": "Added",
-      "badgeInBundle": "In bundle #{{number}}",
-      "badgeMaster": "Bundle master",
-      "masterTag": "Master",
-      "removeMember": "Remove",
-      "needMoreTickets": "Add at least one more ticket to bundle."
+      "membersLabel": "Tickets de este paquete",
+      "addTicketSearchPlaceholder": "Buscar tickets por número o título",
+      "addTicketEmpty": "Buscar tickets para añadir",
+      "badgeAdded": "Añadido",
+      "badgeInBundle": "En el paquete #{{number}}",
+      "badgeMaster": "Ticket principal del paquete",
+      "masterTag": "Principal",
+      "removeMember": "Quitar",
+      "needMoreTickets": "Añade al menos un ticket más al paquete.",
+      "unresolvedSelectedTickets_one": "No se pudo cargar {{count}} ticket seleccionado.",
+      "unresolvedSelectedTickets_other": "No se pudieron cargar {{count}} tickets seleccionados.",
+      "badgeClosed": "Cerrado"
     },
     "auth": {
       "moveRequired": "Debe iniciar sesión para mover tickets",
@@ -682,7 +685,7 @@
       "statusDisabledMultiBoard": "Los tickets seleccionados están en tableros distintos",
       "statusResolvingBoards": "Comprobando los tableros de los tickets seleccionados…",
       "more": "Más",
-      "bundleNeedsOne": "Select at least 1 ticket to bundle"
+      "bundleNeedsOne": "Selecciona al menos 1 ticket para agrupar"
     },
     "assign": {
       "dialogTitle": "Asignar tickets seleccionados",
