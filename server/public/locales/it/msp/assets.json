@@ -663,7 +663,8 @@
       "mobileDevice": "Dettagli del dispositivo mobile",
       "printer": "Dettagli della stampante",
       "custom": "Dettagli di {{typeName}}"
-    }
+    },
+    "additionalFields": "Campi aggiuntivi"
   },
   "assetFormClient": {
     "title": "Cliente del modulo asset",
@@ -752,10 +753,10 @@
     "deviceOverdue": "Il dispositivo è in ritardo",
     "deviceOffline": "Il dispositivo è offline",
     "errors": {
-      "urlFetchFailed": "Impossibile ottenere l'URL di accesso remoto",
-      "initiateFailed": "Impossibile avviare l'accesso remoto",
-      "managePermission": "Permission denied: Cannot manage asset settings.",
-      "readPermission": "Permission denied: Cannot read assets."
+      "urlFetchFailed": "Impossibile ottenere l’URL di accesso remoto",
+      "initiateFailed": "Impossibile avviare l’accesso remoto",
+      "managePermission": "Autorizzazione negata: impossibile gestire le impostazioni degli asset.",
+      "readPermission": "Autorizzazione negata: impossibile leggere gli asset."
     },
     "indicator": {
       "online": "Connesso",
@@ -764,41 +765,41 @@
       "deviceOffline": "Dispositivo offline"
     },
     "links": {
-      "title": "Remote access links",
-      "description": "Configure URL templates for ScreenConnect and other remote tools.",
-      "add": "Add link",
-      "empty": "No remote access links are configured.",
-      "edit": "Edit",
-      "delete": "Delete",
-      "addTitle": "Add remote access link",
-      "editTitle": "Edit remote access link",
-      "cancel": "Cancel",
-      "save": "Save",
-      "label": "Button label",
-      "template": "URL template",
-      "tokens": "Usa {asset.name}, {asset.asset_tag}, {asset.serial_number}, {client.name} e {field.<key>} con le chiavi dei campi personalizzati definite in Impostazioni → Asset → Tipi di asset.",
+      "title": "Collegamenti di accesso remoto",
+      "description": "Configura modelli URL per ScreenConnect e altri strumenti di accesso remoto.",
       "errors": {
-        "load": "Failed to load remote access links.",
-        "save": "Failed to save the remote access link.",
-        "delete": "Failed to delete the remote access link.",
-        "templateHttp": "Template must begin with http:// or https:// and a literal host.",
-        "templatePlaceholder": "Template contains an unsupported placeholder.",
-        "templateUrl": "Template must produce a valid http or https URL.",
-        "required": "A label and URL template are required.",
-        "partialDelete": "Could not delete {{count}} selected link(s)."
+        "load": "Impossibile caricare i collegamenti di accesso remoto.",
+        "save": "Impossibile salvare il collegamento di accesso remoto.",
+        "delete": "Impossibile eliminare il collegamento di accesso remoto.",
+        "templateHttp": "Il modello deve iniziare con http:// o https:// e un host letterale.",
+        "templatePlaceholder": "Il modello contiene un segnaposto non supportato.",
+        "templateUrl": "Il modello deve generare un URL http o https valido.",
+        "required": "Sono obbligatori un’etichetta e un modello URL.",
+        "partialDelete": "Impossibile eliminare {{count}} collegamento/i selezionato/i."
       },
-      "loading": "Caricamento delle opzioni di accesso remoto…",
       "noneAvailable": "Nessuna opzione di accesso remoto disponibile.",
-      "unavailable": "Non disponibile per questa risorsa",
       "confirmDeleteTitle": "Eliminare il collegamento di accesso remoto?",
-      "confirmDeleteMessage": "Vuoi eliminare “{{label}}”? Questa azione non può essere annullata.",
-      "actions": "Actions",
-      "openMenu": "Open menu",
-      "selectLabel": "Select {{label}}",
-      "selectAll": "Select all links",
-      "confirmBulkDeleteTitle": "Delete selected links?",
-      "confirmBulkDeleteMessage": "Delete {{count}} selected remote access link(s)?",
-      "selectedCount": "{{count}} selected"
+      "confirmDeleteMessage": "Eliminare “{{label}}”? Questa azione è irreversibile.",
+      "openMenu": "Apri menu",
+      "selectLabel": "Seleziona {{label}}",
+      "confirmBulkDeleteTitle": "Eliminare i collegamenti selezionati?",
+      "confirmBulkDeleteMessage": "Eliminare {{count}} collegamento/i di accesso remoto selezionato/i?",
+      "selectedCount": "{{count}} selezionato/i",
+      "add": "Aggiungi collegamento",
+      "empty": "Nessun collegamento di accesso remoto configurato.",
+      "edit": "Modifica",
+      "delete": "Elimina",
+      "addTitle": "Aggiungi collegamento di accesso remoto",
+      "editTitle": "Modifica collegamento di accesso remoto",
+      "cancel": "Annulla",
+      "save": "Salva",
+      "label": "Etichetta del pulsante",
+      "template": "Modello URL",
+      "tokens": "Usa {asset.name}, {asset.asset_tag}, {asset.serial_number}, {client.name} e {field.<key>} con le chiavi dei campi personalizzati definite in Impostazioni → Asset → Tipi di asset.",
+      "loading": "Caricamento delle opzioni di accesso remoto…",
+      "unavailable": "Non disponibile per questo asset",
+      "actions": "Azioni",
+      "selectAll": "Seleziona tutti i collegamenti"
     }
   },
   "assetListErrors": {

@@ -663,7 +663,8 @@
       "mobileDevice": "Szczegóły urządzenia mobilnego",
       "printer": "Szczegóły drukarki",
       "custom": "Szczegóły: {{typeName}}"
-    }
+    },
+    "additionalFields": "Pola dodatkowe"
   },
   "assetFormClient": {
     "title": "Klient formularza zasobu",
@@ -753,9 +754,9 @@
     "deviceOffline": "Urządzenie jest offline",
     "errors": {
       "urlFetchFailed": "Nie udało się pobrać adresu URL dostępu zdalnego",
-      "initiateFailed": "Nie udało się zainicjować dostępu zdalnego",
-      "managePermission": "Permission denied: Cannot manage asset settings.",
-      "readPermission": "Permission denied: Cannot read assets."
+      "initiateFailed": "Nie udało się rozpocząć dostępu zdalnego",
+      "managePermission": "Brak uprawnień: nie można zarządzać ustawieniami zasobów.",
+      "readPermission": "Brak uprawnień: nie można odczytać zasobów."
     },
     "indicator": {
       "online": "Online",
@@ -764,41 +765,41 @@
       "deviceOffline": "Urządzenie offline"
     },
     "links": {
-      "title": "Remote access links",
-      "description": "Configure URL templates for ScreenConnect and other remote tools.",
-      "add": "Add link",
-      "empty": "No remote access links are configured.",
-      "edit": "Edit",
-      "delete": "Delete",
-      "addTitle": "Add remote access link",
-      "editTitle": "Edit remote access link",
-      "cancel": "Cancel",
-      "save": "Save",
-      "label": "Button label",
-      "template": "URL template",
-      "tokens": "Użyj {asset.name}, {asset.asset_tag}, {asset.serial_number}, {client.name} oraz {field.<key>} z kluczami pól niestandardowych zdefiniowanymi w Ustawienia → Zasoby → Typy zasobów.",
+      "title": "Łącza dostępu zdalnego",
+      "description": "Skonfiguruj szablony adresów URL dla ScreenConnect i innych narzędzi dostępu zdalnego.",
       "errors": {
-        "load": "Failed to load remote access links.",
-        "save": "Failed to save the remote access link.",
-        "delete": "Failed to delete the remote access link.",
-        "templateHttp": "Template must begin with http:// or https:// and a literal host.",
-        "templatePlaceholder": "Template contains an unsupported placeholder.",
-        "templateUrl": "Template must produce a valid http or https URL.",
-        "required": "A label and URL template are required.",
-        "partialDelete": "Could not delete {{count}} selected link(s)."
+        "load": "Nie udało się wczytać łączy dostępu zdalnego.",
+        "save": "Nie udało się zapisać łącza dostępu zdalnego.",
+        "delete": "Nie udało się usunąć łącza dostępu zdalnego.",
+        "templateHttp": "Szablon musi zaczynać się od http:// lub https:// i zawierać dosłowną nazwę hosta.",
+        "templatePlaceholder": "Szablon zawiera nieobsługiwany symbol zastępczy.",
+        "templateUrl": "Szablon musi tworzyć prawidłowy adres URL http lub https.",
+        "required": "Etykieta i szablon adresu URL są wymagane.",
+        "partialDelete": "Nie udało się usunąć {{count}} zaznaczonych łączy."
       },
-      "loading": "Ładowanie opcji zdalnego dostępu…",
-      "noneAvailable": "Brak dostępnych opcji zdalnego dostępu.",
+      "noneAvailable": "Brak dostępnych opcji dostępu zdalnego.",
+      "confirmDeleteTitle": "Usunąć łącze dostępu zdalnego?",
+      "confirmDeleteMessage": "Czy na pewno usunąć „{{label}}”? Tej czynności nie można cofnąć.",
+      "openMenu": "Otwórz menu",
+      "selectLabel": "Wybierz {{label}}",
+      "confirmBulkDeleteTitle": "Usunąć zaznaczone łącza?",
+      "confirmBulkDeleteMessage": "Usunąć {{count}} zaznaczonych łączy dostępu zdalnego?",
+      "selectedCount": "Wybrano: {{count}}",
+      "add": "Dodaj łącze",
+      "empty": "Nie skonfigurowano łączy dostępu zdalnego.",
+      "edit": "Edytuj",
+      "delete": "Usuń",
+      "addTitle": "Dodaj łącze dostępu zdalnego",
+      "editTitle": "Edytuj łącze dostępu zdalnego",
+      "cancel": "Anuluj",
+      "save": "Zapisz",
+      "label": "Etykieta przycisku",
+      "template": "Szablon adresu URL",
+      "tokens": "Użyj {asset.name}, {asset.asset_tag}, {asset.serial_number}, {client.name} i {field.<key>} z kluczami pól niestandardowych z Ustawienia → Zasoby → Typy zasobów.",
+      "loading": "Wczytywanie opcji dostępu zdalnego…",
       "unavailable": "Niedostępne dla tego zasobu",
-      "confirmDeleteTitle": "Usunąć łącze zdalnego dostępu?",
-      "confirmDeleteMessage": "Czy na pewno usunąć „{{label}}”? Tej operacji nie można cofnąć.",
-      "actions": "Actions",
-      "openMenu": "Open menu",
-      "selectLabel": "Select {{label}}",
-      "selectAll": "Select all links",
-      "confirmBulkDeleteTitle": "Delete selected links?",
-      "confirmBulkDeleteMessage": "Delete {{count}} selected remote access link(s)?",
-      "selectedCount": "{{count}} selected"
+      "actions": "Działania",
+      "selectAll": "Zaznacz wszystkie łącza"
     }
   },
   "assetListErrors": {

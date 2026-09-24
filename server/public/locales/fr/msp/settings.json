@@ -3055,7 +3055,7 @@
     "assetTypes": {
       "tab": "Actifs",
       "title": "Types d'actifs",
-      "description": "Gérez les types d'actifs disponibles dans votre module d'actifs. Les types personnalisés portent un schéma de champs qui pilote leurs formulaires de création/modification.",
+      "description": "Les types personnalisés utilisent un schéma de champs pour leurs formulaires ; les types intégrés prennent aussi en charge des champs supplémentaires.",
       "loading": "Chargement des types d'actifs...",
       "table": {
         "name": "Nom",
@@ -3142,7 +3142,7 @@
           "invalidField": "Ce champ est invalide."
         }
       },
-      "additionalFields": "Additional fields"
+      "additionalFields": "Champs supplémentaires"
     }
   },
   "mcpServer": {

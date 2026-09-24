@@ -3083,7 +3083,7 @@
     "assetTypes": {
       "tab": "Zasoby",
       "title": "Typy zasobów",
-      "description": "Zarządzaj typami zasobów dostępnymi w module zasobów. Typy niestandardowe mają schemat pól, który steruje ich formularzami tworzenia/edycji.",
+      "description": "Typy niestandardowe używają schematu pól w formularzach; typy wbudowane również obsługują pola dodatkowe.",
       "loading": "Ładowanie typów zasobów...",
       "table": {
         "name": "Nazwa",
@@ -3170,7 +3170,7 @@
           "invalidField": "To pole jest nieprawidłowe."
         }
       },
-      "additionalFields": "Additional fields"
+      "additionalFields": "Pola dodatkowe"
     }
   },
   "mcpServer": {

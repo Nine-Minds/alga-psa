@@ -663,7 +663,8 @@
       "mobileDevice": "〖Ḿȯƀīŀḗ Ḓḗṽīƈḗ Ḓḗŧȧīŀş ·········〗",
       "printer": "〖Ƥřīƞŧḗř Ḓḗŧȧīŀş ······〗",
       "custom": "〖{{typeName}} Ḓḗŧȧīŀş ········〗"
-    }
+    },
+    "additionalFields": "〖Ȧḓḓīŧīȯƞȧŀ ƒīḗŀḓş ·······〗"
   },
   "assetFormClient": {
     "title": "〖Ȧşşḗŧ Ƒȯřḿ Ƈŀīḗƞŧ ·······〗",
@@ -742,9 +743,9 @@
   },
   "remoteAccess": {
     "connectionTypes": {
-      "teamviewer": "〖Ŧḗȧḿṽīḗẇḗř ·······〗",
-      "vnc": "〖ṼȠƇ ···〗",
-      "rdp": "〖ŘḒƤ ···〗"
+      "teamviewer": "〖ŦḗȧḿṼīḗẇḗř ····〗",
+      "vnc": "〖ṼȠƇ ··〗",
+      "rdp": "〖ŘḒƤ ··〗"
     },
     "remoteDesktop": "〖Řḗḿȯŧḗ Ḓḗşķŧȯƥ ······〗",
     "remoteShell": "〖Řḗḿȯŧḗ Şħḗŀŀ ·····〗",
@@ -754,8 +755,8 @@
     "errors": {
       "urlFetchFailed": "〖Ƒȧīŀḗḓ ŧȯ ɠḗŧ řḗḿȯŧḗ ȧƈƈḗşş ŬŘĿ ·············〗",
       "initiateFailed": "〖Ƒȧīŀḗḓ ŧȯ īƞīŧīȧŧḗ řḗḿȯŧḗ ȧƈƈḗşş ·············〗",
-      "managePermission": "Permission denied: Cannot manage asset settings.",
-      "readPermission": "Permission denied: Cannot read assets."
+      "managePermission": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ƈȧƞƞȯŧ ḿȧƞȧɠḗ ȧşşḗŧ şḗŧŧīƞɠş. ····················〗",
+      "readPermission": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ƈȧƞƞȯŧ řḗȧḓ ȧşşḗŧş. ················〗"
     },
     "indicator": {
       "online": "〖Ȯƞŀīƞḗ ···〗",
@@ -781,24 +782,24 @@
         "load": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ řḗḿȯŧḗ ȧƈƈḗşş ŀīƞķş. ··············〗",
         "save": "〖Ƒȧīŀḗḓ ŧȯ şȧṽḗ ŧħḗ řḗḿȯŧḗ ȧƈƈḗşş ŀīƞķ. ················〗",
         "delete": "〖Ƒȧīŀḗḓ ŧȯ ḓḗŀḗŧḗ ŧħḗ řḗḿȯŧḗ ȧƈƈḗşş ŀīƞķ. ················〗",
-        "templateHttp": "Template must begin with http:// or https:// and a literal host.",
-        "templatePlaceholder": "Template contains an unsupported placeholder.",
-        "templateUrl": "Template must produce a valid http or https URL.",
-        "required": "A label and URL template are required.",
-        "partialDelete": "Could not delete {{count}} selected link(s)."
+        "templateHttp": "〖Ŧḗḿƥŀȧŧḗ ḿŭşŧ ƀḗɠīƞ ẇīŧħ ħŧŧƥ:// ȯř ħŧŧƥş:// ȧƞḓ ȧ ŀīŧḗřȧŀ ħȯşŧ. ··························〗",
+        "templatePlaceholder": "〖Ŧḗḿƥŀȧŧḗ ƈȯƞŧȧīƞş ȧƞ ŭƞşŭƥƥȯřŧḗḓ ƥŀȧƈḗħȯŀḓḗř. ··················〗",
+        "templateUrl": "〖Ŧḗḿƥŀȧŧḗ ḿŭşŧ ƥřȯḓŭƈḗ ȧ ṽȧŀīḓ ħŧŧƥ ȯř ħŧŧƥş ŬŘĿ. ····················〗",
+        "required": "〖Ȧ ŀȧƀḗŀ ȧƞḓ ŬŘĿ ŧḗḿƥŀȧŧḗ ȧřḗ řḗʠŭīřḗḓ. ················〗",
+        "partialDelete": "〖Ƈȯŭŀḓ ƞȯŧ ḓḗŀḗŧḗ {{count}} şḗŀḗƈŧḗḓ ŀīƞķ(ş). ··················〗"
       },
-      "loading": "〖Ŀȯȧḓīƞɠ řḗḿȯŧḗ ȧƈƈḗşş ȯƥŧīȯƞş… ·······〗",
-      "noneAvailable": "〖Ƞȯ řḗḿȯŧḗ ȧƈƈḗşş ȯƥŧīȯƞş ȧřḗ ȧṽȧīŀȧƀŀḗ. ·········〗",
-      "unavailable": "〖Ŭƞȧṽȧīŀȧƀŀḗ ƒȯř ŧħīş ȧşşḗŧ ···〗",
-      "confirmDeleteTitle": "〖Ḓḗŀḗŧḗ řḗḿȯŧḗ ȧƈƈḗşş ŀīƞķ? ·····〗",
-      "confirmDeleteMessage": "〖Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ ḓḗŀḗŧḗ “{{label}}”? Ŧħīş ƈȧƞƞȯŧ ƀḗ ŭƞḓȯƞḗ. ·········〗",
-      "actions": "Actions",
-      "openMenu": "Open menu",
-      "selectLabel": "Select {{label}}",
-      "selectAll": "Select all links",
-      "confirmBulkDeleteTitle": "Delete selected links?",
-      "confirmBulkDeleteMessage": "Delete {{count}} selected remote access link(s)?",
-      "selectedCount": "{{count}} selected"
+      "loading": "〖Ŀȯȧḓīƞɠ řḗḿȯŧḗ ȧƈƈḗşş ȯƥŧīȯƞş… ············〗",
+      "noneAvailable": "〖Ƞȯ řḗḿȯŧḗ ȧƈƈḗşş ȯƥŧīȯƞş ȧřḗ ȧṽȧīŀȧƀŀḗ. ················〗",
+      "unavailable": "〖Ŭƞȧṽȧīŀȧƀŀḗ ƒȯř ŧħīş ȧşşḗŧ ···········〗",
+      "confirmDeleteTitle": "〖Ḓḗŀḗŧḗ řḗḿȯŧḗ ȧƈƈḗşş ŀīƞķ? ···········〗",
+      "confirmDeleteMessage": "〖Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ ḓḗŀḗŧḗ “{{label}}”? Ŧħīş ȧƈŧīȯƞ ƈȧƞƞȯŧ ƀḗ ŭƞḓȯƞḗ. ······························〗",
+      "actions": "〖Ȧƈŧīȯƞş ···〗",
+      "openMenu": "〖Ȯƥḗƞ ḿḗƞŭ ····〗",
+      "selectLabel": "〖Şḗŀḗƈŧ {{label}} ·······〗",
+      "selectAll": "〖Şḗŀḗƈŧ ȧŀŀ ŀīƞķş ·······〗",
+      "confirmBulkDeleteTitle": "〖Ḓḗŀḗŧḗ şḗŀḗƈŧḗḓ ŀīƞķş? ·········〗",
+      "confirmBulkDeleteMessage": "〖Ḓḗŀḗŧḗ {{count}} şḗŀḗƈŧḗḓ řḗḿȯŧḗ ȧƈƈḗşş ŀīƞķ(ş)? ····················〗",
+      "selectedCount": "〖{{count}} şḗŀḗƈŧḗḓ ········〗"
     }
   },
   "assetListErrors": {

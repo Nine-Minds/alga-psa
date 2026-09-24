@@ -3055,7 +3055,7 @@
     "assetTypes": {
       "tab": "Ativos",
       "title": "Tipos de ativos",
-      "description": "Gerencie os tipos de ativos disponíveis em seu módulo de ativos. Os tipos personalizados carregam um esquema de campo que orienta seus formulários de criação/edição.",
+      "description": "Tipos personalizados usam um esquema de campos nos formulários; tipos integrados também aceitam campos adicionais.",
       "loading": "Carregando tipos de recursos...",
       "table": {
         "name": "Nome",
@@ -3142,7 +3142,7 @@
           "invalidField": "Este campo é inválido."
         }
       },
-      "additionalFields": "Additional fields"
+      "additionalFields": "Campos adicionais"
     }
   },
   "mcpServer": {

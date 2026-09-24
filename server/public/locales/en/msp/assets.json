@@ -663,7 +663,8 @@
       "mobileDevice": "Mobile Device Details",
       "printer": "Printer Details",
       "custom": "{{typeName}} Details"
-    }
+    },
+    "additionalFields": "Additional fields"
   },
   "assetFormClient": {
     "title": "Asset Form Client",

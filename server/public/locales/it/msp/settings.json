@@ -3055,7 +3055,7 @@
     "assetTypes": {
       "tab": "Asset",
       "title": "Tipi di asset",
-      "description": "Gestisci i tipi di asset disponibili nel modulo asset. I tipi personalizzati hanno uno schema di campi che determina i loro moduli di creazione/modifica.",
+      "description": "I tipi personalizzati usano uno schema di campi per i moduli; anche i tipi integrati supportano campi aggiuntivi.",
       "loading": "Caricamento dei tipi di asset...",
       "table": {
         "name": "Nome",
@@ -3142,7 +3142,7 @@
           "invalidField": "Questo campo non è valido."
         }
       },
-      "additionalFields": "Additional fields"
+      "additionalFields": "Campi aggiuntivi"
     }
   },
   "mcpServer": {

@@ -3055,7 +3055,7 @@
     "assetTypes": {
       "tab": "Activos",
       "title": "Tipos de activos",
-      "description": "Administre los tipos de activos disponibles en su módulo de activos. Los tipos personalizados llevan un esquema de campos que define sus formularios de creación y edición.",
+      "description": "Los tipos personalizados usan un esquema de campos para sus formularios; los tipos integrados también admiten campos adicionales.",
       "loading": "Cargando tipos de activos...",
       "table": {
         "name": "Nombre",
@@ -3142,7 +3142,7 @@
           "invalidField": "Este campo no es válido."
         }
       },
-      "additionalFields": "Additional fields"
+      "additionalFields": "Campos adicionales"
     }
   },
   "mcpServer": {

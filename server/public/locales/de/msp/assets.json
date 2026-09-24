@@ -663,7 +663,8 @@
       "mobileDevice": "Details zu Mobilgeräten",
       "printer": "Druckerdetails",
       "custom": "{{typeName}}-Details"
-    }
+    },
+    "additionalFields": "Zusätzliche Felder"
   },
   "assetFormClient": {
     "title": "Asset-Formular-Client",
@@ -752,10 +753,10 @@
     "deviceOverdue": "Gerät ist überfällig",
     "deviceOffline": "Gerät ist offline",
     "errors": {
-      "urlFetchFailed": "URL für Remote-Zugriff konnte nicht abgerufen werden",
-      "initiateFailed": "Remote-Zugriff konnte nicht gestartet werden",
-      "managePermission": "Permission denied: Cannot manage asset settings.",
-      "readPermission": "Permission denied: Cannot read assets."
+      "urlFetchFailed": "Fehler beim Abrufen der Fernzugriffs-URL",
+      "initiateFailed": "Fernzugriff konnte nicht gestartet werden",
+      "managePermission": "Berechtigung verweigert: Asset-Einstellungen können nicht verwaltet werden.",
+      "readPermission": "Berechtigung verweigert: Assets können nicht gelesen werden."
     },
     "indicator": {
       "online": "Online",
@@ -764,41 +765,41 @@
       "deviceOffline": "Gerät offline"
     },
     "links": {
-      "title": "Remote access links",
-      "description": "Configure URL templates for ScreenConnect and other remote tools.",
-      "add": "Add link",
-      "empty": "No remote access links are configured.",
-      "edit": "Edit",
-      "delete": "Delete",
-      "addTitle": "Add remote access link",
-      "editTitle": "Edit remote access link",
-      "cancel": "Cancel",
-      "save": "Save",
-      "label": "Button label",
-      "template": "URL template",
-      "tokens": "Verwenden Sie {asset.name}, {asset.asset_tag}, {asset.serial_number}, {client.name} und {field.<key>} mit benutzerdefinierten Feldschlüsseln unter Einstellungen → Assets → Assettypen.",
+      "title": "Fernzugriffslinks",
+      "description": "URL-Vorlagen für ScreenConnect und andere Fernwartungstools konfigurieren.",
       "errors": {
-        "load": "Failed to load remote access links.",
-        "save": "Failed to save the remote access link.",
-        "delete": "Failed to delete the remote access link.",
-        "templateHttp": "Template must begin with http:// or https:// and a literal host.",
-        "templatePlaceholder": "Template contains an unsupported placeholder.",
-        "templateUrl": "Template must produce a valid http or https URL.",
-        "required": "A label and URL template are required.",
-        "partialDelete": "Could not delete {{count}} selected link(s)."
+        "load": "Fernzugriffslinks konnten nicht geladen werden.",
+        "save": "Fernzugriffslink konnte nicht gespeichert werden.",
+        "delete": "Fernzugriffslink konnte nicht gelöscht werden.",
+        "templateHttp": "Die Vorlage muss mit http:// oder https:// und einem direkten Hostnamen beginnen.",
+        "templatePlaceholder": "Die Vorlage enthält einen nicht unterstützten Platzhalter.",
+        "templateUrl": "Die Vorlage muss eine gültige http- oder https-URL ergeben.",
+        "required": "Eine Beschriftung und eine URL-Vorlage sind erforderlich.",
+        "partialDelete": "{{count}} ausgewählte Links konnten nicht gelöscht werden."
       },
-      "loading": "Remotezugriffsoptionen werden geladen.",
-      "noneAvailable": "Keine Remotezugriffsoptionen verfügbar.",
+      "noneAvailable": "Keine Fernzugriffsoptionen verfügbar.",
+      "confirmDeleteTitle": "Fernzugriffslink löschen?",
+      "confirmDeleteMessage": "Möchten Sie „{{label}}“ wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+      "openMenu": "Menü öffnen",
+      "selectLabel": "{{label}} auswählen",
+      "confirmBulkDeleteTitle": "Ausgewählte Links löschen?",
+      "confirmBulkDeleteMessage": "{{count}} ausgewählte Fernzugriffslinks löschen?",
+      "selectedCount": "{{count}} ausgewählt",
+      "add": "Link hinzufügen",
+      "empty": "Keine Fernzugriffslinks konfiguriert.",
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "addTitle": "Fernzugriffslink hinzufügen",
+      "editTitle": "Fernzugriffslink bearbeiten",
+      "cancel": "Abbrechen",
+      "save": "Speichern",
+      "label": "Schaltflächenbeschriftung",
+      "template": "URL-Vorlage",
+      "tokens": "Verwenden Sie {asset.name}, {asset.asset_tag}, {asset.serial_number}, {client.name} und {field.<key>} mit benutzerdefinierten Feldschlüsseln aus Einstellungen → Assets → Asset-Typen.",
+      "loading": "Fernzugriffsoptionen werden geladen…",
       "unavailable": "Für dieses Asset nicht verfügbar",
-      "confirmDeleteTitle": "Löschen bestätigen",
-      "confirmDeleteMessage": "Möchten Sie den Remotezugriffslink „{{label}}“ löschen?",
-      "actions": "Actions",
-      "openMenu": "Open menu",
-      "selectLabel": "Select {{label}}",
-      "selectAll": "Select all links",
-      "confirmBulkDeleteTitle": "Delete selected links?",
-      "confirmBulkDeleteMessage": "Delete {{count}} selected remote access link(s)?",
-      "selectedCount": "{{count}} selected"
+      "actions": "Aktionen",
+      "selectAll": "Alle Links auswählen"
     }
   },
   "assetListErrors": {
