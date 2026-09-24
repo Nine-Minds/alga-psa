@@ -1156,7 +1156,6 @@
         "exclude": "Wyklucz grupę zabezpieczeń",
         "none": "Brak grupy",
         "patterns": "Dodatkowe wzorce wykluczeń (jedno wyrażenie regularne w wierszu)",
-        "deactivate": "Dezaktywuj powiązane kontakty poza tym filtrem",
         "save": "Zapisz filtr",
         "loading": "Wczytywanie filtru importu…",
         "saved": "Zapisano",
@@ -1174,7 +1173,18 @@
         "addPattern": "Add pattern",
         "remove": "Remove",
         "saving": "Saving…",
-        "saveFailed": "Could not save the import filter."
+        "saveFailed": "Could not save the import filter.",
+        "broadGroupWarning": "Ten filtr obejmuje lub wyklucza szeroką grupę, taką jak Wszyscy użytkownicy. Przed zapisaniem sprawdź skutki.",
+        "deactivateExcludedContacts": "Dezaktywuj połączone kontakty wykluczone przez ten filtr",
+        "effectivePatterns": "Aktywne wzorce: {{patterns}}",
+        "inherited": "Odziedziczone",
+        "overridden": "Zastąpione",
+        "preview": "Podgląd",
+        "previewing": "Tworzenie podglądu…",
+        "reset": "Resetuj",
+        "retry": "Ponów próbę",
+        "recommendedHint": "Zalecane dla nowych konfiguracji: tylko członkowie i tylko użytkownicy z licencją. Niezaznaczone wartości odzwierciedlają zapisane ustawienia.",
+        "excludedContactInactive": "Wykluczono przez filtr importu; połączony kontakt zostałby oznaczony jako nieaktywny. Nic nie jest usuwane."
       }
     },
     "google": {

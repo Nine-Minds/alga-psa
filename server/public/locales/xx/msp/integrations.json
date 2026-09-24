@@ -1156,7 +1156,6 @@
         "exclude": "⟦Ḗẋƈŀŭḓḗ şḗƈŭřīŧẏ ɠřȯŭƥ⟧",
         "none": "⟦Ƞȯ ɠřȯŭƥ⟧",
         "patterns": "⟦Ȧḓḓīŧīȯƞȧŀ ḗẋƈŀŭşīȯƞ ƥȧŧŧḗřƞş (ȯƞḗ řḗɠŭŀȧř ḗẋƥřḗşşīȯƞ ƥḗř ŀīƞḗ)⟧",
-        "deactivate": "⟦Ḓḗȧƈŧīṽȧŧḗ ŀīƞķḗḓ ƈȯƞŧȧƈŧş ŧħȧŧ ƒȧŀŀ ȯŭŧşīḓḗ ŧħīş ƒīŀŧḗř⟧",
         "save": "⟦Şȧṽḗ ƒīŀŧḗř⟧",
         "loading": "⟦Ŀȯȧḓīƞɠ īḿƥȯřŧ ƒīŀŧḗř…⟧",
         "saved": "⟦Şȧṽḗḓ⟧",
@@ -1174,7 +1173,18 @@
         "addPattern": "⟦Ȧḓḓ ƥȧŧŧḗřƞ⟧",
         "remove": "⟦Řḗḿȯṽḗ⟧",
         "saving": "⟦Şȧṽīƞɠ…⟧",
-        "saveFailed": "⟦Ƈȯŭŀḓ ƞȯŧ şȧṽḗ ŧħḗ īḿƥȯřŧ ƒīŀŧḗř.⟧"
+        "saveFailed": "⟦Ƈȯŭŀḓ ƞȯŧ şȧṽḗ ŧħḗ īḿƥȯřŧ ƒīŀŧḗř.⟧",
+        "broadGroupWarning": "⟦This filter includes or excludes a broad group such as All Users. Check the impact before saving.⟧",
+        "deactivateExcludedContacts": "⟦Deactivate linked contacts excluded by this filter⟧",
+        "effectivePatterns": "⟦Effective patterns: {{patterns}}⟧",
+        "inherited": "⟦Inherited⟧",
+        "overridden": "⟦Overridden⟧",
+        "preview": "⟦Preview⟧",
+        "previewing": "⟦Previewing…⟧",
+        "reset": "⟦Reset⟧",
+        "retry": "⟦Retry⟧",
+        "recommendedHint": "⟦Recommended for new setups: Members only and Licensed users only. These are suggestions; unchecked values reflect the saved policy until you change and save them.⟧",
+        "excludedContactInactive": "⟦Excluded by the import filter; the linked contact would be marked inactive. Nothing is deleted.⟧"
       }
     },
     "google": {

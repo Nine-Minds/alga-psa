@@ -1156,7 +1156,6 @@
         "exclude": "Excluir grupo de seguridad",
         "none": "Ningún grupo",
         "patterns": "Patrones de exclusión adicionales (una expresión regular por línea)",
-        "deactivate": "Desactivar contactos vinculados fuera de este filtro",
         "save": "Guardar filtro",
         "loading": "Cargando filtro de importación…",
         "saved": "Guardado",
@@ -1174,7 +1173,18 @@
         "addPattern": "Add pattern",
         "remove": "Remove",
         "saving": "Saving…",
-        "saveFailed": "Could not save the import filter."
+        "saveFailed": "Could not save the import filter.",
+        "broadGroupWarning": "Este filtro incluye o excluye un grupo amplio, como «Todos los usuarios». Comprueba el impacto antes de guardar.",
+        "deactivateExcludedContacts": "Desactivar los contactos vinculados excluidos por este filtro",
+        "effectivePatterns": "Patrones efectivos: {{patterns}}",
+        "inherited": "Heredado",
+        "overridden": "Modificado",
+        "preview": "Vista previa",
+        "previewing": "Generando vista previa…",
+        "reset": "Restablecer",
+        "retry": "Reintentar",
+        "recommendedHint": "Recomendado para nuevas configuraciones: solo miembros y usuarios con licencia. Los valores sin marcar reflejan la política guardada.",
+        "excludedContactInactive": "Excluido por el filtro de importación; el contacto vinculado se marcaría como inactivo. No se elimina nada."
       }
     },
     "google": {

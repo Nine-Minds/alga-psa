@@ -249,6 +249,7 @@ export type EntraPreflightBucketId =
 
 export type EntraPreflightIdentity = {
   bucket: EntraPreflightBucketId;
+  reason?: 'excluded_by_filter' | 'disabled_upstream';
   entraObjectId: string;
   displayName: string | null;
   email: string | null;

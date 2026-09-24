@@ -33,6 +33,7 @@ export type EntraSyncPreviewBucket =
 
 export interface EntraSyncPreviewIdentity {
   bucket: EntraSyncPreviewBucket;
+  reason?: 'excluded_by_filter' | 'disabled_upstream';
   entraObjectId: string;
   displayName: string | null;
   email: string | null;
@@ -328,6 +329,7 @@ export async function executeEntraSync(
         }
         preview?.push({
           bucket: 'mark_inactive',
+          reason: 'disabled_upstream',
           entraObjectId: entry.identity.entraObjectId,
           displayName: entry.identity.displayName ?? null,
           email: entry.identity.email ?? null,
@@ -361,7 +363,7 @@ export async function executeEntraSync(
       for (const entry of linked) {
         for (let index = 0; index < entry.linkedContactCount; index += 1) counters.increment('inactivated');
         excludedContactsOutOfScope += entry.linkedContactCount;
-        preview?.push({ bucket: 'mark_inactive', entraObjectId: entry.identity.entraObjectId, displayName: entry.identity.displayName ?? null, email: entry.identity.email ?? null, userPrincipalName: entry.identity.userPrincipalName ?? null });
+        preview?.push({ bucket: 'mark_inactive', reason: 'excluded_by_filter', entraObjectId: entry.identity.entraObjectId, displayName: entry.identity.displayName ?? null, email: entry.identity.email ?? null, userPrincipalName: entry.identity.userPrincipalName ?? null });
       }
     } else {
       const inactivated = await markExcludedEntraUsersInactive(input.tenantId, allowedExcludedIdentities);

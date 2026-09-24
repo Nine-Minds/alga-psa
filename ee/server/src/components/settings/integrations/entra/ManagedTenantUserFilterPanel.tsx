@@ -22,7 +22,6 @@ export function ManagedTenantUserFilterPanel({ mapping }: { mapping: EntraConfir
   const [override, setOverride] = React.useState<Override | null>(null);
   const [effective, setEffective] = React.useState<FilterConfig | null>(null);
   const [draft, setDraft] = React.useState<Override>({});
-  const [dirty, setDirty] = React.useState<Set<FilterKey>>(new Set());
   const [groups, setGroups] = React.useState<Array<{ id: string; displayName: string | null }>>([]);
   const [loadError, setLoadError] = React.useState<string | null>(null);
   const [groupError, setGroupError] = React.useState<string | null>(null);
@@ -31,6 +30,18 @@ export function ManagedTenantUserFilterPanel({ mapping }: { mapping: EntraConfir
   const [preview, setPreview] = React.useState<EntraPreflightResponse | null>(null);
   const [previewing, setPreviewing] = React.useState(false);
 
+  // This is the one policy the controls display and Preview evaluates. The plan
+  // keeps recommended defaults opt-in until saved, so inherited effective
+  // values stay visible as-is; the recommendation is shown as a hint below.
+  const pendingConfig: FilterConfig | null = effective ? {
+    ...effective,
+    ...draft,
+    includeGroupIds: (draft.includeGroupIds ?? effective.includeGroupIds).slice(),
+    // Exclusions are additive across tenant defaults and managed-tenant rules.
+    excludeGroupIds: [...new Set([...effective.excludeGroupIds, ...(draft.excludeGroupIds ?? [])])],
+    exclusionPatterns: [...new Set([...effective.exclusionPatterns, ...(draft.exclusionPatterns ?? [])])],
+  } : null;
+
   const load = React.useCallback(async () => {
     setLoadError(null);
     const result = await getEntraManagedTenantUserFilter({ managedTenantId: mapping.managedTenantId });
@@ -38,7 +49,6 @@ export function ManagedTenantUserFilterPanel({ mapping }: { mapping: EntraConfir
     setOverride(result.data.override);
     setEffective(result.data.effective);
     setDraft(result.data.override || {});
-    setDirty(new Set());
   }, [mapping.managedTenantId]);
 
   React.useEffect(() => { let live = true; void Promise.all([load(), listEntraMappingGroups({ managedTenantId: mapping.managedTenantId })]).then(([, g]) => {
@@ -48,54 +58,44 @@ export function ManagedTenantUserFilterPanel({ mapping }: { mapping: EntraConfir
 
   const change = (key: FilterKey, value: unknown) => {
     setDraft(current => ({ ...current, [key]: value }));
-    setDirty(current => new Set(current).add(key));
     setPreview(null);
   };
   const save = async () => {
-    if (!effective) return;
+    if (!pendingConfig || !effective) return;
     setBusy(true); setStatus('');
     try {
-      const changed: Override = { ...override };
-      for (const key of dirty) (changed as Record<string, unknown>)[key] = draft[key];
-      const validationPatterns = (draft.exclusionPatterns ?? effective.exclusionPatterns).filter(Boolean);
+      const changed: Override = { ...pendingConfig };
+      const validationPatterns = pendingConfig.exclusionPatterns.filter(Boolean);
       for (const pattern of validationPatterns) { try { new RegExp(pattern, 'i'); } catch { setStatus(t('integrations.entra.userImportFilter.invalid', { pattern })); return; } }
       const result = await updateEntraManagedTenantUserFilter({ managedTenantId: mapping.managedTenantId, override: changed });
       if ('error' in result) setStatus(result.error);
-      else { setOverride(result.data.override); setEffective(result.data.effective); setDraft(result.data.override || {}); setDirty(new Set()); setStatus(t('integrations.entra.userImportFilter.saved')); }
+      else { setOverride(result.data.override); setEffective(result.data.effective); setDraft(result.data.override || {}); setStatus(t('integrations.entra.userImportFilter.saved')); }
     } finally { setBusy(false); }
   };
   const reset = async () => {
     setBusy(true); setStatus('');
-    try { const result = await updateEntraManagedTenantUserFilter({ managedTenantId: mapping.managedTenantId, override: null }); if ('error' in result) setStatus(result.error); else { setOverride(null); setEffective(result.data.effective); setDraft({}); setDirty(new Set()); setPreview(null); setStatus(t('integrations.entra.userImportFilter.saved')); } } finally { setBusy(false); }
+    try { const result = await updateEntraManagedTenantUserFilter({ managedTenantId: mapping.managedTenantId, override: null }); if ('error' in result) setStatus(result.error); else { setOverride(null); setEffective(result.data.effective); setDraft({}); setPreview(null); setStatus(t('integrations.entra.userImportFilter.saved')); } } finally { setBusy(false); }
   };
   const runPreview = async () => {
+    if (!pendingConfig) return;
     setPreviewing(true); setStatus('');
-    const config: FilterConfig = {
-      ...effective,
-      ...draft,
-      memberUsersOnly: draft.memberUsersOnly ?? (override == null ? true : effective.memberUsersOnly),
-      licensedUsersOnly: draft.licensedUsersOnly ?? (override == null ? true : effective.licensedUsersOnly),
-      includeGroupIds: (draft.includeGroupIds ?? effective.includeGroupIds).slice(),
-      excludeGroupIds: (draft.excludeGroupIds ?? effective.excludeGroupIds).slice(),
-      exclusionPatterns: [...new Set([...effective.exclusionPatterns, ...(draft.exclusionPatterns ?? [])])],
-    };
-    try { const result = await runEntraPreflight({ managedTenantId: mapping.managedTenantId, userFilterConfig: config }); if ('error' in result) setStatus(result.error); else setPreview(result.data); } finally { setPreviewing(false); }
+    try { const result = await runEntraPreflight({ managedTenantId: mapping.managedTenantId, userFilterConfig: pendingConfig }); if ('error' in result) setStatus(result.error); else setPreview(result.data); } finally { setPreviewing(false); }
   };
   if (loadError) return <section className="mt-3 rounded-md border p-3 text-sm text-destructive" id="entra-user-filter-load-error">{loadError}<Button id={`entra-filter-reload-${mapping.managedTenantId}`} size="sm" variant="outline" onClick={() => void load()}>{t('integrations.entra.userImportFilter.retry')}</Button></section>;
   if (!effective) return <div id={`entra-user-filter-loading-${mapping.managedTenantId}`}>{t('integrations.entra.userImportFilter.loading')}</div>;
   const marker = (key: FilterKey) => override && Object.prototype.hasOwnProperty.call(override, key) ? t('integrations.entra.userImportFilter.overridden') : t('integrations.entra.userImportFilter.inherited');
   const setHas = (key: 'includeGroupIds' | 'excludeGroupIds', id: string) => {
-    const current = (draft[key] ?? effective[key]) as string[];
+    const current = (pendingConfig![key]) as string[];
     change(key, current.includes(id) ? current.filter(item => item !== id) : [...current, id]);
   };
-  const selectedNames = (key: 'includeGroupIds' | 'excludeGroupIds') => (effective[key] || []).map(id => groups.find(group => group.id === id)?.displayName).filter(Boolean);
-  const toggleValue = (key: 'memberUsersOnly' | 'licensedUsersOnly' | 'deactivateExcludedContacts') =>
-    draft[key] ?? (override == null && key !== 'deactivateExcludedContacts' ? true : effective[key]);
+  const selectedNames = (key: 'includeGroupIds' | 'excludeGroupIds') => pendingConfig![key].map(id => groups.find(group => group.id === id)?.displayName).filter(Boolean);
+  const toggleValue = (key: 'memberUsersOnly' | 'licensedUsersOnly' | 'deactivateExcludedContacts') => pendingConfig![key];
   const broad = [...selectedNames('includeGroupIds'), ...selectedNames('excludeGroupIds')].some(isBroadGroup);
   return <section className="mt-3 space-y-3 rounded-md border p-3" id={`entra-user-filter-${mapping.managedTenantId}`}>
     <h4 className="text-sm font-semibold">{t('integrations.entra.userImportFilter.title')}</h4>
+    {override == null && <p className="text-xs text-muted-foreground">{t('integrations.entra.userImportFilter.recommendedHint')}</p>}
     {(['memberUsersOnly','licensedUsersOnly','deactivateExcludedContacts'] as const).map(key => <label key={key} className="flex gap-2 text-sm"><input id={`entra-filter-${key}-${mapping.managedTenantId}`} type="checkbox" checked={toggleValue(key)} onChange={event => change(key, event.target.checked)}/>{t(`integrations.entra.userImportFilter.${key}`)} <span className="text-xs text-muted-foreground">{marker(key)}</span></label>)}
-    {(['includeGroupIds','excludeGroupIds'] as const).map(key => <fieldset key={key} className="text-sm"><legend>{t(key === 'includeGroupIds' ? 'integrations.entra.userImportFilter.include' : 'integrations.entra.userImportFilter.exclude')} <span className="text-xs text-muted-foreground">{marker(key)}</span></legend><div className="max-h-32 overflow-auto rounded border p-2">{groups.map(group => <label key={group.id} className="flex gap-2"><input id={`entra-filter-${key}-${mapping.managedTenantId}-${group.id}`} type="checkbox" checked={((draft[key] ?? effective[key]) as string[]).includes(group.id)} onChange={() => setHas(key, group.id)}/>{group.displayName || group.id}</label>)}</div></fieldset>)}
+    {(['includeGroupIds','excludeGroupIds'] as const).map(key => <fieldset key={key} className="text-sm"><legend>{t(key === 'includeGroupIds' ? 'integrations.entra.userImportFilter.include' : 'integrations.entra.userImportFilter.exclude')} <span className="text-xs text-muted-foreground">{marker(key)}</span></legend><div className="max-h-32 overflow-auto rounded border p-2">{groups.map(group => <label key={group.id} className="flex gap-2"><input id={`entra-filter-${key}-${mapping.managedTenantId}-${group.id}`} type="checkbox" checked={pendingConfig[key].includes(group.id)} onChange={() => setHas(key, group.id)}/>{group.displayName || group.id}</label>)}</div></fieldset>)}
     {groupError && <p id="entra-filter-groups-error" className="text-sm text-destructive">{groupError}</p>}
     {broad && <p id="entra-filter-broad-group-warning" className="text-sm text-warning-700">{t('integrations.entra.userImportFilter.broadGroupWarning')}</p>}
     <p className="text-xs text-muted-foreground">{t('integrations.entra.userImportFilter.transitive')}</p>

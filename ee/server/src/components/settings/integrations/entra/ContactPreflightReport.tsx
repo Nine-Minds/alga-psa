@@ -152,7 +152,7 @@ export function ContactPreflightReport({
             {report.unknownFieldCounts.assignedLicenseCount ? ` ${t('integrations.entra.userImportFilter.license', { count: report.unknownFieldCounts.assignedLicenseCount })}` : ''}
           </p>
         ) : null}
-        {report.warnings?.map((warning, index) => <p key={`${index}-${warning}`} className="text-sm text-warning-700 dark:text-warning-300">{warning}</p>)}
+        {report.warnings?.filter(warning => !warning.startsWith('User type data unavailable') && !warning.startsWith('License data unavailable')).map((warning, index) => <p key={`${index}-${warning}`} className="text-sm text-warning-700 dark:text-warning-300">{warning}</p>)}
         {BUCKET_ORDER.map((bucketId) => {
           const bucket = bucketsById.get(bucketId);
           const count = bucket?.count ?? 0;
@@ -204,9 +204,16 @@ export function ContactPreflightReport({
 
               {isExpanded ? (
                 <div className="mt-1 rounded-md border border-border/50 bg-muted/30 p-3">
-                  <p className="text-sm text-muted-foreground">
-                    {t(BUCKET_DESCRIPTION_KEYS[bucketId])}
-                  </p>
+                  {bucketId === 'mark_inactive' && samples.some(identity => identity.reason === 'excluded_by_filter') ? (
+                    <>
+                      {samples.some(identity => identity.reason !== 'excluded_by_filter') && (
+                        <p className="text-sm text-muted-foreground">{t(BUCKET_DESCRIPTION_KEYS[bucketId])}</p>
+                      )}
+                      <p className="text-sm text-muted-foreground">{t('integrations.entra.userImportFilter.excludedContactInactive')}</p>
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">{t(BUCKET_DESCRIPTION_KEYS[bucketId])}</p>
+                  )}
                   {samples.length > 0 ? (
                     <ul
                       className="mt-2 flex flex-wrap gap-x-4 gap-y-1"

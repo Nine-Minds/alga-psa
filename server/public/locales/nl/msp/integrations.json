@@ -1156,7 +1156,6 @@
         "exclude": "Beveiligingsgroep uitsluiten",
         "none": "Geen groep",
         "patterns": "Extra uitsluitingspatronen (één reguliere expressie per regel)",
-        "deactivate": "Gekoppelde contacten buiten dit filter deactiveren",
         "save": "Filter opslaan",
         "loading": "Importfilter laden…",
         "saved": "Opgeslagen",
@@ -1174,7 +1173,18 @@
         "addPattern": "Add pattern",
         "remove": "Remove",
         "saving": "Saving…",
-        "saveFailed": "Could not save the import filter."
+        "saveFailed": "Could not save the import filter.",
+        "broadGroupWarning": "Dit filter bevat of sluit een brede groep uit, zoals Alle gebruikers. Controleer de gevolgen voordat u opslaat.",
+        "deactivateExcludedContacts": "Gekoppelde contacten deactiveren die door dit filter worden uitgesloten",
+        "effectivePatterns": "Effectieve patronen: {{patterns}}",
+        "inherited": "Overgenomen",
+        "overridden": "Overschreven",
+        "preview": "Voorbeeld",
+        "previewing": "Voorbeeld wordt gemaakt…",
+        "reset": "Herstellen",
+        "retry": "Opnieuw proberen",
+        "recommendedHint": "Aanbevolen voor nieuwe configuraties: alleen leden en alleen gebruikers met een licentie. Niet aangevinkte waarden volgen het opgeslagen beleid.",
+        "excludedContactInactive": "Uitgesloten door het importfilter; het gekoppelde contact zou inactief worden gemaakt. Er wordt niets verwijderd."
       }
     },
     "google": {

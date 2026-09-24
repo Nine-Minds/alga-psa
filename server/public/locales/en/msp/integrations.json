@@ -1156,7 +1156,6 @@
         "exclude": "Exclude security group",
         "none": "No group",
         "patterns": "Additional exclusion patterns (one regular expression per line)",
-        "deactivate": "Deactivate linked contacts that fall outside this filter",
         "save": "Save filter",
         "loading": "Loading import filter…",
         "saved": "Saved",
@@ -1174,7 +1173,18 @@
         "addPattern": "Add pattern",
         "remove": "Remove",
         "saving": "Saving…",
-        "saveFailed": "Could not save the import filter."
+        "saveFailed": "Could not save the import filter.",
+        "broadGroupWarning": "This filter includes or excludes a broad group such as All Users. Check the impact before saving.",
+        "deactivateExcludedContacts": "Deactivate linked contacts excluded by this filter",
+        "effectivePatterns": "Effective patterns: {{patterns}}",
+        "inherited": "Inherited",
+        "overridden": "Overridden",
+        "preview": "Preview",
+        "previewing": "Previewing…",
+        "reset": "Reset",
+        "retry": "Retry",
+        "recommendedHint": "Recommended for new setups: Members only and Licensed users only. These are suggestions; unchecked values reflect the saved policy until you change and save them.",
+        "excludedContactInactive": "Excluded by the import filter; the linked contact would be marked inactive. Nothing is deleted."
       }
     },
     "google": {
