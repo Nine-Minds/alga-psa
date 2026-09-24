@@ -684,7 +684,10 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
       'x-rbac-resource': 'client',
       'x-rbac-action': 'update',
       // Irreversible and it retires a client: an agent must not run this
-      // unattended, whatever the prompt says.
+      // unattended, whatever the prompt says. The spec generator nests route
+      // extensions under `extensions`, so the MCP registry reads the flag from
+      // the curated override in ee/docs/api-registry/clients.json instead;
+      // clientMerge.contract.test.ts asserts both stay true together.
       'x-chat-approval-required': true,
     },
     edition: 'both',

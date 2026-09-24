@@ -12383,6 +12383,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "tags": [
       "Clients"
     ],
+    "rbacResource": "client",
     "approvalRequired": false,
     "parameters": [
       {
@@ -12434,7 +12435,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "tags": [
       "Clients"
     ],
-    "approvalRequired": false,
+    "rbacResource": "client",
+    "approvalRequired": true,
     "parameters": [
       {
         "name": "id",
@@ -12561,6 +12563,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "tags": [
       "Clients"
     ],
+    "rbacResource": "client",
     "approvalRequired": false,
     "parameters": [
       {
@@ -12611,6 +12614,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "tags": [
       "Clients"
     ],
+    "rbacResource": "client",
     "approvalRequired": false,
     "parameters": [
       {
