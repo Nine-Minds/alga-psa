@@ -20,10 +20,22 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 type Row = Record<string, any>;
 
 const state: Record<string, Row[]> = {};
+/**
+ * Which relations the edition installed. Only the enterprise-only entries of the
+ * move matrix consult this; everything else is assumed present, as it is in both
+ * editions.
+ */
+const installedTables = new Set<string>();
 
 function table(name: string): Row[] {
   if (!state[name]) state[name] = [];
   return state[name];
+}
+
+/** Declares an edition-optional table present, the way EE migrations would. */
+function install(name: string): Row[] {
+  installedTables.add(name);
+  return table(name);
 }
 
 let uuidCounter = 0;
@@ -267,6 +279,7 @@ const fakeTrx: any = {
     return { rows: [] };
   }),
   fn: { now: () => 'now()' },
+  schema: { hasTable: async (name: string) => installedTables.has(name) },
 };
 
 vi.mock('@alga-psa/db', () => ({
@@ -283,6 +296,7 @@ const TENANT = 'tenant-1';
 
 function seed() {
   for (const key of Object.keys(state)) delete state[key];
+  installedTables.clear();
   uuidCounter = 0;
   rawCalls.length = 0;
 
@@ -508,6 +522,98 @@ describe('executeClientMerge', () => {
     });
 
     expect(table('client_locations')[0]).toMatchObject({ client_id: 'target', is_default: true });
+  });
+
+  it('moves the client-keyed rows that keep a live write path pointed at the source', async () => {
+    // A sales order is the sharpest case: salesOrderInvoicingActions resolves
+    // the invoice client from sales_orders.client_id, so one left on the
+    // tombstone raises a later invoice against an archived client and the empty
+    // default profile the merge just created for it. The RMM mapping is the same
+    // shape — device sync would re-populate the client the merge emptied.
+    table('sales_orders').push({ tenant: TENANT, sales_order_id: 'so-1', client_id: 'source' });
+    table('rmm_organization_mappings').push({ tenant: TENANT, mapping_id: 'rmm-1', client_id: 'source' });
+    table('client_tax_rates').push({ tenant: TENANT, client_tax_rate_id: 'rate-1', client_id: 'source' });
+    table('opportunities').push({ tenant: TENANT, opportunity_id: 'opp-1', client_id: 'source' });
+    table('hour_blocks').push({ tenant: TENANT, block_id: 'hb-1', client_id: 'source' });
+
+    const result = await executeClientMerge(fakeTrx, TENANT, 'actor-1', {
+      sourceClientId: 'source',
+      targetClientId: 'target',
+    });
+
+    for (const name of ['sales_orders', 'rmm_organization_mappings', 'client_tax_rates', 'opportunities', 'hour_blocks']) {
+      expect(table(name).map((row) => row.client_id)).toEqual(['target']);
+    }
+    expect(result.counts['sales order']).toBe(1);
+  });
+
+  it('lets the target\'s own billing settings stand rather than moving a second row onto its key', async () => {
+    // client_billing_settings is keyed (tenant, client_id): two rows cannot
+    // coexist, and the client the group is now run as is the one whose settings
+    // govern.
+    table('client_billing_settings').push(
+      { tenant: TENANT, client_id: 'source', zero_dollar_invoice_handling: 'finalized' },
+      { tenant: TENANT, client_id: 'target', zero_dollar_invoice_handling: 'draft' },
+    );
+
+    await executeClientMerge(fakeTrx, TENANT, 'actor-1', {
+      sourceClientId: 'source',
+      targetClientId: 'target',
+    });
+
+    expect(table('client_billing_settings')).toEqual([
+      { tenant: TENANT, client_id: 'target', zero_dollar_invoice_handling: 'draft' },
+    ]);
+  });
+
+  it('moves billing settings when the target has none of its own', async () => {
+    table('client_billing_settings').push(
+      { tenant: TENANT, client_id: 'source', zero_dollar_invoice_handling: 'finalized' },
+    );
+
+    await executeClientMerge(fakeTrx, TENANT, 'actor-1', {
+      sourceClientId: 'source',
+      targetClientId: 'target',
+    });
+
+    expect(table('client_billing_settings')[0]).toMatchObject({ client_id: 'target' });
+  });
+
+  it('skips an enterprise-only table the edition never installed', async () => {
+    // `credentials` and the Entra tables exist in EE only; querying a missing
+    // relation inside the transaction would abort the whole merge in CE.
+    const result = await executeClientMerge(fakeTrx, TENANT, 'actor-1', {
+      sourceClientId: 'source',
+      targetClientId: 'target',
+    });
+
+    expect(result.counts['stored credential']).toBe(0);
+    expect(state.credentials).toBeUndefined();
+  });
+
+  it('moves an enterprise table where the edition installed it, but leaves a colliding payment customer put', async () => {
+    install('credentials').push({ tenant: TENANT, credential_id: 'cred-1', client_id: 'source' });
+    install('client_payment_customers').push(
+      { tenant: TENANT, client_id: 'source', provider_type: 'stripe', external_customer_id: 'cus_source' },
+      { tenant: TENANT, client_id: 'target', provider_type: 'stripe', external_customer_id: 'cus_target' },
+      { tenant: TENANT, client_id: 'source', provider_type: 'paypal', external_customer_id: 'pp_source' },
+    );
+
+    const result = await executeClientMerge(fakeTrx, TENANT, 'actor-1', {
+      sourceClientId: 'source',
+      targetClientId: 'target',
+    });
+
+    expect(result.counts['stored credential']).toBe(1);
+    expect(table('credentials')[0]).toMatchObject({ client_id: 'target' });
+
+    const customers = table('client_payment_customers');
+    // The free slot is inherited; the contested one names a live customer at the
+    // provider, so nothing is discarded on a guess.
+    expect(customers.find((row) => row.external_customer_id === 'pp_source')).toMatchObject({ client_id: 'target' });
+    expect(customers.find((row) => row.external_customer_id === 'cus_source')).toMatchObject({ client_id: 'source' });
+    expect(customers.find((row) => row.external_customer_id === 'cus_target')).toMatchObject({ client_id: 'target' });
+    expect(result.counts['payment customer']).toBe(1);
   });
 
   it('demotes the incoming logo the target already has a slot for', async () => {

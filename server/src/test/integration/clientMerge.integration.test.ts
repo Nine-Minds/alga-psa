@@ -724,4 +724,48 @@ describe('client merge into a billing profile (TM010, TM011, TM012, TM016)', () 
     expect(associations.find((row: any) => row.document_id === sourceWideLogo))
       .toMatchObject({ is_entity_logo: true, entity_logo_variant: 'wide' });
   }, HOOK_TIMEOUT);
+
+  it('TM019: accounts for every client-keyed table in the schema', async () => {
+    // A table nobody thought about does not fail loudly — its rows just stay on
+    // the archived client, keeping a live write path aimed at a tombstone. The
+    // schema is the only honest source for that list, so it is read rather than
+    // remembered, and a new client-keyed table has to be classified before this
+    // passes again.
+    const {
+      CLIENT_OWNED_MOVE_TABLES,
+      PROFILE_HISTORY_TABLES,
+      CLIENT_KEYED_TABLES_LEFT_BEHIND,
+      CLIENT_KEYED_TABLES_HANDLED_EXPLICITLY,
+    } = await import('@alga-psa/clients/lib/clientMergePlan');
+
+    const { rows } = await db.raw(`
+      SELECT c.relname AS table_name
+      FROM pg_class c
+      JOIN pg_namespace n ON n.oid = c.relnamespace AND n.nspname = 'public'
+      JOIN pg_attribute a ON a.attrelid = c.oid
+        AND a.attname = 'client_id' AND a.attnum > 0 AND NOT a.attisdropped
+      WHERE c.relkind = 'r'
+      ORDER BY c.relname
+    `);
+
+    const accounted = new Set<string>([
+      ...CLIENT_OWNED_MOVE_TABLES.map((entry) => entry.table),
+      ...PROFILE_HISTORY_TABLES.map((entry) => entry.table),
+      ...CLIENT_KEYED_TABLES_LEFT_BEHIND.map((entry) => entry.table),
+      ...CLIENT_KEYED_TABLES_HANDLED_EXPLICITLY,
+    ]);
+
+    const unaccounted = (rows as Array<{ table_name: string }>)
+      .map((row) => row.table_name)
+      .filter((name) => !accounted.has(name));
+
+    expect(unaccounted).toEqual([]);
+
+    // Every table the merge claims to move has to still be there, or the merge
+    // aborts the transaction on a missing relation. The edition-optional ones
+    // are exempt: that is what the flag means.
+    const required = CLIENT_OWNED_MOVE_TABLES.filter((entry) => !entry.editionOptional).map((entry) => entry.table);
+    const present = new Set((rows as Array<{ table_name: string }>).map((row) => row.table_name));
+    expect(required.filter((name) => !present.has(name))).toEqual([]);
+  }, HOOK_TIMEOUT);
 });

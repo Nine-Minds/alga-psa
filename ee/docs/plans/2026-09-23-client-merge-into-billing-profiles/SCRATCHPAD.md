@@ -263,3 +263,44 @@ touched the field did so through a cast and `tsc -p shared/tsconfig.json` broke
 on the first honest read (TS2339 in the assignment test). The field is now
 declared optional and nullable next to the other attribution columns, matching
 `ClientContractAssignmentCreateInput` — NULL still means "the client default".
+
+## The move matrix was a remembered list, not the schema
+
+Review found ~15 client-keyed tables no step moved. Enumerating `pg_catalog`
+rather than trusting the enumeration turned up more, and sorted them into three
+kinds:
+
+- **Live rows that keep a write path aimed at the tombstone.** `sales_orders`
+  (its `client_id` is what `salesOrderInvoicingActions` bills),
+  `rmm_organization_mappings` (device sync would re-populate the client the merge
+  just emptied), `client_tax_rates` (`client_tax_settings` already moved, and half
+  a tax configuration is worse than either half), plus quotes, opportunities,
+  inventory, prepaid hours, usage aggregation, accounting export lines and the
+  service/appointment/telephony rows. All moved.
+- **Columns that are not Alga clients at all.** `google_*_provider_config`,
+  `microsoft_*`, `mcp_oauth_*` hold an OAuth *application* id — varchar or text,
+  no foreign key to `clients`. Re-stamping one would break the integration
+  outright. Recorded as left behind rather than silently skipped, because the next
+  person enumerating the schema will ask the same question.
+- **Tables that only look live.** `client_plan_bundles` is dropped by
+  20251008000003 (which asserts it is gone) and reappears only where
+  `ensureClientPlanBundlesTable` recreates it for legacy fixtures;
+  `bucket_usage_unmappable_archive` is a one-time migration quarantine with no
+  write path and no tenant-facade registration. TM019 caught the first one on its
+  first run — the dev database does not have it and the test database does.
+
+Three shapes needed handling beyond a single UPDATE. `client_billing_settings` is
+keyed `(tenant, client_id)`, so the source row cannot land beside the target's:
+the target's settings govern and the source's is dropped, the same call the
+default-location demotion makes. `client_payment_customers` collides the same way
+but names a live customer at Stripe, so a contested row is *left* on the tombstone
+for a human rather than discarded on a guess. And the enterprise-only tables
+(`credentials`, `entra_*`, `client_payment_customers`,
+`opportunity_qbr_triggers`) are asked for with `hasTable` first — the engine is
+shared, and touching a missing relation inside the transaction aborts the whole
+merge in CE.
+
+`hour_blocks` is the one honest compromise: prepaid hours carry no
+`billing_profile_id`, so the segment they were bought for cannot be preserved and
+they become spendable across the parent. Stranding them on a client that will
+never file a ticket is worse.

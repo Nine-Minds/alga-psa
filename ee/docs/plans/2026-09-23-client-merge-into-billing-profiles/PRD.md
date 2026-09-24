@@ -287,6 +287,15 @@ Both tables are tenant-distributed (Citus) and registered in
 - **Highest risk is silent billing drift.** Mitigated by moving rather than copying
   (nothing re-attributes), by stamping NULL profiles on moved work items, and by the
   integration test that re-generates an invoice from a moved cycle.
+- **A forgotten table is the quiet form of that drift.** A client-keyed row left on
+  the tombstone does not fail; it keeps a live write path aimed at an archived
+  client. `sales_orders` is the sharp end — `salesOrderInvoicingActions` resolves
+  the invoice client from `sales_orders.client_id`, so an order left behind later
+  invoices a client nobody is looking at, against the empty default profile the
+  merge created for it. The matrix is therefore exhaustive over the schema, not over
+  a list someone wrote down: TM019 reads `pg_catalog` and fails until every table
+  with a uuid `client_id` is moved, handled explicitly, or recorded in
+  `CLIENT_KEYED_TABLES_LEFT_BEHIND` with a reason.
 - **Concurrency with invoice generation.** The merge takes the same per-tenant
   billing advisory lock (`<tenant>:billing-semantics` + the
   `billing_semantics_locks` shard write) that every billing mutation takes.

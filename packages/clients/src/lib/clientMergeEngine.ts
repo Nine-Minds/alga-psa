@@ -8,6 +8,7 @@ import {
   planBillingProfileMoves,
   planContractMove,
   suggestCutoverDate,
+  type ClientOwnedMoveTable,
   type ContractDecision,
   type MergeBlocker,
   type MergeClientFacts,
@@ -202,6 +203,80 @@ async function countRows(
   return Number(row?.count ?? 0);
 }
 
+/**
+ * Enterprise tables are absent in CE, and touching a missing relation inside a
+ * transaction aborts the whole merge — so ask the catalog first rather than
+ * letting the query fail.
+ */
+async function tableInstalled(trx: Knex.Transaction, table: string): Promise<boolean> {
+  return trx.schema.hasTable(table);
+}
+
+/**
+ * One entry of the move matrix: stamp the profile where the table takes one,
+ * clear out rows the target already owns, then re-point the rest.
+ */
+async function moveClientOwnedRows(
+  trx: Knex.Transaction,
+  tenant: string,
+  entry: ClientOwnedMoveTable,
+  sourceClientId: string,
+  targetClientId: string,
+  movedDefaultProfileId: string | null,
+): Promise<number> {
+  if (entry.editionOptional && !(await tableInstalled(trx, entry.table))) return 0;
+
+  if (entry.stampsBillingProfile && movedDefaultProfileId) {
+    // Stamped *before* the move, while the rows are still identifiable, and
+    // because leaving them NULL would re-attribute them to the parent's default
+    // the next time the attribution chain ran.
+    await scoped(trx, tenant, entry.table)
+      .where({ client_id: sourceClientId })
+      .whereNull('billing_profile_id')
+      .update({ billing_profile_id: movedDefaultProfileId });
+  }
+
+  if (!entry.conflictKeyColumns) {
+    return scoped(trx, tenant, entry.table)
+      .where({ client_id: sourceClientId })
+      .update({ client_id: targetClientId });
+  }
+
+  const keyColumns = entry.conflictKeyColumns;
+  // With no key columns the client is the whole key, so any row on the target
+  // collides with any row on the source; they share the empty key.
+  const selectColumns = keyColumns.length > 0 ? keyColumns : ['client_id'];
+  const keyOf = (row: Record<string, unknown>) => keyColumns.map((column) => String(row[column])).join('::');
+  const whereRow = (row: Record<string, unknown>) => {
+    const where: Record<string, unknown> = { client_id: sourceClientId };
+    for (const column of keyColumns) where[column] = row[column];
+    return where;
+  };
+
+  const readKeys = async (clientId: string) =>
+    (await scoped(trx, tenant, entry.table)
+      .where({ client_id: clientId })
+      .select(...selectColumns)) as Array<Record<string, unknown>>;
+
+  const taken = new Set((await readKeys(targetClientId)).map(keyOf));
+  let moved = 0;
+
+  for (const row of await readKeys(sourceClientId)) {
+    if (taken.has(keyOf(row))) {
+      // 'leave' keeps the row on the tombstone for someone who can decide;
+      // 'drop' discards it because the target's row supersedes it.
+      if (entry.onCollision !== 'leave') {
+        await scoped(trx, tenant, entry.table).where(whereRow(row)).del();
+      }
+      continue;
+    }
+    taken.add(keyOf(row));
+    moved += await scoped(trx, tenant, entry.table).where(whereRow(row)).update({ client_id: targetClientId });
+  }
+
+  return moved;
+}
+
 async function readSourceProfiles(
   trx: Knex.Transaction,
   tenant: string,
@@ -323,7 +398,9 @@ export async function previewClientMerge(
 
   const counts: Record<string, number> = {};
   for (const entry of CLIENT_OWNED_MOVE_TABLES) {
-    counts[entry.label] = await countRows(trx, tenant, entry.table, { client_id: source.clientId });
+    counts[entry.label] = entry.editionOptional && !(await tableInstalled(trx, entry.table))
+      ? 0
+      : await countRows(trx, tenant, entry.table, { client_id: source.clientId });
   }
   for (const entry of PROFILE_HISTORY_TABLES) {
     counts[entry.label] = await countRows(trx, tenant, entry.table, { client_id: source.clientId });
@@ -691,18 +768,14 @@ export async function executeClientMerge(
   }
 
   for (const entry of CLIENT_OWNED_MOVE_TABLES) {
-    if (entry.stampsBillingProfile && movedDefaultProfileId) {
-      // Stamped *before* the move, while the rows are still identifiable, and
-      // because leaving them NULL would re-attribute them to the parent's
-      // default the next time the attribution chain ran.
-      await scoped(trx, tenant, entry.table)
-        .where({ client_id: source.clientId })
-        .whereNull('billing_profile_id')
-        .update({ billing_profile_id: movedDefaultProfileId });
-    }
-    counts[entry.label] = await scoped(trx, tenant, entry.table)
-      .where({ client_id: source.clientId })
-      .update({ client_id: target.clientId });
+    counts[entry.label] = await moveClientOwnedRows(
+      trx,
+      tenant,
+      entry,
+      source.clientId,
+      target.clientId,
+      movedDefaultProfileId,
+    );
   }
 
   // --- 6. Polymorphic associations ---------------------------------------

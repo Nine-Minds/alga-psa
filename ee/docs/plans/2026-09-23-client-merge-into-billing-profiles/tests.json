@@ -165,5 +165,14 @@
       "M036"
     ],
     "note": "shared/billingClients/__tests__/clientContracts.billingProfileAssignment.test.ts"
+  },
+  {
+    "id": "TM019",
+    "description": "Integration: every table in the schema with a uuid client_id is classified — moved, handled explicitly, or recorded as deliberately left behind — and every non-optional table the matrix names still exists.",
+    "implemented": true,
+    "featureIds": [
+      "M037"
+    ],
+    "note": "server/src/test/integration/clientMerge.integration.test.ts reads pg_catalog rather than a remembered list, so a new client-keyed table has to be classified before it passes. It caught client_plan_bundles on its first run (dropped by 20251008000003, recreated only by ensureClientPlanBundlesTable for legacy fixtures). The move and collision behaviour itself — sales orders, RMM mappings, the (tenant, client_id) key on client_billing_settings, an edition-optional table that is absent, and a payment customer left put on collision — is unit-tested in packages/clients/src/lib/clientMergeEngine.test.ts."
   }
 ]

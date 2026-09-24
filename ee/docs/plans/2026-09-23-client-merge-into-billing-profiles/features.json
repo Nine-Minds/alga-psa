@@ -214,5 +214,11 @@
     "description": "A contract chooses its billing profile when it is created — in the contract wizard and in Quick Add — instead of only in a later edit. The pick is written to client_contracts.billing_profile_id through createClientContractAssignment, which refuses a profile owned by another client; it survives a draft resume and is carried onto a renewal draft. No pick leaves the column NULL, falling through to the client default.",
     "implemented": true,
     "prdRefs": ["Design / D2 — Contracts: original dates or cutover, operator's call (Q2)"]
+  },
+  {
+    "id": "M037",
+    "description": "The move matrix is exhaustive over the schema rather than over a remembered list: every table with a uuid client_id is either moved, handled explicitly, or recorded in CLIENT_KEYED_TABLES_LEFT_BEHIND with a reason, and an integration check reads pg_catalog to prove it. This closes the sales-order case — salesOrderInvoicingActions resolves its invoice client from sales_orders.client_id, so an order left on the tombstone later invoices an archived client — along with RMM organisation mappings (device sync would re-populate the emptied client), tax rates, quotes, opportunities, inventory, prepaid hours and usage aggregation. Enterprise-only tables are moved only where the edition installed them; a table whose client_id is an OAuth application id is never touched.",
+    "implemented": true,
+    "prdRefs": ["Design / D1 — Profiles move, they are not copied (Q1)"]
   }
 ]
