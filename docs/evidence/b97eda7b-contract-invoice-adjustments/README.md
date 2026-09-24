@@ -308,10 +308,23 @@ plan requires, without changing the legacy manual-invoice generator.
   treatment (`editState.tax_rate_id`) instead of only the selected service's
   default, so a freeform line with an explicit rate — or a service line whose
   operator overrode it to non-taxable — is labelled correctly while collapsed.
+- An explicit Non-taxable choice is authoritative over a taxable catalog
+  service. `persistManualInvoiceCharges` now distinguishes an absent choice
+  (`tax_rate_id === undefined`, falls through to the service) from an explicit
+  `null` (Non-taxable, no service fallback), and the edit path
+  (`updateManualInvoiceItemsInternal`) derives `is_taxable`/`tax_region` from the
+  selected treatment rather than trusting a stale payload flag. `ManualInvoices`
+  also derives the payload `is_taxable` from the selection. Behavioral coverage:
+  `contractInvoiceManualCredit.test.ts` T234 adds a taxable catalog service line
+  with `tax_rate_id: null` (stored `is_taxable=false`, `tax_region=null`, `tax=0`,
+  total `$100`), taxes it, then overrides a taxable catalog line back to
+  Non-taxable with a deliberately stale `is_taxable: true` (stays non-taxable,
+  `tax=0`, total `$100`). Both halves fail against the pre-fix source.
 - Behavioral coverage: `LineItem.test.tsx` (the control reports the operator
   choice; it is absent with no options; the collapsed badge tracks the explicit
-  treatment), `contractInvoiceAdjustments.db.test.ts` "persists an explicit
-  per-line tax treatment and rejects a tax rate outside the tenant", and
+  treatment, including Non-Taxable on a taxable catalog service),
+  `contractInvoiceAdjustments.db.test.ts` "persists an explicit per-line tax
+  treatment and rejects a tax rate outside the tenant", and
   `contractInvoiceManualCredit.test.ts` T233, which now proves the taxable `$100`
   freeform line lands `$10` tax / `$110` total through the real action and
   returns to `0` when the treatment is cleared.
@@ -322,7 +335,7 @@ Verification snapshot this round (all green, sequential DB runs):
 | --- | --- |
 | `packages/billing` unit (`npx vitest run`) | 311 files / 1558 tests |
 | `contractInvoiceAdjustments.db.test.ts` | 20 tests |
-| `contractInvoiceManualCredit.test.ts` | 5 tests |
+| `contractInvoiceManualCredit.test.ts` | 6 tests |
 | `billingInvoiceGeneration_discounts.test.ts` | 4 tests |
 | `exportReadiness.test.ts` + `invoiceExportGuards.test.ts` | 13 tests |
 | `GenerateTab.test.tsx` + `InvoicePreviewPanel.test.tsx` | 6 tests |

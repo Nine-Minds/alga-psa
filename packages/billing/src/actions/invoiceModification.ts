@@ -2028,12 +2028,17 @@ async function updateManualInvoiceItemsInternal(
     if (changes.updatedItems && changes.updatedItems.length > 0) {
       // First pass: Update all items with their new values
       for (const item of changes.updatedItems) {
-        // A per-line tax treatment resolves to the charge's region. An explicit
-        // rate id sets the region; null/undefined (non-taxable or untouched)
-        // leaves the stored region alone.
-        const explicitTaxRateId = item.tax_rate_id;
-        const resolvedTaxRegion = typeof explicitTaxRateId === 'string' && explicitTaxRateId
-          ? (await resolveTaxRegionCodeForRate(trx, tenant, explicitTaxRateId)) ?? undefined
+        // The selected tax treatment is authoritative for an edited line: a
+        // string taxes it in that rate's region; an explicit null means
+        // Non-taxable and clears any stale region even when the linked service
+        // is taxable. An absent choice (`undefined`) leaves the stored treatment
+        // untouched, preserving legacy callers.
+        const hasExplicitTaxTreatment = item.tax_rate_id !== undefined;
+        const explicitTaxRateId = item.tax_rate_id || null;
+        const resolvedTaxRegion = hasExplicitTaxTreatment
+          ? explicitTaxRateId
+            ? (await resolveTaxRegionCodeForRate(trx, tenant, explicitTaxRateId)) ?? null
+            : null
           : undefined;
         const updateData = {
           service_id: item.service_id,
@@ -2048,7 +2053,7 @@ async function updateManualInvoiceItemsInternal(
           applies_to_service_id: item.applies_to_service_id,
           location_id: item.location_id,
           billing_profile_id: item.billing_profile_id,
-          is_taxable: item.is_taxable,
+          is_taxable: hasExplicitTaxTreatment ? Boolean(explicitTaxRateId) : item.is_taxable,
           tax_region: resolvedTaxRegion,
           manual_line_metadata: item.manual_line_metadata !== undefined
             ? (item.manual_line_metadata ? JSON.stringify(item.manual_line_metadata) : null)

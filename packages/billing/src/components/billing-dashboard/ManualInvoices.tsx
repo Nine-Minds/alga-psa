@@ -839,6 +839,17 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           return Object.keys(next).length > 0 ? (next as ManualLineMetadata) : null;
         };
 
+        // The selected tax treatment is authoritative for the persisted charge:
+        // a chosen rate is taxable, and an explicit Non-taxable (null) stays
+        // non-taxable even when the linked catalog service is taxable. Only an
+        // absent choice (undefined) falls back to the item's existing flag, so a
+        // legacy caller that never saw the control keeps its prior behavior.
+        const resolvePayloadTaxable = (item: EditableInvoiceItem): boolean | undefined => {
+          if (item.is_discount) return false;
+          if (item.tax_rate_id === undefined) return item.is_taxable;
+          return Boolean(item.tax_rate_id);
+        };
+
         // Map EditableInvoiceItem to IInvoiceCharge for newItems. `tax_rate_id`
         // is an authoring override (there is no such column); the server turns it
         // into the charge's tax_region/is_taxable.
@@ -856,7 +867,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           tax_amount: 0, // Calculated backend
           net_amount: 0, // Calculated backend
           is_manual: true,
-          is_taxable: item.is_discount ? false : (item.tax_rate_id ? true : item.is_taxable), // Include is_taxable property
+          is_taxable: resolvePayloadTaxable(item), // Include is_taxable property
           tax_rate_id: item.tax_rate_id ?? null,
           is_discount: item.is_discount,
           discount_type: item.discount_type,
@@ -886,7 +897,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           discount_type: item.discount_type,
           discount_percentage: item.discount_percentage,
           applies_to_item_id: item.applies_to_item_id,
-          is_taxable: item.is_discount ? false : (item.tax_rate_id ? true : item.is_taxable),
+          is_taxable: resolvePayloadTaxable(item),
           tax_rate_id: item.tax_rate_id,
           manual_line_metadata: withTaxTreatmentMetadata(item),
           location_id: item.location_id ?? null,

@@ -926,12 +926,17 @@ export async function persistManualInvoiceCharges(
       }
     }
     // --- Determine Tax Info based on the item's (or service's) Tax Rate ID ---
-    // A per-item tax_rate_id (an explicit operator treatment, e.g. a freeform
-    // charge or a sales-order line — F045) overrides the service default. This
-    // is what lets a serviceless freeform line be taxable without inventing a
-    // service.
-    const explicitTaxRateId = requestItem.tax_rate_id ?? null;
-    const effectiveTaxRateId = explicitTaxRateId ?? service?.tax_rate_id ?? null;
+    // An explicit per-item `tax_rate_id` is authoritative: a string taxes the
+    // line in that rate's region, while an explicit `null` means the operator
+    // chose Non-taxable and MUST override a taxable service default (otherwise a
+    // catalog line can never be made non-taxable). Only an absent choice
+    // (`undefined`) falls through to the linked service — this preserves legacy
+    // callers such as sales-order lines that never saw the tax-treatment control.
+    const hasExplicitTaxTreatment = requestItem.tax_rate_id !== undefined;
+    const explicitTaxRateId = requestItem.tax_rate_id || null;
+    const effectiveTaxRateId = hasExplicitTaxTreatment
+      ? explicitTaxRateId
+      : service?.tax_rate_id ?? null;
     let serviceTaxRegion: string | null = null;
     let serviceIsTaxable = true; // Default for purely manual items if no service
     if (effectiveTaxRateId) {
@@ -943,6 +948,10 @@ export async function persistManualInvoiceCharges(
         console.warn(`Manual charge references tax_rate_id ${effectiveTaxRateId} but no matching tax_rate found.`);
         serviceIsTaxable = false;
       }
+    } else if (hasExplicitTaxTreatment) {
+      // Explicit Non-taxable selection: authoritative even when the linked
+      // service is taxable.
+      serviceIsTaxable = false;
     } else if (service) {
       // Service exists but tax_rate_id is NULL, so it's non-taxable
       serviceIsTaxable = false;

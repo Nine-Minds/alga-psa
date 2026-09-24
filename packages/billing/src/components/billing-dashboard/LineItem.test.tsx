@@ -191,12 +191,19 @@ it('omits the tax-treatment control when no rates are supplied', () => {
 });
 
 it('reflects the effective tax treatment on the collapsed row', () => {
+  // A taxable catalog service (svc-taxable has a non-null tax_rate_id). The
+  // operator's explicit treatment still wins: null renders Non-Taxable even
+  // though the selected service is taxable.
+  const catalogServiceOptions = [
+    ...serviceOptions,
+    { value: 'svc-taxable', label: 'Taxable Support', rate: 100, tax_rate_id: 'rate-svc' },
+  ];
   const collapsed = (taxRateId: string | null) => (
     <LineItem
-      item={{ ...baseItem, tax_rate_id: taxRateId }}
+      item={{ ...baseItem, service_id: 'svc-taxable', tax_rate_id: taxRateId }}
       index={0}
       isExpanded={false}
-      serviceOptions={serviceOptions}
+      serviceOptions={catalogServiceOptions}
       onRemove={vi.fn()}
       onChange={vi.fn()}
       onToggleExpand={vi.fn()}
@@ -205,7 +212,7 @@ it('reflects the effective tax treatment on the collapsed row', () => {
     />
   );
 
-  const taxable = render(collapsed('rate-ny'));
+  const taxable = render(collapsed('rate-svc'));
   expect(screen.getByText('(Taxable)')).toBeTruthy();
   taxable.unmount();
 

@@ -653,6 +653,122 @@ describe('Contract Invoice Manual Credit', () => {
     expect(Number((reappliedInvoice as any).total_amount)).toBe(11000);
   });
 
+  it('T234: an explicit Non-taxable override beats a taxable catalog service on add and edit', async () => {
+    const clientId = context.clientId;
+    const invoiceId = await context.createEntity('invoices', {
+      invoice_number: `CATNONTAX-${uuidv4().slice(0, 8)}`,
+      invoice_date: createTestDateISO({ year: 2025, month: 1, day: 1 }),
+      due_date: createTestDateISO({ year: 2025, month: 2, day: 1 }),
+      status: 'draft',
+      client_id: clientId,
+      currency_code: 'USD',
+      is_manual: false,
+      total_amount: 0,
+    }, 'invoice_id');
+
+    // A taxable catalog service: createTestService with a tax region assigns it
+    // the NY 10% rate configured in beforeEach.
+    const serviceId = await createTestService(context, {
+      service_name: 'Taxable Catalog Service',
+      billing_method: 'fixed',
+      default_rate: 10000,
+      tax_region: 'US-NY',
+    });
+    const service = await context.db('service_catalog')
+      .where({ tenant: context.tenantId, service_id: serviceId })
+      .first();
+    expect(service?.tax_rate_id).toBeTruthy();
+    const taxRate = await context.db('tax_rates')
+      .where({ tenant: context.tenantId, region_code: 'US-NY', is_active: true })
+      .first();
+    expect(taxRate?.tax_rate_id).toBeTruthy();
+
+    // NEW catalog line: an explicit Non-taxable selection must beat the
+    // service's taxable default. Before the fix, `requestItem.tax_rate_id ??
+    // service.tax_rate_id` fell through the null and taxed the line.
+    const itemId = uuidv4();
+    const addedInvoice = await addManualItemsToInvoice(invoiceId, [{
+      item_id: itemId,
+      invoice_id: invoiceId,
+      service_id: serviceId,
+      description: 'Catalog line overridden to non-taxable',
+      quantity: 1,
+      rate: 10000,
+      unit_price: 10000,
+      total_price: 10000,
+      net_amount: 10000,
+      tax_amount: 0,
+      tax_region: undefined,
+      tax_rate: 0,
+      is_manual: true,
+      is_taxable: false,
+      is_discount: false,
+      tenant: context.tenantId,
+      // Explicit Non-taxable.
+      tax_rate_id: null,
+    } as any], { operationId: uuidv4(), expectedRevision: 0 });
+
+    const afterAdd = await context.db('invoice_charges')
+      .where({ item_id: itemId, tenant: context.tenantId })
+      .first();
+    expect(afterAdd.is_taxable).toBe(false);
+    expect(afterAdd.tax_region).toBeNull();
+    expect(Number((addedInvoice as any).tax)).toBe(0);
+    expect(Number((addedInvoice as any).total_amount)).toBe(10000);
+
+    // Make the same catalog line taxable through the edit path first...
+    const taxedInvoice = await updateInvoiceManualItems(invoiceId, {
+      updatedItems: [{
+        item_id: itemId,
+        service_id: serviceId,
+        description: 'Catalog line overridden to non-taxable',
+        quantity: 1,
+        rate: 10000,
+        is_taxable: true,
+        tax_rate_id: taxRate.tax_rate_id,
+      }],
+      newItems: [],
+      removedItemIds: [],
+    } as any, { operationId: uuidv4(), expectedRevision: 1 });
+
+    const afterTaxed = await context.db('invoice_charges')
+      .where({ item_id: itemId, tenant: context.tenantId })
+      .first();
+    expect(afterTaxed.is_taxable).toBe(true);
+    expect(afterTaxed.tax_region).toBe('US-NY');
+    expect(Number((taxedInvoice as any).tax)).toBe(1000);
+    expect(Number((taxedInvoice as any).total_amount)).toBe(11000);
+
+    // ...then override it back to Non-taxable. The payload deliberately carries
+    // the stale `is_taxable: true` a naive editor would send; the selected
+    // treatment must still win.
+    const overriddenInvoice = await updateInvoiceManualItems(invoiceId, {
+      updatedItems: [{
+        item_id: itemId,
+        service_id: serviceId,
+        description: 'Catalog line overridden to non-taxable',
+        quantity: 1,
+        rate: 10000,
+        is_taxable: true,
+        tax_rate_id: null,
+      }],
+      newItems: [],
+      removedItemIds: [],
+    } as any, { operationId: uuidv4(), expectedRevision: 2 });
+
+    const afterOverride = await context.db('invoice_charges')
+      .where({ item_id: itemId, tenant: context.tenantId })
+      .first();
+    expect(afterOverride.is_taxable).toBe(false);
+    expect(afterOverride.tax_region).toBeNull();
+    expect(Number((overriddenInvoice as any).tax)).toBe(0);
+    expect(Number((overriddenInvoice as any).total_amount)).toBe(10000);
+    // Reload surface: a non-taxable stored flag is what the editor's collapsed
+    // badge resolves from (resolveInitialTaxRateId returns null when
+    // is_taxable === false), so the persisted state is non-taxable and clean.
+    expect(Number((overriddenInvoice as any).subtotal)).toBe(10000);
+  });
+
   it('T022: invoice generation succeeds for a cloned assignment with duplicated contract-line configuration after migration', async () => {
     const preservedClientId = context.clientId;
     const clonedClientId = await createClient(context.db, context.tenantId, 'Cloned Contract Billing Client');
