@@ -108,7 +108,7 @@ const pulse = (overrides: Partial<ClientPulse> = {}): ClientPulse => ({
   documents: { totalCount: 0, recent: [] },
   notes: { hasNotes: false, previewLines: [], lastEditedAt: null },
   record: {
-    url: 'example.com', accountManagerName: null, defaultContactName: null,
+    url: 'example.com', accountManagerName: null, defaultContactName: null, defaultContactId: null,
     inboundDomains: [], taxRegion: null, clientSince: null, isInactive: false,
   },
   ...overrides,

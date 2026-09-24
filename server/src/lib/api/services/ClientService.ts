@@ -17,6 +17,7 @@ import {
   deleteLocation as deleteClientLocation,
   updateLocation as updateClientLocation,
 } from '@alga-psa/clients/models';
+import { withClientSinceDateString } from '@alga-psa/clients/lib/clientSince';
 import {
   CreateClientData,
   UpdateClientData,
@@ -268,7 +269,7 @@ export class ClientService extends BaseService<IClient> {
       const clientsWithLogos = await Promise.all(
         (clients as IClient[]).map(async (client) => {
           const logoUrl = await getClientLogoUrl(client.client_id, context.tenant);
-          return { ...client, logoUrl };
+          return withClientSinceDateString({ ...client, logoUrl });
         })
       );
 
@@ -306,10 +307,10 @@ export class ClientService extends BaseService<IClient> {
       // Get logo URL
       const logoUrl = await getClientLogoUrl(id, context.tenant);
 
-      return {
+      return withClientSinceDateString({
         ...client,
         logoUrl
-      } as unknown as IClient;
+      }) as unknown as IClient;
     });
   }
 
@@ -343,6 +344,7 @@ export class ClientService extends BaseService<IClient> {
         billing_email: data.billing_email,
         account_manager_id: data.account_manager_id,
         is_inactive: data.is_inactive || false,
+        client_since: data.client_since ?? null,
         tenant: context.tenant,
         created_at: knex.raw('now()'),
         updated_at: knex.raw('now()')
@@ -405,7 +407,7 @@ export class ClientService extends BaseService<IClient> {
       idempotencyKey: `client_created:${client.client_id}`,
     });
 
-    return client;
+    return withClientSinceDateString(client as Record<string, any>) as IClient;
   }
 
   async delete(id: string, context: ServiceContext): Promise<void> {
@@ -779,7 +781,7 @@ export class ClientService extends BaseService<IClient> {
       });
     }
 
-    return result.after as IClient;
+    return withClientSinceDateString(result.after as Record<string, any>) as IClient;
   }
 
   /**

@@ -1029,6 +1029,10 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       setEditedClient(updatedClient);
       setHasUnsavedChanges(false);
       setHasAttemptedSubmit(false);
+      // The record card summarizes fields this form owns (account manager,
+      // default contact, client since). Without this the overview kept the
+      // pre-save values until a full page reload.
+      setPulseRefreshNonce((nonce) => nonce + 1);
       toast.success(t('clientDetails.saveSuccess', {
         defaultValue: 'Client details saved successfully.',
       }));
