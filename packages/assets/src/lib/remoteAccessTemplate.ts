@@ -43,8 +43,12 @@ export function renderRemoteAccessTemplate(
     const values = scope === 'field'
       ? context.field
       : context[scope as 'asset' | 'client'];
-    const value = values?.[key];
-    if (value === null || typeof value === 'undefined' || String(value) === '') {
+    if (!values || !Object.prototype.hasOwnProperty.call(values, key)) {
+      hasMissingValue = true;
+      return '';
+    }
+    const value = values[key];
+    if (!['string', 'number', 'boolean'].includes(typeof value) || String(value) === '') {
       hasMissingValue = true;
       return '';
     }

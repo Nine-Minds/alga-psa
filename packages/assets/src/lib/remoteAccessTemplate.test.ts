@@ -24,6 +24,23 @@ describe('renderRemoteAccessTemplate', () => {
     )).toBeNull();
   });
 
+  it('rejects inherited properties and non-scalar placeholder values', () => {
+    const inheritedFields = Object.create({ constructor: 'inherited', toString: 'also inherited' });
+    inheritedFields.objectValue = { nested: 'value' };
+    expect(renderRemoteAccessTemplate(
+      'https://remote.example/{field.constructor}',
+      { asset: {}, client: {}, field: inheritedFields }
+    )).toBeNull();
+    expect(renderRemoteAccessTemplate(
+      'https://remote.example/{field.toString}',
+      { asset: {}, client: {}, field: inheritedFields }
+    )).toBeNull();
+    expect(renderRemoteAccessTemplate(
+      'https://remote.example/{field.objectValue}',
+      { asset: {}, client: {}, field: inheritedFields }
+    )).toBeNull();
+  });
+
   it('rejects non-http(s) URLs and malformed placeholders', () => {
     expect(renderRemoteAccessTemplate('javascript:alert(1)', { asset: {}, client: {} })).toBeNull();
     expect(renderRemoteAccessTemplate('data:text/html,hello', { asset: {}, client: {} })).toBeNull();

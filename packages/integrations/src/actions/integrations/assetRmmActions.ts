@@ -182,6 +182,7 @@ export const getAssetRemoteControlTypes = withAuth(async (
   assetId: string
 ): Promise<RmmRemoteConnectionType[]> => {
   await requireAssetPermission(user, 'read');
+  if (!await hasPermission(user as any, 'asset', 'update')) return [];
   try {
     const { ref, actions } = await resolveDevice(tenant, assetId);
     if (!actions.remoteControlTypes) return [];
@@ -198,7 +199,7 @@ export const getAssetRemoteControlUrl = withAuth(async (
   assetId: string,
   connectionType: RmmRemoteConnectionType = 'splashtop'
 ): Promise<string | null> => {
-  await requireAssetPermission(user, 'read');
+  await requireAssetPermission(user, 'update');
   const { ref, actions } = await resolveDevice(tenant, assetId);
   if (!actions.remoteControlUrl) return null;
   try {
