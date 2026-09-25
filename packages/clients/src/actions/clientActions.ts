@@ -726,6 +726,8 @@ function buildDefaultClientLocationSubquery(trx: Knex.Transaction, tenant: strin
       'tenant',
       'client_id',
       'phone',
+      'phone_extension',
+      'country_code',
       'email',
       'address_line1',
       'address_line2',

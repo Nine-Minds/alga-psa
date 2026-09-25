@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import type { DeletionValidationResult, IClient } from '@alga-psa/types';
+import { formatPhoneForDisplay, formatPhoneLabel } from '@alga-psa/validation';
 import { ITag } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { BulkActionBar } from '@alga-psa/ui/components/BulkActionBar';
@@ -1321,7 +1322,11 @@ const Clients: React.FC = () => {
       key: 'phone_no',
       label: t('clientsList.phone', { defaultValue: 'Phone' }),
       header: t('clientsList.phone', { defaultValue: 'Phone' }),
-      render: (client) => client.location_phone ?? client.phone_no ?? t('clientsPage.print.emptyValue', { defaultValue: '-' }),
+      render: (client) => {
+        const formattedPhone = formatPhoneForDisplay(client.location_phone ?? client.phone_no, client.location_phone_extension, client.location_country_code);
+        return formatPhoneLabel(formattedPhone, t('phone.extension', { defaultValue: 'ext.' }))
+          || t('clientsPage.print.emptyValue', { defaultValue: '-' });
+      },
     },
     {
       key: 'address',
