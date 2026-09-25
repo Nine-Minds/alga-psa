@@ -212,6 +212,7 @@ const COPY = {
   },
 };
 SUBJECTS.pt = 'Atualização da solicitação de agendamento - {{serviceName}}';
+SUBJECTS.sv = 'Uppdatering av bokningsförfrågan - {{serviceName}}';
 COPY.pt = {
   headerLabel: 'Atualização da solicitação de agendamento',
   headerSub: 'Sobre sua solicitação recente de agendamento',
@@ -237,6 +238,33 @@ COPY.pt = {
   textReasonHeader: 'MOTIVO',
   textHelpHeader: 'AINDA QUEREMOS AJUDAR',
   textRequestButton: 'Solicitar outro horário',
+};
+
+COPY.sv = {
+  headerLabel: 'Uppdatering av bokningsförfrågan',
+  headerSub: 'Angående din senaste bokningsförfrågan',
+  greeting: 'Hej{{#if requesterName}} {{requesterName}}{{/if}},',
+  intro: 'Tack för ditt intresse för att boka en tid hos oss. Tyvärr kan vi inte tillgodose din förfrågan vid den önskade tiden.',
+  detailsTitle: 'Ursprunglig förfrågan',
+  service: 'Tjänst:',
+  requestedDate: 'Önskat datum:',
+  requestedTime: 'Önskad tid:',
+  reference: 'Referens:',
+  reasonTitle: 'Orsak',
+  helpTitle: 'Vi hjälper dig gärna ändå',
+  helpBody: 'Vi ber om ursäkt för besväret. Skicka gärna en ny förfrågan med ett annat datum och en annan tid som passar bättre med våra lediga tider.',
+  requestButton: 'Skicka förfrågan om en annan tid',
+  contactMsg: 'Om du har frågor eller vill ha hjälp att hitta en ledig tid, kontakta oss på {{contactEmail}}{{#if contactPhone}} eller ring {{contactPhone}}{{/if}}. Vårt team hjälper dig att hitta en tid som passar.',
+  footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+  textHeader: 'Uppdatering av bokningsförfrågan',
+  textDetailsHeader: 'Ursprunglig förfrågan',
+  textService: 'Tjänst',
+  textRequestedDate: 'Önskat datum',
+  textRequestedTime: 'Önskad tid',
+  textReference: 'Referens',
+  textReasonHeader: 'Orsak',
+  textHelpHeader: 'Vi hjälper dig gärna ändå',
+  textRequestButton: 'Skicka förfrågan om en annan tid',
 };
 
 /* eslint-enable max-len */

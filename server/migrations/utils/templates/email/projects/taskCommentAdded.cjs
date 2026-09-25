@@ -25,6 +25,7 @@ const SUBJECTS = {
   it: 'Nuovo commento sulla task: {{task.name}}',
   pl: 'Nowy komentarz do zadania: {{task.name}}',
   pt: 'Novo comentário na tarefa: {{task.name}}',
+  sv: 'Ny kommentar på uppgiften: {{task.name}}',
 };
 
 /* eslint-disable max-len */
@@ -148,6 +149,21 @@ const COPY = {
     textIntro: '{{comment.author}} adicionou um comentário à tarefa "{{task.name}}" no projeto "{{project.name}}".',
     textComment: 'Comentário',
     textView: 'Ver tarefa em',
+  },
+  sv: {
+    headerLabel: 'Ny kommentar på uppgiften',
+    intro: '<strong>{{comment.author}}</strong> har lagt till en kommentar på uppgiften <strong>{{task.name}}</strong> i projektet <strong>{{project.name}}</strong>.',
+    taskName: 'Uppgift',
+    project: 'Projekt',
+    commentBy: 'Kommenterat av',
+    commentLabel: '&#x1F4AC; Kommentar',
+    commentVar: '{{{comment.contentHtml}}}',
+    viewButton: 'Visa uppgift',
+    footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+    textHeader: 'Ny kommentar på uppgiften',
+    textIntro: '{{comment.author}} har lagt till en kommentar på uppgiften ”{{task.name}}” i projektet ”{{project.name}}”.',
+    textComment: 'Kommentar',
+    textView: 'Visa uppgift på',
   },
 };
 /* eslint-enable max-len */

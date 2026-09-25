@@ -1,0 +1,3465 @@
+{
+  "escalationManager": {
+    "unsavedChanges_one": "{{count}} osparad ändring",
+    "unsavedChanges_other": "{{count}} osparade ändringar"
+  },
+  "page": {
+    "title": "Administrationsinställningar"
+  },
+  "tabs": {
+    "general": "Allmänt",
+    "experimentalFeatures": "Experimentella funktioner",
+    "appearance": "Utseende",
+    "clientPortal": "Kundportal",
+    "users": "Användare",
+    "teams": "Team",
+    "language": "Språk",
+    "ticketing": "Ärendehantering",
+    "projects": "Projekt",
+    "interactions": "Interaktioner",
+    "notifications": "Aviseringar",
+    "timeEntry": "Tidregistrering",
+    "billing": "Debitering",
+    "secrets": "Hemligheter",
+    "importExport": "Import/export",
+    "email": "E-post",
+    "integrations": "Integreringar",
+    "extensions": "Tillägg",
+    "ticketingSettings": "Inställningar för ärendehantering",
+    "loadingTicketing": "Laddar inställningar för ärendehantering…",
+    "teamManagement": "Teamhantering",
+    "loadingTeam": "Laddar teaminställningar…",
+    "loadingExperimental": "Laddar inställningar för experimentella funktioner…",
+    "loadingInteractions": "Laddar interaktionsinställningar…",
+    "keyboardShortcuts": "Kortkommandon",
+    "opportunities": "Affärsmöjligheter",
+    "mcpServer": "MCP-server",
+    "settingsFallback": "Inställningar"
+  },
+  "unsavedChanges": {
+    "title": "Osparade ändringar",
+    "message": "Du har osparade ändringar. Vill du lämna sidan? Dina ändringar går förlorade."
+  },
+  "general": {
+    "title": "Allmänna inställningar",
+    "description": "Hantera organisationsnamnet och välj vilken kundpost som representerar ditt eget företag. Kundens uppgifter visas på fakturor, offerter och i kommunikation med kunder.",
+    "fields": {
+      "organizationName": {
+        "label": "Organisationsnamn"
+      },
+      "defaultTimezone": {
+        "label": "Standardtidszon",
+        "help": "Används för e-post och aviseringar när en användare inte har angett en egen tidszon."
+      }
+    },
+    "actions": {
+      "saveOrganizationName": "Spara organisationsnamn",
+      "saveDefaultTimezone": "Spara standardtidszon"
+    },
+    "clients": {
+      "title": "Ditt företag",
+      "help": "Kunden som markerats som ditt företag är din egen organisation. Dess namn, adress och logotyp visas på fakturor, offerter och i kommunikation med kunder.",
+      "currentDefault": "Ditt företag är för närvarande {{name}}.",
+      "yourCompanyBadge": "Ditt företag",
+      "table": {
+        "name": "Namn",
+        "default": "Ditt företag (standard)",
+        "actions": "Åtgärder"
+      },
+      "placeholder": "Välj en kund att lägga till",
+      "addClient": "Lägg till kund",
+      "confirmDialog": {
+        "title": "Ändra ditt företag?",
+        "message": "Detta ändrar ditt företag från {{current}} till {{next}}. {{next}} kommer att representera din egen organisation på fakturor, offerter samt i e-post och inbjudningar till kunder.",
+        "messageInitial": "Detta anger {{next}} som ditt företag. {{next}} kommer att representera din egen organisation på fakturor, offerter samt i e-post och inbjudningar till kunder.",
+        "confirm": "Ändra företag",
+        "cancel": "Avbryt"
+      }
+    },
+    "messages": {
+      "permissionDenied": "Du har inte behörighet att visa hemligheter.",
+      "success": {
+        "tenantNameUpdated": "Klientorganisationens namn har uppdaterats",
+        "timezoneUpdated": "Standardtidszonen har uppdaterats",
+        "clientAdded": "Kunden har lagts till",
+        "clientRemoved": "Kunden har tagits bort",
+        "defaultClientUpdated": "Standardkunden har uppdaterats"
+      },
+      "error": {
+        "loadTenantData": "Det gick inte att ladda klientorganisationens uppgifter",
+        "updateTenantName": "Det gick inte att uppdatera klientorganisationens namn",
+        "updateTimezone": "Det gick inte att uppdatera tidszonen",
+        "selectClient": "Välj en kund",
+        "clientNotFound": "Kunden hittades inte",
+        "clientAlreadyAdded": "Kunden finns redan i listan",
+        "addClient": "Det gick inte att lägga till kunden",
+        "removeClient": "Det gick inte att ta bort kunden",
+        "setDefaultClient": "Det gick inte att ange standardkund",
+        "loadClients": "Det gick inte att ladda kunder"
+      }
+    }
+  },
+  "experimentalFeatures": {
+    "title": "Experimentella funktioner",
+    "description": "Aktivera eller inaktivera experimentella funktioner för din klientorganisation.",
+    "alert": {
+      "title": "Experimentell",
+      "description": "Experimentella funktioner kan ändras eller tas bort utan föregående meddelande."
+    },
+    "features": {
+      "aiAssistant": {
+        "name": "AI-assistent",
+        "description": "Aktivera AI-driven snabbfråga och chatt i sidopanelen.",
+        "restriction": "Endast tillgängligt för klientorganisationer som finns på tillåtelselistan."
+      }
+    },
+    "actions": {
+      "save": "Spara",
+      "saving": "Sparar…",
+      "retry": "Försök igen"
+    },
+    "loading": "Laddar experimentella funktioner…",
+    "messages": {
+      "success": {
+        "saved": "Inställningarna för experimentella funktioner har sparats. Ladda om sidan för att tillämpa ändringarna."
+      },
+      "error": {
+        "loadFailed": "Det gick inte att ladda inställningarna för experimentella funktioner.",
+        "saveFailed": "Det gick inte att spara inställningarna för experimentella funktioner."
+      }
+    }
+  },
+  "users": {
+    "title": "Användarhantering",
+    "description": {
+      "msp": "Hantera MSP-användare och behörigheter",
+      "client": "Hantera kundportalanvändare och deras åtkomst"
+    },
+    "viewSwitcher": {
+      "msp": "MSP",
+      "clientPortal": "Kundportal"
+    },
+    "license": {
+      "usage": "MSP-användare: {{used}}{{limit}} licenser används",
+      "noLimit": " (Ingen gräns)",
+      "ofLimit": " av {{limit}}",
+      "addLicensePrompt": "Du måste köpa fler licenser för att lägga till en ny användare",
+      "addLicense": "Lägg till licens"
+    },
+    "search": "Sök användare",
+    "filter": {
+      "all": "Alla användare",
+      "active": "Aktiva användare",
+      "inactive": "Inaktiva användare",
+      "selectStatus": "Välj status"
+    },
+    "tabs": {
+      "list": "Lista",
+      "structure": "Struktur",
+      "listDescription": "Hantera enskilda användare, roller och behörigheter.",
+      "structureDescription": "Visa och hantera organisationens rapporteringshierarki."
+    },
+    "actions": {
+      "createNewUser": "Skapa ny användare",
+      "createNewClientUser": "Skapa ny kundanvändare",
+      "copyPortalLink": "Kopiera portalens inloggningslänk",
+      "copying": "Kopierar…",
+      "createUser": "Skapa användare",
+      "sendInvitation": "Skicka portalinbjudan",
+      "sendTeamInvitation": "Skicka inbjudan",
+      "cancel": "Avbryt"
+    },
+    "form": {
+      "title": {
+        "msp": "Skapa ny MSP-användare",
+        "client": "Skapa ny kundportalanvändare"
+      },
+      "fields": {
+        "firstName": "Förnamn",
+        "lastName": "Efternamn",
+        "email": "E-post",
+        "client": "Kund",
+        "clientOptional": "(valfritt)",
+        "primaryRole": "Primär roll",
+        "selectRole": "Välj roll",
+        "reportsTo": "Rapporterar till",
+        "reportsToOptional": "(valfritt)",
+        "selectManager": "Välj chef",
+        "existingContact": "Befintlig kontakt",
+        "existingContactOptional": "(valfritt)",
+        "selectExistingContact": "Välj befintlig kontakt (valfritt)",
+        "selectExistingContactRequired": "Välj befintlig kontakt",
+        "selectContactToInvite": "Välj kontakt att bjuda in",
+        "password": "Lösenord",
+        "passwordOptional": "(Lämna tomt för att skicka en inbjudan)",
+        "passwordPlaceholder": {
+          "msp": "Ange lösenord",
+          "client": "Lämna tomt för att skicka en inbjudan"
+        },
+        "selectClient": "Välj kund"
+      },
+      "passwordAlert": {
+        "withPassword": "Om du anger ett lösenord skapas användaren direkt och kan logga in omedelbart.",
+        "withoutPassword": "Inget lösenord krävs — vi skickar en portalinbjudan så att användaren kan ange ett.",
+        "withoutPasswordMsp": "Inget lösenord krävs — vi skickar en e-postinbjudan så att användaren kan ange ett själv."
+      },
+      "requirePasswordChange": "Kräv lösenordsbyte vid första inloggningen"
+    },
+    "table": {
+      "firstName": "Förnamn",
+      "lastName": "Efternamn",
+      "email": "E-post",
+      "client": "Kund",
+      "role": "Roll",
+      "lastLogin": "Senaste inloggning",
+      "actions": "Åtgärder",
+      "noClient": "Ingen kund",
+      "noRole": "Ingen roll",
+      "never": "Aldrig",
+      "viaMethod": "via {{method}}",
+      "loading": "Laddar…",
+      "openMenu": "Öppna meny",
+      "edit": "Redigera",
+      "remove": "Ta bort"
+    },
+    "loading": "Laddar användare…",
+    "messages": {
+      "success": {
+        "portalInvitationSent": "Portalinbjudan har skickats",
+        "teamInvitationSent": "Inbjudan har skickats",
+        "clientPortalUserCreated": "Kundportalanvändaren har skapats",
+        "copiedVanityLink": "Inloggningslänken till portalens anpassade adress har kopierats till urklipp",
+        "copiedCanonicalLink": "Inloggningslänken till portalens ordinarie adress har kopierats till urklipp",
+        "invitationRevoked": "Inbjudan har återkallats"
+      },
+      "error": {
+        "fetchUsers": "Det gick inte att hämta användare",
+        "fetchRoles": "Det gick inte att hämta roller",
+        "fetchClients": "Det gick inte att hämta kunder",
+        "createUser": "Det gick inte att skapa användaren",
+        "sendInvitation": "Det gick inte att skicka inbjudan",
+        "sendInvitationManual": "Det gick inte att skicka inbjudan. Du kan skicka den manuellt från användarlistan.",
+        "createClientPortalUser": "Det gick inte att skapa kundportalanvändaren",
+        "clipboardUnavailable": "Urklipps-API:et är inte tillgängligt i den här webbläsaren.",
+        "copyPortalLink": "Det gick inte att kopiera portalens inloggningslänk",
+        "fillRequiredFields": "Fyll i alla obligatoriska fält",
+        "fixValidationErrors": "Åtgärda valideringsfelen innan du fortsätter",
+        "fixValidationBeforeInvitation": "Åtgärda valideringsfelen innan du skickar inbjudan",
+        "emailAlreadyInUse": "E-postadressen används redan. Använd en annan e-postadress.",
+        "portalUserExists": "Det finns redan en portalanvändare för kontakten eller e-postadressen.",
+        "portalUserExistsForContact": "Det finns redan en portalanvändare för kontakten. Återställ lösenordet för den befintliga användaren.",
+        "selectAppropriateRole": "Välj en lämplig roll för denna användartyp",
+        "contactMissingEmail": "Kontakten ”{{name}}” saknar e-postadress. Uppdatera kontaktens e-postadress innan du skickar en inbjudan.",
+        "licenseLimit": "Det går inte att aktivera användaren: licensgränsen har nåtts. Inaktivera en annan användare eller uppgradera licensen.",
+        "permissionDeniedInvite": "Du har inte behörighet att bjuda in användare.",
+        "permissionDeniedCreate": "Du har inte behörighet att skapa användare.",
+        "emailNotConfigured": "E-posttjänsten är inaktiverad eller inte konfigurerad.",
+        "contactNotFound": "Kontakten hittades inte.",
+        "contactMissingEmailGeneric": "Kontakten saknar e-postadress. Lägg till en e-postadress för kontakten innan du skickar en inbjudan.",
+        "contactInvalidEmail": "Kontakten har en ogiltig e-postadress. Uppdatera kontakten med en giltig e-postadress innan du skickar en inbjudan.",
+        "invalidEmail": "Ange en giltig e-postadress",
+        "noDefaultClient": "Ingen standardkund är konfigurerad för klientorganisationen. Ange en standardkund i Allmänna inställningar.",
+        "noDefaultLocation": "Standardkunden måste ha en standardplats konfigurerad för att portalinbjudningar ska kunna skickas.",
+        "noLocationEmail": "Standardkundens plats måste ha en e-postadress för kontakt konfigurerad.",
+        "noBaseUrl": "Bas-URL är inte konfigurerad för portalinbjudningar.",
+        "passwordTooShort": "Lösenordet måste innehålla minst 8 tecken.",
+        "roleRequired": "Roll krävs",
+        "invalidRole": "Den valda rollen är ogiltig",
+        "licenseLimitReached": "Du har nått licensgränsen för MSP-användare.",
+        "soloPlanLimit": "Solo-abonnemanget är begränsat till 1 användare. Uppgradera till Pro för att lägga till fler användare.",
+        "revokeInvitation": "Det gick inte att återkalla inbjudan",
+        "invitationNotFound": "Inbjudan hittades inte eller har redan använts",
+        "createContact": "Det gick inte att skapa kontakten: {{reason}}",
+        "unknown": "Okänt fel"
+      }
+    },
+    "invitations": {
+      "title": "Väntande inbjudningar",
+      "description": "Inbjudna teammedlemmar som ännu inte har konfigurerat sitt konto.",
+      "expiresPrefix": "Går ut:",
+      "revoke": "Återkalla",
+      "revoking": "Återkallar…"
+    }
+  },
+  "userDetails": {
+    "title": "Användaruppgifter",
+    "fields": {
+      "firstName": {
+        "label": "Förnamn",
+        "placeholder": "Ange förnamn"
+      },
+      "lastName": {
+        "label": "Efternamn",
+        "placeholder": "Ange efternamn"
+      },
+      "email": {
+        "label": "E-post",
+        "placeholder": "Ange e-postadress"
+      },
+      "reportsTo": {
+        "label": "Rapporterar till",
+        "placeholder": "Välj chef"
+      },
+      "workSchedule": {
+        "label": "Arbetstider",
+        "help": "När personen arbetar. Används i beläggningsrapporter. Detta anger inte tillgänglighet för kundbokningar.",
+        "setHours": "Ange arbetstider",
+        "clear": "Rensa",
+        "weeklyTotal": "{{hours}} h per vecka",
+        "days": {
+          "0": "Söndag",
+          "1": "Måndag",
+          "2": "Tisdag",
+          "3": "Onsdag",
+          "4": "Torsdag",
+          "5": "Fredag",
+          "6": "Lördag"
+        }
+      },
+      "weeklyCapacity": {
+        "label": "Veckokapacitet (timmar)",
+        "placeholder": "T.ex. 40",
+        "help": "Reservvärde som endast används när inga arbetstider har angetts ovan."
+      },
+      "lastLogin": "Senaste inloggning",
+      "roles": "Roller",
+      "status": "Status",
+      "statusHelp": "Ange användarkontots status",
+      "newPassword": "Nytt lösenord"
+    },
+    "status": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "inactiveTag": "(Inaktiv)"
+    },
+    "actions": {
+      "addRole": "Lägg till roll",
+      "selectRoleToAdd": "Välj roll att lägga till",
+      "removeRole": "Ta bort",
+      "setPassword": "Ange lösenord",
+      "cancel": "Avbryt",
+      "saveChanges": "Spara ändringar"
+    },
+    "dialog": {
+      "setPassword": {
+        "title": "Ange användarlösenord (administratör)"
+      }
+    },
+    "messages": {
+      "success": {
+        "passwordChanged": "Lösenordet har ändrats",
+        "userUpdated": "Användaren har uppdaterats",
+        "roleAdded": "Rollen har lagts till",
+        "roleRemoved": "Rollen har tagits bort"
+      },
+      "error": {
+        "userNotFound": "Användaren hittades inte",
+        "loadFailed": "Det gick inte att ladda användaruppgifter. Försök igen.",
+        "addRoleFailed": "Det gick inte att lägga till rollen. Försök igen.",
+        "removeRoleFailed": "Det gick inte att ta bort rollen. Försök igen.",
+        "updateUserNotFound": "Det gick inte att uppdatera användaren. Användaren hittades inte.",
+        "updateFailed": "Det gick inte att uppdatera användaren. Försök igen.",
+        "emailAlreadyExists": "Det finns redan en användare med denna e-postadress",
+        "reportsToSelf": "En användare kan inte rapportera till sig själv",
+        "reportsToCycle": "Detta skulle skapa en cirkulär rapporteringskedja",
+        "passwordTooShort": "Lösenordet måste innehålla minst 8 tecken",
+        "passwordChangeFailed": "Det gick inte att ändra lösenordet",
+        "passwordChangeError": "Ett fel uppstod när lösenordet ändrades",
+        "permissionDenied": "Du har inte behörighet att ändra användarroller.",
+        "invalidCapacity": "Veckokapaciteten måste vara ett positivt tal.",
+        "invalidWorkSchedule": "Arbetstiderna måste vara giltiga tidsintervall som slutar efter att de börjar."
+      }
+    },
+    "loading": "Laddar användaruppgifter…"
+  },
+  "teams": {
+    "title": "Teamhantering",
+    "description": "Skapa och hantera team, utse teamledare och organisera medlemmar i hela organisationen",
+    "loading": "Laddar team…",
+    "emptyState": "Välj ett team för att hantera medlemmar",
+    "list": {
+      "title": "Team",
+      "addNewTeam": "Lägg till nytt team",
+      "createTeam": "Skapa team",
+      "cancel": "Avbryt",
+      "delete": "Radera",
+      "placeholder": "Ange nytt teamnamn",
+      "selectManager": "Välj en chef"
+    },
+    "details": {
+      "loading": "Laddar teamuppgifter…",
+      "notFound": "Inget team hittades",
+      "fields": {
+        "teamLead": "Teamledare",
+        "addMember": "Lägg till medlem"
+      },
+      "placeholders": {
+        "teamName": "Ange teamnamn",
+        "selectTeamLead": "Välj en teamledare",
+        "selectUserToAdd": "Välj en användare att lägga till"
+      },
+      "alert": {
+        "unsavedChanges": "Du har osparade ändringar"
+      },
+      "actions": {
+        "discard": "Kasta",
+        "saveChanges": "Spara ändringar",
+        "saveName": "Spara namn",
+        "cancel": "Avbryt",
+        "editName": "Redigera namn",
+        "remove": "Ta bort"
+      },
+      "table": {
+        "teamMembers": "Teammedlemmar",
+        "member": "Medlem",
+        "role": "Roll"
+      },
+      "badge": {
+        "new": "Ny",
+        "lead": "Ledare"
+      },
+      "leadName": "Ledare: {{name}}",
+      "memberCount_one": "{{count}} medlem",
+      "memberCount_other": "{{count}} medlemmar"
+    },
+    "messages": {
+      "error": {
+        "loadFailed": "Det gick inte att ladda team. Försök igen.",
+        "fetchUsers": "Det gick inte att hämta användare",
+        "createFailed": "Det gick inte att skapa teamet: {{error}}",
+        "deleteFailed": "Det gick inte att radera teamet",
+        "updateName": "Det gick inte att uppdatera teamnamnet",
+        "saveChanges": "Det gick inte att spara ändringarna. Försök igen."
+      }
+    }
+  },
+  "ticketing": {
+    "title": "Ärendeinställningar",
+    "tabs": {
+      "display": "Visning",
+      "ticketNumbering": "Ärendenumrering",
+      "boards": "Tavlor",
+      "priorities": "Prioriteter",
+      "categories": "Kategorier",
+      "checklistTemplates": "Checklistemallar",
+      "externalSystems": "Externa system"
+    },
+    "numbering": {
+      "title": "Nummerformat",
+      "description": "Ange prefix, nollutfyllnad och aktuell nummerföljd",
+      "fields": {
+        "prefix": {
+          "label": "Prefix för ärendenummer",
+          "placeholder": "TK-",
+          "help": "Valfritt prefix för ärendenummer. Lämna tomt om inget prefix ska användas eller ange ett eget prefix (t.ex. 'TK-')"
+        },
+        "minimumDigits": {
+          "label": "Minsta antal siffror",
+          "help": "Minsta antal siffror i löpnumret. Med 6 blir exempelvis '1' till '000001'"
+        },
+        "initialValue": {
+          "label": "Startvärde",
+          "placeholder": "Ange värde",
+          "help": "Ange startnumret för nummerföljden. Detta kan bara anges en gång."
+        },
+        "lastUsedNumber": {
+          "label": "Senast använda nummer",
+          "help": "Det senast tilldelade numret. Nästa nummer blir ett högre än detta värde."
+        },
+        "nextPreview": {
+          "label": "Förhandsgranskning av nästa ärendenummer",
+          "help": "Detta nummer tilldelas nästa ärende"
+        }
+      },
+      "actions": {
+        "saveChanges": "Spara ändringar",
+        "cancel": "Avbryt"
+      },
+      "dialog": {
+        "title": "Uppdatera inställningar för ärendenummer",
+        "message": "Ändringarna påverkar hur nya ärendenummer genereras. Befintliga ärenden påverkas inte. Vill du fortsätta?",
+        "confirm": "Uppdatera inställningar"
+      },
+      "loading": "Laddar…",
+      "messages": {
+        "error": {
+          "noSettings": "Inga inställningar för ärendenumrering hittades. Kontakta administratören.",
+          "loadFailed": "Det gick inte att ladda inställningarna för ärendenumrering",
+          "updateFailed": "Det gick inte att uppdatera inställningarna",
+          "updatePaddingFailed": "Det gick inte att uppdatera utfyllnadslängden",
+          "updateLastNumberFailed": "Det gick inte att uppdatera det senaste numret",
+          "updateInitialValueFailed": "Det gick inte att uppdatera startvärdet"
+        },
+        "success": {
+          "updated": "Inställningarna för ärendenumrering har uppdaterats"
+        }
+      }
+    },
+    "statuses": {
+      "title": "Ärendestatusar",
+      "alert": "Standardstatus: När kunder skapar ärenden via kundportalen tilldelas ärendena automatiskt den status som är markerad som standard. Endast en status kan vara standard åt gången.",
+      "table": {
+        "name": "Namn",
+        "status": "Status",
+        "default": "Standard",
+        "order": "Ordning",
+        "actions": "Åtgärder"
+      },
+      "statusLabels": {
+        "closed": "Stängd",
+        "open": "Öppen",
+        "closedHelp": "Ärenden med denna status markeras som stängda",
+        "openHelp": "Ärenden med denna status förblir öppna",
+        "defaultHelp": "Standardstatus för nya ärenden från kundportalen"
+      },
+      "actions": {
+        "addStatus": "Lägg till status",
+        "importStandard": "Importera från standardstatusar",
+        "edit": "Redigera",
+        "delete": "Radera"
+      },
+      "retiredAlert": "Ärendestatusar hanteras nu inom varje tavla. Använd fliken Tavlor för att redigera ärendets livscykel för en viss tavla.",
+      "messages": {
+        "success": {
+          "deleted": "Statusen har raderats",
+          "updated": "Statusen har uppdaterats"
+        },
+        "error": {
+          "lastClosed": "Minst en status måste förbli markerad som stängd",
+          "deleteLastClosed": "Det går inte att radera den sista stängda statusen för denna typ.",
+          "removeDefault": "Det går inte att ta bort standardmarkeringen från den sista standardstatusen"
+        }
+      }
+    },
+    "boards": {
+      "title": "Tavlor",
+      "alert": "Tavlor delar in ärenden i logiska grupper. Varje tavla kan ha en egen standardhandläggare, standardprioritet och SLA-policy.",
+      "table": {
+        "name": "Namn",
+        "description": "Beskrivning",
+        "status": "Status",
+        "default": "Standard",
+        "defaultAgent": "Standardhandläggare",
+        "defaultPriority": "Standardprioritet",
+        "boardManager": "Tavelansvarig",
+        "order": "Ordning",
+        "itilBoard": "ITIL-tavla",
+        "actions": "Åtgärder",
+        "ticketLoad": "Ärendebelastning",
+        "statuses": "Statusar"
+      },
+      "statusLabels": {
+        "active": "Aktiv",
+        "inactive": "Inaktiv",
+        "hiddenFromPortal": "Dold i portalen"
+      },
+      "actions": {
+        "addBoard": "Lägg till tavla",
+        "importStandard": "Importera från standardtavlor",
+        "edit": "Redigera",
+        "delete": "Radera",
+        "cancel": "Avbryt",
+        "close": "Stäng",
+        "create": "Skapa",
+        "update": "Uppdatera",
+        "importSelected": "Importera markerade",
+        "up": "Upp",
+        "down": "Ner",
+        "remove": "Ta bort",
+        "addStatus": "Lägg till status",
+        "back": "Tillbaka till tavlor"
+      },
+      "fields": {
+        "boardName": {
+          "label": "Tavelnamn",
+          "placeholder": "Ange tavelnamn"
+        },
+        "description": {
+          "label": "Beskrivning",
+          "placeholder": "Ange tavlans beskrivning"
+        },
+        "displayOrder": {
+          "label": "Visningsordning",
+          "placeholder": "Ange visningsordning",
+          "help": "Styr i vilken ordning tavlorna visas i listan"
+        },
+        "inactive": "Markera som inaktiv",
+        "itilCompliant": "Följer ITIL",
+        "boardConfiguration": "Tavelkonfiguration",
+        "boardManager": {
+          "label": "Tavelansvarig",
+          "placeholder": "Välj en tavelansvarig",
+          "help": "Användaren som ansvarar för att hantera tavlan"
+        },
+        "defaultAssignedAgent": {
+          "label": "Tilldelad standardhandläggare",
+          "placeholder": "Välj standardhandläggare",
+          "help": "Nya ärenden på tavlan tilldelas som standard denna handläggare"
+        },
+        "defaultPriority": {
+          "label": "Standardprioritet",
+          "placeholder": "Välj standardprioritet",
+          "help": "Nya ärenden på tavlan får som standard denna prioritet",
+          "none": "Ingen"
+        },
+        "slaPolicy": {
+          "label": "SLA-policy",
+          "placeholder": "Välj SLA-policy",
+          "help": "SLA-policyn som ska tillämpas på tavlans ärenden",
+          "none": "Ingen"
+        },
+        "ticketStatusSetup": {
+          "label": "Konfiguration av ärendestatusar",
+          "help": "Välj om tavlan ska utgå från en befintlig livscykel eller en ny statuslista som skapas här.",
+          "copyExisting": "Kopiera från befintlig tavla",
+          "createInline": "Skapa statusar här"
+        },
+        "copyTicketStatuses": {
+          "label": "Kopiera ärendestatusar från",
+          "help": "Nya tavlor kopierar sin ärendelivscykel från en befintlig tavla.",
+          "selectSource": "Välj en källtavla",
+          "noSourceAvailable": "Inga källtavlor är tillgängliga",
+          "unnamedBoard": "Namnlös tavla"
+        },
+        "ticketStatuses": {
+          "labelEditing": "Tavlans ärendestatusar",
+          "labelCopied": "Kopierade ärendestatusar",
+          "labelInline": "Ärendestatusar som skapas här",
+          "helpEditing": "Redigera ärendelivscykeln endast för denna tavla.",
+          "helpCopied": "Granska och justera den kopierade livscykeln innan du sparar den nya tavlan.",
+          "helpInline": "Skapa tavlans första ärendelivscykel innan du sparar.",
+          "loading": "Laddar tavlans ärendestatusar…",
+          "statusName": "Statusnamn",
+          "closed": "Stängd",
+          "default": "Standard",
+          "portalSelectable": "Kundportalanvändare kan välja denna status"
+        },
+        "inboundReplyReopen": {
+          "enabledLabel": "Öppna stängda ärenden igen vid inkommande svar",
+          "enabledHelp": "Gäller trådade svar som matchas mot redan stängda ärenden på tavlan.",
+          "cutoffHoursLabel": "Tidsgräns för återöppning (timmar)",
+          "cutoffHoursHelp": "Svar som kommer efter denna tidsgräns skapar nya ärenden i stället för att öppna gamla igen.",
+          "statusLabel": "Status vid återöppning (valfritt)",
+          "statusPlaceholder": "Välj status vid återöppning",
+          "statusUseDefault": "Använd tavlans öppna standardstatus",
+          "suppressAiLabel": "Förhindra återöppning vid korta bekräftelsesvar (AI)",
+          "suppressAiHelp": "Endast för tillägget Enterprise AI Assistant. Om tillägget inte är tillgängligt öppnas ärenden igen som vanligt vid svar."
+        },
+        "liveTimer": {
+          "label": "Aktivera löpande tidtagning för ärenden",
+          "help": "Visar löpande tidtagning och registrerade intervall för ärenden på tavlan. Manuell tidregistrering är fortsatt tillgänglig."
+        },
+        "clientPortalVisible": {
+          "label": "Synlig i kundportalen",
+          "help": "När detta är avstängt döljs tavlan och dess ärenden för alla kundportalanvändare, oavsett synlighetsgrupper."
+        },
+        "defaultBoard": {
+          "label": "Standardtavla för ärenden från kundportalen",
+          "help": "Nya ärenden som skickas in från kundportalen hamnar på denna tavla. Endast en tavla kan vara standard."
+        }
+      },
+      "dialog": {
+        "addBoard": "Lägg till tavla",
+        "editBoard": "Redigera tavla",
+        "deleteBoardTitle": "Radera tavla",
+        "deleteBoardMessage": "Detta raderar tavlan permanent.",
+        "cleanupItilTitle": "Rensa ITIL-tavla",
+        "cleanupItilMessage": "Detta tar bort ITIL-kategorierna och prioritetsmatrisen som är kopplade till tavlan.",
+        "deleteOnly": "Radera endast",
+        "deleteAndCleanup": "Radera och rensa",
+        "deleteAll": "Radera alla",
+        "importTitle": "Importera standardtavlor",
+        "importDescription": "Välj standardtavlor att importera till organisationen:",
+        "importEmpty": "Det finns inga standardtavlor att importera.",
+        "conflictsTitle": "Lös importkonflikter",
+        "conflictsDescription": "Följande poster har konflikter som måste lösas:",
+        "nameConflict": "Namnet finns redan",
+        "orderConflict": "Ordning {{order}} används redan",
+        "skipItem": "Hoppa över denna post",
+        "importNewName": "Importera med ett annat namn:",
+        "importWithOrder": "Importera med ordning {{order}}",
+        "importWithResolutions": "Importera med lösta konflikter"
+      },
+      "importTable": {
+        "active": "Aktiv"
+      },
+      "itilInfo": {
+        "title": "ITIL-information",
+        "tooltip": "Tavlan följer ITIL:s rekommenderade arbetssätt",
+        "categoriesTitle": "ITIL-kategorier",
+        "priorityMatrixTitle": "Prioritetsmatris",
+        "impactDescription": "Påverkansnivåer anger problemets omfattning",
+        "urgencyDescription": "Brådskandegrader anger hur snabbt problemet behöver lösas",
+        "priorityDescription": "Prioriteten beräknas utifrån påverkan och brådskandegrad",
+        "categories": {
+          "serviceRequest": "Tjänsteförfrågan"
+        },
+        "priorityMatrix": {
+          "urgencyHeaderLine1": {
+            "high": "Hög",
+            "mediumHigh": "Medelhög",
+            "medium": "Medel",
+            "mediumLow": "Medellåg",
+            "low": "Låg"
+          },
+          "urgencyHeaderLine2": {
+            "high": "Brådskandegrad (1)",
+            "mediumHigh": "Brådskandegrad (2)",
+            "medium": "Brådskandegrad (3)",
+            "mediumLow": "Brådskandegrad (4)",
+            "low": "Brådskandegrad (5)"
+          },
+          "impact": {
+            "high": "Hög påverkan (1)",
+            "mediumHigh": "Medelhög påverkan (2)",
+            "medium": "Medelstor påverkan (3)",
+            "mediumLow": "Medellåg påverkan (4)",
+            "low": "Låg påverkan (5)"
+          },
+          "priority": {
+            "critical": "Kritisk (1)",
+            "high": "Hög (2)",
+            "medium": "Medel (3)",
+            "low": "Låg (4)",
+            "planning": "Planering (5)"
+          }
+        }
+      },
+      "messages": {
+        "success": {
+          "created": "Tavlan har skapats",
+          "updated": "Tavlan har uppdaterats",
+          "deleted": "Tavlan har raderats",
+          "imported": "Tavlorna har importerats"
+        },
+        "error": {
+          "fetchFailed": "Det gick inte att ladda tavlor",
+          "fetchAvailableFailed": "Det gick inte att hämta tillgängliga tavlor för import",
+          "nameRequired": "Tavelnamn krävs",
+          "saveFailed": "Det gick inte att spara tavlan",
+          "lastDefault": "Det går inte att ta bort den sista standardtavlan",
+          "statusRequired": "Lägg till minst en ärendestatus innan du sparar tavlan.",
+          "duplicateStatusName": "Namn på ärendestatusar måste vara unika inom en tavla.",
+          "invalidOpenDefault": "Välj exakt en öppen standardstatus för ärenden innan du sparar tavlan.",
+          "nameAlreadyExists": "Det finns redan en tavla med detta namn.",
+          "selectBoardToCopy": "Välj en befintlig tavla att kopiera ärendestatusar från.",
+          "fetchStatusesFailed": "Det gick inte att ladda tavlans ärendestatusar.",
+          "deleteFailed": "Det gick inte att radera tavlan",
+          "importFailed": "Det gick inte att importera tavlor",
+          "updateStatusFailed": "Det gick inte att uppdatera tavlans status",
+          "updateDefaultFailed": "Det gick inte att uppdatera standardtavlan"
+        }
+      },
+      "closeRules": {
+        "enabledLabel": "Stängningsregler",
+        "enabledHelp": "Kräv att villkor uppfylls innan ärenden på tavlan kan stängas.",
+        "requireResolutionCommentLabel": "Kräv en lösningskommentar",
+        "requireResolutionCommentHelp": "En lösningskommentar måste finnas innan ärendet kan stängas.",
+        "requireTimeEntryLabel": "Kräv en tidpost",
+        "requireTimeEntryHelp": "Minst en tidpost måste vara registrerad innan ärendet kan stängas.",
+        "requireChecklistCompleteLabel": "Kräv att checklistan är slutförd",
+        "requireChecklistCompleteHelp": "Alla obligatoriska poster i checklistan måste vara avbockade innan ärendet kan stängas.",
+        "requireNoOpenChildrenLabel": "Kräv att grupperade ärenden är stängda",
+        "requireNoOpenChildrenHelp": "Ett huvudärende i en grupp kan inte stängas medan underärenden i gruppen fortfarande är öppna.",
+        "requiredFieldsLabel": "Obligatoriska fält vid stängning",
+        "requiredFieldsHelp": "Dessa ärendefält måste vara ifyllda innan ärendet kan stängas.",
+        "autoCloseLabel": "Regler för automatisk stängning",
+        "autoCloseHelp": "Stäng automatiskt ärenden som har en viss status utan aktivitet. Ett valfritt varningsmeddelande skickas via e-post till kontakten före stängning.",
+        "addAutoCloseRule": "Lägg till regel",
+        "triggerStatusLabel": "När ärendet har status",
+        "triggerStatusPlaceholder": "Välj status",
+        "targetStatusLabel": "Stäng med status",
+        "targetStatusPlaceholder": "Välj stängd status",
+        "inactivityDaysLabel": "Dagar utan aktivitet",
+        "warningDaysLabel": "Varna antal dagar före stängning",
+        "warningDaysPlaceholder": "Ingen varning",
+        "suppressContactNotificationsLabel": "Avisera inte kunden",
+        "suppressContactNotificationsHelp": "Hoppar över e-post med varning, e-post om stängning, enkätinbjudan och avisering i kundportalen.",
+        "suppressInternalNotificationsLabel": "Avisera inte heller handläggare och bevakare",
+        "ruleEnabledLabel": "Aktiverad",
+        "removeRule": "Ta bort",
+        "messages": {
+          "fetchFailed": "Det gick inte att ladda stängningsregler för tavlan",
+          "autoCloseStatusRequired": "Varje regel för automatisk stängning behöver en utlösande status och en stängd målstatus",
+          "autoCloseDaysInvalid": "Antalet dagar utan aktivitet före automatisk stängning måste vara ett positivt heltal",
+          "autoCloseWarningInvalid": "Varningens framförhållning måste vara kortare än antalet dagar utan aktivitet",
+          "autoCloseSuppressionInvalid": "Aviseringar till handläggare och bevakare kan endast hoppas över när kundaviseringar hoppas över."
+        }
+      },
+      "editor": {
+        "sections": {
+          "general": "Allmänt",
+          "generalHelp": "Namn, beskrivning, synlighet och standard",
+          "appearance": "Utseende och standardinställningar",
+          "appearanceHelp": "Fästa flikar och tavlans standardlistvy",
+          "assignment": "Tilldelning och SLA",
+          "assignmentHelp": "Standardtilldelning, SLA och tavelansvarig",
+          "inbound": "E-post och inkommande svar",
+          "inboundHelp": "Öppna ärenden igen när kunder svarar via e-post",
+          "close": "Stängningsregler",
+          "closeHelp": "Krav innan ett ärende kan stängas",
+          "automation": "Automatisering",
+          "automationHelp": "Stäng inaktiva ärenden automatiskt",
+          "statuses": "Prioriteter och statusar",
+          "statusesHelp": "Standardprioritet och ärendestatusar för tavlan",
+          "display": "Visning och beteende",
+          "displayHelp": "Löpande tidtagning och taveltyp"
+        },
+        "saveChanges": "Spara ändringar",
+        "unsaved": "Osparat",
+        "unsavedShort": "Osparade ändringar",
+        "unsavedBanner": "Du har osparade ändringar. Klicka på ”Spara ändringar” för att tillämpa dem.",
+        "allSaved": "Alla ändringar har sparats",
+        "reopenBadge": "återöppning",
+        "required": "Obligatorisk"
+      },
+      "appearance": {
+        "pinLabel": "Fäst i ärendevyn",
+        "pinHelp": "Fästa tavlor får en permanent flik i ärendevyn. Tavlor som inte är fästa kan nås från Alla ärenden och tavelfiltret.",
+        "savedView": "Sparad vy",
+        "inheritsTenant": "Ärver klientorganisationens standardinställningar",
+        "openBoard": "Öppna denna tavla",
+        "resetToTenant": "Återställ till klientorganisationens standardinställning",
+        "arrangeNote": "Anpassa tavlans vy direkt på tavlan och spara den sedan från menyn Visa.",
+        "preview": "Förhandsgranskning",
+        "summary": {
+          "openOnly": "Endast öppna",
+          "columns": "{{columns}} kolumner",
+          "density": "täthet {{level}}",
+          "sortedBy": "sorterat efter {{field}}"
+        }
+      },
+      "empty": "Inga tavlor hittades.",
+      "searchPlaceholder": "Sök tavlor…"
+    },
+    "priorities": {
+      "title": {
+        "ticket": "Ärendeprioriteter",
+        "projectTask": "Prioriteter för projektuppgifter"
+      },
+      "alert": {
+        "header": "Prioritetshantering:",
+        "description": "Skapa egna prioriteter för organisationen eller importera från standardmallar.",
+        "itilNote": "ITIL-standardprioriteter kan inte redigeras eller raderas.",
+        "itilRemovableNote": "ITIL-standardprioriteter kan inte redigeras, men kan raderas nu när ingen tavla använder ITIL-prioriteter.",
+        "nonItilNote": "Alla prioriteter kan redigeras eller raderas för att passa ditt arbetsflöde."
+      },
+      "table": {
+        "name": "Namn",
+        "type": "Typ",
+        "color": "Färg",
+        "order": "Ordning",
+        "actions": "Åtgärder",
+        "standardTag": "(standard)",
+        "itilProtected": "Skyddad"
+      },
+      "itemTypes": {
+        "ticket": "Ärende",
+        "projectTask": "Projektuppgift"
+      },
+      "actions": {
+        "addPriority": "Lägg till prioritet",
+        "importStandard": "Importera från standardprioriteter",
+        "openMenu": "Öppna meny",
+        "edit": "Redigera",
+        "delete": "Radera",
+        "cancel": "Avbryt"
+      },
+      "dialog": {
+        "addTitle": "Lägg till ny prioritet",
+        "editTitle": "Redigera prioritet",
+        "submitAdd": "Lägg till prioritet",
+        "submitUpdate": "Uppdatera prioritet"
+      },
+      "fields": {
+        "priorityName": {
+          "label": "Prioritetsnamn",
+          "placeholder": "T.ex. Brådskande"
+        },
+        "orderNumber": {
+          "label": "Ordningsnummer (1–100, högre nummer visas först)",
+          "help": "Styr i vilken ordning prioriteter visas i rullgardinsmenyer på hela plattformen. Prioriteter med högre nummer visas först.",
+          "used": "Använda ordningsnummer: {{numbers}}",
+          "noneUsed": "Inga ordningsnummer används ännu"
+        },
+        "color": {
+          "label": "Färg",
+          "chooseButton": "Välj färg"
+        }
+      },
+      "import": {
+        "title": "Importera standardprioriteter",
+        "submit": "Importera ({{count}})",
+        "allImportedTicket": "Alla standardprioriteter har redan importerats för ärenden.",
+        "allImportedProjectTask": "Alla standardprioriteter har redan importerats för projektuppgifter.",
+        "instructions": "Välj de standardprioriteter du vill importera. De kopieras till organisationens prioriteter."
+      },
+      "messages": {
+        "success": {
+          "deleted": "Prioriteten har raderats",
+          "imported": "{{count}} prioriteter har importerats",
+          "skipped": "{{count}} prioriteter hoppades över (finns redan)"
+        },
+        "error": {
+          "orderTaken": "Ordningsnummer {{order}} används redan av ”{{name}}”. Välj ett annat ordningsnummer.",
+          "uniqueConstraint": "Ordningsnumret används redan. Välj ett annat ordningsnummer.",
+          "saveFailed": "Det gick inte att spara prioriteten",
+          "deleteFailed": "Det gick inte att radera prioriteten",
+          "deleteValidationFailed": "Det gick inte att validera raderingen. Försök igen.",
+          "importFailed": "Det gick inte att importera prioriteter"
+        }
+      },
+      "entity": {
+        "fallback": "denna prioritet"
+      }
+    },
+    "checklistTemplates": {
+      "title": "Checklistemallar",
+      "alert": "Checklistemallar definierar återanvändbara checklistor för ärenden. Mallens poster kopieras till ärendet när mallen tillämpas. Att redigera en mall ändrar därför aldrig checklistor som redan finns på ärenden.",
+      "table": {
+        "name": "Namn",
+        "description": "Beskrivning",
+        "items": "Poster",
+        "status": "Status",
+        "actions": "Åtgärder"
+      },
+      "statusLabels": {
+        "active": "Aktiv",
+        "inactive": "Inaktiv"
+      },
+      "actions": {
+        "addTemplate": "Lägg till mall",
+        "edit": "Redigera",
+        "delete": "Radera",
+        "cancel": "Avbryt",
+        "close": "Stäng",
+        "create": "Skapa",
+        "update": "Uppdatera",
+        "up": "Upp",
+        "down": "Ner",
+        "remove": "Ta bort",
+        "addItem": "Lägg till post",
+        "addRule": "Lägg till regel"
+      },
+      "fields": {
+        "name": {
+          "label": "Mallnamn",
+          "placeholder": "Ange mallnamn"
+        },
+        "description": {
+          "label": "Beskrivning",
+          "placeholder": "Ange beskrivning"
+        },
+        "active": "Aktiv",
+        "items": {
+          "label": "Checklistans poster",
+          "help": "Poster läggs till på ärenden i denna ordning när mallen tillämpas.",
+          "itemName": "Postnamn",
+          "required": "Obligatorisk",
+          "newItemLabel": "Ny post",
+          "newItemPlaceholder": "Ange postnamn"
+        },
+        "rules": {
+          "label": "Regler för automatisk tillämpning",
+          "help": "Mallen tillämpas automatiskt på nya ärenden som matchar någon av dessa regler. Låt ett fält stå som ”Valfri” för att matcha alla värden.",
+          "empty": "Inga regler för automatisk tillämpning. Mallen kan fortfarande tillämpas manuellt på ärenden.",
+          "board": "Tavla",
+          "category": "Kategori",
+          "subcategory": "Underkategori",
+          "priority": "Prioritet",
+          "any": "Valfri"
+        }
+      },
+      "dialog": {
+        "addTemplate": "Lägg till checklistemall",
+        "editTemplate": "Redigera checklistemall",
+        "createFirstHelp": "Skapa mallen först och lägg sedan till checklistans poster och regler för automatisk tillämpning.",
+        "deleteTitle": "Radera checklistemall",
+        "deleteMessage": "Vill du radera ”{{name}}”? Checklistor som redan lagts till på ärenden påverkas inte."
+      },
+      "messages": {
+        "success": {
+          "created": "Checklistemallen har skapats",
+          "updated": "Checklistemallen har uppdaterats",
+          "deleted": "Checklistemallen har raderats"
+        },
+        "error": {
+          "fetchFailed": "Det gick inte att hämta checklistemallar",
+          "fetchRulesFailed": "Det gick inte att hämta regler för automatisk tillämpning",
+          "nameRequired": "Mallnamn krävs",
+          "saveFailed": "Det gick inte att spara checklistemallen",
+          "deleteFailed": "Det gick inte att radera checklistemallen",
+          "updateStatusFailed": "Det gick inte att uppdatera mallens status",
+          "itemSaveFailed": "Det gick inte att spara checklistans post",
+          "ruleSaveFailed": "Det gick inte att spara regeln för automatisk tillämpning"
+        }
+      }
+    },
+    "externalSystems": {
+      "title": "Externa system",
+      "subtitle": "Lägg till egna externa system så att ärenden kan länka till poster utanför den inbyggda katalogen.",
+      "addButton": "Lägg till system",
+      "builtInTitle": "Inbyggda system",
+      "builtInSubtitle": "Tillgängliga för alla klientorganisationer. Deras URL:er skapas utifrån systemmallen.",
+      "table": {
+        "label": "Etikett",
+        "key": "Nyckel",
+        "urlTemplate": "URL-mall",
+        "actions": "Åtgärder"
+      },
+      "actions": {
+        "edit": "Redigera",
+        "delete": "Radera",
+        "cancel": "Avbryt",
+        "save": "Spara"
+      },
+      "fields": {
+        "key": "Nyckel",
+        "keyHint": "Måste matcha custom:<slug> med gemener, siffror eller understreck.",
+        "label": "Etikett",
+        "urlTemplate": "URL-mall",
+        "urlTemplateHint": "Valfritt. Använd platshållarna {realm} och {external_id}."
+      },
+      "dialog": {
+        "addTitle": "Lägg till externt system",
+        "editTitle": "Redigera externt system"
+      },
+      "deleteDialog": {
+        "title": "Radera externt system",
+        "message": "Radera ”{{label}}”? System som fortfarande används av länkar kan inte raderas."
+      },
+      "messages": {
+        "success": {
+          "created": "Det externa systemet har skapats.",
+          "updated": "Det externa systemet har uppdaterats.",
+          "deleted": "Det externa systemet har raderats."
+        }
+      }
+    }
+  },
+  "interactions": {
+    "title": "Interaktionsinställningar",
+    "tabs": {
+      "types": "Interaktionstyper",
+      "statuses": "Interaktionsstatusar"
+    },
+    "types": {
+      "title": "Interaktionstyper",
+      "loading": "Laddar interaktionstyper…",
+      "table": {
+        "name": "Namn",
+        "order": "Ordning",
+        "actions": "Åtgärder"
+      },
+      "actions": {
+        "addType": "Lägg till interaktionstyp",
+        "importStandard": "Importera från standardinteraktionstyper",
+        "edit": "Redigera",
+        "delete": "Radera",
+        "cancel": "Avbryt",
+        "importSelected": "Importera markerade"
+      },
+      "dialog": {
+        "import": {
+          "title": "Importera standardinteraktionstyper",
+          "description": "Välj standardinteraktionstyper att importera till organisationen:",
+          "empty": "Det finns inga standardinteraktionstyper att importera."
+        },
+        "conflicts": {
+          "title": "Lös importkonflikter",
+          "description": "Följande poster har konflikter som måste lösas:",
+          "nameConflict": "Namnet finns redan",
+          "orderConflict": "Ordning {{order}} används redan",
+          "skipItem": "Hoppa över denna post",
+          "importDifferentName": "Importera med ett annat namn:",
+          "importDifferentOrder": "Importera med ordning {{order}}",
+          "resolve": "Importera med lösta konflikter"
+        }
+      },
+      "messages": {
+        "success": {
+          "deleted": "Interaktionstypen har raderats",
+          "imported_one": "{{count}} interaktionstyp har importerats",
+          "imported_other": "{{count}} interaktionstyper har importerats"
+        },
+        "error": {
+          "fetchFailed": "Det gick inte att hämta interaktionstyper",
+          "validateDeleteFailed": "Det gick inte att validera raderingen av interaktionstypen",
+          "deleteFailed": "Det gick inte att radera interaktionstypen",
+          "checkConflicts": "Det gick inte att kontrollera konflikter",
+          "importFailed": "Det gick inte att importera interaktionstyper",
+          "fetchAvailable": "Det gick inte att hämta tillgängliga interaktionstyper för import"
+        }
+      }
+    },
+    "statuses": {
+      "title": "Interaktionsstatusar",
+      "alert": "Interaktionsstatusar: Följ status för kundinteraktioner som samtal, e-post och möten.",
+      "table": {
+        "name": "Namn",
+        "status": "Status",
+        "order": "Ordning",
+        "actions": "Åtgärder",
+        "default": "Standard"
+      },
+      "statusLabels": {
+        "closedHelp": "Interaktioner med denna status markeras som stängda",
+        "openHelp": "Interaktioner med denna status förblir öppna"
+      },
+      "actions": {
+        "addStatus": "Lägg till status",
+        "importStandard": "Importera från standard",
+        "edit": "Redigera",
+        "delete": "Radera"
+      },
+      "messages": {
+        "success": {
+          "updated": "Statusen har uppdaterats",
+          "deleted": "Statusen har raderats",
+          "imported": "{{count}} statusar har importerats",
+          "defaultUpdated": "Standardstatus för interaktioner har uppdaterats"
+        },
+        "error": {
+          "lastClosed": "Minst en status måste förbli markerad som stängd",
+          "deleteLastClosed": "Det går inte att radera den sista stängda statusen för denna typ.",
+          "skipped": "{{count}} statusar hoppades över ({{reason}})",
+          "importFailed": "Det gick inte att importera statusar",
+          "defaultRequired": "En status måste förbli standard — ange en annan status som standard i stället.",
+          "closedCannotBeDefault": "En stängd status kan inte vara standard för nya interaktioner."
+        }
+      },
+      "defaultLabels": {
+        "isDefault": "Standard för nya interaktioner",
+        "setDefault": "Använd som standard"
+      }
+    },
+    "quickAdd": {
+      "dialog": {
+        "createTitle": "Skapa interaktionstyp",
+        "editTitle": "Redigera interaktionstyp"
+      },
+      "fields": {
+        "name": {
+          "label": "Interaktionstypens namn:",
+          "placeholder": "T.ex. ”Introduktionssamtal med kund”, ”Säljdemonstration”, ”Projektgenomgång”"
+        },
+        "displayOrder": {
+          "label": "Visningsordning:",
+          "placeholder": "T.ex. 1, 2, 3…"
+        },
+        "icon": {
+          "label": "Välj en ikon:"
+        }
+      },
+      "preview": {
+        "title": "Förhandsgranskning:",
+        "empty": "Ange typnamn ovan"
+      },
+      "actions": {
+        "cancel": "Avbryt",
+        "create": "Skapa typ",
+        "update": "Uppdatera typ",
+        "creating": "Skapar…",
+        "updating": "Uppdaterar…"
+      },
+      "messages": {
+        "error": {
+          "nameRequired": "Ange ett namn för interaktionstypen.",
+          "saveFailed": "Det gick inte att {{action}} interaktionstypen. Försök igen."
+        }
+      }
+    },
+    "openMenu": "Öppna meny"
+  },
+  "clientPortal": {
+    "features": {
+      "title": "Portalfunktioner",
+      "description": "Välj vilka självbetjäningsfunktioner kunder kan använda.",
+      "appointmentsLabel": "Bokningar",
+      "appointmentsHelp": "Låt kunder visa och begära bokningar från kundportalen.",
+      "appointmentsEnabled": "Bokningar är nu tillgängliga i kundportalen",
+      "appointmentsDisabled": "Bokningar är nu dolda i kundportalen",
+      "updateFailed": "Det gick inte att uppdatera kundportalens funktioner"
+    },
+    "branding": {
+      "title": "Varumärkesprofil och utseende",
+      "description": "Anpassa kundportalens utseende med företagets varumärkesprofil.",
+      "fields": {
+        "companyName": "Företagsnamn",
+        "companyLogo": "Företagslogotyp",
+        "companyLogoDark": "Logotyp för mörka bakgrunder",
+        "companyLogoWide": "Bred logotyp (valfritt)",
+        "companyLogoWideDark": "Bred logotyp för mörka bakgrunder (valfritt)",
+        "colorPalette": "Färgpalett",
+        "primaryColor": "Primär färg",
+        "secondaryColor": "Sekundär färg",
+        "supportEmail": "E-postadress för support",
+        "supportPhone": "Telefonnummer för support",
+        "heroGradient": "Färgövergång i översiktspanelens välkomstbanner",
+        "sidebarStyle": "Sidopanelens färg",
+        "sidebarColor": "Anpassad färg för sidopanelen",
+        "followTheme": "Använd organisationens tema i portalen"
+      },
+      "help": {
+        "companyName": "Detta visas i kundportalens sidhuvud",
+        "colorPalette": "Dessa accentfärger kompletterar organisationens tema: primärfärgen används för knappar, länkar och välkomstbannern, sekundärfärgen för bannerns andra halva och övriga accenter. Sidopanelen använder den färg du väljer. Alla andra ytor — sida, kort, text och kantlinjer — följer temat under Inställningar → Utseende.",
+        "companyLogo": "Rekommenderat: PNG eller SVG, högst 2 MB, transparent bakgrund",
+        "companyLogoMsp": "Denna logotyp ersätter även Alga-märket i MSP-sidomenyn.",
+        "companyLogoDark": "Valfritt. Används i portalens sidopanel och i vyer med mörkt läge. Företagslogotypen används om fältet lämnas tomt.",
+        "companyLogoWide": "Visas överst i portalens expanderade sidopanel med höjden 32 px. Ta med företagsnamnet i bilden — panelen slutar visa det separat.",
+        "companyLogoWideDark": "Valfritt. Används när sidopanelens bakgrund är mörk. Den breda logotypen används annars.",
+        "primaryColor": "Används för knappar, länkar och markeringar",
+        "secondaryColor": "Används för accenter och sekundära åtgärder",
+        "supportEmail": "Visas för kunder i bokningsbekräftelser och annan utgående e-post som kontaktadress för hjälp.",
+        "supportPhone": "Valfritt. Visas tillsammans med e-postadressen för support i e-post till kunder.",
+        "heroGradient": "Styr färgövergången i välkomstbannern på kundens översiktspanel.",
+        "sidebarStyle": "Färgar kundportalens sidopanel med din primära eller sekundära färg.",
+        "sidebarColor": "Valfri färg. Panelen använder en mörkare nyans av den så att den ljusa texten förblir läsbar.",
+        "followTheme": "När detta är på använder kundportalen temat som valts under Inställningar → Utseende. När det är av ersätts temat av färgerna nedan.",
+        "followThemeActive": "Färgerna nedan sparas men tillämpas inte så länge portalen följer organisationens tema."
+      },
+      "cropHelp": "Dra och zooma för att välja den del som visas i portalens sidopanel och alla cirkulära ramar. Din breda logotyp ändras inte.",
+      "heroGradient": {
+        "primaryShades": "Primärfärg till nyans av primärfärg",
+        "primarySecondary": "Primärfärg till sekundärfärg"
+      },
+      "sidebarStyle": {
+        "default": "Standard (mörk skiffergrå)",
+        "primary": "Primär färg",
+        "secondary": "Sekundär färg",
+        "custom": "Anpassad färg"
+      },
+      "preview": "Förhandsgranskning",
+      "previewDarkMode": "Förhandsgranska mörkt läge",
+      "actions": {
+        "saveBranding": "Spara varumärkesinställningar",
+        "previewDashboard": "Förhandsgranska kundens översiktspanel",
+        "hideDashboard": "Dölj kundens översiktspanel",
+        "previewSignIn": "Förhandsgranska inloggningssidan",
+        "hideSignIn": "Dölj inloggningssidan"
+      },
+      "customDomainRequired": "En egen domän måste vara konfigurerad",
+      "warnings": {
+        "expectSquare": "Bilden är mycket bredare än den är hög. Den här platsen fyller kvadratiska ytor — du vill förmodligen använda platsen för en bred logotyp.",
+        "expectWide": "Bilden är nästan kvadratisk. Platsen för en bred logotyp är avsedd för en liggande ordlogotyp — en kvadratisk logotyp hör hemma på platsen ovan."
+      }
+    },
+    "dashboardPreview": {
+      "title": "Din kundportal",
+      "welcome": "Välkommen tillbaka!",
+      "subtitle": "Här är en översikt över aktiviteten på ditt konto",
+      "openTickets": "Öppna ärenden",
+      "activeProjects": "Aktiva projekt",
+      "invoices": "Fakturor",
+      "urgent": "{{count}} brådskande",
+      "nearDeadline": "{{count}} nära sista datum",
+      "dueThisMonth": "Förfaller denna månad",
+      "recentActivity": "Senaste aktivitet",
+      "ticketUpdated": "Ärende #1234 har uppdaterats",
+      "hoursAgo": "För {{count}} timmar sedan",
+      "newInvoice": "Ny faktura har genererats",
+      "milestoneCompleted": "Projektmilstolpe har slutförts",
+      "dayAgo": "För 1 dag sedan",
+      "createTicket": "Skapa ärende",
+      "viewProjects": "Visa projekt",
+      "activeDevices": "Aktiva enheter",
+      "basicSupport": "Grundläggande support",
+      "dashboardTitle": "Översiktspanel",
+      "greeting": "God morgon, Alex 👋",
+      "navAppointments": "Bokningar",
+      "navDashboard": "Översiktspanel",
+      "navDevices": "Mina enheter",
+      "navProjects": "Projekt",
+      "navServiceRequests": "Tjänsteförfrågningar",
+      "navTickets": "Ärenden",
+      "serviceRequests": "Tjänsteförfrågningar",
+      "upcomingShort": "Kommande",
+      "upcomingVisits": "Kommande besök",
+      "welcomeBack": "Välkommen tillbaka",
+      "workspaceSection": "Arbetsyta"
+    },
+    "signInPreview": {
+      "portalTitle": "Kundportal",
+      "welcome": "Välkommen till din kundportal",
+      "subtitle": "Hantera dina supportärenden och håll kontakten",
+      "features": {
+        "submitTickets": {
+          "title": "Skicka in supportärenden",
+          "description": "Skapa och hantera dina supportförfrågningar"
+        },
+        "trackStatus": {
+          "title": "Följ ärendestatus",
+          "description": "Följ förloppet i realtid"
+        },
+        "ticketHistory": {
+          "title": "Ärendehistorik",
+          "description": "Se hela din supporthistorik"
+        },
+        "documentation": {
+          "title": "Åtkomst till dokumentation",
+          "description": "Visa delade dokument och resurser"
+        }
+      },
+      "signIn": {
+        "title": "Logga in",
+        "description": "Ange dina inloggningsuppgifter för att komma åt kontot.",
+        "email": "E-post",
+        "emailPlaceholder": "Ange din e-postadress",
+        "password": "Lösenord",
+        "passwordPlaceholder": "Ange ditt lösenord",
+        "forgotPassword": "Glömt lösenordet?",
+        "mspStaffLogin": "MSP-personal? Logga in här →"
+      }
+    },
+    "domain": {
+      "title": "Egen domän",
+      "description": "Konfigurera ett värdnamn med ditt varumärke för kundportalen. Vi konfigurerar TLS-certifikat automatiskt när DNS har verifierats.",
+      "currentStatus": "Aktuell status",
+      "noDomainConfigured": "Ingen egen domän är konfigurerad",
+      "defaultStatusMessage": "Ingen egen domän har registrerats ännu.",
+      "lastChecked": "Senast kontrollerad: {{value}}",
+      "updatingDomainPrefix": "Uppdaterar domänen till ",
+      "updatingDomainSuffix": ". Konfigurationen startas om när du uppdaterar.",
+      "editInstructions": "Ändra värdet nedan och skicka in det för att byta domän och starta en ny konfigurationskörning.",
+      "actions": {
+        "refresh": "Ladda om",
+        "refreshing": "Laddar om…",
+        "retry": "Försök igen",
+        "retrying": "Försöker igen…",
+        "removeDomain": "Ta bort domän",
+        "saveDomain": "Spara domän",
+        "updateDomain": "Uppdatera domän",
+        "submitting": "Skickar in…",
+        "cancelEdit": "Avbryt redigering"
+      },
+      "form": {
+        "label": "Egen domän",
+        "helpTextPrefix": "Lägg till en CNAME-post som pekar på ",
+        "helpTextSuffix": " innan du skickar in.",
+        "placeholder": "portal.example.com"
+      },
+      "checklist": {
+        "title": "Konfigurationschecklista",
+        "step1Prefix": "Skapa en CNAME-post för det valda värdnamnet som pekar på ",
+        "step1Suffix": ".",
+        "step2": "Klicka på ”Spara domän” för att starta DNS-verifiering och certifikatkonfiguration.",
+        "step3": "Använd knappen Ladda om för att kontrollera konfigurationsförloppet. Vi skickar e-post till administratörerna om konfigurationen misslyckas.",
+        "canonicalHostFallback": "ordinarie värdnamn"
+      },
+      "appliance": {
+        "helpText": "Peka detta värdnamn mot servern och låt din omvända proxy vidarebefordra det ursprungliga Host-huvudet innan du sparar.",
+        "checklistTitle": "Konfiguration av omvänd proxy",
+        "step1Prefix": "Peka ",
+        "step1Suffix": " mot denna server (en A-post till dess adress eller en CNAME-post till serverns värdnamn).",
+        "step2": "Avsluta TLS för domänen i din omvända proxy och vidarebefordra till denna server på port 3000. Bevara det ursprungliga Host-huvudet (t.ex. proxy_set_header Host $host) och skicka X-Forwarded-Proto: https.",
+        "step3": "Skaffa och underhåll TLS-certifikatet för domänen på din proxy.",
+        "step4": "Spara domänen här — den aktiveras direkt. Konfigurera DNS och din proxy först, eftersom portallänkarna omedelbart byter till denna domän.",
+        "docLinkText": "Guide för konfiguration och felsökning av omvänd proxy",
+        "neverSeenWarning": "Inga anrop har nått {{domain}} ännu. Kontrollera att din omvända proxy vidarebefordrar det ursprungliga Host-huvudet."
+      },
+      "badges": {
+        "pending_dns": "Väntar på DNS",
+        "verifying_dns": "Verifierar DNS",
+        "dns_failed": "DNS misslyckades",
+        "pending_certificate": "Väntar på certifikat",
+        "certificate_issuing": "Utfärdar certifikat",
+        "certificate_failed": "Certifikatet misslyckades",
+        "deploying": "Driftsätter",
+        "active": "Aktiv",
+        "disabled": "Inaktiverad",
+        "unknown": "Okänd"
+      },
+      "messages": {
+        "requestSubmitted": "Begäran om egen domän har skickats in.",
+        "retryQueued": "Nytt försök har köats. Kontrollera status igen om en stund.",
+        "removalRequested": "Borttagning av egen domän har begärts.",
+        "enterDomainFirst": "Ange en domän innan du skickar in.",
+        "confirmRemove": "Ta bort den nuvarande egna domänen? Trafiken återgår till den förvalda värdadressen.",
+        "loadFailed": "Det gick inte att ladda portaldomänens status.",
+        "registerFailed": "Det gick inte att registrera egen domän.",
+        "refreshFailed": "Det gick inte att uppdatera domänstatusen.",
+        "retryFailed": "Det nya försöket misslyckades.",
+        "disableFailed": "Det gick inte att inaktivera egen domän."
+      }
+    },
+    "yourCompanyName": "Ditt företagsnamn",
+    "brandingPreviewMode": "Temaläge för förhandsgranskning av varumärkesprofil",
+    "brandingUpdated": "Varumärkesinställningarna har uppdaterats"
+  },
+  "appearance": {
+    "title": "Tema",
+    "description": "Välj det ljusa och mörka temaparet som alla i organisationen ser, både i MSP-appen och kundportalen. Varje person väljer fortfarande själv ljust läge, mörkt läge eller systemläge.",
+    "pairs": {
+      "alga": {
+        "label": "Alga",
+        "description": "Standardutseendet: rena vita ytor på dagen, lila toner på natten."
+      },
+      "slate": {
+        "label": "Skiffer",
+        "description": "Neutrala gråtoner med det ursprungliga mörka temat i blå skiffertoner."
+      },
+      "ocean": {
+        "label": "Hav",
+        "description": "Ytor i djupa marinblå och bläckblå toner med tydliga kungsblå accenter."
+      },
+      "sky": {
+        "label": "Himmel",
+        "description": "Klart himmelsblått och cyan på luftiga ytor i vattentoner."
+      },
+      "forest": {
+        "label": "Skog",
+        "description": "Djupa gröna toner med turkosgrön färg för lyckade åtgärder så att status förblir tydlig."
+      },
+      "sunset": {
+        "label": "Solnedgång",
+        "description": "Varma orangea toner och skymningsrosa på sandfärgade ytor."
+      },
+      "cappuccino": {
+        "label": "Cappuccino",
+        "description": "Kaffebruna toner på gräddvitt, rostad espresso i mörkt läge."
+      },
+      "vice": {
+        "label": "Vice",
+        "description": "Neontoner i turkosgrönt, violett, cyan, korall och rosa på lila som en natt i Miami."
+      },
+      "highContrast": {
+        "label": "Hög kontrast",
+        "description": "Endast svart och vitt, med markerade kantlinjer. Bara statusfärgerna behåller sin kulör."
+      },
+      "custom": {
+        "label": "Anpassad",
+        "description": "Dina egna färger, som du redigerar nedan."
+      }
+    },
+    "custom": {
+      "title": "Anpassat tema",
+      "description": "Skapa egna ljusa och mörka varianter. De fullständiga färgskalorna härleds från dessa basfärger, och kontrasten kontrolleras innan temat kan sparas.",
+      "lightMode": "Ljus variant",
+      "darkMode": "Mörk variant",
+      "previewAlt": "Förhandsgranskning av anpassat tema",
+      "seededFrom": "Färgerna utgår från temat {{pair}} — ändra de färger du vill så anpassas hela skalorna.",
+      "contrastTitle": "Färgerna ligger för nära varandra för att vara läsbara. Åtgärda dem innan du sparar:",
+      "contrastIssue": "{{foreground}} kan vara svår att läsa på {{background}}. {{hint}}",
+      "tokens": {
+        "background": "Sidbakgrund",
+        "card": "Kortyta",
+        "surface": "Upphöjd yta",
+        "textPrimary": "Primär text",
+        "textSecondary": "Sekundär text",
+        "textMuted": "Nedtonad text",
+        "border": "Kantlinje",
+        "borderStrong": "Tydlig kantlinje",
+        "primary": "Primär färg",
+        "secondary": "Sekundär färg",
+        "accent": "Accentfärg",
+        "sidebarBg": "Sidopanelens bakgrund",
+        "sidebarText": "Sidopanelens text",
+        "sidebarHover": "Sidopanel vid hovring",
+        "headerBg": "Sidhuvudets bakgrund",
+        "buttonLabel": "Vita knapptexter"
+      },
+      "actions": {
+        "save": "Spara och använd anpassat tema",
+        "reset": "Återställ till färgerna i {{pair}}",
+        "resetDone": "Färgerna har återställts till temat {{pair}} — spara för att tillämpa",
+        "useSaved": "Använd mina sparade färger",
+        "useSavedDone": "Dina sparade färger är tillbaka — spara för att tillämpa"
+      },
+      "contrastHints": {
+        "lighten": "Välj en ljusare {{foreground}} eller en mörkare {{background}}.",
+        "darken": "Välj en mörkare {{foreground}} eller en ljusare {{background}}."
+      },
+      "mock": {
+        "caption": "Peka på en färg nedan för att se vilken del av appen den används i.",
+        "showing": "Markerad: {{token}}",
+        "nav": "Hem",
+        "navActive": "Ärenden",
+        "navMuted": "Rapporter",
+        "headerTitle": "Ärenden",
+        "cardTitle": "Skrivaren i receptionen är offline",
+        "cardBody": "Tilldelat till Dana Reyes",
+        "cardMuted": "Uppdaterat för 2 timmar sedan",
+        "primaryAction": "Spara",
+        "secondaryAction": "Tilldela",
+        "ghostAction": "Avbryt",
+        "surface": "Senaste aktivitet"
+      }
+    },
+    "whiteLabel": {
+      "title": "Anpassa MSP-appen till ditt varumärke",
+      "description": "Logotypplatserna delas med kundportalen, men påverkar bara MSP-appen när anpassning av MSP-gränssnittet har aktiverats nedan.",
+      "logoHelp": "Det kvadratiska märket används överallt där utrymmet är kvadratiskt — i den hopfällda sidomenyn och i cirkulära ramar. Om du lägger en bred logotyp på en kvadratisk plats väljer du vilken del som blir märket. När en bred logotyp har laddats upp kan du också beskära märket direkt från den. Den valfria breda logotypen ersätter märket och namnet i den expanderade sidomenyn, så ladda upp en som redan innehåller företagsnamnet. Sidomenyn följer sin egen bakgrund: varianter för mörk bakgrund i en mörk meny och ljusa varianter i en ljus meny. Om en variant saknas används den du har laddat upp.",
+      "cropHelp": "Dra och zooma för att välja den del som visas i den hopfällda sidomenyn och alla cirkulära ramar. Din breda logotyp ändras inte.",
+      "fields": {
+        "mark": "Kvadratiskt märke",
+        "markDark": "Kvadratiskt märke för mörka bakgrunder",
+        "wide": "Bred logotyp (valfritt)",
+        "wideDark": "Bred logotyp för mörka bakgrunder (valfritt)",
+        "favicon": "Webbläsarikon (favicon)"
+      },
+      "hints": {
+        "mark": "Används i den hopfällda sidomenyn och alla cirkulära ramar. Kvadratiskt format fungerar bäst.",
+        "markDark": "Valfritt. Det kvadratiska märket används annars.",
+        "wide": "Visas endast i den expanderade sidomenyn med höjden 32 px. Ta med företagsnamnet i bilden.",
+        "wideDark": "Valfritt. Används när sidomenyns bakgrund är mörk, vilket den är i alla inbyggda teman.",
+        "favicon": "PNG, SVG eller ICO. Rasterbilder skalas till 32x32 vid uppladdning. Gäller MSP-appen och kundportalen för din organisation."
+      },
+      "warnings": {
+        "expectSquare": "Bilden är mycket bredare än den är hög. Platsen för det kvadratiska märket används i kvadratiska utrymmen — du vill förmodligen använda platsen för en bred logotyp.",
+        "expectWide": "Bilden är nästan kvadratisk. Den breda platsen är avsedd för en liggande logotyp — du vill förmodligen använda platsen för det kvadratiska märket."
+      },
+      "colors": {
+        "label": "Aktivera anpassning av MSP-gränssnittet",
+        "help": "Avstängt som standard. När inställningen aktiveras och tillämpas använder MSP-appen den delade logotypen, medan färgerna fortfarande följer organisationens tema ovan."
+      }
+    },
+    "messages": {
+      "loadFailed": "Det gick inte att ladda utseendeinställningarna",
+      "saved": "Utseendet har uppdaterats",
+      "saveFailed": "Det gick inte att spara utseendeinställningarna",
+      "discarded": "Förhandsgranskningen har kastats"
+    },
+    "unsaved": {
+      "notice": "Du förhandsgranskar ett osparat tema. Alla andra behåller det sparade temat tills du tillämpar detta.",
+      "save": "Tillämpa för alla",
+      "discard": "Kasta"
+    },
+    "upgrade": {
+      "pitch": "Temapar för hela organisationen, redigering av anpassade färgpaletter och varumärkesanpassning av MSP-appen ingår i Enterprise Edition."
+    }
+  },
+  "mspLanguage": {
+    "title": "Organisationsspråk",
+    "description": "Ange standardspråket för alla i arbetsytan — MSP-personal, kundportalanvändare och e-postaviseringar. Enskilda användare och kunder kan välja ett annat språk för sig själva.",
+    "fields": {
+      "defaultLanguage": "Standardspråk",
+      "availableLanguages": "Tillgängliga språk"
+    },
+    "help": {
+      "defaultLanguage": "Tillämpas överallt om inte användarens personliga inställning eller kundens konfigurerade standard anger något annat.",
+      "availableLanguages": "Välj vilka språk användarna ska kunna välja mellan."
+    }
+  },
+  "notifications": {
+    "title": "Aviseringsinställningar",
+    "description": {
+      "email": "Konfigurera hur klientorganisationen skickar e-postaviseringar",
+      "internal": "Konfigurera hur klientorganisationen skickar interna aviseringar"
+    },
+    "viewSwitcher": {
+      "email": "E-postaviseringar",
+      "internal": "Interna aviseringar"
+    },
+    "emailTabs": {
+      "settings": "Inställningar",
+      "emailTemplates": "E-postmallar",
+      "emailBranding": "Varumärkesprofil för e-post",
+      "categories": "Kategorier",
+      "telemetry": "Telemetri"
+    },
+    "internalTabs": {
+      "categories": "Kategorier",
+      "categoriesTypes": "Kategorier och typer"
+    },
+    "loading": {
+      "settings": "Laddar inställningar…",
+      "templates": "Laddar mallar…",
+      "categories": "Laddar kategorier…"
+    },
+    "unsaved": {
+      "title": "Osparade ändringar",
+      "message": "Du har osparade aviseringsinställningar. Vill du lämna sidan? Dina ändringar går förlorade."
+    },
+    "tenantDescription": {
+      "email": "Konfigurera e-postaviseringar för hela klientorganisationen",
+      "internal": "Konfigurera interna aviseringar för hela klientorganisationen"
+    },
+    "sections": {
+      "globalSettings": {
+        "title": "Globala inställningar",
+        "description": "Konfigurera globala aviseringsinställningar"
+      },
+      "emailTemplates": {
+        "title": "E-postmallar",
+        "description": "Hantera e-postmallar för aviseringar"
+      },
+      "categories": {
+        "title": "Aviseringskategorier",
+        "description": "Hantera aviseringskategorier och typer"
+      },
+      "internalCategories": {
+        "title": "Kategorier för interna aviseringar",
+        "description": "Hantera kategorier och typer för interna aviseringar"
+      },
+      "telemetry": {
+        "title": "Telemetri och analys",
+        "description": "Hantera dina inställningar för telemetri och analys"
+      }
+    },
+    "settingsForm": {
+      "enable": {
+        "label": "Aktivera aviseringar",
+        "description": "Slå på eller av alla aviseringar för klientorganisationen"
+      },
+      "loading": "Laddar aviseringsinställningar…",
+      "loadError": "Det gick inte att ladda inställningarna",
+      "save": "Spara ändringar",
+      "saving": "Sparar…"
+    },
+    "emailTemplatesUi": {
+      "preview": {
+        "subjectLabel": "Förhandsgranskning av ämne",
+        "iframeTitle": "Förhandsgranskning av e-postmall",
+        "sampleDataNote": "Förhandsgranskningen använder exempeldata. Riktiga e-postmeddelanden innehåller faktiska värden.",
+        "sourceSyncNote": "Klicka på något i förhandsgranskningen för att markera koden bakom det. När du flyttar markören i källkoden markeras motsvarande del här."
+      },
+      "errors": {
+        "loadFailed": "Det gick inte att ladda mallar"
+      },
+      "list": {
+        "loading": "Laddar e-postmallar…",
+        "templateCount": "({{templateCount}} mallar)",
+        "usingCustom": "Använder anpassad mall",
+        "usingStandard": "Använder standardmall"
+      },
+      "columns": {
+        "name": "Namn",
+        "actions": "Åtgärder"
+      },
+      "fields": {
+        "language": "Språk",
+        "subject": "Ämne",
+        "htmlContent": "HTML-innehåll",
+        "textContent": "Textinnehåll"
+      },
+      "actions": {
+        "collapse": "Fäll ihop",
+        "expand": "Expandera",
+        "edit": "Redigera",
+        "useStandard": "Använd standard",
+        "view": "Visa",
+        "customize": "Anpassa",
+        "sending": "Skickar…",
+        "sendTest": "Skicka testmeddelande",
+        "close": "Stäng",
+        "cancel": "Avbryt",
+        "saving": "Sparar…",
+        "save": "Spara"
+      },
+      "description": "Varje händelsetyp har en standardmall som kan anpassas. Du kan använda standardmallen eller skapa en egen version.",
+      "filter": {
+        "languages": "Språk",
+        "reset": "Återställ"
+      },
+      "test": {
+        "sentTo": "Testmeddelandet har skickats till {{recipient}}",
+        "failed": "Det gick inte att skicka testmeddelandet."
+      },
+      "view": {
+        "title": "Standardmall: {{name}}"
+      },
+      "tabs": {
+        "source": "Källa",
+        "preview": "Förhandsgranskning",
+        "variables": "Variabler"
+      },
+      "common": {
+        "notAvailable": "Ej tillämpligt"
+      },
+      "edit": {
+        "title": "Redigera anpassad mall: {{name}}"
+      },
+      "languages": {
+        "en": "Engelska",
+        "fr": "Franska",
+        "es": "Spanska",
+        "de": "Tyska",
+        "nl": "Nederländska",
+        "it": "Italienska",
+        "pl": "Polska",
+        "pt": "Portugisiska"
+      }
+    },
+    "emailBranding": {
+      "title": "Varumärkesprofil för e-post",
+      "description": "Använd dina färger i all utgående e-post. Förhandsgranska dem här och välj sedan vilka mallar de ska tillämpas på.",
+      "unsavedHint": "Spara paletten innan du tillämpar den.",
+      "source": {
+        "saved": "Sparat",
+        "custom-theme": "Från ditt anpassade tema",
+        "theme-pair": "Från ditt tema",
+        "portal-branding": "Från kundportalens varumärkesprofil",
+        "default": "AlgaPSA:s standard"
+      },
+      "fields": {
+        "primary": "Primär färg",
+        "secondary": "Sekundär färg",
+        "singleColor": "En färg (härled färgövergången från primärfärgen)"
+      },
+      "tokens": {
+        "dark": "Mörk accent",
+        "outerBg": "Yttre bakgrund",
+        "footerBg": "Sidfotens bakgrund",
+        "cardBorder": "Kortets kantlinje",
+        "infoBoxBg": "Informationsrutans bakgrund",
+        "infoBoxBorder": "Informationsrutans kantlinje"
+      },
+      "preview": {
+        "title": "Förhandsgranskning"
+      },
+      "actions": {
+        "save": "Spara palett",
+        "saving": "Sparar…",
+        "useSuggested": "Använd föreslagna färger",
+        "adjust": "Justera härledda färger",
+        "apply": "Tillämpa på mallar",
+        "applying": "Tillämpar…",
+        "applyCount": "Tillämpa på {{count}} mallar",
+        "applyToTemplate": "Tillämpa min palett",
+        "remove": "Ta bort varumärkesprofil från alla mallar",
+        "removing": "Tar bort…",
+        "cancel": "Avbryt",
+        "done": "Klar"
+      },
+      "apply": {
+        "title": "Tillämpa varumärkesprofil på mallar",
+        "languages": "Språk",
+        "selectAll": "Markera alla",
+        "selectNone": "Avmarkera alla",
+        "differs": "Skiljer sig i {{parts}}",
+        "differsParts": {
+          "colors": "färger",
+          "text": "text",
+          "subject": "ämne"
+        },
+        "overwrite": "Skriv över",
+        "overwriteHint": "Att skriva över återskapar mallen från standardmallen med din palett och kastar dina ändringar.",
+        "preview": {
+          "open": "Förhandsgranska resultatet",
+          "title": "Förhandsgranskning: {{name}}",
+          "loading": "Skapar förhandsgranskningen…",
+          "captions": {
+            "create": "En kopia av standardmallen med din varumärkesprofil skapas åt dig.",
+            "update": "Din varumärkesanpassade kopia återskapas från standardmallen med den sparade paletten.",
+            "customized": "Dina ändringar bevaras ord för ord. Endast standardfärger som finns kvar i mallen ersätts.",
+            "overwrite": "Dina ändringar i mallen kastas. Den återskapas från standardmallen med din palett.",
+            "skipped": "Inget skrivs — {{reason}}. Detta är mallen som den ser ut idag."
+          }
+        },
+        "summary": "{{written}} varumärkesanpassade, {{skipped}} överhoppade, {{failed}} misslyckades",
+        "groups": {
+          "system": {
+            "title": "Inte anpassad",
+            "action": "Skapa varumärkesanpassad kopia"
+          },
+          "branded": {
+            "title": "Varumärkesanpassad av dig",
+            "action": "Uppdatera färger"
+          },
+          "customized": {
+            "title": "Anpassad",
+            "action": "Ersätt endast återstående standardfärger"
+          },
+          "no-stock-colors": {
+            "title": "Inga standardfärger",
+            "action": "Inget att ersätta"
+          }
+        },
+        "skipReasons": {
+          "customized": "Anpassad — inte vald",
+          "nothing-to-replace": "Inget att ersätta",
+          "unchanged": "Redan uppdaterad"
+        }
+      },
+      "newTemplates": {
+        "message": "{{count}} mallar har lagts till sedan du senast tillämpade paletten.",
+        "action": "Tillämpa palett på nya mallar",
+        "dismiss": "Avfärda"
+      },
+      "enterprise": {
+        "useLogo": "Använd min logotyp i e-posthuvudet",
+        "logoWide": "Bred logotyp",
+        "logoDefault": "Kvadratisk logotyp",
+        "noLogo": "Ladda upp en logotyp under Inställningar → Kundportal → Varumärkesprofil för att använda den här.",
+        "showAttribution": "Visa ”Drivs av AlgaPSA” i sidfoten"
+      }
+    },
+    "categoriesUi": {
+      "errors": {
+        "loadCategories": "Det gick inte att ladda kategorier",
+        "loadSubtypes": "Det gick inte att ladda undertyper för aviseringar",
+        "save": "Det gick inte att spara aviseringsinställningarna"
+      },
+      "loading": "Laddar aviseringskategorier…",
+      "toasts": {
+        "saved": "Aviseringsinställningarna har sparats",
+        "discarded": "Ändringarna har kastats"
+      },
+      "columns": {
+        "name": "Namn",
+        "description": "Beskrivning",
+        "enabled": "Aktiverad",
+        "defaultForUsers": "Standard för användare",
+        "actions": "Åtgärder"
+      },
+      "tooltips": {
+        "cannotDisable": "Denna kategori kan inte inaktiveras",
+        "cannotModify": "Denna kategori kan inte ändras"
+      },
+      "actions": {
+        "enableAllSubtypes": "Aktivera alla undertyper",
+        "disableAllSubtypes": "Inaktivera alla undertyper",
+        "disable": "Inaktivera",
+        "enable": "Aktivera",
+        "disableDefault": "Inaktivera standard",
+        "enableDefault": "Aktivera standard",
+        "discardChanges": "Kasta ändringar",
+        "saving": "Sparar…",
+        "saveChanges": "Spara ändringar",
+        "cancel": "Avbryt"
+      },
+      "help": {
+        "intro": "Styr vilka typer av e-postaviseringar som är tillgängliga och ange standardinställningar för nya användare.",
+        "enabledLabel": "Aktiverad:",
+        "enabledDescription": "Styr om denna aviseringstyp är aktiv",
+        "defaultLabel": "Standard för användare:",
+        "defaultDescription": "Anger om nya användare har denna avisering aktiverad som standard"
+      },
+      "unsavedChangesAlert": "Du har osparade ändringar. Klicka på ”Spara ändringar” för att tillämpa dem.",
+      "discardDialog": {
+        "title": "Kasta ändringar?",
+        "message": "Vill du kasta alla osparade ändringar? Åtgärden kan inte ångras."
+      }
+    },
+    "internalCategoriesUi": {
+      "errors": {
+        "loadCategories": "Det gick inte att ladda kategorier",
+        "loadSubtypes": "Det gick inte att ladda undertyper för aviseringar",
+        "saveSettings": "Det gick inte att spara aviseringsinställningarna"
+      },
+      "loading": "Laddar kategorier för interna aviseringar…",
+      "toasts": {
+        "saveSuccess": "Aviseringsinställningarna har sparats",
+        "changesDiscarded": "Ändringarna har kastats"
+      },
+      "columns": {
+        "name": "Namn",
+        "description": "Beskrivning",
+        "enabled": "Aktiverad",
+        "defaultForUsers": "Standard för användare",
+        "actions": "Åtgärder",
+        "priority": "Prioritet"
+      },
+      "actions": {
+        "enableAllSubtypes": "Aktivera alla undertyper",
+        "disableAllSubtypes": "Inaktivera alla undertyper",
+        "disable": "Inaktivera",
+        "enable": "Aktivera",
+        "disableDefault": "Inaktivera standard",
+        "enableDefault": "Aktivera standard",
+        "discardChanges": "Kasta ändringar",
+        "saving": "Sparar…",
+        "saveChanges": "Spara ändringar",
+        "cancel": "Avbryt",
+        "resetToDefault": "Återställ till standard"
+      },
+      "intro": "Styr vilka typer av interna aviseringar som är tillgängliga och ange standardinställningar för nya användare.",
+      "enabledLabel": "Aktiverad:",
+      "enabledDescription": "Styr om denna aviseringstyp är aktiv i systemet",
+      "defaultForUsersLabel": "Standard för användare:",
+      "defaultForUsersDescription": "Anger om nya användare har denna avisering aktiverad som standard",
+      "unsavedChangesAlert": "Du har osparade ändringar. Klicka på ”Spara ändringar” för att tillämpa dem.",
+      "discardDialog": {
+        "title": "Kasta ändringar?",
+        "message": "Vill du kasta alla osparade ändringar? Åtgärden kan inte ångras."
+      },
+      "priority": {
+        "high": "Hög",
+        "normal": "Normal",
+        "low": "Låg"
+      }
+    },
+    "emailTemplates": {
+      "editor": {
+        "inlineLogoHint": "Din logotyp bäddas in i meddelandet när det skickas. Behåll referensen src=\"cid:{{cid}}\" oförändrad — om den ersätts med en URL måste mottagarna först godkänna att bilden laddas ner."
+      }
+    }
+  },
+  "timeEntry": {
+    "title": "Inställningar för tidregistrering",
+    "description": "Hantera inställningar för tidregistrering och tidsperioder",
+    "timePeriods": {
+      "title": "Inställningar för tidsperioder",
+      "description": "Konfigurera tidsperioder för debitering",
+      "loading": "Laddar inställningar för tidsperioder…",
+      "addNew": "Lägg till ny tidsperiodsinställning",
+      "help": {
+        "title": "Så fungerar tidsperiodsinställningar",
+        "intro": "Du kan definiera flera aktiva inställningar för att skapa komplexa debiteringscykler. Slutdag är den sista dagen som ingår i perioden.",
+        "exampleIntro": "Exempel för att konfigurera perioder två gånger per månad (1–15 och 16–månadens slut):",
+        "firstSettingLabel": "Inställning 1:",
+        "firstSetting": "Startdag: 1, slutdag: 15 → Perioden omfattar dag 1 till och med 15",
+        "secondSettingLabel": "Inställning 2:",
+        "secondSetting": "Startdag: 16, slutdag: månadens slut → Perioden omfattar dag 16 till och med sista dagen",
+        "outro": "Systemet använder inställningarna för att föreslå och generera tidsperioder. Se till att inställningarna täcker hela cykeln utan luckor."
+      },
+      "form": {
+        "requiredFields": "Fyll i de obligatoriska fälten:",
+        "frequency": "Intervall *",
+        "frequencyPlaceholder": "Ange intervall",
+        "frequencyUnit": "Intervallenhet *",
+        "frequencyUnitPlaceholder": "Välj intervallenhet",
+        "startDay": "Startdag *",
+        "selectDay": "Välj dag",
+        "startDayPlaceholder": "Ange startdag",
+        "endDay": "Slutdag *",
+        "endDayPlaceholder": "Ange slutdag",
+        "endOfUnit": "Slutet av {{unit}}",
+        "endOfMonth": "Månadens slut",
+        "startMonth": "Startmånad",
+        "endMonth": "Slutmånad",
+        "startDayOfMonth": "Startdag i månaden *",
+        "endDayOfMonth": "Slutdag i månaden *",
+        "add": "Lägg till tidsperiodsinställning"
+      },
+      "validation": {
+        "frequencyMin": "Intervallet måste vara minst 1",
+        "startDayRequired": "Startdag krävs",
+        "endDayRequired": "Slutdag krävs",
+        "startDayOfMonthRequired": "Startdag i månaden krävs",
+        "endDayOfMonthRequired": "Slutdag i månaden krävs"
+      },
+      "errors": {
+        "fetch": "Det gick inte att hämta tidsperiodsinställningar",
+        "overlap": "Tidsperiodsinställningen överlappar en befintlig aktiv inställning.",
+        "add": "Det gick inte att lägga till tidsperiodsinställningen. Kontrollera värdena och försök igen.",
+        "update": "Det gick inte att uppdatera tidsperiodsinställningen",
+        "delete": "Det gick inte att radera tidsperiodsinställningen"
+      },
+      "summary": {
+        "frequency": "Intervall: var {{count}} × {{unit}}",
+        "startDay": "Startdag: {{value}}",
+        "endDay": "Slutdag: {{value}}",
+        "start": "Start: {{value}}",
+        "end": "Slut: {{value}}",
+        "effectiveFrom": "Gäller från: {{value}}",
+        "effectiveTo": "Gäller till: {{value}}",
+        "noEnd": "Inget slut",
+        "notSet": "Inte angivet"
+      },
+      "units": {
+        "day": "Dag",
+        "week": "Vecka",
+        "month": "Månad",
+        "year": "År"
+      },
+      "months": {
+        "1": "Januari",
+        "2": "Februari",
+        "3": "Mars",
+        "4": "April",
+        "5": "Maj",
+        "6": "Juni",
+        "7": "Juli",
+        "8": "Augusti",
+        "9": "September",
+        "10": "Oktober",
+        "11": "November",
+        "12": "December"
+      },
+      "weekDays": {
+        "1": "Måndag",
+        "2": "Tisdag",
+        "3": "Onsdag",
+        "4": "Torsdag",
+        "5": "Fredag",
+        "6": "Lördag",
+        "7": "Söndag"
+      }
+    },
+    "periods": {
+      "title": "Tidsperioder",
+      "description": "Visa och hantera perioder för tidregistrering",
+      "loading": "Laddar tidsperioder…",
+      "create": "Skapa ny tidsperiod",
+      "openMenu": "Öppna meny",
+      "columns": {
+        "startDate": "Startdatum",
+        "endDate": "Slutdatum",
+        "actions": "Åtgärder"
+      },
+      "form": {
+        "createTitle": "Skapa ny tidsperiod",
+        "editTitle": "Redigera tidsperiod",
+        "suggestion": "Nästa tidsperiod föreslås utifrån dina inställningar.",
+        "frequency": "Intervall: var {{value}} × {{unit}}",
+        "overrideDates": "Åsidosätt föreslagna datum",
+        "startDate": "Startdatum",
+        "startDatePlaceholder": "Välj startdatum",
+        "noEndDate": "Inget slutdatum",
+        "endDate": "Slutdatum",
+        "endDatePlaceholder": "Välj slutdatum",
+        "deletePeriod": "Radera period",
+        "confirmDeleteTitle": "Bekräfta radering",
+        "confirmDeleteBody": "Vill du radera denna tidsperiod? Åtgärden kan inte ångras.",
+        "checkSettingsLink": "Kontrollera dina tidsperiodsinställningar."
+      },
+      "errors": {
+        "load": "Det gick inte att ladda tidsperioder.",
+        "suggest": "Det gick inte att föreslå en ny tidsperiod",
+        "noApplicableSettings": "Inga tillämpliga tidsperiodsinställningar hittades.",
+        "noSettings": "Inga tidsperiodsinställningar är tillgängliga. Det går inte att skapa en ny tidsperiod.",
+        "settingsRequired": "Det går inte att hantera tidsperioden utan inställningar.",
+        "startDateRequired": "Startdatum måste anges.",
+        "startBeforeEnd": "Startdatum måste infalla före slutdatum.",
+        "overlap": "Tidsperioden överlappar en befintlig period.",
+        "overlapRetry": "Tidsperioden överlappar en befintlig period. Välj andra datum.",
+        "create": "Det gick inte att skapa tidsperioden.",
+        "delete": "Det gick inte att radera tidsperioden",
+        "unexpected": "Ett oväntat fel uppstod."
+      }
+    }
+  },
+  "billing": {
+    "title": "Debiteringsinställningar",
+    "description": "Hantera debitering och abonnemang"
+  },
+  "secrets": {
+    "title": "Hantering av hemligheter",
+    "description": "Hantera krypterade hemligheter för arbetsflöden. Hemligheter kan refereras i arbetsflödesåtgärder med syntaxen $secret.",
+    "list": {
+      "title": "Hemligheter",
+      "description": "Hantera hemligheter för arbetsflöden. Hemligheterna krypteras och kan refereras med { $secret: \"SECRET_NAME\" }",
+      "search": "Sök hemligheter…",
+      "createSecret": "Skapa hemlighet",
+      "table": {
+        "name": "Namn",
+        "description": "Beskrivning",
+        "lastUpdated": "Senast uppdaterad",
+        "lastAccessed": "Senaste åtkomst",
+        "actions": "Åtgärder",
+        "never": "Aldrig",
+        "empty": "-"
+      },
+      "tooltips": {
+        "edit": "Redigera hemlighet",
+        "delete": "Radera hemlighet"
+      }
+    },
+    "dialog": {
+      "createTitle": "Skapa hemlighet",
+      "editTitle": "Redigera hemlighet",
+      "deleteTitle": "Radera hemlighet",
+      "fields": {
+        "name": {
+          "label": "Namn *",
+          "placeholder": "MY_API_KEY",
+          "help": "Använd endast versaler, siffror och understreck"
+        },
+        "value": {
+          "label": "Värde *",
+          "placeholder": "Ange hemlighetens värde",
+          "editPlaceholder": "Ange ett nytt värde för att uppdatera",
+          "editHelp": "Lämna tomt för att behålla det nuvarande värdet"
+        },
+        "description": {
+          "label": "Beskrivning",
+          "placeholder": "Vad används hemligheten till?"
+        }
+      },
+      "delete": {
+        "confirmation": "Vill du radera hemligheten {{name}}?",
+        "usedByWorkflows": "Hemligheten används av {{count}} arbetsflöden",
+        "usedByWarning": "Om du raderar den misslyckas dessa arbetsflöden när de försöker komma åt hemligheten.",
+        "cannotUndo": "Åtgärden kan inte ångras.",
+        "typeToConfirm": "Skriv {{name}} för att bekräfta:",
+        "placeholder": "Ange hemlighetens namn"
+      },
+      "actions": {
+        "cancel": "Avbryt",
+        "create": "Skapa hemlighet",
+        "update": "Uppdatera hemlighet",
+        "delete": "Radera hemlighet",
+        "saving": "Sparar…",
+        "deleting": "Raderar…"
+      }
+    },
+    "messages": {
+      "success": {
+        "created": "Hemligheten ”{{name}}” har skapats",
+        "updated": "Hemligheten ”{{name}}” har uppdaterats",
+        "deleted": "Hemligheten ”{{name}}” har raderats"
+      },
+      "error": {
+        "loadFailed": "Det gick inte att ladda hemligheter",
+        "deleteFailed": "Det gick inte att radera hemligheten",
+        "saveFailed": "Det gick inte att spara hemligheten",
+        "nameRequired": "Hemlighetens namn krävs",
+        "valueRequired": "Hemlighetens värde krävs",
+        "noChanges": "Inga ändringar att spara",
+        "fixValidation": "Åtgärda valideringsfelen"
+      },
+      "permissionDenied": "Du har inte behörighet att visa hemligheter."
+    }
+  },
+  "importExport": {
+    "title": "Arbetsyta för import och export",
+    "description": "Konfigurera import, export och automatiserade dataflöden från en gemensam kontrollpanel.",
+    "history": {
+      "title": "Import- och exporthistorik",
+      "description": "Granska alla import- och exportjobb på ett ställe.",
+      "empty": "Inga import- eller exportjobb hittades. Generera en förhandsgranskning för att skapa det första jobbet.",
+      "table": {
+        "date": "Datum",
+        "source": "Källa",
+        "file": "Fil",
+        "status": "Status",
+        "created": "Skapade",
+        "duplicates": "Dubbletter",
+        "errors": "Fel"
+      }
+    },
+    "tabs": {
+      "assetImport": "Tillgångsimport",
+      "assetExport": "Tillgångsexport",
+      "templatesAutomation": "Mallar och automatisering"
+    },
+    "import": {
+      "fields": {
+        "importSource": "Importkälla",
+        "uploadFile": "Ladda upp fil",
+        "fieldMapping": "Fältmappning",
+        "rememberMapping": "Kom ihåg denna mappning för framtida importer"
+      },
+      "placeholders": {
+        "noSources": "Inga importkällor är tillgängliga",
+        "selectSource": "Välj en importkälla",
+        "sourceColumn": "Källkolumnens namn",
+        "example": "T.ex. {{example}}"
+      },
+      "help": {
+        "fieldMapping": "Ange kolumnnamnen i filen som motsvarar varje obligatoriskt tillgångsfält. Lämna valfria fält tomma för att hoppa över dem."
+      },
+      "alerts": {
+        "selectSource": "Välj en importkälla för att fortsätta.",
+        "chooseFile": "Välj en CSV- eller XLSX-fil för att fortsätta.",
+        "validationIssues": "Valideringsproblem upptäcktes."
+      },
+      "actions": {
+        "generatePreview": "Generera förhandsgranskning",
+        "preparingPreview": "Förbereder förhandsgranskning…",
+        "proceedWithImport": "Fortsätt med import",
+        "startingImport": "Startar import…",
+        "refresh": "Ladda om",
+        "refreshing": "Laddar om…",
+        "cancel": "Avbryt",
+        "importSelected": "Importera markerade"
+      },
+      "preview": {
+        "title": "Förhandsgranskning av import",
+        "description": "Visar upp till de första 10 raderna av totalt {{totalRows}} poster.",
+        "stats": {
+          "total": "Totalt",
+          "valid": "Giltiga",
+          "duplicates": "Dubbletter",
+          "errors": "Fel"
+        },
+        "table": {
+          "row": "Rad",
+          "values": "Värden",
+          "issues": "Problem"
+        },
+        "empty": "Inga rader är tillgängliga för förhandsgranskning."
+      }
+    },
+    "export": {
+      "comingSoon": "Verktyg för tillgångsexport kommer snart. Planerade funktioner omfattar export av filtrerade tillgångslistor, granskningsdata och mappningsmallar direkt till CSV/XLSX."
+    },
+    "templates": {
+      "comingSoon": "Här kommer mappningsmallar och schemalagda importer att finnas. Spara kolumnmappningar, dela dem med teamet och konfigurera återkommande bakgrundsjobb."
+    },
+    "migration": {
+      "actions": {
+        "back": "Tillbaka till migreringar",
+        "upload": "Ladda upp paket"
+      },
+      "errors": {
+        "noImportableRecords": "Paketet innehöll inga poster som kunde importeras.",
+        "permissionDenied": "Du har inte behörighet att importera eller exportera data.",
+        "invalidSpreadsheet": "Det gick inte att läsa kalkylbladet. Kontrollera att det är en giltig CSV- eller XLSX-fil och försök igen.",
+        "notAmpPackage": "Filen är inte ett AMP-paket. Ladda upp en .amp- eller .sqlite-fil.",
+        "tooLarge": "Uppladdningen överskrider den högsta tillåtna storleken.",
+        "sizeMismatch": "Uppladdningen slutfördes inte. Försök igen.",
+        "noRecognizedHeaders": "Inga kolumner i kalkylbladet kändes igen. Kontrollera rubrikraden och försök igen.",
+        "storageRejected": "Servern avvisade uppladdningen. Be administratören kontrollera konfigurationen för lagringens filtyper.",
+        "spreadsheetFailed": "Det gick inte att importera kalkylbladet. Försök igen.",
+        "uploadFailed": "Det gick inte att ladda upp paketet. Försök igen.",
+        "unknown": "Uppladdningen misslyckades. Försök igen."
+      },
+      "preflight": {
+        "title": "Förkontroll"
+      },
+      "run": {
+        "queued": "Migreringen har köats",
+        "applying": "Migrering pågår"
+      },
+      "badges": {
+        "nothingImported": "Inget importerat"
+      },
+      "results": {
+        "skippedSamePackage": "Överhoppade poster hade redan migrerats vid en tidigare körning av samma paket.",
+        "skippedOtherPackage": "Överhoppade poster matchades mot objekt som skapats vid en tidigare migrering av ett annat paket: {{packages}}.",
+        "skippedExistingEntity": "Överhoppade poster matchades mot befintliga objekt.",
+        "nothingImportedTitle": "Inget importerades",
+        "nothingImportedBody": "Körningen skapade inga nya poster. Varje rad matchade något som redan fanns, så inget ändrades.",
+        "claimedBySamePackage": "Redan migrerad av detta paket",
+        "claimedByOtherPackage": "Redan migrerad av {{file}}",
+        "claimedByExistingEntity": "Matchad mot ett befintligt objekt"
+      }
+    },
+    "jobDetails": {
+      "title": "Information om importjobbet",
+      "stats": {
+        "totalRows": "Totalt antal rader",
+        "processed": "Bearbetade",
+        "created": "Skapade",
+        "updated": "Uppdaterade",
+        "duplicates": "Dubbletter",
+        "errors": "Fel"
+      },
+      "sections": {
+        "summary": "Sammanfattning",
+        "records": "Poster ({{count}})",
+        "errors": "Fel ({{count}})",
+        "duplicates": "Dubbletter ({{count}})"
+      },
+      "fields": {
+        "source": "Källa",
+        "originalFileName": "Ursprungligt filnamn",
+        "storedFileId": "ID för lagrad fil",
+        "documentId": "Dokument-ID",
+        "documentAssociation": "Dokumentkoppling",
+        "clientAssociation": "Kundkoppling",
+        "associatedClient": "Kopplad kund",
+        "defaultClientContext": "Standardkundkontext",
+        "tenantClientFallback": "Klientorganisationens kund som reserv",
+        "externalId": "Externt ID",
+        "status": "Status",
+        "sampleValues": "Exempelvärden",
+        "error": "Fel",
+        "duplicateMatch": "Dubblettmatchning"
+      },
+      "empty": {
+        "noRecords": "Inga bearbetade poster ännu.",
+        "noErrors": "Inga valideringsfel registrerades.",
+        "noDuplicates": "Inga dubbletter upptäcktes för detta jobb.",
+        "noValues": "Inga värden"
+      },
+      "truncated": "Visar de första {{count}} posterna. Ladda ner jobbets resultat för fullständig historik."
+    },
+    "messages": {
+      "error": {
+        "loadImportData": "Det gick inte att ladda importdata",
+        "createPreview": "Det gick inte att skapa förhandsgranskningen",
+        "selectPreviewFirst": "Välj en förhandsgranskning att godkänna före import.",
+        "startImportJob": "Det gick inte att starta importjobbet",
+        "loadJobDetails": "Det gick inte att ladda jobbinformation",
+        "refreshHistory": "Det gick inte att ladda om importhistoriken"
+      }
+    },
+    "selectJobHint": "Välj ett importjobb för att granska resultatet."
+  },
+  "email": {
+    "title": "E-postkonfiguration",
+    "description": "Konfigurera e-postleverantörer, domäner och inställningar"
+  },
+  "extensions": {
+    "title": "Tilläggshantering",
+    "description": "Installera, konfigurera och hantera tillägg för att utöka funktionerna i AlgaPSA.",
+    "tabs": {
+      "manage": "Hantera",
+      "install": "Installera"
+    },
+    "enterpriseOnly": {
+      "title": "Pro-funktion",
+      "description": "Tillägg är tillgängliga i AlgaPSA Pro."
+    },
+    "links": {
+      "needLogs": "Behöver du tilläggsloggar?",
+      "debugConsole": "Öppna felsökningskonsolen för Service Proxy Demo"
+    },
+    "loading": {
+      "extensions": "Laddar tillägg…",
+      "installer": "Laddar installationsverktyget…"
+    }
+  },
+  "policyManagement": {
+    "title": "Policyhantering",
+    "upgradeDescription": "Policyhantering är en Pro-funktion. Uppgradera för att få tillgång till avancerade policykontroller."
+  },
+  "roleManagement": {
+    "title": "Hantera roller",
+    "description": "Skapa och hantera roller för åtkomst till MSP och kundportalen",
+    "columns": {
+      "roleNameRequired": "Rollnamn *",
+      "portal": "Portal"
+    },
+    "fields": {
+      "roleName": "Rollnamn",
+      "roleNamePlaceholder": "Ange rollnamn",
+      "description": "Beskrivning",
+      "descriptionPlaceholder": "Ange rollbeskrivning"
+    },
+    "portal": {
+      "none": "Ingen",
+      "access": "Portalåtkomst",
+      "msp": "MSP-portal",
+      "client": "Kundportal",
+      "mspShort": "MSP",
+      "clientShort": "Kund",
+      "required": "En roll måste ha åtkomst till minst en portal"
+    },
+    "actions": {
+      "addRole": "Lägg till roll",
+      "createRole": "Skapa roll"
+    },
+    "createDialog": {
+      "title": "Skapa ny roll"
+    },
+    "deleteDialog": {
+      "entityFallback": "denna roll"
+    },
+    "adminDeleteDisabled": "Administratörsroller kan inte raderas eftersom de är systemroller",
+    "errors": {
+      "createFailed": "Det gick inte att skapa rollen",
+      "updateFailed": "Det gick inte att uppdatera rollen",
+      "validateDeletionFailed": "Det gick inte att validera raderingen. Försök igen.",
+      "deleteFailed": "Det gick inte att radera rollen"
+    }
+  },
+  "security": {
+    "title": "Säkerhetsinställningar",
+    "tabs": {
+      "roles": "Roller",
+      "sessions": "Sessioner",
+      "sso": "Enkel inloggning",
+      "permissions": "Behörigheter",
+      "userRoles": "Användarroller",
+      "policies": "Policyer",
+      "apiKeys": "API-nycklar"
+    },
+    "loading": {
+      "roles": "Laddar rollkonfiguration…",
+      "permissions": "Laddar behörighetskonfiguration…",
+      "userRoles": "Laddar konfiguration för användarroller…",
+      "policies": "Laddar policykonfiguration…",
+      "apiKeys": "Laddar konfiguration för API-nycklar…",
+      "sso": "Laddar hanteringsverktyg för SSO…",
+      "sessions": "Laddar aktiva sessioner…"
+    },
+    "userRoles": {
+      "title": "Tilldela roller till användare",
+      "description": {
+        "msp": "Hantera rolltilldelningar för MSP-användare",
+        "client": "Hantera rolltilldelningar för kundportalanvändare"
+      },
+      "viewSwitcher": {
+        "msp": "MSP",
+        "clientPortal": "Kundportal"
+      },
+      "showInactive": "Visa inaktiva användare",
+      "fields": {
+        "selectUser": "Välj användare",
+        "selectRole": "Välj roll"
+      },
+      "actions": {
+        "assignRole": "Tilldela roll"
+      },
+      "table": {
+        "user": "Användare",
+        "email": "E-post",
+        "roles": "Roller",
+        "actions": "Åtgärder"
+      },
+      "noRolesAssigned": "Inga roller tilldelade",
+      "removeRole": "Ta bort {{role}}",
+      "emptyState": {
+        "noUsers": "Inga användare av typen {{type}} hittades",
+        "inactiveHidden": "(inaktiva användare är dolda)"
+      },
+      "inactiveTag": "(Inaktiv)"
+    },
+    "sessions": {
+      "title": "Alla användarsessioner",
+      "filters": {
+        "search": "Sök",
+        "searchPlaceholder": "Sök efter namn, e-postadress, enhet eller IP…",
+        "user": "Användare",
+        "allUsers": "Alla användare",
+        "loginMethod": "Inloggningsmetod",
+        "allMethods": "Alla metoder",
+        "userType": "Användartyp",
+        "allTypes": "Alla typer",
+        "from": "Från",
+        "to": "Till",
+        "selectDate": "Välj datum",
+        "reset": "Återställ"
+      },
+      "loginMethods": {
+        "password": "Lösenord",
+        "google": "Google OAuth",
+        "microsoft": "Microsoft OAuth",
+        "keycloak": "Keycloak"
+      },
+      "userTypes": {
+        "internal": "Intern",
+        "client": "Kund"
+      },
+      "session": {
+        "yourSession": "Din session",
+        "unknownDevice": "Okänd enhet",
+        "lastActive": "Senast aktiv för {{time}} sedan",
+        "logout": "Logga ut",
+        "revoke": "Återkalla",
+        "revoking": "Återkallar…"
+      },
+      "oauthWarning": "Att återkalla sessionen återkallar inte OAuth-åtkomst till {{provider}}. Återkalla åtkomsten i kontoinställningarna för {{provider}}.",
+      "confirmLogout": "Vill du logga ut från den här enheten?",
+      "messages": {
+        "loggingOut": "Loggar ut…",
+        "revoked": "Sessionen har återkallats"
+      },
+      "emptyState": {
+        "loading": "Laddar sessioner…",
+        "noMatch": "Inga sessioner matchar din sökning",
+        "noSessions": "Inga aktiva sessioner hittades"
+      },
+      "subtitle_one": "{{sessionCount}} aktiv session för {{userCount}} användare",
+      "subtitle_other": "{{sessionCount}} aktiva sessioner för {{userCount}} användare"
+    }
+  },
+  "ssoBulk": {
+    "loading": {
+      "title": "Enkel inloggning",
+      "description": "Laddar verktyg för masstilldelning av SSO…"
+    },
+    "status": {
+      "title": "Inloggningsleverantörer",
+      "caption": "Dessa tjänsteleverantörer hanteras av plattformen — inga klient-ID:n eller DNS-inställningar krävs. Aktivera automatisk koppling eller tilldela användare nedan.",
+      "available": "Tillgänglig",
+      "notConfigured": "Inte konfigurerad"
+    },
+    "autoLink": {
+      "body": "När detta är aktiverat kan nya MSP-användare logga in med Google eller Microsoft med sin e-postadress på arbetet. De behöver inte koppla sitt konto manuellt.",
+      "clientBody": "När detta är aktiverat kopplas matchande kundportalanvändare automatiskt till sina SSO-identiteter vid inloggning.",
+      "clientTitle": "Koppla kundportalanvändare automatiskt",
+      "clientToggleLabel": "Slå på eller av automatisk koppling för kunder",
+      "description": "Slå på detta för att direkt konfigurera varje nytt personalkonto med företagets SSO-leverantör, så att användarna aldrig behöver logga in med lösenord.",
+      "disabledInfo": "Aktivera detta för att låta ny och befintlig personal hoppa över flödet ”Anslut SSO” när deras e-postadress redan matchar en konfigurerad tjänsteleverantör. Vi loggar fortfarande varje automatisk koppling.",
+      "internalBody": "När detta är aktiverat kopplas matchande MSP-användare och interna användare automatiskt till sina SSO-identiteter vid inloggning.",
+      "internalTitle": "Koppla interna användare automatiskt",
+      "internalToggleLabel": "Slå på eller av automatisk koppling för interna användare",
+      "title": "Konfigurera SSO automatiskt för nya interna användare",
+      "toggleLabel": "Slå på eller av automatisk SSO-matchning"
+    },
+    "bulk": {
+      "title": "Masstilldelning av enkel inloggning",
+      "description": "Välj interna användare i listan nedan och koppla dem till en konfigurerad Google- eller Microsoft-leverantör. Förhandsgranska för att kontrollera effekten före körning.",
+      "noProviders": "Inga SSO-leverantörer är konfigurerade ännu. Lägg till OAuth-autentiseringsuppgifter för att fortsätta med masstilldelningar."
+    },
+    "errors": {
+      "loadProviders": "Det gick inte att ladda SSO-leverantörens konfiguration.",
+      "updatePreferences": "Det gick inte att uppdatera SSO-inställningarna."
+    },
+    "form": {
+      "title": "Välj tjänsteleverantör och användare",
+      "description": "Välj den konfigurerade SSO-leverantören för personalen och sök sedan efter och markera de användare som ska kopplas.",
+      "providerLabel": "Tjänsteleverantör",
+      "notConfigured": "Inte konfigurerad",
+      "providerNotConfiguredAlert": "Ange OAuth-autentiseringsuppgifter för tjänsteleverantören innan du kopplar konton.",
+      "actionLabel": "Åtgärd",
+      "linkSelected": "Koppla valda användare",
+      "unlinkSelected": "Ta bort koppling för valda användare",
+      "actionPlaceholder": "Välj massåtgärd för SSO",
+      "actionDescription": "Koppling lägger till tjänsteleverantören för varje vald användare. När kopplingen tas bort återgår användaren till inloggning med lösenord/TOTP tills en ny koppling görs.",
+      "searchLabel": "Sök interna användare",
+      "searchPlaceholder": "Sök efter e-postadress eller namn",
+      "noneSelected": "Inga användare är valda ännu.",
+      "selected_one": "{{count}} användare vald.",
+      "selected_other": "{{count}} användare valda.",
+      "clearSelection": "Avmarkera alla",
+      "loadingUsers": "Laddar användare…",
+      "noMatch": "Inga användare matchar sökningen.",
+      "noUsers": "Inga interna användare hittades.",
+      "clientPortalComing": "Masstilldelningar för kundportalen kommer snart. Verktyget gäller för närvarande endast interna MSP-användare.",
+      "loadUsersFailed": "Det gick inte att ladda användare som kan tilldelas.",
+      "actions": {
+        "previewLink": "Förhandsgranska tilldelning",
+        "previewUnlink": "Förhandsgranska borttagning av koppling",
+        "link": "Koppla konton",
+        "unlink": "Ta bort kontokopplingar",
+        "preparingPreview": "Förbereder förhandsgranskning…",
+        "linking": "Kopplar konton…",
+        "unlinking": "Tar bort kontokopplingar…",
+        "bulkLabel": "Massåtgärder för SSO {{location}}"
+      },
+      "table": {
+        "email": "E-post",
+        "id": "ID",
+        "name": "Namn",
+        "status": "Status",
+        "active": "Aktiv",
+        "inactive": "Inaktiv",
+        "linkedProviders": "Kopplade tjänsteleverantörer",
+        "unlinked": "Inte kopplad",
+        "lastLogin": "Senaste inloggning"
+      },
+      "toast": {
+        "providerRequiredTitle": "Tjänsteleverantör krävs",
+        "providerRequiredDescription": "Välj en konfigurerad tjänsteleverantör innan du fortsätter.",
+        "noUsersTitle": "Inga användare valda",
+        "noUsersDescription": "Välj minst en användare i tabellen.",
+        "failedTitle": "Masstilldelningen misslyckades",
+        "failedDescription": "Det gick inte att bearbeta masstilldelningen av SSO.",
+        "linkCompleteTitle": "Kopplingen är klar",
+        "unlinkCompleteTitle": "Borttagningen av kopplingen är klar",
+        "previewReadyTitle": "Förhandsgranskningen är klar",
+        "linkedCount": "{{count}} konton har kopplats via {{provider}}.",
+        "unlinkedCount": "Kopplingen för {{count}} konton via {{provider}} har tagits bort.",
+        "previewUnlink_one": "Förhandsgranskningen är klar. Vi tar bort kopplingen för {{count}} vald användare.",
+        "previewUnlink_other": "Förhandsgranskningen är klar. Vi tar bort kopplingen för {{count}} valda användare.",
+        "previewLink": "Förhandsgranskningen är klar. Granska sammanfattningen innan du kopplar konton."
+      },
+      "results": {
+        "completeTitle": "Tilldelningen är klar",
+        "previewTitle": "Förhandsgranskningsresultat",
+        "noneMatched": "Ingen av de valda användarna matchade de aktuella filtren.",
+        "processed_one": "{{count}} användare har bearbetats.",
+        "processed_other": "{{count}} användare har bearbetats.",
+        "candidatesSelected": "{{count}} valda",
+        "unlinked": "Koppling borttagen",
+        "wouldUnlink": "Skulle ta bort kopplingen",
+        "linked": "Kopplad",
+        "wouldLink": "Skulle koppla",
+        "alreadyUnlinked": "Kopplingen är redan borttagen",
+        "alreadyLinked": "Redan kopplad",
+        "skippedInactive": "Överhoppad (inaktiv)"
+      },
+      "providerNames": {
+        "google": "Google Workspace",
+        "microsoft": "Microsoft 365"
+      }
+    },
+    "clientPortalProvisioning": {
+      "deactivateBody": "När detta är aktiverat inaktiveras användare som hanteras via Entra-etablering när deras behörighet via åtkomstgruppen tas bort.",
+      "deactivateLabel": "Slå på eller av inaktivering när behörighet tas bort",
+      "deactivateTitle": "Inaktivera Entra-hanterade användare när behörighet tas bort",
+      "defaultRoleBody": "Används för nyetablerade kundportalanvändare i inbyggt läge när en kundmappning inte åsidosätter rollen.",
+      "defaultRoleLabel": "Standardroll i kundportalen för MSP-arbetsytan",
+      "defaultRoleTitle": "Standardroll i kundportalen för MSP-arbetsytan",
+      "modeBody": "Välj om kundportalåtkomst från Entra-synkronisering ska vara inaktiverad, hanteras via inbyggd etablering eller delegeras till arbetsflöden.",
+      "modeBuiltIn": "Inbyggt",
+      "modeDisabled": "Inaktiverat",
+      "modeLabel": "Läge för Entra-etablering i kundportalen",
+      "modeTitle": "Läge för Entra-etablering i kundportalen",
+      "modeWorkflowManaged": "Hanteras av arbetsflöde",
+      "workflowManagedInfo": "Läget som hanteras av arbetsflöden publicerar endast Entra-åtkomsthändelser. Det valda arbetsflödet ansvarar för etablering av kundportalanvändare, rolltilldelning, inbjudningar och livscykeländringar."
+    }
+  },
+  "profile": {
+    "pageTitle": "Din profil",
+    "tabs": {
+      "profile": "Profil",
+      "security": "Säkerhet",
+      "sso": "Enkel inloggning",
+      "apiKeys": "API-nycklar",
+      "notifications": "Aviseringar",
+      "calendar": "Kalender"
+    },
+    "basicInfo": {
+      "title": "Grundläggande information"
+    },
+    "fields": {
+      "firstName": {
+        "label": "Förnamn *"
+      },
+      "lastName": {
+        "label": "Efternamn *"
+      },
+      "email": {
+        "label": "E-post *"
+      },
+      "phoneNumber": {
+        "label": "Telefonnummer"
+      },
+      "timeZone": {
+        "label": "Tidszon"
+      }
+    },
+    "actions": {
+      "saveChanges": "Spara ändringar"
+    },
+    "notifications": {
+      "title": "Aviseringsinställningar",
+      "viewSwitcher": {
+        "email": "E-post",
+        "internal": "Intern"
+      }
+    },
+    "loading": "Laddar profil…",
+    "messages": {
+      "success": {
+        "profileUpdated": "Profilen har uppdaterats"
+      },
+      "error": {
+        "userNotFound": "Användaren hittades inte",
+        "fillRequiredFields": "Fyll i alla obligatoriska fält",
+        "saveFailed": "Det gick inte att spara profilen",
+        "emailAlreadyExists": "Det finns redan en användare med denna e-postadress",
+        "reportsToSelf": "En användare kan inte rapportera till sig själv",
+        "reportsToCycle": "Detta skulle skapa en cirkulär rapporteringskedja"
+      }
+    },
+    "validation": {
+      "firstNameRequired": "Förnamn krävs",
+      "lastNameRequired": "Efternamn krävs"
+    }
+  },
+  "password": {
+    "changePassword": "Ändra lösenord",
+    "fields": {
+      "currentPassword": "Nuvarande lösenord",
+      "newPassword": "Nytt lösenord",
+      "confirmNewPassword": "Bekräfta nytt lösenord"
+    },
+    "messages": {
+      "success": {
+        "changed": "Lösenordet har ändrats"
+      },
+      "error": {
+        "mismatch": "De nya lösenorden matchar inte",
+        "tooShort": "Lösenordet måste innehålla minst 8 tecken",
+        "changeFailed": "Ett fel uppstod när lösenordet ändrades"
+      }
+    }
+  },
+  "integrations": {
+    "betaNotice": "Vissa integreringar är fortfarande under utveckling. Använd en sandlådemiljö vid utvärdering och dela din återkoppling för att hjälpa oss förbättra dem.",
+    "emptyCategory": "Inga integreringar är tillgängliga i denna kategori.",
+    "rmmEnterpriseNote": "RMM-integreringar är tillgängliga i Pro.",
+    "categoryHeading": "Integreringar för {{label}}",
+    "loading": {
+      "payments": "Laddar betalningsinställningar…"
+    },
+    "categories": {
+      "accounting": {
+        "label": "Bokföring",
+        "description": "Välj ett bokföringsprogram för att konfigurera synkronisering av fakturor, betalningar och skatteuppgifter."
+      },
+      "rmm": {
+        "label": "RMM",
+        "description": "Anslut verktyg för fjärrövervakning och fjärrhantering"
+      },
+      "itDocumentation": {
+        "label": "IT-dokumentation",
+        "description": "Anslut plattformar för IT-dokumentation för att visa kunddokumentation, tillgångar och autentiseringsuppgifter i sitt sammanhang."
+      },
+      "communication": {
+        "label": "Kommunikation",
+        "description": "Anslut inkorgar och samarbetsytor för ärendehantering, operatörernas arbetsflöden och åtkomst till Microsoft Teams."
+      },
+      "calendar": {
+        "label": "Kalender",
+        "description": "Kalendersynkronisering för Google och Outlook, som endast finns i Pro, håller resursplanering och kundbokningar samordnade."
+      },
+      "providers": {
+        "label": "Tjänsteleverantörer",
+        "description": {
+          "ee": "Konfigurera Google eller Microsoft för personalinloggning, e-post, kalender och andra integreringar.",
+          "oss": "Konfigurera Google eller Microsoft för personalinloggning, e-post och andra integreringar."
+        }
+      },
+      "identity": {
+        "label": "Identitet",
+        "description": "Anslut identitetsleverantörer för identifiering av klientorganisationer och kontaktsynkronisering."
+      },
+      "payments": {
+        "label": "Betalningar",
+        "description": "Ta emot onlinebetalningar för fakturor"
+      }
+    },
+    "items": {
+      "accountingSetup": {
+        "name": "Bokföringsintegreringar",
+        "description": "Konfigurera bokföringssynkronisering och export"
+      },
+      "rmmSetup": {
+        "name": "RMM-integreringar",
+        "description": "Välj och konfigurera din RMM-leverantör"
+      },
+      "hudu": {
+        "name": "Hudu",
+        "description": "Anslut en Hudu-instans för att visa kunddokumentation och autentiseringsuppgifter i AlgaPSA."
+      },
+      "email": {
+        "name": "Inkommande e-post",
+        "description": "Omvandla inkommande e-post till ärenden",
+        "cardTitle": "Integrering för inkommande e-post",
+        "cardDescription": "Konfigurera e-postleverantörer för att automatiskt omvandla inkommande e-post till ärenden"
+      },
+      "teams": {
+        "name": "Microsoft Teams",
+        "description": "Konfigurera samarbetsytor i Teams för MSP-tekniker",
+        "upgradeDescription": "Konfigurera samarbetsytor i Microsoft Teams för MSP-tekniker. Uppgradera till Pro för att låsa upp funktionen."
+      },
+      "calendarSync": {
+        "name": "Kalendersynkronisering",
+        "description": "Synkronisera schemaposter med Google- eller Microsoft-kalendrar"
+      },
+      "google": {
+        "name": "Google",
+        "description": {
+          "ee": "Google OAuth-autentiseringsuppgifter för personalinloggning, Gmail och Google Calendar",
+          "oss": "Google OAuth-autentiseringsuppgifter för personalinloggning och Gmail"
+        },
+        "cardTitle": "Konfiguration av Google eller Microsoft",
+        "cardDescription": {
+          "ee": "Konfigurera Google eller Microsoft först. Anslut sedan e-post- och kalenderkonton från respektive integreringsvy. Personalinloggning använder OAuth-autentiseringsuppgifterna som sparas här.",
+          "oss": "Konfigurera Google eller Microsoft först. Anslut sedan e-postkonton från Inkommande e-post. Personalinloggning använder OAuth-autentiseringsuppgifterna som sparas här."
+        }
+      },
+      "entra": {
+        "name": "Microsoft Entra",
+        "description": "Identifiera hanterade Microsoft-klientorganisationer och synkronisera användare till kontakter",
+        "upgradeDescription": "Identifiera hanterade Microsoft Entra-klientorganisationer och synkronisera användare till kontakter. Uppgradera till Pro för att låsa upp funktionen."
+      },
+      "stripe": {
+        "name": "Stripe",
+        "description": "Ta emot kreditkortsbetalningar för fakturor via Stripe"
+      },
+      "telephony": {
+        "name": "Telefoni",
+        "description": "Logga samtal som interaktioner, identifiera uppringare och omvandla ett samtal till ett ärende"
+      }
+    }
+  },
+  "orgChart": {
+    "emptyState": "Inga användare är tillgängliga.",
+    "roles": {
+      "client": "Kundanvändare",
+      "internal": "Intern användare"
+    },
+    "badge": {
+      "inactive": "Inaktiv"
+    }
+  },
+  "permissions": {
+    "messages": {
+      "adminLocked": "Administratörsrollens behörigheter kan inte ändras",
+      "permissionsUpdated": "Behörigheterna har uppdaterats"
+    }
+  },
+  "sla": {
+    "messages": {
+      "scheduleNotFound": "Schemat hittades inte",
+      "scheduleUpdated": "Schemat har uppdaterats",
+      "scheduleCreated": "Schemat har skapats",
+      "scheduleDeleted": "Schemat har raderats",
+      "defaultHoursCreated": "Standardschema för öppettider har skapats",
+      "scheduleRequired": "Välj ett schema först",
+      "holidayNameRequired": "Helgdagens namn krävs",
+      "holidayDateRequired": "Helgdagens datum krävs",
+      "holidayAdded": "Helgdagen har lagts till",
+      "holidayDeleted": "Helgdagen har raderats"
+    },
+    "dashboard": {
+      "atRisk": {
+        "empty": "Inga ärenden riskerar för närvarande SLA-överträdelser",
+        "overdueHours": "{{hours}} h {{minutes}} min försenat",
+        "overdueMinutes": "{{minutes}} min försenat",
+        "title": "Ärenden i riskzonen"
+      },
+      "breachChart": {
+        "breachRate": "Andel överträdelser",
+        "empty": "Inga uppgifter om överträdelser är tillgängliga",
+        "title": "Överträdelser per prioritet"
+      },
+      "columns": {
+        "assignee": "Ansvarig",
+        "breachType": "Typ av överträdelse",
+        "client": "Kund",
+        "priority": "Prioritet",
+        "progress": "Förlopp",
+        "slaType": "SLA-typ",
+        "ticket": "Ärende",
+        "timeRemaining": "Återstående tid",
+        "when": "När"
+      },
+      "gauge": {
+        "title": "SLA-efterlevnad"
+      },
+      "labels": {
+        "resolution": "Lösning",
+        "resolutionSla": "SLA för lösning",
+        "response": "Svar",
+        "responseSla": "SLA för svar"
+      },
+      "metrics": {
+        "approachingBreach": "ärenden som närmar sig en överträdelse",
+        "atRisk": "I riskzonen",
+        "currentlyPaused": "Pausade just nu",
+        "metBreached": "{{met}} uppfyllda / {{breached}} överträdda",
+        "overallCompliance": "Total efterlevnad",
+        "pausedSla": "ärenden med pausat SLA",
+        "ticketsTracked_one": "{{count}} ärende följs",
+        "ticketsTracked_other": "{{count}} ärenden följs"
+      },
+      "recentBreaches": {
+        "empty": "Inga SLA-överträdelser under den valda perioden",
+        "title": "Senaste överträdelser",
+        "unassigned": "Ej tilldelad"
+      },
+      "trendChart": {
+        "breaches": "Överträdelser",
+        "compliance": "Efterlevnad",
+        "compliancePercent": "Efterlevnad %",
+        "empty": "Inga trenddata är tillgängliga för den valda perioden",
+        "tickets": "Ärenden",
+        "title": "Efterlevnadstrend"
+      }
+    },
+    "pauseSettings": {
+      "errors": {
+        "globalSettingsUpdateFailed": "Det gick inte att uppdatera de globala SLA-inställningarna",
+        "loadFailed": "Det gick inte att ladda pausinställningarna för SLA",
+        "responseTrackingUpdateFailed": "Det gick inte att uppdatera uppföljningen av svarsstatus",
+        "saveStatusesFailed": "Det gick inte att spara statuskonfigurationerna"
+      },
+      "global": {
+        "description": "Konfigurera globalt beteende för pausning av SLA-tidtagning",
+        "pauseOnAwaitingClient": {
+          "description": "När detta är aktiverat pausas SLA-tidtagningen automatiskt när ett ärende markeras som väntande på svar från kunden. Tidtagningen återupptas när kunden svarar eller ärendestatusen ändras.",
+          "label": "Pausa SLA automatiskt i väntan på kundsvar",
+          "requiresTracking": "Aktivera uppföljning av svarsstatus ovan för att använda detta alternativ."
+        },
+        "responseTracking": {
+          "description": "När detta är aktiverat följer ärenden automatiskt vem som ska svara härnäst (väntar på kundsvar eller internt svar). Detta styr också synligheten för svarsstatusmarkeringar och filter.",
+          "label": "Följ svarsstatus på ärenden"
+        },
+        "title": "Globala SLA-inställningar"
+      },
+      "loading": "Laddar pausinställningar för SLA…",
+      "messages": {
+        "globalSettingsUpdated": "De globala SLA-inställningarna har uppdaterats",
+        "noChangesToSave": "Inga ändringar att spara",
+        "responseTrackingDisabled": "Uppföljning av svarsstatus har inaktiverats",
+        "responseTrackingEnabled": "Uppföljning av svarsstatus har aktiverats",
+        "statusesUpdated_one": "{{count}} statuskonfiguration har uppdaterats",
+        "statusesUpdated_other": "{{count}} statuskonfigurationer har uppdaterats"
+      },
+      "perStatus": {
+        "description": "Konfigurera vilka ärendestatusar som ska pausa SLA-tidtagningen. När ett ärende får en status med pausning aktiverad stoppas SLA-tidtagningen tills ärendet får en annan status.",
+        "empty": "Inga ärendestatusar hittades.",
+        "modified": "Ändrad",
+        "modifiedCount_one": "{{count}} status ändrad",
+        "modifiedCount_other": "{{count}} statusar ändrade",
+        "noUnsavedChanges": "Inga osparade ändringar",
+        "resetChanges": "Återställ ändringar",
+        "saveChanges": "Spara ändringar",
+        "saving": "Sparar…",
+        "title": "Pauskonfiguration per status"
+      },
+      "retry": "Försök igen"
+    },
+    "policyForm": {
+      "actions": {
+        "cancel": "Avbryt",
+        "create": "Skapa policy",
+        "saveChanges": "Spara ändringar",
+        "saving": "Sparar…"
+      },
+      "basics": {
+        "assignBoards": "Tilldela till tavlor",
+        "assignClients": "Tilldela till kunder",
+        "businessHours": "Schema för öppettider",
+        "businessHoursPlaceholder": "Välj schema för öppettider",
+        "description": "Beskrivning",
+        "descriptionPlaceholder": "Valfri beskrivning av denna SLA-policy",
+        "noBusinessHours": "Inga öppettider (dygnet runt)",
+        "policyName": "Policynamn",
+        "policyNamePlaceholder": "Ange policynamn",
+        "scheduleAlways": "{{name}} (dygnet runt)",
+        "searchBoards": "Sök tavlor…",
+        "searchClients": "Sök kunder…",
+        "setAsDefault": "Ange som standardpolicy",
+        "title": "Grundläggande information"
+      },
+      "errors": {
+        "loadFailed": "Det gick inte att ladda data",
+        "notFound": "SLA-policyn hittades inte",
+        "saveFailed": "Det gick inte att spara SLA-policyn"
+      },
+      "loading": "Laddar…",
+      "multiSelect": {
+        "deselectAll": "Avmarkera alla",
+        "deselectAllVisible": "Avmarkera alla synliga",
+        "noItems": "Inga poster är tillgängliga",
+        "noResults": "Inga resultat hittades",
+        "placeholder": "Välj…",
+        "searchPlaceholder": "Sök…",
+        "selectAll": "Markera alla",
+        "selectAllVisible": "Markera alla synliga",
+        "selectedCount_one": "{{count}} vald",
+        "selectedCount_other": "{{count}} valda"
+      },
+      "targets": {
+        "always": "Dygnet runt (ignorera öppettider)",
+        "description": "Ange den längsta tillåtna tiden för ett första svar och för att helt lösa ärenden för varje prioritetsnivå.",
+        "escalationThresholds": "Eskaleringströsklar (% av förfluten tid)",
+        "level1": "Nivå 1 (%)",
+        "level2": "Nivå 2 (%)",
+        "level3": "Nivå 3 (%)",
+        "minutesPlaceholder": "Minuter",
+        "minutesUnit": "minuter",
+        "noTarget": "Inget mål",
+        "notConfigured": "Inte konfigurerad",
+        "resolutionSummary": "Lösning: {{time}}",
+        "resolutionTime": "Lösningstid",
+        "responseSummary": "Svar: {{time}}",
+        "responseTime": "Svarstid",
+        "selectResolutionTime": "Välj lösningstid",
+        "selectResponseTime": "Välj svarstid",
+        "title": "Mål för svar och lösning",
+        "usePreset": "Använd förinställning"
+      },
+      "thresholds": {
+        "add": "Lägg till tröskel",
+        "channelEmail": "E-post",
+        "channelInApp": "I appen",
+        "channelsLabel": "Aviseringskanaler",
+        "description": "Konfigurera när och hur teammedlemmar ska aviseras när SLA-tidsgränser närmar sig eller överskrids.",
+        "empty": "Inga aviseringströsklar är konfigurerade. Klicka på ”Lägg till tröskel” för att skapa en.",
+        "noChannels": "inga",
+        "noRecipients": "Inga mottagare",
+        "percentLabel": "Tröskel (%)",
+        "recipientAssignee": "Ansvarig",
+        "recipientBoardManager": "Tavelansvarig",
+        "recipientBoardManagerShort": "Tavelansvarig",
+        "recipientEscalationManager": "Eskaleringsansvarig",
+        "recipientEscalationManagerShort": "Eskaleringsansvarig",
+        "recipientsLabel": "Mottagare",
+        "remove": "Ta bort",
+        "title": "Aviseringströsklar",
+        "typeBreach": "Överträdelse",
+        "typeLabel": "Aviseringstyp",
+        "typeWarning": "Varning",
+        "viaChannels": "via {{channels}}"
+      },
+      "timeOptions": {
+        "custom": "Anpassad…",
+        "hours1": "1 timme",
+        "hours168": "168 timmar (7 dagar)",
+        "hours2": "2 timmar",
+        "hours24": "24 timmar (1 dag)",
+        "hours4": "4 timmar",
+        "hours48": "48 timmar (2 dagar)",
+        "hours72": "72 timmar (3 dagar)",
+        "hours8": "8 timmar",
+        "minutes15": "15 minuter",
+        "minutes30": "30 minuter"
+      },
+      "validation": {
+        "channelRequired": "Minst en kanal krävs",
+        "duplicateThreshold": "Dubblett av tröskelprocent",
+        "percentRange": "Måste vara mellan 0 och 200",
+        "policyNameRequired": "Policynamn krävs",
+        "targetRequired": "Minst en prioritet bör ha ett mål för svars- eller lösningstid"
+      }
+    },
+    "policyList": {
+      "actions": {
+        "cancel": "Avbryt",
+        "delete": "Radera",
+        "edit": "Redigera",
+        "openMenu": "Öppna meny",
+        "setDefault": "Ange som standard"
+      },
+      "addPolicy": "Lägg till policy",
+      "columns": {
+        "actions": "Åtgärder",
+        "description": "Beskrivning",
+        "name": "Namn"
+      },
+      "defaultLabel": "Standard",
+      "delete": {
+        "checkingUsage": "Kontrollerar användning…",
+        "confirm": "Vill du radera policyn {{name}}? Åtgärden kan inte ångras.",
+        "defaultWarning": "Detta är standardpolicyn. Du kan ange en annan policy som standard först.",
+        "inUseTitle": "Policyn används för närvarande",
+        "title": "Radera SLA-policy",
+        "unlinkNote": "Dessa kopplingar tas bort. Befintliga uppföljningsdata för SLA på ärenden bevaras.",
+        "usageBoards_one": "Tavla: {{names}}",
+        "usageBoards_other": "Tavlor: {{names}}",
+        "usageClients_one": "Kund: {{names}}",
+        "usageClients_other": "Kunder: {{names}}",
+        "usageTickets_one": "{{count}} ärende",
+        "usageTickets_other": "{{count}} ärenden"
+      },
+      "description": "Hantera policyer för servicenivåavtal som definierar mål för svars- och lösningstider",
+      "empty": "Inga SLA-policyer hittades. Klicka på ”Lägg till policy” för att skapa din första policy.",
+      "errors": {
+        "deleteFailed": "Det gick inte att radera policyn. Försök igen.",
+        "loadFailed": "Det gick inte att ladda SLA-policyer. Försök igen.",
+        "setDefaultFailed": "Det gick inte att ange standardpolicy. Försök igen."
+      },
+      "loading": "Laddar SLA-policyer…",
+      "title": "SLA-policyer"
+    },
+    "status": {
+      "atRisk": "I riskzonen",
+      "breached": "Överträdd",
+      "onTrack": "Enligt plan",
+      "paused": "Pausad",
+      "resolutionBreached": "SLA för lösning har överträtts",
+      "responseBreached": "SLA för svar har överträtts",
+      "tooltip": {
+        "resolutionBreachedBy": "Lösning: överskriden med {{time}}",
+        "resolutionRemaining": "Lösning: {{time}} återstår",
+        "responseBreachedBy": "Svar: överskriden med {{time}}",
+        "responseRemaining": "Svar: {{time}} återstår",
+        "statusLine": "SLA-status: {{status}}",
+        "timerPaused": "SLA-tidtagning: pausad"
+      },
+      "unknown": "Okänd"
+    }
+  },
+  "clientPortalLanguage": {
+    "title": "Kundportalens språk",
+    "description": "Åsidosätt standardspråket endast för kundportalanvändare. MSP-personalen behåller organisationens standard.",
+    "fields": {
+      "defaultLanguage": "Standardspråk"
+    },
+    "help": {
+      "defaultLanguage": "När detta är angivet ser kundportalanvändare detta språk om inte deras individuella inställning eller kundens standard åsidosätter det."
+    },
+    "placeholder": "Välj ett språk",
+    "inheritOption": "Använd organisationens standard ({{language}})",
+    "unsetHint": "Ändra organisationens standard under Inställningar → Språk för att ta bort kundportalens åsidosättning.",
+    "updated": "Kundportalens standardspråk har uppdaterats till {{language}}"
+  },
+  "language": {
+    "selectLanguage": "Välj ett språk",
+    "languagesUpdated": "Tillgängliga språk har uppdaterats"
+  },
+  "settings": {
+    "assetTypes": {
+      "tab": "Tillgångar",
+      "title": "Tillgångstyper",
+      "description": "Hantera tillgängliga tillgångstyper i tillgångsmodulen. Anpassade typer har ett fältschema som styr formulären för att skapa och redigera dem.",
+      "loading": "Laddar tillgångstyper…",
+      "table": {
+        "name": "Namn",
+        "builtin": "Inbyggd",
+        "slug": "Identifierare",
+        "fieldCount": "Fält",
+        "order": "Ordning",
+        "actions": "Åtgärder",
+        "openMenu": "Öppna meny",
+        "searchPlaceholder": "Sök tillgångstyper…"
+      },
+      "actions": {
+        "addType": "Lägg till tillgångstyp",
+        "edit": "Redigera",
+        "delete": "Radera",
+        "cancel": "Avbryt",
+        "save": "Spara",
+        "create": "Skapa",
+        "confirmDelete": "Radera"
+      },
+      "dialog": {
+        "createTitle": "Lägg till tillgångstyp",
+        "editTitle": "Redigera tillgångstyp",
+        "nameLabel": "Namn",
+        "namePlaceholder": "T.ex. Brandvägg",
+        "displayOrderLabel": "Visningsordning",
+        "iconLabel": "Ikon",
+        "builtinSchemaHint": "Inbyggda typer använder fasta formulär som hanteras av AlgaPSA, så deras fältschema kan inte redigeras. Du kan fortfarande byta namn på typen eller ändra dess ikon."
+      },
+      "deleteDialog": {
+        "title": "Radera tillgångstyp",
+        "message": "Detta tar permanent bort ”{{name}}” från registret över tillgångstyper."
+      },
+      "messages": {
+        "created": "Tillgångstypen har skapats",
+        "updated": "Tillgångstypen har uppdaterats",
+        "deleted": "Tillgångstypen har raderats"
+      },
+      "errors": {
+        "fetchFailed": "Det gick inte att ladda tillgångstyper.",
+        "saveFailed": "Det gick inte att spara tillgångstypen.",
+        "deleteFailed": "Det gick inte att radera tillgångstypen.",
+        "invalidName": "Ange ett namn för tillgångstypen.",
+        "invalidSchema": "Fältschemat är ogiltigt. Åtgärda de markerade fälten och försök igen.",
+        "reservedSlug": "Identifieraren ”{{slug}}” är reserverad för en inbyggd typ. Välj ett annat namn.",
+        "slugConflict": "Det finns redan en tillgångstyp med identifieraren ”{{slug}}”.",
+        "notFound": "Denna tillgångstyp finns inte längre.",
+        "builtinImmutable": "För inbyggda typer kan endast namn och ikon ändras.",
+        "builtinUndeletable": "Inbyggda typer kan inte raderas.",
+        "inUse": "Typen används fortfarande av {{assetCount}} tillgångar. Tilldela dessa tillgångar en annan typ innan du raderar den.",
+        "unknown": "Något gick fel."
+      },
+      "editor": {
+        "title": "Fält",
+        "empty": "Inga fält ännu. Lägg till fält för att bygga formuläret för att skapa och redigera denna typ.",
+        "addField": "Lägg till fält",
+        "fieldLabel": "Etikett",
+        "fieldLabelPlaceholder": "T.ex. Serienummer",
+        "fieldKey": "Nyckel",
+        "fieldKeyPlaceholder": "T.ex. serial_number",
+        "fieldKind": "Fälttyp",
+        "fieldRequired": "Obligatorisk",
+        "fieldOptions": "Alternativ (kommaseparerade)",
+        "fieldOptionsPlaceholder": "T.ex. Guld, Silver, Brons",
+        "moveUp": "Flytta fält uppåt",
+        "moveDown": "Flytta fält nedåt",
+        "removeField": "Ta bort fält",
+        "kinds": {
+          "text": "Text",
+          "number": "Tal",
+          "date": "Datum",
+          "select": "Urval",
+          "url": "URL",
+          "boolean": "Ja / Nej"
+        },
+        "errors": {
+          "invalidKey": "Nyckeln måste börja med en gemen och endast innehålla gemener, siffror och understreck.",
+          "duplicateKey": "Varje fältnyckel måste vara unik.",
+          "missingLabel": "Etikett krävs.",
+          "invalidKind": "Välj en giltig fälttyp.",
+          "invalidRequired": "Obligatorisk måste vara på eller av.",
+          "missingOptions": "Urvalsfält behöver minst ett alternativ.",
+          "invalidOptions": "Alternativen måste ha värden som inte är tomma.",
+          "invalidField": "Detta fält är ogiltigt."
+        }
+      }
+    }
+  },
+  "mcpServer": {
+    "title": "MCP-server",
+    "description": "Låt AI-agenter logga in i AlgaPSA och agera med de roller du tilldelar dem.",
+    "errors": {
+      "load": "Det gick inte att ladda MCP-inställningarna.",
+      "update": "Det gick inte att uppdatera MCP-inställningarna."
+    },
+    "status": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv"
+    },
+    "providers": {
+      "title": "Identitetsleverantörer",
+      "description": "Agenter loggar in via dessa tjänsteleverantörer. Lägg till dem som dina agenter använder.",
+      "empty": "Inga tjänsteleverantörer ännu.",
+      "readyToUse": "Klar att använda",
+      "platformManaged": "Hanteras av AlgaPSA — ingen konfiguration behövs. Anslut en agent till en i steg 2.",
+      "addAnother": "Lägg till en annan tjänsteleverantör",
+      "advancedOptions": "Avancerade alternativ",
+      "googleNoSetup": "Google kräver ingen konfiguration. Agenter loggar in med ID:t för sitt Google-tjänstkonto.",
+      "kinds": {
+        "microsoft": "Microsoft Entra",
+        "google": "Google",
+        "custom": "Anpassad"
+      },
+      "suggestion": {
+        "withName": "Du är redan ansluten till Microsoft ({{name}}). Använd denna katalog för agenter?",
+        "withoutName": "Du är redan ansluten till Microsoft. Använd denna katalog för agenter?",
+        "useDirectory": "Använd denna katalog"
+      },
+      "fields": {
+        "provider": "Tjänsteleverantör",
+        "entraTenantId": "Entra-klientorganisations-ID",
+        "audienceOptional": "Målgrupp (valfritt)",
+        "audience": "Målgrupp",
+        "subjectClaim": "Identifiera agenter med",
+        "subjectClaimHelp": "Lämna tomt om inte tjänsteleverantören anger något annat.",
+        "issuer": "Utfärdare",
+        "jwksUri": "URL för signeringsnycklar"
+      },
+      "actions": {
+        "add": "Lägg till tjänsteleverantör"
+      },
+      "hints": {
+        "entraTenantIdRequired": "Ange ditt Entra-klientorganisations-ID för att fortsätta.",
+        "issuerAndJwksRequired": "Ange utfärdaren och URL:en för signeringsnycklar för att fortsätta."
+      },
+      "table": {
+        "provider": "Tjänsteleverantör",
+        "directory": "Katalog",
+        "status": "Status"
+      }
+    },
+    "agents": {
+      "title": "Agenter",
+      "description": "Varje agent loggar in som sig själv och får de roller du tilldelar.",
+      "empty": "Inga agenter ännu.",
+      "needsProvider": "Lägg först till en tjänsteleverantör i steg 1. Lägg sedan till agenter som loggar in via den.",
+      "connectedAs": "Ansluten som",
+      "fields": {
+        "name": "Namn",
+        "namePlaceholder": "Bot för supporttriage",
+        "identity": "Identitet",
+        "provider": "Tjänsteleverantör",
+        "providerPlaceholder": "Välj en tjänsteleverantör",
+        "agentId": "Agent-ID",
+        "roles": "Roller"
+      },
+      "manualEntry": {
+        "show": "Ange identitet manuellt",
+        "hide": "Dölj manuell inmatning"
+      },
+      "actions": {
+        "add": "Lägg till agent",
+        "change": "Ändra",
+        "connectWith": "Anslut med {{provider}}",
+        "openMenu": "Öppna agentåtgärder",
+        "viewActivity": "Visa aktivitet",
+        "deactivate": "Inaktivera",
+        "reactivate": "Återaktivera",
+        "remove": "Ta bort…"
+      },
+      "hints": {
+        "nameRequired": "Ge agenten ett namn för att fortsätta.",
+        "connectOrEnterIdentity": "Anslut en tjänsteleverantör — eller ange en identitet — för att fortsätta.",
+        "chooseProviderAndAgentId": "Välj en tjänsteleverantör och ett agent-ID för att fortsätta."
+      },
+      "table": {
+        "name": "Namn",
+        "provider": "Tjänsteleverantör",
+        "agentId": "Agent-ID",
+        "status": "Status"
+      },
+      "removeDialog": {
+        "title": "Ta bort agent",
+        "message": "Ta bort ”{{name}}”? Detta raderar permanent agenten, dess rolltilldelningar och aktivitetslogg. Det kan inte ångras.",
+        "confirm": "Ta bort",
+        "cancel": "Avbryt"
+      }
+    },
+    "agentId": {
+      "unknown": {
+        "placeholder": "agentens identifierare",
+        "helper": "Välj en tjänsteleverantör för att se vad du ska ange."
+      },
+      "microsoft": {
+        "userHelper": "Agentens användarobjekt-ID (oid) från Entra.",
+        "appHelper": "Appens program-ID (klient-ID) från Entra."
+      },
+      "google": {
+        "helper": "Tjänstkontots ID (värdet sub i dess token)."
+      },
+      "custom": {
+        "placeholder": "värdet för ditt subject-anspråk",
+        "helper": "Värdet för anspråket ”{{claim}}” i agentens token."
+      }
+    },
+    "audit": {
+      "title": "Aktivitet",
+      "titleForAgent": "Aktivitet — {{name}}",
+      "description": "Vad den gjorde och om varje åtgärd var tillåten.",
+      "table": {
+        "when": "När",
+        "action": "Åtgärd",
+        "result": "Resultat",
+        "status": "Status"
+      },
+      "decision": {
+        "allowed": "Tillåten",
+        "blocked": "Blockerad"
+      }
+    },
+    "connectedClients": {
+      "title": "Anslutna MCP-klienter",
+      "description": "Appar som du har godkänt för åtkomst till AlgaPSA som dig via MCP (t.ex. Claude). Koppla från dem du inte längre använder.",
+      "loading": "Laddar…",
+      "empty": "Inga anslutna klienter.",
+      "meta": "{{host}} · ansluten {{date}}",
+      "disconnect": "Koppla från",
+      "errors": {
+        "load": "Det gick inte att ladda anslutningar.",
+        "disconnect": "Det gick inte att koppla från."
+      },
+      "dialog": {
+        "title": "Koppla från klient",
+        "message": "Koppla från ”{{name}}”? Den förlorar åtkomsten omedelbart och måste godkännas på nytt för att ansluta igen.",
+        "confirm": "Koppla från",
+        "cancel": "Avbryt"
+      }
+    }
+  },
+  "errors": {
+    "teams": {
+      "permissions": {
+        "create": "Åtkomst nekad: kan inte skapa team.",
+        "update": "Åtkomst nekad: kan inte uppdatera team.",
+        "modify": "Åtkomst nekad: kan inte ändra team.",
+        "modifyMembers": "Åtkomst nekad: kan inte ändra teammedlemmar.",
+        "view": "Åtkomst nekad: kan inte visa teamet.",
+        "viewAll": "Åtkomst nekad: kan inte visa team.",
+        "assignManager": "Åtkomst nekad: kan inte utse teamansvarig."
+      },
+      "notFoundRefresh": "Teamet hittades inte. Det kan ha raderats. Ladda om och försök igen.",
+      "leadRequired": "Ett team måste ha en teamledare. Välj en teamledare och försök igen.",
+      "inactiveUser": "Inaktiva användare kan inte läggas till i ett team.",
+      "cannotRemoveLead": "Det går inte att ta bort teamledaren. Utse en ny teamledare först.",
+      "invalidValue": "Ett av de valda teamvärdena är ogiltigt. Ladda om och försök igen.",
+      "duplicateMember": "Användaren är redan medlem i teamet.",
+      "referenceMissing": "Den valda teamledaren eller medlemmen är inte längre giltig. Ladda om och försök igen.",
+      "missingField": "Ett obligatoriskt teamfält saknas.",
+      "missingFieldNamed": "Ett obligatoriskt teamfält saknas: {{field}}."
+    },
+    "sla": {
+      "permissions": {
+        "view": "Åtkomst nekad: du har inte behörighet att visa SLA-policyer",
+        "create": "Åtkomst nekad: du har inte behörighet att skapa SLA-policyer",
+        "update": "Åtkomst nekad: du har inte behörighet att uppdatera SLA-policyer",
+        "delete": "Åtkomst nekad: du har inte behörighet att radera SLA-policyer"
+      },
+      "policyNotFound": "SLA-policyn hittades inte. Den kan ha raderats. Ladda om och försök igen.",
+      "targetNotFound": "SLA-policyns mål hittades inte. Det kan ha raderats. Ladda om och försök igen.",
+      "priorityNotFound": "Den valda prioriteten hittades inte. Den kan ha raderats. Ladda om och försök igen.",
+      "clientNotFound": "Den valda kunden hittades inte. Den kan ha raderats. Ladda om och försök igen.",
+      "boardNotFound": "Den valda tavlan hittades inte. Den kan ha raderats. Ladda om och försök igen.",
+      "ticketNotFound": "Ärendet hittades inte. Det kan ha raderats. Ladda om och försök igen.",
+      "duplicateTarget": "Ett mål för denna prioritet finns redan i policyn.",
+      "pauseRequiresBoardStatus": "Pauskonfiguration för SLA kräver en ärendestatus som tillhör en tavla.",
+      "invalidValue": "Ett av de valda SLA-värdena är ogiltigt. Ladda om och försök igen.",
+      "referenceMissing": "Den valda SLA-posten eller det relaterade värdet finns inte längre. Ladda om och försök igen.",
+      "conflict": "Denna SLA-ändring strider mot en befintlig post. Ladda om och försök igen.",
+      "notAllowed": "Ett av SLA-värdena är inte tillåtet. Granska formuläret och försök igen.",
+      "missingField": "Ett obligatoriskt SLA-fält saknas.",
+      "missingFieldNamed": "Ett obligatoriskt SLA-fält saknas: {{field}}."
+    },
+    "escalation": {
+      "boardNotFound": "Tavlan hittades inte. Den kan ha raderats. Ladda om och försök igen.",
+      "userNotFound": "Den valda användaren för eskaleringsansvar hittades inte. Ladda om och välj en annan användare.",
+      "configNotFound": "Konfigurationen för eskaleringsansvarig hittades inte. Den kan redan ha raderats.",
+      "recordInvalid": "En av de valda posterna för eskaleringsansvariga är ogiltig. Ladda om och försök igen.",
+      "referenceMissing": "Den valda tavlan eller användaren finns inte längre. Ladda om och försök igen.",
+      "duplicate": "En eskaleringsansvarig är redan konfigurerad för denna tavla och nivå.",
+      "missingField": "Ett obligatoriskt fält för eskaleringsansvarig saknas.",
+      "missingFieldNamed": "Ett obligatoriskt fält för eskaleringsansvarig saknas: {{field}}."
+    },
+    "status": {
+      "notFoundRefresh": "Statusen hittades inte. Den kan ha raderats. Ladda om och försök igen.",
+      "invalidValue": "Ett av de valda statusvärdena är ogiltigt. Ladda om och försök igen.",
+      "referenceMissing": "Den valda relaterade posten för denna status finns inte längre. Ladda om och försök igen.",
+      "orderInUse": "Ordningsnumret används redan. Välj ett annat ordningsnummer.",
+      "duplicateName": "Det finns redan en status med detta namn.",
+      "notAllowed": "Ett av statusvärdena är inte tillåtet. Granska formuläret och försök igen.",
+      "missingField": "Ett obligatoriskt statusfält saknas.",
+      "missingFieldNamed": "Ett obligatoriskt statusfält saknas: {{field}}.",
+      "nameRequired": "Statusnamn krävs",
+      "nameEmpty": "Statusnamnet får inte vara tomt",
+      "idRequired": "Status-ID krävs",
+      "manageFromBoard": "Ärendestatusar måste hanteras från tavlans inställningar",
+      "closedCannotBeDefault": "En stängd status kan inte vara standardstatus",
+      "defaultMustStayOpen": "Ange en annan status som standard innan du stänger denna"
+    },
+    "priority": {
+      "notFound": "Prioriteten hittades inte.",
+      "boardMissing": "Den valda tavlan finns inte längre.",
+      "duplicate": "Det finns redan en prioritet med dessa uppgifter.",
+      "referenceInvalid": "Den valda prioritetsreferensen är inte längre giltig. Ladda om och försök igen.",
+      "invalidData": "Ogiltiga prioritetsdata har angetts. Kontrollera prioritetsuppgifterna.",
+      "missingField": "Ett obligatoriskt prioritetsfält saknas.",
+      "missingFieldNamed": "Ett obligatoriskt prioritetsfält saknas: {{field}}."
+    },
+    "users": {
+      "invalidValue": "En av de valda användarna är ogiltig. Ladda om och försök igen.",
+      "referenceMissing": "En av de valda användarna finns inte längre. Ladda om och försök igen.",
+      "readClientInfoPermission": "Åtkomst nekad: kan inte läsa användarens kundinformation"
+    },
+    "roles": {
+      "userNotFound": "Användaren hittades inte. Ladda om användarlistan och försök igen.",
+      "roleNotFound": "Rollen hittades inte. Ladda om rollistan och försök igen.",
+      "portalRoleOnMspUser": "Det går inte att tilldela en kundportalroll till en MSP-användare.",
+      "mspRoleOnPortalUser": "Det går inte att tilldela en MSP-roll till en kundportalanvändare.",
+      "invalidValue": "Ett av de valda användar- eller rollvärdena är ogiltigt. Ladda om och försök igen.",
+      "referenceMissing": "Den valda användaren eller rollen finns inte längre. Ladda om och försök igen.",
+      "duplicate": "Användaren har redan den valda rollen.",
+      "changePermission": "Åtkomst nekad: du har inte behörighet att ändra användarroller.",
+      "missingField": "Ett obligatoriskt fält för användarroll saknas.",
+      "missingFieldNamed": "Ett obligatoriskt fält för användarroll saknas: {{field}}."
+    },
+    "secrets": {
+      "tenantContextMissing": "Klientorganisationskontext saknas. Ladda om och försök igen.",
+      "notFound": "Hemligheten hittades inte. Den kan redan ha raderats. Ladda om och försök igen.",
+      "invalidName": "Ogiltig klientorganisation eller ogiltigt namn på hemlighet.",
+      "readOnly": "Lagringen för hemligheter är skrivskyddad i denna miljö.",
+      "noDurablePath": "Lagringen för hemligheter är inte konfigurerad för beständiga skrivningar i denna miljö.",
+      "recordInvalid": "En av de valda hemlighetsposterna är ogiltig. Ladda om och försök igen.",
+      "referenceMissing": "En av de valda hemlighetsposterna finns inte längre. Ladda om och försök igen.",
+      "duplicate": "Det finns redan en hemlighet med detta namn.",
+      "missingField": "Ett obligatoriskt fält för hemligheten saknas.",
+      "missingFieldNamed": "Ett obligatoriskt fält för hemligheten saknas: {{field}}.",
+      "permissions": {
+        "create": "Åtkomst nekad: kan inte skapa hemligheter",
+        "update": "Åtkomst nekad: kan inte uppdatera hemligheter",
+        "delete": "Åtkomst nekad: kan inte radera hemligheter"
+      }
+    },
+    "tenantSettings": {
+      "tenantIdRequired": "Klientorganisations-ID krävs.",
+      "invalidValue": "Ett av de valda inställningsvärdena för klientorganisationen är ogiltigt. Ladda om och försök igen.",
+      "missingField": "Ett obligatoriskt inställningsfält för klientorganisationen saknas.",
+      "missingFieldNamed": "Ett obligatoriskt inställningsfält för klientorganisationen saknas: {{field}}.",
+      "invalidTimezone": "Ogiltig tidszon: {{timezone}}",
+      "permissions": {
+        "clearOnboarding": "Åtkomst nekad: endast administratörer kan rensa introduktionsdata.",
+        "update": "Åtkomst nekad: kan inte uppdatera inställningar",
+        "enableAiAssistant": "Åtkomst nekad: kan inte aktivera AI-assistenten för denna klientorganisation"
+      }
+    },
+    "notifications": {
+      "systemTemplateNotFound": "Systemmallen hittades inte. Den kan ha raderats. Ladda om och försök igen.",
+      "templateNotFound": "Aviseringsmallen hittades inte. Den kan ha raderats. Ladda om och försök igen.",
+      "categoryNotFound": "Aviseringskategorin hittades inte. Den kan ha raderats. Ladda om och försök igen.",
+      "subtypeNotFound": "Aviseringsundertypen hittades inte. Den kan ha raderats. Ladda om och försök igen.",
+      "notificationNotFound": "Aviseringen hittades inte. Den kan redan ha uppdaterats eller raderats.",
+      "recordInvalid": "En av de valda aviseringsposterna är ogiltig. Ladda om och försök igen.",
+      "referenceMissing": "En av de valda aviseringsposterna finns inte längre. Ladda om och försök igen.",
+      "duplicate": "Det finns redan en aviseringsinställning med dessa uppgifter.",
+      "missingField": "Ett obligatoriskt aviseringsfält saknas.",
+      "missingFieldNamed": "Ett obligatoriskt aviseringsfält saknas: {{field}}."
+    },
+    "security": {
+      "roleNotFound": "Rollen eller behörigheten hittades inte. Ladda om behörighetslistan och försök igen.",
+      "ticketNotFound": "Ärendet hittades inte. Ladda om ärendet och försök igen.",
+      "policyNotFound": "Policyn hittades inte. Ladda om policylistan och försök igen.",
+      "invalidValue": "Ett av de valda roll-, behörighets- eller policyvärdena är ogiltigt. Ladda om och försök igen.",
+      "referenceMissing": "En av de valda säkerhetsposterna finns inte längre. Ladda om och försök igen.",
+      "permissionAlreadyAssigned": "Behörigheten är redan tilldelad till rollen.",
+      "duplicate": "Det finns redan en säkerhetspost med dessa uppgifter.",
+      "missingField": "Ett obligatoriskt säkerhetsfält saknas.",
+      "missingFieldNamed": "Ett obligatoriskt säkerhetsfält saknas: {{field}}.",
+      "permissions": {
+        "portalRolesOnly": "Åtkomst nekad: kundportaladministratörer får endast hantera kundportalroller.",
+        "portalUsersOnly": "Åtkomst nekad: kundportaladministratörer får endast hantera kundportalanvändare.",
+        "portalAdminRequired": "Åtkomst nekad: administratörsåtkomst till kundportalen krävs.",
+        "otherClientUsers": "Åtkomst nekad: kan inte hantera användare för en annan kund."
+      }
+    },
+    "clientPortalDomain": {
+      "portalUsersNotAllowed": "Kundportalanvändare kan inte hantera egna domäner.",
+      "noPermission": "Du har inte behörighet att hantera kundportalinställningar.",
+      "required": "Domän krävs.",
+      "length": "Domänen måste innehålla mellan 3 och 253 tecken.",
+      "charset": "Domänen får endast innehålla bokstäver, siffror, bindestreck och punkter.",
+      "needsDot": "Domänen måste innehålla minst en punkt.",
+      "notCanonicalHost": "Välj en annan domän än det ordinarie värdnamnet.",
+      "noLeadingTrailingDot": "Domänen får inte börja eller sluta med en punkt.",
+      "notApplianceHost": "Välj en annan domän än serverns primära värdnamn. Den egna portaldomänen måste vara ett annat värdnamn som din omvända proxy vidarebefordrar hit.",
+      "nothingToRetry": "Det finns ingen misslyckad registrering av egen domän att försöka igen med.",
+      "retryOnlyAfterFailure": "Nytt försök är endast tillgängligt efter en misslyckad registrering."
+    }
+  }
+}

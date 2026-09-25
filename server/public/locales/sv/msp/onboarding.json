@@ -1,0 +1,956 @@
+{
+  "common": {
+    "actions": {
+      "back": "Tillbaka",
+      "cancel": "Avbryt",
+      "close": "Stäng",
+      "continue": "Fortsätt",
+      "finish": "Slutför",
+      "invite": "Bjud in",
+      "next": "Nästa",
+      "retry": "Försök igen",
+      "save": "Spara",
+      "saving": "Sparar…",
+      "skip": "Hoppa över",
+      "submit": "Skicka in"
+    },
+    "states": {
+      "loading": "Laddar…",
+      "optional": "Valfritt",
+      "required": "Obligatoriskt"
+    },
+    "no": "Nej",
+    "yes": "Ja"
+  },
+  "onboardingProvider": {
+    "title": "Introduktionskomponent",
+    "description": "Introduktionskontroll på ruttnivå som kontrollerar om klientorganisationen har slutfört introduktionen och annars omdirigerar till guiden"
+  },
+  "onboardingWizard": {
+    "title": "Introduktionsguide",
+    "description": "Guidens ramverk för konfiguration av MSP-klientorganisationer med dialog- eller helsidesvisning, förlopp, validering och slutförandeflöden",
+    "steps": {
+      "clientInfo": "Ditt företag",
+      "teamMembers": "Teammedlemmar",
+      "addClient": "Lägg till kund",
+      "clientContact": "Kundkontakt",
+      "billing": "Debitering",
+      "ticketing": "Ärendehantering",
+      "algadeskWorkspace": "Arbetsyta"
+    },
+    "errors": {
+      "saveClientInfo": "Det gick inte att spara kunduppgifterna",
+      "addTeamMembers": "Det gick inte att lägga till teammedlemmarna",
+      "saveClient": "Det gick inte att spara kunden",
+      "addContact": "Det gick inte att lägga till kontakten",
+      "setupBilling": "Det gick inte att konfigurera debiteringen",
+      "unknown": "Okänt fel",
+      "validationFailed": "Valideringen misslyckades",
+      "configureTicketing": "Det gick inte att konfigurera ärendehanteringen",
+      "completeOnboarding": "Det gick inte att slutföra introduktionen"
+    },
+    "debug": {
+      "title": "Felsökningsinformation:",
+      "currentStep": "Aktuellt steg: {{stepIndex}} ({{stepName}})",
+      "isValid": "Giltigt: {{value}}",
+      "isRequired": "Obligatoriskt: {{value}}",
+      "viewData": "Visa data"
+    },
+    "actions": {
+      "finish": "Slutför konfigurationen",
+      "saving": "Sparar…",
+      "completing": "Slutför…"
+    },
+    "shell": {
+      "title": "Konfigurera ditt system",
+      "description": "Konfigurera din arbetsyta så att den är redo att användas.",
+      "algadeskTitle": "Konfigurera AlgaDesk",
+      "algadeskDescription": "Konfigurera din supportarbetsyta, dina kunder och standardinställningarna för ärenden."
+    }
+  },
+  "addClientStep": {
+    "title": "Steg för att lägga till kund",
+    "description": "Guidesteg för att skapa eller granska den primära kundposten under introduktionen",
+    "validation": {
+      "email": {
+        "invalid": "Ange en giltig e-postadress"
+      },
+      "website": {
+        "example": "Ange en giltig webbadress (t.ex. example.com)",
+        "format": "Ange en webbadress i giltigt format"
+      },
+      "phone": {
+        "tooShort": "Telefonnumret verkar vara för kort",
+        "tooLong": "Telefonnumret verkar vara för långt",
+        "invalidCharacters": "Telefonnumret innehåller ogiltiga tecken"
+      }
+    },
+    "header": {
+      "title": "Lägg till din första kund",
+      "description": "Lägg till din första kund för att komma igång. Du kan hoppa över detta och lägga till kunder senare."
+    },
+    "created": {
+      "title": "Kunden har skapats",
+      "description": "{{clientName}} har lagts till i din kundlista."
+    },
+    "fields": {
+      "clientName": {
+        "label": "Kundnamn",
+        "placeholder": "Exempelföretaget AB"
+      },
+      "clientEmail": {
+        "label": "Kundens e-postadress",
+        "placeholder": "contact@example.com"
+      },
+      "clientPhone": {
+        "label": "Telefonnummer",
+        "placeholder": "+1 (555) 123-4567"
+      },
+      "website": {
+        "label": "Webbplats",
+        "placeholder": "https://example.com"
+      }
+    },
+    "common": {
+      "noteLabel": "Obs:",
+      "optionalLabel": "Valfritt:"
+    },
+    "note": {
+      "defaultTaxSettings": "Kunden skapas som skattebefriad (0 %) enligt standardinställningarna för skatt. Du kan konfigurera skattesatser senare i kundinställningarna.",
+      "optional": "Du kan hoppa över det här steget och lägga till eller ändra kunder när som helst från din översiktspanel."
+    }
+  },
+  "billingSetupStep": {
+    "title": "Steg för debiteringskonfiguration",
+    "description": "Guidesteg för att ange den första tjänsten, prissättningen, debiteringsmodellen och standardinställningarna för avtalsrader",
+    "serviceTypes": {
+      "toasts": {
+        "deleted": "Tjänstetypen har raderats"
+      },
+      "errors": {
+        "delete": "Det gick inte att radera tjänstetypen",
+        "nameRequired": "Tjänstetypens namn är obligatoriskt",
+        "duplicate": "Det finns redan en tjänstetyp med det här namnet",
+        "create": "Det gick inte att skapa tjänstetypen",
+        "createRetry": "Det gick inte att skapa tjänstetypen. Försök igen."
+      },
+      "actions": {
+        "manage": "Hantera tjänstetyper",
+        "import": "Importera standardalternativ",
+        "add": "Lägg till ny",
+        "confirmAdd": "Lägg till tjänstetyp"
+      },
+      "noteLabel": "Obs:",
+      "description": "Tjänstetyper är kategoribeteckningar för organisering och filtrering. Debiteringsmodellen konfigureras separat för varje tjänst. Du kan byta namn på, lägga till eller ta bort typer när som helst senare i Inställningar.",
+      "addForm": {
+        "title": "Lägg till ny tjänstetyp",
+        "fields": {
+          "name": {
+            "label": "Namn *",
+            "placeholder": "T.ex. Premiumsupport"
+          },
+          "description": {
+            "label": "Beskrivning",
+            "placeholder": "Beskriv den här tjänstetypen…"
+          },
+          "billingMethod": {
+            "label": "Debiteringsmetod *"
+          },
+          "displayOrder": {
+            "label": "Visningsordning",
+            "placeholder": "Lämna tomt för automatisk generering",
+            "help": "Styr i vilken ordning tjänstetyper visas i rullgardinsmenyer på hela plattformen. Lägre nummer visas först."
+          }
+        }
+      },
+      "import": {
+        "title": "Föreslagna tjänstetyper",
+        "description": "Dessa är standard för de flesta MSP-företag. Avmarkera dem du inte vill ha och bekräfta sedan för att lägga till resten. Du kan byta namn på eller ta bort dem senare.",
+        "success": {
+          "titleOne": "Tjänstetypen har importerats",
+          "titleOther": "Tjänstetyperna har importerats",
+          "description_one": "{{count}} typ har lagts till i din katalog.",
+          "description_other": "{{count}} typer har lagts till i din katalog.",
+          "skipped": "Antal överhoppade: {{count}}."
+        },
+        "actions": {
+          "importing": "Lägger till…",
+          "importSelected": "Bekräfta och lägg till ({{count}})"
+        }
+      },
+      "table": {
+        "headers": {
+          "name": "Namn",
+          "billingMethod": "Debiteringsmetod",
+          "order": "Ordning",
+          "actions": "Åtgärder"
+        }
+      },
+      "current": {
+        "title": "Nuvarande tjänstetyper",
+        "removeTitle": "Ta bort tjänstetyp"
+      }
+    },
+    "header": {
+      "title": "Konfigurera debitering",
+      "description": "Ange din standardvaluta och skapa din första tjänst.",
+      "serviceTitle": "Skapa din första tjänst",
+      "serviceDescription": "Lägg till en tjänst och välj hur den ska debiteras. Tjänstetypen anger tjänstens kategori, medan debiteringsmodellen styr prissättningen."
+    },
+    "created": {
+      "title": "Tjänsten har skapats",
+      "description": "{{serviceName}} har lagts till i din tjänstekatalog."
+    },
+    "fields": {
+      "serviceName": {
+        "label": "Tjänstenamn *",
+        "placeholder": "Hanterade IT-tjänster"
+      },
+      "serviceDescription": {
+        "label": "Tjänstebeskrivning",
+        "placeholder": "Heltäckande IT-support och förvaltningstjänster…"
+      },
+      "serviceType": {
+        "label": "Tjänstetyp *",
+        "required": "(Obligatorisk)",
+        "emptyPlaceholder": "Skapa eller importera tjänstetyper",
+        "placeholder": "Välj en tjänstetyp",
+        "emptyHelp": "Bekräfta en föreslagen tjänstetyp nedan eller lägg till en egen. Du kan ändra dem senare."
+      },
+      "billingMode": {
+        "label": "Debiteringsmodell"
+      },
+      "defaultRate": {
+        "label": "Standardtaxa",
+        "placeholder": "150"
+      },
+      "defaultCurrency": {
+        "label": "Standardvaluta *",
+        "description": "Den här valutan används som standard för all debitering: tjänster, avtal, offerter och fakturor. Du kan välja en annan valuta för enskilda kunder senare."
+      }
+    },
+    "billingMethods": {
+      "fixed": "Fast",
+      "hourly": "Per timme",
+      "usageBased": "Förbrukningsbaserad",
+      "usage": "Förbrukning"
+    },
+    "validation": {
+      "actionRequiredLabel": "Åtgärd krävs:",
+      "actionRequiredDescription": "Bekräfta en föreslagen tjänstetyp ovan eller lägg till en egen innan du skapar en tjänst."
+    }
+  },
+  "clientContactStep": {
+    "title": "Steg för kundkontakt",
+    "description": "Guidesteg för att samla in uppgifter om kundens huvudkontakt",
+    "validation": {
+      "email": {
+        "invalid": "Ange en giltig e-postadress"
+      }
+    },
+    "empty": {
+      "title": "Kundkontakt",
+      "description": "Inga kunduppgifter har angetts. Hoppa över det här steget eller gå tillbaka och lägg till en kund först."
+    },
+    "header": {
+      "title": "Lägg till kontakt för {{clientName}}",
+      "clientFallback": "Kund",
+      "description": "Lägg till en primär kontaktperson för den här kunden."
+    },
+    "created": {
+      "title": "Kontakten har skapats",
+      "description": "{{contactName}} har lagts till hos {{clientName}}.",
+      "contactFallback": "Kontakten",
+      "clientFallback": "kunden"
+    },
+    "fields": {
+      "contactName": {
+        "label": "Kontaktens namn",
+        "placeholder": "John Smith"
+      },
+      "contactEmail": {
+        "label": "Kontaktens e-postadress",
+        "placeholder": "john.smith@example.com"
+      },
+      "contactRole": {
+        "label": "Roll/befattning",
+        "placeholder": "IT-chef"
+      }
+    },
+    "common": {
+      "optionalLabel": "Valfritt:"
+    },
+    "footer": {
+      "optional": "Du kan hoppa över det här steget och lägga till eller ändra kontakter när som helst från kundens profil."
+    }
+  },
+  "clientInfoStep": {
+    "title": "Steg för kunduppgifter",
+    "description": "Guidesteg för att samla in MSP-användarens identitet, företagsinformation och grundläggande kunduppgifter",
+    "revisit": {
+      "title": "Företagsinformation",
+      "description": "Granska eller uppdatera dina företagsuppgifter.",
+      "fields": {
+        "companyName": {
+          "label": "Företagsnamn",
+          "placeholder": "Acme IT Solutions"
+        }
+      },
+      "note": "Du kan använda den här guiden för att ändra inställningarna för din arbetsyta när som helst."
+    },
+    "common": {
+      "noteLabel": "Obs:"
+    },
+    "header": {
+      "title": "Ditt företag och administratörskonto",
+      "description": "Börja med ditt eget MSP-företags uppgifter och din administratörsinloggning, inte med uppgifterna för en kund som du ger support till."
+    },
+    "fields": {
+      "firstName": {
+        "label": "Förnamn",
+        "placeholder": "John"
+      },
+      "lastName": {
+        "label": "Efternamn",
+        "placeholder": "Doe"
+      },
+      "companyName": {
+        "label": "Företagsnamn",
+        "placeholder": "Acme IT Solutions"
+      },
+      "email": {
+        "label": "E-postadress",
+        "placeholder": "john@acmeit.com",
+        "help": "Den används för att logga in på ditt konto."
+      },
+      "language": {
+        "label": "Språk",
+        "placeholder": "Välj ett språk",
+        "help": "Blir organisationens standardspråk för alla: MSP-personal och kundportalanvändare. Enskilda användare och kunder kan välja ett annat språk senare."
+      }
+    },
+    "address": {
+      "title": "Företagsadress",
+      "description": "Förifylld från dina faktureringsuppgifter – granska och rätta vid behov. Den här adressen visas på dina fakturor och offerter.",
+      "fields": {
+        "addressLine1": {
+          "label": "Adressrad 1",
+          "placeholder": "Storgatan 123"
+        },
+        "addressLine2": {
+          "label": "Adressrad 2",
+          "placeholder": "Kontor 100"
+        },
+        "city": {
+          "label": "Ort"
+        },
+        "stateProvince": {
+          "label": "Delstat/provins"
+        },
+        "postalCode": {
+          "label": "Postnummer"
+        },
+        "country": {
+          "label": "Land",
+          "placeholder": "Välj land"
+        }
+      }
+    },
+    "password": {
+      "resetRequired": {
+        "title": "Lösenordet måste återställas",
+        "description": "Du måste ange ett nytt lösenord för att fortsätta konfigurationen. Det här steget kan inte hoppas över."
+      },
+      "title": "Ange ditt lösenord",
+      "description": "Ange ett nytt lösenord som ersätter ditt tillfälliga lösenord.",
+      "fields": {
+        "newPassword": {
+          "label": "Nytt lösenord",
+          "placeholder": "Skapa ett starkt lösenord"
+        },
+        "confirmPassword": {
+          "label": "Bekräfta lösenord",
+          "placeholder": "Ange ditt lösenord igen",
+          "match": "Lösenorden matchar",
+          "mismatch": "Lösenorden matchar inte"
+        }
+      },
+      "requirements": {
+        "title": "Lösenordet måste innehålla:",
+        "minLength": "Minst 8 tecken",
+        "uppercase": "En stor bokstav",
+        "lowercase": "En liten bokstav",
+        "number": "En siffra",
+        "specialCharacter": "Ett specialtecken"
+      },
+      "strength": {
+        "label": "Lösenordsstyrka: {{strength}}",
+        "strong": "Stark",
+        "medium": "Medel",
+        "weak": "Svag"
+      }
+    },
+    "footer": {
+      "note": "Alla fält på den här sidan måste fyllas i för att fortsätta."
+    }
+  },
+  "teamMembersStep": {
+    "title": "Steg för teammedlemmar",
+    "description": "Guidesteg för att bjuda in de första teammedlemmarna och tilldela roller under introduktionen",
+    "license": {
+      "limitReached": "Licensgränsen har nåtts ({{current}}/{{limit}}). Kontakta supporten för att höja din licensgräns.",
+      "remaining": {
+        "one": "Du kan lägga till ytterligare 1 teammedlem.",
+        "other": "Du kan lägga till ytterligare {{count}} teammedlemmar."
+      },
+      "summary": {
+        "noLimit": "Användare: {{count}} (ingen gräns)",
+        "limited": "Användare: {{current}}/{{limit}}"
+      }
+    },
+    "errors": {
+      "requiredFields": "Fyll i alla obligatoriska fält, inklusive lösenord",
+      "requiredFieldsNoPassword": "Fyll i alla obligatoriska fält",
+      "invalidEmail": "Ange en giltig e-postadress",
+      "passwordLength": "Lösenordet måste vara minst 8 tecken långt",
+      "saveFailed": "Det gick inte att spara teammedlemmen",
+      "inviteFailed": "Det gick inte att skicka inbjudan",
+      "roleRequired": "Välj en roll",
+      "generic": "Ett fel uppstod"
+    },
+    "header": {
+      "title": "Bjud in teammedlemmar",
+      "description": "Lägg till dina teammedlemmar så att de kan komma igång. Du kan hoppa över det här steget och lägga till dem senare."
+    },
+    "created": {
+      "titleOne": "1 teammedlem har skapats",
+      "titleOther": "{{count}} teammedlemmar har skapats",
+      "users": "Skapade användare: {{users}}"
+    },
+    "invited": {
+      "titleOne": "1 inbjudan har skickats",
+      "titleOther": "{{count}} inbjudningar har skickats",
+      "users": "Inbjudna: {{users}}. De får ett e-postmeddelande med en länk för att ange ett eget lösenord."
+    },
+    "member": {
+      "title": "Teammedlem {{index}}",
+      "createdBadge": "Skapad",
+      "invitedBadge": "Inbjuden",
+      "actions": {
+        "saving": "Sparar…",
+        "save": "Spara",
+        "sending": "Skickar…",
+        "sendInvite": "Skicka inbjudan"
+      }
+    },
+    "fields": {
+      "firstName": {
+        "label": "Förnamn",
+        "placeholder": "Jane"
+      },
+      "lastName": {
+        "label": "Efternamn",
+        "placeholder": "Smith"
+      },
+      "email": {
+        "label": "E-post",
+        "placeholder": "jane@youritcompany.com"
+      },
+      "role": {
+        "label": "Roll"
+      },
+      "setupMethod": {
+        "label": "Hur ska användaren få åtkomst?",
+        "email": "Skicka inbjudan via e-post",
+        "password": "Ange ett lösenord själv",
+        "emailHelp": "Användaren får ett e-postmeddelande med en länk för att ange ett eget lösenord. Du behöver inte dela några lösenord.",
+        "passwordHelp": "Du anger ett tillfälligt lösenord nu och delar det direkt med användaren."
+      },
+      "password": {
+        "label": "Tillfälligt lösenord",
+        "placeholder": "Ange tillfälligt lösenord",
+        "help": "Användaren måste ändra lösenordet vid första inloggningen"
+      }
+    },
+    "roles": {
+      "admin": "Administratör",
+      "technician": "Tekniker",
+      "manager": "Chef",
+      "user": "Användare"
+    },
+    "actions": {
+      "saveCurrentFirst": "Spara den aktuella teammedlemmen först",
+      "addAnother": "Lägg till ytterligare en teammedlem"
+    },
+    "unsaved": {
+      "title": "Osparad teammedlem",
+      "description": "Spara den aktuella teammedlemmen innan du lägger till en ny."
+    },
+    "limitReached": {
+      "title": "Användargränsen har nåtts",
+      "description": "Du har nått det högsta antalet användare för ditt nuvarande abonnemang. Kontakta supporten för att höja gränsen."
+    },
+    "optional": {
+      "label": "Valfritt:",
+      "description": "Du kan hoppa över det här steget och bjuda in eller hantera teammedlemmar när som helst via Inställningar > Användare."
+    }
+  },
+  "ticketingConfigStep": {
+    "title": "Steg för konfiguration av ärendehantering",
+    "description": "Guidesteg för att konfigurera tavlor, statusar, prioriteter, kategorier och standardinställningar för SLA under introduktionen",
+    "boards": {
+      "toasts": {
+        "firstDefaultSet": "Den första tavlan har automatiskt angetts som standard",
+        "deleted": "Tavlan har raderats",
+        "defaultUpdated": "Standardtavlan har uppdaterats"
+      },
+      "errors": {
+        "import": "Det gick inte att importera tavlorna",
+        "delete": "Det gick inte att radera tavlan.",
+        "defaultRequired": "Minst en tavla måste anges som standard",
+        "defaultUpdate": "Det gick inte att ange standardtavlan",
+        "duplicate": "Tavlan finns redan",
+        "create": "Det gick inte att skapa tavlan. Försök igen."
+      },
+      "delete": {
+        "fallbackEntity": "den här tavlan"
+      },
+      "title": "Tavlor",
+      "description": "Tavlor hjälper dig att organisera ärenden efter avdelning, team eller typ av arbetsflöde. När kunder skapar ärenden via kundportalen tilldelas ärendena automatiskt den tavla som är markerad som standard.",
+      "tip": "Klicka på stjärnan i kolumnen Standard för att ändra vilken tavla som är standard.",
+      "actions": {
+        "import": "Importera standardalternativ",
+        "add": "Lägg till ny tavla",
+        "confirmAdd": "Lägg till tavla"
+      },
+      "addForm": {
+        "title": "Lägg till ny tavla",
+        "fields": {
+          "name": {
+            "label": "Tavlans namn *",
+            "placeholder": "Ange tavlans namn"
+          },
+          "description": {
+            "label": "Beskrivning",
+            "placeholder": "Ange beskrivning"
+          },
+          "displayOrder": {
+            "label": "Visningsordning",
+            "placeholder": "Lämna tomt för automatisk generering",
+            "help": "Styr i vilken ordning tavlor visas i rullgardinsmenyer på hela plattformen. Lägre nummer visas först."
+          },
+          "itil": {
+            "label": "Anpassa den här tavlan till ITIL"
+          }
+        },
+        "configurationTitle": "Tavlans konfiguration"
+      },
+      "import": {
+        "title": "Importera standardtavlor",
+        "success": {
+          "one": "1 tavla har importerats.",
+          "other": "{{count}} tavlor har importerats."
+        }
+      },
+      "table": {
+        "headers": {
+          "name": "Namn",
+          "default": "Standard",
+          "order": "Ordning",
+          "itil": "ITIL"
+        }
+      },
+      "current": {
+        "title": "Nuvarande tavlor",
+        "defaultTitle": "Standardtavla",
+        "setDefaultTitle": "Ange som standardtavla",
+        "removeTitle": "Ta bort tavla"
+      }
+    },
+    "categories": {
+      "import": {
+        "unknownParent": "Okänd överordnad kategori",
+        "title": "Importera standardkategorier",
+        "success": {
+          "one": "1 kategori har importerats.",
+          "other": "{{count}} kategorier har importerats."
+        },
+        "targetBoard": {
+          "label": "Måltavla *",
+          "placeholder": "Välj en tavla för importerade kategorier",
+          "help": "Alla importerade kategorier tilldelas den här tavlan"
+        },
+        "parentAutoSelectTitle": "Den överordnade kategorin väljs automatiskt"
+      },
+      "errors": {
+        "missingParents": "Det går inte att importera underkategorier utan deras överordnade kategorier. Markera även: {{parents}}",
+        "duplicate": "Kategorin finns redan på den här tavlan",
+        "create": "Det gick inte att skapa kategorin. Försök igen.",
+        "delete": "Det gick inte att radera kategorin."
+      },
+      "delete": {
+        "fallbackEntity": "den här kategorin"
+      },
+      "toasts": {
+        "deleted": "Kategorin har raderats"
+      },
+      "title": "Kategorier",
+      "requiresBoard": "(kräver en tavla)",
+      "description": "Kategorier hjälper dig att organisera ärenden efter typ av problem eller förfrågan. Du kan skapa överordnade kategorier med underkategorier för bättre struktur. Exempel är teknisk support (med underkategorier som maskinvara, programvara och nätverk) eller tjänsteförfrågningar.",
+      "actions": {
+        "import": "Importera standardalternativ",
+        "add": "Lägg till ny kategori",
+        "confirmAdd": "Lägg till kategori"
+      },
+      "addForm": {
+        "title": "Lägg till ny kategori",
+        "fields": {
+          "name": {
+            "label": "Kategorinamn *",
+            "placeholder": "Ange kategorinamn"
+          },
+          "board": {
+            "label": "Måltavla *",
+            "placeholder": "Välj en tavla"
+          },
+          "parent": {
+            "label": "Överordnad kategori",
+            "noneOption": "Ingen (kategori på översta nivån)",
+            "placeholder": "Välj överordnad kategori"
+          },
+          "displayOrder": {
+            "label": "Visningsordning",
+            "placeholder": "Lämna tomt för automatisk generering",
+            "help": "Styr i vilken ordning kategorier visas i rullgardinsmenyer på hela plattformen. Lägre nummer visas först."
+          }
+        }
+      },
+      "table": {
+        "headers": {
+          "name": "Namn",
+          "order": "Ordning"
+        }
+      },
+      "current": {
+        "title": "Nuvarande kategorier ({{count}} totalt)",
+        "removeTitle": "Ta bort kategori"
+      }
+    },
+    "statuses": {
+      "toasts": {
+        "firstDefaultSet": "Den första öppna statusen har automatiskt angetts som standard",
+        "deleted": "Statusen har raderats",
+        "defaultUpdated": "Standardstatusen har uppdaterats"
+      },
+      "delete": {
+        "fallbackEntity": "den här statusen"
+      },
+      "errors": {
+        "delete": "Det gick inte att radera statusen.",
+        "defaultRequired": "Minst en status måste anges som standard",
+        "closedCannotBeDefault": "Stängda statusar kan inte anges som standard",
+        "selectBoardForDefault": "Välj eller skapa en tavla innan du ändrar standardinställningarna för statusar.",
+        "defaultUpdate": "Det gick inte att ange standardstatusen",
+        "duplicate": "Statusen finns redan",
+        "selectBoardForAdd": "Välj eller skapa en tavla innan du lägger till statusar.",
+        "create": "Det gick inte att skapa statusen. Försök igen."
+      },
+      "title": "Statusar",
+      "description": "Statusar konfigureras per tavla. Välj en tavla nedan för att definiera livscykeln för ärenden på den tavlan. Tavlans öppna standardstatus tilldelas automatiskt nya ärenden som skapas på tavlan.",
+      "tip": "Tavlor delar inte statusar. Byt tavla här för att granska eller ändra varje tavlas uppsättning statusar.",
+      "fields": {
+        "board": {
+          "label": "Tavla",
+          "placeholder": "Välj tavla"
+        }
+      },
+      "noBoardWarning": "Skapa eller importera en tavla innan du konfigurerar statusar. Varje tavla behöver en egen öppen standardstatus.",
+      "actions": {
+        "import": "Importera standardalternativ",
+        "add": "Lägg till ny status",
+        "confirmAdd": "Lägg till status"
+      },
+      "addForm": {
+        "title": "Lägg till ny status",
+        "fields": {
+          "name": {
+            "label": "Statusnamn *",
+            "placeholder": "Ange statusnamn"
+          },
+          "displayOrder": {
+            "label": "Visningsordning",
+            "placeholder": "Lämna tomt för automatisk generering",
+            "help": "Styr i vilken ordning statusar visas i rullgardinsmenyer på hela plattformen. Lägre nummer visas först.",
+            "reassigned": "Visningsordningen {{requested}} används redan på den här tavlan, så {{assigned}} användes i stället."
+          },
+          "state": {
+            "label": "Statustyp",
+            "closedLabel": "Stängd status",
+            "openLabel": "Öppen status",
+            "closedHelp": "Den här statusen anger att ärendet är löst och stängt",
+            "openHelp": "Den här statusen anger att ärendet fortfarande är öppet och kräver åtgärd"
+          }
+        }
+      },
+      "import": {
+        "title": "Importera standardstatusar",
+        "targetBoard": "Importerar till {{boardName}}.",
+        "success": {
+          "one": "1 status har importerats.",
+          "other": "{{count}} statusar har importerats."
+        }
+      },
+      "table": {
+        "headers": {
+          "name": "Namn",
+          "type": "Typ",
+          "default": "Standard",
+          "order": "Ordning"
+        }
+      },
+      "types": {
+        "closed": "Stängd",
+        "open": "Öppen"
+      },
+      "current": {
+        "title": "Nuvarande statusar",
+        "titleWithBoard": "Nuvarande statusar för {{boardName}}",
+        "defaultTitle": "Standardstatus",
+        "setDefaultTitle": "Ange som standardstatus",
+        "removeTitle": "Ta bort status"
+      },
+      "empty": {
+        "forBoard": "{{boardName}} har inga statusar ännu. Lägg till eller importera minst en öppen standardstatus innan du slutför introduktionen.",
+        "noBoardSelected": "Välj en tavla för att konfigurera dess statusar."
+      }
+    },
+    "priorities": {
+      "errors": {
+        "duplicate": "Prioriteten finns redan",
+        "missingSession": "Användarsessionen hittades inte. Ladda om och försök igen.",
+        "create": "Det gick inte att skapa prioriteten. Försök igen.",
+        "delete": "Det gick inte att radera prioriteten."
+      },
+      "delete": {
+        "fallbackEntity": "den här prioriteten"
+      },
+      "toasts": {
+        "deleted": "Prioriteten har raderats"
+      },
+      "title": "Prioriteter",
+      "description": "Prioriteter hjälper till att avgöra hur brådskande ärenden är och vilka servicenivåavtal (SLA) som gäller. Varje prioritet har en färg för snabb visuell identifiering. Vanliga prioriteter är kritisk (röd), hög (orange), medel (blå) och låg (grön).",
+      "actions": {
+        "import": "Importera standardalternativ",
+        "add": "Lägg till ny prioritet",
+        "confirmAdd": "Lägg till prioritet"
+      },
+      "addForm": {
+        "title": "Lägg till ny prioritet",
+        "fields": {
+          "name": {
+            "label": "Prioritetsnamn *",
+            "placeholder": "Ange prioritetsnamn"
+          },
+          "displayOrder": {
+            "label": "Visningsordning",
+            "placeholder": "Lämna tomt för automatisk generering",
+            "help": "Styr i vilken ordning prioriteter visas i rullgardinsmenyer på hela plattformen. Lägre nummer visas först."
+          },
+          "color": {
+            "label": "Prioritetsfärg",
+            "choose": "Välj färg"
+          }
+        }
+      },
+      "import": {
+        "title": "Importera standardprioriteter",
+        "success": {
+          "one": "1 prioritet har importerats.",
+          "other": "{{count}} prioriteter har importerats."
+        }
+      },
+      "table": {
+        "headers": {
+          "name": "Namn",
+          "color": "Färg",
+          "order": "Ordning"
+        }
+      },
+      "current": {
+        "title": "Nuvarande prioriteter",
+        "removeTitle": "Ta bort prioritet"
+      }
+    },
+    "common": {
+      "errors": {
+        "validateDeletion": "Det gick inte att validera raderingen. Försök igen."
+      },
+      "noteLabel": "Obs:",
+      "tipLabel": "Tips:",
+      "actions": {
+        "importing": "Importerar…",
+        "importCount": "Importera ({{count}})"
+      },
+      "table": {
+        "actions": "Åtgärder"
+      }
+    },
+    "header": {
+      "title": "Konfigurera ärendehanteringssystem",
+      "description": "Konfigurera ditt system för supportärenden. Importera standardkonfigurationer eller skapa egna."
+    },
+    "loading": {
+      "description": "Laddar befintlig konfiguration…"
+    },
+    "numbering": {
+      "title": "Ärendenumrering",
+      "description": "Konfigurera hur ärendenummer genereras. Varje ärende får en unik identifierare som består av ett valfritt prefix och ett löpnummer som vid behov kan fyllas ut med inledande nollor.",
+      "fields": {
+        "prefix": {
+          "label": "Ärendeprefix",
+          "placeholder": "TK-",
+          "help": "Valfritt. Lämna tomt om du inte vill ha något prefix eller ange ett eget prefix (t.ex. \"TK-\", \"TICKET-\")"
+        },
+        "paddingLength": {
+          "label": "Utfyllnadslängd",
+          "help": "Minsta antal siffror totalt. Till exempel gör 6 att \"1\" blir \"000001\""
+        },
+        "startNumber": {
+          "label": "Startnummer"
+        }
+      },
+      "example": "Exempel: {{value}}"
+    },
+    "itil": {
+      "actions": {
+        "openReference": "Visa ITIL-kategorier och prioritetsmatris"
+      },
+      "title": "Referens för ITIL-standarder",
+      "categories": {
+        "title": "Standardkategorier och underkategorier enligt ITIL",
+        "hardware": {
+          "title": "Maskinvara",
+          "server": "• Server",
+          "desktopLaptop": "• Stationär/bärbar dator",
+          "networkEquipment": "• Nätverksutrustning",
+          "printer": "• Skrivare",
+          "storage": "• Lagring",
+          "mobileDevice": "• Mobil enhet"
+        },
+        "software": {
+          "title": "Programvara",
+          "operatingSystem": "• Operativsystem",
+          "businessApplication": "• Verksamhetsapplikation",
+          "database": "• Databas",
+          "emailCollaboration": "• E-post/samarbete",
+          "securitySoftware": "• Säkerhetsprogramvara",
+          "customApplication": "• Anpassad applikation"
+        },
+        "network": {
+          "title": "Nätverk",
+          "connectivity": "• Anslutning",
+          "vpn": "• VPN",
+          "wifi": "• Wi-Fi",
+          "internetAccess": "• Internetåtkomst",
+          "lanWan": "• LAN/WAN",
+          "firewall": "• Brandvägg"
+        },
+        "security": {
+          "title": "Säkerhet",
+          "malwareVirus": "• Skadlig programvara/virus",
+          "unauthorizedAccess": "• Obehörig åtkomst",
+          "dataBreach": "• Dataintrång",
+          "phishingSpam": "• Nätfiske/skräppost",
+          "policyViolation": "• Policyöverträdelse",
+          "accountLockout": "• Kontolåsning"
+        },
+        "serviceRequest": {
+          "title": "Tjänsteförfrågan",
+          "accessRequest": "• Åtkomstbegäran",
+          "newUserSetup": "• Konfiguration av ny användare",
+          "softwareInstallation": "• Programvaruinstallation",
+          "equipmentRequest": "• Utrustningsförfrågan",
+          "informationRequest": "• Informationsförfrågan",
+          "changeRequest": "• Ändringsbegäran"
+        }
+      },
+      "matrix": {
+        "title": "ITIL-prioritetsmatris (påverkan × brådska)",
+        "urgency": {
+          "high": "Hög",
+          "label": "Brådska",
+          "mediumHigh": "Medelhög",
+          "medium": "Medel",
+          "mediumLow": "Medellåg",
+          "low": "Låg"
+        },
+        "impact": {
+          "high": "Hög påverkan (1)",
+          "mediumHigh": "Medelhög påverkan (2)",
+          "medium": "Medelstor påverkan (3)",
+          "mediumLow": "Medellåg påverkan (4)",
+          "low": "Låg påverkan (5)"
+        },
+        "priority": {
+          "critical": "Kritisk (1)",
+          "high": "Hög (2)",
+          "medium": "Medel (3)",
+          "low": "Låg (4)",
+          "planning": "Planering (5)"
+        },
+        "explanation": {
+          "impact": "Påverkan: Hur många användare eller verksamhetsfunktioner påverkas?",
+          "urgency": "Brådska: Hur snabbt behöver detta lösas?",
+          "priority": "Prioritet: Beräknas automatiskt utifrån matrisen för påverkan × brådska ovan."
+        }
+      }
+    },
+    "supportEmail": {
+      "label": "Supportens e-postadress",
+      "placeholder": "support@youritcompany.com",
+      "help": "Sparas som din kontaktadress för support – visas för kunder i portalen och används i e-postmeddelanden om bokningar. Anslut en e-postlåda senare via Inställningar > E-post för att automatiskt omvandla inkommande e-post till ärenden."
+    },
+    "finalRequirement": {
+      "label": "Obligatoriskt:",
+      "description": "Konfigurera minst en tavla och en prioritet för att slutföra konfigurationen. Importera standardkonfigurationer för att snabbt konfigurera ditt ärendehanteringssystem."
+    }
+  },
+  "teamSetup": {
+    "title": "Konfigurera ditt konto",
+    "subtitle": "Slutför konfigurationen av ditt konto som teammedlem",
+    "accountInformation": "Kontouppgifter",
+    "name": "Namn:",
+    "email": "E-post:",
+    "role": "Roll:",
+    "password": "Lösenord",
+    "passwordPlaceholder": "Ange ditt lösenord",
+    "confirmPassword": "Bekräfta lösenord",
+    "confirmPasswordPlaceholder": "Bekräfta ditt lösenord",
+    "passwordRequirements": "Lösenordskrav",
+    "requirements": {
+      "minLength": "Minst 8 tecken",
+      "hasUppercase": "En stor bokstav",
+      "hasLowercase": "En liten bokstav",
+      "hasNumber": "En siffra",
+      "hasSpecialChar": "Ett specialtecken",
+      "passwordsMatch": "Lösenorden matchar"
+    },
+    "creatingAccount": "Skapar konto…",
+    "createAccount": "Skapa konto",
+    "alreadyHaveAccount": "Har du redan ett konto?",
+    "signIn": "Logga in",
+    "invalidInvitation": "Ogiltig inbjudan",
+    "invalidInvitationDescription": "Ett problem uppstod med din teaminbjudan",
+    "invalidTokenMessage": "Inbjudningslänken är ogiltig eller har gått ut. Be din administratör att skicka inbjudan igen.",
+    "goToSignIn": "Gå till inloggning",
+    "accountReady": "Kontot är klart. Logga in.",
+    "welcome": "Välkommen till teamet!",
+    "errors": {
+      "noToken": "Ingen inbjudningstoken har angetts",
+      "invalidOrExpired": "Ogiltig eller utgången inbjudningstoken",
+      "verificationFailed": "Det gick inte att verifiera inbjudningstoken",
+      "requirementsNotMet": "Kontrollera att alla lösenordskrav är uppfyllda",
+      "createFailed": "Det gick inte att skapa kontot"
+    }
+  }
+}

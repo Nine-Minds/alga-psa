@@ -123,6 +123,7 @@ const COPY = {
   },
 };
 SUBJECTS.pt = 'Lançamento de horas aprovado';
+SUBJECTS.sv = 'Tidpost godkänd';
 COPY.pt = {
   headerLabel: 'Lançamento de horas aprovado',
   intro: 'Seu lançamento de horas foi aprovado.',
@@ -136,6 +137,20 @@ COPY.pt = {
   textHeader: 'Lançamento de horas aprovado',
   textIntro: 'Seu lançamento de horas foi aprovado:',
   textView: 'Ver lançamento de horas em',
+};
+COPY.sv = {
+  headerLabel: 'Tidpost godkänd',
+  intro: 'Din tidpost har godkänts.',
+  date: 'Datum',
+  duration: 'Varaktighet',
+  project: 'Projekt',
+  task: 'Uppgift',
+  approvedBy: 'Godkänd av',
+  viewButton: 'Visa tidpost',
+  footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+  textHeader: 'Tidpost godkänd',
+  textIntro: 'Din tidpost har godkänts:',
+  textView: 'Visa tidpost på',
 };
 
 /* eslint-enable max-len */

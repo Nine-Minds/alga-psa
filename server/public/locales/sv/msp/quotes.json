@@ -1,0 +1,842 @@
+{
+  "common": {
+    "actions": {
+      "approve": "Godkänn",
+      "back": "Tillbaka",
+      "cancel": "Avbryt",
+      "close": "Stäng",
+      "clone": "Klona",
+      "convert": "Konvertera",
+      "delete": "Radera",
+      "downloadPdf": "Ladda ner PDF",
+      "duplicate": "Duplicera",
+      "edit": "Redigera",
+      "editAsCopy": "Redigera som kopia",
+      "newLayout": "Ny layout",
+      "newQuote": "Ny offert",
+      "newTemplate": "Ny mall",
+      "open": "Öppna",
+      "requestChanges": "Begär ändringar",
+      "resend": "Skicka igen",
+      "revise": "Revidera",
+      "save": "Spara",
+      "saveQuote": "Spara offert",
+      "saveTemplate": "Spara mall",
+      "send": "Skicka",
+      "sendReminder": "Skicka påminnelse",
+      "sendToClient": "Skicka till kund",
+      "setAsDefault": "Ange som standard",
+      "submitForApproval": "Skicka in för godkännande",
+      "done": "Klart"
+    },
+    "badges": {
+      "standard": "Standard"
+    },
+    "columns": {
+      "actions": "Åtgärder",
+      "amount": "Belopp",
+      "client": "Kund",
+      "created": "Skapad",
+      "currency": "Valuta",
+      "date": "Datum",
+      "default": "Standard",
+      "items": "Rader",
+      "name": "Namn",
+      "quoteDate": "Offertdatum",
+      "quoteNumber": "Offertnummer",
+      "source": "Källa",
+      "status": "Status",
+      "title": "Titel",
+      "total": "Totalt",
+      "validUntil": "Giltig till"
+    },
+    "labels": {
+      "client": "Kund",
+      "contact": "Kontakt",
+      "currency": "Valuta",
+      "description": "Beskrivning / omfattning",
+      "discounts": "Rabatter",
+      "lineItems": "Rader",
+      "poNumber": "Inköpsordernummer",
+      "quoteDate": "Offertdatum",
+      "quoteLayout": "Offertlayout",
+      "subtotal": "Delsumma",
+      "tax": "Skatt",
+      "termsAndConditions": "Villkor",
+      "title": "Titel",
+      "total": "Totalt",
+      "validUntil": "Giltig till"
+    },
+    "states": {
+      "generating": "Genererar…",
+      "loading": "Laddar…",
+      "saving": "Sparar…",
+      "sending": "Skickar…"
+    }
+  },
+  "quotesTab": {
+    "title": "Offerter",
+    "actions": {
+      "quoteActions": "Offertåtgärder"
+    },
+    "tabs": {
+      "active": "Aktiva ({{count}})",
+      "approval": "Kö för godkännande",
+      "closed": "Stängda ({{count}})",
+      "sent": "Skickade ({{count}})"
+    },
+    "filters": {
+      "allClients": "Alla kunder",
+      "client": "Kund"
+    },
+    "empty": {
+      "byCategory": "Inga offerter i den här kategorin.",
+      "title": "Inga offerter hittades",
+      "description": "Skapa en offert för att komma igång."
+    },
+    "dialogs": {
+      "delete": {
+        "title": "Radera offert",
+        "description": "Åtgärden kan inte ångras."
+      },
+      "send": {
+        "additionalEmails": "Ytterligare mottagare",
+        "additionalEmailsPlaceholder": "email@example.com, another@example.com",
+        "additionalRecipients": "Ytterligare mottagare (kommaseparerade)",
+        "description": "Offertens PDF-fil skickas via e-post till kundens faktureringskontakter och offertens status ändras till ”Skickad”.",
+        "message": "Meddelande",
+        "messageOptional": "Meddelande (valfritt)",
+        "messagePlaceholder": "Lägg till ett personligt meddelande till mottagaren…",
+        "title": "Skicka offert"
+      }
+    },
+    "errors": {
+      "delete": "Det gick inte att radera offerten.",
+      "duplicate": "Det gick inte att duplicera offerten.",
+      "load": "Det gick inte att ladda offerterna",
+      "send": "Det gick inte att skicka offerten.",
+      "resend": "Det gick inte att skicka offerten igen.",
+      "sendReminder": "Det gick inte att skicka offertpåminnelsen."
+    },
+    "loading": "Laddar offerter…",
+    "rowActions": {
+      "delete": "Radera",
+      "downloadPdf": "Ladda ner PDF",
+      "duplicate": "Duplicera",
+      "open": "Öppna",
+      "resend": "Skicka igen",
+      "sendReminder": "Skicka påminnelse",
+      "sendToClient": "Skicka till kund"
+    }
+  },
+  "quoteForm": {
+    "actions": {
+      "cancelQuote": "Annullera offert",
+      "convertToBoth": "Konvertera till båda",
+      "convertToContract": "Konvertera till avtal",
+      "convertToInvoice": "Konvertera till faktura",
+      "createNewRevision": "Skapa ny revision",
+      "sendQuote": "Skicka offert",
+      "saving": "Sparar…",
+      "saveTemplate": "Spara mall",
+      "saveQuote": "Spara offert",
+      "requestApproval": "Begär godkännande",
+      "sendToClient": "Skicka till kund",
+      "approve": "Godkänn",
+      "revise": "Revidera",
+      "requestChanges": "Begär ändringar",
+      "resend": "Skicka igen",
+      "sendReminder": "Skicka påminnelse",
+      "pdf": "PDF",
+      "duplicate": "Duplicera",
+      "back": "Tillbaka",
+      "moreActions": "Fler åtgärder",
+      "cancel": "Avbryt",
+      "previewPdf": "Förhandsgranska PDF",
+      "backToQuotes": "Tillbaka till offerter",
+      "backToTemplates": "Tillbaka till offertmallar",
+      "convertToSalesOrder": "Konvertera till försäljningsorder",
+      "convert": "Konvertera till…"
+    },
+    "headings": {
+      "editQuote": "Redigera offert",
+      "editTemplate": "Redigera offertmall",
+      "newQuote": "Ny offert",
+      "newTemplate": "Ny offertmall",
+      "quote": "Offert",
+      "quoteWithNumber": "Offert {{quoteNumber}}",
+      "quoteWithNumberAndVersion": "Offert {{quoteNumber}} v{{version}}",
+      "templateQuoteFallback": "Malloffert"
+    },
+    "fields": {
+      "additionalEmails": "Ytterligare e-postadresser (kommaseparerade)",
+      "clientNotes": "Anteckningar till kund",
+      "createFromTemplate": "Skapa från mall",
+      "messageOptional": "Meddelande (valfritt)",
+      "quoteLayoutHelp": "Välj layout för offertens PDF-fil. Lämna tomt för att använda standardlayouten.",
+      "recipients": "Mottagare"
+    },
+    "placeholders": {
+      "additionalEmails": "email@example.com, another@example.com",
+      "message": "Lägg till ett personligt meddelande till kunden…",
+      "selectClient": "Välj kund",
+      "selectContact": "Välj kontakt",
+      "selectCurrency": "Välj valuta",
+      "startFromScratch": "Börja från grunden",
+      "useDefaultLayout": "Använd standardlayout"
+    },
+    "alerts": {
+      "accepted": "Offert accepterad",
+      "converted": "Offert konverterad",
+      "convertedDescription": "Den här offerten har konverterats till ett avtal och/eller en faktura.",
+      "quote": "Offert",
+      "rejected": "Offert avböjd"
+    },
+    "dialogs": {
+      "approval": {
+        "approveDescription": "Godkänn offerten så att den kan skickas till kunden.",
+        "approveTitle": "Godkänn offert",
+        "approveComment": "Kommentar (valfri)",
+        "approveCommentPlaceholder": "Lägg till en valfri anteckning…",
+        "changesDescription": "Återställ offerten till utkast med begärda ändringar.",
+        "changesTitle": "Begär ändringar",
+        "changesComment": "Begärda ändringar",
+        "changesCommentPlaceholder": "Beskriv vilka ändringar som behövs…",
+        "processing": "Bearbetar…"
+      },
+      "conversion": {
+        "title": "Förhandsgranskning av konvertering",
+        "description": "Granska vad som skapas när offerten konverteras innan du bekräftar."
+      },
+      "send": {
+        "description": "Offerten skickas via e-post till kundens faktureringskontakter och offertens status ändras till ”Skickad”.",
+        "title": "Skicka offert till kund",
+        "additionalEmails": "Ytterligare mottagare",
+        "message": "Meddelande"
+      }
+    },
+    "errorActions": {
+      "approveQuote": "godkänna offerten",
+      "cancelQuote": "annullera offerten",
+      "requestChanges": "begära ändringar",
+      "resendQuote": "skicka offerten igen",
+      "sendQuote": "skicka offerten",
+      "sendReminder": "skicka påminnelsen",
+      "submitForApproval": "skicka in för godkännande"
+    },
+    "errors": {
+      "convert": "Det gick inte att konvertera offerten",
+      "createRevision": "Det gick inte att skapa revisionen",
+      "downloadPdf": "Det gick inte att ladda ner PDF-filen",
+      "duplicate": "Det gick inte att duplicera offerten",
+      "load": "Det gick inte att ladda offertformuläret",
+      "loadConversionPreview": "Det gick inte att ladda förhandsgranskningen av konverteringen",
+      "notFound": "Offerten hittades inte",
+      "save": "Det gick inte att spara offerten",
+      "saveFailed": "Det gick inte att spara offerten",
+      "workflowAction": "Det gick inte att {{action}}",
+      "removeItem": "Det gick inte att ta bort offertraden"
+    },
+    "loading": "Laddar offertformulär…",
+    "notices": {
+      "approved": "Offerten har godkänts och är klar att skickas.",
+      "cancelled": "Offerten har annullerats.",
+      "createdDraftContract": "Avtalsutkastet {{name}} har skapats.",
+      "createdDraftContractAndInvoice": "Avtalsutkastet {{contractName}} och fakturautkastet {{invoiceName}} har skapats.",
+      "createdDraftInvoice": "Fakturautkastet {{name}} har skapats.",
+      "reminderSent": "Offertpåminnelsen har skickats.",
+      "requestedChanges": "Offerten har återställts till utkast med begärda ändringar.",
+      "resent": "Offerten har skickats igen.",
+      "sent": "Offerten har skickats till kunden.",
+      "submittedForApproval": "Offerten har skickats in för internt godkännande."
+    },
+    "readOnlyNotice": "Den här offerten är skrivskyddad. Skapa en ny revision för att göra ändringar.",
+    "validation": {
+      "clientRequired": "Kund krävs",
+      "titleRequired": "Titel krävs om offerten inte skapas från en mall"
+    },
+    "header": {
+      "editTemplate": "Redigera offertmall",
+      "newTemplate": "Ny offertmall",
+      "editQuote": "Redigera offert",
+      "newQuote": "Ny offert",
+      "version": "v{{version}}",
+      "quoteTotalLabel": "Offertens totalsumma"
+    },
+    "breadcrumb": {
+      "billing": "Debitering",
+      "quoteTemplates": "Offertmallar",
+      "quotes": "Offerter",
+      "newQuote": "Ny offert"
+    },
+    "subtitle": {
+      "template": "Mall · {{description}}",
+      "forClient": "För {{clientName}}",
+      "expires": "Går ut {{date}}"
+    },
+    "banners": {
+      "acceptedTitle": "Offert accepterad",
+      "acceptedBy": "Accepterad av: {{name}}",
+      "acceptedOn": "Accepterad den: {{date}}",
+      "rejectedTitle": "Offert avböjd",
+      "rejectedOn": "Avböjd den: {{date}}",
+      "rejectedReason": "Orsak: {{reason}}",
+      "convertedTitle": "Offert konverterad",
+      "convertedDescription": "Den här offerten har konverterats till ett avtal och/eller en faktura."
+    },
+    "noticeTitle": "Offert",
+    "essentials": {
+      "title": "Grunduppgifter",
+      "subtitle": "Visas för kunden i offertdokumentet.",
+      "titleField": "Titel",
+      "descriptionField": "Beskrivning / omfattning",
+      "descriptionHelp": "Ett kort stycke som visas direkt under titeln i PDF-filen.",
+      "client": "Kund",
+      "clientPlaceholder": "Välj kund",
+      "contact": "Kontakt",
+      "contactPlaceholder": "Välj kontakt",
+      "currency": "Valuta",
+      "currencyPlaceholder": "Välj valuta",
+      "quoteDate": "Offertdatum",
+      "validUntil": "Giltig till",
+      "validUntilHelp": "Offerten går automatiskt ut detta datum."
+    },
+    "lineItems": {
+      "title": "Rader",
+      "subtitleEmpty": "Inga rader ännu.",
+      "subtitleCount": "Antal rader: {{count}} · {{mix}}",
+      "mixBoth": "återkommande debitering och engångsdebitering",
+      "mixRecurring": "återkommande debitering",
+      "mixOneTime": "engångsdebitering",
+      "addLocation": "+ Lägg till plats",
+      "fromTemplate": "+ Från mall"
+    },
+    "clientFacing": {
+      "title": "Text till kunden",
+      "subtitle": "Visas i PDF-filen, under summorna.",
+      "notes": "Anteckningar till kund (valfria)",
+      "terms": "Villkor (valfria)",
+      "termsPlaceholder": "Lägg till villkor, länkar och stycken…"
+    },
+    "moreDetails": {
+      "title": "Fler detaljer",
+      "subtitle": "Inköpsordernummer, affärsmöjlighet, PDF-layout",
+      "poNumber": "Inköpsordernummer",
+      "opportunity": "Affärsmöjlighet",
+      "opportunityPlaceholder": "Affärsmöjlighets-ID (valfritt)",
+      "pdfLayout": "PDF-layout",
+      "pdfLayoutPlaceholder": "Använd standardlayout",
+      "pdfLayoutHelp": "Välj vilken layout kunden ska se. Behåll standardvalet för att använda klientorganisationens standardinställning."
+    },
+    "footer": {
+      "savedAgo": "Ändringar sparade · {{ago}}",
+      "saving": "Sparar…",
+      "unsaved": "Osparade ändringar"
+    },
+    "sidebar": {
+      "quoteTotal": "Offertens totalsumma",
+      "recurringPerMonth": "{{amount}} återkommande / månad",
+      "subtotal": "Delsumma",
+      "discounts": "Rabatter",
+      "tax": "Skatt",
+      "statusLabel": "Status",
+      "approvalLabel": "Godkännande",
+      "approvalMessage": "Offerter måste godkännas av försäljningsansvarig innan de skickas.",
+      "documentLayoutLabel": "Dokumentlayout",
+      "defaultLayout": "Klientorganisationens standardinställning",
+      "standardLayout": "Standard",
+      "customLayout": "Anpassad",
+      "tenantDefault": "Klientorganisationens standardinställning",
+      "changeLayout": "Ändra"
+    }
+  },
+  "quoteDetail": {
+    "title": "Offertdetaljer",
+    "actions": {
+      "backToQuotes": "Tillbaka till offerter",
+      "openConvertedContract": "Öppna konverterat avtal",
+      "openConvertedInvoice": "Öppna konverterad faktura",
+      "preview": "Förhandsgranska",
+      "saveAsTemplate": "Spara som mall",
+      "back": "Tillbaka",
+      "openConvertedSalesOrder": "Konverterad till {{number}}"
+    },
+    "sections": {
+      "activityLog": "Aktivitetslogg",
+      "clientNotes": "Anteckningar till kund",
+      "internalNotes": "Interna anteckningar",
+      "lineItems": "Rader",
+      "quoteLayout": "Offertlayout",
+      "scopeOfWork": "Arbetets omfattning",
+      "termsAndConditions": "Villkor",
+      "versionHistory": "Versionshistorik"
+    },
+    "alerts": {
+      "clientConfigurationSubmitted": "Kundens val har skickats in",
+      "clientConfigurationSubmittedDescription": "Granska de valfria raderna nedan innan du konverterar offerten. Valda rader är markerade som inkluderade, och avböjda rader är markerade för uppföljning.",
+      "update": "Offertuppdatering"
+    },
+    "dialogs": {
+      "approval": {
+        "approveDescription": "Godkänn offerten så att den kan skickas till kunden. Du kan lägga till en valfri kommentar.",
+        "changesDescription": "Återställ offerten till utkast med begärda ändringar. Beskriv vad som behöver revideras."
+      },
+      "send": {
+        "message": "Valfritt meddelande att inkludera i e-postmeddelandet"
+      }
+    },
+    "status": {
+      "accepted": "Offert accepterad",
+      "acceptedBy": "Accepterad av:",
+      "acceptedOn": "Accepterad den:",
+      "reason": "Orsak:",
+      "rejected": "Offert avböjd",
+      "rejectedOn": "Avböjd den:"
+    },
+    "empty": {
+      "activity": "Ingen offertaktivitet har registrerats ännu.",
+      "lineItems": "Offerten har inga rader ännu.",
+      "revisions": "Offerten har inga tidigare revisioner ännu."
+    },
+    "clientSelections": {
+      "declinedOptionalItem": "Kunden avböjde den här valfria raden",
+      "selectedOptionalItem": "Kunden valde den här valfria raden"
+    },
+    "errors": {
+      "approve": "Det gick inte att godkänna offerten",
+      "assignTemplate": "Det gick inte att tilldela mallen",
+      "cancel": "Det gick inte att annullera offerten",
+      "convert": "Det gick inte att konvertera offerten",
+      "delete": "Det gick inte att radera offerten",
+      "deleteUnavailable": "Offerten kunde inte raderas",
+      "downloadPdf": "Det gick inte att generera offertens PDF-fil",
+      "duplicate": "Det gick inte att duplicera offerten",
+      "load": "Det gick inte att ladda offertdetaljerna",
+      "loadConversionPreview": "Det gick inte att ladda förhandsgranskningen av konverteringen",
+      "notFound": "Offerten hittades inte",
+      "preview": "Det gick inte att generera offertens förhandsgranskning",
+      "requestChanges": "Det gick inte att begära ändringar i offerten",
+      "resend": "Det gick inte att skicka offerten igen",
+      "revise": "Det gick inte att skapa en offertrevision",
+      "saveAsTemplate": "Det gick inte att spara offerten som mall",
+      "send": "Det gick inte att skicka offerten",
+      "sendReminder": "Det gick inte att skicka offertpåminnelsen",
+      "submitForApproval": "Det gick inte att skicka in offerten för godkännande"
+    },
+    "labels": {
+      "phase": "Fas: {{phase}}",
+      "templateQuote": "Malloffert",
+      "customItem": "Anpassad rad",
+      "optional": "Valfri",
+      "recurring": "Återkommande"
+    },
+    "loading": "Laddar offertdetaljer…",
+    "notices": {
+      "approved": "Offerten har godkänts och är klar att skickas.",
+      "reminderSent": "Offertpåminnelsen har skickats till de konfigurerade faktureringsmottagarna.",
+      "requestedChanges": "Offerten har återställts till utkast med begärda ändringar.",
+      "resent": "Offerten har skickats igen till de konfigurerade faktureringsmottagarna.",
+      "sent": "Offerten har skickats till kunden.",
+      "submittedForApproval": "Offerten har skickats in för internt godkännande.",
+      "templateAssigned": "Dokumentmallen har tilldelats.",
+      "templateCleared": "Dokumentmallen har tagits bort (standardmallen används).",
+      "createdSalesOrder": "Försäljningsorderutkastet {{number}} har skapats. Produktraderna faktureras vid leverans."
+    },
+    "preview": {
+      "loading": "Laddar förhandsgranskning…"
+    },
+    "table": {
+      "description": "Beskrivning",
+      "billing": "Debitering",
+      "quantity": "Antal",
+      "total": "Totalt",
+      "unitPrice": "Enhetspris"
+    },
+    "locations": {
+      "groupHeading": "Plats",
+      "unassigned": "Rader utan plats",
+      "subtotal": "Delsumma för platsen"
+    },
+    "availability": {
+      "onHand": "I lager: {{count}}"
+    }
+  },
+  "quoteLineItems": {
+    "title": "Rader",
+    "actions": {
+      "addDiscount": "Lägg till rabatt",
+      "collapse": "Fäll ihop",
+      "expand": "Fäll ut",
+      "hideDiscount": "Dölj rabatt",
+      "remove": "Ta bort"
+    },
+    "billingMethods": {
+      "fixed": "Fast",
+      "hourly": "Per timme",
+      "perUnit": "Per enhet",
+      "usage": "Förbrukningsbaserad"
+    },
+    "columns": {
+      "actions": "Åtgärder",
+      "billing": "Debitering",
+      "flags": "Markeringar",
+      "item": "Rad",
+      "move": "Flytta",
+      "quantity": "Antal",
+      "total": "Totalt",
+      "unitPrice": "Enhetspris"
+    },
+    "labels": {
+      "customItem": "Anpassad rad",
+      "itemCountOne": "1 rad",
+      "itemCountOther": "{{count}} rader",
+      "noPriceInCurrency": "Inget pris i {{currencyCode}}",
+      "optional": "Valfri",
+      "phaseSection": "Fas / avsnitt",
+      "recurring": "Återkommande",
+      "service": "tjänst",
+      "setPrice": "Ange pris",
+      "ungroupedItems": "Ogrupperade rader"
+    },
+    "placeholders": {
+      "phaseSection": "t.ex. kartläggning, utrullning, pågående",
+      "selectItem": "Välj rad",
+      "selectService": "Välj tjänst",
+      "servicePicker": "Sök eller skriv ett namn på en anpassad rad…"
+    },
+    "discounts": {
+      "badge": "Rabatt",
+      "description": {
+        "fixed": "Rabatt",
+        "percentage": "Rabatt ({{value}} %)"
+      },
+      "fixed": "Fast rabatt",
+      "fullQuoteSubtotal": "Gäller offertens hela delsumma",
+      "fullQuote": "Hela offerten",
+      "item": "Specifik rad",
+      "percentage": "Procentuell rabatt",
+      "service": "Specifik tjänst",
+      "targets": {
+        "fullQuote": "på hela offerten",
+        "namedItem": "på ”{{name}}”",
+        "namedService": "på {{name}}",
+        "specificItem": "på en specifik rad",
+        "specificService": "på en specifik tjänst"
+      },
+      "types": {
+        "fixed": "Fast",
+        "percentage": "Procent"
+      }
+    },
+    "markup": {
+      "badge": "{{sign}}{{value}} % påslag",
+      "unavailable": "Påslag saknas",
+      "unavailableTooltip": "Påslaget kan inte beräknas eftersom kostnaden registreras i {{costCurrency}} och offerten är i {{quoteCurrency}}."
+    },
+    "empty": "Inga rader ännu. Använd katalogsökningen ovan för att lägga till din första rad.",
+    "searchPlaceholder": "Sök eller skriv ett namn på en anpassad rad…",
+    "locations": {
+      "groupHeading": "Plats {{index}}",
+      "pickerPlaceholder": "Välj en plats",
+      "unassigned": "Rader utan plats visas här tills en plats har valts.",
+      "removeGroup": "Ta bort plats",
+      "subtotal": "Delsumma för platsen",
+      "addLocationButton": "+ Lägg till plats",
+      "needMoreLocations": "Den här kunden har bara en aktiv plats. Lägg till en andra plats i kundinställningarna för att kunna skapa offerter för flera platser.",
+      "emptyGroup": "Inga rader för den här platsen ännu."
+    }
+  },
+  "quoteRecipients": {
+    "trigger": {
+      "add": "Lägg till intern användare eller kundkontakt…",
+      "noClient": "Välj en kund först",
+      "noneAvailable": "Inga användare eller kontakter tillgängliga"
+    },
+    "searchPlaceholder": "Sök efter namn eller e-postadress…",
+    "empty": {
+      "noMatches": "Inga träffar",
+      "noneAvailable": "Inga mottagare tillgängliga"
+    },
+    "kind": {
+      "contact": "Kontakt",
+      "internal": "Intern"
+    },
+    "removeAriaLabel": "Ta bort {{email}}",
+    "errors": {
+      "contactsLoadFailed": "Det gick inte att ladda kundkontakterna."
+    }
+  },
+  "quoteConversion": {
+    "title": "Konvertera offert",
+    "description": "Konvertera den accepterade offerten ”{{title}}” till avtal och/eller fakturor.",
+    "loading": "Laddar förhandsgranskning av konvertering…",
+    "mode": {
+      "contract": {
+        "label": "Endast avtal",
+        "description": "Skapar ett avtalsutkast med återkommande tjänsterader. Rader med engångsdebitering inkluderas inte."
+      },
+      "invoice": {
+        "label": "Endast faktura",
+        "description": "Skapar ett fakturautkast med engångsavgifter. Rader med återkommande debitering inkluderas inte."
+      },
+      "both": {
+        "label": "Avtal + faktura",
+        "description": "Skapar både ett avtalsutkast (för rader med återkommande debitering) och ett fakturautkast (för rader med engångsdebitering)."
+      },
+      "salesOrder": {
+        "label": "Försäljningsorder (produktrader)",
+        "description": "Flyttar produktrader med engångsdebitering till ett försäljningsorderutkast som faktureras vid leverans. Dessa rader undantas från fakturautkastet så att inget dubbelfaktureras."
+      }
+    },
+    "sections": {
+      "contractItems": "Avtalsrader",
+      "conversionMode": "Konverteringsläge",
+      "excludedFromConversion": "Undantagna från konvertering",
+      "excludedItems": "Undantagna rader",
+      "invoiceItems": "Fakturarader",
+      "itemMappingPreview": "Förhandsgranskning av radmappning",
+      "onSalesOrder": "På försäljningsorder {{soNumber}}",
+      "quoteTotal": "Offertens totalsumma",
+      "salesOrderItems": "Försäljningsorderrader",
+      "statusAfterConversion": "Status efter konvertering",
+      "willBecomeContractLines": "Blir avtalsrader",
+      "willBecomeInvoiceCharges": "Blir avgifter på fakturan",
+      "willBecomeSalesOrderLines": "Blir försäljningsorderrader"
+    },
+    "empty": {
+      "contractItems": "Inga rader med återkommande debitering konverteras till ett avtal.",
+      "invoiceItems": "Inga rader med engångsdebitering konverteras till en faktura.",
+      "invoiceItemsOnSalesOrder": "Alla rader med engångsdebitering finns på försäljningsorder {{soNumber}} och faktureras därifrån vid leverans.",
+      "salesOrderItems": "Inga produktrader flyttas till en försäljningsorder."
+    },
+    "summary": {
+      "billedViaSalesOrder": "Faktureras från försäljningsorder {{soNumber}} vid leverans",
+      "converted": "Konverterad",
+      "discount": "Rabatt",
+      "fixed": "fast",
+      "notConverted": "Inte konverterad"
+    },
+    "partial": {
+      "alreadyConverted": "Den här offerten har redan konverterats delvis.",
+      "contractCreated": "Ett avtal har skapats.",
+      "invoiceCreated": "En faktura har skapats.",
+      "remainingItems": "Du kan konvertera de återstående raderna.",
+      "title": "Delvis konvertering",
+      "description": "Vissa poster för den här offerten finns redan."
+    },
+    "actions": {
+      "contract": "Skapa avtalsutkast",
+      "convertQuote": "Konvertera offert",
+      "invoice": "Skapa fakturautkast",
+      "both": "Skapa båda posterna",
+      "converting": "Konverterar…",
+      "salesOrder": "Skapa försäljningsorder"
+    },
+    "errors": {
+      "convert": "Det gick inte att konvertera offerten",
+      "load": "Det gick inte att ladda förhandsgranskningen av konverteringen",
+      "title": "Fel"
+    },
+    "salesOrder": {
+      "existingNote": "Den här offerten har redan konverterats till försäljningsorder {{soNumber}}.",
+      "note": "Produktrader kan faktureras på två sätt: skapa en försäljningsorder för att fakturera dem vid leverans eller fakturera dem direkt. När försäljningsordern skapas undantas raderna från konverteringen till faktura så att inget dubbelfaktureras.",
+      "openSalesOrders": "Öppna försäljningsorder",
+      "successBody": "Produktraderna faktureras vid leverans.",
+      "successTitle": "Försäljningsorder {{number}} har skapats"
+    }
+  },
+  "quoteApproval": {
+    "title": "Offertgodkännanden",
+    "description": "Granska offerter som väntar på chefens godkännande innan de kan skickas till kunder.",
+    "actions": {
+      "backToQuotes": "Tillbaka till offerter"
+    },
+    "settings": {
+      "label": "Godkännande krävs innan offerten skickas",
+      "enabled": "Offertutkast måste godkännas innan de skickas.",
+      "disabled": "Offertutkast kan skickas utan godkännande."
+    },
+    "filters": {
+      "status": "Status",
+      "approved": "Godkänd",
+      "pendingApproval": "Väntar på godkännande"
+    },
+    "empty": {
+      "approved": "Det finns inga godkända offerter i kön just nu.",
+      "pendingApproval": "Det finns inga offerter som väntar på godkännande just nu.",
+      "title": "Inga offerter hittades"
+    },
+    "errors": {
+      "load": "Det gick inte att ladda offertgodkännandena",
+      "settings": "Det gick inte att uppdatera inställningarna för offertgodkännande"
+    },
+    "loading": "Laddar kön för godkännande…"
+  },
+  "quoteTemplates": {
+    "title": "Mallar",
+    "description": "Med offertmallar kan du spara och återanvända rader, villkor och anteckningar. Välj en mall när du skapar en ny offert för att börja med förifyllda uppgifter.",
+    "empty": {
+      "inline": "Inga offertmallar ännu. Skapa en mall genom att klicka på ”Spara som mall” i en offerts detaljvy.",
+      "title": "Inga offertmallar ännu",
+      "description": "Välj ”Spara som mall” i en offert för att skapa din första återanvändbara mall."
+    },
+    "actions": {
+      "createQuoteFromTemplate": "Skapa offert från mall",
+      "delete": "Radera",
+      "editTemplate": "Redigera mall",
+      "templateActions": "Mallåtgärder"
+    },
+    "dialogs": {
+      "delete": {
+        "message": "Är du säker på att du vill radera den här offertmallen? Åtgärden kan inte ångras.",
+        "title": "Radera mall"
+      }
+    },
+    "errors": {
+      "delete": "Det gick inte att radera mallen.",
+      "load": "Det gick inte att ladda mallarna"
+    },
+    "loading": "Laddar mallar…"
+  },
+  "quotePreview": {
+    "title": "Förhandsgranskning av offert",
+    "empty": {
+      "selectQuote": "Välj en offert att förhandsgranska",
+      "unavailable": "Det gick inte att visa förhandsgranskningen. Uppgifter kan saknas."
+    },
+    "placeholders": {
+      "selectLayout": "Välj offertlayout…"
+    },
+    "actions": {
+      "openQuote": "Öppna offert"
+    },
+    "errors": {
+      "downloadPdf": "Det gick inte att ladda ner PDF-filen. Försök igen.",
+      "load": "Det gick inte att ladda förhandsgranskningen"
+    },
+    "loading": "Laddar förhandsgranskning…"
+  },
+  "templateEditor": {
+    "actions": {
+      "backToLayouts": "Tillbaka till layouter",
+      "rerun": "Kör igen",
+      "saveLayout": "Spara layout"
+    },
+    "codeReadonly": "Kodvyn genereras från den visuella arbetsytan och är skrivskyddad.",
+    "defaults": {
+      "copyOf": "Kopia av {{name}}",
+      "standardTemplate": "Standardmall"
+    },
+    "title": "Offertlayoutredigerare",
+    "description": "Utforma offertlayouten i den visuella redigeraren och förhandsgranska sedan med exempeldata.",
+    "errors": {
+      "exportAst": "Det gick inte att exportera mallens AST från den visuella arbetsytan: {{message}}",
+      "load": "Det gick inte att ladda redigeraren för offertmallar",
+      "nameRequired": "Mallnamn krävs.",
+      "notFound": "Dokumentmallen för offerten hittades inte.",
+      "previewPipeline": "Förhandsgranskningsprocessen misslyckades.",
+      "saveFailed": "Det gick inte att spara offertmallen",
+      "unknownAstExport": "Okänt fel vid AST-export",
+      "quoteNotFound": "Det gick inte att ladda offertdetaljer för förhandsgranskning.",
+      "quoteDetailLoad": "Det gick inte att ladda offertdetaljerna."
+    },
+    "fields": {
+      "layoutDetails": "Layoutdetaljer",
+      "templateName": "Mallnamn",
+      "version": "Version"
+    },
+    "footer": {
+      "created": "Skapad:",
+      "lastUpdated": "Senast uppdaterad:"
+    },
+    "headings": {
+      "editLayout": "Redigera offertlayout",
+      "newLayout": "Ny offertlayout"
+    },
+    "placeholders": {
+      "templateName": "Offertmall"
+    },
+    "preview": {
+      "renderFailed": "Renderingen av förhandsgranskningen misslyckades.",
+      "rendering": "Formar data och renderar förhandsgranskningen…",
+      "sampleScenario": "Exempelscenario",
+      "selectScenario": "Välj scenario…",
+      "selectScenarioPrompt": "Välj ett exempelscenario för att generera en tillförlitlig förhandsgranskning.",
+      "templateGenerationFailed": "Det gick inte att generera förhandsgranskningsmallen från den aktuella arbetsytan.",
+      "source": {
+        "sample": "Exempel",
+        "existing": "Befintlig"
+      },
+      "searchQuotes": "Sök offerter…",
+      "searchQuotesHint": "Sök efter nummer eller kund…",
+      "noQuotesFound": "Inga offerter hittades.",
+      "selectQuote": "Välj offert",
+      "selectQuoteHint": "Välj en offert för att förhandsgranska resultatet med offertens uppgifter.",
+      "loadingQuoteDetails": "Laddar offertdetaljer…"
+    },
+    "pipeline": {
+      "render": "Rendera",
+      "shape": "Forma data",
+      "renderFailed": "Renderingen misslyckades.",
+      "shapeFailed": "Dataformningen misslyckades.",
+      "shapingFailed": "Dataformningen misslyckades."
+    },
+    "tabs": {
+      "code": "Kod",
+      "design": "Design",
+      "preview": "Förhandsgranskning",
+      "transforms": "Transformeringar",
+      "visual": "Visuell"
+    }
+  },
+  "templatesPage": {
+    "title": "Offertlayouter",
+    "description": "Utforma layouterna som används för att rendera offerternas PDF-filer och förhandsgranskningar.",
+    "actions": {
+      "openMenu": "Öppna meny"
+    },
+    "cards": {
+      "availableLayouts": "Tillgängliga layouter"
+    },
+    "dialogs": {
+      "deleteConfirm": "Är du säker på att du vill radera ”{{name}}”?"
+    },
+    "errors": {
+      "clone": "Det gick inte att klona mallen",
+      "delete": "Det gick inte att radera mallen",
+      "editCopy": "Det gick inte att skapa en redigerbar kopia",
+      "load": "Det gick inte att ladda dokumentmallarna för offerter",
+      "setDefault": "Det gick inte att ange standardmall"
+    },
+    "labels": {
+      "custom": "Anpassad"
+    }
+  },
+  "errors": {
+    "permissions": {
+      "create": "Åtkomst nekad: Kan inte skapa offerter",
+      "update": "Åtkomst nekad: Kan inte uppdatera offerter",
+      "read": "Åtkomst nekad: Kan inte läsa offerter",
+      "delete": "Åtkomst nekad: Kan inte radera offerter",
+      "readOne": "Åtkomst nekad: Kan inte läsa offerten",
+      "approve": "Åtkomst nekad: Kan inte godkänna offerter",
+      "updateApprovalSettings": "Åtkomst nekad: Kan inte uppdatera inställningarna för offertgodkännande",
+      "readDocumentTemplates": "Åtkomst nekad: Kan inte läsa dokumentmallar för offerter",
+      "modifyDocumentTemplates": "Åtkomst nekad: Kan inte ändra dokumentmallar för offerter",
+      "setDefaultDocumentTemplate": "Åtkomst nekad: Kan inte ange standarddokumentmall för offerter",
+      "deleteDocumentTemplates": "Åtkomst nekad: Kan inte radera dokumentmallar för offerter"
+    },
+    "quote": {
+      "formInvalid": "Offertformuläret innehåller ogiltiga värden. Granska formuläret och försök igen.",
+      "notFoundRefresh": "Offerten hittades inte. Den kan ha uppdaterats eller raderats. Ladda om och försök igen.",
+      "itemNotFoundRefresh": "Offertraden hittades inte. Den kan ha uppdaterats eller raderats. Ladda om och försök igen.",
+      "templateNotFoundRefresh": "Offertmallen hittades inte. Den kan ha uppdaterats eller raderats. Ladda om och försök igen.",
+      "invalidValue": "Ett av de valda offertvärdena är ogiltigt. Ladda om och försök igen.",
+      "referenceMissing": "Den valda offerten, kunden, kontakten eller tjänsten finns inte längre. Ladda om och försök igen.",
+      "conflict": "Den här offertändringen står i konflikt med en befintlig post. Ladda om och försök igen.",
+      "notAllowed": "Ett av offertvärdena är inte tillåtet. Granska formuläret och försök igen.",
+      "missingField": "Ett obligatoriskt offertfält saknas.",
+      "missingFieldNamed": "Ett obligatoriskt offertfält saknas: {{field}}."
+    }
+  }
+}

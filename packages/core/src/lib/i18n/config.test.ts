@@ -30,7 +30,7 @@ describe('filterPseudoLocales', () => {
 
   it('strips incomplete locales in both modes', () => {
     const sample = [...LOCALE_CONFIG.supportedLocales, 'en'] as const;
-    // INCOMPLETE_LOCALES is currently empty; guard the contract for future entries.
+    expect(INCOMPLETE_LOCALES).toContain('sv');
     for (const incomplete of INCOMPLETE_LOCALES) {
       vi.stubEnv('NODE_ENV', 'development');
       expect(filterPseudoLocales(sample)).not.toContain(incomplete);
@@ -41,6 +41,13 @@ describe('filterPseudoLocales', () => {
 
   it('labels pt as Brazilian Portuguese', () => {
     expect(LOCALE_CONFIG.localeNames.pt).toBe('Português (Brasil)');
+  });
+
+  it('registers Swedish as Svenska before the pseudo-locales', () => {
+    expect(LOCALE_CONFIG.supportedLocales).toEqual([
+      'en', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt', 'sv', 'xx', 'yy',
+    ]);
+    expect(LOCALE_CONFIG.localeNames.sv).toBe('Svenska');
   });
 
   it('keeps production locales untouched', () => {
@@ -62,6 +69,9 @@ describe('normalizeLocale', () => {
     ['en-US', 'en'],
     ['  de  ', 'de'],
     ['fr', 'fr'],
+    ['sv', 'sv'],
+    ['sv-SE', 'sv'],
+    ['SV_se', 'sv'],
   ])('normalizes %s to %s', (input, expected) => {
     expect(normalizeLocale(input)).toBe(expected);
   });
@@ -98,6 +108,7 @@ describe('normalizeLocale', () => {
 
   it('lets Accept-Language matching share the same rules', () => {
     expect(getBestMatchingLocale(['pt_BR'])).toBe('pt');
+    expect(getBestMatchingLocale(['sv-SE', 'en'])).toBe('sv');
     expect(getBestMatchingLocale(['en-AU', 'fr-CA'])).toBe('en');
     expect(getBestMatchingLocale(['zh-CN', 'fr-CA'])).toBe('fr');
     expect(getBestMatchingLocale(['zh-CN'])).toBe(LOCALE_CONFIG.defaultLocale);

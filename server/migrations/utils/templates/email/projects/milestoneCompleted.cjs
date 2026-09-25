@@ -118,6 +118,7 @@ const COPY = {
   },
 };
 SUBJECTS.pt = 'Meta concluída: {{milestone.name}}';
+SUBJECTS.sv = 'Milstolpe slutförd: {{milestone.name}}';
 COPY.pt = {
   headerLabel: 'Meta concluída',
   intro: 'Uma meta foi concluída no projeto {{project.name}}:',
@@ -130,6 +131,19 @@ COPY.pt = {
   textHeader: 'Meta concluída',
   textIntro: 'Uma meta foi concluída no projeto {{project.name}}:',
   textView: 'Ver projeto em',
+};
+COPY.sv = {
+  headerLabel: 'Milstolpe slutförd',
+  intro: 'En milstolpe har slutförts i projektet {{project.name}}:',
+  milestone: 'Milstolpe',
+  completionDate: 'Slutförandedatum',
+  completedBy: 'Slutförd av',
+  projectProgress: 'Projektets förlopp',
+  viewButton: 'Visa projekt',
+  footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+  textHeader: 'Milstolpe slutförd',
+  textIntro: 'En milstolpe har slutförts i projektet {{project.name}}:',
+  textView: 'Visa projekt på',
 };
 
 /* eslint-enable max-len */

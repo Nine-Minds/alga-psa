@@ -26,6 +26,7 @@ const SUBJECTS = {
   it: 'Team assegnato al suo ticket • {{ticket.title}}',
   pl: 'Zespół przypisany do Twojego zgłoszenia • {{ticket.title}}',
   pt: 'Equipe atribuída ao seu ticket • {{ticket.title}}',
+  sv: 'Team tilldelat till ditt ärende • {{ticket.title}}',
 };
 
 /* eslint-disable max-len */
@@ -213,6 +214,29 @@ const COPY = {
     textRequester: 'Solicitante',
     textDescription: 'Descrição',
     textView: 'Ver ticket',
+  },
+  sv: {
+    headerLabel: 'Team tilldelat',
+    intro: 'Teamet <strong>{{ticket.teamName}}</strong> har tilldelats ditt ärende för <strong>{{ticket.clientName}}</strong>. Vårt team granskar din förfrågan och svarar inom kort.',
+    badgePrefix: 'Ärende #',
+    priority: 'Prioritet',
+    status: 'Status',
+    team: 'Tilldelat team',
+    assignedBy: 'Tilldelat av',
+    requester: 'Beställare',
+    board: 'Tavla',
+    category: 'Kategori',
+    location: 'Plats',
+    descriptionLabel: 'Beskrivning',
+    descriptionVar: '{{{ticket.description}}}',
+    viewButton: 'Visa ärende',
+    footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+    textHeader: 'Team tilldelat till ditt ärende',
+    textTeam: 'Tilldelat team',
+    textAssignedBy: 'Tilldelat av',
+    textRequester: 'Beställare',
+    textDescription: 'Beskrivning',
+    textView: 'Visa ärende',
   },
 };
 /* eslint-enable max-len */

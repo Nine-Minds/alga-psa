@@ -1,0 +1,618 @@
+{
+  "app": {
+    "description": "Applikation för leverantörer av hanterade IT-tjänster",
+    "keywords": "MSP, leverantör av hanterade IT-tjänster, IT-tjänster, nätverkshantering, molntjänster"
+  },
+  "auth": {
+    "checkEmail": {
+      "layout": {
+        "title": "Kontrollera din e-post"
+      }
+    },
+    "clientPortal": {
+      "forgotPassword": {
+        "layout": {
+          "title": "Glömt lösenord"
+        }
+      },
+      "handoff": {
+        "title": "Loggar in"
+      },
+      "signin": {
+        "title": "Logga in på kundportalen"
+      }
+    },
+    "msp": {
+      "forgotPassword": {
+        "layout": {
+          "title": "Glömt lösenord"
+        }
+      },
+      "signin": {
+        "title": "MSP-inloggning"
+      }
+    },
+    "passwordReset": {
+      "confirmation": {
+        "layout": {
+          "title": "Återställning av lösenord"
+        }
+      },
+      "setNewPassword": {
+        "layout": {
+          "title": "Ange nytt lösenord"
+        }
+      }
+    },
+    "portal": {
+      "setup": {
+        "layout": {
+          "title": "Konfigurera portalen"
+        }
+      }
+    },
+    "register": {
+      "layout": {
+        "title": "Registrera dig"
+      }
+    },
+    "signin": {
+      "title": "Logga in"
+    },
+    "team": {
+      "setup": {
+        "layout": {
+          "title": "Konfigurera teamet"
+        }
+      }
+    },
+    "verify": {
+      "layout": {
+        "description": "Verifiera din e-postadress för att slutföra registreringen",
+        "title": "Verifiera e-postadress"
+      }
+    },
+    "verifyEmail": {
+      "layout": {
+        "title": "Verifiera e-postadress"
+      }
+    },
+    "layout": {
+      "defaultTitle": "Logga in | AlgaPSA"
+    }
+  },
+  "clientPortal": {
+    "account": {
+      "layout": {
+        "title": "Konto"
+      }
+    },
+    "appointments": {
+      "detail": {
+        "layout": {
+          "title": "Bokningsdetaljer"
+        }
+      },
+      "layout": {
+        "title": "Bokningar"
+      }
+    },
+    "billing": {
+      "invoices": {
+        "detail": {
+          "pay": {
+            "title": "Betala faktura"
+          },
+          "paymentSuccess": {
+            "title": "Betalningen lyckades"
+          }
+        }
+      },
+      "quotes": {
+        "detail": {
+          "title": "Offertdetaljer"
+        }
+      },
+      "title": "Debitering"
+    },
+    "clientSettings": {
+      "description": "Hantera företagets inställningar och konfigurationer",
+      "title": "Företagsinställningar"
+    },
+    "dashboard": {
+      "title": "Översiktspanel"
+    },
+    "devices": {
+      "title": "Mina enheter"
+    },
+    "documents": {
+      "title": "Dokument"
+    },
+    "extensions": {
+      "detail": {
+        "title": "Tillägg"
+      }
+    },
+    "knowledgeBase": {
+      "layout": {
+        "title": "Kunskapsbas"
+      }
+    },
+    "licenses": {
+      "title": "Licenser"
+    },
+    "profile": {
+      "layout": {
+        "title": "Profil"
+      }
+    },
+    "projects": {
+      "detail": {
+        "fallbackTitle": "Projektdetaljer"
+      },
+      "title": "Projekt"
+    },
+    "requestServices": {
+      "detail": {
+        "title": "Tjänsteförfrågan"
+      },
+      "myRequests": {
+        "detail": {
+          "title": "Förfrågningsdetaljer"
+        },
+        "title": "Mina förfrågningar"
+      },
+      "title": "Begär tjänster"
+    },
+    "tickets": {
+      "detail": {
+        "fallbackTitle": "Ärendedetaljer",
+        "title": "Ärende #{{ticketNumber}} - {{ticketTitle}}"
+      },
+      "layout": {
+        "title": "Ärenden"
+      }
+    },
+    "layout": {
+      "titleTemplate": "%s | Kundportal",
+      "defaultTitle": "Översiktspanel | Kundportal"
+    }
+  },
+  "msp": {
+    "account": {
+      "layout": {
+        "title": "Konto"
+      }
+    },
+    "addOns": {
+      "layout": {
+        "title": "Tillägg"
+      }
+    },
+    "assets": {
+      "automation": {
+        "title": "Automatisering av tillgångar"
+      },
+      "detail": {
+        "edit": {
+          "description": "Redigera tillgångsdetaljer",
+          "title": "Redigera tillgång"
+        },
+        "fallbackTitle": "Tillgångsdetaljer"
+      },
+      "imports": {
+        "title": "Tillgångsimporter"
+      },
+      "integrations": {
+        "title": "Tillgångsintegreringar"
+      },
+      "maintenance": {
+        "title": "Tillgångsunderhåll"
+      },
+      "policies": {
+        "title": "Tillgångspolicyer"
+      },
+      "title": "Tillgångar"
+    },
+    "billing": {
+      "title": "Debitering",
+      "credits": {
+        "title": "Krediteringar"
+      }
+    },
+    "chat": {
+      "title": "Chatt"
+    },
+    "clients": {
+      "detail": {
+        "fallbackTitle": "Kunduppgifter"
+      },
+      "title": "Kunder"
+    },
+    "contacts": {
+      "title": "Kontakter",
+      "detail": {
+        "fallbackTitle": "Kontaktuppgifter",
+        "activity": {
+          "title": "{{contactName}} - Aktivitet",
+          "fallbackTitle": "Kontaktaktivitet"
+        }
+      }
+    },
+    "createAsset": {
+      "title": "Skapa tillgång"
+    },
+    "createClient": {
+      "title": "Skapa kund"
+    },
+    "createContact": {
+      "title": "Skapa kontakt"
+    },
+    "createOpportunity": {
+      "title": "Skapa affärsmöjlighet"
+    },
+    "createProduct": {
+      "title": "Skapa produkt"
+    },
+    "createProject": {
+      "title": "Skapa projekt"
+    },
+    "createService": {
+      "title": "Skapa tjänst"
+    },
+    "createTicket": {
+      "title": "Skapa ärende"
+    },
+    "dashboard": {
+      "title": "Översiktspanel"
+    },
+    "documentTemplates": {
+      "detail": {
+        "fallbackTitle": "Dokumentlayouter",
+        "title": "Layouter för {{documentType}}"
+      }
+    },
+    "documents": {
+      "title": "Dokument"
+    },
+    "emailLogs": {
+      "title": "E-postloggar"
+    },
+    "extensions": {
+      "detail": {
+        "debug": {
+          "layout": {
+            "title": "Felsökning av tillägg"
+          }
+        }
+      },
+      "layout": {
+        "title": "Tillägg"
+      }
+    },
+    "inventory": {
+      "counts": {
+        "title": "Rullande inventeringar"
+      },
+      "ghostUsage": {
+        "title": "Oregistrerad materialförbrukning"
+      },
+      "kits": {
+        "title": "Paket"
+      },
+      "loaners": {
+        "title": "Låneutrustning"
+      },
+      "locations": {
+        "title": "Lagerplatser"
+      },
+      "margin": {
+        "title": "Marginalrapport"
+      },
+      "purchaseOrders": {
+        "title": "Inköpsorder"
+      },
+      "rma": {
+        "title": "RMA"
+      },
+      "salesOrders": {
+        "title": "Försäljningsorder"
+      },
+      "stock": {
+        "title": "Lagerbestånd"
+      },
+      "title": "Lager",
+      "transfers": {
+        "title": "Lageröverföringar"
+      },
+      "units": {
+        "title": "Lagerenheter"
+      },
+      "vendorBills": {
+        "title": "Leverantörsfakturor"
+      },
+      "vendors": {
+        "title": "Leverantörer"
+      },
+      "writeOffs": {
+        "title": "Lageravskrivningar"
+      }
+    },
+    "invoices": {
+      "detail": {
+        "title": "Faktura"
+      }
+    },
+    "jobs": {
+      "title": "Bakgrundsjobb"
+    },
+    "knowledgeBase": {
+      "review": {
+        "title": "Granskning av kunskapsbasen"
+      },
+      "title": "Kunskapsbas"
+    },
+    "marketing": {
+      "calendar": {
+        "title": "Marknadsföringskalender"
+      },
+      "campaigns": {
+        "title": "Marknadsföringskampanjer"
+      },
+      "channels": {
+        "title": "Marknadsföringskanaler"
+      },
+      "content": {
+        "title": "Marknadsföringsinnehåll"
+      },
+      "forms": {
+        "title": "Marknadsföringsformulär"
+      },
+      "posts": {
+        "title": "Marknadsföringsinlägg"
+      },
+      "sequences": {
+        "title": "Marknadsföringssekvenser"
+      },
+      "title": "Marknadsföring"
+    },
+    "onboarding": {
+      "layout": {
+        "title": "Introduktion"
+      }
+    },
+    "platformUpdates": {
+      "detail": {
+        "title": "Plattformsuppdatering"
+      }
+    },
+    "profile": {
+      "layout": {
+        "title": "Profil"
+      }
+    },
+    "projects": {
+      "detail": {
+        "fallbackTitle": "Projektdetaljer",
+        "tasks": {
+          "detail": {
+            "title": "Projektuppgift"
+          }
+        }
+      },
+      "templates": {
+        "detail": {
+          "layout": {
+            "title": "Malldetaljer"
+          }
+        },
+        "layout": {
+          "title": "Projektmallar"
+        }
+      },
+      "title": "Projekt"
+    },
+    "quoteApprovals": {
+      "title": "Offertgodkännanden"
+    },
+    "quoteDocumentTemplates": {
+      "title": "Offertlayouter"
+    },
+    "reports": {
+      "title": "Rapporter",
+      "deferredRevenue": {
+        "title": "Förutbetalda intäkter"
+      }
+    },
+    "schedule": {
+      "title": "Schema"
+    },
+    "search": {
+      "title": "Sök"
+    },
+    "securitySettings": {
+      "title": "Säkerhetsinställningar"
+    },
+    "serviceRequests": {
+      "detail": {
+        "fallbackTitle": "Tjänsteförfrågan"
+      },
+      "title": "Tjänsteförfrågningar"
+    },
+    "settings": {
+      "extensions": {
+        "description": "Hantera tillägg",
+        "detail": {
+          "description": "Visa information om tillägget",
+          "layout": {
+            "title": "Tilläggsinställningar"
+          },
+          "settings": {
+            "description": "Konfigurera tilläggsinställningar",
+            "layout": {
+              "title": "Tilläggskonfiguration"
+            },
+            "title": "Tilläggsinställningar"
+          },
+          "title": "Information om tillägget"
+        },
+        "layout": {
+          "title": "Tilläggsinställningar"
+        },
+        "title": "Tillägg"
+      },
+      "notifications": {
+        "layout": {
+          "title": "Aviseringsinställningar"
+        }
+      },
+      "sla": {
+        "layout": {
+          "title": "SLA-inställningar"
+        }
+      },
+      "title": "Inställningar"
+    },
+    "shareDocument": {
+      "title": "Dela dokument"
+    },
+    "surveys": {
+      "analytics": {
+        "title": "Enkätanalys"
+      },
+      "dashboard": {
+        "title": "Översiktspanel för enkäter"
+      },
+      "responses": {
+        "detail": {
+          "title": "Svarsdetaljer"
+        },
+        "title": "Enkätsvar"
+      },
+      "settings": {
+        "title": "Enkätinställningar"
+      },
+      "title": "Enkäter"
+    },
+    "technicianDispatch": {
+      "title": "Resursplanering"
+    },
+    "test": {
+      "collab": {
+        "title": "Samarbetstest"
+      },
+      "layout": {
+        "title": "Test"
+      },
+      "onboarding": {
+        "layout": {
+          "title": "Introduktionstest"
+        }
+      },
+      "uiKit": {
+        "layout": {
+          "title": "UI-komponentbibliotek"
+        }
+      }
+    },
+    "tickets": {
+      "bulkAssign": {
+        "title": "Tilldela ärenden"
+      },
+      "bulkDueDate": {
+        "title": "Ange förfallodatum"
+      },
+      "bulkPriority": {
+        "title": "Ange prioritet"
+      },
+      "bulkStatus": {
+        "title": "Ange status"
+      },
+      "bulkTags": {
+        "title": "Ange taggar"
+      },
+      "export": {
+        "title": "Exportera ärenden"
+      },
+      "import": {
+        "title": "Importera ärenden"
+      },
+      "title": "Ärenden",
+      "detail": {
+        "title": "Ärende #{{ticketNumber}} - {{ticketTitle}}",
+        "fallbackTitle": "Ärendedetaljer"
+      }
+    },
+    "timeEntry": {
+      "timesheet": {
+        "detail": {
+          "title": "Tidrapport"
+        }
+      },
+      "title": "Tidpost"
+    },
+    "timeSheetApprovals": {
+      "title": "Godkännanden av tidrapporter"
+    },
+    "userActivities": {
+      "title": "Användaraktiviteter"
+    },
+    "workflowControl": {
+      "title": "Arbetsflödeskontroll"
+    },
+    "workflowEditor": {
+      "detail": {
+        "title": "Redigera arbetsflöde"
+      },
+      "new": {
+        "title": "Nytt arbetsflöde"
+      },
+      "title": "Arbetsflödesredigerare"
+    },
+    "workflows": {
+      "runs": {
+        "detail": {
+          "layout": {
+            "title": "Arbetsflödeskörning"
+          }
+        }
+      },
+      "title": "Arbetsflöden"
+    },
+    "layout": {
+      "defaultTitle": "Översiktspanel | AlgaPSA"
+    }
+  },
+  "share": {
+    "detail": {
+      "layout": {
+        "title": "Delat dokument"
+      }
+    }
+  },
+  "static": {
+    "layout": {
+      "title": "AlgaPSA"
+    },
+    "masterTerms": {
+      "layout": {
+        "title": "Allmänna villkor"
+      }
+    },
+    "privacyPolicy": {
+      "layout": {
+        "title": "Integritetspolicy"
+      }
+    }
+  },
+  "teams": {
+    "auth": {
+      "popupComplete": {
+        "title": "Autentisering i Teams"
+      }
+    },
+    "tab": {
+      "title": "Microsoft Teams"
+    }
+  }
+}

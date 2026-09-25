@@ -20,6 +20,7 @@ const SUBJECTS = {
   it: 'Avviso SLA: ticket #{{ticketNumber}} al {{thresholdPercent}}%',
   pl: 'Ostrze\u017cenie SLA: zg\u0142oszenie #{{ticketNumber}} na poziomie {{thresholdPercent}}%',
   pt: 'Aviso de SLA: ticket #{{ticketNumber}} em {{thresholdPercent}}%',
+  sv: 'SLA-varning: ärende #{{ticketNumber}} vid {{thresholdPercent}}\u00a0%',
 };
 
 /* eslint-disable max-len */
@@ -239,6 +240,33 @@ const COPY = {
     textCallToAction: 'Tome uma ação para evitar uma violação de SLA.',
     textView: 'Ver ticket',
     textFooter: 'Powered by AlgaPSA',
+  },
+  sv: {
+    headerLabel: 'SLA-varning',
+    headerTitle: '{{thresholdPercent}}\u00a0% av tiden har gått',
+    headerMeta: 'Ärende #{{ticketNumber}}',
+    greeting: 'Hej {{recipientName}},',
+    intro: 'Ett ärende som du ansvarar för närmar sig sin SLA-tidsgräns.',
+    ticket: 'Ärende',
+    slaType: 'SLA-typ',
+    timeRemaining: 'Återstående tid',
+    priority: 'Prioritet',
+    client: 'Kund',
+    callToAction: 'Vidta åtgärder för att undvika ett SLA-brott.',
+    viewButton: 'Visa ärende',
+    footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+    textHeader: 'SLA-varning: {{thresholdPercent}}\u00a0% av tiden har gått',
+    textGreeting: 'Hej {{recipientName}},',
+    textIntro: 'Ett ärende som du ansvarar för närmar sig sin SLA-tidsgräns.',
+    textDetailsHeader: 'Ärendedetaljer:',
+    textTicket: 'Ärende',
+    textSlaType: 'SLA-typ',
+    textTimeRemaining: 'Återstående tid',
+    textPriority: 'Prioritet',
+    textClient: 'Kund',
+    textCallToAction: 'Vidta åtgärder för att undvika ett SLA-brott.',
+    textView: 'Visa ärende',
+    textFooter: 'Drivs av AlgaPSA',
   },
 };
 /* eslint-enable max-len */

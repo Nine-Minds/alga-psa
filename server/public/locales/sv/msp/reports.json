@@ -1,0 +1,546 @@
+{
+  "page": {
+    "title": "Rapporter"
+  },
+  "actions": {
+    "refresh": "Ladda om"
+  },
+  "placeholders": {
+    "selectContract": "Välj avtal…"
+  },
+  "units": {
+    "hoursShort": "h",
+    "days": "dagar",
+    "percent": "%",
+    "dash": "—"
+  },
+  "reportsPage": {
+    "cards": {
+      "timeUtilization": {
+        "title": "Tidsutnyttjande",
+        "placeholder": "[Platshållare för diagram över tidsutnyttjande]"
+      },
+      "projectProgress": {
+        "title": "Projektförlopp",
+        "placeholder": "[Platshållare för diagram över projektförlopp]"
+      },
+      "revenueByClient": {
+        "title": "Intäkter per kund",
+        "placeholder": "[Platshållare för diagram över intäkter per kund]"
+      },
+      "teamPerformance": {
+        "title": "Teamets prestation",
+        "placeholder": "[Platshållare för diagram över teamets prestation]"
+      }
+    },
+    "description": "Färdiga verksamhetsrapporter för den aktuella arbetsytan. Fler anpassningsmöjligheter tillkommer i rapportkatalogen senare.",
+    "categories": {
+      "helpdesk": "Support",
+      "operations": "Verksamhet",
+      "billing": "Debitering",
+      "inventory": "Lager"
+    },
+    "badges": {
+      "planned": "Planerad"
+    },
+    "actions": {
+      "viewReport": "Visa rapport",
+      "openInBilling": "Öppna i debitering",
+      "openReport": "Öppna rapport",
+      "requiresTier": "Kräver {{tier}}",
+      "comingSoon": "Kommer snart"
+    },
+    "errors": {
+      "loadReport": "Det gick inte att läsa in rapporten."
+    },
+    "empty": {
+      "noData": "Inga data för den här rapporten.",
+      "noOpenTicketsInRange": "Inga öppna ärenden i det här intervallet.",
+      "noDate": "Inget datum",
+      "notAvailable": "Ej tillgängligt",
+      "noEmailChannels": "Inga e-postkanaler är konfigurerade.",
+      "noCapacity": "Ej tillgängligt — ingen kapacitet angiven",
+      "noEstimate": "Ej tillgängligt — ingen uppskattning angiven",
+      "noOverruns": "Ingen uppgift har överskridit sin uppskattade tid."
+    },
+    "fallbackTitle": "Rapport",
+    "dateRange": {
+      "lastDays": "Senaste {{count}} dagarna",
+      "allActiveProjects": "Alla aktiva projekt, från start till idag"
+    },
+    "units": {
+      "daysWithCount": "{{count}} dagar"
+    },
+    "metrics": {
+      "created": "Skapade",
+      "closed": "Stängda",
+      "openNow": "Öppna nu",
+      "awaitingCustomer": "Väntar på kund",
+      "awaitingInternal": "Väntar på internt svar",
+      "under2Days": "Under 2 dagar",
+      "days2To7": "2 till 7 dagar",
+      "days8To30": "8 till 30 dagar",
+      "over30Days": "Över 30 dagar",
+      "activeChannels": "Aktiva kanaler",
+      "healthyChannels": "Fungerande kanaler",
+      "problemChannels": "Kanaler med problem",
+      "emailsProcessed": "Bearbetade e-postmeddelanden",
+      "ticketsFromEmail": "Ärenden från e-post",
+      "failedEmails": "Misslyckade e-postmeddelanden",
+      "avgProcessingTime": "Genomsnittlig bearbetningstid",
+      "avgTicketCreationTime": "Genomsnittlig tid från e-post till ärende",
+      "totalHours": "Totalt antal timmar",
+      "billableHours": "Debiterbara timmar",
+      "nonBillableHours": "Icke-debiterbara timmar",
+      "billablePercent": "Debiterbar andel i %",
+      "timeEntries": "Tidposter",
+      "activeContracts": "Aktiva avtal",
+      "monthlyRecurring": "Återkommande månadsintäkter",
+      "renewalsDue": "Förnyelser som ska göras",
+      "bucketUsedHours": "Använda timmar i timpotter",
+      "bucketOverageHours": "Timmar utöver timpotter",
+      "openAssigned": "Öppna tilldelade ärenden",
+      "activeAssignees": "Aktiva ansvariga",
+      "avgResolutionTime": "Genomsnittlig lösningstid",
+      "workedHours": "Arbetade timmar",
+      "capacityHours": "Kapacitet i timmar",
+      "utilization": "Nyttjandegrad",
+      "usersWithoutCapacity": "Saknar kapacitet",
+      "activeUsers": "Aktiva användare",
+      "activeProjects": "Aktiva projekt",
+      "budgetedHours": "Budgeterade timmar",
+      "estimatedHours": "Uppskattade timmar",
+      "actualHours": "Faktiska timmar",
+      "projectsOverEstimate": "Över uppskattad tid",
+      "projectsOverBudget": "Över budget"
+    },
+    "sections": {
+      "openByStatus": "Öppna ärenden per status",
+      "openByPriority": "Öppna ärenden per prioritet",
+      "openByAssignee": "Öppna ärenden per ansvarig",
+      "ageDistribution": "Åldersfördelning",
+      "responseOwnership": "Svarsansvar",
+      "oldestOpenTickets": "Äldsta öppna ärendena",
+      "emailProcessingStatus": "Bearbetningsstatus",
+      "emailChannels": "E-postkanaler",
+      "timeByUser": "Tid per användare",
+      "billableHoursByService": "Debiterbara timmar per tjänst",
+      "entriesByWorkType": "Tidposter per arbetstyp",
+      "contractRevenue": "Avtalsintäkter",
+      "upcomingRenewals": "Kommande förnyelser",
+      "bucketUsage": "Förbrukning av timpotter",
+      "performanceByAssignee": "Prestation per ansvarig",
+      "closedByAssignee": "Stängda ärenden per ansvarig",
+      "utilizationByUser": "Nyttjandegrad per användare",
+      "hoursByProject": "Timmar per projekt",
+      "hoursByPhase": "Timmar per fas",
+      "largestTaskOverruns": "Största tidsöverskridanden per uppgift"
+    },
+    "reportCatalog": {
+      "ticketWorkload": {
+        "title": "Arbetsbelastning för ärenden",
+        "description": "Skapade, stängda och för närvarande öppna ärenden grupperade efter status, prioritet och ansvarig."
+      },
+      "ticketAging": {
+        "title": "Ärendenas ålder",
+        "description": "Åldersintervall för öppna ärenden, svarsansvar och de äldsta aktiva ärendena."
+      },
+      "emailChannelHealth": {
+        "title": "E-postkanalernas status",
+        "description": "Mängd inkommande e-post, tid för att skapa ärenden och anslutningsstatus för e-postlådor."
+      },
+      "timeUtilization": {
+        "title": "Tidsutnyttjande",
+        "description": "Registrerat arbete per person och tjänsteområde för PSA-verksamheten."
+      },
+      "teamPerformance": {
+        "title": "Teamets prestation",
+        "description": "Genomströmning på teamnivå och svarsansvar för arbetsytor med flera användare."
+      },
+      "employeeUtilization": {
+        "title": "Medarbetarnas nyttjandegrad",
+        "description": "Arbetade timmar i förhållande till varje teammedlems veckokapacitet."
+      },
+      "contractReports": {
+        "title": "Avtalsrapporter",
+        "description": "Avtalsintäkter, förnyelser, nyttjandegrad för timpotter och lönsamhet."
+      },
+      "deferredRevenue": {
+        "title": "Förutbetalda intäkter",
+        "description": "Skuld för kundförskott: tillgodohavanden och oanvända timpottstimmar per månad."
+      },
+      "inventoryMargin": {
+        "title": "Marginalrapport",
+        "description": "Intäkter, kostnad för sålda varor och marginal per produkt från levererade försäljningsorder."
+      },
+      "inventoryWriteOffs": {
+        "title": "Nedskrivningar",
+        "description": "Lagersvinn och nedskrivna justeringar per orsak och period."
+      },
+      "inventoryGhostUsage": {
+        "title": "Oregistrerad materialförbrukning",
+        "description": "Stängda maskinvaruärenden utan registrerade delar — kostnader som verksamheten kan ha fått stå för."
+      },
+      "projectHours": {
+        "title": "Projekttimmar jämfört med uppskattningar",
+        "description": "Registrerade timmar i förhållande till uppgifternas uppskattningar och projektbudgetar, med de faser som tar längre tid än planerat."
+      }
+    },
+    "table": {
+      "channel": "Kanal",
+      "status": "Status",
+      "processed": "Bearbetade",
+      "tickets": "Ärenden",
+      "avgEmailToTicket": "Genomsn. e-post till ärende",
+      "assignee": "Ansvarig",
+      "created": "Skapade",
+      "closed": "Stängda",
+      "open": "Öppna",
+      "avgResolution": "Genomsn. lösningstid",
+      "user": "Användare",
+      "totalHours": "Totalt antal timmar",
+      "billableHours": "Debiterbara timmar",
+      "entries": "Tidposter",
+      "ticket": "Ärende",
+      "entered": "Registrerat",
+      "age": "Ålder",
+      "workedHours": "Arbetade timmar",
+      "capacityHours": "Kapacitet i timmar",
+      "utilization": "Nyttjandegrad",
+      "capacityEstimated": "Uppskattat utifrån veckokapacitet; inga arbetstider angivna.",
+      "project": "Projekt",
+      "client": "Kund",
+      "phase": "Fas",
+      "task": "Uppgift",
+      "budgetedHours": "Budgeterade",
+      "estimatedHours": "Uppskattade",
+      "actualHours": "Faktiska",
+      "variance": "Avvikelse",
+      "estimateUsed": "Andel av uppskattad tid",
+      "tasksClosedOfTotal": "{{closed}}/{{total}} uppgifter slutförda"
+    },
+    "statusValues": {
+      "connected": "Ansluten",
+      "disconnected": "Frånkopplad",
+      "error": "Fel",
+      "configuring": "Konfigureras",
+      "unknown": "Okänd",
+      "success": "Lyckades",
+      "failed": "Misslyckades",
+      "partial": "Delvis",
+      "processing": "Bearbetas"
+    }
+  },
+  "contractReports": {
+    "title": "Avtalsrapporter",
+    "description": "Analysera avtalens resultat, intäkter och nyttjandegrad",
+    "errors": {
+      "loadingTitle": "Fel vid inläsning av rapporter",
+      "loadData": "Det gick inte att läsa in rapportdata"
+    },
+    "summary": {
+      "totalMRR": {
+        "title": "Fast MRR",
+        "subtitle": "Fasta återkommande månadsintäkter från aktiva avtal",
+        "variableUsageNote": "{{count}} aktiva avtal debiterar även rörlig förbrukning (ingår inte)"
+      },
+      "ytdRevenue": {
+        "title": "Intäkter hittills i år",
+        "subtitle": "Hittills i år efter fakturerad tjänsteperiod"
+      },
+      "activeContracts": {
+        "title": "Aktiva avtal",
+        "subtitle": "Aktiva tilldelningar"
+      },
+      "renewalDecisions": {
+        "title": "Förnyelsebeslut som ska fattas",
+        "subtitle": "Sista beslutsdatum inom de närmaste 90 dagarna"
+      }
+    },
+    "tabs": {
+      "revenue": "Avtalsintäkter",
+      "expiration": "Avtalsslut",
+      "bucketUsage": "Timpottstimmar",
+      "profitability": "Lönsamhet"
+    },
+    "sections": {
+      "revenue": {
+        "title": "Rapport över avtalsintäkter",
+        "description": "Översikt över återkommande månadsintäkter och fakturerade tjänsteperioder hittills i år per avtal.",
+        "empty": "Inga tillgängliga data om avtalsintäkter"
+      },
+      "expiration": {
+        "title": "Avtalsslut och förnyelsebeslut",
+        "description": "Följ kommande avtalsslut och sista datum för förnyelsebeslut.",
+        "empty": "Inga avtalsslut eller förnyelsebeslut inom den närmaste tiden"
+      },
+      "bucketUsage": {
+        "title": "Nyttjandegrad för timpottstimmar",
+        "description": "Följ förbrukningen av timpottstimmar och identifiera överskridanden",
+        "empty": "Inga avtal med timpotter hittades"
+      },
+      "profitability": {
+        "title": "Lönsamhetsrapport",
+        "description": "Marginal per kund, avtal och ärende utifrån konfigurerade interna arbetskostnadssatser.",
+        "empty": "Inga lönsamhetsdata tillgängliga"
+      }
+    },
+    "table": {
+      "contract": "Avtal",
+      "client": "Kund",
+      "monthlyRecurring": "Återkommande månadsintäkter",
+      "totalBilledYtd": "Totalt fakturerat hittills i år",
+      "status": "Status",
+      "endDate": "Slutdatum",
+      "daysUntilExpiration": "Dagar till avtalsslut",
+      "monthlyValue": "Månadsvärde",
+      "autoRenew": "Automatisk förnyelse",
+      "totalHours": "Totalt antal timmar",
+      "usedHours": "Använda timmar",
+      "remaining": "Återstående",
+      "utilization": "Nyttjandegrad",
+      "overage": "Överskridande",
+      "revenueYtd": "Intäkter hittills i år",
+      "costYtd": "Kostnader hittills i år",
+      "profit": "Vinst",
+      "margin": "Marginal",
+      "plusVariableUsage": "+ rörlig förbrukning",
+      "variableUsage": "Rörlig förbrukning"
+    },
+    "statusValues": {
+      "active": "Aktivt",
+      "upcoming": "Kommande",
+      "yes": "Ja",
+      "no": "Nej"
+    },
+    "profitability": {
+      "formats": {
+        "percent": "{{value}} %",
+        "hours": "{{value}} h",
+        "hourlyRate": "{{value}}/h",
+        "ticketWithNumber": "#{{number}} {{title}}",
+        "billableHours": "{{value}} debiterbara timmar",
+        "listSeparator": ", ",
+        "attributionUncosted": "{{attribution}} (utan beräknad kostnad)",
+        "unassignedLine": "{{line}} (ej tilldelad)"
+      },
+      "errors": {
+        "load": "Det gick inte att läsa in lönsamhetsdata",
+        "title": "Fel vid inläsning av lönsamhet"
+      },
+      "table": {
+        "revenue": "Intäkter",
+        "laborCost": "Arbetskostnad",
+        "materialCost": "Materialkostnad",
+        "margin": "Marginal",
+        "marginPct": "Marginal i %",
+        "hours": "Timmar",
+        "ehr": "Eff. timtaxa",
+        "client": "Kund",
+        "agreement": "Avtal",
+        "ticket": "Ärende",
+        "attribution": "Hänföring",
+        "contractLine": "Rad",
+        "cost": "Kostnad"
+      },
+      "actions": {
+        "toggleLines": "Visa eller dölj rader",
+        "apply": "Tillämpa",
+        "configureCostRates": "Konfigurera kostnadssatser",
+        "clearClient": "Alla kunder",
+        "clearAgreement": "Alla avtal"
+      },
+      "rowTypes": {
+        "adHoc": "Ad hoc",
+        "unattributed": "Ej hänförd",
+        "unassigned": "Ej tilldelad"
+      },
+      "attribution": {
+        "exact": "Exakt",
+        "allocated": "Fördelad",
+        "none": "Ingen"
+      },
+      "status": {
+        "uncosted": "Utan beräknad kostnad"
+      },
+      "filters": {
+        "startDate": "Startdatum",
+        "endDate": "Slutdatum"
+      },
+      "timingTooltip": "Intäkter filtreras efter fakturadatum. Arbetskostnader filtreras efter arbetsdatum. Fakturerade materialkostnader följer fakturadatum; ofakturerade materialkostnader följer datumet då posten skapades.",
+      "empty": {
+        "costRates": "Kostnadssatser är inte konfigurerade. Arbetstimmar visas utan beräknad kostnad tills en standardsats för klientorganisationen eller en användarspecifik sats har angetts.",
+        "clients": "Inga tillgängliga lönsamhetsdata för kunder i det här intervallet.",
+        "lines": "Inga detaljer på radnivå för den här raden.",
+        "tickets": "Inga tillgängliga lönsamhetsdata för ärenden i det här urvalet.",
+        "agreements": "Inga tillgängliga lönsamhetsdata för avtal i det här urvalet."
+      },
+      "print": {
+        "dateRange": "{{start}} till {{end}}",
+        "client": "Kund",
+        "allClients": "Alla kunder",
+        "agreement": "Avtal",
+        "allAgreements": "Alla avtal",
+        "currency": "Valuta"
+      },
+      "warnings": {
+        "title": "Rapportvarningar",
+        "uncostedMinutes": "{{hours}} timmar utan beräknad kostnad",
+        "unattributedMinutes": "{{hours}} timmar utan hänföring",
+        "unapprovedMinutes": "{{hours}} timmar utan godkännande ingår",
+        "zeroDuration": "{{count}} tidposter med noll varaktighet",
+        "uncostedMaterials": "{{count}} materialposter utan beräknad kostnad",
+        "unconvertedRevenue": "{{count}} intäktsrader utan valutaomräkning",
+        "materialCurrencyMismatch": "{{count}} valutaavvikelser för material"
+      },
+      "summary": {
+        "revenue": "Intäkter",
+        "laborCost": "Arbetskostnad",
+        "materialCost": "Materialkostnad",
+        "margin": "Marginal",
+        "marginPct": "Marginal i %",
+        "ehr": "Effektiv timtaxa"
+      },
+      "sections": {
+        "clients": "Kunder",
+        "clientsDescription": "Välj en kund för att se detaljer om avtal och ärenden.",
+        "agreements": "Avtal för {{client}}",
+        "agreementsDescription": "Ad hoc-rader och rader utan hänföring ingår så att totalsummorna stämmer.",
+        "linesForAgreement": "Avtalsrader för {{agreement}}",
+        "tickets": "Ärenden",
+        "ticketsForAgreement": "Ärendekostnader och intäkter för {{agreement}}.",
+        "ticketsDescription": "Arbete, materialkostnad, hänförda intäkter och marginal per ärende."
+      },
+      "fallbacks": {
+        "untitledTicket": "Ärende utan titel"
+      }
+    }
+  },
+  "contractPerformance": {
+    "title": "Nyckeltal för avtalsresultat",
+    "errors": {
+      "loadData": "Det gick inte att läsa in avtalsdata"
+    },
+    "metrics": {
+      "totalClients": "Totalt antal kunder",
+      "activeClients": "Aktiva kunder",
+      "totalPlans": "Totalt antal planer",
+      "averagePlansPerClient": "Genomsnittligt antal planer per kund",
+      "totalRevenue": "Totala intäkter",
+      "averageRevenuePerClient": "Genomsnittlig intäkt per kund"
+    },
+    "empty": {
+      "selectContract": "Välj ett avtal för att visa nyckeltal för avtalsresultat",
+      "noContracts": "Inga avtal tillgängliga"
+    },
+    "comparison": {
+      "title": "Avtalsjämförelse",
+      "table": {
+        "contract": "Avtal",
+        "clients": "Kunder",
+        "plans": "Planer",
+        "revenue": "Intäkter"
+      }
+    }
+  },
+  "contractUsage": {
+    "title": "Rapport över avtalsanvändning",
+    "errors": {
+      "loadInitialData": "Det gick inte att läsa in grunddata",
+      "loadUsageData": "Det gick inte att läsa in data om avtalsanvändning"
+    },
+    "empty": {
+      "noClientsUsingContract": "Inga kunder använder det här avtalet",
+      "selectContract": "Välj ett avtal för att visa användningsdata"
+    },
+    "table": {
+      "client": "Kund",
+      "startDate": "Startdatum",
+      "endDate": "Slutdatum",
+      "contractLines": "Avtalsrader",
+      "totalBilled": "Totalt fakturerat",
+      "status": "Status"
+    },
+    "statusValues": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "ongoing": "Pågående",
+      "unknownClient": "Okänd kund"
+    },
+    "summary": {
+      "title": "Sammanfattning",
+      "totalClients": "Totalt antal kunder",
+      "activeAssignments": "Aktiva tilldelningar",
+      "totalBilled": "Totalt fakturerat"
+    }
+  },
+  "deferredRevenue": {
+    "title": "Förutbetalda intäkter / skuld för kundförskott",
+    "description": "Månadsvis saldoutveckling per kund för tillgodohavanden och oanvända förbetalda timpottstimmar.",
+    "printSubtitle": "Månad {{month}}",
+    "printTable": "Saldoutveckling per kund",
+    "empty": "Ingen skuld för kundförskott den här månaden.",
+    "actions": {
+      "csv": "Ladda ner CSV"
+    },
+    "errors": {
+      "load": "Det gick inte att läsa in rapporten över förutbetalda intäkter."
+    },
+    "summary": {
+      "totalLiability": "Total skuld för kundförskott",
+      "credits": "Tillgodohavanden",
+      "hours": "Förbetalda timmar",
+      "delta": "Förändring jämfört med föregående månad"
+    },
+    "table": {
+      "client": "Kund",
+      "credits": "Tillgodohavanden",
+      "hours": "Förbetalda timmar",
+      "total": "Totalt utgående saldo",
+      "opening": "Ingående saldo",
+      "issued": "Utfärdade",
+      "applied": "Använda",
+      "expired": "Utgångna",
+      "adjustments": "Just.",
+      "closing": "Utgående saldo",
+      "currencyHeading": "Valuta",
+      "noClients": "Inga kunder med förbetalda saldon den här månaden.",
+      "tenantTotal": "Totalt för klientorganisationen"
+    },
+    "detail": {
+      "credits": "Tillgodohavanden",
+      "noCredits": "Inga poster för tillgodohavanden.",
+      "date": "Utfärdat",
+      "description": "Beskrivning",
+      "remaining": "Återstående",
+      "expires": "Går ut",
+      "qbo": "QBO",
+      "reachable": "Synkroniserat",
+      "notReachable": "Finns inte i QBO",
+      "notReachableTitle": "Tillgodohavanden från förskottsbetalningar eller projektförskott exporteras aldrig till QuickBooks — Alga är det primära registret.",
+      "buckets": "Förbetalda timpottstimmar",
+      "noBuckets": "Inga förbetalda timpottsperioder.",
+      "line": "Rad",
+      "period": "Period",
+      "included": "Ingår",
+      "used": "Använda",
+      "value": "Värde",
+      "feeSource": "Avgift",
+      "rollover": "överföring",
+      "notBilled": "Ännu inte fakturerat",
+      "billed": "Fakturerat"
+    },
+    "csv": {
+      "client": "Kund",
+      "currency": "Valuta"
+    }
+  },
+  "errors": {
+    "report": {
+      "invalidValue": "En av de valda rapportposterna är ogiltig. Ladda om och försök igen.",
+      "referenceMissing": "En av de valda rapportposterna finns inte längre. Ladda om och försök igen.",
+      "missingField": "Ett obligatoriskt rapportfält saknas.",
+      "missingFieldNamed": "Ett obligatoriskt rapportfält saknas: {{field}}."
+    }
+  }
+}

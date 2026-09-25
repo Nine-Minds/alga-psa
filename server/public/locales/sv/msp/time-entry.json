@@ -1,0 +1,510 @@
+{
+  "common": {
+    "actions": {
+      "view": "Visa",
+      "back": "Tillbaka",
+      "save": "Spara tidpost",
+      "saveGeneric": "Spara",
+      "saving": "Sparar…",
+      "cancel": "Avbryt",
+      "reset": "Återställ",
+      "delete": "Radera",
+      "change": "Ändra",
+      "select": "Välj",
+      "getStarted": "Kom igång",
+      "addItem": "Lägg till post",
+      "addEntry": "Tidpost",
+      "addComment": "Lägg till kommentar",
+      "adding": "Lägger till…",
+      "approve": "Godkänn",
+      "reject": "Avvisa",
+      "requestChanges": "Begär ändringar",
+      "reverseApproval": "Återkalla godkännande",
+      "reopen": "Öppna igen",
+      "reopenForEdits": "Öppna igen för redigering",
+      "submitTimeSheet": "Skicka in tidrapport",
+      "showDetails": "Visa detaljer",
+      "hideDetails": "Dölj detaljer",
+      "copyToAnotherDay": "Kopiera till en annan dag",
+      "viewDetails": "Visa detaljer",
+      "manageTimePeriods": "Hantera tidsperioder",
+      "selectWorkItem": "Välj arbetspost",
+      "clearFilter": "Rensa filter",
+      "remove": "Ta bort",
+      "clear": "Rensa"
+    },
+    "states": {
+      "inProgress": "Pågår",
+      "submitted": "Inskickad",
+      "approved": "Godkänd",
+      "changesRequested": "Ändringar begärda",
+      "unknown": "Okänd",
+      "current": "Aktuell",
+      "active": "Aktiv",
+      "addressed": "Åtgärdad",
+      "changeRequested": "Ändring begärd",
+      "loading": "Laddar…"
+    },
+    "fallbacks": {
+      "na": "Ej tillämpligt",
+      "none": "Inga tidposter",
+      "notFound": "Hittades inte",
+      "untitled": "Utan titel",
+      "unassigned": "Ej tilldelad",
+      "noDueDate": "Inget förfallodatum",
+      "noServiceSelected": "Ingen tjänst vald",
+      "noNotes": "Inga anteckningar",
+      "noUserFound": "Ingen användare hittades"
+    },
+    "units": {
+      "hoursShort": "h",
+      "minutesShort": "min",
+      "hoursAbbrev": "h",
+      "dayOne": "dag",
+      "dayOther": "dagar",
+      "percentBillable": "{{value}} % debiterbar tid"
+    },
+    "types": {
+      "all": "Alla typer",
+      "ticket": "Ärende",
+      "tickets": "Ärenden",
+      "projectTask": "Projektuppgift",
+      "projectTasks": "Projektuppgifter",
+      "interaction": "Interaktion",
+      "interactions": "Interaktioner",
+      "adHocEntry": "Ad hoc-post",
+      "adHocEntries": "Ad hoc-poster",
+      "billable": "Debiterbar"
+    }
+  },
+  "timeTracking": {
+    "subjectUserLabel": "Användare"
+  },
+  "timeEntryProvider": {
+    "errors": {
+      "initialize": "Det gick inte att initiera tidposter"
+    }
+  },
+  "timePeriodList": {
+    "title": "Välj en tidsperiod",
+    "columns": {
+      "period": "Period",
+      "status": "Status",
+      "hoursEntered": "Registrerade timmar",
+      "daysLogged": "Dagar med registrerad tid",
+      "lastEntry": "Senaste tidpost",
+      "actions": "Åtgärder"
+    },
+    "lastEntry": {
+      "none": "Inga tidposter"
+    },
+    "bulk": {
+      "selectedCount": "Markerade: {{count}}"
+    },
+    "delete": {
+      "success": "{{count}} tidrapport(er) har tagits bort",
+      "partialFailure": "{{count}} tidrapport(er) kunde inte tas bort",
+      "error": "Det gick inte att ta bort tidrapporter"
+    },
+    "removePeriod": {
+      "success": "{{count}} tidsperiod(er) har tagits bort",
+      "partialFailure": "{{count}} tidsperiod(er) kunde inte tas bort",
+      "error": "Det gick inte att ta bort tidsperioder"
+    },
+    "remove": {
+      "title": "Ta bort oanvända poster",
+      "message": "Vill du ta bort {{count}} markerad(e) period(er)? Oanvända löneperioder tas bort för hela organisationen tillsammans med eventuella tomma tidrapporter i utkastform för dessa perioder. Detta kan inte ångras.",
+      "timesheetMessage": "Vill du ta bort {{count}} oanvänd(a) tidrapport(er)? Endast tomma tidrapporter i utkastform tas bort och detta kan inte ångras."
+    }
+  },
+  "timeEntryForm": {
+    "labels": {
+      "service": "Tjänst",
+      "date": "Datum",
+      "startTime": "Starttid",
+      "endTime": "Sluttid",
+      "duration": "Varaktighet",
+      "billable": "Debiterbar",
+      "notes": "Anteckningar",
+      "deleteTimeEntry": "Radera tidpost",
+      "unsavedChanges": "Osparade ändringar"
+    },
+    "placeholders": {
+      "selectService": "Välj en tjänst",
+      "selectDate": "Välj datum",
+      "addNotes": "Lägg till anteckningar"
+    },
+    "validation": {
+      "startBeforeEnd": "Starttiden måste vara före sluttiden",
+      "endAfterStart": "Sluttiden måste vara efter starttiden",
+      "durationMinimum": "Varaktigheten måste vara minst 1 minut",
+      "minimumDuration": "Minsta varaktighet är 1 minut",
+      "serviceRequired": "En tjänst krävs för tidposter",
+      "timePeriodRange": "Datumet måste ligga inom den aktuella perioden ({{periodRange}})",
+      "endAfterStartPicker": "Sluttiden måste vara efter starttiden",
+      "durationSameDay": "Tidsintervallet måste sluta samma dag",
+      "endSameDay": "Sluttiden måste vara samma dag som starttiden",
+      "invalidTimeRange": "Ange ett giltigt tidsintervall"
+    }
+  },
+  "workItemPicker": {
+    "actions": {
+      "createAdHocEntry": "Skapa ad hoc-post"
+    },
+    "placeholders": {
+      "search": "Sök arbetsposter…",
+      "adHocTitle": "Ange en titel för ad hoc-posten",
+      "startTime": "Starttid",
+      "endTime": "Sluttid"
+    },
+    "filters": {
+      "includeInactive": "Inkludera inaktiva",
+      "filters": "Filter",
+      "assignedTo": "Tilldelad till",
+      "assignedToMe": "Tilldelad till mig",
+      "startDate": "Startdatum",
+      "endDate": "Slutdatum"
+    },
+    "empty": {
+      "searching": "Söker…",
+      "noWorkItems": "Inga arbetsposter hittades"
+    },
+    "paymentWarningTitle": "Varning om betalningskrav",
+    "paymentWarning": "Betalning krävs för en flaggad debiteringsmilstolpe i projektet och har inte bekräftats. Bekräfta betalningen innan du fortsätter arbetet."
+  },
+  "workItemList": {
+    "meta": {
+      "assignedTo": "Tilldelad till: {{value}}",
+      "dueDate": "Förfallodatum: {{value}}",
+      "contact": "Kontakt: {{value}}",
+      "scheduledEnd": "Schemalagt slut: {{value}}"
+    },
+    "assignment": {
+      "oneUser": "1 användare tilldelad",
+      "multipleUsers": "{{count}} användare tilldelade",
+      "additionalUsers": "{{name}}, +{{count}} användare",
+      "additionalUsersOther": "{{name}}, +{{count}} användare"
+    },
+    "bundledUnder": "Grupperat → {{number}}",
+    "bundled": "Grupperat",
+    "pagination": {
+      "previous": "Föregående",
+      "next": "Nästa",
+      "pageInfo": "Sida {{current}} av {{total}} ({{records}} poster totalt)"
+    },
+    "interactionType": "{{type}} • {{client}}",
+    "currentSelection": "Aktuell arbetspost"
+  },
+  "timeSheetHeader": {
+    "title": "Tidrapport",
+    "titleFor": "Tidrapport för {{name}}",
+    "editedBy": "Redigerad av {{name}}",
+    "aria": {
+      "previousWeek": "Föregående vecka",
+      "nextWeek": "Nästa vecka"
+    },
+    "pagination": {
+      "pageInfo": "Sida {{current}} av {{total}}"
+    },
+    "labels": {
+      "status": "Status:",
+      "showIntervals": "Visa intervall",
+      "grid": "Rutnät",
+      "list": "Lista"
+    }
+  },
+  "approval": {
+    "titleFor": "Godkännande av tidrapport för {{name}}",
+    "sections": {
+      "summary": "Sammanfattning",
+      "breakdownByWorkItemType": "Fördelning per arbetsposttyp",
+      "dailyBreakdown": "Fördelning per dag",
+      "detailedEntries": "Detaljerade tidposter",
+      "comments": "Kommentarer",
+      "timeEntryDetails": "Tidpostens detaljer"
+    },
+    "labels": {
+      "period": "Period",
+      "submitted": "Inskickad",
+      "total": "Totalt",
+      "billable": "Debiterbar tid",
+      "nonBillable": "Icke-debiterbar tid",
+      "workItem": "Arbetspost",
+      "service": "Tjänst",
+      "duration": "Varaktighet",
+      "notes": "Anteckningar",
+      "entryChangeSuggestion": "Ändringsförslag för tidpost",
+      "approver": "Godkännare",
+      "employee": "Medarbetare"
+    },
+    "table": {
+      "date": "Datum",
+      "workItem": "Arbetspost",
+      "start": "Start",
+      "end": "Slut",
+      "billable": "Debiterbar tid",
+      "status": "Status"
+    },
+    "comments": {
+      "changesRequestedHint": "(Ändringar har begärts – läs kommentarerna)",
+      "responsePlaceholder": "Skriv ditt svar på de begärda ändringarna…",
+      "placeholder": "Lägg till en kommentar…",
+      "respondToChanges": "Svara på ändringar"
+    },
+    "changeSuggestionPlaceholder": "Ange exakt vad medarbetaren ska rätta i den här tidposten"
+  },
+  "approvalActions": {
+    "dialogs": {
+      "rejectTitle": "Avvisa tidrapport",
+      "requestChangesTitle": "Begär ändringar"
+    },
+    "labels": {
+      "rejectionReason": "Orsak till avvisning"
+    },
+    "placeholders": {
+      "rejectionReason": "Ange orsak till avvisning"
+    },
+    "confirm": {
+      "reject": "Bekräfta avvisning",
+      "changes": "Bekräfta ändringar"
+    }
+  },
+  "comments": {
+    "placeholder": "Lägg till en kommentar…",
+    "responsePlaceholder": "Svara på de begärda ändringarna…",
+    "respondToChanges": "Svara på ändringar"
+  },
+  "feedback": {
+    "approverFeedback": "Återkoppling från godkännaren",
+    "viewHistory": "Visa återkopplingshistorik",
+    "approverOn": "{{name}} den {{value}}"
+  },
+  "managerDashboard": {
+    "access": {
+      "title": "Behörighet som teamledare krävs",
+      "description": "Du måste vara teamledare för att godkänna tidrapporter för dina teammedlemmar.",
+      "goToTeamSettings": "Gå till teaminställningar"
+    },
+    "title": "Godkännanden av tidrapporter",
+    "actions": {
+      "hideApproved": "Dölj godkända",
+      "showApproved": "Visa godkända",
+      "bulkApproveSelected": "Godkänn alla markerade",
+      "reverse": "Återkalla"
+    },
+    "columns": {
+      "select": "Välj",
+      "employee": "Medarbetare",
+      "period": "Period",
+      "status": "Status",
+      "actions": "Åtgärder"
+    },
+    "reverseApproval": {
+      "reason": "Godkännandet återkallades av chefen",
+      "error": "Det gick inte att återkalla godkännandet: {{error}}"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "Markerade: {{count}}",
+        "clear": "Rensa"
+      }
+    }
+  },
+  "workItemDrawer": {
+    "errors": {
+      "genericTitle": "Fel vid inläsning av innehåll",
+      "genericDescription": "Försök igen",
+      "failedInteraction": "Det gick inte att läsa in interaktionens detaljer",
+      "interactionNotFound": "Interaktionen hittades inte",
+      "noUserSession": "Ingen användarsession hittades",
+      "failedTicket": "Det gick inte att läsa in ärendet",
+      "failedTask": "Det gick inte att läsa in uppgiften",
+      "failedTaskPhase": "Det gick inte att läsa in uppgiftens fas",
+      "failedTaskProjectMetadata": "Det gick inte att läsa in projektmetadata för uppgiften",
+      "failedAdHoc": "Det gick inte att läsa in data för ad hoc-posten",
+      "unsupportedType": "Arbetsposttypen stöds inte",
+      "failedOpportunityStep": "Det gick inte att läsa in data för affärssteget"
+    },
+    "opportunityStep": {
+      "opportunity": "Affärsmöjlighet",
+      "client": "Kund",
+      "assignedTo": "Tilldelad till",
+      "openOpportunity": "Öppna affärsmöjlighet"
+    }
+  },
+  "timeSheetClient": {
+    "errors": {
+      "delegationDisabled": "Delegerad tidregistrering är inaktiverad",
+      "failedReopen": "Det gick inte att öppna tidrapporten igen"
+    },
+    "reopen": {
+      "success": "Tidrapporten har öppnats igen för redigering",
+      "reason": "Öppnad igen för redigering",
+      "title": "Öppna igen för redigering?",
+      "message": "Tidrapporten återgår till statusen Ändringar begärda så att tidposterna kan redigeras."
+    }
+  },
+  "timeSheetTable": {
+    "empty": {
+      "title": "Inga arbetsposter i din tidrapport",
+      "description": "Lägg till en ny arbetspost för att börja registrera din tid för den här veckan.",
+      "getStarted": "Kom igång"
+    }
+  },
+  "timeSheetList": {
+    "delete": {
+      "title": "Radera arbetspost",
+      "message": "Alla tidposter för den här arbetsposten raderas permanent. Åtgärden kan inte ångras."
+    },
+    "summary": {
+      "entryOne": "tidpost",
+      "entryOther": "tidposter",
+      "total": "Totalt: {{value}}",
+      "billable": "Debiterbar tid: {{value}}"
+    },
+    "empty": {
+      "title": "Inga tidposter ännu",
+      "description": "Lägg till en arbetspost och börja registrera din tid.",
+      "noEntries": "Inga tidposter"
+    },
+    "columns": {
+      "workItem": "Arbetspost",
+      "timeEntry": "Tidpost",
+      "duration": "Varaktighet",
+      "billableDuration": "Debiterbar varaktighet",
+      "actions": "Åtgärder"
+    },
+    "dayGroup": {
+      "entryOne": "{{count}} tidpost",
+      "entryOther": "{{count}} tidposter"
+    },
+    "focusFilter": {
+      "summary": "Visar {{count}} tidposter för {{workItem}} den {{date}}",
+      "description": "Endast tidposter från den markerade rutnätscellen visas.",
+      "backToGrid": "Tillbaka till rutnätet"
+    }
+  },
+  "selectedWorkItem": {
+    "adHocNoWorkItem": "Ad hoc-post (ingen arbetspost)"
+  },
+  "contractInfo": {
+    "noContract": "Ingen avtalsrad hittades för den här tjänsten. Tiden kommer att kopplas till standardavtalet som hanteras av systemet.",
+    "contract": "Avtal: {{name}}",
+    "defaultContract": "Standardavtal som hanteras av systemet",
+    "multipleLines": "Flera avtalsrader är tillgängliga – standardvalet används"
+  },
+  "billableLegend": {
+    "title": "Färgförklaring för debiterbar tid",
+    "description": "Färgindikatorer för andelen debiterbar tid"
+  },
+  "intervalItem": {
+    "now": "Nu",
+    "autoClosed": "Automatiskt avslutat",
+    "active": "Aktivt"
+  },
+  "intervals": {
+    "createdFromNote_one": "Skapad från {{count}} intervall",
+    "createdFromNote_other": "Skapad från {{count}} intervall",
+    "selectedCount_one": "{{count}} intervall markerat",
+    "selectedCount_other": "{{count}} intervall markerade",
+    "title": "Tidsintervall för ärenden",
+    "hideShortIntervals": "Dölj intervall under 1 minut",
+    "totalTime": "Total tid: {{value}}",
+    "selectedOne": "{{count}} intervall markerat",
+    "selectedOther": "{{count}} intervall markerade",
+    "tooltips": {
+      "createTimeEntry": "Skapa tidpost från markerade intervall",
+      "deleteSelected": "Radera markerade intervall",
+      "mergeSelected": "Slå ihop markerade intervall"
+    },
+    "actions": {
+      "selectAll": "Markera alla",
+      "deselectAll": "Avmarkera alla",
+      "merge": "Slå ihop"
+    },
+    "states": {
+      "loading": "Laddar intervall…",
+      "noIntervalsThisPeriod": "Inga intervall hittades för den här tidsperioden",
+      "noIntervalsThisTicket": "Inga intervall hittades för det här ärendet",
+      "noIntervalsLongerThanMinute": "Inga intervall längre än 1 minut hittades"
+    },
+    "entryName": "Tidpost för ärende",
+    "messages": {
+      "cannotFindTimeSheet": "Det går inte att skapa tidposten – det gick inte att hitta eller skapa en tidrapport",
+      "mergeFirst": "Slå ihop intervallen innan du skapar en tidpost",
+      "sameTicketOnly": "Tidposter kan bara skapas från intervall för samma ärende",
+      "mergeSameTicketOnly": "Endast intervall från samma ärende kan slås ihop",
+      "mergeSuccess": "Intervallen har slagits ihop",
+      "failedMerge": "Det gick inte att slå ihop intervallen",
+      "noActivePeriod": "Ingen aktiv tidsperiod hittades",
+      "failedFetchTimeSheet": "Det gick inte att skapa eller hämta tidrapporten",
+      "failedPrepareTimeEntry": "Det gick inte att förbereda tidposten",
+      "savedSuccess": "Tidposten har sparats",
+      "failedSave": "Det gick inte att spara tidposten"
+    }
+  },
+  "addWorkItemDialog": {
+    "title": "Lägg till arbetspost",
+    "description": "Välj en arbetspost att lägga till i tidrapporten",
+    "close": "Stäng dialogrutan ”Lägg till arbetspost”",
+    "focus": "Fokusera dialogrutan ”Lägg till arbetspost”"
+  },
+  "timeEntryReadOnly": {
+    "viewEntryDetails": "Visa tidpostens detaljer"
+  },
+  "messages": {
+    "serviceRequired": "Välj en tjänst innan du sparar tidposter",
+    "invalidService": "Den valda tjänsten är ogiltig",
+    "taxRegionRequired": "Välj en skatteregion för skattepliktiga tjänster",
+    "invalidTimeEntry": "Kontrollera tidpostens värden",
+    "savingEntry": "Sparar tidpost…",
+    "entrySaved": "Tidposten har sparats",
+    "entrySavedSuccess": "Tidposten har sparats",
+    "taskUpdated": "Uppgiften har uppdaterats",
+    "saveChangesFailed": "Det gick inte att spara ändringarna",
+    "changesSaved": "Ändringarna har sparats",
+    "workItemDeleted": "Arbetsposten har raderats",
+    "submitFailed": "Det gick inte att skicka in tidrapporten"
+  },
+  "bundleNotice": {
+    "withNumber": "Det här ärendet är grupperat under {{number}}. Tid för gruppen registreras vanligtvis på huvudärendet.",
+    "withoutNumber": "Det här ärendet ingår i en grupp. Tid för gruppen registreras vanligtvis på huvudärendet."
+  },
+  "errors": {
+    "timeSheet": {
+      "notFoundRefresh": "Tidrapporten hittades inte. Den kan ha raderats. Ladda om och försök igen.",
+      "onlySubmittedApprovable": "Endast inskickade tidrapporter kan godkännas.",
+      "idRequired": "Tidrapportens ID krävs.",
+      "ticketIdRequired": "Ärendets ID krävs.",
+      "workItemRemoveFailed": "Det gick inte att ta bort arbetsposten. Ladda om och försök igen.",
+      "onlyDraftRemovable": "Endast tidrapporter i utkastform kan tas bort.",
+      "removeEntriesFirst": "Ta bort tidposterna innan du tar bort den här tidrapporten.",
+      "onlyApprovedReopenable": "Endast godkända tidrapporter kan öppnas igen.",
+      "invoicedCannotReopen": "Den här tidrapporten innehåller fakturerad tid och kan inte öppnas igen."
+    },
+    "timeEntry": {
+      "notFoundRefresh": "Tidposten hittades inte. Den kan ha raderats. Ladda om och försök igen.",
+      "serviceRequired": "Välj en tjänst innan du sparar den här tidposten.",
+      "alreadyInvoiced": "Den här tidposten har redan fakturerats och kan inte ändras.",
+      "workItemTypeUnsupported": "Den valda arbetsposttypen stöds inte för tidposter.",
+      "bucketUpdateFailed": "Det gick inte att uppdatera timpottens förbrukning för den här tidposten. Ladda om och försök igen.",
+      "wrongTimeSheet": "Den här tidposten tillhör inte den valda tidrapporten.",
+      "outsidePeriod": "Tidposten måste ligga inom den valda tidrapportens period.",
+      "invalidReference": "Den valda tidposten, tidrapporten eller arbetsposten är ogiltig. Ladda om och försök igen.",
+      "referenceMissing": "Den valda tidrapporten, tidposten, arbetsposten eller användaren är inte längre giltig. Ladda om och försök igen.",
+      "duplicate": "Det finns redan en tidpost som står i konflikt med den här. Ladda om och försök igen.",
+      "missingField": "Ett obligatoriskt fält för tidrapport eller tidpost saknas.",
+      "missingFieldNamed": "Ett obligatoriskt fält för tidrapport eller tidpost saknas: {{field}}."
+    },
+    "timePeriod": {
+      "datesRequired": "Ange giltiga start- och slutdatum."
+    },
+    "timePeriodSettings": {
+      "invalidValue": "Ett värde i tidsperiodens inställningar är ogiltigt. Ladda om och försök igen.",
+      "referenceMissing": "Den valda tidsperiodsinställningen är inte längre giltig. Ladda om och försök igen.",
+      "duplicate": "Det finns redan en tidsperiodsinställning som står i konflikt med den här.",
+      "missingField": "Ett obligatoriskt fält för tidsperiodsinställningen saknas.",
+      "missingFieldNamed": "Ett obligatoriskt fält för tidsperiodsinställningen saknas: {{field}}."
+    }
+  }
+}

@@ -1,0 +1,149 @@
+{
+  "shared": {
+    "fallbacks": {
+      "empty": "-"
+    },
+    "statusLabels": {
+      "completed": "Slutfört",
+      "failed": "Misslyckades",
+      "processing": "Bearbetas",
+      "pending": "Väntande"
+    },
+    "runnerLabels": {
+      "temporal": "Temporal",
+      "pgboss": "PG Boss"
+    }
+  },
+  "recentTable": {
+    "columns": {
+      "jobName": "Bakgrundsjobbets namn",
+      "runner": "Körmotor",
+      "status": "Status",
+      "duration": "Varaktighet",
+      "started": "Startat",
+      "completed": "Avslutat"
+    },
+    "time": {
+      "justNow": "Nyss",
+      "minutesAgo": "För {{count}} min sedan",
+      "hoursAgo": "För {{count}} h sedan"
+    },
+    "duration": {
+      "milliseconds": "{{count}} ms",
+      "seconds": "{{count}} s",
+      "minutesSeconds": "{{minutes}} min {{seconds}} s",
+      "hoursMinutes": "{{hours}} h {{minutes}} min"
+    },
+    "externalId": "ID: {{id}}…",
+    "print": {
+      "title": "Senaste bakgrundsjobben",
+      "subtitle": "{{count}} bakgrundsjobb",
+      "noJobs": "Inga bakgrundsjobb att skriva ut",
+      "columns": {
+        "jobName": "Bakgrundsjobbets namn",
+        "runner": "Körmotor",
+        "status": "Status",
+        "duration": "Varaktighet",
+        "started": "Startat",
+        "completed": "Avslutat"
+      },
+      "optionsDialog": {
+        "title": "Utskriftsalternativ",
+        "description": "Välj vilka kolumner som ska ingå vid utskrift av de senaste bakgrundsjobben."
+      }
+    }
+  },
+  "metrics": {
+    "labels": {
+      "totalJobs": "Totalt antal bakgrundsjobb",
+      "totalJobsPgBoss": "Totalt antal bakgrundsjobb (PG Boss)",
+      "totalJobsTemporal": "Totalt antal bakgrundsjobb (Temporal)",
+      "completed": "Slutförda",
+      "failed": "Misslyckade",
+      "pending": "Väntande",
+      "processing": "Bearbetas",
+      "queued": "I kö",
+      "running": "Körs",
+      "pgboss": "PG Boss",
+      "temporal": "Temporal"
+    },
+    "successRate": "{{count}} % lyckade bakgrundsjobb",
+    "successRateNone": "Inga avslutade bakgrundsjobb ännu"
+  },
+  "historyTable": {
+    "columns": {
+      "jobName": "Bakgrundsjobbets namn",
+      "status": "Status",
+      "created": "Skapat",
+      "started": "Startat",
+      "completed": "Slutfört"
+    }
+  },
+  "progress": {
+    "loading": "Laddar detaljer om bakgrundsjobbet…",
+    "labels": {
+      "created": "Skapat:",
+      "jobData": "Bakgrundsjobbets data"
+    }
+  },
+  "drawer": {
+    "title": "Detaljer om bakgrundsjobbet",
+    "jobId": "ID: {{id}}",
+    "sections": {
+      "progress": "Bakgrundsjobbets förlopp",
+      "metrics": "Mätvärden för bakgrundsjobbet",
+      "history": "Bakgrundsjobbets historik"
+    }
+  },
+  "stepHistory": {
+    "title": "Bakgrundsjobbets steg",
+    "labels": {
+      "processed": "Bearbetat:",
+      "retries": "Omförsök:"
+    }
+  },
+  "actions": {
+    "print": "Skriv ut",
+    "printOptions": "Utskriftsalternativ"
+  },
+  "clearHistory": {
+    "button": "Rensa historik",
+    "dialog": {
+      "title": "Rensa bakgrundsjobbens historik",
+      "warning": "Detta tar permanent bort bakgrundsjobbens historik från listan och kan inte ångras. Det stoppar eller avbryter inte bakgrundsjobb som fortfarande körs.",
+      "daysLabel": "Ålder i dagar",
+      "daysError": "Ange antalet dagar som ett heltal (1 eller mer).",
+      "cancel": "Avbryt",
+      "clearing": "Rensar…",
+      "confirm": "Rensa historik"
+    },
+    "scope": {
+      "finished": {
+        "label": "Endast avslutade",
+        "description": "Slutförda och misslyckade bakgrundsjobb. Bakgrundsjobb som väntar, står i kö eller körs behålls."
+      },
+      "all": {
+        "label": "Alla statusar",
+        "description": "Alla bakgrundsjobb, inklusive de som väntar, står i kö eller fortfarande körs."
+      }
+    },
+    "age": {
+      "toggle": "Radera endast bakgrundsjobb som är äldre än en angiven ålder"
+    },
+    "toast": {
+      "none": "Inga matchande bakgrundsjobb att rensa.",
+      "error": "Det gick inte att rensa bakgrundsjobbens historik. Försök igen.",
+      "success_one": "{{count}} bakgrundsjobb har rensats från historiken.",
+      "success_other": "{{count}} bakgrundsjobb har rensats från historiken."
+    }
+  },
+  "page": {
+    "heading": "Övervakning av bakgrundsjobb",
+    "recentJobs": "Senaste bakgrundsjobben"
+  },
+  "errors": {
+    "job": {
+      "notFound": "Bakgrundsjobbet hittades inte. Det kan ha löpt ut eller raderats."
+    }
+  }
+}

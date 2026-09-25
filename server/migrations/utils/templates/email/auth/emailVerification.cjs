@@ -351,6 +351,30 @@ STYLED_COPY.pt = {
   textFooter: 'Este é um email automático de segurança.\n© {{currentYear}} {{tenantClientName}}. Todos os direitos reservados.',
 };
 
+STYLED_COPY.sv = {
+  subject: 'Verifiera din e-postadress{{#if registrationClientName}} för {{registrationClientName}}{{/if}}',
+  headerTitle: 'E-postverifiering',
+  headerSubtitle: 'Bekräfta din e-postadress för att komma igång',
+  greeting: 'Hej,',
+  intro: 'Välkommen. Verifiera din e-postadress för att aktivera ditt konto{{#if registrationClientName}} för <strong>{{registrationClientName}}</strong>{{/if}}.',
+  whyTitle: '✉️ Varför verifiera din e-postadress?',
+  why1: '✓ Säkerställer kontots säkerhet och möjligheter till återställning',
+  why2: '✓ Möjliggör viktiga aviseringar och uppdateringar',
+  why3: '✓ Bekräftar att du är kontots ägare',
+  buttonText: 'Verifiera e-postadress',
+  linkInstructions: 'Eller kopiera och klistra in den här länken i din webbläsare:',
+  warningTitle: '⏰ Tidsbegränsad verifiering',
+  warningText: 'Den här verifieringslänken slutar gälla om <strong>{{expirationTime}}</strong>. Slutför verifieringen innan dess.',
+  didntRequest: '<strong>Har du inte begärt det här e-postmeddelandet?</strong> Du kan lugnt ignorera det. Din e-postadress läggs inte till i vårt system om du inte klickar på verifieringslänken ovan.',
+  footer1: 'Det här är ett automatiskt säkerhetsmeddelande.',
+  footer2: '© {{currentYear}} {{tenantClientName}}. Alla rättigheter förbehållna.',
+  textWhy: '✉️ Varför verifiera din e-postadress?\n✓ Säkerställer kontots säkerhet och möjligheter till återställning\n✓ Möjliggör viktiga aviseringar och uppdateringar\n✓ Bekräftar att du är kontots ägare',
+  textButton: 'Verifiera e-postadress: {{verificationUrl}}',
+  textWarning: '⏰ Tidsbegränsad verifiering\nDen här verifieringslänken slutar gälla om {{expirationTime}}. Slutför verifieringen innan dess.',
+  textDidntRequest: 'Har du inte begärt det här e-postmeddelandet? Du kan lugnt ignorera det. Din e-postadress läggs inte till i vårt system om du inte klickar på verifieringslänken ovan.',
+  textFooter: 'Det här är ett automatiskt säkerhetsmeddelande.\n© {{currentYear}} {{tenantClientName}}. Alla rättigheter förbehållna.',
+};
+
 /* eslint-enable max-len */
 
 function buildStyledHtml(c) {
@@ -434,7 +458,7 @@ ${c.textFooter}`;
 function getTemplate() {
   const translations = [];
 
-  // Styled versions for all supported locales (en, fr, es, de, nl, it, pl)
+  // Styled versions for all supported locales (en, fr, es, de, nl, it, pl, pt, sv)
   for (const [lang, copy] of Object.entries(STYLED_COPY)) {
     translations.push({
       language: lang,

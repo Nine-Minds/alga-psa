@@ -1,0 +1,162 @@
+{
+  "views": {
+    "list": "Lista",
+    "calendar": "Kalender",
+    "label": "Byt vy"
+  },
+  "calendar": {
+    "today": "Idag",
+    "more": "fler",
+    "label": "Bokningskalender",
+    "previousMonth": "Föregående månad",
+    "nextMonth": "Nästa månad",
+    "cellWithCount": "{{date}}, antal bokningar: {{count}}",
+    "moreAria": "Visa {{count}} fler för {{date}}",
+    "requestOnDate": "Skicka bokningsförfrågan för {{date}}"
+  },
+  "modal": {
+    "title": "Skicka bokningsförfrågan",
+    "editTitle": "Redigera bokningsförfrågan",
+    "step": "Steg",
+    "of": "av"
+  },
+  "steps": {
+    "service": "Tjänst",
+    "date": "Datum",
+    "time": "Tid",
+    "confirm": "Bekräfta"
+  },
+  "step1": {
+    "title": "Välj tjänst",
+    "description": "Välj den tjänst du behöver hjälp med",
+    "selectService": "Välj en tjänst",
+    "serviceLabel": "Tjänst",
+    "ticketLabel": "Koppla till befintligt ärende (valfritt)",
+    "selectTicket": "Välj ett ärende",
+    "noTicket": "Inget ärende",
+    "searchTickets": "Sök ärenden…",
+    "noTicketsFound": "Inga ärenden matchar din sökning",
+    "ticketHint": "Du kan koppla bokningen till ett befintligt supportärende"
+  },
+  "step2": {
+    "title": "Välj datum",
+    "description": "Välj önskat datum för bokningen",
+    "selectDate": "Välj ett tillgängligt datum",
+    "selectedDate": "Valt datum"
+  },
+  "step3": {
+    "title": "Välj tid och tekniker",
+    "description": "Välj önskad tid och, om du vill, en tekniker",
+    "selectTime": "Tillgängliga tider",
+    "minutes": "min",
+    "noTimeSlotsAvailable": "Det finns inga tillgängliga tider för detta datum. Välj ett annat datum.",
+    "technicianLabel": "Önskad tekniker (valfritt)",
+    "selectTechnician": "Välj en tekniker",
+    "noPreference": "Inget önskemål",
+    "technicianHint": "Detta är ett önskemål och kan ändras beroende på tillgänglighet"
+  },
+  "step4": {
+    "title": "Granska och bekräfta",
+    "description": "Lägg till eventuell ytterligare information och granska din bokningsförfrågan",
+    "descriptionPlaceholder": "Ange eventuell ytterligare information om din förfrågan…",
+    "summaryTitle": "Bokningsöversikt",
+    "service": "Tjänst",
+    "dateTime": "Datum och tid",
+    "at": "kl.",
+    "duration": "Varaktighet",
+    "technician": "Önskad tekniker",
+    "linkedTicket": "Kopplat ärende",
+    "approvalNote": "Din bokningsförfrågan skickas in för godkännande. Du får en bekräftelse via e-post när den har godkänts.",
+    "submit": "Skicka bokningsförfrågan",
+    "update": "Uppdatera bokning"
+  },
+  "status": {
+    "pending": "Väntar på godkännande",
+    "approved": "Bekräftad",
+    "declined": "Avböjd",
+    "cancelled": "Avbokad"
+  },
+  "errors": {
+    "loadServicesFailed": "Det gick inte att ladda tillgängliga tjänster. Försök igen.",
+    "loadDatesFailed": "Det gick inte att ladda tillgängliga datum. Försök igen.",
+    "loadSlotsFailed": "Det gick inte att ladda tillgängliga tider. Försök igen.",
+    "createFailed": "Det gick inte att skapa bokningsförfrågan. Försök igen.",
+    "updateFailed": "Det gick inte att uppdatera bokningsförfrågan. Försök igen.",
+    "loadFailed": "Det gick inte att ladda bokningar. Försök igen.",
+    "notFound": "Bokningsförfrågan hittades inte"
+  },
+  "messages": {
+    "requestSuccess": "Bokningsförfrågan har skickats in.",
+    "requestSuccessDetail": "Vi granskar din förfrågan och skickar en bekräftelse via e-post när den har godkänts.",
+    "updateSuccess": "Bokningsförfrågan har uppdaterats.",
+    "updateSuccessDetail": "Din bokningsförfrågan har uppdaterats.",
+    "cancelSuccess": "Bokningen har avbokats.",
+    "cancelFailed": "Det gick inte att avboka bokningen. Försök igen."
+  },
+  "page": {
+    "title": "Mina bokningar",
+    "subtitle": "Visa och hantera dina bokningsförfrågningar",
+    "requestButton": "Skicka ny bokningsförfrågan",
+    "noAppointments": "Inga bokningar hittades",
+    "noAppointmentsDescription": "Du har inte skickat någon bokningsförfrågan än. Skicka en nu för att komma igång."
+  },
+  "filters": {
+    "all": "Alla",
+    "pending": "Väntande",
+    "approved": "Godkänd",
+    "declined": "Avböjd"
+  },
+  "table": {
+    "service": "Tjänst",
+    "dateTime": "Datum och tid",
+    "status": "Status",
+    "technician": "Tekniker",
+    "actions": "Åtgärder",
+    "minutes": "min",
+    "notAssigned": "Inte tilldelad",
+    "viewDetails": "Visa detaljer",
+    "edit": "Redigera",
+    "cancel": "Avboka",
+    "rowActionsLabel": "Radåtgärder"
+  },
+  "details": {
+    "title": "Bokningsdetaljer",
+    "statusApproved": "Bokningen har bekräftats",
+    "statusPending": "Bokningen väntar på godkännande",
+    "statusDeclined": "Bokningsförfrågan har avböjts",
+    "statusCancelled": "Bokningen har avbokats",
+    "reason": "Orsak",
+    "reference": "Referens",
+    "service": "Tjänst",
+    "dateTime": "Datum och tid",
+    "teamsMeeting": "Teams-möte",
+    "joinTeamsMeeting": "Anslut till Teams-möte",
+    "technician": "Tilldelad tekniker",
+    "linkedTicket": "Kopplat ärende",
+    "description": "Beskrivning",
+    "created": "Förfrågan skickad",
+    "approved": "Godkänd",
+    "cancelButton": "Avboka bokning",
+    "downloadRecording": "Ladda ner inspelning",
+    "viewTranscript": "Visa transkription"
+  },
+  "cancel": {
+    "title": "Avboka bokning",
+    "message": "Är du säker på att du vill avboka denna bokningsförfrågan? Åtgärden kan inte ångras.",
+    "messageWithTeamsWarning": "Är du säker på att du vill avboka denna bokningsförfrågan? Åtgärden kan inte ångras. Microsoft Teams-mötet raderas också.",
+    "confirm": "Ja, avboka",
+    "teamsMeetingCleanupNotice": "Det kopplade Microsoft Teams-mötet avbokas och försvinner snart från deltagarnas kalendrar."
+  },
+  "ticketSection": {
+    "title": "Bokningsförfrågningar",
+    "service": "Tjänst",
+    "publicRequest": "Offentlig förfrågan",
+    "minutes": "minuter",
+    "preferred": "Önskad:",
+    "approvedBy": "Godkänd av",
+    "on": "den",
+    "declined": "Avböjd:",
+    "invalidDateTime": "Ogiltigt datum eller klockslag"
+  },
+  "backToAppointments": "Tillbaka till bokningar"
+}

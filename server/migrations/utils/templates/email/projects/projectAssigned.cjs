@@ -118,6 +118,7 @@ const COPY = {
   },
 };
 SUBJECTS.pt = 'Você foi atribuído ao projeto: {{project.name}}';
+SUBJECTS.sv = 'Du har tilldelats projektet: {{project.name}}';
 COPY.pt = {
   headerLabel: 'Projeto atribuído',
   intro: 'Você foi atribuído a um projeto:',
@@ -130,6 +131,19 @@ COPY.pt = {
   textHeader: 'Projeto atribuído',
   textIntro: 'Você foi atribuído a um projeto:',
   textView: 'Ver projeto em',
+};
+COPY.sv = {
+  headerLabel: 'Projekt tilldelat',
+  intro: 'Du har tilldelats ett projekt:',
+  projectName: 'Projektnamn',
+  description: 'Beskrivning',
+  startDate: 'Startdatum',
+  assignedBy: 'Tilldelat av',
+  viewButton: 'Visa projekt',
+  footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+  textHeader: 'Projekt tilldelat',
+  textIntro: 'Du har tilldelats ett projekt:',
+  textView: 'Visa projekt på',
 };
 
 /* eslint-enable max-len */

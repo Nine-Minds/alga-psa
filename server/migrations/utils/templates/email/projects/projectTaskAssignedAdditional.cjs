@@ -166,6 +166,7 @@ const COPY = {
   },
 };
 SUBJECTS.pt = 'Você foi adicionado como recurso adicional à tarefa: {{task.name}}';
+SUBJECTS.sv = 'Du har lagts till som ytterligare resurs för uppgiften: {{task.name}}';
 COPY.pt = {
   headerLabel: 'Atribuição de tarefa',
   intro: 'Olá{{#if recipientName}} {{recipientName}}{{/if}}, você foi adicionado(a) como recurso adicional de uma tarefa do projeto.',
@@ -184,6 +185,25 @@ COPY.pt = {
   textHeader: 'Atribuição de tarefa',
   textIntro: 'Você foi adicionado(a) como recurso adicional para esta tarefa:',
   textView: 'Ver tarefa em',
+};
+COPY.sv = {
+  headerLabel: 'Uppgiftstilldelning',
+  intro: 'Hej{{#if recipientName}} {{recipientName}}{{/if}}, du har lagts till som ytterligare resurs för en projektuppgift.',
+  assignedBadge: 'Ytterligare resurs',
+  badgeBg: 'rgba(138,77,234,0.12)',
+  badgeColor: '#5b38b0',
+  taskLabel: 'Uppgift',
+  projectLabel: 'Projekt',
+  dueDateLabel: 'Förfallodatum',
+  assignedByLabel: 'Tilldelad av',
+  roleLabel: 'Roll',
+  descriptionTitle: 'Beskrivning',
+  viewButton: 'Visa uppgift',
+  buttonColor: '#8A4DEA',
+  footer: 'Drivs av AlgaPSA',
+  textHeader: 'Uppgiftstilldelning',
+  textIntro: 'Du har lagts till som ytterligare resurs för den här uppgiften:',
+  textView: 'Visa uppgift på',
 };
 
 /* eslint-enable max-len */

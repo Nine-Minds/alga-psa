@@ -113,6 +113,7 @@ const COPY = {
   },
 };
 SUBJECTS.pt = 'Pagamento vencido: fatura #{{invoice.number}}';
+SUBJECTS.sv = 'Förfallen betalning: faktura #{{invoice.number}}';
 COPY.pt = {
   headerLabel: 'Pagamento vencido',
   intro: 'O pagamento da fatura #{{invoice.number}} está vencido.',
@@ -124,6 +125,18 @@ COPY.pt = {
   footer: 'Powered by AlgaPSA &middot; Mantendo as equipes alinhadas',
   textHeader: 'Pagamento vencido',
   textIntro: 'O pagamento da fatura #{{invoice.number}} está vencido:',
+};
+COPY.sv = {
+  headerLabel: 'Förfallen betalning',
+  intro: 'Betalningen för faktura #{{invoice.number}} är förfallen.',
+  invoiceNumberLabel: 'Fakturanummer',
+  amountDueLabel: 'Belopp att betala',
+  dueDateLabel: 'Förfallodatum',
+  daysOverdueLabel: 'Dagar efter förfallodatum',
+  viewButton: 'Visa faktura',
+  footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+  textHeader: 'Förfallen betalning',
+  textIntro: 'Betalningen för faktura #{{invoice.number}} är förfallen:',
 };
 
 /* eslint-enable max-len */

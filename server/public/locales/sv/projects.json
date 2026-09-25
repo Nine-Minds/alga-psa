@@ -1,0 +1,93 @@
+{
+  "projectPrint": {
+    "tasks": {
+      "fields": {
+        "assignee": "Ansvarig",
+        "description": "Beskrivning",
+        "dueDate": "Förfallodatum",
+        "estimatedHours": "Uppskattade timmar",
+        "phase": "Fas",
+        "status": "Status",
+        "wbsCode": "WBS-kod"
+      }
+    }
+  },
+  "errors": {
+    "permissions": {
+      "createProject": "Åtkomst nekad: Du saknar behörighet att skapa projekt",
+      "readProject": "Åtkomst nekad: Du saknar behörighet att läsa projekt",
+      "updateProject": "Åtkomst nekad: Du saknar behörighet att uppdatera projekt",
+      "deleteProject": "Åtkomst nekad: Du saknar behörighet att radera projekt",
+      "materialRead": "Åtkomst nekad: Behörighet att läsa projekt krävs",
+      "materialUpdate": "Åtkomst nekad: Behörighet att uppdatera projekt krävs"
+    },
+    "project": {
+      "notFound": "Projektet hittades inte",
+      "validationFailed": "Projektet kunde inte valideras. Kontrollera projektets detaljer och försök igen.",
+      "invalidValue": "Ett av de valda projektvärdena är ogiltigt. Ladda om och försök igen.",
+      "referenceMissing": "En av de valda projektposterna finns inte längre. Ladda om och försök igen.",
+      "conflict": "Den här projektändringen står i konflikt med en befintlig post. Ladda om och försök igen.",
+      "notAllowed": "Ett av projektvärdena är inte tillåtet. Kontrollera formuläret och försök igen.",
+      "missingField": "Ett obligatoriskt projektfält saknas.",
+      "missingFieldNamed": "Ett obligatoriskt projektfält saknas: {{field}}.",
+      "statusesNotConfigured": "Projektstatusar är inte konfigurerade. Lägg till minst en projektstatus innan du skapar projekt.",
+      "taskStatusesNotConfigured": "Statusar för projektuppgifter är inte konfigurerade. Lägg till minst en uppgiftsstatus innan du skapar projekt.",
+      "detailsUnavailableAfterCreate": "Projektet kunde inte skapas eftersom dess detaljer inte kunde läsas in. Försök igen."
+    },
+    "task": {
+      "validationFailed": "Rätta uppgiftens detaljer: {{details}}",
+      "invalidValue": "Ett av de valda uppgiftsvärdena är ogiltigt. Ladda om och försök igen.",
+      "referenceMissing": "En av de valda projekt- eller uppgiftsposterna finns inte längre. Ladda om och försök igen.",
+      "conflict": "Den här uppgiftsändringen står i konflikt med en befintlig post. Ladda om och försök igen.",
+      "notAllowed": "Ett av uppgiftsvärdena är inte tillåtet. Kontrollera formuläret och försök igen.",
+      "missingField": "Ett obligatoriskt uppgiftsfält saknas.",
+      "missingFieldNamed": "Ett obligatoriskt uppgiftsfält saknas: {{field}}."
+    },
+    "comment": {
+      "internalOnly": "Endast interna användare kan kommentera uppgifter.",
+      "taskNotFound": "Uppgiften hittades inte. Den kan ha raderats. Ladda om och försök igen.",
+      "parentNotFound": "Kommentaren du svarar på hittades inte. Ladda om och försök igen.",
+      "sameThreadRequired": "Svar måste ligga i samma kommentarstråd för uppgiften. Ladda om och försök igen.",
+      "parentDeleted": "Du kan inte svara på en raderad kommentar.",
+      "notFound": "Kommentaren hittades inte. Den kan ha raderats. Ladda om och försök igen.",
+      "referenceMissing": "Den valda uppgiften eller kommentaren finns inte längre. Ladda om och försök igen.",
+      "missingField": "Ett obligatoriskt kommentarsfält saknas.",
+      "missingFieldNamed": "Ett obligatoriskt kommentarsfält saknas: {{field}}."
+    },
+    "export": {
+      "invalidValue": "Valet innehåller ett ogiltigt projekt, en ogiltig fas eller en ogiltig uppgift. Ladda om och försök igen.",
+      "missingField": "Ett obligatoriskt fält för projektexport saknas.",
+      "missingFieldNamed": "Ett obligatoriskt fält för projektexport saknas: {{field}}."
+    },
+    "status": {
+      "invalidValue": "Ett av de valda statusvärdena är ogiltigt. Ladda om och försök igen.",
+      "referenceMissing": "En av de valda projektstatusarna finns inte längre. Ladda om och försök igen.",
+      "duplicate": "En status för projektuppgifter med dessa inställningar finns redan.",
+      "notAllowed": "Ett av statusvärdena är inte tillåtet. Kontrollera formuläret och försök igen.",
+      "missingField": "Ett obligatoriskt statusfält saknas.",
+      "missingFieldNamed": "Ett obligatoriskt statusfält saknas: {{field}}."
+    },
+    "template": {
+      "validationFailed": "Mallen kunde inte valideras. Kontrollera mallens detaljer och försök igen.",
+      "invalidUuid": "Mallförfrågan innehåller ett ogiltigt UUID",
+      "missingStatuses": "Den här mallen hänvisar till statusar som inte längre finns. Rätta till mallens statuskolumner och försök igen."
+    },
+    "ordering": {
+      "invalidValue": "Ett av de valda projekt-, fas-, uppgifts- eller statusvärdena är ogiltigt. Ladda om och försök igen.",
+      "referenceMissing": "En av de valda posterna för projektordning finns inte längre. Ladda om och försök igen.",
+      "missingField": "Ett obligatoriskt fält för projektordning saknas.",
+      "missingFieldNamed": "Ett obligatoriskt fält för projektordning saknas: {{field}}."
+    },
+    "material": {
+      "referenceMissing": "Valet av projekt, kund, produkt eller lagerenhet är inte längre giltigt. Ladda om och försök igen.",
+      "missingField": "Ett obligatoriskt materialfält saknas.",
+      "missingFieldNamed": "Ett obligatoriskt materialfält saknas: {{field}}."
+    },
+    "statusUpdate": {
+      "noRecipient": "Ingen e-postadress är konfigurerad för projektets kundkontakt.",
+      "emailNotConfigured": "E-post är inte konfigurerad. Konfigurera e-postinställningarna under Inställningar innan du skickar uppdateringar.",
+      "templateMissing": "E-postmallen för projektets statusuppdatering saknas.",
+      "sendFailed": "Det gick inte att skicka projektets statusuppdatering. Försök igen."
+    }
+  }
+}

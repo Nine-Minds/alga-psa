@@ -485,6 +485,69 @@ Se tiver dúvidas ou precisar de ajuda, entre em contato com a equipe de suporte
 Esta é uma mensagem automática. Não responda a este email.`,
 };
 
+LANGS.sv = {
+  subject: '{{platformName}} - Dina inloggningslänkar',
+  html: `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+          <div style="background: linear-gradient(135deg, #8A4DEA, #40CFF9); padding: 30px; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">{{platformName}}</h1>
+          </div>
+          <h2 style="color: #111827; font-size: 24px; margin: 30px 30px 0;">
+            Dina inloggningslänkar
+          </h2>
+          <div style="padding: 40px 30px;">
+            <p style="color: #111827; font-size: 16px; margin-bottom: 20px;">Hej,</p>
+            <p style="color: #111827; font-size: 16px; margin-bottom: 20px;">
+              Du har begärt kundportalåtkomst{{#if isMultiple}} för flera organisationer{{/if}}.
+              {{#if isMultiple}}Vi hittade {{tenantCount}} organisationer kopplade till din e-postadress.{{else}}Här är din inloggningslänk:{{/if}}
+            </p>
+
+            <table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; margin: 25px 0;">
+              {{tenantLinksHtml}}
+            </table>
+
+            <div style="background-color: #f3f4f6; border-radius: 6px; padding: 20px; margin: 25px 0;">
+              <p style="color: #4b5563; font-size: 14px; margin: 0;">
+                <strong>Säkerhetsinformation:</strong> Om du inte har begärt de här inloggningslänkarna kan du lugnt ignorera det här e-postmeddelandet. Ditt konto är fortfarande skyddat.
+              </p>
+            </div>
+
+            <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 30px;">
+              <p style="color: #6b7280; font-size: 14px; margin-bottom: 10px;">
+                Kontakta din organisations supportteam om du har frågor eller behöver hjälp.
+              </p>
+            </div>
+          </div>
+
+          <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+            <p style="color: #9ca3af; font-size: 12px; margin: 5px 0;">
+              © {{currentYear}} {{platformName}}. Alla rättigheter förbehållna.
+            </p>
+            <p style="color: #9ca3af; font-size: 11px; margin: 5px 0;">
+              Det här är ett automatiskt meddelande. Svara inte på det här e-postmeddelandet.
+            </p>
+          </div>
+        </div>
+      `,
+  text: `{{platformName}} - Dina inloggningslänkar
+
+Hej,
+
+Du har begärt kundportalåtkomst{{#if isMultiple}} för flera organisationer{{/if}}.
+{{#if isMultiple}}Vi hittade {{tenantCount}} organisationer kopplade till din e-postadress.{{else}}Här är din inloggningslänk:{{/if}}
+
+Dina inloggningslänkar:
+{{tenantLinksText}}
+
+Säkerhetsinformation: Om du inte har begärt de här inloggningslänkarna kan du lugnt ignorera det här e-postmeddelandet. Ditt konto är fortfarande skyddat.
+
+Kontakta din organisations supportteam om du har frågor eller behöver hjälp.
+
+---
+© {{currentYear}} {{platformName}}. Alla rättigheter förbehållna.
+Det här är ett automatiskt meddelande. Svara inte på det här e-postmeddelandet.`,
+};
+
 /* eslint-enable max-len */
 
 function getTemplate() {

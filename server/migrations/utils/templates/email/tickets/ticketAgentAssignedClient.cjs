@@ -29,6 +29,7 @@ const SUBJECTS = {
   it: 'Il suo ticket \u00e8 in lavorazione \u2022 {{ticket.title}}',
   pl: 'Twoje zg\u0142oszenie jest w trakcie obs\u0142ugi \u2022 {{ticket.title}}',
   pt: 'Seu ticket está em atendimento • {{ticket.title}}',
+  sv: 'Ditt ärende hanteras • {{ticket.title}}',
 };
 
 /* eslint-disable max-len */
@@ -168,6 +169,23 @@ const COPY = {
     textAssigned: 'Atribuído a',
     textRequester: 'Solicitante',
     textView: 'Ver ticket',
+  },
+  sv: {
+    headerLabel: 'Handläggare tilldelad',
+    intro: '<strong>{{ticket.assignedToName}}</strong> har tilldelats ditt ärende för <strong>{{ticket.clientName}}</strong>. Handläggaren hör snart av sig med uppdateringar.',
+    badgePrefix: 'Ärende #',
+    priority: 'Prioritet',
+    status: 'Status',
+    assignedTo: 'Tilldelat till',
+    board: 'Tavla',
+    category: 'Kategori',
+    requester: 'Beställare',
+    viewButton: 'Visa ärende',
+    footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+    textHeader: 'Ditt ärende hanteras',
+    textAssigned: 'Tilldelat till',
+    textRequester: 'Beställare',
+    textView: 'Visa ärende',
   },
 };
 /* eslint-enable max-len */

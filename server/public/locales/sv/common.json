@@ -1,0 +1,1623 @@
+{
+  "colorPicker": {
+    "invalidHexBackground": "Ogiltig hexadecimal färgkod (t.ex. #FF0000)",
+    "invalidHexText": "Ogiltig hexadecimal färgkod (t.ex. #FFFFFF)",
+    "customizeTagColors": "Anpassa taggfärger",
+    "chooseColor": "Välj färg",
+    "quickSelect": "Snabbval",
+    "presetAriaLabel": "Välj förinställd färg {{number}}",
+    "backgroundColor": "Bakgrundsfärg",
+    "textColor": "Textfärg",
+    "preview": "Förhandsgranskning",
+    "sampleTag": "Exempeltagg",
+    "resetToDefault": "Återställ till standard"
+  },
+  "clientNameCell": {
+    "noClient": "Ingen kund"
+  },
+  "reactions": {
+    "add": "Reagera",
+    "ariaSummary_one": "{{emoji}} {{count}} reaktion",
+    "ariaSummary_other": "{{emoji}} {{count}} reaktioner",
+    "ariaYouReacted": ", du reagerade"
+  },
+  "credits": {
+    "expiresInDaysOn_one": "Går ut om {{count}} dag, den {{date}}",
+    "expiresInDaysOn_other": "Går ut om {{count}} dagar, den {{date}}",
+    "expiringForClient_one": "{{count}} tillgodohavande för {{clientName}} går snart ut",
+    "expiringForClient_other": "{{count}} tillgodohavanden för {{clientName}} går snart ut"
+  },
+  "staleAction": {
+    "message": "Sidan är inaktuell. Ladda om för att återställa liveuppdateringar och åtgärder."
+  },
+  "licenseBanner": {
+    "trialExpiresIn_one": "Provperioden för Pro går ut om {{count}} dag. Ange en licensnyckel för att behålla Pro-funktionerna.",
+    "trialExpiresIn_other": "Provperioden för Pro går ut om {{count}} dagar. Ange en licensnyckel för att behålla Pro-funktionerna.",
+    "trialDaysRemaining_one": "Provperioden för Pro är aktiv — {{count}} dag kvar.",
+    "trialDaysRemaining_other": "Provperioden för Pro är aktiv — {{count}} dagar kvar.",
+    "trialAvailable": "Essentials-funktionerna används. Starta en kostnadsfri 15-dagars provperiod av Pro för att få tillgång till alla funktioner.",
+    "trialExpired": "Provperioden för Pro har gått ut. Installationen använder nu Essentials-funktionerna.",
+    "licenseExpiresIn_one": "Licensen går ut om {{count}} dag. Förnya den för att undvika avbrott i tjänsten.",
+    "licenseExpiresIn_other": "Licensen går ut om {{count}} dagar. Förnya den för att undvika avbrott i tjänsten.",
+    "licenseExpired": "Licensen har gått ut. Installationen använder nu Essentials-funktionerna.",
+    "licenseWrongTenant": "Licensen utfärdades för en annan enhet och är inte giltig här. Installationen använder Essentials-funktionerna.",
+    "manageLicense": "Hantera licens",
+    "ariaLabel": "Licensstatus",
+    "dismiss": "Stäng"
+  },
+  "nav": {
+    "dashboard": "Översiktspanel",
+    "tickets": "Ärenden",
+    "clients": "Kunder",
+    "projects": "Projekt",
+    "billing": "Debitering",
+    "reports": "Rapporter",
+    "settings": "Inställningar",
+    "profile": "Profil",
+    "logout": "Logga ut",
+    "help": "Hjälp"
+  },
+  "actions": {
+    "save": "Spara",
+    "cancel": "Avbryt",
+    "delete": "Radera",
+    "edit": "Redigera",
+    "create": "Skapa",
+    "update": "Uppdatera",
+    "submit": "Skicka in",
+    "back": "Tillbaka",
+    "next": "Nästa",
+    "previous": "Föregående",
+    "search": "Sök",
+    "filter": "Filtrera",
+    "export": "Exportera",
+    "import": "Importera",
+    "download": "Ladda ner",
+    "upload": "Ladda upp",
+    "refresh": "Ladda om",
+    "close": "Stäng",
+    "confirm": "Bekräfta",
+    "add": "Lägg till",
+    "remove": "Ta bort",
+    "clear": "Rensa",
+    "reset": "Återställ",
+    "view": "Visa",
+    "copy": "Kopiera",
+    "duplicate": "Duplicera",
+    "openMenu": "Öppna meny",
+    "confirmDeletion": "Bekräfta radering",
+    "saving": "Sparar…",
+    "print": "Skriv ut",
+    "printSelected_one": "Skriv ut markerad ({{count}})",
+    "printSelected_other": "Skriv ut markerade ({{count}})",
+    "printOptions": "Utskriftsalternativ",
+    "resetPrintOptions": "Återställ utskriftsalternativ",
+    "share": "Dela",
+    "done": "Klart",
+    "continue": "Fortsätt",
+    "printSelected": "Skriv ut markerade ({{count}})",
+    "removeTag": "Ta bort tagg"
+  },
+  "upgradePrompt": {
+    "editionLabel": "Pro",
+    "defaultCta": "Utforska Pro"
+  },
+  "form": {
+    "selectPlaceholder": "Välj…",
+    "clearSelection": "Avmarkera alla",
+    "fromDate": "Från datum",
+    "toDate": "Till datum",
+    "noResults": "Inga resultat hittades",
+    "searchPlaceholder": "Sök…",
+    "showingOfTotal": "Visar {{shown}} av {{total}} — skriv för att begränsa urvalet"
+  },
+  "pickers": {
+    "addNewClient": "Lägg till ny kund",
+    "addNewContact": "Lägg till ny kontakt",
+    "loadingUsers": "Läser in användare…",
+    "errorLoadingUsers": "Fel vid inläsning av användare",
+    "searchUsers": "Sök användare…",
+    "unassigned": "Ej tilldelad",
+    "noUsersAvailable": "Inga användare tillgängliga",
+    "searchBoards": "Sök tavlor…",
+    "searchBoardsLabel": "Sök tavlor",
+    "noBoardsFound": "Inga tavlor hittades",
+    "notAssigned": "Inte tilldelad",
+    "searchUsersOrTeams": "Sök användare eller team…",
+    "unnamedUser": "Användare utan namn",
+    "unnamedTeam": "Team utan namn"
+  },
+  "serviceTypeSelect": {
+    "placeholder": "Välj tjänstetyp…",
+    "newNamePlaceholder": "Namn på ny tjänstetyp…",
+    "addNew": "Lägg till ny tjänstetyp",
+    "deleteTitle": "Radera tjänstetyp",
+    "deleteConfirm": "Vill du radera den här tjänstetypen? Det går inte att ångra.",
+    "errors": {
+      "delete": "Det går inte att radera den här tjänstetypen. Den kan användas av befintliga tjänster.",
+      "create": "Det gick inte att skapa tjänstetypen. Försök igen."
+    }
+  },
+  "tagFilter": {
+    "placeholder": "Filtrera efter taggar…",
+    "filter": "Filter",
+    "selectedCount": "Markerade: {{count}}",
+    "clearAll": "Rensa alla"
+  },
+  "status": {
+    "loading": "Läser in…",
+    "saving": "Sparar…",
+    "processing": "Bearbetar…",
+    "success": "Lyckades",
+    "error": "Fel",
+    "warning": "Varning",
+    "info": "Information",
+    "pending": "Väntande",
+    "active": "Aktiv",
+    "inactive": "Inaktiv",
+    "completed": "Slutförd",
+    "cancelled": "Avbruten"
+  },
+  "messages": {
+    "welcome": "Välkommen",
+    "confirmDelete": "Vill du radera den här posten?",
+    "confirmDeletion": "Bekräfta radering",
+    "saveSuccess": "Ändringarna har sparats",
+    "saveError": "Det gick inte att spara ändringarna",
+    "loadError": "Det gick inte att läsa in data",
+    "noData": "Inga data tillgängliga",
+    "required": "Fältet är obligatoriskt",
+    "invalidEmail": "Ogiltig e-postadress",
+    "invalidPassword": "Ogiltigt lösenord",
+    "passwordMismatch": "Lösenorden matchar inte"
+  },
+  "errors": {
+    "validation": {
+      "required": "{{field}} krävs.",
+      "invalidType": "{{field}} har fel typ.",
+      "invalidFormat": "{{field}} har ett ogiltigt format.",
+      "tooSmall": "{{field}} understiger det minsta tillåtna värdet eller den minsta tillåtna längden.",
+      "tooLarge": "{{field}} överstiger det största tillåtna värdet eller den största tillåtna längden.",
+      "unsupportedValue": "{{field}} har ett värde som inte stöds.",
+      "invalidValue": "{{field}} har ett ogiltigt värde."
+    },
+    "auth": {
+      "notAuthenticated": "Inte autentiserad",
+      "accessDenied": "Åtkomst nekad",
+      "clientPortalOnly": "Åtkomst nekad: Åtgärder i kundportalen är endast tillgängliga för kundanvändare",
+      "insufficientPermissions": "Otillräckliga behörigheter",
+      "userIdNotFound": "Användar-ID saknas i sessionen",
+      "tenantNotFound": "Klientorganisationen saknas i sessionen. Logga ut och logga in igen.",
+      "userNotFound": "Användaren hittades inte",
+      "contactNotFound": "Användaren är inte kopplad till en kontakt",
+      "clientNotFound": "Kontakten är inte kopplad till en kund"
+    },
+    "password": {
+      "currentIncorrect": "Det nuvarande lösenordet är felaktigt",
+      "changeFailed": "Det gick inte att ändra lösenordet",
+      "differentTenant": "Behörighet saknas: Det går inte att ändra en användare från en annan klientorganisation",
+      "internalStaffRequired": "Behörighet saknas: Rättigheter för intern personal krävs",
+      "adminRequired": "Behörighet saknas: Administratörsrättigheter krävs",
+      "changeUserFailed": "Det gick inte att ändra användarens lösenord"
+    },
+    "permissions": {
+      "tickets": {
+        "read": "Otillräckliga behörigheter för att visa ärenden",
+        "readDetails": "Otillräckliga behörigheter för att visa ärendedetaljer",
+        "create": "Otillräckliga behörigheter för att skapa ärenden",
+        "update": "Otillräckliga behörigheter för att uppdatera ärenden",
+        "updateStatus": "Otillräckliga behörigheter för att uppdatera ärendestatus",
+        "addComments": "Otillräckliga behörigheter för att lägga till kommentarer",
+        "updateComments": "Otillräckliga behörigheter för att uppdatera kommentarer",
+        "deleteComments": "Otillräckliga behörigheter för att radera kommentarer",
+        "viewDocuments": "Otillräckliga behörigheter för att visa ärendedokument"
+      }
+    },
+    "tags": {
+      "notFound": "Taggen hittades inte. Den kan ha raderats. Ladda om och försök igen.",
+      "invalidValue": "Ett av de valda taggvärdena är ogiltigt. Ladda om och försök igen.",
+      "textTooLongShort": "Taggtexten är för lång.",
+      "referenceMissing": "Den valda taggen eller den taggade posten finns inte längre. Ladda om och försök igen.",
+      "alreadyApplied": "Taggen har redan lagts till på den här posten.",
+      "duplicate": "En tagg med de uppgifterna finns redan.",
+      "notAllowed": "Ett av taggvärdena är inte tillåtet. Kontrollera taggen och försök igen.",
+      "missingField": "Ett obligatoriskt taggfält saknas.",
+      "missingFieldNamed": "Obligatoriskt taggfält saknas: {{field}}.",
+      "textRequired": "Taggtext krävs",
+      "textEmpty": "Taggtexten får inte vara tom",
+      "textTooLong": "Taggtexten är för lång (högst 50 tecken)",
+      "textInvalidCharacters": "Taggtexten innehåller ogiltiga tecken",
+      "backgroundColorInvalid": "Ogiltigt format för bakgrundsfärg. Ange en giltig hexadecimal färgkod (t.ex. #FF0000)",
+      "textColorInvalid": "Ogiltigt format för textfärg. Ange en giltig hexadecimal färgkod (t.ex. #FFFFFF)"
+    }
+  },
+  "fields": {
+    "notes": "Anteckningar"
+  },
+  "auth": {
+    "signOut": {
+      "title": "Logga ut",
+      "confirmation": "Vill du logga ut?",
+      "signingOut": "Loggar ut…",
+      "action": "Logga ut"
+    },
+    "passwordReset": {
+      "title": "Lösenordsbyte krävs",
+      "description": "Du använder fortfarande ett tillfälligt lösenord. Byt lösenord för att skydda ditt konto."
+    },
+    "twoFactor": {
+      "codeLabel": "2FA-kod",
+      "verify": "Verifiera",
+      "title": "Enkelt",
+      "instructions": "Ange den sexsiffriga koden från din app för tvåfaktorsautentisering.",
+      "digitsLeft": "Siffror kvar: {{count}}"
+    },
+    "messages": {
+      "handoffMissingToken": "Token för överlämning av inloggningen saknas eller är ogiltig. Logga in igen.",
+      "handoffFinalizeFailed": "Det gick inte att slutföra din inloggning. Försök logga in igen.",
+      "handoffNetworkIssue": "Ett nätverksproblem upptäcktes när din inloggning slutfördes. Försök igen."
+    },
+    "checkEmail": {
+      "resendSuccess": "E-postmeddelandet har skickats. Kontrollera din inkorg.",
+      "resendFailed": "Det gick inte att skicka e-postmeddelandet igen. Försök igen.",
+      "whatsNext": "Vad händer nu?",
+      "didntReceive": "Har du inte fått e-postmeddelandet?"
+    },
+    "sso": {
+      "signInWithGoogle": "Logga in med Google",
+      "signInWithMicrosoft": "Logga in med Microsoft",
+      "signInWithKeycloak": "Logga in med Keycloak",
+      "redirecting": "Omdirigerar…",
+      "startFailed": "Det gick inte att starta SSO-inloggningen. Kontrollera tjänsteleverantörens konfiguration och försök igen."
+    },
+    "verify": {
+      "title": "E-postverifiering är inte längre tillgänglig",
+      "selfRegistrationRemoved": "Självregistrering via e-postdomän stöds inte längre av säkerhetsskäl.",
+      "existingContactsOnly": "Registrering är nu endast tillgänglig för befintliga kontakter. Kontakta din administratör för att först läggas till som kontakt.",
+      "registerFromSignIn": "Om du redan är en kontakt kan du registrera dig direkt från inloggningssidan med den e-postadress som är kopplad till din kontakt.",
+      "returnToSignIn": "Tillbaka till inloggning"
+    },
+    "validation": {
+      "password": {
+        "required": "Lösenord krävs",
+        "tooShort": "Lösenordet måste innehålla minst 8 tecken",
+        "tooLong": "Lösenordet får innehålla högst 128 tecken",
+        "missingUppercase": "Lösenordet måste innehålla minst en stor bokstav",
+        "missingLowercase": "Lösenordet måste innehålla minst en liten bokstav",
+        "missingNumber": "Lösenordet måste innehålla minst en siffra",
+        "missingSpecialCharacter": "Lösenordet måste innehålla minst ett specialtecken",
+        "tooCommon": "Lösenordet är för vanligt. Välj ett starkare lösenord",
+        "sequentialCharacters": "Lösenordet får inte innehålla tecken i följd"
+      }
+    }
+  },
+  "share": {
+    "errors": {
+      "loadFailed": "Det gick inte att läsa in delningslänken",
+      "connectionFailed": "Det gick inte att ansluta till servern",
+      "passwordRequired": "Lösenord krävs",
+      "invalidPassword": "Ogiltigt lösenord",
+      "downloadFailedRetry": "Nedladdningen misslyckades. Försök igen.",
+      "downloadFailed": "Nedladdningen misslyckades",
+      "linkNotAvailable": "Länken är inte tillgänglig",
+      "linkExpired": "Delningslänken har gått ut.",
+      "downloadLimitReached": "Gränsen för antal nedladdningar har nåtts."
+    },
+    "downloadStarted": "Nedladdningen har startat",
+    "enterPassword": "Ange lösenord",
+    "downloadsUsed": "{{used}} av {{max}} nedladdningar har använts",
+    "expiresAt": "Går ut: {{date}}"
+  },
+  "tickets": {
+    "origin": {
+      "internal": "Skapat internt",
+      "clientPortal": "Skapat via kundportalen",
+      "inboundEmail": "Skapat via inkommande e-post",
+      "api": "Skapat via API",
+      "other": "Skapat via annan källa"
+    },
+    "responseSource": {
+      "clientPortal": "Mottaget via kundportalen",
+      "inboundEmail": "Mottaget via inkommande e-post"
+    }
+  },
+  "time": {
+    "today": "Idag",
+    "yesterday": "Igår",
+    "tomorrow": "Imorgon",
+    "thisWeek": "Den här veckan",
+    "lastWeek": "Förra veckan",
+    "thisMonth": "Den här månaden",
+    "lastMonth": "Förra månaden",
+    "thisYear": "Det här året",
+    "lastYear": "Förra året",
+    "seconds": "sekunder",
+    "minutes": "minuter",
+    "hours": "timmar",
+    "days": "dagar",
+    "weeks": "veckor",
+    "months": "månader",
+    "years": "år"
+  },
+  "language": {
+    "selectLanguage": "Välj språk",
+    "changeLanguage": "Ändra språk",
+    "currentLanguage": "Aktuellt språk",
+    "previewLanguage": "Förhandsgranska språk",
+    "preference": {
+      "label": "Språkval",
+      "helper": "Välj språk för gränssnittet och e-postaviseringar. Ditt val ersätter organisationens och kundportalens standardinställningar för dig.",
+      "placeholder": "Välj ett språk",
+      "cleared": "Språkvalet har rensats. Standardspråket används…",
+      "updating": "Uppdaterar språkval…",
+      "notSet": "Inte angivet",
+      "notSetWithSource": "Inte angivet (använder {{source}}: {{languageName}} - {{locale}})",
+      "source": {
+        "client": "kundens standardinställning",
+        "tenant": "klientorganisationens standardinställning",
+        "system": "systemets standardinställning"
+      }
+    },
+    "hierarchyTable": {
+      "title": "Prioritetsordning för språkval",
+      "description": "När Alga väljer språk för gränssnittet och e-postaviseringar kontrolleras dessa alternativ i ordning tills en matchning hittas.",
+      "columns": {
+        "priority": "Prioritet",
+        "source": "Språkkälla",
+        "appliesTo": "Gäller för",
+        "whereSet": "Var det anges"
+      },
+      "rows": {
+        "userPreference": {
+          "source": "Individuellt språkval",
+          "appliesTo": "Alla användare",
+          "whereSet": "Användarprofil"
+        },
+        "clientUserLanguage": {
+          "source": "Kundspecifikt användarspråk",
+          "appliesTo": "Kundportalanvändare (per kund)",
+          "whereSet": "Kunduppgifter"
+        },
+        "clientPortalDefault": {
+          "source": "Kundportalens standardinställning",
+          "appliesTo": "Alla kundportalanvändare",
+          "whereSet": "MSP-inställningar → Kundportal"
+        },
+        "organizationDefault": {
+          "source": "Organisationens standardinställning",
+          "appliesTo": "Alla användare (MSP-personal och kundportal)",
+          "whereSet": "MSP-inställningar → Språk"
+        },
+        "systemDefault": {
+          "source": "Systemets standardinställning (engelska)",
+          "appliesTo": "Reservalternativ",
+          "whereSet": "Systemdefinierat"
+        }
+      }
+    }
+  },
+  "yes": "Ja",
+  "no": "Nej",
+  "clients": {
+    "locations": {
+      "sectionTitle": "Kundplatser",
+      "manageButton": "Hantera platser",
+      "dialogTitle": "Hantera platser - {{client}}",
+      "managerLabel": "Hantering av kundplatser",
+      "listTitle": "Platser",
+      "buttons": {
+        "add": "Lägg till plats",
+        "save": "Spara plats"
+      },
+      "card": {
+        "unnamed": "Plats utan namn",
+        "setDefault": "Ange som standard",
+        "edit": "Redigera plats",
+        "delete": "Radera plats",
+        "addressLabel": "Adress",
+        "addressHelper": "Fullständig adress för platsen",
+        "phoneLabel": "Telefon",
+        "phoneHelper": "Telefonnummer för platsen",
+        "phoneValue": "Telefon: {{phone}}",
+        "emailLabel": "E-post",
+        "emailHelper": "E-postadress för platsen",
+        "emailValue": "E-post: {{email}}",
+        "billingTag": "Fakturering",
+        "shippingTag": "Leverans",
+        "notesLabel": "Anteckningar",
+        "notesHelper": "Ytterligare anteckningar om platsen"
+      },
+      "form": {
+        "locationName": "Platsnamn",
+        "locationNameHelper": "Namn på platsen (t.ex. huvudkontor, lager)",
+        "addressLine1": "Adressrad 1",
+        "addressLine1Helper": "Primär adressrad (obligatorisk)",
+        "addressLine2": "Adressrad 2",
+        "addressLine2Helper": "Ytterligare adressuppgifter (valfritt)",
+        "addressLine3": "Adressrad 3",
+        "city": "Ort",
+        "cityHelper": "Ortnamn (obligatoriskt)",
+        "stateProvince": "Delstat/provins",
+        "stateProvinceHelper": "Namn på delstat eller provins",
+        "postalCode": "Postnummer",
+        "postalCodeHelper": "Postnummer",
+        "country": "Land",
+        "countryHelper": "Välj land (obligatoriskt)",
+        "phone": "Telefon",
+        "phoneHelper": "Telefonnummer för platsen",
+        "email": "E-post",
+        "emailHelper": "E-postadress för platsen",
+        "taxRegion": "Skatteregion",
+        "taxRegionHelper": "Välj tillämplig skatteregion",
+        "notes": "Anteckningar",
+        "notesHelper": "Ytterligare anteckningar om platsen",
+        "defaultLocation": "Standardplats",
+        "defaultLocationHelper": "Ange den här platsen som kundens standardplats",
+        "billingAddress": "Faktureringsadress",
+        "billingAddressHelper": "Använd den här platsen som faktureringsadress",
+        "shippingAddress": "Leveransadress",
+        "shippingAddressHelper": "Använd den här platsen som leveransadress",
+        "placeholder": {
+          "locationName": "t.ex. huvudkontor, lager",
+          "addressLine1": "Ange adress *",
+          "city": "Ange ort *",
+          "country": "Välj land *",
+          "loadingCountries": "Läser in länder…",
+          "taxRegionOption": "Välj en skatteregion…",
+          "taxRegion": "Välj en skatteregion…"
+        }
+      },
+      "validation": {
+        "title": "Fyll i de obligatoriska fälten:"
+      },
+      "errors": {
+        "loadTaxRegions": "Det gick inte att läsa in skatteregioner",
+        "loadCountries": "Det gick inte att läsa in länder",
+        "loadLocations": "Det gick inte att läsa in kundplatser",
+        "save": "Det gick inte att spara platsen",
+        "delete": "Det gick inte att radera platsen",
+        "setDefault": "Det gick inte att ange standardplats"
+      },
+      "success": {
+        "create": "Platsen har skapats",
+        "update": "Platsen har uppdaterats",
+        "delete": "Platsen har raderats",
+        "setDefault": "Standardplatsen har uppdaterats"
+      },
+      "dialog": {
+        "addTitle": "Lägg till ny plats",
+        "editTitle": "Redigera plats",
+        "deleteTitle": "Radera plats",
+        "deleteMessage": "Vill du radera platsen ”{{name}}”? Åtgärden går inte att ångra."
+      },
+      "empty": {
+        "title": "Inga platser har lagts till ännu",
+        "description": "Klicka på ”Lägg till plats” för att komma igång"
+      }
+    },
+    "validation": {
+      "clientName": {
+        "structural": "Ange ett giltigt kundnamn",
+        "required": "Kundnamn krävs",
+        "emojiOnly": "Namnet består enbart av emojier.",
+        "tooShort": "Namnet består av ett enda tecken — stämmer det?",
+        "abbreviationOnly": "Det här är bara en företagsförkortning, inget namn.",
+        "repeatedCharacters": "Namnet upprepar samma tecken flera gånger.",
+        "looksLikeUrl": "Det här ser ut som en webbadress snarare än ett namn.",
+        "noLettersOrNumbers": "Namnet innehåller inga bokstäver eller siffror."
+      },
+      "contactName": {
+        "structural": "Ange ett giltigt kontaktnamn",
+        "placeholder": "Det här ser ut som en platshållare snarare än en person."
+      },
+      "email": {
+        "structural": "Ange en giltig e-postadress",
+        "required": "E-postadress krävs",
+        "disposableDomain": "{{domain}} tillhandahåller tillfälliga e-postadresser.",
+        "reservedDomain": "{{domain}} är reserverad för dokumentation och testning.",
+        "internalDomain": "{{domain}} kan bara slås upp i ett privat nätverk."
+      },
+      "url": {
+        "structural": "Ange en giltig webbplats-URL (t.ex. apple.com)",
+        "ipAddress": "Det här är en IP-adress snarare än ett domännamn.",
+        "internalHost": "{{host}} kan bara slås upp i ett privat nätverk.",
+        "reservedDomain": "{{host}} är reserverad för dokumentation och testning."
+      },
+      "phone": {
+        "structural": "Ange ett giltigt telefonnummer",
+        "repeatedDigits": "Numret består av samma siffra upprepad.",
+        "sequentialDigits": "Siffrorna i numret följer varandra rakt uppåt eller nedåt på knappsatsen.",
+        "fictionalRange": "Numret ligger i serien 555-0100 som är reserverad för fiktiva nummer."
+      },
+      "dismissWarning": "Stäng",
+      "address": {
+        "emoji": "Adressen får inte innehålla emojier",
+        "empty": "Adressen får inte vara tom",
+        "invalidCharacters": "Adressen innehåller ogiltiga tecken",
+        "noLetters": "Adressen måste innehålla bokstäver",
+        "tooLong": "Adressen får innehålla högst 100 tecken"
+      },
+      "city": {
+        "emoji": "Ortnamnet får inte innehålla emojier",
+        "empty": "Ortnamnet får inte vara tomt",
+        "invalidCharacters": "Ortnamnet innehåller ogiltiga tecken",
+        "noLetters": "Ortnamnet måste innehålla bokstäver",
+        "tooLong": "Ortnamnet får innehålla högst 100 tecken"
+      },
+      "stateProvince": {
+        "emoji": "Delstaten/provinsen får inte innehålla emojier",
+        "empty": "Delstaten/provinsen får inte vara tom",
+        "invalidCharacters": "Delstaten/provinsen innehåller ogiltiga tecken",
+        "noLetters": "Delstaten/provinsen måste innehålla bokstäver",
+        "tooLong": "Delstaten/provinsen får innehålla högst 100 tecken"
+      },
+      "postalCode": {
+        "au": "Ange ett giltigt australiskt postnummer (t.ex. 2000)",
+        "br": "Ange ett giltigt brasilianskt postnummer (t.ex. 01234-567)",
+        "ca": "Ange ett giltigt kanadensiskt postnummer (t.ex. K1A 0A6)",
+        "ch": "Ange ett giltigt schweiziskt postnummer (t.ex. 8001)",
+        "de": "Ange ett giltigt tyskt postnummer (t.ex. 10115)",
+        "emoji": "Postnumret får inte innehålla emojier",
+        "es": "Ange ett giltigt spanskt postnummer (t.ex. 28001)",
+        "fr": "Ange ett giltigt franskt postnummer (t.ex. 75001)",
+        "gb": "Ange ett giltigt brittiskt postnummer (t.ex. SW1A 1AA)",
+        "generic": "Ange ett giltigt postnummer",
+        "in": "Ange ett giltigt indiskt postnummer (t.ex. 110001)",
+        "it": "Ange ett giltigt italienskt postnummer (t.ex. 00118)",
+        "jp": "Ange ett giltigt japanskt postnummer (t.ex. 123-4567)",
+        "nl": "Ange ett giltigt nederländskt postnummer (t.ex. 1234AB)",
+        "onlySpaces": "Postnumret får inte bestå enbart av mellanslag",
+        "us": "Ange ett giltigt amerikanskt postnummer (t.ex. 12345 eller 12345-6789)",
+        "usShort": "Ange ett giltigt amerikanskt postnummer"
+      },
+      "industry": {
+        "invalidCharacters": "Branschen innehåller ogiltiga tecken",
+        "noLetters": "Branschen måste innehålla bokstäver",
+        "tooLong": "Branschen får innehålla högst 100 tecken",
+        "tooShort": "Branschen måste innehålla minst 2 tecken",
+        "tooShortText": "Branschen måste innehålla minst 2 texttecken"
+      },
+      "role": {
+        "noAlphanumeric": "Rollen måste innehålla bokstäver eller siffror",
+        "onlySpaces": "Rollen får inte bestå enbart av mellanslag",
+        "tooLong": "Rollen får innehålla högst 100 tecken"
+      },
+      "notes": {
+        "tooLong": "Anteckningarna får innehålla högst 2 000 tecken"
+      },
+      "companySize": {
+        "emoji": "Företagsstorleken får inte innehålla emojier",
+        "invalid": "Ange en giltig företagsstorlek (t.ex. ”50”, ”10-50”, ”femhundra”, ”2,5 miljoner”, ”litet”, ”storföretag”)",
+        "tooLong": "Företagsstorleken får innehålla högst 50 tecken"
+      },
+      "annualRevenue": {
+        "emoji": "Årsomsättningen får inte innehålla emojier",
+        "invalid": "Ange en giltig årsomsättning (t.ex. ”1 000 000 $”, ”fem miljoner”, ”2,5 miljoner”, ”10–50 miljoner”, ”ej angiven”)",
+        "tooLong": "Årsomsättningen får innehålla högst 50 tecken"
+      }
+    }
+  },
+  "commentThread": {
+    "replies_one": "{{count}} svar",
+    "replies_other": "{{count}} svar",
+    "collapse": "Fäll ihop",
+    "expand": "Fäll ut",
+    "showInDrawer": "Visa i sidopanel",
+    "showEarlierReplies_one": "Visa {{count}} tidigare svar",
+    "showEarlierReplies_other": "Visa {{count}} tidigare svar"
+  },
+  "pagination": {
+    "previous": "Föregående",
+    "next": "Nästa",
+    "pageInfo": "Sida {{current}} av {{total}} (totalt {{count}} poster)",
+    "page": "Sida",
+    "of": "av",
+    "showing": "Visar {{from}} till {{to}} av {{total}} resultat",
+    "rowsPerPage": "Rader per sida",
+    "first": "Första",
+    "last": "Sista",
+    "itemsLabel": "poster",
+    "itemsLabel_one": "post",
+    "itemsLabel_other": "poster",
+    "itemsPerPageOption": "{{count}} poster/sida",
+    "itemsPerPagePlaceholder": "Poster per sida",
+    "reflectionLabel": "Sidnavigering",
+    "range": "{{from}} - {{to}} av {{total}} {{itemLabel}}",
+    "ariaLabel": "Sidnavigering",
+    "totalItems": "Totalt {{count}} {{itemLabel}}",
+    "totalRecordsInline": "(totalt {{count}} poster)",
+    "pageOf": "Sida {{current}} av {{total}}"
+  },
+  "documents": {
+    "title": "Dokument",
+    "noDocuments": "Inga dokument bifogade",
+    "upload": "Ladda upp dokument",
+    "download": "Ladda ner",
+    "remove": "Ta bort",
+    "detach": "Koppla bort",
+    "preview": "Förhandsgranska",
+    "linkDocuments": "Länka befintliga",
+    "editDocument": "Redigera dokument",
+    "viewDocument": "Visa dokument",
+    "downloadToPlay": "Ladda ner för att spela upp",
+    "delete": "Radera",
+    "deletePermanently": "Radera permanent",
+    "previewUnavailable": "Förhandsgranskning är inte tillgänglig",
+    "newDocument": "Lägg till dokument",
+    "uploadFile": "Ladda upp fil",
+    "deleteTitle": "Radera dokument permanent",
+    "deleteMessage": "Vill du radera ”{{name}}” permanent från systemet?\\n\\nFilen tas bort helt och kommer inte längre att vara tillgänglig någonstans. Åtgärden går inte att ångra.",
+    "deleteVideoTitle": "Radera video permanent",
+    "deleteVideoMessage": "Vill du radera videon ”{{name}}” permanent från systemet?\\n\\nFilen tas bort helt och kommer inte längre att vara tillgänglig någonstans. Åtgärden går inte att ångra.",
+    "removeTitle": "Koppla bort dokument",
+    "removeMessage": "Vill du koppla bort ”{{name}}” från den här posten?\\n\\nEndast länken tas bort — dokumentet finns kvar i dokumentbiblioteket och kan bifogas till andra poster.",
+    "removeVideoTitle": "Koppla bort video",
+    "removeVideoMessage": "Vill du koppla bort videon ”{{name}}” från den här posten?\\n\\nEndast länken tas bort — filen finns kvar i dokumentbiblioteket och kan bifogas till andra poster.",
+    "downloadFile": "Ladda ner fil",
+    "videoUnsupported": "Videoformatet ({{mimeType}}) stöds inte för uppspelning i webbläsaren",
+    "videoTagUnsupported": "Din webbläsare stöder inte videotaggen.",
+    "unnamed": "Utan titel",
+    "videoDownloadInfo": "Videon laddas ner och kan spelas upp med systemets standardvideospelare",
+    "previewUnavailableNoId": "Förhandsgranskning är inte tillgänglig (identifierare saknas)",
+    "previewLoadFailed": "Det gick inte att läsa in förhandsgranskningen",
+    "videoCodecWarning": "Chrome kanske inte stöder denna videokodek. Prova att ladda ner videon eller använd Safari/Edge.",
+    "messages": {
+      "fetchFailed": "Det gick inte att hämta dokument.",
+      "folderCreated": "Mappen ”{{name}}” har skapats",
+      "folderCreateFailed": "Det gick inte att skapa mappen",
+      "moveDocumentsSuccess_one": "{{count}} dokument har flyttats till {{destination}}",
+      "moveDocumentsSuccess_other": "{{count}} dokument har flyttats till {{destination}}",
+      "moveDocumentsFailed": "Det gick inte att flytta dokumenten",
+      "deleteSuccess": "Dokumentet ”{{name}}” har raderats",
+      "deleteFailed": "Det gick inte att radera dokumentet",
+      "removeAssociationFailed": "Det gick inte att ta bort dokumentkopplingen",
+      "moveDocumentSuccess": "Dokumentet ”{{name}}” har flyttats",
+      "moveDocumentFailed": "Det gick inte att flytta dokumentet",
+      "createFailed": "Det gick inte att skapa dokumentet",
+      "saveFailed": "Det gick inte att spara dokumentet",
+      "loadContentFailed": "Det gick inte att läsa in dokumentets innehåll",
+      "downloadFailed": "Det gick inte att ladda ner dokumentet",
+      "bulkDeleteFailed": "Det gick inte att radera vissa dokument",
+      "bulkDeleteSuccess_one": "{{count}} dokument har raderats",
+      "bulkDeleteSuccess_other": "{{count}} dokument har raderats"
+    },
+    "empty": {
+      "default": "Inga dokument hittades",
+      "folder": "Inga dokument hittades i den här mappen"
+    },
+    "validation": {
+      "nameRequired": "Dokumentnamn krävs"
+    },
+    "bulkActions": {
+      "selected_one": "{{count}} dokument markerat",
+      "selected_other": "{{count}} dokument markerade",
+      "moveToFolder": "Flytta till mapp",
+      "deleteSelected": "Radera markerade",
+      "clearSelection": "Avmarkera alla"
+    },
+    "prompts": {
+      "confirmBulkDelete_one": "Vill du radera {{count}} dokument?",
+      "confirmBulkDelete_other": "Vill du radera {{count}} dokument?"
+    },
+    "pagination": {
+      "perPage": "{{count}} per sida"
+    },
+    "folderSelector": {
+      "defaultTitle": "Välj målmapp",
+      "defaultDescription": "Välj var dokumentet ska sparas",
+      "singleDescription": "Var vill du spara ”{{fileName}}”?",
+      "multipleDescription": "Var vill du spara dessa {{count}} filer?",
+      "newDocumentTitle": "Välj mapp för nytt dokument",
+      "newDocumentDescription": "Välj var det nya dokumentet ska sparas",
+      "moveTitle": "Flytta dokument",
+      "moveDescriptionWithName": "Välj målmapp för ”{{name}}”",
+      "moveDescription": "Välj målmapp",
+      "bulkMoveTitle": "Flytta markerade dokument",
+      "bulkMoveDescription_one": "Välj målmapp för {{count}} dokument",
+      "bulkMoveDescription_other": "Välj målmapp för {{count}} dokument",
+      "errors": {
+        "nameRequired": "Ange ett mappnamn",
+        "invalidCharacters": "Mappnamnet får inte innehålla ”/”",
+        "createFailed": "Det gick inte att skapa mappen"
+      },
+      "creating": "Skapar…",
+      "createButton": "Skapa mapp",
+      "newFolderButton": "Ny mapp",
+      "parentLabel": "Överordnad mapp: {{folder}}",
+      "rootLabel": "/ (Rot)",
+      "namePlaceholder": "Ange mappnamn",
+      "loading": "Läser in mappar…",
+      "rootOption": "Rot (ingen mapp)",
+      "empty": "Inga mappar tillgängliga. Dokument sparas i roten.",
+      "showAllFolders": "Visa alla mappar",
+      "showEntityFolders": "Visa entitetsmappar"
+    },
+    "filters": {
+      "searchLabel": "Sök dokument",
+      "searchPlaceholder": "Sök efter dokumentnamn…",
+      "typeLabel": "Dokumenttyp",
+      "entityTypeLabel": "Kopplad entitetstyp",
+      "uploadedByLabel": "Uppladdat av",
+      "uploadedByPlaceholder": "Alla användare",
+      "updatedStartLabel": "Uppdaterat från datum",
+      "updatedEndLabel": "Uppdaterat till datum",
+      "startDatePlaceholder": "Välj startdatum",
+      "endDatePlaceholder": "Välj slutdatum",
+      "sortByLabel": "Sortera efter",
+      "clear": "Rensa filter",
+      "showAllDocuments": "Visa alla dokument",
+      "typeOptions": {
+        "all": "Alla dokumenttyper",
+        "pdf": "PDF",
+        "image": "Bilder",
+        "text": "Dokument",
+        "video": "Video",
+        "other": "Annat"
+      },
+      "sortOptions": {
+        "updated_at": "Datum",
+        "document_name": "Dokumentnamn",
+        "file_size": "Filstorlek",
+        "created_by_full_name": "Skapat av"
+      },
+      "sortOrder": {
+        "default": {
+          "asc": "Visa i stigande ordning",
+          "desc": "Visa i fallande ordning"
+        },
+        "document_name": {
+          "asc": "Visa A–Z",
+          "desc": "Visa Z–A"
+        },
+        "updated_at": {
+          "asc": "Visa äldsta först",
+          "desc": "Visa nyaste först"
+        },
+        "file_size": {
+          "asc": "Visa minsta först",
+          "desc": "Visa största först"
+        },
+        "created_by_full_name": {
+          "asc": "Visa A–Z",
+          "desc": "Visa Z–A"
+        }
+      },
+      "clientVisibility": {
+        "all": "Alla",
+        "visible": "Synligt för kund",
+        "hidden": "Endast internt"
+      },
+      "clientVisibilityLabel": "Synlighet för kund",
+      "entityOptions": {
+        "all": "Alla entiteter"
+      }
+    },
+    "selector": {
+      "title": "Välj dokument",
+      "reflectionLabel": "Dokumentväljare",
+      "searchPlaceholder": "Sök dokument…",
+      "foldersLabel": "Mappar",
+      "folderHint": "i mappen ”{{folder}}”",
+      "saving": "Sparar…",
+      "selectDocument": "Välj dokument",
+      "associateSelected": "Koppla markerade",
+      "errors": {
+        "configuration": "Konfigurationsfel: Entitetsinformation saknas",
+        "invalidData": "Ogiltiga dokumentdata togs emot",
+        "load": "Det gick inte att läsa in dokument",
+        "save": "Det gick inte att spara dokumentvalet"
+      },
+      "configErrorTitle": "Konfigurationsfel",
+      "configErrorMessage": "Obligatorisk konfiguration saknas. Kontakta supporten."
+    },
+    "uploadSection": {
+      "reflectionLabel": "Dokumentuppladdning",
+      "dragDrop": "Dra och släpp dina filer här, eller",
+      "browse": "Bläddra bland filer",
+      "uploading": "Laddar upp…",
+      "uploadingProgress": "Laddar upp {{current}} av {{total}}",
+      "pending": "Väntande",
+      "error": "Det gick inte att ladda upp dokumentet",
+      "fileError": "Det gick inte att ladda upp filen",
+      "associatedEntityTypeLabel": "Koppla till",
+      "noAssociation": "Ingen koppling",
+      "selectAssociatedEntityError": "Välj en entitet att koppla till innan du laddar upp."
+    },
+    "folders": {
+      "root": "Rot",
+      "loadFailed": "Det gick inte att läsa in mappträdet",
+      "deleteConfirm": "Vill du radera mappen ”{{name}}”? Det går bara om mappen är tom.",
+      "deleteSuccess": "Mappen ”{{name}}” har raderats",
+      "deleteFailed": "Det gick inte att radera mappen",
+      "deleteAction": "Radera mapp",
+      "loading": "Läser in mappar…",
+      "title": "Mappar",
+      "collapse": "Fäll ihop mappar",
+      "allDocuments": "Alla dokument",
+      "expand": "Visa mappar",
+      "deleteTitle": "Radera mapp"
+    },
+    "folderManager": {
+      "title": "Skapa ny mapp",
+      "nameLabel": "Mappnamn",
+      "namePlaceholder": "Ange mappnamn",
+      "willCreateIn": "Skapas i: {{folder}}"
+    },
+    "notifications": {
+      "viewAll": "Visa alla aviseringar",
+      "categories": {
+        "Authentication": "Autentisering",
+        "Invoices": "Fakturor",
+        "Projects": "Projekt",
+        "Tickets": "Ärenden",
+        "Time Entries": "Tidposter"
+      }
+    },
+    "list": {
+      "name": "Namn",
+      "folder": "Mapp",
+      "size": "Storlek",
+      "modified": "Ändrat",
+      "visibility": "Synlighet",
+      "actions": "Åtgärder"
+    },
+    "hasShareLinks": "Har aktiva delningslänkar",
+    "visibility": {
+      "clientVisible": "Synligt för kund",
+      "internalOnly": "Internt",
+      "markedVisible": "”{{name}}” visas nu i kundportalen",
+      "markedHidden": "”{{name}}” visas inte längre i kundportalen",
+      "toggleFailed": "Det gick inte att uppdatera mappens synlighet",
+      "cascadeTitle": "Uppdatera dokumentens synlighet",
+      "cascadeMakeVisible": "Vill du även göra samtliga {{count}} dokument i ”{{name}}” synliga i kundportalen?",
+      "cascadeMakeHidden": "Vill du även dölja samtliga {{count}} dokument i ”{{name}}” i kundportalen?",
+      "cascadeYes": "Ja, uppdatera dokumenten",
+      "cascadeNo": "Nej, endast mappen"
+    },
+    "share": "Dela",
+    "videoPlaybackFailed": "Det går inte att spela upp videon i webbläsaren",
+    "videoPlaybackIssue": "Har du problem med att spela upp videon?",
+    "downloadVideo": "Ladda ner video",
+    "downloadAsPdf": "Ladda ner som PDF",
+    "downloadAsMarkdown": "Ladda ner som Markdown",
+    "move": "Flytta",
+    "associatedEntityPicker": {
+      "allEntities": "Alla entiteter",
+      "loadingClients": "Läser in kunder…",
+      "loadingContacts": "Läser in kontakter…",
+      "noEntityTypes": "Inga entitetstyper hittades",
+      "typeLabel": "Kopplad entitetstyp",
+      "typePlaceholder": "Välj entitetstyp",
+      "typeSearchPlaceholder": "Sök entitetstyper…",
+      "entityLabel": "{{entityType}}",
+      "entityPlaceholder": "Välj {{entityType}}",
+      "entitySearchPlaceholder": "Sök {{entityType}}…",
+      "noEntities": "Inga {{entityType}} hittades"
+    },
+    "huduTab": {
+      "documentsTabLabel": "Dokument",
+      "tabLabel": "Hudu"
+    }
+  },
+  "surveys": {
+    "common": {
+      "loading": "Läser in…"
+    },
+    "settings": {
+      "tabLabel": "Enkäter",
+      "title": "Kundnöjdhetsenkäter",
+      "subtitle": "Konfigurera mallar, utlösare och utskick för att samla in återkoppling efter avslutade ärenden.",
+      "tabs": {
+        "templates": "Mallar",
+        "triggers": "Utlösare"
+      },
+      "templateList": {
+        "title": "Enkätmallar",
+        "description": "Hantera frågorna och betygsskalorna som skickas till dina kunder.",
+        "createButton": "Ny mall",
+        "emptyTitle": "Inga enkätmallar ännu",
+        "emptyDescription": "Skapa din första mall för att ange enkätens formuleringar och betygsskala.",
+        "table": {
+          "name": "Mall",
+          "rating": "Betygsskala",
+          "status": "Status",
+          "updated": "Uppdaterad",
+          "actions": "Åtgärder"
+        },
+        "defaultBadge": "Standard",
+        "status": {
+          "enabled": "Aktiverad",
+          "disabled": "Inaktiverad"
+        },
+        "toasts": {
+          "created": "Mallen har skapats",
+          "updated": "Mallen har uppdaterats",
+          "deleted": "Mallen har raderats",
+          "setDefault": "Standardmallen har uppdaterats",
+          "error": "Det gick inte att spara mallen",
+          "deleteError": "Det gick inte att radera mallen"
+        },
+        "errors": {
+          "load": "Det gick inte att läsa in enkätmallar."
+        },
+        "deleteConfirm": "Vill du radera den här mallen? Inbjudningar som redan har skickats påverkas inte."
+      },
+      "templateForm": {
+        "titleCreate": "Skapa enkätmall",
+        "titleEdit": "Redigera enkätmall",
+        "labels": {
+          "name": "Mallnamn",
+          "ratingType": "Betygstyp",
+          "ratingScale": "Betygsskala",
+          "ratingLabels": "Betygsbeskrivningar",
+          "promptText": "Enkätfråga",
+          "commentPrompt": "Kommentarsfråga",
+          "thankYouText": "Tackmeddelande",
+          "isDefault": "Ange som standardmall",
+          "enabled": "Mall aktiverad"
+        },
+        "placeholders": {
+          "ratingLabels": "Exempel:\\n1 = Mycket missnöjd\\n2 = Missnöjd\\n3 = Neutral\\n4 = Nöjd\\n5 = Mycket nöjd"
+        },
+        "help": {
+          "ratingLabels": "Ange en beskrivning per betyg med ”värde = beskrivning” på separata rader."
+        },
+        "ratingTypes": {
+          "stars": "Stjärnor",
+          "numbers": "Tal",
+          "emojis": "Emojier"
+        },
+        "actions": {
+          "create": "Skapa mall",
+          "save": "Spara ändringar",
+          "delete": "Radera mall"
+        }
+      },
+      "triggerList": {
+        "title": "Enkätutlösare",
+        "description": "Skicka inbjudningar automatiskt när ärenden eller projekt slutförs.",
+        "createButton": "Ny utlösare",
+        "emptyTitle": "Inga enkätutlösare konfigurerade",
+        "emptyDescription": "Skapa en utlösare för att skicka enkäter när ärenden stängs eller projekt slutförs.",
+        "table": {
+          "template": "Mall",
+          "type": "Utlösare",
+          "conditions": "Villkor",
+          "status": "Status",
+          "updated": "Uppdaterad",
+          "actions": "Åtgärder"
+        },
+        "conditions": {
+          "boards": "Tavlor",
+          "statuses": "Statusar",
+          "priorities": "Prioriteter",
+          "any": "Alla",
+          "unrestricted": "Gäller alla ärenden och projekt"
+        },
+        "status": {
+          "enabled": "Aktiverad",
+          "disabled": "Inaktiverad"
+        },
+        "toasts": {
+          "created": "Utlösaren har skapats",
+          "updated": "Utlösaren har uppdaterats",
+          "deleted": "Utlösaren har raderats",
+          "error": "Det gick inte att spara utlösaren",
+          "deleteError": "Det gick inte att radera utlösaren"
+        },
+        "errors": {
+          "load": "Det gick inte att läsa in enkätutlösare."
+        },
+        "deleteConfirm": "Vill du radera den här utlösaren? Inbjudningar som redan ligger i kö skickas ändå."
+      },
+      "triggerForm": {
+        "titleCreate": "Skapa enkätutlösare",
+        "titleEdit": "Redigera enkätutlösare",
+        "labels": {
+          "template": "Enkätmall",
+          "triggerType": "Utlösartyp",
+          "boardIds": "Tavel-ID:n",
+          "statusIds": "Status-ID:n",
+          "priorities": "Prioriteter",
+          "enabled": "Utlösare aktiverad"
+        },
+        "placeholders": {
+          "boardIds": "Välj tavla",
+          "statusIds": "Lägg till status",
+          "priorities": "Lägg till prioritet"
+        },
+        "help": {
+          "conditions": "Lämna ett fält tomt för att matcha alla värden."
+        },
+        "actions": {
+          "create": "Skapa utlösare",
+          "save": "Spara ändringar",
+          "delete": "Radera utlösare"
+        },
+        "triggerTypes": {
+          "ticket_closed": "Ärende stängt",
+          "project_completed": "Projekt slutfört"
+        },
+        "errors": {
+          "reference": "Det gick inte att läsa in utlösaralternativ. Försök igen."
+        },
+        "noTemplates": "Skapa en enkätmall innan du lägger till utlösare.",
+        "prioritiesMixed": "De valda tavlorna använder olika prioritetstyper. Alla prioriteter visas."
+      },
+      "preview": {
+        "heading": "Förhandsgranskning av svarssidan",
+        "tabs": {
+          "survey": "Enkätformulär",
+          "thankYou": "Tack"
+        },
+        "noPrompt": "Enkätfråga",
+        "commentPlaceholder": "Kundkommentarer visas här…",
+        "noThankYou": "Tackmeddelande",
+        "notice": "Förhandsgranskningen visar vad kunderna ser när de klickar på enkätlänken i e-postmeddelandet.",
+        "editEmailTemplate": "Redigera e-postmall för enkäter"
+      }
+    },
+    "response": {
+      "pageTitle": "Kundnöjdhetsenkät",
+      "invalidTitle": "Enkäten är inte tillgänglig",
+      "invalidMessage": "Länken för återkoppling är inte längre giltig eller har redan använts.",
+      "ratingPrompt": "Hur var din upplevelse?",
+      "ratingAssistive": "Välj ett betyg från 1 till {{scale}}",
+      "commentLabel": "Ytterligare kommentarer (valfritt)",
+      "submitButton": "Skicka återkoppling",
+      "submitting": "Skickar återkoppling…",
+      "submittedTitle": "Tack för ditt svar",
+      "submittedMessage": "{{thankYouText}}",
+      "retryButton": "Försök igen",
+      "ratingSubmitted": "Återkopplingen har skickats",
+      "errorMessage": "Det gick inte att spara din återkoppling. Försök igen.",
+      "selectRatingError": "Välj ett betyg innan du skickar in.",
+      "supportMessage": "Kontakta din tekniker om du har frågor."
+    }
+  },
+  "availability": {
+    "settings": {
+      "title": "Tillgänglighetsinställningar",
+      "description": "Konfigurera regler och scheman för bokningstillgänglighet"
+    },
+    "tabs": {
+      "general": "Allmänna inställningar",
+      "userHours": "Användarnas arbetstider",
+      "serviceRules": "Tjänsteregler",
+      "exceptions": "Undantag"
+    },
+    "general": {
+      "advanceBookingDays": "Antal dagar för bokning i förväg",
+      "advanceBookingDaysHelper": "Hur långt i förväg kunder kan boka tider",
+      "minimumNoticeHours": "Minsta framförhållning i timmar",
+      "minimumNoticeHoursHelper": "Minsta tid som krävs mellan bokning och bokad tid",
+      "defaultBufferBefore": "Standardbuffert före (minuter)",
+      "defaultBufferAfter": "Standardbuffert efter (minuter)",
+      "bufferHelper": "Tidsbuffert mellan bokningar"
+    },
+    "userHours": {
+      "selectUser": "Välj användare",
+      "dayOfWeek": "Veckodag",
+      "startTime": "Starttid",
+      "endTime": "Sluttid",
+      "available": "Tillgänglig",
+      "cloneSettings": "Kopiera till andra användare",
+      "maxAppointmentsPerDay": "Högsta antal bokningar per dag"
+    },
+    "serviceRules": {
+      "selectService": "Välj tjänst",
+      "allowWithoutContract": "Tillåt utan avtal",
+      "advanceBooking": "Antal dagar för bokning i förväg",
+      "maxAppointments": "Högsta antal bokningar per dag"
+    },
+    "exceptions": {
+      "addException": "Lägg till undantag",
+      "date": "Datum",
+      "reason": "Orsak",
+      "userSpecific": "Användarspecifikt",
+      "companyWide": "Hela företaget"
+    },
+    "messages": {
+      "saveSuccess": "Tillgänglighetsinställningarna har sparats",
+      "saveFailed": "Det gick inte att spara tillgänglighetsinställningarna",
+      "loadFailed": "Det gick inte att läsa in tillgänglighetsinställningarna"
+    }
+  },
+  "appointments": {
+    "requests": {
+      "title": "Bokningsförfrågningar",
+      "viewAll": "Visa alla förfrågningar",
+      "approve": "Godkänn och schemalägg",
+      "decline": "Avböj",
+      "assignTech": "Tilldela tekniker",
+      "internalNotes": "Interna anteckningar",
+      "pendingCount": "Väntande förfrågningar: {{count}}",
+      "filterByStatus": "Filtrera efter status",
+      "filterByService": "Filtrera efter tjänst",
+      "filterByDate": "Filtrera efter datum"
+    },
+    "panel": {
+      "title": "Bokningsförfrågningar",
+      "description": "Granska och hantera bokningsförfrågningar från kunder",
+      "noRequests": "Inga bokningsförfrågningar hittades",
+      "loadingRequests": "Läser in förfrågningar…"
+    },
+    "card": {
+      "requesterName": "Beställare",
+      "companyName": "Företag",
+      "service": "Tjänst",
+      "requestedDateTime": "Önskat datum och klockslag",
+      "duration": "Varaktighet",
+      "preferredTechnician": "Önskad tekniker",
+      "linkedTicket": "Kopplat ärende",
+      "actions": "Åtgärder"
+    },
+    "approvalModal": {
+      "title": "Godkänn bokningsförfrågan",
+      "confirmDateTime": "Bekräfta datum och klockslag",
+      "modifyDateTime": "Ändra datum och klockslag",
+      "assignedUser": "Tilldelad tekniker",
+      "linkToTicket": "Koppla till ärende",
+      "internalNotes": "Interna anteckningar",
+      "approve": "Godkänn och skapa schemapost",
+      "approving": "Godkänner…"
+    },
+    "declineModal": {
+      "title": "Avböj bokningsförfrågan",
+      "reason": "Orsak till avböjande",
+      "reasonRequired": "Ange en orsak",
+      "reasonPlaceholder": "Förklara varför förfrågan avböjs…",
+      "decline": "Avböj förfrågan",
+      "declining": "Avböjer…"
+    },
+    "detailsModal": {
+      "title": "Detaljer om förfrågan",
+      "requesterInfo": "Uppgifter om beställaren",
+      "requestInfo": "Information om förfrågan",
+      "status": "Status",
+      "createdAt": "Förfrågan skapad",
+      "approvedAt": "Godkänd den",
+      "approvedBy": "Godkänd av",
+      "declinedReason": "Orsak till avböjande"
+    },
+    "status": {
+      "pending": "Väntande",
+      "approved": "Godkänd",
+      "declined": "Avböjd",
+      "cancelled": "Avbokad"
+    },
+    "messages": {
+      "approveSuccess": "Bokningsförfrågan har godkänts",
+      "approveFailed": "Det gick inte att godkänna bokningsförfrågan",
+      "declineSuccess": "Bokningsförfrågan har avböjts",
+      "declineFailed": "Det gick inte att avböja bokningsförfrågan",
+      "loadFailed": "Det gick inte att läsa in bokningsförfrågningar",
+      "scheduleEntryCreated": "Schemaposten har skapats"
+    }
+  },
+  "common": {
+    "actions": "Åtgärder",
+    "active": "Aktiv",
+    "inactive": "Inaktiv",
+    "loading": "Läser in…",
+    "uploading": "Laddar upp…",
+    "error": "Ett fel inträffade",
+    "save": "Spara",
+    "cancel": "Avbryt",
+    "delete": "Radera",
+    "edit": "Redigera",
+    "close": "Stäng",
+    "confirm": "Bekräfta",
+    "yes": "Ja",
+    "no": "Nej",
+    "search": "Sök",
+    "filter": "Filtrera",
+    "resetFilters": "Återställ",
+    "sort": "Sortera",
+    "refresh": "Ladda om",
+    "export": "Exportera",
+    "import": "Importera",
+    "download": "Ladda ner",
+    "upload": "Ladda upp",
+    "selectAll": "Markera alla",
+    "clearSelection": "Avmarkera alla",
+    "view": "Visa",
+    "back": "Tillbaka",
+    "next": "Nästa",
+    "previous": "Föregående",
+    "submit": "Skicka in",
+    "submitting": "Skickar in…",
+    "reset": "Återställ",
+    "noData": "Inga data tillgängliga",
+    "required": "Obligatoriskt",
+    "optional": "Valfritt",
+    "notSpecified": "Inte angivet",
+    "unknown": "Okänd",
+    "edited": "redigerad",
+    "editComment": "Redigera kommentar",
+    "deleteCommentAriaLabel": "Radera kommentar",
+    "deleteComment": "Radera kommentar",
+    "deleteCommentConfirmation": "Vill du radera den här kommentaren? Åtgärden går inte att ångra.",
+    "update": "Uppdatera",
+    "create": "Skapa",
+    "replyComment": "Svara på kommentar",
+    "saving": "Sparar…"
+  },
+  "sessionManagement": {
+    "title": "Aktiva sessioner",
+    "description": "Hantera dina aktiva inloggningssessioner på alla enheter (högst 5 sessioner)",
+    "states": {
+      "loading": "Läser in sessioner…",
+      "noSessions": "Inga aktiva sessioner hittades"
+    },
+    "labels": {
+      "unknownDevice": "Okänd enhet",
+      "currentSession": "Aktuell session",
+      "yourSession": "Din session",
+      "lastActive": "Senast aktiv"
+    },
+    "loginMethods": {
+      "password": "Lösenord",
+      "googleOAuth": "Google OAuth",
+      "microsoftOAuth": "Microsoft OAuth",
+      "keycloak": "Keycloak"
+    },
+    "userTypes": {
+      "internal": "Intern",
+      "client": "Kund"
+    },
+    "actions": {
+      "logout": "Logga ut",
+      "revoke": "Återkalla",
+      "revoking": "Återkallar…",
+      "loggingOut": "Loggar ut…",
+      "logoutFromOther_one": "Logga ut från {{count}} annan enhet",
+      "logoutFromOther_other": "Logga ut från {{count}} andra enheter"
+    },
+    "confirmations": {
+      "logoutCurrent": "Du loggas ut från din aktuella session. Vill du fortsätta?",
+      "logoutAllOther": "Du loggas ut från alla andra enheter. Vill du fortsätta?"
+    },
+    "prompts": {
+      "enter2FA": "Ange din 2FA-kod:"
+    },
+    "messages": {
+      "loggingOut": "Loggar ut…",
+      "sessionRevoked": "Sessionen har återkallats"
+    },
+    "warnings": {
+      "oauthLogout": "Du loggas bara ut från AlgaPSA. Du förblir inloggad hos {{provider}}."
+    },
+    "errors": {
+      "fetchFailed": "Det gick inte att hämta sessioner",
+      "loadFailed": "Det gick inte att läsa in aktiva sessioner",
+      "revokeFailed": "Det gick inte att återkalla sessionen",
+      "revokeAllFailed": "Det gick inte att återkalla sessionerna",
+      "logoutAllFailed": "Det gick inte att logga ut från andra enheter",
+      "adminAccessRequired": "Otillräckliga behörigheter för att visa alla sessioner"
+    },
+    "admin": {
+      "title": "Alla användarsessioner",
+      "description": "{{sessionCount}} aktiva sessioner från {{userCount}} användare",
+      "searchPlaceholder": "Sök efter användarnamn, e-post, enhet eller IP-adress…",
+      "noResults": "Inga sessioner matchar din sökning"
+    }
+  },
+  "projects": {
+    "task": {
+      "comments": {
+        "title": "Kommentarer",
+        "internal_only": "Endast internt",
+        "placeholder": "Lägg till en kommentar… Använd @ för att nämna teammedlemmar",
+        "add_comment": "Lägg till kommentar",
+        "no_comments": "Inga kommentarer ännu. Bli först med att kommentera.",
+        "edited": "Redigerad",
+        "error_creating": "Det gick inte att skapa kommentaren. Försök igen.",
+        "error_updating": "Det gick inte att uppdatera kommentaren. Försök igen.",
+        "error_deleting": "Det gick inte att radera kommentaren. Försök igen.",
+        "confirm_delete": "Vill du radera den här kommentaren?"
+      }
+    }
+  },
+  "enums": {
+    "addOnDescription": {
+      "ai_assistant": "Ge ditt team tillgång till AI-chatt, dokumentstöd, hjälp i sidopanelen och AI-verktyg för arbetsflöden."
+    }
+  },
+  "timePicker": {
+    "placeholder": "Välj tid",
+    "hour": "Timme",
+    "minute": "Minut",
+    "period": "Period",
+    "open": "Öppna tidsväljare"
+  },
+  "timezonePicker": {
+    "selectPlaceholder": "Välj tidszon…",
+    "searchPlaceholder": "Sök tidszoner eller förkortningar (t.ex. EST)…",
+    "noResults": "Inga tidszoner hittades",
+    "matchingGroup": "Matchar ”{{query}}”",
+    "regions": {
+      "Africa": "Afrika",
+      "America": "Amerika",
+      "Antarctica": "Antarktis",
+      "Arctic": "Arktis",
+      "Asia": "Asien",
+      "Atlantic": "Atlanten",
+      "Australia": "Australien",
+      "Europe": "Europa",
+      "Indian": "Indiska oceanen",
+      "Pacific": "Stilla havet",
+      "Etc": "Annat"
+    }
+  },
+  "pages": {
+    "errors": {
+      "somethingWentWrong": "Något gick fel",
+      "genericError": "Ett fel inträffade. Försök igen senare.",
+      "notFoundTitle": "404 - Sidan hittades inte",
+      "notFoundDescription": "Sidan du söker finns inte.",
+      "userNotAuthenticated": "Användaren är inte autentiserad",
+      "userNotAuthenticatedError": "Fel: Användaren är inte autentiserad",
+      "missingRunId": "Körnings-ID saknas.",
+      "teamLeadAccessRequired": "Teamledarbehörighet krävs",
+      "teamsTabUnavailable": "Teams-fliken är inte tillgänglig",
+      "teamsFeatureName": "Microsoft Teams-integrering",
+      "teamsEnterprisePitch": "Få tillgång till ärendeinformation och teknikernas arbetsflöden i Microsoft Teams.",
+      "teamsSignInUnavailable": "Teams-inloggning är inte tillgänglig",
+      "teamsSetupNotFinished": "Teams-konfigurationen är inte slutförd",
+      "teamsSetupNotFinishedHint": "Be en PSA-administratör att slutföra Teams-konfigurationen och öppna sedan den personliga fliken igen.",
+      "teamsTabAdminHint": "Be en PSA-administratör att slutföra Teams-konfigurationen och öppna sedan fliken igen.",
+      "assetNotFound": "Tillgången hittades inte",
+      "contactNotFound": "Kontakten hittades inte",
+      "templateNotFound": "Mallen hittades inte",
+      "contactLoadError": "Fel vid inläsning av kontakten",
+      "unknownError": "Ett okänt fel inträffade",
+      "templateNotFoundDetail": "Mallen du söker finns inte eller har raderats.",
+      "teamLeadAccessDetail": "Du måste vara teamledare för att godkänna dina teammedlemmars tidrapporter.",
+      "teamsTabEnableHint": "Be en PSA-administratör att aktivera Teams-integreringen för den här klientorganisationen innan du öppnar fliken igen."
+    },
+    "actions": {
+      "tryAgain": "Försök igen",
+      "goToTeamSettings": "Gå till teaminställningar",
+      "selectDateRange": "Välj datumintervall"
+    },
+    "loading": {
+      "billingDashboard": "Läser in översiktspanelen för debitering…",
+      "onboarding": "Läser in introduktion…",
+      "extension": "Läser in tillägget…",
+      "extensionSettings": "Läser in tilläggsinställningar…",
+      "ssoSettings": "Läser in SSO-inställningar…"
+    },
+    "titles": {
+      "emailLogs": "E-postloggar",
+      "editAsset": "Redigera tillgång",
+      "slaSettings": "SLA-inställningar",
+      "documentEditor": "Dokumentredigerare",
+      "accountManagement": "Kontohantering"
+    },
+    "teamsTab": {
+      "signedInAs": "Inloggad som {{name}}",
+      "openInFullPsa": "Öppna i hela PSA-systemet",
+      "iframeTitle": "{{destination}} i AlgaPSA",
+      "fullPsaHint": "Välj ”Öppna i hela PSA-systemet” för mer information än vad som kan visas på ett Teams-kort.",
+      "fallback": {
+        "label": "Den begärda posten är inte tillgänglig:",
+        "showingInstead": "Visar din arbetslista i Teams i stället för {{destination}}."
+      },
+      "entrySource": {
+        "bot": "Öppnat från ett resultat i en Teams-bot.",
+        "messageExtension": "Öppnat från ett resultat i ett Teams-meddelandetillägg.",
+        "notification": "Öppnat från en aktivitetsavisering i Teams."
+      },
+      "destinations": {
+        "myWork": {
+          "title": "Mitt arbete",
+          "summary": "Din personliga flik i Teams är redo att läsa in din arbetskö i PSA."
+        },
+        "ticket": {
+          "title": "Ärende {{ticketId}}",
+          "summary": "Du öppnar ärende {{ticketId}} från Teams."
+        },
+        "projectTask": {
+          "title": "Projektuppgift {{taskId}}",
+          "summary": "Du öppnar uppgift {{taskId}} i projekt {{projectId}}."
+        },
+        "approval": {
+          "title": "Godkännande {{approvalId}}",
+          "summary": "Du öppnar godkännande {{approvalId}} från Teams."
+        },
+        "timeEntry": {
+          "title": "Tidpost {{entryId}}",
+          "summary": "Du öppnar tidpost {{entryId}} från Teams."
+        },
+        "contact": {
+          "title": "Kontakt {{contactId}}",
+          "summary": "Du öppnar kontakt {{contactId}} från Teams.",
+          "summaryWithClient": "Du öppnar kontakt {{contactId}} för kund {{clientId}} från Teams."
+        }
+      }
+    },
+    "unsubscribe": {
+      "pageTitle": "Avsluta prenumeration",
+      "confirmTitle": "Vill du avsluta prenumerationen på dessa e-postmeddelanden?",
+      "confirmDescription": "Du kommer inte längre att få marknadsföringsmeddelanden till den här e-postadressen.",
+      "confirmAction": "Avsluta prenumeration",
+      "doneTitle": "Din prenumeration har avslutats",
+      "doneDescription": "Du kommer inte längre att få dessa e-postmeddelanden.",
+      "unavailableTitle": "Länken är inte tillgänglig",
+      "unavailableDescription": "Länken är inte längre giltig."
+    },
+    "mcpAuthorize": {
+      "errorTitle": "Auktoriseringsfel",
+      "documentTitle": "Ge {{client}} behörighet",
+      "consentTitle": "Ge åtkomst",
+      "consentRequest": "<strong>{{client}}</strong> begär åtkomst till AlgaPSA <em>i ditt namn</em>.",
+      "consentScope": "Den kommer att kunna använda MCP-verktygen med dina behörigheter i den här arbetsytan. Du kan när som helst koppla från den via Inställningar → MCP.",
+      "approve": "Godkänn",
+      "deny": "Neka"
+    },
+    "microsoftEmailSetup": {
+      "title": "Konfiguration av Microsoft-e-post",
+      "finishing": "Slutför konfigurationen av Microsoft-e-post…",
+      "finished": "Konfigurationen är slutförd. Du kan stänga det här fönstret.",
+      "notFinished": "Konfigurationen slutfördes inte. Gå tillbaka till AlgaPSA för att granska felet.",
+      "returnLink": "Tillbaka till AlgaPSA"
+    }
+  },
+  "feedback": {
+    "providePlaceholder": "Lämna återkoppling"
+  },
+  "presence": {
+    "noOneElseEditing": "Ingen annan redigerar",
+    "conflict": {
+      "changedField": "{{author}} ändrade nyss det här fältet {{time}}.",
+      "remoteValue": "Fjärrvärde:",
+      "keepYours": "Behåll ditt värde",
+      "takeTheirs": "Använd den andras värde"
+    }
+  },
+  "labels": {
+    "printColumns": "Kolumner att skriva ut"
+  },
+  "deleteEntity": {
+    "checkingDependenciesTitle": "Kontrollerar beroenden",
+    "deleteTitle": "Radera {{entityName}}",
+    "cannotDeleteTitle": "Det går inte att radera",
+    "deleting": "Raderar…",
+    "checkingDependenciesMessage": "Kontrollerar beroenden…",
+    "fallbackBlockMessage": "Ta bort eller omfördela dessa poster före radering.",
+    "confirmationMessage": "Vill du radera ”{{entityName}}”? Åtgärden går inte att ångra.",
+    "alternatives": {
+      "deactivate": {
+        "label": "Markera som inaktiv",
+        "description": "Inaktiverar posten utan att radera dess data.",
+        "warning": "Inaktiva poster kan inte längre väljas i nya arbetsflöden."
+      },
+      "archive": {
+        "label": "Arkivera",
+        "description": "Tar posten ur aktiv användning och bevarar historiken.",
+        "warning": "Arkiverade poster döljs i standardvyer."
+      }
+    }
+  },
+  "dataTable": {
+    "columnsHidden_one": "{{count}} kolumn är dold.",
+    "columnsHidden_other": "{{count}} kolumner är dolda.",
+    "showAll": "Visa alla",
+    "showingAllColumns": "Alla kolumner visas. Rulla i sidled för att se dem.",
+    "showLess": "Visa färre",
+    "columnsHidden": "{{count}} kolumner är dolda på grund av begränsat utrymme."
+  },
+  "richTextEditorSkeleton": {
+    "loading": "Läser in redigeraren…"
+  },
+  "productBoundary": {
+    "upgrade": {
+      "title": "Tillgängligt i AlgaPSA",
+      "description": "Det här området ingår i den fullständiga AlgaPSA-produkten. AlgaDesk innehåller endast funktioner inriktade på supportarbete.",
+      "cta": "Tillbaka till översiktspanelen i AlgaDesk"
+    },
+    "notFound": {
+      "title": "Sidan är inte tillgänglig",
+      "description": "Sidan är inte tillgänglig i den produkt du använder.",
+      "cta": "Gå till översiktspanelen"
+    }
+  },
+  "notifications": {
+    "needsAttention": "Kräver åtgärd ({{count}})",
+    "lowPriority": "Låg prioritet ({{count}})"
+  },
+  "importConflicts": {
+    "title": "Lös importkonflikter",
+    "description": "Vissa poster finns redan. Välj hur varje konflikt ska hanteras.",
+    "apply": "Tillämpa lösningar",
+    "reason": {
+      "name": "Konflikt: Namnet finns redan",
+      "order": "Konflikt: Ordningstalet {{order}} används redan",
+      "item": "Konflikt: Posten finns redan"
+    },
+    "skip": "Hoppa över den här posten",
+    "rename": "Importera med ett annat namn",
+    "newNamePlaceholder": "Ange nytt namn",
+    "reorder": "Importera med ett annat ordningstal",
+    "newOrderPlaceholder": "Ange nytt ordningstal"
+  },
+  "tags": {
+    "editTitle": "Redigera tagg",
+    "noPermission": "Du har inte behörighet att redigera taggar. Kontakta din administratör för att få åtkomst.",
+    "preview": "Förhandsgranskning av tagg",
+    "textLabel": "Taggtext",
+    "textPlaceholder": "Ange taggtext",
+    "quickColors": "Snabbval av färger",
+    "presetSwatch": "Bakgrund: {{background}}, text: {{text}}",
+    "backgroundColorLabel": "Bakgrundsfärg",
+    "textColorLabel": "Textfärg",
+    "pickBackgroundColor": "Välj bakgrundsfärg",
+    "pickTextColor": "Välj textfärg",
+    "resetColors": "Återställ färger",
+    "deleteAll": "Radera alla",
+    "deleting": "Raderar…",
+    "deleteAllTitle": "Radera alla taggar",
+    "deleteAllMessage": "Vill du radera alla taggar med texten ”{{tag}}”? Taggen tas bort från alla {{entityType}}. Åtgärden går inte att ångra.",
+    "deletedAll": "Alla taggar med texten ”{{tag}}” har raderats",
+    "deleteFailed": "Det gick inte att radera taggarna",
+    "saveFailed": "Det gick inte att spara taggändringarna",
+    "textRequired": "Taggtexten får inte vara tom",
+    "updated": "Taggen har uppdaterats",
+    "entityTypes": {
+      "client": "kunder",
+      "contact": "kontakter",
+      "ticket": "ärenden",
+      "project": "projekt",
+      "project_task": "projektuppgifter",
+      "workflow_form": "arbetsflödesformulär",
+      "document": "dokument",
+      "knowledge_base_article": "kunskapsbasartiklar",
+      "opportunity": "affärsmöjligheter"
+    }
+  },
+  "statusDialog": {
+    "nameRequired": "Statusnamn krävs",
+    "orderTaken": "Ordningstalet {{order}} används redan av ”{{name}}”. Välj ett annat ordningstal.",
+    "updated": "Statusen har uppdaterats",
+    "created": "Statusen har skapats",
+    "orderInUse": "Ordningstalet används redan. Välj ett annat ordningstal.",
+    "updateFailed": "Det gick inte att uppdatera statusen",
+    "createFailed": "Det gick inte att skapa statusen",
+    "submitUpdate": "Uppdatera status",
+    "submitAdd": "Lägg till status",
+    "editTitle": "Redigera status",
+    "addTitle": "Lägg till ny status",
+    "nameLabel": "Statusnamn",
+    "namePlaceholder": "t.ex. Pågår",
+    "orderLabel": "Ordningstal (1–100, lägre tal visas först)",
+    "orderHelp": "Styr i vilken ordning statusar visas i rullgardinsmenyer på hela plattformen.",
+    "usedOrders": "Använda ordningstal: {{orders}}",
+    "noUsedOrders": "Inga ordningstal används ännu",
+    "markClosed": "Markera som stängd status",
+    "setDefault": "Ange som standardstatus för nya poster",
+    "defaultClosedHelp": "En stängd status kan inte vara standard för nya poster."
+  },
+  "callLink": {
+    "teamsCall": "Ring i Microsoft Teams",
+    "threecxCall": "Ring via 3CX",
+    "threecxDialing": "Ringer från din 3CX-anknytning",
+    "threecxFailed": "Telefonväxeln kunde inte ringa samtalet"
+  },
+  "editor": {
+    "attachFiles": "Bifoga filer",
+    "uploadingFiles": "Laddar upp filer…",
+    "fileUploadFailed": "Filuppladdningen misslyckades."
+  },
+  "emailPreferences": {
+    "loading": "Läser in e-postinställningar…",
+    "saving": "Sparar e-postinställningar…",
+    "slow": "Det här tar längre tid än vanligt. Väntar på bekräftelse innan fler ändringar tillåts.",
+    "loadError": "Det gick inte att läsa in sparade e-postinställningar. Försök igen för att bekräfta dina aktuella inställningar.",
+    "saveError": "Det gick inte att bekräfta att inställningarna sparades. Kontrollera dina sparade inställningar och försök igen.",
+    "retry": "Försök igen",
+    "disabledByAdmin": "Inaktiverat av administratören",
+    "mixed": "Delvis aktiverat",
+    "empty": "Inga kategorier för e-postaviseringar är tillgängliga."
+  }
+}

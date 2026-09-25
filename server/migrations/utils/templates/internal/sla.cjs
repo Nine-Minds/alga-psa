@@ -49,6 +49,10 @@ const TEMPLATES = [
         title: 'Aviso de SLA: {{thresholdPercent}}% do tempo decorrido',
         message: 'O ticket #{{ticketNumber}} "{{ticketTitle}}" está em {{thresholdPercent}}% do SLA {{slaType}}. Tempo restante: {{remainingTime}}.',
       },
+      sv: {
+        title: 'SLA-varning: {{thresholdPercent}} % av tiden har gått',
+        message: 'För ärende #{{ticketNumber}} ”{{ticketTitle}}” har {{thresholdPercent}} % av tiden enligt SLA-avtalet för {{slaType}} gått. Återstående tid: {{remainingTime}}.',
+      },
     },
   },
 
@@ -88,6 +92,10 @@ const TEMPLATES = [
       pt: {
         title: 'SLA violado',
         message: 'VIOLAÇÃO DE SLA: o ticket #{{ticketNumber}} "{{ticketTitle}}" excedeu a meta de SLA {{slaType}}. Política: {{policyName}}. Cliente: {{clientName}}.',
+      },
+      sv: {
+        title: 'SLA-avtal överträtt',
+        message: 'SLA-överträdelse: Ärende #{{ticketNumber}} ”{{ticketTitle}}” har överskridit SLA-målet för {{slaType}}. Policy: {{policyName}}. Kund: {{clientName}}.',
       },
     },
   },
@@ -129,6 +137,10 @@ const TEMPLATES = [
         title: 'SLA de resposta cumprido',
         message: 'O SLA de resposta do ticket #{{ticketNumber}} "{{ticketTitle}}" foi cumprido. A primeira resposta foi fornecida dentro do prazo previsto.',
       },
+      sv: {
+        title: 'SLA-mål för svarstid uppfyllt',
+        message: 'SLA-målet för svarstid för ärende #{{ticketNumber}} ”{{ticketTitle}}” uppfylldes. Det första svaret gavs inom den angivna tidsgränsen.',
+      },
     },
   },
 
@@ -169,6 +181,10 @@ const TEMPLATES = [
         title: 'SLA de resolução cumprido',
         message: 'O ticket #{{ticketNumber}} "{{ticketTitle}}" foi resolvido dentro da meta de SLA. Ótimo trabalho!',
       },
+      sv: {
+        title: 'SLA-mål för lösningstid uppfyllt',
+        message: 'Ärende #{{ticketNumber}} ”{{ticketTitle}}” löstes inom SLA-målet. Bra jobbat.',
+      },
     },
   },
 
@@ -208,6 +224,10 @@ const TEMPLATES = [
       pt: {
         title: 'Ticket escalonado (SLA)',
         message: 'O ticket #{{ticketNumber}} "{{ticketTitle}}" foi escalonado para o nível {{escalationLevel}} devido ao SLA. Você foi adicionado como gerente de escalonamento.',
+      },
+      sv: {
+        title: 'Ärende eskalerat (SLA)',
+        message: 'Ärende #{{ticketNumber}} ”{{ticketTitle}}” har eskalerats till nivå {{escalationLevel}} på grund av SLA-avtalet. Du har lagts till som eskaleringsansvarig.',
       },
     },
   },

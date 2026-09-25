@@ -132,6 +132,7 @@ const COPY = {
   },
 };
 SUBJECTS.pt = 'Seu ticket foi criado • {{ticket.title}}';
+SUBJECTS.sv = 'Ditt ärende har skapats • {{ticket.title}}';
 COPY.pt = {
   headerLabel: 'Ticket criado',
   intro: 'Seu ticket para <strong>{{ticket.clientName}}</strong> foi criado. Nossa equipe vai analisá-lo e retornar — você pode acompanhar o progresso pelo link abaixo.',
@@ -145,6 +146,20 @@ COPY.pt = {
   textHeader: 'Seu ticket foi criado',
   textDescription: 'Descrição',
   textView: 'Ver ticket',
+};
+COPY.sv = {
+  headerLabel: 'Ärende skapat',
+  intro: 'Ditt ärende för <strong>{{ticket.clientName}}</strong> har skapats. Vårt team granskar det och återkommer — du kan följa ärendets framsteg via länken nedan.',
+  badgePrefix: 'Ärende #',
+  priority: 'Prioritet',
+  status: 'Status',
+  assignedTo: 'Tilldelat till',
+  descriptionLabel: 'Beskrivning',
+  viewButton: 'Visa ärende',
+  footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+  textHeader: 'Ditt ärende har skapats',
+  textDescription: 'Beskrivning',
+  textView: 'Visa ärende',
 };
 
 /* eslint-enable max-len */

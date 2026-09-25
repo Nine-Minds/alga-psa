@@ -27,6 +27,10 @@ beforeAll(async () => {
         'msp/settings': load('pl', 'msp/settings'),
         'msp/profile': load('pl', 'msp/profile'),
       },
+      sv: {
+        'msp/settings': load('sv', 'msp/settings'),
+        'msp/profile': load('sv', 'msp/profile'),
+      },
     },
   });
 });
@@ -49,6 +53,19 @@ describe('migrated plural keys resolve via i18next v4 count selection', () => {
     expect(t('interactions.types.messages.success.imported', { count: 5 })).toBe(
       'Zaimportowano 5 typów interakcji'
     );
+  });
+
+  it.each([
+    [1, 'one'],
+    [0, 'other'],
+    [2, 'other'],
+    [5, 'other'],
+    [1.5, 'other'],
+  ] as const)('Swedish count %s resolves to _%s without falling back to English', (count, category) => {
+    const t = i18next.getFixedT('sv', 'msp/settings');
+    const result = t('teams.details.memberCount', { count, returnDetails: true });
+    expect(result.usedLng).toBe('sv');
+    expect(result.exactUsedKey).toBe(`teams.details.memberCount_${category}`);
   });
 
   it('T051: sessions subtitle interpolates both counts with count-driven plural', () => {

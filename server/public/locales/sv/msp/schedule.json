@@ -1,0 +1,780 @@
+{
+  "page": {
+    "title": "Schema",
+    "actions": {
+      "configureAvailability": "Konfigurera tillgänglighet",
+      "appointmentRequests": "Bokningsförfrågningar"
+    }
+  },
+  "sidebar": {
+    "actions": {
+      "compareAll": "Jämför alla",
+      "clearAll": "Avmarkera alla",
+      "viewWeek": "Visa vecka",
+      "compare": "Jämför",
+      "stopComparing": "Sluta jämföra"
+    },
+    "labels": {
+      "inactive": "(Inaktiv)"
+    },
+    "aria": {
+      "viewWeek": "Visa vecka för {{name}}",
+      "compare": "Jämför {{name}}"
+    }
+  },
+  "agentView": {
+    "loading": "Laddar…",
+    "errors": {
+      "loadPermissions": "Kunde inte läsa in användarbehörigheter",
+      "forbidden": "Du har inte behörighet att visa det här schemat.",
+      "moveFailed": "Kunde inte flytta schemaposten"
+    },
+    "schedulingFor": "Schemaläggning",
+    "selectSlotHint": "Dra för att skapa, flytta eller ändra längden på poster. Klicka på en post för att redigera den.",
+    "readOnlyHint": "Du kan visa det här schemat, men behöver behörighet att uppdatera schemat för att lägga till eller ändra poster.",
+    "workItemLegend": "Den här arbetsposten",
+    "schedulingForAgent": "Schemaläggning för {{name}}",
+    "otherWorkLegend": "Annat arbete",
+    "workItemTypeLabel": {
+      "ticket": "Ärende"
+    }
+  },
+  "calendar": {
+    "legend": {
+      "types": {
+        "ticket": "Ärende",
+        "projectTask": "Projektuppgift",
+        "nonBillableCategory": "Icke-debiterbar kategori",
+        "adHoc": "Ad hoc-post",
+        "interaction": "Interaktion",
+        "appointmentRequest": "Bokningsförfrågan",
+        "opportunityStep": "Affärssteg"
+      },
+      "showInactiveUsers": "Visa inaktiva användare"
+    },
+    "loading": {
+      "initial": "Laddar schema…",
+      "overlay": "Laddar…"
+    },
+    "errors": {
+      "validateDeletion": "Kunde inte kontrollera om posten kan raderas. Försök igen.",
+      "loadPermissions": "Kunde inte läsa in behörigheter.",
+      "loadCurrentUser": "Kunde inte läsa in aktuell användare.",
+      "unknown": "Ett okänt fel uppstod",
+      "deleteFailed": "Kunde inte radera schemaposten",
+      "deleteUnexpected": "Ett fel uppstod när schemaposten skulle raderas",
+      "updateFailed": "Kunde inte uppdatera schemaposten: {{error}}",
+      "createFailed": "Kunde inte lägga till schemaposten: {{error}}",
+      "saveUnexpected": "Ett fel uppstod när schemaposten skulle sparas"
+    },
+    "toolbar": {
+      "previousAria": "Föregående {{view}}",
+      "previous": "< Föregående",
+      "today": "Idag",
+      "nextAria": "Nästa {{view}}",
+      "next": "Nästa >",
+      "views": {
+        "month": "Månad",
+        "week": "Vecka",
+        "day": "Dag"
+      }
+    },
+    "event": {
+      "fallbacks": {
+        "unknownTechnician": "Okänd",
+        "unassigned": "Ej tilldelad",
+        "untitled": "Utan titel"
+      },
+      "tooltip": {
+        "scheduledFor": "Schemalagd för: {{technicians}}",
+        "start": "Start: {{dateTime}}",
+        "end": "Slut: {{dateTime}}",
+        "multiDay": "(Flera dagar)"
+      }
+    },
+    "deleteDialog": {
+      "title": "Radera schemapost",
+      "messageRecurring": "Välj vilka händelser som ska raderas:",
+      "messageSingle": "Är du säker på att du vill radera den här schemaposten? Åtgärden kan inte ångras.",
+      "confirm": "Radera",
+      "entityFallback": "den här schemaposten",
+      "options": {
+        "single": "Endast den här händelsen",
+        "future": "Den här och framtida händelser",
+        "all": "Alla händelser"
+      },
+      "messageWithTeamsWarning": "Är du säker på att du vill radera den här schemaposten? Åtgärden kan inte ångras. Microsoft Teams-mötet raderas också."
+    },
+    "print": {
+      "title": "Schemaöversikt",
+      "subtitle": "Schemalagda poster: {{count}}",
+      "noEntries": "Inga schemalagda poster att skriva ut",
+      "emptyValue": "-",
+      "columns": {
+        "title": "Titel",
+        "type": "Typ",
+        "start": "Start",
+        "end": "Slut",
+        "assigned": "Tilldelad",
+        "status": "Status"
+      },
+      "optionsDialog": {
+        "title": "Utskriftsalternativ",
+        "description": "Välj vilka kolumner som ska ingå när schemat skrivs ut."
+      }
+    }
+  },
+  "weeklyEvent": {
+    "actions": {
+      "delete": "Radera post"
+    },
+    "continuation": {
+      "previousWeek": "Fortsätter från föregående vecka"
+    }
+  },
+  "requests": {
+    "errors": {
+      "load": "Kunde inte läsa in bokningsförfrågningar",
+      "ticketNotFound": "Ärendet hittades inte",
+      "loadTicket": "Kunde inte läsa in ärendet",
+      "assignTechnicianRequired": "Tilldela en tekniker",
+      "approve": "Kunde inte godkänna förfrågan",
+      "declineReasonRequired": "Ange en orsak till att avböja",
+      "decline": "Kunde inte avböja förfrågan",
+      "reschedule": "Kunde inte boka om tiden",
+      "rescheduleDateRequired": "Välj ett nytt datum och klockslag",
+      "generateTeamsMeeting": "Kunde inte skapa Microsoft Teams-mötet"
+    },
+    "feedback": {
+      "approved": "Bokningsförfrågan godkänd",
+      "declined": "Bokningsförfrågan avböjd",
+      "rescheduled": "Bokningen har flyttats",
+      "teamsMeetingGenerated": "Microsoft Teams-mötet har skapats"
+    },
+    "filters": {
+      "statusLabel": "Filtrera efter status",
+      "statusOptions": {
+        "all": "Alla",
+        "pending": "Väntande",
+        "approved": "Godkänd",
+        "declined": "Avböjd",
+        "cancelled": "Avbokad"
+      }
+    },
+    "fallbacks": {
+      "invalidDateTime": "Ogiltigt datum/klockslag"
+    },
+    "list": {
+      "title": "Bokningsförfrågningar",
+      "badgeTotal": "Totalt",
+      "loading": "Laddar förfrågningar…",
+      "empty": "Ingen {{status}} förfrågan hittades",
+      "duration": "{{count}} minuter",
+      "ticketFallback": "Ärende #{{ticket}}",
+      "fallbacks": {
+        "publicRequest": "Offentlig förfrågan"
+      }
+    },
+    "detail": {
+      "back": "← Tillbaka till listan",
+      "title": "Förfrågans detaljer",
+      "section": {
+        "requestInformation": "Information om förfrågan"
+      },
+      "labels": {
+        "reference": "Referens",
+        "client": "Kund",
+        "requester": "Beställare",
+        "contact": "Kontakt",
+        "email": "E-post",
+        "phone": "Telefon",
+        "service": "Tjänst",
+        "requestedTime": "Önskad tid",
+        "duration": "Varaktighet",
+        "teamsMeeting": "Teams-möte",
+        "status": "Status",
+        "linkedTicket": "Länkat ärende",
+        "description": "Beskrivning"
+      },
+      "actions": {
+        "joinTeamsMeeting": "Anslut till Teams-möte",
+        "generateTeamsMeeting": "Skapa Teams-möte"
+      },
+      "teamsMeetingMissing": "Den här godkända bokningen saknar ännu en länk till ett Teams-möte."
+    },
+    "approval": {
+      "title": "Detaljer för godkännande",
+      "fields": {
+        "assignedTechnician": "Tilldela tekniker *",
+        "finalDateTime": "Slutligt datum och klockslag",
+        "generateTeamsMeeting": "Skapa länk till Microsoft Teams-möte",
+        "internalNotes": "Interna anteckningar (valfria)",
+        "linkedTicket": "Länka till ärende (valfritt)"
+      },
+      "placeholders": {
+        "assignedTechnician": "Välj tekniker",
+        "internalNotes": "Lägg till interna anteckningar…",
+        "linkedTicket": "Ange ärende-ID att länka till…"
+      },
+      "actions": {
+        "approve": "Godkänn",
+        "decline": "Avböj"
+      },
+      "teamsMeetingFailure": {
+        "title": "Microsoft Teams-mötet kunde inte skapas",
+        "description": "Bokningen godkändes inte. Försök skapa mötet igen, eller godkänn utan möte och skapa ett senare.",
+        "retry": "Försök igen",
+        "approveWithout": "Godkänn utan möte"
+      }
+    },
+    "decline": {
+      "title": "Avböj förfrågan",
+      "fields": {
+        "reason": "Orsak till att avböja *"
+      },
+      "placeholders": {
+        "reason": "Ange en orsak till att avböja den här förfrågan…"
+      },
+      "actions": {
+        "confirm": "Bekräfta avböjande",
+        "cancel": "Avbryt"
+      }
+    },
+    "reschedule": {
+      "title": "Boka om",
+      "teamsNote": "Deltagarna får en uppdaterad inbjudan till Microsoft Teams-mötet.",
+      "fields": {
+        "newDateTime": "Nytt datum och klockslag"
+      },
+      "actions": {
+        "open": "Boka om tiden",
+        "confirm": "Bekräfta ombokning",
+        "cancel": "Avbryt"
+      }
+    }
+  },
+  "availabilitySettings": {
+    "dialog": {
+      "title": "Tillgänglighetsinställningar"
+    },
+    "loading": "Laddar inställningar…",
+    "tabs": {
+      "general": "Allmänna inställningar",
+      "userHours": "Bokningsbara tider",
+      "serviceRules": "Tjänsteregler",
+      "exceptions": "Undantag",
+      "teamsMeetings": "Teams-möten"
+    },
+    "days": {
+      "sunday": "Söndag",
+      "monday": "Måndag",
+      "tuesday": "Tisdag",
+      "wednesday": "Onsdag",
+      "thursday": "Torsdag",
+      "friday": "Fredag",
+      "saturday": "Lördag"
+    },
+    "common": {
+      "yes": "Ja",
+      "no": "Nej",
+      "columns": {
+        "action": "Åtgärd"
+      },
+      "actions": {
+        "edit": "Redigera",
+        "delete": "Radera",
+        "deleting": "Raderar…"
+      },
+      "defaultApprover": {
+        "placeholder": "Välj godkännare"
+      },
+      "teamSelect": {
+        "label": "Filtrera tekniker efter team",
+        "placeholder": "Alla behöriga tekniker",
+        "help": "Det här filtrerar endast teknikerlistan. Teknikerns bokningstillgänglighet gäller för alla team."
+      }
+    },
+    "feedback": {
+      "loadError": "Kunde inte läsa in inställningar"
+    },
+    "general": {
+      "autoApproval": {
+        "title": "Aktivera automatiskt godkännande",
+        "description": "Godkänn automatiskt bokningar som uppfyller kriterierna nedan",
+        "criteriaTitle": "Kriterier för automatiskt godkännande:",
+        "criteria": {
+          "requireAvailability": "Teknikern måste ha tillgänglighet konfigurerad för den önskade tiden",
+          "requireContract": "Kunden måste ha ett aktivt avtal (om tjänsten kräver det)",
+          "checkConflicts": "Inga schemakonflikter med befintliga bokningar",
+          "respectBuffers": "Respektera bufferttider före och efter bokningar"
+        }
+      },
+      "defaultApprover": {
+        "label": "Godkännare",
+        "help": "Företagsgemensamma godkännare för bokningsförfrågningar som kräver manuellt godkännande. Lägg till flera användare och/eller team – alla som väljs aviseras och kan godkänna. Detta kan åsidosättas per tekniker under Bokningsbara tider."
+      },
+      "advanceBookingDays": {
+        "label": "Förhandsbokning som standard (dagar)"
+      },
+      "minimumNoticeHours": {
+        "label": "Minsta framförhållning (timmar)"
+      },
+      "actions": {
+        "save": "Spara allmänna inställningar"
+      },
+      "feedback": {
+        "saveSuccess": "Allmänna inställningar har sparats",
+        "saveError": "Kunde inte spara inställningar"
+      }
+    },
+    "userHours": {
+      "roleManager": {
+        "label": "Teamchef:",
+        "description": "Du kan bara konfigurera bokningstillgänglighet för behöriga teammedlemmar och medarbetare som rapporterar direkt till dig. Tabellen nedan följer det aktuella teamfiltret."
+      },
+      "roleAdmin": {
+        "label": "Administratör:",
+        "description": "Du kan konfigurera bokningstillgänglighet för alla behöriga tekniker. Inställningarna gäller för användaren i alla team. Tabellen nedan följer det aktuella teamfiltret."
+      },
+      "userSelect": {
+        "label": "Tekniker",
+        "placeholderSelectTeamFirst": "Välj ett team först",
+        "placeholder": "Välj en tekniker att konfigurera"
+      },
+      "appointmentSettings": {
+        "title": "Bokningsinställningar",
+        "defaultDuration": {
+          "label": "Standardlängd för bokningar (minuter)",
+          "help": "Teknikerspecifik längd som ersätter standardvärdet. Lämna tomt för att använda den tjänstespecifika längden från Tjänsteregler.",
+          "placeholder": "Lämna tomt för att använda tjänstens standardvärde"
+        },
+        "bufferAfter": {
+          "label": "Bufferttid mellan bokningar (minuter)",
+          "placeholder": "15"
+        },
+        "defaultApprover": {
+          "label": "Godkännare",
+          "help": "Vem som ska granska och godkänna bokningsförfrågningar för den här teknikern som kräver manuellt godkännande. Lägg till flera användare och/eller team. Lämna tomt för att använda de företagsgemensamma godkännarna."
+        },
+        "allowClientPreference": {
+          "label": "Tillåt kundönskemål",
+          "help": "Låt kunder önska just den här teknikern"
+        }
+      },
+      "schedule": {
+        "timezoneNotice": "Tiderna anges i din lokala tidszon ({{timeZone}})",
+        "columns": {
+          "day": "Dag",
+          "available": "Tillgänglig",
+          "startTime": "Starttid",
+          "endTime": "Sluttid"
+        },
+        "availableFor": "Tillgänglig på {{day}}",
+        "startTimeFor": "Starttid för {{day}}",
+        "endTimeFor": "Sluttid för {{day}}"
+      },
+      "configuredUsers": {
+        "title": "Konfigurerade användare",
+        "description": "Tekniker med sparad bokningstillgänglighet i det aktuella filtret",
+        "empty": "Inga tekniker i det här filtret har sparad bokningstillgänglighet ännu",
+        "columns": {
+          "userName": "Användarens namn",
+          "status": "Status"
+        },
+        "status": {
+          "configured": "Konfigurerad"
+        },
+        "actions": {
+          "edit": "Redigera bokningsbara tider för {{name}}",
+          "delete": "Radera bokningsbara tider för {{name}}"
+        }
+      },
+      "actions": {
+        "save": "Spara bokningsbara tider",
+        "retry": "Försök igen",
+        "saving": "Sparar…"
+      },
+      "feedback": {
+        "selectUserError": "Välj en användare",
+        "saveSuccess": "Bokningsbara tider har sparats",
+        "saveError": "Kunde inte spara bokningsbara tider",
+        "deleteSuccess": "Användarens tillgänglighet har raderats",
+        "deleteError": "Kunde inte radera användarens tillgänglighet"
+      },
+      "deleteDialog": {
+        "title": "Radera användarens tillgänglighet",
+        "message": "Är du säker på att du vill radera tillgänglighetsinställningarna för {{userName}}? Alla konfigurerade arbetstider för användaren tas bort. Åtgärden kan inte ångras."
+      },
+      "scope": {
+        "team": "Teamfilter:",
+        "allTeams": "Alla behöriga tekniker",
+        "technician": "Tekniker:",
+        "schedule": "Schema:",
+        "loading": "Kontrollerar sparade bokningsbara tider",
+        "saved": "Sparade bokningsbara tider",
+        "partial": "Sparade bokningsbara tider med osparade standardvärden för dagar som saknas",
+        "draft": "Osparad mall för måndag–fredag kl. 09.00–17.00",
+        "explanation": "De här bokningsbara tiderna gäller för användaren i alla team. De ärvs inte från det separata arbetsschemat."
+      },
+      "loading": "Laddar teknikerns tider…"
+    },
+    "serviceRules": {
+      "serviceSelect": {
+        "label": "Välj tjänst att konfigurera",
+        "placeholder": "Välj en tjänst att konfigurera"
+      },
+      "editor": {
+        "title": "Redigera regler: {{serviceName}}",
+        "allowWithoutContract": {
+          "label": "Tillåt bokning utan avtal"
+        },
+        "maxAppointmentsPerDay": {
+          "label": "Maximalt antal bokningar per dag"
+        },
+        "defaultDuration": {
+          "label": "Standardlängd för bokningar (minuter)",
+          "help": "Standardlängd för bokningar av den här tjänstetypen. Kan åsidosättas av teknikerspecifika inställningar under Bokningsbara tider.",
+          "placeholder": "T.ex. 60 (minuter)"
+        }
+      },
+      "configuredServices": {
+        "title": "Konfigurerade tjänster",
+        "description": "Tjänster med konfigurerade bokningsregler",
+        "empty": "Inga tjänster har konfigurerats ännu",
+        "columns": {
+          "serviceName": "Tjänstenamn",
+          "duration": "Varaktighet (min)",
+          "withoutContract": "Utan avtal",
+          "maxPerDay": "Maximalt per dag"
+        }
+      },
+      "common": {
+        "noLimit": "Ingen gräns"
+      },
+      "actions": {
+        "save": "Spara tjänsteregler"
+      },
+      "feedback": {
+        "selectServiceError": "Välj en tjänst",
+        "saveSuccess": "Tjänsteregler har sparats",
+        "saveError": "Kunde inte spara tjänsteregler",
+        "deleteSuccess": "Tjänsteregler har raderats",
+        "deleteError": "Kunde inte radera tjänsteregler"
+      },
+      "deleteDialog": {
+        "title": "Radera tjänsteregler",
+        "message": "Är du säker på att du vill radera reglerna för {{serviceName}}? Åtgärden kan inte ångras."
+      }
+    },
+    "exceptions": {
+      "form": {
+        "title": "Lägg till undantag",
+        "date": {
+          "label": "Välj datum"
+        },
+        "user": {
+          "label": "Användare (valfritt – lämna tomt för hela företaget)",
+          "placeholder": "Välj användare"
+        },
+        "isAvailable": {
+          "label": "Tillgänglig den här dagen"
+        },
+        "reason": {
+          "label": "Orsak",
+          "placeholder": "Helgdag, ledighet osv."
+        }
+      },
+      "common": {
+        "companyWide": "Hela företaget"
+      },
+      "actions": {
+        "add": "Lägg till undantag"
+      },
+      "list": {
+        "title": "Befintliga undantag",
+        "empty": "Inga undantag har konfigurerats",
+        "status": {
+          "available": "Tillgänglig",
+          "unavailable": "Ej tillgänglig"
+        }
+      },
+      "feedback": {
+        "selectDateError": "Välj ett datum",
+        "addSuccess": "Undantaget har lagts till",
+        "addError": "Kunde inte lägga till undantaget",
+        "deleteSuccess": "Undantaget har raderats",
+        "deleteError": "Kunde inte radera undantaget"
+      }
+    },
+    "teamsMeetings": {
+      "prerequisites": {
+        "title": "Förutsättningar i Azure",
+        "description": "Innan du aktiverar detta ska du ge appen programbehörigheten OnlineMeetings.ReadWrite.All och skapa en programåtkomstprincip för organisatörskontot.",
+        "steps": {
+          "toggle": "Visa konfigurationssteg för Azure",
+          "step1": {
+            "title": "1. Bevilja programbehörighet i Graph",
+            "item1": "Öppna administrationscentret för Entra → Appregistreringar.",
+            "item2": "Välj appen som används av den här klientorganisationens Teams-integrering.",
+            "item3": "API-behörigheter → Lägg till → Microsoft Graph → Programbehörigheter.",
+            "item4": "Lägg till OnlineMeetings.ReadWrite.All och bevilja administratörssamtycke."
+          },
+          "step2": {
+            "title": "2. Skapa en programåtkomstprincip",
+            "intro": "Att skapa möten med enbart appbehörigheter måste uttryckligen tillåtas för organisatörskontot.",
+            "note": "Vänta i upp till 30 minuter så att principen hinner träda i kraft innan du klickar på Verifiera."
+          }
+        }
+      },
+      "organizer": {
+        "title": "Mötesorganisatör",
+        "label": "Objekt-ID för Microsoft-användaren som är standardorganisatör",
+        "help": "Godkända bokningar skapar Teams-möten som den här Microsoft-användaren. Använd objekt-ID:t från Entra. UPN-värden kan ge 404 från Microsoft Graph onlineMeetings.",
+        "placeholder": "00000000-0000-0000-0000-000000000000"
+      },
+      "actions": {
+        "save": "Spara",
+        "saving": "Sparar…",
+        "verify": "Verifiera",
+        "verifying": "Verifierar…",
+        "openRunbook": "Öppna konfigurationsanvisningar"
+      },
+      "feedback": {
+        "saveSuccess": "Organisatören för Teams-möten har sparats",
+        "saveError": "Kunde inte spara organisatören för Teams-möten",
+        "verifySuccess": "Organisatören för Teams-möten har verifierats",
+        "verifyError": "Kunde inte verifiera organisatören för Teams-möten"
+      },
+      "verify": {
+        "valid": "Microsoft-organisatören har verifierats.",
+        "validWithName": "Verifierad Microsoft-användare: {{displayName}}.",
+        "reasons": {
+          "eeDisabled": "Verifiering av Teams-möten är endast tillgänglig i Pro.",
+          "notConfigured": "Teams-integreringen måste vara aktiv innan en organisatör kan verifieras.",
+          "userNotFound": "Microsoft kunde inte hitta en användare för det angivna organisatörsvärdet.",
+          "policyMissing": "Microsoft-användaren finns, men programåtkomstprincipen tillåter ännu inte att möten skapas.",
+          "graphError": "Microsoft Graph kunde inte verifiera den här organisatören just nu."
+        }
+      }
+    }
+  },
+  "entryPopup": {
+    "title": {
+      "appointmentRequest": "Bokningsförfrågan",
+      "view": "Visa post",
+      "edit": "Redigera post",
+      "new": "Ny post",
+      "newForWorkItem": "Schemalägg {{name}}"
+    },
+    "alerts": {
+      "privateEntryOnlyCreator": "Det här är en privat post. Endast den som skapade posten kan visa eller redigera detaljerna."
+    },
+    "validation": {
+      "summaryTitle": "Fyll i de obligatoriska fälten:",
+      "titleRequiredForAdHoc": "Titel krävs för ad hoc-poster",
+      "startRequired": "Startdatum och klockslag",
+      "endRequired": "Slutdatum och klockslag",
+      "assigneeRequired": "Minst en tilldelad användare",
+      "startInvalid": "Startdatumet är ogiltigt",
+      "endInvalid": "Slutdatumet är ogiltigt",
+      "endAfterStart": "Slutdatumet måste vara efter startdatumet",
+      "recurrenceIntervalPositive": "Upprepningsintervallet måste vara ett positivt heltal",
+      "recurrenceCountPositive": "Antalet tillfällen måste vara ett positivt heltal",
+      "recurrenceEndInvalid": "Slutdatumet för upprepningen är ogiltigt",
+      "recurrenceEndAfterStart": "Slutdatumet för upprepningen måste vara efter startdatumet"
+    },
+    "fields": {
+      "title": "Titel",
+      "assignedUsers": "Tilldelade användare *",
+      "privateEntry": "Privat post (inte synlig för andra användare)",
+      "start": "Start *",
+      "end": "Slut *",
+      "notes": "Anteckningar",
+      "technician": "Tekniker",
+      "notesPlaceholder": "Vad teknikern bör veta innan arbetet påbörjas"
+    },
+    "actions": {
+      "cancel": "Avbryt",
+      "close": "Stäng",
+      "save": "Spara",
+      "delete": "Radera post"
+    },
+    "workItem": {
+      "adHocFallback": "Ad hoc-post (utan arbetspost)",
+      "openDetails": "Detaljer",
+      "loading": "Laddar arbetspost…",
+      "openTicket": "Öppna ärende",
+      "openTask": "Öppna uppgift",
+      "openInteraction": "Öppna interaktion"
+    },
+    "appointmentRequest": {
+      "approved": {
+        "title": "Godkänd bokning",
+        "descriptionWithDate": "Den här bokningen kommer från en kundförfrågan och godkändes den {{date}}.",
+        "description": "Den här bokningen kommer från en kundförfrågan.",
+        "joinTeamsMeeting": "Anslut till Teams-möte",
+        "downloadRecording": "Ladda ner inspelning",
+        "viewTranscript": "Visa transkription"
+      },
+      "pending": {
+        "title": "Väntande bokningsförfrågan",
+        "description": "Det här är en bokningsförfrågan från en kund. Du kan godkänna eller avböja den nedan."
+      },
+      "declined": {
+        "title": "Avböjd bokningsförfrågan",
+        "descriptionWithReason": "Den här bokningsförfrågan avböjdes: {{reason}}",
+        "description": "Den här bokningsförfrågan avböjdes."
+      },
+      "cancelled": {
+        "title": "Avbokad bokningsförfrågan",
+        "description": "Den här bokningsförfrågan avbokades av kunden."
+      },
+      "requesterInfo": {
+        "title": "Beställaruppgifter",
+        "company": "Företag",
+        "name": "Namn",
+        "email": "E-post",
+        "phone": "Telefon"
+      },
+      "requestedDateTimeLabel": "Önskat datum och klockslag",
+      "assignTechnicianLabel": "Tilldela tekniker *",
+      "assignTechnicianPlaceholder": "Välj tekniker",
+      "scheduledDateTimeLabel": "Schemalagt datum och klockslag",
+      "generateTeamsMeeting": "Skapa länk till Microsoft Teams-möte",
+      "noNotes": "Inga anteckningar har angetts",
+      "declineReasonLabel": "Orsak till att avböja *",
+      "declineReasonPlaceholder": "Ange en orsak till att avböja den här förfrågan…",
+      "actions": {
+        "approve": "Godkänn",
+        "decline": "Avböj",
+        "confirmDecline": "Bekräfta avböjande"
+      },
+      "toasts": {
+        "assignTechnicianRequired": "Tilldela en tekniker",
+        "approved": "Bokningsförfrågan godkänd",
+        "approveFailed": "Kunde inte godkänna förfrågan",
+        "declineReasonRequired": "Ange en orsak till att avböja",
+        "declined": "Bokningsförfrågan avböjd",
+        "declineFailed": "Kunde inte avböja förfrågan"
+      }
+    },
+    "recurrence": {
+      "label": "Upprepning",
+      "intervalLabel": "Intervall",
+      "endLabel": "Slut",
+      "endDateLabel": "Slutdatum",
+      "occurrencesLabel": "Tillfällen",
+      "workdaysOnly": "Endast arbetsdagar (mån–fre, utom helgdagar)",
+      "options": {
+        "none": "Ingen",
+        "daily": "Dagligen",
+        "weekly": "Veckovis",
+        "monthly": "Månadsvis",
+        "yearly": "Årligen"
+      },
+      "endOptions": {
+        "never": "Aldrig",
+        "date": "På datum",
+        "count": "Efter"
+      },
+      "applyDialog": {
+        "title": "Tillämpa ändringar på",
+        "message": "Välj vilka händelser som ska uppdateras:"
+      }
+    },
+    "delete": {
+      "validationFailed": "Kunde inte kontrollera om posten kan raderas. Försök igen.",
+      "entityFallback": "den här schemaposten",
+      "confirm": "Är du säker på att du vill radera den här schemaposten? Åtgärden kan inte ångras.",
+      "confirmWithTeamsWarning": "Är du säker på att du vill radera den här schemaposten? Åtgärden kan inte ångras. Microsoft Teams-mötet raderas också.",
+      "scopeDialog": {
+        "title": "Radera schemapost",
+        "message": "Välj vilka händelser som ska raderas:",
+        "confirm": "Fortsätt"
+      }
+    },
+    "scopeOptions": {
+      "single": "Endast den här händelsen",
+      "future": "Den här och framtida händelser",
+      "all": "Alla händelser"
+    },
+    "errors": {
+      "loadWorkItem": "Kunde inte läsa in arbetsposten."
+    },
+    "teamsMeeting": {
+      "create": "Skapa Teams-möte",
+      "creating": "Skapar Teams-möte…",
+      "join": "Anslut till Teams-möte",
+      "created": "Microsoft Teams-mötet har skapats",
+      "createFailed": "Kunde inte skapa Teams-möte",
+      "recurringUnsupported": "Teams-möten kan endast läggas till i fristående poster, inte i återkommande serier."
+    },
+    "duration": {
+      "minutes": "{{count}} min",
+      "hours": "{{count}} h",
+      "hoursMinutes": "{{hours}} h {{minutes}} min"
+    }
+  },
+  "actions": {
+    "print": "Skriv ut",
+    "printOptions": "Utskriftsalternativ"
+  },
+  "interactionDetails": {
+    "fields": {
+      "client": "Kund",
+      "contact": "Kontakt",
+      "duration": "Varaktighet",
+      "endTime": "Sluttid",
+      "notes": "Anteckningar",
+      "startTime": "Starttid",
+      "status": "Status",
+      "title": "Titel",
+      "user": "Användare"
+    },
+    "noClient": "Ingen kopplad kund",
+    "noContact": "Ingen kopplad kontakt",
+    "noTitle": "Ingen titel",
+    "notAvailable": "Ej tillgängligt",
+    "title": "Interaktionsdetaljer",
+    "unknownUser": "Okänd"
+  },
+  "errors": {
+    "entry": {
+      "notFound": "Schemaposten hittades inte.",
+      "invalid": "Den valda schemaposten är ogiltig. Ladda om och försök igen.",
+      "assigneesMissing": "En eller flera tilldelade användare kunde inte hittas."
+    },
+    "activities": {
+      "otherUserForbidden": "Åtkomst nekad: du kan inte visa en annan användares schemaaktiviteter"
+    },
+    "workItem": {
+      "adHocTimesRequired": "Starttid och sluttid krävs för ad hoc-poster.",
+      "typeUnsupported": "Den här typen av arbetspost stöds inte för schemaläggning.",
+      "entryOrUserUnavailable": "Den valda schemaposten eller användaren är inte längre tillgänglig. Ladda om och försök igen.",
+      "invalid": "Den valda arbetsposten är ogiltig. Ladda om och försök igen.",
+      "referenceMissing": "Valet av arbetspost, schemapost eller ansvarig är inte längre giltigt. Ladda om och försök igen.",
+      "duplicateEntry": "Schemaposten finns redan. Ladda om och försök igen.",
+      "missingField": "Ett obligatoriskt schemafält saknas.",
+      "missingFieldNamed": "Ett obligatoriskt schemafält saknas: {{field}}."
+    },
+    "meetingArtifacts": {
+      "meetingIdRequired": "Mötes-ID krävs",
+      "refreshPermission": "Åtkomst nekad: du kan inte ladda om mötesinspelningar.",
+      "refreshFailed": "Kunde inte ladda om mötesinspelningar. Försök igen.",
+      "graphForbidden": "Microsoft Graph nekade åtkomst till Teams-inspelningen. Kontrollera inspelningsbehörigheterna och försök igen.",
+      "graphNotFound": "Teams-inspelningen är inte längre tillgänglig via Microsoft Graph.",
+      "graphThrottled": "Microsoft Graph begränsar antalet nedladdningar av inspelningar. Försök igen om en stund.",
+      "graphHttpStatus": "Microsoft Graph returnerade HTTP {{status}} när Teams-inspelningen laddades ner."
+    }
+  },
+  "workItemEditor": {
+    "created": "{{title}} har schemalagts",
+    "updated": "Schemaposten har uppdaterats",
+    "deleted": "Schemaposten har raderats",
+    "createFailed": "Kunde inte schemalägga det här arbetet",
+    "updateFailed": "Kunde inte uppdatera schemaposten",
+    "deleteFailed": "Kunde inte radera schemaposten",
+    "loadFailed": "Kunde inte läsa in schemaposten",
+    "noPermission": "Du behöver behörighet att uppdatera schemat för att schemalägga arbete."
+  }
+}

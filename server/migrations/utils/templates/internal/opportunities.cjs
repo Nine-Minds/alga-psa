@@ -37,6 +37,10 @@ const TEMPLATES = [
         title: 'Oportunidade esfriando: {{opportunityTitle}}',
         message: '{{why}} Próxima ação: {{nextAction}}',
       },
+      sv: {
+        title: 'Affärsmöjlighet stagnerar: {{opportunityTitle}}',
+        message: '{{why}} Nästa åtgärd: {{nextAction}}',
+      },
     },
   },
   {
@@ -75,6 +79,10 @@ const TEMPLATES = [
         title: 'A oportunidade precisa de intervenção: {{opportunityTitle}}',
         message: 'A oportunidade de {{ownerName}} com {{clientName}} está parada há {{daysSinceActivity}} dias.',
       },
+      sv: {
+        title: 'Affärsmöjlighet kräver åtgärd: {{opportunityTitle}}',
+        message: 'Affärsmöjligheten med {{clientName}} som {{ownerName}} ansvarar för har varit inaktiv i {{daysSinceActivity}} dagar.',
+      },
     },
   },
   {
@@ -112,6 +120,10 @@ const TEMPLATES = [
       pt: {
         title: 'Seu resumo semanal de oportunidades',
         message: '{{actionsDue}} ações vencendo esta semana, {{stalledDeals}} negócios parados, {{newSuggestions}} novas sugestões e {{winsLastWeek}} vitórias na semana passada.',
+      },
+      sv: {
+        title: 'Din veckosammanfattning av affärsmöjligheter',
+        message: '{{actionsDue}} åtgärder ska vara klara denna vecka, {{stalledDeals}} affärer har stagnerat, {{newSuggestions}} nya förslag och {{winsLastWeek}} vunna affärer förra veckan.',
       },
     },
   },

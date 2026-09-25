@@ -214,6 +214,7 @@ const COPY = {
   },
 };
 SUBJECTS.pt = 'Ticket encerrado • {{ticket.title}}';
+SUBJECTS.sv = 'Ärende stängt • {{ticket.title}}';
 COPY.pt = {
   headerLabel: 'Ticket encerrado',
   intro: 'Um ticket para <strong>{{ticket.clientName}}</strong> foi resolvido e encerrado. Revise os detalhes da resolução abaixo.',
@@ -239,6 +240,32 @@ COPY.pt = {
   textRequester: 'Solicitante',
   textResolution: 'Resolução',
   textView: 'Ver ticket',
+};
+COPY.sv = {
+  headerLabel: 'Ärende stängt',
+  intro: 'Ett ärende för <strong>{{ticket.clientName}}</strong> har lösts och stängts. Granska lösningen nedan.',
+  badgePrefix: 'Ärende #',
+  status: 'Status',
+  closedStatusLabel: 'Stängt',
+  closedBy: 'Stängt av',
+  closedByVar: '{{ticket.closedBy}}',
+  assignedTo: 'Tilldelat till',
+  requester: 'Beställare',
+  board: 'Tavla',
+  category: 'Kategori',
+  location: 'Plats',
+  resolutionLabel: 'Lösning',
+  resolutionVar: '{{{ticket.resolution}}}',
+  viewButton: 'Visa ärende',
+  footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+  textHeader: 'Ärende stängt',
+  textClosedBy: 'Stängt av',
+  textStatus: 'Status',
+  textClosedStatus: 'Stängt',
+  textAssigned: 'Tilldelat till',
+  textRequester: 'Beställare',
+  textResolution: 'Lösning',
+  textView: 'Visa ärende',
 };
 
 /* eslint-enable max-len */

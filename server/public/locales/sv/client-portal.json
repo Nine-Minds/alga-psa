@@ -1,0 +1,1015 @@
+{
+  "nav": {
+    "dashboard": "Översiktspanel",
+    "tickets": "Ärenden",
+    "projects": "Projekt",
+    "appointments": "Bokningar",
+    "billing": "Debitering",
+    "assets": "Tillgångar",
+    "clientSettings": "Kundinställningar",
+    "profile": "Profil",
+    "account": "Konto",
+    "signOut": "Logga ut",
+    "clientPortal": "Kundportal",
+    "clientPortalLabel": "Kundportal",
+    "portal": "Portal",
+    "notifications": "Aviseringar",
+    "documents": "Dokument",
+    "knowledgeBase": "Kunskapsbas",
+    "requestServices": "Tjänsteförfrågningar",
+    "home": "Hem",
+    "myTickets": "Mina ärenden",
+    "newRequest": "Ny förfrågan",
+    "schedule": "Schema",
+    "myDevices": "Mina enheter",
+    "helpCenter": "Hjälpcenter",
+    "organization": "Organisation",
+    "supportCard": {
+      "title": "Behöver du akut hjälp?",
+      "description": "Kontakta oss när som helst för att få hjälp."
+    },
+    "sections": {
+      "workspace": "Arbetsyta",
+      "resources": "Resurser",
+      "more": "Mer",
+      "apps": "Appar"
+    },
+    "licenses": "Licenser"
+  },
+  "sidebar": {
+    "goToDashboard": "Gå till översiktspanelen",
+    "logoAlt": "Kundportalens logotyp",
+    "expandSidebar": "Expandera sidofältet",
+    "collapseSidebar": "Fäll ihop sidofältet"
+  },
+  "devices": {
+    "pageTitle": "Mina enheter",
+    "loading": "Laddar enheter…",
+    "statusOkTitle": "Alla enheter är aktiva",
+    "statusOkBody": "Antal enheter som rapporterar: {{count}}",
+    "empty": {
+      "title": "Inga enheter ännu",
+      "body": "Enheter som din tjänsteleverantör hanterar visas här."
+    },
+    "types": {
+      "workstation": "Arbetsstationer",
+      "server": "Servrar",
+      "mobile": "Mobila enheter",
+      "printer": "Skrivare",
+      "network": "Nätverk",
+      "unknown": "Annat"
+    },
+    "statusWarnTitle": "Vissa enheter är inaktiva",
+    "statusWarnBody": "{{active}} aktiva · {{inactive}} inaktiva",
+    "status": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv"
+    },
+    "searchPlaceholder": "Sök efter namn, inventarienummer eller serienummer",
+    "filters": {
+      "allTypes": "Alla typer",
+      "allStatuses": "Alla statusar"
+    },
+    "clearFilters": "Rensa filter",
+    "columns": {
+      "name": "Namn",
+      "type": "Typ",
+      "status": "Status",
+      "location": "Plats",
+      "updated": "Uppdaterad",
+      "actions": "Åtgärder"
+    },
+    "notAvailable": "Ej tillgängligt",
+    "detailsTitle": "Tillgångsdetaljer",
+    "createTicket": "Skapa ärende",
+    "createTicketForDevice": "Skapa ett ärende för den här enheten",
+    "rowActionsLabel": "Radåtgärder"
+  },
+  "dashboard": {
+    "title": "Översiktspanel",
+    "welcome": "Välkommen tillbaka! Här är en översikt över ditt konto.",
+    "loading": "Laddar översiktspanelen…",
+    "error": "Det gick inte att ladda översiktspanelen. Försök igen senare.",
+    "metrics": {
+      "openTickets": "Öppna supportärenden",
+      "activeProjects": "Öppna projekt",
+      "pendingInvoices": "Väntande fakturor",
+      "activeAssets": "Aktiva tillgångar",
+      "upcomingVisits": "Kommande besök",
+      "activeDevices": "Aktiva enheter",
+      "openTicketsHint": "Pågående support",
+      "activeProjectsHint": "Pågår",
+      "nextLabel": "Nästa: {{when}}",
+      "noneScheduled": "Inga schemalagda",
+      "deviceStatusHint": "Hanterade slutenheter",
+      "serviceRequests": "Tjänsteförfrågningar",
+      "serviceRequestsHint": "Totalt antal inskickade",
+      "openTicketsDescription": "Supportärenden som vi fortfarande arbetar med.",
+      "activeProjectsDescription": "Projekt som vi genomför för ditt team.",
+      "serviceRequestsDescription": "Strukturerade förfrågningar som du har skickat in från katalogen.",
+      "upcomingVisitsDescription": "Schemalagda bokningar med våra tekniker.",
+      "activeDevicesDescription": "Slutenheter som vi för närvarande hanterar och övervakar."
+    },
+    "welcomeBack": "Välkommen tillbaka",
+    "heroSubtitle": "Här är en ögonblicksbild av dina IT-supportaktiviteter. Vårt team står redo att hjälpa dig att fortsätta arbeta effektivt.",
+    "greeting": {
+      "morning": "God morgon",
+      "afternoon": "God eftermiddag",
+      "evening": "God kväll"
+    },
+    "nextToday": "Idag",
+    "nextTomorrow": "Imorgon",
+    "recentTickets": {
+      "title": "Senaste ärenden",
+      "viewAll": "Visa alla",
+      "id": "ID",
+      "subject": "Ämne",
+      "status": "Status",
+      "priority": "Prioritet",
+      "updated": "Uppdaterat",
+      "empty": "Inga aktiva ärenden – skönt!",
+      "countLabel": "Antal som visas: {{count}}"
+    },
+    "activity": {
+      "title": "Senaste aktivitet",
+      "subtitle": "Senaste uppdateringarna för ditt konto",
+      "empty": "Ingen aktivitet på sistone",
+      "emptyHint": "När ärenden uppdateras eller fakturor kommer visas de här.",
+      "viewTickets": "Visa alla ärenden",
+      "titles": {
+        "ticket": "Nytt ärende: {{name}}",
+        "invoice": "Faktura {{name}} skapad",
+        "asset": "Underhåll av tillgång: {{name}}",
+        "project": "Projekt uppdaterat: {{name}}",
+        "quote": {
+          "_default": "Offert {{name}}",
+          "sent": "Offert {{name}} skickad för granskning",
+          "accepted": "Offert {{name}} accepterad",
+          "rejected": "Offert {{name}} avböjd",
+          "expired": "Offert {{name}} utgången"
+        },
+        "service_request": {
+          "_default": "Tjänsteförfrågan: {{name}}",
+          "pending": "Tjänsteförfrågan inskickad: {{name}}",
+          "succeeded": "Tjänsteförfrågan uppfylld: {{name}}",
+          "failed": "Tjänsteförfrågan misslyckades: {{name}}"
+        },
+        "appointment": {
+          "_default": "Bokning: {{name}}",
+          "pending": "Bokning begärd: {{name}}",
+          "approved": "Bokning bekräftad: {{name}}",
+          "declined": "Bokning avböjd: {{name}}",
+          "cancelled": "Bokning avbokad: {{name}}"
+        }
+      },
+      "algadeskEmptyHint": "När ärenden uppdateras visas de här."
+    },
+    "devices": {
+      "title": "Dina enheter",
+      "viewAll": "Visa alla",
+      "countLabel": "Antal hanterade: {{count}}",
+      "emptyShort": "Inga enheter ännu",
+      "emptyBody": "Enheter som din tjänsteleverantör hanterar visas här.",
+      "healthy": "Fungerar normalt",
+      "inactive": "Inaktiv",
+      "active": "Aktiv"
+    },
+    "quickActions": {
+      "title": "Snabbåtgärder",
+      "createTicket": "Skapa ärende",
+      "requestAppointment": "Begär bokning",
+      "viewLatestInvoice": "Visa senaste fakturan",
+      "newServiceRequest": "Ny tjänsteförfrågan"
+    },
+    "appointments": {
+      "title": "Kommande bokningar",
+      "noUpcoming": "Inga kommande bokningar. Begär en nu!",
+      "noUpcomingShort": "Inget i kalendern",
+      "countLabel": "Antal kommande: {{count}}",
+      "requestButton": "Begär bokning",
+      "viewAll": "Visa alla bokningar →",
+      "technician": "Tekniker"
+    },
+    "recentActivity": {
+      "title": "Senaste aktivitet"
+    },
+    "viewAll": "Visa alla {{item}} →",
+    "timeAgo": {
+      "justNow": "nyss",
+      "minutes": "för {{count}} min sedan",
+      "hours": "för {{count}} h sedan",
+      "days": "för {{count}} dagar sedan"
+    }
+  },
+  "auth": {
+    "signIn": "Logga in",
+    "signOut": "Logga ut",
+    "email": "E-post",
+    "password": "Lösenord",
+    "emailPlaceholder": "Ange din e-postadress",
+    "passwordPlaceholder": "Ange ditt lösenord",
+    "signingIn": "Loggar in…",
+    "rememberMe": "Kom ihåg mig",
+    "forgotPasswordLink": "Har du glömt ditt lösenord?",
+    "forgotPasswordPage": {
+      "title": "Glömt lösenordet?",
+      "subtitle": "Ingen fara, vi skickar instruktioner för att återställa det.",
+      "logoAlt": "Kundportalens logotyp",
+      "emailLabel": "E-post",
+      "emailPlaceholder": "Ange din e-postadress",
+      "sendResetButton": "Skicka återställningslänk",
+      "backToLogin": "← Tillbaka till inloggningen",
+      "resetLinkSent": "Om det finns ett konto med den här e-postadressen har en länk för att återställa lösenordet skickats."
+    },
+    "resetPassword": "Återställ lösenord",
+    "backToSignIn": "Tillbaka till inloggningen",
+    "sendResetLink": "Skicka återställningslänk",
+    "resetLinkSent": "En länk för att återställa lösenordet har skickats till din e-postadress",
+    "invalidCredentials": "Ogiltig e-postadress eller ogiltigt lösenord",
+    "loginError": "Ett fel uppstod vid inloggningen",
+    "sessionExpired": "Din session har gått ut. Logga in igen.",
+    "welcomeTitle": "Välkommen till din kundportal",
+    "welcomeSubtitle": "Hantera dina supportärenden och håll kontakten",
+    "signInDescription": "Ange dina inloggningsuppgifter för att komma åt ditt konto.",
+    "clientLogin": "Kundinloggning",
+    "mspStaffLogin": "MSP-personal? Logga in här →",
+    "accessDeniedTitle": "Åtkomst nekad",
+    "accessDeniedMessage": "Du har inte behörighet att komma åt kundportalen.",
+    "registrationSuccessTitle": "Registreringen lyckades",
+    "registrationSuccessMessage": "Ditt konto har skapats. Logga in.",
+    "portalSetup": {
+      "title": "Konfigurera portalåtkomst",
+      "subtitle": "Slutför konfigurationen av ditt kundportalkonto",
+      "loading": "Laddar…",
+      "invalidInvitation": "Ogiltig inbjudan",
+      "invalidInvitationDescription": "Ett problem uppstod med din portalinbjudan",
+      "invalidTokenMessage": "Inbjudningstoken är ogiltig eller har gått ut. Kontakta din tjänsteleverantör för att få en ny inbjudan.",
+      "noTokenProvided": "Ingen inbjudningstoken har angetts",
+      "invalidOrExpiredToken": "Ogiltig eller utgången inbjudningstoken",
+      "verificationFailed": "Det gick inte att verifiera inbjudningstoken",
+      "goToPortalSignIn": "Gå till portalinloggningen",
+      "accountInformation": "Kontouppgifter",
+      "name": "Namn:",
+      "email": "E-post:",
+      "client": "Kund:",
+      "password": "Lösenord",
+      "passwordPlaceholder": "Ange ditt lösenord",
+      "confirmPassword": "Bekräfta lösenord",
+      "confirmPasswordPlaceholder": "Bekräfta ditt lösenord",
+      "passwordRequirements": "Lösenordskrav",
+      "requirements": {
+        "minLength": "Minst 8 tecken",
+        "hasUppercase": "En stor bokstav",
+        "hasLowercase": "En liten bokstav",
+        "hasNumber": "En siffra",
+        "hasSpecialChar": "Ett specialtecken",
+        "passwordsMatch": "Lösenorden matchar"
+      },
+      "createAccount": "Skapa portalkonto",
+      "creatingAccount": "Skapar konto…",
+      "alreadyHaveAccount": "Har du redan ett konto?",
+      "signInToPortal": "Logga in i portalen",
+      "requirementsNotMet": "Kontrollera att alla lösenordskrav är uppfyllda",
+      "accountReady": "Kontot är klart. Logga in.",
+      "accountCreatedSuccess": "Kontot har skapats. Logga in.",
+      "welcome": "Välkommen till kundportalen!",
+      "createFailed": "Det gick inte att skapa kontot",
+      "errors": {
+        "tokenRequired": "En giltig inbjudningstoken krävs.",
+        "tokenAndPasswordRequired": "En token och ett lösenord krävs för att slutföra konfigurationen.",
+        "passwordTooShort": "Lösenordet måste innehålla minst 8 tecken.",
+        "invalidOrExpiredToken": "Den här inbjudningslänken är ogiltig eller har gått ut.",
+        "tenantContextRequired": "Organisationskontext saknas. Öppna inbjudningslänken igen.",
+        "resetPasswordFailed": "Vi kunde inte återställa lösenordet för det befintliga kontot. Försök igen.",
+        "createUserFailed": "Vi kunde inte skapa ditt användarkonto. Försök igen.",
+        "setupFailed": "Vi kunde inte slutföra portalkonfigurationen. Försök igen.",
+        "verificationFailed": "Vi kunde inte verifiera din inbjudningstoken. Försök igen.",
+        "invitationFailed": "Vi kunde inte skicka inbjudan. Försök igen.",
+        "permissionDeniedInvite": "Du har inte behörighet att skicka portalinbjudningar.",
+        "permissionDeniedCreate": "Du har inte behörighet att skapa användarkonton för portalen.",
+        "emailNotConfigured": "E-posttjänsten är inte konfigurerad. Kontakta din administratör.",
+        "contactNotFound": "Kontakten hittades inte.",
+        "contactMissingEmail": "Kontakten saknar e-postadress.",
+        "contactInvalidEmail": "Kontakten har en ogiltig e-postadress.",
+        "userExistsForContact": "Det finns redan ett användarkonto för den här kontakten.",
+        "portalUserAlreadyExists": "Det finns redan en portalanvändare för den här kontakten.",
+        "noDefaultClient": "Ingen standardkund har konfigurerats för den här klientorganisationen.",
+        "noDefaultLocation": "Ingen standardplats har konfigurerats för standardkunden.",
+        "noLocationEmail": "Ingen e-postadress för kontakt har konfigurerats för kundplatsen.",
+        "baseUrlNotConfigured": "Programmets bas-URL är inte konfigurerad.",
+        "invitationNotFound": "Inbjudan hittades inte.",
+        "revokeFailed": "Det gick inte att återkalla inbjudan. Försök igen."
+      }
+    },
+    "features": {
+      "submitTickets": {
+        "title": "Skicka in supportärenden",
+        "description": "Skapa och hantera dina supportförfrågningar"
+      },
+      "trackStatus": {
+        "title": "Följ ärendestatus",
+        "description": "Följ förloppet i realtid"
+      },
+      "ticketHistory": {
+        "title": "Ärendehistorik",
+        "description": "Se hela din supporthistorik"
+      },
+      "documentation": {
+        "title": "Dokumentationsåtkomst",
+        "description": "Visa delade dokument och resurser"
+      }
+    },
+    "forgotPassword": "Glömt lösenordet?",
+    "sessionEndedTitle": "Sessionen har avslutats",
+    "sessionEndedMessage": "Du har loggats ut från sessionen. Logga in igen.",
+    "clientRegistration": {
+      "errors": {
+        "contactNotFound": "Kontakten hittades inte.",
+        "contactInactive": "Den här kontakten är inaktiv.",
+        "emailAlreadyExists": "Det finns redan en användare med den här e-postadressen.",
+        "registrationFailed": "Vi kunde inte slutföra registreringen. Försök igen."
+      }
+    },
+    "captchaRequired": "Slutför verifieringen nedan och logga sedan in igen.",
+    "tooManyAttempts": "För många misslyckade inloggningsförsök. Vänta några minuter innan du försöker igen.",
+    "tenantDiscovery": {
+      "title": "Hitta din organisation",
+      "description": "Ange din e-postadress så skickar vi inloggningslänkar för alla organisationer du har åtkomst till.",
+      "emailLabel": "E-postadress",
+      "emailPlaceholder": "your.email@company.com",
+      "submit": "Skicka inloggningslänkar",
+      "submitting": "Skickar…",
+      "invalidEmail": "Ange en giltig e-postadress",
+      "linksSent": "Kontrollera din e-post för inloggningslänkar",
+      "sent": {
+        "title": "Kontrollera din e-post",
+        "description": "Om det finns ett konto med den e-postadressen har vi skickat inloggningslänkar för varje organisation du har åtkomst till.",
+        "noEmailReceived": "Har du inte fått något e-postmeddelande?",
+        "checkSpam": "Kontrollera skräppostmappen",
+        "verifyAddress": "Kontrollera att e-postadressen är korrekt",
+        "contactSupport": "Kontakta organisationens supportteam",
+        "tryAnother": "Prova en annan e-postadress"
+      }
+    },
+    "register": {
+      "emailLabel": "E-postadress",
+      "checkingEmail": "Kontrollerar e-postadressen…",
+      "existingContactsOnly": "Registrering är endast tillgänglig för befintliga kontakter. Kontakta din administratör.",
+      "contactVerified": "Kontakten är verifierad. Skapa ditt lösenord.",
+      "passwordPlaceholder": "Skapa ett lösenord",
+      "passwordMustContain": "Lösenordet måste innehålla:",
+      "completeRequiredFields": "Fyll i de obligatoriska fälten:",
+      "creatingAccount": "Skapar konto…",
+      "createAccount": "Skapa konto",
+      "failed": "Registreringen misslyckades",
+      "unexpectedError": "Ett oväntat fel uppstod vid registreringen.",
+      "missing": {
+        "email": "E-post",
+        "validEmail": "Giltig e-postadress",
+        "verifiedContact": "Verifierad e-postadress för kontakten",
+        "validPassword": "Giltigt lösenord"
+      }
+    }
+  },
+  "account": {
+    "title": "Konto",
+    "notAvailable": "Ej tillgängligt",
+    "licenseManagement": {
+      "title": "Konto",
+      "subtitle": "Licenshantering finns i MSP-portalen",
+      "howToPurchaseTitle": "Så köper du fler licenser:",
+      "step1": "Logga in i MSP-portalen (om du har administratörsåtkomst)",
+      "step2": "Gå till Inställningar → Kontohantering",
+      "step3": "Klicka på ”Lägg till licenser” för att köpa fler licenser",
+      "step4": "Slutför köpet",
+      "needHelpTitle": "Behöver du hjälp?",
+      "needHelpDescription": "Endast användare med behörighet för kontohantering kan köpa licenser. Kontakta din AlgaPSA-administratör om du saknar åtkomst.",
+      "backToDashboard": "Tillbaka till översiktspanelen",
+      "goToMSPPortal": "Gå till MSP-portalen",
+      "signingOut": "Loggar ut…"
+    },
+    "services": {
+      "loadError": "Det gick inte att ladda tjänsterna",
+      "loadContractLinesError": "Det gick inte att ladda tjänsternas avtalsrader",
+      "updateError": "Det gick inte att uppdatera tjänsten",
+      "loading": "Laddar tjänster…",
+      "activeTitle": "Aktiva tjänster",
+      "empty": "Inga aktiva tjänster hittades",
+      "columns": {
+        "service": "Tjänst",
+        "description": "Beskrivning",
+        "status": "Status",
+        "currentContractLine": "Nuvarande avtalsrad",
+        "nextBilling": "Nästa debitering"
+      },
+      "actions": {
+        "manage": "Hantera",
+        "upgrade": "Uppgradera",
+        "downgrade": "Nedgradera"
+      },
+      "manageTitle": "Hantera {{service}}",
+      "genericServiceLabel": "Tjänst",
+      "currentContractLine": "Nuvarande avtalsrad",
+      "availableContractLines": "Tillgängliga avtalsrader",
+      "catalog": {
+        "title": "Tillgängliga tjänster",
+        "learnMore": "Läs mer",
+        "managedIt": {
+          "title": "Hanterad IT-support",
+          "description": "IT-support och övervakning dygnet runt för ditt företag. Proaktivt underhåll, säkerhetsuppdateringar och dedikerad teknisk support ingår.",
+          "price": "Från 299 $/månad"
+        },
+        "cloudBackup": {
+          "title": "Säkerhetskopiering i molnet",
+          "description": "Säker molnbaserad säkerhetskopiering och lösningar för katastrofåterställning. Automatiska säkerhetskopior, snabba återställningsalternativ och datakryptering ingår.",
+          "price": "Från 99 $/månad"
+        },
+        "cybersecurity": {
+          "title": "Cybersäkerhet",
+          "description": "Avancerad säkerhetsövervakning och förebyggande av hot. Brandväggshantering, skydd för slutenheter och regelbundna säkerhetsbedömningar ingår.",
+          "price": "Från 199 $/månad"
+        }
+      }
+    },
+    "billing": {
+      "loadError": "Det gick inte att ladda debiteringsuppgifterna",
+      "addPaymentError": "Det gick inte att lägga till betalningsmetoden",
+      "removePaymentError": "Det gick inte att ta bort betalningsmetoden",
+      "setDefaultError": "Det gick inte att ange standardbetalningsmetod",
+      "loadingBillingInfo": "Laddar debiteringsinformation…",
+      "overviewTitle": "Debiteringsöversikt",
+      "paymentMethodsTitle": "Betalningsmetoder",
+      "noPaymentMethods": "Inga sparade betalningsmetoder",
+      "billingCycleTitle": "Debiteringscykel",
+      "noBillingCycle": "Ingen debiteringscykel hittades",
+      "recentInvoicesTitle": "Senaste fakturor",
+      "billingHistoryTitle": "Debiteringshistorik",
+      "labels": {
+        "defaultTag": "(Standard)",
+        "paysFor": "Betalar för {{profile}}"
+      },
+      "actions": {
+        "setDefault": "Ange som standard",
+        "remove": "Ta bort",
+        "addPaymentMethod": "Lägg till betalningsmetod",
+        "adding": "Lägger till…",
+        "view": "Visa"
+      },
+      "fields": {
+        "cardNumber": "Kortnummer",
+        "expiryMonth": "Månad",
+        "expiryYear": "År",
+        "cvv": "CVV",
+        "setAsDefault": "Ange som standardbetalningsmetod",
+        "billingProfile": "Betalar för"
+      },
+      "history": {
+        "period": "Period",
+        "startDate": "Startdatum",
+        "endDate": "Slutdatum",
+        "status": "Status",
+        "empty": "Ingen debiteringshistorik tillgänglig"
+      },
+      "validation": {
+        "cardNumber": "Ange ett giltigt 16-siffrigt kortnummer",
+        "expMonth": "Ange en giltig månad (01–12)",
+        "expYear": "Ange ett giltigt år (2024–2099)",
+        "cvv": "Ange en giltig CVV-kod"
+      }
+    }
+  },
+  "licenses": {
+    "pageTitle": "Appliance-licenser",
+    "pageDescription": "Dina Pro-licensrättigheter för Alga appliance. Licensnyckeldokument finns även under Dokument.",
+    "loading": "Laddar licenser…",
+    "empty": {
+      "message": "Inga appliance-licenser hittades.",
+      "purchaseLink": "Köp en licens",
+      "suffix": "för att komma igång."
+    },
+    "downloadKey": "Ladda ner nyckel",
+    "validFrom": "Giltig från",
+    "expires": "Går ut",
+    "expiringSoon": "Går snart ut",
+    "renewal": "Förnyelse",
+    "renewalModes": {
+      "auto": "Förnyas automatiskt",
+      "manual": "Manuell förnyelse"
+    },
+    "tiers": {
+      "pro": "Pro",
+      "premium": "Pro"
+    },
+    "transports": {
+      "connectedMonthly": "Ansluten (månadsvis)",
+      "connectedAnnual": "Ansluten (årsvis)",
+      "airgapAnnual": "Nätverksisolerad (årsvis)"
+    },
+    "statuses": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "expired": "Utgången",
+      "terminated": "Avslutad"
+    }
+  },
+  "profile": {
+    "title": "Min profil",
+    "personalInfo": "Personuppgifter",
+    "contactInfo": "Kontaktuppgifter",
+    "clientInfo": "Kunduppgifter",
+    "preferences": "Inställningar",
+    "security": "Säkerhet",
+    "activity": "Aktivitet",
+    "notificationSettings": "Aviseringsinställningar",
+    "fields": {
+      "firstName": "Förnamn",
+      "lastName": "Efternamn",
+      "email": "E-postadress",
+      "phone": "Telefonnummer",
+      "mobile": "Mobiltelefon",
+      "title": "Befattning",
+      "department": "Avdelning",
+      "client": "Kund",
+      "address": "Adress",
+      "city": "Ort",
+      "state": "Delstat/provins",
+      "postalCode": "Postnummer",
+      "country": "Land",
+      "timezone": "Tidszon",
+      "language": "Språkinställning",
+      "dateFormat": "Datumformat",
+      "avatar": "Profilbild",
+      "notes": "Anteckningar"
+    },
+    "changePassword": {
+      "title": "Ändra lösenord",
+      "current": "Nuvarande lösenord",
+      "new": "Nytt lösenord",
+      "confirm": "Bekräfta nytt lösenord",
+      "requirements": "Lösenordet måste innehålla minst 8 tecken",
+      "submit": "Uppdatera lösenord",
+      "success": "Lösenordet har uppdaterats",
+      "error": "Det gick inte att uppdatera lösenordet",
+      "passwordMismatch": "De nya lösenorden matchar inte",
+      "unknownError": "Ett fel uppstod när lösenordet ändrades"
+    },
+    "twoFactorAuth": {
+      "title": "Tvåfaktorsautentisering",
+      "enable": "Aktivera 2FA",
+      "disable": "Inaktivera 2FA",
+      "status": "Status",
+      "enabled": "Aktiverad",
+      "disabled": "Inaktiverad"
+    },
+    "notifications": {
+      "unreadCount_one": "{{count}} oläst avisering",
+      "unreadCount_other": "{{count}} olästa aviseringar",
+      "title": "Aviseringsinställningar",
+      "email": "E-postaviseringar",
+      "ticketUpdates": "Ärendeuppdateringar",
+      "projectUpdates": "Projektuppdateringar",
+      "invoices": "Fakturaaviseringar",
+      "announcements": "Systemmeddelanden",
+      "emailPreferences": "E-post",
+      "internalPreferences": "Internt"
+    },
+    "actions": {
+      "save": "Spara ändringar",
+      "cancel": "Avbryt",
+      "edit": "Redigera profil",
+      "uploadPhoto": "Ladda upp foto",
+      "removePhoto": "Ta bort foto"
+    },
+    "messages": {
+      "updateSuccess": "Profilen har uppdaterats",
+      "updateError": "Det gick inte att uppdatera profilen",
+      "emailAlreadyExists": "Det finns redan en användare med den här e-postadressen",
+      "reportsToSelf": "En användare kan inte ha sig själv som chef",
+      "reportsToCycle": "Detta skulle skapa en cirkulär chefshierarki",
+      "photoUploaded": "Fotot har laddats upp",
+      "photoRemoved": "Fotot har tagits bort",
+      "userNotFound": "Användaren hittades inte",
+      "loadError": "Det gick inte att ladda profilen",
+      "loading": "Laddar profil…",
+      "avatarDescription": "Den här profilbilden visas för MSP-personalen när de tittar på dina kontaktuppgifter."
+    },
+    "imageUpload": {
+      "uploadAvatar": "Ladda upp profilbild",
+      "uploadLogo": "Ladda upp logotyp",
+      "uploadingAvatar": "Laddar upp profilbild…",
+      "uploadingLogo": "Laddar upp logotyp…",
+      "deleteAvatar": "Radera profilbild",
+      "deleteLogo": "Radera kundlogotyp",
+      "deleteProfilePicture": "Radera profilbild",
+      "delete": "Radera",
+      "deleting": "Raderar…",
+      "deleteLogoConfirm": "Vill du verkligen radera logotypen? Åtgärden kan inte ångras.",
+      "deleteAvatarConfirm": "Vill du verkligen radera profilbilden? Åtgärden kan inte ångras.",
+      "edit": "Redigera",
+      "invalidType": "Välj en bildfil.",
+      "sizeLimit": "Bildstorleken måste vara mindre än 2 MB.",
+      "maxSize": "Max 2 MB (PNG, JPG, GIF)",
+      "uploadSuccess": "Uppladdningen lyckades.",
+      "uploadError": "Det gick inte att ladda upp. Försök igen.",
+      "deleteSuccess": "Raderingen lyckades.",
+      "deleteError": "Det gick inte att radera.",
+      "deleteConfirm": "Vill du verkligen radera detta? Åtgärden kan inte ångras.",
+      "linking": "Länkar…",
+      "linkDocument": "Länka dokument",
+      "cropTitle": "Välj kvadratisk logotyp",
+      "cropHelp": "Dra logotypen och zooma för att välja den del som visas i små, kvadratiska utrymmen. Zooma ut för att lämna utrymme runt den. Hela logotypen sparas också.",
+      "zoom": "Zoom",
+      "zoomOut": "Zooma ut",
+      "zoomIn": "Zooma in",
+      "cropPreview": "Förhandsgranskning",
+      "applyCrop": "Använd den här beskärningen",
+      "adjustMark": "Justera logotyp",
+      "cropFromWide": "Beskär från bred logotyp",
+      "recropSuccess": "Logotypen har uppdaterats.",
+      "recropError": "Det gick inte att uppdatera logotypen."
+    },
+    "validation": {
+      "clientNameRequired": "Kundnamn krävs",
+      "emailRequired": "E-postadress krävs",
+      "emailInvalid": "Ange en giltig e-postadress",
+      "phoneInvalid": "Ange ett giltigt telefonnummer",
+      "addressInvalid": "Adressen får inte vara tom om den anges"
+    }
+  },
+  "clientSettings": {
+    "title": "Kundinställningar",
+    "details": "Kunduppgifter",
+    "billing": "Debiteringsinformation",
+    "description": "Hantera dina kundinställningar och konfigurationer.",
+    "tabs": {
+      "account": "Konto",
+      "clientDetails": "Kunduppgifter",
+      "userManagement": "Användarhantering",
+      "visibilityGroups": "Synlighetsgrupper"
+    },
+    "fields": {
+      "clientLogo": "Kundlogotyp",
+      "clientName": "Kundnamn",
+      "clientLocations": "Kundplatser",
+      "manageLocations": "Hantera platser",
+      "mainOffice": "Huvudkontor",
+      "warehouse": "Lager",
+      "website": "Webbplats",
+      "industry": "Bransch",
+      "companySize": "Företagsstorlek",
+      "company_size": "Företagsstorlek",
+      "annualRevenue": "Årsomsättning",
+      "size": "Företagsstorlek",
+      "taxId": "Skatte-ID",
+      "billingAddress": "Faktureringsadress",
+      "primaryContact": "Primär kontakt",
+      "uploadLogo": "Ladda upp logotyp",
+      "deleteLogo": "Radera kundlogotyp"
+    },
+    "users": {
+      "title": "Användarhantering",
+      "searchUsers": "Sök användare",
+      "addNewUser": "Lägg till ny användare",
+      "addUser": "Lägg till användare",
+      "editUser": "Redigera användare",
+      "removeUser": "Ta bort användare",
+      "firstName": "Förnamn",
+      "lastName": "Efternamn",
+      "email": "E-post",
+      "phone": "Telefon",
+      "roles": "Roller",
+      "status": "Status",
+      "actions": "Åtgärder",
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "selectRole": "Välj en roll (valfritt)",
+      "createUser": "Skapa användare",
+      "invite": "Skicka inbjudan",
+      "resendInvite": "Skicka inbjudan igen",
+      "lastLogin": "Senaste inloggning",
+      "never": "Aldrig",
+      "via": "via",
+      "userNotFound": "Användaren hittades inte",
+      "failedToLoad": "Det gick inte att ladda användaruppgifterna",
+      "failedToUpdate": "Det gick inte att uppdatera användaren",
+      "failedToAssignRole": "Det gick inte att tilldela rollen",
+      "failedToRemoveRole": "Det gick inte att ta bort rollen",
+      "statusDescription": "Ange användarkontots status",
+      "noRolesAssigned": "Inga roller tilldelade",
+      "assignRole": "Tilldela roll",
+      "resetPassword": "Återställ användarens lösenord",
+      "clientNotFound": "Kunden hittades inte",
+      "permissionError": "Du har inte behörighet att hantera användare",
+      "loadError": "Det gick inte att ladda användarna",
+      "emailExists": "Det finns redan en kontakt med den här e-postadressen",
+      "emailAlreadyExists": "Det finns redan en användare med den här e-postadressen",
+      "reportsToSelf": "En användare kan inte ha sig själv som chef",
+      "reportsToCycle": "Detta skulle skapa en cirkulär chefshierarki",
+      "createError": "Det gick inte att skapa användaren",
+      "deleteError": "Det gick inte att radera användaren"
+    },
+    "messages": {
+      "saveChanges": "Spara ändringar",
+      "failedToLoad": "Det gick inte att ladda kontouppgifterna",
+      "updateSuccess": "Kundinställningarna har uppdaterats",
+      "userAdded": "Användaren har lagts till",
+      "userRemoved": "Användaren har tagits bort",
+      "inviteSent": "Inbjudan har skickats",
+      "noPermission": "Du har inte behörighet att komma åt kundinställningarna",
+      "clientNotFound": "Kunden hittades inte",
+      "detailsLoadError": "Det gick inte att ladda kunduppgifterna",
+      "updateError": "Det gick inte att uppdatera kunduppgifterna"
+    },
+    "visibilityGroups": {
+      "title": "Synlighetsgrupper",
+      "description": "Hantera vilka ärendetavlor varje kontakt i kundportalen har åtkomst till.",
+      "nameLabel": "Namn",
+      "descriptionLabel": "Beskrivning",
+      "boardLabel": "Tavlor",
+      "noBoards": "Inga tavlor är tillgängliga",
+      "loadError": "Det går inte att ladda synlighetsgrupperna",
+      "empty": "Inga synlighetsgrupper ännu.",
+      "loading": "Laddar grupper…",
+      "boardCount": "tavlor",
+      "assignmentCount": "tilldelade kontakter",
+      "edit": "Redigera",
+      "delete": "Radera",
+      "deleteDialogTitle": "Radera synlighetsgrupp",
+      "deleteConfirm": "Vill du radera den här synlighetsgruppen?",
+      "deleteAssignedError": "Den här synlighetsgruppen är fortfarande tilldelad till en eller flera kontakter.",
+      "deleteMissingError": "Den här synlighetsgruppen finns inte längre.",
+      "deleteSuccess": "Synlighetsgruppen har raderats",
+      "deleteError": "Det går inte att radera synlighetsgruppen",
+      "save": "Spara grupp",
+      "create": "Skapa grupp",
+      "nameRequired": "Synlighetsgruppens namn krävs",
+      "saveError": "Det går inte att spara synlighetsgruppen",
+      "updateSuccess": "Synlighetsgruppen har uppdaterats",
+      "createSuccess": "Synlighetsgruppen har skapats",
+      "assignmentsTitle": "Kontakttilldelningar",
+      "assignmentsDescription": "Tilldela varje kontakt en synlighetsgrupp eller behåll full åtkomst.",
+      "noContacts": "Inga kontakter tillgängliga.",
+      "assignmentLabel": "Tilldelad grupp",
+      "fullAccess": "Full åtkomst",
+      "cancel": "Avbryt",
+      "assignSuccess": "Kontaktens synlighetstilldelning har uppdaterats",
+      "assignError": "Det går inte att tilldela synlighetsgruppen",
+      "scopeLabel": "Ärendesynlighet",
+      "scopeClient": "Alla den här kundens ärenden",
+      "scopeContact": "Endast egna ärenden",
+      "scopeClientDescription": "Medlemmar ser alla den här kundens ärenden på de valda tavlorna.",
+      "scopeContactDescription": "Medlemmar ser endast ärenden där de är angivna som kontakt. Kundadministratörer ser alla ärenden på de valda tavlorna, även ärenden utan kontakt.",
+      "assignmentHelp": "Tilldela en grupp för att begränsa åtkomst till tavlor och ärenden, eller behåll full kundåtkomst.",
+      "boardHiddenFromPortal": "Dold i kundportalen"
+    },
+    "domain": {
+      "title": "Anpassad domän",
+      "description": "Klientorganisationer med Pro kan ha portalen på en anpassad domän. Din standardadress för den driftade portalen visas nedan.",
+      "defaultAddressLabel": "Portalens standardadress",
+      "upgradeHint": "Uppgradera till Pro för att konfigurera en kundportaldomän med din varumärkesprofil och automatisk certifikathantering."
+    }
+  },
+  "notifications": {
+    "title": "Aviseringar",
+    "bellUnreadAria": "Aviseringar ({{unread}} olästa)",
+    "unreadDot": "Olästa aviseringar",
+    "reconnecting": "Återansluter…",
+    "markAsRead": "Markera som läst",
+    "markAllAsRead": "Markera alla som lästa",
+    "noNotifications": "Inga nya aviseringar",
+    "unreadCount_one": "{{count}} oläst avisering",
+    "unreadCount_other": "{{count}} olästa aviseringar",
+    "settings": "Aviseringsinställningar",
+    "viewAll": "Visa alla aviseringar",
+    "tabs": {
+      "unread": "Olästa",
+      "all": "Alla",
+      "read": "Lästa"
+    },
+    "preferences": {
+      "title": "Aviseringsinställningar",
+      "description": "Hantera vilka interna aviseringar du får",
+      "loading": "Laddar inställningar…",
+      "loadError": "Det gick inte att ladda inställningarna",
+      "saveError": "Det gick inte att spara inställningen",
+      "noCategories": "Inga aviseringskategorier tillgängliga",
+      "emailPreferences": "E-postinställningar",
+      "internalPreferences": "Inställningar för interna aviseringar",
+      "priority": {
+        "high": "Hög",
+        "normal": "Normal",
+        "low": "Låg"
+      },
+      "resetPriority": "Återställ"
+    },
+    "categories": {
+      "tickets": "Ärenden",
+      "invoices": "Fakturor",
+      "messages": "Meddelanden",
+      "projects": "Projekt",
+      "system": "System"
+    },
+    "needsAttention": "Kräver åtgärd ({{count}})",
+    "lowPriority": "Låg prioritet ({{count}})",
+    "filters": {
+      "title": "Filtrera aviseringar",
+      "description": "Välj kriterier för att filtrera aviseringsaktiviteter.",
+      "statusLabel": "Status",
+      "unreadOnly": "Endast olästa",
+      "showRead": "Visa lästa",
+      "categoryLabel": "Kategori",
+      "allCategories": "Alla kategorier",
+      "categoryPlaceholder": "Välj kategori…",
+      "dateRangeLabel": "Datumintervall",
+      "priorityLabel": "Prioritet",
+      "allPriorities": "Alla prioriteter",
+      "priorityPlaceholder": "Välj prioritet…",
+      "reset": "Återställ",
+      "cancel": "Avbryt",
+      "apply": "Tillämpa filter"
+    },
+    "card": {
+      "unread": "Oläst",
+      "noMessage": "Inget meddelande"
+    }
+  },
+  "billing": {
+    "columns": {
+      "service": "Tjänst",
+      "notAvailable": "Ej tillgängligt"
+    },
+    "filters": {
+      "dateRange": "Datumintervall",
+      "startDate": "Startdatum",
+      "endDate": "Slutdatum",
+      "apply": "Tillämpa filter"
+    },
+    "usageMetrics": {
+      "title": "Förbrukningsmått",
+      "bucketHistoryTitle": "Förbrukningshistorik för timpott",
+      "columns": {
+        "unitOfMeasure": "Måttenhet",
+        "quantity": "Antal"
+      },
+      "empty": {
+        "title": "Inga förbrukningsmått tillgängliga",
+        "description": "Inga förbrukningsmått har registrerats för det valda datumintervallet."
+      }
+    },
+    "hoursByService": {
+      "columns": {
+        "serviceType": "Tjänstetyp",
+        "hours": "Timmar"
+      },
+      "empty": {
+        "title": "Inga timuppgifter tillgängliga",
+        "description": "Inga debiterbara timmar har registrerats för det valda datumintervallet."
+      }
+    },
+    "quotes": {
+      "columns": {
+        "quoteNumber": "Offertnummer",
+        "title": "Titel",
+        "amount": "Belopp",
+        "status": "Status",
+        "date": "Datum"
+      },
+      "draftQuote": "Utkast {{count}}",
+      "empty": "Inga offerter hittades",
+      "errors": {
+        "loadFailed": "Det gick inte att ladda offerterna"
+      }
+    },
+    "bucketUsage": {
+      "contractLineLabel": "Avtalsrad för timpott",
+      "usage": "Förbrukning",
+      "hoursUsed": "Förbrukade timmar: {{hours}}",
+      "hoursTotal": "Totalt antal timmar: {{hours}}",
+      "rolloverHours": "Inkluderar överförda timmar: {{hours}}"
+    },
+    "bucketHistory": {
+      "title": "Förbrukningshistorik",
+      "trendStable": "Stabil",
+      "current": "Aktuell",
+      "avgUsage": "Snittförbrukning",
+      "peak": "Topp",
+      "periods": "Perioder"
+    },
+    "invoicePreview": {
+      "loadFailed": "Det gick inte att ladda fakturan",
+      "unavailable": "Det går inte att visa förhandsgranskningen av fakturan."
+    },
+    "payment": {
+      "redirecting": "Omdirigerar till betalning…"
+    },
+    "paymentSuccess": {
+      "unknownStart": "Okänd start",
+      "unknownEnd": "Okänt slut",
+      "verifying": {
+        "title": "Verifierar betalningen",
+        "description": "Vänta medan vi bekräftar din betalning…"
+      },
+      "success": {
+        "title": "Betalningen lyckades",
+        "thankYou": "Tack för din betalning.",
+        "amountPaid": "Betalt belopp: {{amount}}.",
+        "confirmationEmail": "Ett bekräftelsemeddelande skickas till din registrerade e-postadress.",
+        "thankYouForInvoice": "Tack för din betalning av faktura nr {{invoiceNumber}}."
+      },
+      "servicePeriod": {
+        "title": "Sammanfattning av tjänsteperioder",
+        "description": "Den här sammanfattningen bygger på detaljperioderna för fakturans återkommande poster, inte enbart på fakturahuvudets debiteringsdatum."
+      },
+      "pending": {
+        "title": "Betalningen behandlas",
+        "description": "Din betalning behandlas. Det kan ta en liten stund. Du får en bekräftelse via e-post när betalningen är klar."
+      },
+      "failed": {
+        "title": "Betalningsverifieringen misslyckades",
+        "description": "Vi kunde inte bekräfta din betalning. Kontakta supporten."
+      },
+      "errors": {
+        "verificationFailed": "Betalningsverifieringen misslyckades",
+        "verifyFailed": "Det gick inte att verifiera betalningen",
+        "unexpected": "Ett fel uppstod vid verifieringen av din betalning"
+      },
+      "actions": {
+        "backToBilling": "Tillbaka till debitering",
+        "viewInvoice": "Visa faktura"
+      }
+    },
+    "segments": {
+      "allSegments": "Hela organisationen",
+      "organizationTotalLabel": "Totalt för din organisation",
+      "periodLabel": "{{start}} till {{end}}",
+      "selectorLabel": "Visa",
+      "empty": "Inga fakturerade avgifter under den här perioden.",
+      "chargesTitle": "Avgifter i det här segmentet",
+      "noCharges": "Inga avgifter under den här perioden."
+    }
+  },
+  "assets": {
+    "columns": {
+      "name": "Namn",
+      "type": "Typ",
+      "status": "Status",
+      "location": "Plats",
+      "lastUpdated": "Senast uppdaterad"
+    },
+    "notAvailable": "Ej tillgängligt",
+    "detailsTitle": "Tillgångsdetaljer"
+  },
+  "errors": {
+    "account": {
+      "userNotLinkedToContact": "Din portalanvändare är inte kopplad till en kontakt. Kontakta supporten om problemet kvarstår.",
+      "userNotLinkedToClient": "Din portalanvändare är inte kopplad till ett kundkonto. Kontakta supporten om problemet kvarstår.",
+      "contactNotLinkedToClient": "Din kontakt är inte kopplad till ett kundkonto. Kontakta supporten om problemet kvarstår.",
+      "clientNotFound": "Kundkontot hittades inte. Det kan ha raderats eller så har du inte längre åtkomst.",
+      "serviceNotFound": "Tjänsten hittades inte eller är inte längre aktiv. Ladda om och försök igen.",
+      "serviceUpgradeUnavailable": "Funktionen för att uppgradera tjänster är tillfälligt otillgänglig. Kontakta supporten för att ändra ditt abonnemang."
+    },
+    "records": {
+      "invalid": "En av de valda posterna är ogiltig. Ladda om och försök igen.",
+      "missing": "En av de valda posterna finns inte längre. Ladda om och försök igen."
+    },
+    "access": {
+      "unauthorized": "Behörighet saknas",
+      "projectBillingData": "Du har inte behörighet att komma åt projektets debiteringsuppgifter",
+      "quoteData": "Du har inte behörighet att komma åt offertuppgifterna",
+      "invoiceData": "Du har inte behörighet att komma åt fakturauppgifterna",
+      "billingData": "Du har inte behörighet att komma åt debiteringsuppgifterna",
+      "settingsUpdate": "Du har inte behörighet att uppdatera de här inställningarna.",
+      "billingSegment": "Du har inte behörighet att komma åt det debiteringssegmentet"
+    },
+    "billing": {
+      "quoteNotFound": "Offerten hittades inte eller åtkomst nekades",
+      "quoteStale": "Offerten är inte längre tillgänglig. Ladda om offerten och försök igen.",
+      "quoteStaleAccept": "Offerten är inte längre tillgänglig. Ladda om offerten innan du accepterar den.",
+      "quoteStaleReject": "Offerten är inte längre tillgänglig. Ladda om offerten innan du avböjer den.",
+      "invoiceNotFound": "Fakturan hittades inte eller åtkomst nekades",
+      "jobNotFound": "Bakgrundsjobbet hittades inte",
+      "quoteInvalidState": "Offertens status är inte giltig för den här åtgärden",
+      "rejectionCommentRequired": "En kommentar krävs när du avböjer",
+      "emailSendFailed": "Det gick inte att starta e-postutskicket"
+    },
+    "tickets": {
+      "notFoundOrDenied": "Ärendet hittades inte eller åtkomst nekades",
+      "invalidData": "Ogiltiga ärendeuppgifter",
+      "statusNotPortalSelectable": "Den här statusen kan inte väljas från kundportalen"
+    },
+    "visibilityGroups": {
+      "checkDetails": "Kontrollera synlighetsgruppens uppgifter och försök igen.",
+      "boardsUnavailable": "En eller flera valda tavlor är inte längre tillgängliga. Ladda om och försök igen.",
+      "contactNotFound": "Kontakten hittades inte. Den kan ha raderats. Ladda om och försök igen.",
+      "otherClient": "Du har inte behörighet att hantera synlighetsgrupper för en annan kund.",
+      "selectClientOrContact": "Välj en kund eller kontakt innan du hanterar synlighetsgrupper.",
+      "groupNotFound": "Synlighetsgruppen hittades inte. Den kan ha raderats. Ladda om och försök igen.",
+      "groupNotValidForContact": "Den valda synlighetsgruppen är inte giltig för den här kontakten. Ladda om och försök igen.",
+      "missingField": "Ett obligatoriskt fält för synlighetsgruppen saknas.",
+      "missingFieldNamed": "Ett obligatoriskt fält för synlighetsgruppen saknas: {{field}}.",
+      "recordInvalid": "En av de valda synlighetsgruppsposterna är inte längre giltig. Ladda om och försök igen.",
+      "duplicate": "Det finns redan en synlighetsgrupp med de här uppgifterna för den här kunden.",
+      "invalidData": "Ogiltiga uppgifter har angetts för synlighetsgruppen. Kontrollera gruppens uppgifter och de valda tavlorna."
+    }
+  }
+}

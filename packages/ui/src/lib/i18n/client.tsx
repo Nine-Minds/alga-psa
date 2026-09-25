@@ -67,6 +67,10 @@ const BOOTSTRAP_LOADING_TEXT: Record<
     translations: 'Carregando traduções...',
     languagePreferences: 'Carregando preferências de idioma...',
   },
+  sv: {
+    translations: 'Laddar översättningar...',
+    languagePreferences: 'Laddar språkinställningar...',
+  },
   // Mirrors scripts/generate-pseudo-locales.cjs; these two never reach a pack.
   xx: {
     translations: '⟦Ŀȯȧḓīƞɠ ŧřȧƞşŀȧŧīȯƞş...⟧',

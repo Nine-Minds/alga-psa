@@ -1,0 +1,576 @@
+{
+  "taxRates": {
+    "title": "Skattesatser",
+    "loading": "Läser in skattesatser",
+    "errors": {
+      "fetchRates": "Det gick inte att hämta skattesatser",
+      "loadRegions": "Det gick inte att läsa in skatteregioner.",
+      "add": "Det gick inte att lägga till skattesatsen",
+      "update": "Det gick inte att uppdatera skattesatsen",
+      "validateDeletion": "Det gick inte att kontrollera om radering är möjlig. Försök igen.",
+      "confirmDeletion": "Det gick inte att bekräfta raderingen av skattesatsen."
+    },
+    "deleteEntity": {
+      "fallback": "den här skattesatsen",
+      "withRegion": "skattesatsen för {{regionName}}"
+    },
+    "validation": {
+      "requiredFieldsTitle": "Fyll i de obligatoriska fälten:",
+      "region": "Skatteregion",
+      "percentage": "Skattesats i procent",
+      "startDate": "Startdatum"
+    },
+    "table": {
+      "region": "Region",
+      "taxPercentage": "Skattesats i procent",
+      "description": "Beskrivning",
+      "startDate": "Startdatum",
+      "endDate": "Slutdatum",
+      "actions": "Åtgärder",
+      "notAvailable": "Ej tillgängligt",
+      "composite": "Sammansatt"
+    },
+    "actions": {
+      "openMenu": "Öppna meny",
+      "advancedSettings": "Avancerade inställningar",
+      "edit": "Redigera",
+      "delete": "Radera",
+      "addNew": "Lägg till ny skattesats",
+      "add": "Lägg till skattesats",
+      "update": "Uppdatera skattesats",
+      "cancel": "Avbryt"
+    },
+    "dialog": {
+      "addTitle": "Lägg till ny skattesats",
+      "editTitle": "Redigera skattesats",
+      "description": "Ange uppgifterna för skattesatsen.",
+      "fields": {
+        "region": "Skatteregion *",
+        "percentage": "Skattesats i procent *",
+        "description": "Beskrivning",
+        "startDate": "Startdatum *",
+        "endDate": "Slutdatum (valfritt)",
+        "active": "Aktiv"
+      },
+      "placeholders": {
+        "loadingRegions": "Läser in regioner…",
+        "selectRegion": "Välj skatteregion",
+        "percentage": "Ange procentsats"
+      },
+      "activeHint": "Inaktiva skattesatser används inte när skatt beräknas på fakturor.",
+      "regionDescription": "Den här skattesatsen gäller fakturor som beskattas i {{region}}."
+    },
+    "cap": {
+      "title": "Skattetak",
+      "label": "Skattetak ({{currencyCode}})",
+      "currency": "Skattesatsens valuta",
+      "universal": "Alla fakturavalutor",
+      "optional": "Valfritt",
+      "noCap": "Inget tak",
+      "clear": "Rensa skattetak",
+      "hint": "Högsta skattebelopp från den här skattesatsen per beräkning. Lämna tomt för att inte ange något tak. Ange 0 för att inte debitera någon skatt i beräkningar som använder det här taket.",
+      "scopeTitle": "Så tillämpas skattetak",
+      "scope": "En regional beräkning begränsar bidraget från varje skattesats innan skatten summeras, inte regionens sammanlagda skattebelopp. Vid periodberäkningar tillämpas taket på varje skattesats i varje datumsegment. Flera segment kan tillsammans överskrida taket. En faktura kan omfatta flera beräkningar. Taket gäller inte per faktura, kund, projekt eller hel period. Debiteringstak för projekt begränsar debiterbara belopp, medan skattetak begränsar den beräknade skatten. Externa leverantörer av skattetjänster använder sin egen konfiguration.",
+      "applicability": "Den här skattesatsen gäller endast fakturor i {{currencyCode}}. Den väljs inte längre för andra valutor.",
+      "composite": "Det här taket tillämpas när skattesatsen ingår i en regional beräkning. Komponentbaserade beräkningar tillämpar inte det här taket.",
+      "legacy": "Valuta inte angiven · {{amount}} i valutans minsta enhet",
+      "legacyHelp": "Det sparade taket tillämpas för närvarande i den minsta enheten för varje fakturas valuta. Välj en valuta och välj uttryckligen att behålla det sparade beloppet eller ange ett nytt tak. Om du ändrar något annat bevaras taket. Du kan också rensa det utan att välja en valuta.",
+      "resolve": "Använd sparat belopp i minsta enhet för {{currencyCode}}",
+      "reenter": "Ange taket på nytt i den nya valutan innan du sparar.",
+      "example": "Exempel: {{amount}}; utan tusentalsavgränsare.",
+      "errors": {
+        "negative": "Ange ett skattetak som är noll eller högre.",
+        "precision": "Skattetaket har fler decimaler än vad den här valutan tillåter.",
+        "invalid": "Ange ett belopp med decimaltecknet som visas i exemplet, utan förtecken, tusentalsavgränsare eller valutasymboler.",
+        "overflow": "Skattetaket överskrider det högsta belopp som stöds.",
+        "currency": "Välj en valuta som stöds för skattesatsen innan du anger ett skattetak.",
+        "reenter": "Ange taket på nytt i den nya valutan innan du sparar."
+      },
+      "compositeIndicator": "Endast regionala beräkningar"
+    }
+  },
+  "taxRateDetail": {
+    "actions": {
+      "back": "Tillbaka till skattesatser"
+    },
+    "subtitle": "{{regionCode}} - {{percentage}} %",
+    "tabs": {
+      "details": "Detaljer",
+      "components": "Komponenter",
+      "brackets": "Skatteskikt",
+      "holidays": "Skattefria perioder"
+    },
+    "fields": {
+      "regionCode": "Regionkod",
+      "taxPercentage": "Skattesats i procent",
+      "description": "Beskrivning",
+      "taxType": "Skattetyp",
+      "startDate": "Startdatum",
+      "endDate": "Slutdatum",
+      "isComposite": "Är sammansatt",
+      "isActive": "Är aktiv"
+    },
+    "values": {
+      "dash": "-",
+      "noEndDate": "Inget slutdatum",
+      "yes": "Ja",
+      "no": "Nej",
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "composite": "Sammansatt"
+    },
+    "precedence": {
+      "title": "Prioritetsordning vid skatteberäkning",
+      "clientExempt": "Först kontrolleras om kunden är skattebefriad (i så fall tillämpas ingen skatt)",
+      "serviceSpecific": "En tjänstespecifik skattesats används om en sådan har tilldelats",
+      "clientDefault": "Kundens standardskattesats används som reserv",
+      "regionLookup": "Uppslagning av skatteregion avgör vilken skattesats som gäller utifrån platsen"
+    },
+    "components": {
+      "simpleRateMessage": "Det här är en enkel skattesats, inte en sammansatt. Skattekomponenter används endast för sammansatta skatter.",
+      "enableCompositeMessage": "Markera skattesatsen som sammansatt när du redigerar den för att använda skattekomponenter."
+    },
+    "brackets": {
+      "intro": "Progressiva skatteskikt tillämpar olika skattesatser på olika delar av ett belopp.",
+      "precedence": "När skatteskikt har angetts har de företräde framför den fasta procentsatsen."
+    }
+  },
+  "serviceForm": {
+    "errors": {
+      "loadServiceTypes": "Det gick inte att hämta tjänstetyper",
+      "loadTaxData": "Det gick inte att läsa in skatteuppgifter.",
+      "selectServiceType": "Välj en tjänstetyp",
+      "serviceTypeNotFound": "Den valda tjänstetypen hittades inte",
+      "create": "Det gick inte att skapa tjänsten"
+    },
+    "fields": {
+      "serviceName": {
+        "placeholder": "Tjänstenamn"
+      },
+      "serviceType": {
+        "label": "Tjänstetyp",
+        "placeholder": "Välj tjänstetyp"
+      },
+      "billingMethod": {
+        "label": "Debiteringsmetod",
+        "placeholder": "Välj debiteringsmetod"
+      },
+      "defaultRate": {
+        "placeholder": "Standardtaxa"
+      },
+      "unitOfMeasure": {
+        "placeholder": "Måttenhet"
+      },
+      "description": {
+        "label": "Beskrivning",
+        "placeholder": "Tjänstebeskrivning"
+      },
+      "taxRate": {
+        "label": "Skattesats",
+        "placeholderLoading": "Läser in skatteuppgifter…",
+        "placeholder": "Välj skattesats (valfritt)"
+      }
+    },
+    "options": {
+      "billingMethod": {
+        "fixed": "Fast pris",
+        "hourly": "Per timme",
+        "usage": "Förbrukningsbaserad"
+      }
+    },
+    "taxRateOption": {
+      "fallback": "Ej tillgängligt",
+      "label": "{{description}} - {{percentage}} %"
+    },
+    "actions": {
+      "submit": "Lägg till tjänst"
+    }
+  },
+  "serviceSelection": {
+    "title": "Lägg till tjänster och produkter på avtalsrad",
+    "searchPlaceholder": "Sök tjänster/produkter…",
+    "errors": {
+      "load": "Det gick inte att läsa in tjänster",
+      "add": "Det gick inte att lägga till tjänster på avtalsraden"
+    },
+    "states": {
+      "loading": "Läser in tjänster…",
+      "empty": "Inga tjänster hittades"
+    },
+    "table": {
+      "itemName": "Namn",
+      "type": "Typ",
+      "unit": "Enhet",
+      "rate": "Taxa",
+      "product": "Produkt",
+      "service": "Tjänst",
+      "unknown": "Okänd"
+    },
+    "selection": {
+      "countOne": "{{count}} tjänst markerad",
+      "countOther": "{{count}} tjänster markerade"
+    },
+    "actions": {
+      "cancel": "Avbryt",
+      "addSelected": "Lägg till markerade tjänster",
+      "adding": "Lägger till…"
+    },
+    "quickAdd": {
+      "label": "Snabbtillägg:",
+      "allType": "Alla {{type}}"
+    }
+  },
+  "configType": {
+    "placeholder": "Välj konfigurationstyp",
+    "options": {
+      "Fixed": {
+        "label": "Fast pris",
+        "description": "En tjänst med fast pris och oförändrad debitering oavsett förbrukning. Passar förutsägbara tjänster."
+      },
+      "Hourly": {
+        "label": "Timtaxa",
+        "description": "Tidsbaserad debitering med anpassningsbara taxor. Passar varierande arbetsbelastning som debiteras efter nedlagd tid."
+      },
+      "Usage": {
+        "label": "Förbrukningsbaserad",
+        "description": "Förbrukningsbaserad debitering med möjlighet till prisnivåer. Passar tjänster som mäts efter förbrukning."
+      },
+      "Bucket": {
+        "label": "Timpott",
+        "description": "Förköpta timmar som kan användas över tid. Passar kunder som behöver flexibilitet med ett budgettak."
+      }
+    },
+    "warningDialog": {
+      "title": "Ändra konfigurationstyp?",
+      "description": "Om du ändrar konfigurationstyp återställs alla typspecifika inställningar. Åtgärden kan inte ångras.",
+      "cancel": "Avbryt",
+      "confirm": "Ändra typ"
+    }
+  },
+  "serviceConfig": {
+    "title": "Tjänstekonfiguration",
+    "serviceLabel": "Tjänst",
+    "effectiveModeLabel": "Gällande läge",
+    "defaultSourceLabel": "Källa för standardvärden",
+    "modes": {
+      "Fixed": "Fast pris",
+      "Hourly": "Timtaxa",
+      "Usage": "Förbrukningsbaserad",
+      "Bucket": "Timpott"
+    },
+    "defaultSources": {
+      "catalog default": "katalogens standardvärde",
+      "contract override": "anpassat avtalsvärde",
+      "none": "ingen"
+    },
+    "fields": {
+      "configurationType": "Konfigurationstyp",
+      "quantity": {
+        "label": "Antal",
+        "placeholder": "Ange antal",
+        "help": "Antal enheter av den här tjänsten",
+        "errorNegative": "Antalet kan inte vara negativt"
+      },
+      "customRate": {
+        "label": "Anpassad taxa",
+        "placeholder": "Ange taxa",
+        "placeholderDefault": "Standard: {{rate}}",
+        "helpCustom": "Anpassad taxa för den här tjänsten",
+        "helpUseDefault": "Lämna tomt för att använda standardtaxan ({{rate}})",
+        "errorNegative": "Taxan kan inte vara negativ"
+      }
+    },
+    "bucketOverlay": {
+      "recommendHours": "Rekommendera timpott",
+      "recommendUsage": "Rekommendera förbrukningspott"
+    },
+    "actions": {
+      "cancel": "Avbryt",
+      "save": "Spara konfiguration",
+      "saving": "Sparar…"
+    }
+  },
+  "fixedConfig": {
+    "title": "Konfiguration för fast pris",
+    "fields": {
+      "adjustForPartialPeriods": "Justera för delperioder",
+      "billingCycleAlignment": {
+        "label": "Anpassning till debiteringscykel",
+        "placeholder": "Välj anpassning",
+        "help": "Styr hur täckning för delperioder beräknas när den återkommande avgiften behöver anpassas till en kortare period än en hel tjänsteperiod."
+      },
+      "unitRate": {
+        "label": "Enhetstaxa",
+        "placeholder": "0,00",
+        "help": "Taxa som debiteras för varje licens/enhet under varje tjänsteperiod."
+      }
+    },
+    "options": {
+      "start": "Debiteringscykelns början",
+      "end": "Debiteringscykelns slut",
+      "prorated": "Proportionell täckning"
+    },
+    "pricingBasis": {
+      "label": "Hur prissätts den här tjänsten?",
+      "bundle": {
+        "label": "Paketpris",
+        "description": "Det är avtalsradens fasta totalbelopp som debiteras. Antalet för den här tjänsten används bara för att fördela en andel av totalbeloppet för rapportering — det avser inte debiterbara licenser, och ändringar i antalet påverkar inte det debiterade beloppet.",
+        "allocationNote": "Fördelningsantal: {{quantity}} — används för att fördela paketets totalbelopp för rapportering och debiteras inte som licenser."
+      },
+      "unit": {
+        "label": "Återkommande licenser/enheter",
+        "description": "Debiterar antal × enhetstaxa varje period, utan att något totalbelopp för raden har företräde. Samma antal och taxa debiteras igen nästa period tills du schemalägger en ändring. Antalet noll ger ett debiterat belopp på noll.",
+        "summary": "{{quantity}} × {{rate}} (återkommande licenser) = {{total}} per period"
+      }
+    }
+  },
+  "hourlyConfig": {
+    "title": "Konfiguration för timtaxa",
+    "fields": {
+      "minimumBillableTime": {
+        "label": "Minsta debiterbara tid (minuter)",
+        "placeholder": "15",
+        "help": "Minsta tid att debitera (t.ex. 15 minuter)",
+        "errorNegative": "Minsta debiterbara tid kan inte vara negativ"
+      },
+      "roundUpToNearest": {
+        "label": "Avrunda uppåt till närmaste (minuter)",
+        "placeholder": "15",
+        "help": "Avrunda tidposter uppåt till närmaste tidssteg",
+        "errorNegative": "Avrundningsvärdet kan inte vara negativt"
+      },
+      "newUserType": {
+        "label": "Användartyp",
+        "placeholder": "Välj användartyp"
+      },
+      "newUserTypeRate": {
+        "label": "Taxa",
+        "placeholder": "Ange taxa",
+        "errorNegative": "Taxan för användartypen kan inte vara negativ"
+      }
+    },
+    "userTypeRates": {
+      "title": "Taxor per användartyp",
+      "headers": {
+        "userType": "Användartyp",
+        "rate": "Taxa"
+      },
+      "options": {
+        "technician": "Tekniker",
+        "engineer": "Ingenjör",
+        "consultant": "Konsult",
+        "project_manager": "Projektledare",
+        "admin": "Administratör"
+      },
+      "actions": {
+        "addRate": "Lägg till taxa"
+      }
+    }
+  },
+  "usageConfig": {
+    "title": "Konfiguration för förbrukningsbaserad debitering",
+    "recordDrivenNote": "Förbrukningsbaserade tjänster debiteras utifrån den förbrukning som registreras under Förbrukningsuppföljning för varje tjänsteperiod. En period utan registrerad förbrukning ger ingen debitering — registrera förbrukningen (eller ett uttryckligt nollvärde) varje period för att debitera den här tjänsten.",
+    "defaults": {
+      "unitOfMeasure": "Enhet"
+    },
+    "fields": {
+      "unitOfMeasure": {
+        "label": "Måttenhet",
+        "placeholder": "Ange måttenhet",
+        "help": "Enheten som används för att mäta förbrukning (t.ex. GB, användare, enhet)",
+        "errorRequired": "Måttenhet krävs"
+      },
+      "minimumUsage": {
+        "label": "Minsta förbrukningsnivå",
+        "placeholder": "0",
+        "help": "Minimivärde som tillämpas på registrerad förbrukning (0 för inget minimivärde). Det gäller bara när perioden har en förbrukningspost — även ett uttryckligt nollvärde — och skapar aldrig en debitering på egen hand.",
+        "errorNegative": "Minsta förbrukning kan inte vara negativ",
+        "labelAdditive": "Minimivärde per post",
+        "labelPeriodTotal": "Minimivärde per periodrapport",
+        "helpAdditive": "Minimivärde som tillämpas på varje registrerad post (0 för inget minimivärde). Det gäller bara när perioden har en förbrukningspost — även ett uttryckligt nollvärde — och skapar aldrig en debitering på egen hand.",
+        "helpPeriodTotal": "Minimivärde som tillämpas en gång på det rapporterade antalet för perioden (0 för inget minimivärde). Det gäller bara när ett antal rapporteras — även ett uttryckligt nollvärde — och skapar aldrig en debitering på egen hand."
+      },
+      "enableTieredPricing": "Aktivera nivåbaserad prissättning"
+    },
+    "tiers": {
+      "title": "Prisnivåer",
+      "addTier": "Lägg till nivå",
+      "empty": "Inga nivåer har konfigurerats. Lägg till en nivå för att ange volymbaserad prissättning.",
+      "from": "Från ({{unit}})",
+      "to": "Till ({{unit}})",
+      "ratePer": "Taxa per {{unit}}",
+      "unlimited": "Obegränsat",
+      "help": "Konfigurera volymbaserade prisnivåer. Varje nivås taxa tillämpas på förbrukningen inom dess intervall.",
+      "errors": {
+        "onlyLastUnlimited": "Endast den sista nivån kan sakna övre gräns",
+        "overlap": "Nivåerna får inte överlappa varandra",
+        "upperGreaterThanLower": "Nivåns övre gräns måste vara större än den nedre gränsen",
+        "rateNegative": "Nivåernas taxor kan inte vara negativa"
+      }
+    },
+    "measurementMode": {
+      "label": "Hur mäts förbrukningen?",
+      "additive": {
+        "label": "Registrera förbrukningen löpande",
+        "description": "Daterade poster summeras: poster på 10 och 12 ger en debitering på 22. Minimivärdet och eventuella nivåer tillämpas på varje post. Nästa period börjar utan poster."
+      },
+      "periodTotal": {
+        "label": "Rapportera ett antal för varje period",
+        "description": "Ett antal per tjänsteperiod ersätter det föregående: om du korrigerar 10 till 12 debiteras 12, aldrig 22. Minimivärdet och eventuella nivåer tillämpas en gång på det antalet. Nästa period börjar utan rapporterat antal — inget antal förs över."
+      },
+      "transitionNote": "Ändringen av läget gäller från och med nästa ofakturerade tjänsteperiod. Poster eller antal som redan har registrerats i en öppen period måste först faktureras eller tas bort."
+    }
+  },
+  "bucketConfig": {
+    "title": "Konfiguration för timpott",
+    "fields": {
+      "totalMinutes": {
+        "label": "Totalt antal minuter",
+        "placeholder": "Ange totalt antal timmar",
+        "help": "Det totala antalet minuter som ingår i den här avtalsraden för timpotten",
+        "errorPositive": "Det totala antalet minuter måste vara större än noll"
+      },
+      "billingPeriod": {
+        "label": "Debiteringsperiod",
+        "placeholder": "Välj debiteringsperiod",
+        "help": "Perioden som timpotten fördelas över",
+        "mismatchPrefix": "Avvikelse:",
+        "mismatch": "Timpottens debiteringsperiod ({{billingPeriod}}) bör matcha avtalsradens debiteringsintervall ({{contractLineBillingFrequency}})"
+      },
+      "overageRate": {
+        "label": "Taxa för överförbrukning",
+        "placeholder": "Ange taxa för överförbrukning",
+        "help": "Timtaxan som debiteras för timmar utöver timpottens gräns",
+        "errorNegative": "Taxan för överförbrukning kan inte vara negativ"
+      },
+      "allowRollover": "Tillåt att oanvända timmar förs över till nästa period"
+    }
+  },
+  "rateTiers": {
+    "title": "Taxenivåer och mängdrabatter",
+    "description": "Konfigurera olika taxor för olika antalsintervall. Större antal kan ge rabatterade taxor.",
+    "loading": "Läser in taxenivåer…",
+    "table": {
+      "minQuantity": "Minsta antal",
+      "maxQuantity": "Högsta antal",
+      "rate": "Taxa ({{unit}})",
+      "actions": "Åtgärder",
+      "unlimited": "Obegränsat"
+    },
+    "formattedRate": "{{rate}} per {{unit}}",
+    "errors": {
+      "load": "Det gick inte att läsa in taxenivåer",
+      "save": "Det gick inte att spara taxenivåerna",
+      "lastTier": "Det går inte att ta bort den sista nivån",
+      "minPositive": "Minsta antal måste vara större än 0",
+      "maxGreaterThanMin": "Högsta antal måste vara större än minsta antal",
+      "rateNegative": "Taxan kan inte vara negativ",
+      "overlap": "Nivåernas intervall får inte överlappa varandra"
+    },
+    "actions": {
+      "addTier": "Lägg till nivå",
+      "save": "Spara taxenivåer",
+      "saving": "Sparar…"
+    }
+  },
+  "serviceTaxSettings": {
+    "title": "Skatteinställningar",
+    "fields": {
+      "taxRate": {
+        "label": "Skattesats",
+        "placeholderLoading": "Läser in skattesatser…",
+        "placeholder": "Välj skattesats",
+        "help": "Välj ”Ej skattepliktig” om den här tjänsten inte ska beskattas."
+      }
+    },
+    "options": {
+      "nonTaxable": "Ej skattepliktig"
+    },
+    "optionLabel": "{{taxType}} ({{countryCode}}) - {{percentage}} %",
+    "errors": {
+      "loadTaxRates": "Det gick inte att läsa in skattesatser.",
+      "save": "Det gick inte att spara skatteinställningarna"
+    },
+    "actions": {
+      "save": "Spara skatteinställningar",
+      "saving": "Sparar…"
+    }
+  },
+  "serviceDetail": {
+    "loading": "Läser in tjänstekonfiguration…",
+    "errors": {
+      "notFound": "Tjänsten hittades inte",
+      "load": "Det gick inte att läsa in tjänstekonfigurationen"
+    },
+    "title": "Tjänstekonfiguration: {{serviceName}}",
+    "description": "Konfigurera tjänstedetaljer, prissättning och skatteinställningar",
+    "sections": {
+      "unitOfMeasure": "Måttenhet",
+      "baseRate": "Grundtaxa"
+    },
+    "baseRate": {
+      "summary": "{{rate}} per {{unit}}",
+      "help": "Grundtaxan kan åsidosättas med antalsbaserade nivåer nedan."
+    }
+  },
+  "errors": {
+    "permissions": {
+      "createServices": "Behörighet saknas: kan inte skapa tjänster/produkter",
+      "updateServices": "Behörighet saknas: kan inte uppdatera tjänster/produkter",
+      "deleteServices": "Behörighet saknas: kan inte radera tjänster",
+      "deleteServicesProducts": "Behörighet saknas: kan inte radera tjänster/produkter",
+      "createServiceTypes": "Behörighet saknas: kan inte skapa tjänstetyper",
+      "updateServiceTypes": "Behörighet saknas: kan inte uppdatera tjänstetyper",
+      "deleteServiceTypes": "Behörighet saknas: kan inte radera tjänstetyper",
+      "updatePricing": "Behörighet saknas: kan inte uppdatera tjänstens prissättning"
+    },
+    "category": {
+      "duplicateName": "En tjänstekategori med det här namnet finns redan",
+      "notFound": "Tjänstekategorin hittades inte",
+      "invalid": "Den valda tjänstekategorin är ogiltig. Ladda om och försök igen.",
+      "inUse": "Det går inte att radera kategorin eftersom den fortfarande används.",
+      "inUseByServices": "Det går inte att radera kategorin: tjänster använder den här kategorin",
+      "inUseByTickets": "Det går inte att radera en kategori som används av ärenden",
+      "nameRequired": "Kategorinamn krävs",
+      "nameEmpty": "Kategorinamnet får inte vara tomt",
+      "idRequired": "Kategori-ID krävs",
+      "missingField": "Ett obligatoriskt fält för tjänstekategorin saknas.",
+      "missingFieldNamed": "Ett obligatoriskt fält för tjänstekategorin saknas: {{field}}."
+    },
+    "service": {
+      "selectType": "Välj en tjänstetyp innan du sparar.",
+      "typeNotFound": "Den valda tjänstetypen hittades inte. Ladda om och välj en annan tjänstetyp.",
+      "selectBillingMethod": "Välj en debiteringsmetod innan du sparar.",
+      "notFoundRefresh": "Tjänsten hittades inte. Den kan ha raderats. Ladda om och försök igen.",
+      "invalidValue": "Ett av de valda tjänstevärdena är ogiltigt. Ladda om och försök igen.",
+      "referenceMissing": "Den valda tjänsten, kategorin, skattesatsen eller tjänstetypen är inte längre tillgänglig. Ladda om och försök igen.",
+      "duplicate": "En tjänst eller produkt med de här värdena finns redan.",
+      "missingField": "Ett obligatoriskt fält för tjänsten saknas.",
+      "missingFieldNamed": "Ett obligatoriskt fält för tjänsten saknas: {{field}}."
+    },
+    "product": {
+      "notFound": "Produkten hittades inte",
+      "alreadyDeleted": "Produkten hittades inte. Den kan redan ha raderats.",
+      "barcodeExists": "En produkt med den här streckkoden finns redan. Använd en annan streckkod eller redigera den befintliga produkten.",
+      "barcodeExistsNamed": "En produkt med streckkoden ”{{barcode}}” finns redan. Använd en annan streckkod eller redigera den befintliga produkten.",
+      "skuExists": "En produkt med det här SKU-värdet finns redan. Använd ett annat SKU-värde eller redigera den befintliga produkten.",
+      "skuExistsNamed": "En produkt med SKU-värdet ”{{sku}}” finns redan. Använd ett annat SKU-värde eller redigera den befintliga produkten.",
+      "cannotDelete": "Det går inte att radera produkten: {{reasons}}"
+    },
+    "serviceType": {
+      "duplicateName": "En tjänstetyp med det här namnet finns redan.",
+      "notFoundRefresh": "Tjänstetypen hittades inte. Den kan ha raderats. Ladda om och försök igen.",
+      "notFound": "Tjänstetypen hittades inte.",
+      "inUse": "Det går inte att radera tjänstetypen eftersom den används av en eller flera tjänster.",
+      "inUseByCount": "Det går inte att radera tjänstetypen. Antal tjänster som använder den: {{serviceCount}}."
+    },
+    "rateTier": {
+      "overlap": "Nivåernas intervall får inte överlappa varandra.",
+      "notFound": "Taxenivån hittades inte. Ladda om tjänsten och försök igen.",
+      "invalid": "Den valda taxenivån är ogiltig. Ladda om tjänsten och försök igen.",
+      "serviceInvalid": "Den valda tjänsten för den här taxenivån är inte längre giltig. Ladda om tjänsten och försök igen.",
+      "missingField": "Ett obligatoriskt fält för taxenivån saknas.",
+      "missingFieldNamed": "Ett obligatoriskt fält för taxenivån saknas: {{field}}."
+    }
+  }
+}

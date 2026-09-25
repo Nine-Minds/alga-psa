@@ -1,0 +1,1929 @@
+{
+  "common": {
+    "actions": "Åtgärder",
+    "active": "Aktiv",
+    "allTime": "Hela perioden",
+    "cancel": "Avbryt",
+    "clear": "Rensa",
+    "close": "Stäng",
+    "confirm": "Bekräfta",
+    "deactivate": "Inaktivera",
+    "description": "Beskrivning",
+    "edit": "Redigera",
+    "emptyValue": "—",
+    "from": "Från",
+    "inactive": "Inaktiv",
+    "loading": "Laddar…",
+    "name": "Namn",
+    "period": "Period",
+    "quantity": "Antal",
+    "refresh": "Ladda om",
+    "refreshing": "Laddar om…",
+    "remove": "Ta bort",
+    "retry": "Försök igen",
+    "run": "Kör",
+    "runReport": "Kör rapport",
+    "running": "Körs…",
+    "save": "Spara",
+    "saveFailed": "Det gick inte att spara",
+    "saving": "Sparar…",
+    "search": "Sök",
+    "status": "Status",
+    "to": "Till",
+    "today": "Idag",
+    "total": "Totalt",
+    "unknown": "Okänd"
+  },
+  "counts": {
+    "adjustments": "{{count}} justeringar",
+    "approveApply": "Godkänn och tillämpa",
+    "approveFailed": "Det gick inte att godkänna inventeringen.",
+    "approved": "Inventeringen godkänd — {{summary}}.",
+    "approving": "Godkänner…",
+    "blindCountHint": "Förväntade antal sparas nu och döljs under räkningen (blindinventering).",
+    "cancelCount": "Avbryt inventering",
+    "cancelFailed": "Det gick inte att avbryta inventeringen.",
+    "cancelledDone": "Inventeringen avbruten — lagerbeståndet ändrades inte.",
+    "columns": {
+      "progress": "Förlopp",
+      "started": "Startad"
+    },
+    "count": "Inventering",
+    "counted": "Räknat: {{qty}}",
+    "detailTitle": "Inventering — {{location}}",
+    "dispositionAdd": "Lägg till i lager (hittad enhet)",
+    "dispositionExclude": "Uteslut från denna inventering",
+    "dispositionPlaceholder": "Hantering…",
+    "expected": "Förväntat: {{qty}}",
+    "fields": {
+      "countedQty": "Räknat antal",
+      "location": "Plats",
+      "locationPlaceholder": "Välj en plats…",
+      "serialsLabel": "Befintliga serienummer (ett per rad)"
+    },
+    "loadSessionFailed": "Det gick inte att ladda inventeringen.",
+    "loadSessionsFailed": "Det gick inte att ladda inventeringarna.",
+    "noProducts": "Inga lagerspårade produkter på denna plats.",
+    "open": "Öppna",
+    "pickLocation": "Välj en plats att inventera.",
+    "progressValue": "{{counted}} av {{total}} räknade",
+    "qtyInvalid": "Det räknade antalet måste vara ett heltal som är noll eller större.",
+    "recordFailed": "Det gick inte att registrera inventeringen.",
+    "recorded": "Inventeringen registrerad.",
+    "saveCount": "Spara inventering",
+    "staleBadge": "Inaktuell — lagerbeståndet har ändrats, räkna om",
+    "staleLines": "{{count}} rader var inaktuella (lagerbeståndet ändrades under inventeringen) och hoppades över — räkna om dem.",
+    "startCount": "Starta inventering",
+    "startDialogTitle": "Starta en cyklisk inventering",
+    "startFailed": "Det gick inte att starta inventeringen.",
+    "started": "Inventeringen startad — förväntade antal har sparats.",
+    "starting": "Startar…",
+    "status": {
+      "approved": "Godkänd",
+      "cancelled": "Avbruten",
+      "counting": "Räkning pågår",
+      "draft": "Utkast",
+      "inReview": "Under granskning"
+    },
+    "submitFailed": "Det gick inte att skicka in inventeringen.",
+    "submitForReview": "Skicka in för granskning",
+    "submitted": "Inskickad för granskning.",
+    "submitting": "Skickar in…",
+    "subtitle": "Blindinventering per plats — avvikelser registreras i lagerjournalen vid godkännande.",
+    "title": "Cykliska inventeringar",
+    "uncountedLines": "{{count}} rader räknades aldrig och lämnades oförändrade.",
+    "unexpectedPrompt": "Oväntade serienummer — välj hur de ska hanteras före godkännande:",
+    "unitsAdded": "{{count}} enheter tillagda",
+    "unitsRetired": "{{count}} enheter utrangerade",
+    "varianceLabel": "· avvikelse"
+  },
+  "dashboard": {
+    "actions": {
+      "newPurchaseOrder": "Ny inköpsorder",
+      "receiveStock": "Ta emot varor",
+      "stockLedger": "Öppna lagerjournal"
+    },
+    "loadError": {
+      "title": "Det gick inte att ladda aktuella lageruppgifter",
+      "body": "Översiktspanelen visar tomma värden tills uppgifterna kan hämtas."
+    },
+    "attention": {
+      "allClear": "Allt klart — inget kräver åtgärd just nu.",
+      "title": "Kräver åtgärd",
+      "urgent": "{{count}} brådskande",
+      "footer": "Rangordnat efter ekonomisk påverkan och kundpåverkan · uppdaterat nyss",
+      "itemFallback": "enhet",
+      "refFallback": "RMA",
+      "noneFallback": "ingen",
+      "personFallback": "någon",
+      "vendorFallback": "leverantör",
+      "filters": {
+        "all": "Alla",
+        "money": "Ekonomi",
+        "fulfillment": "Orderhantering",
+        "field": "Fältarbete",
+        "ops": "Drift"
+      },
+      "bands": {
+        "red": "Kostar pengar eller en kund idag",
+        "amber": "Bör följas upp denna vecka",
+        "info": "Håll uppsikt"
+      },
+      "actions": {
+        "invoice": "Fakturera",
+        "viewSo": "Visa försäljningsorder",
+        "trackTransfer": "Spåra överföring",
+        "recall": "Begär återlämning",
+        "review": "Granska",
+        "chase": "Följ upp",
+        "openStaging": "Öppna förberedelser",
+        "requote": "Uppdatera offert",
+        "reviewBill": "Granska leverantörsfaktura",
+        "approve": "Godkänn",
+        "reorder": "Beställ på nytt",
+        "createPo": "Skapa inköpsorder",
+        "receive": "Ta emot",
+        "shipReplacement": "Skicka ersättningsenhet",
+        "view": "Visa"
+      },
+      "kind": {
+        "unbilled": "ofakturerat",
+        "dropship": "direktleverans",
+        "cutoverRisk": "risk för försenad driftsättning",
+        "cutover": "driftsättning",
+        "vanShortage": "brist i servicebil",
+        "loaner": "försenad låneenhet",
+        "ghost": "oregistrerad materialförbrukning",
+        "rmaAging": "åldrande returärende",
+        "rmaClient": "ersättningsenhet",
+        "priceCreep": "kostnadsökning",
+        "billCreep": "fakturaökning",
+        "billsOverdue": "förfallna leverantörsfakturor",
+        "countApproval": "godkännande av inventering",
+        "stockLow": "lågt lagerbestånd",
+        "stockOut": "slut i lager",
+        "poPartial": "dellevererad inköpsorder",
+        "warranty": "garanti",
+        "deadStock": "stillaliggande lager"
+      },
+      "fact": {
+        "unbilledSo": "skickat, ännu inte fakturerat",
+        "unbilledDropship": "ofakturerade direktleveranser för {{count}} försäljningsorder",
+        "cutoverRisk": "driftsättning {{date}} — {{backordered}} av {{ordered}} restnoterade",
+        "cutoverStaging": "driftsättning {{date}} — {{staged}} av {{ordered}} förberedda",
+        "vanShortage": "brist på {{service}} med {{jobs}} installationer idag",
+        "overdueLoaner": "låneenhet {{service}} är {{days}} dagar försenad",
+        "ghostTech": "{{count}} stängda hårdvaruärenden, inga delar fakturerade",
+        "rmaVendor": "skyldig kreditering — inget svar på {{days}} dagar",
+        "rmaClient": "ersättningsenhet saknas fortfarande",
+        "priceCreepSo": "priset baseras fortfarande på tidigare kostnad",
+        "priceCreepQuotes": "{{count}} öppna offerter ligger nu under aktuell kostnad",
+        "priceCreepBill": "fakturan överstiger motsvarande inköpsorder",
+        "billsOverdue": "{{count}} förfallna leverantörsfakturor",
+        "countApproval": "inventeringsavvikelse behöver godkännas",
+        "stockOut": "{{service}} är slut i lager",
+        "stockLow": "{{service}} ligger under beställningspunkten",
+        "poPartial": "delvis mottagen inköpsorder är fortfarande öppen",
+        "warranty": "garantin för {{count}} enheter går ut om <30 dagar",
+        "deadStock": "inga lagerrörelser på 90 dagar"
+      },
+      "meta": {
+        "unbilledSo": "{{so}} · {{lines}} rader · skickat för {{days}} dagar sedan",
+        "unbilledDropship": "bekräftade direktleveransrader klara för fakturering",
+        "cutoverFeeder": "beräknad ankomst {{po}} {{eta}} · {{slack}} dagars marginal · {{pct}} % förberett",
+        "cutover": "{{so}} · {{pct}} % förberett · {{days}} dagar kvar",
+        "vanShortageTransit": "tillgängligt {{available}} · överföring från {{from}} skickad",
+        "vanShortage": "tillgängligt {{available}} · beställningspunkt {{reorder}}",
+        "overdueLoaner": "ska återlämnas {{date}}{{serial}}",
+        "ghostTech": "uppskattad materialkostnadsrisk från stängda hårdvaruärenden",
+        "rmaVendor": "{{ref}} · äldsta utestående fordran",
+        "rmaClient": "{{ref}} · {{service}} · ska vara klart om {{days}} dagar",
+        "priceCreepSo": "{{so}} · marginalrisk vid leverans med nuvarande pris",
+        "priceCreepQuotes": "offerter: {{numbers}}",
+        "priceCreepBill": "{{bill}} · flaggad mot motsvarande inköpsorder",
+        "billsOverdue": "som längst förfallen i {{days}} dagar",
+        "countApproval": "räknat av {{name}} · väntar på en annan persons godkännande",
+        "stockLevel": "tillgängligt {{available}} · beställningspunkt {{reorder}}",
+        "poPartial": "{{po}} · {{received}} av {{ordered}} mottagna · {{vendor}}",
+        "warranty": "{{count}} kunder",
+        "deadStock": "{{locations}} platser binder rörelsekapital"
+      },
+      "metric": {
+        "ageDays": "{{days}} dagar",
+        "percent": "{{pct}} %",
+        "daysOut": "{{days}} dagar kvar",
+        "jobs": "{{count}} uppdrag",
+        "today": "idag",
+        "units": "{{count}} enheter",
+        "ltThirty": "<30 dagar",
+        "available": "tillgängligt"
+      }
+    },
+    "bills": {
+      "acrossBill": "{{total}} för {{count}} leverantörsfaktura",
+      "acrossBills": "{{total}} för {{count}} leverantörsfakturor",
+      "nothingOverdue": "inget förfallet",
+      "overdue": "{{count}} förfallna · {{total}}",
+      "title": "Obetalda leverantörsfakturor",
+      "viewBills": "Visa leverantörsfakturor"
+    },
+    "kpi": {
+      "arrivingToday": " · {{count}} anländer idag",
+      "marginFoot": "{{margin}} på {{revenue}}",
+      "marginMtd": "Marginal · hittills denna månad",
+      "onHandUnits": "Enheter i lager",
+      "onOrder": "Beställt (öppna inköpsorder)",
+      "poCount": "{{count}} inköpsorder",
+      "poCountPlural": "{{count}} inköpsorder",
+      "serialized": "{{count}} serienummerspårade",
+      "stockedLocation": "{{count}} lagerförande plats",
+      "stockedLocations": "{{count}} lagerförande platser",
+      "totalValue": "Totalt lagervärde"
+    },
+    "movements": {
+      "bySuffix": " · av {{name}}",
+      "consumed": "Förbrukat",
+      "empty": "Inga nya lagerrörelser.",
+      "fullLedger": "Hela lagerjournalen",
+      "generic": "{{type}} {{qty}} × {{name}}",
+      "itemFallback": "artikel",
+      "received": "Mottaget",
+      "rma": "RMA",
+      "serialSuffix": " (serienr {{sn}})",
+      "title": "Senaste lagerrörelser",
+      "transferred": "Överfört"
+    },
+    "receiving": {
+      "allPos": "Alla inköpsorder",
+      "arriving": "På väg",
+      "empty": "Inga öppna inköpsorder.",
+      "open": "Öppen",
+      "partial": "Delvis mottagen",
+      "receivedOf": "{{received}} av {{ordered}} mottagna",
+      "title": "Kö för varumottagning",
+      "unit": "{{count}} enhet",
+      "units": "{{count}} enheter",
+      "vendorFallback": "Leverantör"
+    },
+    "relTime": {
+      "dayAgo": "för {{count}} dagar sedan",
+      "hrAgo": "för {{count}} h sedan",
+      "justNow": "nyss",
+      "minAgo": "för {{count}} min sedan"
+    },
+    "stockHealthAcross": "Lagerstatus för {{subtitle}}",
+    "subtitle": {
+      "location": "{{count}} plats",
+      "locations": "{{count}} platser",
+      "van": " och {{count}} servicebil",
+      "vans": " och {{count}} servicebilar"
+    },
+    "thisWeek": {
+      "rmasOpened": "Öppnade returärenden",
+      "title": "Denna vecka",
+      "transfers": "Överföringar mellan platser",
+      "unitsDeployed": "Driftsatta enheter",
+      "unitsReceived": "Mottagna enheter"
+    },
+    "title": "Lager",
+    "valueByLocation": {
+      "empty": "Inget lagerbestånd.",
+      "grandTotal": "Totalsumma {{total}}",
+      "title": "Lagervärde per plats"
+    },
+    "sourceDocType": {
+      "purchaseOrder": "Inköpsorder",
+      "salesOrder": "Försäljningsorder",
+      "ticketMaterial": "Ärendematerial",
+      "projectMaterial": "Projektmaterial",
+      "contract": "Avtal",
+      "rma": "RMA",
+      "transfer": "Överföring",
+      "loan": "Lån",
+      "manual": "Manuell"
+    },
+    "movementType": {
+      "adjust": "Justerat",
+      "returnRestock": "Återlagt i lager",
+      "loanOut": "Utlånat",
+      "loanIn": "Lån återlämnat",
+      "retire": "Utrangerat"
+    },
+    "header": {
+      "branch": "filial",
+      "branches": "filialer",
+      "van": "servicebil",
+      "vans": "servicebilar",
+      "tech": "tekniker",
+      "techs": "tekniker",
+      "subtitle": "{{branches}} · {{vans}} · {{techs}} — {{attention}} kräver åtgärd, {{inPlay}} pågår idag."
+    },
+    "money": {
+      "estUnavailable": "endast antal",
+      "unbilled": {
+        "title": "Skickat men ofakturerat",
+        "noShippedSos": "Inga skickade försäljningsorder väntar",
+        "otherSos": "{{count}} ytterligare skickade försäljningsorder",
+        "dropship": "Ofakturerade direktleveranser",
+        "soCount": "{{count}} försäljningsorder",
+        "ghost": "Oregistrerad materialförbrukning",
+        "ticketCount": "{{count}} ärenden",
+        "ledgerLink": "Visa intäktsjournal"
+      },
+      "margin": {
+        "title": "Marginal hittills denna månad",
+        "vsLastMonth": "jämfört med förra månaden",
+        "meta": "{{margin}} marginal · {{revenue}} intäkter · {{cogs}} kostnad för sålda varor",
+        "priceCreep": "{{count}} offerter och {{sos}} baseras fortfarande på tidigare kostnad — {{amount}} i marginal riskeras.",
+        "noSos": "inga öppna försäljningsorder"
+      },
+      "rma": {
+        "title": "Leverantörsfordringar (returkrediteringar)",
+        "oldest": "äldst: {{days}} dagar",
+        "empty": "Inga åldrande returärenden hos leverantörer.",
+        "vendorFallback": "Leverantör",
+        "creditRef": "kreditering · {{ref}}",
+        "credit": "kreditering",
+        "link": "Följ upp alla returärenden"
+      }
+    },
+    "deployments": {
+      "title": "Veckans driftsättningar",
+      "subtitle": "{{count}} driftsättningar med datum",
+      "eyebrow": "Denna vecka",
+      "scope": "{{qty}}× {{name}} — {{staged}} förberedda · {{backordered}} restnoterade",
+      "itemFallback": "artikel",
+      "scopeFallback": "{{staged}} förberedda · {{backordered}} restnoterade",
+      "feeder": "Levereras via {{po}} från {{vendor}}, beräknad ankomst {{eta}} — {{slack}} dagars marginal.",
+      "vendorFallback": "leverantör",
+      "noEta": "ingen beräknad ankomst",
+      "allServiceOrders": "Alla serviceorder",
+      "countdownBefore": "T-{{days}}",
+      "countdownAfter": "T+{{days}}",
+      "status": {
+        "atRisk": "Riskerar att försenas",
+        "ready": "Klar",
+        "staging": "Förberedelse"
+      }
+    },
+    "pipeline": {
+      "title": "Försäljningsorderflöde",
+      "openSos": "{{count}} öppna försäljningsorder",
+      "quotes": "Offert",
+      "quotesValue": "{{count}} öppna",
+      "booked": "Försäljningsorder bokad",
+      "bookedValue": "{{count}} · {{draft}} utkast",
+      "fulfilling": "Leverans pågår",
+      "fulfillingValue": "{{count}} restnoterade",
+      "invoiced": "Fakturerad",
+      "invoicedValue": "denna vecka",
+      "blocked": "{{count}} försäljningsorder blockerade av restnotering",
+      "allSos": "Alla försäljningsorder"
+    },
+    "receivingToday": {
+      "title": "Varumottagning idag",
+      "meta": "Inköpsorder · {{amount}} · {{more}} till denna vecka",
+      "empty": "Inga inköpsorder anländer idag.",
+      "vendorFallback": "Leverantör",
+      "flag": "Observera: {{po}} anländer med {{slack}} dagars marginal före driftsättning hos {{client}}.",
+      "clientFallback": "kund",
+      "receiveStock": "Ta emot varor"
+    },
+    "ghostWeek": {
+      "title": "Oregistrerad materialförbrukning denna vecka",
+      "countOnly": "stängda ärenden, 0 delar",
+      "est": "stängda ärenden, 0 delar · uppskattat {{amount}}",
+      "explainer": "Hårdvaruärenden stängda utan registrerat material — ofakturerade avslut med enbart arbete per tekniker.",
+      "empty": "Inga misstänkta fall av oregistrerad materialförbrukning denna vecka.",
+      "techChip": "{{name}} · {{count}}{{amount}}",
+      "review": "Granska oregistrerad materialförbrukning"
+    },
+    "footer": {
+      "title": "Lagerstatus",
+      "weekAbbrev": "v.",
+      "onHand": "Enheter i lager",
+      "serialized": "{{count}} serienummerspårade",
+      "deadStock": "Stillaliggande lager",
+      "deadStockDetail": "{{location}} · 90 dagar",
+      "locationFallback": "Plats",
+      "thisWeek": "Denna vecka",
+      "weekActivity": "{{received}} mottagna · {{deployed}} driftsatta · {{transfers}} överföringar · {{rmas}} returärenden",
+      "valuationReport": "Lagervärderingsrapport"
+    }
+  },
+  "errors": {
+    "cycleCounts": {
+      "approvedCannotCancel": "En godkänd inventering kan inte avbrytas.",
+      "conflict": "Denna inventeringsuppdatering står i konflikt med en befintlig post. Ladda om och försök igen.",
+      "countNonNegative": "Det räknade antalet måste vara ett heltal som är noll eller större.",
+      "locationRequired": "Välj en plats att inventera.",
+      "productNotInSession": "Produkten ingår inte i inventeringen. Ladda om inventeringen och försök igen.",
+      "recordInvalid": "En av de valda inventeringsposterna är inte längre giltig. Ladda om och försök igen.",
+      "separateApproverRequired": "En annan person måste godkänna eftersom du räknade i denna inventering.",
+      "sessionAlreadyOpen": "Platsen har redan en öppen inventering.",
+      "sessionNotFound": "Inventeringen hittades inte. Den kan ha uppdaterats eller raderats. Ladda om och försök igen.",
+      "stockLocationNotFound": "Lagerplatsen hittades inte. Den kan ha uppdaterats eller raderats. Ladda om och försök igen."
+    },
+    "dropShip": {
+      "conflict": "Denna direktleverans står i konflikt med en befintlig post. Ladda om och försök igen.",
+      "lineNotDropShip": "Denna försäljningsorderrad är inte konfigurerad för direktleverans.",
+      "lineRequired": "Välj en direktleveransrad innan du bekräftar leverantörens leverans.",
+      "poLineNotLinked": "Denna inköpsorderrad är inte kopplad till en försäljningsorderrad.",
+      "purchaseOrderNotDropShip": "Denna inköpsorder är inte konfigurerad för direktleverans.",
+      "purchaseOrderNotFound": "Inköpsordern hittades inte. Den kan ha raderats. Ladda om och försök igen.",
+      "purchaseOrderRequired": "Skapa inköpsordern för direktleverans innan du bekräftar leverantörens leverans.",
+      "recordInvalid": "En av de valda direktleveransposterna finns inte längre. Ladda om och försök igen.",
+      "salesOrderLineNotFound": "Försäljningsorderraden hittades inte. Den kan ha raderats. Ladda om och försök igen.",
+      "salesOrderNotFound": "Försäljningsordern hittades inte. Den kan ha raderats. Ladda om och försök igen.",
+      "serialsRequired": "Ange minst ett serienummer för denna serienummerspårade direktleverans.",
+      "vendorRequired": "Välj en leverantör innan du skapar inköpsordern för direktleverans."
+    },
+    "fulfillment": {
+      "conflict": "Denna leverans står i konflikt med en befintlig post. Ladda om och försök igen.",
+      "exceedsOrdered": "Leveransen skulle överstiga det beställda antalet. Ladda om ordern och försök igen.",
+      "noSerializedUnits": "Inga serienummerspårade enheter är tillgängliga för leverans av denna rad.",
+      "quantityRequired": "Ange antal att leverera för denna rad utan serienummerspårning.",
+      "recordInvalid": "En av de valda leveransposterna är inte längre giltig. Ladda om och försök igen.",
+      "sourceLocationRequired": "Välj en ursprungsplats innan du levererar denna rad.",
+      "trackingDisabled": "Lagerspårning är inte aktiverad för denna produkt.",
+      "useDropShipFlow": "Använd mottagningsflödet för direktleveranser för att leverera denna rad."
+    },
+    "ghostUsage": {
+      "aiRequiresEe": "AI-bedömning kräver Enterprise Edition och tillägget AI Assistant.",
+      "reviewNotFound": "Granskningen hittades inte. Den kan redan ha uppdaterats. Ladda om och försök igen."
+    },
+    "kits": {
+      "componentNotFound": "Komponentprodukten hittades inte. Den kan ha uppdaterats eller raderats. Ladda om och försök igen.",
+      "componentQuantityPositive": "Komponentantalet måste vara ett positivt heltal.",
+      "componentsRequired": "Lägg till minst en komponent i paketet innan du lägger till det på en försäljningsorder.",
+      "currencyCodeInvalid": "Valutan måste vara en kod med tre bokstäver, till exempel USD.",
+      "duplicateComponent": "Denna paketkomponent finns redan. Uppdatera antalet i stället.",
+      "duplicateSku": "En produkt med detta artikelnummer finns redan. Använd ett annat artikelnummer eller redigera den befintliga produkten.",
+      "enableInventoryAndKitFirst": "Aktivera lagerspårning och markera produkten som ett paket innan du hanterar komponenter.",
+      "fixedPriceRequired": "Ange ett fast paketpris som är större än 0 eller ändra prissättningen till summan av komponentpriserna.",
+      "markAsKitFirst": "Markera produkten som ett paket innan du hanterar eller prissätter paketkomponenter.",
+      "nameRequired": "Ange ett namn för paketet.",
+      "nestedKit": "Ett paket kan inte innehålla ett annat paket. Välj en produkt som inte är ett paket som komponent.",
+      "notFound": "Paketet hittades inte. Det kan ha uppdaterats eller raderats. Ladda om och försök igen.",
+      "pricingModeInvalid": "Paketets prissättningsmodell måste vara antingen summan av komponentpriserna eller ett fast pris.",
+      "productTypeNotFound": "Den valda produkttypen finns inte längre. Ladda om och välj en annan.",
+      "productTypeRequired": "Välj en produkttyp för paketet.",
+      "recordInvalid": "En av de valda paketposterna är inte längre giltig. Ladda om och försök igen.",
+      "savedButNotReloaded": "Paketet sparades men kunde inte laddas om. Ladda om för att se det senaste tillståndet.",
+      "selfComponent": "Ett paket kan inte innehålla sig självt som komponent.",
+      "updateParentLine": "Uppdatera den överordnade paketraden i stället för en enskild komponentrad."
+    },
+    "landedCost": {
+      "amountPositive": "Anskaffningsomkostnaden måste vara större än noll.",
+      "appliedCannotRemove": "Tillämpade anskaffningsomkostnadsposter kan inte tas bort.",
+      "conflict": "Denna uppdatering av anskaffningsomkostnader står i konflikt med en befintlig post. Ladda om och försök igen.",
+      "orderCancelled": "Anskaffningsomkostnader kan inte läggas till på en annullerad inköpsorder.",
+      "receiveLineFirst": "Ta emot minst en inköpsorderrad innan du tillämpar anskaffningsomkostnader.",
+      "recordInvalid": "En av de valda anskaffningsomkostnadsposterna är inte längre giltig. Ladda om och försök igen."
+    },
+    "loaners": {
+      "cannotLoanOut": "Enheten kan inte lånas ut.",
+      "cannotLoanOutStatus": {
+        "allocated": "Enheten kan inte lånas ut — den är för närvarande reserverad.",
+        "delivered": "Enheten kan inte lånas ut — den är för närvarande levererad.",
+        "in_rma": "Enheten kan inte lånas ut — den är för närvarande under returhantering.",
+        "in_stock": "Enheten kan inte lånas ut — den är för närvarande i lager.",
+        "in_transit": "Enheten kan inte lånas ut — den är för närvarande under transport.",
+        "on_loan": "Enheten kan inte lånas ut — den är för närvarande utlånad.",
+        "retired": "Enheten kan inte lånas ut — den är för närvarande utrangerad.",
+        "returned": "Enheten kan inte lånas ut — den är för närvarande returnerad."
+      },
+      "clientRequired": "Välj en kund innan du lånar ut enheten.",
+      "conflict": "Denna uppdatering av en låneenhet står i konflikt med en befintlig post. Ladda om och försök igen.",
+      "dueDateInvalid": "Välj ett giltigt förfallodatum.",
+      "invalidReferenceUnitClient": "Det verkar inte vara en giltig postreferens. Välj enheten och kunden från listorna.",
+      "notOnLoan": "Enheten är inte utlånad.",
+      "notOnLoanStatus": {
+        "allocated": "Enheten är inte utlånad — den är för närvarande reserverad.",
+        "delivered": "Enheten är inte utlånad — den är för närvarande levererad.",
+        "in_rma": "Enheten är inte utlånad — den är för närvarande under returhantering.",
+        "in_stock": "Enheten är inte utlånad — den är för närvarande i lager.",
+        "in_transit": "Enheten är inte utlånad — den är för närvarande under transport.",
+        "on_loan": "Enheten är inte utlånad — den är för närvarande utlånad.",
+        "retired": "Enheten är inte utlånad — den är för närvarande utrangerad.",
+        "returned": "Enheten är inte utlånad — den är för närvarande returnerad."
+      },
+      "recordInvalid": "En av de valda låneposterna är inte längre giltig. Ladda om och försök igen.",
+      "returnLocationRequired": "Välj en returplats."
+    },
+    "openingBalance": {
+      "conflict": "Importen står i konflikt med befintliga lagerposter. Validera filen igen och försök på nytt.",
+      "recordInvalid": "En av de valda posterna för ingående saldo är inte längre giltig. Validera filen igen och försök på nytt."
+    },
+    "permissions": {
+      "inventoryRead": "Åtkomst nekad: behörighet att läsa lageruppgifter krävs",
+      "inventoryUpdate": "Åtkomst nekad: behörighet att uppdatera lageruppgifter krävs",
+      "settingsUpdate": "Åtkomst nekad: behörighet att uppdatera inställningar krävs",
+      "vendorCreate": "Åtkomst nekad: behörighet att skapa leverantörer krävs",
+      "vendorUpdate": "Åtkomst nekad: behörighet att uppdatera leverantörer krävs"
+    },
+    "productSettings": {
+      "alreadyExists": "Lagerinställningar finns redan för denna produkt. Ladda om och försök igen.",
+      "invalidKitPricingMode": "Välj en giltig prissättningsmodell för paketet.",
+      "productNotFound": "Produkten hittades inte. Den kan ha uppdaterats eller raderats. Ladda om och försök igen.",
+      "productsOnly": "Lagerhantering kan endast aktiveras för produkter.",
+      "removeComponentsFirst": "Ta bort alla paketkomponenter innan du avmarkerar produkten som paket.",
+      "serializedUnitsExist": "Produkten har serienummerspårade enheter. Flytta, utrangera eller ta bort enheterna innan du inaktiverar serienummerspårning."
+    },
+    "purchaseOrders": {
+      "cancelledCannotEdit": "Inköpsordern är annullerad och kan inte redigeras.",
+      "cancelledCannotReceive": "Inköpsordern är annullerad och kan inte ta emot varor.",
+      "currencyRequired": "Välj en valuta innan du skapar inköpsordern.",
+      "fullyReceivedCannotCancel": "Inköpsordern är redan helt mottagen och kan inte annulleras.",
+      "lineNotFound": "Inköpsorderraden hittades inte. Den kan ha uppdaterats eller raderats. Ladda om och försök igen.",
+      "lineReceivedCannotRemove": "Varor har redan tagits emot på denna rad och den kan inte tas bort.",
+      "lineRequired": "Lägg till minst en rad innan du skickar in inköpsordern.",
+      "onlyDraftDeletable": "Endast inköpsorderutkast kan raderas. Annullera inskickade order i stället.",
+      "quantityPositive": "Antalet måste vara större än 0.",
+      "receivedStockCannotCancel": "Varor har redan tagits emot på inköpsordern och den kan inte annulleras.",
+      "recordInvalid": "En av de valda inköpsorderposterna är inte längre giltig. Ladda om och försök igen.",
+      "stockLocationNotFound": "Lagerplatsen hittades inte. Den kan ha raderats. Välj en annan plats.",
+      "submitBeforeReceiving": "Skicka in inköpsordern innan du tar emot varor mot den.",
+      "trackingDisabled": "Lagerspårning är inaktiverad för denna produkt.",
+      "vendorRequired": "Välj en leverantör innan du skapar inköpsordern."
+    },
+    "reorder": {
+      "destinationAndSourceRequired": "Välj både lastens destination och en ursprungshylla.",
+      "recordInvalid": "En av de valda posterna i lastlistan är inte längre giltig. Ladda om och försök igen."
+    },
+    "reporting": {
+      "invalidDateRange": "Välj ett giltigt datumintervall för rapporten."
+    },
+    "restock": {
+      "cannotRestock": "Enheten kan inte återläggas i lager. Endast levererade eller returnerade enheter kan återläggas i lager.",
+      "cannotRestockStatus": {
+        "allocated": "Enheten kan inte återläggas i lager — den är för närvarande reserverad. Endast levererade eller returnerade enheter kan återläggas i lager.",
+        "delivered": "Enheten kan inte återläggas i lager — den är för närvarande levererad. Endast levererade eller returnerade enheter kan återläggas i lager.",
+        "in_rma": "Enheten kan inte återläggas i lager — den är för närvarande under returhantering. Endast levererade eller returnerade enheter kan återläggas i lager.",
+        "in_stock": "Enheten kan inte återläggas i lager — den är för närvarande i lager. Endast levererade eller returnerade enheter kan återläggas i lager.",
+        "in_transit": "Enheten kan inte återläggas i lager — den är för närvarande under transport. Endast levererade eller returnerade enheter kan återläggas i lager.",
+        "on_loan": "Enheten kan inte återläggas i lager — den är för närvarande utlånad. Endast levererade eller returnerade enheter kan återläggas i lager.",
+        "retired": "Enheten kan inte återläggas i lager — den är för närvarande utrangerad. Endast levererade eller returnerade enheter kan återläggas i lager.",
+        "returned": "Enheten kan inte återläggas i lager — den är för närvarande returnerad. Endast levererade eller returnerade enheter kan återläggas i lager."
+      },
+      "conflict": "Denna återläggning i lager står i konflikt med en befintlig post. Ladda om och försök igen.",
+      "feeNonNegative": "Returavgiften måste vara noll eller större.",
+      "invalidReferenceUnitLocation": "Det verkar inte vara en giltig postreferens. Välj enheten och platsen från listorna.",
+      "locationRequired": "Välj en plats där enheten ska återläggas i lager.",
+      "productAndLocationRequired": "Välj en produkt och en plats innan du återlägger varor utan serienummerspårning i lager.",
+      "quantityPositive": "Antalet att återlägga i lager måste vara större än noll.",
+      "recordInvalid": "En av de valda posterna är inte längre giltig. Ladda om och försök igen.",
+      "serializedUnitRequired": "Produkten är serienummerspårad. Välj den specifika enhet som ska återläggas i lager."
+    },
+    "rma": {
+      "caseNotFound": "Returärendet hittades inte. Det kan ha uppdaterats eller raderats. Ladda om och försök igen.",
+      "deadUnitDueDateRequired": "Välj ett sista returdatum för den trasiga enheten.",
+      "duplicateStockUnit": "En lagerenhet med detta serienummer eller denna MAC-adress finns redan.",
+      "missingProductDetails": "Produktuppgifter saknas i returärendet. Ladda om och försök igen.",
+      "noReplacementUnit": "Ingen ersättningsenhet har registrerats i returärendet. Ladda om och försök igen.",
+      "noReturnedUnit": "Ingen returnerad enhet har registrerats i returärendet. Ladda om och försök igen.",
+      "recordInvalid": "En av de valda returposterna är inte längre giltig. Ladda om och försök igen.",
+      "replacementLocationRequired": "Välj mottagningsplats för ersättningsenheten.",
+      "replacementSerialRequired": "Ange ersättningsenhetens serienummer.",
+      "returnLocationRequired": "Välj en plats innan du tar emot returen.",
+      "returnedUnitNotFound": "Den returnerade lagerenheten hittades inte. Ladda om och välj en annan enhet.",
+      "returnedUnitRequired": "Den returnerade enhetens ID krävs.",
+      "vendorRequired": "Välj en leverantör innan du skickar returen."
+    },
+    "salesOrders": {
+      "clientRequired": "Välj en kund innan du skapar försäljningsordern.",
+      "conflict": "Denna uppdatering av försäljningsordern står i konflikt med en befintlig post. Ladda om och försök igen.",
+      "currencyRequired": "Välj en valuta innan du skapar försäljningsordern.",
+      "fulfilledCannotCancel": "Försäljningsordern har levererade rader och kan inte annulleras.",
+      "fulfilledCannotReopen": "Försäljningsordern har levererade rader och kan inte öppnas igen.",
+      "invalidDate": "Välj ett giltigt försäljningsorderdatum.",
+      "invalidValue": "Ett av de valda försäljningsordervärdena är ogiltigt. Ladda om och försök igen.",
+      "invoicedCannotCancel": "Försäljningsordern har fakturerade rader och kan inte annulleras.",
+      "invoicedCannotReopen": "Försäljningsordern har fakturerade rader och kan inte öppnas igen.",
+      "missingData": "Obligatoriska försäljningsorderuppgifter saknas. Granska formuläret och försök igen.",
+      "onlyDraftDeletable": "Endast försäljningsorderutkast kan raderas. Annullera bekräftade order i stället.",
+      "recordInvalid": "En av de valda försäljningsorderposterna är inte längre giltig. Ladda om och försök igen.",
+      "valueNotAllowed": "Ett av försäljningsordervärdena är inte tillåtet. Granska formuläret och försök igen."
+    },
+    "shared": {
+      "duplicateStockUnit": "En lagerenhet med samma serienummer eller MAC-adress finns redan.",
+      "inventoryNotEnabledForProduct": "Lagerhantering är inte aktiverad för denna produkt.",
+      "inventoryRecordInvalid": "En av de valda lagerposterna är inte längre giltig. Ladda om och försök igen.",
+      "inventorySettingsDisabled": "Lagerinställningar är inte aktiverade för denna produkt. Aktivera lagerspårning först.",
+      "lineQuantityPositive": "Antalet på varje rad måste vara större än 0.",
+      "locationRequiredForReceipt": "Välj en plats innan du tar emot varor.",
+      "purchaseOrderNotFound": "Inköpsordern hittades inte. Den kan ha uppdaterats eller raderats. Ladda om och försök igen.",
+      "salesOrderLineAlreadyFulfilled": "Denna försäljningsorderrad är redan helt levererad.",
+      "salesOrderLineNotFound": "Försäljningsorderraden hittades inte. Den kan ha uppdaterats eller raderats. Ladda om och försök igen.",
+      "salesOrderNotFound": "Försäljningsordern hittades inte. Den kan ha uppdaterats eller raderats. Ladda om och försök igen.",
+      "sameSourceAndDestination": "Välj olika ursprungs- och destinationsplatser.",
+      "serialNumberRequired": "Varje serienummerspårad enhet behöver ett serienummer.",
+      "stockUnitNotFound": "Lagerenheten hittades inte. Den kan ha uppdaterats eller raderats. Ladda om och försök igen.",
+      "vendorNotFoundChooseAnother": "Leverantören hittades inte. Den kan ha raderats. Välj en annan leverantör."
+    },
+    "stockLedger": {
+      "productRequired": "Välj en produkt innan du tar emot varor.",
+      "quantityPositiveInteger": "Antalet måste vara ett positivt heltal.",
+      "recordInvalid": "Den valda produkten eller platsen är inte längre giltig. Ladda om och försök igen.",
+      "trackingDisabled": "Lagerspårning är inaktiverad för denna produkt.",
+      "unitCostNonNegative": "Enhetskostnaden får inte vara negativ."
+    },
+    "stockLocations": {
+      "duplicate": "En plats med dessa uppgifter finns redan.",
+      "invalidType": "Välj en giltig platstyp.",
+      "moveStockBeforeDeactivate": "Flytta bort hela lagerbeståndet från platsen innan du inaktiverar den.",
+      "moveUnitsBeforeDeactivate": "Flytta eller utrangera alla enheter från platsen innan du inaktiverar den.",
+      "nameRequired": "Platsnamn krävs.",
+      "notFound": "Platsen hittades inte. Den kan ha uppdaterats eller raderats. Ladda om och försök igen.",
+      "recordInvalid": "En av de valda platsposterna är inte längre giltig. Ladda om och försök igen."
+    },
+    "stockUnits": {
+      "conflict": "Denna sökning efter lagerenheter står i konflikt med en befintlig post. Ladda om och försök igen.",
+      "invalidDateRange": "Välj ett giltigt datumintervall för lagerrörelser.",
+      "invalidValue": "Ett av de valda lagerenhetsvärdena är ogiltigt. Ladda om och försök igen.",
+      "recordInvalid": "En av de valda lagerenhetsposterna är inte längre giltig. Ladda om och försök igen."
+    },
+    "transfers": {
+      "conflict": "Denna överföring står i konflikt med en befintlig post. Ladda om och försök igen.",
+      "lineRequired": "Lägg till minst en överföringsrad.",
+      "locationsRequired": "Välj både en ursprungsplats och en destinationsplats.",
+      "notFound": "Överföringen hittades inte. Den kan ha uppdaterats eller raderats. Ladda om och försök igen.",
+      "productRequired": "Varje överföringsrad behöver en produkt eller tjänst.",
+      "quantityPositive": "Antalet på överföringsraden måste vara större än noll.",
+      "recordInvalid": "En av de valda överföringsposterna är inte längre giltig. Ladda om och försök igen.",
+      "unitNotAtSource": "Den valda lagerenheten finns inte på ursprungsplatsen.",
+      "unitNotInStock": "Endast enheter som för närvarande finns i lager kan överföras.",
+      "unitProductMismatch": "Den valda lagerenheten stämmer inte med produkten på överföringsraden."
+    },
+    "vendorBills": {
+      "duplicateNumber": "En faktura med detta nummer finns redan för den valda leverantören.",
+      "lineQuantityPositive": "Antalet på raden måste vara ett positivt heltal.",
+      "lineUnitCostNonNegative": "Radens enhetskostnad får inte vara negativ.",
+      "notFound": "Leverantörsfakturan hittades inte. Den kan ha uppdaterats eller raderats. Ladda om och försök igen.",
+      "numberRequired": "Ange leverantörens fakturanummer.",
+      "receiveStockFirst": "Ta emot varor på inköpsordern innan du skapar en leverantörsfaktura från den.",
+      "recordInvalid": "En av de valda leverantörsfakturaposterna är inte längre giltig. Ladda om och försök igen.",
+      "vendorRequired": "Välj en leverantör innan du skapar fakturan."
+    },
+    "vendorProducts": {
+      "costNonNegative": "Leverantörskostnaden måste vara noll eller större.",
+      "duplicate": "Detta leverantörserbjudande finns redan. Ladda om och redigera det befintliga erbjudandet.",
+      "recordInvalid": "Den valda leverantören eller produkten är inte längre giltig. Ladda om och försök igen.",
+      "vendorAndProductRequired": "Välj både en leverantör och en produkt innan du sparar erbjudandet."
+    },
+    "vendors": {
+      "duplicateName": "En leverantör med namnet ”{{name}}” finns redan",
+      "hasOpenPurchaseOrders": "Det går inte att inaktivera en leverantör med öppna inköpsorder",
+      "nameRequired": "Leverantörsnamn krävs",
+      "notFound": "Leverantören hittades inte"
+    }
+  },
+  "ghostUsage": {
+    "actions": {
+      "dismiss": "Avfärda",
+      "openTicket": "Öppna ärende",
+      "openTicketAddMaterial": "Öppna ärende · lägg till material",
+      "reopen": "Öppna igen"
+    },
+    "ai": {
+      "batchHint": "Behandlar upp till {{count}} misstänkta fall per körning.",
+      "checking": "Kontrollerar AI-tillgänglighet…",
+      "classifiedSummary": "Klassificerade {{classified}} (oklara {{unclear}}, misslyckade {{failed}}, återstående {{remaining}})",
+      "classifyCandidates": "Klassificera misstänkta fall",
+      "classifying": "Klassificerar…",
+      "didNotRun": "AI-bedömningen kördes inte{{reason}}.",
+      "requiresEnterprise": "AI-bedömning kräver Pro och tillägget AI Assistant.",
+      "runFailed": "AI-bedömningen misslyckades.",
+      "toggleFailed": "Det gick inte att ändra inställningen för AI-bedömning.",
+      "toggleLabel": "AI-bedömning — klassificera misstänkta ärenden med AI-tillägget",
+      "toggledOff": "AI-bedömning avstängd.",
+      "toggledOn": "AI-bedömning påslagen."
+    },
+    "candidateCapNote": " (visar de första {{cap}})",
+    "candidateCount": "{{count}} misstänkt fall av oregistrerad materialförbrukning",
+    "candidateCountPlural": "{{count}} misstänkta fall av oregistrerad materialförbrukning",
+    "candidatesTitle": "Misstänkt oregistrerad materialförbrukning",
+    "columns": {
+      "aiVerdict": "AI-bedömning",
+      "assignedTo": "Tilldelat till",
+      "board": "Tavla",
+      "category": "Kategori",
+      "client": "Kund",
+      "closed": "Stängt",
+      "closedBy": "Stängt av",
+      "ticketNumber": "Ärendenummer",
+      "title": "Titel"
+    },
+    "disposition": {
+      "confirmed": "Bekräftat — flyttat till arbetslistan.",
+      "dismissed": "Avfärdat.",
+      "reopened": "Öppnat igen."
+    },
+    "filters": {
+      "allBoards": "Alla tavlor",
+      "allCategories": "Alla kategorier",
+      "board": "Tavla",
+      "category": "Kategori"
+    },
+    "funnel": {
+      "closedInWindow": "Stängda under intervallet",
+      "ghostCandidates": "Misstänkt oregistrerad materialförbrukning",
+      "hasMaterials": "Har material",
+      "inHardwareScope": "Gäller hårdvara"
+    },
+    "loadError": "Det gick inte att ladda rapporten om oregistrerad materialförbrukning. Försök ladda om.",
+    "loading": "Laddar misstänkta fall av oregistrerad materialförbrukning…",
+    "noCandidates": "Inga misstänkta fall — ingen materialförbrukning verkar ha missats.",
+    "runFailed": "Det gick inte att köra rapporten om oregistrerad materialförbrukning.",
+    "subtitle": "Stängda hårdvaruärenden utan registrerade delar — material som verksamheten kan ha fått stå för.",
+    "title": "Oregistrerad materialförbrukning",
+    "updateFailed": "Det gick inte att uppdatera ärendet.",
+    "verdict": {
+      "hardwareMissing": "Hårdvara saknas",
+      "noHardware": "Ingen hårdvara",
+      "unclear": "Oklart"
+    },
+    "worklistTitle": "Bekräftat — registrera materialet"
+  },
+  "import_": {
+    "actions": {
+      "import": "Importera",
+      "importRows": "Importera {{count}} rader",
+      "importing": "Importerar…",
+      "validate": "Validera",
+      "validating": "Validerar…"
+    },
+    "andMore": "…och {{count}} till",
+    "andMoreValidRows": "…och {{count}} giltiga rader till",
+    "apply": {
+      "receipt": "{{count}} inleverans",
+      "receipts": "{{count}} inleveranser",
+      "success": "Importerade {{receipts}} ({{units}}, {{value}}) som ”{{label}}”.",
+      "unit": "{{count}} enhet",
+      "units": "{{count}} enheter"
+    },
+    "chooseFileFirst": "Välj en CSV-fil först.",
+    "dialogTitle": "Importera ingående saldon",
+    "errors": {
+      "headingPlural": "{{count}} fel — inget importeras förrän alla rader är felfria:",
+      "headingSingular": "{{count}} fel — inget importeras förrän alla rader är felfria:"
+    },
+    "fields": {
+      "batchLabel": "Importetikett",
+      "csvFile": "CSV-fil",
+      "enableTracking": "Aktivera lagerspårning för produkter som ännu inte spåras"
+    },
+    "importFailed": "Importen misslyckades — inget sparades.",
+    "intro": {
+      "downloadTemplate": "Ladda ner mallen",
+      "forColumns": "för att se de förväntade kolumnerna.",
+      "text": "Skapa ett ingående lagerbestånd från en CSV-fil. Varje rad registreras som en faktisk inleverans i lagerjournalen med importetiketten — rader med serienummer blir enskilda enheter och rader utan serienummer blir samlade antal."
+    },
+    "openButton": "Importera ingående saldon",
+    "readFileFailed": "Det gick inte att läsa filen.",
+    "rowPrefix": "Rad {{row}}: ",
+    "summary": {
+      "bulkQuantity": "Antal utan serienummerspårning:",
+      "locations": "Platser:",
+      "products": "Produkter:",
+      "rows": "Rader:",
+      "serializedUnits": "Serienummerspårade enheter:",
+      "settingWillEnable": "Lagerspårning aktiveras för {{count}} produkt",
+      "settingsWillEnable": "Lagerspårning aktiveras för {{count}} produkter",
+      "value": "Värde:"
+    },
+    "table": {
+      "location": "Plats",
+      "product": "Produkt",
+      "qty": "Antal",
+      "serial": "Serienummer",
+      "unitCost": "Enhetskostnad"
+    },
+    "validationFailed": "Valideringen misslyckades."
+  },
+  "kits": {
+    "addComponent": "Lägg till komponent",
+    "addFailed": "Det gick inte att lägga till",
+    "columns": {
+      "component": "Komponent",
+      "sku": "Artikelnummer"
+    },
+    "componentAdded": "Komponenten tillagd.",
+    "componentRemoved": "Komponenten borttagen.",
+    "componentRequired": "En komponent krävs.",
+    "componentsHeading": "Komponenter — {{name}}",
+    "fields": {
+      "component": "Komponent",
+      "componentPlaceholder": "Välj en produkt…",
+      "sku": "Artikelnummer",
+      "unit": "Enhet"
+    },
+    "loadComponentsFailed": "Det gick inte att ladda komponenter",
+    "loadKitsFailed": "Det gick inte att ladda paket",
+    "manage": "Hantera",
+    "quantityInvalid": "Antalet per paket måste vara ett positivt heltal.",
+    "removeConfirm": "Ta bort {{name}} från paketet?",
+    "removeFailed": "Det gick inte att ta bort",
+    "removeTitle": "Ta bort komponent",
+    "title": "Produktpaket",
+    "actions": {
+      "addComponent": "Lägg till komponent",
+      "createKit": "Skapa paket",
+      "createSalesOrder": "Skapa försäljningsorder",
+      "productSettings": "Öppna produktinställningar",
+      "updateQuantity": "Uppdatera antal",
+      "viewSalesOrders": "Visa försäljningsorder"
+    },
+    "bom": {
+      "componentCount": "{{count}} komponenter",
+      "componentCountShort": "Komponenter",
+      "emptyBody": "Paket utan komponenter kan inte användas på försäljningsorder eftersom det inte finns något att reservera eller leverera.",
+      "emptyTitle": "Lägg till minst en komponent i stycklistan",
+      "qtyPerKit": "Antal per paket",
+      "title": "Stycklista"
+    },
+    "create": {
+      "created": "Paketet skapat.",
+      "fields": {
+        "name": "Paketnamn",
+        "productType": "Produkttyp"
+      },
+      "noServiceTypes": "Skapa en produkttyp under Debitering innan du skapar ett paket.",
+      "title": "Skapa paket",
+      "validation": {
+        "costInvalid": "Paketkostnaden måste vara ett giltigt belopp.",
+        "nameRequired": "Paketnamn krävs.",
+        "priceRequired": "Paketpriset måste vara större än 0.",
+        "typeRequired": "Produkttyp krävs."
+      }
+    },
+    "detail": {
+      "loadFailedTitle": "Det gick inte att ladda paketet",
+      "notFound": "Paketet kunde inte hittas.",
+      "pickKit": "Välj ett paket för att hantera dess stycklista."
+    },
+    "empty": {
+      "body": "Skapa ett säljbart paket och lägg sedan till dess stycklista.",
+      "noResults": "Inga paket matchar filtren.",
+      "title": "Inga produktpaket ännu"
+    },
+    "filters": {
+      "all": "Alla"
+    },
+    "list": {
+      "label": "Paketlista"
+    },
+    "pricing": {
+      "addComponentsToCalculate": "Lägg till komponenter för att beräkna ett pris.",
+      "calculatedBasis": "Komponenternas försäljningspriser × antal",
+      "calculatedPrice": "Beräknat paketpris",
+      "componentCost": "Komponentkostnad",
+      "createSumHint": "Priset beräknas när komponenter har lagts till.",
+      "currency": "Valuta",
+      "each": "per styck",
+      "extCost": "Totalkostnad",
+      "extended": "totalt",
+      "fixed": "Fast pris",
+      "fixedAmount": "Fast paketpris",
+      "grossMargin": "Bruttomarginal",
+      "grossProfit": "Bruttovinst",
+      "kitCostOptional": "Paketkostnad (valfri)",
+      "kitPrice": "Paketpris",
+      "kitPriceWithCurrency": "Paketpris ({{currency}})",
+      "margin": "Marginal",
+      "marginUnavailable": "Lägg till komponentkostnader i paketets valuta för att beräkna marginalen.",
+      "mode": "Prissättningsmodell",
+      "salesOrderPrice": "Paketpris på försäljningsorder",
+      "save": "Spara prissättning",
+      "saved": "Prissättningen sparad.",
+      "sellingPrice": "Försäljningspris",
+      "sum": "Summan av komponentpriserna",
+      "title": "Prissättning och marginal",
+      "unitCost": "Enhetskostnad",
+      "unsaved": "Spara prissättningen innan du skapar en försäljningsorder.",
+      "validation": {
+        "fixedRequired": "Det fasta paketpriset måste vara större än 0.",
+        "priceRequired": "Paketpriset måste vara större än 0."
+      }
+    },
+    "salesOrder": {
+      "componentLines": "Komponentrader",
+      "componentLinesValue": "Bryts ut som underordnade rader",
+      "parentLine": "Överordnad paketrad",
+      "parentLineValue": "Prissatt till {{price}}",
+      "preview": "Förhandsgranskning av försäljningsorder",
+      "previewQuantity": "Antal paket",
+      "previewQuantityInvalid": "Ange ett positivt heltal.",
+      "stockEffect": "Lagerpåverkan",
+      "stockEffectValue": "Komponenterna reserveras och levereras från lagret",
+      "title": "Hantering på försäljningsorder"
+    },
+    "searchPlaceholder": "Sök paket eller artikelnummer",
+    "status": {
+      "incomplete": "Ofullständigt",
+      "lowStock": "Lågt lagerbestånd",
+      "noBom": "Ingen stycklista",
+      "ready": "Klart"
+    },
+    "stock": {
+      "available": "Tillgängligt",
+      "canBuildLabel": "Kan sättas samman",
+      "noStockLimit": "Ingen lagerbegränsning",
+      "noStockLimitShort": "ej tillämpligt",
+      "nonStocked": "Inte lagerförd",
+      "serialized": "Serienummerspårad",
+      "shortComponents": "Komponenter med brist",
+      "shortWarning": "Det tillgängliga lagret av minst en lagerförd komponent räcker inte till ett helt paket.",
+      "stocked": "Lagerförd",
+      "stockedComponents": "Lagerförda komponenter",
+      "title": "Lagerberedskap"
+    },
+    "summary": {
+      "attention": "{{count}} kräver åtgärd",
+      "ready": "{{count}} klara",
+      "total": "{{count}} paket"
+    },
+    "usage": {
+      "usedOnSalesOrders": "Används på försäljningsorder"
+    },
+    "componentUpdated": "Komponentantalet uppdaterat."
+  },
+  "loaners": {
+    "title": "Låneenheter",
+    "loanOut": "Låna ut",
+    "return": "Återlämna",
+    "extend": "Förläng",
+    "history": "Historik",
+    "loadFailed": "Det gick inte att ladda låneenheter. Försök igen.",
+    "loadLocationsFailed": "Det gick inte att ladda lagerplatser. Försök igen.",
+    "loanDialogTitle": "Låna ut en enhet",
+    "loaningOut": "Lånar ut…",
+    "loanedOut": "{{serial}} utlånad.",
+    "loanFailed": "Det gick inte att låna ut enheten.",
+    "theUnit": "Enheten",
+    "chooseUnit": "Välj en enhet.",
+    "chooseClient": "Välj en kund.",
+    "returnDialogTitle": "Återlämna låneenhet",
+    "returning": "Återlämnar…",
+    "returningTo": "Återlämnar {{serial}} till lagret.",
+    "returned": "{{serial}} återlämnad till lagret.",
+    "returnFailed": "Det gick inte att återlämna låneenheten.",
+    "returnLocationRequired": "Välj en returplats.",
+    "extendDialogTitle": "Förläng lån",
+    "currentlyDue": "Nuvarande förfallodatum: {{due}}",
+    "updateDueDate": "Uppdatera förfallodatum",
+    "updatingDueDate": "Uppdaterar…",
+    "dueDateUpdated": "Förfallodatum uppdaterat för {{serial}}.",
+    "extendFailed": "Det gick inte att uppdatera förfallodatumet.",
+    "historyNotFound": "Ingen historik har registrerats för denna enhet ännu.",
+    "historyLoadFailed": "Det gick inte att ladda enhetens historik. Försök igen.",
+    "noDueDate": "Inget förfallodatum",
+    "daysOut": "utlånad i {{n}} dagar",
+    "daysOverdue": "{{n}} dagar försenad",
+    "dueToday": "Ska återlämnas idag",
+    "dueInDays": "Ska återlämnas om {{n}} dagar",
+    "searchPlaceholder": "Sök serienummer, MAC-adress, kund eller produkt",
+    "columns": {
+      "serial": "Serienummer",
+      "product": "Produkt",
+      "client": "Kund",
+      "loaned": "Utlånad",
+      "due": "Ska återlämnas"
+    },
+    "summary": {
+      "out": "{{n}} utlånade",
+      "overdueSuffix": " · {{n}} försenade"
+    },
+    "filter": {
+      "label": "Visa",
+      "all": "Alla låneenheter",
+      "overdue": "Endast försenade"
+    },
+    "empty": {
+      "noMatchTitle": "Inga låneenheter matchar",
+      "noMatchDescription": "Rensa sökningen och filtret för att se allt som är utlånat.",
+      "clearFilters": "Rensa filter",
+      "noLoansTitle": "Inget är utlånat",
+      "noLoansDescription": "Enheter som du lånar ut till kunder visas här tills de återlämnas."
+    },
+    "fields": {
+      "unit": "Enhet",
+      "unitPlaceholder": "Sök efter serienummer eller MAC-adress…",
+      "unitSearchPlaceholder": "t.ex. SSD990-0007",
+      "noInStockUnits": "Inga enheter i lager hittades",
+      "client": "Kund",
+      "dueDate": "Förfallodatum",
+      "returnLocation": "Återlämna till plats",
+      "locationPlaceholder": "Välj en plats…"
+    }
+  },
+  "locations": {
+    "addLocation": "Lägg till plats",
+    "addressLabel": "Adress (valfri)",
+    "assignedPlaceholder": "Vem tillhör platsen?",
+    "cityPlaceholder": "Ort",
+    "clearSearch": "Rensa sökning",
+    "columns": {
+      "assignedTo": "Tilldelad till",
+      "available": "Tillgängligt",
+      "onHand": "I lager",
+      "product": "Produkt",
+      "sku": "Artikelnummer",
+      "stock": "Lagerbestånd",
+      "type": "Typ"
+    },
+    "count": "{{n}} plats",
+    "countPlural": "{{n}} platser",
+    "create": "Skapa",
+    "created": "Platsen skapad.",
+    "deactivateConfirm": "Inaktivera ”{{name}}”? Platsen visas då inte längre som destination för varor.",
+    "deactivateFailed": "Det gick inte att inaktivera platsen.",
+    "deactivateTitle": "Inaktivera plats",
+    "deactivated": "Platsen inaktiverad.",
+    "default": "Standard",
+    "editLocation": "Redigera plats",
+    "emptyDescription": "Lägg till en lagerlokal, servicebil eller ett kontor för att spåra var varorna finns.",
+    "emptyTitle": "Inga lagerplatser ännu",
+    "filteredCount": "{{shown}} av {{total}}",
+    "holdsStockTooltip": "Har lagerbestånd — flytta bort det före inaktivering",
+    "keepActive": "Behåll aktiv",
+    "loadErrorDescription": "Något gick fel när sidan laddades. Försök igen.",
+    "loadErrorTitle": "Det gick inte att ladda platser",
+    "loadFailed": "Det gick inte att ladda platser.",
+    "makeDefault": "Gör detta till standardplats",
+    "nameRequired": "Platsnamn krävs",
+    "noActiveDescription": "Alla platser är inaktiverade.",
+    "noActiveTitle": "Inga aktiva platser",
+    "noMatchTitle": "Inga platser matchar",
+    "notAssigned": "Inte tilldelad",
+    "nothingOnHand": "Inget lagerbestånd på denna plats.",
+    "reactivate": "Återaktivera",
+    "reactivateFailed": "Det gick inte att återaktivera platsen.",
+    "reactivated": "Platsen återaktiverad.",
+    "saveFailed": "Det gick inte att spara platsen.",
+    "searchPlaceholder": "Sök platser",
+    "selectType": "Välj en typ…",
+    "setDefault": "Ange som standard",
+    "setDefaultFailed": "Det gick inte att ange standardplatsen.",
+    "setDefaultSuccess": "”{{name}}” är nu standardplats.",
+    "showInactive": "Visa inaktiva",
+    "showInactiveCount": "Visa inaktiva ({{n}})",
+    "statePlaceholder": "Delstat/region",
+    "stock": {
+      "loadFailed": "Det gick inte att ladda platsens lagerbestånd."
+    },
+    "stockAt": "Lagerbestånd på {{name}}",
+    "stockEmpty": "Tomt",
+    "stockSearchPlaceholder": "Sök produkt eller artikelnummer",
+    "stockTitle": "Lagerbestånd",
+    "streetPlaceholder": "Gatuadress",
+    "suitePlaceholder": "Lägenhet, lokal, våning (valfritt)",
+    "title": "Lagerplatser",
+    "type": {
+      "office": "Kontor",
+      "other": "Annat",
+      "van": "Fordon",
+      "warehouse": "Lagerlokal"
+    },
+    "updated": "Platsen uppdaterad.",
+    "zipPlaceholder": "Postnummer"
+  },
+  "margin": {
+    "columns": {
+      "cogs": "Kostnad för sålda varor",
+      "margin": "Marginal",
+      "marginPct": "Marginal %",
+      "product": "Produkt",
+      "qtySold": "Sålt antal",
+      "revenue": "Intäkter"
+    },
+    "empty": "Ingen försäljningsbaserad marginal under intervallet.",
+    "loading": "Laddar marginal…",
+    "metrics": {
+      "cogs": "Kostnad för sålda varor",
+      "margin": "Marginal",
+      "marginPct": "Marginal %",
+      "revenue": "Intäkter"
+    },
+    "runFailed": "Det gick inte att köra marginalrapporten.",
+    "subtitle": "Intäkter, kostnad för sålda varor och marginal per produkt från levererade försäljningsorder.",
+    "title": "Marginalrapport"
+  },
+  "poLandedCost": {
+    "actions": {
+      "addEntry": "Lägg till post",
+      "adding": "Lägger till…",
+      "applyPending": "Tillämpa väntande poster",
+      "applying": "Tillämpar…"
+    },
+    "addFailed": "Det gick inte att lägga till posten.",
+    "allocation": {
+      "value": "Radvärde"
+    },
+    "amountRequired": "Beloppet måste vara större än 0.",
+    "applied": "{{amount}} har fördelats på {{count}} rader — genomsnitt och enhetskostnader uppdaterade.",
+    "appliedLabel": "Tillämpat:",
+    "applyFailed": "Det gick inte att tillämpa anskaffningsomkostnaderna.",
+    "columns": {
+      "allocateBy": "Fördela efter",
+      "allocated": "Fördelat",
+      "amount": "Belopp",
+      "effectiveUnitCost": "Faktisk enhetskostnad",
+      "product": "Produkt",
+      "received": "Mottaget antal",
+      "type": "Typ"
+    },
+    "costType": {
+      "duty": "Tull",
+      "freight": "Frakt",
+      "other": "Annat"
+    },
+    "entryAdded": "Anskaffningsomkostnadsposten tillagd.",
+    "fields": {
+      "amount": "Belopp ({{currency}})"
+    },
+    "loadError": "Det gick inte att ladda anskaffningsomkostnaderna.",
+    "nothingReceived": "Inget har tagits emot ännu — ta först emot inköpsordern och tillämpa sedan.",
+    "nothingToApply": "Inget att tillämpa.",
+    "pendingLabel": "Väntande:",
+    "previewTitle": "Förhandsgranskning av fördelning (väntande poster)",
+    "removeFailed": "Det gick inte att ta bort posten.",
+    "status": {
+      "applied": "Tillämpad",
+      "pending": "Väntande"
+    },
+    "title": "Anskaffningsomkostnader",
+    "titleWithPo": "Anskaffningsomkostnader — {{poNumber}}"
+  },
+  "purchaseOrders": {
+    "actions": {
+      "addItem": "Lägg till rad",
+      "create": "Skapa",
+      "landedCost": "Anskaffningsomkostnader",
+      "receive": "Ta emot",
+      "receiving": "Tar emot…",
+      "submit": "Skicka in"
+    },
+    "addPurchaseOrder": "Lägg till inköpsorder",
+    "allVendors": "Alla leverantörer",
+    "amountOnOrder": "{{amount}} beställt",
+    "mixedCurrencyOnOrder": "{{count}} utestående inköpsorder i flera valutor",
+    "cancelConfirm": "Vill du annullera inköpsorder {{poNumber}}? Detta kan inte ångras.",
+    "cancelFailed": "Det gick inte att annullera inköpsordern.",
+    "cancelTitle": "Annullera inköpsorder",
+    "cancelled": "Inköpsordern annullerad.",
+    "clearFilters": "Rensa filter",
+    "columns": {
+      "amount": "Belopp",
+      "expected": "Förväntad ankomst",
+      "poNumber": "Inköpsordernummer",
+      "product": "Produkt",
+      "qty": "Antal",
+      "received": "Mottaget antal",
+      "unitCost": "Enhetskostnad",
+      "vendor": "Leverantör"
+    },
+    "count": "{{count}} inköpsorder",
+    "countPlural": "{{count}} inköpsorder",
+    "createFailed": "Det gick inte att skapa inköpsordern.",
+    "created": "Inköpsordern skapad.",
+    "currency": {
+      "cad": "CAD — kanadensisk dollar",
+      "eur": "EUR — euro",
+      "gbp": "GBP — brittiskt pund",
+      "usd": "USD — amerikansk dollar"
+    },
+    "currencyRequired": "Valuta krävs",
+    "emptyDescription": "Skapa en inköpsorder för att spåra vad som har beställts från dina leverantörer.",
+    "emptyTitle": "Inga inköpsorder ännu",
+    "fields": {
+      "currency": "Valuta",
+      "expectedDate": "Förväntat datum",
+      "items": "Rader",
+      "location": "Plats",
+      "selectLocation": "Välj en plats…",
+      "selectProduct": "Välj en produkt…",
+      "selectVendor": "Välj en leverantör…",
+      "serialNumbers": "Serienummer (ett per rad)",
+      "vendor": "Leverantör"
+    },
+    "filteredCount": "{{filtered}} av {{total}}",
+    "keepPo": "Behåll inköpsorder",
+    "lineFullyReceived": "Denna rad är helt mottagen.",
+    "lineQtyRequired": "Antalet på varje rad måste vara större än 0",
+    "loadError": "Det gick inte att ladda inköpsorder.",
+    "loadErrorDescription": "Något gick fel när sidan laddades. Försök igen.",
+    "loadErrorTitle": "Det gick inte att ladda inköpsorder",
+    "loadOneFailed": "Det gick inte att ladda inköpsordern.",
+    "loadingPo": "Laddar inköpsorder…",
+    "locationRequired": "Plats krävs",
+    "noLines": "Inköpsordern har inga rader.",
+    "noMatchTitle": "Inga inköpsorder matchar",
+    "notFound": "Inköpsordern hittades inte",
+    "overReceived": "Mottaget antal: {{quantity}}. Du har nu tagit emot fler än vad som beställdes.",
+    "productsLoadError": "Det gick inte att ladda produkter.",
+    "qtyRequired": "Antalet måste vara större än 0",
+    "receiveFailed": "Det gick inte att ta emot denna rad.",
+    "receiveTitle": "Ta emot {{poNumber}}",
+    "receiveTitleDefault": "Ta emot inköpsorder",
+    "receivedOf": "{{received}} av {{ordered}} mottagna",
+    "receivedStatus": "Mottaget antal: {{quantity}}. Inköpsordern har nu status {{status}}.",
+    "searchPlaceholder": "Sök inköpsordernummer eller leverantör",
+    "status": {
+      "allStatuses": "Alla statusar",
+      "cancelled": "Annullerad",
+      "draft": "Utkast",
+      "open": "Öppen",
+      "partiallyReceived": "Delvis mottagen",
+      "received": "Mottagen"
+    },
+    "submitFailed": "Det gick inte att skicka in inköpsordern.",
+    "submitted": "Inköpsordern inskickad.",
+    "title": "Inköpsorder",
+    "unnamedProduct": "Namnlös produkt",
+    "vendorRequired": "Leverantör krävs",
+    "vendorsLoadError": "Det gick inte att ladda leverantörer."
+  },
+  "rma": {
+    "caseOpened": "Returärendet öppnat.",
+    "columns": {
+      "client": "Kund",
+      "daysRemaining": "Återstående dagar",
+      "dueDate": "Förfallodatum",
+      "reason": "Orsak",
+      "returnedUnit": "Returnerad enhet",
+      "type": "Typ",
+      "vendor": "Leverantör",
+      "creditAtStake": "Kreditering som riskeras",
+      "rmaNumber": "RMA-nummer"
+    },
+    "deadUnitsOwed": "Trasiga enheter att återlämna",
+    "fields": {
+      "location": "Plats",
+      "locationPlaceholder": "Välj en plats…",
+      "reason": "Orsak",
+      "returnedUnitId": "ID för returnerad enhet",
+      "rmaType": "Returtyp",
+      "vendor": "Leverantör",
+      "vendorPlaceholder": "Välj en leverantör…",
+      "vendorRef": "Leverantörens RMA-referens"
+    },
+    "loadCasesFailed": "Det gick inte att ladda returärenden.",
+    "loadLocationsVendorsFailed": "Det gick inte att ladda platser och leverantörer.",
+    "openFailed": "Det gick inte att öppna returärendet.",
+    "openRma": "Öppna returärende",
+    "pickLocation": "Välj en plats.",
+    "pickVendor": "Välj en leverantör.",
+    "receiveFailed": "Det gick inte att ta emot returen.",
+    "receiveReturn": "Ta emot retur",
+    "receiving": "Tar emot…",
+    "returnReceived": "Returen mottagen.",
+    "returnedUnitRequired": "Den returnerade enhetens ID krävs.",
+    "sendToVendor": "Skicka till leverantör",
+    "sendVendorFailed": "Det gick inte att skicka till leverantören.",
+    "sending": "Skickar…",
+    "sentToVendor": "Skickad till leverantören.",
+    "title": "RMA",
+    "types": {
+      "advanceReplacement": "Förhandsutbyte",
+      "standard": "Standard"
+    },
+    "status": {
+      "open": "Öppet",
+      "awaitingReturn": "Väntar på retur",
+      "returned": "Returnerat",
+      "sentToVendor": "Skickat till leverantör",
+      "replacementReceived": "Ersättningsenhet mottagen",
+      "replacementDeployed": "Ersättningsenhet driftsatt",
+      "deadUnitOwed": "Trasig enhet ska återlämnas",
+      "deadUnitReturned": "Trasig enhet återlämnad",
+      "replaced": "Ersatt",
+      "credited": "Krediterat",
+      "charged": "Debiterat",
+      "closed": "Stängt"
+    },
+    "ageAtVendor": "{{days}} dagar hos leverantören",
+    "filters": {
+      "statusActive": "Visar returärenden med status {{status}}."
+    }
+  },
+  "salesOrders": {
+    "actions": {
+      "addLine": "Lägg till rad",
+      "confirmShipment": "Bekräfta leverans",
+      "confirming": "Bekräftar…",
+      "createBackorderPo": "Skapa inköpsorderutkast för restorder",
+      "createDropShipPo": "Skapa inköpsorder för direktleverans",
+      "createPo": "Skapa inköpsorder",
+      "creating": "Skapar…",
+      "document": "Dokument",
+      "emailConfirmation": "Skicka bekräftelse till kunden via e-post…",
+      "fulfill": "Leverera",
+      "fulfilling": "Levererar…",
+      "generateInvoice": "Skapa faktura",
+      "invoicing": "Fakturerar…",
+      "manageLayouts": "Hantera layouter",
+      "reopenToDraft": "Öppna igen som utkast",
+      "reopening": "Öppnar igen…",
+      "cancelSalesOrder": "Annullera försäljningsorder",
+      "moreActions": "Fler åtgärder",
+      "orderPdfs": "Orderdokument i PDF-format"
+    },
+    "addSalesOrder": "Lägg till försäljningsorder",
+    "allocationMode": {
+      "hard": "Exklusiv",
+      "soft": "Preliminär"
+    },
+    "allocationModeHelp": "Preliminär reservation reserverar varor men låter dem vara synliga för andra order. Exklusiv reservation låser dem till denna order.",
+    "availabilityOk": "OK",
+    "backorderBadge": "Restnoterat {{shortfall}}",
+    "billingAllocation": "Debitering och reservation",
+    "billsOnFulfillment": "Faktureras vid leverans",
+    "cancelDialog": {
+      "confirm": "Annullera försäljningsorder",
+      "keep": "Behåll order",
+      "message": "Annullera försäljningsorder {{number}}? Detta kan inte ångras.",
+      "title": "Annullera försäljningsorder"
+    },
+    "cancelFailed": "Det gick inte att annullera",
+    "cancelled": "Försäljningsordern annullerad",
+    "clientRequired": "Kund krävs",
+    "columns": {
+      "client": "Kund",
+      "currency": "Valuta",
+      "invoiceMode": "Faktureringsläge",
+      "soNumber": "Försäljningsordernummer",
+      "amount": "Belopp",
+      "fulfillment": "Levererat antal",
+      "invoiceable": "Kan faktureras"
+    },
+    "confirmFailed": "Det gick inte att bekräfta",
+    "confirmShipmentError": "Det gick inte att bekräfta leveransen.",
+    "confirmed": "Försäljningsordern bekräftad",
+    "createDraftPoError": "Det gick inte att skapa inköpsorderutkastet.",
+    "createDropShipPoError": "Det gick inte att skapa inköpsordern för direktleverans.",
+    "createPoDialog": {
+      "note": "Beställer radens hela antal ({{quantity}}) från leverantören för leverans direkt till kunden. När leverantören skickat varorna använder du ”Bekräfta leverans” för att markera raden som levererad.",
+      "title": "Skapa inköpsorder för direktleverans — {{name}}",
+      "vendor": "Leverantör",
+      "vendorPlaceholder": "Välj en leverantör…"
+    },
+    "created": "Försäljningsordern skapad",
+    "currencyFromClient": "Hämtad från kunden",
+    "currencyRequired": "Valutakod krävs",
+    "detailTitle": "Försäljningsorder {{number}}",
+    "detailTitleFallback": "Försäljningsorder",
+    "documentFailed": "Det gick inte att skapa dokumentet.",
+    "documents": {
+      "packingSlip": "Följesedel",
+      "pickList": "Plocklista",
+      "salesOrder": "Orderbekräftelse"
+    },
+    "draftPoCreated": "Inköpsorderutkast skapat: {{numbers}}",
+    "draftPosCreated": "Inköpsorderutkast skapade: {{numbers}}",
+    "dropShipBadge": "Direktleverans",
+    "dropShipDialog": {
+      "addSerial": "Lägg till serienummer",
+      "confirmNote": "Bekräfta att leverantören har skickat de återstående {{count}} enheterna till kunden. Raden markeras som levererad. Lagerbeståndet påverkas inte.",
+      "macPlaceholder": "MAC-adress (valfri)",
+      "serialPlaceholder": "Serienummer",
+      "serialsNote": "Ange serienumren för enheterna som leverantören skickat (med MAC-adress där det är tillämpligt). Enheterna registreras som levererade till kunden. Lagerbeståndet påverkas inte.",
+      "title": "Bekräfta leverantörens leverans — {{name}}"
+    },
+    "dropShipPoCreated": "Inköpsorder {{number}} för direktleverans skapad — bekräfta leveransen när leverantören skickat varorna.",
+    "emailDialog": {
+      "confirm": "Skicka e-post",
+      "message": "Skicka orderbekräftelsen för {{number}} via e-post till kundens faktureringskontakt?",
+      "title": "Skicka orderbekräftelse via e-post"
+    },
+    "emailFailed": "Det gick inte att skicka bekräftelsen via e-post.",
+    "emailSuccess": "Bekräftelsen skickad via e-post till {{recipients}}",
+    "enterSerial": "Ange minst ett serienummer.",
+    "errors": {
+      "documentGenerationFailed": "Det gick inte att skapa dokumentet",
+      "downloadPermissionDenied": "Åtkomst nekad: kan inte ladda ner försäljningsorderdokument",
+      "emailConfirmationFailed": "Det gick inte att skicka bekräftelsen via e-post",
+      "emailPermissionDenied": "Åtkomst nekad: kan inte skicka försäljningsorderdokument via e-post",
+      "emailSendFailed": "Det gick inte att skicka e-postmeddelandet.",
+      "noRecipientEmail": "Ingen e-postadress till mottagaren finns registrerad för kunden.",
+      "notFound": "Försäljningsordern hittades inte"
+    },
+    "fields": {
+      "allocationMode": "Hur lagret ska reserveras",
+      "clientPoNumber": "Kundens inköpsordernummer",
+      "currencyCode": "Valutakod",
+      "expectedShipDate": "Förväntat leveransdatum",
+      "fulfillment": "Leveranssätt",
+      "invoiceMode": "När fakturering ska ske",
+      "items": "Rader",
+      "lines": "Rader",
+      "noService": "Ingen tjänst hittades.",
+      "notes": "Anteckningar",
+      "qty": "Antal",
+      "searchService": "Sök tjänster…",
+      "selectService": "Välj en tjänst…",
+      "service": "Tjänst",
+      "serviceId": "Tjänste-ID",
+      "unitPrice": "Enhetspris",
+      "unitPriceIn": "Enhetspris ({{currency}})"
+    },
+    "filters": {
+      "kitUsageActive": "Visar försäljningsorder med {{kit}}.",
+      "invoiceableActive": "Visar försäljningsorder med levererade, ofakturerade poster."
+    },
+    "fromQuote": "Från offert",
+    "fulfillDialog": {
+      "allocatedToThis": "Reserverad för denna order",
+      "hardHeldMany": "{{count}} enheter är exklusivt reserverade för andra order och visas inte.",
+      "hardHeldOne": "{{count}} enhet är exklusivt reserverad för en annan order och visas inte.",
+      "loadingUnits": "Laddar enheter…",
+      "noUnits": "Inga tillgängliga enheter.",
+      "remaining": "{{remaining}} av {{ordered}} återstår.",
+      "searchPlaceholder": "Sök serienummer eller MAC-adress",
+      "selectedMany": "{{count}} enheter markerade",
+      "selectedOne": "{{count}} enhet markerad",
+      "shortStockNote": "Lagerbrist ger en varning men blockerar aldrig — precis som vid automatisk materialfakturering.",
+      "softAllocatedOther": "Preliminärt reserverad för en annan order",
+      "sourceLocation": "Ursprungsplats",
+      "title": "Leverera — {{name}}"
+    },
+    "fulfilledUnits": "{{count}} enheter levererade.",
+    "fulfillment": {
+      "dropShip": "Direktleverans",
+      "fromStock": "Från lager"
+    },
+    "fulfillmentFailed": "Leveransen misslyckades.",
+    "invoiceColumns": {
+      "amount": "Belopp",
+      "created": "Skapad",
+      "invoice": "Faktura"
+    },
+    "invoiceGenFailed": "Det gick inte att skapa fakturan.",
+    "invoiceMode": {
+      "manual": "Manuell",
+      "onFulfillment": "Vid leverans"
+    },
+    "kitPrice": {
+      "calculated": "Beräknat från komponenter",
+      "configured": "Konfigurerat paketpris",
+      "currencyMismatch": "Paketpriset är konfigurerat i {{kitCurrency}}. Ange ett pris i {{orderCurrency}} för denna försäljningsorder.",
+      "currencyOverride": "Orderspecifikt pris i {{currency}}",
+      "overridden": "Ändrat från {{price}} för denna försäljningsorder",
+      "reset": "Återställ till paketpris"
+    },
+    "invoiceModeHelp": "Vid leverans skapas fakturan när varorna skickas. Med Manuell sköter du faktureringen själv.",
+    "invoicedItems": "{{count}} poster fakturerade.",
+    "invoices": "Fakturor",
+    "invoicingFailed": "Faktureringen misslyckades: {{error}}. Använd ”Skapa faktura” för att försöka igen.",
+    "lineColumns": {
+      "availability": "Tillgänglighet",
+      "fulfilled": "Levererat antal",
+      "invoiced": "Fakturerat antal",
+      "ordered": "Beställt antal",
+      "product": "Produkt",
+      "unitPrice": "Enhetspris"
+    },
+    "lineQtyPositive": "Antalet på varje rad måste vara större än 0",
+    "loadDetailError": "Det gick inte att ladda försäljningsordern.",
+    "loadError": "Det gick inte att ladda försäljningsorder",
+    "loadUnitsError": "Det gick inte att ladda tillgängliga enheter.",
+    "loadVendorsError": "Det gick inte att ladda leverantörer.",
+    "manualInvoicing": "Manuell fakturering",
+    "nothingBackordered": "Inget är restnoterat.",
+    "nothingToInvoice": "Inget kvar att fakturera.",
+    "onlyRemaining": "Endast {{remaining}} återstår på denna rad.",
+    "pickServiceForLine": "Välj en tjänst för denna rad.",
+    "pickVendor": "Välj den leverantör som ska leverera denna rad.",
+    "productDefaultLocation": "Produktens standardplats",
+    "qtyPositive": "Måste vara > 0.",
+    "qtyPositiveInteger": "Antalet måste vara ett positivt heltal.",
+    "reopenError": "Det gick inte att öppna försäljningsordern igen.",
+    "reopened": "Försäljningsordern öppnad igen — den är åter ett utkast.",
+    "selectUnit": "Markera minst en enhet.",
+    "shipmentConfirmed": "Leveransen bekräftad — {{count}} enheter levererade.",
+    "status": {
+      "cancelled": "Annullerad",
+      "closed": "Stängd",
+      "confirmed": "Bekräftad",
+      "draft": "Utkast",
+      "fulfilled": "Levererad",
+      "invoiced": "Fakturerad",
+      "partiallyFulfilled": "Delvis levererad"
+    },
+    "title": "Försäljningsorder",
+    "total": "Totalt",
+    "unassignedBackorder": "{{count}} restnoterade rader saknar föredragen leverantör — skapa dessa inköpsorder manuellt.",
+    "unnamedService": "Namnlös",
+    "notFound": "Försäljningsordern hittades inte.",
+    "badges": {
+      "dropShip": "Direktleverans",
+      "readyToInvoice": "Klar"
+    }
+  },
+  "stock": {
+    "actions": {
+      "receive": "Ta emot"
+    },
+    "badge": {
+      "serial": "Serienummer"
+    },
+    "clearFilters": "Rensa filter",
+    "columns": {
+      "available": "Tillgängligt",
+      "location": "Plats",
+      "onHand": "I lager",
+      "product": "Produkt",
+      "sku": "Artikelnummer"
+    },
+    "empty": {
+      "noMatchTitle": "Inga produkter matchar",
+      "noProductsDescription": "Aktivera lagerspårning för en produkt under Debitering → Produkter och ta sedan emot varor.",
+      "noProductsTitle": "Inga produkter har lagerspårning ännu"
+    },
+    "fields": {
+      "location": "Plats",
+      "product": "Produkt",
+      "unitCost": "Enhetskostnad"
+    },
+    "filteredCount": "{{shown}} av {{total}} produkter",
+    "levels": {
+      "empty": "Inget lagerbestånd registrerat för denna produkt.",
+      "loadFailed": "Det gick inte att ladda lagernivåer.",
+      "loading": "Laddar lagerbestånd…",
+      "title": "Lagernivåer — {{name}}"
+    },
+    "loadLocationsFailed": "Det gick inte att ladda platser.",
+    "loadProductsFailed": "Det gick inte att ladda produkter.",
+    "needsAttention": "Kräver åtgärd",
+    "rebuild": {
+      "button": "Bygg om lagercache",
+      "consistent": "{{products}} produkter kontrollerade — cachevärdena stämmer redan.",
+      "correctedMany": "{{products}} produkter kontrollerade och {{n}} värden korrigerade.",
+      "correctedOne": "{{products}} produkter kontrollerade och {{n}} värde korrigerat.",
+      "failed": "Det gick inte att bygga om lagercachen.",
+      "inProgress": "Bygger om…"
+    },
+    "receive": {
+      "costNonNegative": "Enhetskostnaden får inte vara negativ.",
+      "failed": "Det gick inte att ta emot varor.",
+      "inProgress": "Tar emot…",
+      "pickLocation": "Välj en plats.",
+      "pickProduct": "Välj en produkt.",
+      "qtyPositive": "Antalet måste vara ett positivt heltal.",
+      "selectLocation": "Välj en plats…",
+      "selectProduct": "Välj en produkt…",
+      "serialCount": "Tar emot {{n}} enheter.",
+      "serialCountOne": "Tar emot 1 enhet.",
+      "serialNumbers": "Serienummer (ett per rad)",
+      "serialsRequired": "Ange minst ett serienummer.",
+      "success": "Varorna mottagna."
+    },
+    "receiveStock": "Ta emot varor",
+    "searchPlaceholder": "Sök produkter eller artikelnummer",
+    "status": {
+      "low": "Lågt",
+      "out": "Slut",
+      "wordSite": "{{word}} · {{n}} plats",
+      "wordSites": "{{word}} · {{n}} platser"
+    },
+    "summary": {
+      "lowSuffix": " · {{n}} med lågt lagerbestånd",
+      "outSuffix": " · {{n}} slut i lager",
+      "productMany": "{{n}} produkter",
+      "productOne": "{{n}} produkt"
+    },
+    "title": "Lagerbestånd",
+    "unnamedProduct": "Namnlös produkt"
+  },
+  "stockUnits": {
+    "columns": {
+      "client": "Kund",
+      "location": "Plats",
+      "macAddress": "MAC-adress",
+      "serialNumber": "Serienummer",
+      "warrantyExpires": "Garantin går ut",
+      "product": "Produkt",
+      "unitCost": "Enhetskostnad"
+    },
+    "detail": {
+      "delivered": "Levererad",
+      "location": "Plats",
+      "mac": "MAC",
+      "received": "Mottagen",
+      "serial": "Serienummer",
+      "unitCost": "Enhetskostnad",
+      "asset": "Tillgång"
+    },
+    "exportCsv": "Exportera CSV",
+    "history": "Historik",
+    "historyLoadFailed": "Det gick inte att ladda enhetens historik. Försök igen.",
+    "historyNotFound": "Ingen historik har registrerats för denna enhet ännu.",
+    "loadFailed": "Det gick inte att ladda lagerenheter. Försök ladda om.",
+    "noMovements": "Inga lagerrörelser ännu",
+    "qty": "Antal",
+    "searchBy": "Sök efter",
+    "searchFailed": "Det gick inte att utföra sökningen. Kontrollera serienumret eller MAC-adressen och försök igen.",
+    "searchMode": {
+      "mac": "MAC-adress",
+      "serial": "Serienummer"
+    },
+    "searchPlaceholder": {
+      "mac": "t.ex. AA:BB:CC:00:00:01",
+      "serial": "t.ex. SSD990-0007"
+    },
+    "searchTerm": "Sökterm",
+    "title": "Lagerenheter",
+    "unitHistoryTitle": "Enhetshistorik",
+    "unitTitle": "Enhet {{id}}",
+    "status": {
+      "inStock": "I lager",
+      "allocated": "Reserverad",
+      "inTransit": "Under transport",
+      "onLoan": "Utlånad",
+      "delivered": "Levererad",
+      "returned": "Returnerad",
+      "inRma": "Under returhantering",
+      "retired": "Utrangerad"
+    },
+    "empty": {
+      "noMatchTitle": "Inga enheter matchar ”{{term}}”",
+      "noMatchDescription": "Rensa sökningen och filtren för att se alla enheter.",
+      "clearSearch": "Rensa sökning",
+      "noUnitsTitle": "Inga lagerenheter ännu",
+      "noUnitsDescription": "Serienummerspårade enheter visas här när varor tas emot mot en serienummerspårad produkt.",
+      "noFilterMatchTitle": "Inga enheter matchar filtret",
+      "clearFilters": "Rensa filter"
+    },
+    "summary": {
+      "one": "{{n}} enhet",
+      "many": "{{n}} enheter",
+      "valueSuffix": " · värde {{value}}"
+    },
+    "filter": {
+      "status": "Status",
+      "allStatuses": "Alla statusar",
+      "client": "Kund",
+      "allClients": "Alla kunder"
+    },
+    "viewAsset": "Visa tillgång",
+    "restock": {
+      "action": "Återlägg i lager",
+      "headerAction": "Återlägg en retur i lager",
+      "dialogTitle": "Återlägg en returnerad enhet i lager",
+      "mode": "Vad ska återläggas i lager?",
+      "modeUnit": "En specifik returnerad enhet",
+      "modeQuantity": "Ett antal av en produkt",
+      "unit": "Enhet",
+      "unitPlaceholder": "Sök en levererad eller returnerad enhet…",
+      "noUnits": "Inga levererade eller returnerade enheter matchar",
+      "location": "Plats för återläggning",
+      "locationPlaceholder": "Välj en plats…",
+      "useCurrentLocation": "Använd enhetens nuvarande plats",
+      "product": "Produkt",
+      "productPlaceholder": "Välj en produkt…",
+      "quantity": "Antal",
+      "fee": "Returavgift",
+      "feeClient": "Fakturera returavgiften till",
+      "feeInvalid": "Returavgiften måste vara noll eller större.",
+      "chooseUnit": "Välj en enhet att återlägga i lager.",
+      "chooseProduct": "Välj en produkt att återlägga i lager.",
+      "chooseLocation": "Välj en plats där varorna ska återläggas i lager.",
+      "quantityInvalid": "Ange ett antal större än noll.",
+      "chooseClient": "Välj den kund som ska faktureras returavgiften.",
+      "theProduct": "produkten",
+      "doneWithInvoice": "Enheten återlagd i lager. Fakturautkast {{number}} skapat för returavgiften på {{amount}}.",
+      "doneFeeFailed": "Enheten återlagd i lager, men returavgiften fakturerades inte: {{reason}} Skapa den manuellt.",
+      "doneQuantity": "{{qty}} × {{product}} återlagt i lager.",
+      "done": "Enheten återlagd i lager.",
+      "failed": "Det gick inte att återlägga returen i lager.",
+      "restocking": "Återlägger i lager…",
+      "submit": "Återlägg i lager"
+    }
+  },
+  "transfers": {
+    "addLine": "Lägg till rad",
+    "cancelConfirm": "Vill du avbryta överföringen? Detta kan inte ångras.",
+    "cancelFailed": "Det gick inte att avbryta",
+    "cancelTitle": "Avbryt överföring",
+    "cancelled": "Överföringen avbruten",
+    "columns": {
+      "atSource": "På ursprungsplatsen",
+      "dispatched": "Skickat antal",
+      "from": "Från",
+      "loadQty": "Antal att lasta",
+      "needed": "Behövs",
+      "product": "Produkt",
+      "received": "Mottaget antal",
+      "serials": "Serienummer",
+      "to": "Till"
+    },
+    "compute": "Beräkna",
+    "computeFailed": "Det gick inte att beräkna lastlistan",
+    "computing": "Beräknar…",
+    "dash": "-",
+    "dispatch": "Skicka",
+    "dispatchFailed": "Det gick inte att skicka",
+    "dispatchLoad": "Skicka last",
+    "dispatchTransfer": "Skicka överföring",
+    "dispatched": "Överföringen skickad",
+    "dispatching": "Skickar…",
+    "dispatchingLoad": "Skickar…",
+    "fifoPicked": "Plockat enligt FIFO",
+    "fromLocation": "Från plats",
+    "fromSource": "Från (ursprungshylla)",
+    "keepTransfer": "Behåll överföring",
+    "lineRequired": "Minst en rad med en tjänst krävs",
+    "linesLabel": "Rader *",
+    "loadDestination": "Lasta (destination)",
+    "loadDispatchedMany": "Lasten skickad ({{n}} rader)",
+    "loadDispatchedOne": "Lasten skickad ({{n}} rad)",
+    "loadFailed": "Det gick inte att ladda överföringar",
+    "loadList": "Lastlista",
+    "loadLocationsFailed": "Det gick inte att ladda platser",
+    "loadQtyRequired": "Minst ett lastantal krävs",
+    "locationsMustDiffer": "Ursprung och destination måste vara olika",
+    "locationsRequired": "Ursprungs- och destinationsplats krävs",
+    "noLowStock": "Inga rader med lågt lagerbestånd hittades för denna destination.",
+    "noSerials": "Inga serienummer",
+    "receive": "Ta emot",
+    "receiveFailed": "Det gick inte att ta emot",
+    "received": "Överföringen mottagen",
+    "selectDestination": "Välj destination…",
+    "selectLocation": "Välj en plats…",
+    "selectSource": "Välj ursprungsplats…",
+    "serviceId": "Tjänste-ID",
+    "shortAtSource": "{{n}} saknas på ursprungsplatsen",
+    "title": "Överföringar",
+    "toLocation": "Till plats",
+    "vanLoadList": "Lastlista för servicebil",
+    "vanLoadListReplenishment": "Påfyllning enligt servicebilens lastlista",
+    "status": {
+      "dispatched": "Skickad",
+      "received": "Mottagen",
+      "cancelled": "Avbruten"
+    }
+  },
+  "vendorBills": {
+    "actions": {
+      "markPaid": "Markera som betald",
+      "open": "Öppna",
+      "void": "Makulera"
+    },
+    "addBill": "Lägg till leverantörsfaktura",
+    "allStatuses": "Alla statusar",
+    "billCreated": "Leverantörsfakturan skapad (utkast).",
+    "billLoadError": "Det gick inte att ladda leverantörsfakturan.",
+    "billNumberRequired": "Ange leverantörens fakturanummer.",
+    "billOpened": "Leverantörsfakturan öppnad.",
+    "billPaid": "Leverantörsfakturan markerad som betald.",
+    "billVoided": "Leverantörsfakturan makulerad.",
+    "billedAbove": "Fakturerat belopp överstiger mottaget värde med {{amount}}.",
+    "billedBelow": "Fakturerat belopp understiger mottaget värde med {{amount}}.",
+    "columns": {
+      "amount": "Belopp",
+      "billNumber": "Fakturanummer",
+      "due": "Förfaller",
+      "line": "Rad",
+      "po": "Inköpsorder",
+      "qty": "Antal",
+      "unitCost": "Enhetskostnad",
+      "vendor": "Leverantör",
+      "vsPo": "jämfört med inköpsorder"
+    },
+    "createBill": "Skapa leverantörsfaktura",
+    "createError": "Det gick inte att skapa leverantörsfakturan.",
+    "createHint": "Förfallodatumet hämtas som standard från leverantörens betalningsvillkor. Fakturor som förifylls från en inköpsorder kopierar mottagna antal och kostnader.",
+    "creating": "Skapar…",
+    "detailDue": "Förfaller {{date}}",
+    "detailPo": "Inköpsorder {{number}}",
+    "dialog": {
+      "billTitle": "Leverantörsfaktura",
+      "createTitle": "Lägg till leverantörsfaktura",
+      "detailTitle": "Leverantörsfaktura {{number}} — {{vendor}}"
+    },
+    "export": {
+      "error": "Exporten misslyckades",
+      "exported": "Exporterad",
+      "notExported": "Inte exporterad",
+      "pending": "Väntar på export",
+      "retry": "Försök igen",
+      "retrying": "Försöker igen…"
+    },
+    "exportError": "Det gick inte att exportera leverantörsfakturan.",
+    "exportFailed": "Exporten misslyckades.",
+    "exportQueued": "Exporten köad.",
+    "exportedToAccounting": "Exporterad till bokföringen.",
+    "fields": {
+      "billNumber": "Leverantörens fakturanummer",
+      "noPoPlaceholder": "Ingen inköpsorder — tom faktura",
+      "prefillPo": "Förifyll från inköpsorder (valfritt)",
+      "vendor": "Leverantör",
+      "vendorPlaceholder": "Välj en leverantör…"
+    },
+    "loadError": "Det gick inte att ladda leverantörsfakturor.",
+    "matchesPo": "stämmer med inköpsordern",
+    "matchesPoValue": "Stämmer med inköpsorderns mottagna värde.",
+    "pickVendor": "Välj en leverantör (eller en inköpsorder att förifylla från).",
+    "status": {
+      "draft": "Utkast",
+      "open": "Öppen",
+      "paid": "Betald",
+      "void": "Makulerad"
+    },
+    "subtitle": "Enkel leverantörsreskontra: jämför vad leverantörerna fakturerat med vad du tagit emot. Ingen huvudbok — markera betalningar manuellt.",
+    "title": "Leverantörsfakturor",
+    "updateError": "Det gick inte att uppdatera leverantörsfakturan."
+  },
+  "vendorPriceList": {
+    "columns": {
+      "cost": "Kostnad",
+      "leadTime": "Ledtid",
+      "product": "Produkt",
+      "vendorSku": "Leverantörens artikelnummer"
+    },
+    "costNegative": "Kostnaden får inte vara negativ.",
+    "dialogTitle": "Prislista — {{name}}",
+    "emptyState": "Inga erbjudanden ännu — lägg till leverantörens artikelnummer och avtalskostnader nedan.",
+    "fields": {
+      "cost": "Kostnad",
+      "currency": "Valuta",
+      "leadTime": "Ledtid (dagar)",
+      "preferred": "Föredragen leverantör för denna produkt (styr beställningsförslag)",
+      "product": "Produkt",
+      "productPlaceholder": "Välj en produkt…",
+      "vendorSku": "Leverantörens artikelnummer"
+    },
+    "leadTimeDays": "{{days}} dagar",
+    "loadError": "Det gick inte att ladda prislistan.",
+    "offerRemoved": "Erbjudandet borttaget.",
+    "offerSaved": "Erbjudandet sparat.",
+    "pickProduct": "Välj en produkt.",
+    "preferred": "Föredragen",
+    "removeError": "Det gick inte att ta bort erbjudandet.",
+    "saveError": "Det gick inte att spara erbjudandet.",
+    "saveOffer": "Spara erbjudande",
+    "title": "Prislista",
+    "unnamedProduct": "Namnlös produkt"
+  },
+  "vendors": {
+    "addVendor": "Lägg till leverantör",
+    "columns": {
+      "contact": "Kontakt",
+      "email": "E-post",
+      "paymentTerms": "Betalningsvillkor",
+      "vendor": "Leverantör"
+    },
+    "created": "Leverantören skapad",
+    "deactivateConfirm": "Vill du inaktivera {{name}}? Leverantören kommer inte längre att kunna väljas för nya inköpsorder.",
+    "deactivateFailed": "Det gick inte att inaktivera",
+    "deactivateTitle": "Inaktivera leverantör",
+    "deactivated": "Leverantören inaktiverad",
+    "editVendor": "Redigera leverantör",
+    "fields": {
+      "accountNumber": "Kontonummer",
+      "contactName": "Kontaktens namn",
+      "email": "E-post",
+      "name": "Leverantörsnamn",
+      "paymentTerms": "Betalningsvillkor",
+      "phone": "Telefon"
+    },
+    "loadError": "Det gick inte att ladda leverantörer",
+    "nameRequired": "Leverantörsnamn krävs",
+    "priceList": "Prislista",
+    "title": "Leverantörer",
+    "updated": "Leverantören uppdaterad"
+  },
+  "writeOffs": {
+    "badges": {
+      "adjustment": "Justering",
+      "countCorrection": "Inventeringskorrigering",
+      "retired": "Utrangerad"
+    },
+    "byUser": "Per användare",
+    "columns": {
+      "by": "Av",
+      "events": "Händelser",
+      "foundAdded": "Hittat/tillagt",
+      "location": "Plats",
+      "net": "Netto",
+      "product": "Produkt",
+      "qty": "Antal",
+      "reason": "Orsak",
+      "type": "Typ",
+      "user": "Användare",
+      "value": "Värde",
+      "when": "När",
+      "writtenOff": "Nedskrivet"
+    },
+    "eventsTitle": "Händelser",
+    "runFailed": "Det gick inte att köra nedskrivningsrapporten.",
+    "subtitle": "Alla lagernedskrivningar, utrangeringar och inventeringskorrigeringar — med namnet på den som godkände dem. Baserat på lagerjournalen. Inget här kan redigeras i efterhand.",
+    "title": "Nedskrivningar och justeringar",
+    "totals": {
+      "foundAdded": "Hittat/tillagt: ",
+      "net": "Netto: ",
+      "writtenOff": "Nedskrivet: "
+    },
+    "truncatedNotice": "Visar de senaste {{count}} händelserna — summorna ovan omfattar fortfarande hela perioden. Begränsa datumintervallet för att se allt specificerat."
+  }
+}

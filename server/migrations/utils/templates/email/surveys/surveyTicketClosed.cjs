@@ -5,7 +5,7 @@
  * because the survey email has a unique layout with inline rating buttons and
  * a fallback survey link.
  *
- * Supports all 7 languages: en, fr, es, de, nl, it, pl.
+ * Supports all 9 languages: en, fr, es, de, nl, it, pl, pt, sv.
  */
 
 const TEMPLATE_NAME = 'SURVEY_TICKET_CLOSED';
@@ -90,6 +90,7 @@ const COPY = {
   },
 };
 SUBJECTS.pt = 'Queremos sua opinião sobre o ticket {{ticket_number}}';
+SUBJECTS.sv = 'Vi vill gärna höra vad du tycker om ärende {{ticket_number}}';
 COPY.pt = {
   salutation: 'Olá {{contact_name}},',
   summary: 'Ticket #{{ticket_number}} · {{ticket_subject}}',
@@ -98,6 +99,16 @@ COPY.pt = {
   buttonHelp: 'Escolha uma nota abaixo para nos contar como foi o atendimento:',
   fallback: 'Se os botões não carregarem, abra este link seguro da pesquisa:',
   thankYou: '{{thank_you_text}}',
+};
+COPY.sv = {
+  salutation: 'Hej {{contact_name}},',
+  summary: 'Ärende #{{ticket_number}} · {{ticket_subject}}',
+  technicianLine: 'Tekniker: {{technician_name}}',
+  ratingIntro: '{{prompt_text}}',
+  buttonHelp: 'Välj ett betyg nedan för att berätta hur du upplevde vår service:',
+  fallback: 'Om knapparna inte laddas, öppna den här säkra länken till enkäten:',
+  thankYou: '{{thank_you_text}}',
+  ticketLabel: 'Ärende',
 };
 
 /* eslint-enable max-len */

@@ -1,0 +1,182 @@
+{
+  "sidebar": {
+    "title": "Chatt",
+    "subtitleHistory": "Dina senaste AI-sessioner",
+    "subtitleDefault": "Chatta med AI och hantera sparade sessioner",
+    "showHistory": "Visa chatthistorik",
+    "hideHistory": "Dölj chatthistorik",
+    "showHistoryTooltip": "Visa historik",
+    "hideHistoryTooltip": "Dölj historik",
+    "startNewChat": "Starta ny chatt",
+    "hideSidebar": "Dölj sidopanelen för chatt",
+    "hideSidebarTooltip": "Dölj chatt",
+    "introMessage": "Chatta med AI – fråga vad du vill!",
+    "loadingChatConversation": "Laddar chattkonversation",
+    "history": {
+      "searchResults": "Sökresultat",
+      "recentChats": "Senaste chattar",
+      "loading": "Laddar…",
+      "searchAriaLabel": "Sök i chatthistoriken",
+      "searchPlaceholder": "Sök bland sparade chattar",
+      "typeAtLeastNChars": "Skriv minst {{count}} tecken för att söka bland sparade chattar.",
+      "emptyInitial": "Sparade chattar visas här när du har skickat ett meddelande.",
+      "emptySearch": "Inga matchande chattar hittades.",
+      "untitled": "Chatt utan titel",
+      "noMessagesYet": "Inga meddelanden ännu",
+      "loadingConversation": "Laddar konversation…",
+      "chatActionsFor": "Chattåtgärder för {{title}}",
+      "rename": "Byt namn",
+      "delete": "Radera",
+      "unableToLoadRecent": "Det gick inte att ladda de senaste chattarna.",
+      "unableToLoadSearch": "Det gick inte att ladda sökresultaten."
+    },
+    "timestamp": {
+      "recently": "Nyligen",
+      "justNow": "Nyss",
+      "minutesAgo": "För {{count}} min sedan",
+      "hoursAgo": "För {{count}} h sedan",
+      "daysAgo": "För {{count}} dagar sedan"
+    },
+    "newChatConfirm": {
+      "title": "Starta en ny chatt?",
+      "message": "Din nuvarande chatt tas bort från sidopanelen. Sparade meddelanden finns kvar i chatthistoriken.",
+      "confirmLabel": "Starta ny chatt",
+      "cancelLabel": "Behåll nuvarande chatt"
+    },
+    "deleteConfirm": {
+      "title": "Radera den här chatten?",
+      "messageWithTitle": "Radera ”{{title}}” från din AI-historik? Det går inte att ångra.",
+      "fallbackTitle": "den här chatten",
+      "confirmLabel": "Radera chatt",
+      "cancelLabel": "Avbryt"
+    },
+    "rename": {
+      "dialogTitle": "Byt namn på chatten",
+      "inputLabel": "Chattitel",
+      "inputPlaceholder": "Ange chattitel",
+      "cancel": "Avbryt",
+      "save": "Spara"
+    }
+  },
+  "chat": {
+    "greeting": "Jag är Alga! Din favorit-AI-assistent. Ställ en fråga till mig.",
+    "avatarAlt": "Alga",
+    "defaultFunctionName": "Funktionsanrop",
+    "resultTruncated": "Resultatet var för stort och kortades ned.",
+    "inputPlaceholder": "Skicka ett meddelande",
+    "inputPlaceholderGenerating": "Genererar text…",
+    "inputAriaLabel": "Skriv till Alga",
+    "thinking": "Tänker…",
+    "hintMultiline": "Flerradsläge: Enter lägger till en ny rad. Ctrl+Enter eller ⌘+Enter skickar.",
+    "hintSingleLine": "Tryck på Enter för att skicka. Shift+Enter växlar till flerradsläge.",
+    "editingNotice": "Du redigerar det valda meddelandet. När du skickar ersätts meddelandet och tråden genereras om därifrån.",
+    "cancelEdit": "Avbryt redigering",
+    "stop": "Stoppa",
+    "send": "Skicka",
+    "viewDetails": "Visa detaljer",
+    "viewFullValue": "Visa hela värdet",
+    "parameters": "Parametrar",
+    "plan": "Plan",
+    "playbooks": "Åtgärdsguider",
+    "validation": {
+      "dialogTitle": "Meddelande krävs",
+      "ok": "OK",
+      "enterMessage": "Skriv ett meddelande innan du skickar."
+    },
+    "errors": {
+      "userNotIdentified": "Det gick inte att skicka meddelandet: användaren kunde inte identifieras.",
+      "unableToSave": "Det gick inte att spara meddelandet. Fortsätter tills vidare utan att spara.",
+      "requestFailedStatus": "Anropet misslyckades med status {{status}}",
+      "unexpectedResponse": "Oväntat svar från assistenten.",
+      "unexpectedError": "Ett oväntat fel inträffade.",
+      "generationError": "Ett fel inträffade när svaret genererades.",
+      "connectionInterrupted": "Anslutningen avbröts — delar av svaret visas.",
+      "connectionInterruptedWithReason": "Anslutningen avbröts — {{reason}}"
+    },
+    "function": {
+      "approveAriaLabel": "Godkänn funktionsanrop",
+      "declineAriaLabel": "Avböj funktionsanrop",
+      "approve": "Godkänn",
+      "approving": "Godkänner…",
+      "deny": "Neka",
+      "processing": "Bearbetar…",
+      "autoApproveLabel": "Godkänn framtida {{method}}-anrop automatiskt",
+      "executingRequest": "Utför anrop…",
+      "continuingWithoutCall": "Fortsätter utan att anropa funktionen…",
+      "autoApprovalEnabled": "Automatiskt godkännande är aktiverat för {{method}}-anrop.",
+      "reviewAndApprove": "Granska och godkänn när du är redo.",
+      "completedNoDetails": "Åtgärden slutfördes utan ytterligare detaljer.",
+      "emDash": "—"
+    },
+    "continuation": {
+      "badge": "Fortsätt",
+      "endpoint": "sök-/verktygskedja",
+      "title": "Fortsätta samla in resultat?",
+      "description": "Alga nådde gränsen för antalet verktygssteg under informationsinsamlingen.",
+      "status": "Sökningarna och anropen ovan, som enbart läser data, har slutförts. Fortsätt från samma punkt för att samla in mer information eller slutföra svaret.",
+      "continue": "Fortsätt",
+      "continueAriaLabel": "Fortsätt AI-svaret där verktygsgränsen nåddes",
+      "defaultPrompt": "Fortsätt"
+    }
+  },
+  "quickAsk": {
+    "title": "Snabbfråga",
+    "yoloLabel": "YOLO",
+    "yoloAriaLabel": "YOLO-läge (godkänn HTTP-åtgärder automatiskt)",
+    "openInSidebar": "Öppna i sidopanelen",
+    "close": "Stäng",
+    "ask": "Fråga",
+    "inputPlaceholder": "Ställ en snabb fråga…",
+    "inputAriaLabel": "Inmatningsfält för snabbfråga",
+    "followUpNotice": "Ställ följdfrågor nedan. Den här chatten sparas på samma sätt som chatten i sidopanelen.",
+    "startingSession": "Startar session…",
+    "session": "Session: {{chatId}}",
+    "hint": "Esc för att stänga • Enter för att fråga • Shift+Enter för ny rad • {{modifier}}+↑ för att öppna igen"
+  },
+  "message": {
+    "authorAlga": "Alga",
+    "authorYou": "Du",
+    "authorSystem": "System",
+    "avatarAlt": "Algas avatar",
+    "draftingResponse": "Formulerar svar…",
+    "interrupted": "Avbrutet",
+    "interruptionDetail": "Anslutningen avbröts — delar av svaret visas.",
+    "showAssistantReasoning": "Visa assistentens resonemang",
+    "editAriaLabel": "Redigera det här meddelandet",
+    "editTooltip": "Redigera det här meddelandet",
+    "regenerateAriaLabel": "Generera om från det här meddelandet",
+    "regenerateTooltip": "Generera om från det här meddelandet",
+    "functionStatus": {
+      "success": "Funktionen kördes",
+      "declined": "Funktionen avböjdes",
+      "pending": "Funktionen är köad",
+      "error": "Funktionsfel"
+    },
+    "executedCalls": "Utförda anrop",
+    "bundleMore": "+{{remaining}} till"
+  },
+  "mention": {
+    "noResultsFound": "Inga resultat hittades"
+  },
+  "aiCredits": {
+    "indicatorTooltip": "{{credits}} AI-tillgodohavanden kvar",
+    "noSubscription": {
+      "title": "AI är ett betaltillägg",
+      "body": "Prenumerera på AI-tillägget för att använda Alga AI. Ditt abonnemang omfattar en månatlig tilldelning av tillgodohavanden.",
+      "cta": "Visa inställningar för AI-förbrukning"
+    },
+    "outOfCredits": {
+      "title": "AI-tillgodohavandena är slut",
+      "body": "Fyll på för att fortsätta använda Alga AI.",
+      "bodyWithBalance": "Ditt saldo är {{balance}} tillgodohavanden. Fyll på för att fortsätta använda Alga AI.",
+      "cta": "Köp tillgodohavanden för påfyllning"
+    },
+    "consentRequired": {
+      "title": "Samtycke till datadelning krävs",
+      "body": "En administratör måste godkänna villkoren för datadelning för AI i den här installationen innan AI kan användas."
+    }
+  },
+  "mentions": {
+    "removeChip": "Ta bort {{mention}}"
+  }
+}

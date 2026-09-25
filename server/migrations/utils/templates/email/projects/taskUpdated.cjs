@@ -118,6 +118,7 @@ const COPY = {
   },
 };
 SUBJECTS.pt = 'Tarefa atualizada: {{task.name}}';
+SUBJECTS.sv = 'Uppgift uppdaterad: {{task.name}}';
 COPY.pt = {
   headerLabel: 'Tarefa atualizada',
   intro: 'Uma tarefa foi atualizada no projeto {{project.name}}:',
@@ -130,6 +131,19 @@ COPY.pt = {
   textHeader: 'Tarefa atualizada',
   textIntro: 'Uma tarefa foi atualizada no projeto {{project.name}}:',
   textView: 'Ver tarefa em',
+};
+COPY.sv = {
+  headerLabel: 'Uppgift uppdaterad',
+  intro: 'En uppgift har uppdaterats i projektet {{project.name}}:',
+  taskName: 'Uppgiftsnamn',
+  status: 'Status',
+  progress: 'Förlopp',
+  updatedBy: 'Uppdaterad av',
+  viewButton: 'Visa uppgift',
+  footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+  textHeader: 'Uppgift uppdaterad',
+  textIntro: 'En uppgift har uppdaterats i projektet {{project.name}}:',
+  textView: 'Visa uppgift på',
 };
 
 /* eslint-enable max-len */

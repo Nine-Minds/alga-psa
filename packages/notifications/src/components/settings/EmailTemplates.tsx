@@ -70,7 +70,8 @@ const LANGUAGE_NAMES: Record<string, string> = {
   'nl': 'Dutch',
   'it': 'Italian',
   'pl': 'Polish',
-  'pt': 'Portuguese'
+  'pt': 'Portuguese',
+  'sv': 'Svenska'
 };
 
 // Row types for flat list

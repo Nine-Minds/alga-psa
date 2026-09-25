@@ -100,6 +100,17 @@ const COPY = {
     cta: 'Ver no AlgaPSA',
     textIntro: 'Alerta de RMM ({{severity}}) em {{deviceName}}: {{message}}',
   },
+  sv: {
+    subject: 'RMM-larm ({{severity}}): {{deviceName}}',
+    heading: 'RMM-larm',
+    intro: 'Ett larm från {{provider}} matchade en regel som aviserar dig.',
+    severity: 'Allvarlighetsgrad',
+    device: 'Enhet',
+    message: 'Meddelande',
+    ticket: 'Ärende',
+    cta: 'Visa i AlgaPSA',
+    textIntro: 'RMM-larm ({{severity}}) på {{deviceName}}: {{message}}',
+  },
 };
 
 function buildHtml(copy) {

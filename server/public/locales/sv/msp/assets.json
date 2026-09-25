@@ -1,0 +1,1534 @@
+{
+  "common": {
+    "actions": {
+      "add": "Lägg till",
+      "back": "Tillbaka",
+      "cancel": "Avbryt",
+      "close": "Stäng",
+      "copy": "Kopiera",
+      "create": "Skapa",
+      "delete": "Radera",
+      "download": "Ladda ner",
+      "edit": "Redigera",
+      "refresh": "Ladda om",
+      "remove": "Ta bort",
+      "retry": "Försök igen",
+      "save": "Spara",
+      "saving": "Sparar…",
+      "search": "Sök",
+      "select": "Välj",
+      "update": "Uppdatera",
+      "view": "Visa"
+    },
+    "states": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "loading": "Läser in…",
+      "na": "Saknas",
+      "none": "Ingen"
+    },
+    "no": "Nej",
+    "yes": "Ja"
+  },
+  "enums": {
+    "rmmAgentStatus": {
+      "online": "Online",
+      "offline": "Offline",
+      "overdue": "Försenad",
+      "unknown": "Okänd"
+    }
+  },
+  "assetAlertsSection": {
+    "title": "Avsnitt för tillgångslarm",
+    "description": "Omslutande komponent i Enterprise för tillgångsspecifika RMM-larm och åtgärder för att avhjälpa fel"
+  },
+  "assetCommandPalette": {
+    "title": "Kommandopalett",
+    "description": "Kommandopalett för att söka efter tillgångar och utföra åtgärder på dem",
+    "register": {
+      "label": "Kommandopalett för tillgångar",
+      "title": "Kommandopalett för tillgångar"
+    },
+    "actions": {
+      "createAsset": {
+        "label": "Skapa tillgång",
+        "description": "Öppna snabbregistreringen för att registrera en ny tillgång"
+      },
+      "refreshData": {
+        "label": "Ladda om data",
+        "description": "Hämta tillgångar från servern igen"
+      },
+      "reset": {
+        "label": "Återställ",
+        "description": "Ta bort alla aktiva filter och söktermer"
+      }
+    },
+    "searchPlaceholder": "Sök efter tillgångar, kunder, ärenden…",
+    "empty": "Inga träffar än. Prova ett annat sökord.",
+    "groups": {
+      "quickActions": "Snabbåtgärder",
+      "assets": "Tillgångar",
+      "hints": "Tips"
+    },
+    "hint": {
+      "body": "Fortsätt skriva för att söka i hela tillgångslistan. Sökning efter ärenden och kunder kommer i en senare version.",
+      "badge": "Kommer snart"
+    },
+    "values": {
+      "unassigned": "Ej tilldelad"
+    }
+  },
+  "assetDashboard": {
+    "title": "Översiktspanel för tillgångar",
+    "description": "Överordnad komponent för tillgångsöversikten som visar tillgångsvyn på klientsidan"
+  },
+  "assetDashboardClient": {
+    "title": "Klientkomponent för tillgångsöversikten",
+    "description": "Huvudsida för tillgångslistan med filter, tabell- och rutnätsvyer, massåtgärder och flöden i sidopaneler",
+    "reflection": {
+      "label": "Översiktspanel för tillgångar"
+    },
+    "errors": {
+      "loadDrawerFailed": "Det går inte att läsa in tillgångens detaljer just nu. Försök igen."
+    },
+    "details": {
+      "noIp": "Ingen IP-adress",
+      "network": "Nätverk",
+      "local": "Lokal",
+      "noDetails": "Inga detaljer tillgängliga",
+      "unassigned": "Ej tilldelad"
+    },
+    "selection": {
+      "selectAllVisibleAssets": "Markera alla synliga tillgångar",
+      "selectAsset": "Markera tillgången {{name}}",
+      "selectedAssets_one": "{{count}} tillgång markerad",
+      "selectedAssets_other": "{{count}} tillgångar markerade",
+      "clearSelection": "Avmarkera alla",
+      "bulkActionsComingSoon": "Massåtgärder kommer snart"
+    },
+    "actions": {
+      "openActionsForAsset": "Öppna åtgärder för tillgången {{name}}",
+      "viewDetails": "Visa detaljer",
+      "editAsset": "Redigera tillgång",
+      "createTicket": "Skapa ärende",
+      "refreshData": "Ladda om data"
+    },
+    "table": {
+      "name": "Namn",
+      "tag": "Inventarienummer",
+      "type": "Typ",
+      "details": "Detaljer",
+      "status": "Status",
+      "agent": "Agent",
+      "client": "Kund",
+      "location": "Plats",
+      "actions": "Åtgärder",
+      "patching": "Patchning",
+      "coverage": "Täckning"
+    },
+    "metrics": {
+      "totalAssets": {
+        "title": "Totalt antal tillgångar",
+        "helper": "Hos alla kunder"
+      },
+      "filteredView": {
+        "title": "Filtrerad vy",
+        "helper": "Matchar aktiva filter"
+      },
+      "automationReady": {
+        "title": "Redo för automatisering",
+        "helper": "Aktiva underhållsscheman",
+        "upcoming": "Kommande: {{count}}",
+        "overdue": "Försenade: {{count}}"
+      },
+      "activeSchedules": {
+        "title": "Aktiva scheman",
+        "helper": "Automatisering av livscykeln"
+      },
+      "overdueMaintenance": {
+        "title": "Försenat underhåll",
+        "helper": "Kräver åtgärd"
+      },
+      "upcomingMaintenance": {
+        "title": "Kommande underhåll",
+        "helper": "De närmaste 30 dagarna"
+      }
+    },
+    "filters": {
+      "searchPlaceholder": "Sök efter namn, inventarienummer eller serienummer",
+      "reset": "Återställ",
+      "status": "Status",
+      "type": "Typ",
+      "agent": "Agent",
+      "columns": "Kolumner",
+      "client": {
+        "loading": "Läser in kunder…",
+        "placeholder": "Kund",
+        "clear": "Rensa kundfilter"
+      },
+      "rmmManaged": {
+        "managed": "Hanterad via RMM",
+        "unmanaged": "Inte hanterad"
+      }
+    },
+    "activeFilters": {
+      "status": "Status: {{value}}",
+      "type": "Typ: {{value}}",
+      "client": "Kund: {{value}}",
+      "agent": "Agent: {{value}}"
+    },
+    "statuses": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "maintenance": "Underhåll"
+    },
+    "types": {
+      "workstation": "Arbetsstation",
+      "server": "Server",
+      "network_device": "Nätverksenhet",
+      "mobile_device": "Mobil enhet",
+      "printer": "Skrivare"
+    },
+    "columns": {
+      "select": "Markering",
+      "name": "Namn",
+      "asset_tag": "Inventarienummer",
+      "asset_type": "Tillgångstyp",
+      "details": "Detaljer",
+      "status": "Status",
+      "agent_status": "Agentstatus",
+      "client_name": "Kundnamn",
+      "location": "Plats",
+      "actions": "Åtgärder"
+    },
+    "print": {
+      "title": "Tillgångar",
+      "selectedTitle": "Markerade tillgångar",
+      "subtitle": "{{count}} tillgångar",
+      "noAssets": "Inga tillgångar att skriva ut",
+      "emptyValue": "-",
+      "columns": {
+        "name": "Namn",
+        "tag": "Inventarienummer",
+        "type": "Typ",
+        "status": "Status",
+        "client": "Kund",
+        "location": "Plats"
+      },
+      "optionsDialog": {
+        "title": "Utskriftsalternativ",
+        "description": "Välj vilka kolumner som ska ingå vid utskrift av tillgångar."
+      }
+    },
+    "bulk": {
+      "actionBar": {
+        "clear": "Rensa",
+        "delete": "Radera",
+        "selectedCount": "Markerade: {{count}}",
+        "setLocation": "Ange plats",
+        "setStatus": "Ange status"
+      },
+      "actions": {
+        "apply": "Tillämpa",
+        "applying": "Tillämpar…",
+        "deleteAssets": "Radera",
+        "deleting": "Raderar…",
+        "updateLocation": "Platsuppdatering",
+        "updateStatus": "Statusuppdatering"
+      },
+      "deleteDialog": {
+        "description": "Radera markerade tillgångar ({{count}}). Tillgångar med beroenden kan hoppas över.",
+        "title": "Radera markerade tillgångar"
+      },
+      "errors": {
+        "deleteFailed": "Det går inte att radera de markerade tillgångarna.",
+        "updateLocationFailed": "Det går inte att uppdatera platserna för de markerade tillgångarna.",
+        "updateStatusFailed": "Det går inte att uppdatera de markerade tillgångarna."
+      },
+      "locationDialog": {
+        "clearLocation": "Rensa plats",
+        "customLocation": "Anpassad plats",
+        "customPlaceholder": "Ange en anpassad plats eller ett område",
+        "description": "Uppdatera markerade tillgångar ({{count}}).",
+        "loadingLocations": "Läser in platser…",
+        "savedDisabled": "Sparade kundplatser är bara tillgängliga när alla markerade tillgångar är synliga och tillhör samma kund.",
+        "savedLocation": "Sparad kundplats",
+        "selectLocation": "Välj plats",
+        "title": "Ange tillgångens plats"
+      },
+      "partialFailure": "{{action}} slutfördes för {{succeeded}} av tillgångarna; {{failed}} misslyckades.",
+      "statusDialog": {
+        "description": "Uppdatera markerade tillgångar ({{count}}).",
+        "title": "Ange tillgångens status"
+      },
+      "success": "{{action}} slutfördes. Antal tillgångar: {{count}}."
+    }
+  },
+  "assetDashboardGrid": {
+    "title": "Rutnät för tillgångsöversikten",
+    "description": "Sammansatt rutnätslayout för tillgångarnas detaljkort, RMM-paneler och relaterade statuswidgetar"
+  },
+  "assetDetailDrawer": {
+    "title": "Sidopanel med tillgångsdetaljer",
+    "description": "Snabbvy i en sidopanel med tillgångsåtgärder, sammanfattning och navigering till den fullständiga posten",
+    "label": "Sidopanel med tillgångsdetaljer",
+    "header": {
+      "title": "Tillgångsdetaljer",
+      "subtitle": "Behåll sammanhanget när du granskar livscykel och konfiguration"
+    },
+    "tabs": {
+      "overview": "Översikt",
+      "maintenance": "Underhåll",
+      "tickets": "Ärenden",
+      "configuration": "Konfiguration",
+      "documents": "Dokument"
+    },
+    "helper": {
+      "awaitingSelection": "Väntar på att en tillgång väljs",
+      "selectedAsset": "{{name}} • {{tab}}"
+    },
+    "statuses": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "maintenance": "Underhåll"
+    },
+    "empty": {
+      "selectAsset": "Välj en tillgång för att visa detaljer",
+      "nothingToDisplay": "Inget att visa"
+    },
+    "actions": {
+      "openAssetRecord": "Öppna tillgångspost",
+      "delete": "Radera"
+    },
+    "overview": {
+      "assetTag": "Inventarienummer {{tag}} • {{type}}",
+      "client": "Kund: {{name}}",
+      "activeSchedules": "Aktiva scheman",
+      "upcomingMaintenance": "Kommande underhåll",
+      "nextOn": "Nästa tillfälle: {{date}}",
+      "completedMaintenance": "Slutfört underhåll",
+      "compliance": "Efterlevnad {{percent}} %",
+      "lastMaintenance": "Senaste underhåll",
+      "noHistory": "Ingen historik",
+      "maintenanceDataPending": "Underhållsdata visas när scheman har konfigurerats.",
+      "assetSummary": "Tillgångssammanfattning",
+      "recentLifecycleEvents": "Senaste livscykelhändelser"
+    },
+    "maintenance": {
+      "noSchedules": "Inga underhållsscheman har hittats för den här tillgången än.",
+      "totalSchedules": "Totalt antal scheman",
+      "active": "Aktiva",
+      "complianceRate": "Efterlevnadsgrad",
+      "history": "Underhållshistorik",
+      "loggedBy": "Loggat av {{name}}",
+      "system": "system",
+      "noLogs": "Underhållsloggar visas här efter den första serviceposten."
+    },
+    "tickets": {
+      "empty": "Inga ärenden är kopplade till den här tillgången än. Använd snabbåtgärden för att skapa ett.",
+      "linked": "Kopplat {{date}}",
+      "client": "Kund: {{name}}",
+      "assignee": "Ansvarig: {{name}}",
+      "openTicket": "Öppna ärende"
+    },
+    "configuration": {
+      "coreAttributes": "Grundläggande attribut",
+      "serialNumber": "Serienummer",
+      "location": "Plats",
+      "purchaseDate": "Inköpsdatum",
+      "warrantyEnd": "Garantins slutdatum",
+      "notProvided": "Inte angivet"
+    },
+    "info": {
+      "client": "Kund",
+      "unassigned": "Ej tilldelad",
+      "assetTag": "Inventarienummer",
+      "status": "Status",
+      "created": "Skapad",
+      "updated": "Uppdaterad",
+      "tenant": "Klientorganisation"
+    },
+    "typeDetails": {
+      "workstation": "Arbetsstationsdetaljer",
+      "networkDevice": "Nätverksenhetsdetaljer",
+      "server": "Serverdetaljer",
+      "mobileDevice": "Detaljer om mobil enhet",
+      "printer": "Skrivardetaljer",
+      "operatingSystem": "Operativsystem",
+      "cpu": "CPU",
+      "ram": "RAM",
+      "storage": "Lagring",
+      "gpu": "GPU",
+      "notProvided": "Inte angivet",
+      "never": "Aldrig",
+      "deviceType": "Enhetstyp",
+      "managementIp": "IP-adress för hantering",
+      "portCount": "Antal portar",
+      "firmwareVersion": "Version av fast programvara",
+      "poeSupport": "PoE-stöd",
+      "powerDraw": "Effektförbrukning",
+      "virtualized": "Virtualiserad",
+      "primaryIp": "Primär IP-adress",
+      "hypervisor": "Hypervisor",
+      "os": "Operativsystem",
+      "model": "Modell",
+      "imei": "IMEI",
+      "phoneNumber": "Telefonnummer",
+      "carrier": "Operatör",
+      "lastLogin": "Senaste inloggning",
+      "lastCheckIn": "Senaste incheckning",
+      "notReported": "Inte rapporterat",
+      "networkPrinter": "Nätverksskrivare",
+      "ipAddress": "IP-adress",
+      "supportsColor": "Stöder färgutskrift",
+      "supportsDuplex": "Stöder dubbelsidig utskrift",
+      "monthlyDutyCycle": "Maximal utskriftsvolym per månad",
+      "monthlyDutyCycleValue": "{{count}} sidor"
+    },
+    "relative": {
+      "momentsAgo": "nyss",
+      "minutesAgo_one": "för {{count}} minut sedan",
+      "minutesAgo_other": "för {{count}} minuter sedan",
+      "hoursAgo_one": "för {{count}} timme sedan",
+      "hoursAgo_other": "för {{count}} timmar sedan",
+      "daysAgo_one": "för {{count}} dag sedan",
+      "daysAgo_other": "för {{count}} dagar sedan"
+    }
+  },
+  "assetDetailHeader": {
+    "title": "Sidhuvud för tillgångsdetaljer",
+    "description": "Sidhuvud för tillgångsvyn med identitet, statusmärken och åtgärder för omladdning",
+    "backToAssets": "Tillbaka till tillgångar",
+    "assetTag": "Inventarienummer: {{tag}}",
+    "actions": {
+      "createTicket": "Skapa ärende",
+      "menu": "Åtgärder",
+      "refreshing": "Laddar om…",
+      "refreshData": "Ladda om data",
+      "rebootDevice": "Starta om enhet",
+      "rebooting": "Startar om…",
+      "editAsset": "Redigera tillgång",
+      "deleteAsset": "Radera tillgång"
+    },
+    "values": {
+      "unknownClient": "Okänd kund"
+    },
+    "reboot": {
+      "title": "Starta om enheten?",
+      "message": "{{name}} startas om direkt via {{provider}}. Alla som är inloggade förlorar osparat arbete.",
+      "confirm": "Starta om nu"
+    }
+  },
+  "assetDetailTabs": {
+    "title": "Flikar för tillgångsdetaljer",
+    "description": "Fliknavigering för tillgångens översikt, underhåll, dokument, historik och relaterade poster",
+    "tabs": {
+      "serviceHistory": "Servicehistorik",
+      "software": "Programvara",
+      "maintenance": "Underhåll",
+      "relatedAssets": "Relaterade tillgångar",
+      "documentsPasswords": "Dokument och lösenord",
+      "timeline": "Tidslinje"
+    }
+  },
+  "assetDetailView": {
+    "title": "Detaljvy för tillgång",
+    "description": "Sammansatt detaljvy för tillgångar med inläsning, fel, mätvärden, rutnätspaneler och detaljflikar",
+    "loading": "Läser in tillgångsdetaljer…",
+    "errors": {
+      "title": "Fel",
+      "notFound": "Tillgången hittades inte eller så saknar du behörighet att visa den."
+    },
+    "fields": {
+      "assetTag": "Inventarienummer",
+      "serialNumber": "Serienummer",
+      "assetType": "Typ",
+      "client": "Kund",
+      "status": "Status",
+      "location": "Plats"
+    }
+  },
+  "assetDetails": {
+    "title": "Tillgångsdetaljer",
+    "description": "Fullständig detaljsida för tillgångar med sammanfattningskort, kopplingar, dokument och driftåtgärder",
+    "assetTag": "Inventarienummer: {{tag}}",
+    "loading": {
+      "details": "Läser in detaljer…"
+    },
+    "fields": {
+      "status": "Status",
+      "serialNumber": "Serienummer",
+      "location": "Plats",
+      "client": "Kund",
+      "purchaseDate": "Inköpsdatum",
+      "warrantyEnd": "Garantins slutdatum",
+      "cpu": "CPU",
+      "ram": "RAM",
+      "storage": "Lagring",
+      "gpu": "GPU",
+      "lastLogin": "Senaste inloggning",
+      "managementIp": "IP-adress för hantering",
+      "portCount": "Antal portar",
+      "powerDraw": "Effektförbrukning",
+      "firmwareVersion": "Version av fast programvara",
+      "poeSupport": "PoE-stöd",
+      "type": "Typ",
+      "hypervisor": "Hypervisor",
+      "primaryIp": "Primär IP-adress",
+      "operatingSystem": "Operativsystem",
+      "imei": "IMEI",
+      "phoneNumber": "Telefonnummer",
+      "carrier": "Operatör",
+      "supervisionStatus": "Övervakningsstatus",
+      "ipAddress": "IP-adress",
+      "networkPrinter": "Nätverksskrivare",
+      "colorSupport": "Stöd för färgutskrift",
+      "duplexSupport": "Stöd för dubbelsidig utskrift",
+      "monthlyDutyCycle": "Maximal utskriftsvolym per månad"
+    },
+    "sections": {
+      "basicInformation": "Grundläggande information",
+      "workstation": "Arbetsstationsdetaljer",
+      "networkDevice": "Nätverksenhetsdetaljer",
+      "server": "Serverdetaljer",
+      "mobileDevice": "Detaljer om mobil enhet",
+      "printer": "Skrivardetaljer",
+      "relatedAssets": "Relaterade tillgångar"
+    },
+    "maintenance": {
+      "activeSchedules": "Aktiva scheman",
+      "overdue": "Försenad",
+      "upcoming": "Kommande"
+    },
+    "tabs": {
+      "details": "Detaljer",
+      "relatedAssets": "Relaterade tillgångar",
+      "documents": "Dokument"
+    },
+    "relationships": {
+      "parentOf": "Överordnad till",
+      "childOf": "Underordnad till"
+    },
+    "empty": {
+      "notSpecified": "Inte angivet",
+      "unassigned": "Ej tilldelad",
+      "never": "Aldrig",
+      "noAdditionalDetails": "Inga ytterligare detaljer tillgängliga",
+      "noRelatedAssets": "Inga relaterade tillgångar hittades"
+    },
+    "values": {
+      "virtual": "Virtuell",
+      "physical": "Fysisk",
+      "supervised": "Övervakad",
+      "unsupervised": "Inte övervakad",
+      "pagesUnit": "sidor"
+    },
+    "statuses": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "maintenance": "Underhåll"
+    },
+    "deviceTypes": {
+      "switch": "Switch",
+      "router": "Router",
+      "firewall": "Brandvägg",
+      "access_point": "Åtkomstpunkt",
+      "load_balancer": "Lastbalanserare"
+    },
+    "relationshipTypes": {
+      "affected": "Berörd",
+      "related": "Relaterad"
+    }
+  },
+  "assetDocuments": {
+    "title": "Tillgångsdokument",
+    "description": "Dokumentlista och bilageyta för filer som hör till en tillgång"
+  },
+  "assetForm": {
+    "title": "Tillgångsformulär",
+    "description": "Huvudformulär för att skapa och redigera tillgångar med fält för identitet, livscykel, avtal och metadata",
+    "heading": "Redigera tillgång",
+    "loading": {
+      "assetDetails": "Läser in tillgångsdetaljer…"
+    },
+    "errors": {
+      "assetNotFound": "Tillgången hittades inte",
+      "loadFailed": "Det gick inte att läsa in tillgångsdetaljer",
+      "clientsLoadFailed": "Det går inte att läsa in kunder",
+      "locationsLoadFailed": "Det går inte att läsa in platser för den här kunden",
+      "updateFailed": "Det gick inte att uppdatera tillgången",
+      "validation": "Korrigera de markerade fälten innan du sparar."
+    },
+    "actions": {
+      "viewClient": "Visa kund",
+      "manageClientLocations": "Hantera kundplatser",
+      "saveChanges": "Spara ändringar"
+    },
+    "alerts": {
+      "noLocationsSaved": "Den här kunden har inga sparade platser än. Ange en anpassad plats eller skapa en från kundposten."
+    },
+    "sections": {
+      "basicInformation": "Grundläggande information",
+      "clientAndLocation": "Kund och plats",
+      "assetBasics": "Grunduppgifter om tillgången"
+    },
+    "fields": {
+      "customLocationOption": "Anpassad plats",
+      "osType": "Typ av operativsystem",
+      "osVersion": "Operativsystemets version",
+      "cpuModel": "CPU-modell",
+      "cpuCores": "CPU-kärnor",
+      "ramGb": "RAM (GB)",
+      "storageType": "Lagringstyp",
+      "storageCapacityGb": "Lagringskapacitet (GB)",
+      "gpuModel": "GPU-modell",
+      "deviceType": "Enhetstyp",
+      "managementIp": "IP-adress för hantering",
+      "portCount": "Antal portar",
+      "firmwareVersion": "Version av fast programvara",
+      "powerDrawWatts": "Effektförbrukning (watt)",
+      "supportsPoe": "Stöder PoE",
+      "primaryIp": "Primär IP-adress",
+      "raidConfig": "RAID-konfiguration",
+      "virtualMachine": "Virtuell maskin",
+      "hypervisor": "Hypervisor",
+      "model": "Modell",
+      "imei": "IMEI",
+      "phoneNumber": "Telefonnummer",
+      "carrier": "Operatör",
+      "supervisedDevice": "Övervakad enhet",
+      "ipAddress": "IP-adress",
+      "monthlyDutyCycle": "Maximal utskriftsvolym per månad",
+      "networkPrinter": "Nätverksskrivare",
+      "colorSupport": "Stöd för färgutskrift",
+      "duplexSupport": "Stöd för dubbelsidig utskrift",
+      "client": "Kund",
+      "primaryLocation": "Primär plats",
+      "name": "Namn",
+      "assetTag": "Inventarienummer",
+      "serialNumber": "Serienummer",
+      "status": "Status",
+      "purchaseDate": "Inköpsdatum",
+      "warrantyEndDate": "Garantins slutdatum",
+      "assetType": "Typ"
+    },
+    "placeholders": {
+      "loadingClients": "Läser in kunder…",
+      "selectClient": "Välj kund",
+      "loadingLocations": "Läser in platser…",
+      "selectLocation": "Välj en plats",
+      "selectClientFirst": "Välj en kund först",
+      "customLocation": "Ange en anpassad plats eller ett område",
+      "selectPurchaseDate": "Välj inköpsdatum",
+      "selectWarrantyEndDate": "Välj garantins slutdatum"
+    },
+    "statusOptions": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "maintenance": "Underhåll"
+    },
+    "networkDeviceTypes": {
+      "switch": "Switch",
+      "router": "Router",
+      "firewall": "Brandvägg",
+      "access_point": "Åtkomstpunkt",
+      "load_balancer": "Lastbalanserare"
+    },
+    "storageTypes": {
+      "ssd": "SSD",
+      "hdd": "HDD",
+      "nvme": "NVMe"
+    },
+    "osTypes": {
+      "windows": "Windows",
+      "macos": "macOS",
+      "linux": "Linux"
+    },
+    "mobileOsTypes": {
+      "ios": "iOS",
+      "android": "Android"
+    },
+    "typeDetails": {
+      "workstation": "Arbetsstationsdetaljer",
+      "networkDevice": "Nätverksenhetsdetaljer",
+      "server": "Serverdetaljer",
+      "mobileDevice": "Detaljer om mobil enhet",
+      "printer": "Skrivardetaljer",
+      "custom": "Detaljer för {{typeName}}"
+    }
+  },
+  "assetFormClient": {
+    "title": "Klientkomponent för tillgångsformuläret",
+    "description": "Dynamisk komponent på klientsidan för tillgångsformuläret och redigeringsvyns inläsningsplatshållare",
+    "loadingTitle": "Redigera tillgång"
+  },
+  "assetMetricsBanner": {
+    "title": "Mätvärdesfält för tillgångar",
+    "description": "Mätvärdeskort och sammanställningar för ärenden, underhåll, drifttid och tillgångarnas hälsostatus",
+    "labels": {
+      "healthStatus": "Hälsostatus",
+      "openTickets": "Öppna ärenden",
+      "securityStatus": "Säkerhetsstatus",
+      "warranty": "Garanti"
+    },
+    "healthStatuses": {
+      "healthy": "Felfri",
+      "warning": "Varning",
+      "critical": "Kritisk",
+      "unknown": "Okänd"
+    },
+    "securityStatuses": {
+      "secure": "Säker",
+      "missingPatches": "{{count}} saknade patchar",
+      "critical": "Kritisk",
+      "unknown": "Okänd"
+    },
+    "openTickets": {
+      "active": "[{{count}} aktiva]"
+    },
+    "warrantyStatuses": {
+      "expiresIn": "Löper ut om {{count}} dagar",
+      "expired": "Utgången",
+      "unknown": "Okänd"
+    }
+  },
+  "assetPatchStatusSection": {
+    "title": "Avsnitt för tillgångens patchstatus",
+    "description": "Omslutande komponent i Enterprise för patch- och antivirusstatus i tillgångens detaljvy",
+    "heading": "Patchstatus",
+    "compliance": {
+      "unknown": "Okänd",
+      "actionRequired": "Åtgärd krävs",
+      "updatesAvailable": "Uppdateringar tillgängliga",
+      "minorUpdates": "Mindre uppdateringar",
+      "upToDate": "Uppdaterad"
+    },
+    "relativeTime": {
+      "never": "Aldrig",
+      "justNow": "Nyss",
+      "minutesAgo": "för {{count}} min sedan",
+      "hoursAgo": "för {{count}} h sedan",
+      "daysAgo": "för {{count}} dagar sedan"
+    },
+    "labels": {
+      "osPatches": "OS-patchar",
+      "software": "Programvara",
+      "failed": "Misslyckade",
+      "lastScan": "Senaste genomsökning",
+      "pending": "väntande",
+      "patches": "patchar"
+    }
+  },
+  "assetSoftwareInventory": {
+    "title": "Tillgångens programvaruinventering",
+    "description": "Omslutande komponent i Enterprise för inventering av installerad programvara och versionsdata",
+    "heading": "Programvaruinventering",
+    "searchPlaceholder": "Sök efter programvara…",
+    "appsCount": "{{count}} appar",
+    "unknownName": "Okänd",
+    "noMatch": "Ingen programvara matchar din sökning",
+    "version": "v{{version}}",
+    "by": "av {{publisher}}",
+    "showingOfApplications": "Visar {{shown}} av {{total}} program",
+    "more": "+{{count}} till"
+  },
+  "remoteAccess": {
+    "remoteDesktop": "Fjärrskrivbord",
+    "remoteShell": "Fjärrskal",
+    "remoteAccess": "Fjärråtkomst",
+    "deviceOverdue": "Enhetens incheckning är försenad",
+    "deviceOffline": "Enheten är offline",
+    "errors": {
+      "urlFetchFailed": "Det gick inte att hämta URL:en för fjärråtkomst",
+      "initiateFailed": "Det gick inte att starta fjärråtkomst"
+    },
+    "indicator": {
+      "online": "Online",
+      "offline": "Offline",
+      "available": "Fjärråtkomst tillgänglig",
+      "deviceOffline": "Enheten är offline"
+    }
+  },
+  "assetListErrors": {
+    "genericError": "Ett fel uppstod. Försök igen senare.",
+    "assetNotFound": "Tillgången hittades inte"
+  },
+  "assetEdit": {
+    "pageTitle": "Redigera tillgång"
+  },
+  "associatedAssets": {
+    "title": "Tillgångar",
+    "description": "Hantering av över- och underordnade tillgångsrelationer med åtgärder för kopplade tillgångar",
+    "loading": {
+      "assets": "Läser in tillgångar…"
+    },
+    "actions": {
+      "addAsset": "Lägg till tillgång",
+      "showLess": "Visa färre",
+      "moreAssets_one": "{{count}} tillgång till",
+      "moreAssets_other": "{{count}} tillgångar till"
+    },
+    "errors": {
+      "loadAvailableAssets": "Det gick inte att läsa in tillgängliga tillgångar",
+      "loadDrawerFailed": "Det går inte att läsa in tillgångens detaljer just nu. Försök igen.",
+      "loadAssociatedAssets": "Det gick inte att läsa in kopplade tillgångar",
+      "selectAtLeastOneAsset": "Välj minst en tillgång",
+      "associateFailed": "Det gick inte att koppla tillgångarna – de kan redan vara kopplade",
+      "associationFailed": "Det gick inte att koppla tillgångarna",
+      "removeFailed": "Det gick inte att ta bort tillgångskopplingen"
+    },
+    "success": {
+      "associated_one": "{{count}} tillgång har kopplats",
+      "associated_other": "{{count}} tillgångar har kopplats",
+      "associatedPartial_one": "{{count}} tillgång har kopplats, {{failed}} misslyckades (kan redan vara kopplade)",
+      "associatedPartial_other": "{{count}} tillgångar har kopplats, {{failed}} misslyckades (kan redan vara kopplade)",
+      "removed": "Tillgångskopplingen har tagits bort"
+    },
+    "empty": {
+      "noneAssociated": "Inga tillgångar är kopplade till det här ärendet.",
+      "unknownAsset": "Okänd tillgång"
+    },
+    "dialog": {
+      "title": "Lägg till tillgång",
+      "loadingAssets": "Läser in tillgångar…",
+      "selectedAssetsLabel": "Markerade:",
+      "search": {
+        "label": "Sök efter tillgångar",
+        "placeholder": "Sök efter namn, inventarienummer eller serienummer…"
+      },
+      "empty": {
+        "search": "Inga tillgångar matchar din sökning",
+        "available": "Inga tillgångar tillgängliga för den här kunden"
+      },
+      "relationship": {
+        "placeholder": "Typ…"
+      },
+      "actions": {
+        "addAssets_one": "Lägg till tillgång",
+        "addAssets_other": "Lägg till tillgångar"
+      }
+    },
+    "table": {
+      "name": "Namn",
+      "assetTag": "Inventarienummer",
+      "type": "Typ",
+      "status": "Status"
+    },
+    "assetStatuses": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "maintenance": "Underhåll"
+    },
+    "assetTypes": {
+      "workstation": "Arbetsstation",
+      "server": "Server",
+      "network_device": "Nätverksenhet",
+      "mobile_device": "Mobil enhet",
+      "printer": "Skrivare"
+    },
+    "relationshipTypes": {
+      "affected": "Berörd",
+      "related": "Relaterad"
+    }
+  },
+  "createTicketFromAssetButton": {
+    "title": "Skapa ärende från tillgång",
+    "description": "Flöde för att skapa ärenden från en tillgång med val av tavla, status och kategori",
+    "register": {
+      "label": "Skapa ärende från tillgång",
+      "title": "Skapa ärende från tillgång"
+    },
+    "defaultTitle": "Problem med {{name}}",
+    "actions": {
+      "open": "Skapa ärende",
+      "create": "Skapa ärende",
+      "creating": "Skapar…"
+    },
+    "fields": {
+      "title": "Titel",
+      "description": "Beskrivning",
+      "board": "Tavla",
+      "status": "Status",
+      "priority": "Prioritet"
+    },
+    "placeholders": {
+      "title": "Ange ärendets titel",
+      "description": "Beskriv problemet…",
+      "loadingBoards": "Läser in tavlor…",
+      "selectBoard": "Välj tavla…",
+      "selectBoardFirst": "Välj tavla först…",
+      "loadingStatuses": "Läser in statusar…",
+      "selectStatus": "Välj status…",
+      "loadingPriorities": "Läser in prioriteter…",
+      "selectPriority": "Välj prioritet…"
+    },
+    "errors": {
+      "loadPriorities": "Det gick inte att läsa in prioriteter",
+      "loadBoards": "Det gick inte att läsa in tavlor",
+      "loadStatuses": "Det gick inte att läsa in statusar",
+      "requiredFields": "Fyll i titel, tavla, status och prioritet",
+      "createFailed": "Det gick inte att skapa ärendet"
+    },
+    "success": {
+      "created": "Ärendet har skapats"
+    }
+  },
+  "deleteAssetButton": {
+    "title": "Knapp för att radera tillgång",
+    "description": "Bekräftelseflöde för att radera en tillgångspost",
+    "actions": {
+      "removing": "Tar bort…"
+    },
+    "entityNameFallback": "den här tillgången",
+    "errors": {
+      "validationFailed": "Det gick inte att validera raderingen. Försök igen.",
+      "deleteFailed": "Det gick inte att radera tillgången. Försök igen."
+    }
+  },
+  "quickAddAsset": {
+    "title": "Snabbregistrering av tillgång",
+    "description": "Flöde för snabbregistrering av en ny tillgång med de viktigaste fälten",
+    "actions": {
+      "addAsset": "Lägg till tillgång",
+      "creating": "Skapar…",
+      "createAsset": "Skapa tillgång"
+    },
+    "errors": {
+      "fetchClientsFailed": "Det gick inte att hämta kunder",
+      "createFailed": "Det gick inte att skapa tillgången"
+    },
+    "validation": {
+      "client": "Kund",
+      "assetName": "Tillgångsnamn",
+      "assetTag": "Inventarienummer",
+      "assetType": "Tillgångstyp",
+      "requiredFields": "Fyll i de obligatoriska fälten:"
+    },
+    "fields": {
+      "osType": "Typ av operativsystem",
+      "osVersion": "Operativsystemets version",
+      "deviceType": "Enhetstyp",
+      "managementIp": "IP-adress för hantering",
+      "model": "Modell",
+      "clientRequired": "Kund *",
+      "assetNameRequired": "Tillgångsnamn *",
+      "assetTagRequired": "Inventarienummer *",
+      "typeRequired": "Typ *",
+      "status": "Status",
+      "serialNumber": "Serienummer",
+      "customLocationOption": "Anpassad plats",
+      "location": "Plats"
+    },
+    "placeholders": {
+      "workstationOsType": "t.ex. Windows, macOS, Linux",
+      "workstationOsVersion": "t.ex. 11, Monterey, Ubuntu 22.04",
+      "selectDeviceType": "Välj enhetstyp",
+      "managementIp": "t.ex. 192.168.1.1",
+      "serverOsType": "t.ex. Windows Server, Ubuntu Server",
+      "serverOsVersion": "t.ex. 2022, 22.04 LTS",
+      "selectOsType": "Välj typ av operativsystem",
+      "mobileModel": "t.ex. iPhone 14 Pro, Galaxy S23",
+      "printerModel": "t.ex. HP LaserJet Pro M404n",
+      "assetName": "Ange tillgångsnamn",
+      "assetTag": "Ange inventarienummer",
+      "selectType": "Välj typ",
+      "selectStatus": "Välj status",
+      "serialNumber": "Ange serienummer",
+      "customLocation": "Ange en anpassad plats eller ett område",
+      "loadingLocations": "Läser in platser…",
+      "selectClientFirst": "Välj en kund först",
+      "selectLocation": "Välj plats"
+    },
+    "sections": {
+      "typeSpecificDetails": "Typspecifika detaljer"
+    },
+    "statusOptions": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "maintenance": "Underhåll"
+    },
+    "assetTypes": {
+      "workstation": "Arbetsstation",
+      "network_device": "Nätverksenhet",
+      "server": "Server",
+      "mobile_device": "Mobil enhet",
+      "printer": "Skrivare",
+      "unknown": "Okänd"
+    },
+    "networkDeviceTypes": {
+      "switch": "Switch",
+      "router": "Router",
+      "firewall": "Brandvägg",
+      "accessPoint": "Åtkomstpunkt",
+      "loadBalancer": "Lastbalanserare"
+    },
+    "mobileOsTypes": {
+      "ios": "iOS",
+      "android": "Android"
+    }
+  },
+  "remoteAccessButton": {
+    "title": "Knapp för fjärråtkomst",
+    "description": "Startfunktion för fjärråtkomst till tillgångar med anslutningsintegreringar som stöds"
+  },
+  "rmmStatusIndicator": {
+    "title": "RMM-statusindikator",
+    "description": "Statusmärke för ansluten eller frånkopplad RMM med tillhörande statusetiketter",
+    "titles": {
+      "unknown": "Agentstatus okänd",
+      "status": "{{status}}{{suffix}}",
+      "lastSeen": " - Senast sedd: {{value}}"
+    },
+    "relative": {
+      "justNow": "Nyss",
+      "minutesAgo": "för {{count}} min sedan",
+      "hoursAgo": "för {{count}} h sedan",
+      "daysAgo": "för {{count}} dagar sedan"
+    }
+  },
+  "assetInfoPanel": {
+    "title": "Tillgångsinformation och livscykel",
+    "description": "Allmän informationspanel för tillgångens identitet, ägare och livscykel",
+    "actions": {
+      "copy": "Kopiera",
+      "copied": "Kopierat"
+    },
+    "fields": {
+      "client": "Kund",
+      "location": "Plats",
+      "model": "Modell",
+      "serialNumber": "Serienummer",
+      "purchaseDate": "Inköpsdatum",
+      "warrantyEnd": "Garantins slutdatum"
+    },
+    "values": {
+      "unknownClient": "Okänd kund",
+      "unassigned": "Ej tilldelad",
+      "unknownModel": "Okänd modell"
+    }
+  },
+  "assetNotesPanel": {
+    "title": "Anteckningar",
+    "description": "Panel med formaterade anteckningar för tillgångsspecifik information och snabb överblick över driften",
+    "errors": {
+      "loadTitle": "Det gick inte att läsa in anteckningarna",
+      "unknown": "Okänt fel",
+      "loadDescription": "Det gick inte att läsa in anteckningarna. Försök igen."
+    },
+    "lastUpdated": "Senast uppdaterad: {{value}}"
+  },
+  "hardwareSpecsPanel": {
+    "title": "Maskinvaruspecifikationer",
+    "description": "Specifikationspanel för CPU, minne, lagring och enhetsmetadata",
+    "fields": {
+      "cpu": "CPU",
+      "ram": "RAM",
+      "storage": "Lagring",
+      "utilization": "Nyttjandegrad"
+    },
+    "values": {
+      "unknownCpu": "Okänd CPU",
+      "unknown": "Okänd",
+      "unifiedMemory": "{{size}} GB enhetligt minne",
+      "memoryUsed": " ({{size}} GB använt)",
+      "freeStorage": "{{size}} GB ledigt"
+    },
+    "empty": "Inga maskinvarudata tillgängliga",
+    "emptyStorage": "Inga lagringsenheter upptäcktes"
+  },
+  "huduDocumentationCard": {
+    "title": "Hudu-dokumentation",
+    "syncedAt": "Senast synkroniserad från Hudu: {{value}}"
+  },
+  "rmmVitalsPanel": {
+    "title": "RMM-driftvärden och anslutning",
+    "description": "RMM-panel med driftvärden för livstecken, övervakning och klientenheternas hälsa",
+    "actions": {
+      "refresh": "Ladda om"
+    },
+    "fields": {
+      "agentStatus": "Agentstatus",
+      "currentUser": "Nuvarande användare",
+      "lastCheckIn": "(Senaste incheckning: {{value}})",
+      "uptime": "Drifttid",
+      "lastSync": "Senaste RMM-synkronisering",
+      "network": "Nätverk",
+      "networkValue": "LAN-IP: {{lan}} | WAN-IP: {{wan}}",
+      "taniumCriticality": "Kritikalitet i Tanium"
+    },
+    "values": {
+      "never": "Aldrig"
+    },
+    "empty": {
+      "title": "RMM-driftvärden",
+      "notConnected": "Inte ansluten till RMM"
+    },
+    "uptime": "{{days}} dagar, {{hours}} timmar, {{minutes}} minuter"
+  },
+  "securityPatchingPanel": {
+    "title": "Säkerhet och patchning",
+    "description": "Panel för säkerhets- och patchningsläge med indikatorer för sårbarheter och uppdateringsstatus",
+    "fields": {
+      "osVersion": "Operativsystemets version",
+      "antivirus": "Antivirus",
+      "patchStatus": "Patchstatus",
+      "firewall": "Brandvägg"
+    },
+    "values": {
+      "unknown": "Okänd"
+    },
+    "antivirus": {
+      "running": "✔ Installerat och igång",
+      "inactive": "Inaktiv",
+      "lastScan": "| Senaste genomsökning: Idag kl. 03.00"
+    },
+    "patchStatus": {
+      "critical": "Kritisk",
+      "atRisk": "Riskutsatt",
+      "missingPatches": "- {{count}} kritiska operativsystemspatchar saknas.",
+      "upToDate": "✔ Uppdaterad"
+    },
+    "firewall": {
+      "on": "✔ På"
+    }
+  },
+  "copyableField": {
+    "title": "Kopierbart fält",
+    "description": "Gemensamt fält för kopiering till urklipp i tillgångsformulär och detaljpaneler",
+    "actions": {
+      "copy": "Kopiera",
+      "copied": "Kopierat"
+    }
+  },
+  "statusBadge": {
+    "title": "Statusmärke",
+    "description": "Gemensam komponent för statusmärken som visar tillgångarnas livscykel- och övervakningsstatus",
+    "statuses": {
+      "online": "Online",
+      "offline": "Offline",
+      "overdue": "Försenad",
+      "healthy": "Felfri",
+      "warning": "Varning",
+      "critical": "Kritisk",
+      "unknown": "Okänd",
+      "secure": "Säker",
+      "at_risk": "Riskutsatt",
+      "active": "Aktiv",
+      "expiring_soon": "Löper snart ut",
+      "expired": "Utgången"
+    }
+  },
+  "utilizationBar": {
+    "title": "Nyttjandegradsstapel",
+    "description": "Gemensam förloppsindikator för nyttjandegrad och procentbaserade tillgångsmått"
+  },
+  "createMaintenanceScheduleDialog": {
+    "title": "Skapa underhållsschema",
+    "description": "Dialogruta för att ange underhållsscheman och upprepningsregler för en tillgång",
+    "titles": {
+      "create": "Schemalägg underhåll",
+      "edit": "Redigera underhållsschema"
+    },
+    "actions": {
+      "create": "Skapa schema",
+      "creating": "Skapar…",
+      "update": "Uppdatera schema",
+      "updating": "Uppdaterar…"
+    },
+    "fields": {
+      "scheduleName": "Schemanamn *",
+      "description": "Beskrivning",
+      "maintenanceType": "Underhållstyp *",
+      "frequency": "Frekvens *",
+      "interval": "Intervall *",
+      "nextMaintenanceDate": "Nästa underhållsdatum *",
+      "active": "Aktivt"
+    },
+    "placeholders": {
+      "scheduleName": "t.ex. Månatligt serverunderhåll",
+      "description": "Valfri beskrivning…",
+      "maintenanceType": "Välj underhållstyp",
+      "frequency": "Välj frekvens",
+      "interval": "1",
+      "nextMaintenanceDate": "Välj datum"
+    },
+    "frequencyOptions": {
+      "daily": "Dagligen",
+      "weekly": "Veckovis",
+      "monthly": "Månadsvis",
+      "quarterly": "Kvartalsvis",
+      "yearly": "Årligen"
+    },
+    "errors": {
+      "scheduleNameRequired": "Schemanamn krävs",
+      "maintenanceTypeRequired": "Underhållstyp krävs",
+      "frequencyRequired": "Frekvens krävs",
+      "nextMaintenanceRequired": "Nästa underhållsdatum krävs",
+      "frequencyIntervalMin": "Upprepningsintervallet måste vara minst 1",
+      "saveFailed": "Det gick inte att skapa underhållsschemat"
+    }
+  },
+  "maintenanceSchedulesTab": {
+    "title": "Underhållsscheman",
+    "description": "Flik för hantering av underhållsscheman för planerad service och återkommande arbete",
+    "summary": {
+      "complianceRate": "Efterlevnadsgrad",
+      "nextMaintenance": "Nästa underhåll",
+      "noneScheduled": "Inget schemalagt"
+    },
+    "actions": {
+      "scheduleMaintenance": "Schemalägg underhåll"
+    },
+    "errors": {
+      "deleteFailed": "Det gick inte att radera underhållsschemat"
+    },
+    "table": {
+      "scheduleName": "Schemanamn",
+      "type": "Typ",
+      "frequency": "Frekvens",
+      "nextMaintenance": "Nästa underhåll",
+      "lastMaintenance": "Senaste underhåll",
+      "status": "Status",
+      "actions": "Åtgärder"
+    },
+    "frequency": {
+      "every_one": "Varje {{frequency}}",
+      "every_other": "Intervall: {{count}} {{frequency}}",
+      "units": {
+        "daily_one": "dag",
+        "daily_other": "dagar",
+        "weekly_one": "vecka",
+        "weekly_other": "veckor",
+        "monthly_one": "månad",
+        "monthly_other": "månader",
+        "quarterly_one": "kvartal",
+        "quarterly_other": "kvartal",
+        "yearly_one": "år",
+        "yearly_other": "år"
+      }
+    },
+    "status": {
+      "active": "Aktivt",
+      "inactive": "Inaktivt"
+    },
+    "types": {
+      "preventive": "Förebyggande",
+      "corrective": "Avhjälpande",
+      "inspection": "Inspektion",
+      "calibration": "Kalibrering",
+      "replacement": "Utbyte"
+    },
+    "empty": {
+      "schedules": "Inga underhållsscheman hittades. Klicka på ”Schemalägg underhåll” för att skapa ett."
+    },
+    "history": {
+      "title": "Underhållshistorik",
+      "performedAt": "Utfört den",
+      "performedBy": "Utfört av",
+      "notes": "Anteckningar",
+      "empty": "Ingen underhållshistorik registrerad."
+    },
+    "dialog": {
+      "delete": {
+        "title": "Radera underhållsschema",
+        "message": "Vill du verkligen radera ”{{name}}”? Det går inte att ångra åtgärden."
+      }
+    }
+  },
+  "maintenanceCommandCenter": {
+    "title": "Underhåll",
+    "description": "Kontrollcenter för förebyggande arbete med alla kunders tillgångar.",
+    "assetsLink": "Tillgångar"
+  },
+  "maintenanceCompletionDialog": {
+    "errors": {
+      "performedDateRequired": "Ett datum för utförandet krävs.",
+      "completeFailed": "Det gick inte att slutföra underhållet."
+    }
+  },
+  "relatedAssetsTab": {
+    "title": "Relaterade tillgångar ({{count}})",
+    "description": "Flik för att visa och hantera relationer mellan tillgångar",
+    "loading": "Läser in relaterade tillgångar…",
+    "actions": {
+      "linkAsset": "Koppla tillgång",
+      "unlink": "Ta bort koppling",
+      "linkEmptyState": "Koppla en tillgång"
+    },
+    "success": {
+      "linked": "Tillgången har kopplats",
+      "unlinked": "Tillgångskopplingen har tagits bort"
+    },
+    "errors": {
+      "selectAsset": "Välj en tillgång att koppla",
+      "linkFailed": "Det gick inte att koppla tillgången",
+      "unlinkFailed": "Det gick inte att ta bort tillgångskopplingen"
+    },
+    "table": {
+      "assetName": "Tillgångsnamn",
+      "relationship": "Relation",
+      "linkedDate": "Kopplingsdatum",
+      "actions": "Åtgärder"
+    },
+    "empty": {
+      "linked": "Inga relaterade tillgångar är kopplade."
+    },
+    "dialog": {
+      "title": "Koppla tillgång",
+      "loadingAssets": "Läser in tillgångar…",
+      "empty": "Inga tillgängliga tillgångar hittades.",
+      "search": {
+        "label": "Sök efter tillgångar",
+        "placeholder": "Sök efter namn, inventarienummer, serienummer…"
+      },
+      "relationshipType": {
+        "label": "Relationstyp",
+        "placeholder": "relaterad"
+      },
+      "table": {
+        "asset": "Tillgång",
+        "select": "Välj"
+      },
+      "actions": {
+        "selected": "Vald",
+        "linking": "Kopplar…",
+        "confirm": "Koppla tillgång"
+      }
+    },
+    "relationshipTypes": {
+      "related": "Relaterad",
+      "affected": "Berörd"
+    }
+  },
+  "serviceHistoryTab": {
+    "title": "Servicehistorik",
+    "description": "Servicehistorikflik med en sammanfattning av tillgångens underhåll och ärendeaktivitet",
+    "actions": {
+      "createTicket": "Skapa ärende"
+    },
+    "table": {
+      "ticketId": "Ärende-ID",
+      "subject": "Ämne",
+      "status": "Status",
+      "priority": "Prioritet",
+      "dateLinked": "Kopplingsdatum"
+    },
+    "empty": "Inga ärenden är kopplade till den här tillgången.",
+    "clientFallback": "Okänd kund"
+  },
+  "softwareInventoryTab": {
+    "title": "Programvaruinventering",
+    "description": "Flik för programvaruinventering med installerad programvara, versioner och identifieringsmetadata",
+    "searchPlaceholder": "Sök efter programvara…",
+    "category": {
+      "placeholder": "Kategori",
+      "options": {
+        "all": "Alla",
+        "browser": "Webbläsare",
+        "security": "Säkerhet",
+        "productivity": "Produktivitet",
+        "development": "Utveckling"
+      }
+    },
+    "table": {
+      "name": "Namn",
+      "version": "Version",
+      "publisher": "Utgivare",
+      "installDate": "Installationsdatum"
+    },
+    "empty": "Ingen programvara matchar din sökning.",
+    "totalItems": "Totalt antal poster: {{count}}",
+    "values": {
+      "unknown": "Okänd"
+    }
+  },
+  "alerts": {
+    "messages": {
+      "alertAcknowledged": "Larmet har kvitterats",
+      "acknowledgeFailed": "Det gick inte att kvittera larmet",
+      "ticketCreated": "Ärendet har skapats",
+      "ticketCreateFailed": "Det gick inte att skapa ärendet"
+    },
+    "activeAlerts": "Aktiva larm",
+    "acknowledge": "Kvittera",
+    "createTicket": "Skapa ärende"
+  },
+  "actions": {
+    "print": "Skriv ut",
+    "printOptions": "Utskriftsalternativ",
+    "printSelected": "Skriv ut markerade ({{count}})"
+  },
+  "crossFeature": {
+    "loadTicketFailed": "Det gick inte att läsa in ärendet",
+    "openTicketFailed": "Det gick inte att öppna ärendet"
+  },
+  "assetTypeBreakdown": {
+    "title": "Tillgångar efter typ"
+  },
+  "customTypeDetailsPanel": {
+    "title": "Detaljer för {{name}}",
+    "values": {
+      "yes": "Ja",
+      "no": "Nej"
+    }
+  },
+  "assetBento": {
+    "health": "Hälsa",
+    "security": "Säkerhet",
+    "openTickets": "Öppna ärenden",
+    "warranty": "Garanti",
+    "identity": "Identitet",
+    "tag": "Inventarienummer",
+    "serial": "Serienummer",
+    "status": "Status",
+    "location": "Plats",
+    "purchased": "Inköpt",
+    "warrantyEnds": "Garantin löper ut",
+    "hardware": "Maskinvara",
+    "os": "Operativsystem",
+    "cpu": "CPU",
+    "cores": "Kärnor",
+    "ram": "RAM",
+    "ip": "IP",
+    "noHardware": "Inga maskinvarudetaljer registrerade.",
+    "notes": "Anteckningar",
+    "liveVitals": "Driftvärden i realtid",
+    "checkedIn": "Incheckad",
+    "neverCheckedIn": "Aldrig incheckad",
+    "memory": "Minne",
+    "disk": "Disk",
+    "uptime": "Drifttid",
+    "signedIn": "Inloggad",
+    "securityTitle": "Säkerhet",
+    "antivirus": "Antivirus",
+    "pendingPatches": "Väntande patchar",
+    "failedPatches": "Misslyckade patchar",
+    "lastScan": "Senaste genomsökning",
+    "agentVersion": "Agent",
+    "noRelated": "Inte kopplad till någon annan tillgång.",
+    "manage": "Hantera",
+    "reportedFacts": "Rapporterade uppgifter",
+    "more": "Övrigt",
+    "views": "Tillgångsvyer",
+    "editAsset": "Redigera tillgång",
+    "viewAll": "Visa alla",
+    "open": "Öppna",
+    "close": "Stäng",
+    "packagesReported": "{{count}} rapporterade paket",
+    "noSoftware": "Ingen programvaruinventering rapporterad.",
+    "noService": "Inga ärenden hänvisar till den här tillgången.",
+    "activeSchedules": "Aktiva scheman",
+    "compliance": "Efterlevnad",
+    "lastDone": "Senast utfört",
+    "noMaintenance": "Inget schemalagt.",
+    "docsHint": "Bilagor och inloggningsuppgifter för den här tillgången."
+  },
+  "assetTimeline": {
+    "title": "Tidslinje",
+    "empty": "Inget registrerat för den här tillgången än.",
+    "emptyLane": "Inga händelser registrerade i kategorin {{lane}}.",
+    "moreEvents": "Visar {{shown}} av {{total}} händelser.",
+    "lanes": {
+      "all": "Alla",
+      "service": "Service",
+      "changes": "Ändringar",
+      "maintenance": "Underhåll",
+      "system": "System"
+    },
+    "events": {
+      "maintenancePerformed": "Underhåll utfört",
+      "lastReboot": "Senaste omstart",
+      "patchScan": "Patchsökning",
+      "patchScanDetail": "{{pending}} väntande, {{failed}} misslyckade",
+      "purchased": "Inköpt"
+    },
+    "changeTypes": {
+      "created": "Skapad",
+      "updated": "Uppdaterad",
+      "status_change": "Status ändrad",
+      "location_change": "Plats ändrad",
+      "rmm_linked": "RMM kopplad",
+      "hardware_upgrade": "Maskinvara uppgraderad",
+      "warranty_updated": "Garanti uppdaterad"
+    }
+  },
+  "assetSignals": {
+    "warranty": {
+      "daysLeft": "{{count}} dagar kvar",
+      "expiresToday": "löper ut idag",
+      "expiredAgo": "löpte ut för {{count}} dagar sedan"
+    },
+    "duration": {
+      "dayHour": "{{days}} dagar {{hours}} h",
+      "hourMinute": "{{hours}} h {{minutes}} min",
+      "minute": "{{minutes}} min"
+    },
+    "age": {
+      "justNow": "nyss",
+      "minutesAgo": "för {{count}} min sedan",
+      "hoursAgo": "för {{count}} h sedan",
+      "daysAgo": "för {{count}} dagar sedan"
+    },
+    "patching": {
+      "failed": "{{count}} misslyckade",
+      "pending": "{{count}} väntande",
+      "upToDate": "uppdaterad"
+    }
+  },
+  "assetCells": {
+    "agent": {
+      "unmanaged": "inte hanterad",
+      "noAgent": "ingen RMM-agent",
+      "seen": "sedd {{age}}",
+      "neverSeen": "aldrig sedd"
+    },
+    "agentStatus": {
+      "online": "online",
+      "offline": "offline",
+      "overdue": "försenad",
+      "unknown": "okänd"
+    },
+    "patching": {
+      "scanned": "genomsökt {{age}}",
+      "neverScanned": "aldrig genomsökt"
+    },
+    "coverage": {
+      "noWarrantyDate": "inget garantidatum"
+    },
+    "status": {
+      "active": "aktiv",
+      "inactive": "inaktiv",
+      "maintenance": "underhåll"
+    }
+  },
+  "errors": {
+    "permissions": {
+      "readAssets": "Åtkomst nekad: Kan inte läsa tillgångar",
+      "readAssetTypes": "Åtkomst nekad: Kan inte läsa tillgångstyper",
+      "manageAssetTypes": "Åtkomst nekad: Kan inte hantera tillgångstyper",
+      "readDocuments": "Åtkomst nekad: Kan inte läsa tillgångsdokument",
+      "associateDocuments": "Åtkomst nekad: Kan inte koppla dokument till tillgångar",
+      "removeDocuments": "Åtkomst nekad: Kan inte ta bort dokument från tillgångar",
+      "updateDocumentNotes": "Åtkomst nekad: Kan inte uppdatera anteckningar för tillgångsdokument"
+    },
+    "asset": {
+      "notFoundRefresh": "Tillgången hittades inte. Den kan ha raderats. Ladda om och försök igen.",
+      "clientNotFound": "Kunden hittades inte. Den kan ha raderats. Ladda om och försök igen.",
+      "maintenanceNotFound": "Underhållsschemat hittades inte. Det kan ha raderats. Ladda om och försök igen.",
+      "maintenanceMismatch": "Den här underhållsposten hör inte till den valda tillgången. Ladda om och försök igen.",
+      "locationUnavailable": "Den valda platsen är inte tillgänglig för den här kunden.",
+      "selfRelation": "En tillgång kan inte vara relaterad till sig själv.",
+      "selectAtLeastOne": "Välj minst en tillgång.",
+      "typeUnavailable": "Tillgångstypen är inte tillgänglig. Välj en giltig tillgångstyp.",
+      "typeUnavailableNamed": "Tillgångstypen ”{{assetType}}” är inte tillgänglig. Välj en giltig tillgångstyp.",
+      "documentAssociationNotFound": "Dokumentkopplingen hittades inte. Den kan redan ha tagits bort. Ladda om och försök igen.",
+      "invalidValue": "Ett av de valda tillgångsvärdena är ogiltigt. Ladda om och försök igen.",
+      "invalidDate": "Ett av de valda tillgångsdatumen är ogiltigt. Granska formuläret och försök igen.",
+      "referenceMissing": "Den valda tillgången, dokumentet eller den relaterade posten finns inte längre. Ladda om och försök igen.",
+      "conflict": "Den här tillgångsändringen står i konflikt med en befintlig post. Ladda om och försök igen.",
+      "notAllowed": "Ett av tillgångsvärdena är inte tillåtet. Granska formuläret och försök igen.",
+      "missingField": "Ett obligatoriskt tillgångsfält saknas.",
+      "missingFieldNamed": "Obligatoriskt tillgångsfält saknas: {{field}}."
+    }
+  }
+}

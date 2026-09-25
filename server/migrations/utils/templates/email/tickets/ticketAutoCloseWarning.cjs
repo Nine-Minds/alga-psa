@@ -21,6 +21,7 @@ const SUBJECTS = {
   it: 'Il suo ticket verrà chiuso a breve • {{ticket.title}}',
   pl: 'Twoje zgłoszenie zostanie wkrótce zamknięte • {{ticket.title}}',
   pt: 'Seu ticket será encerrado em breve • {{ticket.title}}',
+  sv: 'Ditt ärende stängs snart • {{ticket.title}}',
 };
 
 /* eslint-disable max-len */
@@ -120,6 +121,18 @@ const COPY = {
     textHeader: 'Seu ticket será encerrado em breve',
     textKeepOpen: 'Se você ainda precisa de ajuda, responda a este email ou adicione um comentário ao ticket para mantê-lo aberto.',
     textView: 'Ver ticket',
+  },
+  sv: {
+    headerLabel: 'Ärendet stängs snart',
+    intro: 'Vi har inte fått något svar från dig i det här ärendet. Det stängs automatiskt <strong>{{ticket.scheduledCloseDate}}</strong> om ingen ny aktivitet sker.',
+    keepOpen: 'Om du fortfarande behöver hjälp kan du svara på det här e-postmeddelandet eller lägga till en kommentar i ärendet — då hålls det öppet.',
+    badgePrefix: 'Ärende #',
+    closeDate: 'Planerad stängning',
+    viewButton: 'Visa ärende',
+    footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+    textHeader: 'Ditt ärende stängs snart',
+    textKeepOpen: 'Om du fortfarande behöver hjälp, svara på det här e-postmeddelandet eller lägg till en kommentar i ärendet för att hålla det öppet.',
+    textView: 'Visa ärende',
   },
 };
 
