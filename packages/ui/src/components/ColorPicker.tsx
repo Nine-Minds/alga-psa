@@ -242,6 +242,13 @@ const ColorPicker = ({
                   id="background-color"
                   value={backgroundColor}
                   onChange={(e) => handleBackgroundChange(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleSave();
+                    }
+                  }}
                   placeholder="#FF0000"
                   className="flex-1"
                 />
@@ -268,6 +275,13 @@ const ColorPicker = ({
                     id="text-color"
                     value={textColor}
                     onChange={(e) => handleTextChange(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleSave();
+                      }
+                    }}
                     placeholder="#FFFFFF"
                     className="flex-1"
                   />
@@ -322,6 +336,7 @@ const ColorPicker = ({
           <div className="flex justify-between pt-2">
             <Button
               id="color-picker-reset"
+              type="button"
               variant="outline"
               size="sm"
               onClick={handleReset}
@@ -331,6 +346,7 @@ const ColorPicker = ({
             <div className="space-x-2">
               <Button
                 id="color-picker-cancel"
+                type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => setIsOpen(false)}
@@ -339,6 +355,7 @@ const ColorPicker = ({
               </Button>
               <Button
                 id="color-picker-save"
+                type="button"
                 size="sm"
                 onClick={handleSave}
                 disabled={!!backgroundError || !!textError}
