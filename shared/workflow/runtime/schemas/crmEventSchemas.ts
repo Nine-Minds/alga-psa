@@ -3,7 +3,7 @@ import {
   CONTACT_EMAIL_CANONICAL_TYPES,
   CONTACT_PHONE_CANONICAL_TYPES,
 } from '../../../interfaces/contact.interfaces';
-import { BaseDomainEventPayloadSchema, changesSchema, updatedFieldsSchema, uuidSchema } from './commonEventPayloadSchemas';
+import { BaseDomainEventPayloadSchema, changesSchema, dateOnlySchema, updatedFieldsSchema, uuidSchema } from './commonEventPayloadSchemas';
 
 const clientIdSchema = uuidSchema('Client ID');
 const contactIdSchema = uuidSchema('Contact ID');
@@ -36,7 +36,7 @@ const contactPhoneNumberSchema = z.object({
 });
 
 export const clientAnniversaryUpcomingEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
-  clientId: clientIdSchema, clientName: z.string().min(1), anniversaryDate: z.string().date(), yearsAsClient: z.number().int().positive(), daysUntilAnniversary: z.number().int().nonnegative(),
+  clientId: clientIdSchema, clientName: z.string().min(1), anniversaryDate: dateOnlySchema('Anniversary date'), yearsAsClient: z.number().int().positive(), daysUntilAnniversary: z.number().int().nonnegative(),
 }).describe('Payload for CLIENT_ANNIVERSARY_UPCOMING');
 export type ClientAnniversaryUpcomingEventPayload = z.infer<typeof clientAnniversaryUpcomingEventPayloadSchema>;
 

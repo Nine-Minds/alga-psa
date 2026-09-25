@@ -1,6 +1,7 @@
 import { z } from 'zod';
+import { dateOnlySchema } from './commonEventPayloadSchemas';
 
-const date = z.string().date();
+const date = dateOnlySchema('Calendar date (YYYY-MM-DD)');
 const common = { occursOn: date, fireDate: date, offsetDays: z.number().int().min(-365).max(365), clientId: z.string().optional(), clientName: z.string().optional() };
 export const dateTriggerPayloadSchemas = {
   'payload.ClientAnniversary.v1': z.object({ ...common, clientId: z.string(), clientName: z.string(), yearsAsClient: z.number().int().positive(), anniversarySource: z.enum(['client_since', 'created_at']) }).passthrough(),
