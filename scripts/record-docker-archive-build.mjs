@@ -23,6 +23,18 @@ export async function recordDockerArchiveBuild(input, archivePath, outputPath) {
     || !plain(input.dockerfile) || path.isAbsolute(input.dockerfile) || input.dockerfile.split(/[\\/]/).includes('..')
     || !/^linux\/(amd64|arm64)(\/v[0-9]+)?$/.test(input.platform ?? '')) throw new Error('Invalid component build identity');
   if (!digestPattern.test(input.configImageId ?? '') || !digestPattern.test(input.buildReportedDigest ?? '')) throw new Error('Missing or invalid build action identity');
+  // A reused build names the original build and the input hash that proves
+  // the candidate would have built the same context.
+  let reuse;
+  if (input.reuse !== undefined) {
+    const r = input.reuse;
+    if (!/^[a-f0-9]{40}$/.test(r?.sourceRevision ?? '') || r.sourceRevision === input.revision
+      || !/^\d+$/.test(String(r.sourceRunId ?? '')) || !Number.isSafeInteger(r.sourceAttempt) || r.sourceAttempt <= 0
+      || !/^\d+$/.test(String(r.artifactRunId ?? '')) || !plain(r.inputs?.policy) || !digestPattern.test(r.inputs?.sha256 ?? '')
+      || !Number.isSafeInteger(r.inputs?.files) || r.inputs.files < 1) throw new Error('Invalid reuse provenance');
+    reuse = { sourceRevision: r.sourceRevision, sourceRunId: String(r.sourceRunId), sourceAttempt: r.sourceAttempt, artifactRunId: String(r.artifactRunId),
+      inputs: { policy: r.inputs.policy, sha256: r.inputs.sha256, files: r.inputs.files } };
+  }
   let metadata;
   try { metadata = typeof input.metadata === 'string' ? JSON.parse(input.metadata) : input.metadata; }
   catch { throw new Error('Invalid build metadata'); }
@@ -49,7 +61,7 @@ export async function recordDockerArchiveBuild(input, archivePath, outputPath) {
     configImageId: input.configImageId, buildReportedDigest: input.buildReportedDigest,
     // These are build-action outputs, not evidence of a published registry manifest.
     metadata: { 'containerimage.config.digest': metadata['containerimage.config.digest'], 'containerimage.digest': metadata['containerimage.digest'] },
-    archive: { filename: path.basename(archivePath), bytes, sha256: `sha256:${hash.digest('hex')}` } };
+    archive: { filename: path.basename(archivePath), bytes, sha256: `sha256:${hash.digest('hex')}` }, ...(reuse ? { reuse } : {}) };
   await writeFile(outputPath, JSON.stringify(record, null, 2) + '\n', { flag: 'wx' });
   return record;
 }

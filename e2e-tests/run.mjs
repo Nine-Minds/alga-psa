@@ -7,6 +7,7 @@ import { reconcileDiscovery, repositoryTestFiles } from '../scripts/lib/test-dis
 import { playwrightTests, reconcilePlaywrightExecution } from '../scripts/lib/playwright-execution-evidence.mjs';
 import { testRevision } from '../scripts/lib/test-revision.mjs';
 import { browserTestMetrics } from '../scripts/lib/browser-test-metrics.mjs';
+import { applyBrowserPolicy, loadJevSelection, providerFloorFiles } from '../scripts/lib/jev-enforcement.mjs';
 
 const require = createRequire(import.meta.url);
 const cwd = fileURLToPath(new URL('.', import.meta.url));
@@ -37,12 +38,38 @@ try {
   });
   save(files.discovery, discovery);
   if (discovery.status !== 'passed') throw new Error(discovery.failures.join('\n'));
-  const result = run([], files.results);
+  // A recorded Jev judgment for this exact revision narrows the run to the
+  // provider floor, sign-in, changed journeys and every journey it rates at
+  // or above threshold. Deferred journeys are recorded with their probability
+  // so the gate can account for every collected case. Anything else runs all.
+  const jevPath = process.env.JEV_SELECTION_PATH;
+  let jev = jevPath ? loadJevSelection({ file: path.resolve(root, jevPath), revision: before.revision, mode: 'enforce' })
+    : { status: 'unavailable', reason: 'JEV_SELECTION_PATH is not set' };
+  let filters = [];
+  let deferred = [];
+  if (jev.status === 'applied') {
+    const edition = collected.config?.metadata?.edition ?? process.env.E2E_EDITION;
+    const providerPolicy = JSON.parse(readFileSync(path.join(root, 'scripts/browser-provider-requirements.json'), 'utf8'));
+    const floorFiles = providerFloorFiles(providerPolicy, edition);
+    const policy = applyBrowserPolicy({ cases, judgments: jev.selection.browser?.judgments ?? [], floorFiles,
+      changedFiles: jev.selection.always ?? [], threshold: jev.selection.threshold });
+    if (!policy.filters.length) throw new Error('Judged browser selection produced no filters');
+    filters = policy.filters;
+    deferred = policy.deferred;
+    jev = { status: 'applied', threshold: policy.threshold, revision: before.revision, floor: floorFiles,
+      selected: policy.selected.map(entry => ({ identity: [entry.file, entry.projectId, entry.projectName, entry.titles], probability: entry.probability, reason: entry.reason })),
+      deferred };
+    console.log(`browser gate: Jev selected ${policy.selected.length} of ${cases.length} journeys, deferred ${deferred.length} (threshold ${policy.threshold})`);
+    for (const entry of deferred) console.log(`  deferred (p=${entry.probability.toFixed(2)}): ${entry.identity[0]} › ${entry.identity[3].at(-1)}`);
+  } else {
+    console.log(`browser gate: full run; Jev ${jev.reason}`);
+  }
+  const result = run(filters, files.results);
   let report;
   try { report = JSON.parse(readFileSync(files.results, 'utf8')); } catch { report = null; }
-  evidence = reconcilePlaywrightExecution({ collected, report, root, revision: before.revision, exitCode: result.status });
+  evidence = reconcilePlaywrightExecution({ collected, report, root, revision: before.revision, exitCode: result.status, deferred });
   evidence.configuration = collected.config.metadata;
-  evidence.selection = { mode: 'full', filters: [] };
+  evidence.selection = jev.status === 'applied' ? { mode: 'jev', filters, jev } : { mode: 'full', filters: [], jev };
 } catch (error) {
   evidence = { schemaVersion: 1, suite: 'production-browser', revision: before?.revision, status: 'failed', failures: [error.message] };
 }

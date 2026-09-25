@@ -78,6 +78,10 @@ jobs:
     if: needs.changes.outputs.run_tests == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    # Only this job reads earlier runs' artifacts, for verified image reuse.
+    permissions:
+      contents: read
+      actions: read
     strategy:
       fail-fast: false
       matrix:
@@ -137,15 +141,35 @@ jobs:
           fi
           df -h /
 
+      # An earlier run (this branch first, then main) whose build of this image
+      # had byte-identical inputs (scripts/image-inputs.json, proven by git tree
+      # hashes at both revisions) supplies the archive. Its record is verified
+      # against that run's identity, the archive against the record, and a new
+      # record is issued for this candidate carrying the reuse provenance. Any
+      # doubt means build it.
+      - name: Look for a verified reusable build
+        id: reuse
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          IMAGE_REUSE_DISABLED: ${{ inputs.no_cache == true && 'true' || 'false' }}
+          REUSE_BRANCHES: ${{ github.head_ref || github.ref_name }},main
+          BUILD_SERVICE: ${{ matrix.service }}
+          BUILD_IMAGE: ${{ matrix.image }}
+          BUILD_DOCKERFILE: ${{ matrix.dockerfile }}
+          BUILD_ARTIFACT: ${{ matrix.artifact || format('fresh-install-image-{0}', matrix.service) }}
+          IMAGE_ARCHIVE: ${{ runner.temp }}/${{ matrix.service }}.tar.gz
+          BUILD_RECORD: ${{ runner.temp }}/${{ matrix.service }}-build.json
+        run: node scripts/reuse-docker-archive-build.mjs
+
       - name: Set up emulator build runtime
-        if: matrix.service == 'algasim'
+        if: matrix.service == 'algasim' && steps.reuse.outputs.reused != 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
 
       - name: Compile candidate emulator packages and verify controls
-        if: matrix.service == 'algasim'
+        if: matrix.service == 'algasim' && steps.reuse.outputs.reused != 'true'
         run: |
           npm install -g npm@11
           npm ci
@@ -160,9 +184,10 @@ jobs:
           node --test e2e-tests/harness/calendar-callback-proxy.test.mjs
 
       - uses: docker/setup-buildx-action@v3
+        if: steps.reuse.outputs.reused != 'true'
 
       - name: Provide memory headroom for production compilation
-        if: matrix.service == 'server' || matrix.service == 'server-ee'
+        if: (matrix.service == 'server' || matrix.service == 'server-ee') && steps.reuse.outputs.reused != 'true'
         run: |
           # EE's webpack build exceeded runner RAM and was killed by the OS.
           # Keep the actual production build and its bounded Node heap; provide
@@ -176,6 +201,7 @@ jobs:
 
       - name: Build and export ${{ matrix.service }}
         id: export_image
+        if: steps.reuse.outputs.reused != 'true'
         uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context || '.' }}
@@ -195,12 +221,14 @@ jobs:
           cache-to: ${{ matrix.cache && format('type=gha,version=2,scope=fresh-install-{0},mode=max,ignore-error=true,timeout=3m', matrix.service) || '' }}
 
       - name: Compress image for transfer
+        if: steps.reuse.outputs.reused != 'true'
         env:
           IMAGE_ARCHIVE: ${{ runner.temp }}/${{ matrix.service }}.tar
         run: |
           gzip -1 "$IMAGE_ARCHIVE"
 
       - name: Record actual image archive build identity
+        if: steps.reuse.outputs.reused != 'true'
         env:
           IMAGE_ARCHIVE: ${{ runner.temp }}/${{ matrix.service }}.tar.gz
           BUILD_RECORD: ${{ runner.temp }}/${{ matrix.service }}-build.json
@@ -272,6 +300,17 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      # The Jev judgment for this revision narrows the browser run to the
+      # provider floor, sign-in, changed journeys and confident matches.
+      # Absent, the gate runs every journey as before.
+      - name: Download Jev judgment
+        if: needs.changes.outputs.run_tests == 'true'
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: jev-selection
+          path: test-results/jev-selection
 
       - name: Set up test environment secrets and .env
         if: needs.changes.outputs.run_tests == 'true'
@@ -936,6 +975,7 @@ jobs:
           E2E_DB_NAME: server
           E2E_DB_USER: postgres
           E2E_DB_PASSWORD: placeholder-password
+          JEV_SELECTION_PATH: ${{ github.workspace }}/test-results/jev-selection/jev-selection.json
         timeout-minutes: 25
         run: xvfb-run --auto-servernum npm test
         shell: bash
@@ -1069,12 +1109,14 @@ jobs:
         run: |
           set -euo pipefail
           image=alga-e2e-test_server_ee_local:latest
-          test "$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$image")" = "$GITHUB_SHA"
+          # A reused image carries its original build's revision; the verified
+          # build record says which (scripts/expected-image-revision.mjs).
+          test "$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$image")" = "$(node scripts/expected-image-revision.mjs server-ee)"
           expected_image=$(docker image inspect --format '{{.Id}}' "$image")
           node e2e-tests/harness/create-upgrade-pgbouncer.mjs "$RUNNER_TEMP/fresh-install-compose.json" "$RUNNER_TEMP/upgrade-pooler"
           export COMPOSE_FILE="$COMPOSE_FILE:$RUNNER_TEMP/upgrade-pooler/upgrade-compose.json"
           pooler_image=$(jq -r '.services["upgrade-pgbouncer"].image' "$RUNNER_TEMP/upgrade-pooler/upgrade-compose.json")
-          test "$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$pooler_image")" = "$GITHUB_SHA"
+          test "$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$pooler_image")" = "$(node scripts/expected-image-revision.mjs pgbouncer)"
           expected_pooler_image=$(docker image inspect --format '{{.Id}}' "$pooler_image")
           docker-compose -p alga-e2e-test up --no-build --no-deps -d upgrade-pgbouncer
           pooler_container=$(docker-compose -p alga-e2e-test ps -q upgrade-pgbouncer)
@@ -1218,7 +1260,7 @@ jobs:
         run: |
           set -euo pipefail
           image=alga-e2e-test_server_ee_local:latest
-          test "$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$image")" = "$GITHUB_SHA"
+          test "$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$image")" = "$(node scripts/expected-image-revision.mjs server-ee)"
           expected_image=$(docker image inspect --format '{{.Id}}' "$image")
           export COMPOSE_FILE="$COMPOSE_FILE:$RUNNER_TEMP/citus-upgrade-compose.json"
           docker-compose -p alga-e2e-test up --no-build --no-deps --force-recreate -d server

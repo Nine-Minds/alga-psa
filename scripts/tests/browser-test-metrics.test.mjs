@@ -60,7 +60,7 @@ test('the actual browser runner emits incomplete metrics when execution cannot s
   mkdirSync(path.join(root, 'e2e-tests'), { recursive: true });
   mkdirSync(path.join(root, 'scripts/lib'), { recursive: true });
   for (const file of ['e2e-tests/run.mjs', 'scripts/verify-docker-archive-build.mjs', ...['browser-test-metrics', 'browser-artifact-manifest', 'test-discovery', 'test-revision',
-    'test-execution-evidence', 'playwright-execution-evidence'].map(name => `scripts/lib/${name}.mjs`)]) {
+    'test-execution-evidence', 'playwright-execution-evidence', 'jev-enforcement'].map(name => `scripts/lib/${name}.mjs`)]) {
     cpSync(path.join(repository, file), path.join(root, file));
   }
   const result = spawnSync(process.execPath, ['e2e-tests/run.mjs', '--unsupported-filter'], { cwd: root, encoding: 'utf8' });

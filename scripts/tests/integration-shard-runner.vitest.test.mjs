@@ -16,7 +16,7 @@ test('actual integration runner partitions, executes and rejects missing or stal
     writeFileSync(path.join(root, file), content);
   };
   for (const file of ['scripts/run-tier1-integration.mjs', 'scripts/verify-integration-shards.mjs',
-    'scripts/lib/integration-selection.mjs', 'scripts/lib/test-discovery.mjs', 'scripts/lib/test-execution-evidence.mjs', 'scripts/lib/test-revision.mjs', 'scripts/lib/test-sharding.mjs']) {
+    'scripts/lib/integration-selection.mjs', 'scripts/lib/test-discovery.mjs', 'scripts/lib/test-execution-evidence.mjs', 'scripts/lib/test-revision.mjs', 'scripts/lib/test-sharding.mjs', 'scripts/lib/jev-enforcement.mjs']) {
     write(file, readFileSync(path.join(source, file), 'utf8'));
   }
   write('.gitignore', 'node_modules\ntest-results/\nserver/test-results-integration.json\n');

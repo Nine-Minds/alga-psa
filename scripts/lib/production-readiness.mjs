@@ -77,7 +77,10 @@ export function evaluateProductionReadiness({ revision, changed, jobs, artifacts
           }
           const counts = member?.counts;
           if (!counts || !Number.isSafeInteger(counts.passed) || counts.passed <= 0 || !Number.isSafeInteger(counts.failed) || counts.failed !== 0) problems.push(`${id}: empty or failed execution counts`);
-          if (counts && Object.entries(counts).some(([key, value]) => !Number.isSafeInteger(value) || value < 0 || (!['tests', 'passed'].includes(key) && value !== 0))) problems.push(`${id}: skipped or incomplete execution`);
+          // `deferred` cases were excused by a recorded judgment; the producing
+          // gate verified each identity is collected, below threshold and bound
+          // to this revision before it could pass. Every other count must be zero.
+          if (counts && Object.entries(counts).some(([key, value]) => !Number.isSafeInteger(value) || value < 0 || (!['tests', 'passed', 'deferred'].includes(key) && value !== 0))) problems.push(`${id}: skipped or incomplete execution`);
         }
       }
     }

@@ -122,3 +122,18 @@ test('failed archive receipt CLI removes stale receipt', async t => {
       GITHUB_RUN_ID: context.runId, GITHUB_RUN_ATTEMPT: '2' } });
   assert.equal(result.status, 1); await assert.rejects(readFile(output), { code: 'ENOENT' });
 });
+
+test('a manifest with a reused component names the verified scope and the reused services', async t => {
+  const f = await fixture(t, 'community');
+  const source = 'b'.repeat(40);
+  const redis = f.components.find(component => component.record.service === 'redis');
+  redis.record.reuse = { sourceRevision: source, sourceRunId: '99', sourceAttempt: 1, artifactRunId: '99', inputs: { policy: 'scripts/image-inputs.json', sha256: `sha256:${'e'.repeat(64)}`, files: 3 } };
+  redis.receipt = await createBrowserArchiveReceipt(redis.record, path.join(f.directory, 'redis.tar.gz'), f.expected);
+  redis.inspection[0].Config.Labels['org.opencontainers.image.revision'] = source;
+  const manifest = build(f);
+  assert.equal(manifest.scope, 'candidate-verified-archives');
+  assert.deepEqual(manifest.reused, ['redis']);
+  assert.equal(manifest.components.find(component => component.record.service === 'redis').record.reuse.sourceRevision, source);
+  assert.deepEqual(validateBrowserArtifactManifest(manifest, f.expected), manifest);
+  assert.throws(() => validateBrowserArtifactManifest({ ...manifest, scope: 'anything-else' }, f.expected), /identity mismatch/);
+});

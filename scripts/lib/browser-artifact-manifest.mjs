@@ -26,8 +26,11 @@ function recordFields(record, context) {
     service: record.service, image: record.image, dockerfile: record.dockerfile, platform: record.platform,
     configImageId: record.configImageId, buildReportedDigest: record.buildReportedDigest,
     metadata: { 'containerimage.config.digest': record.configImageId, 'containerimage.digest': record.buildReportedDigest },
-    archive: { filename: record.archive.filename, bytes: record.archive.bytes, sha256: record.archive.sha256 } };
+    archive: { filename: record.archive.filename, bytes: record.archive.bytes, sha256: record.archive.sha256 },
+    ...(record.reuse ? { reuse: { sourceRevision: record.reuse.sourceRevision, sourceRunId: record.reuse.sourceRunId, sourceAttempt: record.reuse.sourceAttempt,
+      artifactRunId: record.reuse.artifactRunId, inputs: { policy: record.reuse.inputs.policy, sha256: record.reuse.inputs.sha256, files: record.reuse.inputs.files } } } : {}) };
 }
+export const MANIFEST_SCOPES = ['candidate-built-archives-only', 'candidate-verified-archives'];
 // Receipts attest a successful local byte verification before CI removes the large
 // gzip archive. They are not signatures or evidence of registry publication.
 export async function createBrowserArchiveReceipt(record, archivePath, expected) {
@@ -57,8 +60,12 @@ export function buildBrowserArtifactManifest({ components, ...expected }) {
   if (JSON.stringify(selected.map(component => component.record.service)) !== JSON.stringify(browserArtifactServices(context.edition))) {
     throw new Error('Browser archive component inventory mismatch');
   }
+  // Every component was built from the candidate, or reused from a verified
+  // earlier build with identical inputs; the scope says which.
+  const reused = selected.filter(component => component.record.reuse).map(component => component.record.service);
   return { schemaVersion: 1, kind: 'browser-ci-docker-archives', registryPublication: false,
-    scope: 'candidate-built-archives-only', ...context, components: selected };
+    scope: reused.length ? 'candidate-verified-archives' : 'candidate-built-archives-only', ...context,
+    ...(reused.length ? { reused } : {}), components: selected };
 }
 export function validateBrowserArtifactManifest(manifest, expected) {
   const current = identity(expected);
@@ -74,7 +81,7 @@ export function validateBrowserArtifactManifest(manifest, expected) {
   }
   const context = { ...current, runAttempt: attempt };
   if (manifest?.schemaVersion !== 1 || manifest.kind !== 'browser-ci-docker-archives' || manifest.registryPublication !== false
-    || manifest.scope !== 'candidate-built-archives-only'
+    || !MANIFEST_SCOPES.includes(manifest.scope)
     || Object.entries(context).some(([key, value]) => manifest[key] !== value)) throw new Error('Browser artifact manifest identity mismatch');
   // Return the sanitized projection; never export arbitrary inspection environment
   // variables or build metadata to metrics.

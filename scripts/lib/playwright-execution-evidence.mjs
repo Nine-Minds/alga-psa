@@ -21,7 +21,7 @@ export function playwrightTests(report, root) {
           throw new Error('Playwright test has no project identity');
         }
         entries.push({ file, projectId: test.projectId, projectName: test.projectName,
-          titles: [...titles, spec.title], expectedStatus: test.expectedStatus,
+          titles: [...titles, spec.title], line: spec.line, expectedStatus: test.expectedStatus,
           status: test.status, results: test.results });
       }
     }
@@ -32,9 +32,11 @@ export function playwrightTests(report, root) {
   return entries;
 }
 
-export function reconcilePlaywrightExecution({ collected, report, root, revision, exitCode }) {
+// `deferred` lists collected identities a recorded judgment excused from this
+// run. Each must exist in the collection; the rest of the collection must run.
+export function reconcilePlaywrightExecution({ collected, report, root, revision, exitCode, deferred = [] }) {
   const failures = [];
-  const counts = { passed: 0, failed: 0, flaky: 0, skipped: 0, interrupted: 0, missing: 0 };
+  const counts = { passed: 0, failed: 0, flaky: 0, skipped: 0, interrupted: 0, missing: 0, deferred: 0 };
   let expected = [];
   let executed = [];
   try { expected = playwrightTests(collected, root); } catch (error) { failures.push(`Collection: ${error.message}`); }
@@ -42,6 +44,18 @@ export function reconcilePlaywrightExecution({ collected, report, root, revision
   if (!expected.length) failures.push('Required browser collection is empty');
   if (exitCode !== 0) failures.push(`Browser runner exited with ${exitCode ?? 'no exit code'}`);
   const key = entry => JSON.stringify([entry.file, entry.projectId, entry.projectName, entry.titles]);
+  if (!Array.isArray(deferred)) failures.push('Invalid deferred inventory');
+  const deferredKeys = new Set();
+  for (const entry of Array.isArray(deferred) ? deferred : []) {
+    const identity = JSON.stringify(entry?.identity);
+    if (!Array.isArray(entry?.identity) || entry.identity.length !== 4 || typeof entry.probability !== 'number') { failures.push(`Invalid deferred entry: ${identity}`); continue; }
+    if (!expected.some(candidate => key(candidate) === identity)) failures.push(`Deferred test is not in the collection: ${identity}`);
+    if (deferredKeys.has(identity)) failures.push(`Duplicate deferred test: ${identity}`);
+    deferredKeys.add(identity);
+  }
+  counts.deferred = deferredKeys.size;
+  expected = expected.filter(entry => !deferredKeys.has(key(entry)));
+  if (!expected.length && deferredKeys.size) failures.push('Every collected browser case was deferred');
   const inventory = entries => {
     const map = new Map();
     for (const entry of entries) map.set(key(entry), (map.get(key(entry)) || 0) + 1);

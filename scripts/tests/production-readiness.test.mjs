@@ -397,3 +397,13 @@ test('quarantining one requirement cannot hide a failure of the job it shares', 
   assert.ok(!result.failures.some(failure => failure.startsWith(QUARANTINABLE)),
     'the quarantined requirement must not appear in the top-level failures');
 });
+
+test('deferred browser cases excused by a recorded judgment do not read as incomplete execution', () => {
+  const input = fixture();
+  const gate = input.artifacts['fresh-install-execution-gate'];
+  const browser = gate.results.find(member => member.id === 'playwright-enterprise');
+  browser.counts = { passed: 15, failed: 0, flaky: 0, skipped: 0, interrupted: 0, missing: 0, deferred: 32 };
+  assert.equal(evaluate(input).status, 'passed', evaluate(input).failures.join('\n'));
+  browser.counts.skipped = 1;
+  assert.match(evaluate(input).failures.join('\n'), /playwright-enterprise: skipped or incomplete execution/);
+});

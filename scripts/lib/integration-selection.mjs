@@ -12,22 +12,36 @@ const outsideGraph = [
   /^(?:services|ee\/packages|scripts|\.github|test-config)\//,
   /^\.env/,
 ];
+// Harness changes alter how every suite runs (config, setup, fixtures,
+// dependencies, CI). No judgment about product behavior can narrow them.
+// Migrations, seeds, services and unknown roots change what suites observe;
+// those a semantic judgment can rank.
+const harness = [
+  /^(?:server|ee\/server)\/test-utils\//,
+  /^server\/(?:vitest\.|src\/test\/setup\.)/,
+  /^shared\/.*(?:\/__tests__\/.*)?_dbTestUtils\./,
+  /(?:^|\/)(?:package(?:-lock)?\.json|tsconfig[^/]*\.json|vitest[^/]*\.[cm]?[jt]s)$/,
+  /^(?:scripts|\.github|test-config)\//,
+  /^\.env/,
+];
 
 export function selectIntegration(changed) {
   if (changed === null) {
-    return { shouldRun: true, full: true, reason: 'Change evidence unavailable; full suite required' };
+    return { shouldRun: true, full: true, harness: true, reason: 'Change evidence unavailable; full suite required' };
   }
   if (!Array.isArray(changed) || changed.some((file) => typeof file !== 'string' || !file)) {
     throw new Error('Expected changed paths or null');
   }
   const relevant = changed.filter((file) => !documentation.test(file));
   if (!relevant.length) {
-    return { shouldRun: false, full: false, reason: 'Only documentation changed (or identical revisions)' };
+    return { shouldRun: false, full: false, harness: false, reason: 'Only documentation changed (or identical revisions)' };
   }
+  const harnessChange = relevant.find((file) => harness.some((pattern) => pattern.test(file)));
+  if (harnessChange) return { shouldRun: true, full: true, harness: true, reason: `${harnessChange} changes the test harness` };
   const full = relevant.find((file) => outsideGraph.some((pattern) => pattern.test(file)) || !graphSource.test(file));
   return full
-    ? { shouldRun: true, full: true, reason: `${full} is outside the reliable import graph` }
-    : { shouldRun: true, full: false, reason: 'Manifest floor plus affected integration suites' };
+    ? { shouldRun: true, full: true, harness: false, reason: `${full} is outside the reliable import graph` }
+    : { shouldRun: true, full: false, harness: false, reason: 'Manifest floor plus affected integration suites' };
 }
 
 export function readChangedFiles({ cwd, base, head = 'HEAD' }) {

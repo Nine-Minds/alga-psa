@@ -19,6 +19,7 @@ import { reconcileExecution } from './lib/test-execution-evidence.mjs';
 import { reconcileDiscovery, repositoryTestFiles } from './lib/test-discovery.mjs';
 import { partitionTestFiles } from './lib/test-sharding.mjs';
 import { testRevision } from './lib/test-revision.mjs';
+import { applyIntegrationPolicy, loadJevSelection, DEFAULT_PRUNE_THRESHOLD } from './lib/jev-enforcement.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const serverDir = path.join(repoRoot, 'server');
@@ -102,14 +103,23 @@ for (const entry of paths) {
   }
 }
 
+const before = testRevision(repoRoot);
 const base = process.env.TIER1_BASE_SHA?.trim();
 const changed = readChangedFiles({ cwd: repoRoot, base, head: process.env.TIER1_HEAD_SHA || 'HEAD' });
 const decision = selectIntegration(changed);
+// Paths in this runner are server-relative; Jev judgments are repository-relative.
+const toRepo = (file) => path.posix.normalize(path.posix.join('server', file));
+const toServer = (file) => path.posix.relative('server', file);
 // Direct/manual invocation still runs the manifest on documentation-only
 // changes. Only the workflow's explicit selection step may skip the job.
 let selection = paths;
 let mode = decision.reason;
-if (decision.full) {
+let jev = { status: 'not-applicable' };
+const forceFull = process.env.INTEGRATION_FORCE_FULL === 'true';
+if (forceFull) {
+  selection = integrationDirs;
+  mode = 'full integration suite (forced)';
+} else if (decision.full && decision.harness) {
   selection = integrationDirs;
 } else if (decision.shouldRun) {
   const affected = affectedSuites(base);
@@ -117,15 +127,36 @@ if (decision.full) {
     selection = integrationDirs;
     mode = 'full integration suite (import graph unavailable)';
   } else {
-    const extra = affected.filter((file) => !coveredByManifest(file, paths));
-    selection = [...paths, ...extra];
-    mode = `manifest (${paths.length} entries) + ${extra.length} affected suites vs ${base.slice(0, 10)}`;
-    for (const file of extra) console.log(`  affected: ${file}`);
+    const jevPath = process.env.JEV_SELECTION_PATH;
+    jev = jevPath ? loadJevSelection({ file: jevPath, revision: before.revision, mode: 'enforce' }) : { status: 'unavailable', reason: 'JEV_SELECTION_PATH is not set' };
+    if (jev.status === 'applied') {
+      // Floor and the import graph's direct answer stay; Jev prunes graph
+      // suites it is confidently unrelated to and adds suites the graph missed.
+      const judged = jev.selection;
+      const policy = applyIntegrationPolicy({
+        floor: floorFiles.map(toRepo), affected: affected.map(toRepo), always: judged.always,
+        judgments: judged.integration?.judgments ?? [], threshold: judged.threshold,
+        pruneThreshold: Number(process.env.JEV_PRUNE_THRESHOLD || DEFAULT_PRUNE_THRESHOLD),
+      });
+      selection = policy.run.map(toServer);
+      jev = { status: 'applied', threshold: policy.threshold, pruneThreshold: policy.pruneThreshold, revision: judged.head,
+        graph: policy.graph.length, added: policy.added, pruned: policy.pruned };
+      mode = `manifest (${paths.length} entries) + ${policy.graph.length} affected + ${policy.added.length} added by Jev, ${policy.pruned.length} pruned by Jev${decision.full ? ` (${decision.reason})` : ''}`;
+      for (const entry of policy.added) console.log(`  added by Jev (p=${entry.probability.toFixed(2)}): ${toServer(entry.file)}`);
+      for (const entry of policy.pruned) console.log(`  pruned by Jev (p=${entry.probability.toFixed(2)}): ${toServer(entry.file)}`);
+    } else if (decision.full) {
+      selection = integrationDirs;
+      mode = `${decision.reason}; Jev ${jev.reason}`;
+    } else {
+      const extra = affected.filter((file) => !coveredByManifest(file, paths));
+      selection = [...paths, ...extra];
+      mode = `manifest (${paths.length} entries) + ${extra.length} affected suites vs ${base.slice(0, 10)}; Jev ${jev.reason}`;
+      for (const file of extra) console.log(`  affected: ${file}`);
+    }
   }
 }
 console.log(`tier1 gate: ${mode}`);
 
-const before = testRevision(repoRoot);
 let evidence;
 let allFiles = [];
 const index = Number(process.env.INTEGRATION_SHARD_INDEX || '1');
@@ -164,7 +195,7 @@ try {
   evidence = { schemaVersion: 1, suite: 'integration', revision: before.revision, status: 'failed', failures: [error.message] };
 }
 const after = testRevision(repoRoot);
-evidence.selection = { mode: 'selected', reason: mode, paths: selection, manifest: paths, allFiles, filters: [], shard: { index, total } };
+evidence.selection = { mode: 'selected', reason: mode, paths: selection, manifest: paths, allFiles, filters: [], shard: { index, total }, jev };
 if (before.dirty || after.dirty) {
   evidence.status = 'failed';
   evidence.failures.push('Integration checkout must remain clean');
