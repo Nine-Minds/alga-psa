@@ -350,3 +350,40 @@ Both cost a diagnosis on 2026-09-25 and neither is a defect in the merge engine:
   `getEntityImageUrl` takes `.first()` of the logo associations with no variant
   preference. Both rows are legal under
   `uq_document_associations_single_true_logo`, which is keyed by variant.
+
+## A profile could be picked everywhere and honoured nowhere
+
+The 2026-09-25 round found the profile plumbed *into* the billing tables and out
+of every surface that spends them. Three separate reads still asked the client
+row the question the profile had already answered:
+
+- **Delivery.** `resolveInvoiceBillingRecipient` took a `clientId` and nothing
+  else, so an invoice raised against a merged-in profile was emailed to the
+  parent's `billing_email` — `it-ops@northstardental.example` on this card's
+  data — even with the profile's own AP address saved. It now takes the
+  invoice's profile and tries the profile's billing contact, `billing_email` and
+  bill-to location first, addressing the mail by `bill_to_name`. Every field is
+  nullable-means-inherit, so a profile that fills nothing in adds no step, which
+  is what keeps the unsegmented path byte-identical. The three delivery callers
+  (preview, direct send, the pg-boss job) pass `invoice.billing_profile_id`, and
+  the manual-invoice email gate asks about the same profile — otherwise a
+  profile whose only address is its own is refused an invoice it can deliver.
+- **Bill To.** `Invoice.getFullInvoiceById` built `client.name` from
+  `clients.client_name`, and every rendered document, preview and PDF maps
+  `customer.name` from it — so the profile's `bill_to_name` and its bill-to
+  location address were dead columns. The read now resolves both, falling back
+  field by field, and the profile row is only queried when the invoice carries a
+  profile at all (a pre-S8 invoice costs no extra read).
+- **Confirmation.** A draft named no profile anywhere, so the pick made on the
+  generate screen could not be checked short of finalizing and sending. The
+  listing query selects the profile id, its name, and a per-client profile count
+  so the details card can name it behind the D6 rule rather than showing every
+  unsegmented client a row saying "default".
+
+And on contracts: creation could pick a profile, nothing could change one. The
+contract's client-assignment card now states and edits it through the same
+update path as its dates and PO, guarded by the same cross-client rejection
+creation already had — re-pointing a contract moves every charge it produces.
+The edit dialog's picker was worse than absent: it rendered, it was never
+loaded from the assignment, and it was never saved. It is gone; that dialog
+edits the contract, not the assignment that carries the profile.
