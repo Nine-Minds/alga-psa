@@ -1,7 +1,9 @@
 /**
  * Appliance Console API — list appliance installs.
  *
- * GET /api/v1/appliance-installs — list registry tenants (deployment_type=appliance).
+ * GET  /api/v1/appliance-installs — list registry tenants (deployment_type=appliance).
+ * POST /api/v1/appliance-installs — create a registry tenant (starts a Temporal
+ *      workflow that mints the tenant + install code in C4 and emails it).
  *
  * Access restricted to MASTER_BILLING_TENANT_ID. Thin read-proxy: forwards to the
  * alga-license service (C4) GET /tenants with the server-held service secret and
@@ -12,6 +14,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { PlatformReportAuditService as ExtensionAuditService, extractClientInfo } from '@ee/lib/platformReports';
 import { assertMasterTenantAccess, isMasterTenantAuthError as isAuthError } from '@ee/lib/auth/masterTenantAccess';
 import { listApplianceTenants } from '@ee/lib/applianceConsole/algaLicenseAdminClient';
+import { handleApplianceTrigger } from '@ee/lib/applianceConsole/triggerRoute';
+import { parseCreateTenant } from '@ee/lib/applianceConsole/actionInputs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -51,4 +55,16 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
   }
+}
+
+export async function POST(request: NextRequest): Promise<NextResponse> {
+  return handleApplianceTrigger(
+    {
+      action: 'create',
+      eventType: 'appliance.create',
+      parse: (body, _tenantId, base) => parseCreateTenant(body, base),
+    },
+    request,
+    null,
+  );
 }
