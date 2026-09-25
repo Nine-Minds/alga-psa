@@ -644,7 +644,11 @@ export function ContractDialog({
               />
             </div>
 
-            {/* Billing profile — rendered only for a segmented client */}
+            {/* Billing profile — rendered only for a segmented client, and only
+                while creating: this dialog edits the contract, not the client
+                assignment that carries the profile, so on edit the profile is
+                changed on the contract's client-assignment card instead. */}
+            {!editingContract && (
             <BillingProfilePicker
               id="contract-dialog-billing-profile"
               clientId={clientId || null}
@@ -659,6 +663,7 @@ export function ContractDialog({
                 defaultValue: 'Charges from this contract are billed to this profile.',
               })}
             />
+            )}
 
             {/* Contract Name */}
             <div>

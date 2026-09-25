@@ -594,6 +594,17 @@ export async function updateClientContractAssignment(
     throw new Error(`Client contract ${clientContractId} not found`);
   }
 
+  // Re-pointing a contract at another profile moves every charge it produces,
+  // so the same cross-client guard that applies at creation applies here.
+  if (updateData.billing_profile_id) {
+    const profile = await tenantDb(knexOrTrx, tenant).table('client_billing_profiles')
+      .where({ billing_profile_id: updateData.billing_profile_id })
+      .first('client_id');
+    if (!profile || profile.client_id !== existing.client_id) {
+      throw new Error('That billing profile belongs to a different client.');
+    }
+  }
+
   const sanitized: Partial<IClientContract> = {
     ...updateData,
     tenant: undefined as any,

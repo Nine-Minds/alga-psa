@@ -147,6 +147,9 @@ export interface IContractAssignmentSummary extends TenantEntity {
   client_contract_id: string;
   client_id: string;
   client_name?: string | null;
+  /** Profile this assignment bills; NULL falls back to the client default. */
+  billing_profile_id?: string | null;
+  billing_profile_name?: string | null;
   assignment_status?: ContractStatus;
   start_date: ISO8601String | null;
   end_date: ISO8601String | null;
