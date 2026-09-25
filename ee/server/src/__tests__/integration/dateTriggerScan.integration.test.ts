@@ -9,7 +9,7 @@ import { launchDateTriggeredWorkflows, buildDateTriggerFireKey } from '../../../
 const mocks = vi.hoisted(() => ({ publish: vi.fn(), temporalStart: vi.fn() }));
 vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: mocks.publish }));
 vi.mock('../../../../packages/workflows/src/lib/workflowRuntimeV2Temporal', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../../../packages/workflows/src/lib/workflowRuntimeV2Temporal')>()),
+  ...((await importOriginal()) as typeof import('../../../../packages/workflows/src/lib/workflowRuntimeV2Temporal')),
   startWorkflowRuntimeV2TemporalRun: mocks.temporalStart,
 }));
 
