@@ -238,7 +238,7 @@ export default function ClientCommandCenter({
     </>
   );
   if (identityLocation?.phone) {
-    identityItems.push({ key: 'phone', href: null, text: <><Phone className={IDENTITY_ICON_CLASS} aria-hidden="true" /><PhoneText value={identityLocation.phone} /></> });
+    identityItems.push({ key: 'phone', href: null, text: <><Phone className={IDENTITY_ICON_CLASS} aria-hidden="true" /><PhoneText value={identityLocation.phone} extension={identityLocation.phone_extension} defaultCountry={identityLocation.country_code} /></> });
   }
   if (identityLocation?.email) {
     identityItems.push({ key: 'email', href: `mailto:${identityLocation.email}`, text: identityText(Mail, identityLocation.email) });

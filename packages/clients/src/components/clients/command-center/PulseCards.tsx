@@ -538,7 +538,7 @@ export function PeopleCard({ id, data, onOpen, onOpenContact, onAddContact, clas
                 })()}
                 <span className="block text-xs text-[rgb(var(--color-text-600))] truncate">
                   {contact.phone && (
-                    <><Phone className={CONTACT_ICON_CLASS} aria-hidden="true" /><PhoneText value={contact.phone} className="hover:text-primary-700 hover:underline" /></>
+                    <><Phone className={CONTACT_ICON_CLASS} aria-hidden="true" /><PhoneText value={contact.phone} extension={contact.phone_extension} className="hover:text-primary-700 hover:underline" /></>
                   )}
                   {contact.phone && contact.email && <span className="text-[rgb(var(--color-text-300))]"> · </span>}
                   {contact.email && (
@@ -614,7 +614,7 @@ export function LocationsCard({ id, locations, onManage, className, t }: {
               {(location.phone || location.email) && (
                 <div className="text-xs text-[rgb(var(--color-text-600))] truncate">
                   {location.phone && (
-                    <><Phone className={CONTACT_ICON_CLASS} aria-hidden="true" /><PhoneText value={location.phone} className="hover:text-primary-700 hover:underline" /></>
+                    <><Phone className={CONTACT_ICON_CLASS} aria-hidden="true" /><PhoneText value={location.phone} extension={location.phone_extension} defaultCountry={location.country_code} className="hover:text-primary-700 hover:underline" /></>
                   )}
                   {location.phone && location.email && <span className="text-[rgb(var(--color-text-300))]"> · </span>}
                   {location.email && (
