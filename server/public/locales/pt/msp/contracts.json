@@ -1700,6 +1700,7 @@
     },
     "fields": {
       "client": "Cliente",
+      "billingProfile": "Perfil de faturamento",
       "contractName": "Nome do contrato",
       "billingFrequency": "Frequência de cobrança",
       "currency": "Moeda",
@@ -1708,6 +1709,9 @@
       "renewalMode": "Modo de renovação",
       "noticePeriod": "Período de aviso prévio",
       "renewalTerm": "Prazo de renovação"
+    },
+    "billingProfile": {
+      "clientDefault": "O perfil padrão do cliente"
     },
     "fallback": {
       "notSelected": "Não selecionado",

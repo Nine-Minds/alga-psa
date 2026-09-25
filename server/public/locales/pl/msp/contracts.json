@@ -1704,6 +1704,7 @@
     },
     "fields": {
       "client": "Klient",
+      "billingProfile": "Profil rozliczeniowy",
       "contractName": "Nazwa umowy",
       "billingFrequency": "Częstotliwość rozliczeń",
       "currency": "Waluta",
@@ -1712,6 +1713,9 @@
       "renewalMode": "Tryb odnowienia",
       "noticePeriod": "Okres wypowiedzenia",
       "renewalTerm": "Okres odnowienia"
+    },
+    "billingProfile": {
+      "clientDefault": "Domyślny profil klienta"
     },
     "fallback": {
       "notSelected": "Nie wybrano",

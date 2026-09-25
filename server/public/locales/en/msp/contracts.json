@@ -1700,6 +1700,7 @@
     },
     "fields": {
       "client": "Client",
+      "billingProfile": "Billing Profile",
       "contractName": "Contract Name",
       "billingFrequency": "Billing Frequency",
       "currency": "Currency",
@@ -1708,6 +1709,9 @@
       "renewalMode": "Renewal Mode",
       "noticePeriod": "Notice Period",
       "renewalTerm": "Renewal Term"
+    },
+    "billingProfile": {
+      "clientDefault": "The client's default profile"
     },
     "fallback": {
       "notSelected": "Not selected",

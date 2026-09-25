@@ -15,10 +15,13 @@ import {
   CheckCircle2,
   FileCheck,
   Repeat,
+  Wallet,
 } from 'lucide-react';
 import { CURRENCY_OPTIONS } from '@alga-psa/core';
 import { parse } from 'date-fns';
 import { getClientByIdForBilling } from '@alga-psa/billing/actions/billingClientsActions';
+import { getClientBillingProfilesForBilling } from '@alga-psa/billing/actions/billingProfileActions';
+import { useClientBillingProfiles } from '@alga-psa/ui/hooks/useClientBillingProfiles';
 import { getRecurringAuthoringPreview } from '../recurringAuthoringPreview';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -26,6 +29,8 @@ import {
   useBillingFrequencyOptions,
   useFormatBillingFrequency,
 } from '@alga-psa/billing/hooks/useBillingEnumOptions';
+
+const loadBillingProfiles = (clientId: string) => getClientBillingProfilesForBilling(clientId);
 
 interface ReviewContractStepProps {
   data: ContractWizardData;
@@ -62,6 +67,17 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
 
     void loadClientName();
   }, [data.client_id, t]);
+
+  // Mirrors the picker on the basics step: silent for a single-profile client,
+  // and for a segmented one it states where the contract will bill — the pick
+  // or the client default it falls back to.
+  const { profiles: billingProfiles, isSegmented: isProfileSegmented } = useClientBillingProfiles(
+    data.client_id || null,
+    loadBillingProfiles,
+  );
+  const selectedBillingProfileName = data.billing_profile_id
+    ? billingProfiles.find((profile) => profile.billing_profile_id === data.billing_profile_id)?.name
+    : null;
 
   const currencyCode = data.currency_code || 'USD';
   const recurringPreview = getRecurringAuthoringPreview({
@@ -263,6 +279,22 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
               </p>
             </div>
           </div>
+          {isProfileSegmented && (
+            <div className="flex items-start gap-2">
+              <Wallet className="h-4 w-4 mt-0.5 text-[rgb(var(--color-text-300))]" />
+              <div>
+                <p className="text-[rgb(var(--color-text-500))]">
+                  {t('wizardReview.fields.billingProfile', { defaultValue: 'Billing Profile' })}
+                </p>
+                <p className="font-medium">
+                  {selectedBillingProfileName ||
+                    t('wizardReview.billingProfile.clientDefault', {
+                      defaultValue: "The client's default profile",
+                    })}
+                </p>
+              </div>
+            </div>
+          )}
           <div className="flex items-start gap-2">
             <FileText className="h-4 w-4 mt-0.5 text-[rgb(var(--color-text-300))]" />
             <div>
