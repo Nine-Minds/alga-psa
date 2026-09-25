@@ -13,7 +13,8 @@ import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossF
 import { translateFieldValidation, validateClientNameField } from '@alga-psa/validation';
 import ClientContactsList from '../contacts/ClientContactsList';
 import QuickAddContact from '../contacts/QuickAddContact';
-import { Flex, Text, Heading } from '@radix-ui/themes';
+import { Text, Heading } from '@radix-ui/themes';
+import { DrawerFooter } from '@alga-psa/ui/components/Drawer';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import BillingConfiguration from './BillingConfiguration';
 import { getClientById } from '@alga-psa/clients/actions';
@@ -31,6 +32,7 @@ import {
   listClientInboundEmailDomains,
   addClientInboundEmailDomain,
   removeClientInboundEmailDomain,
+  setClientInboundEmailDomainAutoCreateContacts,
   listClientNameAliases,
   addClientNameAlias,
   removeClientNameAlias,
@@ -80,6 +82,7 @@ import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { usePageSaveShortcut } from '@alga-psa/ui/keyboard-shortcuts';
+import { clientWebsiteFieldsForSave } from '../../lib/clientWebsiteUpdate';
 import type { SurveyClientSatisfactionSummary } from '@alga-psa/types';
 import {
   formatEntraRunStatusLabel,
@@ -242,6 +245,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, renderHourBlocksSection, renderClientOpportunities, renderClientTickets, getSlaPolicies, openTicketDetails } = useClientCrossFeature();
   const { renderDocuments } = useDocumentsCrossFeature();
   const [editedClient, setEditedClient] = useState<IClient>(client);
+  // `client` is a prop and does not advance after this component saves. Keep
+  // the comparison baseline current so a later save is compared to last save.
+  const savedClientRef = useRef(client);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isQuickAddTicketOpen, setIsQuickAddTicketOpen] = useState(false);
   const [isAddContactOpen, setIsAddContactOpen] = useState(false);
@@ -732,6 +738,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           ...latestClientData,
           client_type: latestClientData.client_type || 'company'
         });
+        savedClientRef.current = latestClientData;
         setHasUnsavedChanges(false);
       }
     } catch (error) {
@@ -748,6 +755,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       ...client,
       client_type: client.client_type || 'company'
     });
+    savedClientRef.current = client;
     setHasUnsavedChanges(false);
   }, [client]);
 
@@ -943,7 +951,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       }
       
       // Compare with original client to determine if there are unsaved changes
-      return JSON.stringify(tempClient) !== JSON.stringify(client);
+      return JSON.stringify(tempClient) !== JSON.stringify(savedClientRef.current);
     });
   };
 
@@ -999,6 +1007,19 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         properties: restOfEditedClient.properties ? { ...restOfEditedClient.properties } : {},
         account_manager_id: editedClientRef.current.account_manager_id === '' ? null : editedClientRef.current.account_manager_id,
       };
+      const websiteFields = clientWebsiteFieldsForSave(editedClientRef.current, savedClientRef.current);
+      if (!websiteFields.changed) {
+        delete dataToUpdate.url;
+        if (dataToUpdate.properties) delete dataToUpdate.properties.website;
+      } else {
+        // The field handlers keep these copies in sync; submit the user's edit
+        // explicitly so a deliberate empty value clears both stored copies.
+        dataToUpdate.url = websiteFields.url;
+        dataToUpdate.properties = {
+          ...(dataToUpdate.properties ?? {}),
+          website: websiteFields.website,
+        };
+      }
       const updatedClientResult = await updateClient(client.client_id, dataToUpdate);
       if (isClientActionError(updatedClientResult)) {
         handleError(updatedClientResult);
@@ -1006,9 +1027,14 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       }
 
       const updatedClient = updatedClientResult as IClient;
+      savedClientRef.current = updatedClient;
       setEditedClient(updatedClient);
       setHasUnsavedChanges(false);
       setHasAttemptedSubmit(false);
+      // The record card summarizes fields this form owns (account manager,
+      // default contact, client since). Without this the overview kept the
+      // pre-save values until a full page reload.
+      setPulseRefreshNonce((nonce) => nonce + 1);
       toast.success(t('clientDetails.saveSuccess', {
         defaultValue: 'Client details saved successfully.',
       }));
@@ -1156,11 +1182,11 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       }
       (tempClient.properties as any).primary_contact_id = contactId;
       (tempClient.properties as any).primary_contact_name = selectedName;
-      return JSON.stringify(tempClient) !== JSON.stringify(client);
+      return JSON.stringify(tempClient) !== JSON.stringify(savedClientRef.current);
     });
   }, [clientActiveContacts, editedClient, client]);
 
-  const [inboundEmailDomains, setInboundEmailDomains] = useState<Array<{ id: string; domain: string }>>([]);
+  const [inboundEmailDomains, setInboundEmailDomains] = useState<Array<{ id: string; domain: string; auto_create_contacts: boolean }>>([]);
   const [inboundDomainDraft, setInboundDomainDraft] = useState('');
   const [isInboundDomainBusy, setIsInboundDomainBusy] = useState(false);
   const [inboundDestinationOptions, setInboundDestinationOptions] = useState<SelectOption[]>([]);
@@ -1176,7 +1202,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           toast.error(getErrorMessage(rows));
           return;
         }
-        setInboundEmailDomains((rows ?? []).map((r: any) => ({ id: r.id, domain: r.domain })));
+        setInboundEmailDomains((rows ?? []).map((r: any) => ({ id: r.id, domain: r.domain, auto_create_contacts: Boolean(r.auto_create_contacts) })));
       } catch (error) {
         // Non-blocking; if this fails we don't want to prevent other client edits.
         console.error('Failed to load inbound email domains:', error);
@@ -1237,7 +1263,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         return;
       }
       setInboundEmailDomains((prev) => {
-        const next = [...prev, { id: (created as any).id, domain: (created as any).domain }].filter(
+        const next = [...prev, { id: (created as any).id, domain: (created as any).domain, auto_create_contacts: false }].filter(
           (d, idx, arr) => idx === arr.findIndex((x) => x.id === d.id)
         );
         next.sort((a, b) => a.domain.localeCompare(b.domain));
@@ -1252,6 +1278,19 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       setIsInboundDomainBusy(false);
     }
   }, [addClientInboundEmailDomain, editedClient.client_id, inboundDomainDraft, normalizeInboundDomain]);
+
+  const handleToggleInboundDomainAutoCreate = useCallback(async (domainId: string, enabled: boolean) => {
+    const previous = inboundEmailDomains.find((d) => d.id === domainId)?.auto_create_contacts ?? false;
+    setInboundEmailDomains((rows) => rows.map((d) => d.id === domainId ? { ...d, auto_create_contacts: enabled } : d));
+    try {
+      const result = await setClientInboundEmailDomainAutoCreateContacts(editedClient.client_id, domainId, enabled);
+      if (isClientActionError(result)) throw new Error(getErrorMessage(result));
+      toast.success(t('clientDetails.inboundDomainAutoCreateUpdated'));
+    } catch (error) {
+      setInboundEmailDomains((rows) => rows.map((d) => d.id === domainId ? { ...d, auto_create_contacts: previous } : d));
+      toast.error(t('clientDetails.inboundDomainAutoCreateUpdateFailed'));
+    }
+  }, [editedClient.client_id, inboundEmailDomains, t]);
 
   const handleRemoveInboundDomain = useCallback(async (domainId: string) => {
     if (!domainId) return;
@@ -1381,6 +1420,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           onDefaultContactChange={handleDefaultContactChange}
           onAddInboundDomain={handleAddInboundDomain}
           onRemoveInboundDomain={handleRemoveInboundDomain}
+          onToggleInboundDomainAutoCreate={handleToggleInboundDomainAutoCreate}
           onAddClientNameAlias={handleAddClientNameAlias}
           onRemoveClientNameAlias={handleRemoveClientNameAlias}
           onTagsChange={handleTagsChange}
@@ -1617,7 +1657,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             </FieldContainer>
           </div>
           
-          <Flex gap="4" justify="end" align="center">
+          <DrawerFooter className="items-center gap-4">
             {hasAttemptedSubmit && Object.keys(fieldErrors).some(key => fieldErrors[key]) && (
               <Text size="2" className="text-red-600 mr-2" role="alert">
                 {t('clientDetails.requiredFields', { defaultValue: 'Please fill in all required fields' })}
@@ -1632,7 +1672,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                 ? t('common.actions.saving', { defaultValue: 'Saving...' })
                 : t('clientDetails.saveChanges', { defaultValue: 'Save' })}
             </Button>
-          </Flex>
+          </DrawerFooter>
         </div>
       )
     },
@@ -1923,7 +1963,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             onTabUrlChange={handleFocusTabUrlChange}
             hasUnsavedRecordChanges={hasUnsavedChanges}
             onDiscardRecordChanges={() => {
-              setEditedClient(client);
+              setEditedClient(savedClientRef.current);
               setHasUnsavedChanges(false);
             }}
             onNewTicket={() => setIsQuickAddTicketOpen(true)}

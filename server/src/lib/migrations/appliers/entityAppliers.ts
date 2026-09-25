@@ -33,6 +33,12 @@ export interface EntityApplier {
   ): Promise<AppliedTarget>;
 }
 
+/** Leading calendar date of an AMP timestamp, or undefined if it has none. */
+function sourceCreatedDate(value?: string | null): string | undefined {
+  const match = typeof value === 'string' ? /^\d{4}-\d{2}-\d{2}/.exec(value.trim()) : null;
+  return match ? match[0] : undefined;
+}
+
 /**
  * Organizations → clients through the transaction-scoped shared model. This
  * keeps the target mutation in the same transaction as the AMP identity and
@@ -52,6 +58,10 @@ export class OrganizationMigrationApplier implements EntityApplier {
       client_name: record.name,
       url: record.website ?? undefined,
       phone_no: record.phone ?? undefined,
+      // Tenure carried over from the source PSA: when the organization was
+      // created there, not when this row lands here. An unreadable timestamp
+      // falls back to created_at rather than failing the whole organization.
+      client_since: sourceCreatedDate(record.created_at),
       properties: {
         ...(record.website ? { website: record.website } : {}),
         ...(record.phone ? { phone: record.phone } : {}),

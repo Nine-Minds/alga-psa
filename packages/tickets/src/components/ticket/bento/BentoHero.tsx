@@ -35,6 +35,7 @@ import { usePageSaveShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
 } from '../TicketNotificationSuppressionControl';
+import { CategoryPicker } from '../../CategoryPicker';
 
 interface HeroSelectOption {
   value: string;
@@ -503,6 +504,7 @@ export function BentoHero({
   }, [handlePendingChange, pendingBoardConfig, pendingChanges.board_id, savedBoardConfig]);
 
   const displayedStatusId = displayValue('status_id');
+  const displayedCategoryId = displayValue('subcategory_id') || displayValue('category_id');
   const baseScopedStatusOptions = boardScopedStatusOptions.length > 0
     ? boardScopedStatusOptions
     : statusOptions.filter((option) => option.board_id === effectiveBoardId || option.value === displayedStatusId);
@@ -513,17 +515,6 @@ export function BentoHero({
     displayedStatusId && !baseScopedStatusOptions.some((option) => option.value === displayedStatusId)
       ? [...baseScopedStatusOptions, ...statusOptions.filter((option) => option.value === displayedStatusId)]
       : baseScopedStatusOptions;
-
-  const categoryOptions = useMemo<SelectOption[]>(
-    () =>
-      (boardCategories ?? [])
-        .filter((category) => category.category_id)
-        .map((category) => ({
-          value: category.category_id,
-          label: category.category_name ?? '',
-        })),
-    [boardCategories],
-  );
 
   // Priority options may carry the priority color; render it as a dot. A board
   // only offers the priority family its priority_type declares, so a custom board
@@ -1036,13 +1027,31 @@ export function BentoHero({
           </HeroField>
           <HeroField label={t('bento.hero.category', 'Category')}>
             {renderLiveField('category_id', '', (
-              <CustomSelect
+              <CategoryPicker
                 id={`${id}-category-select`}
+                categories={boardCategories}
+                selectedCategories={displayedCategoryId ? [displayedCategoryId] : []}
+                onSelect={(categoryIds) => {
+                  // LEVERAGE: pattern ticket-category-selection — Grid and Entry both stage parent/subcategory IDs.
+                  const selectedId = categoryIds[0];
+                  if (!selectedId || selectedId === 'no-category') {
+                    handlePendingChange('category_id', null);
+                    handlePendingChange('subcategory_id', null);
+                    return;
+                  }
+
+                  const selectedCategory = boardCategories.find((category) => category.category_id === selectedId);
+                  if (selectedCategory?.parent_category) {
+                    handlePendingChange('category_id', selectedCategory.parent_category);
+                    handlePendingChange('subcategory_id', selectedId);
+                  } else {
+                    handlePendingChange('category_id', selectedId);
+                    handlePendingChange('subcategory_id', null);
+                  }
+                }}
                 placeholder={t('bento.hero.category', 'Category')}
-                value={displayValue('category_id') ?? ''}
-                options={categoryOptions}
-                onValueChange={(value: string) => handlePendingChange('category_id', value || null)}
-                disabled={workflowLocked || isFrozen('category_id') || isLoadingBoardConfig}
+                multiSelect={false}
+                disabled={workflowLocked || isFrozen('category_id') || isFrozen('subcategory_id') || isLoadingBoardConfig}
                 className="!w-full"
               />
             ))}

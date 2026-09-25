@@ -1074,7 +1074,21 @@
       "selectParentCategory": "Übergeordnete Kategorie auswählen",
       "parentHelpWithBoard": "Wählen Sie eine übergeordnete Kategorie aus, um eine Unterkategorie zu erstellen, oder lassen Sie das Feld für die oberste Ebene leer",
       "parentHelpWithoutBoard": "Wählen Sie zuerst ein Board oder eine übergeordnete Kategorie aus, um deren Board zu übernehmen",
-      "creating": "Wird erstellt..."
+      "creating": "Wird erstellt...",
+      "copyToBoard": "Kategorien auf ein anderes Board kopieren",
+      "copyTitle": "Kategorien auf ein anderes Board kopieren",
+      "copySourceLabel": "Quellboard auswählen",
+      "copyTargetLabel": "Zielboard auswählen",
+      "copySelected": "Ausgewählte kopieren",
+      "copySuccess": "{{created}} Kategorien kopiert; {{skipped}} bereits vorhandene übersprungen.",
+      "copyFailed": "Kopieren fehlgeschlagen",
+      "copyEmpty": "Keine Kategorien auf diesem Board.",
+      "copying": "Wird kopiert…",
+      "copySourceBoard": "Quellboard auswählen",
+      "copyTargetBoard": "Zielboard auswählen",
+      "copyBoardTypeMismatch": "Ticketkategorien können nur zwischen Boards mit demselben Kategorietyp kopiert werden.",
+      "copyConflicts_one": "{{count}} übersprungene Kategorie hat auf dem Zielboard eine andere übergeordnete Kategorie.",
+      "copyConflicts_other": "{{count}} übersprungene Kategorien haben auf dem Zielboard eine andere übergeordnete Kategorie."
     },
     "display": {
       "responseStateTrackingTitle": "Antwortstatus-Tracking",
@@ -1454,7 +1468,11 @@
       "missingField": "Erforderliches Checklistenfeld fehlt.",
       "missingFieldNamed": "Erforderliches Checklistenfeld fehlt: {{field}}.",
       "referenceInvalid": "Das ausgewählte Ticket, die Checklistenvorlage oder der Regelfilter ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
-      "invalidValue": "Einer der Checklistenwerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut."
+      "invalidValue": "Einer der Checklistenwerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "ruleCategoryBoardMismatch": "Die ausgewählte Kategorie gehört zu einem anderen Board als die Regel.",
+      "ruleCategoryInvalid": "Die ausgewählte Kategorie ist keine Kategorie der obersten Ebene.",
+      "ruleSubcategoryInvalid": "Die ausgewählte Unterkategorie gehört nicht zur ausgewählten Kategorie.",
+      "ruleSubcategoryRequiresCategory": "Wählen Sie eine Kategorie aus, bevor Sie eine Unterkategorie wählen."
     }
   },
   "ticketSection": {

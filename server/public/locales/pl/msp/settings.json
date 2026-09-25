@@ -3083,7 +3083,7 @@
     "assetTypes": {
       "tab": "Zasoby",
       "title": "Typy zasobów",
-      "description": "Zarządzaj typami zasobów dostępnymi w module zasobów. Typy niestandardowe mają schemat pól, który steruje ich formularzami tworzenia/edycji.",
+      "description": "Typy niestandardowe używają schematu pól w formularzach; typy wbudowane również obsługują pola dodatkowe.",
       "loading": "Ładowanie typów zasobów...",
       "table": {
         "name": "Nazwa",
@@ -3111,7 +3111,7 @@
         "namePlaceholder": "np. Firewall",
         "displayOrderLabel": "Kolejność wyświetlania",
         "iconLabel": "Ikona",
-        "builtinSchemaHint": "Typy wbudowane używają stałych formularzy zarządzanych przez AlgaPSA, więc ich schematu pól nie można edytować. Nadal możesz zmienić nazwę typu lub jego ikonę."
+        "builtinSchemaHint": "Standardowy wbudowany formularz pozostaje niezmienny. Te dodatkowe pola są definiowane dla danego tenanta."
       },
       "deleteDialog": {
         "title": "Usuń typ zasobu",
@@ -3169,7 +3169,8 @@
           "invalidOptions": "Opcje nie mogą być puste.",
           "invalidField": "To pole jest nieprawidłowe."
         }
-      }
+      },
+      "additionalFields": "Pola dodatkowe"
     }
   },
   "mcpServer": {

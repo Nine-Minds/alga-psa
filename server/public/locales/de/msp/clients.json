@@ -197,6 +197,9 @@
     "opportunities": "Verkaufschancen",
     "lifecycleStatus": "Lebenszyklus",
     "lifecycleStatusHelper": "Interessenten stehen Vertriebsworkflows zur Verfügung, werden aber standardmäßig in operativen Kundenlisten ausgeblendet.",
+    "clientSince": "Kunde seit",
+    "clientSinceHelper": "Beginn der Geschäftsbeziehung. Bleibt das Feld leer, wird das Datum verwendet, an dem dieser Kunde hier angelegt wurde.",
+    "clientSincePlaceholder": "Anlagedatum dieses Kunden",
     "title": "Kundendaten",
     "backToClients": "Zurück zu Kunden",
     "openInNewTab": "In neuem Tab öffnen",
@@ -304,7 +307,11 @@
     "parentClientSelf": "Ein Kunde kann nicht sein eigener übergeordneter Kunde sein",
     "parentClientPlaceholder": "Kein übergeordneter Kunde",
     "parentClientClear": "Löschen",
-    "parentClientLegacy": "Zuvor als Text eingegeben: {{name}}"
+    "parentClientLegacy": "Zuvor als Text eingegeben: {{name}}",
+    "inboundDomainAutoCreateContacts": "Kontakte für neue Absender erstellen",
+    "inboundDomainAutoCreateHelp": "Zugeordnete Domains können für vertrauenswürdige neue Absender einen Kontakt erstellen.",
+    "inboundDomainAutoCreateUpdated": "Absendereinstellung aktualisiert.",
+    "inboundDomainAutoCreateUpdateFailed": "Absendereinstellung konnte nicht aktualisiert werden."
   },
   "clientCommandCenter": {
     "cards": {

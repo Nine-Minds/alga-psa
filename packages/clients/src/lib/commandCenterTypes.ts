@@ -229,8 +229,11 @@ export interface ClientPulseRecord {
   url: string | null;
   accountManagerName: string | null;
   defaultContactName: string | null;
+  /** Set only when the named contact still belongs to this client. */
+  defaultContactId: string | null;
   inboundDomains: string[];
   taxRegion: string | null;
+  /** 'YYYY-MM-DD' — clients.client_since, falling back to created_at. */
   clientSince: string | null;
   isInactive: boolean;
 }

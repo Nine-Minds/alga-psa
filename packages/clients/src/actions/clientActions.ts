@@ -42,10 +42,12 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { applyClientListIndexedSearchFilter } from '../lib/listSearchSql';
+import { CLIENT_SINCE_FORMAT_MESSAGE, toClientSinceDate, withClientSinceDateString } from '../lib/clientSince';
 import { normalizeClientType } from '../lib/normalizeClientType';
 import { clientCoreFieldsSchema, normalizePhone, parseSubmittedFields } from '@alga-psa/validation';
 import { isStructuralFailure, type StructuralResult } from '../lib/structuralResult';
 import { resolveTenantDefaultCountry } from '@alga-psa/tenancy/lib/tenantDefaultCountry';
+import { mergeClientWebsiteUpdate } from '../lib/clientWebsiteUpdate';
 
 const CLIENT_PORTAL_MUTABLE_CLIENT_PROPERTIES = new Set([
   'website',
@@ -325,36 +327,13 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
       }
       permittedUpdateData = structural.data;
 
-      // Handle properties separately
-      if (permittedUpdateData.properties) {
-        const currentProperties = currentClient.properties || {};
-        const newProperties = permittedUpdateData.properties;
-
-        updateObject.properties = { ...currentProperties, ...newProperties };
-
-        // Sync website field with url if website is being updated
-        if ('website' in newProperties) {
-          updateObject.url = newProperties.website || '';
-        }
-      }
-
-      // Handle url field to sync with properties.website
-      if (permittedUpdateData.url !== undefined) {
-        updateObject.url = permittedUpdateData.url;
-
-        // Update properties.website to match url
-        if (!updateObject.properties) {
-          updateObject.properties = {
-            ...(currentClient.properties || {}),
-            website: permittedUpdateData.url
-          };
-        } else {
-          updateObject.properties = {
-            ...updateObject.properties,
-            website: permittedUpdateData.url
-          };
-        }
-      }
+      // Preserve partial property updates and only synchronize website copies
+      // when url or properties.website was explicitly provided.
+      Object.assign(updateObject, mergeClientWebsiteUpdate(
+        currentClient.url,
+        currentClient.properties,
+        permittedUpdateData
+      ));
 
       // Handle all other fields
       Object.entries(permittedUpdateData).forEach(([key, value]) => {
@@ -376,6 +355,17 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
 
       if (permittedUpdateData.hasOwnProperty('account_manager_id')) {
           updateObject.account_manager_id = permittedUpdateData.account_manager_id === '' ? null : permittedUpdateData.account_manager_id;
+      }
+
+      // client_since is a DATE. Forms round-trip whatever the driver handed
+      // them — including a local-midnight Date — and sending that back would
+      // let the database session timezone cast it to the previous day.
+      if (permittedUpdateData.hasOwnProperty('client_since')) {
+        const clientSince = toClientSinceDate(permittedUpdateData.client_since);
+        if (clientSince === undefined) {
+          throw new ClientStructuralError(`${CLIENT_SINCE_FORMAT_MESSAGE}.`);
+        }
+        updateObject.client_since = clientSince;
       }
 
       console.log('Final updateObject being sent to database:', JSON.stringify(updateObject, null, 2));
@@ -405,7 +395,11 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
       getClientLogoUrlAsync(clientId, tenant),
       getClientWideLogoUrlAsync(clientId, tenant),
     ]);
-    const updatedClientWithLogo = { ...updateResult.after, logoUrl, logoWideUrl } as IClientWithLocation;
+    const updatedClientWithLogo = withClientSinceDateString({
+      ...updateResult.after,
+      logoUrl,
+      logoWideUrl,
+    }) as IClientWithLocation;
 
     const occurredAt = updateResult.occurredAt ?? updatedClientWithLogo.updated_at ?? new Date().toISOString();
     const actor = maybeUserActor(user);
@@ -641,7 +635,7 @@ export const createClient = withAuth(async (user, { tenant }, client: Omit<IClie
       idempotencyKey: `client_created:${createdClient.client_id}`,
     });
 
-    return { success: true, data: createdClient };
+    return { success: true, data: withClientSinceDateString(createdClient) };
   } catch (error: any) {
     console.error('Error creating client:', error);
 
@@ -1438,6 +1432,7 @@ export const exportClientsToCSV = withAuth(async (user, { tenant }, clients: ICl
         client_type: client.client_type || 'company',
         is_inactive: client.is_inactive ? 'true' : 'false',
         notes: client.notes || '',
+        client_since: toClientSinceDate(client.client_since) || '',
         tags: tagNames,
         // Location fields
         location_name: location.location_name || '',
@@ -1459,6 +1454,7 @@ export const exportClientsToCSV = withAuth(async (user, { tenant }, clients: ICl
     'client_type',
     'is_inactive',
     'notes',
+    'client_since',
     'tags',
     'location_name',
     'email',
@@ -1483,6 +1479,7 @@ export async function generateClientCSVTemplate(): Promise<string> {
       client_type: 'company',
       is_inactive: 'false',
       notes: 'Specializes in unbirthday party supplies and premium tea blends',
+      client_since: '2015-06-01',
       tags: 'Tea, Party Planning, Whimsical',
       location_name: 'The Tea Party Table',
       email: 'hatter@teaparty.wonderland',
@@ -1503,6 +1500,7 @@ export async function generateClientCSVTemplate(): Promise<string> {
     'client_type',
     'is_inactive',
     'notes',
+    'client_since',
     'tags',
     'location_name',
     'email',
@@ -1773,6 +1771,14 @@ export const importClientsFromCSV = withAuth(async (
         clientData.phone_number = normalizedRow.phone_no;
       }
 
+      // Bulk migration is how tenure actually arrives, so a date the source
+      // exported in another shape fails this row by itself rather than landing
+      // in the column as garbage or vanishing silently.
+      const clientSince = toClientSinceDate(clientData.client_since);
+      if (clientSince === undefined) {
+        throw new Error(CLIENT_SINCE_FORMAT_MESSAGE);
+      }
+
       let savedClient: IClient | undefined;
       let created = false;
       let skipped = false;
@@ -1816,6 +1822,11 @@ export const importClientsFromCSV = withAuth(async (
           }
           if (clientData.account_manager_id !== undefined) {
             updateData.account_manager_id = clientData.account_manager_id === '' ? null : clientData.account_manager_id;
+          }
+          // Mapped-but-empty clears the date back to the created_at fallback;
+          // an unmapped column leaves whatever is already stored alone.
+          if (clientData.client_since !== undefined) {
+            updateData.client_since = clientSince;
           }
 
           [savedClient] = await tenantScopedTable(trx, 'clients', tenant)
@@ -1886,6 +1897,7 @@ export const importClientsFromCSV = withAuth(async (
             tax_id_number: clientData.tax_id_number || '',
             tax_exemption_certificate: clientData.tax_exemption_certificate || '',
             notes: clientData.notes || '',
+            client_since: clientSince,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           };

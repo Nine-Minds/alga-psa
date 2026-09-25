@@ -597,20 +597,18 @@ async function getExtensionData(knex: Knex, tenant: string, asset_id: string, as
 }
 
 // F310: asset_type must be one of the six built-ins or a tenant registry slug.
-// Returns the registry entry when (and only when) the slug is a custom type.
+// Returns the registry entry for both built-in and custom schemas.
 async function resolveWritableAssetType(
     knex: Knex,
     tenant: string,
     assetType: string
 ): Promise<AssetTypeRegistryEntry | null> {
-    if (isBuiltinAssetTypeSlug(assetType)) {
-        return null;
-    }
     const entry = await getAssetTypeBySlug(knex, tenant, assetType);
+    if (isBuiltinAssetTypeSlug(assetType) && !entry) return null;
     if (!entry) {
         throw invalidAssetTypeError(assetType);
     }
-    return entry.is_builtin ? null : entry;
+    return entry;
 }
 
 // Helper function to insert/update extension table data.
@@ -1146,11 +1144,7 @@ export async function updateAssetRecord(
             let customTypeEntry: AssetTypeRegistryEntry | null = null;
             if (typeof baseCandidate.asset_type === 'string') {
                 customTypeEntry = await resolveWritableAssetType(trx, tenant, baseCandidate.asset_type);
-            } else if (
-                attributesPayload !== undefined &&
-                typeof asset.asset_type === 'string' &&
-                !isBuiltinAssetTypeSlug(asset.asset_type)
-            ) {
+            } else if (attributesPayload !== undefined && typeof asset.asset_type === 'string') {
                 customTypeEntry = await getAssetTypeBySlug(trx, tenant, asset.asset_type);
             }
 

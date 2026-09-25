@@ -13,9 +13,9 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: vi.fn(),
 }));
 
-import { findClientIdByInboundEmailDomain } from './emailWorkflowActions';
+import { findClientIdByInboundEmailDomain, findInboundEmailDomainMapping } from './emailWorkflowActions';
 
-function makeInboundDomainLookupTrx(params: { row: null | { client_id: string } }) {
+function makeInboundDomainLookupTrx(params: { row: null | { client_id: string; auto_create_contacts?: boolean } }) {
   const builder: any = {
     select: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
@@ -40,10 +40,16 @@ describe('emailWorkflowActions: findClientIdByInboundEmailDomain', () => {
   });
 
   it('returns the client_id when a mapping exists (domain normalization)', async () => {
-    const { trx, builder } = makeInboundDomainLookupTrx({ row: { client_id: 'client-1' } });
+    const { trx, builder } = makeInboundDomainLookupTrx({ row: { client_id: 'client-1', auto_create_contacts: true } });
     trxImpl = trx;
 
     await expect(findClientIdByInboundEmailDomain(' Example.COM ', 'tenant-1')).resolves.toBe('client-1');
     expect(builder.andWhereRaw).toHaveBeenCalledWith('lower(domain) = ?', ['example.com']);
+  });
+
+  it('returns the opt-in flag from a mapping', async () => {
+    const { trx } = makeInboundDomainLookupTrx({ row: { client_id: 'client-1', auto_create_contacts: true } });
+    trxImpl = trx;
+    await expect(findInboundEmailDomainMapping('example.com', 'tenant-1')).resolves.toEqual({ clientId: 'client-1', autoCreateContacts: true });
   });
 });
