@@ -15,6 +15,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { Label } from '@alga-psa/ui/components/Label';
+import { BillingProfilePicker } from '@alga-psa/ui/components/BillingProfilePicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { toPlainDate } from '@alga-psa/core';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
@@ -25,6 +26,7 @@ import {
   type DraftInvoicePropertiesUpdateActionResult,
   type DraftInvoicePropertiesUpdateResult,
 } from '@alga-psa/billing/actions/invoiceModification';
+import { getClientBillingProfilesForBilling } from '@alga-psa/billing/actions/billingProfileActions';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -34,7 +36,7 @@ import {
 export interface DraftInvoiceDetailsSummary extends Pick<
   DbInvoiceViewModel,
   'invoice_id' | 'invoice_number' | 'status' | 'total_amount' | 'currencyCode' | 'client'
-  | 'billing_profile_name' | 'client_has_multiple_billing_profiles'
+  | 'client_id' | 'billing_profile_id' | 'billing_profile_name' | 'client_has_multiple_billing_profiles'
 > {
   invoice_date: DateValue;
   due_date: DateValue | null;
@@ -49,6 +51,7 @@ interface DraftInvoiceDetailsFormState {
   invoiceNumber: string;
   invoiceDate: string;
   dueDate: string;
+  billingProfileId: string | null;
 }
 
 const normalizeDateInputValue = (value: DraftInvoiceDetailsSummary['invoice_date'] | DraftInvoiceDetailsSummary['due_date']) => {
@@ -64,10 +67,20 @@ const normalizeDateInputValue = (value: DraftInvoiceDetailsSummary['invoice_date
   }
 };
 
+const loadBillingProfiles = (clientId: string) => getClientBillingProfilesForBilling(clientId);
+
+const EMPTY_FORM_STATE: DraftInvoiceDetailsFormState = {
+  invoiceNumber: '',
+  invoiceDate: '',
+  dueDate: '',
+  billingProfileId: null,
+};
+
 const buildFormState = (invoice: DraftInvoiceDetailsSummary): DraftInvoiceDetailsFormState => ({
   invoiceNumber: invoice.invoice_number ?? '',
   invoiceDate: normalizeDateInputValue(invoice.invoice_date),
   dueDate: normalizeDateInputValue(invoice.due_date),
+  billingProfileId: invoice.billing_profile_id ?? null,
 });
 
 const isDraftInvoiceDetailsError = (
@@ -85,28 +98,21 @@ const DraftInvoiceDetailsCard: React.FC<DraftInvoiceDetailsCardProps> = ({
   const initialState = useMemo(() => (invoice ? buildFormState(invoice) : null), [
     invoice?.invoice_id,
     invoice?.invoice_number,
+    invoice?.billing_profile_id,
     invoice ? normalizeDateInputValue(invoice.invoice_date) : '',
     invoice ? normalizeDateInputValue(invoice.due_date) : '',
   ]);
 
-  const [formState, setFormState] = useState<DraftInvoiceDetailsFormState>({
-    invoiceNumber: '',
-    invoiceDate: '',
-    dueDate: '',
-  });
-  const [savedState, setSavedState] = useState<DraftInvoiceDetailsFormState>({
-    invoiceNumber: '',
-    invoiceDate: '',
-    dueDate: '',
-  });
+  const [formState, setFormState] = useState<DraftInvoiceDetailsFormState>(EMPTY_FORM_STATE);
+  const [savedState, setSavedState] = useState<DraftInvoiceDetailsFormState>(EMPTY_FORM_STATE);
   const [isSaving, setIsSaving] = useState(false);
   const [invoiceNumberError, setInvoiceNumberError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!initialState) {
-      setFormState({ invoiceNumber: '', invoiceDate: '', dueDate: '' });
-      setSavedState({ invoiceNumber: '', invoiceDate: '', dueDate: '' });
+      setFormState(EMPTY_FORM_STATE);
+      setSavedState(EMPTY_FORM_STATE);
       setInvoiceNumberError(null);
       setFormError(null);
       return;
@@ -125,7 +131,8 @@ const DraftInvoiceDetailsCard: React.FC<DraftInvoiceDetailsCardProps> = ({
   const hasChanges =
     formState.invoiceNumber !== savedState.invoiceNumber ||
     formState.invoiceDate !== savedState.invoiceDate ||
-    formState.dueDate !== savedState.dueDate;
+    formState.dueDate !== savedState.dueDate ||
+    formState.billingProfileId !== savedState.billingProfileId;
 
   const handleSave = async () => {
     const trimmedInvoiceNumber = formState.invoiceNumber.trim();
@@ -154,6 +161,11 @@ const DraftInvoiceDetailsCard: React.FC<DraftInvoiceDetailsCardProps> = ({
         invoiceNumber: trimmedInvoiceNumber,
         invoiceDate: formState.invoiceDate,
         dueDate: formState.dueDate || null,
+        // Only a segmented client may re-point; leaving the key out keeps an
+        // unsegmented draft's attribution untouched (D6).
+        ...(invoice.client_has_multiple_billing_profiles
+          ? { billingProfileId: formState.billingProfileId }
+          : {}),
       });
 
       if (isDraftInvoiceDetailsError(updated)) {
@@ -178,6 +190,7 @@ const DraftInvoiceDetailsCard: React.FC<DraftInvoiceDetailsCardProps> = ({
         invoiceNumber: updated.invoiceNumber,
         invoiceDate: updated.invoiceDate,
         dueDate: updated.dueDate ?? '',
+        billingProfileId: updated.billingProfileId ?? null,
       };
 
       setFormState(nextSavedState);
@@ -309,18 +322,28 @@ const DraftInvoiceDetailsCard: React.FC<DraftInvoiceDetailsCardProps> = ({
           </div>
 
           {/* Which profile the draft bills — shown only for a segmented client,
-              where the pick was a real decision worth confirming (D6). */}
+              where the pick was a real decision worth confirming (D6). The
+              draft is the last place a wrong pick can still be corrected: once
+              finalized the invoice, its charges and its recipient are settled. */}
           {invoice.client_has_multiple_billing_profiles ? (
             <div className="space-y-1" id="draft-invoice-billing-profile">
-              <span className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-                {t('draftInvoiceDetails.labels.billingProfile', { defaultValue: 'Billing Profile' })}
-              </span>
-              <div className="min-h-10 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] px-3 py-2 text-sm text-[rgb(var(--color-text-900))]">
-                {invoice.billing_profile_name
-                  || t('draftInvoiceDetails.labels.billingProfileDefault', {
-                    defaultValue: "The client's default profile",
-                  })}
-              </div>
+              <BillingProfilePicker
+                id="draft-invoice-billing-profile-select"
+                clientId={invoice.client_id}
+                loadProfiles={loadBillingProfiles}
+                value={formState.billingProfileId}
+                onChange={(billingProfileId) =>
+                  setFormState((current) => ({ ...current, billingProfileId }))
+                }
+                label={t('draftInvoiceDetails.labels.billingProfile', { defaultValue: 'Billing Profile' })}
+                unassignedLabel={t('draftInvoiceDetails.labels.billingProfileDefault', {
+                  defaultValue: "The client's default profile",
+                })}
+                hint={t('draftInvoiceDetails.hints.billingProfile', {
+                  defaultValue: 'The invoice, its lines and its emailed copy follow this profile.',
+                })}
+                disabled={isSaving}
+              />
             </div>
           ) : null}
         </div>
