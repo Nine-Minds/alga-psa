@@ -40,6 +40,12 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
 
   const getRecipientSourceLabel = (source: InvoiceEmailRecipientInfo['recipientSource']) => {
     switch (source) {
+      // A segmented client's invoice goes to the profile's own AP identity —
+      // saying so is the difference between a right address and a suspicious one.
+      case 'profile_billing_contact':
+      case 'profile_billing_email':
+      case 'profile_location':
+        return t('sendEmail.recipients.billingProfile', { defaultValue: 'Billing Profile' });
       case 'billing_contact':
         return t('sendEmail.recipients.billingContact', { defaultValue: 'Billing Contact' });
       case 'billing_email':

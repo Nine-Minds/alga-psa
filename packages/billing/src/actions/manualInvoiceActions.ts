@@ -167,6 +167,9 @@ export const generateManualInvoice = withAuth(async (
       tenant,
       clientId,
       client.client_name,
+      // A profile of another client is rejected below; the resolver ignores one
+      // here for the same reason, so this cannot borrow a stranger's address.
+      request.billingProfileId?.trim() || null,
     );
     if (!emailValidation.valid) {
       return handledManualInvoiceFailure(

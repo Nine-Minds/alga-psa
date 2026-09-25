@@ -210,7 +210,16 @@ export interface InvoiceEmailRecipientInfo {
 
   recipientEmail: string;
   recipientName: string;
-  recipientSource: 'billing_contact' | 'billing_email' | 'billing_location' | 'default_location' | 'client_email' | 'none';
+  recipientSource:
+    | 'profile_billing_contact'
+    | 'profile_billing_email'
+    | 'profile_location'
+    | 'billing_contact'
+    | 'billing_email'
+    | 'billing_location'
+    | 'default_location'
+    | 'client_email'
+    | 'none';
 
   totalAmount: string;
   currencyCode: string;
@@ -270,6 +279,7 @@ export const getInvoiceEmailRecipientAction = withAuth(async (
         knexOrTrx: knex,
         tenantId: tenant,
         clientId: invoice.client_id,
+        billingProfileId: invoice.billing_profile_id ?? null,
       });
 
       let recipientEmail = resolved.recipientEmail;
@@ -487,6 +497,7 @@ export const sendInvoiceEmailAction = withAuth(async (
         knexOrTrx: knex,
         tenantId: tenant,
         clientId: invoice.client_id,
+        billingProfileId: invoice.billing_profile_id ?? null,
       });
 
       let recipientEmail = resolved.recipientEmail;
