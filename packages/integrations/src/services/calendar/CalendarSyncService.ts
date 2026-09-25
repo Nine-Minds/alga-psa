@@ -1,4 +1,5 @@
 // @ts-nocheck
+// LEVERAGE: pattern calendar-sync-dual-copy — kept behaviorally aligned with the live EE runtime until the legacy tree is removed.
 // TODO: This file needs refactoring - ScheduleEntry model method signatures have changed
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Calendar sync service - intentionally bridges integrations and scheduling to synchronize calendar entries */
 /**
@@ -16,6 +17,8 @@ import { mapScheduleEntryToExternalEvent, mapExternalEventToScheduleEntry } from
 import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
 import { v4 as uuidv4 } from 'uuid';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { hasPermission } from '@alga-psa/auth';
+import { evaluateEntryAccess, resolveCalendarAccess } from '@alga-psa/scheduling/lib/calendarAccess';
 
 export class CalendarSyncService {
   private providerService: CalendarProviderService;
@@ -228,12 +231,7 @@ export class CalendarSyncService {
           const existingMapping = await this.getMappingByExternalEvent(externalEventId, calendarProviderId, tenant);
           if (existingMapping) {
             // Delete the corresponding schedule entry (skip external delete since it's already gone)
-            const deleteResult = await this.deleteScheduleEntry(
-              existingMapping.schedule_entry_id,
-              calendarProviderId,
-              'all',
-              true // skipExternalDelete - event already deleted in external calendar
-            );
+            const deleteResult = await this.handleInboundProviderDelete(existingMapping.schedule_entry_id, calendarProviderId, tenant);
             if (deleteResult.success) {
               return {
                 success: true,
@@ -261,6 +259,15 @@ export class CalendarSyncService {
 
       // Check for existing mapping
       const existingMapping = await this.getMappingByExternalEvent(externalEventId, calendarProviderId, tenant);
+      if (existingMapping?.external_last_modified && externalEvent.updated === existingMapping.external_last_modified) {
+        return { success: true, skipped: true, reason: 'External version already synchronized' };
+      }
+      if (existingMapping) {
+        const entry = await ScheduleEntry.get(knex, existingMapping.schedule_entry_id);
+        if (entry?.calendar_id && await tenantDb(knex, tenant).table('calendars').where({ calendar_id: entry.calendar_id, calendar_type: 'group', is_archived: true }).first()) {
+          return { success: true, skipped: true, reason: 'Calendar is archived' };
+        }
+      }
 
       const result = await withTransaction(knex, async (trx) => {
         if (existingMapping) {
@@ -271,6 +278,22 @@ export class CalendarSyncService {
               success: false,
               error: 'Schedule entry not found for existing mapping'
             };
+          }
+
+          const providerUser = provider.user_id
+            ? await tenantDb(trx, tenant).table('users').where('user_id', provider.user_id).first()
+            : null;
+          if (providerUser) {
+            const viewer = { user_id: providerUser.user_id, user_type: providerUser.user_type, tenant };
+            const canViewAll = await hasPermission(viewer, 'user_schedule', 'update', trx);
+            const access = await resolveCalendarAccess(trx, tenant, viewer, canViewAll);
+            if (!evaluateEntryAccess(existingEntry, access).canEdit) {
+              const pushed = await this.syncScheduleEntryToExternal(existingEntry.entry_id, provider.id, true, tenant);
+              if (!pushed.success) return pushed;
+              await tenantDb(trx, tenant).table('calendar_event_mappings').where('id', existingMapping.id)
+                .update({ external_last_modified: externalEvent.updated, updated_at: new Date().toISOString() });
+              return { success: true, skipped: true, reason: 'Provider user cannot edit this entry' };
+            }
           }
 
           // Check for conflicts
@@ -629,6 +652,27 @@ export class CalendarSyncService {
    * Delete a schedule entry and its external calendar event
    * @param skipExternalDelete - If true, skip deleting from external calendar (use when external already deleted)
    */
+  async handleInboundProviderDelete(entryId: string, providerId: string, tenantContext?: string): Promise<{ success: boolean; error?: string }> {
+    const { knex, tenant } = await createTenantKnex(tenantContext);
+    if (!tenant) return { success: false, error: 'Tenant context is required' };
+    const provider = await this.providerService.getProvider(providerId, tenant);
+    if (!provider?.user_id) return { success: false, error: 'Provider user not found' };
+    const entry = await ScheduleEntry.get(knex, entryId);
+    if (!entry) return { success: true };
+    if (entry.calendar_id && await tenantDb(knex, tenant).table('calendars').where({ calendar_id: entry.calendar_id, calendar_type: 'group', is_archived: true }).first()) return { success: true };
+    const user = await tenantDb(knex, tenant).table('users').where('user_id', provider.user_id).first();
+    if (!user) return { success: false, error: 'Provider user not found' };
+    const viewer = { user_id: user.user_id, user_type: user.user_type, tenant };
+    const canViewAll = await hasPermission(viewer, 'user_schedule', 'update', knex);
+    const access = await resolveCalendarAccess(knex, tenant, viewer, canViewAll);
+    if (evaluateEntryAccess(entry, access).canEdit && entry.assigned_user_ids.length === 1) return this.deleteScheduleEntry(entryId, providerId, 'all', true, tenant);
+    if (entry.assigned_user_ids.includes(provider.user_id)) {
+      await ScheduleEntry.update(knex, entryId, { ...entry, assigned_user_ids: entry.assigned_user_ids.filter((id: string) => id !== provider.user_id) }, 'all' as any);
+    }
+    await tenantDb(knex, tenant).table('calendar_event_mappings').where({ schedule_entry_id: entryId, calendar_provider_id: providerId }).del();
+    return { success: true };
+  }
+
   async deleteScheduleEntry(
     entryId: string,
     calendarProviderId: string,

@@ -29,6 +29,12 @@ This runbook covers the day-to-day operational tasks for the Google and Microsof
 - UI surfaces show `Conflict` badges and direct users back to Calendar Settings to resolve.
 - Operators should review the mapping, decide which side wins, and re-run the manual sync once conflict remediation is complete.
 
+## Shared Calendar Entries
+- Group calendar entries sync only to connected providers belonging to their assignees. Group entries with no assignees never sync externally.
+- An inbound provider edit is applied to Alga only when that provider's user has edit access to the entry. Otherwise Alga stays authoritative and its current version is pushed back to that provider.
+- An inbound provider delete removes the whole Alga entry only when the provider's user has delete-equivalent edit access and is the sole assignee. Otherwise only that user's assignment and provider mapping are removed.
+- Archiving a group calendar removes its assignees' external copies and mappings; restoring the calendar recreates those copies. Webhook changes are ignored while the group calendar is archived.
+
 ## Deleting A Provider
 1. Select **Delete** in the provider card.
 2. A confirmation dialog explains the blast radius (webhooks removed, sync halted). Confirm to proceed.

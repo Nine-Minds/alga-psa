@@ -130,7 +130,10 @@ Unassigned, pending appointment-request entries keep today's rule: visible to `u
 - A user can't share their calendar with themselves. Sharing with the same user or team twice updates the level (upsert).
 - A private entry can't be placed on a group calendar. Setting a calendar clears `is_private`. The server enforces this.
 - Recurring entries: expanded virtual instances inherit the parent entry's calendar, assignees and visibility.
-- External calendar sync is unchanged. Only assignees' providers receive entries.
+- External calendar sync sends group-calendar entries only to their assignees' connected providers. Group entries with no assignees never sync externally.
+- Provider-side edits apply to Alga only when the provider's user has `canEdit` under `evaluateEntryAccess`; otherwise Alga remains authoritative and its version is pushed back to that provider.
+- Provider-side deletes delete the Alga entry only when that user could delete it in Alga and is its sole assignee. Otherwise only that user's assignment and provider mapping are removed.
+- Archiving a group calendar removes its assignees' external copies and mappings through schedule-entry update events. Restoring it recreates those copies. Inbound provider changes are ignored while archived.
 
 **Capabilities**
 - The server returns viewer capabilities to the client (`canViewAll`, the list of visible calendars with their levels). This replaces the client-side `user_schedule:read:all` check.
@@ -192,7 +195,7 @@ No new observability beyond existing logging. Not requested.
 
 - The migration is additive: two tables and a nullable column. No backfill.
 - No feature flag. Without shares or group calendars, behaviour matches today. The first-run UI shows empty *People* and *Group calendars* groups with a "Share my calendar" or "New group calendar" call to action.
-- The EE calendar sync package needs no change. Entries with a `calendar_id` still sync by assignee.
+- The EE calendar sync package applies the inbound access rules above. Entries with a `calendar_id` still sync by assignee.
 
 ## Open Questions
 
