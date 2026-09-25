@@ -511,6 +511,9 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "TeamViewer",
+      "VNC",
+      "RDP",
       "PG Boss",
       "YOLO",
       "Session: {{chatId}}",
