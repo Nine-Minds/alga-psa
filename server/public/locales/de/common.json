@@ -1619,5 +1619,75 @@
     "disabledByAdmin": "Vom Administrator deaktiviert",
     "mixed": "Teilweise aktiviert",
     "empty": "Keine E-Mail-Benachrichtigungskategorien verfügbar."
+  },
+  "listViews": {
+    "defaultView": "Standardansicht",
+    "unsavedChanges": "Diese Ansicht hat ungespeicherte Änderungen",
+    "searchPlaceholder": "Ansichten durchsuchen",
+    "noMatches": "Keine passenden Ansichten",
+    "sections": {
+      "mine": "Meine Ansichten",
+      "mineEmpty": "Noch keine privaten Ansichten",
+      "shared": "Geteilte Ansichten",
+      "sharedEmpty": "Noch keine geteilten Ansichten"
+    },
+    "labels": {
+      "myDefault": "Mein Standard",
+      "sharedByYou": "Von Ihnen geteilt"
+    },
+    "visibility": {
+      "private": "Privat",
+      "shared": "Geteilt"
+    },
+    "actions": {
+      "delete": "Löschen",
+      "manage": "Verwalten",
+      "setDefault": "Als meinen Standard festlegen",
+      "clearDefault": "Meinen Standard entfernen",
+      "copyLink": "Link kopieren",
+      "saveChanges": "Änderungen speichern",
+      "saveChangesTo": "Änderungen in „{{name}}“ speichern",
+      "saveAsNew": "Als neue Ansicht speichern…",
+      "discardChanges": "Änderungen verwerfen"
+    },
+    "dialog": {
+      "createTitle": "Als neue Ansicht speichern",
+      "manageTitle": "Ansicht verwalten",
+      "nameLabel": "Name",
+      "nameInvalid": "Geben Sie einen Namen mit 1 bis {{max}} Zeichen ein.",
+      "visibilityLabel": "Wer sie sehen kann",
+      "privateHint": "Nur Sie können diese Ansicht sehen.",
+      "sharedHint": "Alle, die diese Liste öffnen können, können sie sehen und anwenden.",
+      "sharedDisabledHint": "Sie haben keine Berechtigung, Ansichten zu teilen."
+    },
+    "deleteDialog": {
+      "title": "Ansicht löschen",
+      "message": "„{{name}}“ löschen?",
+      "messageShared": "„{{name}}“ löschen? Die Ansicht ist geteilt und verschwindet für alle, die sie verwenden."
+    },
+    "toasts": {
+      "saved": "„{{name}}“ gespeichert",
+      "updated": "„{{name}}“ aktualisiert",
+      "deleted": "Ansicht gelöscht",
+      "defaultSet": "Standardansicht festgelegt",
+      "defaultCleared": "Standardansicht entfernt",
+      "linkCopied": "Link kopiert",
+      "droppedReferences": "Einige Elemente in „{{name}}“ existieren nicht mehr und wurden übersprungen: {{fields}}"
+    },
+    "errors": {
+      "notFound": "Diese Ansicht ist privat oder existiert nicht mehr.",
+      "unknownList": "Unbekannte Liste.",
+      "invalidName": "Ein Ansichtsname muss 1 bis 100 Zeichen lang sein.",
+      "duplicateName": "Sie haben in dieser Liste bereits eine Ansicht namens „{{name}}“.",
+      "invalidSettings": "Die Ansicht konnte nicht gespeichert werden: {{detail}}",
+      "invalidVisibility": "Die Sichtbarkeit muss privat oder geteilt sein.",
+      "cannotShare": "Sie haben keine Berechtigung, Ansichten zu teilen.",
+      "cannotEdit": "Sie haben keine Berechtigung, diese Ansicht zu ändern.",
+      "cannotReadList": "Sie haben keine Berechtigung, diese Liste anzuzeigen.",
+      "saveFailed": "Die Ansicht konnte nicht gespeichert werden.",
+      "deleteFailed": "Die Ansicht konnte nicht gelöscht werden.",
+      "defaultFailed": "Ihre Standardansicht konnte nicht geändert werden.",
+      "copyFailed": "Der Link konnte nicht kopiert werden."
+    }
   }
 }

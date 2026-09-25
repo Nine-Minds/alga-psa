@@ -123,6 +123,28 @@ describe('ticket list URL sync after navigating away', () => {
     pushState.mockRestore();
   });
 
+  it('carries the applied view through a plain filter change in one write', () => {
+    const viewId = '11111111-1111-4111-8111-111111111111';
+    window.history.replaceState(null, '', `/msp/tickets?view=${viewId}`);
+
+    const { props } = renderContainer();
+    const replaceState = vi.spyOn(window.history, 'replaceState').mockImplementation(() => {});
+    const pushState = vi.spyOn(window.history, 'pushState').mockImplementation(() => {});
+
+    act(() => {
+      props.onFilterChange({ priorityId: 'priority-1' });
+    });
+
+    // A plain edit is one write, and the write still names the view being refined.
+    expect(replaceState).toHaveBeenCalledTimes(1);
+    const written = String(replaceState.mock.calls[0][2]);
+    expect(new URLSearchParams(written.split('?')[1]).get('view')).toBe(viewId);
+    expect(pushState).not.toHaveBeenCalled();
+
+    replaceState.mockRestore();
+    pushState.mockRestore();
+  });
+
   it('writes no history entry once the dashboard reports a navigation', () => {
     const { props } = renderContainer();
     const replaceState = vi.spyOn(window.history, 'replaceState').mockImplementation(() => {});
