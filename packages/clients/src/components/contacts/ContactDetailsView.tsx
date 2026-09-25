@@ -6,6 +6,7 @@ import { IContact } from '@alga-psa/types';
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { QuickAddInteraction } from '../interactions/QuickAddInteraction';
 import { Button } from '@alga-psa/ui/components/Button';
+import { PhoneText } from '@alga-psa/ui/components/PhoneText';
 import { Pen, Plus, ArrowLeft, ExternalLink } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useDrawer, useClientDrawer } from '@alga-psa/ui';
@@ -432,7 +433,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
                   <div className="space-y-2">
                     {contact.phone_numbers.map((phone) => (
                       <div key={phone.contact_phone_number_id} className="rounded-md border border-gray-200 px-3 py-2">
-                        <div className="text-sm font-medium text-gray-900">{phone.phone_number}</div>
+                        <div className="text-sm font-medium text-gray-900"><PhoneText value={phone.phone_number} extension={phone.extension} /></div>
                         <div className="text-xs text-gray-500">
                           {getPhoneTypeLabel(phone)}
                           {phone.is_default ? ` • ${t('contactDetailsView.fields.defaultPhone', { defaultValue: 'Default' })}` : ''}

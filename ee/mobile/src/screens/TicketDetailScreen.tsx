@@ -1,3 +1,4 @@
+import { formatPhoneForDisplay } from "../../../../packages/validation/src/lib/phone";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Linking, Platform, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
 import { useTranslation } from "react-i18next";
@@ -624,7 +625,7 @@ export function TicketDetailBody({
                 style={{ marginTop: spacing.xs, paddingVertical: spacing.xs }}
               >
                 <Text style={{ ...typography.caption, color: colors.primary }}>
-                  {t("detail.contactPhone")}: {ticket.contact_phone}
+                  {t("detail.contactPhone")}: {formatPhoneForDisplay(ticket.contact_phone).number}
                 </Text>
               </Pressable>
             ) : null}
@@ -677,7 +678,7 @@ export function TicketDetailBody({
                 style={{ marginTop: spacing.xs, paddingVertical: spacing.xs }}
               >
                 <Text style={{ ...typography.caption, color: colors.primary }}>
-                  {t("detail.contactPhone")}: {ticket.client_phone}
+                  {t("detail.contactPhone")}: {formatPhoneForDisplay(ticket.client_phone).number}
                 </Text>
               </Pressable>
             ) : null}

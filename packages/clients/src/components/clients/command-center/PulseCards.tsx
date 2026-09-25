@@ -3,6 +3,7 @@
 import React from 'react';
 import { ArrowUpRight, FileText, Mail, MapPin, Phone, Plus, Settings } from 'lucide-react';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
+import { PhoneText } from '@alga-psa/ui/components/PhoneText';
 import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import {
   BentoChip,
@@ -537,9 +538,9 @@ export function PeopleCard({ id, data, onOpen, onOpenContact, onAddContact, clas
                 })()}
                 <span className="block text-xs text-[rgb(var(--color-text-600))] truncate">
                   {contact.phone && (
-                    <a href={`tel:${contact.phone}`} className="hover:text-primary-700 hover:underline">
-                      <Phone className={CONTACT_ICON_CLASS} aria-hidden="true" />{contact.phone}
-                    </a>
+                    <span className="hover:text-primary-700 hover:underline">
+                      <Phone className={CONTACT_ICON_CLASS} aria-hidden="true" /><PhoneText value={contact.phone} />
+                    </span>
                   )}
                   {contact.phone && contact.email && <span className="text-[rgb(var(--color-text-300))]"> · </span>}
                   {contact.email && (
@@ -615,9 +616,9 @@ export function LocationsCard({ id, locations, onManage, className, t }: {
               {(location.phone || location.email) && (
                 <div className="text-xs text-[rgb(var(--color-text-600))] truncate">
                   {location.phone && (
-                    <a href={`tel:${location.phone}`} className="hover:text-primary-700 hover:underline">
-                      <Phone className={CONTACT_ICON_CLASS} aria-hidden="true" />{location.phone}
-                    </a>
+                    <span className="hover:text-primary-700 hover:underline">
+                      <Phone className={CONTACT_ICON_CLASS} aria-hidden="true" /><PhoneText value={location.phone} />
+                    </span>
                   )}
                   {location.phone && location.email && <span className="text-[rgb(var(--color-text-300))]"> · </span>}
                   {location.email && (

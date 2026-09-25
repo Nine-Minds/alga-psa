@@ -1,3 +1,4 @@
+import { formatPhoneForDisplay } from "../../../../packages/validation/src/lib/phone";
 import { Linking, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { CommonActions } from "@react-navigation/native";
@@ -462,13 +463,13 @@ export function ClientDetailScreen({ navigation, route }: Props) {
                 </Text>
                 {location.phone ? (
                   <Pressable
-                    onPress={() => void Linking.openURL(`tel:${location.phone}`)}
+                    onPress={() => void Linking.openURL(`tel:${formatPhoneForDisplay(location.phone).number}`)}
                     accessibilityRole="button"
                     accessibilityLabel={t("detail.phone")}
                     hitSlop={4}
                   >
                     <Text style={{ ...theme.typography.caption, color: theme.colors.primary, marginTop: theme.spacing.xs }}>
-                      {location.phone}
+                      {formatPhoneForDisplay(location.phone).number}
                     </Text>
                   </Pressable>
                 ) : null}

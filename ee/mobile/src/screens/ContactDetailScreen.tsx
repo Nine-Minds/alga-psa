@@ -1,3 +1,4 @@
+import { formatPhoneForDisplay } from "../../../../packages/validation/src/lib/phone";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { CommonActions } from "@react-navigation/native";
 import { Linking, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
@@ -335,7 +336,7 @@ function PhoneRow({
     >
       <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary }}>{label}</Text>
       <Text style={{ ...theme.typography.body, color: theme.colors.primary, marginTop: 2 }}>
-        {phone.phone_number}
+        {formatPhoneForDisplay(phone.phone_number, phone.extension).number}{phone.extension ? ` ext. ${phone.extension}` : ""}
       </Text>
     </Pressable>
   );

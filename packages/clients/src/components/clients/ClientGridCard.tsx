@@ -1,5 +1,6 @@
 import { useRouter } from 'next/navigation';
 import { Button } from '@alga-psa/ui/components/Button';
+import { PhoneText } from '@alga-psa/ui/components/PhoneText';
 import { ReflectedDropdownMenu } from "@alga-psa/ui/components/ReflectedDropdownMenu";
 import { MoreVertical, Pencil, Trash2, ExternalLink, Mail, Phone, MapPin, Globe, UserCircle2, Ticket } from 'lucide-react';
 import { MouseEvent } from 'react';
@@ -219,7 +220,7 @@ const ClientGridCard = ({
                             </a>
                         </MetaRow>
                     )}
-                    {phone && <MetaRow icon={<Phone className="h-3.5 w-3.5" />}>{phone}</MetaRow>}
+                    {phone && <MetaRow icon={<Phone className="h-3.5 w-3.5" />}><PhoneText value={phone} extension={client.phone_extension} defaultCountry={(client as any).country_code} /></MetaRow>}
                     {address && <MetaRow icon={<MapPin className="h-3.5 w-3.5" />}>{address}</MetaRow>}
                     {url && (
                         <MetaRow icon={<Globe className="h-3.5 w-3.5" />}>

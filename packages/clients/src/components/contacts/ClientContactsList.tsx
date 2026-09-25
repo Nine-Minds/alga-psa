@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { IContact } from '@alga-psa/types';
 import { getContactsByClient } from '@alga-psa/clients/actions';
 import { Button } from '@alga-psa/ui/components/Button';
+import { PhoneText } from '@alga-psa/ui/components/PhoneText';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { Eye, ExternalLink, MoreVertical, Pen } from 'lucide-react';
@@ -266,9 +267,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
       dataIndex: 'default_phone_number',
       width: '18%',
       render: (value, record): React.ReactNode =>
-        record.default_phone_number
-        || record.phone_numbers?.find((phoneNumber: any) => phoneNumber.is_default)?.phone_number
-        || t('common.states.na', { defaultValue: 'N/A' }),
+        <PhoneText value={record.default_phone_number || record.phone_numbers?.find((phoneNumber: any) => phoneNumber.is_default)?.phone_number} fallback={t('common.states.na', { defaultValue: 'N/A' })} />,
     },
     {
       title: '',

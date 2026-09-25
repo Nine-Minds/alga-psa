@@ -97,6 +97,7 @@ export * from './Pagination';
 export { default as Pagination } from './Pagination';
 export * from './PasswordResetWarning';
 export * from './PhoneInput';
+export * from './PhoneText';
 export * from './Popover';
 export * from './PrintButton';
 export * from './PrintOptionsDialog';

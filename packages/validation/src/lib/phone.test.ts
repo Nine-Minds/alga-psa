@@ -1,5 +1,21 @@
 import { describe, it, expect } from 'vitest';
-import { isDialPrefixOnly, normalizePhone, splitPackedExtension } from './phone';
+import { formatPhoneForDisplay, isDialPrefixOnly, normalizePhone, splitPackedExtension } from './phone';
+
+describe('formatPhoneForDisplay', () => {
+  it('formats international values consistently and preserves extensions separately', () => {
+    expect(formatPhoneForDisplay('+13202521658').number).toBe('+1 320 252 1658');
+    expect(formatPhoneForDisplay('+1 507-532-4482').number).toBe(formatPhoneForDisplay('+15075324482').number);
+    expect(formatPhoneForDisplay('+1 555 234 5678 ext. 42')).toMatchObject({ number: '+1 555 234 5678', extension: '42' });
+    expect(formatPhoneForDisplay('+1 555 234 5678 ext. 42', '99').extension).toBe('99');
+  });
+  it('uses an optional region and falls back safely', () => {
+    expect(formatPhoneForDisplay('3202521658', undefined, 'US').number).toBe('+1 320 252 1658');
+    expect(formatPhoneForDisplay('3202521658').number).toBe('3202521658');
+    expect(formatPhoneForDisplay('+442079460123').number).toBe('+44 20 7946 0123');
+    expect(formatPhoneForDisplay(' call front desk ').number).toBe('call front desk');
+    for (const value of [null, undefined, '']) expect(formatPhoneForDisplay(value).number).toBe('');
+  });
+});
 
 describe('splitPackedExtension', () => {
   it('splits the suffixes PhoneInput used to write', () => {
