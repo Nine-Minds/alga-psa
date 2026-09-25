@@ -11,6 +11,7 @@ import { isEnterprise } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { hashPassword } from '@alga-psa/core/encryption';
 import UserPreferences from '@alga-psa/db/models/userPreferences';
+import { ListViewModel } from '@alga-psa/list-views/models/listViewModel';
 import { getUserAvatarUrl } from '@alga-psa/user-composition/lib/avatarUtils';
 import { uploadEntityImage, deleteEntityImage } from '@alga-psa/storage';
 import { hasPermission, throwPermissionError } from '@alga-psa/user-composition/lib/permissions';
@@ -836,6 +837,12 @@ export const deleteUser = withAuth(async (
           .where({ [column]: userId })
           .update({ [column]: actorId });
       }
+
+      // ── Named list views ──────────────────────────────────────────────
+      // Private views go with the user; shared views pass to the deleting
+      // admin so the team keeps them. owner_user_id is NOT NULL, so this
+      // must run before the user row goes.
+      await ListViewModel.handOverForDeletedUser(trx, tenantId, userId, actorId);
 
       // ── User-scoped rows → DELETE ─────────────────────────────────────
       // Rows that have no meaning without the user.

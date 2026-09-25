@@ -462,6 +462,8 @@ const CE_CLEANUP_TABLES: ReadonlySet<string> = new Set([
   'user_activity_group_items', 'user_activity_groups',
   // shared calendars (grantee shares, personal calendar)
   'calendars', 'calendar_shares',
+  // named list views: private deleted, shared handed to the actor
+  'list_views',
   // Always present in both editions:
   'users', 'clients',
 ]);
@@ -502,6 +504,9 @@ function makeFakeTrx(present: ReadonlySet<string>) {
       // Eager subquery builder (e.g. user_activity_groups.select('group_id'))
       // used inside whereIn after the tenant-scope migration.
       select: (..._cols: unknown[]) => chain,
+      whereNot: (_column: string, _value: unknown) => chain,
+      // Awaiting a bare select (list_views hand-over) reads no rows.
+      then: (resolve: (rows: unknown[]) => unknown) => resolve([]),
       update: async (values: Record<string, unknown>) => {
         ops.push({ table, op: 'update', values });
         return 0;
