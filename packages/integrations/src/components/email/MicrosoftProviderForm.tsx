@@ -16,6 +16,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { DrawerFooter } from '@alga-psa/ui/components/Drawer';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { CheckCircle } from 'lucide-react';
 import type { EmailProvider } from './types';
@@ -791,7 +792,7 @@ export function MicrosoftProviderForm({
       </Card>
 
       {/* Form Actions */}
-      <div className="flex items-center justify-end space-x-2">
+      <DrawerFooter className="items-center">
         <Button id="cancel-btn" type="button" variant="outline" onClick={onCancel}>
           {t('forms.common.actions.cancel', { defaultValue: 'Cancel' })}
         </Button>
@@ -807,7 +808,7 @@ export function MicrosoftProviderForm({
             ? t('forms.common.actions.updateProvider', { defaultValue: 'Update Provider' })
             : t('forms.common.actions.addProvider', { defaultValue: 'Add Provider' })}
         </Button>
-      </div>
+      </DrawerFooter>
     </form>
   );
 }

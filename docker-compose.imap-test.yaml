@@ -1,17 +1,16 @@
 services:
   minio:
-    image: quay.io/minio/minio:latest
+    image: bitnamilegacy/minio:2025.4.22
     profiles:
       - test
     environment:
       MINIO_ROOT_USER: ${IMAP_STORAGE_S3_ACCESS_KEY:-minioadmin}
       MINIO_ROOT_PASSWORD: ${IMAP_STORAGE_S3_SECRET_KEY:-minioadmin}
-    command: server /data --console-address ":9001"
     ports:
       - "${EXPOSE_IMAP_MINIO_API_PORT:-3900}:9000"
       - "${EXPOSE_IMAP_MINIO_CONSOLE_PORT:-3901}:9001"
     volumes:
-      - minio_imap_data:/data
+      - minio_imap_data:/bitnami/minio/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 10s
@@ -21,7 +20,7 @@ services:
       - app-network
 
   minio-init:
-    image: quay.io/minio/mc:latest
+    image: bitnamilegacy/minio-client:2025.4.16
     profiles:
       - test
     depends_on:

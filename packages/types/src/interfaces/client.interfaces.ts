@@ -27,6 +27,8 @@ export interface IClient extends TenantEntity, ITaggable {
   default_currency_code?: string | null;
   notes?: string | null;
   is_inactive: boolean;
+  /** Date the relationship began; null falls back to created_at. */
+  client_since?: string | null;
   created_at: string;
   updated_at: string;
   properties?: ({[key: string]: any} & {

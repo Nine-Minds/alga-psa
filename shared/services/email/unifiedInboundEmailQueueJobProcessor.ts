@@ -1,5 +1,6 @@
 import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
+import { INBOUND_MIME_PARSE_OPTIONS } from './inboundMimeParseOptions';
 import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import type {
@@ -469,7 +470,7 @@ export async function fetchMicrosoftMessageForPointer(job: UnifiedInboundEmailQu
   await assertMicrosoftMessageInMonitoredFolders(adapter, job.pointer.messageId, config.provider_config?.folder_filters);
 
   const parsed: any = await withTimeout(
-    simpleParser(rawMimeBuffer),
+    simpleParser(rawMimeBuffer, INBOUND_MIME_PARSE_OPTIONS),
     parseTimeoutMs,
     'microsoft_mime_parse'
   );
@@ -648,7 +649,7 @@ export async function fetchImapMessageForPointer(job: UnifiedInboundEmailQueueJo
           ? fetched.source
           : Buffer.from(fetched.source);
         const parsed: any = await withTimeout(
-          simpleParser(rawMimeBuffer),
+          simpleParser(rawMimeBuffer, INBOUND_MIME_PARSE_OPTIONS),
           parseTimeoutMs,
           'imap_mime_parse'
         );
