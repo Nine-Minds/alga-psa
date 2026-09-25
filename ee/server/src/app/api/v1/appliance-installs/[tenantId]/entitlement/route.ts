@@ -1,5 +1,5 @@
 /**
- * Appliance Console API — change seats and/or tier, comp (C4 only) or billed (Stripe first).
+ * Appliance Console API — change seats, comp (C4 only) or billed (Stripe first).
  *
  * POST /api/v1/appliance-installs/:tenantId/entitlement
  *

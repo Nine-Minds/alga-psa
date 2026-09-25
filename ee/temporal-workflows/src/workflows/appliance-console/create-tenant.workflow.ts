@@ -41,7 +41,6 @@ export async function applianceCreateTenantWorkflow(args: CreateTenantArgs): Pro
   if (args.comp) {
     const comp = await c4.c4GrantCompLicense({
       tenantId: registered.tenant_id,
-      tier: args.edition === 'premium' ? 'premium' : 'pro',
       seats: args.seats,
       endsAt: args.comp.endsAt,
       note: args.comp.note,

@@ -13,7 +13,6 @@ export async function applianceExtendProWorkflow(args: ExtendProArgs): Promise<E
   }
   const granted = await c4.c4GrantCompLicense({
     tenantId: args.tenantId,
-    tier: 'pro',
     seats: args.seats,
     endsAt: args.endsAt,
     note: args.reason ?? 'Extended by operator',

@@ -6,8 +6,7 @@
  * @ee imports. Keep both in sync.
  */
 
-export type ApplianceEditionInput = 'essentials' | 'pro' | 'premium';
-export type ApplianceTierInput = 'pro' | 'premium';
+export type ApplianceEditionInput = 'essentials' | 'pro';
 
 export interface OperatorMeta {
   userId: string;
@@ -98,17 +97,14 @@ export type ProrationBehavior = 'create_prorations' | 'none';
 export interface ChangeEntitlementArgs extends BaseArgs {
   tenantId: string;
   mode: EntitlementChangeMode;
-  /** Absent = unchanged; null = unlimited (comp mode only). */
-  seats?: number | null;
-  /** Absent = unchanged. */
-  tier?: ApplianceTierInput;
+  /** null = unlimited (comp mode only). */
+  seats: number | null;
   proration: ProrationBehavior;
 }
 
 export interface ChangeEntitlementResult {
   mode: EntitlementChangeMode;
   seats: number | null;
-  tier: ApplianceTierInput;
   stripe_updated: boolean;
 }
 

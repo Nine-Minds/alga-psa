@@ -50,14 +50,12 @@ async function getStripe(): Promise<Stripe> {
   return stripeClient;
 }
 
-/** All configured appliance per-seat price ids (both editions × intervals), as nm-store defines them. */
+/** All configured appliance per-seat price ids (Pro × intervals), as nm-store defines them. */
 export function appliancePerSeatPriceIds(env: NodeJS.ProcessEnv = process.env): Set<string> {
   const ids = new Set<string>();
-  for (const edition of ['PRO', 'PREMIUM']) {
-    for (const interval of ['MONTHLY', 'YEARLY']) {
-      const id = env[`STRIPE_PRICE_ID_APPLIANCE_${edition}_USER_${interval}`];
-      if (id) ids.add(id);
-    }
+  for (const interval of ['MONTHLY', 'YEARLY']) {
+    const id = env[`STRIPE_PRICE_ID_APPLIANCE_PRO_USER_${interval}`];
+    if (id) ids.add(id);
   }
   return ids;
 }

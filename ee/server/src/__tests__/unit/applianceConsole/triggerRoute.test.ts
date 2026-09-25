@@ -187,19 +187,20 @@ describe('action input validation', () => {
     expect(() => parseExtendPro({ ends_at: tooFar, reason: 'r' }, TENANT, base)).toThrow(/within 90 days/);
   });
 
-  it('entitlement change needs a mode and at least seats or tier', async () => {
+  it('entitlement change needs a mode and seats', async () => {
     const { parseChangeEntitlement } = await load();
     expect(() => parseChangeEntitlement({ seats: 5, reason: 'r' }, TENANT, base)).toThrow(/mode is required/);
-    expect(() => parseChangeEntitlement({ mode: 'comp', reason: 'r' }, TENANT, base)).toThrow(/seats or tier/);
+    expect(() => parseChangeEntitlement({ mode: 'comp', reason: 'r' }, TENANT, base)).toThrow(/seats is required/);
     const billed = parseChangeEntitlement({ mode: 'billed', seats: '7', reason: 'r' }, TENANT, base);
     expect(billed).toMatchObject({ mode: 'billed', seats: 7, proration: 'create_prorations' });
     expect(billed).not.toHaveProperty('tier');
     // seats: null is an explicit "unlimited", only meaningful without billing.
     expect(parseChangeEntitlement({ mode: 'comp', seats: null, reason: 'r' }, TENANT, base)).toMatchObject({ seats: null });
     expect(() => parseChangeEntitlement({ mode: 'billed', seats: null, reason: 'r' }, TENANT, base)).toThrow(/Unlimited seats/);
-    const tierOnly = parseChangeEntitlement({ mode: 'billed', tier: 'premium', reason: 'r' }, TENANT, base);
-    expect(tierOnly).not.toHaveProperty('seats');
-    expect(tierOnly.tier).toBe('premium');
+    // There is one paid tier; a `tier` key is ignored rather than accepted.
+    const withTier = parseChangeEntitlement({ mode: 'comp', seats: 3, tier: 'premium', reason: 'r' }, TENANT, base);
+    expect(withTier).toMatchObject({ mode: 'comp', seats: 3 });
+    expect(withTier).not.toHaveProperty('tier');
   });
 
   it('revoke-appliance validates the appliance id and needs a reason', async () => {

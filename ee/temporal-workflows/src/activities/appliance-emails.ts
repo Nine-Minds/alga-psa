@@ -25,7 +25,7 @@ export type ApplianceEmailKind =
   | 'suspended'
   | 'reactivated';
 
-export type ApplianceEmailEdition = 'essentials' | 'pro' | 'premium';
+export type ApplianceEmailEdition = 'essentials' | 'pro';
 
 export interface DeliverApplianceEmailInput {
   kind: ApplianceEmailKind;
@@ -80,7 +80,7 @@ const PURPLE = '#8a4dea';
 const PURPLE_LIGHT = '#a366f0';
 
 function editionLabel(edition: ApplianceEmailEdition | undefined): string {
-  return edition === 'pro' ? 'Pro' : edition === 'premium' ? 'Premium' : 'Essentials';
+  return edition === 'pro' ? 'Pro' : 'Essentials';
 }
 
 function fmtDate(unix: number | undefined): string {

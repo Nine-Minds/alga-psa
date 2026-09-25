@@ -3,8 +3,8 @@
  *
  * Appliance subscriptions are shaped by nm-store checkout: an optional flat
  * base line plus a per-seat line whose price id is one of
- * STRIPE_PRICE_ID_APPLIANCE_{PRO,PREMIUM}_USER_{MONTHLY,YEARLY}. Pro is per-seat
- * only. These activities change the per-seat line; C4 is updated afterwards by
+ * STRIPE_PRICE_ID_APPLIANCE_PRO_USER_{MONTHLY,YEARLY}. Pro is the only paid
+ * tier and is per-seat only. These activities change the per-seat line; C4 is updated afterwards by
  * the workflow so licensing never runs ahead of billing.
  */
 
@@ -26,22 +26,19 @@ function getStripe(): Stripe {
   return stripeClient;
 }
 
-export type ApplianceTier = 'pro' | 'premium';
 export type ApplianceInterval = 'month' | 'year';
 
 /** nm-store's env naming for appliance per-seat prices. */
-export function appliancePerSeatPriceId(tier: ApplianceTier, interval: ApplianceInterval, env: NodeJS.ProcessEnv = process.env): string | null {
-  const key = `STRIPE_PRICE_ID_APPLIANCE_${tier.toUpperCase()}_USER_${interval === 'year' ? 'YEARLY' : 'MONTHLY'}`;
+export function appliancePerSeatPriceId(interval: ApplianceInterval, env: NodeJS.ProcessEnv = process.env): string | null {
+  const key = `STRIPE_PRICE_ID_APPLIANCE_PRO_USER_${interval === 'year' ? 'YEARLY' : 'MONTHLY'}`;
   return env[key] || null;
 }
 
 export function appliancePerSeatPriceIds(env: NodeJS.ProcessEnv = process.env): Set<string> {
   const ids = new Set<string>();
-  for (const tier of ['pro', 'premium'] as const) {
-    for (const interval of ['month', 'year'] as const) {
-      const id = appliancePerSeatPriceId(tier, interval, env);
-      if (id) ids.add(id);
-    }
+  for (const interval of ['month', 'year'] as const) {
+    const id = appliancePerSeatPriceId(interval, env);
+    if (id) ids.add(id);
   }
   return ids;
 }
@@ -102,47 +99,6 @@ export async function stripeUpdateSeatQuantity(input: StripeUpdateSeatQuantityIn
   });
   const after = findPerSeatItem(updated) ?? item;
   return { stripeSubId: updated.id, itemId: after.id, priceId: after.price.id, seats: after.quantity ?? input.seats };
-}
-
-export interface StripeChangeTierInput {
-  stripeSubId: string;
-  tier: ApplianceTier;
-  /** Optional seat change in the same update. */
-  seats?: number | null;
-  proration: ProrationBehavior;
-}
-
-export interface StripeTierChangeResult extends StripeSeatChangeResult {
-  tier: ApplianceTier;
-  interval: ApplianceInterval;
-}
-
-/** Swap the per-seat line to the target tier's price for the same billing interval. */
-export async function stripeChangeTier(input: StripeChangeTierInput): Promise<StripeTierChangeResult> {
-  const stripe = getStripe();
-  logger().info('stripeChangeTier', { stripeSubId: input.stripeSubId, tier: input.tier });
-  const sub = await stripe.subscriptions.retrieve(input.stripeSubId);
-  guardActive(sub);
-  const item = requirePerSeatItem(sub);
-  const rawInterval = item.price.recurring?.interval;
-  const interval: ApplianceInterval = rawInterval === 'year' ? 'year' : 'month';
-  const targetPrice = appliancePerSeatPriceId(input.tier, interval);
-  if (!targetPrice) {
-    throw ApplicationFailure.nonRetryable(
-      `No appliance per-seat price configured for ${input.tier}/${interval} on the worker`,
-      'tier_price_not_configured',
-    );
-  }
-  const quantity = input.seats ?? item.quantity ?? 1;
-  if (item.price.id === targetPrice && quantity === item.quantity) {
-    return { stripeSubId: sub.id, itemId: item.id, priceId: item.price.id, seats: quantity, tier: input.tier, interval };
-  }
-  const updated = await stripe.subscriptions.update(sub.id, {
-    items: [{ id: item.id, price: targetPrice, quantity }],
-    proration_behavior: input.proration,
-  });
-  const after = updated.items.data.find((i) => i.price.id === targetPrice) ?? item;
-  return { stripeSubId: updated.id, itemId: after.id, priceId: after.price.id, seats: after.quantity ?? quantity, tier: input.tier, interval };
 }
 
 export type PauseCollectionBehavior = 'void' | 'keep_as_draft' | 'mark_uncollectible';

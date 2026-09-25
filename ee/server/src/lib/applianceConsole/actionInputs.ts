@@ -6,8 +6,7 @@
  * because the worker package does not resolve @ee imports; keep both in sync.
  */
 
-export type ApplianceEditionInput = 'essentials' | 'pro' | 'premium';
-export type ApplianceTierInput = 'pro' | 'premium';
+export type ApplianceEditionInput = 'essentials' | 'pro';
 
 export interface OperatorMeta {
   userId: string;
@@ -66,10 +65,8 @@ export type ProrationBehavior = 'create_prorations' | 'none';
 export interface ChangeEntitlementArgs extends BaseArgs {
   tenantId: string;
   mode: EntitlementChangeMode;
-  /** Absent = unchanged; null = unlimited (comp mode only). */
-  seats?: number | null;
-  /** Absent = unchanged. */
-  tier?: ApplianceTierInput;
+  /** null = unlimited (comp mode only). */
+  seats: number | null;
   proration: ProrationBehavior;
 }
 
@@ -178,7 +175,7 @@ export function parseCreateTenant(body: Body, base: Omit<BaseArgs, 'reason'>): C
   const companyName = str(body, 'company_name', { required: true, max: 200 })!;
   const contactEmail = str(body, 'contact_email', { required: true, max: 320 })!;
   if (!EMAIL_RE.test(contactEmail)) throw new ActionValidationError('contact_email is not a valid email');
-  const edition = oneOf(body, 'edition', ['essentials', 'pro', 'premium'] as const, true)!;
+  const edition = oneOf(body, 'edition', ['essentials', 'pro'] as const, true)!;
   const productCode = oneOf(body, 'product_code', ['psa', 'algadesk'] as const, false) ?? 'psa';
   const seats = positiveInt(body, 'seats');
   const stripeSubId = str(body, 'stripe_sub_id', { max: 100 });
@@ -251,11 +248,10 @@ export function parseExtendPro(body: Body, tenantId: string, base: Omit<BaseArgs
 
 export function parseChangeEntitlement(body: Body, tenantId: string, base: Omit<BaseArgs, 'reason'>): ChangeEntitlementArgs {
   const mode = oneOf(body, 'mode', ['comp', 'billed'] as const, true)!;
-  // `seats: null` is an explicit "unlimited"; an absent key leaves seats unchanged.
+  // `seats: null` is an explicit "unlimited"; the key itself is required.
   const seatsProvided = 'seats' in body && body.seats !== undefined && body.seats !== '';
-  const seats = seatsProvided ? (body.seats === null ? null : positiveInt(body, 'seats')) : undefined;
-  const tier = oneOf(body, 'tier', ['pro', 'premium'] as const, false) ?? undefined;
-  if (!seatsProvided && !tier) throw new ActionValidationError('seats or tier is required');
+  if (!seatsProvided) throw new ActionValidationError('seats is required');
+  const seats = body.seats === null ? null : positiveInt(body, 'seats')!;
   if (mode === 'billed' && seats === null) throw new ActionValidationError('Unlimited seats cannot be billed; use comp mode');
   const proration = oneOf(body, 'proration', ['create_prorations', 'none'] as const, false) ?? 'create_prorations';
   return {
@@ -263,8 +259,7 @@ export function parseChangeEntitlement(body: Body, tenantId: string, base: Omit<
     reason: reason(body, true),
     tenantId,
     mode,
-    ...(seatsProvided ? { seats } : {}),
-    ...(tier ? { tier } : {}),
+    seats,
     proration,
   };
 }

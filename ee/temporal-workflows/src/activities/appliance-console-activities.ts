@@ -14,8 +14,9 @@ const logger = () => Context.current().log;
 
 // ── C4 shapes the workflows need (mirror alga-license src/api-types.ts) ───────
 
-export type C4Edition = 'essentials' | 'pro' | 'premium';
-export type C4Tier = 'pro' | 'premium';
+export type C4Edition = 'essentials' | 'pro';
+/** The only paid tier. Kept as a named type so the wire shape stays explicit. */
+export type C4Tier = 'pro';
 export type C4TenantStatus = 'registered' | 'installed' | 'active' | 'suspended' | 'cancelled';
 
 export interface C4TenantDetail {
@@ -133,7 +134,6 @@ export async function c4SignAirgapKey(input: { tenantId: string }): Promise<{ jw
 
 export interface C4GrantCompLicenseInput {
   tenantId: string;
-  tier: C4Tier;
   seats?: number | null;
   /** Unix seconds. */
   endsAt: number;
@@ -152,7 +152,6 @@ export async function c4GrantCompLicense(input: C4GrantCompLicenseInput): Promis
   logger().info('c4GrantCompLicense', { tenantId: input.tenantId, endsAt: input.endsAt });
   return c4(() =>
     c4Post(`/tenants/${enc(input.tenantId)}/comp-license`, {
-      tier: input.tier,
       seats: input.seats ?? undefined,
       ends_at: input.endsAt,
       note: input.note,
@@ -162,19 +161,16 @@ export async function c4GrantCompLicense(input: C4GrantCompLicenseInput): Promis
 
 export interface C4UpdateTenantEntitlementInput {
   tenantId: string;
-  seats?: number | null;
-  tier?: C4Tier;
+  /** null = unlimited. */
+  seats: number | null;
 }
 
-/** PATCH /tenants/:id/entitlement: record seats/tier on the active entitlement. */
+/** PATCH /tenants/:id/entitlement: record seats on the active entitlement. */
 export async function c4UpdateTenantEntitlement(
   input: C4UpdateTenantEntitlementInput,
 ): Promise<{ stripe_sub_id: string; tier: C4Tier; seats: number | null }> {
-  logger().info('c4UpdateTenantEntitlement', { tenantId: input.tenantId, seats: input.seats, tier: input.tier });
-  const body: Record<string, unknown> = {};
-  if (input.seats !== undefined) body.seats = input.seats;
-  if (input.tier !== undefined) body.tier = input.tier;
-  return c4(() => c4Patch(`/tenants/${enc(input.tenantId)}/entitlement`, body));
+  logger().info('c4UpdateTenantEntitlement', { tenantId: input.tenantId, seats: input.seats });
+  return c4(() => c4Patch(`/tenants/${enc(input.tenantId)}/entitlement`, { seats: input.seats }));
 }
 
 /** POST /tenants/:id/status: registry lifecycle (check-in honours suspended/cancelled). */
