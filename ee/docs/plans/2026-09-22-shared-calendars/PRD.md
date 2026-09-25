@@ -133,6 +133,7 @@ Unassigned, pending appointment-request entries keep today's rule: visible to `u
 - External calendar sync sends group-calendar entries only to their assignees' connected providers. Group entries with no assignees never sync externally.
 - Provider-side edits apply to Alga only when the provider's user has `canEdit` under `evaluateEntryAccess`; otherwise Alga remains authoritative and its version is pushed back to that provider.
 - Provider-side deletes delete the Alga entry only when that user could delete it in Alga and is its sole assignee. Otherwise only that user's assignment and provider mapping are removed.
+- Removing a read-only sole assignee may leave the entry with no assignees. This is intentional for group and personal entries; group entries with no assignees remain in Alga and never sync externally.
 - Archiving a group calendar removes its assignees' external copies and mappings through schedule-entry update events. Restoring it recreates those copies. Inbound provider changes are ignored while archived.
 
 **Capabilities**

@@ -635,6 +635,7 @@ export class CalendarSyncService {
     const access = await resolveCalendarAccess(knex, tenant, viewer, canViewAll);
     if (evaluateEntryAccess(entry, access).canEdit && entry.assigned_user_ids.length === 1) return this.deleteScheduleEntry(entryId, providerId, 'all', true);
     if (entry.assigned_user_ids.includes(provider.user_id)) {
+      // A read-only sole assignee may be removed, leaving group or personal entries unassigned intentionally.
       const updated = await ScheduleEntry.update(knex, tenant, entryId, { ...entry, assigned_user_ids: entry.assigned_user_ids.filter((id: string) => id !== provider.user_id) });
       if (!updated) return { success: false, error: 'Failed to remove provider user from entry' };
     }
