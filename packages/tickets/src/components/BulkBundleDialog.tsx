@@ -7,6 +7,7 @@ import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import AsyncSearchableSelect, { type SelectOption } from '@alga-psa/ui/components/AsyncSearchableSelect';
@@ -337,9 +338,9 @@ export default function BulkBundleDialog({ id, isOpen, onClose, initialTicketIds
                       <span className="text-[rgb(var(--color-text-500))]">· {member.client_name}</span>
                     </span>
                     {masterId === member.ticket_id && (
-                      <span className="rounded bg-[rgb(var(--color-primary-100))] px-2 py-0.5 text-xs text-[rgb(var(--color-primary-700))]">
+                      <Badge variant="info" size="sm">
                         {t('bulk.bundle.masterTag', 'Master')}
-                      </span>
+                      </Badge>
                     )}
                     <Button id={`${id}-bundle-member-remove-${member.ticket_id}`} variant="ghost" onClick={() => removeMember(member.ticket_id)}>
                       {t('bulk.bundle.removeMember', 'Remove')}

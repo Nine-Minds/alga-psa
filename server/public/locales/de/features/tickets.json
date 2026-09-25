@@ -653,7 +653,7 @@
       "badgeAdded": "Hinzugefügt",
       "badgeInBundle": "Im Bündel #{{number}}",
       "badgeMaster": "Bündel-Master",
-      "masterTag": "Master",
+      "masterTag": "Hauptticket",
       "removeMember": "Entfernen",
       "needMoreTickets": "Fügen Sie mindestens ein weiteres Ticket zum Bündel hinzu.",
       "unresolvedSelectedTickets_one": "{{count}} ausgewähltes Ticket konnte nicht geladen werden.",

@@ -182,6 +182,27 @@ export function AsyncSearchableSelect({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [open, disabled]);
 
+  // Escape belongs to the top-most layer: while this dropdown is open it must
+  // dismiss the list only. Radix dismissable layers (Dialog, Drawer) listen for
+  // Escape on `document` in the capture phase, so a React handler on the input
+  // or the trigger cannot stop them and the surrounding dialog closes too -
+  // taking any unsaved edits with it. A window-capture listener runs first.
+  useEffect(() => {
+    if (!open || disabled) return;
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      setOpen(false);
+      triggerRef.current?.focus();
+    };
+
+    window.addEventListener('keydown', handleEscape, true);
+    return () => window.removeEventListener('keydown', handleEscape, true);
+  }, [open, disabled]);
+
   useEffect(() => {
     if (open) return;
     setSearch('');
@@ -280,12 +301,6 @@ export function AsyncSearchableSelect({
             autoFocus={autoFocusSearch}
             value={search}
             onValueChange={setSearch}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') {
-                e.stopPropagation();
-                setOpen(false);
-              }
-            }}
             className="flex h-9 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-[rgb(var(--color-text-400))]"
             placeholder={resolvedSearchPlaceholder}
           />
