@@ -113,6 +113,7 @@ jobs:
           path: test-results/repository-inventory/
           if-no-files-found: error
           retention-days: 30
+          overwrite: true
 
   readiness:
     name: Production regression readiness

@@ -4,9 +4,10 @@ import React, { useEffect, useRef } from 'react';
 import { IScheduleEntry } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Trash, CalendarDays } from 'lucide-react';
-import { WorkItemType } from '@alga-psa/types';
 import { useIsCompactEvent } from '@alga-psa/ui/hooks';
+import { useSurfaceIsLight } from '@alga-psa/ui/hooks/useSurfaceIsLight';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { fillTokenFor, inkForFill } from '../../lib/scheduleChipInk';
 
 interface WeeklyScheduleEventProps {
   event: IScheduleEntry;
@@ -24,26 +25,6 @@ interface WeeklyScheduleEventProps {
   /** Overlay calendar color, drawn as a left stripe. */
   calendarColor?: string;
 }
-
-const workItemColors: Record<WorkItemType, string> = {
-  ticket: 'rgb(var(--color-primary-200))',
-  project_task: 'rgb(var(--color-secondary-100))',
-  non_billable_category: 'rgb(var(--color-event-non-billable))',
-  ad_hoc: 'rgb(var(--color-border-200))',
-  interaction: 'rgb(var(--color-event-interaction))',
-  appointment_request: 'rgb(var(--color-event-appointment))',
-  opportunity_step: 'rgb(var(--color-event-opportunity))',
-};
-
-const workItemHoverColors: Record<WorkItemType, string> = {
-  ticket: 'rgb(var(--color-primary-300))',
-  project_task: 'rgb(var(--color-secondary-200))',
-  non_billable_category: 'rgb(var(--color-event-non-billable-hover))',
-  ad_hoc: 'rgb(var(--color-border-300))',
-  interaction: 'rgb(var(--color-event-interaction-hover))',
-  appointment_request: 'rgb(var(--color-event-appointment-hover))',
-  opportunity_step: 'rgb(var(--color-event-opportunity-hover))',
-};
 
 const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
   event,
@@ -87,14 +68,14 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
     }
   }, [isComparison]);
 
-  const baseColor = workItemColors[event.work_item_type] || 'rgb(var(--color-border-200))';
-  const hoverColor = workItemHoverColors[event.work_item_type] || 'rgb(var(--color-border-300))';
-  
-  const backgroundColor = isHovered ? hoverColor : baseColor;
+  const fill = fillTokenFor(event.work_item_type, isHovered);
+  const backgroundColor = `rgb(var(${fill}))`;
   const opacity = isPrimary ? 1 : (isComparison ? 0.6 : 1);
-  
-  // Determine text color based on background color
-  const textColor = event.work_item_type === 'ticket' ? 'text-primary-950' : 'text-gray-950';
+
+  // Ink follows the fill the chip is painted with, so it stays readable in every
+  // theme — and on hover, where some fills cross from dark to light.
+  const fillIsLight = useSurfaceIsLight(eventRef, fill);
+  const textColor = inkForFill(fillIsLight);
 
   // Find assigned technician names for tooltip
   const assignedTechnicians = event.assigned_user_ids?.map(userId => {
@@ -161,9 +142,10 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
   return (
     <div
       ref={eventRef}
-      className={`absolute inset-0 ${compactClasses.text} overflow-hidden rounded-md ${textColor} group`}
+      className={`absolute inset-0 ${compactClasses.text} overflow-hidden rounded-md group`}
       style={{
         backgroundColor,
+        color: textColor,
         opacity,
         width: isComparison ? 'calc(100% - 20px)' : '100%',
         height: '100%',

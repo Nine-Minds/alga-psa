@@ -22,7 +22,10 @@ import { auditLog } from '@alga-psa/db';
 export type ServiceRequestSubmissionAuditOperation =
   | 'service_request_submission_created'
   | 'service_request_submission_execution_succeeded'
-  | 'service_request_submission_execution_failed';
+  | 'service_request_submission_execution_failed'
+  | 'service_request_submission_mapping_applied'
+  | 'service_request_submission_mapping_field_applied'
+  | 'service_request_submission_mapping_field_failed';
 
 export interface ServiceRequestSubmissionAuditParams {
   submissionId: string;

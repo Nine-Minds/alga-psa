@@ -19,6 +19,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Card, CardContent } from '@alga-psa/ui/components/Card';
+import { DrawerFooter } from '@alga-psa/ui/components/Drawer';
 import { Eye, EyeOff, ChevronDown, ChevronUp, X } from 'lucide-react';
 import ClientPasswordChangeForm from './ClientPasswordChangeForm';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
@@ -452,7 +453,7 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
         )}
       </div>
 
-      <div className="flex justify-end space-x-2 mt-6">
+      <DrawerFooter>
         <Button
           id="close-button"
           onClick={closeDrawer}
@@ -467,7 +468,7 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
         >
           {tProfile('clientSettings.messages.saveChanges')}
         </Button>
-      </div>
+      </DrawerFooter>
     </Card>
   );
 };

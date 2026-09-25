@@ -29,4 +29,14 @@ describe('document upload and association mutation tenant-scoped query contract'
     expect(uploadAssociationSection).toContain('if (options.parentDocumentId) {');
     expect(uploadAssociationSection).toContain("entity_type: 'document'");
   });
+
+  it('files an opportunity upload into the deal folder and links it to the deal', () => {
+    // Without the association the paperwork never shows on the opportunity;
+    // without the folder chain it lands in the library root instead of
+    // /Opportunities, and inherits no client visibility.
+    expect(uploadAssociationSection).toContain('if (options.opportunityId) {');
+    expect(uploadAssociationSection).toContain("entity_type: 'opportunity'");
+    expect(uploadAssociationSection).toContain(": options.opportunityId ? { id: options.opportunityId, type: 'opportunity' }");
+    expect(uploadAssociationSection).toContain(": options.opportunityId ? 'opportunity'");
+  });
 });

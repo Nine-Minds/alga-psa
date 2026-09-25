@@ -7,6 +7,75 @@ import { createProductionBrowserActors } from '../../server/test-utils/productio
 
 test.use({ emulatorProviders: ['smtp-sink'] });
 
+const INLINE_PNG_BASE64 =
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=';
+
+// A tiny but structurally valid PCM WAV, so a real voicemail-style audio
+// attachment travels the same MIME path a phone system would produce.
+function buildWavBytes(): Buffer {
+  return Buffer.concat([
+    Buffer.from('RIFF'), Buffer.from([0x24, 0x00, 0x00, 0x00]), Buffer.from('WAVE'),
+    Buffer.from('fmt '), Buffer.from([0x10, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00]),
+    Buffer.from([0x40, 0x1f, 0x00, 0x00, 0x80, 0x3e, 0x00, 0x00, 0x02, 0x00, 0x10, 0x00]),
+    Buffer.from('data'), Buffer.from([0x00, 0x00, 0x00, 0x00]),
+  ]);
+}
+
+// One inline logo referenced once by CID: it must persist as exactly one image
+// document, never a CID copy plus a data-URL copy.
+function buildInboundRawFixture(params: {
+  runId: string; title: string; firstId: string; firstBody: string; inlineQuote: string;
+  mailbox: string; portalEmail: string; wavBytes: Buffer;
+}): string {
+  const boundary = `mime-${params.runId}`;
+  const relatedBoundary = `related-${params.runId}`;
+  return [
+    `From: Customer <${params.portalEmail}>`, `To: ${params.mailbox}`, `Subject: ${params.title}`,
+    `Message-ID: ${params.firstId}`, `Date: ${new Date().toUTCString()}`, 'MIME-Version: 1.0',
+    // Model the receiving provider's authentication result; GreenMail itself
+    // does not implement Internet SPF/DKIM/DMARC verification.
+    'Authentication-Results: imap-test-server; dmarc=pass header.from=example.invalid; spf=pass smtp.mailfrom=example.invalid; dkim=pass header.d=example.invalid',
+    `Content-Type: multipart/mixed; boundary="${boundary}"`, '',
+    `--${boundary}`, `Content-Type: multipart/related; boundary="${relatedBoundary}"`, '',
+    `--${relatedBoundary}`, 'Content-Type: text/html; charset=utf-8', '',
+    `<p>${params.firstBody}</p><blockquote>${params.inlineQuote}</blockquote><p>My answer follows the quotation.</p><img src="cid:inline-logo" alt="Logo">`,
+    `--${relatedBoundary}`, 'Content-Type: image/png', 'Content-ID: <inline-logo>',
+    'Content-Disposition: inline; filename="inline-logo.png"', 'Content-Transfer-Encoding: base64', '',
+    INLINE_PNG_BASE64, `--${relatedBoundary}--`,
+    `--${boundary}`, 'Content-Type: text/plain; name="diagnostic.txt"',
+    'Content-Disposition: attachment; filename="diagnostic.txt"', 'Content-Transfer-Encoding: base64', '',
+    Buffer.from(`Attachment bytes ${params.runId}`).toString('base64'),
+    `--${boundary}`, 'Content-Type: audio/wav; name="voicemail.wav"',
+    'Content-Disposition: attachment; filename="voicemail.wav"', 'Content-Transfer-Encoding: base64', '',
+    params.wavBytes.toString('base64'), `--${boundary}--`, '',
+  ].join('\r\n');
+}
+
+// A token-threaded customer reply that carries its own inline CID image. Used
+// to prove a durable reply's comment is rewritten to the served file URL.
+function buildTokenReplyRawFixture(params: {
+  runId: string; title: string; replyId: string; token: string; replyBody: string;
+  mailbox: string; portalEmail: string; wavBytes: Buffer;
+}): string {
+  const boundary = `reply-mime-${params.runId}`;
+  const relatedBoundary = `reply-related-${params.runId}`;
+  return [
+    `From: Customer <${params.portalEmail}>`, `To: ${params.mailbox}`, `Subject: Re: ${params.title}`,
+    `Message-ID: ${params.replyId}`, `Date: ${new Date().toUTCString()}`, 'MIME-Version: 1.0',
+    'Authentication-Results: imap-test-server; spf=pass smtp.mailfrom=example.invalid; dkim=pass header.d=example.invalid',
+    `Content-Type: multipart/mixed; boundary="${boundary}"`, '',
+    `--${boundary}`, `Content-Type: multipart/related; boundary="${relatedBoundary}"`, '',
+    `--${relatedBoundary}`, 'Content-Type: text/html; charset=utf-8', '',
+    `<div data-alga-reply-token="${params.token}"></div><p>${params.replyBody}</p><img src="cid:reply-logo" alt="Reply logo">`,
+    `--${relatedBoundary}`, 'Content-Type: image/png', 'Content-ID: <reply-logo>',
+    'Content-Disposition: inline; filename="reply-logo.png"', 'Content-Transfer-Encoding: base64', '',
+    INLINE_PNG_BASE64, `--${relatedBoundary}--`,
+    `--${boundary}`, 'Content-Type: audio/wav; name="reply-voicemail.wav"',
+    'Content-Disposition: attachment; filename="reply-voicemail.wav"', 'Content-Transfer-Encoding: base64', '',
+    params.wavBytes.toString('base64'), `--${boundary}--`, '',
+  ].join('\r\n');
+}
+
 test('built email service ingests MIME, preserves inline quotations, threads replies and deduplicates delivery', async ({ page, credentials, database, emulators }, testInfo) => {
   test.setTimeout(300_000);
   if (process.env.E2E_EMAIL_TRANSPORT_ISOLATED !== 'true') {
@@ -62,20 +131,11 @@ test('built email service ingests MIME, preserves inline quotations, threads rep
   const firstId = `<new-${actors.runId}@example.test>`;
   const inlineQuote = `Keep this customer quotation ${actors.runId}`;
   const firstBody = `Investigate the connection ${actors.runId}`;
-  const boundary = `mime-${actors.runId}`;
-  const raw = [
-    `From: Customer <${tenant.portal.email}>`, `To: ${mailbox}`, `Subject: ${title}`,
-    `Message-ID: ${firstId}`, `Date: ${new Date().toUTCString()}`, 'MIME-Version: 1.0',
-    // Model the receiving provider's authentication result; GreenMail itself
-    // does not implement Internet SPF/DKIM/DMARC verification.
-    'Authentication-Results: imap-test-server; dmarc=pass header.from=example.invalid; spf=pass smtp.mailfrom=example.invalid; dkim=pass header.d=example.invalid',
-    `Content-Type: multipart/mixed; boundary="${boundary}"`, '',
-    `--${boundary}`, 'Content-Type: text/html; charset=utf-8', '',
-    `<p>${firstBody}</p><blockquote>${inlineQuote}</blockquote><p>My answer follows the quotation.</p>`,
-    `--${boundary}`, 'Content-Type: text/plain; name="diagnostic.txt"',
-    'Content-Disposition: attachment; filename="diagnostic.txt"', 'Content-Transfer-Encoding: base64', '',
-    Buffer.from(`Attachment bytes ${actors.runId}`).toString('base64'), `--${boundary}--`, '',
-  ].join('\r\n');
+  const wavBytes = buildWavBytes();
+  const raw = buildInboundRawFixture({
+    runId: actors.runId, title, firstId, firstBody, inlineQuote, mailbox,
+    portalEmail: tenant.portal.email, wavBytes,
+  });
   async function send(message: string) {
     const result = await transport.sendMail({ envelope: { from: tenant.portal.email, to: [mailbox] }, raw: message });
     expect(result.accepted).toEqual([mailbox]);
@@ -104,6 +164,76 @@ test('built email service ingests MIME, preserves inline quotations, threads rep
     const download = await page.request.get(`/api/documents/download/${attachments[0].file_id}`);
     expect(download.status()).toBe(200);
     expect(await download.body()).toEqual(Buffer.from(`Attachment bytes ${actors.runId}`));
+
+    // A voicemail-style .wav must land as a downloadable ticket document under
+    // the same upload policy manual uploads use (regression: alga-2026-0002491).
+    const audioAttachments = await database('documents as d')
+      .join('document_associations as a', function () {
+        this.on('a.tenant', '=', 'd.tenant').andOn('a.document_id', '=', 'd.document_id');
+      }).where({ 'd.tenant': tenant.tenantId, 'a.entity_id': ticket.ticket_id, 'd.document_name': 'voicemail.wav' })
+      .select('d.file_id', 'd.mime_type', 'd.storage_path');
+    expect(audioAttachments).toHaveLength(1);
+    expect(audioAttachments[0]).toMatchObject({ mime_type: 'audio/wav' });
+    expect(audioAttachments[0].file_id).toBeTruthy();
+    expect(audioAttachments[0].storage_path).toBeTruthy();
+    const audioDownload = await page.request.get(`/api/documents/download/${audioAttachments[0].file_id}`);
+    expect(audioDownload.status()).toBe(200);
+    expect(await audioDownload.body()).toEqual(wavBytes);
+    // The Documents tile links the recording straight to the download route:
+    // the view route refuses audio with 400, so a /view link is a dead click.
+    const documentsTile = page.locator('#ticket-details-bento-documents-section');
+    await expect(documentsTile.getByRole('link', { name: /voicemail\.wav/ })).toHaveAttribute(
+      'href', `/api/documents/download/${audioAttachments[0].file_id}`);
+    await expect(documentsTile.getByRole('link', { name: /diagnostic\.txt/ })).toHaveAttribute(
+      'href', `/api/documents/download/${attachments[0].file_id}`);
+
+    // The single inline CID logo is stored once and the comment body reuses it.
+    const imageDocuments = await database('documents as d')
+      .join('document_associations as a', function () {
+        this.on('a.tenant', '=', 'd.tenant').andOn('a.document_id', '=', 'd.document_id');
+      }).where({ 'd.tenant': tenant.tenantId, 'a.entity_id': ticket.ticket_id, 'd.mime_type': 'image/png' })
+      .select('d.file_id', 'd.document_name');
+    expect(imageDocuments).toHaveLength(1);
+    expect(imageDocuments[0].document_name).toBe('inline-logo.png');
+    // The page was opened before processing finished, so the description may
+    // still hold the pre-rewrite cid: reference; reload to read the settled body.
+    await page.reload();
+    await expect(description.locator(`img[src*="/api/documents/view/${imageDocuments[0].file_id}"]`)).toHaveCount(1);
+
+    // Both persisted bodies (the new-ticket description and the originating
+    // comment) must carry the resolved file URL, never an unresolved `cid:`.
+    // The description is stored at tickets.attributes.description; the comment
+    // is the ticket's first comment.
+    const storedTicket = await database('tickets').where({ tenant: tenant.tenantId, ticket_id: ticket.ticket_id }).first();
+    const storedAttributes = typeof storedTicket.attributes === 'string'
+      ? JSON.parse(storedTicket.attributes) : storedTicket.attributes;
+    const storedDescription = String(storedAttributes?.description ?? '');
+    expect(storedDescription).toContain(`/api/documents/view/${imageDocuments[0].file_id}`);
+    expect(storedDescription).not.toContain('cid:');
+    const originatingComment = await database('comments')
+      .where({ tenant: tenant.tenantId, ticket_id: ticket.ticket_id }).orderBy('created_at').first();
+    const originatingNote = String(originatingComment?.note ?? '');
+    expect(originatingNote).toContain(`/api/documents/view/${imageDocuments[0].file_id}`);
+    expect(originatingNote).not.toContain('cid:');
+
+    // The rendered images in both the description and the timeline must have
+    // loaded (naturalWidth > 0), not be broken cid placeholders.
+    const renderedImageWidths = async () => page.evaluate(() => {
+      const read = (selector: string) => {
+        const root = document.querySelector(selector);
+        return root ? [...root.querySelectorAll('img')].map(img => ({ src: img.getAttribute('src') ?? '', naturalWidth: img.naturalWidth })) : [];
+      };
+      return {
+        description: read('#ticket-details-bento-hero-description-section'),
+        timeline: read('#ticket-details-bento-timeline-tile'),
+      };
+    });
+    await expect.poll(async () => {
+      const state = await renderedImageWidths();
+      const matches = (imgs: Array<{ src: string; naturalWidth: number }>) =>
+        imgs.some(img => img.src.includes(imageDocuments[0].file_id) && img.naturalWidth > 0);
+      return matches(state.description) && matches(state.timeline);
+    }, { timeout: 30_000 }).toBe(true);
 
     const agentReply = `Agent transport response ${actors.runId}`;
     const conversation = page.locator('#ticket-details-bento-timeline-tile');
@@ -204,6 +334,166 @@ test('built email service ingests MIME, preserves inline quotations, threads rep
   } finally {
     transport.close();
     // Stop ingestion before the next test gets its own mailbox and provider.
+    await database('email_providers').where({ tenant: tenant.tenantId, id: provider.id }).update({ is_active: false });
+  }
+});
+
+// Durable-enforce counterpart. Runs only when the deployed email-service worker
+// has UNIFIED_INBOUND_EMAIL_DURABLE_MODE=enforce; the durable recovery
+// scheduler must be present so the artifact manifest reaches terminal state
+// without manual enqueueing. This is declared conditionally rather than skipped
+// at runtime: the production-browser execution gate treats every *collected*
+// case as required and fails on any skip, so a runtime test.skip would redden
+// CI wherever durable mode is off (the default, including CI). Declaring it only
+// when E2E_INBOUND_DURABLE_MODE=enforce keeps collected==executed in both the
+// test:list and run passes. The standard-path test above already covers the cid
+// URL rewrite (resolved /api/documents/view URLs, no cid:, deduped rendering)
+// and the WAV attachment end-to-end in CI; the durable ingestion path is also
+// unit-covered (processInboundEmailArtifacts.test.ts).
+if ((process.env.E2E_INBOUND_DURABLE_MODE || 'off') === 'enforce')
+test('durable enforce resolves inline cid images in the stored description, comment and threaded reply', async ({ page, credentials, database }, testInfo) => {
+  test.setTimeout(300_000);
+  if (process.env.E2E_EMAIL_TRANSPORT_ISOLATED !== 'true') {
+    throw new Error('Raw email journeys require E2E_EMAIL_TRANSPORT_ISOLATED=true and an owned GreenMail/email-service stack');
+  }
+
+  const actors = await createProductionBrowserActors(database, { sourceEmail: credentials.email });
+  const tenant = actors.primary;
+  const mailbox = `inbound-${actors.runId}@example.test`;
+  const title = `Durable MIME transport ${actors.runId}`;
+  const defaultsName = `Inbound ${actors.runId}`;
+  await database('inbound_ticket_defaults').insert({
+    id: randomUUID(), tenant: tenant.tenantId, short_name: `inbound-${actors.runId}`,
+    display_name: defaultsName, is_default: true, is_active: true,
+    board_id: tenant.ticketing.boardId, status_id: tenant.ticketing.openStatusId,
+    priority_id: tenant.ticketing.priorityId, client_id: tenant.clients.primary.id,
+    entered_by: tenant.admin.userId,
+  });
+  await database('tenant_email_settings').insert({
+    tenant: tenant.tenantId, email_provider: 'smtp', fallback_enabled: false,
+    ticketing_from_email: mailbox,
+    provider_configs: JSON.stringify([{ providerId: 'smtp-e2e', providerType: 'smtp', isEnabled: true,
+      config: { host: 'algasim', port: 4040, secure: false, from: mailbox,
+        username: '', password: '', requireTLS: false } }]),
+  });
+  await signIn(page, { email: tenant.admin.email, password: credentials.password });
+  await page.goto('/msp/settings/integrations?category=communication');
+  await page.locator('#add-provider-btn').click();
+  await page.locator('#setup-imap-provider-button').click();
+  const dialog = page.getByRole('dialog');
+  await dialog.locator('#providerName').fill(title);
+  await dialog.locator('#mailbox').fill(mailbox);
+  await dialog.locator('#host').fill('imap-test-server');
+  await dialog.locator('#port').fill('3143');
+  await dialog.locator('#secure').click();
+  await dialog.locator('#username').fill(mailbox);
+  await dialog.locator('#password').fill('synthetic-mailbox-password');
+  await dialog.locator('#imap-defaults-select').click();
+  await page.getByRole('option', { name: defaultsName, exact: true }).click();
+  await dialog.getByRole('button', { name: 'Create Provider', exact: true }).click();
+  await expect(dialog).toBeHidden();
+  const providers = await database('email_providers').where({ tenant: tenant.tenantId, mailbox });
+  expect(providers).toHaveLength(1);
+  const provider = providers[0];
+
+  const transport = nodemailer.createTransport({
+    host: process.env.E2E_SMTP_HOST || '127.0.0.1', port: Number(process.env.E2E_SMTP_PORT || '3025'),
+    secure: false, ignoreTLS: true, connectionTimeout: 10_000, socketTimeout: 10_000,
+  });
+  const wavBytes = buildWavBytes();
+  const firstId = `<durable-new-${actors.runId}@example.test>`;
+  const firstBody = `Durable connection ${actors.runId}`;
+  const inlineQuote = `Durable quotation ${actors.runId}`;
+  const send = async (message: string) => {
+    const result = await transport.sendMail({ envelope: { from: tenant.portal.email, to: [mailbox] }, raw: message });
+    expect(result.accepted).toEqual([mailbox]);
+    expect(result.rejected).toEqual([]);
+  };
+  const waitForArtifactsTerminal = async (inboxId: string) => {
+    await expect.poll(async () => {
+      const rows = await database('inbound_email_artifacts').where({ tenant: tenant.tenantId, inbox_id: inboxId });
+      return rows.length > 0 && rows.every((row: { status: string }) =>
+        ['succeeded', 'skipped', 'terminal_failed'].includes(row.status));
+    }, { timeout: 120_000, intervals: [1000, 2000] }).toBe(true);
+  };
+  const readRenderedImageWidths = async () => page.evaluate(() => {
+    const read = (selector: string) => {
+      const root = document.querySelector(selector);
+      return root ? [...root.querySelectorAll('img')].map(img => ({ src: img.getAttribute('src') ?? '', naturalWidth: img.naturalWidth })) : [];
+    };
+    return {
+      description: read('#ticket-details-bento-hero-description-section'),
+      timeline: read('#ticket-details-bento-timeline-tile'),
+    };
+  });
+
+  try {
+    await send(buildInboundRawFixture({
+      runId: actors.runId, title, firstId, firstBody, inlineQuote, mailbox,
+      portalEmail: tenant.portal.email, wavBytes,
+    }));
+    await expect.poll(async () => (await database('tickets').where({ tenant: tenant.tenantId, title })).length,
+      { timeout: 120_000, intervals: [1000, 2000] }).toBe(1);
+    const ticket = await database('tickets').where({ tenant: tenant.tenantId, title }).first();
+    const inbox = await database('inbound_email_inbox').where({ tenant: tenant.tenantId, ticket_id: ticket.ticket_id }).first();
+    expect(inbox).toMatchObject({ status: 'succeeded', outcome_kind: 'created' });
+    await waitForArtifactsTerminal(inbox.inbox_id);
+
+    const imageDocuments = await database('documents as d')
+      .join('document_associations as a', function () {
+        this.on('a.tenant', '=', 'd.tenant').andOn('a.document_id', '=', 'd.document_id');
+      }).where({ 'd.tenant': tenant.tenantId, 'a.entity_id': ticket.ticket_id, 'd.mime_type': 'image/png' })
+      .select('d.file_id', 'd.document_name');
+    expect(imageDocuments).toHaveLength(1);
+    expect(imageDocuments[0].document_name).toBe('inline-logo.png');
+
+    const storedTicket = await database('tickets').where({ tenant: tenant.tenantId, ticket_id: ticket.ticket_id }).first();
+    const storedAttributes = typeof storedTicket.attributes === 'string'
+      ? JSON.parse(storedTicket.attributes) : storedTicket.attributes;
+    const storedDescription = String(storedAttributes?.description ?? '');
+    expect(storedDescription).toContain(`/api/documents/view/${imageDocuments[0].file_id}`);
+    expect(storedDescription).not.toContain('cid:');
+    const originatingComment = await database('comments')
+      .where({ tenant: tenant.tenantId, ticket_id: ticket.ticket_id }).orderBy('created_at').first();
+    expect(String(originatingComment?.note ?? '')).toContain(`/api/documents/view/${imageDocuments[0].file_id}`);
+    expect(String(originatingComment?.note ?? '')).not.toContain('cid:');
+
+    await page.goto(`/msp/tickets/${ticket.ticket_id}`);
+    await expect.poll(async () => {
+      const state = await readRenderedImageWidths();
+      const matches = (imgs: Array<{ src: string; naturalWidth: number }>) =>
+        imgs.some(img => img.src.includes(imageDocuments[0].file_id) && img.naturalWidth > 0);
+      return matches(state.description) && matches(state.timeline);
+    }, { timeout: 30_000 }).toBe(true);
+
+    // Token-threaded durable reply carrying its own inline image: the reply
+    // comment must be rewritten to the served URL too.
+    const tokenRow = await database('email_reply_tokens')
+      .where({ tenant: tenant.tenantId, ticket_id: ticket.ticket_id }).first();
+    expect(tokenRow?.token).toEqual(expect.any(String));
+    const replyId = `<durable-reply-${actors.runId}@example.test>`;
+    const replyBody = `Durable reply ${actors.runId}`;
+    await send(buildTokenReplyRawFixture({
+      runId: actors.runId, title, replyId, token: String(tokenRow.token), replyBody,
+      mailbox, portalEmail: tenant.portal.email, wavBytes,
+    }));
+    await expect.poll(async () => (await database('inbound_email_inbox')
+      .where({ tenant: tenant.tenantId, ticket_id: ticket.ticket_id }).whereNot('inbox_id', inbox.inbox_id)
+      .count('* as count').first())?.count, { timeout: 120_000 }).toBe('1');
+    const replyInbox = await database('inbound_email_inbox')
+      .where({ tenant: tenant.tenantId, ticket_id: ticket.ticket_id }).whereNot('inbox_id', inbox.inbox_id).first();
+    expect(replyInbox).toMatchObject({ status: 'succeeded', outcome_kind: 'replied' });
+    await waitForArtifactsTerminal(replyInbox.inbox_id);
+    const replyComment = await database('comments').where({ tenant: tenant.tenantId, comment_id: replyInbox.comment_id }).first();
+    expect(String(replyComment?.note ?? '')).toContain('/api/documents/view/');
+    expect(String(replyComment?.note ?? '')).not.toContain('cid:');
+
+    await testInfo.attach('durable-enforce-identities', { body: JSON.stringify({
+      providerId: provider.id, tenantId: tenant.tenantId, ticketId: ticket.ticket_id,
+      inboxId: inbox.inbox_id, replyInboxId: replyInbox.inbox_id, firstId,
+    }), contentType: 'application/json' });
+  } finally {
+    transport.close();
     await database('email_providers').where({ tenant: tenant.tenantId, id: provider.id }).update({ is_active: false });
   }
 });

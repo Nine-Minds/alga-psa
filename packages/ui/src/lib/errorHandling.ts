@@ -321,10 +321,9 @@ export function getErrorMessage(error: unknown): string {
  * Shows permission errors with a ShieldAlert icon and other errors normally.
  */
 export function handleError(error: unknown, fallbackMessage?: string): void {
-  const message = getErrorMessage(error);
-
   if (isPermissionError(error)) {
     // Show permission errors with an Alert-style layout
+    const message = getErrorMessage(error);
     toast.custom((t) => (
       React.createElement('div', {
         className: `${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-alert-destructive-bg shadow-lg rounded-lg pointer-events-auto flex items-start p-4 border border-destructive/30`,
@@ -345,9 +344,16 @@ export function handleError(error: unknown, fallbackMessage?: string): void {
     ), {
       duration: 5000,
     });
+  } else if (isActionMessageError(error)) {
+    // A returned actionError is the explicit user-safe channel, so its message
+    // outranks the caller's generic fallback — otherwise a specific server reply
+    // ("filters are no longer valid") is hidden behind "Failed to fetch…".
+    // Thrown errors and unknown values never match this guard, so raw exception
+    // text still cannot reach a toast.
+    toast.error(error.actionError);
   } else {
     // Show other errors normally
-    toast.error(fallbackMessage || message);
+    toast.error(fallbackMessage || getErrorMessage(error));
   }
 
   // Always log to console for debugging

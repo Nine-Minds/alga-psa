@@ -3,6 +3,7 @@
 import { calendarDisplayDates, calendarStoredDates, moveCalendarStart } from '../../lib/calendarDateDisplay';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
+import { DrawerFooter } from '@alga-psa/ui/components/Drawer';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
@@ -1838,7 +1839,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         </div>
         )}
 
-      <div className="mt-4 flex items-center justify-end space-x-3">
+      <DrawerFooter className="items-center gap-3">
         {/* Destructive action sits apart from the primary pair, styled as a quiet action. */}
         {showDeleteButton && (
           <Button
@@ -1884,7 +1885,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
             {t('entryPopup.actions.save', { defaultValue: 'Save' })}
           </Button>
         )}
-      </div>
+      </DrawerFooter>
     </form>
   );
 

@@ -38,7 +38,15 @@ const documents = [
     document_id: 'doc-file',
     file_id: 'file-1',
     document_name: 'notes.pdf',
+    mime_type: 'application/pdf',
     file_size: 2048,
+  },
+  {
+    document_id: 'doc-voicemail',
+    file_id: 'file-wav',
+    document_name: 'voicemail.wav',
+    mime_type: 'audio/wav',
+    file_size: 8088,
   },
   {
     document_id: 'doc-block',
@@ -61,6 +69,12 @@ describe('DocumentsTile grid document cells', () => {
       '/api/documents/view/file-1',
     );
 
+    // An inbound voicemail recording is a real file but not previewable: its
+    // link must download rather than hit the view route's 400.
+    const voicemailLink = screen.getByText('voicemail.wav').closest('a');
+    expect(voicemailLink).toHaveAttribute('href', '/api/documents/download/file-wav');
+    expect(voicemailLink).toHaveAttribute('target', '_blank');
+
     const internalDocument = screen.getByRole('button', { name: /Runbook/ });
     expect(internalDocument).not.toHaveAttribute('href');
     expect(internalDocument).not.toHaveAttribute('target');
@@ -79,13 +93,19 @@ describe('DocumentsTile grid document cells', () => {
         ticketId="t1"
         documents={documents}
         onDocumentCreated={noop}
-        resolveDocumentViewUrl={({ file_id }) => `/portal/documents/${file_id}`}
+        resolveDocumentViewUrl={({ file_id, mime_type }) =>
+          `/portal/documents/${mime_type === 'audio/wav' ? 'download' : 'view'}/${file_id}`
+        }
       />,
     );
 
     expect(screen.getByText('notes.pdf').closest('a')).toHaveAttribute(
       'href',
-      '/portal/documents/file-1',
+      '/portal/documents/view/file-1',
+    );
+    expect(screen.getByText('voicemail.wav').closest('a')).toHaveAttribute(
+      'href',
+      '/portal/documents/download/file-wav',
     );
     expect(screen.getByText('notes.pdf').closest('a')).toHaveAttribute('target', '_blank');
     fireEvent.click(screen.getByRole('button', { name: /Runbook/ }));

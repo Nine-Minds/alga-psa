@@ -1,5 +1,6 @@
 import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
+import { INBOUND_MIME_PARSE_OPTIONS } from '@alga-psa/shared/services/email/inboundMimeParseOptions';
 import { v4 as uuidv4 } from 'uuid';
 import { createHash } from 'crypto';
 import logger from '@alga-psa/core/logger';
@@ -862,7 +863,7 @@ class ImapFolderListener {
         const rawMimeBuffer = Buffer.isBuffer(message.source)
           ? message.source
           : Buffer.from(message.source);
-        const parsed = await simpleParser(rawMimeBuffer);
+        const parsed = await simpleParser(rawMimeBuffer, INBOUND_MIME_PARSE_OPTIONS);
 
         const emailData = this.mapParsedMessage(parsed, rawMimeBuffer, message.uid);
         if (!emailData.from?.email) {

@@ -383,6 +383,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'workflow_task_definitions',
 
   // Service request runtime and published snapshots
+  // Applications restrict deletion of mapping versions; remove their results first.
+  'service_request_submission_application_results', 'service_request_submission_applications',
+  'service_request_answer_mapping_versions', 'service_request_answer_mappings',
   'service_request_submission_attachments', 'service_request_submissions',
   'service_request_definition_versions', 'service_request_definitions',
 

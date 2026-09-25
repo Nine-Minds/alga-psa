@@ -387,7 +387,7 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
     expect(microsoftConnectMock).toHaveBeenCalledTimes(1);
     expect(microsoftDownloadMessageSourceMock).toHaveBeenCalledWith('ms-msg-1');
     expect(microsoftGetMessageDetailsMock).not.toHaveBeenCalled();
-    expect(simpleParserMock).toHaveBeenCalledWith(rawMimeBuffer);
+    expect(simpleParserMock).toHaveBeenCalledWith(rawMimeBuffer, { keepCidLinks: true });
     const processedEmail = processInboundEmailInAppMock.mock.calls[0][0].emailData;
     expect(processedEmail).toMatchObject({
       id: '<ms-msg-1@example.com>',
