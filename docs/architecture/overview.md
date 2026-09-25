@@ -194,7 +194,7 @@ This document provides a high-level architectural overview of the open-source MS
     - Configurable notification thresholds with duplicate prevention
     - Full audit log for SLA compliance reporting
 
-* **Security:** Implements security measures. RBAC and ABAC logic is under `server/src/lib/auth/`. Authentication is handled through NextAuth.js with multi-portal support:
+* **Security:** Implements security measures. RBAC and ABAC logic is primarily under `server/src/lib/auth/`; a shared ABAC relationship-template registry lives in `packages/authorization/src/kernel/` — each template defines both a JavaScript `matches()` predicate and a SQL `compileSql()` predicate to keep in-memory and query-level enforcement consistent. Authentication is handled through NextAuth.js with multi-portal support:
   * Authentication Routes:
     - **MSP Portal**: `/auth/msp/signin` (purple theme, internal users)
     - **Client Portal**: `/auth/client-portal/signin` (blue theme, client users)
@@ -445,7 +445,7 @@ No code has been merged yet – this section serves as an architectural note so 
 * **Scalability:** Addressed through caching (`server/src/lib/cache`) and database optimization strategies.
 
 * **Security:**
-  * Implemented through RBAC/ABAC (`server/src/lib/auth`) and secure authentication (`server/src/pages/api/auth/[...nextauth]/options.ts`).
+  * Implemented through RBAC/ABAC (`server/src/lib/auth`, `packages/authorization/src/kernel/`) and secure authentication (`server/src/pages/api/auth/[...nextauth]/options.ts`).
   * The workflows feature incorporates security measures to ensure that only authorized users can create or modify workflows.
 
   RBAC Roles (Client Portal)
