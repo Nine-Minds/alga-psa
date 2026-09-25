@@ -3053,6 +3053,7 @@
   },
   "settings": {
     "assetTypes": {
+      "additionalFields": "Ytterligare fält",
       "tab": "Tillgångar",
       "title": "Tillgångstyper",
       "description": "Hantera tillgängliga tillgångstyper i tillgångsmodulen. Anpassade typer har ett fältschema som styr formulären för att skapa och redigera dem.",

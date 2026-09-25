@@ -71,6 +71,12 @@
       "title": "Radera affärsmöjlighet"
     },
     "detail": {
+      "addDocument": "Bifoga ett dokument",
+      "documents": "Dokument",
+      "documentsLoading": "Läser in dokument…",
+      "manageDocuments": "Lägg till eller hantera dokument",
+      "noDocuments": "Inga dokument ännu. Bifoga offertförfrågan, anteckningar om omfattningen eller undertecknade handlingar här.",
+      "viewAllDocuments": "Visa alla {{count}}",
       "backToList": "Tillbaka till affärsmöjligheter",
       "confidence": "Din tilltro",
       "confidenceNote": "Tilltron bedöms av den ansvariga. Stadiet grundas på underlag. De visas sida vid sida och slås aldrig ihop.",

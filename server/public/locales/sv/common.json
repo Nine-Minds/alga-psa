@@ -1609,6 +1609,76 @@
     "uploadingFiles": "Laddar upp filer…",
     "fileUploadFailed": "Filuppladdningen misslyckades."
   },
+  "listViews": {
+    "defaultView": "Standardvy",
+    "unsavedChanges": "Den här vyn har osparade ändringar",
+    "searchPlaceholder": "Sök vyer",
+    "noMatches": "Inga matchande vyer",
+    "sections": {
+      "mine": "Mina vyer",
+      "mineEmpty": "Inga privata vyer ännu",
+      "shared": "Delade vyer",
+      "sharedEmpty": "Inga delade vyer ännu"
+    },
+    "labels": {
+      "myDefault": "Min standardvy",
+      "sharedByYou": "Delad av dig"
+    },
+    "visibility": {
+      "private": "Privat",
+      "shared": "Delad"
+    },
+    "actions": {
+      "delete": "Radera",
+      "manage": "Hantera",
+      "setDefault": "Ange som min standardvy",
+      "clearDefault": "Rensa min standardvy",
+      "copyLink": "Kopiera länk",
+      "saveChanges": "Spara ändringar",
+      "saveChangesTo": "Spara ändringar i ”{{name}}”",
+      "saveAsNew": "Spara som ny vy…",
+      "discardChanges": "Kasta ändringar"
+    },
+    "dialog": {
+      "createTitle": "Spara som ny vy",
+      "manageTitle": "Hantera vy",
+      "nameLabel": "Namn",
+      "nameInvalid": "Ange ett namn med 1 till {{max}} tecken.",
+      "visibilityLabel": "Vem kan se vyn",
+      "privateHint": "Bara du kan se den här vyn.",
+      "sharedHint": "Alla som kan öppna den här listan kan se och använda vyn.",
+      "sharedDisabledHint": "Du har inte behörighet att dela vyer."
+    },
+    "deleteDialog": {
+      "title": "Radera vy",
+      "message": "Radera ”{{name}}”?",
+      "messageShared": "Radera ”{{name}}”? Vyn är delad och försvinner därför för alla som använder den."
+    },
+    "toasts": {
+      "saved": "”{{name}}” har sparats",
+      "updated": "”{{name}}” har uppdaterats",
+      "deleted": "Vyn har raderats",
+      "defaultSet": "Standardvyn har angetts",
+      "defaultCleared": "Standardvyn har rensats",
+      "linkCopied": "Länken har kopierats",
+      "droppedReferences": "Vissa poster i ”{{name}}” finns inte längre och hoppades över: {{fields}}"
+    },
+    "errors": {
+      "notFound": "Den här vyn är privat eller finns inte längre.",
+      "unknownList": "Okänd lista.",
+      "invalidName": "Ett vynamn måste innehålla mellan 1 och 100 tecken.",
+      "duplicateName": "Du har redan en vy med namnet ”{{name}}” i den här listan.",
+      "invalidSettings": "Det gick inte att spara vyn: {{detail}}",
+      "invalidVisibility": "Synligheten måste vara privat eller delad.",
+      "cannotShare": "Du har inte behörighet att dela vyer.",
+      "cannotEdit": "Du har inte behörighet att ändra den här vyn.",
+      "cannotReadList": "Du har inte behörighet att visa den här listan.",
+      "saveFailed": "Det gick inte att spara vyn.",
+      "deleteFailed": "Det gick inte att radera vyn.",
+      "defaultFailed": "Det gick inte att ändra din standardvy.",
+      "copyFailed": "Det gick inte att kopiera länken."
+    }
+  },
   "emailPreferences": {
     "loading": "Läser in e-postinställningar…",
     "saving": "Sparar e-postinställningar…",

@@ -307,7 +307,11 @@
     "parentClientSelf": "En kund kan inte vara sin egen överordnade kund",
     "parentClientPlaceholder": "Ingen överordnad kund",
     "parentClientClear": "Rensa",
-    "parentClientLegacy": "Tidigare angivet som text: {{name}}"
+    "parentClientLegacy": "Tidigare angivet som text: {{name}}",
+    "inboundDomainAutoCreateContacts": "Skapa kontakter för nya avsändare",
+    "inboundDomainAutoCreateHelp": "Mappade domäner kan valfritt skapa en kontakt för en betrodd ny avsändare. Domäner måste vara unika för varje kund.",
+    "inboundDomainAutoCreateUpdated": "Inställningen för avsändarkontakter har uppdaterats.",
+    "inboundDomainAutoCreateUpdateFailed": "Det gick inte att uppdatera inställningen för avsändarkontakter."
   },
   "clientCommandCenter": {
     "cards": {

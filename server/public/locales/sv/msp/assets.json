@@ -545,6 +545,7 @@
     "description": "Dokumentlista och bilageyta för filer som hör till en tillgång"
   },
   "assetForm": {
+    "additionalFields": "Ytterligare fält",
     "title": "Tillgångsformulär",
     "description": "Huvudformulär för att skapa och redigera tillgångar med fält för identitet, livscykel, avtal och metadata",
     "heading": "Redigera tillgång",
@@ -733,6 +734,11 @@
     "more": "+{{count}} till"
   },
   "remoteAccess": {
+    "connectionTypes": {
+      "teamviewer": "TeamViewer",
+      "vnc": "VNC",
+      "rdp": "RDP"
+    },
     "remoteDesktop": "Fjärrskrivbord",
     "remoteShell": "Fjärrskal",
     "remoteAccess": "Fjärråtkomst",
@@ -740,13 +746,52 @@
     "deviceOffline": "Enheten är offline",
     "errors": {
       "urlFetchFailed": "Det gick inte att hämta URL:en för fjärråtkomst",
-      "initiateFailed": "Det gick inte att starta fjärråtkomst"
+      "initiateFailed": "Det gick inte att starta fjärråtkomst",
+      "managePermission": "Åtkomst nekad: Du kan inte hantera tillgångsinställningar.",
+      "readPermission": "Åtkomst nekad: Du kan inte läsa tillgångar."
     },
     "indicator": {
       "online": "Online",
       "offline": "Offline",
       "available": "Fjärråtkomst tillgänglig",
       "deviceOffline": "Enheten är offline"
+    },
+    "links": {
+      "title": "Länkar för fjärråtkomst",
+      "description": "Konfigurera URL-mallar för ScreenConnect och andra fjärrverktyg.",
+      "add": "Lägg till länk",
+      "empty": "Inga länkar för fjärråtkomst är konfigurerade.",
+      "edit": "Redigera",
+      "delete": "Radera",
+      "addTitle": "Lägg till länk för fjärråtkomst",
+      "editTitle": "Redigera länk för fjärråtkomst",
+      "cancel": "Avbryt",
+      "save": "Spara",
+      "label": "Knapptext",
+      "template": "URL-mall",
+      "tokens": "Använd {asset.name}, {asset.asset_tag}, {asset.serial_number}, {client.name} och {field.<key>} med anpassade fältnycklar som definieras under Inställningar → Tillgångar → Tillgångstyper.",
+      "errors": {
+        "load": "Det gick inte att läsa in länkar för fjärråtkomst.",
+        "save": "Det gick inte att spara länken för fjärråtkomst.",
+        "delete": "Det gick inte att radera länken för fjärråtkomst.",
+        "templateHttp": "Mallen måste börja med http:// eller https:// och ett värdnamn utan platshållare.",
+        "templatePlaceholder": "Mallen innehåller en platshållare som inte stöds.",
+        "templateUrl": "Mallen måste ge en giltig http- eller https-URL.",
+        "required": "En knapptext och en URL-mall krävs.",
+        "partialDelete": "Det gick inte att radera {{count}} av de markerade länkarna."
+      },
+      "loading": "Läser in alternativ för fjärråtkomst…",
+      "noneAvailable": "Inga alternativ för fjärråtkomst är tillgängliga.",
+      "unavailable": "Inte tillgängligt för den här tillgången",
+      "confirmDeleteTitle": "Radera länk för fjärråtkomst?",
+      "confirmDeleteMessage": "Vill du verkligen radera ”{{label}}”? Åtgärden går inte att ångra.",
+      "actions": "Åtgärder",
+      "openMenu": "Öppna meny",
+      "selectLabel": "Markera {{label}}",
+      "selectAll": "Markera alla länkar",
+      "confirmBulkDeleteTitle": "Radera markerade länkar?",
+      "confirmBulkDeleteMessage": "Radera {{count}} markerade länkar för fjärråtkomst?",
+      "selectedCount": "{{count}} markerade"
     }
   },
   "assetListErrors": {

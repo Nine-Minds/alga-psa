@@ -1023,6 +1023,20 @@
       "filterByBoard": "Filtrera efter tavla",
       "addCategory": "Lägg till kategori",
       "importStandardCategories": "Importera från standardkategorier",
+      "copyToBoard": "Kopiera kategorier till en annan tavla",
+      "copyTitle": "Kopiera kategorier till en annan tavla",
+      "copySourceBoard": "Välj källtavla",
+      "copyTargetBoard": "Välj måltavla",
+      "copySelected": "Kopiera markerade",
+      "copySuccess": "Kopierade {{created}} kategorier och hoppade över {{skipped}} som redan finns.",
+      "copyFailed": "Det gick inte att kopiera kategorierna",
+      "copySourceLabel": "Källtavla",
+      "copyTargetLabel": "Måltavla",
+      "copyEmpty": "Det finns inga kategorier på den här tavlan.",
+      "copying": "Kopierar…",
+      "copyBoardTypeMismatch": "Ärendekategorier kan bara kopieras mellan tavlor med samma kategorityp.",
+      "copyConflicts_one": "{{count}} överhoppad kategori har en annan överordnad kategori på måltavlan.",
+      "copyConflicts_other": "{{count}} överhoppade kategorier har en annan överordnad kategori på måltavlan.",
       "editCategory": "Redigera kategori",
       "categoryName": "Kategorinamn *",
       "enterCategoryName": "Ange kategorinamn",
@@ -1462,7 +1476,11 @@
       "missingField": "Ett obligatoriskt checklistfält saknas.",
       "missingFieldNamed": "Ett obligatoriskt checklistfält saknas: {{field}}.",
       "referenceInvalid": "Det valda ärendet, checklistmallen eller regelfiltret är inte längre giltigt. Ladda om och försök igen.",
-      "invalidValue": "Ett av checklistvärdena är ogiltigt. Ladda om och försök igen."
+      "invalidValue": "Ett av checklistvärdena är ogiltigt. Ladda om och försök igen.",
+      "ruleCategoryBoardMismatch": "Den valda kategorin tillhör en annan tavla än regeln.",
+      "ruleCategoryInvalid": "Den valda kategorin är inte en kategori på översta nivån.",
+      "ruleSubcategoryInvalid": "Den valda underkategorin tillhör inte den valda kategorin.",
+      "ruleSubcategoryRequiresCategory": "Välj en kategori innan du väljer en underkategori."
     }
   },
   "ticketSection": {
