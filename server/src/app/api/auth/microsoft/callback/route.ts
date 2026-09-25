@@ -28,6 +28,7 @@ import {
 } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
 import { EmailWebhookMaintenanceService } from '@alga-psa/shared/services/email/EmailWebhookMaintenanceService';
 import { randomBytes } from 'crypto';
+import type { EmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 
 export const dynamic = 'force-dynamic';
 
@@ -744,6 +745,17 @@ export async function GET(request: NextRequest) {
             });
           });
 
+          // The newly persisted OAuth connection supersedes any saved failure report.
+          try {
+            const { knex: diagnosticClearKnex } = await createTenantKnex(stateContext.tenant);
+            await tenantDb(diagnosticClearKnex, stateContext.tenant)
+              .table('microsoft_email_provider_config')
+              .where({ email_provider_id: stateContext.providerId })
+              .update({ last_callback_diagnostic: null });
+          } catch (clearError: any) {
+            console.warn('[MS OAuth Callback] Could not clear stale callback diagnostics:', clearError?.message || String(clearError));
+          }
+
           // A successful reconnect for a provider auto-paused on repeated
           // auth failures must resume ingestion only after durably
           // reconciling the paused interval. Credentials are freshly
@@ -784,6 +796,38 @@ export async function GET(request: NextRequest) {
           // that would clobber the restored state and take a working mailbox
           // offline. The user still sees the failed callback.
           console.warn('⚠️ Failed to persist Microsoft OAuth tokens or initialize webhook (provider restored to its prior state):', persistErr?.message || persistErr);
+          // Capture a redacted callback-time report using the fresh credentials
+          // in memory. This write is deliberately after compensation and only
+          // touches the diagnostic column, never provider state or token fields.
+          try {
+            const { knex: diagnosticKnex } = await createTenantKnex(stateContext.tenant!);
+            const diagnosticDb = tenantDb(diagnosticKnex, stateContext.tenant!);
+            const provider = await diagnosticDb.table('email_providers').where({ id: stateContext.providerId }).first();
+            const vendor = await diagnosticDb.table('microsoft_email_provider_config').where({ email_provider_id: stateContext.providerId }).first();
+            if (provider && vendor) {
+              const diagConfig: EmailProviderConfig = {
+                id: provider.id,
+                tenant: provider.tenant,
+                name: provider.provider_name || provider.mailbox,
+                provider_type: 'microsoft',
+                mailbox: provider.mailbox,
+                folder_to_monitor: Array.isArray(vendor.folder_filters) ? vendor.folder_filters[0] || 'Inbox' : 'Inbox',
+                active: provider.is_active,
+                webhook_notification_url: '',
+                connection_status: provider.status === 'connected' ? 'connected' : 'error',
+                provider_config: { ...vendor, access_token, refresh_token: refresh_token || undefined, token_expires_at: expiresAt.toISOString() },
+                created_at: provider.created_at,
+                updated_at: provider.updated_at,
+              };
+              const diagAdapter = new MicrosoftGraphAdapter(diagConfig);
+              const report = await diagAdapter.runMicrosoft365Diagnostics({ includeIdentifiers: true, liveSubscriptionTest: false });
+              await diagnosticDb.table('microsoft_email_provider_config').where({ email_provider_id: stateContext.providerId }).update({
+                last_callback_diagnostic: { source: 'oauth_callback', createdAt: new Date().toISOString(), report },
+              });
+            }
+          } catch (diagnosticError: any) {
+            console.warn('[MS OAuth Callback] Could not store callback-time diagnostics:', diagnosticError?.message || String(diagnosticError));
+          }
           return respondWithPostMessage({
             type: 'oauth-callback',
             provider: 'microsoft',

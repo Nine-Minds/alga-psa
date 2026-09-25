@@ -23,6 +23,7 @@ function makeAdapter(overrides?: Partial<any>) {
     provider_config: {
       access_token: makeJwt({ tid: 'tid', scp: 'Mail.Read Mail.Read.Shared', aud: 'graph' }),
       refresh_token: 'refresh-token',
+      client_secret: 'client-secret-value',
       token_expires_at: new Date(Date.now() + 60_000).toISOString(),
     },
     ...overrides,
@@ -115,7 +116,14 @@ describe('MicrosoftGraphAdapter.runMicrosoft365Diagnostics', () => {
     expect(subStep?.status).toBe('pass');
     expect((subStep?.data as any)?.createdSubscriptionId).toBe('sub-1');
     expect((subStep?.data as any)?.deletedSubscriptionId).toBe('sub-1');
+
+    const serialized = JSON.stringify(report);
+    expect(serialized).not.toContain('refresh-token');
+    expect(serialized).not.toContain('Authorization');
+    expect(serialized).not.toContain('client-secret-value');
+    expect(serialized).not.toContain(makeJwt({ tid: 'tid', scp: 'Mail.Read Mail.Read.Shared', aud: 'graph' }));
   });
+
 
   it('warns when delegated scopes are missing', async () => {
     const adapter = makeAdapter({

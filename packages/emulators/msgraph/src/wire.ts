@@ -498,15 +498,27 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
 
   const mailboxRoots = ['/me', '/users/:userId'];
   for (const root of mailboxRoots) {
-    graph.get(`${root}/mailFolders`, (_req, res) => {
+    graph.get(`${root}/mailFolders`, (req, res) => {
+      if (root.startsWith('/users/') && !String((req.params as any).userId).startsWith('me')) {
+        const access = core.canAccessMailboxFolder(String((req.params as any).userId), authed(res).clientId, 'inbox', true);
+        if (access === false) throw new GraphApiError(404, { error: { code: 'ErrorItemNotFound', message: 'Default folder Root not found' } });
+      }
       res.json({ value: [core.getMailFolder('inbox')] });
     });
 
     graph.get(`${root}/mailFolders/:folderId`, (req, res) => {
+      if (root.startsWith('/users/')) {
+        const access = core.canAccessMailboxFolder(String((req.params as any).userId), authed(res).clientId, String((req.params as any).folderId));
+        if (access === false) throw new GraphApiError(404, { error: { code: 'ErrorItemNotFound', message: 'Mail folder not found' } });
+      }
       res.json(core.getMailFolder(String(req.params.folderId)));
     });
 
     graph.get(`${root}/mailFolders/:folderId/messages`, (req, res) => {
+      if (root.startsWith('/users/')) {
+        const access = core.canAccessMailboxFolder(String((req.params as any).userId), authed(res).clientId, String((req.params as any).folderId));
+        if (access === false) throw new GraphApiError(404, { error: { code: 'ErrorItemNotFound', message: 'Mail folder not found' } });
+      }
       core.getMailFolder(String(req.params.folderId));
       const filter = String(req.query.$filter ?? '');
       const match = filter.match(/receivedDateTime ge (.+)$/);

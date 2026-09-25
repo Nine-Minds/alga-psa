@@ -1733,6 +1733,18 @@ export const runMicrosoft365Diagnostics = withAuth(async (
       .where({ email_provider_id: providerId })
       .first();
 
+    if (vendorConfig?.last_callback_diagnostic && !vendorConfig?.access_token && !vendorConfig?.refresh_token) {
+      const saved = vendorConfig.last_callback_diagnostic;
+      return {
+        success: true,
+        report: {
+          ...saved.report,
+          diagnosticSource: 'oauth_callback',
+          diagnosticCreatedAt: saved.createdAt,
+        } as Microsoft365DiagnosticsReport,
+      };
+    }
+
     const baseUrl = getWebhookBaseUrl();
     const webhookUrl = `${baseUrl}/api/email/webhooks/microsoft`;
 
