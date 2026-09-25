@@ -13,6 +13,7 @@ describe('formatPhoneForDisplay', () => {
     expect(formatPhoneForDisplay('3202521658').number).toBe('3202521658');
     expect(formatPhoneForDisplay('+442079460123').number).toBe('+44 20 7946 0123');
     expect(formatPhoneForDisplay(' call front desk ').number).toBe('call front desk');
+    expect(formatPhoneForDisplay('555 234 5678 ext. 42').number).toBe('555 234 5678');
     for (const value of [null, undefined, '']) expect(formatPhoneForDisplay(value).number).toBe('');
   });
 });

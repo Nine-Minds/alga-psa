@@ -1,8 +1,12 @@
 /** @vitest-environment jsdom */
 import React from 'react';
 import { cleanup, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PhoneText } from './PhoneText';
+
+vi.mock('../lib/i18n/client', () => ({
+  useTranslation: () => ({ t: (_key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? 'ext.' }),
+}));
 
 afterEach(cleanup);
 

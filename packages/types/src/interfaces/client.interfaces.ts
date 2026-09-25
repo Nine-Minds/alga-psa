@@ -120,6 +120,8 @@ export interface IClientLocation extends TenantEntity {
 export interface IClientWithLocation extends IClient {
   location_email?: string;
   location_phone?: string;
+  location_phone_extension?: string | null;
+  location_country_code?: string | null;
   location_address?: string;
 }
 

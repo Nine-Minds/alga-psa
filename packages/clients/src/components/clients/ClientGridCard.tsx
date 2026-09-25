@@ -4,7 +4,7 @@ import { PhoneText } from '@alga-psa/ui/components/PhoneText';
 import { ReflectedDropdownMenu } from "@alga-psa/ui/components/ReflectedDropdownMenu";
 import { MoreVertical, Pencil, Trash2, ExternalLink, Mail, Phone, MapPin, Globe, UserCircle2, Ticket } from 'lucide-react';
 import { MouseEvent } from 'react';
-import type { IClient } from '@alga-psa/types';
+import type { IClient, IClientWithLocation } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
 import { TagManager } from '@alga-psa/tags/components';
@@ -13,7 +13,7 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ClientGridCardProps {
-    client: IClient;
+    client: IClientWithLocation;
     selectedClients: string[];
     handleCheckboxChange: (clientId: string) => void;
     handleEditClient: (clientId: string) => void;
@@ -64,7 +64,7 @@ const ClientGridCard = ({
     // not shown at all: it is 'company' on 98% of records, so the row carried no
     // information. Absent rows are the signal now — a short card is a thin record.
     const email = (client as any).location_email as string | undefined;
-    const phone = (client as any).location_phone as string | undefined;
+    const phone = client.location_phone;
     const address = (client as any).address_line1
         ? [(client as any).address_line1, (client as any).city, (client as any).state_province]
             .filter(Boolean).join(', ')
@@ -220,7 +220,7 @@ const ClientGridCard = ({
                             </a>
                         </MetaRow>
                     )}
-                    {phone && <MetaRow icon={<Phone className="h-3.5 w-3.5" />}><PhoneText value={phone} extension={client.phone_extension} defaultCountry={(client as any).country_code} /></MetaRow>}
+                    {phone && <MetaRow icon={<Phone className="h-3.5 w-3.5" />}><PhoneText value={phone} extension={client.location_phone_extension} defaultCountry={client.location_country_code} /></MetaRow>}
                     {address && <MetaRow icon={<MapPin className="h-3.5 w-3.5" />}>{address}</MetaRow>}
                     {url && (
                         <MetaRow icon={<Globe className="h-3.5 w-3.5" />}>

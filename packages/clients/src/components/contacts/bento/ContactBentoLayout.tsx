@@ -19,7 +19,6 @@ import BackNav from '@alga-psa/ui/components/BackNav';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
-import { PhoneText } from '@alga-psa/ui/components/PhoneText';
 import { CallLink } from '@alga-psa/ui/components/CallLink';
 import { InteractionIcon } from '@alga-psa/ui/components/InteractionIcon';
 import { BentoTile, BentoTileAddButton, BentoTileEmpty, BentoTileEmptyAction } from '@alga-psa/ui/components/bento/BentoTile';
@@ -456,7 +455,11 @@ export function ContactBentoLayout({
               <span className="truncate">
                 {primaryPhone ? (
                   <>
-                    <PhoneText value={primaryPhone} extension={primaryPhoneEntry?.extension} />
+                    <CallLink
+                      id={`${id}-primary-phone-call`}
+                      phoneNumber={primaryPhone}
+                      extension={primaryPhoneEntry?.extension}
+                    />
                     {primaryPhoneEntry ? ` · ${phoneType(primaryPhoneEntry).toLowerCase()}` : ''}
                   </>
                 ) : 'No phone number'}
@@ -529,7 +532,11 @@ export function ContactBentoLayout({
             <TileRow
               key={phone.contact_phone_number_id ?? phone.phone_number}
               primary={(
-                <PhoneText value={phone.phone_number} extension={phone.extension} />
+                <CallLink
+                  id={`${id}-phone-call-${phone.contact_phone_number_id ?? phone.phone_number}`}
+                  phoneNumber={phone.phone_number}
+                  extension={phone.extension}
+                />
               )}
               meta={[phoneType(phone).toLowerCase(), phone.is_default ? 'primary' : null].filter(Boolean).join(' · ')}
               emphasize={false}

@@ -1,4 +1,4 @@
-import { formatPhoneForDisplay } from "../../../../packages/validation/src/lib/phone";
+import { formatPhoneForDisplay, formatPhoneLabel } from "../../../../packages/validation/src/lib/phone";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Linking, Platform, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
 import { useTranslation } from "react-i18next";
@@ -614,7 +614,7 @@ export function TicketDetailBody({
                 testID="ticket-detail-call-contact"
                 onPress={() => placeCall({
                   origin: { kind: "ticket", id: ticketId },
-                  phone: contactPhone,
+                  phone: formatPhoneForDisplay(contactPhone).e164 || contactPhone,
                   name: ticket.contact_name ?? null,
                   contactId: ticketContactId ?? null,
                   clientId: ticketClientId ?? null,
@@ -625,7 +625,7 @@ export function TicketDetailBody({
                 style={{ marginTop: spacing.xs, paddingVertical: spacing.xs }}
               >
                 <Text style={{ ...typography.caption, color: colors.primary }}>
-                  {t("detail.contactPhone")}: {formatPhoneForDisplay(ticket.contact_phone).number}
+                  {t("detail.contactPhone")}: {formatPhoneLabel(formatPhoneForDisplay(ticket.contact_phone), t("detail.phoneExtension", { defaultValue: "ext." }))}
                 </Text>
               </Pressable>
             ) : null}
@@ -668,7 +668,7 @@ export function TicketDetailBody({
                 testID="ticket-detail-call-client"
                 onPress={() => placeCall({
                   origin: { kind: "ticket", id: ticketId },
-                  phone: clientPhone,
+                  phone: formatPhoneForDisplay(clientPhone).e164 || clientPhone,
                   name: ticket.client_name ?? null,
                   contactId: null,
                   clientId: ticketClientId ?? null,
@@ -678,7 +678,7 @@ export function TicketDetailBody({
                 style={{ marginTop: spacing.xs, paddingVertical: spacing.xs }}
               >
                 <Text style={{ ...typography.caption, color: colors.primary }}>
-                  {t("detail.contactPhone")}: {formatPhoneForDisplay(ticket.client_phone).number}
+                  {t("detail.contactPhone")}: {formatPhoneLabel(formatPhoneForDisplay(ticket.client_phone), t("detail.phoneExtension", { defaultValue: "ext." }))}
                 </Text>
               </Pressable>
             ) : null}

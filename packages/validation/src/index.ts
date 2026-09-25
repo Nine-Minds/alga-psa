@@ -50,6 +50,7 @@ export type { FieldValidation, Translator, ValidationMessage } from './lib/field
 export {
   normalizePhone,
   formatPhoneForDisplay,
+  formatPhoneLabel,
   isDialPrefixOnly,
   isStructurallyValidPhone,
   splitPackedExtension,
