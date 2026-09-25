@@ -4,7 +4,7 @@ const runMaintenanceJobMock = vi.fn();
 const acquireLockMock = vi.fn();
 const releaseMock = vi.fn();
 const executeJobHandlerMock = vi.fn();
-const initializeJobRunnerMock = vi.fn();
+const configureLauncherMock = vi.fn();
 let subscribedHandler: ((event: unknown) => Promise<void>) | null = null;
 const registrationOrder: string[] = [];
 
@@ -27,7 +27,7 @@ vi.mock('../../../lib/eventBus/index', () => ({
     unsubscribe: async () => undefined,
   }),
 }));
-vi.mock('../../../lib/jobs/initializeJobRunner', () => ({ initializeJobRunner: (...args: unknown[]) => { registrationOrder.push('initialize'); return initializeJobRunnerMock(...args); } }));
+vi.mock('../../../lib/jobs/dateTriggerWorkflowLauncher', () => ({ configureEditionDateTriggerWorkflowLauncher: (...args: unknown[]) => { registrationOrder.push('configure-launcher'); return configureLauncherMock(...args); } }));
 vi.mock('../../../lib/jobs/jobHandlerRegistry', () => ({
   executeJobHandler: (...args: unknown[]) => executeJobHandlerMock(...args),
 }));
@@ -54,10 +54,9 @@ function event(jobName: string, extra: Record<string, unknown> = {}) {
 describe('maintenanceJobSubscriber', () => {
   beforeAll(async () => {
     // The subscriber registers once per process; capture the handler it hands the bus.
-    initializeJobRunnerMock.mockResolvedValue({});
     await registerMaintenanceJobSubscriber();
     expect(subscribedHandler).toBeTypeOf('function');
-    expect(registrationOrder).toEqual(['initialize', 'subscribe']);
+    expect(registrationOrder).toEqual(['configure-launcher', 'subscribe']);
   });
 
   beforeEach(() => {

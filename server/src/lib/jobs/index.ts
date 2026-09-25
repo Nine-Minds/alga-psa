@@ -37,6 +37,7 @@ import {
 import { renewGoogleGmailWatchSubscriptions, GoogleGmailWatchRenewalJobData } from '@alga-psa/jobs/handlers/googleGmailWatchRenewalHandler';
 import { processRenewalQueueHandler, RenewalQueueProcessorJobData } from '@alga-psa/jobs/handlers/processRenewalQueueHandler';
 import { createDateTriggerScanHandler, dateTriggerScanHandler, DateTriggerScanJobData } from '@alga-psa/jobs/handlers/dateTriggerScanHandler';
+import { resolveDateTriggerWorkflowLauncher } from './dateTriggerWorkflowLauncher';
 import { autoCloseTicketsHandler, AutoCloseTicketsJobData } from '@alga-psa/jobs/handlers/autoCloseTicketsHandler';
 import { lowStockNotificationHandler, LowStockNotificationJobData } from './handlers/lowStockNotificationHandler';
 import {
@@ -269,12 +270,9 @@ export const initializeScheduler = async (storageService?: StorageService) => {
       await providerDisconnectRetryJobHandler(job);
     });
 
-    let runDateTriggerScan = dateTriggerScanHandler;
-    if (isEnterpriseWorkflowEdition()) {
-      // Keep the legacy scheduler's EE handler aligned with JobHandlerRegistry without a CE import edge.
-      const { launchDateTriggeredWorkflows } = require('@alga-psa/workflows/lib/dateTriggerLauncher');
-      runDateTriggerScan = createDateTriggerScanHandler(launchDateTriggeredWorkflows);
-    }
+    // Keep the legacy scheduler's EE handler aligned with JobHandlerRegistry without a CE import edge.
+    const dateTriggerLauncher = resolveDateTriggerWorkflowLauncher(isEnterpriseWorkflowEdition());
+    const runDateTriggerScan = dateTriggerLauncher ? createDateTriggerScanHandler(dateTriggerLauncher) : dateTriggerScanHandler;
     jobScheduler.registerJobHandler<DateTriggerScanJobData>('date-trigger-scan', async (job) => { await runDateTriggerScan(job.data); });
 
     // Register renewal queue processing handler

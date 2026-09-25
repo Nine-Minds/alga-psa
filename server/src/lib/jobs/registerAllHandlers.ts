@@ -53,7 +53,7 @@ import {
   ReconcileHourBlockAllocationsJobData,
 } from '@alga-psa/jobs/handlers/reconcileHourBlockAllocationsHandler';
 import { createDateTriggerScanHandler, dateTriggerScanHandler, DateTriggerScanJobData } from '@alga-psa/jobs/handlers/dateTriggerScanHandler';
-import { configureDateTriggerWorkflowLauncher } from '@alga-psa/jobs/fanout';
+import { configureEditionDateTriggerWorkflowLauncher } from './dateTriggerWorkflowLauncher';
 import {
   processRenewalQueueHandler,
   RenewalQueueProcessorJobData,
@@ -520,14 +520,8 @@ export async function registerAllJobHandlers(
     registerOpts
   );
 
-  let runDateTriggerScan = dateTriggerScanHandler;
-  configureDateTriggerWorkflowLauncher(undefined);
-  if (includeEnterprise) {
-    // Keep the EE launcher behind the edition boundary so CE never imports enterprise code.
-    const { launchDateTriggeredWorkflows } = require('@alga-psa/workflows/lib/dateTriggerLauncher');
-    configureDateTriggerWorkflowLauncher(launchDateTriggeredWorkflows);
-    runDateTriggerScan = createDateTriggerScanHandler(launchDateTriggeredWorkflows);
-  }
+  const dateTriggerLauncher = configureEditionDateTriggerWorkflowLauncher(includeEnterprise);
+  const runDateTriggerScan = dateTriggerLauncher ? createDateTriggerScanHandler(dateTriggerLauncher) : dateTriggerScanHandler;
   JobHandlerRegistry.register<DateTriggerScanJobData & BaseJobData>({ name: 'date-trigger-scan', handler: async (_jobId, data) => { await runDateTriggerScan(data); }, retry: { maxAttempts: 3 } }, registerOpts);
 
   JobHandlerRegistry.register<RenewalQueueProcessorJobData & BaseJobData>(
