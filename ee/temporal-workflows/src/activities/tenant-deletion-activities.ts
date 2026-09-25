@@ -254,6 +254,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'import_sources',
 
   // Asset details
+  'asset_remote_access_links',
   'asset_maintenance_occurrences',
   'asset_maintenance_notifications', 'asset_maintenance_history', 'asset_service_history',
   'asset_ticket_associations', 'asset_document_associations', 'asset_relationships',
@@ -281,6 +282,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // External references depend on tickets and their creating users. Purge them
   // explicitly before either parent, along with the tenant's custom systems.
   'external_entity_links', 'tenant_external_systems',
+
+  // Named list views reference their owning user; purge before users.
+  'list_views',
 
   // SLA leaf tables (must be before tickets, statuses, priorities, boards)
   // ticket_audit_logs sits with sla_audit_log: same shape, FKs to tickets/users,

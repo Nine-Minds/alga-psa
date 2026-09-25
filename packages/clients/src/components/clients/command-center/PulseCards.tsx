@@ -3,6 +3,7 @@
 import React from 'react';
 import { ArrowUpRight, FileText, Mail, MapPin, Phone, Plus, Settings } from 'lucide-react';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
+import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import {
   BentoChip,
   BentoFooterLinks,
@@ -741,17 +742,20 @@ export function NotesCard({ id, data, onOpen, className, t }: {
 
 // ── Client record ────────────────────────────────────────────────────────────
 
-export function RecordCard({ id, data, onOpen, onOpenAdditionalInfo, className, t }: {
+export function RecordCard({ id, data, onOpen, onOpenAdditionalInfo, onOpenContact, className, t }: {
   id: string;
   data: ClientPulseRecord;
   onOpen: (() => void) | null;
   onOpenAdditionalInfo: (() => void) | null;
+  onOpenContact?: ((contactId: string) => void) | null;
   className?: string;
   t: TFn;
 }) {
+  const defaultContactId = data.defaultContactId;
+  const { formatDate } = useFormatters();
   // W5: tax region + inbound domains were plumbing on the overview (they live
   // in the Details/Tax focus views); the card keeps the who-owns-this facts.
-  const rows: Array<{ label: string; value: string | null }> = [
+  const rows: Array<{ label: string; value: string | null; onClick?: () => void }> = [
     {
       label: t('clientCommandCenter.record.accountManager', { defaultValue: 'Account manager' }),
       value: data.accountManagerName,
@@ -759,10 +763,17 @@ export function RecordCard({ id, data, onOpen, onOpenAdditionalInfo, className, 
     {
       label: t('clientCommandCenter.record.defaultContact', { defaultValue: 'Default contact' }),
       value: data.defaultContactName,
+      onClick: defaultContactId && onOpenContact ? () => onOpenContact(defaultContactId) : undefined,
     },
     {
       label: t('clientCommandCenter.record.clientSince', { defaultValue: 'Client since' }),
-      value: data.clientSince ? new Date(data.clientSince).getFullYear().toString() : null,
+      // The full day, in the tenant country's digit order and separator. The
+      // value stays the raw calendar date string on the way in: formatDate
+      // treats YYYY-MM-DD as a date with no timezone, while pre-parsing it into
+      // a Date here would shift a January 1 into the prior year west of UTC.
+      value: data.clientSince
+        ? formatDate(data.clientSince, { year: 'numeric', month: '2-digit', day: '2-digit' })
+        : null,
     },
   ];
 
@@ -782,11 +793,21 @@ export function RecordCard({ id, data, onOpen, onOpenAdditionalInfo, className, 
         {rows.map((row) => (
           <BentoRow key={row.label} className="gap-3">
             <span className="text-[rgb(var(--color-text-600))]">{row.label}</span>
-            <span
-              className={`ml-auto text-right truncate ${row.value ? 'text-[rgb(var(--color-text-900))]' : 'text-[rgb(var(--color-text-400))] italic'}`}
-            >
-              {row.value ?? t('clientCommandCenter.record.unset', { defaultValue: 'not set' })}
-            </span>
+            {row.value && row.onClick ? (
+              <button
+                type="button"
+                onClick={row.onClick}
+                className="ml-auto text-right truncate text-[rgb(var(--color-text-900))] hover:text-primary-700 hover:underline"
+              >
+                {row.value}
+              </button>
+            ) : (
+              <span
+                className={`ml-auto text-right truncate ${row.value ? 'text-[rgb(var(--color-text-900))]' : 'text-[rgb(var(--color-text-400))] italic'}`}
+              >
+                {row.value ?? t('clientCommandCenter.record.unset', { defaultValue: 'not set' })}
+              </span>
+            )}
           </BentoRow>
         ))}
       </BentoRowList>

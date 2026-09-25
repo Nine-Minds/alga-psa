@@ -198,6 +198,9 @@
     "opportunities": "Verkoopkansen",
     "lifecycleStatus": "Levenscyclus",
     "lifecycleStatusHelper": "Prospects zijn beschikbaar in verkoopworkflows, maar worden standaard verborgen in operationele klantenlijsten.",
+    "clientSince": "Klant sinds",
+    "clientSinceHelper": "Begin van de relatie. Als dit veld leeg blijft, wordt de datum gebruikt waarop deze klant hier is toegevoegd.",
+    "clientSincePlaceholder": "Datum waarop deze klant is toegevoegd",
     "title": "Klantgegevens",
     "backToClients": "Terug naar Klanten",
     "openInNewTab": "Openen in nieuw tabblad",
@@ -307,7 +310,11 @@
     "parentClientClear": "Wissen",
     "parentClientLegacy": "Eerder als tekst ingevoerd: {{name}}",
     "mergeClient": "Samenvoegen",
-    "mergeClientHelp": "Een andere klant in deze klant opnemen als facturatieprofiel"
+    "mergeClientHelp": "Een andere klant in deze klant opnemen als facturatieprofiel",
+    "inboundDomainAutoCreateContacts": "Contacten maken voor nieuwe afzenders",
+    "inboundDomainAutoCreateHelp": "Gekoppelde domeinen kunnen een contact maken voor een vertrouwde nieuwe afzender.",
+    "inboundDomainAutoCreateUpdated": "Instelling voor afzendercontacten bijgewerkt.",
+    "inboundDomainAutoCreateUpdateFailed": "Instelling voor afzendercontacten kan niet worden bijgewerkt."
   },
   "clientCommandCenter": {
     "cards": {

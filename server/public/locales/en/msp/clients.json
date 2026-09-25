@@ -198,6 +198,9 @@
     "opportunities": "Opportunities",
     "lifecycleStatus": "Lifecycle",
     "lifecycleStatusHelper": "Prospects are available to sales workflows but hidden from operational client lists by default.",
+    "clientSince": "Client since",
+    "clientSinceHelper": "When the relationship started. Leave it empty to use the date this client was added here.",
+    "clientSincePlaceholder": "Date this client was added",
     "title": "Client Details",
     "backToClients": "Back to Clients",
     "openInNewTab": "Open in new tab",
@@ -307,7 +310,11 @@
     "parentClientClear": "Clear",
     "parentClientLegacy": "Previously entered as text: {{name}}",
     "mergeClient": "Merge",
-    "mergeClientHelp": "Absorb another client into this one as a billing profile"
+    "mergeClientHelp": "Absorb another client into this one as a billing profile",
+    "inboundDomainAutoCreateContacts": "Create contacts for new senders",
+    "inboundDomainAutoCreateHelp": "Mapped domains can optionally create a contact for a trusted new sender. Domains must be unique across clients.",
+    "inboundDomainAutoCreateUpdated": "Sender contact setting updated.",
+    "inboundDomainAutoCreateUpdateFailed": "Could not update sender contact setting."
   },
   "clientCommandCenter": {
     "cards": {

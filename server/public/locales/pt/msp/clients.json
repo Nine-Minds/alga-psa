@@ -198,6 +198,9 @@
     "opportunities": "Oportunidades",
     "lifecycleStatus": "Ciclo de vida",
     "lifecycleStatusHelper": "Os clientes potenciais ficam disponíveis nos fluxos de vendas, mas são ocultados por padrão nas listas operacionais de clientes.",
+    "clientSince": "Cliente desde",
+    "clientSinceHelper": "Data de início do relacionamento. Se o campo ficar vazio, é usada a data em que este cliente foi adicionado aqui.",
+    "clientSincePlaceholder": "Data em que este cliente foi adicionado",
     "title": "Detalhes do cliente",
     "backToClients": "Voltar para Clientes",
     "openInNewTab": "Abrir em nova aba",
@@ -307,7 +310,11 @@
     "parentClientClear": "Limpar",
     "parentClientLegacy": "Inserido anteriormente como texto: {{name}}",
     "mergeClient": "Mesclar",
-    "mergeClientHelp": "Absorver outro cliente neste como perfil de faturamento"
+    "mergeClientHelp": "Absorver outro cliente neste como perfil de faturamento",
+    "inboundDomainAutoCreateContacts": "Criar contatos para novos remetentes",
+    "inboundDomainAutoCreateHelp": "Os domínios mapeados podem, opcionalmente, criar um contato para um novo remetente confiável. Os domínios precisam ser únicos entre os clientes.",
+    "inboundDomainAutoCreateUpdated": "A configuração de contatos do remetente foi atualizada.",
+    "inboundDomainAutoCreateUpdateFailed": "Não foi possível atualizar a configuração de contatos do remetente."
   },
   "clientCommandCenter": {
     "cards": {

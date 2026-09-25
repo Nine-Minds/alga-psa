@@ -46,6 +46,10 @@
       "types": "./src/lib/clientMergePlan.ts",
       "import": "./src/lib/clientMergePlan.ts"
     },
+    "./lib/clientSince": {
+      "import": "./src/lib/clientSince.ts",
+      "types": "./src/lib/clientSince.ts"
+    },
     "./lib/contactActionErrorCodes": {
       "import": "./src/lib/contactActionErrorCodes.ts",
       "types": "./src/lib/contactActionErrorCodes.ts"
@@ -84,6 +88,7 @@
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
     "@alga-psa/formatting": "*",
+    "@alga-psa/list-views": "*",
     "@alga-psa/inventory": "*",
     "@alga-psa/shared": "*",
     "@alga-psa/storage": "*",

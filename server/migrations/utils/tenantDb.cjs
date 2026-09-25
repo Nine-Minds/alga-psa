@@ -22,6 +22,7 @@ const TENANT_TABLE_METADATA = {
   accounting_sync_operations: { scope: 'tenant' },
   asset_types: { scope: 'tenant' },
   asset_type_registry: { scope: 'tenant' },
+  asset_remote_access_links: { scope: 'tenant' },
   apple_iap_subscriptions: { scope: 'tenant' },
   // Reference table for tenantless Apple sign-in discovery, but tenant-known operations must scope by tenant.
   apple_user_identities: { scope: 'tenant' },
@@ -211,6 +212,7 @@ const TENANT_TABLE_METADATA = {
   storage_usage: { scope: 'tenant' },
   external_entity_mappings: { scope: 'tenant' },
   external_entity_links: { scope: 'tenant' },
+  list_views: { scope: 'tenant' },
   external_tax_imports: { scope: 'tenant' },
   feature_toggles: { scope: 'tenant' },
   gmail_processed_history: { scope: 'tenant' },

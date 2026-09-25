@@ -25,6 +25,7 @@ import {
   getColumnLayout,
   getColumnSizeConfig,
 } from './dataTableColumnFit';
+import { applyColumnVisibilityAndOrder } from './dataTableColumnState';
 import { ReflectionContainer } from '../ui-reflection/ReflectionContainer';
 import { cn } from '../lib/utils';
 import Pagination from './Pagination';
@@ -268,7 +269,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
   const {
     id,
     data,
-    columns,
+    columns: inputColumns,
     pagination = true,
     onRowClick,
     currentPage = 1,
@@ -286,7 +287,17 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     onItemsPerPageChange,
     itemsPerPageOptions,
     expandedRowRender,
+    columnSizing: controlledColumnSizing,
+    onColumnSizingChange,
+    columnVisibility,
+    columnOrder,
   } = props;
+  // Caller-controlled visibility and order are applied first, so everything
+  // below (auto-fit, sizing, reflection) sees only the columns the caller wants.
+  const columns = useMemo(
+    () => applyColumnVisibilityAndOrder(inputColumns, columnVisibility, columnOrder),
+    [inputColumns, columnVisibility, columnOrder]
+  );
   const { t } = useTranslation('common');
   const defaultItemsPerPageOptions = useMemo(() => [
     { value: '10', label: t('pagination.itemsPerPageOption', { count: 10, defaultValue: '10 per page' }) },
@@ -355,7 +366,9 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     [columns, containerWidth]
   );
 
-  const columnIds = useMemo(() => columns.map(col => getColumnId(col.dataIndex)), [columns]);
+  // Every column the caller defined, hidden or not: a width remembered for a
+  // column a view hides must survive until the column is shown again.
+  const columnIds = useMemo(() => inputColumns.map(col => getColumnId(col.dataIndex)), [inputColumns]);
   const columnSizingStorageKey = id ? `datatable-column-sizing:${id}` : null;
   const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});
   const [hasLoadedColumnSizing, setHasLoadedColumnSizing] = useState(false);
@@ -387,6 +400,31 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
 
     window.localStorage.setItem(columnSizingStorageKey, JSON.stringify(columnSizing));
   }, [columnSizing, columnSizingStorageKey, hasLoadedColumnSizing]);
+
+  // Controlled widths win while they are given, and are mirrored into the
+  // remembered state so that dropping back to uncontrolled keeps the last
+  // widths on screen (and in localStorage) instead of jumping.
+  useEffect(() => {
+    if (controlledColumnSizing !== undefined) {
+      setColumnSizing(controlledColumnSizing);
+    }
+  }, [controlledColumnSizing]);
+
+  const effectiveColumnSizing: ColumnSizingState = controlledColumnSizing ?? columnSizing;
+  const effectiveColumnSizingRef = useRef(effectiveColumnSizing);
+  effectiveColumnSizingRef.current = effectiveColumnSizing;
+  const onColumnSizingChangeRef = useRef(onColumnSizingChange);
+  onColumnSizingChangeRef.current = onColumnSizingChange;
+
+  const handleColumnSizingChange = React.useCallback(
+    (updater: ColumnSizingState | ((old: ColumnSizingState) => ColumnSizingState)) => {
+      const next = typeof updater === 'function' ? updater(effectiveColumnSizingRef.current) : updater;
+      effectiveColumnSizingRef.current = next;
+      setColumnSizing(next);
+      onColumnSizingChangeRef.current?.(next);
+    },
+    []
+  );
 
   // Recalculate which columns fit the container (see computeColumnFit for the algorithm).
   // `showAllColumns` bypasses this and renders everything with horizontal scroll.
@@ -553,11 +591,11 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
         pageSize: currentPageSize,
       },
       sorting: validSorting,
-      columnSizing,
+      columnSizing: effectiveColumnSizing,
     },
     enableColumnResizing: true,
     columnResizeMode: 'onChange',
-    onColumnSizingChange: setColumnSizing,
+    onColumnSizingChange: handleColumnSizingChange,
     onPaginationChange: setPagination,
     onSortingChange: (updater) => {
       if (manualSorting && onSortChange) {
@@ -567,7 +605,14 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
           onSortChange(id, desc ? 'desc' : 'asc');
         }
       } else {
-        setSorting(updater);
+        const newSorting = typeof updater === 'function' ? updater(sorting) : updater;
+        setSorting(newSorting);
+        // Client-side sorting stays the table's; the callback only reports it
+        // (e.g. so a saved list view can capture the sort).
+        if (onSortChange && newSorting.length > 0) {
+          const { id, desc } = newSorting[0];
+          onSortChange(id, desc ? 'desc' : 'asc');
+        }
       }
     },
     manualPagination: totalItems !== undefined,

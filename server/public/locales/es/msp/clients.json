@@ -198,6 +198,9 @@
     "opportunities": "Oportunidades",
     "lifecycleStatus": "Ciclo de vida",
     "lifecycleStatusHelper": "Los clientes potenciales están disponibles en los flujos de ventas, pero se ocultan de forma predeterminada en las listas operativas de clientes.",
+    "clientSince": "Cliente desde",
+    "clientSinceHelper": "Fecha de inicio de la relación. Si el campo se deja vacío, se usa la fecha en que se agregó este cliente aquí.",
+    "clientSincePlaceholder": "Fecha en que se agregó este cliente",
     "title": "Detalles del cliente",
     "backToClients": "Volver a Clientes",
     "openInNewTab": "Abrir en nueva pestaña",
@@ -307,7 +310,11 @@
     "parentClientClear": "Borrar",
     "parentClientLegacy": "Introducido anteriormente como texto: {{name}}",
     "mergeClient": "Fusionar",
-    "mergeClientHelp": "Absorber otro cliente en este como perfil de facturación"
+    "mergeClientHelp": "Absorber otro cliente en este como perfil de facturación",
+    "inboundDomainAutoCreateContacts": "Crear contactos para nuevos remitentes",
+    "inboundDomainAutoCreateHelp": "Los dominios asignados pueden crear un contacto para un nuevo remitente de confianza.",
+    "inboundDomainAutoCreateUpdated": "Se actualizó la configuración de contactos.",
+    "inboundDomainAutoCreateUpdateFailed": "No se pudo actualizar la configuración de contactos."
   },
   "clientCommandCenter": {
     "cards": {

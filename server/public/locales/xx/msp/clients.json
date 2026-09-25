@@ -198,6 +198,9 @@
     "opportunities": "⟦Ȯƥƥȯřŧŭƞīŧīḗş⟧",
     "lifecycleStatus": "⟦Ŀīƒḗƈẏƈŀḗ⟧",
     "lifecycleStatusHelper": "⟦Ƥřȯşƥḗƈŧş ȧřḗ ȧṽȧīŀȧƀŀḗ ŧȯ şȧŀḗş ẇȯřķƒŀȯẇş ƀŭŧ ħīḓḓḗƞ ƒřȯḿ ȯƥḗřȧŧīȯƞȧŀ ƈŀīḗƞŧ ŀīşŧş ƀẏ ḓḗƒȧŭŀŧ.⟧",
+    "clientSince": "⟦Ƈŀīḗƞŧ şīƞƈḗ⟧",
+    "clientSinceHelper": "⟦Ẇħḗƞ ŧħḗ řḗŀȧŧīȯƞşħīƥ şŧȧřŧḗḓ. Ŀḗȧṽḗ īŧ ḗḿƥŧẏ ŧȯ ŭşḗ ŧħḗ ḓȧŧḗ ŧħīş ƈŀīḗƞŧ ẇȧş ȧḓḓḗḓ ħḗřḗ.⟧",
+    "clientSincePlaceholder": "⟦Ḓȧŧḗ ŧħīş ƈŀīḗƞŧ ẇȧş ȧḓḓḗḓ⟧",
     "title": "⟦Ƈŀīḗƞŧ Ḓḗŧȧīŀş⟧",
     "backToClients": "⟦Ɓȧƈķ ŧȯ Ƈŀīḗƞŧş⟧",
     "openInNewTab": "⟦Ȯƥḗƞ īƞ ƞḗẇ ŧȧƀ⟧",
@@ -307,7 +310,11 @@
     "parentClientClear": "⟦Ƈŀḗȧř⟧",
     "parentClientLegacy": "⟦Ƥřḗṽīȯŭşŀẏ ḗƞŧḗřḗḓ ȧş ŧḗẋŧ: {{name}}⟧",
     "mergeClient": "⟦Ḿḗřɠḗ⟧",
-    "mergeClientHelp": "⟦Ȧƀşȯřƀ ȧƞȯŧħḗř ƈŀīḗƞŧ īƞŧȯ ŧħīş ȯƞḗ ȧş ȧ ƀīŀŀīƞɠ ƥřȯƒīŀḗ⟧"
+    "mergeClientHelp": "⟦Ȧƀşȯřƀ ȧƞȯŧħḗř ƈŀīḗƞŧ īƞŧȯ ŧħīş ȯƞḗ ȧş ȧ ƀīŀŀīƞɠ ƥřȯƒīŀḗ⟧",
+    "inboundDomainAutoCreateContacts": "⟦Ƈřḗȧŧḗ ƈȯƞŧȧƈŧş ƒȯř ƞḗẇ şḗƞḓḗřş⟧",
+    "inboundDomainAutoCreateHelp": "⟦Ḿȧƥƥḗḓ ḓȯḿȧīƞş ƈȧƞ ȯƥŧīȯƞȧŀŀẏ ƈřḗȧŧḗ ȧ ƈȯƞŧȧƈŧ ƒȯř ȧ ŧřŭşŧḗḓ ƞḗẇ şḗƞḓḗř. Ḓȯḿȧīƞş ḿŭşŧ ƀḗ ŭƞīʠŭḗ ȧƈřȯşş ƈŀīḗƞŧş.⟧",
+    "inboundDomainAutoCreateUpdated": "⟦Şḗƞḓḗř ƈȯƞŧȧƈŧ şḗŧŧīƞɠ ŭƥḓȧŧḗḓ.⟧",
+    "inboundDomainAutoCreateUpdateFailed": "⟦Ƈȯŭŀḓ ƞȯŧ ŭƥḓȧŧḗ şḗƞḓḗř ƈȯƞŧȧƈŧ şḗŧŧīƞɠ.⟧"
   },
   "clientCommandCenter": {
     "cards": {

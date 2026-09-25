@@ -198,6 +198,9 @@
     "opportunities": "Opportunità",
     "lifecycleStatus": "Ciclo di vita",
     "lifecycleStatusHelper": "I prospect sono disponibili nei flussi di vendita, ma sono nascosti per impostazione predefinita negli elenchi operativi dei clienti.",
+    "clientSince": "Cliente dal",
+    "clientSinceHelper": "Data di inizio della relazione. Se il campo resta vuoto, viene usata la data in cui questo cliente è stato aggiunto qui.",
+    "clientSincePlaceholder": "Data di aggiunta di questo cliente",
     "title": "Dettagli del cliente",
     "backToClients": "Torniamo ai Clienti",
     "openInNewTab": "Apri in una nuova scheda",
@@ -307,7 +310,11 @@
     "parentClientClear": "Cancella",
     "parentClientLegacy": "Inserito in precedenza come testo: {{name}}",
     "mergeClient": "Unisci",
-    "mergeClientHelp": "Assorbire un altro cliente in questo come profilo di fatturazione"
+    "mergeClientHelp": "Assorbire un altro cliente in questo come profilo di fatturazione",
+    "inboundDomainAutoCreateContacts": "Crea contatti per i nuovi mittenti",
+    "inboundDomainAutoCreateHelp": "I domini associati possono creare un contatto per un nuovo mittente attendibile.",
+    "inboundDomainAutoCreateUpdated": "Impostazione dei contatti mittente aggiornata.",
+    "inboundDomainAutoCreateUpdateFailed": "Impossibile aggiornare l’impostazione dei contatti mittente."
   },
   "clientCommandCenter": {
     "cards": {

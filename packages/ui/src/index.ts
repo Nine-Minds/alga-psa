@@ -12,6 +12,8 @@ export { useFeatureFlag } from './hooks/useFeatureFlag';
 // Note: useTagPermissions has been moved to @alga-psa/tags/hooks
 export { useTenant } from './components/providers/TenantProvider';
 export { DrawerProvider, DrawerOutlet, useDrawer } from './context/DrawerContext';
+export { DrawerFooter } from './components/Drawer';
+export type { DrawerFooterProps } from './components/Drawer';
 export { EmptyState } from './components/EmptyState';
 export type { EmptyStateProps } from './components/EmptyState';
 

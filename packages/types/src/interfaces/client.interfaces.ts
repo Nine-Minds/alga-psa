@@ -33,6 +33,8 @@ export interface IClient extends TenantEntity, ITaggable {
    */
   merged_into_client_id?: string | null;
   merged_at?: string | null;
+  /** Date the relationship began; null falls back to created_at. */
+  client_since?: string | null;
   created_at: string;
   updated_at: string;
   properties?: ({[key: string]: any} & {

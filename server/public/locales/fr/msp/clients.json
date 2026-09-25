@@ -198,6 +198,9 @@
     "opportunities": "Opportunités",
     "lifecycleStatus": "Cycle de vie",
     "lifecycleStatusHelper": "Les prospects sont disponibles dans les flux de vente, mais masqués par défaut dans les listes opérationnelles de clients.",
+    "clientSince": "Client depuis",
+    "clientSinceHelper": "Date de début de la relation. Si ce champ reste vide, la date d'ajout de ce client est utilisée.",
+    "clientSincePlaceholder": "Date d'ajout de ce client",
     "title": "Détails du client",
     "backToClients": "Retour aux Clients",
     "openInNewTab": "Ouvrir dans un nouvel onglet",
@@ -307,7 +310,11 @@
     "parentClientClear": "Effacer",
     "parentClientLegacy": "Précédemment saisi comme texte : {{name}}",
     "mergeClient": "Fusionner",
-    "mergeClientHelp": "Absorber un autre client dans celui-ci sous forme de profil de facturation"
+    "mergeClientHelp": "Absorber un autre client dans celui-ci sous forme de profil de facturation",
+    "inboundDomainAutoCreateContacts": "Créer des contacts pour les nouveaux expéditeurs",
+    "inboundDomainAutoCreateHelp": "Les domaines associés peuvent créer un contact pour un nouvel expéditeur de confiance.",
+    "inboundDomainAutoCreateUpdated": "Paramètre des contacts expéditeurs mis à jour.",
+    "inboundDomainAutoCreateUpdateFailed": "Impossible de mettre à jour le paramètre des contacts expéditeurs."
   },
   "clientCommandCenter": {
     "cards": {

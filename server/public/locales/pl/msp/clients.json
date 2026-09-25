@@ -224,6 +224,9 @@
     "opportunities": "Szanse sprzedażowe",
     "lifecycleStatus": "Cykl życia",
     "lifecycleStatusHelper": "Potencjalni klienci są dostępni w procesach sprzedażowych, ale domyślnie ukryci na operacyjnych listach klientów.",
+    "clientSince": "Klient od",
+    "clientSinceHelper": "Data rozpoczęcia współpracy. Jeśli pole pozostanie puste, używana jest data dodania tego klienta.",
+    "clientSincePlaceholder": "Data dodania tego klienta",
     "title": "Dane Klienta",
     "backToClients": "Powrót do Klientów",
     "openInNewTab": "Otwórz w nowej karcie",
@@ -337,7 +340,11 @@
     "parentClientClear": "Wyczyść",
     "parentClientLegacy": "Wcześniej wprowadzono jako tekst: {{name}}",
     "mergeClient": "Scal",
-    "mergeClientHelp": "Włącz innego klienta do tego klienta jako profil rozliczeniowy"
+    "mergeClientHelp": "Włącz innego klienta do tego klienta jako profil rozliczeniowy",
+    "inboundDomainAutoCreateContacts": "Twórz kontakty dla nowych nadawców",
+    "inboundDomainAutoCreateHelp": "Przypisane domeny mogą tworzyć kontakt dla zaufanego nowego nadawcy.",
+    "inboundDomainAutoCreateUpdated": "Zaktualizowano ustawienie kontaktów nadawców.",
+    "inboundDomainAutoCreateUpdateFailed": "Nie udało się zaktualizować ustawienia kontaktów nadawców."
   },
   "clientCommandCenter": {
     "cards": {

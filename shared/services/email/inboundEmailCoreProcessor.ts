@@ -328,7 +328,7 @@ async function runCommitPhase(params: {
         mode: 'enforce',
         trx,
         inboxId: params.inboxId,
-        eventPublishers: { ticket: ticketPublisher, comment: commentPublisher },
+        eventPublishers: { ticket: ticketPublisher, comment: commentPublisher, contact: ticketPublisher },
       },
     }
   );

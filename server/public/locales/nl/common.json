@@ -1619,5 +1619,75 @@
     "disabledByAdmin": "Uitgeschakeld door beheerder",
     "mixed": "Gedeeltelijk ingeschakeld",
     "empty": "Geen categorieën voor e-mailmeldingen beschikbaar."
+  },
+  "listViews": {
+    "defaultView": "Standaardweergave",
+    "unsavedChanges": "Deze weergave heeft niet-opgeslagen wijzigingen",
+    "searchPlaceholder": "Weergaven zoeken",
+    "noMatches": "Geen overeenkomende weergaven",
+    "sections": {
+      "mine": "Mijn weergaven",
+      "mineEmpty": "Nog geen privéweergaven",
+      "shared": "Gedeelde weergaven",
+      "sharedEmpty": "Nog geen gedeelde weergaven"
+    },
+    "labels": {
+      "myDefault": "Mijn standaard",
+      "sharedByYou": "Door u gedeeld"
+    },
+    "visibility": {
+      "private": "Privé",
+      "shared": "Gedeeld"
+    },
+    "actions": {
+      "delete": "Verwijderen",
+      "manage": "Beheren",
+      "setDefault": "Als mijn standaard instellen",
+      "clearDefault": "Mijn standaard wissen",
+      "copyLink": "Link kopiëren",
+      "saveChanges": "Wijzigingen opslaan",
+      "saveChangesTo": "Wijzigingen opslaan in \"{{name}}\"",
+      "saveAsNew": "Opslaan als nieuwe weergave…",
+      "discardChanges": "Wijzigingen negeren"
+    },
+    "dialog": {
+      "createTitle": "Opslaan als nieuwe weergave",
+      "manageTitle": "Weergave beheren",
+      "nameLabel": "Naam",
+      "nameInvalid": "Voer een naam in van 1 tot {{max}} tekens.",
+      "visibilityLabel": "Wie kan hem zien",
+      "privateHint": "Alleen u kunt deze weergave zien.",
+      "sharedHint": "Iedereen die deze lijst kan openen, kan hem zien en toepassen.",
+      "sharedDisabledHint": "U hebt geen toestemming om weergaven te delen."
+    },
+    "deleteDialog": {
+      "title": "Weergave verwijderen",
+      "message": "\"{{name}}\" verwijderen?",
+      "messageShared": "\"{{name}}\" verwijderen? Hij is gedeeld en verdwijnt dus voor iedereen die hem gebruikt."
+    },
+    "toasts": {
+      "saved": "\"{{name}}\" opgeslagen",
+      "updated": "\"{{name}}\" bijgewerkt",
+      "deleted": "Weergave verwijderd",
+      "defaultSet": "Standaardweergave ingesteld",
+      "defaultCleared": "Standaardweergave gewist",
+      "linkCopied": "Link gekopieerd",
+      "droppedReferences": "Sommige items in \"{{name}}\" bestaan niet meer en zijn overgeslagen: {{fields}}"
+    },
+    "errors": {
+      "notFound": "Deze weergave is privé of bestaat niet meer.",
+      "unknownList": "Onbekende lijst.",
+      "invalidName": "Een weergavenaam moet 1 tot 100 tekens lang zijn.",
+      "duplicateName": "U hebt al een weergave met de naam \"{{name}}\" in deze lijst.",
+      "invalidSettings": "De weergave kon niet worden opgeslagen: {{detail}}",
+      "invalidVisibility": "Zichtbaarheid moet privé of gedeeld zijn.",
+      "cannotShare": "U hebt geen toestemming om weergaven te delen.",
+      "cannotEdit": "U hebt geen toestemming om deze weergave te wijzigen.",
+      "cannotReadList": "U hebt geen toestemming om deze lijst te bekijken.",
+      "saveFailed": "De weergave kon niet worden opgeslagen.",
+      "deleteFailed": "De weergave kon niet worden verwijderd.",
+      "defaultFailed": "Uw standaardweergave kon niet worden gewijzigd.",
+      "copyFailed": "De link kon niet worden gekopieerd."
+    }
   }
 }
