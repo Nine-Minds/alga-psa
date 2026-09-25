@@ -93,11 +93,16 @@ export interface ProcessInboundEmailInAppOptions {
     eventPublishers?: {
       ticket?: IEventPublisher;
       comment?: IEventPublisher;
+      contact?: IEventPublisher;
     };
   };
 }
 
 export interface ProcessInboundEmailInAppDiagnostics extends Record<string, unknown> {
+  senderResolution?: {
+    autoCreatedContactId: string | null;
+    autoCreateSkipReason: 'auto_create_disabled' | 'auth_not_aligned' | 'automated' | 'provider_mailbox' | 'exists_elsewhere' | 'client_inactive' | 'error' | null;
+  };
   parser: {
     confidence: number | null;
     strategy: string | null;
@@ -917,7 +922,8 @@ export async function processInboundEmailInApp(
     resolveInboundTicketDefaults,
     resolveEffectiveInboundTicketDefaults,
     findContactByEmail,
-    findClientIdByInboundEmailDomain,
+    findInboundEmailDomainMapping,
+    createContactForInboundSender,
     findValidClientPrimaryContactId,
     findEmailProviderMailboxAddress,
     upsertTicketWatchListRecipients,
@@ -1733,11 +1739,14 @@ export async function processInboundEmailInApp(
   });
 
   let domainMatchedClientId: string | null = null;
+  let domainAutoCreateContacts = false;
   let domainMatchedContactId: string | null = null;
   if (!ruleAssignedClientId && !matchedSenderContact && senderEmail) {
     const senderDomain = extractEmailDomain(senderEmail);
     if (senderDomain) {
-      domainMatchedClientId = await findClientIdByInboundEmailDomain(senderDomain, tenantId);
+      const mapping = await findInboundEmailDomainMapping(senderDomain, tenantId);
+      domainMatchedClientId = mapping?.clientId ?? null;
+      domainAutoCreateContacts = mapping?.autoCreateContacts ?? false;
       if (domainMatchedClientId) {
         domainMatchedContactId = await findValidClientPrimaryContactId(domainMatchedClientId, tenantId);
       }
@@ -1834,12 +1843,13 @@ export async function processInboundEmailInApp(
   // email match that is consistent with the ticket's client.
   const matchedSenderIsInternalUser = matchedSenderContact?.user_type === 'internal';
   const senderContactUsableAsAuthor = !ruleAssignedClientId || senderContactInRuleClient;
-  const commentAuthorContactId =
+  // LEVERAGE: friction inbound-sender-resolution
+  let commentAuthorContactId =
     matchedSenderIsInternalUser || !senderContactUsableAsAuthor ? undefined : matchedSenderContactId;
   const commentAuthorUserId = senderContactUsableAsAuthor
     ? matchedSenderContact?.user_id ?? null
     : null;
-  const commentAuthorType = matchedSenderIsInternalUser ? 'internal' : 'contact';
+  let commentAuthorType = matchedSenderIsInternalUser ? 'internal' : 'contact';
 
   const clientMatchSource =
     ruleOutcome.kind === 'assign_client'
@@ -1884,6 +1894,38 @@ export async function processInboundEmailInApp(
     }, diagnostics);
   }
 
+  let autoCreatedContactId: string | undefined;
+  let autoCreateSkipReason: NonNullable<ProcessInboundEmailInAppDiagnostics['senderResolution']>['autoCreateSkipReason'] = null;
+  const autoCreateEligible = Boolean(!ruleAssignedClientId && !matchedSenderContact && domainMatchedClientId && domainAutoCreateContacts && senderEmail && targetClientId === domainMatchedClientId);
+  if (autoCreateEligible) {
+    const automated = detectAutomatedInboundMessage(emailData).isAutomated;
+    if (senderIsProviderMailbox) autoCreateSkipReason = 'provider_mailbox';
+    else if (automated) autoCreateSkipReason = 'automated';
+    else if (!(allowsContactSenderAttribution(senderAuthResults) || isVerifiedListRewrite)) autoCreateSkipReason = 'auth_not_aligned';
+    else {
+      const created = await createContactForInboundSender({ email: senderEmail!, name: senderName, clientId: domainMatchedClientId! }, tenantId, {
+        existingConnection: options.durableExecution?.trx,
+        inboxId: options.durableExecution?.inboxId,
+        contactEventPublisher: options.durableExecution?.eventPublishers?.contact,
+        providerId,
+        emailId: emailData.id,
+        onSkip: (reason) => { autoCreateSkipReason = reason; },
+      });
+      autoCreatedContactId = created?.contactId;
+      if (!created) {
+        if (!autoCreateSkipReason) autoCreateSkipReason = 'error';
+      } else if (created.created) {
+        console.info('processInboundEmailInApp: auto-created contact for domain-matched sender', { tenantId, providerId, emailId: emailData.id, clientId: domainMatchedClientId, contactId: created.contactId });
+      }
+    }
+  } else if (domainMatchedClientId && !domainAutoCreateContacts) autoCreateSkipReason = 'auto_create_disabled';
+  if (autoCreatedContactId) {
+    targetContactId = autoCreatedContactId;
+    commentAuthorContactId = autoCreatedContactId;
+    commentAuthorType = 'contact';
+  }
+  if (diagnostics) diagnostics.senderResolution = { autoCreatedContactId: autoCreatedContactId ?? null, autoCreateSkipReason };
+
   const parsedHtml = parsedEmail?.sanitizedHtml ?? emailData.body?.html;
   const parsedText = parsedEmail?.sanitizedText ?? emailData.body?.text;
   const blocks = await blocksFromEmailBody({
@@ -1922,6 +1964,7 @@ export async function processInboundEmailInApp(
         providerId,
         authResults: senderAuthResults,
         clientMatchSource,
+        ...(autoCreatedContactId ? { autoCreatedContactId } : {}),
         ...(appliedRule
           ? { appliedRuleId: appliedRule.ruleId, appliedRuleName: appliedRule.ruleName }
           : {}),
@@ -1956,7 +1999,7 @@ export async function processInboundEmailInApp(
           heuristics: parsedEmail?.appliedHeuristics,
           warnings: parsedEmail?.warnings,
         },
-        unmatchedSender: !matchedSenderContact,
+        unmatchedSender: !matchedSenderContact && !autoCreatedContactId,
         inboundReopenDecision: rerouteReasonMetadata ?? undefined,
       },
     },
@@ -1973,8 +2016,7 @@ export async function processInboundEmailInApp(
       scopeLabel: 'new-ticket',
       clientVisibleAttachments: Boolean(
         !matchedSenderIsInternalUser
-        && matchedSenderContact?.client_id
-        && matchedSenderContact.client_id === targetClientId
+        && ((matchedSenderContact?.client_id && matchedSenderContact.client_id === targetClientId) || Boolean(autoCreatedContactId))
       ),
     });
     await applyEmbeddedImageUrlMappingsToStoredBodies({

@@ -197,6 +197,11 @@ interface TicketingDashboardProps {
   /** True when this tab has a stored document of its own (Reset has work to do). */
   hasStoredDefaultView?: boolean;
   onSavedViewChanged?: (boardId: string | null, saved: TicketViewSettings | null) => void;
+  /** Named-view picker, rendered beside the View menu (the container owns its state). */
+  listViewPicker?: React.ReactNode;
+  /** Controlled column widths for the ticket table (named views capture and apply them). */
+  columnSizing?: Record<string, number>;
+  onColumnSizingChange?: (columnSizing: Record<string, number>) => void;
 }
 
 const useDebounce = <T,>(value: T, delay: number): T => {
@@ -348,6 +353,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   savedViewSettings,
   hasStoredDefaultView = false,
   onSavedViewChanged,
+  listViewPicker,
+  columnSizing,
+  onColumnSizingChange,
 }) => {
   const BUNDLE_VIEW_STORAGE_KEY = 'tickets_bundle_view';
   const router = useRouter();
@@ -2512,6 +2520,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                     />
                   </div>
                   <div className="h-6 w-px bg-gray-200 mx-1 shrink-0" />
+                  {listViewPicker}
                   {viewPresentation && onViewPresentationChange && (
                     <TicketViewMenu
                       id={`${id}-view-menu`}
@@ -2867,6 +2876,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                 sortBy={sortBy}
                 sortDirection={sortDirection}
                 onSortChange={handleTableSortChange}
+                columnSizing={columnSizing}
+                onColumnSizingChange={onColumnSizingChange}
               />
               )}
             </ShortcutActiveRegion>

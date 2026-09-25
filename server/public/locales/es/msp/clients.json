@@ -307,7 +307,11 @@
     "parentClientSelf": "Un cliente no puede ser su propio cliente principal",
     "parentClientPlaceholder": "Sin cliente principal",
     "parentClientClear": "Borrar",
-    "parentClientLegacy": "Introducido anteriormente como texto: {{name}}"
+    "parentClientLegacy": "Introducido anteriormente como texto: {{name}}",
+    "inboundDomainAutoCreateContacts": "Crear contactos para nuevos remitentes",
+    "inboundDomainAutoCreateHelp": "Los dominios asignados pueden crear un contacto para un nuevo remitente de confianza.",
+    "inboundDomainAutoCreateUpdated": "Se actualizó la configuración de contactos.",
+    "inboundDomainAutoCreateUpdateFailed": "No se pudo actualizar la configuración de contactos."
   },
   "clientCommandCenter": {
     "cards": {

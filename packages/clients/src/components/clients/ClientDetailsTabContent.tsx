@@ -9,6 +9,7 @@ import { translateFieldValidation, validateAnnualRevenueField, validateClientNam
 import { Button } from '@alga-psa/ui/components/Button';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import { DrawerFooter } from '@alga-psa/ui/components/Drawer';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { FieldWarnings } from '@alga-psa/ui/components/FieldWarnings';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -181,7 +182,7 @@ export interface ClientDetailsTabContentProps {
   isAlgaDeskMode?: boolean;
   inboundDestinationOptions: SelectOption[];
   isInboundDestinationOptionsLoading: boolean;
-  inboundEmailDomains: Array<{ id: string; domain: string }>;
+  inboundEmailDomains: Array<{ id: string; domain: string; auto_create_contacts: boolean }>;
   inboundDomainDraft: string;
   setInboundDomainDraft: (value: string) => void;
   isInboundDomainBusy: boolean;
@@ -195,6 +196,7 @@ export interface ClientDetailsTabContentProps {
   onDefaultContactChange: (contactId: string) => void;
   onAddInboundDomain: () => void | Promise<void>;
   onRemoveInboundDomain: (domainId: string) => void | Promise<void>;
+  onToggleInboundDomainAutoCreate: (domainId: string, enabled: boolean) => void | Promise<void>;
   onAddClientNameAlias: () => void | Promise<void>;
   onRemoveClientNameAlias: (aliasId: string) => void | Promise<void>;
   onTagsChange: (updatedTags: ITag[]) => void;
@@ -237,6 +239,7 @@ export function ClientDetailsTabContent({
   onDefaultContactChange,
   onAddInboundDomain,
   onRemoveInboundDomain,
+  onToggleInboundDomainAutoCreate,
   onAddClientNameAlias,
   onRemoveClientNameAlias,
   onTagsChange,
@@ -363,7 +366,7 @@ export function ClientDetailsTabContent({
             label={t('clientDetails.inboundEmailDomains', { defaultValue: 'Inbound email domains' })}
             fieldType="textField"
             value={inboundEmailDomains.map((d) => d.domain).join(', ')}
-            helperText="Only these domains will be used for inbound email domain matching (e.g. acme.com). Domains must be unique across clients."
+            helperText={t('clientDetails.inboundDomainAutoCreateHelp')}
             automationId="client-inbound-email-domains-field"
           >
             <Text as="label" size="2" className="text-gray-700 font-medium">
@@ -399,7 +402,13 @@ export function ClientDetailsTabContent({
                 <div className="space-y-2">
                   {inboundEmailDomains.map((d) => (
                     <div key={d.id} className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2">
-                      <Text size="2" className="text-gray-800">{d.domain}</Text>
+                      <div className="flex flex-col">
+                        <Text size="2" className="text-gray-800">{d.domain}</Text>
+                        <label className="flex items-center gap-2 text-xs text-gray-600">
+                          <Switch id={`client-inbound-email-domain-auto-create-${d.id}`} checked={d.auto_create_contacts} onCheckedChange={(enabled) => onToggleInboundDomainAutoCreate(d.id, enabled)} />
+                          {t('clientDetails.inboundDomainAutoCreateContacts')}
+                        </label>
+                      </div>
                       <Button
                         id={`client-inbound-email-domain-remove-${d.id}`}
                         type="button"
@@ -681,7 +690,7 @@ export function ClientDetailsTabContent({
         </div>
       </div>
 
-      <Flex gap="4" justify="end" align="center" className="pt-6">
+      <DrawerFooter className="items-center gap-4 pt-6">
         {hasAttemptedSubmit && Object.keys(fieldErrors).some(key => fieldErrors[key]) && (
           <Text size="2" className="text-red-600 mr-2" role="alert">
             {t('clientDetails.requiredFields', { defaultValue: 'Please fill in all required fields' })}
@@ -703,7 +712,7 @@ export function ClientDetailsTabContent({
         >
           {t('clientDetails.addTicket', { defaultValue: 'Add ticket' })}
         </Button>
-      </Flex>
+      </DrawerFooter>
     </div>
   );
 }

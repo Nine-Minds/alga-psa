@@ -37,6 +37,7 @@ export * from './contractLineServiceConfiguration.interfaces';
 export * from './contractSimulation.interfaces';
 export * from './contractTemplate.interfaces';
 export * from './dataTable.interfaces';
+export * from './listView.interfaces';
 export * from './document-association.interface';
 export * from './document.interface';
 export * from './documentBlockContent.interface';

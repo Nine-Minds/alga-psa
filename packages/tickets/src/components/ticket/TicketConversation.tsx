@@ -146,7 +146,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   onDelete,
   onContentChange,
   hideInternalTab = false,
-  isSubmitting = false,
+  isSubmitting: isSubmittingFromParent = false,
   overrides = {},
   externalComments = [],
   closedStatusOptions = [],
@@ -165,6 +165,11 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   // Ensure we have a stable id for interactive element ids
   const compId = id || `ticket-${ticket.ticket_id || 'unknown'}-conversation`;
   const [showEditor, setShowEditor] = useState(false);
+  // The composer owns its own in-flight state so every host (the client portal
+  // passes no isSubmitting) gets a single submission and a pending button.
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const submitInFlightRef = useRef(false);
+  const isSubmitting = isSubmittingFromParent || isSubmittingComment;
   // Which sticky slot the composer opens into — decided at open time so it
   // opens where the reader clicked and never moves mid-draft.
   const [editorPlacement, setEditorPlacement] = useState<'top' | 'bottom'>('top');
@@ -267,7 +272,9 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     setShowEditor(true);
   };
   const handleSubmitComment = async () => {
-    if (composeUploadSession.isUploading) return;
+    if (composeUploadSession.isUploading || isSubmittingFromParent || submitInFlightRef.current) return;
+    submitInFlightRef.current = true;
+    setIsSubmittingComment(true);
     let success = false;
     try {
       if (hideInternalTab) {
@@ -314,6 +321,9 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       }
     } catch (error) {
       console.error('Error during comment submission process:', error);
+    } finally {
+      submitInFlightRef.current = false;
+      setIsSubmittingComment(false);
     }
   };
 

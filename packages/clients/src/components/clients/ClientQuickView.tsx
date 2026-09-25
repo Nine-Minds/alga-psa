@@ -21,6 +21,7 @@ import {
   addClientInboundEmailDomain,
   listClientInboundEmailDomains,
   removeClientInboundEmailDomain,
+  setClientInboundEmailDomainAutoCreateContacts,
 } from '@alga-psa/clients/actions/clientInboundEmailDomainActions';
 import {
   addClientNameAlias,
@@ -116,7 +117,7 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
   const [isQuickAddTicketOpen, setIsQuickAddTicketOpen] = useState(false);
   const [isLocationsDialogOpen, setIsLocationsDialogOpen] = useState(initialPanel === 'locations');
   const [locationsRefreshKey, setLocationsRefreshKey] = useState(0);
-  const [inboundEmailDomains, setInboundEmailDomains] = useState<Array<{ id: string; domain: string }>>([]);
+  const [inboundEmailDomains, setInboundEmailDomains] = useState<Array<{ id: string; domain: string; auto_create_contacts: boolean }>>([]);
   const [inboundDomainDraft, setInboundDomainDraft] = useState('');
   const [isInboundDomainBusy, setIsInboundDomainBusy] = useState(false);
   const [inboundDestinationOptions, setInboundDestinationOptions] = useState<Array<{ value: string; label: string }>>([]);
@@ -265,7 +266,7 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
             toast.error(getErrorMessage(rows));
             return;
           }
-          setInboundEmailDomains((rows ?? []).map((r: any) => ({ id: r.id, domain: r.domain })));
+          setInboundEmailDomains((rows ?? []).map((r: any) => ({ id: r.id, domain: r.domain, auto_create_contacts: Boolean(r.auto_create_contacts) })));
         }
       } catch (err) {
         console.error('Failed to load inbound email domains:', err);
@@ -620,7 +621,7 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
         toast.error(getErrorMessage(created));
         return;
       }
-      setInboundEmailDomains((prev) => [...prev, { id: (created as any).id, domain: (created as any).domain }]);
+      setInboundEmailDomains((prev) => [...prev, { id: (created as any).id, domain: (created as any).domain, auto_create_contacts: false }]);
       setInboundDomainDraft('');
       toast.success(t('clientDetails.inboundDomainAdded'));
     } catch (err) {
@@ -630,6 +631,20 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
       setIsInboundDomainBusy(false);
     }
   }, [editedClient?.client_id, inboundDomainDraft, normalizeInboundDomain, t]);
+
+  const handleToggleInboundDomainAutoCreate = useCallback(async (domainId: string, enabled: boolean) => {
+    if (!editedClient?.client_id) return;
+    const previous = inboundEmailDomains.find((d) => d.id === domainId)?.auto_create_contacts ?? false;
+    setInboundEmailDomains((rows) => rows.map((d) => d.id === domainId ? { ...d, auto_create_contacts: enabled } : d));
+    try {
+      const result = await setClientInboundEmailDomainAutoCreateContacts(editedClient.client_id, domainId, enabled);
+      if (isClientActionError(result)) throw new Error(getErrorMessage(result));
+      toast.success(t('clientDetails.inboundDomainAutoCreateUpdated'));
+    } catch {
+      setInboundEmailDomains((rows) => rows.map((d) => d.id === domainId ? { ...d, auto_create_contacts: previous } : d));
+      toast.error(t('clientDetails.inboundDomainAutoCreateUpdateFailed'));
+    }
+  }, [editedClient?.client_id, inboundEmailDomains, t]);
 
   const handleRemoveInboundDomain = useCallback(async (domainId: string) => {
     if (!editedClient?.client_id || !domainId) return;
@@ -1071,6 +1086,7 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
                 onDefaultContactChange={handleDefaultContactChange}
                 onAddInboundDomain={handleAddInboundDomain}
                 onRemoveInboundDomain={handleRemoveInboundDomain}
+                onToggleInboundDomainAutoCreate={handleToggleInboundDomainAutoCreate}
                 onAddClientNameAlias={handleAddClientNameAlias}
                 onRemoveClientNameAlias={handleRemoveClientNameAlias}
                 onTagsChange={setTags}
