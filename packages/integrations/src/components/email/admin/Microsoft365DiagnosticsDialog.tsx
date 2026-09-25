@@ -168,7 +168,10 @@ export function Microsoft365DiagnosticsDialog({
             {report.diagnosticSource === 'oauth_callback' && (
               <Alert>
                 <AlertDescription>
-                  Callback-time diagnostics from {report.diagnosticCreatedAt ? new Date(report.diagnosticCreatedAt).toLocaleString() : report.createdAt}.
+                  {t('microsoft365.states.callbackDiagnosticsCaptured', {
+                    defaultValue: 'Callback-time diagnostics captured at {{timestamp}}.',
+                    timestamp: report.diagnosticCreatedAt ? new Date(report.diagnosticCreatedAt).toLocaleString() : report.createdAt,
+                  })}
                 </AlertDescription>
               </Alert>
             )}

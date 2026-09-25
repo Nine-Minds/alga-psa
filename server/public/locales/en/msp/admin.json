@@ -253,7 +253,8 @@
     },
     "states": {
       "running": "Running diagnostics...",
-      "diagnosticsFailed": "Diagnostics failed"
+      "diagnosticsFailed": "Diagnostics failed",
+      "callbackDiagnosticsCaptured": "Callback-time diagnostics captured at {{timestamp}}."
     },
     "statuses": {
       "pass": "Pass",

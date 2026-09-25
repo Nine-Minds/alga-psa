@@ -78,6 +78,11 @@ export interface MicrosoftGraphWebhookLifecycleObserver {
   onSubscriptionCreated(subscriptionId: string): void;
 }
 
+export interface MicrosoftGraphAdapterOptions {
+  /** Keep refreshed credentials in memory without writing them to provider storage. */
+  persistRefreshedCredentials?: boolean;
+}
+
 export interface MicrosoftWebhookInitializationResult {
   success: boolean;
   subscriptionId?: string;
@@ -132,9 +137,11 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
   private baseUrl = getMicrosoftGraphBaseUrl();
   private authenticatedUserEmail: string | undefined; // Email of the user who authorized the app
   private webhookLifecycle: MicrosoftGraphWebhookLifecycleObserver | undefined;
+  private readonly persistRefreshedCredentials: boolean;
 
-  constructor(config: EmailProviderConfig) {
+  constructor(config: EmailProviderConfig, options: MicrosoftGraphAdapterOptions = {}) {
     super(config);
+    this.persistRefreshedCredentials = options.persistRefreshedCredentials !== false;
 
     // Create axios instance with default headers
     this.httpClient = axios.create({
@@ -448,6 +455,8 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       this.config.provider_config.access_token = this.accessToken;
       this.config.provider_config.refresh_token = this.refreshToken;
       this.config.provider_config.token_expires_at = this.tokenExpiresAt?.toISOString();
+
+      if (!this.persistRefreshedCredentials) return;
 
       // Persist to DB (parity with Gmail)
       try {
@@ -1303,32 +1312,27 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       }
 
       const clientRequestId = randomUUID();
-      const res = await this.httpClient.get(mailboxBase, {
-        params: { $select: 'id,userPrincipalName,mail' },
-        headers: { 'client-request-id': clientRequestId, 'return-client-request-id': 'true' },
-      });
-      const ids = this.extractGraphIds(res.headers);
-      return {
-        status: 'pass' as const,
-        http: {
-          method: 'GET',
-          path: `${mailboxBase}?$select=id,userPrincipalName,mail`,
-          status: res.status,
-          requestId: ids.requestId,
-          clientRequestId: ids.clientRequestId || clientRequestId,
-        },
-        data: {
-          id: res.data?.id,
-          userPrincipalName: res.data?.userPrincipalName,
-          mail: res.data?.mail,
-        },
-      };
-    }).catch((error: any) => {
-      const failure = this.classifyGraphFailure(error);
-      if (failure.status === 403 || failure.status === 404) {
-        return { status: 'warn' as const, error: { message: 'The mailbox directory object is not readable. Folder-level mail access is checked separately and can still work without this permission.' } };
+      const path = `${mailboxBase}?$select=id,userPrincipalName,mail`;
+      try {
+        const res = await this.httpClient.get(mailboxBase, {
+          params: { $select: 'id,userPrincipalName,mail' },
+          headers: { 'client-request-id': clientRequestId, 'return-client-request-id': 'true' },
+        });
+        const ids = this.extractGraphIds(res.headers);
+        return {
+          status: 'pass' as const,
+          http: { method: 'GET', path, status: res.status, requestId: ids.requestId, clientRequestId: ids.clientRequestId || clientRequestId },
+          data: { id: res.data?.id, userPrincipalName: res.data?.userPrincipalName, mail: res.data?.mail },
+        };
+      } catch (error: any) {
+        const failure = this.classifyGraphFailure(error);
+        if (failure.status !== 403 && failure.status !== 404) throw error;
+        return {
+          status: 'warn' as const,
+          http: { method: 'GET', path, status: failure.status, requestId: failure.requestId, clientRequestId: failure.clientRequestId || clientRequestId },
+          error: { message: 'The mailbox directory object is not readable. Folder-level mail access is checked separately and can still work without this permission.' },
+        };
       }
-      throw error;
     });
 
     // Step: inbox well-known folder check
@@ -1361,33 +1365,28 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
     await runStep('folder_list', 'List top-level mail folders', async () => {
       const clientRequestId = randomUUID();
       const path = `${mailboxBase}/mailFolders`;
-      const res = await this.httpClient.get(path, {
-        params: { $select: 'id,displayName', $top: folderListTop },
-        headers: { 'client-request-id': clientRequestId, 'return-client-request-id': 'true' },
-      });
-      const ids = this.extractGraphIds(res.headers);
-      folders = (res.data?.value || []).map((f: any) => ({ id: String(f.id), displayName: f.displayName }));
-      return {
-        status: 'pass' as const,
-        http: {
-          method: 'GET',
-          path: `${path}?$select=id,displayName&$top=${folderListTop}`,
-          status: res.status,
-          requestId: ids.requestId,
-          clientRequestId: ids.clientRequestId || clientRequestId,
-        },
-        data: {
-          count: folders.length,
-          truncated: folders.length >= folderListTop,
-          sample: folders.slice(0, 25),
-        },
-      };
-    }).catch((error: any) => {
-      const failure = this.classifyGraphFailure(error);
-      if (failure.status === 403 || failure.status === 404) {
-        return { status: 'warn' as const, error: { message: 'Root folder listing is unavailable. Inbox and directly accessible folders remain usable; custom display-name resolution may require Full Access.' } };
+      const diagnosticPath = `${path}?$select=id,displayName&$top=${folderListTop}`;
+      try {
+        const res = await this.httpClient.get(path, {
+          params: { $select: 'id,displayName', $top: folderListTop },
+          headers: { 'client-request-id': clientRequestId, 'return-client-request-id': 'true' },
+        });
+        const ids = this.extractGraphIds(res.headers);
+        folders = (res.data?.value || []).map((f: any) => ({ id: String(f.id), displayName: f.displayName }));
+        return {
+          status: 'pass' as const,
+          http: { method: 'GET', path: diagnosticPath, status: res.status, requestId: ids.requestId, clientRequestId: ids.clientRequestId || clientRequestId },
+          data: { count: folders.length, truncated: folders.length >= folderListTop, sample: folders.slice(0, 25) },
+        };
+      } catch (error: any) {
+        const failure = this.classifyGraphFailure(error);
+        if (failure.status !== 403 && failure.status !== 404) throw error;
+        return {
+          status: 'warn' as const,
+          http: { method: 'GET', path: diagnosticPath, status: failure.status, requestId: failure.requestId, clientRequestId: failure.clientRequestId || clientRequestId },
+          error: { message: 'Root folder listing is unavailable. Inbox and directly accessible folders remain usable; custom display-name resolution may require Full Access.' },
+        };
       }
-      throw error;
     });
 
     // Step: resolve configured folder to a resource

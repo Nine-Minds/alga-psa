@@ -28,6 +28,7 @@ import {
 import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
 import type { Microsoft365DiagnosticsReport } from '@alga-psa/shared/interfaces/microsoft365-diagnostics.interfaces';
 import { buildMicrosoftEmailProviderConfig } from '@alga-psa/shared/services/email/microsoftEmailProviderConfig';
+import { resolveMicrosoft365DiagnosticsReport } from '../../lib/microsoft365DiagnosticsResult';
 import {
   MicrosoftEmailIssuerError,
   MICROSOFT_EMAIL_ISSUER_ERRORS,
@@ -1733,18 +1734,6 @@ export const runMicrosoft365Diagnostics = withAuth(async (
       .where({ email_provider_id: providerId })
       .first();
 
-    if (vendorConfig?.last_callback_diagnostic && !vendorConfig?.access_token && !vendorConfig?.refresh_token) {
-      const saved = vendorConfig.last_callback_diagnostic;
-      return {
-        success: true,
-        report: {
-          ...saved.report,
-          diagnosticSource: 'oauth_callback',
-          diagnosticCreatedAt: saved.createdAt,
-        } as Microsoft365DiagnosticsReport,
-      };
-    }
-
     const baseUrl = getWebhookBaseUrl();
     const webhookUrl = `${baseUrl}/api/email/webhooks/microsoft`;
 
@@ -1773,12 +1762,14 @@ export const runMicrosoft365Diagnostics = withAuth(async (
       await buildMicrosoftEmailProviderConfig(adapterConfig as any)
     );
 
-    const report = await adapter.runMicrosoft365Diagnostics({
-      includeIdentifiers: true,
-      liveSubscriptionTest: true,
-      requiredScopes: ['Mail.Read', 'Mail.Read.Shared'],
-      folderListTop: 100,
-    });
+    const report = await resolveMicrosoft365DiagnosticsReport(vendorConfig, () =>
+      adapter.runMicrosoft365Diagnostics({
+        includeIdentifiers: true,
+        liveSubscriptionTest: true,
+        requiredScopes: ['Mail.Read', 'Mail.Read.Shared'],
+        folderListTop: 100,
+      })
+    );
 
     return { success: true, report };
   } catch (error: any) {

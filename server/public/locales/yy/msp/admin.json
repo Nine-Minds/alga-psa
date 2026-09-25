@@ -253,7 +253,8 @@
     },
     "states": {
       "running": "〖Řŭƞƞīƞɠ ḓīȧɠƞȯşŧīƈş... ·········〗",
-      "diagnosticsFailed": "〖Ḓīȧɠƞȯşŧīƈş ƒȧīŀḗḓ ········〗"
+      "diagnosticsFailed": "〖Ḓīȧɠƞȯşŧīƈş ƒȧīŀḗḓ ········〗",
+      "callbackDiagnosticsCaptured": "〖Ƈȧŀŀƀȧƈķ-ŧīḿḗ ḓīȧɠƞȯşŧīƈş ƈȧƥŧŭřḗḓ ȧŧ {{timestamp}} ·······〗"
     },
     "statuses": {
       "pass": "〖Ƥȧşş ··〗",

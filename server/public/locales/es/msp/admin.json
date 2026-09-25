@@ -253,7 +253,8 @@
     },
     "states": {
       "running": "Ejecutando diagnósticos...",
-      "diagnosticsFailed": "Los diagnósticos fallaron"
+      "diagnosticsFailed": "Los diagnósticos fallaron",
+      "callbackDiagnosticsCaptured": "Diagnóstico de devolución de llamada capturado el {{timestamp}}."
     },
     "statuses": {
       "pass": "Aprobado",
