@@ -318,3 +318,35 @@ merge in CE.
 `billing_profile_id`, so the segment they were bought for cannot be preserved and
 they become spendable across the parent. Stranding them on a client that will
 never file a ticket is worse.
+
+## The review step never said which profile a contract would bill
+
+The basics step gained a profile picker, but the last screen before a contract
+exists listed client, name, frequency, currency and dates and stopped there. For
+the case this feature is for — a contract raised against a profile that arrived
+with a merged client — the one field that decides where the money lands was the
+one field the operator could not confirm. Review now carries the row, naming the
+picked profile or the client default it falls back to, behind the same
+`isSegmented` rule the picker renders behind so a single-profile client's review
+is unchanged.
+
+## Two things a card environment gets wrong after this branch merges main
+
+Both cost a diagnosis on 2026-09-25 and neither is a defect in the merge engine:
+
+- **The clone keeps the database, not the migrations.** `client_since` and
+  `client_inbound_email_domains.auto_create_contacts` arrived with main, so a
+  card database cloned before that merge answers `column ... does not exist` to
+  the client snapshot and the inbound-domain list — which is what the "could not
+  load the client snapshot" panel on a merged client actually was, not a merge
+  regression. `npm --prefix server run migrate:ee` (CE + EE in one pass; plain
+  `knex migrate:latest` refuses the directory as corrupt because the EE
+  migrations live elsewhere) applied the six pending files.
+- **The clone keeps the database, not the uploads.** Logo requests 404 for any
+  file uploaded before the clone: the `document_associations` row and the
+  `external_files` row travel with the database while the object under
+  `server/tmp/storage/<tenant>/` does not. A parent holding a `wide` logo from
+  before the clone and a `default` logo uploaded after it renders broken, because
+  `getEntityImageUrl` takes `.first()` of the logo associations with no variant
+  preference. Both rows are legal under
+  `uq_document_associations_single_true_logo`, which is keyed by variant.
