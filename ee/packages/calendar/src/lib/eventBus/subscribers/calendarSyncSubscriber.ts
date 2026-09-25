@@ -212,6 +212,11 @@ async function handleScheduleEntryUpdated(event: ScheduleEntryUpdatedEvent): Pro
         }
 
         try {
+          if (changes?.calendarArchived === true) {
+            await syncService.removeProviderCopy(entryId, provider.id);
+            continue;
+          }
+
           // If user was assigned but no longer is, delete from their calendar
           if (userWasAssigned && !userIsAssigned && provider.user_id) {
             const result = await syncService.deleteScheduleEntry(entryId, provider.id, 'all');

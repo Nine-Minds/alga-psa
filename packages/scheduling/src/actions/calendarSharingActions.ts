@@ -615,12 +615,29 @@ async function setGroupCalendarArchived(
   const outcome = await withTransaction(db, async (trx: Knex.Transaction) => {
     const loaded = await loadManagedGroupCalendar(trx, tenant, user, base.canUpdate, calendarId);
     if ('error' in loaded) return loaded;
+    const entries = await tenantDb(trx, tenant).table('schedule_entries')
+      .where({ calendar_id: calendarId }).select('entry_id', 'assigned_user_ids');
     await tenantDb(trx, tenant).table('calendars')
       .where({ calendar_id: calendarId })
       .update({ is_archived: isArchived, updated_at: new Date() });
-    return {};
+    return { entries };
   });
   if ('error' in outcome) return fail(outcome.error as string);
+  for (const entry of outcome.entries) {
+    await publishEvent({
+      eventType: 'SCHEDULE_ENTRY_UPDATED',
+      payload: {
+        tenantId: tenant,
+        userId: user.user_id,
+        entryId: entry.entry_id,
+        changes: {
+          before: { assignedUserIds: entry.assigned_user_ids || [] },
+          after: { assignedUserIds: entry.assigned_user_ids || [] },
+          calendarArchived: isArchived,
+        },
+      },
+    });
+  }
   return { success: true, data: null };
 }
 
