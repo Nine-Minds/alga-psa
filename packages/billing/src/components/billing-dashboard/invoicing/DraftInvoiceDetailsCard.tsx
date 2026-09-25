@@ -34,6 +34,7 @@ import {
 export interface DraftInvoiceDetailsSummary extends Pick<
   DbInvoiceViewModel,
   'invoice_id' | 'invoice_number' | 'status' | 'total_amount' | 'currencyCode' | 'client'
+  | 'billing_profile_name' | 'client_has_multiple_billing_profiles'
 > {
   invoice_date: DateValue;
   due_date: DateValue | null;
@@ -306,6 +307,22 @@ const DraftInvoiceDetailsCard: React.FC<DraftInvoiceDetailsCardProps> = ({
               {money(Number(invoice.total_amount ?? 0), invoice.currencyCode || undefined)}
             </div>
           </div>
+
+          {/* Which profile the draft bills — shown only for a segmented client,
+              where the pick was a real decision worth confirming (D6). */}
+          {invoice.client_has_multiple_billing_profiles ? (
+            <div className="space-y-1" id="draft-invoice-billing-profile">
+              <span className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
+                {t('draftInvoiceDetails.labels.billingProfile', { defaultValue: 'Billing Profile' })}
+              </span>
+              <div className="min-h-10 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] px-3 py-2 text-sm text-[rgb(var(--color-text-900))]">
+                {invoice.billing_profile_name
+                  || t('draftInvoiceDetails.labels.billingProfileDefault', {
+                    defaultValue: "The client's default profile",
+                  })}
+              </div>
+            </div>
+          ) : null}
         </div>
       </CardContent>
       <CardFooter className="justify-end gap-2">

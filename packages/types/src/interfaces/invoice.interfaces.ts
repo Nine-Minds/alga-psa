@@ -574,10 +574,22 @@ export interface InvoiceViewModel {
   po_number?: string | null;
   client_contract_id?: string | null;
   client: {
+    /**
+     * Who the invoice is billed to: the billing profile's bill-to name when it
+     * carries one, otherwise the client's own name.
+     */
     name: string;
     logo: string;
     address: string;
   };
+  /** The billing profile this invoice bills; NULL for a pre-profile invoice. */
+  billing_profile_id?: string | null;
+  billing_profile_name?: string | null;
+  /**
+   * True only when the client holds more than one billing profile — the one
+   * condition every profile surface renders behind (D6).
+   */
+  client_has_multiple_billing_profiles?: boolean;
   contact: {
     name: string;
     address: string;
