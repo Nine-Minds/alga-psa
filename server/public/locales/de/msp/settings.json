@@ -3055,7 +3055,7 @@
     "assetTypes": {
       "tab": "Assets",
       "title": "Asset-Typen",
-      "description": "Verwalten Sie die in Ihrem Asset-Modul verfügbaren Asset-Typen. Benutzerdefinierte Typen tragen ein Feldschema, das ihre Erstell-/Bearbeitungsformulare bestimmt.",
+      "description": "Benutzerdefinierte Typen verwenden ein Feldschema für Erstellungs- und Bearbeitungsformulare; integrierte Typen unterstützen zusätzliche Felder.",
       "loading": "Asset-Typen werden geladen...",
       "table": {
         "name": "Name",
@@ -3083,7 +3083,7 @@
         "namePlaceholder": "z. B. Firewall",
         "displayOrderLabel": "Anzeigereihenfolge",
         "iconLabel": "Symbol",
-        "builtinSchemaHint": "Integrierte Typen verwenden feste, von AlgaPSA verwaltete Formulare; ihr Feldschema kann daher nicht bearbeitet werden. Sie können den Typ weiterhin umbenennen oder sein Symbol ändern."
+        "builtinSchemaHint": "Das standardmäßige integrierte Formular bleibt unverändert. Diese zusätzlichen Felder werden vom jeweiligen Mandanten definiert."
       },
       "deleteDialog": {
         "title": "Asset-Typ löschen",
@@ -3141,7 +3141,8 @@
           "invalidOptions": "Optionen dürfen nicht leer sein.",
           "invalidField": "Dieses Feld ist ungültig."
         }
-      }
+      },
+      "additionalFields": "Zusätzliche Felder"
     }
   },
   "mcpServer": {

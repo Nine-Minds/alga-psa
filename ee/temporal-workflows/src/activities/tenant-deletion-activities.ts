@@ -254,6 +254,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'import_sources',
 
   // Asset details
+  'asset_remote_access_links',
   'asset_maintenance_occurrences',
   'asset_maintenance_notifications', 'asset_maintenance_history', 'asset_service_history',
   'asset_ticket_associations', 'asset_document_associations', 'asset_relationships',

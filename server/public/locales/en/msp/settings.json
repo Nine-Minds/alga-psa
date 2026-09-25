@@ -3055,7 +3055,7 @@
     "assetTypes": {
       "tab": "Assets",
       "title": "Asset Types",
-      "description": "Manage the asset types available in your asset module. Custom types carry a field schema that drives their create/edit forms.",
+      "description": "Custom types use a field schema for their forms; built-in types also support additional fields.",
       "loading": "Loading asset types...",
       "table": {
         "name": "Name",
@@ -3083,7 +3083,7 @@
         "namePlaceholder": "e.g. Firewall",
         "displayOrderLabel": "Display Order",
         "iconLabel": "Icon",
-        "builtinSchemaHint": "Built-in types use fixed forms managed by AlgaPSA, so their field schema cannot be edited. You can still rename the type or change its icon."
+        "builtinSchemaHint": "The standard built-in form stays fixed. These additional fields are tenant-defined."
       },
       "deleteDialog": {
         "title": "Delete Asset Type",
@@ -3141,7 +3141,8 @@
           "invalidOptions": "Options must be non-empty values.",
           "invalidField": "This field is invalid."
         }
-      }
+      },
+      "additionalFields": "Additional fields"
     }
   },
   "mcpServer": {

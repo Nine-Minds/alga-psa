@@ -3055,7 +3055,7 @@
     "assetTypes": {
       "tab": "Assets",
       "title": "Assettypen",
-      "description": "Beheer de assettypen die beschikbaar zijn in uw assetmodule. Aangepaste typen hebben een veldschema dat hun aanmaak-/bewerkformulieren bepaalt.",
+      "description": "Aangepaste typen gebruiken een veldschema voor hun formulieren; ingebouwde typen ondersteunen ook extra velden.",
       "loading": "Assettypen laden...",
       "table": {
         "name": "Naam",
@@ -3083,7 +3083,7 @@
         "namePlaceholder": "bijv. Firewall",
         "displayOrderLabel": "Weergavevolgorde",
         "iconLabel": "Pictogram",
-        "builtinSchemaHint": "Ingebouwde typen gebruiken vaste formulieren die door AlgaPSA worden beheerd; hun veldschema kan daarom niet worden bewerkt. U kunt het type nog wel hernoemen of het pictogram wijzigen."
+        "builtinSchemaHint": "Het standaard ingebouwde formulier blijft ongewijzigd. Deze extra velden worden per tenant gedefinieerd."
       },
       "deleteDialog": {
         "title": "Assettype verwijderen",
@@ -3141,7 +3141,8 @@
           "invalidOptions": "Opties mogen niet leeg zijn.",
           "invalidField": "Dit veld is ongeldig."
         }
-      }
+      },
+      "additionalFields": "Extra velden"
     }
   },
   "mcpServer": {
