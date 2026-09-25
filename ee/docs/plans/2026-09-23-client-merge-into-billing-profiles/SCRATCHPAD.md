@@ -387,3 +387,60 @@ creation already had — re-pointing a contract moves every charge it produces.
 The edit dialog's picker was worse than absent: it rendered, it was never
 loaded from the assignment, and it was never saved. It is gone; that dialog
 edits the contract, not the assignment that carries the profile.
+
+## "Why is invoice 12345 still going to the default billing email?"
+
+Answered from the card's own database, not from the code: the invoice numbered
+`12345` carries `billing_profile_id = b8ad2bb3…`, which is the client's
+**default** profile ("Northstar Dental Group"), not the profile *named* `12345`
+(`7d7b4133…`, billing email `natallia+12345@nineminds.com`). That profile holds
+no `billing_email`, so delivery falls through to `clients.billing_email` —
+`it-ops@northstardental.example`. The address is what the stored attribution
+asks for.
+
+The delivery fix itself is sound: `INV001015`, raised against the `12345`
+profile, resolves to `natallia+12345@nineminds.com` with the source badge
+"Billing Profile" — confirmed in the running app, not just in tests.
+
+So the defect was never the resolver; it was that nothing between the generate
+screen and the sent email ever *said* which profile an invoice bills, and once
+it was wrong there was no way to correct it:
+
+- The **send-email dialog** showed an address with no provenance beyond a
+  source badge, and the badge for a client-level fallback reads "Billing Email"
+   — true, and useless for deciding whether the pick was wrong.
+- A **finalized invoice** named no profile at all. `bill_to_name` is inherited
+  from the client unless a profile overrides it, so the Bill To block looks
+  identical either way.
+- A **draft** could be read but not corrected. The only remedy for a wrong pick
+  was deleting the invoice and generating it again.
+
+All three are closed: the dialog and the finalized preview name the profile
+(falling back to "the client's default profile" when the invoice carries none),
+and the draft details card re-points it through `updateDraftInvoiceProperties`,
+which validates the pick against the invoice's own client and moves the charges
+that followed the header. Charges carrying a *different* profile came from a
+contract line and keep their own attribution.
+
+Ordering matters more than it looks: an expected error returns from the
+`withTransaction` callback, and that **commits**. The profile write therefore
+runs after the draft, cross-client and duplicate-number guards, so a rejected
+edit leaves nothing moved. A test pins exactly that.
+
+Not reproduced: the pick reverting on the generate screen. With the client
+picked and `12345` selected, the control holds the value across re-renders and
+through a line-item edit (checked headlessly). Every invoice on this card that
+was generated with a profile selected recorded that profile; the one numbered
+`12345` recorded the default, which is what the picker shows until it is
+changed.
+
+### Deliberately left client-level
+
+Two recipients resolve to the *client*, and should:
+
+- `PaymentService.getClient` feeds Stripe customer creation. A Stripe customer
+  is a client-level identity; making it per-profile is the sub-customer slice
+  the plan defers (Q8), not a delivery bug.
+- `prepaidBalanceAlertDelivery` routes by `prepaid_balance_alerts.client_id`,
+  and that table carries no `billing_profile_id` — the alert genuinely is about
+  the client.
