@@ -32,6 +32,7 @@ import {
   listClientInboundEmailDomains,
   addClientInboundEmailDomain,
   removeClientInboundEmailDomain,
+  setClientInboundEmailDomainAutoCreateContacts,
   listClientNameAliases,
   addClientNameAlias,
   removeClientNameAlias,
@@ -1185,7 +1186,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     });
   }, [clientActiveContacts, editedClient, client]);
 
-  const [inboundEmailDomains, setInboundEmailDomains] = useState<Array<{ id: string; domain: string }>>([]);
+  const [inboundEmailDomains, setInboundEmailDomains] = useState<Array<{ id: string; domain: string; auto_create_contacts: boolean }>>([]);
   const [inboundDomainDraft, setInboundDomainDraft] = useState('');
   const [isInboundDomainBusy, setIsInboundDomainBusy] = useState(false);
   const [inboundDestinationOptions, setInboundDestinationOptions] = useState<SelectOption[]>([]);
@@ -1201,7 +1202,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           toast.error(getErrorMessage(rows));
           return;
         }
-        setInboundEmailDomains((rows ?? []).map((r: any) => ({ id: r.id, domain: r.domain })));
+        setInboundEmailDomains((rows ?? []).map((r: any) => ({ id: r.id, domain: r.domain, auto_create_contacts: Boolean(r.auto_create_contacts) })));
       } catch (error) {
         // Non-blocking; if this fails we don't want to prevent other client edits.
         console.error('Failed to load inbound email domains:', error);
@@ -1262,7 +1263,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         return;
       }
       setInboundEmailDomains((prev) => {
-        const next = [...prev, { id: (created as any).id, domain: (created as any).domain }].filter(
+        const next = [...prev, { id: (created as any).id, domain: (created as any).domain, auto_create_contacts: false }].filter(
           (d, idx, arr) => idx === arr.findIndex((x) => x.id === d.id)
         );
         next.sort((a, b) => a.domain.localeCompare(b.domain));
@@ -1277,6 +1278,19 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       setIsInboundDomainBusy(false);
     }
   }, [addClientInboundEmailDomain, editedClient.client_id, inboundDomainDraft, normalizeInboundDomain]);
+
+  const handleToggleInboundDomainAutoCreate = useCallback(async (domainId: string, enabled: boolean) => {
+    const previous = inboundEmailDomains.find((d) => d.id === domainId)?.auto_create_contacts ?? false;
+    setInboundEmailDomains((rows) => rows.map((d) => d.id === domainId ? { ...d, auto_create_contacts: enabled } : d));
+    try {
+      const result = await setClientInboundEmailDomainAutoCreateContacts(editedClient.client_id, domainId, enabled);
+      if (isClientActionError(result)) throw new Error(getErrorMessage(result));
+      toast.success(t('clientDetails.inboundDomainAutoCreateUpdated'));
+    } catch (error) {
+      setInboundEmailDomains((rows) => rows.map((d) => d.id === domainId ? { ...d, auto_create_contacts: previous } : d));
+      toast.error(t('clientDetails.inboundDomainAutoCreateUpdateFailed'));
+    }
+  }, [editedClient.client_id, inboundEmailDomains, t]);
 
   const handleRemoveInboundDomain = useCallback(async (domainId: string) => {
     if (!domainId) return;
@@ -1406,6 +1420,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           onDefaultContactChange={handleDefaultContactChange}
           onAddInboundDomain={handleAddInboundDomain}
           onRemoveInboundDomain={handleRemoveInboundDomain}
+          onToggleInboundDomainAutoCreate={handleToggleInboundDomainAutoCreate}
           onAddClientNameAlias={handleAddClientNameAlias}
           onRemoveClientNameAlias={handleRemoveClientNameAlias}
           onTagsChange={handleTagsChange}

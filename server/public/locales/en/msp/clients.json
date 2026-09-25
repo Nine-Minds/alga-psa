@@ -307,7 +307,11 @@
     "parentClientSelf": "A client cannot be its own parent",
     "parentClientPlaceholder": "No parent client",
     "parentClientClear": "Clear",
-    "parentClientLegacy": "Previously entered as text: {{name}}"
+    "parentClientLegacy": "Previously entered as text: {{name}}",
+    "inboundDomainAutoCreateContacts": "Create contacts for new senders",
+    "inboundDomainAutoCreateHelp": "Mapped domains can optionally create a contact for a trusted new sender. Domains must be unique across clients.",
+    "inboundDomainAutoCreateUpdated": "Sender contact setting updated.",
+    "inboundDomainAutoCreateUpdateFailed": "Could not update sender contact setting."
   },
   "clientCommandCenter": {
     "cards": {
