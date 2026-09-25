@@ -1476,7 +1476,11 @@
       "missingField": "Missing required checklist field.",
       "missingFieldNamed": "Missing required checklist field: {{field}}.",
       "referenceInvalid": "The selected ticket, checklist template, or rule filter is no longer valid. Please refresh and try again.",
-      "invalidValue": "One of the checklist values is invalid. Please refresh and try again."
+      "invalidValue": "One of the checklist values is invalid. Please refresh and try again.",
+      "ruleCategoryBoardMismatch": "The selected category belongs to a different board than the rule.",
+      "ruleCategoryInvalid": "The selected category is not a top-level category.",
+      "ruleSubcategoryInvalid": "The selected subcategory does not belong to the selected category.",
+      "ruleSubcategoryRequiresCategory": "Select a category before choosing a subcategory."
     }
   },
   "ticketSection": {

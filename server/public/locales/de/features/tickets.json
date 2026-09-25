@@ -1468,7 +1468,11 @@
       "missingField": "Erforderliches Checklistenfeld fehlt.",
       "missingFieldNamed": "Erforderliches Checklistenfeld fehlt: {{field}}.",
       "referenceInvalid": "Das ausgewählte Ticket, die Checklistenvorlage oder der Regelfilter ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
-      "invalidValue": "Einer der Checklistenwerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut."
+      "invalidValue": "Einer der Checklistenwerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "ruleCategoryBoardMismatch": "Die ausgewählte Kategorie gehört zu einem anderen Board als die Regel.",
+      "ruleCategoryInvalid": "Die ausgewählte Kategorie ist keine Kategorie der obersten Ebene.",
+      "ruleSubcategoryInvalid": "Die ausgewählte Unterkategorie gehört nicht zur ausgewählten Kategorie.",
+      "ruleSubcategoryRequiresCategory": "Wählen Sie eine Kategorie aus, bevor Sie eine Unterkategorie wählen."
     }
   },
   "ticketSection": {

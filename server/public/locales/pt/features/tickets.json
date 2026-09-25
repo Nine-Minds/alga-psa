@@ -1468,7 +1468,11 @@
       "missingField": "Falta um campo obrigatório da lista de verificação.",
       "missingFieldNamed": "Falta um campo obrigatório da lista de verificação: {{field}}.",
       "referenceInvalid": "O ticket, o modelo de lista de verificação ou o filtro de regra selecionados não são mais válidos. Atualize a página e tente novamente.",
-      "invalidValue": "Um dos valores da lista de verificação é inválido. Atualize a página e tente novamente."
+      "invalidValue": "Um dos valores da lista de verificação é inválido. Atualize a página e tente novamente.",
+      "ruleCategoryBoardMismatch": "A categoria selecionada pertence a um quadro diferente do da regra.",
+      "ruleCategoryInvalid": "A categoria selecionada não é uma categoria de nível superior.",
+      "ruleSubcategoryInvalid": "A subcategoria selecionada não pertence à categoria selecionada.",
+      "ruleSubcategoryRequiresCategory": "Selecione uma categoria antes de escolher uma subcategoria."
     }
   },
   "ticketSection": {

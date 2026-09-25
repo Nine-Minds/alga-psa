@@ -1468,7 +1468,11 @@
       "missingField": "Er ontbreekt een verplicht checklistveld.",
       "missingFieldNamed": "Er ontbreekt een verplicht checklistveld: {{field}}.",
       "referenceInvalid": "Het geselecteerde ticket, de checklistsjabloon of het regelfilter is niet langer geldig. Vernieuw de pagina en probeer het opnieuw.",
-      "invalidValue": "Een van de checklistwaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw."
+      "invalidValue": "Een van de checklistwaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "ruleCategoryBoardMismatch": "De geselecteerde categorie hoort bij een ander bord dan de regel.",
+      "ruleCategoryInvalid": "De geselecteerde categorie is geen categorie op het hoogste niveau.",
+      "ruleSubcategoryInvalid": "De geselecteerde subcategorie hoort niet bij de geselecteerde categorie.",
+      "ruleSubcategoryRequiresCategory": "Selecteer een categorie voordat u een subcategorie kiest."
     }
   },
   "ticketSection": {

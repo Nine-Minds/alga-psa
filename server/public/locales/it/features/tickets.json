@@ -1468,7 +1468,11 @@
       "missingField": "Manca un campo obbligatorio della lista di controllo.",
       "missingFieldNamed": "Manca un campo obbligatorio della lista di controllo: {{field}}.",
       "referenceInvalid": "Il ticket, il modello di lista di controllo o il filtro della regola selezionati non sono più validi. Aggiornare la pagina e riprovare.",
-      "invalidValue": "Uno dei valori della lista di controllo non è valido. Aggiornare la pagina e riprovare."
+      "invalidValue": "Uno dei valori della lista di controllo non è valido. Aggiornare la pagina e riprovare.",
+      "ruleCategoryBoardMismatch": "La categoria selezionata appartiene a una bacheca diversa da quella della regola.",
+      "ruleCategoryInvalid": "La categoria selezionata non è una categoria di primo livello.",
+      "ruleSubcategoryInvalid": "La sottocategoria selezionata non appartiene alla categoria selezionata.",
+      "ruleSubcategoryRequiresCategory": "Seleziona una categoria prima di scegliere una sottocategoria."
     }
   },
   "ticketSection": {
