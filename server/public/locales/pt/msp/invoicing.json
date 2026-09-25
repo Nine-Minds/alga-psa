@@ -732,7 +732,9 @@
     "title": "Visualização da fatura",
     "templatePlaceholder": "Selecione o modelo de fatura...",
     "labels": {
-      "standard": "(Padrão)"
+      "standard": "(Padrão)",
+      "billingProfile": "Perfil de faturação: {{name}}",
+      "billingProfileDefault": "o perfil predefinido do cliente"
     },
     "actions": {
       "finalizeInvoice": "Finalizar fatura",
@@ -988,7 +990,9 @@
       "clientEmail": "E-mail do cliente",
       "noEmailFound": "Nenhum e-mail encontrado",
       "notConfigured": "Nenhum endereço de email está configurado para este cliente.",
-      "billingProfile": "Perfil de faturamento"
+      "billingProfile": "Perfil de faturamento",
+      "billingProfileNamed": "Perfil de faturação: {{name}}",
+      "billingProfileDefault": "o perfil predefinido do cliente"
     },
     "fields": {
       "due": "Devido",
@@ -2067,6 +2071,9 @@
     "labels": {
       "billingProfile": "Perfil de faturamento",
       "billingProfileDefault": "O perfil padrão do cliente"
+    },
+    "hints": {
+      "billingProfile": "A fatura, as suas linhas e a cópia enviada por e-mail seguem este perfil."
     }
   },
   "documentTemplates": {
@@ -2177,7 +2184,8 @@
       "referenceMissing": "A fatura, cliente, contrato ou registro de faturamento selecionado não existe mais. Atualize a página e tente novamente.",
       "duplicate": "Já existe uma fatura conflitante. Atualize a página e tente novamente.",
       "missingField": "Falta um campo obrigatório da fatura.",
-      "missingFieldNamed": "Falta um campo obrigatório da fatura: {{field}}."
+      "missingFieldNamed": "Falta um campo obrigatório da fatura: {{field}}.",
+      "billingProfileUnavailable": "O perfil de faturação selecionado não está disponível para este cliente."
     },
     "billingCycle": {
       "notFoundRefresh": "Ciclo de faturamento não encontrado. Ele pode ter sido atualizado ou excluído. Atualize a página e tente novamente.",

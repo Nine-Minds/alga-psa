@@ -732,7 +732,9 @@
     "title": "Factuurvoorbeeld",
     "templatePlaceholder": "Factuursjabloon selecteren...",
     "labels": {
-      "standard": "(Standaard)"
+      "standard": "(Standaard)",
+      "billingProfile": "Factureringsprofiel: {{name}}",
+      "billingProfileDefault": "het standaardprofiel van de klant"
     },
     "actions": {
       "finalizeInvoice": "Factuur finaliseren",
@@ -988,7 +990,9 @@
       "clientEmail": "Klant-e-mail",
       "noEmailFound": "Geen e-mailadres gevonden",
       "notConfigured": "Er is geen e-mailadres geconfigureerd voor deze client.",
-      "billingProfile": "Factureringsprofiel"
+      "billingProfile": "Factureringsprofiel",
+      "billingProfileNamed": "Factureringsprofiel: {{name}}",
+      "billingProfileDefault": "het standaardprofiel van de klant"
     },
     "fields": {
       "due": "Vervaldatum",
@@ -2067,6 +2071,9 @@
     "labels": {
       "billingProfile": "Factureringsprofiel",
       "billingProfileDefault": "Het standaardprofiel van de klant"
+    },
+    "hints": {
+      "billingProfile": "De factuur, de regels en de gemailde kopie volgen dit profiel."
     }
   },
   "documentTemplates": {
@@ -2177,7 +2184,8 @@
       "referenceMissing": "De geselecteerde factuur, klant, het contract of de factuurregistratie bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
       "duplicate": "Er bestaat al een conflicterende factuur. Vernieuw de pagina en probeer het opnieuw.",
       "missingField": "Er ontbreekt een verplicht factuurveld.",
-      "missingFieldNamed": "Er ontbreekt een verplicht factuurveld: {{field}}."
+      "missingFieldNamed": "Er ontbreekt een verplicht factuurveld: {{field}}.",
+      "billingProfileUnavailable": "Het geselecteerde factureringsprofiel is niet beschikbaar voor deze klant."
     },
     "billingCycle": {
       "notFoundRefresh": "Factuurcyclus niet gevonden. Mogelijk is deze bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",

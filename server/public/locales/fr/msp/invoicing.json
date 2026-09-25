@@ -732,7 +732,9 @@
     "title": "Aperçu de la facture",
     "templatePlaceholder": "Sélectionnez le modèle de facture...",
     "labels": {
-      "standard": "(Standard)"
+      "standard": "(Standard)",
+      "billingProfile": "Profil de facturation : {{name}}",
+      "billingProfileDefault": "le profil par défaut du client"
     },
     "actions": {
       "finalizeInvoice": "Finaliser la facture",
@@ -988,7 +990,9 @@
       "clientEmail": "E-mail du client",
       "noEmailFound": "Aucun e-mail trouvé",
       "notConfigured": "Aucune adresse e-mail n'est configurée pour ce client.",
-      "billingProfile": "Profil de facturation"
+      "billingProfile": "Profil de facturation",
+      "billingProfileNamed": "Profil de facturation : {{name}}",
+      "billingProfileDefault": "le profil par défaut du client"
     },
     "fields": {
       "due": "Échéance",
@@ -2067,6 +2071,9 @@
     "labels": {
       "billingProfile": "Profil de facturation",
       "billingProfileDefault": "Le profil par défaut du client"
+    },
+    "hints": {
+      "billingProfile": "La facture, ses lignes et la copie envoyée par e-mail suivent ce profil."
     }
   },
   "documentTemplates": {
@@ -2177,7 +2184,8 @@
       "referenceMissing": "La facture, le client, le contrat ou l’enregistrement de facturation sélectionné n’existe plus. Veuillez actualiser la page et réessayer.",
       "duplicate": "Une facture en conflit existe déjà. Veuillez actualiser la page et réessayer.",
       "missingField": "Un champ obligatoire de la facture est manquant.",
-      "missingFieldNamed": "Un champ obligatoire de la facture est manquant : {{field}}."
+      "missingFieldNamed": "Un champ obligatoire de la facture est manquant : {{field}}.",
+      "billingProfileUnavailable": "Le profil de facturation sélectionné n'est pas disponible pour ce client."
     },
     "billingCycle": {
       "notFoundRefresh": "Cycle de facturation introuvable. Il a peut-être été mis à jour ou supprimé. Veuillez actualiser la page et réessayer.",

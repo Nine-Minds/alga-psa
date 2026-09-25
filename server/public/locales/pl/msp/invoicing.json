@@ -758,7 +758,9 @@
     "title": "Podgląd faktury",
     "templatePlaceholder": "Wybierz szablon faktury...",
     "labels": {
-      "standard": "(Standardowa)"
+      "standard": "(Standardowa)",
+      "billingProfile": "Profil rozliczeniowy: {{name}}",
+      "billingProfileDefault": "domyślny profil klienta"
     },
     "actions": {
       "finalizeInvoice": "Sfinalizuj fakturę",
@@ -1030,7 +1032,9 @@
       "clientEmail": "E-mail klienta",
       "noEmailFound": "Nie znaleziono adresu e-mail",
       "notConfigured": "Dla tego klienta nie skonfigurowano żadnego adresu e-mail.",
-      "billingProfile": "Profil rozliczeniowy"
+      "billingProfile": "Profil rozliczeniowy",
+      "billingProfileNamed": "Profil rozliczeniowy: {{name}}",
+      "billingProfileDefault": "domyślny profil klienta"
     },
     "fields": {
       "due": "Termin",
@@ -2117,6 +2121,9 @@
     "labels": {
       "billingProfile": "Profil rozliczeniowy",
       "billingProfileDefault": "Domyślny profil klienta"
+    },
+    "hints": {
+      "billingProfile": "Faktura, jej pozycje i kopia wysyłana e-mailem podążają za tym profilem."
     }
   },
   "documentTemplates": {
@@ -2227,7 +2234,8 @@
       "referenceMissing": "Wybrana faktura, klient, umowa lub zapis rozliczeniowy już nie istnieje. Odśwież stronę i spróbuj ponownie.",
       "duplicate": "Istnieje już sprzeczna faktura. Odśwież stronę i spróbuj ponownie.",
       "missingField": "Brakuje wymaganego pola faktury.",
-      "missingFieldNamed": "Brakuje wymaganego pola faktury: {{field}}."
+      "missingFieldNamed": "Brakuje wymaganego pola faktury: {{field}}.",
+      "billingProfileUnavailable": "Wybrany profil rozliczeniowy nie jest dostępny dla tego klienta."
     },
     "billingCycle": {
       "notFoundRefresh": "Nie znaleziono cyklu rozliczeniowego. Mógł zostać zaktualizowany lub usunięty. Odśwież stronę i spróbuj ponownie.",

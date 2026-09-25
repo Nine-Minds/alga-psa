@@ -732,7 +732,9 @@
     "title": "Rechnungsvorschau",
     "templatePlaceholder": "Rechnungsvorlage auswählen...",
     "labels": {
-      "standard": "(Standard)"
+      "standard": "(Standard)",
+      "billingProfile": "Abrechnungsprofil: {{name}}",
+      "billingProfileDefault": "das Standardprofil des Kunden"
     },
     "actions": {
       "finalizeInvoice": "Rechnung abschließen",
@@ -988,7 +990,9 @@
       "clientEmail": "Kunden-E-Mail",
       "noEmailFound": "Keine E-Mail gefunden",
       "notConfigured": "Für diesen Client ist keine E-Mail-Adresse konfiguriert.",
-      "billingProfile": "Abrechnungsprofil"
+      "billingProfile": "Abrechnungsprofil",
+      "billingProfileNamed": "Abrechnungsprofil: {{name}}",
+      "billingProfileDefault": "das Standardprofil des Kunden"
     },
     "fields": {
       "due": "Fällig",
@@ -2067,6 +2071,9 @@
     "labels": {
       "billingProfile": "Abrechnungsprofil",
       "billingProfileDefault": "Das Standardprofil des Kunden"
+    },
+    "hints": {
+      "billingProfile": "Die Rechnung, ihre Positionen und die per E-Mail versendete Kopie folgen diesem Profil."
     }
   },
   "documentTemplates": {
@@ -2177,7 +2184,8 @@
       "referenceMissing": "Die ausgewählte Rechnung, der Kunde, Vertrag oder Abrechnungsdatensatz existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "duplicate": "Es existiert bereits eine widersprüchliche Rechnung. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "missingField": "Erforderliches Rechnungsfeld fehlt.",
-      "missingFieldNamed": "Erforderliches Rechnungsfeld fehlt: {{field}}."
+      "missingFieldNamed": "Erforderliches Rechnungsfeld fehlt: {{field}}.",
+      "billingProfileUnavailable": "Das ausgewählte Abrechnungsprofil ist für diesen Kunden nicht verfügbar."
     },
     "billingCycle": {
       "notFoundRefresh": "Abrechnungszeitraum nicht gefunden. Er wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",

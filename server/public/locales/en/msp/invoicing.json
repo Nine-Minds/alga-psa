@@ -732,7 +732,9 @@
     "title": "Invoice Preview",
     "templatePlaceholder": "Select invoice template...",
     "labels": {
-      "standard": " (Standard)"
+      "standard": " (Standard)",
+      "billingProfile": "Billing profile: {{name}}",
+      "billingProfileDefault": "the client's default profile"
     },
     "actions": {
       "finalizeInvoice": "Finalize Invoice",
@@ -988,7 +990,9 @@
       "clientEmail": "Client Email",
       "noEmailFound": "No Email Found",
       "notConfigured": "No email address is configured for this client.",
-      "billingProfile": "Billing Profile"
+      "billingProfile": "Billing Profile",
+      "billingProfileNamed": "Billing profile: {{name}}",
+      "billingProfileDefault": "the client's default profile"
     },
     "fields": {
       "due": "Due",
@@ -2067,6 +2071,9 @@
     "labels": {
       "billingProfile": "Billing Profile",
       "billingProfileDefault": "The client's default profile"
+    },
+    "hints": {
+      "billingProfile": "The invoice, its lines and its emailed copy follow this profile."
     }
   },
   "documentTemplates": {
@@ -2177,7 +2184,8 @@
       "referenceMissing": "The selected invoice, client, contract, or billing record no longer exists. Please refresh and try again.",
       "duplicate": "A conflicting invoice already exists. Please refresh and try again.",
       "missingField": "Missing required invoice field.",
-      "missingFieldNamed": "Missing required invoice field: {{field}}."
+      "missingFieldNamed": "Missing required invoice field: {{field}}.",
+      "billingProfileUnavailable": "The selected billing profile is not available for this client."
     },
     "billingCycle": {
       "notFoundRefresh": "Billing cycle not found. It may have been updated or deleted. Please refresh and try again.",

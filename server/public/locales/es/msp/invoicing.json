@@ -732,7 +732,9 @@
     "title": "Vista previa de factura",
     "templatePlaceholder": "Seleccionar plantilla de factura...",
     "labels": {
-      "standard": "(Estándar)"
+      "standard": "(Estándar)",
+      "billingProfile": "Perfil de facturación: {{name}}",
+      "billingProfileDefault": "el perfil predeterminado del cliente"
     },
     "actions": {
       "finalizeInvoice": "Finalizar factura",
@@ -988,7 +990,9 @@
       "clientEmail": "Correo electrónico de la empresa",
       "noEmailFound": "No se encontró ningún correo electrónico",
       "notConfigured": "No hay ninguna dirección de correo electrónico configurada para este cliente.",
-      "billingProfile": "Perfil de facturación"
+      "billingProfile": "Perfil de facturación",
+      "billingProfileNamed": "Perfil de facturación: {{name}}",
+      "billingProfileDefault": "el perfil predeterminado del cliente"
     },
     "fields": {
       "due": "Vencimiento",
@@ -2067,6 +2071,9 @@
     "labels": {
       "billingProfile": "Perfil de facturación",
       "billingProfileDefault": "El perfil predeterminado del cliente"
+    },
+    "hints": {
+      "billingProfile": "La factura, sus líneas y la copia enviada por correo siguen este perfil."
     }
   },
   "documentTemplates": {
@@ -2177,7 +2184,8 @@
       "referenceMissing": "La factura, cliente, contrato o registro de facturación seleccionado ya no existe. Actualice la página e inténtelo de nuevo.",
       "duplicate": "Ya existe una factura en conflicto. Actualice la página e inténtelo de nuevo.",
       "missingField": "Falta un campo obligatorio de la factura.",
-      "missingFieldNamed": "Falta un campo obligatorio de la factura: {{field}}."
+      "missingFieldNamed": "Falta un campo obligatorio de la factura: {{field}}.",
+      "billingProfileUnavailable": "El perfil de facturación seleccionado no está disponible para este cliente."
     },
     "billingCycle": {
       "notFoundRefresh": "No se encontró el ciclo de facturación. Es posible que se haya actualizado o eliminado. Actualice la página e inténtelo de nuevo.",
