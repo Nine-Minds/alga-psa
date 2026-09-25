@@ -11,44 +11,52 @@ vi.mock('@alga-psa/db', () => ({
 }));
 vi.mock('../lib/authHelpers', () => ({ hasMspPermission: (...args: any[]) => allowedMock(...args) }));
 
-function makeTrx(returned: any) {
+function makeTrx(rowsById: Record<string, any>) {
   const builder: any = {
-    where: vi.fn().mockReturnThis(),
+    where: vi.fn((criteria: any) => {
+      if (criteria?.id) builder.lastId = criteria.id;
+      return builder;
+    }),
     update: vi.fn().mockReturnThis(),
-    returning: vi.fn(async () => returned ? [returned] : []),
+    returning: vi.fn(async () => rowsById[builder.lastId] ? [rowsById[builder.lastId]] : []),
   };
   const trx = vi.fn(() => builder);
   return { trx, builder };
 }
 
-describe('setClientInboundEmailDomainAutoCreateContacts', () => {
+describe('setClientInboundEmailDomainsAutoCreateContacts', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
   it('denies callers without client update permission', async () => {
     allowedMock.mockResolvedValue(false);
-    const { setClientInboundEmailDomainAutoCreateContacts } = await import('./clientInboundEmailDomainActions');
-    await expect(setClientInboundEmailDomainAutoCreateContacts('client-1', 'domain-1', true))
+    const { setClientInboundEmailDomainsAutoCreateContacts } = await import('./clientInboundEmailDomainActions');
+    await expect(setClientInboundEmailDomainsAutoCreateContacts('client-1', [{ domainId: 'domain-1', enabled: true }]))
       .resolves.toMatchObject({ permissionError: 'Permission denied: Cannot update clients' });
   });
 
-  it('returns not found when the domain does not belong to the requested client', async () => {
+  it('returns not found when a domain does not belong to the requested client', async () => {
     allowedMock.mockResolvedValue(true);
-    const { trx, builder } = makeTrx(null);
+    const { trx, builder } = makeTrx({});
     trxImpl = trx;
-    const { setClientInboundEmailDomainAutoCreateContacts } = await import('./clientInboundEmailDomainActions');
-    await expect(setClientInboundEmailDomainAutoCreateContacts('client-1', 'domain-other', true))
+    const { setClientInboundEmailDomainsAutoCreateContacts } = await import('./clientInboundEmailDomainActions');
+    await expect(setClientInboundEmailDomainsAutoCreateContacts('client-1', [{ domainId: 'domain-other', enabled: true }]))
       .resolves.toMatchObject({ actionError: 'Inbound email domain not found.' });
     expect(builder.where).toHaveBeenCalledWith({ tenant: 'tenant-1' });
     expect(builder.where).toHaveBeenCalledWith({ client_id: 'client-1', id: 'domain-other' });
   });
 
-  it('updates the opt-in flag for a domain owned by the client', async () => {
+  it('updates every staged opt-in flag for domains owned by the client', async () => {
     allowedMock.mockResolvedValue(true);
-    const row = { id: 'domain-1', client_id: 'client-1', domain: 'example.com', auto_create_contacts: true };
-    const { trx, builder } = makeTrx(row);
+    const on = { id: 'domain-1', client_id: 'client-1', domain: 'example.com', auto_create_contacts: true };
+    const off = { id: 'domain-2', client_id: 'client-1', domain: 'example.org', auto_create_contacts: false };
+    const { trx, builder } = makeTrx({ 'domain-1': on, 'domain-2': off });
     trxImpl = trx;
-    const { setClientInboundEmailDomainAutoCreateContacts } = await import('./clientInboundEmailDomainActions');
-    await expect(setClientInboundEmailDomainAutoCreateContacts('client-1', 'domain-1', true)).resolves.toEqual(row);
+    const { setClientInboundEmailDomainsAutoCreateContacts } = await import('./clientInboundEmailDomainActions');
+    await expect(setClientInboundEmailDomainsAutoCreateContacts('client-1', [
+      { domainId: 'domain-1', enabled: true },
+      { domainId: 'domain-2', enabled: false },
+    ])).resolves.toEqual([on, off]);
     expect(builder.update).toHaveBeenCalledWith(expect.objectContaining({ auto_create_contacts: true }));
+    expect(builder.update).toHaveBeenCalledWith(expect.objectContaining({ auto_create_contacts: false }));
   });
 });

@@ -31,7 +31,6 @@ import {
   listClientInboundEmailDomains,
   addClientInboundEmailDomain,
   removeClientInboundEmailDomain,
-  setClientInboundEmailDomainAutoCreateContacts,
   listClientNameAliases,
   addClientNameAlias,
   removeClientNameAlias,
@@ -89,6 +88,7 @@ import {
   shouldShowEntraSyncAction,
   } from './clientDetailsEntraSyncAction';
 import { useEntraSyncPermission } from './useEntraSyncPermission';
+import { useInboundDomainAutoCreateDraft } from './useInboundDomainAutoCreateDraft';
 
 function isClientActionError(value: unknown): value is ActionMessageError | ActionPermissionError {
   return isActionMessageError(value) || isActionPermissionError(value);
@@ -948,6 +948,11 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     });
   };
 
+  const [inboundEmailDomains, setInboundEmailDomains] = useState<Array<{ id: string; domain: string; auto_create_contacts: boolean }>>([]);
+  const inboundDomainAutoCreate = useInboundDomainAutoCreateDraft(editedClient.client_id, inboundEmailDomains, setInboundEmailDomains);
+  const saveInboundDomainAutoCreate = inboundDomainAutoCreate.save;
+  const hasUnsavedFormChanges = hasUnsavedChanges || inboundDomainAutoCreate.hasChanges;
+
   const editedClientRef = useRef(editedClient);
   editedClientRef.current = editedClient;
   const isSavingRef = useRef(isSaving);
@@ -1010,6 +1015,10 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       setEditedClient(updatedClient);
       setHasUnsavedChanges(false);
       setHasAttemptedSubmit(false);
+      if (!await saveInboundDomainAutoCreate()) {
+        toast.error(t('clientDetails.inboundDomainAutoCreateUpdateFailed'));
+        return;
+      }
       toast.success(t('clientDetails.saveSuccess', {
         defaultValue: 'Client details saved successfully.',
       }));
@@ -1021,9 +1030,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     } finally {
       setIsSaving(false);
     }
-  }, [client.client_id, client.client_name]);
+  }, [client.client_id, client.client_name, saveInboundDomainAutoCreate]);
 
-  usePageSaveShortcut(handleSave, { enabled: hasUnsavedChanges && !isSaving });
+  usePageSaveShortcut(handleSave, { enabled: hasUnsavedFormChanges && !isSaving });
 
   const handleSyncEntraNow = async () => {
     if (isSyncingEntra) return;
@@ -1161,7 +1170,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     });
   }, [clientActiveContacts, editedClient, client]);
 
-  const [inboundEmailDomains, setInboundEmailDomains] = useState<Array<{ id: string; domain: string; auto_create_contacts: boolean }>>([]);
   const [inboundDomainDraft, setInboundDomainDraft] = useState('');
   const [isInboundDomainBusy, setIsInboundDomainBusy] = useState(false);
   const [inboundDestinationOptions, setInboundDestinationOptions] = useState<SelectOption[]>([]);
@@ -1253,19 +1261,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       setIsInboundDomainBusy(false);
     }
   }, [addClientInboundEmailDomain, editedClient.client_id, inboundDomainDraft, normalizeInboundDomain]);
-
-  const handleToggleInboundDomainAutoCreate = useCallback(async (domainId: string, enabled: boolean) => {
-    const previous = inboundEmailDomains.find((d) => d.id === domainId)?.auto_create_contacts ?? false;
-    setInboundEmailDomains((rows) => rows.map((d) => d.id === domainId ? { ...d, auto_create_contacts: enabled } : d));
-    try {
-      const result = await setClientInboundEmailDomainAutoCreateContacts(editedClient.client_id, domainId, enabled);
-      if (isClientActionError(result)) throw new Error(getErrorMessage(result));
-      toast.success(t('clientDetails.inboundDomainAutoCreateUpdated'));
-    } catch (error) {
-      setInboundEmailDomains((rows) => rows.map((d) => d.id === domainId ? { ...d, auto_create_contacts: previous } : d));
-      toast.error(t('clientDetails.inboundDomainAutoCreateUpdateFailed'));
-    }
-  }, [editedClient.client_id, inboundEmailDomains, t]);
 
   const handleRemoveInboundDomain = useCallback(async (domainId: string) => {
     if (!domainId) return;
@@ -1381,7 +1376,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           isAlgaDeskMode={isAlgaDeskMode}
           inboundDestinationOptions={inboundDestinationOptions}
           isInboundDestinationOptionsLoading={isInboundDestinationOptionsLoading}
-          inboundEmailDomains={inboundEmailDomains}
+          inboundEmailDomains={inboundDomainAutoCreate.domains}
           inboundDomainDraft={inboundDomainDraft}
           setInboundDomainDraft={setInboundDomainDraft}
           isInboundDomainBusy={isInboundDomainBusy}
@@ -1395,7 +1390,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           onDefaultContactChange={handleDefaultContactChange}
           onAddInboundDomain={handleAddInboundDomain}
           onRemoveInboundDomain={handleRemoveInboundDomain}
-          onToggleInboundDomainAutoCreate={handleToggleInboundDomainAutoCreate}
+          onToggleInboundDomainAutoCreate={inboundDomainAutoCreate.toggle}
           onAddClientNameAlias={handleAddClientNameAlias}
           onRemoveClientNameAlias={handleRemoveClientNameAlias}
           onTagsChange={handleTagsChange}
@@ -1738,7 +1733,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     handleDefaultContactChange,
     inboundDestinationOptions,
     isInboundDestinationOptionsLoading,
-    inboundEmailDomains,
+    inboundDomainAutoCreate.domains,
+    inboundDomainAutoCreate.toggle,
     inboundDomainDraft,
     setInboundDomainDraft,
     isInboundDomainBusy,
@@ -1936,10 +1932,11 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             tabs={tabContent}
             initialTabId={searchParams?.get('tab')?.toLowerCase() || null}
             onTabUrlChange={handleFocusTabUrlChange}
-            hasUnsavedRecordChanges={hasUnsavedChanges}
+            hasUnsavedRecordChanges={hasUnsavedFormChanges}
             onDiscardRecordChanges={() => {
               setEditedClient(client);
               setHasUnsavedChanges(false);
+              inboundDomainAutoCreate.discard();
             }}
             onNewTicket={() => setIsQuickAddTicketOpen(true)}
             onManageLocations={() => setIsLocationsDialogOpen(true)}

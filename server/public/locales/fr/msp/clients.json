@@ -307,7 +307,6 @@
     "parentClientLegacy": "Précédemment saisi comme texte : {{name}}",
     "inboundDomainAutoCreateContacts": "Créer des contacts pour les nouveaux expéditeurs",
     "inboundDomainAutoCreateHelp": "Les domaines associés peuvent créer un contact pour un nouvel expéditeur de confiance.",
-    "inboundDomainAutoCreateUpdated": "Paramètre des contacts expéditeurs mis à jour.",
     "inboundDomainAutoCreateUpdateFailed": "Impossible de mettre à jour le paramètre des contacts expéditeurs."
   },
   "clientCommandCenter": {

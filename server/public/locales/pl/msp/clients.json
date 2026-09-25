@@ -337,7 +337,6 @@
     "parentClientLegacy": "Wcześniej wprowadzono jako tekst: {{name}}",
     "inboundDomainAutoCreateContacts": "Twórz kontakty dla nowych nadawców",
     "inboundDomainAutoCreateHelp": "Przypisane domeny mogą tworzyć kontakt dla zaufanego nowego nadawcy.",
-    "inboundDomainAutoCreateUpdated": "Zaktualizowano ustawienie kontaktów nadawców.",
     "inboundDomainAutoCreateUpdateFailed": "Nie udało się zaktualizować ustawienia kontaktów nadawców."
   },
   "clientCommandCenter": {

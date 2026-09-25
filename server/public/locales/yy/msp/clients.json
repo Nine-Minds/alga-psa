@@ -307,7 +307,6 @@
     "parentClientLegacy": "〖Ƥřḗṽīȯŭşŀẏ ḗƞŧḗřḗḓ ȧş ŧḗẋŧ: {{name}} ···············〗",
     "inboundDomainAutoCreateContacts": "〖Ƈřḗȧŧḗ ƈȯƞŧȧƈŧş ƒȯř ƞḗẇ şḗƞḓḗřş ·············〗",
     "inboundDomainAutoCreateHelp": "〖Ḿȧƥƥḗḓ ḓȯḿȧīƞş ƈȧƞ ȯƥŧīȯƞȧŀŀẏ ƈřḗȧŧḗ ȧ ƈȯƞŧȧƈŧ ƒȯř ȧ ŧřŭşŧḗḓ ƞḗẇ şḗƞḓḗř. Ḓȯḿȧīƞş ḿŭşŧ ƀḗ ŭƞīʠŭḗ ȧƈřȯşş ƈŀīḗƞŧş. ·············································〗",
-    "inboundDomainAutoCreateUpdated": "〖Şḗƞḓḗř ƈȯƞŧȧƈŧ şḗŧŧīƞɠ ŭƥḓȧŧḗḓ. ·············〗",
     "inboundDomainAutoCreateUpdateFailed": "〖Ƈȯŭŀḓ ƞȯŧ ŭƥḓȧŧḗ şḗƞḓḗř ƈȯƞŧȧƈŧ şḗŧŧīƞɠ. ················〗"
   },
   "clientCommandCenter": {

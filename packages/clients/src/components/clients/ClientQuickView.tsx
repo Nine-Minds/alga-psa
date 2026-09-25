@@ -21,7 +21,6 @@ import {
   addClientInboundEmailDomain,
   listClientInboundEmailDomains,
   removeClientInboundEmailDomain,
-  setClientInboundEmailDomainAutoCreateContacts,
 } from '@alga-psa/clients/actions/clientInboundEmailDomainActions';
 import {
   addClientNameAlias,
@@ -64,6 +63,7 @@ import {
   shouldShowEntraSyncAction,
 } from './clientDetailsEntraSyncAction';
 import { useEntraSyncPermission } from './useEntraSyncPermission';
+import { useInboundDomainAutoCreateDraft } from './useInboundDomainAutoCreateDraft';
 import { ClientDetailsTabContent } from './ClientDetailsTabContent';
 
 function isClientActionError(value: unknown): value is ActionMessageError | ActionPermissionError {
@@ -533,6 +533,10 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
     });
   }, [clientActiveContacts, updateUnsavedState]);
 
+  const inboundDomainAutoCreate = useInboundDomainAutoCreateDraft(editedClient?.client_id, inboundEmailDomains, setInboundEmailDomains);
+  const saveInboundDomainAutoCreate = inboundDomainAutoCreate.save;
+  const hasUnsavedFormChanges = hasUnsavedChanges || inboundDomainAutoCreate.hasChanges;
+
   const editedClientRef = useRef(editedClient);
   editedClientRef.current = editedClient;
   const isSavingRef = useRef(isSaving);
@@ -568,6 +572,10 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
       setEditedClient(updatedClient);
       setHasUnsavedChanges(false);
       setHasAttemptedSubmit(false);
+      if (!await saveInboundDomainAutoCreate()) {
+        toast.error(t('clientDetails.inboundDomainAutoCreateUpdateFailed'));
+        return;
+      }
       toast.success(t('clientDetails.saveSuccess', { defaultValue: 'Client details saved successfully.' }));
     } catch (err) {
       console.error('Error saving client:', err);
@@ -575,12 +583,12 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
     } finally {
       setIsSaving(false);
     }
-  }, [client?.client_id, t]);
+  }, [client?.client_id, saveInboundDomainAutoCreate, t]);
 
   // Quick views are drawer-hosted, where the panel scope suppresses page.save.
   const insideDrawer = useInsideDrawer();
-  usePageSaveShortcut(handleSave, { enabled: !insideDrawer && hasUnsavedChanges && !isSaving });
-  usePanelSubmitShortcut(handleSave, { enabled: insideDrawer && hasUnsavedChanges && !isSaving });
+  usePageSaveShortcut(handleSave, { enabled: !insideDrawer && hasUnsavedFormChanges && !isSaving });
+  usePanelSubmitShortcut(handleSave, { enabled: insideDrawer && hasUnsavedFormChanges && !isSaving });
 
   const normalizeInboundDomain = useCallback((raw: string) => {
     const trimmed = (raw ?? '').trim().toLowerCase();
@@ -608,20 +616,6 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
       setIsInboundDomainBusy(false);
     }
   }, [editedClient?.client_id, inboundDomainDraft, normalizeInboundDomain, t]);
-
-  const handleToggleInboundDomainAutoCreate = useCallback(async (domainId: string, enabled: boolean) => {
-    if (!editedClient?.client_id) return;
-    const previous = inboundEmailDomains.find((d) => d.id === domainId)?.auto_create_contacts ?? false;
-    setInboundEmailDomains((rows) => rows.map((d) => d.id === domainId ? { ...d, auto_create_contacts: enabled } : d));
-    try {
-      const result = await setClientInboundEmailDomainAutoCreateContacts(editedClient.client_id, domainId, enabled);
-      if (isClientActionError(result)) throw new Error(getErrorMessage(result));
-      toast.success(t('clientDetails.inboundDomainAutoCreateUpdated'));
-    } catch {
-      setInboundEmailDomains((rows) => rows.map((d) => d.id === domainId ? { ...d, auto_create_contacts: previous } : d));
-      toast.error(t('clientDetails.inboundDomainAutoCreateUpdateFailed'));
-    }
-  }, [editedClient?.client_id, inboundEmailDomains, t]);
 
   const handleRemoveInboundDomain = useCallback(async (domainId: string) => {
     if (!editedClient?.client_id || !domainId) return;
@@ -1049,7 +1043,7 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
                 surveySummary={null}
                 inboundDestinationOptions={inboundDestinationOptions}
                 isInboundDestinationOptionsLoading={isInboundDestinationOptionsLoading}
-                inboundEmailDomains={inboundEmailDomains}
+                inboundEmailDomains={inboundDomainAutoCreate.domains}
                 inboundDomainDraft={inboundDomainDraft}
                 setInboundDomainDraft={setInboundDomainDraft}
                 isInboundDomainBusy={isInboundDomainBusy}
@@ -1063,7 +1057,7 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
                 onDefaultContactChange={handleDefaultContactChange}
                 onAddInboundDomain={handleAddInboundDomain}
                 onRemoveInboundDomain={handleRemoveInboundDomain}
-                onToggleInboundDomainAutoCreate={handleToggleInboundDomainAutoCreate}
+                onToggleInboundDomainAutoCreate={inboundDomainAutoCreate.toggle}
                 onAddClientNameAlias={handleAddClientNameAlias}
                 onRemoveClientNameAlias={handleRemoveClientNameAlias}
                 onTagsChange={setTags}

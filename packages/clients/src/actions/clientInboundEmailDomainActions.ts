@@ -141,19 +141,41 @@ export const addClientInboundEmailDomain = withAuth(async (
   }
 });
 
-export const setClientInboundEmailDomainAutoCreateContacts = withAuth(async (
-  user, { tenant }, clientId: string, domainId: string, enabled: boolean,
-): Promise<ClientInboundEmailDomain | ClientInboundEmailDomainActionError> => {
+export interface ClientInboundEmailDomainAutoCreateChange {
+  domainId: string;
+  enabled: boolean;
+}
+
+/**
+ * Applies the "create contacts for new senders" switches staged in the client
+ * form, all or nothing, when the form is saved.
+ */
+export const setClientInboundEmailDomainsAutoCreateContacts = withAuth(async (
+  user, { tenant }, clientId: string, changes: ClientInboundEmailDomainAutoCreateChange[],
+): Promise<ClientInboundEmailDomain[] | ClientInboundEmailDomainActionError> => {
   if (!await hasMspPermission(user, 'client', 'update')) {
     return permissionError('Permission denied: Cannot update clients', 'msp/clients:errors.permissions.updateClients');
   }
   const { knex } = await createTenantKnex();
-  return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const [row] = await tenantDb(trx, tenant).table('client_inbound_email_domains')
-      .where({ client_id: clientId, id: domainId }).update({ auto_create_contacts: enabled, updated_at: new Date().toISOString() })
-      .returning(['id', 'client_id', 'domain', 'created_at', 'auto_create_contacts']);
-    return row ? row as any : actionError('Inbound email domain not found.', 'msp/clients:errors.inboundEmailDomain.notFound');
-  });
+  try {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const now = new Date().toISOString();
+      const rows: ClientInboundEmailDomain[] = [];
+      for (const { domainId, enabled } of changes) {
+        const [row] = await tenantDb(trx, tenant).table('client_inbound_email_domains')
+          .where({ client_id: clientId, id: domainId }).update({ auto_create_contacts: enabled, updated_at: now })
+          .returning(['id', 'client_id', 'domain', 'created_at', 'auto_create_contacts']);
+        if (!row) throw new ExpectedClientInboundEmailDomainError('Inbound email domain not found.');
+        rows.push(row as any);
+      }
+      return rows;
+    });
+  } catch (e) {
+    if (e instanceof ExpectedClientInboundEmailDomainError) {
+      return actionError(e.message, 'msp/clients:errors.inboundEmailDomain.notFound');
+    }
+    throw e;
+  }
 });
 
 export const removeClientInboundEmailDomain = withAuth(async (
