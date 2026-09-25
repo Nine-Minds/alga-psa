@@ -24,6 +24,7 @@
     "email": "Email",
     "website": "Website",
     "address": "Address",
+    "openInMaps": "Open in maps",
     "accountManager": "Account manager",
     "clientType": "Client type",
     "industry": "Industry",

@@ -54,6 +54,7 @@ import {
   publishExternalLinkEvent,
 } from '@alga-psa/tickets/actions/externalLinks/externalLinkPersistence';
 import { NotFoundError, ValidationError, ConflictError, ForbiddenError } from '../middleware/apiMiddleware';
+import { locationAddressSql } from './locationAddressSql';
 import { inboundSenderLabel } from './ticketCommentAuthor';
 import { hasPermission } from '../../auth/rbac';
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
@@ -707,6 +708,8 @@ export class TicketService extends BaseService<ITicket> {
         ),
         'comp.client_name',
         'cl.location_name as location_name',
+        // One-line postal address for map links; the name alone is a poor geocoding query.
+        knex.raw(`${locationAddressSql('cl')} as location_address`),
         'cl.email as client_email',
         'cl.phone as client_phone',
         'cont.full_name as contact_name',

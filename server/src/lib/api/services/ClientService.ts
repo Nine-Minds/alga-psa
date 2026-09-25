@@ -4,6 +4,7 @@
  */
 
 import { Knex } from 'knex';
+import { locationAddressSql } from './locationAddressSql';
 import { BaseService, ServiceContext, ListResult, tenantDb, withTransaction } from '@alga-psa/db';
 import { IClient, IClientLocation } from 'server/src/interfaces/client.interfaces';
 import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
@@ -179,6 +180,28 @@ async function cleanupEntraReferencesBeforeClientDelete(
   }
 }
 
+// A client's phone, email and address are those of its default location (the
+// clients table has none of its own); the web actions derive them the same way.
+function joinDefaultLocation(db: ReturnType<typeof tenantDb>, query: Knex.QueryBuilder): void {
+  db.tenantJoinFirstMatching(query, 'client_locations', 'cl', 'c.client_id', 'client_id', {
+    type: 'left',
+    rootTenantColumn: 'c.tenant',
+    where: (q, alias) => q.where({
+      [`${alias}.is_default`]: true,
+      [`${alias}.is_active`]: true,
+    }),
+    orderBy: [
+      { column: 'updated_at', order: 'desc' },
+      { column: 'created_at', order: 'desc' },
+      { column: 'location_id', order: 'desc' },
+    ],
+  });
+}
+
+function defaultLocationContactColumns(trx: Knex): Array<string | Knex.Raw> {
+  return ['cl.phone as phone_no', 'cl.email as email', trx.raw(`${locationAddressSql('cl')} as address`)];
+}
+
 export class ClientService extends BaseService<IClient> {
   constructor() {
     super({
@@ -210,34 +233,10 @@ export class ClientService extends BaseService<IClient> {
       // Build base query with account manager and location joins
       let dataQuery = db.table('clients as c');
       db.tenantJoin(dataQuery, 'users as u', 'c.account_manager_id', 'u.user_id', { type: 'left' });
-      db.tenantJoinFirstMatching(dataQuery, 'client_locations', 'cl', 'c.client_id', 'client_id', {
-        type: 'left',
-        rootTenantColumn: 'c.tenant',
-        where: (query, alias) => query.where({
-          [`${alias}.is_default`]: true,
-          [`${alias}.is_active`]: true,
-        }),
-        orderBy: [
-          { column: 'updated_at', order: 'desc' },
-          { column: 'created_at', order: 'desc' },
-          { column: 'location_id', order: 'desc' },
-        ],
-      });
+      joinDefaultLocation(db, dataQuery);
 
       let countQuery = db.table('clients as c');
-      db.tenantJoinFirstMatching(countQuery, 'client_locations', 'cl', 'c.client_id', 'client_id', {
-        type: 'left',
-        rootTenantColumn: 'c.tenant',
-        where: (query, alias) => query.where({
-          [`${alias}.is_default`]: true,
-          [`${alias}.is_active`]: true,
-        }),
-        orderBy: [
-          { column: 'updated_at', order: 'desc' },
-          { column: 'created_at', order: 'desc' },
-          { column: 'location_id', order: 'desc' },
-        ],
-      });
+      joinDefaultLocation(db, countQuery);
 
       // Apply filters
       dataQuery = this.applyClientFilters(dataQuery, filters);
@@ -255,6 +254,7 @@ export class ClientService extends BaseService<IClient> {
       // Select fields
       dataQuery = dataQuery.select(
         'c.*',
+        ...defaultLocationContactColumns(trx),
         trx.raw(`${availableCreditSubquerySql('c')} as credit_balance`),
         trx.raw(`CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN CONCAT(u.first_name, ' ', u.last_name) ELSE NULL END as account_manager_full_name`)
       );
@@ -290,10 +290,12 @@ export class ClientService extends BaseService<IClient> {
       const db = tenantDb(trx, context.tenant);
       const clientQuery = db.table<IClient>('clients as c');
       db.tenantJoin(clientQuery, 'users as u', 'c.account_manager_id', 'u.user_id', { type: 'left' });
+      joinDefaultLocation(db, clientQuery);
 
       const client = await clientQuery
         .select(
           'c.*',
+          ...defaultLocationContactColumns(trx),
           trx.raw(`${availableCreditSubquerySql('c')} as credit_balance`),
           trx.raw(`CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN CONCAT(u.first_name, ' ', u.last_name) ELSE NULL END as account_manager_full_name`)
         )
