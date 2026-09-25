@@ -987,7 +987,8 @@
       "billingEmail": "Correo electrónico de facturación",
       "clientEmail": "Correo electrónico de la empresa",
       "noEmailFound": "No se encontró ningún correo electrónico",
-      "notConfigured": "No hay ninguna dirección de correo electrónico configurada para este cliente."
+      "notConfigured": "No hay ninguna dirección de correo electrónico configurada para este cliente.",
+      "billingProfile": "Perfil de facturación"
     },
     "fields": {
       "due": "Vencimiento",
@@ -2062,6 +2063,10 @@
     "errors": {
       "invoiceNumberRequired": "El número de factura es obligatorio.",
       "invoiceDateRequired": "La fecha de la factura es obligatoria."
+    },
+    "labels": {
+      "billingProfile": "Perfil de facturación",
+      "billingProfileDefault": "El perfil predeterminado del cliente"
     }
   },
   "documentTemplates": {

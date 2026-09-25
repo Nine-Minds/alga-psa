@@ -1029,7 +1029,8 @@
       "billingEmail": "E-mail rozliczeniowy",
       "clientEmail": "E-mail klienta",
       "noEmailFound": "Nie znaleziono adresu e-mail",
-      "notConfigured": "Dla tego klienta nie skonfigurowano żadnego adresu e-mail."
+      "notConfigured": "Dla tego klienta nie skonfigurowano żadnego adresu e-mail.",
+      "billingProfile": "Profil rozliczeniowy"
     },
     "fields": {
       "due": "Termin",
@@ -2112,6 +2113,10 @@
     "errors": {
       "invoiceNumberRequired": "Numer faktury jest wymagany.",
       "invoiceDateRequired": "Data faktury jest wymagana."
+    },
+    "labels": {
+      "billingProfile": "Profil rozliczeniowy",
+      "billingProfileDefault": "Domyślny profil klienta"
     }
   },
   "documentTemplates": {

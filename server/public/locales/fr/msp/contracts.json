@@ -118,6 +118,9 @@
       "renewalHandling": "Gestion des renouvellements"
     },
     "clientAssignment": {
+      "billingProfile": "Profil de facturation",
+      "billingProfileLabel": "Profil de facturation de l'affectation",
+      "billingProfileNone": "Utiliser le profil par défaut du client",
       "clientContractId": "ID du contrat client : {{id}}",
       "creditDrawdownOptOut": "Exclure de la consommation du crédit",
       "empty": "Ce contrat n'est pas encore affecté à un client.",

@@ -118,6 +118,9 @@
       "renewalHandling": "Umgang mit Erneuerungen"
     },
     "clientAssignment": {
+      "billingProfile": "Abrechnungsprofil",
+      "billingProfileLabel": "Abrechnungsprofil der Zuordnung",
+      "billingProfileNone": "Standardprofil des Kunden verwenden",
       "clientContractId": "Kundenvertrags-ID: {{id}}",
       "creditDrawdownOptOut": "Von der Guthabenverrechnung ausschließen",
       "empty": "Dieser Vertrag ist noch keinem Kunden zugewiesen.",

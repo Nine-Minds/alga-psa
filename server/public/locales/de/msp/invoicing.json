@@ -987,7 +987,8 @@
       "billingEmail": "Rechnungs-E-Mail",
       "clientEmail": "Kunden-E-Mail",
       "noEmailFound": "Keine E-Mail gefunden",
-      "notConfigured": "Für diesen Client ist keine E-Mail-Adresse konfiguriert."
+      "notConfigured": "Für diesen Client ist keine E-Mail-Adresse konfiguriert.",
+      "billingProfile": "Abrechnungsprofil"
     },
     "fields": {
       "due": "Fällig",
@@ -2062,6 +2063,10 @@
     "errors": {
       "invoiceNumberRequired": "Die Rechnungsnummer ist erforderlich.",
       "invoiceDateRequired": "Das Rechnungsdatum ist erforderlich."
+    },
+    "labels": {
+      "billingProfile": "Abrechnungsprofil",
+      "billingProfileDefault": "Das Standardprofil des Kunden"
     }
   },
   "documentTemplates": {

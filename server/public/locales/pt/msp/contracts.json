@@ -118,6 +118,9 @@
       "renewalHandling": "Tratamento de renovação"
     },
     "clientAssignment": {
+      "billingProfile": "Perfil de faturamento",
+      "billingProfileLabel": "Perfil de faturamento da atribuição",
+      "billingProfileNone": "Usar o perfil padrão do cliente",
       "clientContractId": "ID do contrato do cliente: {{id}}",
       "creditDrawdownOptOut": "Excluir do consumo de crédito",
       "empty": "Este contrato ainda não está atribuído a um cliente.",

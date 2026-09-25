@@ -987,7 +987,8 @@
       "billingEmail": "Facturerings-e-mailadres",
       "clientEmail": "Klant-e-mail",
       "noEmailFound": "Geen e-mailadres gevonden",
-      "notConfigured": "Er is geen e-mailadres geconfigureerd voor deze client."
+      "notConfigured": "Er is geen e-mailadres geconfigureerd voor deze client.",
+      "billingProfile": "Factureringsprofiel"
     },
     "fields": {
       "due": "Vervaldatum",
@@ -2062,6 +2063,10 @@
     "errors": {
       "invoiceNumberRequired": "Het factuurnummer is verplicht.",
       "invoiceDateRequired": "De factuurdatum is verplicht."
+    },
+    "labels": {
+      "billingProfile": "Factureringsprofiel",
+      "billingProfileDefault": "Het standaardprofiel van de klant"
     }
   },
   "documentTemplates": {

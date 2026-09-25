@@ -118,6 +118,9 @@
       "renewalHandling": "Obsługa odnowień"
     },
     "clientAssignment": {
+      "billingProfile": "Profil rozliczeniowy",
+      "billingProfileLabel": "Profil rozliczeniowy przypisania",
+      "billingProfileNone": "Użyj domyślnego profilu klienta",
       "clientContractId": "ID umowy klienta: {{id}}",
       "creditDrawdownOptOut": "Wyklucz z wykorzystania kredytu",
       "empty": "Ta umowa nie została jeszcze przypisana do klienta.",

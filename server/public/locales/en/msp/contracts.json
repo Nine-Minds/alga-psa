@@ -118,6 +118,9 @@
       "renewalHandling": "Renewal Handling"
     },
     "clientAssignment": {
+      "billingProfile": "Billing Profile",
+      "billingProfileLabel": "Assignment billing profile",
+      "billingProfileNone": "Use the client's default profile",
       "clientContractId": "Client Contract ID: {{id}}",
       "creditDrawdownOptOut": "Exclude from credit draw-down",
       "empty": "This contract is not assigned to a client yet.",

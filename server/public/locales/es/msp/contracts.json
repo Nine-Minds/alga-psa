@@ -118,6 +118,9 @@
       "renewalHandling": "Manejo de renovación"
     },
     "clientAssignment": {
+      "billingProfile": "Perfil de facturación",
+      "billingProfileLabel": "Perfil de facturación de la asignación",
+      "billingProfileNone": "Usar el perfil predeterminado del cliente",
       "clientContractId": "ID de contrato del cliente: {{id}}",
       "creditDrawdownOptOut": "Excluir del consumo de crédito",
       "empty": "Este contrato aún no está asignado a un cliente.",

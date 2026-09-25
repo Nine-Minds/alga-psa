@@ -987,7 +987,8 @@
       "billingEmail": "⟦Ɓīŀŀīƞɠ Ḗḿȧīŀ⟧",
       "clientEmail": "⟦Ƈŀīḗƞŧ Ḗḿȧīŀ⟧",
       "noEmailFound": "⟦Ƞȯ Ḗḿȧīŀ Ƒȯŭƞḓ⟧",
-      "notConfigured": "⟦Ƞȯ ḗḿȧīŀ ȧḓḓřḗşş īş ƈȯƞƒīɠŭřḗḓ ƒȯř ŧħīş ƈŀīḗƞŧ.⟧"
+      "notConfigured": "⟦Ƞȯ ḗḿȧīŀ ȧḓḓřḗşş īş ƈȯƞƒīɠŭřḗḓ ƒȯř ŧħīş ƈŀīḗƞŧ.⟧",
+      "billingProfile": "⟦Ɓīŀŀīƞɠ Ƥřȯƒīŀḗ⟧"
     },
     "fields": {
       "due": "⟦Ḓŭḗ⟧",
@@ -2062,6 +2063,10 @@
     "errors": {
       "invoiceNumberRequired": "⟦Īƞṽȯīƈḗ ƞŭḿƀḗř īş řḗʠŭīřḗḓ.⟧",
       "invoiceDateRequired": "⟦Īƞṽȯīƈḗ ḓȧŧḗ īş řḗʠŭīřḗḓ.⟧"
+    },
+    "labels": {
+      "billingProfile": "⟦Ɓīŀŀīƞɠ Ƥřȯƒīŀḗ⟧",
+      "billingProfileDefault": "⟦Ŧħḗ ƈŀīḗƞŧ'ş ḓḗƒȧŭŀŧ ƥřȯƒīŀḗ⟧"
     }
   },
   "documentTemplates": {

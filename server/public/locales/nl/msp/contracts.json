@@ -118,6 +118,9 @@
       "renewalHandling": "Verlengingsafhandeling"
     },
     "clientAssignment": {
+      "billingProfile": "Factureringsprofiel",
+      "billingProfileLabel": "Factureringsprofiel van de toewijzing",
+      "billingProfileNone": "Het standaardprofiel van de klant gebruiken",
       "clientContractId": "Klantcontract-ID: {{id}}",
       "creditDrawdownOptOut": "Uitsluiten van kredietopname",
       "empty": "Dit contract is nog niet aan een klant toegewezen.",

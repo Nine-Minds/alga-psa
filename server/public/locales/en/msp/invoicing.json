@@ -987,7 +987,8 @@
       "billingEmail": "Billing Email",
       "clientEmail": "Client Email",
       "noEmailFound": "No Email Found",
-      "notConfigured": "No email address is configured for this client."
+      "notConfigured": "No email address is configured for this client.",
+      "billingProfile": "Billing Profile"
     },
     "fields": {
       "due": "Due",
@@ -2062,6 +2063,10 @@
     "errors": {
       "invoiceNumberRequired": "Invoice number is required.",
       "invoiceDateRequired": "Invoice date is required."
+    },
+    "labels": {
+      "billingProfile": "Billing Profile",
+      "billingProfileDefault": "The client's default profile"
     }
   },
   "documentTemplates": {
