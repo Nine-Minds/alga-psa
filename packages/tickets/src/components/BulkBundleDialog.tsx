@@ -17,6 +17,7 @@ import { bundleTicketsAction, getBundleMasterStatusAction, getBundleMasterClosed
 import { fetchTicketsWithPagination, loadTicketListItemsByIds } from '../actions/optimizedTicketActions';
 import { ClosedMasterChoiceFields } from './ticket/ClosedMasterChoiceFields';
 import type { ClosedMasterChoice } from '../lib/ticketBundlePolicy';
+import { TICKET_STATUS_FILTER_ALL } from '../lib/ticketStatusFilter';
 
 interface Props {
   id: string;
@@ -72,7 +73,7 @@ export default function BulkBundleDialog({ id, isOpen, onClose, initialTicketIds
     setMasterId(currentTicketIds[0] ?? null);
 
     if (missingIds.length > 0) {
-      const filters: ITicketListFilters = { boardFilterState: 'all', showOpenOnly: false };
+      const filters: ITicketListFilters = { boardFilterState: 'all', showOpenOnly: false, statusId: TICKET_STATUS_FILTER_ALL };
       void loadTicketListItemsByIds(filters, missingIds).then(result => {
         if (cancelled) return;
         if (isActionMessageError(result) || isActionPermissionError(result)) {
@@ -179,6 +180,7 @@ export default function BulkBundleDialog({ id, isOpen, onClose, initialTicketIds
       bundleView: 'individual',
       boardFilterState: 'all',
       showOpenOnly: false,
+      statusId: TICKET_STATUS_FILTER_ALL,
     };
     const result = await fetchTicketsWithPagination(filters, page, limit);
     if (isActionMessageError(result) || isActionPermissionError(result)) {

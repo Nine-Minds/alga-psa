@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import BulkBundleDialog from './BulkBundleDialog';
+import { TICKET_STATUS_FILTER_ALL, shouldApplyOpenOnlyStatusFilter } from '../lib/ticketStatusFilter';
 
 const mocks = vi.hoisted(() => ({
   fetch: vi.fn(),
@@ -77,7 +78,6 @@ if (!('ResizeObserver' in globalThis)) {
 if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = () => {};
 }
-
 function ticket(id: string, clientId = 'client-a', extra: Record<string, unknown> = {}) {
   return {
     ticket_id: id,
@@ -160,6 +160,18 @@ describe('BulkBundleDialog', () => {
     expect(within(getElement('bundle-test-bundle-members')).getAllByRole('listitem')).toHaveLength(2);
   });
 
+  it('hydrates a closed off-page selected member with all statuses', async () => {
+    const closed = ticket('closed-member', 'client-a', { is_closed: true });
+    mocks.loadByIds.mockResolvedValue({ tickets: [closed] });
+    renderDialog({ initialTicketIds: ['one', 'closed-member'], knownRows: [[ticket('one')]] });
+    await waitFor(() => expect(mocks.loadByIds).toHaveBeenCalled());
+    const filters = mocks.loadByIds.mock.calls[0][0];
+    expect(filters.statusId).toBe(TICKET_STATUS_FILTER_ALL);
+    expect(shouldApplyOpenOnlyStatusFilter(filters.statusId, filters.showOpenOnly)).toBe(false);
+    expect(await screen.findByText('CLOSED-MEMBER')).toBeTruthy();
+    expect(within(getElement('bundle-test-bundle-members')).getAllByRole('listitem')).toHaveLength(2);
+  });
+
   it('reports the count of selected tickets that could not be resolved', async () => {
     mocks.loadByIds.mockResolvedValue({ tickets: [] });
     renderDialog({ initialTicketIds: ['one', 'missing'], knownRows: [[ticket('one')]] });
@@ -226,13 +238,26 @@ describe('BulkBundleDialog', () => {
   });
 
   it('shows closed status for a selectable closed result', async () => {
-    mocks.fetch.mockResolvedValue({ tickets: [ticket('closed', 'client-a', { is_closed: true })], totalCount: 1 });
+    const closed = ticket('closed', 'client-a', { is_closed: true });
+    mocks.fetch.mockResolvedValue({ tickets: [closed], totalCount: 1 });
+    mocks.closedContext.mockImplementation(async ({ masterTicketId }: { masterTicketId: string }) => ({
+      isClosed: masterTicketId === 'closed',
+      allowedChoices: masterTicketId === 'closed' ? ['keep_closed'] : [],
+      hasResolutionComment: false,
+      masterStatusName: masterTicketId === 'closed' ? 'Closed' : 'Open',
+    }));
     renderDialog();
     await openSearch();
+    const filters = mocks.fetch.mock.calls.at(-1)?.[0];
+    expect(filters.statusId).toBe(TICKET_STATUS_FILTER_ALL);
+    expect(shouldApplyOpenOnlyStatusFilter(filters.statusId, filters.showOpenOnly)).toBe(false);
     const closedOption = await screen.findByRole('option', { name: /Closed.*CLOSED – Ticket closed/ });
     expect(closedOption).toHaveAttribute('aria-disabled', 'false');
     await chooseSearchResult(/CLOSED – Ticket closed/);
     await waitFor(() => expect(within(getElement('bundle-test-bundle-members')).getAllByRole('listitem')).toHaveLength(2));
+    fireEvent.click(getElement('bundle-test-bundle-member-remove-one'));
+    expect(await screen.findByText("This bundle's master is closed")).toBeTruthy();
+    expect(screen.getByText('Add and keep master closed')).toBeTruthy();
   });
 
   it('blocks confirm when two existing masters are present', async () => {
