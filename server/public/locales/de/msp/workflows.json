@@ -674,7 +674,24 @@
       "workflowStepsListHint": "Ziehen Sie Schritte, um sie umzusortieren oder zwischen Pipes zu verschieben.",
       "workflowStepsGraphHint": "Schwenken/zoomen Sie den Graphen. Verzweigungen werden als separate Spuren dargestellt.",
       "workflowStepsViewAria": "Workflow-Schritte-Ansicht",
-      "warningsCount": "{{count}} Warnungen"
+      "warningsCount": "{{count}} Warnungen",
+      "dateSource": "Datumsquelle",
+      "dateSourceAnniversary": "Kundenjubiläum",
+      "dateSourceRenewal": "Entscheidungsdatum für die Vertragsverlängerung",
+      "dateSourceContractEnd": "Vertragsenddatum",
+      "dateSourceWarranty": "Garantieende des Assets",
+      "dateOffset": "Tage",
+      "dateDirection": "Zeitpunkt",
+      "before": "Vorher",
+      "onDate": "Am Tag selbst",
+      "after": "Nachher",
+      "daysBefore": "Tage vor",
+      "daysAfter": "Tage nach",
+      "localTime": "Ortszeit",
+      "timezoneOptional": "Zeitzone (optional)",
+      "tenantTimezoneDefault": "Zeitzone des Mandanten",
+      "dateTriggerSummary": "Wird {{days}} {{direction}} {{source}} um {{time}} ({{timezone}}) ausgeführt",
+      "inputDataDatePrefix": "Dieser Workflow empfängt die durch folgendes Schema definierte Nutzlast:"
     },
     "stepPanel": {
       "readOnly": "Schreibgeschützter Zugriff: Schrittbearbeitung ist deaktiviert.",
@@ -1715,7 +1732,8 @@
     "event": "Ereignis",
     "eventWithType": "Ereignis: {{eventType}}",
     "oneTimeSchedule": "Einmaliger Zeitplan",
-    "recurringSchedule": "Wiederkehrender Zeitplan"
+    "recurringSchedule": "Wiederkehrender Zeitplan",
+    "date": "Datum"
   },
   "scheduleStatus": {
     "unknown": "Unbekannt",
@@ -2323,13 +2341,15 @@
         "event": "Ereignisbasiert",
         "schedule": "Einmaliger Zeitplan",
         "recurring": "Wiederkehrender Zeitplan",
-        "manual": "Manuell"
+        "manual": "Manuell",
+        "date": "Datumsbasiert"
       },
       "triggerLabels": {
         "manual": "Manuell",
         "schedule": "Einmaliger Zeitplan",
         "recurring": "Wiederkehrender Zeitplan",
-        "event": "Ereignis"
+        "event": "Ereignis",
+        "date": "Datum"
       },
       "bulk": {
         "selectedSingular": "{{count}} Workflow ausgewählt",

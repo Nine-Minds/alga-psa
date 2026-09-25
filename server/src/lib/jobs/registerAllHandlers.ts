@@ -52,6 +52,8 @@ import {
   handleReconcileHourBlockAllocations,
   ReconcileHourBlockAllocationsJobData,
 } from '@alga-psa/jobs/handlers/reconcileHourBlockAllocationsHandler';
+import { createDateTriggerScanHandler, dateTriggerScanHandler, DateTriggerScanJobData } from '@alga-psa/jobs/handlers/dateTriggerScanHandler';
+import { configureEditionDateTriggerWorkflowLauncher } from './dateTriggerWorkflowLauncher';
 import {
   processRenewalQueueHandler,
   RenewalQueueProcessorJobData,
@@ -517,6 +519,10 @@ export async function registerAllJobHandlers(
     },
     registerOpts
   );
+
+  const dateTriggerLauncher = configureEditionDateTriggerWorkflowLauncher(includeEnterprise);
+  const runDateTriggerScan = dateTriggerLauncher ? createDateTriggerScanHandler(dateTriggerLauncher) : dateTriggerScanHandler;
+  JobHandlerRegistry.register<DateTriggerScanJobData & BaseJobData>({ name: 'date-trigger-scan', handler: async (_jobId, data) => { await runDateTriggerScan(data); }, retry: { maxAttempts: 3 } }, registerOpts);
 
   JobHandlerRegistry.register<RenewalQueueProcessorJobData & BaseJobData>(
     {

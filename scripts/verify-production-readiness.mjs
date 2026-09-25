@@ -14,7 +14,7 @@ let result;
 try {
   const source = testRevision(root);
   if (source.dirty || source.revision !== process.env.GITHUB_SHA) throw new Error('Readiness checkout is dirty or differs from candidate');
-  const artifacts = {}, unreadable = [];
+  const artifacts = {}, unreadable = new Map();
   const changed = readChangedFiles({ cwd: root, base: process.env.TIER1_BASE_SHA, head: source.revision });
   const jobs = JSON.parse(process.env.READINESS_JOBS || '{}');
   const selection = selectIntegration(changed);
@@ -42,7 +42,7 @@ try {
           delete verified.counts;
         }
         artifacts[artifact] = verified;
-      } catch { unreadable.push(`${artifact}: missing or unreadable callback inputs`); }
+      } catch { unreadable.set(artifact, 'missing or unreadable callback inputs'); }
       continue;
     }
     if (artifact === 'teams-development-execution') {
@@ -64,7 +64,7 @@ try {
           verified.status = 'failed';
         }
         artifacts[artifact] = verified;
-      } catch (error) { unreadable.push(`${artifact}: ${error.message}`); }
+      } catch (error) { unreadable.set(artifact, error.message); }
       continue;
     }
     if (['supported-upgrade-execution', 'supported-citus-upgrade-execution'].includes(artifact)) {
@@ -88,17 +88,24 @@ try {
           verified.status = 'failed';
         }
         artifacts[artifact] = verified;
-      } catch (error) { unreadable.push(`${artifact}: ${error.message}`); }
+      } catch (error) { unreadable.set(artifact, error.message); }
       continue;
     }
     const name = artifact + (revisionSuffix ? `-${source.revision}` : '');
     try { artifacts[artifact] = JSON.parse(readFileSync(path.join(root, 'test-results/readiness-input', name, 'aggregate.json'), 'utf8')); }
-    catch (error) { unreadable.push(`${artifact}: ${error.message}`); }
+    catch (error) { unreadable.set(artifact, error.message); }
   }
   const quarantine = JSON.parse(readFileSync(path.join(root, 'scripts/lib/quarantine.json'), 'utf8'));
   result = evaluateProductionReadiness({ revision: source.revision,
     changed, jobs, artifacts, quarantine });
-  result.failures.push(...unreadable);
+  // An unreadable input leaves its verdict absent, which the evaluation already
+  // records against that requirement. Attach the cause there, so a valid
+  // quarantine keeps it visible without the diagnostic re-vetoing readiness.
+  for (const [artifact, message] of unreadable) {
+    const entry = result.results?.find(({ id }) => id === artifact);
+    if (String(entry?.status).startsWith('quarantined')) entry.failures.push(`${artifact}: ${message}`);
+    else result.failures.push(`${artifact}: ${message}`);
+  }
   if (result.failures.length) result.status = 'failed';
 } catch (error) { result = { schemaVersion: 1, scope: 'production-regression-readiness', status: 'failed', failures: [error.message] }; }
 const directory = path.join(root, 'test-results/production-readiness');

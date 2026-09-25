@@ -63,9 +63,11 @@ import { advanceMaintenanceDate } from '../lib/maintenanceRecurrence';
 import { localizeActionError, withAuth, hasPermission } from '@alga-psa/auth';
 import { toCalendarDateString, toISOTimestamp, toPlainDate } from '@alga-psa/core';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { resolveEffectiveTimeZone } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/db';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { emitDateDomainEventOnce, toTenantLocalDate } from '@alga-psa/event-bus/workflow/dateDomainEvents';
 import {
     buildAssetAssignedPayload,
     buildAssetCreatedPayload,
@@ -1022,8 +1024,10 @@ export async function createAssetRecord(
             });
 
             if (warranty) {
-                await publishWorkflowEvent({
-                    eventType: 'ASSET_WARRANTY_EXPIRING',
+                const warrantyDate = toTenantLocalDate(warranty.expiresAt, await resolveEffectiveTimeZone(knex, tenant));
+                await emitDateDomainEventOnce(knex, tenant, {
+                    eventType: 'ASSET_WARRANTY_EXPIRING', entityId: created.asset_id,
+                    cycleKey: warrantyDate, occursOn: warrantyDate,
                     payload: buildAssetWarrantyExpiringPayload({
                         assetId: created.asset_id,
                         clientId: created.client_id || undefined,
@@ -1314,8 +1318,10 @@ export async function updateAssetRecord(
         });
 
         if (warranty) {
-            await publishWorkflowEvent({
-                eventType: 'ASSET_WARRANTY_EXPIRING',
+            const warrantyDate = toTenantLocalDate(warranty.expiresAt, await resolveEffectiveTimeZone(knex, tenant));
+            await emitDateDomainEventOnce(knex, tenant, {
+                eventType: 'ASSET_WARRANTY_EXPIRING', entityId: asset_id,
+                cycleKey: warrantyDate, occursOn: warrantyDate,
                 payload: buildAssetWarrantyExpiringPayload({
                     assetId: asset_id,
                     clientId: newClientId || previousClientId,

@@ -674,7 +674,24 @@
       "workflowStepsListHint": "Sleep stappen om ze te herschikken of tussen pipes te verplaatsen.",
       "workflowStepsGraphHint": "Verschuif/zoom de grafiek. Vertakkingen worden als aparte banen weergegeven.",
       "workflowStepsViewAria": "Weergave van workflowstappen",
-      "warningsCount": "{{count}} waarschuwingen"
+      "warningsCount": "{{count}} waarschuwingen",
+      "dateSource": "Datumbron",
+      "dateSourceAnniversary": "Klantjubileum",
+      "dateSourceRenewal": "Beslissingsdatum voor contractverlenging",
+      "dateSourceContractEnd": "Einddatum contract",
+      "dateSourceWarranty": "Einde garantie asset",
+      "dateOffset": "Dagen",
+      "dateDirection": "Tijdstip",
+      "before": "Voor",
+      "onDate": "Op de dag zelf",
+      "after": "Na",
+      "daysBefore": "dagen vóór",
+      "daysAfter": "dagen na",
+      "localTime": "Lokale tijd",
+      "timezoneOptional": "Tijdzone (optioneel)",
+      "tenantTimezoneDefault": "Tijdzone van de tenant",
+      "dateTriggerSummary": "Wordt {{days}} {{direction}} {{source}} om {{time}} ({{timezone}}) uitgevoerd",
+      "inputDataDatePrefix": "Deze workflow ontvangt de payload die is gedefinieerd door"
     },
     "stepPanel": {
       "readOnly": "Alleen-lezentoegang: het bewerken van stappen is uitgeschakeld.",
@@ -1715,7 +1732,8 @@
     "event": "Gebeurtenis",
     "eventWithType": "Gebeurtenis: {{eventType}}",
     "oneTimeSchedule": "Eenmalige planning",
-    "recurringSchedule": "Terugkerende planning"
+    "recurringSchedule": "Terugkerende planning",
+    "date": "Datum"
   },
   "scheduleStatus": {
     "unknown": "Onbekend",
@@ -2323,13 +2341,15 @@
         "event": "Op basis van een gebeurtenis",
         "schedule": "Eenmalige planning",
         "recurring": "Terugkerende planning",
-        "manual": "Handmatig"
+        "manual": "Handmatig",
+        "date": "Op basis van een datum"
       },
       "triggerLabels": {
         "manual": "Handmatig",
         "schedule": "Eenmalige planning",
         "recurring": "Terugkerende planning",
-        "event": "Gebeurtenis"
+        "event": "Gebeurtenis",
+        "date": "Datum"
       },
       "bulk": {
         "selectedSingular": "{{count}} workflow geselecteerd",

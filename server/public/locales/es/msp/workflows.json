@@ -674,7 +674,24 @@
       "workflowStepsListHint": "Arrastre los pasos para reordenarlos o moverlos entre los canales.",
       "workflowStepsGraphHint": "Desplácese/acerque el gráfico. Las ramas se muestran en carriles separados.",
       "workflowStepsViewAria": "Vista de los pasos del flujo de trabajo",
-      "warningsCount": "{{count}} advertencias"
+      "warningsCount": "{{count}} advertencias",
+      "dateSource": "Origen de la fecha",
+      "dateSourceAnniversary": "Aniversario del cliente",
+      "dateSourceRenewal": "Fecha de decisión de renovación del contrato",
+      "dateSourceContractEnd": "Fecha de finalización del contrato",
+      "dateSourceWarranty": "Fin de la garantía del activo",
+      "dateOffset": "Días",
+      "dateDirection": "Momento",
+      "before": "Antes",
+      "onDate": "El mismo día",
+      "after": "Después",
+      "daysBefore": "días antes de",
+      "daysAfter": "días después de",
+      "localTime": "Hora local",
+      "timezoneOptional": "Zona horaria (opcional)",
+      "tenantTimezoneDefault": "Zona horaria del inquilino",
+      "dateTriggerSummary": "Se ejecuta {{days}} {{direction}} {{source}} a las {{time}} ({{timezone}})",
+      "inputDataDatePrefix": "Este flujo de trabajo recibe la carga útil definida por"
     },
     "stepPanel": {
       "readOnly": "Acceso de solo lectura: la edición de pasos está deshabilitada.",
@@ -1715,7 +1732,8 @@
     "event": "Evento",
     "eventWithType": "Evento: {{eventType}}",
     "oneTimeSchedule": "Programación puntual",
-    "recurringSchedule": "Programación recurrente"
+    "recurringSchedule": "Programación recurrente",
+    "date": "Fecha"
   },
   "scheduleStatus": {
     "unknown": "Desconocido",
@@ -2323,13 +2341,15 @@
         "event": "Basado en eventos",
         "schedule": "Programación única",
         "recurring": "Programación recurrente",
-        "manual": "Manual"
+        "manual": "Manual",
+        "date": "Basado en fechas"
       },
       "triggerLabels": {
         "manual": "Manual",
         "schedule": "Programación única",
         "recurring": "Programación recurrente",
-        "event": "Evento"
+        "event": "Evento",
+        "date": "Fecha"
       },
       "bulk": {
         "selectedSingular": "{{count}} flujo de trabajo seleccionado",

@@ -39,6 +39,32 @@ const emailStep = (inputMapping: Record<string, unknown>) => ({
 });
 
 describe('validateWorkflowDefinition expressions', () => {
+  it('rejects a date trigger payload schema that does not match its source', () => {
+    const definition = {
+      ...definitionWith([]),
+      trigger: { type: 'date', source: 'client.anniversary', offsetDays: -30 },
+      payloadSchemaRef: 'payload.ContractEndDate.v1',
+    } as WorkflowDefinition;
+    const result = validateWorkflowDefinition(definition);
+    expect(result.errors).toContainEqual(expect.objectContaining({
+      code: 'DATE_TRIGGER_SCHEMA_MISMATCH',
+      stepPath: 'trigger',
+    }));
+  });
+
+  it('rejects an invalid IANA timezone on a date trigger', () => {
+    const definition = {
+      ...definitionWith([]),
+      trigger: { type: 'date', source: 'client.anniversary', offsetDays: 0, timezone: 'Mars/Olympus' },
+      payloadSchemaRef: 'payload.ClientAnniversary.v1',
+    } as WorkflowDefinition;
+    const result = validateWorkflowDefinition(definition);
+    expect(result.errors).toContainEqual(expect.objectContaining({
+      code: 'INVALID_TRIGGER_TIMEZONE',
+      message: expect.stringContaining('valid IANA timezone'),
+    }));
+  });
+
   it('reports an empty action input expression exactly once, with guidance', () => {
     const result = validateWorkflowDefinition(definitionWith([emailStep({ subject: 'Hi', html: { $expr: '' } })]));
     const forHtml = result.errors.filter((error) => error.message.includes('inputMapping.html'));

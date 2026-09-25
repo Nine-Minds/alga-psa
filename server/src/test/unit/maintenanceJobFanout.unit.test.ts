@@ -6,6 +6,8 @@ const contractSweepMock = vi.fn();
 const listTenantsMock = vi.fn();
 // Rows returned for the per-job tenant selector tables (teams_integrations, email_providers).
 const selectTenantsMock = vi.fn();
+const configuredDateLauncherMock = vi.fn();
+const dateScanLauncherCapture = vi.fn();
 const selectorTablesSeen: string[] = [];
 
 vi.mock('@alga-psa/core/logger', () => ({
@@ -38,6 +40,7 @@ vi.mock('@alga-psa/db/admin', () => ({
 // Every handler imported by maintenanceJobFanout must be mocked or the module
 // will try to load the real (heavy) handler graph.
 vi.mock('@alga-psa/jobs/handlers/expiredCreditsHandler', () => ({ expiredCreditsHandler: (...a: unknown[]) => tenantHandlerMock('expired-credits', ...a) }));
+vi.mock('@alga-psa/jobs/handlers/dateTriggerScanHandler', () => ({ createDateTriggerScanHandler: (launcher: unknown) => { dateScanLauncherCapture(launcher); return async ({ tenantId }: { tenantId: string }) => { if (typeof launcher === 'function') await (launcher as Function)({ tenantId, today: '2026-10-01', now: new Date('2026-10-01T12:00:00Z'), timezone: 'UTC', knex: {}, sources: [] }); }; } }));
 vi.mock('@alga-psa/jobs/handlers/expiringCreditsNotificationHandler', () => ({ expiringCreditsNotificationHandler: (...a: unknown[]) => tenantHandlerMock('expiring-credits-notification', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/reconcileBucketUsageHandler', () => ({ handleReconcileBucketUsage: (...a: unknown[]) => tenantHandlerMock('reconcile-bucket-usage', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/processRenewalQueueHandler', () => ({ processRenewalQueueHandler: (...a: unknown[]) => tenantHandlerMock('process-renewal-queue', ...a) }));
@@ -58,7 +61,7 @@ vi.mock('@alga-psa/billing/actions/contractCadenceServicePeriodMaterialization',
   replenishContractCadenceServicePeriodsSweep: (...a: unknown[]) => contractSweepMock(...a),
 }));
 
-import { runMaintenanceJob, isKnownMaintenanceJob } from '@alga-psa/jobs/fanout';
+import { runMaintenanceJob, isKnownMaintenanceJob, configureDateTriggerWorkflowLauncher } from '@alga-psa/jobs/fanout';
 
 describe('runMaintenanceJob', () => {
   beforeEach(() => {
@@ -68,6 +71,9 @@ describe('runMaintenanceJob', () => {
     listTenantsMock.mockReset();
     selectTenantsMock.mockReset();
     selectorTablesSeen.length = 0;
+    configuredDateLauncherMock.mockReset().mockResolvedValue(undefined);
+    dateScanLauncherCapture.mockReset();
+    configureDateTriggerWorkflowLauncher(configuredDateLauncherMock as any);
     tenantHandlerMock.mockResolvedValue(undefined);
     systemHandlerMock.mockResolvedValue(undefined);
     contractSweepMock.mockResolvedValue({ tenantsProcessed: 0, tenantsFailed: 0, summaries: [] });
@@ -109,6 +115,13 @@ describe('runMaintenanceJob', () => {
     listTenantsMock.mockReturnValue([{ tenant: 't1' }]);
     await runMaintenanceJob('process-renewal-queue');
     expect(tenantHandlerMock).toHaveBeenCalledWith('process-renewal-queue', { tenantId: 't1', horizonDays: 90 });
+  });
+
+  it('runs the injected date workflow launcher from the maintenance fanout', async () => {
+    listTenantsMock.mockReturnValue([{ tenant: 't-date' }]);
+    await runMaintenanceJob('date-trigger-scan');
+    expect(dateScanLauncherCapture).toHaveBeenCalledOnce();
+    expect(configuredDateLauncherMock).toHaveBeenCalledWith(expect.objectContaining({ tenantId: 't-date', today: '2026-10-01', timezone: 'UTC' }));
   });
 
   it('does not consult a selector table for jobs that fan out to every tenant', async () => {

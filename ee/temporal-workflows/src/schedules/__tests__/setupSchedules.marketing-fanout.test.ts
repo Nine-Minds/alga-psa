@@ -103,6 +103,16 @@ describe('setupSchedules marketing fan-out cutover', () => {
 
     await setupSchedules();
 
+    expect(scheduleCreateMock.mock.calls.map(([input]) => input).find(({ scheduleId }) => scheduleId === 'maintenance-fanout:date-trigger-scan')).toEqual(expect.objectContaining({
+      scheduleId: 'maintenance-fanout:date-trigger-scan',
+      spec: { cronExpressions: ['5 * * * *'] },
+      action: expect.objectContaining({
+        workflowType: expect.any(Function),
+        args: [{ jobName: 'date-trigger-scan' }],
+        taskQueue: 'tenant-workflows',
+      }),
+    }));
+
     const marketingCreates = scheduleCreateMock.mock.calls
       .map(([input]) => input)
       .filter(({ scheduleId }) => scheduleId.startsWith('marketing-fanout:'));

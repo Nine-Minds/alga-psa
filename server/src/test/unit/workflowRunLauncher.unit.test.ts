@@ -142,7 +142,8 @@ describe('Workflow run launcher', () => {
 
     expect(result).toEqual({
       runId: 'run-started',
-      workflowVersion: 5
+      workflowVersion: 5,
+      created: true
     });
     expect(initializeWorkflowRuntimeV2Mock).toHaveBeenCalledTimes(1);
     expect(startRunMock).toHaveBeenCalledTimes(1);
@@ -199,7 +200,8 @@ describe('Workflow run launcher', () => {
 
     expect(result).toEqual({
       runId: 'run-existing',
-      workflowVersion: 5
+      workflowVersion: 5,
+      created: false
     });
     expect(startRunMock).toHaveBeenCalledTimes(1);
     expect(startWorkflowRuntimeV2TemporalRunMock).not.toHaveBeenCalled();
@@ -223,7 +225,8 @@ describe('Workflow run launcher', () => {
 
     expect(result).toEqual({
       runId: 'run-created',
-      workflowVersion: 5
+      workflowVersion: 5,
+      created: true
     });
     expect(startWorkflowRuntimeV2TemporalRunMock).toHaveBeenCalledWith({
       runId: 'run-created',
@@ -294,7 +297,8 @@ describe('Workflow run launcher', () => {
 
     expect(result).toEqual({
       runId: 'run-created',
-      workflowVersion: 5
+      workflowVersion: 5,
+      created: true
     });
     expect(createRunMock).toHaveBeenCalledWith(
       knexMock,

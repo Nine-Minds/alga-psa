@@ -80,6 +80,8 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Workflow data store + entity links (standalone; created_by_run_id is a soft
   // ref with no FK, so order among these does not matter)
   'workflow_data_store', 'workflow_entity_links',
+  // Date trigger emission ledger (FK only to tenants)
+  'date_trigger_emissions',
   'workflow_runs', 'tenant_workflow_schedule', 'workflow_definitions',
 
   // === Marketing module (children first; campaigns/channels last).

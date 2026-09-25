@@ -114,6 +114,13 @@ test('portal ticket survives assignment, replies, resolution and reopening witho
         && Boolean(request.postData()?.includes(acknowledgment))),
       portalPage.getByRole('button', { name: 'Add Comment', exact: true }).click(),
     ]);
+    // The draft stays in the composer while the action runs, so a bare text
+    // match passes before the comment exists. Reloading then races the insert.
+    // Wait for the action to finish and the composer to clear first.
+    const commentResponse = await commentRequest.response();
+    expect(commentResponse?.ok()).toBe(true);
+    expect(await commentResponse!.finished()).toBeNull();
+    await expect(portalPage.locator('[contenteditable="true"]').getByText(acknowledgment, { exact: true })).toHaveCount(0);
     await expect(portalPage.getByText(acknowledgment, { exact: true })).toBeVisible();
     await portalPage.reload();
     await expect(portalPage.getByText(acknowledgment, { exact: true })).toBeVisible();

@@ -107,7 +107,7 @@ export interface WorkflowDefinitionListItem {
 }
 
 type StatusFilter = 'all' | 'active' | 'draft' | 'paused';
-type TriggerFilter = 'all' | 'event' | 'schedule' | 'recurring' | 'scheduled' | 'manual';
+type TriggerFilter = 'all' | 'event' | 'schedule' | 'recurring' | 'scheduled' | 'date' | 'manual';
 type WorkflowCounts = { total: number; active: number; draft: number; paused: number };
 type SortableColumnId = 'name' | 'status' | 'updated_at' | 'created_at';
 
@@ -161,6 +161,7 @@ const getTriggerIcon = (trigger?: Record<string, unknown> | null) => {
   if (triggerType === 'recurring') {
     return <Clock className="w-4 h-4 text-[rgb(var(--color-secondary-500))]" />;
   }
+  if (triggerType === 'date') return <Calendar className="w-4 h-4 text-[rgb(var(--color-secondary-500))]" />;
   if (triggerType === 'event') {
     return <Zap className="w-4 h-4 text-[rgb(var(--color-accent-500))]" />;
   }
@@ -176,6 +177,9 @@ const getTriggerLabel = (trigger: Record<string, unknown> | null | undefined, t:
   }
   if (triggerType === 'recurring') {
     return t('automation.workflowList.triggerLabels.recurring', { defaultValue: 'Recurring schedule' });
+  }
+  if (triggerType === 'date') {
+    return t('automation.workflowList.triggerLabels.date', { defaultValue: 'Date' });
   }
   if (triggerType === 'event') {
     return t('automation.workflowList.triggerLabels.event', { defaultValue: 'Event' });
@@ -240,6 +244,7 @@ export default function WorkflowList({
     { value: 'event', label: t('automation.workflowList.triggerFilter.event', { defaultValue: 'Event-based' }) },
     { value: 'schedule', label: t('automation.workflowList.triggerFilter.schedule', { defaultValue: 'One-time schedule' }) },
     { value: 'recurring', label: t('automation.workflowList.triggerFilter.recurring', { defaultValue: 'Recurring schedule' }) },
+    { value: 'date', label: t('automation.workflowList.triggerFilter.date', { defaultValue: 'Date-based' }) },
     { value: 'manual', label: t('automation.workflowList.triggerFilter.manual', { defaultValue: 'Manual' }) }
   ];
 
