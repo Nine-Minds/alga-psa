@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Pencil, Plus, Star, Archive, Trash2, RotateCcw, Settings2 } from 'lucide-react';
+import { Pencil, Plus, Star, Archive, Trash2, RotateCcw, Settings2, Merge } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -23,6 +23,7 @@ import {
   type ClientBillingProfile,
 } from '../../actions/clientBillingProfileActions';
 import { ClientBillingProfileSettings } from './ClientBillingProfileSettings';
+import MergeClientsDialog from './MergeClientsDialog';
 
 /**
  * Billing profiles on the client detail page (F035–F041).
@@ -52,6 +53,7 @@ const ClientBillingProfiles: React.FC<ClientBillingProfilesProps> = ({ clientId 
   const [editingProfileId, setEditingProfileId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
   const [settingsProfileId, setSettingsProfileId] = useState<string | null>(null);
+  const [isMergeOpen, setIsMergeOpen] = useState(false);
 
   const reload = useCallback(async () => {
     setIsLoading(true);
@@ -372,6 +374,33 @@ const ClientBillingProfiles: React.FC<ClientBillingProfilesProps> = ({ clientId 
             {t('clientBillingProfiles.addButton', { defaultValue: 'Add profile' })}
           </Button>
         </div>
+
+        {/* The other way a profile comes into existence: an existing client
+            that was only ever separate because profiles did not exist yet. */}
+        <div className="flex items-center justify-between gap-3 rounded-md border border-dashed border-gray-300 px-4 py-3">
+          <p className="text-sm text-gray-600">
+            {t('clientBillingProfiles.mergeHelp', {
+              defaultValue:
+                'Already track a site or entity as its own client? Merge it in and it becomes a billing profile here, keeping its invoices and history.',
+            })}
+          </p>
+          <Button
+            id="merge-client-into-profile-btn"
+            type="button"
+            variant="outline"
+            onClick={() => setIsMergeOpen(true)}
+          >
+            <Merge className="mr-1 h-4 w-4" />
+            {t('clientBillingProfiles.mergeButton', { defaultValue: 'Merge a client in' })}
+          </Button>
+        </div>
+
+        <MergeClientsDialog
+          isOpen={isMergeOpen}
+          onClose={() => setIsMergeOpen(false)}
+          targetClientId={clientId}
+          onMerged={() => void reload()}
+        />
       </CardContent>
     </Card>
   );

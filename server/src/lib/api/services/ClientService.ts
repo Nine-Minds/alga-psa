@@ -28,10 +28,13 @@ import {
 } from '../schemas/client';
 import { ListOptions } from '../controllers/types';
 import { runWithTenant } from 'server/src/lib/db';
+import { analytics } from '../../analytics/posthog';
+import { AnalyticsEvents } from '../../analytics/events';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import {
   buildClientArchivedPayload,
   buildClientCreatedPayload,
+  buildClientMergedPayload,
   buildClientOwnerAssignedPayload,
   buildClientStatusChangedPayload,
   buildClientUpdatedPayload,
@@ -41,6 +44,13 @@ import {
   ensureDefaultContractForClientIfBillingConfigured,
 } from '@alga-psa/shared/billingClients/defaultContract';
 import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
+import {
+  ClientMergeBlockedError,
+  executeClientMerge,
+  previewClientMerge,
+  type ClientMergePreview,
+  type ClientMergeResult,
+} from '@alga-psa/clients/lib/clientMergeEngine';
 import { mergeClientWebsiteUpdate } from '@alga-psa/clients/lib/clientWebsiteUpdate';
 
 function maybeUserActorFromContext(context: ServiceContext) {
@@ -1038,6 +1048,212 @@ export class ClientService extends BaseService<IClient> {
     });
 
     return query;
+  }
+
+  /**
+   * Dry run of absorbing `sourceClientId` into `clientId` as a billing profile.
+   *
+   * Writes nothing. Everything the caller needs to make the per-row decisions
+   * the merge asks for — profiles, contacts, contracts, counts, blockers — comes
+   * back here, so an API client can present the same choices the wizard does
+   * instead of guessing and discovering the answer afterwards.
+   */
+  async previewMerge(
+    clientId: string,
+    sourceClientId: string,
+    context: ServiceContext
+  ): Promise<ClientMergePreview> {
+    const { knex } = await this.getKnex();
+    return withTransaction(knex, (trx) =>
+      previewClientMerge(trx, context.tenant, {
+        sourceClientId,
+        targetClientId: clientId,
+      })
+    );
+  }
+
+  async mergeClient(
+    clientId: string,
+    input: {
+      sourceClientId: string;
+      contactAssignments?: Array<{
+        contactNameId: string;
+        billingProfileId: string;
+        isManager?: boolean;
+        canViewProfileTickets?: boolean;
+      }>;
+      contractDecisions?: Array<{
+        clientContractId: string;
+        choice: 'original' | 'cutover';
+        cutoverDate?: string | null;
+      }>;
+      pinPortalGrants?: boolean;
+      externalRemapChoices?: Array<{ mappingId: string; apply: boolean }>;
+    },
+    context: ServiceContext
+  ): Promise<ClientMergeResult> {
+    const { knex } = await this.getKnex();
+    let result: ClientMergeResult;
+    try {
+      result = await withTransaction(knex, (trx) =>
+        executeClientMerge(trx, context.tenant, context.userId ?? null, {
+          sourceClientId: input.sourceClientId,
+          targetClientId: clientId,
+          contactAssignments: input.contactAssignments,
+          contractDecisions: input.contractDecisions,
+          pinPortalGrants: input.pinPortalGrants,
+          externalRemapChoices: input.externalRemapChoices,
+        })
+      );
+    } catch (error) {
+      // A refused merge is the caller asking for something impossible, not a
+      // server fault; the blockers carry the reason.
+      if (error instanceof ClientMergeBlockedError) {
+        throw new ValidationError(error.message, error.blockers);
+      }
+      throw error;
+    }
+
+    const mergedAt = new Date().toISOString();
+    await runWithTenant(context.tenant, async () => {
+      await publishWorkflowEvent({
+        eventType: 'CLIENT_MERGED',
+        payload: buildClientMergedPayload({
+          sourceClientId: result.sourceClientId,
+          targetClientId: result.targetClientId,
+          mergedByUserId: typeof context.userId === 'string' ? context.userId : undefined,
+          mergedAt,
+          strategy: 'merge_into_billing_profile',
+        }),
+        ctx: {
+          tenantId: context.tenant,
+          occurredAt: mergedAt,
+          actor: maybeUserActorFromContext(context),
+        },
+        idempotencyKey: `client_merged:${result.mergeId}`,
+      });
+    });
+
+    // Same telemetry the server action sends, so a merge driven through the API
+    // or the MCP is not invisible next to one driven from the UI.
+    analytics.capture(AnalyticsEvents.CLIENT_MERGED, {
+      merge_id: result.mergeId,
+      source_client_id: result.sourceClientId,
+      target_client_id: result.targetClientId,
+      moved_profile_count: result.movedProfileIds.length,
+      moved_counts: result.counts,
+      pinned_portal_grants: input.pinPortalGrants !== false,
+      contract_decision_count: input.contractDecisions?.length ?? 0,
+      via: 'api',
+    }, typeof context.userId === 'string' ? context.userId : undefined);
+
+    return result;
+  }
+
+  /**
+   * The contacts attached to a billing profile, with the manager label and the
+   * ticket-visibility grant.
+   */
+  async getBillingProfileContacts(
+    clientId: string,
+    billingProfileId: string,
+    context: ServiceContext
+  ): Promise<Array<{
+    contact_name_id: string;
+    full_name: string;
+    email: string | null;
+    is_manager: boolean;
+    can_view_profile_tickets: boolean;
+  }>> {
+    const { knex } = await this.getKnex();
+    return withTransaction(knex, async (trx) => {
+      await this.assertProfileBelongsToClient(trx, clientId, billingProfileId, context);
+
+      const db = tenantDb(trx, context.tenant);
+      const query = db.table('billing_profile_contacts as bpc');
+      db.tenantJoin(query, 'contacts as c', 'c.contact_name_id', 'bpc.contact_name_id');
+      const rows = await query
+        .where({ 'bpc.billing_profile_id': billingProfileId })
+        .orderBy('c.full_name', 'asc')
+        .select(
+          'bpc.contact_name_id',
+          'bpc.is_manager',
+          'bpc.can_view_profile_tickets',
+          'c.full_name',
+          'c.email'
+        );
+
+      return rows.map((row: any) => ({
+        contact_name_id: row.contact_name_id,
+        full_name: row.full_name ?? '',
+        email: row.email ?? null,
+        is_manager: Boolean(row.is_manager),
+        can_view_profile_tickets: Boolean(row.can_view_profile_tickets),
+      }));
+    });
+  }
+
+  /** Replaces the profile's contact list; omitting a contact removes it. */
+  async setBillingProfileContacts(
+    clientId: string,
+    billingProfileId: string,
+    contacts: Array<{
+      contact_name_id: string;
+      is_manager?: boolean;
+      can_view_profile_tickets?: boolean;
+    }>,
+    context: ServiceContext
+  ): Promise<void> {
+    const { knex } = await this.getKnex();
+    await withTransaction(knex, async (trx) => {
+      await this.assertProfileBelongsToClient(trx, clientId, billingProfileId, context);
+
+      const db = tenantDb(trx, context.tenant);
+      const requested = [...new Map(contacts.map((entry) => [entry.contact_name_id, entry])).values()];
+
+      if (requested.filter((entry) => entry.is_manager).length > 1) {
+        throw new ValidationError('A billing profile can only have one manager');
+      }
+
+      if (requested.length > 0) {
+        const owned = await db.table('contacts')
+          .where({ client_id: clientId })
+          .whereIn('contact_name_id', requested.map((entry) => entry.contact_name_id))
+          .select('contact_name_id');
+        if (owned.length !== requested.length) {
+          throw new ValidationError('One of the selected contacts does not belong to this client');
+        }
+      }
+
+      await db.table('billing_profile_contacts')
+        .where({ billing_profile_id: billingProfileId })
+        .del();
+      if (requested.length > 0) {
+        await db.table('billing_profile_contacts').insert(requested.map((entry) => ({
+          tenant: context.tenant,
+          billing_profile_id: billingProfileId,
+          contact_name_id: entry.contact_name_id,
+          is_manager: Boolean(entry.is_manager),
+          can_view_profile_tickets: Boolean(entry.can_view_profile_tickets),
+          created_by: context.userId,
+        })));
+      }
+    });
+  }
+
+  private async assertProfileBelongsToClient(
+    trx: Knex.Transaction,
+    clientId: string,
+    billingProfileId: string,
+    context: ServiceContext
+  ): Promise<void> {
+    const profile = await tenantDb(trx, context.tenant)
+      .table('client_billing_profiles')
+      .where({ billing_profile_id: billingProfileId })
+      .first('client_id');
+    if (!profile || profile.client_id !== clientId) {
+      throw new NotFoundError('Billing profile not found for this client');
+    }
   }
 
   /**

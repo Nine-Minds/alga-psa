@@ -545,6 +545,7 @@ export const createRenewalDraftForQueueItem = withAuth(async (
         'cc.notice_period_days',
         'cc.renewal_term_months',
         'cc.use_tenant_renewal_defaults',
+        'cc.billing_profile_id',
         'c.contract_name',
         'c.contract_description',
         'c.billing_frequency',
@@ -616,6 +617,8 @@ export const createRenewalDraftForQueueItem = withAuth(async (
       po_required: false,
       po_number: null,
       po_amount: null,
+      // A renewal keeps billing where the expiring term billed it.
+      billing_profile_id: (source as any).billing_profile_id ?? null,
     };
 
     if (hasTemplateContractIdColumn) {

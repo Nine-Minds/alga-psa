@@ -221,7 +221,7 @@ export const getDashboardMetrics = withAuth(async (
               'is_closed': false
             }),
           visibility,
-          { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id' }
+          { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id', billingProfileColumn: 'tickets.billing_profile_id' }
         ).count('ticket_id as count') as unknown as Promise<Array<{ count: string }>>,
 
         // Get active projects count
@@ -344,7 +344,7 @@ export const getRecentActivity = withAuth(async (
             .orWhere('comments.publish_state', 'published');
         })
         .modify((queryBuilder: Knex.QueryBuilder) => {
-          applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id' });
+          applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id', billingProfileColumn: 'tickets.billing_profile_id' });
         })
         .orderBy('tickets.updated_at', 'desc')
         .limit(3);

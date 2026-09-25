@@ -542,7 +542,13 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // those and before clients. The portal access grants reference profiles, so
   // they go first (S12).
   'client_portal_user_billing_profiles',
+  // Profile contacts reference both a profile and a contact; contacts are
+  // deleted after clients, so this has to go before the profiles it hangs off.
+  'billing_profile_contacts',
   'client_billing_profiles',
+  // Merge audit rows reference nothing but the tenant, so the position is
+  // advisory — listed beside the clients they describe so the order reads.
+  'client_merges',
   'clients',    // Delete clients FIRST (after NULLing account_manager references)
   'contacts',   // Delete contacts SECOND (after clients, before users that have NOT NULL contact_id)
   'contact_email_type_definitions', // contacts.primary_email_custom_type_id → this table (RESTRICT)

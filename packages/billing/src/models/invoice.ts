@@ -535,6 +535,51 @@ const Invoice = {
       throw new Error(`Customer client details not found for invoice ${invoiceId}`);
     }
 
+    // The profile this invoice bills, and the identity it prints. Only read for
+    // an invoice that carries a profile, so a pre-profile invoice costs nothing
+    // and reads exactly as it always did.
+    const clientBillingProfiles = invoice.billing_profile_id
+      ? await tenantDb(knexOrTrx, tenant)
+        .table('client_billing_profiles')
+        .where({ client_id: invoice.client_id })
+        .select(
+          'billing_profile_id',
+          'name',
+          'bill_to_name',
+          'bill_to_location_id',
+          'is_default',
+        ) as Array<{
+          billing_profile_id: string;
+          name: string;
+          bill_to_name: string | null;
+          bill_to_location_id: string | null;
+          is_default: boolean;
+        }>
+      : [];
+    const billingProfile = clientBillingProfiles.find(
+      (profile) => profile.billing_profile_id === invoice.billing_profile_id,
+    ) ?? null;
+    // A profile's bill-to address is a location of the same client; when the
+    // profile names one, that is the address the invoice is billed to.
+    const billToLocation = billingProfile?.bill_to_location_id
+      ? await tenantScopedTable(knexOrTrx, tenant, 'client_locations')
+        .where({
+          location_id: billingProfile.bill_to_location_id,
+          client_id: invoice.client_id,
+        })
+        .select(
+          knexOrTrx.raw(`CONCAT_WS(', ',
+            NULLIF(address_line1, 'N/A'),
+            address_line2,
+            NULLIF(city, 'N/A'),
+            state_province,
+            postal_code,
+            NULLIF(country_name, 'Unknown')
+          ) as location_address`),
+        )
+        .first() as { location_address?: string | null } | undefined
+      : undefined;
+
     let clientProperties: { logo?: string } = {};
     if (typeof client.properties === 'string') {
       try {
@@ -629,10 +674,18 @@ const Invoice = {
       po_number: invoice.po_number ?? null,
       client_contract_id: invoice.client_contract_id ?? null,
       client: {
-        name: client.client_name || '',
+        // Bill-to, not the client's own name: a profile that carries its own
+        // billing identity is the customer on this document. NULL inherits the
+        // client name, which is every unsegmented invoice.
+        name: billingProfile?.bill_to_name?.trim() || client.client_name || '',
         logo: logoUrl || clientProperties.logo || '',
-        address: client.location_address || ''
+        address: billToLocation?.location_address || client.location_address || ''
       },
+      billing_profile_id: invoice.billing_profile_id ?? null,
+      billing_profile_name: billingProfile?.name ?? null,
+      // D6 — profile surfaces stay invisible until a client actually holds more
+      // than one profile.
+      client_has_multiple_billing_profiles: clientBillingProfiles.length > 1,
       contact: {
         name: contact?.full_name || '',
         address: ''

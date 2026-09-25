@@ -353,7 +353,11 @@ export class TicketService extends BaseService<ITicket> {
     visibility: ContactVisibilityContext
   ): Knex.QueryBuilder {
     query = query.where('t.client_id', visibility.clientId);
-    return applyTicketVisibilityFilter(query, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id' });
+    return applyTicketVisibilityFilter(query, visibility, {
+      boardColumn: 't.board_id',
+      contactColumn: 't.contact_name_id',
+      billingProfileColumn: 't.billing_profile_id',
+    });
   }
 
   /**

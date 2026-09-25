@@ -69,6 +69,35 @@ vi.mock('../hooks/useTicketFormOptions', () => ({
   useTicketFormOptions: () => ({ options: null }),
 }));
 
+// The real hook calls a `'use server'` action (createTenantKnex) that isn't
+// mocked here. `TicketingDashboard` is mocked to `null` below, so the picker
+// this hook feeds is never actually rendered — but the hook itself still runs
+// as part of `TicketingDashboardContainer`, and its unmocked DB round trip can
+// settle after the test (and jsdom) tear down, throwing an unhandled
+// "window is not defined" rejection unrelated to the sort contract under test.
+vi.mock('@alga-psa/list-views/hooks', () => ({
+  useListViews: () => ({
+    isLoading: false,
+    views: [],
+    myViews: [],
+    sharedViews: [],
+    activeView: null,
+    defaultViewId: null,
+    canShare: false,
+    isDirty: false,
+    isSaving: false,
+    applyView: vi.fn(),
+    discardChanges: vi.fn(),
+    saveChanges: vi.fn(async () => false),
+    saveAsNew: vi.fn(async () => false),
+    updateView: vi.fn(async () => false),
+    deleteView: vi.fn(async () => false),
+    setDefault: vi.fn(async () => false),
+    linkFor: vi.fn(() => ''),
+  }),
+  writeViewParam: vi.fn(),
+}));
+
 const { default: TicketingDashboardContainer } = await import('./TicketingDashboardContainer');
 
 const consolidatedData = {
