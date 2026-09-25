@@ -1,22 +1,16 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { knex as createKnex } from 'knex';
+import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import { getPlaywrightDbConfig } from './utils/playwrightDatabaseConfig';
+import { createTestDbConnection } from '@main-test-utils/dbConfig';
 import { assetWarrantyEndSource } from '../../../../../packages/jobs/src/lib/dateTriggers/sources/assetWarrantyEnd';
 import { clientAnniversarySource } from '../../../../../packages/jobs/src/lib/dateTriggers/sources/clientAnniversary';
 import { contractRenewalDecisionSource } from '../../../../../packages/jobs/src/lib/dateTriggers/sources/contractRenewalDecision';
 
-const enabled = process.env.DATE_TRIGGER_INTEGRATION === '1';
+describe('date trigger source database integration', () => {
+  let db: Knex;
 
-describe.skipIf(!enabled)('date trigger source database integration', () => {
-  const config = getPlaywrightDbConfig();
-  const db = createKnex({
-    client: 'pg',
-    connection: { host: config.host, port: config.port, database: config.database, user: config.adminUser, password: config.adminPassword, ssl: config.ssl },
-    pool: { min: 0, max: 2 },
-  });
-
-  afterAll(async () => { await db.destroy(); });
+  beforeAll(async () => { db = await createTestDbConnection(); });
+  afterAll(async () => { await db?.destroy(); });
 
   it('finds the tenant-local anniversary and non-retired warranty date, excluding retired assets', async () => {
     const tenant = await db('tenants').first('tenant');

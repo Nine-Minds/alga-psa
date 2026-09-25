@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { knex as createKnex } from 'knex';
+import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import { getPlaywrightDbConfig } from './utils/playwrightDatabaseConfig';
+import { createTestDbConnection } from '@main-test-utils/dbConfig';
 import { createDateTriggerScanHandler } from '../../../../../packages/jobs/src/lib/handlers/dateTriggerScanHandler';
 import { emitDateDomainEventOnce, normalizeDateDomainKeyDate, toTenantLocalDate } from '../../../../../packages/event-bus/src/workflow/dateDomainEvents';
 import { launchDateTriggeredWorkflows, buildDateTriggerFireKey } from '../../../../packages/workflows/src/lib/dateTriggerLauncher';
@@ -13,16 +13,14 @@ vi.mock('../../../../packages/workflows/src/lib/workflowRuntimeV2Temporal', asyn
   startWorkflowRuntimeV2TemporalRun: mocks.temporalStart,
 }));
 
-const enabled = process.env.DATE_TRIGGER_INTEGRATION === '1';
-
-describe.skipIf(!enabled)('date trigger scan and workflow launch integration', () => {
-  const config = getPlaywrightDbConfig();
-  const db = createKnex({ client: 'pg', connection: { host: config.host, port: config.port, database: config.database, user: config.adminUser, password: config.adminPassword, ssl: config.ssl }, pool: { min: 0, max: 2 } });
-  beforeAll(() => {
+describe('date trigger scan and workflow launch integration', () => {
+  let db: Knex;
+  beforeAll(async () => {
+    db = await createTestDbConnection();
     mocks.publish.mockResolvedValue(undefined);
     mocks.temporalStart.mockImplementation(async ({ runId }: { runId: string }) => ({ workflowId: `stub:${runId}`, firstExecutionRunId: null }));
   });
-  afterAll(async () => { await db.destroy(); });
+  afterAll(async () => { await db?.destroy(); });
 
   it('creates three real deduped runs and one ledger publish per event, then shares keys with save emitters', async () => {
     const tenantRow = await db('tenants').first('tenant');
