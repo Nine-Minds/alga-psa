@@ -225,6 +225,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   storage_usage: { scope: 'tenant' },
   external_entity_mappings: { scope: 'tenant' },
   external_entity_links: { scope: 'tenant' },
+  list_views: { scope: 'tenant' },
   external_tax_imports: { scope: 'tenant' },
   feature_toggles: { scope: 'tenant' },
   gmail_processed_history: { scope: 'tenant' },

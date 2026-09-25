@@ -1,4 +1,5 @@
 import type { ITicketListFilters } from '@alga-psa/types';
+import { normalizeAssignedToIdList } from './ticketFilterUtils';
 import {
   TICKET_COLUMNS,
   resolveTicketColumnOrder,
@@ -310,7 +311,7 @@ export function validateCapturedFilters(
   out.clientId = keepScalar(filters.clientId, known.clientIds);
   out.categoryIds = keepList(filters.categoryIds, known.categoryIds);
   out.excludeCategoryIds = keepList(filters.excludeCategoryIds, known.categoryIds);
-  out.assignedToIds = keepList(filters.assignedToIds, known.userIds);
+  out.assignedToIds = keepList(normalizeAssignedToIdList(filters.assignedToIds), known.userIds);
   out.assignedTeamIds = keepList(filters.assignedTeamIds, known.teamIds);
   out.tags = keepList(filters.tags, known.tags);
 

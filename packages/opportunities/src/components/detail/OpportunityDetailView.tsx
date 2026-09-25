@@ -17,6 +17,7 @@ import type { IOpportunityDetail, IUser, OpportunityConfidence } from '@alga-psa
 import { oneTimeCents } from '../../lib/pipelineReporting';
 import type { OpportunityStepAssignee } from '../../actions/opportunityStepActions';
 import { WhySentenceText } from '../WhySentenceText';
+import { OpportunityDocumentsTile } from './OpportunityDocumentsTile';
 
 const OPPORTUNITY_TYPE_DEFAULTS = {
   new_logo: 'New client',
@@ -253,6 +254,8 @@ export function OpportunityDetailView({
           </BentoTileEmptyAction>
         ) : null}
       </BentoTile>
+
+      <OpportunityDocumentsTile opportunityId={detail.opportunity_id} />
 
       {commitments}
 

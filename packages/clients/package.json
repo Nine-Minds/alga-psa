@@ -38,6 +38,10 @@
       "types": "./src/lib/onlineMeetingArtifactCapture.ts",
       "import": "./src/lib/onlineMeetingArtifactCapture.ts"
     },
+    "./lib/clientSince": {
+      "import": "./src/lib/clientSince.ts",
+      "types": "./src/lib/clientSince.ts"
+    },
     "./lib/contactActionErrorCodes": {
       "import": "./src/lib/contactActionErrorCodes.ts",
       "types": "./src/lib/contactActionErrorCodes.ts"
@@ -45,6 +49,10 @@
     "./lib/createContactRoute": {
       "import": "./src/lib/createContactRoute.ts",
       "types": "./src/lib/createContactRoute.ts"
+    },
+    "./lib/clientWebsiteUpdate": {
+      "import": "./src/lib/clientWebsiteUpdate.ts",
+      "types": "./src/lib/clientWebsiteUpdate.ts"
     },
     "./context/ClientCrossFeatureContext": {
       "types": "./src/context/ClientCrossFeatureContext.tsx",
@@ -72,6 +80,7 @@
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
     "@alga-psa/formatting": "*",
+    "@alga-psa/list-views": "*",
     "@alga-psa/inventory": "*",
     "@alga-psa/shared": "*",
     "@alga-psa/storage": "*",

@@ -612,6 +612,15 @@ deploymentProfile: hosted
 # Trust X-Forwarded-Host from the reverse proxy without adopting the appliance
 # profile (self-hosted behind a Host-rewriting proxy). Off by default.
 trustForwardedHost: false
+# Mobile Universal/App Links. When set, the server serves
+# /.well-known/apple-app-site-association and /.well-known/assetlinks.json so
+# https://<host>/msp/tickets/* opens the AlgaPSA app. The app binary only claims
+# the hosted domain, so only the hosted deployment sets these; empty leaves both
+# routes answering 404. androidCertFingerprints is a comma-separated list of
+# SHA-256 signing-certificate fingerprints (Play app-signing key).
+mobileAppLinks:
+  appleTeamId: ""
+  androidCertFingerprints: ""
 
 # Hosted Environment Configuration
 # Used for cloud-hosted environments (different from dev environments)

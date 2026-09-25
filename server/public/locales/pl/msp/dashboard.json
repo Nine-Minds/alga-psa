@@ -110,7 +110,9 @@
       "hiding": "Ukrywanie...",
       "hide": "Ukryj",
       "dismiss": "Ukryj {{title}}",
-      "restoring": "Przywracanie..."
+      "restoring": "Przywracanie...",
+      "hideSection": "Ukryj sekcję",
+      "hidingSection": "Ukrywanie sekcji…"
     },
     "hidden": {
       "title": "Ukryte karty konfiguracji ({{count}})",
@@ -179,7 +181,14 @@
     },
     "errors": {
       "dismissFailed": "Nie udało się ukryć kroku onboardingu.",
-      "restoreFailed": "Nie udało się przywrócić kroku onboardingu."
+      "restoreFailed": "Nie udało się przywrócić kroku onboardingu.",
+      "dismissSectionFailed": "Nie udało się ukryć sekcji wdrażania.",
+      "restoreSectionFailed": "Nie udało się przywrócić sekcji wdrażania."
+    },
+    "preferences": {
+      "title": "Preferencje pulpitu",
+      "description": "Ukończona sekcja wdrażania jest ukryta na pulpicie.",
+      "restoreSection": "Przywróć sekcję wdrażania"
     }
   },
   "greeting": {

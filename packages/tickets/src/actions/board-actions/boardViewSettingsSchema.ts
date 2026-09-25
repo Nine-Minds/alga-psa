@@ -54,7 +54,7 @@ const capturedFiltersShape: { [K in CapturableFilterKey]: z.ZodTypeAny } = {
     contactId: z.string(),
     showOpenOnly: z.boolean(),
     tags: z.array(z.string()),
-    assignedToIds: z.array(z.string()),
+    assignedToIds: z.array(z.string().uuid()),
     assignedTeamIds: z.array(z.string()),
     includeUnassigned: z.boolean(),
     assignedToMe: z.boolean(),

@@ -8,7 +8,7 @@ version: '3.8'
 services:
   # MinIO - S3-compatible object storage for testing
   minio:
-    image: quay.io/minio/minio:latest
+    image: bitnamilegacy/minio:2025.4.22
     container_name: ${APP_NAME:-alga}_minio_test
     ports:
       - "9000:9000"  # MinIO API
@@ -17,9 +17,8 @@ services:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
       MINIO_DOMAIN: minio
-    command: server /data --console-address ":9001"
     volumes:
-      - minio_test_data:/data
+      - minio_test_data:/bitnami/minio/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 10s
@@ -30,7 +29,7 @@ services:
 
   # MinIO Client - for bucket initialization
   minio-init:
-    image: quay.io/minio/mc:latest
+    image: bitnamilegacy/minio-client:2025.4.16
     container_name: ${APP_NAME:-alga}_minio_init
     depends_on:
       minio:

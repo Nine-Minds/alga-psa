@@ -195,6 +195,9 @@ test('built email service ingests MIME, preserves inline quotations, threads rep
       .select('d.file_id', 'd.document_name');
     expect(imageDocuments).toHaveLength(1);
     expect(imageDocuments[0].document_name).toBe('inline-logo.png');
+    // The page was opened before processing finished, so the description may
+    // still hold the pre-rewrite cid: reference; reload to read the settled body.
+    await page.reload();
     await expect(description.locator(`img[src*="/api/documents/view/${imageDocuments[0].file_id}"]`)).toHaveCount(1);
 
     // Both persisted bodies (the new-ticket description and the originating

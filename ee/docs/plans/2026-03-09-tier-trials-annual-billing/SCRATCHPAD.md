@@ -30,7 +30,7 @@ Rolling notes for implementing trials, annual billing, bug fixes, and documentat
 - (2026-03-09) JWT already refreshes plan every 5 min — trial_end and subscription_status can piggyback on same query
 - (2026-03-09) Header component at `server/src/components/layout/Header.tsx` — trial banner goes next to tenant badge (left side)
 - (2026-03-09) CancellationFeedbackModal at `ee/server/src/components/settings/account/CancellationFeedbackModal.tsx` — pattern for Premium trial request form
-- (2026-03-09) NineMinds extension TenantManagementView at `ee/extensions/nineminds-reporting/src/iframe/main.tsx` (lines ~2908-3700)
+- (2026-03-09) NineMinds extension TenantManagementView at `nm-extensions/packages/control-panel/src/iframe/main.tsx` (lines ~2908-3700) — the extension moved out of alga-psa into the private nm-extensions repo, same registry name `com.alga.ninemindsreporting`
 - (2026-03-09) Extension API calls go through WASM proxy: UI → bridge → handler.ts → uiProxy → Next.js API
 - (2026-03-09) All tenant management APIs require master billing tenant auth
 - (2026-03-09) `sendEventEmail` at `server/src/lib/notifications/sendEventEmail.ts` — for trial request emails
@@ -52,8 +52,8 @@ Rolling notes for implementing trials, annual billing, bug fixes, and documentat
 | `ee/server/src/components/settings/account/AccountManagement.tsx` | Trial status, request form |
 | `ee/server/src/components/settings/account/CancellationFeedbackModal.tsx` | Pattern for request form |
 | `ee/server/src/lib/actions/license-actions.ts` | Server actions for trials |
-| `ee/extensions/nineminds-reporting/src/iframe/main.tsx` | Extension UI for trial management |
-| `ee/extensions/nineminds-reporting/src/handler.ts` | Extension handler routing |
+| `nm-extensions/packages/control-panel/src/iframe/main.tsx` | Extension UI for trial management (private nm-extensions repo) |
+| `nm-extensions/packages/control-panel/src/handler.ts` | Extension handler routing (private nm-extensions repo) |
 
 ## Stripe Trial Implementation Notes
 
