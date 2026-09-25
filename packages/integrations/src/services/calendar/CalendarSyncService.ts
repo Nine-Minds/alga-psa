@@ -259,7 +259,11 @@ export class CalendarSyncService {
 
       // Check for existing mapping
       const existingMapping = await this.getMappingByExternalEvent(externalEventId, calendarProviderId, tenant);
-      if (existingMapping?.external_last_modified && externalEvent.updated === existingMapping.external_last_modified) {
+      const incomingModifiedAt = externalEvent.updated ? new Date(externalEvent.updated).getTime() : NaN;
+      const mappedModifiedAt = existingMapping?.external_last_modified
+        ? new Date(existingMapping.external_last_modified).getTime()
+        : NaN;
+      if (Number.isFinite(incomingModifiedAt) && incomingModifiedAt === mappedModifiedAt) {
         return { success: true, skipped: true, reason: 'External version already synchronized' };
       }
       if (existingMapping) {
@@ -269,6 +273,7 @@ export class CalendarSyncService {
         }
       }
 
+      let rePushEntryId: string | null = null;
       const result = await withTransaction(knex, async (trx) => {
         if (existingMapping) {
           // Update existing schedule entry
@@ -280,20 +285,11 @@ export class CalendarSyncService {
             };
           }
 
-          const providerUser = provider.user_id
-            ? await tenantDb(trx, tenant).table('users').where('user_id', provider.user_id).first()
-            : null;
-          if (providerUser) {
-            const viewer = { user_id: providerUser.user_id, user_type: providerUser.user_type, tenant };
-            const canViewAll = await hasPermission(viewer, 'user_schedule', 'update', trx);
-            const access = await resolveCalendarAccess(trx, tenant, viewer, canViewAll);
-            if (!evaluateEntryAccess(existingEntry, access).canEdit) {
-              const pushed = await this.syncScheduleEntryToExternal(existingEntry.entry_id, provider.id, true, tenant);
-              if (!pushed.success) return pushed;
-              await tenantDb(trx, tenant).table('calendar_event_mappings').where('id', existingMapping.id)
-                .update({ external_last_modified: externalEvent.updated, updated_at: new Date().toISOString() });
-              return { success: true, skipped: true, reason: 'Provider user cannot edit this entry' };
-            }
+          const access = await this.resolveProviderUserAccess(trx, tenant, provider.user_id);
+          if (!access) return { success: true, skipped: true, reason: 'Provider user not found' };
+          if (!evaluateEntryAccess(existingEntry, access).canEdit) {
+            rePushEntryId = existingEntry.entry_id;
+            return { success: true, skipped: true, reason: 'Provider user cannot edit this entry' };
           }
 
           // Check for conflicts
@@ -536,6 +532,10 @@ export class CalendarSyncService {
           return syncResult;
         }
       });
+      if (rePushEntryId) {
+        const pushed = await this.syncScheduleEntryToExternal(rePushEntryId, provider.id, true, tenant);
+        if (!pushed.success) return pushed;
+      }
       return result;
     } catch (error: any) {
       console.error(`Failed to sync external event ${externalEventId} to schedule entry:`, error);
@@ -660,17 +660,25 @@ export class CalendarSyncService {
     const entry = await ScheduleEntry.get(knex, entryId);
     if (!entry) return { success: true };
     if (entry.calendar_id && await tenantDb(knex, tenant).table('calendars').where({ calendar_id: entry.calendar_id, calendar_type: 'group', is_archived: true }).first()) return { success: true };
-    const user = await tenantDb(knex, tenant).table('users').where('user_id', provider.user_id).first();
-    if (!user) return { success: false, error: 'Provider user not found' };
-    const viewer = { user_id: user.user_id, user_type: user.user_type, tenant };
-    const canViewAll = await hasPermission(viewer, 'user_schedule', 'update', knex);
-    const access = await resolveCalendarAccess(knex, tenant, viewer, canViewAll);
+    const access = await this.resolveProviderUserAccess(knex, tenant, provider.user_id);
+    if (!access) return { success: false, error: 'Provider user not found' };
     if (evaluateEntryAccess(entry, access).canEdit && entry.assigned_user_ids.length === 1) return this.deleteScheduleEntry(entryId, providerId, 'all', true, tenant);
     if (entry.assigned_user_ids.includes(provider.user_id)) {
+      // A read-only sole assignee may be removed, leaving group or personal entries unassigned intentionally.
       await ScheduleEntry.update(knex, entryId, { ...entry, assigned_user_ids: entry.assigned_user_ids.filter((id: string) => id !== provider.user_id) }, 'all' as any);
     }
     await tenantDb(knex, tenant).table('calendar_event_mappings').where({ schedule_entry_id: entryId, calendar_provider_id: providerId }).del();
     return { success: true };
+  }
+
+  private async resolveProviderUserAccess(knex: any, tenant: string, providerUserId?: string | null) {
+    if (!providerUserId) return null;
+    const user = await tenantDb(knex, tenant).table('users').where('user_id', providerUserId).first();
+    if (!user) return null;
+    const viewer = { user_id: user.user_id, user_type: user.user_type, tenant };
+    // scheduleActions.ts uses this same user_schedule:update check before resolving calendar access.
+    const canViewAll = await hasPermission(viewer, 'user_schedule', 'update', knex);
+    return resolveCalendarAccess(knex, tenant, viewer, canViewAll);
   }
 
   async deleteScheduleEntry(
