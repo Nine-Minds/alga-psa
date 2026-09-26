@@ -147,6 +147,61 @@ describe.each(FAMILIES)('standard $family templates speak the recipient language
 });
 
 describe('the catalog migrations mirror the catalog in code', () => {
+  it('localizes serial labels without changing serial data bindings and is idempotent', async () => {
+    const migration = await import(
+      /* @vite-ignore */ path.resolve(__dirname,
+        '../../../../../server/migrations/20260813120000_upsert_i18n_standard_document_template_asts.cjs')
+    );
+    // Exercise the shared label vocabulary through the migration's write path.
+    // Pick lists themselves are code-backed, not rows in either migrated table.
+    let ast = {
+      layout: { id: 'root', type: 'document', children: [
+        { id: 'serials-note', type: 'text', content: {
+          type: 'literal', value: 'Allocated serial numbers; subject to change at fulfillment.',
+        } },
+        { id: 'items', type: 'dynamic-table', columns: [
+          { id: 'serials', header: 'Serial numbers',
+            value: { type: 'path', path: 'allocated_serials_display' } },
+        ] },
+      ] },
+    };
+    const updates: unknown[] = [];
+    const knex = Object.assign((table: string) => {
+      expect(table).toBe('standard_invoice_templates');
+      return {
+        select: async () => [{ template_id: 'standard-1', standard_invoice_template_code: 'standard-default', templateAst: ast }],
+        where: (selector: unknown) => {
+          expect(selector).toEqual({ template_id: 'standard-1' });
+          return { update: async (row: { templateAst: string }) => {
+            updates.push(row);
+            ast = JSON.parse(row.templateAst);
+          } };
+        },
+      };
+    }, {
+      schema: {
+        hasTable: async (table: string) => table === 'standard_invoice_templates',
+        hasColumn: async () => true,
+      },
+      raw: (_sql: string, values: string[]) => values[0],
+      fn: { now: () => '2026-09-26' },
+    });
+
+    await migration.up(knex);
+    expect(ast.layout.children).toEqual([
+      { id: 'serials-note', type: 'text', content: {
+        type: 'i18n', i18nKey: 'labels.allocatedSerialsNote',
+        defaultValue: 'Allocated serial numbers; subject to change at fulfillment.',
+      } },
+      { id: 'items', type: 'dynamic-table', columns: [
+        { id: 'serials', header: { i18nKey: 'labels.serialNumbers', defaultValue: 'Serial numbers' },
+          value: { type: 'path', path: 'allocated_serials_display' } },
+      ] },
+    ]);
+    await migration.up(knex);
+    expect(updates).toHaveLength(1);
+  });
+
   it('maps every shipped English label to the same key', async () => {
     const migration = await import(
       /* @vite-ignore */ path.resolve(
