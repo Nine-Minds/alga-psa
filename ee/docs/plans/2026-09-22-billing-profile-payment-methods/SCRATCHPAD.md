@@ -53,9 +53,150 @@
 
 ## Commands
 
-- Run migrations: `cd server && npx knex migrate:latest --knexfile knexfile.cjs`,
-  run against the `alga-psa-local-test` stack.
+- Do not run `knex migrate:latest` against the shared `alga-psa-local-test`
+  stack: it contains EE and other-branch migration records. The payment-method
+  migration is already applied; verify its schema and migration row before
+  considering any further migration action.
 - Dev server: port 3421.
+
+## Environment recovery (2026-09-26, takeover inspection)
+
+Live acceptance remains blocked. No new payment-method defect was established.
+
+- Storage has 7.5 GiB available on the shared 150 GiB filesystem. The builder
+  moved this worktree's generated `server/.next` to
+  `/tmp/alga-billing-profile-next-cache-20260926`; that directory exists on the
+  separate root filesystem. Leave the old cache there while diagnosing the
+  recovered server. Monitor free space during compilation.
+- Port 3421 has no listener. Board project
+  `279f76b9-5712-403a-b286-8ace5b62713f` remains at Draft Implementation with
+  run `45ffabe3-d7ef-4d84-a9aa-34cffa4a0fd5` recorded as queued. Its annotations
+  show that ensuring `dev-server` resumed it and the board suspended it three
+  seconds later. The shared template declares `dev-server` for Implement and
+  Smoke Test, but not Draft Implementation.
+- An operator must enable the service through the supported board lifecycle
+  while this verification runs, or reconcile the active run and hand off to
+  a service-using step. Do not mark smoke verification passed to advance the
+  card, change the shared template for all projects, or launch an unmanaged
+  server to evade suspension. Once the lifecycle permits it, use:
+
+  ```bash
+  alga-dev workflow-restart-service --projectId=279f76b9-5712-403a-b286-8ace5b62713f --name=dev-server
+  ```
+
+- The target worktree lacks `secrets/alga_auth_key`,
+  `secrets/ninjaone_client_id`, and `secrets/ninjaone_client_secret`, all mounted
+  by the EE Compose `temporal-worker`. Docker labels identify
+  `feature-alga-2026-0002516-ticket-timeline-shows-0m-for-a` as the local-test
+  stack's source worktree; those files are absent there too. Restore the
+  existing values from the authorized development source. Do not generate a
+  replacement authentication key.
+- Port 7233 belongs to `temporal-workflows-temporal-1`, whose Compose working
+  directory is `fix-marketing-workflow-fanout-routing/ee/temporal-workflows`.
+  Port 7429 belongs to `alga-2578-temporal`. Neither establishes this card's
+  worker readiness. No invoice-email worker container is running.
+- `packages/jobs/src/lib/jobs/runners/TemporalJobRunner.ts` defaults to
+  `localhost:7233`, namespace `default`, and queue `alga-jobs`. Configure the
+  server and worker explicitly for the same intended Temporal service and
+  namespace. The worker configuration in
+  `ee/temporal-workflows/src/workerConfig.ts` always includes `alga-jobs` and
+  `sla-workflows`; avoid accidentally polling another project's queues.
+  Host and container addresses may differ while identifying the same service.
+  Confirm worker pollers and job completion, not just an open TCP port.
+
+### Checks to finish after recovery
+
+1. Verify sign-in on localhost and 127.0.0.1 after compilation. For a remaining
+   431, capture request-header sizes without recording cookie values. Compare
+   with a clean browser context before attributing the failure to cookies.
+   For the translation spinner, inspect failed translation/script requests,
+   console errors, and HMR alongside current server logs. Historical evidence
+   does not establish either cause.
+2. Save and reload profile overrides and inheritance for payment method and
+   terms. Generate invoices for sibling profiles, verify method snapshots and
+   due dates, then verify that later profile edits leave snapshots unchanged.
+3. Check portal row menus, invoice details, and direct pay routes for Check
+   and Bank Transfer; verify retained Credit Card and null-snapshot behavior.
+4. Submit invoice emails through the EE job path to the development SMTP sink
+   (previously SMTP 3035, control 9187). Confirm captured recipients and content:
+   offline invoices keep their portal link and omit Stripe Pay Now. Verify
+   card behavior with the intended test payment-provider configuration.
+
+## Deploy-fix verification handoff (2026-09-26)
+
+The implementation stayed unchanged. `git status --short` was clean at the
+start of this pass, and the initial handoff was `df161e6faf`. Storage currently
+has 7.6 GiB available (95% used); Btrfs reports 7.59 GiB free estimated and
+only 1 MiB unallocated device space. `server/.next` is only 12 KiB. The
+previously moved 6.0 GiB cache remains at
+`/tmp/alga-billing-profile-next-cache-20260926`; it was not removed. The
+board-managed service log has no matching ENOSPC, 431, translation, or ready
+entries, but it contains no new app run to validate. No service listener is on
+3421, and HTTP to localhost:3421 fails to connect.
+
+The board reports `dev-server` suspended with reason `"Draft Implementation"
+does not use it`. The single requested `workflow-restart-service` attempt was
+rejected: `No live service "dev-server" for project`. The service remains
+suspended. An operator must transition this card to a service-using lifecycle
+step (or apply the supported lifecycle override) before browser acceptance.
+Browser 431 and translation-spinner behavior could not be reproduced, and no
+sign-in or authenticated billing screen is claimed as verified.
+
+Fresh automated evidence:
+
+- `cd server && npx vitest run src/test/integration/billing/billingProfilePaymentMethod.integration.test.ts --coverage.enabled=false` — 7/7 passed. The fixture explicitly targets the dedicated `test_db_billing_profile_payment_method`, not `server`.
+- `cd server && npx vitest run ../packages/billing/src/actions/invoiceEmailLinkContext.offlinePayment.test.ts ../packages/billing/src/lib/adapters/invoiceAdapters.test.ts ../packages/client-portal/src/actions/clientPaymentActions.offlinePayment.test.ts ../packages/client-portal/src/components/billing/InvoicesTab.paymentMethods.test.tsx --coverage.enabled=false` — 32/32 passed.
+- `cd server && NODE_OPTIONS=--max-old-space-size=12288 npm run typecheck` — passed.
+- `cd packages/billing && npm run typecheck && npm run build` — passed (typecheck and tsup build).
+- `cd packages/client-portal && npm run typecheck` — passed. `npm run build` still fails with `No input files, try "tsup <your-file>" instead`, the known package build configuration issue; no new client-portal build claim is made.
+
+The current `3035`/`9187` SMTP sink belongs to the unrelated
+`feature-alga-2026-0002521-quote-list-send-dialog-lacks-t` worktree (state file
+under its private review directory); it was not used or inspected for this
+feature's delivery. The target `.env.localtest` has no SMTP or Temporal
+settings, so no target SMTP route to that sink is configured. Port 7233
+belongs to `fix-marketing-workflow-fanout-routing/ee/temporal-workflows`, and
+the local test stack's Compose labels point to a different worktree. No
+invoice-email worker container is running for this target. The target EE
+checkout still lacks root `secrets/alga_auth_key`,
+`secrets/ninjaone_client_id`, and `secrets/ninjaone_client_secret`; restore those existing
+values from the authorized development secret source before worker execution.
+The target worker is defined in root `docker-compose.ee.yaml`, with secret
+file declarations in `docker-compose.base.yaml`. Its defaults are namespace
+`default`, address `temporal-dev:7233`, and job queue `alga-jobs` (from
+`TEMPORAL_JOB_TASK_QUEUE`). It explicitly polls `tenant-workflows`,
+`portal-domain-workflows`, `email-domain-workflows`, and `alga-jobs`.
+The standalone `ee/temporal-workflows/docker-compose.yaml` uses different
+defaults and is not the target local-test stack configuration. The server job runner
+defaults to `localhost:7233`, namespace `default`, queue `alga-jobs`. The
+intended shared Temporal address and matching SMTP sink route must be provided
+before a worker/job delivery check.
+No Temporal queue polling, job execution, SMTP delivery, or email Pay Now
+behavior was verified.
+
+Takeover recheck at 2026-09-26 03:42Z: disk still has 7.5 GiB available,
+and the board service remains suspended. The requested restart returned
+`No live service "dev-server" for project`; port 3421 has no listener.
+The three root secret files above are absent. The four focused suites listed
+above were rerun independently and all 32 tests passed. No product code
+changed, so the builder's successful typechecks and billing build remain the
+latest build evidence; they were not rerun during this documentation correction.
+An operator lifecycle adjustment and an authorized source for the existing
+secrets have been requested. No unmanaged server or unrelated Temporal stack
+was started or modified. Live acceptance is still incomplete.
+
+The live acceptance items still outstanding are the profile edit/save and
+inheritance screens, invoice finalization/snapshot persistence after profile
+changes, authenticated portal behavior, and delivered EE invoice emails. The
+fresh integration and unit evidence covers backend profile persistence,
+terms, snapshots, invoice adapters, offline invoice email link selection, and
+portal payment action/list controls, but does not replace those live flows.
+
+The builder reported passing integration checks (7 profile tests and T004),
+email-link tests (5), portal controls (4), adapters (19), and billing,
+client-portal, and server typechecks in round 2. These were not rerun during
+takeover because product code is unchanged. They do not establish live
+browser behavior or SMTP delivery. No fresh browser acceptance is claimed.
 
 ## Implementation notes (2026-09-23)
 
