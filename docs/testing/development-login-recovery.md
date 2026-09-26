@@ -36,14 +36,32 @@ the service and worktree behind port 3927. The service operator should provide
 the configured credential from this worktree's private, ignored
 `server/.env.local` file (mode `0600`). Never copy it into a ticket or durable
 report.
-For this recovery, the effective secret from the same file was confirmed to
-match the hash verification secret. A fresh process with inherited auth and
-password variables unset loaded that file, verified the stored hash, and
-successfully authenticated `glinda@emeraldcity.oz` through `authenticateUser`
-against the configured `server` database. The one-time recovery flag was
-removed; `DEV_LOGIN_PASSWORD` remains configured, so the next Next.js service
-boot loads and reports the matching credential. The worktree's configured
-port `3927` had no listener during this implementation step.
+The initial recovery handoff was subsequently found to reject the configured
+password, including when checked with Next.js's environment loader. The cause
+of that intervening mismatch was not established. Takeover repeated the scoped
+recovery, then confirmed authentication in separate processes before and after
+the regression suite. Other worktrees using the old startup code can still
+rotate a shared database credential; this branch cannot prevent their writes.
+
+Run this read-only check from `server/` immediately before browser smoke:
+
+```sh
+NODE_ENV=development node --import tsx scripts/check-development-login.mjs
+```
+
+It uses Next.js's development environment loader and `authenticateUser` against
+the configured database. It emits only a result, never the password, and starts
+no server. To verify the private file independently of inherited credential
+variables, prefix the command with
+`env -u NEXTAUTH_SECRET -u nextauth_secret -u DEV_LOGIN_PASSWORD -u DEV_LOGIN_PASSWORD_RECOVERY`.
+If verification fails and recovery of this fixture is intended, append
+`--recover`. That option calls the same tenant-scoped compare-and-set recovery
+used at startup and verifies authentication afterward. It does not persist a
+recovery flag or change the private environment file. Keep the recovery flag
+unset for normal service boots.
+
+The private `DEV_LOGIN_PASSWORD` remains configured for the next Next.js boot.
+Port `3927` had no listener during this implementation step.
 
 Smoke Test now only needs the browser checks: authenticate and reload to
 confirm the session persists, confirm sign-in input hydration and the Google
