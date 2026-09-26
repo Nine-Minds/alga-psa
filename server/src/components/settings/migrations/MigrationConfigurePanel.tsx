@@ -24,15 +24,18 @@ export function seedCustomAssetFieldMappings(
     const type = assetTypes.find((candidate) => candidate.slug === slug);
     return Boolean(type && !type.isBuiltin && type.fields.length > 0);
   }));
-  const seeded = Object.fromEntries(Object.entries(existing).filter(([slug]) => eligibleSlugs.has(slug)));
+  const seeded: Record<string, Record<string, string>> = {};
   for (const slug of eligibleSlugs) {
-    if (Object.prototype.hasOwnProperty.call(existing, slug)) continue;
     const type = assetTypes.find((candidate) => candidate.slug === slug);
     const sources = sourceFields.filter((field) => Object.entries(mapping).some(([sourceType, targetSlug]) => sourceType === field.assetTypeName && targetSlug === slug));
-    seeded[slug] = Object.fromEntries(sources.flatMap((source) => {
+    const currentNames = new Set(sources.map((source) => source.fieldName));
+    const previous = existing[slug] ?? {};
+    seeded[slug] = Object.fromEntries(Object.entries(previous).filter(([sourceName]) => currentNames.has(sourceName)));
+    if (Object.prototype.hasOwnProperty.call(existing, slug)) continue;
+    Object.assign(seeded[slug], Object.fromEntries(sources.flatMap((source) => {
       const matches = (type?.fields ?? []).filter((field) => normalizeName(field.key) === normalizeName(source.fieldName) || normalizeName(field.label) === normalizeName(source.fieldName));
       return matches.length === 1 ? [[source.fieldName, matches[0].key]] : [];
-    }));
+    })));
   }
   return seeded;
 }
@@ -162,7 +165,7 @@ const MigrationConfigurePanel = ({ details, onSaved }: MigrationConfigurePanelPr
               },
             }
           : {}),
-        ...(hasAssets ? { assets: { assetTypeMapping, customFieldMapping: seedCustomAssetFieldMappings(assetTypeMapping, customFieldMapping, options.assetTypes, options.packageAssetCustomFields) } } : {}),
+        ...(hasAssets ? { assets: { assetTypeMapping, customFieldMapping: Object.fromEntries(Object.entries(seedCustomAssetFieldMappings(assetTypeMapping, customFieldMapping, options.assetTypes, options.packageAssetCustomFields)).map(([slug, sourceMap]) => [slug, Object.fromEntries(Object.entries(sourceMap).filter(([, targetKey]) => targetKey))])) } } : {}),
       });
       setSaveSucceeded(true);
       await onSaved();
@@ -320,6 +323,7 @@ const MigrationConfigurePanel = ({ details, onSaved }: MigrationConfigurePanelPr
                 onChange={(next) => setCustomFieldMapping({ ...customFieldMapping, [slug]: next })}
                 emptyMessage="No custom columns were preserved for this asset type."
                 allowClear
+                preserveClears
                 detail={(sourceName) => {
                   const rows = sourceRows.filter((row) => row.fieldName === sourceName);
                   const samples = [...new Set(rows.map((row) => row.sampleValue).filter(Boolean))];
@@ -392,6 +396,7 @@ const MappingGrid = ({
   onChange,
   emptyMessage,
   allowClear = false,
+  preserveClears = false,
   detail,
 }: {
   title: string;
@@ -403,6 +408,7 @@ const MappingGrid = ({
   onChange: (next: Record<string, string>) => void;
   emptyMessage: string;
   allowClear?: boolean;
+  preserveClears?: boolean;
   detail?: (sourceName: string) => string;
 }): React.JSX.Element => (
   <div className="space-y-2">
@@ -432,7 +438,9 @@ const MappingGrid = ({
               onValueChange={(value) => {
                 const next = value
                   ? { ...mapping, [sourceName]: value }
-                  : Object.fromEntries(Object.entries(mapping).filter(([source]) => source !== sourceName));
+                  : preserveClears
+                    ? { ...mapping, [sourceName]: '' }
+                    : Object.fromEntries(Object.entries(mapping).filter(([source]) => source !== sourceName));
                 onChange(next);
               }}
             />
