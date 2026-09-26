@@ -392,8 +392,10 @@ fixture labels are client `T004 Payment Method Snapshot Client`, profiles
 `Card Site` and `Check Site`, and separate `T004 Card Service` / `T004 Check
 Service` recurring contracts. It sets client Credit Card / Net 30 and the Check
 profile override to Check / Due on Receipt; it asserts separate invoice/charge
-attribution, 30-day versus same-day due dates, and immutable issued method/date
-snapshots after edits. Do not treat this ephemeral database as a UI fixture.
+attribution, 30-day versus same-day due dates, and generated-invoice
+method/date snapshots after edits. The test leaves invoices as drafts and does
+not establish finalized/issued-invoice behavior. Do not treat this ephemeral
+database as a UI fixture.
 
 The following repeatable UI runbook creates a separate acceptance client inside
 the already owner-authorized test tenant. Use a fresh run tag such as
@@ -431,10 +433,16 @@ prerequisites above and have a reachable test recipient/mailbox.
    service charge only, the Card invoice snapshots Credit Card and due date is
    invoice date + 30 days, and Check snapshots Check with due date equal to
    invoice date.
-4. Change Card to Bank Transfer / Due on Receipt and Check to Credit Card / Net
-   30. Reload both issued invoices and confirm original payment-method
-   snapshots, due dates, billing-profile IDs, and charge attribution are
-   unchanged.
+4. Open each generated invoice in the UI and finalize it using the normal
+   invoice action. Reload both and verify each status is finalized before
+   proceeding. Record the finalized status, payment method, invoice date, due
+   date, billing-profile ID, and the charge IDs/profile attribution for both.
+   The later comparison is only valid against these recorded finalized
+   snapshots.
+5. Change Card to Bank Transfer / Due on Receipt and Check to Credit Card / Net
+   30. Reload both finalized invoices and compare against the recorded values:
+   payment-method snapshots, invoice/due dates, billing-profile IDs, and charge
+   attribution must remain unchanged.
 
 Cleanup is scoped to the exact `<run-tag>` objects recorded above: void/cancel
 the two acceptance invoices through normal invoice actions if cleanup is
