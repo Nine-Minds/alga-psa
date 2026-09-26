@@ -33,6 +33,12 @@ const renderCards = (addresses: React.ReactNode, routing: React.ReactNode) => re
 );
 
 describe('outbound email sender cards', () => {
+  it('shows the initial sender load error in both cards', async () => {
+    actionMocks.list.mockRejectedValue(new Error('Sender settings unavailable'));
+    renderCards(<EmailSenderAddressesCard transport="smtp" />, <EmailSenderRoutingCard />);
+    await waitFor(() => expect(screen.getAllByRole('alert').filter(alert => alert.textContent === 'Sender settings unavailable')).toHaveLength(2));
+  });
+
   it('adapts the Add dialog to managed domains and SMTP relay requirements', async () => {
     actionMocks.list.mockResolvedValue({ senders: [], routes: [] });
     const { rerender } = renderCards(<EmailSenderAddressesCard transport="resend" verifiedDomains={['example.test']} />, null);

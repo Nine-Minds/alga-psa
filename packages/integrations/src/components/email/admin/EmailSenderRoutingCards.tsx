@@ -20,19 +20,26 @@ type Sender = { sender_id: string; email_address: string; display_name: string |
 type Route = { route_id?: string; route_type: 'default' | 'mail_class' | 'board'; mail_class: OutboundMailClass | null; board_id: string | null; board_name?: string | null; sender_id: string | null; display_name: string | null };
 type Translate = (key: string, defaultValue: string) => string;
 
-type SenderState = { senders: Sender[]; routes: Route[]; reload: () => Promise<void> };
-const SenderStateContext = createContext<SenderState>({ senders: [], routes: [], reload: async () => {} });
+type SenderState = { senders: Sender[]; routes: Route[]; loadError: string | null; reload: () => Promise<void> };
+const SenderStateContext = createContext<SenderState>({ senders: [], routes: [], loadError: null, reload: async () => {} });
 
 export function EmailSenderCardsProvider({ children }: { children: ReactNode }) {
   const [senders, setSenders] = useState<Sender[]>([]);
   const [routes, setRoutes] = useState<Route[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const reload = useCallback(async () => {
-    const result = await listEmailSenders();
-    setSenders(result.senders as Sender[]);
-    setRoutes(result.routes as Route[]);
+    try {
+      const result = await listEmailSenders();
+      setSenders(result.senders as Sender[]);
+      setRoutes(result.routes as Route[]);
+      setLoadError(null);
+    } catch (reason) {
+      setLoadError(reason instanceof Error ? reason.message : String(reason));
+      throw reason;
+    }
   }, []);
   useEffect(() => { void reload().catch(() => {}); }, [reload]);
-  return <SenderStateContext.Provider value={{ senders, routes, reload }}>{children}</SenderStateContext.Provider>;
+  return <SenderStateContext.Provider value={{ senders, routes, loadError, reload }}>{children}</SenderStateContext.Provider>;
 }
 
 const MAIL_CLASSES: OutboundMailClass[] = ['ticket', 'project', 'billing', 'sales', 'scheduling', 'survey', 'account', 'general'];
@@ -48,7 +55,7 @@ export function EmailSenderAddressesCard({
 }) {
   const { t: translate } = useTranslation('msp/admin');
   const t: Translate = (key, fallback) => translate(key, { defaultValue: fallback });
-  const { senders, reload } = useContext(SenderStateContext);
+  const { senders, loadError, reload } = useContext(SenderStateContext);
   const [emailAddress, setEmailAddress] = useState('');
   const [localPart, setLocalPart] = useState('');
   const [domain, setDomain] = useState(verifiedDomains[0] ?? '');
@@ -181,7 +188,7 @@ export function EmailSenderAddressesCard({
         </div>
         </DialogContent>
         </Dialog>
-        {error && !addOpen && <p role="alert" className="text-sm text-destructive">{error}</p>}
+        {(error || loadError) && !addOpen && <p role="alert" className="text-sm text-destructive">{error || loadError}</p>}
       </CardContent>
     </Card>
   );
@@ -190,7 +197,7 @@ export function EmailSenderAddressesCard({
 export function EmailSenderRoutingCard({ transport = 'resend' }: { transport?: 'smtp' | 'resend' | 'microsoft' }) {
   const { t: translate } = useTranslation('msp/admin');
   const t: Translate = (key, fallback) => translate(key, { defaultValue: fallback });
-  const { senders, routes, reload } = useContext(SenderStateContext);
+  const { senders, routes, loadError, reload } = useContext(SenderStateContext);
   const [busyRoute, setBusyRoute] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -238,7 +245,7 @@ export function EmailSenderRoutingCard({ transport = 'resend' }: { transport?: '
           return <p key={route.route_id ?? route.board_id} className="text-sm text-foreground">{route.board_name || t('email.senderIdentities.routing.unknownBoard', 'Unknown board')}: {sender?.email_address ?? t('email.senderIdentities.routing.useDefault', 'Use ticket default')}{route.display_name ? ` · ${route.display_name}` : ''}</p>;
         })}
       </div>
-      {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+      {(error || loadError) && <p role="alert" className="text-sm text-destructive">{error || loadError}</p>}
     </CardContent>
   </Card>;
 }

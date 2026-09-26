@@ -37,10 +37,13 @@ export const listEmailSenders = withAuth(async (user, { tenant }) => {
   const { db } = await authorize(user, tenant, 'read');
   const [senders, routes] = await Promise.all([
     db.table('email_sender_addresses').select('*').orderBy('email_address'),
-    db.table('email_sender_routes as routes')
-      .leftJoin('boards as boards', function () {
-        this.on('boards.tenant', '=', 'routes.tenant').andOn('boards.board_id', '=', 'routes.board_id');
-      })
+    db.tenantJoin(
+      db.table('email_sender_routes as routes'),
+      'boards as boards',
+      'routes.board_id',
+      'boards.board_id',
+      { type: 'left', rootTenantColumn: 'routes.tenant' },
+    )
       .select('routes.*', 'boards.board_name')
       .orderBy('routes.route_type'),
   ]);
@@ -166,10 +169,13 @@ export const updateEmailSender = withAuth(async (user, { tenant }, input: { send
 
 export const deleteEmailSender = withAuth(async (user, { tenant }, senderId: string) => {
   const { db } = await authorize(user, tenant, 'update');
-  const routes = await db.table('email_sender_routes as routes')
-    .leftJoin('boards as boards', function () {
-      this.on('boards.tenant', '=', 'routes.tenant').andOn('boards.board_id', '=', 'routes.board_id');
-    })
+  const routes = await db.tenantJoin(
+    db.table('email_sender_routes as routes'),
+    'boards as boards',
+    'routes.board_id',
+    'boards.board_id',
+    { type: 'left', rootTenantColumn: 'routes.tenant' },
+  )
     .where('routes.sender_id', senderId)
     .select('routes.route_type', 'routes.mail_class', 'boards.board_name');
   if (routes.length) {
