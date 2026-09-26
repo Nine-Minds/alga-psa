@@ -33,6 +33,7 @@ const shared = vi.hoisted(() => ({
   syncCalls: [] as Array<{ entryId: string; providerId: string }>,
   permissions: ['user_schedule:read', 'user_schedule:update'] as string[],
   deleteCalls: [] as Array<{ entryId: string; providerId: string; scope: string }>,
+  removeCopyCalls: [] as Array<{ entryId: string; providerId: string }>,
 }));
 
 const eventHandlers = vi.hoisted(() => new Map<string, Set<(event: any) => Promise<void>>>());
@@ -132,6 +133,9 @@ vi.mock('@alga-psa/ee-calendar/lib/services/calendar/CalendarSyncService', () =>
     async deleteScheduleEntry(entryId: string, providerId: string, scope: string) {
       shared.deleteCalls.push({ entryId, providerId, scope });
       return { success: true };
+    }
+    async removeProviderCopy(entryId: string, providerId: string) {
+      shared.removeCopyCalls.push({ entryId, providerId });
     }
   },
 }));
@@ -242,6 +246,7 @@ describe('Schedule entry creation triggers calendar sync', () => {
   beforeEach(async () => {
     shared.syncCalls.length = 0;
     shared.deleteCalls.length = 0;
+    shared.removeCopyCalls.length = 0;
     await tenantTable(db, tenantId, 'calendar_event_mappings').del();
     await tenantTable(db, tenantId, 'schedule_entries').del();
   });
@@ -335,5 +340,31 @@ describe('Schedule entry creation triggers calendar sync', () => {
 
     const remaining = await tenantTable(db, tenantId, 'schedule_entries').where({ entry_id: entryId }).first();
     expect(remaining).toBeUndefined();
+  });
+
+  it('removes provider copies on archive events and recreates them on restore events', async () => {
+    const entryId = uuidv4();
+    const publish = (calendarArchived: boolean) => {
+      const handlers = eventHandlers.get('SCHEDULE_ENTRY_UPDATED');
+      return Promise.all(Array.from(handlers ?? []).map(handler => handler({
+        payload: {
+          tenantId,
+          entryId,
+          userId,
+          changes: {
+            before: { assignedUserIds: [userId] },
+            after: { assignedUserIds: [userId] },
+            calendarArchived,
+          },
+        },
+      })));
+    };
+
+    await publish(true);
+    expect(shared.removeCopyCalls).toContainEqual({ entryId, providerId });
+
+    shared.syncCalls.length = 0;
+    await publish(false);
+    expect(shared.syncCalls).toContainEqual({ entryId, providerId });
   });
 });

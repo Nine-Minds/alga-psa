@@ -12,6 +12,7 @@ import type { Knex } from 'knex';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
+import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
 import type {
   CalendarAccessLevel,
   ICalendar,
@@ -615,12 +616,33 @@ async function setGroupCalendarArchived(
   const outcome = await withTransaction(db, async (trx: Knex.Transaction) => {
     const loaded = await loadManagedGroupCalendar(trx, tenant, user, base.canUpdate, calendarId);
     if ('error' in loaded) return loaded;
+    const entries = await tenantDb(trx, tenant).table('schedule_entries')
+      .where({ calendar_id: calendarId }).select('entry_id');
+    const entryIds = entries.map((entry: { entry_id: string }) => entry.entry_id);
+    const assignedUserIds = entryIds.length > 0
+      ? await ScheduleEntry.getAssignedUserIds(trx, tenant, entryIds)
+      : {};
     await tenantDb(trx, tenant).table('calendars')
       .where({ calendar_id: calendarId })
       .update({ is_archived: isArchived, updated_at: new Date() });
-    return {};
+    return { entries, assignedUserIds };
   });
   if ('error' in outcome) return fail(outcome.error as string);
+  for (const entry of outcome.entries) {
+    await publishEvent({
+      eventType: 'SCHEDULE_ENTRY_UPDATED',
+      payload: {
+        tenantId: tenant,
+        userId: user.user_id,
+        entryId: entry.entry_id,
+        changes: {
+          before: { assignedUserIds: outcome.assignedUserIds[entry.entry_id] || [] },
+          after: { assignedUserIds: outcome.assignedUserIds[entry.entry_id] || [] },
+          calendarArchived: isArchived,
+        },
+      },
+    });
+  }
   return { success: true, data: null };
 }
 

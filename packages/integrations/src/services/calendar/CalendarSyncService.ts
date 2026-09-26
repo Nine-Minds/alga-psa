@@ -1,4 +1,5 @@
 // @ts-nocheck
+// LEVERAGE: pattern calendar-sync-dual-copy — kept behaviorally aligned with the live EE runtime until the legacy tree is removed.
 // TODO: This file needs refactoring - ScheduleEntry model method signatures have changed
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Calendar sync service - intentionally bridges integrations and scheduling to synchronize calendar entries */
 /**
@@ -16,6 +17,8 @@ import { mapScheduleEntryToExternalEvent, mapExternalEventToScheduleEntry } from
 import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
 import { v4 as uuidv4 } from 'uuid';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { hasPermission } from '@alga-psa/auth';
+import { evaluateEntryAccess, resolveCalendarAccess } from '@alga-psa/scheduling/lib/calendarAccess';
 
 export class CalendarSyncService {
   private providerService: CalendarProviderService;
@@ -228,12 +231,7 @@ export class CalendarSyncService {
           const existingMapping = await this.getMappingByExternalEvent(externalEventId, calendarProviderId, tenant);
           if (existingMapping) {
             // Delete the corresponding schedule entry (skip external delete since it's already gone)
-            const deleteResult = await this.deleteScheduleEntry(
-              existingMapping.schedule_entry_id,
-              calendarProviderId,
-              'all',
-              true // skipExternalDelete - event already deleted in external calendar
-            );
+            const deleteResult = await this.handleInboundProviderDelete(existingMapping.schedule_entry_id, calendarProviderId, tenant);
             if (deleteResult.success) {
               return {
                 success: true,
@@ -261,7 +259,21 @@ export class CalendarSyncService {
 
       // Check for existing mapping
       const existingMapping = await this.getMappingByExternalEvent(externalEventId, calendarProviderId, tenant);
+      const incomingModifiedAt = externalEvent.updated ? new Date(externalEvent.updated).getTime() : NaN;
+      const mappedModifiedAt = existingMapping?.external_last_modified
+        ? new Date(existingMapping.external_last_modified).getTime()
+        : NaN;
+      if (Number.isFinite(incomingModifiedAt) && incomingModifiedAt === mappedModifiedAt) {
+        return { success: true, skipped: true, reason: 'External version already synchronized' };
+      }
+      if (existingMapping) {
+        const entry = await ScheduleEntry.get(knex, existingMapping.schedule_entry_id);
+        if (entry?.calendar_id && await tenantDb(knex, tenant).table('calendars').where({ calendar_id: entry.calendar_id, calendar_type: 'group', is_archived: true }).first()) {
+          return { success: true, skipped: true, reason: 'Calendar is archived' };
+        }
+      }
 
+      let rePushEntryId: string | null = null;
       const result = await withTransaction(knex, async (trx) => {
         if (existingMapping) {
           // Update existing schedule entry
@@ -271,6 +283,13 @@ export class CalendarSyncService {
               success: false,
               error: 'Schedule entry not found for existing mapping'
             };
+          }
+
+          const access = await this.resolveProviderUserAccess(trx, tenant, provider.user_id);
+          if (!access) return { success: true, skipped: true, reason: 'Provider user not found' };
+          if (!evaluateEntryAccess(existingEntry, access).canEdit) {
+            rePushEntryId = existingEntry.entry_id;
+            return { success: true, skipped: true, reason: 'Provider user cannot edit this entry' };
           }
 
           // Check for conflicts
@@ -513,6 +532,10 @@ export class CalendarSyncService {
           return syncResult;
         }
       });
+      if (rePushEntryId) {
+        const pushed = await this.syncScheduleEntryToExternal(rePushEntryId, provider.id, true, tenant);
+        if (!pushed.success) return pushed;
+      }
       return result;
     } catch (error: any) {
       console.error(`Failed to sync external event ${externalEventId} to schedule entry:`, error);
@@ -629,6 +652,35 @@ export class CalendarSyncService {
    * Delete a schedule entry and its external calendar event
    * @param skipExternalDelete - If true, skip deleting from external calendar (use when external already deleted)
    */
+  async handleInboundProviderDelete(entryId: string, providerId: string, tenantContext?: string): Promise<{ success: boolean; error?: string }> {
+    const { knex, tenant } = await createTenantKnex(tenantContext);
+    if (!tenant) return { success: false, error: 'Tenant context is required' };
+    const provider = await this.providerService.getProvider(providerId, tenant);
+    if (!provider?.user_id) return { success: false, error: 'Provider user not found' };
+    const entry = await ScheduleEntry.get(knex, entryId);
+    if (!entry) return { success: true };
+    if (entry.calendar_id && await tenantDb(knex, tenant).table('calendars').where({ calendar_id: entry.calendar_id, calendar_type: 'group', is_archived: true }).first()) return { success: true };
+    const access = await this.resolveProviderUserAccess(knex, tenant, provider.user_id);
+    if (!access) return { success: false, error: 'Provider user not found' };
+    if (evaluateEntryAccess(entry, access).canEdit && entry.assigned_user_ids.length === 1) return this.deleteScheduleEntry(entryId, providerId, 'all', true, tenant);
+    if (entry.assigned_user_ids.includes(provider.user_id)) {
+      // A read-only sole assignee may be removed, leaving group or personal entries unassigned intentionally.
+      await ScheduleEntry.update(knex, entryId, { ...entry, assigned_user_ids: entry.assigned_user_ids.filter((id: string) => id !== provider.user_id) }, 'all' as any);
+    }
+    await tenantDb(knex, tenant).table('calendar_event_mappings').where({ schedule_entry_id: entryId, calendar_provider_id: providerId }).del();
+    return { success: true };
+  }
+
+  private async resolveProviderUserAccess(knex: any, tenant: string, providerUserId?: string | null) {
+    if (!providerUserId) return null;
+    const user = await tenantDb(knex, tenant).table('users').where('user_id', providerUserId).first();
+    if (!user) return null;
+    const viewer = { user_id: user.user_id, user_type: user.user_type, tenant };
+    // scheduleActions.ts uses this same user_schedule:update check before resolving calendar access.
+    const canViewAll = await hasPermission(viewer, 'user_schedule', 'update', knex);
+    return resolveCalendarAccess(knex, tenant, viewer, canViewAll);
+  }
+
   async deleteScheduleEntry(
     entryId: string,
     calendarProviderId: string,
