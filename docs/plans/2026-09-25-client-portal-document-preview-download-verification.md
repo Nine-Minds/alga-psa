@@ -1,14 +1,15 @@
 # Client portal document preview/download verification
 
-Date: 2026-09-26  
+Date: 2026-09-26 (mitigation round)
 Branch: `feature/alga-2026-0002585-fix-client-portal-document-pre`  
-Result: code-level checks passed; live portal verification is blocked by board service lifecycle policy.
+Result: focused behavior tests, typechecks, and production build passed. Live portal verification remains blocked by the board service lifecycle policy.
 
 ## Environment recovery
 
 - Board service: `dev-server`, command `PORT=3284 npm run dev`, working directory `server/` in this worktree; compose database project `alga-psa-local-test`.
-- `/home/robert/alga-copies` was at 99% capacity. Removed only this worktree's generated `server/.next` output (about 1.6 GB). After the production build, the filesystem had about 7.0 GB free.
+- Earlier recovery removed only this worktree's generated `server/.next` output (about 1.6 GB) after the filesystem had reached 99%. At the start of this mitigation round, `/dev/loop0` was 95% used with 7.5 GB available; `server/.next` was 881 MB. No additional files were removed because current capacity was sufficient and the prior ENOSPC condition was not present. After the final production build completed and its transient files settled, `/dev/loop0` had 11 GB available (93% used).
 - The board accepted `workflow-ensure-service` twice (once as `agent:Draft Implementation`, once as `agent:Smoke Test`) and then suspended the PTY within about three seconds. The board annotation said: `Draft Implementation does not use it. It starts again when the card needs it.` Port 3284 remained closed (`curl` returned HTTP 000); the browser showed Chrome's connection error. A supported service-use policy override is not exposed by `alga-dev`; changing the active step would start different workflow work.
+- During this mitigation round, `workflow-list-services` first reported no live services. A single board-supported `workflow-ensure-service` resumed the existing service using `PORT=3284 npm run dev`, cwd `/home/robert/alga-copies/feature-alga-2026-0002585-fix-client-portal-document-pre/server`. The board then immediately suspended it because the current step is `Draft Implementation`; the subsequent `GET http://localhost:3284/auth/signin` was refused (HTTP 000). No standalone server was started and no board lifecycle policy was bypassed.
 - Board annotation `4b9ed518-b966-4276-bf3b-6ecea3a8ac0c` records the precise owner action needed: declare `dev-server` in use for Draft Implementation or authorize the smoke step/temporarily disable auto-suspension. A blocked-attention request was also submitted through the board CLI.
 
 ## Code and test evidence
@@ -30,6 +31,91 @@ Commands and results:
 | `NODE_OPTIONS=--max-old-space-size=12288 npm run build:source` | Passed; Turbopack compiled and generated all 74 pages, with existing dynamic-file tracing warnings |
 | `npm run build` (from `packages/client-portal`) | Not a usable package build target: tsup reports no input files |
 
+Mitigation-round reruns on the final code revision:
+
+| Command | Result |
+| --- | --- |
+| `npx vitest run src/components/documents/ClientDocumentsPage.test.tsx src/lib/fetchAndSaveFile.test.ts --coverage.enabled=false` (from `packages/client-portal`) | Passed: 23 tests |
+| `npx vitest run src/test/integration/clientPortalDocuments.integration.test.ts --coverage.enabled=false` (from `server`) | Passed: 14 tests; includes live visibility queries, a generated PDF, text extraction, and authorization cases |
+| `npm run typecheck` (from `packages/client-portal`) | Passed |
+| `NODE_OPTIONS=--max-old-space-size=12288 npm run typecheck` (from `server`) | Passed |
+| `NODE_OPTIONS=--max-old-space-size=12288 npm run build:source` (from repository root) | Passed; all 74 pages generated; existing Turbopack/NFT dynamic-file tracing warnings remain |
+
+The first attempted build invocation was run from `server/`, where the root-only `build:source` script is not defined; it was rerun successfully from the repository root. This did not change source files.
+
 ## Still requires live verification
 
-After board-owner intervention, start the board-managed service and verify the rendered sign-in page, then use real storage-backed PDF/image fixtures in a client session to capture previews, attachment downloads, actual PDF and Markdown exports, stored-text fallback, visible failures, and direct client/tenant denials. Save screenshots and inspect the downloaded artifacts with `file(1)`; do not treat this report's mocked storage route test as live evidence.
+Takeover independently checked the environment and workflow configuration on 2026-09-26:
+
+- `/dev/loop0` has 11 GB available (93% used); no additional cleanup is needed.
+- `workflow-list-services --live=true` returns no services. The saved `dev-server` record is suspended with reason `"Draft Implementation" does not use it`; sign-in on port 3284 refuses the connection.
+- Template `b0d517e1-8ed7-4738-b4fd-2594ee42ae34` declares `services: [{ name: "dev-server" }]` for Implement and Smoke Test, but has no services declaration for Draft Implementation. This confirms the lifecycle mismatch independently of the earlier report. Repeating ensure-service cannot resolve that mismatch. No shared template or current-step change was made during this takeover.
+- Independently reran the two focused client suites (23/23 passed) and the integration suite (14/14 passed, including actual PDF rendering). No product code changed; the preceding successful typechecks and production build apply to the same source revision.
+- Recorded durable fact `41a0a3a5-d378-4dda-945d-cc6b48c03de2` and marked the card blocked with the required board-owner action. Application readiness and live portal smoke remain unverified; this is not a successful mitigation result.
+
+Live sign-in and all portal smoke criteria remain incomplete. The service must be resumed while the card is on its `Smoke Test` step (the board currently suspends it during `Draft Implementation`). On that step, verify the rendered sign-in page, then use real storage-backed PDF/image fixtures in a client session to capture previews, attachment downloads, actual PDF and Markdown exports, stored-text fallback, visible failures, and direct client/tenant denials. Save screenshots and inspect downloaded artifacts with `file(1)`; do not treat this report's mocked storage route test as live evidence. The repeated authorization, PNG decoding, and exported-PDF text assertions pass in the focused automated suites, but the requested real object-store round trip, usable sign-in page, and browser-visible result have not been executed.
+
+## One-shot Draft Implementation rerun (2026-09-26)
+
+This run made no product-code changes. The cookie-bearing 431 blocker and document implementation were re-inspected before deciding whether a server change was justified.
+
+- `alga-dev workflow-list-services --live=true --pretty` had no live service for this card, and a fresh `GET http://localhost:3284/auth/client-portal/signin` failed with connection refused (curl exit 7). The saved service remains board-owned, runs `PORT=3284 npm run dev` from this worktree's `server/`, and is automatically suspended during Draft Implementation. It must be available on the Smoke Test step for live verification. No ensure, restart, replacement process, or lifecycle override was attempted in this run.
+- Existing browser evidence remains at `/tmp/alga-smoke-evidence/alga-2026-0002585-20260926-0357/`: `credential-mode-probe.json` records 200/63,197 bytes with credentials omitted and 431/0 bytes with credentials included; `network-failures.json` records cookie-bearing dashboard and portal requests at 431; `report.md` documents the `127.0.0.1` → `localhost` redirect and that only 336 bytes of JS-visible cookies were observed. The prior run did not isolate cookie attribution or record the full request Cookie header size. This rerun did not access or clear shared browser cookies.
+- `server/next.config.mjs` has no `maxHeaderSize` or equivalent header-limit override. Without a live request's total header size or a cookie-level attribution, changing the development server's limit would be unsupported. No arbitrary limit increase or speculative application change was made. The isolated-cookie browser probe remains part of the Smoke Test handoff.
+- Durable board fact `9b07f8b2-393d-4389-91d3-3bcfffdb3d37` records this run's fresh readiness observation.
+
+Fresh validation commands and results:
+
+| Command | Result |
+| --- | --- |
+| `npx vitest run src/components/documents/ClientDocumentsPage.test.tsx src/lib/fetchAndSaveFile.test.ts --coverage.enabled=false` (from `packages/client-portal`) | Passed: 23 tests |
+| `npx vitest run src/test/integration/clientPortalDocuments.integration.test.ts --coverage.enabled=false` (from `server`) | Passed: 14 tests, including generated PDF rendering and authorization cases; file storage remains mocked |
+| `npm run typecheck` (from `packages/client-portal`) | Passed |
+| `NODE_OPTIONS=--max-old-space-size=12288 npm run typecheck` (from `server`) | Passed |
+| `NODE_OPTIONS=--max-old-space-size=12288 npm run build:source` (repository root) | Passed: Turbopack compiled and generated all 74 pages; existing dynamic-file tracing/NFT warnings remain |
+
+Live verification is **blocked and incomplete**. Required Smoke Test handoff: use a fresh isolated cookie context against the board-managed service; prove a cookie-bearing dashboard and portal sign-in request succeeds and the authenticated client portal renders; then execute the document, authorization, error, search, filtering, navigation, preview, download, and export scenarios from the approved plan, preserving screenshots and inspected output files. If an isolated context still reproduces 431, capture total request-header bytes and identify the cookie(s) before considering a development-only header configuration change.
+
+## Prepared isolated browser mitigation (2026-09-26)
+
+Added `scripts/client-portal-isolated-smoke.mjs`. It starts a separate Playwright Chromium process and creates a fresh, in-memory `BrowserContext` without a persistent user-data directory. The live mode never reads, clears, or reuses the in-app browser's cookies. It records request method/path/status, cookie presence and byte count (never cookie values), document file/export response headers and bodies, downloads, and operator checkpoints/screenshots. It does not start or manage an app server.
+
+Isolation was verified without the application using:
+
+```bash
+node scripts/client-portal-isolated-smoke.mjs --self-test --evidence-dir /tmp/alga-2585-isolated-smoke-proof-final-20260926
+```
+
+`node --check scripts/client-portal-isolated-smoke.mjs` passed. The self-test result was `passed: true`; the isolated context started and ended with zero cookies, its request and local server saw zero Cookie bytes, and a sentinel cookie in a separate context remained intact. Evidence: `/tmp/alga-2585-isolated-smoke-proof-final-20260926/isolation-self-test.json` and `isolation-self-test.png`. Durable board fact: `438ecaca-a1d6-4d31-ade4-e03eadd4f24b`.
+
+When the board puts the card on Smoke Test and its service is available, from the repository root run:
+
+```bash
+node scripts/client-portal-isolated-smoke.mjs \
+  --base-url http://localhost:3284 \
+  --start-path /auth/client-portal/signin \
+  --headed \
+  --evidence-dir /tmp/alga-2585-portal-smoke-20260926
+```
+
+This opens the separate Chromium window directly at portal sign-in. Sign in using the card's smoke identity in that window. The terminal accepts `shot LABEL` to save a screenshot, `mark RESULT` to record the observed result, `probe SAME_ORIGIN_PATH` to issue an authenticated fetch and save its response, and `done` to close and finalize the run. Example probes after login:
+
+```text
+probe /api/client-portal/documents/<document-id>/file?disposition=inline
+probe /api/client-portal/documents/<document-id>/file?disposition=attachment
+probe /api/client-portal/documents/<document-id>/export?format=pdf
+probe /api/client-portal/documents/<document-id>/export?format=md
+```
+
+Use `shot`/`mark` at each checkpoint below. The script saves downloaded files under `downloads/`, file/export response bodies under `responses/`, request/response metadata in `run.json`, and start/final screenshots. Review `run.json` beside each body: a usable file/export should have a successful status, expected content type and filename header, and valid PDF/image/Markdown bytes; an API error should have a failing status and an error JSON body. A legitimate stored JSON file must have a successful file response and matching document metadata/content, rather than an error status/body. Use the View action for content authorization and preview checks; record its visible state and inspect its network status/body in the browser's Network panel where applicable.
+
+Smoke checkpoints to capture in that run:
+
+1. Record success for a cookie-bearing dashboard request and client-portal sign-in/navigation, then capture the authenticated portal landing page.
+2. In Documents, search, filter, and navigate the results; capture each state.
+3. Preview and download uploaded PDF and PNG fixtures. Confirm the previews render and the saved artifacts have usable contents, expected filenames, and matching content types.
+4. Preview an in-app BlockNote document and supported stored-text document. Export each as PDF and Markdown; inspect the resulting files and record filenames/types.
+5. Exercise a missing storage object and empty content. Confirm visible errors and no downloaded API error JSON presented as a document.
+6. In separate harness runs, authenticate as the second client and a contact in the second tenant. Use `probe` with document IDs from the first identity for file/PDF/Markdown routes, and exercise the content View action where the UI exposes the test ID. Confirm denials and capture status/body evidence. Record any content-action denial that cannot be invoked through the UI as unverified, rather than inferring it from file/export denial.
+
+Prepared mitigation is **not verified recovery**: the offline test proves the browser context is isolated and preserves a separate session, but authenticated cookie-bearing requests, browser-visible document behavior, and authorization denials remain unverified until the board-managed service is available on Smoke Test. The last readiness check for this run returned no live services for the card; `curl http://localhost:3284/auth/client-portal/signin` failed with connection refused (HTTP 000). No existing behavioral suites were rerun in this preparation round, and no header limit was changed.
