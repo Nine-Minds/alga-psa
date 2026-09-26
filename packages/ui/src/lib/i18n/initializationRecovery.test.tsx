@@ -44,6 +44,12 @@ function SignInForm() {
         value={email}
         onChange={(event) => setEmail(event.target.value)}
       />
+      <output data-testid="three-argument-plural">
+        {t('articleCount', '{{count}} article', { count: 3 })}
+      </output>
+      <output data-testid="three-argument-singular">
+        {t('articleCount', '{{count}} article', { count: 1 })}
+      </output>
     </form>
   );
 }
@@ -82,7 +88,11 @@ describe('I18nProvider auth loading recovery', () => {
       const firstBatch = pendingReads.splice(0);
       for (const request of firstBatch) {
         request.callback(null, request.namespace === 'msp/auth'
-          ? { signIn: { form: { emailLabel: 'Courriel' } } }
+          ? {
+            signIn: { form: { emailLabel: 'Courriel' } },
+            articleCount_one: '{{count}} article',
+            articleCount_other: '{{count}} articles',
+          }
           : {});
       }
     });
@@ -91,6 +101,8 @@ describe('I18nProvider auth loading recovery', () => {
     await waitFor(() => expect(screen.queryByRole('textbox', { name: 'Courriel' })).not.toBeNull());
     expect((screen.getByRole('textbox', { name: 'Courriel' }) as HTMLInputElement).value)
       .toBe('operator@example.test');
+    expect(screen.getByTestId('three-argument-plural').textContent).toBe('3 articles');
+    expect(screen.getByTestId('three-argument-singular').textContent).toBe('1 article');
     initSpy.mockRestore();
   });
 });

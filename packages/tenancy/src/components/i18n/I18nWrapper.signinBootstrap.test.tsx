@@ -115,7 +115,18 @@ describe('MSP sign-in bootstrap during pending translations', () => {
 
   it('renders fallback controls in server markup and hydrates an interactive form while reads are pending', async () => {
     const initSpy = vi.spyOn(i18next, 'init');
-    const markup = renderToString(<SignInTree />);
+    const windowDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'window');
+    expect(windowDescriptor?.configurable).toBe(true);
+    Reflect.deleteProperty(globalThis, 'window');
+    let markup: string;
+    try {
+      expect(typeof window).toBe('undefined');
+      markup = renderToString(<SignInTree />);
+      expect(i18next.isInitialized).not.toBe(true);
+      expect(initSpy).not.toHaveBeenCalled();
+    } finally {
+      if (windowDescriptor) Object.defineProperty(globalThis, 'window', windowDescriptor);
+    }
     expect(markup).toContain('id="msp-email-field"');
     expect(markup).toContain('id="msp-password-field"');
     expect(markup).toContain('Email');
@@ -127,13 +138,17 @@ describe('MSP sign-in bootstrap during pending translations', () => {
     document.body.appendChild(container);
 
     let root: Root | undefined;
+    const recoverableErrors: unknown[] = [];
     await act(async () => {
-      root = hydrateRoot(container, <SignInTree />);
+      root = hydrateRoot(container, <SignInTree />, {
+        onRecoverableError: (error) => recoverableErrors.push(error),
+      });
     });
 
     expect(pendingReads.length).toBeGreaterThan(0);
     expect(i18next.isInitialized).not.toBe(true);
     expect(initSpy).toHaveBeenCalledTimes(1);
+    expect(recoverableErrors).toEqual([]);
 
     const email = container.querySelector<HTMLInputElement>('#msp-email-field');
     const password = container.querySelector<HTMLInputElement>('#msp-password-field');
