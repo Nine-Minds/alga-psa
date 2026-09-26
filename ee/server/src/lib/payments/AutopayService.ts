@@ -6,11 +6,12 @@ import { computeBalanceDue } from '@alga-psa/billing/services/accountingSync/rec
 import { PaymentService } from './PaymentService';
 import { createStripePaymentProvider } from './StripePaymentProvider';
 import { scheduleImmediateJob } from 'server/src/lib/jobs';
-import { classifyAutopayFailure, retryAt, shouldScheduleAutopay } from './autopayPolicy';
+import { classifyAutopayFailure, isAutopayEnrollmentValid, retryAt, shouldScheduleAutopay } from './autopayPolicy';
 import type { PaymentWebhookEvent } from '@alga-psa/types';
 import { buildPaymentFailedPayload } from 'server/src/lib/api/services/paymentWorkflowEvents';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import logger from '@alga-psa/core/logger';
+import { reconcileStripeWebhookEvents } from '../actions/payment-actions';
 
 type Authorization = { userId: string | null; source: 'client_portal' | 'msp'; ip?: string | null; userAgent?: string | null; consentTextVersion: string };
 
@@ -25,17 +26,35 @@ export class AutopayService {
   async enroll(billingProfileId: string, paymentMethodId: string, authorization: Authorization): Promise<void> {
     const config = await this.table('payment_provider_configs').where({ provider_type: 'stripe', is_enabled: true }).first();
     const settings = (config?.settings ?? {}) as Record<string, unknown>;
-    if (settings.autopayEnabled !== true) throw new Error('Auto-pay is disabled for this tenant');
-    const method = await this.table('payment_methods').where({ payment_method_id: paymentMethodId, billing_profile_id: billingProfileId, is_deleted: false, provider_type: 'stripe', status: 'active' }).first();
-    if (!method?.external_payment_method_id || !method?.external_customer_id) throw new Error('Selected card is not chargeable for this billing profile');
+    const method = await this.table('payment_methods').where({ payment_method_id: paymentMethodId, billing_profile_id: billingProfileId, is_deleted: false }).first();
+    if (!isAutopayEnrollmentValid({ tenantEnabled: settings.autopayEnabled === true, profileMatches: method?.billing_profile_id === billingProfileId,
+      providerType: method?.provider_type, status: method?.status, externalPaymentMethodId: method?.external_payment_method_id, externalCustomerId: method?.external_customer_id })) {
+      throw new Error(settings.autopayEnabled !== true ? 'Auto-pay is disabled for this tenant' : 'Selected card is not chargeable for this billing profile');
+    }
     const profile = await this.table('client_billing_profiles').where({ billing_profile_id: billingProfileId }).first();
     if (!profile) throw new Error('Billing profile not found');
+    await reconcileStripeWebhookEvents(this.tenantId);
     await this.table('billing_profile_autopay').insert({ tenant: this.tenantId, billing_profile_id: billingProfileId, client_id: profile.client_id,
       is_enabled: true, payment_method_id: paymentMethodId, authorized_at: this.knex.fn.now(), authorized_by_user_id: authorization.userId,
       authorization_source: authorization.source, authorization_ip: authorization.ip ?? null, authorization_user_agent: authorization.userAgent ?? null,
       consent_text_version: authorization.consentTextVersion, disabled_at: null, disabled_by_user_id: null, disabled_reason: null,
       created_at: this.knex.fn.now(), updated_at: this.knex.fn.now() })
       .onConflict(['tenant', 'billing_profile_id']).merge();
+  }
+
+  async getProfileOverview(billingProfileId: string): Promise<Record<string, unknown> | null> {
+    const profile = await this.table('client_billing_profiles').where({ billing_profile_id: billingProfileId }).first('client_id');
+    if (!profile) return null;
+    const [config, enrollment, methods, attempts] = await Promise.all([
+      this.table('payment_provider_configs').where({ provider_type: 'stripe', is_enabled: true }).first('settings'),
+      this.table('billing_profile_autopay').where({ billing_profile_id: billingProfileId }).first(),
+      this.table('payment_methods').where({ billing_profile_id: billingProfileId, provider_type: 'stripe', is_deleted: false }).select('payment_method_id', 'brand', 'last4', 'exp_month', 'exp_year', 'status', 'external_payment_method_id'),
+      this.table('invoice_autopay_attempts').where({ billing_profile_id: billingProfileId }).orderBy('created_at', 'desc').limit(5),
+    ]);
+    return { enabled: (config?.settings as any)?.autopayEnabled === true, consentText: (config?.settings as any)?.autopayConsentText ?? '',
+      consentTextVersion: (config?.settings as any)?.autopayConsentTextVersion ?? '1', enrollment: enrollment ?? null,
+      methods,
+      chargeableMethods: methods.filter((method: any) => method.status === 'active' && !!method.external_payment_method_id), attempts };
   }
 
   async disenroll(billingProfileId: string, reason: string, actor: string | null): Promise<void> {

@@ -287,7 +287,6 @@ export const PaymentSettingsConfig: React.FC = () => {
         />
       </div>
 
-      {/* Payment Link Expiration */}
       <div className="flex items-center justify-between">
         <div className="space-y-0.5"><Label>{t('payment.settings.autopay.label', { defaultValue: 'Allow auto-pay' })}</Label><p className="text-sm text-muted-foreground">{t('payment.settings.autopay.description', { defaultValue: 'Allow billing profiles to authorize automatic card payments.' })}</p></div>
         <Switch id="autopay-enabled" checked={localSettings?.autopayEnabled ?? false} onCheckedChange={(checked) => handleLocalSettingsChange({ autopayEnabled: checked })} disabled={savingSettings} />

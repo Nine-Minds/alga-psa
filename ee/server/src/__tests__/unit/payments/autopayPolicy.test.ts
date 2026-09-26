@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { classifyAutopayFailure, isMissedFinalizeCandidate, retryAt, shouldScheduleAutopay } from '../../../lib/payments/autopayPolicy';
+import { classifyAutopayFailure, isAutopayEnrollmentValid, isMissedFinalizeCandidate, retryAt, shouldScheduleAutopay } from '../../../lib/payments/autopayPolicy';
 import { buildAutopayPaymentIntentRequest, mapStripeAutopayError } from '../../../lib/payments/stripeAutopayParams';
 
 const chargeRequest = {
@@ -45,6 +45,16 @@ describe('autopay policy and Stripe request construction', () => {
     expect(isMissedFinalizeCandidate({ ...base, authorizedAt: '2026-09-26T00:00:00Z' })).toBe(false);
     expect(isMissedFinalizeCandidate({ ...base, finalizedAt: '2026-09-01T00:00:00Z' })).toBe(false);
     expect(isMissedFinalizeCandidate({ ...base, status: 'partially_applied' })).toBe(false);
+  });
+
+  it('requires enabled tenant settings and a profile-matched active Stripe card for enrollment', () => {
+    const valid = { tenantEnabled: true, profileMatches: true, providerType: 'stripe', status: 'active', externalPaymentMethodId: 'pm_1', externalCustomerId: 'cus_1' };
+    expect(isAutopayEnrollmentValid(valid)).toBe(true);
+    expect(isAutopayEnrollmentValid({ ...valid, tenantEnabled: false })).toBe(false);
+    expect(isAutopayEnrollmentValid({ ...valid, profileMatches: false })).toBe(false);
+    expect(isAutopayEnrollmentValid({ ...valid, providerType: 'manual' })).toBe(false);
+    expect(isAutopayEnrollmentValid({ ...valid, status: 'requires_update' })).toBe(false);
+    expect(isAutopayEnrollmentValid({ ...valid, externalPaymentMethodId: null })).toBe(false);
   });
 
   it('skips attempts unless every chargeability and invoice rule passes', () => {

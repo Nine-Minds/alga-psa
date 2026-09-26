@@ -8,7 +8,9 @@ export default async function PaymentMethodSetupCompletePage({
 }) {
   const { session_id: sessionId, returnTo } = await searchParams;
   if (!sessionId) redirect('/client-portal/billing');
-  await completeClientPortalCardSetup(sessionId);
   const safeReturnTo = returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//') ? returnTo : '/client-portal/billing';
-  redirect(safeReturnTo);
+  let completed = false;
+  try { await completeClientPortalCardSetup(sessionId); completed = true; } catch { completed = false; }
+  if (!completed) redirect('/client-portal/billing?cardSetup=error');
+  redirect(`${safeReturnTo}${safeReturnTo.includes('?') ? '&' : '?'}cardSetup=success`);
 }

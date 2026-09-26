@@ -1,0 +1,100 @@
+'use client';
+
+import React, { useCallback, useEffect, useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { toast } from 'react-hot-toast';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { getClientAutopaySettings, setClientAutopay, startClientAutopaySetup } from '../../actions/clientBillingProfileActions';
+
+interface AutopayOverview {
+  enabled: boolean;
+  consentText: string;
+  consentTextVersion: string;
+  enrollment: null | { is_enabled: boolean; payment_method_id: string; authorized_at: string; authorization_source: string; authorized_by_user_id: string | null };
+  methods: Array<{ payment_method_id: string; brand: string | null; last4: string; exp_month: string; exp_year: string; status: string }>;
+  attempts: Array<{ attempt_id: string; attempt_number: number; status: string; scheduled_for: string; failure_code?: string | null; failure_message?: string | null }>;
+}
+
+const isActionError = (value: unknown) => isActionMessageError(value) || isActionPermissionError(value);
+
+export function ClientAutopaySettings({ clientId, billingProfileId, profileName }: { clientId: string; billingProfileId: string; profileName: string }) {
+  const { t } = useTranslation('msp/clients');
+  const [overview, setOverview] = useState<AutopayOverview | null>(null);
+  const [methodId, setMethodId] = useState('');
+  const [attested, setAttested] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const reload = useCallback(async () => {
+    try {
+      const result = await getClientAutopaySettings(clientId, billingProfileId);
+      if (isActionError(result)) throw new Error(getErrorMessage(result));
+      const value = result as unknown as AutopayOverview | null;
+      setOverview(value);
+      setMethodId(value?.enrollment?.payment_method_id ?? value?.methods?.[0]?.payment_method_id ?? '');
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    }
+  }, [clientId, billingProfileId]);
+
+  useEffect(() => { void reload(); }, [reload]);
+
+  const changeEnrollment = async (enabled: boolean) => {
+    setBusy(true);
+    try {
+      const result = await setClientAutopay({ clientId, billingProfileId, paymentMethodId: methodId, enabled, consentTextVersion: overview?.consentTextVersion ?? '1' });
+      if (isActionError(result)) throw new Error(getErrorMessage(result));
+      toast.success(enabled ? t('clientAutopay.enabled', { defaultValue: 'Auto-pay enabled' }) : t('clientAutopay.disabled', { defaultValue: 'Auto-pay disabled' }));
+      setAttested(false);
+      await reload();
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const copySetupLink = async () => {
+    setBusy(true);
+    try {
+      const result = await startClientAutopaySetup(clientId, billingProfileId);
+      if (isActionError(result) || !result?.url) throw new Error(getErrorMessage(result) || 'Unable to create setup link');
+      await navigator.clipboard.writeText(result.url);
+      toast.success(t('clientAutopay.linkCopied', { defaultValue: 'Card setup link copied' }));
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!overview?.enabled) return null;
+  const enrolled = overview.enrollment?.is_enabled === true;
+  const selectedMethod = overview.methods.find((method) => method.payment_method_id === methodId);
+
+  return <Card className="mt-3 border-border">
+    <CardHeader className="pb-2"><CardTitle className="text-base">{t('clientAutopay.title', { profile: profileName, defaultValue: 'Auto-pay · {{profile}}' })}</CardTitle></CardHeader>
+    <CardContent className="space-y-3">
+      {enrolled ? <>
+        <p className="text-sm">{t('clientAutopay.active', { defaultValue: 'Enabled' })}: {overview.methods.find((method) => method.payment_method_id === overview.enrollment?.payment_method_id)?.brand ?? 'Card'} •••• {overview.methods.find((method) => method.payment_method_id === overview.enrollment?.payment_method_id)?.last4}</p>
+        <p className="text-xs text-muted-foreground">{t('clientAutopay.authorization', { source: overview.enrollment?.authorization_source, user: overview.enrollment?.authorized_by_user_id ?? '—', date: new Date(overview.enrollment!.authorized_at).toLocaleString(), defaultValue: 'Authorized by {{user}} on {{date}} ({{source}})' })}</p>
+        <Button id={`msp-disable-autopay-${billingProfileId}`} variant="outline" disabled={busy} onClick={() => void changeEnrollment(false)}>{t('clientAutopay.disable', { defaultValue: 'Disable auto-pay' })}</Button>
+      </> : <>
+        <Button id={`msp-copy-card-setup-${billingProfileId}`} variant="outline" disabled={busy} onClick={() => void copySetupLink()}>{t('clientAutopay.copySetupLink', { defaultValue: 'Copy setup link' })}</Button>
+        {overview.methods.length > 0 && <>
+          <CustomSelect id={`msp-autopay-card-${billingProfileId}`} value={methodId} onValueChange={setMethodId} options={overview.methods.map((method) => ({ value: method.payment_method_id, label: `${method.brand ?? 'Card'} •••• ${method.last4} (${method.exp_month}/${method.exp_year}) · ${method.status}` }))} />
+          <p className="text-sm text-muted-foreground">{overview.consentText}</p>
+          <Checkbox id={`msp-autopay-attestation-${billingProfileId}`} checked={attested} onChange={(event) => setAttested((event.target as HTMLInputElement).checked)} label={t('clientAutopay.attestation', { defaultValue: 'Client has authorized recurring charges' })} />
+          <Button id={`msp-enable-autopay-${billingProfileId}`} disabled={busy || !selectedMethod || !attested} onClick={() => void changeEnrollment(true)}>{t('clientAutopay.enable', { defaultValue: 'Enable auto-pay' })}</Button>
+        </>}
+      </>}
+      <div className="space-y-1">
+        <p className="text-sm font-medium">{t('clientAutopay.recentAttempts', { defaultValue: 'Recent attempts' })}</p>
+        {overview.attempts.length === 0 ? <p className="text-sm text-muted-foreground">{t('clientAutopay.noAttempts', { defaultValue: 'No attempts yet' })}</p> : overview.attempts.map((attempt) => <p key={attempt.attempt_id} className="text-xs text-muted-foreground">{new Date(attempt.scheduled_for).toLocaleDateString()} · {attempt.status}{attempt.failure_code ? ` · ${attempt.failure_code}` : ''}{attempt.failure_message ? `: ${attempt.failure_message}` : ''}</p>)}
+      </div>
+    </CardContent>
+  </Card>;
+}

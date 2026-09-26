@@ -63,6 +63,36 @@ export async function removeSavedPaymentMethod(tenantId: string, paymentMethodId
   return true;
 }
 
+export async function inspectSavedPaymentMethodSetup(tenantId: string, sessionId: string): Promise<Record<string, unknown> | null> {
+  if (!isEnterpriseBuild()) return null;
+  const ee = await loadEnterprisePayments();
+  if (!ee?.SavedPaymentMethodService) return null;
+  return (await ee.SavedPaymentMethodService.create(tenantId)).inspectSetup(sessionId);
+}
+
+export async function getAutopayProfileOverview(tenantId: string, billingProfileId: string): Promise<Record<string, unknown> | null> {
+  if (!isEnterpriseBuild()) return null;
+  const ee = await loadEnterprisePayments();
+  if (!ee?.AutopayService) return null;
+  return (await ee.AutopayService.create(tenantId)).getProfileOverview(billingProfileId);
+}
+
+export async function enrollBillingProfileAutopay(tenantId: string, billingProfileId: string, paymentMethodId: string, authorization: Record<string, unknown>): Promise<boolean> {
+  if (!isEnterpriseBuild()) return false;
+  const ee = await loadEnterprisePayments();
+  if (!ee?.AutopayService) return false;
+  await (await ee.AutopayService.create(tenantId)).enroll(billingProfileId, paymentMethodId, authorization);
+  return true;
+}
+
+export async function disableBillingProfileAutopay(tenantId: string, billingProfileId: string, reason: string, actor: string | null): Promise<boolean> {
+  if (!isEnterpriseBuild()) return false;
+  const ee = await loadEnterprisePayments();
+  if (!ee?.AutopayService) return false;
+  await (await ee.AutopayService.create(tenantId)).disenroll(billingProfileId, reason, actor);
+  return true;
+}
+
 /** Best-effort finalize producer. It is intentionally isolated from finalize. */
 export async function enqueueInvoiceAutopay(_knex: unknown, tenantId: string, invoiceId: string): Promise<void> {
   try {

@@ -13,7 +13,8 @@ import {
   resolvePaymentBillingProfileId,
 } from '@alga-psa/shared/billingClients/billingProfilePayments';
 import { getPermittedBillingProfileIds } from './client-portal-actions/clientBillingProfileAccess';
-import { completeSavedPaymentMethodSetup, removeSavedPaymentMethod as removeSavedMethod, startSavedPaymentMethodSetup } from '@alga-psa/billing/actions/paymentActions';
+import { completeSavedPaymentMethodSetup, disableBillingProfileAutopay, enrollBillingProfileAutopay, getAutopayProfileOverview, inspectSavedPaymentMethodSetup, removeSavedPaymentMethod as removeSavedMethod, startSavedPaymentMethodSetup } from '@alga-psa/billing/actions/paymentActions';
+import { headers } from 'next/headers';
 
 export type ClientPortalAccountActionError = ActionMessageError;
 
@@ -433,13 +434,47 @@ export const completeClientPortalCardSetup = withAuth(async (user, { tenant }, s
   const { knex } = await createTenantKnex();
   const clientId = await getClientIdFromUser(knex, user, tenant);
   if (!clientId) return noClientForUserError();
+  const setup = await inspectSavedPaymentMethodSetup(tenant, sessionId);
+  if (!setup || setup.clientId !== clientId || setup.tenantId !== tenant) throw new Error('Card setup does not belong to this client.');
+  const permitted = await getPermittedBillingProfileIds(knex, tenant, user, clientId);
+  if (permitted && !permitted.has(String(setup.billingProfileId))) throw new Error('You do not have access to that billing profile.');
   const completed = await completeSavedPaymentMethodSetup(tenant, sessionId);
   if (!completed) throw new Error('Hosted card setup is unavailable.');
-  const method = await tenantDb(knex, tenant).table('payment_methods').where({ payment_method_id: completed.paymentMethodId, client_id: clientId }).first('billing_profile_id');
-  if (!method) throw new Error('Card setup does not belong to this client.');
-  const permitted = await getPermittedBillingProfileIds(knex, tenant, user, clientId);
-  if (permitted && !permitted.has(method.billing_profile_id)) throw new Error('You do not have access to that billing profile.');
   return { success: true };
+});
+
+export const getClientPortalAutopayProfile = withAuth(async (user, { tenant }, billingProfileId: string) => {
+  const { knex } = await createTenantKnex();
+  const clientId = await getClientIdFromUser(knex, user, tenant);
+  if (!clientId) return noClientForUserError();
+  const permitted = await getPermittedBillingProfileIds(knex, tenant, user, clientId);
+  if (permitted && !permitted.has(billingProfileId)) throw new Error('You do not have access to that billing profile.');
+  return await getAutopayProfileOverview(tenant, billingProfileId);
+});
+
+export const enrollClientPortalAutopay = withAuth(async (user, { tenant }, billingProfileId: string, paymentMethodId: string, consentTextVersion: string) => {
+  const { knex } = await createTenantKnex();
+  const clientId = await getClientIdFromUser(knex, user, tenant);
+  if (!clientId) return noClientForUserError();
+  const permitted = await getPermittedBillingProfileIds(knex, tenant, user, clientId);
+  if (permitted && !permitted.has(billingProfileId)) throw new Error('You do not have access to that billing profile.');
+  const profile = await tenantDb(knex, tenant).table('client_billing_profiles').where({ billing_profile_id: billingProfileId, client_id: clientId }).first();
+  if (!profile) throw new Error('Billing profile not found.');
+  const requestHeaders = await headers();
+  return await enrollBillingProfileAutopay(tenant, billingProfileId, paymentMethodId, {
+    userId: user.user_id, source: 'client_portal', consentTextVersion,
+    ip: requestHeaders.get('x-forwarded-for')?.split(',')[0]?.trim() ?? requestHeaders.get('x-real-ip'),
+    userAgent: requestHeaders.get('user-agent'),
+  });
+});
+
+export const disableClientPortalAutopay = withAuth(async (user, { tenant }, billingProfileId: string) => {
+  const { knex } = await createTenantKnex();
+  const clientId = await getClientIdFromUser(knex, user, tenant);
+  if (!clientId) return noClientForUserError();
+  const permitted = await getPermittedBillingProfileIds(knex, tenant, user, clientId);
+  if (permitted && !permitted.has(billingProfileId)) throw new Error('You do not have access to that billing profile.');
+  return await disableBillingProfileAutopay(tenant, billingProfileId, 'client_portal_request', user.user_id);
 });
 
 export const setDefaultPaymentMethod = withAuth(async (user, { tenant }, id: string): Promise<{ success: boolean } | ClientPortalAccountActionError> => {

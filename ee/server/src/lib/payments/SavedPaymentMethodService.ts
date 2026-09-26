@@ -35,15 +35,11 @@ export class SavedPaymentMethodService {
 
   async completeSetup(externalSessionOrSetupIntentId: string): Promise<{ paymentMethodId: string }> {
     const stripe = createStripePaymentProvider(this.tenantId);
-    const eventObject = externalSessionOrSetupIntentId.startsWith('cs_')
-      ? await stripe.getSetupIntentFromCheckout(externalSessionOrSetupIntentId)
-      : await stripe.getSetupIntent(externalSessionOrSetupIntentId);
-    const metadata = eventObject.metadata;
-    if (eventObject.status !== 'succeeded') throw new Error(`Stripe SetupIntent is not complete (status: ${eventObject.status})`);
-    const clientId = metadata?.client_id;
-    const billingProfileId = metadata?.billing_profile_id;
-    const paymentMethodExternalId = typeof eventObject.payment_method === 'string' ? eventObject.payment_method : eventObject.payment_method?.id;
-    if (!clientId || !billingProfileId || !paymentMethodExternalId || metadata?.tenant_id !== this.tenantId) throw new Error('Stripe setup intent metadata is incomplete or belongs to another tenant');
+    const eventObject = await this.inspectSetup(externalSessionOrSetupIntentId);
+    const clientId = eventObject.clientId;
+    const billingProfileId = eventObject.billingProfileId;
+    const paymentMethodExternalId = eventObject.paymentMethodId;
+    if (!paymentMethodExternalId) throw new Error('Stripe setup intent has no payment method');
     const details = await stripe.retrieveSavedPaymentMethod(paymentMethodExternalId);
     await stripe.updateSavedPaymentMethodMetadata(paymentMethodExternalId, { tenant_id: this.tenantId, client_id: clientId, billing_profile_id: billingProfileId });
     const profile = await tenantDb(this.knex, this.tenantId).table('client_billing_profiles')
@@ -70,6 +66,20 @@ export class SavedPaymentMethodService {
       const [inserted] = await tenantDb(trx, this.tenantId).table('payment_methods').insert(row).returning('payment_method_id');
       return { paymentMethodId: String(inserted.payment_method_id) };
     });
+  }
+
+  async inspectSetup(externalSessionOrSetupIntentId: string): Promise<{ clientId: string; billingProfileId: string; tenantId: string; status: string; paymentMethodId: string | null }> {
+    const stripe = createStripePaymentProvider(this.tenantId);
+    const setupIntent = externalSessionOrSetupIntentId.startsWith('cs_')
+      ? await stripe.getSetupIntentFromCheckout(externalSessionOrSetupIntentId)
+      : await stripe.getSetupIntent(externalSessionOrSetupIntentId);
+    if (setupIntent.status !== 'succeeded') throw new Error(`Stripe SetupIntent is not complete (status: ${setupIntent.status})`);
+    const metadata = setupIntent.metadata;
+    if (!metadata?.client_id || !metadata?.billing_profile_id || metadata?.tenant_id !== this.tenantId) {
+      throw new Error('Stripe setup metadata is incomplete or belongs to another tenant');
+    }
+    const paymentMethodId = typeof setupIntent.payment_method === 'string' ? setupIntent.payment_method : setupIntent.payment_method?.id ?? null;
+    return { clientId: metadata.client_id, billingProfileId: metadata.billing_profile_id, tenantId: this.tenantId, status: setupIntent.status, paymentMethodId };
   }
 
   async removeMethod(paymentMethodId: string): Promise<void> {

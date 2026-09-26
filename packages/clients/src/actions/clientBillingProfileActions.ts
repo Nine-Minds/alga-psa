@@ -18,6 +18,8 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { assertMspPermission } from '../lib/authHelpers';
+import { disableBillingProfileAutopay, enrollBillingProfileAutopay, getAutopayProfileOverview, startSavedPaymentMethodSetup } from '@alga-psa/billing/actions/paymentActions';
+import { headers } from 'next/headers';
 
 /**
  * Billing profile CRUD (F035–F041, F044–F048, F052).
@@ -127,6 +129,38 @@ export const getClientBillingProfiles = withAuth(async (
     if (expected) return expected;
     throw error;
   }
+});
+
+export const getClientAutopaySettings = withAuth(async (user, { tenant }, clientId: string, billingProfileId: string) => {
+  await assertMspPermission(user, 'billing', 'read', 'Permission denied: Cannot read auto-pay settings');
+  const { knex } = await createTenantKnex();
+  const profile = await tenantDb(knex, tenant).table('client_billing_profiles').where({ client_id: clientId, billing_profile_id: billingProfileId }).first();
+  if (!profile) throw new Error('Billing profile not found');
+  return await getAutopayProfileOverview(tenant, billingProfileId);
+});
+
+export const startClientAutopaySetup = withAuth(async (user, { tenant }, clientId: string, billingProfileId: string) => {
+  await assertMspPermission(user, 'billing', 'update', 'Permission denied: Cannot manage auto-pay settings');
+  const { knex } = await createTenantKnex();
+  const profile = await tenantDb(knex, tenant).table('client_billing_profiles').where({ client_id: clientId, billing_profile_id: billingProfileId, is_active: true }).first();
+  if (!profile) throw new Error('Billing profile not found');
+  return await startSavedPaymentMethodSetup(tenant, clientId, billingProfileId, `/msp/clients/${clientId}`);
+});
+
+export const setClientAutopay = withAuth(async (user, { tenant }, input: { clientId: string; billingProfileId: string; paymentMethodId?: string; enabled: boolean; consentTextVersion: string }) => {
+  await assertMspPermission(user, 'billing', 'update', 'Permission denied: Cannot manage auto-pay settings');
+  const { knex } = await createTenantKnex();
+  const profile = await tenantDb(knex, tenant).table('client_billing_profiles').where({ client_id: input.clientId, billing_profile_id: input.billingProfileId }).first();
+  if (!profile) throw new Error('Billing profile not found');
+  if (!input.enabled) return await disableBillingProfileAutopay(tenant, input.billingProfileId, 'msp_request', user.user_id);
+  if (!input.paymentMethodId) throw new Error('Select a chargeable card');
+  const requestHeaders = await headers();
+  await enrollBillingProfileAutopay(tenant, input.billingProfileId, input.paymentMethodId, {
+    userId: user.user_id, source: 'msp', consentTextVersion: input.consentTextVersion,
+    ip: requestHeaders.get('x-forwarded-for')?.split(',')[0]?.trim() ?? requestHeaders.get('x-real-ip'),
+    userAgent: requestHeaders.get('user-agent'),
+  });
+  return true;
 });
 
 export const createClientBillingProfile = withAuth(async (

@@ -18,6 +18,14 @@ export function isMissedFinalizeCandidate(input: {
   return Number.isFinite(finalizedAt) && Number.isFinite(authorizedAt) && finalizedAt >= now - windowMs && finalizedAt <= now && authorizedAt <= finalizedAt;
 }
 
+export function isAutopayEnrollmentValid(input: {
+  tenantEnabled: boolean; profileMatches: boolean; providerType?: string | null; status?: string | null;
+  externalPaymentMethodId?: string | null; externalCustomerId?: string | null;
+}): boolean {
+  return input.tenantEnabled && input.profileMatches && input.providerType === 'stripe' && input.status === 'active' &&
+    !!input.externalPaymentMethodId && !!input.externalCustomerId;
+}
+
 export function classifyAutopayFailure(code?: string, declineCode?: string, attemptNumber = 1, retryCount = 3): { retryable: boolean; hardDecline: boolean } {
   const decline = declineCode ?? code ?? '';
   const hardDecline = ['stolen_card', 'lost_card', 'fraudulent', 'expired_card'].includes(decline) || (decline === 'do_not_honor' && attemptNumber > retryCount);

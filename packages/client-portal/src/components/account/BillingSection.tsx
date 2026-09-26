@@ -4,6 +4,8 @@ import { Card } from "@alga-psa/ui/components/Card";
 import { Badge } from "@alga-psa/ui/components/Badge";
 import { Table } from "@alga-psa/ui/components/Table";
 import { Button } from "@alga-psa/ui/components/Button";
+import { Checkbox } from "@alga-psa/ui/components/Checkbox";
+import CustomSelect from "@alga-psa/ui/components/CustomSelect";
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { Dialog, DialogContent } from "@alga-psa/ui/components/Dialog";
 import { useState, useEffect } from 'react';
@@ -13,6 +15,9 @@ import {
   getBillingCycles,
   getPaymentMethods,
   startClientPortalCardSetup,
+  getClientPortalAutopayProfile,
+  enrollClientPortalAutopay,
+  disableClientPortalAutopay,
   removePaymentMethod,
   setDefaultPaymentMethod,
   type Invoice,
@@ -24,13 +29,25 @@ import {
   type PortalBillingProfile,
 } from "../../actions/client-portal-actions/client-billing-segments";
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { useSearchParams } from 'next/navigation';
 
 const isReturnedActionError = (
   value: unknown
 ): value is { readonly actionError: string } | { readonly permissionError: string } =>
   isActionMessageError(value) || isActionPermissionError(value);
 
+type PortalAutopayInfo = {
+  enabled: boolean;
+  consentText: string;
+  consentTextVersion: string;
+  enrollment: { is_enabled: boolean; payment_method_id: string; authorized_at: string; authorization_source: string; authorized_by_user_id?: string } | null;
+  methods: Array<{ payment_method_id: string; brand: string | null; last4: string; exp_month: string; exp_year: string; status: string }>;
+  chargeableMethods: Array<{ payment_method_id: string; brand: string | null; last4: string; exp_month: string; exp_year: string; status: string }>;
+  attempts: Array<{ attempt_id: string; status: string; scheduled_for: string; failure_code?: string | null }>;
+};
+
 export default function BillingSection() {
+  const searchParams = useSearchParams();
   const { money } = useCurrencyFormat();
   const { t: tAccount } = useTranslation('client-portal');
   const { t: tBilling } = useTranslation('features/billing');
@@ -55,6 +72,10 @@ export default function BillingSection() {
   const [error, setError] = useState('');
   const [setupError, setSetupError] = useState('');
   const [startingSetup, setStartingSetup] = useState(false);
+  const [autopayByProfile, setAutopayByProfile] = useState<Record<string, PortalAutopayInfo>>({});
+  const [autopaySelections, setAutopaySelections] = useState<Record<string, string>>({});
+  const [autopayConsents, setAutopayConsents] = useState<Record<string, boolean>>({});
+  const [autopayBusyProfileId, setAutopayBusyProfileId] = useState<string | null>(null);
 
   useEffect(() => {
     const loadBillingData = async () => {
@@ -74,6 +95,16 @@ export default function BillingSection() {
         setBillingCycles(cyclesData);
         setPaymentMethods(methodsData);
         setBillingProfiles(profilesData as PortalBillingProfile[]);
+        const profileResults = await Promise.all((profilesData as PortalBillingProfile[]).map(async (profile) => ({
+          id: profile.billingProfileId,
+          info: await getClientPortalAutopayProfile(profile.billingProfileId),
+        })));
+        const autopayInfo: Record<string, PortalAutopayInfo> = {};
+        for (const result of profileResults) {
+          if (!isReturnedActionError(result.info) && result.info) autopayInfo[result.id] = result.info as PortalAutopayInfo;
+        }
+        setAutopayByProfile(autopayInfo);
+        setAutopaySelections(Object.fromEntries(Object.entries(autopayInfo).map(([id, info]) => [id, info.chargeableMethods[0]?.payment_method_id ?? ''])));
       } catch (err) {
         console.error('Failed to load billing data:', err);
         setError(tAccountBilling('loadError', 'Failed to load billing data'));
@@ -142,6 +173,23 @@ export default function BillingSection() {
     }
   };
 
+  const handleAutopayChange = async (billingProfileId: string, enabled: boolean) => {
+    const info = autopayByProfile[billingProfileId];
+    setAutopayBusyProfileId(billingProfileId);
+    try {
+      const result = enabled
+        ? await enrollClientPortalAutopay(billingProfileId, autopaySelections[billingProfileId] ?? '', info?.consentTextVersion ?? '1')
+        : await disableClientPortalAutopay(billingProfileId);
+      if (isReturnedActionError(result)) throw new Error(getErrorMessage(result));
+      const refreshed = await getClientPortalAutopayProfile(billingProfileId);
+      if (!isReturnedActionError(refreshed) && refreshed) setAutopayByProfile((current) => ({ ...current, [billingProfileId]: refreshed as PortalAutopayInfo }));
+    } catch (autopayFailure) {
+      setSetupError(getErrorMessage(autopayFailure));
+    } finally {
+      setAutopayBusyProfileId(null);
+    }
+  };
+
   // money() takes minor units and formats with the tenant's locale + currency
   // from CurrencyFormatProvider; amounts here are major units.
   const formatAmount = (amount: number, currencyCode?: string) => {
@@ -166,7 +214,30 @@ export default function BillingSection() {
 
   return (
     <div className="space-y-8">
+      {searchParams.get('cardSetup') === 'success' && <p className="text-sm text-success">{tAccountBilling('cardSetup.success', 'Card saved securely.')}</p>}
+      {searchParams.get('cardSetup') === 'error' && <p className="text-sm text-destructive">{tAccountBilling('cardSetup.error', 'We could not save the card. Please try again.')}</p>}
       {/* Billing Overview */}
+      {billingProfiles.map((profile) => {
+        const info = autopayByProfile[profile.billingProfileId];
+        if (!info?.enabled) return null;
+        const enrolled = info.enrollment?.is_enabled === true;
+        return <Card key={`autopay-${profile.billingProfileId}`} className="p-5">
+          <h4 className="text-sm font-medium">{tAccountBilling('autopay.title', { defaultValue: 'Auto-pay · {{profile}}', profile: profile.name })}</h4>
+          {enrolled ? <div className="mt-2 text-sm text-muted-foreground">
+            <p>{tAccountBilling('autopay.enrolled', { defaultValue: 'Auto-pay is enabled for this billing profile.' })}</p>
+            <p>{info.methods.find((method) => method.payment_method_id === info.enrollment?.payment_method_id)?.brand} •••• {info.methods.find((method) => method.payment_method_id === info.enrollment?.payment_method_id)?.last4}</p>
+            <p>{tAccountBilling('autopay.authorizedAt', { defaultValue: 'Authorized {{date}}', date: new Date(info.enrollment!.authorized_at).toLocaleDateString() })}</p>
+            <Button id={`disable-autopay-${profile.billingProfileId}`} className="mt-3" variant="outline" disabled={autopayBusyProfileId === profile.billingProfileId} onClick={() => void handleAutopayChange(profile.billingProfileId, false)}>{tAccountBilling('autopay.disable', 'Turn off auto-pay')}</Button>
+          </div> : <div className="mt-3 space-y-3">
+            {info.chargeableMethods.length ? <>
+              <CustomSelect id={`autopay-card-${profile.billingProfileId}`} value={autopaySelections[profile.billingProfileId] ?? ''} onValueChange={(value) => setAutopaySelections((current) => ({ ...current, [profile.billingProfileId]: value }))} options={info.chargeableMethods.map((method) => ({ value: method.payment_method_id, label: `${method.brand ?? 'Card'} •••• ${method.last4} (${method.exp_month}/${method.exp_year})` }))} />
+              <p className="text-sm text-muted-foreground">{info.consentText}</p>
+              <Checkbox id={`autopay-consent-${profile.billingProfileId}`} checked={autopayConsents[profile.billingProfileId] ?? false} onChange={(event) => setAutopayConsents((current) => ({ ...current, [profile.billingProfileId]: (event.target as HTMLInputElement).checked }))} label={tAccountBilling('autopay.consent', 'I authorize recurring charges to this card for finalized invoices.')} />
+              <Button id={`enable-autopay-${profile.billingProfileId}`} disabled={!autopaySelections[profile.billingProfileId] || !autopayConsents[profile.billingProfileId] || autopayBusyProfileId === profile.billingProfileId} onClick={() => void handleAutopayChange(profile.billingProfileId, true)}>{tAccountBilling('autopay.enable', 'Enable auto-pay')}</Button>
+            </> : <p className="text-sm text-muted-foreground">{tAccountBilling('autopay.noCards', 'Add a card to enable auto-pay.')}</p>}
+          </div>}
+        </Card>;
+      })}
       <section>
         <h3 className="text-lg font-medium mb-4">{tAccountBilling('overviewTitle', 'Billing Overview')}</h3>
         <Card className="p-6">
