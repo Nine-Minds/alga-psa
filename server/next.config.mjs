@@ -187,10 +187,15 @@ const nextConfig = {
   // and RSC requests from origins it does not recognize, which stalls
   // hydration when a phone/tablet loads the dev server by LAN IP.
   // Comma-separated hostnames, e.g. DEV_ALLOWED_ORIGINS=192.168.1.20,my-mac.local
-  allowedDevOrigins: (process.env.DEV_ALLOWED_ORIGINS ?? '')
-    .split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean),
+  // Keep loopback IP access working for isolated browser sessions; Next blocks
+  // its HMR endpoint for this origin unless it is explicitly allowed.
+  allowedDevOrigins: [
+    '127.0.0.1',
+    ...(process.env.DEV_ALLOWED_ORIGINS ?? '')
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean),
+  ],
   env: {
     NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION || appVersion,
     // Propagate edition to client-side code

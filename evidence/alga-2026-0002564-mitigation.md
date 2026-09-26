@@ -48,6 +48,50 @@ The package build and the repository build both passed. The repository build com
 
 Review follow-up reconfirmed no listener on port 3212 (`curl` returned connection refused). Board-service restoration remains an external prerequisite for isolated authentication and all live behavior checks; the service was not started.
 
-## Next action
+## Mitigation pass 2026-09-26
 
-Board-service restoration on port 3212 is an external prerequisite. Once restored through the normal board workflow, use the isolated-account procedure in `evidence/plan.txt`. Capture cookie names/counts/aggregate sizes only, inspect the relevant request-header limit and loopback asset failures, and rerun the live behavior checks. Do not change product code unless that verification demonstrates a defect.
+No task-specific approved plan was present in `docs/plans/` or in the branch's
+plan-file history. The user-provided acceptance scope and `evidence/plan.txt`
+remain the working checklist.
+
+The board server was still unavailable on port 3212 (`curl` to both
+`127.0.0.1:3212/auth/msp/signin` and `localhost:3212/auth/msp/signin` failed
+with connection refused). The board service log at
+`~/.alga-dev/card-services/card-service_384fd554-43c1-4e15-8ed9-7423eb6de35a_dev-server_1/service.log`
+contains an explicit Next warning at line 19129: `/_next/webpack-hmr` from
+`127.0.0.1` was blocked as a cross-origin dev resource. `server/next.config.mjs`
+already accepted extra development origins through `DEV_ALLOWED_ORIGINS`, but
+the loopback IP was not in its default list. The config now includes
+`127.0.0.1` by default and retains any comma-separated configured origins. A
+focused config test covers both default loopback access and custom entries.
+This addresses the observed HMR-origin rejection; it does not establish that
+HMR caused the translation-loading screen.
+
+The same saved log shows the sign-in route returning 200, followed by the HMR
+warning and unrelated Temporal connection failures; it contains no HMR
+`ERR_INVALID_HTTP_RESPONSE` message or HTTP 431 response. The earlier browser
+trace (`/tmp/alga-smoke-evidence/alga-2026-0002564-20260926T0005/network-errors.json`)
+records four localhost requests returning 431, but no cookie-size metadata or
+locale-resource request results. The `I18nProvider` in
+`packages/ui/src/lib/i18n/client.tsx` holds children until i18next init and
+route-namespace loading settle. Since no live browser was available and the
+preserved trace omits locale requests, the loading-screen cause remains open.
+Using `127.0.0.1` avoids the shared `localhost` cookies, but live behavior on
+that origin was not rechecked.
+
+Current offline checks:
+
+- `npx vitest run tests/billingSettingsActions.defaultCurrency.test.ts src/components/billing-dashboard/quotes/QuoteForm.terms.test.tsx src/constants/billingQuoteValidity.test.ts --reporter=verbose` (from `packages/billing`) — 27 tests passed.
+- `npx vitest run src/test/unit/devAllowedOrigins.unit.test.ts --reporter=verbose` (from `server`) — 2 tests passed.
+- `npx vitest run src/test/integration/devServerStartup.integration.test.ts --reporter=verbose` (from `server`) — 7 tests passed, including HMR delegation under Webpack and Turbopack.
+- `NODE_OPTIONS=--max-old-space-size=8192 npm -w @alga-psa/billing run typecheck` — passed.
+- `NODE_OPTIONS=--max-old-space-size=8192 npm run typecheck` (from `server`) — did not complete; TypeScript exhausted the 8 GiB V8 heap after about 2.5 minutes. The default 4 GiB attempt also exhausted memory. The production build completed successfully, but skipped its own type validation; the standalone server typecheck remains unverified.
+- `npm run build` — passed, including the production Next.js compile and static page generation. Turbopack reported the same broad filesystem-trace warnings in document preview and extension assets as the prior build.
+
+No billing feature code changed in this pass and no quote-validity defect was
+established. The board app was not started, no credentials were recovered or
+used, and no database rows were changed. Screenshots and tenant-scoped database
+evidence for authentication, settings persistence, quote creation, invalid
+input, and existing/manual-date preservation are still outstanding. After
+board-service restoration, use the isolated-account steps in `evidence/plan.txt`
+and rerun those live checks; do not reset shared accounts.
