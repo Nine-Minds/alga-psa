@@ -1218,6 +1218,7 @@
         "followTheme": "When on, the client portal uses the theme chosen under Settings → Appearance. When off, the colors below override it.",
         "followThemeActive": "The colors below are kept but not applied while the portal follows the organization theme."
       },
+      "cropHelp": "Drag and zoom to choose the part shown in the portal side panel and every circular frame. Your wide logo is not changed.",
       "heroGradient": {
         "primaryShades": "Primary color to primary shade",
         "primarySecondary": "Primary color to secondary color"
@@ -1487,7 +1488,8 @@
     "whiteLabel": {
       "title": "White-label the MSP app",
       "description": "The logo slots are shared with the client portal, but they only affect the MSP app after MSP UI customization is enabled below.",
-      "logoHelp": "The square mark is used wherever the space is square — the collapsed side menu and circular frames. The optional wide logo replaces the mark and the name in the expanded side menu, so upload one that already contains your company name. The side menu follows its own background: dark-background variants on a dark menu, light ones on a light menu, falling back to whichever variant you uploaded.",
+      "logoHelp": "The square mark is used wherever the space is square — the collapsed side menu and circular frames. Drop a wide logo into a square slot and you pick which part becomes the mark; once a wide logo is uploaded you can also cut the mark straight from it. The optional wide logo replaces the mark and the name in the expanded side menu, so upload one that already contains your company name. The side menu follows its own background: dark-background variants on a dark menu, light ones on a light menu, falling back to whichever variant you uploaded.",
+      "cropHelp": "Drag and zoom to choose the part shown in the collapsed side menu and every circular frame. Your wide logo is not changed.",
       "fields": {
         "mark": "Square mark",
         "markDark": "Square mark for dark backgrounds",
@@ -3053,7 +3055,7 @@
     "assetTypes": {
       "tab": "Assets",
       "title": "Asset Types",
-      "description": "Manage the asset types available in your asset module. Custom types carry a field schema that drives their create/edit forms.",
+      "description": "Custom types use a field schema for their forms; built-in types also support additional fields.",
       "loading": "Loading asset types...",
       "table": {
         "name": "Name",
@@ -3081,7 +3083,7 @@
         "namePlaceholder": "e.g. Firewall",
         "displayOrderLabel": "Display Order",
         "iconLabel": "Icon",
-        "builtinSchemaHint": "Built-in types use fixed forms managed by AlgaPSA, so their field schema cannot be edited. You can still rename the type or change its icon."
+        "builtinSchemaHint": "The standard built-in form stays fixed. These additional fields are tenant-defined."
       },
       "deleteDialog": {
         "title": "Delete Asset Type",
@@ -3139,7 +3141,8 @@
           "invalidOptions": "Options must be non-empty values.",
           "invalidField": "This field is invalid."
         }
-      }
+      },
+      "additionalFields": "Additional fields"
     }
   },
   "mcpServer": {

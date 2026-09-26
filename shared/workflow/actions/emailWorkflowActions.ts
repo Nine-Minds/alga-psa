@@ -13,6 +13,7 @@ import { buildInboundEmailReplyReceivedPayload } from '../streams/domainEventBui
 import { normalizeRfc822MessageId } from '../../services/email/inboundEmailIdentity';
 import { normalizeEmailAddress } from '../../lib/email/addressUtils';
 import { ContactModel } from '../../models/contactModel';
+import { buildContactCreatedPayload } from '../streams/domainEventBuilders/contactEventBuilders';
 import {
   mergeTicketWatchListRecipients,
   parseTicketWatchListAttributes,
@@ -416,10 +417,10 @@ export async function findContactByEmail(
  * - the domain is blank/invalid
  * - no mapping exists for the domain in the tenant
  */
-export async function findClientIdByInboundEmailDomain(
+export async function findInboundEmailDomainMapping(
   domain: string,
   tenant: string
-): Promise<string | null> {
+): Promise<{ clientId: string; autoCreateContacts: boolean } | null> {
   const normalizedDomain = (domain ?? '').trim().toLowerCase();
   if (!normalizedDomain) {
     return null;
@@ -430,12 +431,14 @@ export async function findClientIdByInboundEmailDomain(
   return withAdminTransaction(async (trx: Knex.Transaction) => {
     try {
       const row = await tenantDb(trx, tenant).table('client_inbound_email_domains')
-        .select('client_id')
+        .select('client_id', 'auto_create_contacts')
         .andWhereRaw('lower(domain) = ?', [normalizedDomain])
         .first();
 
       const clientId = (row as any)?.client_id;
-      return typeof clientId === 'string' && clientId ? clientId : null;
+      return typeof clientId === 'string' && clientId
+        ? { clientId, autoCreateContacts: Boolean((row as any).auto_create_contacts) }
+        : null;
     } catch (error: any) {
       // Best-effort safety: if the mapping table isn't present in a given environment,
       // do not break inbound email processing; treat as "no match".
@@ -446,6 +449,10 @@ export async function findClientIdByInboundEmailDomain(
       throw error;
     }
   });
+}
+
+export async function findClientIdByInboundEmailDomain(domain: string, tenant: string): Promise<string | null> {
+  return (await findInboundEmailDomainMapping(domain, tenant))?.clientId ?? null;
 }
 
 /**
@@ -760,6 +767,84 @@ export async function createOrFindContact(
         is_new: true
       };
     });
+}
+
+// LEVERAGE: pattern contact-create-with-event
+export async function createContactForInboundSender(
+  input: { email: string; name?: string; clientId: string },
+  tenant: string,
+  executionOptions?: InboundEmailExecutionOptions & {
+    contactEventPublisher?: import('@alga-psa/types').IEventPublisher;
+    providerId?: string;
+    emailId?: string;
+    onSkip?: (reason: 'exists_elsewhere' | 'client_inactive' | 'error') => void;
+  }
+): Promise<{ contactId: string; created: boolean } | null> {
+  const normalizedEmail = normalizeEmailAddress(input.email);
+  if (!normalizedEmail) return null;
+  const { withAdminTransaction } = await import('@alga-psa/db');
+  let createdContact: any = null;
+  let eventPayload: Record<string, unknown> | null = null;
+  try {
+    const result = await withAdminTransaction(async (trx: Knex.Transaction) => {
+      const run = async (savepoint: Knex.Transaction) => {
+        const user = await tenantDb(savepoint, tenant).table('users').select('user_id').whereRaw('lower(email) = ?', [normalizedEmail]).first();
+        if (user) {
+          executionOptions?.onSkip?.('exists_elsewhere');
+          return null;
+        }
+        const existing = await ContactModel.getContactByEmail(normalizedEmail, tenant, savepoint);
+        if (existing) {
+          if (existing.client_id === input.clientId) return { contactId: existing.contact_name_id, created: false };
+          executionOptions?.onSkip?.('exists_elsewhere');
+          return null;
+        }
+        const client = await tenantDb(savepoint, tenant).table('clients').select('client_id').where({ client_id: input.clientId })
+          .andWhere((query: Knex.QueryBuilder) => query.where('is_inactive', false).orWhereNull('is_inactive'))
+          .first();
+        if (!client) {
+          executionOptions?.onSkip?.('client_inactive');
+          return null;
+        }
+        const contact = await ContactModel.createContact({ full_name: input.name?.trim() || normalizedEmail, email: normalizedEmail, client_id: input.clientId }, tenant, savepoint);
+        createdContact = contact;
+        eventPayload = buildContactCreatedPayload({ contactId: contact.contact_name_id, clientId: contact.client_id, fullName: contact.full_name, email: contact.email ?? normalizedEmail, primaryEmailCanonicalType: contact.primary_email_canonical_type ?? 'work', primaryEmailCustomTypeId: contact.primary_email_custom_type_id ?? null, primaryEmailType: contact.primary_email_type ?? null, additionalEmailAddresses: contact.additional_email_addresses ?? [], phoneNumbers: contact.phone_numbers ?? [], defaultPhoneNumber: contact.default_phone_number || undefined, defaultPhoneType: contact.default_phone_type || undefined, createdAt: contact.created_at ?? new Date() });
+        if (executionOptions?.existingConnection) {
+          if (!executionOptions.contactEventPublisher || typeof (executionOptions.contactEventPublisher as any).publishContactCreated !== 'function') {
+            throw new Error('CONTACT_CREATED outbox publisher is required for durable inbound contact creation');
+          }
+          await (executionOptions.contactEventPublisher as any).publishContactCreated(eventPayload);
+        }
+        return { contactId: contact.contact_name_id, created: true };
+      };
+      try {
+        // Keep unique-email races recoverable in PostgreSQL. A failed insert
+        // aborts its transaction until the savepoint is rolled back.
+        const created = await (trx as any).transaction(run);
+        return created;
+      } catch (error: any) {
+        if (String(error?.code ?? '') === 'EMAIL_EXISTS' || String(error?.message ?? '').includes('EMAIL_EXISTS')) {
+          const existing = await ContactModel.getContactByEmail(normalizedEmail, tenant, trx);
+          if (existing?.client_id === input.clientId) return { contactId: existing.contact_name_id, created: false };
+          executionOptions?.onSkip?.('exists_elsewhere');
+          return null;
+        }
+        throw error;
+      }
+    }, executionOptions?.existingConnection as any);
+    if (result?.created && eventPayload && !executionOptions?.existingConnection) {
+      try {
+        await publishWorkflowEvent({ eventType: 'CONTACT_CREATED', payload: eventPayload, ctx: { tenantId: tenant }, idempotencyKey: `contact_created:${createdContact.contact_name_id}` });
+      } catch (eventError) {
+        console.warn('createContactForInboundSender: CONTACT_CREATED publish failed', { tenantId: tenant, contactId: createdContact?.contact_name_id, error: eventError instanceof Error ? eventError.message : String(eventError) });
+      }
+    }
+    return result;
+  } catch (error) {
+    executionOptions?.onSkip?.('error');
+    console.warn('createContactForInboundSender: contact creation failed; falling back', { tenantId: tenant, providerId: executionOptions?.providerId, emailId: executionOptions?.emailId, clientId: input.clientId, error: error instanceof Error ? error.message : String(error) });
+    return null;
+  }
 }
 
 // =============================================================================
@@ -1427,7 +1512,7 @@ export function normalizeInboundEmailProvider(
 
 export function buildInboundEmailCommentMetadata(
   metadata: unknown,
-  inboundReplyEvent?: { provider: string }
+  inboundReplyEvent?: { provider: string; from?: string }
 ): CommentMetadata {
   const baseMetadata: Record<string, unknown> =
     metadata && typeof metadata === 'object' && !Array.isArray(metadata)
@@ -1451,6 +1536,12 @@ export function buildInboundEmailCommentMetadata(
   if (providerType) {
     emailMetadata.provider = providerType;
     emailMetadata.providerType = providerType;
+  }
+
+  // Without a sender address the comment carries no identity at all, so its
+  // notification event has no author to render for an unmatched sender.
+  if (!emailMetadata.fromAddress && inboundReplyEvent?.from) {
+    emailMetadata.fromAddress = inboundReplyEvent.from;
   }
 
   return {
@@ -1550,6 +1641,7 @@ export async function createCommentFromEmail(
           commentData.inboundReplyEvent
             ? {
                 provider: commentData.inboundReplyEvent.provider,
+                from: commentData.inboundReplyEvent.from,
               }
             : undefined
         )

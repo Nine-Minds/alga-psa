@@ -5,6 +5,7 @@ import type { PaginatedResponse, SuccessResponse } from "./tickets";
 export type ContactPhoneNumber = {
   contact_phone_number_id?: string;
   phone_number: string;
+  extension?: string | null;
   normalized_phone_number?: string | null;
   canonical_type?: string | null;
   custom_type?: string | null;

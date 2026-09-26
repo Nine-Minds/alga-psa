@@ -15,6 +15,11 @@ function sectionBetween(startMarker: string, endMarker: string): string {
 }
 
 describe('contactActions tenant-scoped query contract', () => {
+  it('rejects a shared mailbox when granting client admin access on the server', () => {
+    expect(source).toContain('assertContactIsNotSharedMailbox(trx, tenant, contactId');
+    expect(source).toContain('Shared mailbox contacts cannot be client admins.');
+  });
+
   it('uses structural tenant scoping for contact deletion roots', () => {
     const cleanupSection = sectionBetween('async function cleanupEntraReferencesBeforeContactDelete', 'export const getContactByContactNameId');
     const deleteSection = sectionBetween('export const deleteContact', 'type ContactFilterStatus');

@@ -8,7 +8,8 @@ const findTicketByEmailThreadMock = vi.fn();
 const resolveInboundTicketDefaultsMock = vi.fn();
 const resolveEffectiveInboundTicketDefaultsMock = vi.fn();
 const findContactByEmailMock = vi.fn();
-const findClientIdByInboundEmailDomainMock = vi.fn();
+const findInboundEmailDomainMappingMock = vi.fn();
+const createContactForInboundSenderMock = vi.fn();
 const findValidClientPrimaryContactIdMock = vi.fn();
 const findEmailProviderMailboxAddressMock = vi.fn();
 const upsertTicketWatchListRecipientsMock = vi.fn();
@@ -16,6 +17,7 @@ const createTicketFromEmailMock = vi.fn();
 const createCommentFromEmailMock = vi.fn();
 const processInboundEmailArtifactsBestEffortMock = vi.fn();
 const evaluateInboundEmailRulesMock = vi.fn();
+const associateAssetWithTicketMock = vi.fn();
 
 function buildEmailData(overrides: Partial<EmailMessageDetails> = {}): EmailMessageDetails {
   return {
@@ -73,7 +75,8 @@ vi.mock('../../../workflow/actions/emailWorkflowActions', () => ({
   resolveEffectiveInboundTicketDefaults: (...args: any[]) =>
     resolveEffectiveInboundTicketDefaultsMock(...args),
   findContactByEmail: (...args: any[]) => findContactByEmailMock(...args),
-  findClientIdByInboundEmailDomain: (...args: any[]) => findClientIdByInboundEmailDomainMock(...args),
+  findInboundEmailDomainMapping: (...args: any[]) => findInboundEmailDomainMappingMock(...args),
+  createContactForInboundSender: (...args: any[]) => createContactForInboundSenderMock(...args),
   findValidClientPrimaryContactId: (...args: any[]) => findValidClientPrimaryContactIdMock(...args),
   findEmailProviderMailboxAddress: (...args: any[]) => findEmailProviderMailboxAddressMock(...args),
   upsertTicketWatchListRecipients: (...args: any[]) => upsertTicketWatchListRecipientsMock(...args),
@@ -88,6 +91,10 @@ vi.mock('../processInboundEmailArtifacts', () => ({
 
 vi.mock('../inboundEmailRules', () => ({
   evaluateInboundEmailRules: (...args: any[]) => evaluateInboundEmailRulesMock(...args),
+}));
+
+vi.mock('../../assets/assetTicketAssociation', () => ({
+  associateAssetWithTicket: (...args: any[]) => associateAssetWithTicketMock(...args),
 }));
 
 const PROVIDER_DEFAULTS = {
@@ -122,7 +129,7 @@ describe('processInboundEmailInApp: inbound email rules integration', () => {
     findTicketByReplyTokenMock.mockResolvedValue(null);
     findTicketByEmailThreadMock.mockResolvedValue(null);
     findContactByEmailMock.mockResolvedValue(null);
-    findClientIdByInboundEmailDomainMock.mockResolvedValue(null);
+    findInboundEmailDomainMappingMock.mockResolvedValue(null);
     findValidClientPrimaryContactIdMock.mockResolvedValue(null);
     findEmailProviderMailboxAddressMock.mockResolvedValue('support@example.com');
     upsertTicketWatchListRecipientsMock.mockResolvedValue({ updated: true, watchList: [] });
@@ -135,6 +142,7 @@ describe('processInboundEmailInApp: inbound email rules integration', () => {
     createCommentFromEmailMock.mockResolvedValue('comment-1');
     processInboundEmailArtifactsBestEffortMock.mockResolvedValue(undefined);
     evaluateInboundEmailRulesMock.mockResolvedValue({ outcome: { kind: 'none' }, trace: [] });
+    associateAssetWithTicketMock.mockResolvedValue(undefined);
   });
 
   async function run(emailOverrides: Partial<EmailMessageDetails> = {}) {
@@ -195,7 +203,7 @@ describe('processInboundEmailInApp: inbound email rules integration', () => {
     const result = await run();
 
     expect(result).toMatchObject({ outcome: 'created', ticketId: 'ticket-1' });
-    expect(findClientIdByInboundEmailDomainMock).not.toHaveBeenCalled();
+    expect(findInboundEmailDomainMappingMock).not.toHaveBeenCalled();
     expect(findValidClientPrimaryContactIdMock).toHaveBeenCalledWith('client-acme', 'tenant-1');
     expect(createTicketFromEmailMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -209,6 +217,28 @@ describe('processInboundEmailInApp: inbound email rules integration', () => {
       }),
       'tenant-1'
     );
+  });
+
+  it('uses matched contact for ticket and destination cascade, and treats asset linking as best effort', async () => {
+    evaluateInboundEmailRulesMock.mockResolvedValue({ outcome: {
+      kind: 'assign_client', ruleId: 'rule-contact', ruleName: 'Device alert', clientId: 'client-a',
+      extractedValue: 'jane@acme.com', matchSource: 'rule_extraction', matchedBy: 'contact_email',
+      contactId: 'matched-contact', assetId: 'matched-asset',
+    }, trace: [] });
+    associateAssetWithTicketMock.mockRejectedValue(new Error('association unavailable'));
+
+    const result = await run();
+
+    expect(result).toMatchObject({ outcome: 'created', ticketId: 'ticket-1' });
+    expect(createTicketFromEmailMock).toHaveBeenCalledWith(expect.objectContaining({
+      client_id: 'client-a', contact_id: 'matched-contact',
+      email_metadata: expect.objectContaining({ ruleClientMatchedBy: 'contact_email' }),
+    }), 'tenant-1');
+    expect(resolveEffectiveInboundTicketDefaultsMock).toHaveBeenCalledWith(expect.objectContaining({
+      matchedContactId: 'matched-contact', matchedContactClientId: 'client-a',
+    }));
+    expect(associateAssetWithTicketMock).toHaveBeenCalled();
+    expect(createCommentFromEmailMock).toHaveBeenCalled();
   });
 
   it('assign_client keeps the sender contact when it belongs to the assigned client', async () => {

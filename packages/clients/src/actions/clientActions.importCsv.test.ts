@@ -1,4 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+// Load during collection: a cold transform inside a timed test can outlive that
+// test and write into the next test's reset database state. vi.mock is hoisted.
+import { importClientsFromCSV } from './clientActions';
 
 const createTenantKnexMock = vi.hoisted(() => vi.fn());
 const tenantDbMock = vi.hoisted(() => vi.fn((conn: any) => ({
@@ -134,6 +137,7 @@ const TABLE_COLUMNS: Record<string, Set<string>> = {
     'invoice_template_id', 'billing_contact_id', 'billing_email', 'region_code',
     'account_manager_id', 'default_currency_code', 'sla_policy_id',
     'entra_tenant_id', 'entra_primary_domain', 'inbound_ticket_defaults_id',
+    'client_since',
   ]),
   client_locations: new Set([
     'location_id', 'tenant', 'client_id', 'location_name', 'address_line1',
@@ -285,7 +289,6 @@ function csvRow(overrides: Record<string, any> = {}): Record<string, any> {
 }
 
 async function importClients(rows: Record<string, any>[], updateExisting = false) {
-  const { importClientsFromCSV } = await import('./clientActions');
   return importClientsFromCSV(rows, updateExisting) as Promise<Array<{
     success: boolean;
     message: string;
@@ -370,7 +373,11 @@ describe('importClientsFromCSV', () => {
     })]);
 
     expect(results[0]).toMatchObject({ success: true });
+    expect(state.clients).toHaveLength(1);
+    expect(state.clients[0]).toMatchObject({ client_name: 'Bogota Support' });
+    expect(state.client_locations).toHaveLength(1);
     expect(state.client_locations[0]).toMatchObject({
+      client_id: state.clients[0].client_id,
       phone: '+573007001234',
       phone_extension: '',
       country_code: 'CO',
@@ -547,6 +554,55 @@ describe('importClientsFromCSV', () => {
       'Valid After Person',
     ]);
     expect(state.clients.map((client) => client.client_type)).toEqual(['company', 'individual']);
+  });
+
+  // Bulk migration is the path tenure actually arrives on: a client whose
+  // relationship started years before the AlgaPSA row was written.
+  it('stores a mapped client_since on create', async () => {
+    const results = await importClients([csvRow({ client_since: '2015-06-01' })]);
+
+    expect(results[0]).toMatchObject({ success: true, message: 'Client created' });
+    expect(state.clients[0].client_since).toBe('2015-06-01');
+  });
+
+  it('overwrites client_since on update and clears it when the cell is empty', async () => {
+    state.clients.push({
+      tenant: 'tenant-1',
+      client_id: 'client-existing',
+      client_name: 'Harborview Dental Group',
+      url: '',
+      client_since: '2015-06-01',
+    });
+
+    const updated = await importClients([csvRow({ client_since: '2011-03-14' })], true);
+    expect(updated[0]).toMatchObject({ success: true, message: 'Client updated' });
+    expect(state.clients[0].client_since).toBe('2011-03-14');
+
+    const cleared = await importClients([csvRow({ client_since: '' })], true);
+    expect(cleared[0]).toMatchObject({ success: true, message: 'Client updated' });
+    expect(state.clients[0].client_since).toBeNull();
+
+    // An unmapped column must leave the stored date alone.
+    state.clients[0].client_since = '2011-03-14';
+    await importClients([csvRow()], true);
+    expect(state.clients[0].client_since).toBe('2011-03-14');
+  });
+
+  it('fails only the row whose client_since is not a date', async () => {
+    const results = await importClients([
+      csvRow({ client_name: 'Valid Before Co', client_since: '2015-06-01' }),
+      csvRow({ client_name: 'Garbled Date Co', client_since: 'June 2015' }),
+      csvRow({ client_name: 'Impossible Date Co', client_since: '2015-02-30' }),
+      csvRow({ client_name: 'Valid After Co', client_since: '2020-12-31' }),
+    ]);
+
+    expect(results.map((result) => result.success)).toEqual([true, false, false, true]);
+    expect(results[1].message).toContain('Client since must be a date');
+    expect(state.clients.map((client) => client.client_name)).toEqual([
+      'Valid Before Co',
+      'Valid After Co',
+    ]);
+    expect(state.clients.map((client) => client.client_since)).toEqual(['2015-06-01', '2020-12-31']);
   });
 
   it('updates the existing default location instead of inserting a second one', async () => {

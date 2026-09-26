@@ -355,7 +355,7 @@ export function ExternalTaxBatchImportDashboard() {
 
         {/* Pending Invoices Table */}
         {pendingInvoices.length > 0 ? (
-          <DataTable
+          <DataTable id="external-tax-batch-import-table"
             columns={columns}
             data={pendingInvoices}
             pagination={true}

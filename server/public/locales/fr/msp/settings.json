@@ -1218,6 +1218,7 @@
         "followTheme": "Lorsque cette option est activée, le portail client utilise le thème choisi dans Paramètres → Apparence. Lorsqu’elle est désactivée, les couleurs ci-dessous le remplacent.",
         "followThemeActive": "Les couleurs ci-dessous sont conservées mais ne sont pas appliquées tant que le portail suit le thème de l’organisation."
       },
+      "cropHelp": "Faites glisser et zoomez pour choisir la partie affichée dans le panneau latéral du portail et dans tous les cadres ronds. Votre logo large n'est pas modifié.",
       "heroGradient": {
         "primaryShades": "Couleur principale vers une nuance principale",
         "primarySecondary": "Couleur principale vers couleur secondaire"
@@ -1487,7 +1488,8 @@
     "whiteLabel": {
       "title": "Personnaliser la marque de l’application MSP",
       "description": "Téléversez votre logo une seule fois. Il remplace la marque Alga dans le menu latéral MSP, et le portail client utilise les mêmes images.",
-      "logoHelp": "La marque carrée est utilisée partout où l’espace est carré : le menu latéral réduit et les cadres circulaires. Le logo large facultatif remplace la marque et le nom dans le menu latéral déployé : téléversez-en donc un qui contient déjà le nom de votre entreprise. Le menu latéral s’adapte à son propre arrière-plan : les variantes pour arrière-plans sombres sur un menu sombre, les claires sur un menu clair, et à défaut la variante que vous avez téléversée.",
+      "logoHelp": "La marque carrée est utilisée partout où l’espace est carré : le menu latéral réduit et les cadres circulaires. Déposez un logo large dans un emplacement carré et choisissez la partie qui devient le symbole ; une fois un logo large importé, vous pouvez aussi découper le symbole directement à partir de celui-ci. Le logo large facultatif remplace la marque et le nom dans le menu latéral déployé : téléversez-en donc un qui contient déjà le nom de votre entreprise. Le menu latéral s’adapte à son propre arrière-plan : les variantes pour arrière-plans sombres sur un menu sombre, les claires sur un menu clair, et à défaut la variante que vous avez téléversée.",
+      "cropHelp": "Faites glisser et zoomez pour choisir la partie affichée dans le menu latéral replié et dans tous les cadres ronds. Votre logo large n'est pas modifié.",
       "fields": {
         "mark": "Marque carrée",
         "markDark": "Marque carrée pour arrière-plans sombres",
@@ -3053,7 +3055,7 @@
     "assetTypes": {
       "tab": "Actifs",
       "title": "Types d'actifs",
-      "description": "Gérez les types d'actifs disponibles dans votre module d'actifs. Les types personnalisés portent un schéma de champs qui pilote leurs formulaires de création/modification.",
+      "description": "Les types personnalisés utilisent un schéma de champs pour leurs formulaires ; les types intégrés prennent aussi en charge des champs supplémentaires.",
       "loading": "Chargement des types d'actifs...",
       "table": {
         "name": "Nom",
@@ -3081,7 +3083,7 @@
         "namePlaceholder": "p. ex. Pare-feu",
         "displayOrderLabel": "Ordre d'affichage",
         "iconLabel": "Icône",
-        "builtinSchemaHint": "Les types intégrés utilisent des formulaires fixes gérés par AlgaPSA ; leur schéma de champs ne peut donc pas être modifié. Vous pouvez toujours renommer le type ou changer son icône."
+        "builtinSchemaHint": "Le formulaire standard intégré reste fixe. Ces champs supplémentaires sont définis pour chaque tenant."
       },
       "deleteDialog": {
         "title": "Supprimer le type d'actif",
@@ -3139,7 +3141,8 @@
           "invalidOptions": "Les options ne peuvent pas être vides.",
           "invalidField": "Ce champ est invalide."
         }
-      }
+      },
+      "additionalFields": "Champs supplémentaires"
     }
   },
   "mcpServer": {

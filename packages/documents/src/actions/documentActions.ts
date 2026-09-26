@@ -123,7 +123,7 @@ type SafeDocumentSortField = NonNullable<DocumentFilters['sortBy']>;
 type SafeSortOrder = 'asc' | 'desc';
 type SearchableDocumentAssociationEntityType = Extract<
   DocumentAssociationEntityType,
-  'client' | 'contact' | 'ticket' | 'asset' | 'project_task' | 'contract' | 'quote'
+  'client' | 'contact' | 'ticket' | 'asset' | 'project_task' | 'contract' | 'quote' | 'opportunity'
 >;
 
 interface DocumentAssociationEntitySearchOption {
@@ -148,6 +148,7 @@ const SEARCHABLE_ASSOCIATION_ENTITY_TYPES = new Set<SearchableDocumentAssociatio
   'project_task',
   'contract',
   'quote',
+  'opportunity',
 ]);
 
 // LEVERAGE: pattern tenant-scoped-table — document actions and shared authorization repeat this typed facade.
@@ -2099,6 +2100,32 @@ export const searchDocumentAssociationEntities = withAuth(async (
       return { options: rows, total };
     }
 
+    if (entityType === 'opportunity') {
+      let query = tenantScopedTable(trx, 'opportunities as o', tenant);
+      db.tenantJoin(query, 'clients as cl', 'o.client_id', 'cl.client_id', { type: 'left' });
+      query = query
+        .select(
+          'o.opportunity_id as value',
+          trx.raw(`
+            CONCAT(
+              COALESCE(o.opportunity_number, 'Opportunity'),
+              ' - ',
+              COALESCE(o.title, 'Untitled opportunity'),
+              CASE
+                WHEN cl.client_name IS NOT NULL AND cl.client_name <> ''
+                THEN CONCAT(' - ', cl.client_name)
+                ELSE ''
+              END
+            ) as label
+          `)
+        )
+        .orderBy('o.updated_at', 'desc');
+      query = applySearch(query, ['o.opportunity_number', 'o.title', 'cl.client_name']);
+      const total = await countRows(query, 'o.opportunity_id');
+      const rows = await query.limit(safeLimit).offset(offset);
+      return { options: rows, total };
+    }
+
     let quoteQuery = tenantScopedTable(trx, 'quotes as q', tenant);
     db.tenantJoin(quoteQuery, 'clients as cl', 'q.client_id', 'cl.client_id', { type: 'left' });
     quoteQuery = quoteQuery
@@ -2325,6 +2352,7 @@ export const uploadDocument = withAuth(async (
     assetId?: string;
     projectTaskId?: string;
     contractId?: string;
+    opportunityId?: string;
     folder_path?: string | null;
     /** The document this upload is embedded in — inline editor images point at their article. */
     parentDocumentId?: string;
@@ -2417,6 +2445,7 @@ export const uploadDocument = withAuth(async (
           const primaryEntity = options.ticketId ? { id: options.ticketId, type: 'ticket' }
             : options.projectTaskId ? { id: options.projectTaskId, type: 'project_task' }
             : options.contractId ? { id: options.contractId, type: 'contract' }
+            : options.opportunityId ? { id: options.opportunityId, type: 'opportunity' }
             : options.clientId ? { id: options.clientId, type: 'client' }
             : options.assetId ? { id: options.assetId, type: 'asset' }
             : null;
@@ -2474,10 +2503,11 @@ export const uploadDocument = withAuth(async (
             .andWhere('folder_path', resolvedFolderPath);
 
           const entityId = options.ticketId || options.projectTaskId || options.contractId
-            || options.clientId || options.assetId;
+            || options.opportunityId || options.clientId || options.assetId;
           const entityType = options.ticketId ? 'ticket'
             : options.projectTaskId ? 'project_task'
             : options.contractId ? 'contract'
+            : options.opportunityId ? 'opportunity'
             : options.clientId ? 'client'
             : options.assetId ? 'asset'
             : null;
@@ -2585,6 +2615,15 @@ export const uploadDocument = withAuth(async (
         document_id: documentWithId.document_id,
         entity_id: options.contractId,
         entity_type: 'contract',
+        tenant
+      });
+    }
+
+    if (options.opportunityId) {
+      associations.push({
+        document_id: documentWithId.document_id,
+        entity_id: options.opportunityId,
+        entity_type: 'opportunity',
         tenant
       });
     }

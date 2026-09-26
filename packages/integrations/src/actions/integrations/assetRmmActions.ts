@@ -176,6 +176,23 @@ export const triggerRmmScript = withAuth(async (user, { tenant }, assetId: strin
   }
 });
 
+export const getAssetRemoteControlTypes = withAuth(async (
+  user,
+  { tenant },
+  assetId: string
+): Promise<RmmRemoteConnectionType[]> => {
+  await requireAssetPermission(user, 'read');
+  if (!await hasPermission(user as any, 'asset', 'update')) return [];
+  try {
+    const { ref, actions } = await resolveDevice(tenant, assetId);
+    if (!actions.remoteControlTypes) return [];
+    return await actions.remoteControlTypes(ref);
+  } catch (error) {
+    console.warn('Remote control types not available:', error);
+    return [];
+  }
+});
+
 export const getAssetRemoteControlUrl = withAuth(async (
   user,
   { tenant },

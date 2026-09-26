@@ -82,9 +82,11 @@ describe('apply preview', () => {
 
   it('previews through the same planner and decorator as the apply', () => {
     expect(body).toContain('previewEmailBrandingApply({');
-    expect(body).toContain('target: resolveEmailPalette(context.palette)');
+    expect(body).toContain('const target = resolveEmailPalette(context.palette)');
     expect(body).toContain('appliedPalette: context.palette.appliedPalette ?? null');
-    expect(body).toContain('decorate: buildBrandDecorator(context.palette, context.settings.branding, isEnterprise)');
+    expect(body).toContain(
+      'decorate: buildBrandDecorator(context.palette, context.settings.branding, isEnterprise, target)',
+    );
   });
 });
 
@@ -94,15 +96,37 @@ describe('enterprise brand assets', () => {
     const body = decorator.slice(0, decorator.indexOf('\n}\n'));
 
     expect(body).toContain('if (!enterprise) return undefined;');
-    expect(body).toContain("palette.logo?.variant === 'wide' && branding?.logoWideUrl");
     expect(body).toContain("{ variant, alt: branding?.clientName ?? '' }");
     expect(body).toContain('decorateBrandedHtml(html, { logo, hideAttribution })');
     // The row references the logo by content-id; no URL is ever written into it.
     expect(body).not.toContain('url:');
   });
 
+  it('writes the variant that reads on the header the palette paints', () => {
+    const decorator = source.slice(source.indexOf('function buildBrandDecorator'));
+    const body = decorator.slice(0, decorator.indexOf('\n}\n'));
+
+    // One shared chooser, so the settings preview cannot disagree with it.
+    expect(body).toContain('pickBrandLogoVariant(palette.logo.variant, isDarkEmailHeader(target), {');
+    for (const url of ['logoUrl', 'logoDarkUrl', 'logoWideUrl', 'logoWideDarkUrl']) {
+      expect(body).toContain(`${url}: branding?.${url} || undefined`);
+    }
+  });
+
+  it('offers the dark artwork to the panel, Enterprise-gated like the wordmark', () => {
+    const status = source.slice(source.indexOf('logoOptions: {'));
+    const body = status.slice(0, status.indexOf('},'));
+
+    expect(body).toContain('logoUrl: settings.branding?.logoUrl || undefined');
+    for (const url of ['logoDarkUrl', 'logoWideUrl', 'logoWideDarkUrl']) {
+      expect(body).toContain(`${url}: isEnterprise ? settings.branding?.${url} || undefined : undefined`);
+    }
+  });
+
   it('runs the decorator over everything the apply writes', () => {
     const apply = source.slice(source.indexOf('export const applyEmailBrandingAction'));
-    expect(apply).toContain('decorate: buildBrandDecorator(context.palette, context.settings.branding, isEnterprise)');
+    expect(apply).toContain(
+      'decorate: buildBrandDecorator(context.palette, context.settings.branding, isEnterprise, target)',
+    );
   });
 });

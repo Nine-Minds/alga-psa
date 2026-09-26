@@ -663,7 +663,8 @@
       "mobileDevice": "Szczegóły urządzenia mobilnego",
       "printer": "Szczegóły drukarki",
       "custom": "Szczegóły: {{typeName}}"
-    }
+    },
+    "additionalFields": "Pola dodatkowe"
   },
   "assetFormClient": {
     "title": "Klient formularza zasobu",
@@ -741,6 +742,11 @@
     "more": "+{{count}} więcej"
   },
   "remoteAccess": {
+    "connectionTypes": {
+      "teamviewer": "TeamViewer",
+      "vnc": "VNC",
+      "rdp": "RDP"
+    },
     "remoteDesktop": "Pulpit zdalny",
     "remoteShell": "Powłoka zdalna",
     "remoteAccess": "Dostęp zdalny",
@@ -748,13 +754,52 @@
     "deviceOffline": "Urządzenie jest offline",
     "errors": {
       "urlFetchFailed": "Nie udało się pobrać adresu URL dostępu zdalnego",
-      "initiateFailed": "Nie udało się zainicjować dostępu zdalnego"
+      "initiateFailed": "Nie udało się rozpocząć dostępu zdalnego",
+      "managePermission": "Brak uprawnień: nie można zarządzać ustawieniami zasobów.",
+      "readPermission": "Brak uprawnień: nie można odczytać zasobów."
     },
     "indicator": {
       "online": "Online",
       "offline": "Offline",
       "available": "Dostęp zdalny dostępny",
       "deviceOffline": "Urządzenie offline"
+    },
+    "links": {
+      "title": "Łącza dostępu zdalnego",
+      "description": "Skonfiguruj szablony adresów URL dla ScreenConnect i innych narzędzi dostępu zdalnego.",
+      "errors": {
+        "load": "Nie udało się wczytać łączy dostępu zdalnego.",
+        "save": "Nie udało się zapisać łącza dostępu zdalnego.",
+        "delete": "Nie udało się usunąć łącza dostępu zdalnego.",
+        "templateHttp": "Szablon musi zaczynać się od http:// lub https:// i zawierać dosłowną nazwę hosta.",
+        "templatePlaceholder": "Szablon zawiera nieobsługiwany symbol zastępczy.",
+        "templateUrl": "Szablon musi tworzyć prawidłowy adres URL http lub https.",
+        "required": "Etykieta i szablon adresu URL są wymagane.",
+        "partialDelete": "Nie udało się usunąć {{count}} zaznaczonych łączy."
+      },
+      "noneAvailable": "Brak dostępnych opcji dostępu zdalnego.",
+      "confirmDeleteTitle": "Usunąć łącze dostępu zdalnego?",
+      "confirmDeleteMessage": "Czy na pewno usunąć „{{label}}”? Tej czynności nie można cofnąć.",
+      "openMenu": "Otwórz menu",
+      "selectLabel": "Wybierz {{label}}",
+      "confirmBulkDeleteTitle": "Usunąć zaznaczone łącza?",
+      "confirmBulkDeleteMessage": "Usunąć {{count}} zaznaczonych łączy dostępu zdalnego?",
+      "selectedCount": "Wybrano: {{count}}",
+      "add": "Dodaj łącze",
+      "empty": "Nie skonfigurowano łączy dostępu zdalnego.",
+      "edit": "Edytuj",
+      "delete": "Usuń",
+      "addTitle": "Dodaj łącze dostępu zdalnego",
+      "editTitle": "Edytuj łącze dostępu zdalnego",
+      "cancel": "Anuluj",
+      "save": "Zapisz",
+      "label": "Etykieta przycisku",
+      "template": "Szablon adresu URL",
+      "tokens": "Użyj {asset.name}, {asset.asset_tag}, {asset.serial_number}, {client.name} i {field.<key>} z kluczami pól niestandardowych z Ustawienia → Zasoby → Typy zasobów.",
+      "loading": "Wczytywanie opcji dostępu zdalnego…",
+      "unavailable": "Niedostępne dla tego zasobu",
+      "actions": "Działania",
+      "selectAll": "Zaznacz wszystkie łącza"
     }
   },
   "assetListErrors": {

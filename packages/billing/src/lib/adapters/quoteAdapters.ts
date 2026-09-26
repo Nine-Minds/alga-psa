@@ -1,5 +1,5 @@
 import type { IQuote, QuoteViewModel, QuoteViewModelLineItem, QuoteViewModelLocation, QuoteViewModelLocationGroup, QuoteViewModelParty, QuoteViewModelPhase } from '@alga-psa/types';
-import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
+import { getClientDocumentLogoUrl } from '@alga-psa/formatting/avatarUtils';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 
@@ -409,7 +409,7 @@ async function fetchClientParty(
     return null;
   }
 
-  const logoUrl = await getClientLogoUrl(clientId, tenant).catch(() => null);
+  const logoUrl = await getClientDocumentLogoUrl(clientId, tenant).catch(() => null);
 
   return {
     name: asTrimmedString(client.client_name) || 'Client',

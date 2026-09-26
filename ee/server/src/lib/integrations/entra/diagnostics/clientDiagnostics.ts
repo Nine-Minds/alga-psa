@@ -25,7 +25,8 @@ import {
   listConfirmedEntraMappings,
   type ConfirmedEntraMapping,
 } from '../mapping/confirmedMappingsService';
-import { filterEntraUsersForTenant } from '../settingsService';
+import { filterEntraUsersForManagedTenant, resolveEntraUserFilterPolicy } from '../settingsService';
+import { filterEntraUsers } from '../sync/userFilterPipeline';
 import { classifyEntraOAuthFailure } from './oauthClassifier';
 import { aggregateClientCategories, dedupeRecommendations } from './recommendations';
 import { sanitizeClient, sanitizeRecommendations } from './redaction';
@@ -204,10 +205,12 @@ async function pageUserYield(options: {
   startCounts: EntraPendingYield['counts'];
 }): Promise<{ done: true; counts: EntraPendingYield['counts'] } | { done: false; nextLink: string | null; counts: EntraPendingYield['counts'] }> {
   const adapter = new DirectProviderAdapter();
+  const policy = await resolveEntraUserFilterPolicy({ tenant: options.tenant, managedTenantId: options.mapping.managedTenantId, entraTenantId: options.mapping.entraTenantId, adapter });
   const counts = {
     totalUsers: options.startCounts.totalUsers,
     includedUsers: options.startCounts.includedUsers,
     excluded: { ...options.startCounts.excluded },
+    unknownFieldCounts: { userType: options.startCounts.unknownFieldCounts?.userType ?? 0, assignedLicenseCount: options.startCounts.unknownFieldCounts?.assignedLicenseCount ?? 0 },
   };
   let nextLink: string | null = options.startNextLink;
   let pages = 0;
@@ -228,9 +231,11 @@ async function pageUserYield(options: {
       if (options.signal.aborted) return { done: false, nextLink, counts };
       throw error;
     }
-    const filtered = await filterEntraUsersForTenant(options.tenant, page.users);
+          const filtered = filterEntraUsers(page.users, policy);
     counts.totalUsers += page.users.length;
     counts.includedUsers += filtered.included.length;
+    counts.unknownFieldCounts.userType += filtered.unknownFieldCounts?.userType ?? 0;
+    counts.unknownFieldCounts.assignedLicenseCount += filtered.unknownFieldCounts?.assignedLicenseCount ?? 0;
     for (const excluded of filtered.excluded) {
       counts.excluded[excluded.reason] = (counts.excluded[excluded.reason] ?? 0) + 1;
     }
@@ -247,6 +252,11 @@ async function runDirectClient(options: DirectClientOptions): Promise<ClientRunO
   const runner = createEntraStepRunner();
   const recState: ClientRecommendationState = { recommendations: [] };
   const portal = await loadMappingPortalConfig(tenant, mapping.managedTenantId);
+  await runner.runStep('shared_mailbox_detection', 'Shared mailbox detection', {}, async () => {
+    const rec: DiagnosticsRecommendation = { code: 'shared_mailbox_detection_unavailable', severity: 'warn', text: 'Shared mailbox detection is unavailable in Direct mode; no users were classified as shared mailboxes.', messageKey: 'sharedMailboxDetectionUnavailable' };
+    recState.recommendations.push(rec);
+    return { status: 'warn' as const, data: { classified: false }, recommendations: [rec] };
+  });
   let accessToken: string | null = null;
   let firstUserId: string | null = null;
   let usersReadOk = false;
@@ -593,6 +603,7 @@ async function runDirectClient(options: DirectClientOptions): Promise<ClientRunO
       totalUsers: 0,
       includedUsers: 0,
       excluded: {} as Record<string, number>,
+      unknownFieldCounts: { userType: 0, assignedLicenseCount: 0 },
     };
     try {
       const outcome = await pageUserYield({
@@ -632,11 +643,12 @@ async function runDirectClient(options: DirectClientOptions): Promise<ClientRunO
         });
       }
       await runner.runStep('user_yield_preview', 'User yield preview', {}, async () => ({
-        status: recommendations.length ? ('warn' as const) : ('pass' as const),
+        status: recommendations.length || counts.unknownFieldCounts.userType || counts.unknownFieldCounts.assignedLicenseCount ? ('warn' as const) : ('pass' as const),
         data: {
           totalUsers: counts.totalUsers,
           includedUsers: counts.includedUsers,
           excludedByReason: counts.excluded,
+          unknownFieldCounts: counts.unknownFieldCounts,
           emptyDirectory: counts.totalUsers === 0,
         },
         recommendations,
@@ -730,6 +742,7 @@ async function runCippClient(options: {
   } else {
     let users: Awaited<ReturnType<CippProviderAdapter['listUsersForTenant']>> = [];
     let accessOk = false;
+    let sharedMailboxIds: Set<string> | null = null;
     await runner.runStep('per_tenant_users', 'CIPP per-tenant users', {}, async () => {
       try {
         users = await new CippProviderAdapter().listUsersForTenant({
@@ -762,6 +775,18 @@ async function runCippClient(options: {
       }
     });
 
+    if (accessOk) {
+      await runner.runStep('shared_mailbox_detection', 'Shared mailbox detection', { requires: ['per_tenant_users'] }, async () => {
+        sharedMailboxIds = await new CippProviderAdapter().listSharedMailboxIds({ tenant, managedTenantId: mapping.entraTenantId });
+        if (sharedMailboxIds === null) {
+          const rec: DiagnosticsRecommendation = { code: 'shared_mailbox_detection_unavailable', severity: 'warn', text: 'Shared mailbox detection is unavailable for this CIPP connection; no users were classified as shared mailboxes.', messageKey: 'sharedMailboxDetectionUnavailable' };
+          recState.recommendations.push(rec);
+          return { status: 'warn' as const, data: { classified: false }, recommendations: [rec] };
+        }
+        return { status: 'pass' as const, data: { classifiedCount: sharedMailboxIds.size } };
+      });
+    }
+
     await runner.runStep(
       'user_yield_preview',
       'User yield preview',
@@ -774,7 +799,8 @@ async function runCippClient(options: {
           return { status: 'skip' as const, data: { reason: 'No usable CIPP directory read.' } };
         }
         try {
-          const filtered = await filterEntraUsersForTenant(tenant, users);
+          const policy = await resolveEntraUserFilterPolicy({ tenant, managedTenantId: mapping.managedTenantId, entraTenantId: mapping.entraTenantId, adapter: new CippProviderAdapter(), users, sharedMailboxIds });
+          const filtered = filterEntraUsers(users, policy);
           const excluded = filtered.excluded.reduce<Record<string, number>>((acc, item) => {
             acc[item.reason] = (acc[item.reason] ?? 0) + 1;
             return acc;
@@ -790,16 +816,19 @@ async function runCippClient(options: {
                 },
               ]
             : [];
-          recState.recommendations.push(...recommendations);
+          const unknown = filtered.unknownFieldCounts ?? { userType: 0, assignedLicenseCount: 0 };
+          const mailboxWarning: DiagnosticsRecommendation[] = filtered.warnings.map(text => ({ code: 'shared_mailbox_detection_unavailable', severity: 'warn', text, messageKey: 'sharedMailboxDetectionUnavailable' }));
+          recState.recommendations.push(...recommendations, ...mailboxWarning);
           return {
-            status: allExcluded ? ('warn' as const) : ('pass' as const),
+            status: allExcluded || unknown.userType > 0 || unknown.assignedLicenseCount > 0 || mailboxWarning.length > 0 ? ('warn' as const) : ('pass' as const),
             data: {
               totalUsers: users.length,
               includedUsers: filtered.included.length,
               excludedByReason: excluded,
+              unknownFieldCounts: unknown,
               emptyDirectory: users.length === 0,
             },
-            recommendations,
+              recommendations: [...recommendations, ...mailboxWarning],
           };
         } catch (error: any) {
           const rec: DiagnosticsRecommendation = {

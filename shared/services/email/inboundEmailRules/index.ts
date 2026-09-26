@@ -6,6 +6,8 @@ export {
   evaluateCondition,
   evaluateConditions,
   extractValue,
+  extractEmailCandidate,
+  resolveMatchTargets,
   extractionToRegexSource,
   normalizeExtractedValue,
 } from './evaluator';

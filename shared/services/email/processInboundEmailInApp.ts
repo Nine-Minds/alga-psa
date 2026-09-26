@@ -2,7 +2,6 @@ import type { EmailMessageDetails } from '../../interfaces/inbound-email.interfa
 import type { IEventPublisher } from '@alga-psa/types';
 import type { InboundEmailExecutionOptions } from '../../workflow/actions/emailWorkflowActions';
 import { createHash, randomUUID } from 'node:crypto';
-import { convertHtmlToBlockNote, convertMarkdownToBlocks } from '../../lib/utils/contentConversion';
 import { extractEmailDomain, normalizeEmailAddress } from '../../lib/email/addressUtils';
 import {
   detectAutomatedInboundMessage,
@@ -13,10 +12,11 @@ import {
   checkInboundReopenRateLimit,
   type InboundReopenRateLimitResult,
 } from './inboundReopenRateLimiter';
+import { processInboundEmailArtifactsBestEffort } from './processInboundEmailArtifacts';
 import {
-  processInboundEmailArtifactsBestEffort,
-  type ProcessInboundEmailArtifactsResult,
-} from './processInboundEmailArtifacts';
+  applyEmbeddedImageUrlMappingsToStoredBodies,
+  blocksFromEmailBody,
+} from './inboundEmbeddedImageUrlRewrite';
 import {
   buildInboundWatchListRecipients,
   getActiveWatchListEmails,
@@ -31,6 +31,7 @@ import {
 import { evaluateInboundEmailRules } from './inboundEmailRules';
 import { normalizeRfc822MessageId } from './inboundEmailIdentity';
 import { withTenantAdminTransaction } from './tenantAdminTransaction';
+import { associateAssetWithTicket } from '../assets/assetTicketAssociation';
 import {
   detectOutboundNotificationLoop,
   type NotificationLoopDetectionResult,
@@ -93,11 +94,16 @@ export interface ProcessInboundEmailInAppOptions {
     eventPublishers?: {
       ticket?: IEventPublisher;
       comment?: IEventPublisher;
+      contact?: IEventPublisher;
     };
   };
 }
 
 export interface ProcessInboundEmailInAppDiagnostics extends Record<string, unknown> {
+  senderResolution?: {
+    autoCreatedContactId: string | null;
+    autoCreateSkipReason: 'auto_create_disabled' | 'auth_not_aligned' | 'automated' | 'provider_mailbox' | 'exists_elsewhere' | 'client_inactive' | 'error' | null;
+  };
   parser: {
     confidence: number | null;
     strategy: string | null;
@@ -593,43 +599,6 @@ function buildDedupeKey(input: ProcessInboundEmailInAppInput): string {
   return `inbound-email:${input.tenantId}:${input.providerId}:${input.emailData.id}`;
 }
 
-function blocksFallbackFromText(text: string) {
-  return [
-    {
-      type: 'paragraph',
-      content: [{ type: 'text', text, styles: {} }],
-    },
-  ];
-}
-
-async function blocksFromEmailBody(params: {
-  html?: string;
-  text?: string;
-}): Promise<unknown[]> {
-  const html = params.html?.trim();
-  const text = params.text?.trim();
-
-  if (html) {
-    try {
-      const blocks = await convertHtmlToBlockNote(html, { flattenTables: true });
-      return blocks.length ? blocks : blocksFallbackFromText(text ?? '');
-    } catch {
-      return blocksFallbackFromText(text ?? '');
-    }
-  }
-
-  if (text) {
-    try {
-      const blocks = convertMarkdownToBlocks(text);
-      return blocks.length ? blocks : blocksFallbackFromText(text);
-    } catch {
-      return blocksFallbackFromText(text);
-    }
-  }
-
-  return blocksFallbackFromText('');
-}
-
 /**
  * Candidate lookup forms for a raw RFC 5322 Message-ID. The canonical
  * normalized form matches how the durable pipeline writes `email_metadata`
@@ -863,134 +832,6 @@ async function resolveReplyTargetFromProviderThreadId(params: {
     : null;
 }
 
-function normalizeEmbeddedContentId(value: string | undefined | null): string {
-  if (!value) return '';
-  return String(value).trim().replace(/^cid:/i, '').replace(/^<|>$/g, '').toLowerCase();
-}
-
-function rewriteEmbeddedImageSourcesInHtml(
-  html: string,
-  embeddedMappings: ProcessInboundEmailArtifactsResult['embeddedImageUrlMappings']
-): string {
-  if (!html || !embeddedMappings.length) return html;
-
-  const dataUrlMap = new Map<string, string>();
-  const cidMap = new Map<string, string>();
-
-  for (const mapping of embeddedMappings) {
-    if (mapping.source === 'data-url') {
-      dataUrlMap.set(mapping.reference, mapping.url);
-      continue;
-    }
-
-    if (mapping.source === 'cid') {
-      const normalized = normalizeEmbeddedContentId(mapping.reference);
-      if (normalized) {
-        cidMap.set(normalized, mapping.url);
-      }
-    }
-  }
-
-  let rewritten = html;
-
-  if (dataUrlMap.size > 0) {
-    rewritten = rewritten.replace(
-      /data:(image\/[a-z0-9.+-]+);base64,([^"'<>]+)/gim,
-      (fullMatch: string, contentType: string, base64: string) => {
-        const normalized = `data:${String(contentType).toLowerCase()};base64,${String(base64).replace(/\s+/g, '')}`;
-        return dataUrlMap.get(normalized) || fullMatch;
-      }
-    );
-  }
-
-  if (cidMap.size > 0) {
-    rewritten = rewritten.replace(/\bcid:([^"'<>\s)]+)/gim, (fullMatch: string, cid: string) => {
-      const normalized = normalizeEmbeddedContentId(cid);
-      return cidMap.get(normalized) || fullMatch;
-    });
-  }
-
-  return rewritten;
-}
-
-function preserveEmbeddedImageUrlBlocks(
-  blocks: unknown[],
-  embeddedMappings: ProcessInboundEmailArtifactsResult['embeddedImageUrlMappings']
-): unknown[] {
-  if (!embeddedMappings.length) {
-    return blocks;
-  }
-
-  const serializedBlocks = JSON.stringify(blocks);
-  const missingMappings = embeddedMappings.filter((mapping) => (
-    mapping.url && !serializedBlocks.includes(mapping.url)
-  ));
-
-  if (!missingMappings.length) {
-    return blocks;
-  }
-
-  return [
-    ...blocks,
-    ...missingMappings.map((mapping) => ({
-      type: 'image',
-      props: {
-        url: mapping.url,
-        name: mapping.fileId || mapping.documentId || 'embedded-image',
-        caption: '',
-      },
-    })),
-  ];
-}
-
-async function maybeRewriteCommentWithEmbeddedAttachmentUrls(args: {
-  tenantId: string;
-  commentId: string;
-  html?: string;
-  text?: string;
-  originalCommentContent: string;
-  artifactsResult?: ProcessInboundEmailArtifactsResult;
-}): Promise<void> {
-  const embeddedMappings = args.artifactsResult?.embeddedImageUrlMappings ?? [];
-  if (!args.html || embeddedMappings.length === 0) {
-    return;
-  }
-
-  const rewrittenHtml = rewriteEmbeddedImageSourcesInHtml(args.html, embeddedMappings);
-  if (!rewrittenHtml || rewrittenHtml === args.html) {
-    return;
-  }
-
-  const rewrittenBlocks = preserveEmbeddedImageUrlBlocks(
-    await blocksFromEmailBody({
-      html: rewrittenHtml,
-      text: args.text,
-    }),
-    embeddedMappings
-  );
-  const rewrittenContent = JSON.stringify(rewrittenBlocks);
-  if (rewrittenContent === args.originalCommentContent) {
-    return;
-  }
-
-  try {
-    await withTenantAdminTransaction(args.tenantId, async (_trx: any, db: any) => {
-      await db.table('comments as c')
-        .where('c.comment_id', args.commentId)
-        .update({
-          note: rewrittenContent,
-          updated_at: new Date(),
-        });
-    });
-  } catch (error) {
-    console.warn('processInboundEmailInApp: embedded image comment rewrite failed (continuing)', {
-      tenantId: args.tenantId,
-      commentId: args.commentId,
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
-}
-
 export async function processInboundEmailInApp(
   input: ProcessInboundEmailInAppInput,
   options: ProcessInboundEmailInAppOptions = {}
@@ -1082,7 +923,8 @@ export async function processInboundEmailInApp(
     resolveInboundTicketDefaults,
     resolveEffectiveInboundTicketDefaults,
     findContactByEmail,
-    findClientIdByInboundEmailDomain,
+    findInboundEmailDomainMapping,
+    createContactForInboundSender,
     findValidClientPrimaryContactId,
     findEmailProviderMailboxAddress,
     upsertTicketWatchListRecipients,
@@ -1131,6 +973,12 @@ export async function processInboundEmailInApp(
       return null;
     }
     if (allowsContactSenderAttribution(senderAuthResults) || isVerifiedListRewrite) return matched;
+    console.warn('processInboundEmailInApp: sender auth not aligned; discarding contact match', {
+      tenantId, providerId, emailId: emailData.id, senderEmail,
+      contactId: matched.contact_id ?? null,
+      contactClientId: matched.client_id ?? null,
+      authResults: senderAuthResults,
+    });
     return null;
   };
 
@@ -1663,13 +1511,14 @@ export async function processInboundEmailInApp(
           && matchedSenderContact.client_id === policyContext.clientId
         ),
       });
-      await maybeRewriteCommentWithEmbeddedAttachmentUrls({
+      await applyEmbeddedImageUrlMappingsToStoredBodies({
         tenantId,
-        commentId,
         html: parsedHtml,
         text: parsedText,
-        originalCommentContent: serializedBlocks,
-        artifactsResult,
+        mappings: artifactsResult?.embeddedImageUrlMappings ?? [],
+        targets: [
+          { kind: 'comment', id: commentId, originalContent: serializedBlocks },
+        ],
       });
     }
 
@@ -1864,6 +1713,8 @@ export async function processInboundEmailInApp(
   }
 
   const ruleAssignedClientId = ruleOutcome.kind === 'assign_client' ? ruleOutcome.clientId : null;
+  const ruleAssignedContactIdFromMatch = ruleOutcome.kind === 'assign_client' ? ruleOutcome.contactId ?? null : null;
+  const ruleAssignedAssetId = ruleOutcome.kind === 'assign_client' ? ruleOutcome.assetId ?? null : null;
   const ruleDestinationDefaults =
     ruleOutcome.kind === 'set_destination' || ruleOutcome.kind === 'fallback_destination'
       ? (ruleOutcome.defaults as any)
@@ -1891,11 +1742,14 @@ export async function processInboundEmailInApp(
   });
 
   let domainMatchedClientId: string | null = null;
+  let domainAutoCreateContacts = false;
   let domainMatchedContactId: string | null = null;
   if (!ruleAssignedClientId && !matchedSenderContact && senderEmail) {
     const senderDomain = extractEmailDomain(senderEmail);
     if (senderDomain) {
-      domainMatchedClientId = await findClientIdByInboundEmailDomain(senderDomain, tenantId);
+      const mapping = await findInboundEmailDomainMapping(senderDomain, tenantId);
+      domainMatchedClientId = mapping?.clientId ?? null;
+      domainAutoCreateContacts = mapping?.autoCreateContacts ?? false;
       if (domainMatchedClientId) {
         domainMatchedContactId = await findValidClientPrimaryContactId(domainMatchedClientId, tenantId);
       }
@@ -1915,9 +1769,9 @@ export async function processInboundEmailInApp(
   );
   let ruleAssignedContactId: string | null = null;
   if (ruleAssignedClientId) {
-    ruleAssignedContactId = senderContactInRuleClient
+    ruleAssignedContactId = ruleAssignedContactIdFromMatch ?? (senderContactInRuleClient
       ? matchedSenderContactId ?? null
-      : await findValidClientPrimaryContactId(ruleAssignedClientId, tenantId);
+      : await findValidClientPrimaryContactId(ruleAssignedClientId, tenantId));
   }
 
   // Rule destination defaults (set_destination / non-match fallback) sit above
@@ -1936,12 +1790,14 @@ export async function processInboundEmailInApp(
       providerId,
       providerDefaults,
       matchedContactId: ruleAssignedClientId
-        ? senderContactInRuleClient
+        ? ruleAssignedContactIdFromMatch ?? (senderContactInRuleClient
           ? matchedSenderContactId ?? null
-          : null
+          : null)
         : matchedSenderContactId ?? null,
       matchedContactClientId: ruleAssignedClientId
-        ? senderContactInRuleClient
+        ? ruleAssignedContactIdFromMatch
+          ? ruleAssignedClientId
+          : senderContactInRuleClient
           ? ruleAssignedClientId
           : null
         : matchedSenderClientId ?? null,
@@ -1992,12 +1848,13 @@ export async function processInboundEmailInApp(
   // email match that is consistent with the ticket's client.
   const matchedSenderIsInternalUser = matchedSenderContact?.user_type === 'internal';
   const senderContactUsableAsAuthor = !ruleAssignedClientId || senderContactInRuleClient;
-  const commentAuthorContactId =
+  // LEVERAGE: friction inbound-sender-resolution
+  let commentAuthorContactId =
     matchedSenderIsInternalUser || !senderContactUsableAsAuthor ? undefined : matchedSenderContactId;
   const commentAuthorUserId = senderContactUsableAsAuthor
     ? matchedSenderContact?.user_id ?? null
     : null;
-  const commentAuthorType = matchedSenderIsInternalUser ? 'internal' : 'contact';
+  let commentAuthorType = matchedSenderIsInternalUser ? 'internal' : 'contact';
 
   const clientMatchSource =
     ruleOutcome.kind === 'assign_client'
@@ -2042,6 +1899,38 @@ export async function processInboundEmailInApp(
     }, diagnostics);
   }
 
+  let autoCreatedContactId: string | undefined;
+  let autoCreateSkipReason: NonNullable<ProcessInboundEmailInAppDiagnostics['senderResolution']>['autoCreateSkipReason'] = null;
+  const autoCreateEligible = Boolean(!ruleAssignedClientId && !matchedSenderContact && domainMatchedClientId && domainAutoCreateContacts && senderEmail && targetClientId === domainMatchedClientId);
+  if (autoCreateEligible) {
+    const automated = detectAutomatedInboundMessage(emailData).isAutomated;
+    if (senderIsProviderMailbox) autoCreateSkipReason = 'provider_mailbox';
+    else if (automated) autoCreateSkipReason = 'automated';
+    else if (!(allowsContactSenderAttribution(senderAuthResults) || isVerifiedListRewrite)) autoCreateSkipReason = 'auth_not_aligned';
+    else {
+      const created = await createContactForInboundSender({ email: senderEmail!, name: senderName, clientId: domainMatchedClientId! }, tenantId, {
+        existingConnection: options.durableExecution?.trx,
+        inboxId: options.durableExecution?.inboxId,
+        contactEventPublisher: options.durableExecution?.eventPublishers?.contact,
+        providerId,
+        emailId: emailData.id,
+        onSkip: (reason) => { autoCreateSkipReason = reason; },
+      });
+      autoCreatedContactId = created?.contactId;
+      if (!created) {
+        if (!autoCreateSkipReason) autoCreateSkipReason = 'error';
+      } else if (created.created) {
+        console.info('processInboundEmailInApp: auto-created contact for domain-matched sender', { tenantId, providerId, emailId: emailData.id, clientId: domainMatchedClientId, contactId: created.contactId });
+      }
+    }
+  } else if (domainMatchedClientId && !domainAutoCreateContacts) autoCreateSkipReason = 'auto_create_disabled';
+  if (autoCreatedContactId) {
+    targetContactId = autoCreatedContactId;
+    commentAuthorContactId = autoCreatedContactId;
+    commentAuthorType = 'contact';
+  }
+  if (diagnostics) diagnostics.senderResolution = { autoCreatedContactId: autoCreatedContactId ?? null, autoCreateSkipReason };
+
   const parsedHtml = parsedEmail?.sanitizedHtml ?? emailData.body?.html;
   const parsedText = parsedEmail?.sanitizedText ?? emailData.body?.text;
   const blocks = await blocksFromEmailBody({
@@ -2080,8 +1969,10 @@ export async function processInboundEmailInApp(
         providerId,
         authResults: senderAuthResults,
         clientMatchSource,
+        ...(autoCreatedContactId ? { autoCreatedContactId } : {}),
         ...(appliedRule
-          ? { appliedRuleId: appliedRule.ruleId, appliedRuleName: appliedRule.ruleName }
+          ? { appliedRuleId: appliedRule.ruleId, appliedRuleName: appliedRule.ruleName,
+              ...(ruleOutcome.kind === 'assign_client' ? { ruleClientMatchedBy: ruleOutcome.matchedBy } : {}) }
           : {}),
       },
       attributes: seededAttributes ?? undefined,
@@ -2089,6 +1980,19 @@ export async function processInboundEmailInApp(
     tenantId,
     ...helperExtraArgs('ticket')
   );
+
+  if (ruleAssignedAssetId) {
+    try {
+      await withTenantAdminTransaction(tenantId, async (trx: any) => {
+        await associateAssetWithTicket(trx, tenantId, ruleAssignedAssetId, ticketResult.ticket_id, new Date().toISOString());
+      });
+    } catch (error) {
+      console.warn('processInboundEmailInApp: failed to associate rule-matched asset with ticket', {
+        tenantId, ticketId: ticketResult.ticket_id, assetId: ruleAssignedAssetId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
 
   const commentId = await createCommentFromEmail(
     {
@@ -2114,7 +2018,7 @@ export async function processInboundEmailInApp(
           heuristics: parsedEmail?.appliedHeuristics,
           warnings: parsedEmail?.warnings,
         },
-        unmatchedSender: !matchedSenderContact,
+        unmatchedSender: !matchedSenderContact && !autoCreatedContactId,
         inboundReopenDecision: rerouteReasonMetadata ?? undefined,
       },
     },
@@ -2131,17 +2035,18 @@ export async function processInboundEmailInApp(
       scopeLabel: 'new-ticket',
       clientVisibleAttachments: Boolean(
         !matchedSenderIsInternalUser
-        && matchedSenderContact?.client_id
-        && matchedSenderContact.client_id === targetClientId
+        && ((matchedSenderContact?.client_id && matchedSenderContact.client_id === targetClientId) || Boolean(autoCreatedContactId))
       ),
     });
-    await maybeRewriteCommentWithEmbeddedAttachmentUrls({
+    await applyEmbeddedImageUrlMappingsToStoredBodies({
       tenantId,
-      commentId,
       html: parsedHtml,
       text: parsedText,
-      originalCommentContent: serializedBlocks,
-      artifactsResult,
+      mappings: artifactsResult?.embeddedImageUrlMappings ?? [],
+      targets: [
+        { kind: 'comment', id: commentId, originalContent: serializedBlocks },
+        { kind: 'ticket-description', id: ticketResult.ticket_id, originalContent: serializedBlocks },
+      ],
     });
   }
 

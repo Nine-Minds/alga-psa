@@ -1218,6 +1218,7 @@
         "followTheme": "Quando ativado, o portal do cliente usa o tema escolhido em Configurações → Aparência. Quando desativado, as cores abaixo o substituem.",
         "followThemeActive": "As cores abaixo ficam salvas, mas não são aplicadas enquanto o portal seguir o tema da organização."
       },
+      "cropHelp": "Arraste e amplie para escolher a parte mostrada no painel lateral do portal e em todas as molduras circulares. O seu logotipo largo não é alterado.",
       "heroGradient": {
         "primaryShades": "Cor primária para tom primário",
         "primarySecondary": "Cor primária para cor secundária"
@@ -1487,7 +1488,8 @@
     "whiteLabel": {
       "title": "Marca própria no aplicativo MSP",
       "description": "Envie seu logotipo uma vez. Ele substitui a marca Alga no menu lateral MSP, e o portal do cliente usa as mesmas imagens.",
-      "logoHelp": "A marca quadrada é usada sempre que o espaço é quadrado: no menu lateral recolhido e nas molduras circulares. O logotipo largo opcional substitui a marca e o nome no menu lateral expandido, então envie um que já contenha o nome da sua empresa. O menu lateral segue o próprio fundo: usa as variantes para fundos escuros quando o menu é escuro e as claras quando é claro, recorrendo à variante que você enviou.",
+      "logoHelp": "A marca quadrada é usada sempre que o espaço é quadrado: no menu lateral recolhido e nas molduras circulares. Solte um logotipo largo num espaço quadrado e escolha qual parte se torna a marca; depois de enviar um logotipo largo, também pode recortar a marca diretamente a partir dele. O logotipo largo opcional substitui a marca e o nome no menu lateral expandido, então envie um que já contenha o nome da sua empresa. O menu lateral segue o próprio fundo: usa as variantes para fundos escuros quando o menu é escuro e as claras quando é claro, recorrendo à variante que você enviou.",
+      "cropHelp": "Arraste e amplie para escolher a parte mostrada no menu lateral recolhido e em todas as molduras circulares. O seu logotipo largo não é alterado.",
       "fields": {
         "mark": "Marca quadrada",
         "markDark": "Marca quadrada para fundos escuros",
@@ -3053,7 +3055,7 @@
     "assetTypes": {
       "tab": "Ativos",
       "title": "Tipos de ativos",
-      "description": "Gerencie os tipos de ativos disponíveis em seu módulo de ativos. Os tipos personalizados carregam um esquema de campo que orienta seus formulários de criação/edição.",
+      "description": "Tipos personalizados usam um esquema de campos nos formulários; tipos integrados também aceitam campos adicionais.",
       "loading": "Carregando tipos de recursos...",
       "table": {
         "name": "Nome",
@@ -3081,7 +3083,7 @@
         "namePlaceholder": "por exemplo Firewall",
         "displayOrderLabel": "Ordem de exibição",
         "iconLabel": "Ícone",
-        "builtinSchemaHint": "Os tipos integrados usam formulários fixos gerenciados pelo AlgaPSA, portanto seu esquema de campo não pode ser editado. Você ainda pode renomear o tipo ou alterar seu ícone."
+        "builtinSchemaHint": "O formulário padrão integrado permanece fixo. Estes campos adicionais são definidos por tenant."
       },
       "deleteDialog": {
         "title": "Excluir tipo de ativo",
@@ -3139,7 +3141,8 @@
           "invalidOptions": "As opções devem ser valores não vazios.",
           "invalidField": "Este campo é inválido."
         }
-      }
+      },
+      "additionalFields": "Campos adicionais"
     }
   },
   "mcpServer": {

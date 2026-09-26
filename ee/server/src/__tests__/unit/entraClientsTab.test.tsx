@@ -10,11 +10,17 @@ const {
   runEntraPreflightMock,
   startEntraSyncMock,
   unmapEntraTenantMock,
+  getEntraManagedTenantUserFilterMock,
+  listEntraMappingGroupsMock,
+  updateEntraManagedTenantUserFilterMock,
 } = vi.hoisted(() => ({
   getEntraSyncRunDetailMock: vi.fn(),
   runEntraPreflightMock: vi.fn(),
   startEntraSyncMock: vi.fn(),
   unmapEntraTenantMock: vi.fn(),
+  getEntraManagedTenantUserFilterMock: vi.fn(),
+  listEntraMappingGroupsMock: vi.fn(),
+  updateEntraManagedTenantUserFilterMock: vi.fn(),
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
@@ -27,6 +33,9 @@ vi.mock('@alga-psa/integrations/actions', () => ({
   runEntraPreflight: runEntraPreflightMock,
   startEntraSync: startEntraSyncMock,
   unmapEntraTenant: unmapEntraTenantMock,
+  getEntraManagedTenantUserFilter: getEntraManagedTenantUserFilterMock,
+  listEntraMappingGroups: listEntraMappingGroupsMock,
+  updateEntraManagedTenantUserFilter: updateEntraManagedTenantUserFilterMock,
 }));
 
 vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({
@@ -81,6 +90,9 @@ describe('EntraClientsTab', () => {
     runEntraPreflightMock.mockReset();
     startEntraSyncMock.mockReset();
     unmapEntraTenantMock.mockReset();
+    getEntraManagedTenantUserFilterMock.mockReset();
+    listEntraMappingGroupsMock.mockReset();
+    updateEntraManagedTenantUserFilterMock.mockReset();
     startEntraSyncMock.mockResolvedValue({
       success: true,
       data: { accepted: true, runId: 'run-1', workflowId: 'workflow-1' },
@@ -90,6 +102,9 @@ describe('EntraClientsTab', () => {
       data: { run: { status: 'completed' }, tenantResults: [] },
     });
     unmapEntraTenantMock.mockResolvedValue({ success: true, data: {} });
+    getEntraManagedTenantUserFilterMock.mockResolvedValue({ success: true, data: { defaults: { version: 1, memberUsersOnly: false, licensedUsersOnly: false, includeGroupIds: [], excludeGroupIds: [], exclusionPatterns: [], deactivateExcludedContacts: false }, override: null, effective: { version: 1, memberUsersOnly: false, licensedUsersOnly: false, includeGroupIds: [], excludeGroupIds: [], exclusionPatterns: [], deactivateExcludedContacts: false } } });
+    listEntraMappingGroupsMock.mockResolvedValue({ success: true, data: { groups: [] } });
+    updateEntraManagedTenantUserFilterMock.mockResolvedValue({ success: true, data: {} });
   });
 
   const renderTab = (mappings: EntraConfirmedMapping[], onOpenConnection?: () => void) =>
@@ -311,6 +326,18 @@ describe('EntraClientsTab', () => {
       expect(document.getElementById('entra-clients-error')?.textContent).toContain('did not start')
     );
     expect(document.getElementById('entra-clients-message')).toBeNull();
+  });
+
+  it('reruns the row preview after the filter panel saves', async () => {
+    runEntraPreflightMock.mockResolvedValue({ success: true, data: { runId: 'preflight', managedTenantId: 'managed-1', clientId: 'client-1', checkedAt: '2026-07-25T12:00:00.000Z', totalIdentities: 0, counters: { created: 0, linked: 0, updated: 0, ambiguous: 0, inactivated: 0 }, buckets: [] } });
+    renderTab([client()]);
+    fireEvent.click(document.getElementById('entra-client-preview-managed-1') as HTMLButtonElement);
+    await waitFor(() => expect(runEntraPreflightMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(document.getElementById('entra-filter-save-managed-1')).not.toBeNull());
+    fireEvent.click(document.getElementById('entra-filter-save-managed-1') as HTMLButtonElement);
+    await waitFor(() => expect(runEntraPreflightMock).toHaveBeenCalledTimes(2));
+    expect(runEntraPreflightMock.mock.calls[1][0]).toEqual({ managedTenantId: 'managed-1' });
+    expect(document.getElementById('entra-client-preview-managed-1')).not.toBeNull();
   });
 
   it('T143: keeps the previous count visible until the workflow finishes, then reloads it', async () => {

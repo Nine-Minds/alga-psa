@@ -131,12 +131,16 @@ vi.mock('@alga-psa/ui/components/Alert', () => ({
 vi.mock('@alga-psa/ui/components/DropdownMenu', () => ({
   DropdownMenu: ({ children }: any) => React.createElement('div', null, children),
   DropdownMenuContent: ({ children }: any) => React.createElement('div', null, children),
-  DropdownMenuItem: ({ children }: any) => React.createElement('button', { type: 'button' }, children),
+  DropdownMenuItem: ({ children, id, onClick }: any) =>
+    React.createElement('button', { type: 'button', id, onClick }, children),
   DropdownMenuTrigger: ({ children }: any) => React.createElement('div', null, children),
 }));
 
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
-  Dialog: () => null,
+  // Render open dialogs (children + sticky footer) so status-changing dialog
+  // confirmations stay drivable in tests. Closed dialogs render nothing.
+  Dialog: ({ children, footer, isOpen }: any) =>
+    isOpen ? React.createElement('div', null, children, footer) : null,
   DialogContent: ({ children }: any) => React.createElement('div', null, children),
   DialogDescription: ({ children }: any) => React.createElement('div', null, children),
   DialogHeader: ({ children }: any) => React.createElement('div', null, children),
@@ -442,5 +446,150 @@ describe('QuoteForm template instantiation', () => {
     expect(payload.terms_and_conditions_block).toEqual([
       { type: 'paragraph', content: [{ type: 'text', text: 'Net 30. See https://example.com/terms', styles: {} }] },
     ]);
+  });
+});
+
+const createDeferred = <T,>() => {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+};
+
+const workflowQuote = (status: string) => ({
+  ...editQuote,
+  status,
+  quote_items: [],
+});
+
+describe('QuoteForm quote status change callback', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    lineItemsEditorMock.current = null;
+    termsEditorMock.current = null;
+    actions.listQuotes.mockResolvedValue({ data: [] });
+    getQuoteDocumentTemplatesMock.mockResolvedValue([]);
+    actions.getQuoteApprovalSettings.mockResolvedValue({ approvalRequired: false });
+    getDefaultBillingSettingsMock.mockResolvedValue({ defaultCurrencyCode: 'USD' });
+    getAllClientsMock.mockResolvedValue([]);
+    getActiveLocationsMock.mockResolvedValue([]);
+    getContactsMock.mockResolvedValue([]);
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it('T001/F002: a successful send awaits the parent refresh callback exactly once', async () => {
+    actions.getQuote.mockResolvedValue(workflowQuote('draft'));
+    actions.sendQuote.mockResolvedValue(workflowQuote('sent'));
+    const deferred = createDeferred<void>();
+    const onQuoteStatusChanged = vi.fn(() => deferred.promise);
+
+    renderForm({ quoteId: 'quote-1', onQuoteStatusChanged });
+    await screen.findByLabelText('Title');
+
+    fireEvent.click(document.getElementById('quote-form-send') as HTMLButtonElement);
+    await waitFor(() => expect(document.getElementById('quote-form-send-confirm')).not.toBeNull());
+    fireEvent.click(document.getElementById('quote-form-send-confirm') as HTMLButtonElement);
+
+    await waitFor(() => expect(actions.sendQuote).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(onQuoteStatusChanged).toHaveBeenCalledTimes(1));
+
+    // Awaited, not fired-and-forgotten: the workflow stays busy and the send
+    // dialog stays open until the parent refresh settles.
+    expect((document.getElementById('quote-form-send-confirm') as HTMLButtonElement).disabled).toBe(true);
+    expect(document.getElementById('quote-form-send-confirm')).not.toBeNull();
+
+    deferred.resolve();
+    await waitFor(() => expect(document.getElementById('quote-form-send-confirm')).toBeNull());
+  });
+
+  it('T001/F003: a successful resend awaits the parent refresh callback exactly once', async () => {
+    actions.getQuote.mockResolvedValue(workflowQuote('sent'));
+    actions.resendQuote.mockResolvedValue(workflowQuote('sent'));
+    const deferred = createDeferred<void>();
+    const onQuoteStatusChanged = vi.fn(() => deferred.promise);
+
+    renderForm({ quoteId: 'quote-1', onQuoteStatusChanged });
+    await screen.findByLabelText('Title');
+
+    fireEvent.click(document.getElementById('quote-form-resend-menu-item') as HTMLButtonElement);
+
+    await waitFor(() => expect(actions.resendQuote).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(onQuoteStatusChanged).toHaveBeenCalledTimes(1));
+    // The success notice only lands after the awaited callback resolves.
+    expect(screen.queryByText('Quote resent.')).toBeNull();
+
+    deferred.resolve();
+    await waitFor(() => expect(screen.getByText('Quote resent.')).toBeTruthy());
+  });
+
+  it('T001/F004: a successful approval awaits the parent refresh callback exactly once', async () => {
+    actions.getQuote.mockResolvedValue(workflowQuote('pending_approval'));
+    actions.approveQuote.mockResolvedValue(workflowQuote('approved'));
+    const deferred = createDeferred<void>();
+    const onQuoteStatusChanged = vi.fn(() => deferred.promise);
+
+    renderForm({ quoteId: 'quote-1', onQuoteStatusChanged });
+    await screen.findByLabelText('Title');
+
+    fireEvent.click(document.getElementById('quote-form-approve') as HTMLButtonElement);
+    await waitFor(() => expect(document.getElementById('quote-form-approval-confirm')).not.toBeNull());
+    fireEvent.click(document.getElementById('quote-form-approval-confirm') as HTMLButtonElement);
+
+    await waitFor(() => expect(actions.approveQuote).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(onQuoteStatusChanged).toHaveBeenCalledTimes(1));
+    expect(document.getElementById('quote-form-approval-confirm')).not.toBeNull();
+
+    deferred.resolve();
+    await waitFor(() => expect(document.getElementById('quote-form-approval-confirm')).toBeNull());
+  });
+
+  it('T001/F005: a returned action error does not invoke the parent callback', async () => {
+    actions.getQuote.mockResolvedValue(workflowQuote('draft'));
+    actions.sendQuote.mockResolvedValue({ messageKey: 'send_failed', message: 'Send failed' });
+    const onQuoteStatusChanged = vi.fn();
+
+    renderForm({ quoteId: 'quote-1', onQuoteStatusChanged });
+    await screen.findByLabelText('Title');
+
+    fireEvent.click(document.getElementById('quote-form-send') as HTMLButtonElement);
+    await waitFor(() => expect(document.getElementById('quote-form-send-confirm')).not.toBeNull());
+    fireEvent.click(document.getElementById('quote-form-send-confirm') as HTMLButtonElement);
+
+    await waitFor(() => expect(screen.getByText('Send failed')).toBeTruthy());
+    expect(onQuoteStatusChanged).not.toHaveBeenCalled();
+  });
+
+  it('T001/F005: a permission error does not invoke the parent callback', async () => {
+    actions.getQuote.mockResolvedValue(workflowQuote('pending_approval'));
+    actions.approveQuote.mockResolvedValue({ permissionError: 'Forbidden' });
+    const onQuoteStatusChanged = vi.fn();
+
+    renderForm({ quoteId: 'quote-1', onQuoteStatusChanged });
+    await screen.findByLabelText('Title');
+
+    fireEvent.click(document.getElementById('quote-form-approve') as HTMLButtonElement);
+    await waitFor(() => expect(document.getElementById('quote-form-approval-confirm')).not.toBeNull());
+    fireEvent.click(document.getElementById('quote-form-approval-confirm') as HTMLButtonElement);
+
+    await waitFor(() => expect(screen.getByText('Forbidden')).toBeTruthy());
+    expect(onQuoteStatusChanged).not.toHaveBeenCalled();
+  });
+
+  it('T001/F005: a thrown action failure does not invoke the parent callback', async () => {
+    actions.getQuote.mockResolvedValue(workflowQuote('sent'));
+    actions.resendQuote.mockRejectedValue(new Error('Resend exploded'));
+    const onQuoteStatusChanged = vi.fn();
+
+    renderForm({ quoteId: 'quote-1', onQuoteStatusChanged });
+    await screen.findByLabelText('Title');
+
+    fireEvent.click(document.getElementById('quote-form-resend-menu-item') as HTMLButtonElement);
+
+    await waitFor(() => expect(screen.getByText('Resend exploded')).toBeTruthy());
+    expect(onQuoteStatusChanged).not.toHaveBeenCalled();
   });
 });

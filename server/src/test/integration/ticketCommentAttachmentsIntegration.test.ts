@@ -347,6 +347,52 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
       expect(storage).toHaveBeenCalledTimes(1);
     } finally { connection.mockRestore(); storage.mockRestore(); }
   });
+  it('heals an intent missing its author identity and dispatches the real sender once', async () => {
+    const { EventSchemas } = await import('@alga-psa/event-schemas');
+    const stuck = await makeComment({
+      user_id: null, author_type: 'unknown',
+      metadata: JSON.stringify({ email: { fromAddress: 'unmatched@example.test', fromName: 'Unmatched Sender' } }),
+    });
+    // The shape production persisted before the producer fix: no userId and no
+    // comment.author, so every reconcile pass failed strict validation.
+    const eventId = randomUUID();
+    await table('comments').where({comment_id:stuck}).update({
+      scheduled_publish_event_id: eventId,
+      comment_publication_payload: JSON.stringify({tenantId:tenant,ticketId:ticket,commentId:stuck,comment:{id:stuck,content:'[]'}}),
+    });
+    const publish = vi.fn(async (_event: any, _options?: any) => undefined);
+    await dispatchCommentPublication(trx, tenant, stuck, publish);
+    await dispatchCommentPublication(trx, tenant, stuck, publish);
+    expect(publish).toHaveBeenCalledTimes(1);
+    const [event, options] = publish.mock.calls[0] as [any, any];
+    expect(options.eventId).toBe(eventId);
+    expect(event.payload).toMatchObject({userId:ticket,comment:{author:'Unmatched Sender'}});
+    expect(() => EventSchemas.TICKET_COMMENT_ADDED.parse({
+      id: randomUUID(), timestamp: new Date().toISOString(), ...event,
+    })).not.toThrow();
+    expect((await table('comments').where({comment_id:stuck}).first()).scheduled_publish_dispatched_at).toBeTruthy();
+  });
+  it('publishes a user-less scheduled comment with a sentinel actor and the real sender', async () => {
+    const publishers = await import('@alga-psa/event-bus/publishers');
+    const { EventSchemas } = await import('@alga-psa/event-schemas');
+    const scheduled = await makeComment({
+      user_id: null, author_type: 'unknown',
+      publish_state: 'scheduled', scheduled_publish_at: new Date(Date.now() - 60000),
+      metadata: JSON.stringify({ email: { fromAddress: 'unmatched@example.test' } }),
+    });
+    await table('tickets').where({ticket_id:ticket}).update({response_state:'awaiting_client'});
+    const connection = vi.spyOn(dbModule,'getConnection').mockResolvedValue(trx);
+    const publish = vi.spyOn(publishers,'publishEvent').mockResolvedValue(undefined);
+    try {
+      const {publishScheduledCommentHandler} = await import('@/lib/jobs/handlers/publishScheduledCommentHandler');
+      await publishScheduledCommentHandler({tenantId:tenant,ticketId:ticket,commentId:scheduled});
+      const [event] = publish.mock.calls[0] as [any, any];
+      expect(event.payload).toMatchObject({userId:ticket,comment:{author:'unmatched@example.test'}});
+      expect(() => EventSchemas.TICKET_COMMENT_ADDED.parse({
+        id: randomUUID(), timestamp: new Date().toISOString(), ...event,
+      })).not.toThrow();
+    } finally { connection.mockRestore(); publish.mockRestore(); }
+  });
   it('serializes competing claims and publishes shared-model events only after commit', async () => {
     const uploaded = await upload();
     const first = await makeComment({note:note(uploaded.file)});

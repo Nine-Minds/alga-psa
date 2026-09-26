@@ -35,6 +35,7 @@
     "title": "Strona kontaktów",
     "description": "Główna strona zarządzania kontaktami z wyszukiwaniem, filtrami, widokiem listy i akcjami zbiorczymi",
     "heading": "Kontakty",
+    "sharedMailbox": "Skrzynka współdzielona",
     "addContact": "+ Dodaj kontakt",
     "actions": "Akcje",
     "searchPlaceholder": "Szukaj kontaktów, notatek i interakcji",
