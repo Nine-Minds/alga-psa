@@ -31,6 +31,7 @@ import { useDateFormat } from '../dateFormat/useDateFormat';
  */
 let i18nInitialized = false;
 let i18nInitialization: Promise<void> | null = null;
+const I18N_READINESS_TIMEOUT_MS = 10_000;
 
 const BOOTSTRAP_LOADING_TEXT: Record<
   SupportedLocale,
@@ -236,10 +237,22 @@ export function I18nProvider({
 
   useEffect(() => {
     let cancelled = false;
+    let readinessTimer: ReturnType<typeof setTimeout> | undefined;
     // The route's namespaces are awaited as part of initialization rather than
     // in a follow-up effect, so `isInitialized` means "translations are ready"
     // and not merely "i18next exists". Children used to render in the gap.
-    initI18n(locale, preloadedResources, namespaceKey ? namespaceKey.split(',') : undefined)
+    const readiness = initI18n(
+      locale,
+      preloadedResources,
+      namespaceKey ? namespaceKey.split(',') : undefined,
+    );
+    const readinessDeadline = new Promise<never>((_, reject) => {
+      readinessTimer = setTimeout(() => {
+        reject(new Error(`Translation initialization exceeded ${I18N_READINESS_TIMEOUT_MS}ms`));
+      }, I18N_READINESS_TIMEOUT_MS);
+    });
+
+    Promise.race([readiness, readinessDeadline])
       .then(() => {
         if (!cancelled) setIsInitialized(true);
       })
@@ -250,9 +263,13 @@ export function I18nProvider({
           console.error('Failed to initialize translations:', error);
           setIsInitialized(true);
         }
+      })
+      .finally(() => {
+        if (readinessTimer) clearTimeout(readinessTimer);
       });
     return () => {
       cancelled = true;
+      if (readinessTimer) clearTimeout(readinessTimer);
     };
   }, [locale, preloadedResources, namespaceKey]);
 
