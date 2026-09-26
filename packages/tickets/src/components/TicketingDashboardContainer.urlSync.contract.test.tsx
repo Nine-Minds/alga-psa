@@ -43,6 +43,7 @@ vi.mock('./TicketingDashboard', () => ({
 
 vi.mock('../actions/optimizedTicketActions', () => ({
   fetchTicketsWithPagination: (...args: unknown[]) => fetchTicketsWithPagination(...(args as [])),
+  loadTicketListItemsByIds: vi.fn(),
 }));
 
 // The container's saved-views hook loads views on mount. Left real, that server

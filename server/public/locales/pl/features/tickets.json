@@ -718,7 +718,21 @@
       "propagationSummary": "{{masters}} wybranych zgłoszeń to zgłoszenia nadrzędne w trybie synchronizacji; ta zmiana zamknie lub ponownie otworzy {{children}} zgłoszeń podrzędnych.",
       "masterSummary": "{{children}} zgłoszeń podrzędnych",
       "applyToChildren": "Zastosuj do podrzędnych",
-      "mastersOnly": "Tylko nadrzędne"
+      "mastersOnly": "Tylko nadrzędne",
+      "membersLabel": "Zgłoszenia w tym pakiecie",
+      "addTicketSearchPlaceholder": "Szukaj zgłoszeń po numerze lub tytule",
+      "addTicketEmpty": "Wyszukaj zgłoszenia do dodania",
+      "badgeAdded": "Dodano",
+      "badgeInBundle": "W pakiecie #{{number}}",
+      "badgeMaster": "Zgłoszenie nadrzędne pakietu",
+      "masterTag": "Nadrzędne",
+      "removeMember": "Usuń",
+      "needMoreTickets": "Dodaj co najmniej jedno zgłoszenie do pakietu.",
+      "unresolvedSelectedTickets_one": "Nie udało się załadować {{count}} wybranego zgłoszenia.",
+      "unresolvedSelectedTickets_other": "Nie udało się załadować {{count}} wybranego zgłoszenia.",
+      "badgeClosed": "Zamknięte",
+      "unresolvedSelectedTickets_few": "Nie udało się załadować {{count}} wybranych zgłoszeń.",
+      "unresolvedSelectedTickets_many": "Nie udało się załadować {{count}} wybranego zgłoszenia."
     },
     "auth": {
       "moveRequired": "Musisz być zalogowany, aby przenosić zgłoszenia",
@@ -746,7 +760,8 @@
       "statusResolvingBoards": "Sprawdzanie tablic wybranych zgłoszeń…",
       "more": "Więcej",
       "selectedCount_few": "Zaznaczono {{count}}",
-      "selectedCount_many": "Zaznaczono {{count}}"
+      "selectedCount_many": "Zaznaczono {{count}}",
+      "bundleNeedsOne": "Wybierz co najmniej 1 zgłoszenie do połączenia"
     },
     "assign": {
       "dialogTitle": "Przypisz wybrane zgłoszenia",

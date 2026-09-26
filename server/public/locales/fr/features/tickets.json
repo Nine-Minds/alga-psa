@@ -646,7 +646,19 @@
       "propagationSummary": "{{masters}} ticket(s) sélectionné(s) sont des maîtres en mode synchronisation ; cette modification fermera/rouvrira {{children}} ticket(s) enfants.",
       "masterSummary": "{{children}} ticket(s) enfants",
       "applyToChildren": "Appliquer aux enfants",
-      "mastersOnly": "Maîtres uniquement"
+      "mastersOnly": "Maîtres uniquement",
+      "membersLabel": "Tickets de ce lot",
+      "addTicketSearchPlaceholder": "Rechercher des tickets par numéro ou titre",
+      "addTicketEmpty": "Rechercher des tickets à ajouter",
+      "badgeAdded": "Ajouté",
+      "badgeInBundle": "Dans le lot #{{number}}",
+      "badgeMaster": "Ticket maître du lot",
+      "masterTag": "Maître",
+      "removeMember": "Retirer",
+      "needMoreTickets": "Ajoutez au moins un ticket supplémentaire au lot.",
+      "unresolvedSelectedTickets_one": "Impossible de charger {{count}} ticket sélectionné.",
+      "unresolvedSelectedTickets_other": "Impossible de charger {{count}} tickets sélectionnés.",
+      "badgeClosed": "Fermé"
     },
     "auth": {
       "moveRequired": "Vous devez être connecté pour déplacer des tickets",
@@ -672,7 +684,8 @@
       "dueDate": "Échéance",
       "statusDisabledMultiBoard": "Les tickets sélectionnés sont sur des tableaux différents",
       "statusResolvingBoards": "Vérification des tableaux des tickets sélectionnés…",
-      "more": "Plus"
+      "more": "Plus",
+      "bundleNeedsOne": "Sélectionnez au moins 1 ticket à regrouper"
     },
     "assign": {
       "dialogTitle": "Assigner les tickets sélectionnés",
