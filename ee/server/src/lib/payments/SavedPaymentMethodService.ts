@@ -45,22 +45,26 @@ export class SavedPaymentMethodService {
       .where({ client_id: clientId, billing_profile_id: billingProfileId }).first();
     if (!profile) throw new Error('Billing profile for setup intent no longer exists');
 
-    const existing = await tenantDb(this.knex, this.tenantId).table('payment_methods')
-      .where({ provider_type: 'stripe', external_payment_method_id: paymentMethodExternalId }).first();
-    if (existing) return { paymentMethodId: String(existing.payment_method_id) };
-
-    const paymentMethodId = uuidv4();
-    const hasDefault = await tenantDb(this.knex, this.tenantId).table('payment_methods')
-      .where({ billing_profile_id: billingProfileId, is_default: true, is_deleted: false }).first();
-    const row = {
-      tenant: this.tenantId, payment_method_id: paymentMethodId, client_id: clientId, billing_profile_id: billingProfileId,
-      type: 'credit_card', last4: details.last4, exp_month: String(details.expMonth), exp_year: String(details.expYear),
-      is_default: !hasDefault, is_deleted: false, provider_type: 'stripe', external_payment_method_id: details.externalPaymentMethodId,
-      external_customer_id: details.externalCustomerId, brand: details.brand, fingerprint: details.fingerprint, status: 'active',
-      created_at: this.knex.fn.now(), updated_at: this.knex.fn.now(),
-    };
-    const [inserted] = await tenantDb(this.knex, this.tenantId).table('payment_methods').insert(row).returning('payment_method_id');
-    return { paymentMethodId: String(inserted.payment_method_id) };
+    return this.knex.transaction(async (trx) => {
+      const profileRow = await tenantDb(trx, this.tenantId).table('client_billing_profiles')
+        .where({ client_id: clientId, billing_profile_id: billingProfileId }).forUpdate().first();
+      if (!profileRow) throw new Error('Billing profile for setup intent no longer exists');
+      const existing = await tenantDb(trx, this.tenantId).table('payment_methods')
+        .where({ provider_type: 'stripe', external_payment_method_id: paymentMethodExternalId }).first();
+      if (existing) return { paymentMethodId: String(existing.payment_method_id) };
+      const paymentMethodId = uuidv4();
+      const hasDefault = await tenantDb(trx, this.tenantId).table('payment_methods')
+        .where({ billing_profile_id: billingProfileId, is_default: true, is_deleted: false }).first();
+      const row = {
+        tenant: this.tenantId, payment_method_id: paymentMethodId, client_id: clientId, billing_profile_id: billingProfileId,
+        type: 'credit_card', last4: details.last4, exp_month: String(details.expMonth), exp_year: String(details.expYear),
+        is_default: !hasDefault, is_deleted: false, provider_type: 'stripe', external_payment_method_id: details.externalPaymentMethodId,
+        external_customer_id: details.externalCustomerId, brand: details.brand, fingerprint: details.fingerprint, status: 'active',
+        created_at: trx.fn.now(), updated_at: trx.fn.now(),
+      };
+      const [inserted] = await tenantDb(trx, this.tenantId).table('payment_methods').insert(row).returning('payment_method_id');
+      return { paymentMethodId: String(inserted.payment_method_id) };
+    });
   }
 
   async removeMethod(paymentMethodId: string): Promise<void> {

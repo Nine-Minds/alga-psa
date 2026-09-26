@@ -230,6 +230,12 @@ export class StripePaymentProvider implements PaymentProvider {
     return (await this.getStripe()).setupIntents.retrieve(setupIntentId);
   }
 
+  async retrieveAttemptPaymentIntent(attemptId: string): Promise<Stripe.PaymentIntent | null> {
+    const stripe = await this.getStripe();
+    const result = await stripe.paymentIntents.search({ query: `metadata['autopay_attempt_id']:'${attemptId}'`, limit: 1 });
+    return result.data[0] ?? null;
+  }
+
   async updateSavedPaymentMethodMetadata(externalId: string, metadata: Record<string, string>): Promise<void> {
     await (await this.getStripe()).paymentMethods.update(externalId, { metadata });
   }
@@ -520,6 +526,7 @@ export class StripePaymentProvider implements PaymentProvider {
           billingProfileId = session.metadata?.billing_profile_id;
           setupIntentId = session.setup_intent as string;
           customerId = session.customer as string;
+          externalLinkId = session.id;
           status = 'succeeded';
           break;
         }

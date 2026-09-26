@@ -7,6 +7,7 @@ import { PaymentService } from './PaymentService';
 import { createStripePaymentProvider } from './StripePaymentProvider';
 import { scheduleImmediateJob } from 'server/src/lib/jobs';
 import { classifyAutopayFailure, retryAt, shouldScheduleAutopay } from './autopayPolicy';
+import type { PaymentWebhookEvent } from '@alga-psa/types';
 
 type Authorization = { userId: string | null; source: 'client_portal' | 'msp'; ip?: string | null; userAgent?: string | null; consentTextVersion: string };
 
@@ -37,6 +38,26 @@ export class AutopayService {
   async disenroll(billingProfileId: string, reason: string, actor: string | null): Promise<void> {
     await this.table('billing_profile_autopay').where({ billing_profile_id: billingProfileId, is_enabled: true }).update({ is_enabled: false,
       disabled_at: this.knex.fn.now(), disabled_by_user_id: actor, disabled_reason: reason, updated_at: this.knex.fn.now() });
+  }
+
+  async handleProviderEvent(event: PaymentWebhookEvent): Promise<void> {
+    if (!event.autopayAttemptId) return;
+    const attempt = await this.table('invoice_autopay_attempts').where({ attempt_id: event.autopayAttemptId }).first();
+    if (!attempt) return;
+    if (attempt.status !== 'processing') return;
+    if (event.eventType === 'payment_intent.succeeded') {
+      await this.table('invoice_autopay_attempts').where({ attempt_id: event.autopayAttemptId }).update({ status: 'succeeded',
+        payment_intent_id: event.paymentIntentId, processed_at: this.knex.fn.now(), updated_at: this.knex.fn.now() });
+      return;
+    }
+    if (event.eventType === 'payment_intent.payment_failed') {
+      const raw = event.payload as any;
+      const intent = raw?.data?.object ?? {};
+      const error = intent.last_payment_error ?? {};
+      const paymentService = await PaymentService.create(this.tenantId);
+      await this.failAttempt(attempt, { status: error.code === 'authentication_required' ? 'requires_action' : 'failed',
+        paymentIntentId: event.paymentIntentId ?? intent.id, failureCode: error.code, declineCode: error.decline_code, message: error.message }, paymentService);
+    }
   }
 
   async scheduleForFinalizedInvoice(invoiceId: string): Promise<'scheduled' | 'skipped'> {
@@ -74,6 +95,35 @@ export class AutopayService {
   }
 
   async processDueAttempts(limit = 20): Promise<number> {
+    // Risk-6 recovery: find finalized invoices whose enqueue was lost after commit.
+    const missed = await this.table('invoices').whereIn('status', ['sent', 'partially_applied'])
+      .whereNotExists(function (this: Knex.QueryBuilder) {
+        this.select(1).from('invoice_autopay_attempts as aa')
+          .whereRaw('aa.tenant = invoices.tenant').whereRaw('aa.invoice_id = invoices.invoice_id');
+      }).orderBy('finalized_at').limit(limit).select('invoice_id');
+    for (const invoice of missed) await this.scheduleForFinalizedInvoice(invoice.invoice_id);
+
+    // A processing row older than one hour may represent an accepted request
+    // whose worker died. Always query Stripe before resolving it; unknown rows
+    // remain locked in processing and are never blindly charged again.
+    const stuck = await this.table('invoice_autopay_attempts').where({ status: 'processing' })
+      .where('updated_at', '<', this.knex.raw("now() - interval '1 hour'")).limit(limit);
+    const provider = createStripePaymentProvider(this.tenantId) as any;
+    for (const attempt of stuck) {
+      const intent = await provider.retrieveAttemptPaymentIntent(attempt.attempt_id);
+      if (!intent) continue;
+      if (intent.status === 'succeeded') {
+        const invoice = await this.table('invoices').where({ invoice_id: attempt.invoice_id }).first();
+        const payments = await this.table('invoice_payments').where({ invoice_id: attempt.invoice_id }).sum('amount as total').first();
+        const balance = computeBalanceDue({ totalAmount: Number(invoice.total_amount), creditApplied: Number(invoice.credit_applied ?? 0), totalPaid: Number(payments?.total ?? 0) });
+        if (balance > 0) await recordExternalPayment(this.knex, this.tenantId, { invoiceId: attempt.invoice_id, amount: Math.min(balance, Number(intent.amount_received || intent.amount)), provider: 'stripe', referenceNumber: intent.id, currency: attempt.currency, notes: 'Auto-pay' });
+        await this.table('invoice_autopay_attempts').where({ attempt_id: attempt.attempt_id }).update({ status: 'succeeded', payment_intent_id: intent.id, processed_at: this.knex.fn.now(), updated_at: this.knex.fn.now() });
+      } else if (intent.status === 'requires_payment_method' || intent.status === 'canceled') {
+        await this.failAttempt(attempt, { status: 'failed', paymentIntentId: intent.id, failureCode: intent.last_payment_error?.code,
+          declineCode: intent.last_payment_error?.decline_code, message: intent.last_payment_error?.message }, await PaymentService.create(this.tenantId));
+      }
+    }
+
     const claims = await this.knex.transaction(async (trx) => {
       const rows = await tenantDb(trx, this.tenantId).table('invoice_autopay_attempts').where({ status: 'scheduled' }).where('scheduled_for', '<=', trx.fn.now())
         .orderBy('scheduled_for').limit(limit).forUpdate().skipLocked();

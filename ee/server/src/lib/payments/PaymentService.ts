@@ -29,6 +29,7 @@ import {
 import { PaymentProviderRegistry, PAYMENT_PROVIDER_TYPES } from './PaymentProviderRegistry';
 import { createStripePaymentProvider } from './StripePaymentProvider';
 import { SavedPaymentMethodService } from './SavedPaymentMethodService';
+import { AutopayService } from './AutopayService';
 import { recordTransaction } from 'server/src/lib/utils/transactionUtils';
 import { recordExternalPayment } from '@alga-psa/billing/services';
 import { resolveInvoiceBillingRecipient } from '@alga-psa/billing/services';
@@ -419,6 +420,13 @@ export class PaymentService {
     if (event.eventType.startsWith('payment_method.') && event.externalPaymentMethodId) {
       await (await SavedPaymentMethodService.create(this.tenantId)).syncFromProviderEvent(event);
       return { success: true, paymentRecorded: false };
+    }
+    if (event.autopayAttemptId && (event.eventType === 'payment_intent.succeeded' || event.eventType === 'payment_intent.payment_failed')) {
+      const result = event.eventType === 'payment_intent.succeeded'
+        ? await this.handlePaymentSucceeded(event)
+        : await this.handlePaymentFailed(event);
+      if (result.success) await (await AutopayService.create(this.tenantId)).handleProviderEvent(event);
+      return result;
     }
 
     switch (event.eventType) {
