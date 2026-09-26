@@ -403,10 +403,7 @@ export class EmailNotificationService implements NotificationService {
     try {
       const recipientLocale = await resolveEmailLocale(params.tenant, {
         email: params.emailAddress,
-        userId: params.userId,
-        mailClass: params.mailClass,
-        boardId: params.boardId,
-        senderId: params.senderId
+        userId: params.userId
       });
 
       const template = await this.getEffectiveTemplate(params.tenant, params.templateName, recipientLocale);
@@ -422,6 +419,9 @@ export class EmailNotificationService implements NotificationService {
       const result = await service.sendEmail({
         to: params.emailAddress,
         tenantId: params.tenant,
+        mailClass: params.mailClass,
+        boardId: params.boardId,
+        senderId: params.senderId,
         templateProcessor: processor,
         userId: params.userId
       });

@@ -189,7 +189,8 @@ export async function sendSlaNotification(
             context.tenant,
             recipient,
             emailTemplateName,
-            { ...templateData, recipientName }
+            { ...templateData, recipientName },
+            context.boardId ?? undefined
           );
 
           if (emailResult) {
@@ -524,7 +525,8 @@ async function sendEmailNotification(
   tenant: string,
   recipient: NotificationRecipient,
   templateName: string,
-  data: Record<string, unknown>
+  data: Record<string, unknown>,
+  boardId?: string
 ): Promise<boolean> {
   try {
     const emailAddress = recipient.email;
@@ -550,7 +552,7 @@ async function sendEmailNotification(
       () =>
         emailService.sendNotification({
           mailClass: 'ticket',
-          boardId: ticket.board_id,
+          boardId,
           tenant,
           userId: recipient.user_id,
           subtypeId: subtype.id,
