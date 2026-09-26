@@ -59,6 +59,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import { clearEmailSenderRoute, listEmailSenders, setEmailSenderRoute } from '@alga-psa/integrations/actions';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import type { ColumnDefinition } from '@alga-psa/types';
 import {
@@ -507,6 +508,10 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
   const [showAddEditDialog, setShowAddEditDialog] = useState(false);
   const [editingBoard, setEditingBoard] = useState<IBoard | null>(null);
   const [formData, setFormData] = useState(createEmptyFormData);
+  const [ticketSenderOptions, setTicketSenderOptions] = useState<Array<{ value: string; label: string }>>([]);
+  const [ticketSenderId, setTicketSenderId] = useState('');
+  const [ticketSenderName, setTicketSenderName] = useState('');
+  const [ticketSenderSaving, setTicketSenderSaving] = useState(false);
   const [isLoadingBoardStatuses, setIsLoadingBoardStatuses] = useState(false);
   // Tracks the close-rules / auto-close fetch on edit so the dirty baseline is
   // captured only after those values land (otherwise both sections show as dirty on open).
@@ -517,6 +522,41 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
   // Accordion editor: per-section collapse state + dirty tracking against an on-open baseline
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(collapsedExceptFirstSection);
   const [formSnapshot, setFormSnapshot] = useState<Record<string, string> | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    if (!editingBoard?.board_id) {
+      setTicketSenderOptions([]);
+      setTicketSenderId('');
+      setTicketSenderName('');
+      return;
+    }
+    void listEmailSenders().then(({ senders, routes }) => {
+      if (!active) return;
+      setTicketSenderOptions(senders.filter((sender: any) => sender.verification_status === 'verified').map((sender: any) => ({ value: sender.sender_id, label: sender.email_address })));
+      const route = routes.find((item: any) => item.route_type === 'board' && item.board_id === editingBoard.board_id);
+      setTicketSenderId(route?.sender_id ?? '');
+      setTicketSenderName(route?.display_name ?? '');
+    }).catch((error) => toast.error(error instanceof Error ? error.message : 'Could not load ticket senders.'));
+    return () => { active = false; };
+  }, [editingBoard?.board_id]);
+
+  const saveTicketSenderRoute = async () => {
+    if (!editingBoard?.board_id) return;
+    setTicketSenderSaving(true);
+    try {
+      if (!ticketSenderId && !ticketSenderName.trim()) {
+        await clearEmailSenderRoute({ routeType: 'board', boardId: editingBoard.board_id });
+      } else {
+        await setEmailSenderRoute({ routeType: 'board', boardId: editingBoard.board_id, senderId: ticketSenderId || null, displayName: ticketSenderName });
+      }
+      toast.success(t('ticketing.boards.emailSender.saved', 'Ticket sender saved'));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not save ticket sender.');
+    } finally {
+      setTicketSenderSaving(false);
+    }
+  };
   
   // State for Import Dialog
   const [showImportDialog, setShowImportDialog] = useState(false);
@@ -1963,6 +2003,23 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
                   disabled={!formData.inbound_reply_reopen_enabled}
                 />
               </div>
+              )}
+
+              {editingBoard && (
+                <div className="space-y-2 border-t border-border pt-4">
+                  <Label htmlFor="board-ticket-email-sender">{t('ticketing.boards.emailSender.label', 'Send ticket email from')}</Label>
+                  <CustomSelect
+                    id="board-ticket-email-sender"
+                    value={ticketSenderId}
+                    onValueChange={setTicketSenderId}
+                    options={[{ value: '', label: t('ticketing.boards.emailSender.useMailClass', 'Use ticket mail routing') }, ...ticketSenderOptions]}
+                  />
+                  <Label htmlFor="board-ticket-email-sender-name">{t('ticketing.boards.emailSender.displayName', 'Display name override (optional)')}</Label>
+                  <Input id="board-ticket-email-sender-name" value={ticketSenderName} onChange={(event) => setTicketSenderName(event.target.value)} />
+                  <Button id="board-ticket-email-sender-save" type="button" variant="outline" disabled={ticketSenderSaving} onClick={() => void saveTicketSenderRoute()}>
+                    {ticketSenderSaving ? t('common.saving', 'Saving...') : t('ticketing.boards.emailSender.save', 'Save sender')}
+                  </Button>
+                </div>
               )}
 
               <div className="flex items-center justify-between">

@@ -11,6 +11,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import ClientNameCell from '@alga-psa/ui/components/ClientNameCell';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { listSelectableSenders } from '@alga-psa/integrations/actions';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -310,6 +311,9 @@ const QuotesTab: React.FC = () => {
   const [isSending, setIsSending] = useState(false);
   const [sendAdditionalEmails, setSendAdditionalEmails] = useState('');
   const [sendMessage, setSendMessage] = useState('');
+  const [quoteSenders, setQuoteSenders] = useState<Array<{ sender_id: string; email_address: string }>>([]);
+  const [quoteEffectiveSenderId, setQuoteEffectiveSenderId] = useState<string | null>(null);
+  const [quoteSenderId, setQuoteSenderId] = useState('');
   const selectedQuoteId = searchParams?.get('quoteId');
   const selectedMode = searchParams?.get('mode');
   const requestedSubtab = searchParams?.get('subtab');
@@ -326,6 +330,15 @@ const QuotesTab: React.FC = () => {
   useEffect(() => {
     void loadData();
   }, []);
+
+  useEffect(() => {
+    if (!sendDialogState.isOpen) return;
+    void listSelectableSenders({ mailClass: 'sales' }).then((result) => {
+      setQuoteSenders(result.senders);
+      setQuoteEffectiveSenderId(result.effectiveSenderId);
+      setQuoteSenderId(result.effectiveSenderId ?? '');
+    }).catch((reason) => setError(reason instanceof Error ? reason.message : 'Could not load sender addresses.'));
+  }, [sendDialogState.isOpen]);
 
   const loadData = async (options?: { background?: boolean }) => {
     const isBackground = options?.background === true;
@@ -425,6 +438,7 @@ const QuotesTab: React.FC = () => {
       const result = await sendQuote(quoteId, {
         email_addresses: parsedEmails.length > 0 ? parsedEmails : undefined,
         message: sendMessage.trim() || undefined,
+        senderId: quoteSenderId || undefined,
       });
       if (isReturnedActionError(result)) {
         setError(getErrorMessage(result));
@@ -745,6 +759,17 @@ const QuotesTab: React.FC = () => {
             })}
           </DialogDescription>
           <div className="space-y-3 py-2">
+            {quoteSenders.length > 1 && (
+              <div className="space-y-1">
+                <label htmlFor="send-quote-sender" className="text-sm font-medium">{t('quotesTab.dialogs.send.from', { defaultValue: 'From' })}</label>
+                <CustomSelect
+                  id="send-quote-sender"
+                  value={quoteSenderId || quoteEffectiveSenderId || ''}
+                  onValueChange={setQuoteSenderId}
+                  options={quoteSenders.map((sender) => ({ value: sender.sender_id, label: sender.email_address }))}
+                />
+              </div>
+            )}
             <label className="flex flex-col gap-1 text-sm font-medium">
               {t('quotesTab.dialogs.send.additionalRecipients', {
                 defaultValue: 'Additional recipients (comma-separated)',
