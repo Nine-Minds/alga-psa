@@ -27,7 +27,8 @@ Branch: `feature/alga-2026-0002563-quote-pdf-filename-from-the-qu`
 ## Download response headers
 
 - Extracted the production document download `Response` construction into `createDocumentDownloadResponse`; `downloadDocument` uses this function directly.
-- `quotePdfDownloadResponse.test.ts` creates actual `Response` objects through that production function and asserts `Content-Disposition`, including the UTF-8 `filename*` value and decoded browser filename, for stored, renamed, Unicode-title, and `Quote_Q-0042.pdf` fallback artifacts.
+- RFC 5987 encoding now percent-encodes `!'()*` left untouched by `encodeURIComponent`, preventing invalid `filename*` values for ordinary apostrophes and parentheses.
+- `quotePdfDownloadResponse.test.ts` creates actual `Response` objects through that production function and parses `Content-Disposition` with the installed `content-disposition` parser. Seven cases recover the filename for stored, renamed, apostrophe, parentheses, Unicode, Unicode plus punctuation, and `Quote_Q-0042.pdf` fallback artifacts.
 - This verifies response header construction offline. Browser download UX and live route/database/storage integration remain unverified until the board service is restored.
 
 ## Changes and code-level filename review
@@ -43,7 +44,7 @@ Branch: `feature/alga-2026-0002563-quote-pdf-filename-from-the-qu`
 - `npm run test -w @alga-psa/core -- --run src/lib/fileNames.test.ts` — passed, 9 tests.
 - `npm run test -w @alga-psa/billing -- --run tests/quote/quoteFileNames.test.ts tests/quote/quoteActions.test.ts tests/quote/quotePdfGenerationService.test.ts` — passed, 56 tests.
 - `npm run test -w @alga-psa/ui -- --run src/lib/i18n/client.initialization.test.tsx src/lib/i18n/namespaceReadiness.test.tsx` — passed, 4 tests.
-- `npm run test -w @alga-psa/documents -- --run tests/quotePdfDownloadResponse.test.ts` — passed, 4 response-header cases.
+- `npm run test -w @alga-psa/documents -- --run tests/quotePdfDownloadResponse.test.ts` — passed, 7 parsed response-header cases.
 - `npm run typecheck -w @alga-psa/client-portal`, `npm run typecheck -w @alga-psa/billing`, and `npm run build -w @alga-psa/core` — completed successfully.
 - `npm run typecheck -w @alga-psa/ui` and `npm run typecheck -w @alga-psa/documents` — completed successfully.
 

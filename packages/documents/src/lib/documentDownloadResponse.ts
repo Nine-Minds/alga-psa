@@ -9,7 +9,11 @@ export function createDocumentDownloadResponse(
   // The extended parameter preserves Unicode; filename remains a compatible
   // ASCII fallback for clients that do not understand filename*.
   const documentName = document.document_name || 'download';
-  const encodedFilename = encodeURIComponent(documentName);
+  // encodeURIComponent leaves characters that are not valid unescaped in an
+  // RFC 5987 value. Percent-encode those as UTF-8 bytes as well.
+  const encodedFilename = encodeURIComponent(documentName).replace(/[!'()*]/g, (character) =>
+    `%${character.charCodeAt(0).toString(16).toUpperCase()}`
+  );
   const asciiFilename = documentName.replace(/[^\x00-\x7F]/g, '_');
   headers.set('Content-Disposition', `attachment; filename="${asciiFilename}"; filename*=UTF-8''${encodedFilename}`);
   headers.set('Content-Length', buffer.length.toString());
