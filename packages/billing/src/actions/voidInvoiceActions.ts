@@ -13,6 +13,7 @@ import { enqueueInvoiceVoid } from '../services/accountingSync/syncProducers';
 import { notifyInvoiceTerminalStatus } from '../services/accountingSync/invoiceTerminalStatusHandlers';
 import { suppressPrepaidReplenishmentForVoidedInvoice } from '../lib/prepaidAutoReplenishment';
 import { hasConnectedQboRealm } from '../services/accountingSync/accountingSyncSettings';
+import { signalAutopayInvoiceSettled } from '../services/autopayBridge';
 
 export type VoidInvoiceResult =
   | { success: true }
@@ -346,6 +347,8 @@ export const voidInvoice = withAuth(async (
   if (!outcome.success) {
     return outcome;
   }
+
+  void signalAutopayInvoiceSettled(tenant, invoiceId);
 
   // Fire-and-forget: enqueue void_invoice op if accounting mapping exists.
   // The enqueue is additionally gated on the actor's remote-mutate capability

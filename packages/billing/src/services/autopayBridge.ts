@@ -87,12 +87,28 @@ export async function getInvoiceAutopayContextsForTenant(tenantId: string, invoi
 }
 
 /** Best-effort finalize producer. It is intentionally isolated from finalize and never throws. */
-export async function enqueueInvoiceAutopay(_knex: unknown, tenantId: string, invoiceId: string): Promise<void> {
+export async function startInvoiceAutopay(_knex: unknown, tenantId: string, invoiceId: string): Promise<void> {
   try {
     const ee = await loadEnterpriseAutopay();
     if (!ee?.AutopayService) return;
-    await ee.AutopayService.enqueueInvoiceAutopay(tenantId, invoiceId);
+    await ee.AutopayService.startInvoiceAutopay(tenantId, invoiceId);
   } catch (error) {
-    logger.error('[billing/autopayBridge] Failed to enqueue invoice auto-pay', { tenantId, invoiceId, error });
+    logger.error('[billing/autopayBridge] Failed to start invoice auto-pay workflow', { tenantId, invoiceId, error });
   }
+}
+
+export async function signalAutopayInvoiceSettled(tenantId: string, invoiceId: string): Promise<void> {
+  try {
+    const ee = await loadEnterpriseAutopay();
+    await ee?.AutopayService?.signalInvoiceSettled(tenantId, invoiceId);
+  } catch (error) {
+    logger.warn('[billing/autopayBridge] Failed to signal invoice settlement', { tenantId, invoiceId, error });
+  }
+}
+
+export async function chargeInvoiceWithAutopayNow(tenantId: string, invoiceId: string): Promise<boolean> {
+  const ee = await loadEnterpriseAutopay();
+  if (!ee?.AutopayService) return false;
+  await ee.AutopayService.chargeInvoiceNow(tenantId, invoiceId);
+  return true;
 }

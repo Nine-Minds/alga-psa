@@ -161,16 +161,6 @@ export const initializeScheduler = async (storageService?: StorageService) => {
     }
     
     // Register job handlers
-    jobScheduler.registerJobHandler<{ tenantId: string; invoiceId: string }>('invoice_autopay_schedule', async (job) => {
-      const ee = await import('@enterprise/lib/payments');
-      const service = await (ee as any).AutopayService.create(job.data.tenantId);
-      await service.scheduleForFinalizedInvoice(job.data.invoiceId);
-    });
-    jobScheduler.registerJobHandler<{ tenantId: string }>('invoice_autopay_process', async (job) => {
-      const ee = await import('@enterprise/lib/payments');
-      const service = await (ee as any).AutopayService.create(job.data.tenantId);
-      await service.processDueAttempts();
-    });
     jobScheduler.registerJobHandler<GenerateInvoiceData>('generate-invoice', async (job: Job<GenerateInvoiceData>) => {
       await generateInvoiceHandler(job.data);
     });
@@ -506,11 +496,6 @@ export const scheduleImmediateJob = async <T extends Record<string, unknown>>(
 ): Promise<string | null> => {
   const scheduler = await initializeScheduler();
   return await scheduler.scheduleImmediateJob(jobName, data);
-};
-
-export const scheduleAutopaySweepJob = async (tenantId: string): Promise<string | null> => {
-  const scheduler = await initializeScheduler();
-  return scheduler.scheduleRecurringJob('invoice_autopay_process', '1 hour', { tenantId });
 };
 
 export const scheduleSearchVisibleUserReindexJob = async (

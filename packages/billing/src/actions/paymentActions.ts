@@ -6,7 +6,7 @@ import { getCurrentUserAsync } from '../lib/authHelpers';
 import { PaymentLinkError } from './paymentLinkError';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { getInvoiceAutopayContextsForTenant, type InvoiceAutopayContext } from '../services/autopayBridge';
+import { getInvoiceAutopayContextsForTenant, chargeInvoiceWithAutopayNow, type InvoiceAutopayContext } from '../services/autopayBridge';
 
 export type { PaymentLinkErrorCode } from './paymentLinkError';
 
@@ -59,6 +59,17 @@ export async function getInvoiceAutopayContexts(invoiceIds: string[]): Promise<R
     return {};
   }
   return getInvoiceAutopayContextsForTenant(tenantId, permittedInvoiceIds);
+}
+
+export async function chargeInvoiceAutopayNow(invoiceId: string): Promise<{ success: boolean; error?: string }> {
+  const user = await getCurrentUserAsync();
+  if (!user || user.user_type === 'client' || !await hasPermission(user, 'billing', 'update')) {
+    return { success: false, error: 'Permission denied' };
+  }
+  const { knex } = await createTenantKnex();
+  const invoice = await tenantDb(knex, user.tenant).table('invoices').where({ invoice_id: invoiceId }).first('invoice_id');
+  if (!invoice) return { success: false, error: 'Invoice not found' };
+  return { success: await chargeInvoiceWithAutopayNow(user.tenant, invoiceId) };
 }
 
 export async function getPaymentService(tenantId: string): Promise<any | null> {

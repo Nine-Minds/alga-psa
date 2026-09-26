@@ -1,5 +1,4 @@
-const DEFAULT_TEMPORAL_ADDRESS = 'temporal-frontend.temporal.svc.cluster.local:7233';
-const DEFAULT_TEMPORAL_NAMESPACE = 'default';
+import { getTemporalClient } from '../temporal/client';
 // Non-authored workflows (registered in ee/temporal-workflows non-authored-index)
 // are served by the temporal-worker on these queues; tenant-workflows is the
 // general-purpose one used by tenant-creation etc.
@@ -31,14 +30,7 @@ export async function startApplianceLicenseIssuance(
   paymentIntentId: string,
   input: ApplianceLicenseIssuanceInput
 ): Promise<{ workflowId: string }> {
-  const temporal = await import('@temporalio/client');
-  const connection = await temporal.Connection.connect({
-    address: process.env.TEMPORAL_ADDRESS || DEFAULT_TEMPORAL_ADDRESS,
-  });
-  const client = new temporal.Client({
-    connection,
-    namespace: process.env.TEMPORAL_NAMESPACE || DEFAULT_TEMPORAL_NAMESPACE,
-  });
+  const client = await getTemporalClient();
 
   const workflowId = `license-issue:${paymentIntentId}`;
   try {
@@ -55,7 +47,5 @@ export async function startApplianceLicenseIssuance(
       return { workflowId };
     }
     throw error;
-  } finally {
-    await connection.close().catch(() => undefined);
   }
 }

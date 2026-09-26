@@ -28,7 +28,7 @@ import {
 
 import { validateInvoiceFinalization, validateInvoiceFinalizationInternal } from './taxSourceActions';
 import { enqueueInvoiceAutoExport } from '../services/accountingSync/syncProducers';
-import { enqueueInvoiceAutopay } from '../services/autopayBridge';
+import { startInvoiceAutopay } from '../services/autopayBridge';
 import { assertInvoiceNotExported } from '../services/accountingSync/invoiceExportGuards';
 import { assertInvoiceExportReady, InvoiceExportReadinessError } from '../services/accountingSync/exportReadiness';
 import { withAuth } from '@alga-psa/auth';
@@ -1482,14 +1482,14 @@ export async function finalizeInvoiceWithKnex(
 
   // Auto-export producer (accounting sync): fire-and-forget, never blocks finalize.
   await enqueueInvoiceAutoExport(knex, tenant, invoiceId);
-  // Post-commit, fire-and-forget scheduling. Payment setup must never slow or fail finalize.
-  void enqueueInvoiceAutopay(knex, tenant, invoiceId);
-
   if (deferPrepaidActivation && options.markReplenishmentIssued !== false) {
     await tenantScopedTable(knex, tenant, 'prepaid_balance_alerts')
       .where({ replenishment_invoice_id: invoiceId, replenishment_status: 'pending' })
       .update({ replenishment_status: 'issued', updated_at: knex.fn.now() });
   }
+
+  // Post-commit, fire-and-forget start. Temporal availability must never slow or fail finalize.
+  void startInvoiceAutopay(knex, tenant, invoiceId);
 }
 
 /**

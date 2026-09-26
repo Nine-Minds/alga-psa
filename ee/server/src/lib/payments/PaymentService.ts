@@ -30,6 +30,7 @@ import { PaymentProviderRegistry, PAYMENT_PROVIDER_TYPES } from './PaymentProvid
 import { createStripePaymentProvider } from './StripePaymentProvider';
 import { SavedPaymentMethodService } from './SavedPaymentMethodService';
 import { AutopayService } from './AutopayService';
+import { signalInvoiceAutopay } from '../temporal/invoiceAutopay';
 import { recordTransaction } from 'server/src/lib/utils/transactionUtils';
 import { recordExternalPayment } from '@alga-psa/billing/services';
 import { resolveInvoiceBillingRecipient } from '@alga-psa/billing/services';
@@ -529,7 +530,6 @@ export class PaymentService {
     });
 
     const occurredAt = new Date().toISOString();
-
     if (typeof event.amount === 'number') {
       const invoice = event.invoiceId ? await this.getInvoice(event.invoiceId) : null;
       const currency = (event.currency || invoice?.currency_code || 'USD').toUpperCase();
@@ -804,6 +804,9 @@ export class PaymentService {
     });
 
     const occurredAt = new Date().toISOString();
+    if (!event.autopayAttemptId && recordResult.newStatus === 'paid') {
+      await signalInvoiceAutopay(this.tenantId, event.invoiceId, 'invoiceSettled');
+    }
     await publishWorkflowEvent({
       eventType: 'PAYMENT_RECORDED',
       payload: buildPaymentRecordedPayload({

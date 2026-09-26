@@ -19,9 +19,6 @@ import { runMaintenanceJob, isKnownMaintenanceJob } from '@alga-psa/jobs/fanout'
 import { executeJobHandler } from '../../jobs/jobHandlerRegistry';
 import { runWithTenant } from '@alga-psa/db';
 import { acquireMaintenanceJobLock } from './maintenanceJobLock';
-import { getConnection } from '../../db/db';
-import { tenantDb } from '@alga-psa/db';
-import { scheduleImmediateJob } from '../../jobs';
 
 let isRegistered = false;
 
@@ -52,16 +49,6 @@ async function handleMaintenanceJobRequested(event: unknown): Promise<void> {
   const { jobName, jobId, data, tenantId } = validated.payload;
 
   try {
-    if (jobName === 'autopay-due-attempts') {
-      const knex = await getConnection(null);
-      const tenants = await tenantDb(knex, '__autopay_maintenance_tenant_scan__')
-        .unscoped<{ tenant: string }>('payment_provider_configs', 'auto-pay maintenance selects tenants with the tenant setting enabled')
-        .where('provider_type', 'stripe').where('is_enabled', true)
-        .whereRaw("settings->>'autopayEnabled' = 'true'")
-        .distinct('tenant');
-      for (const row of tenants) await scheduleImmediateJob('invoice_autopay_process', { tenantId: row.tenant });
-      return;
-    }
     if (isKnownMaintenanceJob(jobName)) {
       // Global maintenance fan-out: run once / across all tenants, and never
       // concurrently with another run of the same job anywhere in the cluster.

@@ -109,9 +109,7 @@ export class SavedPaymentMethodService {
 
 export class AutopayService {
   static async create(_tenantId: string): Promise<AutopayService> { return new AutopayService(); }
-  static async enqueueInvoiceAutopay(): Promise<void> {}
-  async scheduleForFinalizedInvoice(): Promise<'not_available'> { return 'not_available'; }
-  async processDueAttempts(): Promise<'not_available'> { return 'not_available'; }
+  static async startInvoiceAutopay(): Promise<void> {}
   async enroll(): Promise<never> { throw new Error('Auto-pay requires Enterprise Edition'); }
   async disenroll(): Promise<never> { throw new Error('Auto-pay requires Enterprise Edition'); }
 }

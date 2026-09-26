@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { createStripePaymentProvider } from './StripePaymentProvider';
 import { resolveInvoiceBillingRecipient } from '@alga-psa/billing/services';
 import { buildSetupSuccessUrl, resolvePublicSetupTenantContext, type PublicSetupContext } from './publicSetupConfirmation';
+import { signalProfileAutopayChanged } from '../temporal/invoiceAutopay';
 
 /** EE-owned bridge between hosted Stripe setup and profile-scoped payment_methods. */
 export class SavedPaymentMethodService {
@@ -94,6 +95,7 @@ export class SavedPaymentMethodService {
     if (method.provider_type === 'stripe' && method.external_payment_method_id) await createStripePaymentProvider(this.tenantId).detachPaymentMethod(method.external_payment_method_id);
     await tenantDb(this.knex, this.tenantId).table('payment_methods').where({ payment_method_id: paymentMethodId }).update({ is_deleted: true, is_default: false, status: 'detached', updated_at: this.knex.fn.now() });
     await tenantDb(this.knex, this.tenantId).table('billing_profile_autopay').where({ payment_method_id: paymentMethodId, is_enabled: true }).update({ is_enabled: false, disabled_at: this.knex.fn.now(), disabled_reason: 'payment_method_removed', updated_at: this.knex.fn.now() });
+    await signalProfileAutopayChanged(this.knex, this.tenantId, method.billing_profile_id);
   }
 
   async syncFromProviderEvent(event: { eventType: string; externalPaymentMethodId?: string }): Promise<void> {
@@ -106,6 +108,7 @@ export class SavedPaymentMethodService {
         .update({ status: 'detached', is_deleted: true, is_default: false, updated_at: this.knex.fn.now() });
       await tenantDb(this.knex, this.tenantId).table('billing_profile_autopay').where({ payment_method_id: method.payment_method_id, is_enabled: true })
         .update({ is_enabled: false, disabled_at: this.knex.fn.now(), disabled_reason: 'payment_method_detached', updated_at: this.knex.fn.now() });
+      await signalProfileAutopayChanged(this.knex, this.tenantId, method.billing_profile_id);
       return;
     }
     try {
@@ -117,6 +120,7 @@ export class SavedPaymentMethodService {
     } catch {
       await tenantDb(this.knex, this.tenantId).table('payment_methods').where({ payment_method_id: method.payment_method_id })
         .update({ status: 'requires_update', updated_at: this.knex.fn.now() });
+      await signalProfileAutopayChanged(this.knex, this.tenantId, method.billing_profile_id);
     }
   }
 }

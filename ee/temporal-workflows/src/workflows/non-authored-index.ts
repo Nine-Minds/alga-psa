@@ -29,3 +29,4 @@ export * from './appliance-essentials-registration-workflow.js';
 export * from './tenant-product-upgrade-workflow.js';
 export * from './trial-payment-reminder-workflow.js';
 export * from './threecx-call-control-workflow.js';
+export * from './invoice-autopay-workflow.js';
