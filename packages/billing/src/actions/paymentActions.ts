@@ -4,6 +4,8 @@ import logger from '@alga-psa/core/logger';
 import type { PaymentDetails, PaymentLinkResult } from '@alga-psa/types';
 import { getCurrentUserAsync } from '../lib/authHelpers';
 import { PaymentLinkError } from './paymentLinkError';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { hasPermission } from '@alga-psa/auth/rbac';
 
 export type { PaymentLinkErrorCode } from './paymentLinkError';
 
@@ -91,6 +93,26 @@ export async function disableBillingProfileAutopay(tenantId: string, billingProf
   if (!ee?.AutopayService) return false;
   await (await ee.AutopayService.create(tenantId)).disenroll(billingProfileId, reason, actor);
   return true;
+}
+
+export async function getInvoiceAutopayContexts(invoiceIds: string[]): Promise<Record<string, { scheduledFor: string; brand: string | null; last4: string; status: string }>> {
+  if (!isEnterpriseBuild()) return {};
+  const user = await getCurrentUserAsync();
+  if (!user) return {};
+  const tenantId = user.tenant;
+  const { knex } = await createTenantKnex();
+  let permittedInvoiceIds = invoiceIds;
+  if (user.contact_id) {
+    const contact = await tenantDb(knex, tenantId).table('contacts').where({ contact_name_id: user.contact_id }).first('client_id');
+    if (!contact?.client_id) return {};
+    const rows = await tenantDb(knex, tenantId).table('invoices').where({ client_id: contact.client_id }).whereIn('invoice_id', invoiceIds).select('invoice_id');
+    permittedInvoiceIds = rows.map((row: { invoice_id: string }) => row.invoice_id);
+  } else if (!await hasPermission(user, 'billing', 'read')) {
+    return {};
+  }
+  const ee = await loadEnterprisePayments();
+  if (!ee?.AutopayService) return {};
+  return (await ee.AutopayService.create(tenantId)).getInvoiceAutopayContexts(permittedInvoiceIds);
 }
 
 /** Best-effort finalize producer. It is intentionally isolated from finalize. */

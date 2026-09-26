@@ -333,7 +333,7 @@ export default function BillingSection() {
             ) : (
               invoices.map((invoice): React.JSX.Element => (
                 <tr key={invoice.id}>
-                  <td>{invoice.number}</td>
+                  <td>{invoice.number}{invoice.autopay && <p className="mt-1 text-xs text-muted-foreground">{tAccountBilling('autopay.willCharge', { defaultValue: 'Will be charged on {{date}} to {{brand}} •••• {{last4}}', date: new Date(invoice.autopay.scheduledFor).toLocaleDateString(), brand: invoice.autopay.brand ?? 'Card', last4: invoice.autopay.last4 })}</p>}</td>
                   <td>{invoice.date}</td>
                   <td>{formatAmount(invoice.amount)}</td>
                   <td>

@@ -51,10 +51,29 @@ export class AutopayService {
       this.table('payment_methods').where({ billing_profile_id: billingProfileId, provider_type: 'stripe', is_deleted: false }).select('payment_method_id', 'brand', 'last4', 'exp_month', 'exp_year', 'status', 'external_payment_method_id'),
       this.table('invoice_autopay_attempts').where({ billing_profile_id: billingProfileId }).orderBy('created_at', 'desc').limit(5),
     ]);
+    const safeMethods = methods.map(({ external_payment_method_id: _externalId, ...method }: any) => method);
+    const chargeableMethodIds = new Set(methods.filter((method: any) => method.status === 'active' && !!method.external_payment_method_id).map((method: any) => method.payment_method_id));
     return { enabled: (config?.settings as any)?.autopayEnabled === true, consentText: (config?.settings as any)?.autopayConsentText ?? '',
       consentTextVersion: (config?.settings as any)?.autopayConsentTextVersion ?? '1', enrollment: enrollment ?? null,
-      methods,
-      chargeableMethods: methods.filter((method: any) => method.status === 'active' && !!method.external_payment_method_id), attempts };
+      methods: safeMethods,
+      chargeableMethods: safeMethods.filter((method: any) => chargeableMethodIds.has(method.payment_method_id)), attempts };
+  }
+
+  async getInvoiceAutopayContexts(invoiceIds: string[]): Promise<Record<string, { scheduledFor: string; brand: string | null; last4: string; status: string }>> {
+    if (invoiceIds.length === 0) return {};
+    const rows = await this.table('invoice_autopay_attempts as aa')
+      .join('payment_methods as pm', function () {
+        this.on('pm.payment_method_id', '=', 'aa.payment_method_id').andOn('pm.tenant', '=', 'aa.tenant');
+      })
+      .whereIn('aa.invoice_id', invoiceIds).where(function () {
+        this.where('aa.status', 'processing').orWhere(function () {
+          this.where('aa.status', 'scheduled').whereRaw('aa.scheduled_for >= now()');
+        });
+      })
+      .select('aa.invoice_id', 'aa.scheduled_for', 'aa.status', 'pm.brand', 'pm.last4').orderBy('aa.scheduled_for', 'asc');
+    const result: Record<string, { scheduledFor: string; brand: string | null; last4: string; status: string }> = {};
+    for (const row of rows) result[row.invoice_id] ??= { scheduledFor: row.status === 'processing' ? new Date().toISOString() : row.scheduled_for, brand: row.brand, last4: row.last4, status: row.status };
+    return result;
   }
 
   async disenroll(billingProfileId: string, reason: string, actor: string | null): Promise<void> {

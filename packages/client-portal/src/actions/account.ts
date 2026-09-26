@@ -13,7 +13,7 @@ import {
   resolvePaymentBillingProfileId,
 } from '@alga-psa/shared/billingClients/billingProfilePayments';
 import { getPermittedBillingProfileIds } from './client-portal-actions/clientBillingProfileAccess';
-import { completeSavedPaymentMethodSetup, disableBillingProfileAutopay, enrollBillingProfileAutopay, getAutopayProfileOverview, inspectSavedPaymentMethodSetup, removeSavedPaymentMethod as removeSavedMethod, startSavedPaymentMethodSetup } from '@alga-psa/billing/actions/paymentActions';
+import { completeSavedPaymentMethodSetup, disableBillingProfileAutopay, enrollBillingProfileAutopay, getAutopayProfileOverview, getInvoiceAutopayContexts, inspectSavedPaymentMethodSetup, removeSavedPaymentMethod as removeSavedMethod, startSavedPaymentMethodSetup } from '@alga-psa/billing/actions/paymentActions';
 import { headers } from 'next/headers';
 
 export type ClientPortalAccountActionError = ActionMessageError;
@@ -83,6 +83,7 @@ export interface Invoice {
   date: string;
   amount: number;
   status: 'paid' | 'pending' | 'overdue' | 'credit note';
+  autopay?: { scheduledFor: string; brand: string | null; last4: string; status: string };
 }
 
 export interface PaymentMethod {
@@ -532,6 +533,7 @@ export const getInvoices = withAuth(async (user, { tenant }): Promise<Invoice[] 
       .select('*') as unknown as InvoiceRow[];
   });
 
+  const autopayContexts = await getInvoiceAutopayContexts(invoices.map((invoice) => invoice.invoice_id));
   return invoices.map((invoice): Invoice => {
     // Determine status based on due date and existing status. Credit notes
     // reduce what the client owes — pending/overdue semantics don't apply.
@@ -552,7 +554,8 @@ export const getInvoices = withAuth(async (user, { tenant }): Promise<Invoice[] 
       number: invoice.invoice_number,
       date: formatDate(invoice.created_at),
       amount: Number(invoice.total_amount || 0) - Number(invoice.credit_applied || 0),
-      status
+      status,
+      autopay: autopayContexts[invoice.invoice_id],
     };
   });
 });
