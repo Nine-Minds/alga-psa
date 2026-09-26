@@ -332,19 +332,48 @@ contact `3d727620-6baa-4219-babc-25c2259e7574` to tenant
 `a3ad6e99-5ed9-4a1c-9cf3-b0b49c1c3d84` (display label `PM Acceptance 0926
 1822`). That tenant has no active `tenant_companies` rows. The label and contact
 association do not establish an intended MSP/default client. Do not set a
-shared default or insert tenant membership directly. Invitation looks up the
-tenant's `tenant_companies.is_default` row and then requires its active default
-location and either tenant portal support email or location email. The
-supported setter is `setDefaultClient` from General Settings; only use it after
-the tenant owner identifies the intended MSP company.
+shared default or insert tenant membership directly. The supported General
+Settings implementation is `server/src/components/settings/general/GeneralSettings.tsx`:
+it loads active memberships through `getTenantDetails`, lists clients not
+currently active for the tenant, and adds a selection with `addClientToTenant`.
+That action upserts `(tenant, client_id)` and clears `deleted_at`, so it also
+restores a soft-deleted membership. `setDefaultClient` only clears/sets
+`is_default` on rows already in `tenant_companies`; it does not add membership.
 
-No authenticated, supported isolated-tenant provisioning flow was available
-without the app server, so no portal invitation, activation, or portal-auth
-fixture was created. Next server-enabled step must first get the tenant owner's
-intended default-client identity (or an authorized isolated-tenant provisioning
-path), configure it through supported General Settings, and verify its default
-location/email before inviting the retained contact. Never fabricate a portal
-user/authentication record.
+Use this order after the tenant owner identifies the intended MSP/company
+identity:
+
+1. In General Settings, confirm the tenant and identity. If the intended
+   company is absent from active memberships, select that company in the client
+   picker and press **Add Client** first. For an empty membership list this UI
+   handler immediately makes the first added company the default; therefore do
+   not add anything while identity is unresolved. If the company was
+   soft-deleted, it appears selectable and Add Client restores the existing
+   membership. Reload and confirm it appears once.
+2. Select the owner-confirmed company in the Default column and confirm the
+   change. This calls `setDefaultClient` after membership exists. Reload and
+   verify exactly that company is shown as the default. Never infer identity
+   from the tenant organization label or the retained contact's client.
+3. Open that company's Locations. Confirm it has an active default location;
+   create or mark the intended one as default through the supported location
+   UI if needed, then reload and verify it remains active/default.
+4. In Settings > Client Portal > Branding, configure the tenant support email,
+   or verify the default location has an email. Reload settings. Invitation
+   needs the default company, its active default location, and a support email
+   from tenant settings or that location.
+
+Invitation uses the tenant's default membership for MSP reply-to, then the
+contact's client for portal association. Do not add the retained contact's
+client as default unless the tenant owner confirms it is the intended MSP
+company. No membership or default was changed in this mitigation pass.
+
+No authenticated isolated tenant plus reachable test-contact identity was
+available to provision in this server-stopped step, so no portal invitation,
+activation, or portal-auth fixture was created. Next server-enabled step needs
+the tenant owner's intended default-client identity (or an authorized isolated
+tenant admin/contact and reachable inbox), configured through supported
+General Settings before inviting. Never fabricate a portal user/authentication
+record.
 
 After activation, use unpaid finalized invoices with immutable snapshots
 `check`, `bank_transfer`, `credit_card`, and `NULL`. Verify Check and Bank
@@ -355,32 +384,72 @@ state with `offline_payment_method` and create no checkout. Verify Card and NULL
 retain their configured checkout behavior. A 404 does not establish this
 acceptance.
 
-### Recurring profile preparation
+### Recurring profile setup runbook for the next UI smoke
 
-Automated T004 already creates real generated invoices in the isolated
-`test_db_billing_profile_recurring_acceptance` database. It creates a randomized
-tenant/client on each run with client `T004 Payment Method Snapshot Client`,
-default inheriting profile `Card Site`, sibling override profile `Check Site`,
-and separate `T004 Card Service` / `T004 Check Service` contracts and due
-service periods. Client settings are Credit Card / Net 30; the sibling override
-is Check / Due on Receipt. The test asserts separate invoices and charges,
-profile attribution, 30-day versus same-day due dates, and unchanged issued
-method/date snapshots after both profile settings are edited. UUIDs are
-deliberately generated at runtime; this dedicated test database is not an
-authenticated UI tenant and its rows are not offered as Generate-screen
-fixtures.
+Automated T004 creates real generated invoices in isolated
+`test_db_billing_profile_recurring_acceptance`, using runtime UUIDs. Its stable
+fixture labels are client `T004 Payment Method Snapshot Client`, profiles
+`Card Site` and `Check Site`, and separate `T004 Card Service` / `T004 Check
+Service` recurring contracts. It sets client Credit Card / Net 30 and the Check
+profile override to Check / Due on Receipt; it asserts separate invoice/charge
+attribution, 30-day versus same-day due dates, and immutable issued method/date
+snapshots after edits. Do not treat this ephemeral database as a UI fixture.
 
-For live Generate-through-UI acceptance, use a dedicated correctly provisioned
-test tenant/client with two sibling profiles. Set client Credit Card / Net 30;
-leave profile A inheriting and set profile B to Check / Due on Receipt. Assign
-separate recurring contracts/lines and due service periods to A and B. In
-Billing > Invoicing > Generate, generate each profile's due period separately;
-verify each invoice contains only its profile's charges, A snapshots Card and
-is due 30 days after invoice date, and B snapshots Check and is due on the
-invoice date. Edit both profile settings after issuance, reload both invoices,
-and confirm snapshots/dates and charge attribution remain unchanged. This
-browser acceptance remains pending; T004 is its automated behavioral coverage,
-not a substitute for the UI run.
+The following repeatable UI runbook creates a separate acceptance client inside
+the already owner-authorized test tenant. Use a fresh run tag such as
+`PMR-20260926-A`; replace it on every run so no existing client, contract,
+invoice, membership, or tenant setting is reused accidentally. Prerequisites:
+server enabled by the board lifecycle, and an authenticated MSP admin in the
+selected tenant. The runbook does not require changing the tenant default or
+adding the acceptance client to General Settings. For portal invitation in the
+same tenant, separately complete the owner-confirmed default/location/email
+prerequisites above and have a reachable test recipient/mailbox.
+
+1. Create a company named `<run-tag>-Recurring`, with an active billing
+   location and the email required by normal client setup. Under Client >
+   Billing > General > Billing profiles, keep/rename the default profile to
+   `<run-tag>-Card`, add sibling `<run-tag>-Check`, and save settings. Set the
+   client's preferred method to Credit Card and terms to Net 30. Leave the Card
+   profile method and terms inherited. Set Check to Check and Due on Receipt.
+   Reload the client and both profile settings to confirm persistence.
+2. In Billing > Contracts, create two separate active monthly recurring
+   contracts for this client, one for each profile. Add one fixed monthly
+   contract line/service to each contract, with distinct names
+   `<run-tag>-Card-Service` and `<run-tag>-Check-Service`, equal nonzero rates,
+   and assign each line to its matching profile in the contract's Contract
+   Lines tab using the **Billing profile** selector. Use monthly frequency,
+   billing in arrears, and a start date on the first day of the previous full
+   calendar month. Saving/adding the lines uses the supported contract actions
+   that sync recurring service periods. Confirm both prior-month periods appear
+   eligible in Generate before continuing; if either is absent, record that as
+   a setup blocker rather than directly editing service-period rows. Record
+   client, profile, contract, line, and service IDs from their detail-page
+   URLs/actions in the smoke notes.
+3. Open Billing > Invoicing > Generate. Select only the due row for the Card
+   contract/profile and generate it; then separately generate only the Check
+   row. Record both invoice IDs. Confirm each invoice contains its own named
+   service charge only, the Card invoice snapshots Credit Card and due date is
+   invoice date + 30 days, and Check snapshots Check with due date equal to
+   invoice date.
+4. Change Card to Bank Transfer / Due on Receipt and Check to Credit Card / Net
+   30. Reload both issued invoices and confirm original payment-method
+   snapshots, due dates, billing-profile IDs, and charge attribution are
+   unchanged.
+
+Cleanup is scoped to the exact `<run-tag>` objects recorded above: void/cancel
+the two acceptance invoices through normal invoice actions if cleanup is
+required, preserving them when needed as immutable-snapshot evidence;
+terminate/cancel the two contracts and archive/delete their contract lines and
+services through supported UI actions; archive the non-default Check profile;
+then archive/delete only the `<run-tag>` acceptance client if allowed and if
+no retained evidence depends on it. Never delete unrelated invoices, remove
+the tenant's default membership, or clean up by issuing broad SQL. If the UI
+does not offer a safe cleanup for an issued invoice, leave it labeled and
+report its ID rather than modifying the database directly.
+
+This runbook supplies repeatable names, prerequisites, generated-ID capture,
+and cleanup; it does not claim UI fixtures were created while the server was
+stopped. Live Generate-through-UI and portal acceptance remain pending.
 
 ### Fresh mitigation checks
 
