@@ -35,6 +35,7 @@ type I18nInitializationAttempt = {
   state: 'pending' | 'timed-out' | 'ready' | 'failed';
 };
 let i18nInitialization: I18nInitializationAttempt | null = null;
+let i18nReconciliation: Promise<void> = Promise.resolve();
 // A fallback deadline for the UI readiness gate; it is not a diagnosis that
 // this timeout caused any particular browser bootstrap failure.
 const I18N_READINESS_TIMEOUT_MS = 10_000;
@@ -149,21 +150,62 @@ async function ensureNamespacesLoaded(
   }
 }
 
+async function reconcileProviderI18n(
+  locale: SupportedLocale,
+  preloaded: PreloadedNamespaceResources | undefined,
+  namespaces: string[] | undefined,
+  isProviderActive: () => boolean,
+) {
+  // Keep provider-specific locale/resource work ordered. If an old provider's
+  // language change is already in flight when it unmounts, the current
+  // provider's reconciliation runs after it and becomes the final state.
+  const reconciliation = i18nReconciliation.then(async () => {
+    if (!isProviderActive()) return;
+
+    applyPreloadedResources(locale, preloaded);
+    if (i18next.language !== locale) {
+      await i18next.changeLanguage(locale);
+    }
+  });
+  i18nReconciliation = reconciliation.catch(() => undefined);
+  await reconciliation;
+
+  // Namespace loads do not mutate the active language, so do not keep the
+  // locale-reconciliation queue locked while a stale provider's load is
+  // pending. Cleanup skips loads that have not started yet.
+  if (!isProviderActive()) return;
+  await ensureNamespacesLoaded(locale, namespaces);
+}
+
 async function initI18n(
   locale?: SupportedLocale,
   preloaded?: PreloadedNamespaceResources,
   namespaces?: string[],
+  isProviderActive: () => boolean = () => true,
 ) {
   const resolvedLocale = (locale || LOCALE_CONFIG.defaultLocale) as SupportedLocale;
   if (!i18nInitialized) {
-    // A timed-out init still owns the singleton i18next instance. Do not start
-    // another init against it; later mounts use fallback keys while that one
-    // attempt either completes or rejects. Rejection releases the slot below,
-    // so a future mount can retry without overlapping the old attempt.
-    if (i18nInitialization?.state === 'timed-out') return;
+    if (i18nInitialization?.state === 'timed-out') {
+      // Render the provider's fallback immediately, but keep its current
+      // inputs attached to the shared attempt for reconciliation on settlement.
+      const attempt = i18nInitialization;
+      void attempt.promise
+        .then(() => reconcileProviderI18n(
+          resolvedLocale,
+          preloaded,
+          namespaces,
+          isProviderActive,
+        ))
+        .catch((error) => {
+          if (isProviderActive()) {
+            console.error('Failed to initialize translations:', error);
+          }
+        });
+      return;
+    }
 
     // React StrictMode mounts effects twice in development. Share the in-flight
-    // init so both effects/providers cannot call i18next.init concurrently.
+    // init so concurrent effects/providers cannot call i18next.init twice.
     if (!i18nInitialization) {
       // Seed only when the server actually embedded namespace data — an empty
       // seed would mark the bundle as loaded and mask fetched translations.
@@ -214,11 +256,7 @@ async function initI18n(
     await i18nInitialization.promise;
   }
 
-  applyPreloadedResources(resolvedLocale, preloaded);
-  if (locale && i18next.language !== locale) {
-    await i18next.changeLanguage(locale);
-  }
-  await ensureNamespacesLoaded(resolvedLocale, namespaces);
+  await reconcileProviderI18n(resolvedLocale, preloaded, namespaces, isProviderActive);
 }
 
 /**
@@ -272,6 +310,7 @@ export function I18nProvider({
       locale,
       preloadedResources,
       namespaceKey ? namespaceKey.split(',') : undefined,
+      () => !cancelled,
     );
     const initializationAttempt = i18nInitialization;
     const readinessDeadline = new Promise<never>((_, reject) => {

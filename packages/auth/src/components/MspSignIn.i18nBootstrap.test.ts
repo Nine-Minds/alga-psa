@@ -13,6 +13,7 @@ type BackendRead = {
 };
 
 const backendReads = vi.hoisted(() => [] as BackendRead[]);
+const backendReadHistory = vi.hoisted(() => [] as Array<{ language: string; namespace: string }>);
 const signInMock = vi.hoisted(() => vi.fn());
 
 vi.mock('i18next-http-backend', () => {
@@ -27,6 +28,7 @@ vi.mock('i18next-http-backend', () => {
       callback: BackendRead['callback'],
     ) {
       backendReads.push({ language, namespace, callback });
+      backendReadHistory.push({ language, namespace });
     }
   }
 
@@ -91,6 +93,7 @@ vi.mock('./useLoginCaptcha', () => ({
 }));
 
 const { I18nProvider } = await import('@alga-psa/ui/lib/i18n/client');
+const { default: i18next } = await import('i18next');
 const { default: MspSignIn } = await import('./MspSignIn');
 
 async function flushEffects() {
@@ -113,17 +116,19 @@ describe('MSP sign-in i18n bootstrap', () => {
     vi.useRealTimers();
     vi.restoreAllMocks();
     backendReads.length = 0;
+    backendReadHistory.length = 0;
   });
 
-  it('keeps credentials usable through stalled init and route namespaces, then applies late translations', async () => {
+  it('reconciles the current locale and preloaded namespaces after a timed-out init settles', async () => {
     vi.useFakeTimers();
     signInMock.mockResolvedValue({ error: 'CredentialsSignin' });
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const initSpy = vi.spyOn(i18next, 'init');
 
-    render(
+    const oldProvider = render(
       React.createElement(
         I18nProvider,
-        { initialLocale: 'en', portal: 'msp', namespaces: ['common', 'msp/auth'] },
+        { initialLocale: 'en', portal: 'msp', namespaces: ['common', 'msp/auth', 'msp/old-only'] },
         React.createElement(MspSignIn),
       ),
     );
@@ -156,32 +161,62 @@ describe('MSP sign-in i18n bootstrap', () => {
       expect.objectContaining({ email: 'operator@example.com', password: 'secret' }),
     );
 
+    oldProvider.unmount();
+    render(
+      React.createElement(
+        I18nProvider,
+        {
+          initialLocale: 'fr',
+          portal: 'msp',
+          namespaces: ['common', 'msp/auth', 'msp/core'],
+          preloadedResources: {
+            common: {},
+            'msp/auth': {
+              signIn: {
+                form: {
+                  emailLabel: 'Courriel',
+                  passwordLabel: 'Mot de passe',
+                  submit: 'Se connecter',
+                },
+              },
+            },
+          },
+        },
+        React.createElement(MspSignIn),
+      ),
+    );
+    await flushEffects();
+    expect(screen.getByLabelText('Email')).toBeTruthy();
+    expect(initSpy).toHaveBeenCalledTimes(1);
+
     await act(async () => {
       resolveRead('common');
       for (let index = 0; index < 12; index += 1) await Promise.resolve();
     });
-    expect(backendReads.some((read) => read.namespace === 'msp/auth')).toBe(true);
-    expect(screen.getByLabelText('Email')).toBeTruthy();
+    if (backendReads.some((read) => read.language === 'en' && read.namespace === 'msp/auth')) {
+      await act(async () => {
+        resolveRead('msp/auth');
+        for (let index = 0; index < 12; index += 1) await Promise.resolve();
+      });
+    }
+    expect(backendReads.some((read) => read.language === 'fr' && read.namespace === 'msp/core')).toBe(true);
+    expect(backendReadHistory).not.toContainEqual({ language: 'en', namespace: 'msp/old-only' });
+    expect(i18next.language).toBe('fr');
+
+    // Route namespace work can still be pending; its preloaded current-locale
+    // auth namespace is already available through the real translation hook.
+    expect(screen.getByLabelText('Courriel')).toBeTruthy();
+    expect(screen.getByLabelText('Mot de passe')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Se connecter' })).toBeTruthy();
 
     await act(async () => {
-      resolveRead('msp/auth', {
-        signIn: {
-          form: {
-            emailLabel: 'Work email',
-            passwordLabel: 'Secret phrase',
-            submit: 'Continue',
-          },
-        },
-      });
+      resolveRead('msp/core', { core: { nav: { home: 'Accueil' } } });
       for (let index = 0; index < 12; index += 1) await Promise.resolve();
     });
 
-    expect(screen.getByLabelText('Work email')).toBeTruthy();
-    expect(screen.getByLabelText('Secret phrase')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Continue' })).toBeTruthy();
-    expect(errorSpy).toHaveBeenCalledWith(
-      'Failed to initialize translations:',
-      expect.objectContaining({ message: 'Translation initialization exceeded 10000ms' }),
-    );
+    expect(screen.getByLabelText('Courriel')).toBeTruthy();
+    expect(i18next.language).toBe('fr');
+    expect(initSpy).toHaveBeenCalledTimes(1);
+    expect(errorSpy).toHaveBeenCalledTimes(1);
   });
 });
