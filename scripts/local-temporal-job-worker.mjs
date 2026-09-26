@@ -5,13 +5,21 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import process from 'node:process';
 
-import {
-  initializeJobHandlersForWorker,
-  jobActivities,
-} from '../ee/temporal-workflows/dist/ee/temporal-workflows/src/activities/job-activities.js';
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Load the same local configuration as the host-run Next server before any
+// activity imports initialize database or Redis clients. Opt in so existing
+// callers supplying their own environment keep their current behavior.
+if (process.argv.includes('--server-env')) {
+  const { default: nextEnv } = await import('@next/env');
+  nextEnv.loadEnvConfig(path.resolve(__dirname, '../server'), process.env.NODE_ENV !== 'production');
+  for (const key of ['TEMPORAL_ADDRESS', 'TEMPORAL_NAMESPACE', 'TEMPORAL_JOB_TASK_QUEUE', 'REDIS_HOST', 'REDIS_PORT']) {
+    if (!process.env[key]?.trim()) {
+      throw new Error(`Set ${key} in the server environment before starting the local job worker.`);
+    }
+  }
+}
 
 const temporalAddress = process.env.TEMPORAL_ADDRESS || 'localhost:7233';
 const temporalNamespace = process.env.TEMPORAL_NAMESPACE || 'default';
@@ -28,8 +36,13 @@ async function main() {
     temporalNamespace,
     taskQueue,
     workflowsPath,
+    redisHost: process.env.REDIS_HOST,
+    redisPort: process.env.REDIS_PORT,
   });
 
+  const { initializeJobHandlersForWorker, jobActivities } = await import(
+    '../ee/temporal-workflows/dist/ee/temporal-workflows/src/activities/job-activities.js'
+  );
   await initializeJobHandlersForWorker();
 
   const connection = await NativeConnection.connect({ address: temporalAddress });
