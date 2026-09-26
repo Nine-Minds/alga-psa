@@ -36,28 +36,24 @@ the service and worktree behind port 3927. The service operator should provide
 the configured credential from this worktree's private, ignored
 `server/.env.local` file (mode `0600`). Never copy it into a ticket or durable
 report.
-The initial recovery handoff was subsequently found to reject the configured
-password, including when checked with Next.js's environment loader. Review
-reproduced the failure twice. Private diagnostics then established that the
-configured password did not verify against the selected database row, the
-effective secret provider agreed with the loaded auth-secret environment
-setting, and exactly one active internal row matched the seeded email; the
-tenant-scoped account lookup agreed with that row. This rules out ambiguous
-account selection and an in-process hash/verify secret mismatch. It does not
-establish whether the stored hash was later changed by another database writer
-or was originally created under different secret configuration; no external
-writer was identified.
+The initial recovery handoff was subsequently found to fail in the command
+path. Recovery updated the database but did not mutate the previously loaded
+user object, so the command verified the stale hash. After changing the command
+to re-read the tenant-scoped row, a second command-path defect surfaced: its
+lookup adapter omitted the required `internal` user type. The stale-hash
+behavior has a regression test using the command's verification helper; the
+corrected tenant-scoped adapter was exercised by fresh-process recovery and
+normal checks.
 
-After that diagnosis, explicit tenant-scoped recovery authenticated in its
-process and an independent fresh-process check passed immediately afterward.
-Following focused tests and typechecking, a later fresh-process check failed;
-private diagnostics again showed one selected account, matching loaded and
-effective auth-secret configuration, and a stored hash that did not match the
-configured password. This establishes credential instability across checks,
-consistent with a shared database row changing between them. The writer has
-not been identified, so the credential gate is not currently satisfied. Do
-not treat the immediate post-recovery pass as durable; resolve the shared
-database writer or configuration ownership before handoff.
+Private HMAC comparisons across fresh processes found one active matching
+account and stable database identity, account identity, configured password,
+and effective secret. The effective secret provider agreed with the loaded
+auth-secret environment setting. The stored hash changed during explicit
+recovery, then remained identical across subsequent checks; the configured
+password verified against it and `authenticateUser` accepted it after recovery
+and again after tests and typechecking. No external writer or rotation was
+observed during these comparisons. The origin of the earlier mismatched hash
+was not established.
 
 Run this read-only check from `server/` immediately before browser smoke:
 
@@ -82,10 +78,10 @@ unset for normal service boots.
 The private `DEV_LOGIN_PASSWORD` remains configured for the next Next.js boot.
 Port `3927` had no listener during this implementation step.
 
-The credential gate must pass in a fresh process immediately before browser
-smoke; it currently fails intermittently, so live sign-in is not ready to hand
-off. Once the shared database credential remains stable, validate sign-in and
-session survival after reload, sign-in input and Google SSO label hydration, and
+The credential gate passed in separate fresh processes immediately after
+recovery and after validation. Rerun it immediately before browser smoke because
+the database is shared. Then validate sign-in and session survival after reload,
+sign-in input and Google SSO label hydration, and
 priority hex Save followed by dialog Save and reload/database persistence. Also
 confirm Enter commits the picker draft while Cancel discards it. This plain
 PostgreSQL database does not validate Citus distribution-column compatibility.
