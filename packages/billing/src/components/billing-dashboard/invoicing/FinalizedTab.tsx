@@ -260,8 +260,11 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
   };
 
   const handleEmail = async () => {
-    if (!selectedInvoice) return;
-    setEmailDialogInvoiceIds([selectedInvoice.invoice_id]);
+    // The detail pane can be opened from a deep link while server-side
+    // pagination leaves its invoice outside the currently displayed page.
+    // The URL is the source of truth for the invoice shown in that pane.
+    if (!selectedInvoiceId) return;
+    setEmailDialogInvoiceIds([selectedInvoiceId]);
     setEmailDialogOpen(true);
   };
 

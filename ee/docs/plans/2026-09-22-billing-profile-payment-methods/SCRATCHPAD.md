@@ -198,6 +198,110 @@ client-portal, and server typechecks in round 2. These were not rerun during
 takeover because product code is unchanged. They do not establish live
 browser behavior or SMTP delivery. No fresh browser acceptance is claimed.
 
+## Deploy-fix mitigation round (2026-09-26)
+
+The plan in this folder is the primary feature specification, but its PRD is
+marked `Draft — implemented (first draft)` and no approval record is present in
+this directory. Its human Q1–Q3 decisions and acceptance criteria were followed;
+this round did not reopen the feature design.
+
+### Portal invitation setup and acceptance still pending
+
+`portalInvitationActions.ts` resolves the tenant's MSP/default client by joining
+`tenant_companies.is_default = true` to `clients`. The supported configuration
+path is **General Settings → Default Client**, which calls
+`packages/tenancy/src/actions/coreTenantActions.ts:setDefaultClient`.
+The retained contact `3d727620-6baa-4219-babc-25c2259e7574` belongs to client
+`a3ad6e99-5ed9-4a1c-9cf3-b0b49c1c3d84`; this association does not prove that
+client is the tenant's intended MSP/default client. No shared tenant default was
+changed. With the app server required for the supported UI/action and prohibited
+from starting in this step, no live invitation or activated portal identity was
+created. Do not fabricate one in the database.
+
+Server-enabled smoke procedure:
+
+1. In General Settings, identify the tenant's actual MSP company record and
+   select it as Default Client. Confirm it has an active default location with
+   an email, or configure Client Portal support email in tenant settings.
+2. Open the retained contact under client
+   `a3ad6e99-5ed9-4a1c-9cf3-b0b49c1c3d84`, initiate the supported portal
+   invitation, and verify success (no `NO_DEFAULT_CLIENT`, location, or support
+   email error). Deliver the invitation through the configured mail path; open
+   its link, set the password, sign in, and confirm the resulting portal session
+   represents this contact. Record the actual activated contact, not a seeded
+   user row.
+3. Use unpaid, finalized invoices whose immutable snapshots are respectively
+   `check`, `bank_transfer`, `credit_card`, and `NULL`. In the portal invoice
+   list row menus and invoice details, verify Check and Bank Transfer have no
+   Pay Now control; Card and NULL retain existing controls.
+4. For each offline invoice, navigate directly to
+   `/client-portal/billing/invoices/<invoiceId>/pay`. Verify the supported page
+   calls `getClientPortalInvoicePaymentLink` and displays the unavailable
+   payment state with action error code `offline_payment_method`; a 404 alone
+   is not evidence. Confirm no checkout/payment link was created. For Card and
+   NULL snapshots, verify the existing payment action reaches the configured
+   checkout behavior.
+
+### Recurring profile live acceptance still pending
+
+Existing automated T004 in
+`server/src/test/integration/billing/billingProfileAttribution.integration.test.ts`
+uses the isolated database `test_db_billing_profile_recurring_acceptance` and
+already covers the required profile/charge attribution, inherited Credit Card
+and overridden Check snapshots, Net 30 and Due on Receipt effective terms and
+due dates, charge isolation between sibling profiles, and unchanged issued
+payment method/date snapshots after editing both profiles. No meaningful T004
+coverage gap was found, so no recurring tests were added.
+
+For live browser acceptance after the server is enabled, use a dedicated test
+tenant and create one client with two billing profiles. Set the client method
+to Credit Card and terms to Net 30; leave profile A inheriting, and set profile
+B to Check and Due on Receipt. Assign separate recurring contract lines to
+each profile, generate each profile's recurring invoice, and verify in the UI
+that charges and invoice snapshots stay with their assigned profile, A is Card
+and due 30 days after its invoice date, and B is Check and due on its invoice
+date. Edit the client/profile methods and terms after issue, reload both
+invoices, and verify their snapshots and due dates did not change. Confirm each
+profile's generated charges remain isolated from its sibling. This browser run
+is separate from the automated T004 database result.
+
+### Validation receipts for this mitigation round
+
+- Passed: server Vitest focused component regression
+  `../packages/billing/tests/FinalizedTab.deepLinkEmail.test.tsx` (2/2,
+  off-page and ordinary on-page selection).
+- Passed: isolated integration suites
+  `billingProfilePaymentMethod.integration.test.ts` and
+  `billingProfileAttribution.integration.test.ts` (12/12 total); the latter
+  recreated only `test_db_billing_profile_recurring_acceptance`.
+- Passed: offline-payment invoice email link, portal action, invoice-list UI,
+  and adapter suites (32/32); supported portal pay-page route suite (4/4).
+- Passed: billing and client-portal typechecks; billing tsup build; server
+  typecheck with `NODE_OPTIONS=--max-old-space-size=12288`.
+- Known package build failure reproduced: `packages/client-portal npm run build`
+  exits 1 with tsup `No input files, try "tsup <your-file>" instead`. This
+  package baseline/configuration failure is independent of the billing
+  regression.
+- A billing typecheck without a heap cap once exited 134 near Node's default
+  4 GiB heap limit. The captured rerun with a 12 GiB cap passed along with its
+  build; no TypeScript diagnostic was emitted by the resource-limited attempt.
+
+All integration and component results above are automated checks. No server
+was started; invitation/activation, the live payment controls/direct route,
+recurring browser acceptance, and the specified deep-link reproduction remain
+pending the server-enabled smoke step.
+
+### Off-page email regression
+
+`FinalizedTab` now uses the selected `invoiceId` URL parameter for the Send
+Email action, so server-side page membership is not required. The focused
+component regression supplies a current page that excludes the deep-linked
+invoice and asserts the dialog opens with that URL-selected ID; a paired case
+keeps ordinary on-page selection covered. The previously
+reported live reproduction is
+`/msp/invoices/9a8ca509-d042-42e0-8182-4391c0484e53`; authenticated browser
+reproduction remains deferred to the server-enabled smoke step.
+
 ## Implementation notes (2026-09-23)
 
 - Shared vocabulary: `shared/billingClients/paymentPreferences.ts` (methods,
