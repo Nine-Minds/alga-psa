@@ -38,4 +38,52 @@ describe('ColorPicker hex input Enter handling', () => {
     expect(onSave).toHaveBeenCalledWith('#ABCDEF', null);
     expect(onSubmit).not.toHaveBeenCalled();
   });
+
+  it('discards a canceled draft when the picker is reopened', () => {
+    const onSave = vi.fn();
+    render(
+      <ColorPicker
+        currentBackgroundColor="#111111"
+        onSave={onSave}
+        showTextColor={false}
+        trigger={<button type="button">Choose color</button>}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Choose color' }));
+    const input = screen.getByLabelText('Background Color') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: '#ABCDEF' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Choose color' }));
+    expect((screen.getByLabelText('Background Color') as HTMLInputElement).value).toBe('#111111');
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(onSave).toHaveBeenCalledWith('#111111', null);
+  });
+
+  it('does not save invalid hex input when Enter is pressed', () => {
+    const onSave = vi.fn();
+    const onSubmit = vi.fn((event: React.FormEvent) => event.preventDefault());
+    render(
+      <form onSubmit={onSubmit}>
+        <ColorPicker
+          currentBackgroundColor="#111111"
+          onSave={onSave}
+          showTextColor={false}
+          trigger={<button type="button">Choose color</button>}
+        />
+      </form>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Choose color' }));
+    const input = screen.getByLabelText('Background Color') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'invalid' } });
+    const enter = createEvent.keyDown(input, { key: 'Enter' });
+    fireEvent(input, enter);
+
+    expect(enter.defaultPrevented).toBe(true);
+    expect(onSave).not.toHaveBeenCalled();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
 });

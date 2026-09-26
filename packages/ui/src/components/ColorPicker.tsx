@@ -148,6 +148,14 @@ const ColorPicker = ({
     setIsOpen(false);
   };
 
+  const handleDiscardDraft = () => {
+    setBackgroundColor(currentBackgroundColor || '');
+    setTextColor(currentTextColor || '');
+    setBackgroundError('');
+    setTextError('');
+    setIsOpen(false);
+  };
+
   const handleReset = () => {
     onSave(null, null);
     setBackgroundColor('');
@@ -165,7 +173,16 @@ const ColorPicker = ({
   };
 
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
+    <Popover
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) {
+          handleDiscardDraft();
+          return;
+        }
+        setIsOpen(open);
+      }}
+    >
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent
         className="w-80 p-4 bg-[rgb(var(--color-border-50))] border border-[rgb(var(--color-border-200))] rounded-lg shadow-lg z-50"
@@ -349,7 +366,7 @@ const ColorPicker = ({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => setIsOpen(false)}
+                onClick={handleDiscardDraft}
               >
                 {t('actions.cancel', 'Cancel')}
               </Button>
