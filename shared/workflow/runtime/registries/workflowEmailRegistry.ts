@@ -14,7 +14,7 @@ export interface WorkflowEmailProvider {
       sendEmail(params: unknown): Promise<{ success: boolean; error?: string; messageId?: string; providerId?: string; providerType?: string; sentAt?: Date | string }>;
     };
     getTenantEmailSettings(tenantId: string, trx: unknown): Promise<any>;
-    resolveOutboundSenderForTenant?(request: { tenantId: string; mailClass: string; senderId?: string }, settings: unknown, trx: unknown): Promise<{ from: { email: string; name?: string }; sender?: { sender_id: string } }>;
+    resolveOutboundSenderForTenant(request: { tenantId: string; mailClass: string; senderId?: string }, settings: unknown, trx: unknown): Promise<{ from: { email: string; name?: string }; sender?: { sender_id: string } }>;
   };
   StaticTemplateProcessor: new (subject: string, html: string, text?: string) => {
     process(params: { templateData: Record<string, unknown> }): Promise<{ subject: string; html: string; text?: string }>;

@@ -64,14 +64,24 @@ exports.up = async function up(knex) {
     ON CONFLICT (tenant, email_address) DO NOTHING
   `);
   await knex.raw(`
+    -- An unverified legacy Resend address is retained as an identity for review,
+    -- but not installed as a ticket sender. The name-only route below preserves
+    -- configured branding while delivery uses the tenant's existing default.
     INSERT INTO email_sender_routes (tenant, route_type, mail_class, sender_id, display_name)
-    SELECT tes.tenant, 'mail_class', 'ticket', esa.sender_id,
-      CASE WHEN nullif(trim(tes.ticketing_from_email), '') IS NULL THEN nullif(trim(tes.ticketing_from_name), '') END
+    SELECT tes.tenant, 'mail_class', 'ticket',
+      CASE WHEN esa.verification_status = 'verified' THEN esa.sender_id END,
+      coalesce(nullif(trim(tes.ticketing_from_name), ''), nullif(trim(ep.sender_display_name), ''))
     FROM tenant_email_settings tes
     LEFT JOIN email_sender_addresses esa
       ON esa.tenant = tes.tenant AND esa.email_address = lower(trim(tes.ticketing_from_email))
-    WHERE nullif(trim(tes.ticketing_from_email), '') IS NOT NULL
-       OR nullif(trim(tes.ticketing_from_name), '') IS NOT NULL
+    LEFT JOIN email_providers ep
+      ON ep.tenant = tes.tenant AND lower(ep.mailbox) = lower(trim(tes.ticketing_from_email))
+      AND ep.provider_type = 'microsoft'
+    WHERE (nullif(trim(tes.ticketing_from_email), '') IS NOT NULL
+       OR nullif(trim(tes.ticketing_from_name), '') IS NOT NULL)
+      AND (esa.verification_status = 'verified'
+        OR nullif(trim(tes.ticketing_from_name), '') IS NOT NULL
+        OR nullif(trim(ep.sender_display_name), '') IS NOT NULL)
     ON CONFLICT (tenant, mail_class) WHERE route_type = 'mail_class' DO NOTHING
   `);
 };

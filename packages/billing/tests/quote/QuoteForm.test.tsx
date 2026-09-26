@@ -4,6 +4,10 @@ import React from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('../../../integrations/src/actions/email-actions/emailSenderActions', () => ({
+  listSelectableSenders: vi.fn(async () => ({ senders: [], effectiveSenderId: null, allowOverride: false })),
+}));
+
 const actions = vi.hoisted(() => ({
   addQuoteItem: vi.fn(),
   approveQuote: vi.fn(),

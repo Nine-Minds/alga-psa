@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { tenantDb } from '@alga-psa/db';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import { getWorkflowEmailProvider } from '../../registries/workflowEmailRegistry';
+import { withWorkflowJsonSchemaMetadata } from '../../jsonSchemaMetadata';
 import { EmailProviderError } from '@alga-psa/types';
 import {
   uuidSchema,
@@ -14,6 +15,28 @@ import {
   MAX_ATTACHMENT_BYTES,
   isAllowedAttachmentMimeType
 } from './shared';
+
+export function resolveDeprecatedWorkflowFrom(input: {
+  from?: { email?: string };
+  senderId?: string;
+  senders: Array<{ sender_id: string; email_address: string }>;
+  effectiveDefaultEmail: string;
+}): string | undefined {
+  if (!input.from) return input.senderId;
+  if (!input.from.email) throw new Error('The saved From address is missing an email address. Choose a sender identity.');
+  const address = input.from.email.trim().toLowerCase();
+  if (input.senderId) {
+    const selected = input.senders.find((sender) => sender.sender_id === input.senderId);
+    if (!selected || selected.email_address.toLowerCase() !== address) {
+      throw new Error('The saved From address conflicts with the selected sender identity. Choose a matching sender identity.');
+    }
+    return input.senderId;
+  }
+  const matchingSender = input.senders.find((sender) => sender.email_address.toLowerCase() === address);
+  if (matchingSender) return matchingSender.sender_id;
+  if (input.effectiveDefaultEmail.toLowerCase() === address) return undefined;
+  throw new Error('The saved From address is not a configured sender or the effective default. Choose a sender identity.');
+}
 
 export function registerEmailActions(): void {
   const registry = getActionRegistryV2();
@@ -29,7 +52,11 @@ export function registerEmailActions(): void {
       cc: z.array(z.object({ email: z.string().email(), name: z.string().optional() })).optional(),
       bcc: z.array(z.object({ email: z.string().email(), name: z.string().optional() })).optional(),
       from: z.object({ email: z.string().email(), name: z.string().optional() }).optional().describe('Optional from override'),
-      sender_id: uuidSchema.optional().describe('Configured outbound sender identity'),
+      sender_id: withWorkflowJsonSchemaMetadata(uuidSchema.optional(), 'Configured outbound sender identity', {
+        'x-workflow-picker-kind': 'email-sender',
+        'x-workflow-picker-fixed-value-hint': 'Select sender identity',
+        'x-workflow-picker-allow-dynamic-reference': true,
+      }),
       mail_class: z.enum(['ticket', 'project', 'billing', 'sales', 'scheduling', 'survey', 'account', 'general']).optional().default('general'),
       subject: z.string().min(1).describe('Subject template (supports {{var}})'),
       html: z.string().optional().describe('HTML template (supports {{var}})'),
@@ -88,10 +115,16 @@ export function registerEmailActions(): void {
       // it matches a configured sender; delivery still uses the central resolver.
       let senderId = input.sender_id;
       if (input.from) {
-        const address = input.from.email.toLowerCase();
-        const resolved = await TenantEmailService.resolveOutboundSenderForTenant?.({ tenantId: tx.tenantId, mailClass: input.mail_class ?? 'general', senderId }, settings, tx.trx);
-        if (!resolved || resolved.from.email.toLowerCase() !== address) {
-          throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'The saved From address is not a configured sender or the effective default. Choose a sender identity.' });
+        const effectiveDefault = await TenantEmailService.resolveOutboundSenderForTenant({ tenantId: tx.tenantId, mailClass: input.mail_class ?? 'general' }, settings, tx.trx);
+        try {
+          senderId = resolveDeprecatedWorkflowFrom({
+            from: input.from,
+            senderId,
+            senders: Array.isArray(settings.outboundSenders) ? settings.outboundSenders : [],
+            effectiveDefaultEmail: effectiveDefault.from.email,
+          });
+        } catch (error) {
+          throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: error instanceof Error ? error.message : String(error) });
         }
       }
 

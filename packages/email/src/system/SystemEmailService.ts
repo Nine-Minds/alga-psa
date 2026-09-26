@@ -280,9 +280,13 @@ export class SystemEmailService extends BaseEmailService {
   /** Send tenant-scoped appointment mail through tenant routing, then retain the established system fallback. */
   public async sendTenantScopedEmail(params: SystemEmailParams, mailClass: import('@alga-psa/types').OutboundMailClass): Promise<EmailSendResult> {
     if (!params.tenantId) return this.sendEmail(params);
-    const result = await TenantEmailService.getInstance(params.tenantId).sendEmail({ ...params, to: params.to, mailClass });
-    if (result.success || result.providerId === 'system-email-provider') return result;
-    return this.sendEmail(params);
+    const tenantService = TenantEmailService.getInstance(params.tenantId);
+    // The platform fallback is only for a tenant without a usable tenant
+    // provider. Once delivery is attempted, failures may be validation errors,
+    // provider rejections after acceptance, or rate limits; retrying those via
+    // another From/provider can violate routing or send duplicates.
+    if (!(await tenantService.isConfigured())) return this.sendEmail(params);
+    return tenantService.sendEmail({ ...params, to: params.to, mailClass });
   }
 
   public override async isConfigured(): Promise<boolean> {

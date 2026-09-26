@@ -217,6 +217,31 @@ describe('email settings provider invariants', () => {
     ]);
   });
 
+  it('rejects a transport change that would invalidate a saved sender identity', async () => {
+    const existingSettings = buildSettings('smtp', [
+      { providerId: 'smtp-provider', providerType: 'smtp', isEnabled: true, config: { host: 'relay', port: 587, username: 'mailer', password: 'secret', from: 'support@unverified.example' } },
+    ]);
+    getTenantEmailSettingsMock.mockResolvedValue(existingSettings);
+    const knexMock = vi.fn((table: string) => {
+      const query: any = {
+        where: vi.fn(() => query),
+        select: vi.fn(async () => table === 'email_sender_addresses' ? [
+          { sender_id: 'sender-1', email_address: 'support@unverified.example', verification_status: 'unverified' },
+        ] : []),
+        first: vi.fn(async () => null),
+        insert: vi.fn(async () => 1),
+      };
+      return query;
+    }) as any;
+    createTenantKnexMock.mockResolvedValue({ knex: knexMock });
+
+    const { updateEmailSettings } = await import('./emailSettingsActions');
+    const result = await updateEmailSettings({ emailProvider: 'resend' });
+
+    expect(JSON.stringify(result)).toMatch(/Cannot change transport/);
+    expect(invalidateTenantSettingsMock).not.toHaveBeenCalled();
+  });
+
   it('pins Microsoft outbound settings to a connected tenant mailbox without changing ticket identity', async () => {
     const existingSettings = {
       ...buildSettings('smtp', [

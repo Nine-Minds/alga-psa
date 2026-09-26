@@ -5,6 +5,9 @@ const runtime = vi.hoisted(() => ({
   initializedSettings: [] as Array<Record<string, any>>,
   sent: [] as Array<{ config: Record<string, any>; message: Record<string, any> }>,
   settingsRow: null as Record<string, any> | null,
+  sender: null as Record<string, any> | null,
+  logged: [] as Array<Record<string, any>>,
+  senderUpdates: [] as Array<Record<string, any>>,
 }));
 
 vi.mock('@alga-psa/core/logger', () => ({
@@ -40,9 +43,18 @@ vi.mock('@alga-psa/db', () => ({
         return { first: vi.fn(async () => runtime.settingsRow) };
       }
       if (table === 'email_sending_logs') {
-        return { insert: vi.fn(async () => 1) };
+        return { insert: vi.fn(async (entry: Record<string, any>) => { runtime.logged.push(entry); return 1; }) };
       }
-      if (table === 'email_sender_addresses' || table === 'email_sender_routes') {
+      if (table === 'email_domains') {
+        return { where: () => ({ first: vi.fn(async () => null) }) };
+      }
+      if (table === 'email_sender_addresses') {
+        return {
+          select: vi.fn(async () => runtime.sender ? [runtime.sender] : []),
+          where: () => ({ update: vi.fn(async (entry: Record<string, any>) => { runtime.senderUpdates.push(entry); return 1; }) }),
+        };
+      }
+      if (table === 'email_sender_routes') {
         return { select: vi.fn(async () => []) };
       }
       throw new Error(`Unexpected table in email freshness test: ${table}`);
@@ -66,7 +78,7 @@ vi.mock('../senderIdentity', () => ({
     };
   },
   resolveOutboundSender: ({ from, fromName }: any, settings: Record<string, any>, companyName?: string | null) => ({
-    sender: null,
+    sender: runtime.sender,
     microsoftProviderId: null,
     from: from ?? {
       email: settings.providerConfigs?.find((config: any) => config.isEnabled)?.config?.from || 'notifications@example.test',
@@ -145,6 +157,9 @@ describe('TenantEmailService settings freshness', () => {
       from: 'old-notifications@example.test',
       fromName: 'Old Notifications',
     });
+    runtime.sender = null;
+    runtime.logged.length = 0;
+    runtime.senderUpdates.length = 0;
     await TenantEmailService.invalidateTenantSettings('tenant-settings-freshness');
   });
 
@@ -276,5 +291,31 @@ describe('TenantEmailService settings freshness', () => {
         from: { email: 'old-notifications@example.test', name: 'Old Notifications' },
       },
     ]);
+  });
+
+  it('fails a Resend send after its domain is removed, marks the sender failed, logs it, and never falls back', async () => {
+    runtime.sender = {
+      tenant: 'tenant-settings-freshness',
+      sender_id: 'sender-1',
+      email_address: 'support@removed.example',
+      display_name: 'Support',
+      verification_status: 'verified',
+    };
+    runtime.settingsRow = buildSettingsRow({ password: 'key', from: 'support@removed.example', fromName: 'Support' });
+    runtime.settingsRow.email_provider = 'resend';
+    runtime.settingsRow.provider_configs[0].providerType = 'resend';
+
+    const service = TenantEmailService.getInstance('tenant-settings-freshness');
+    await expect(service.sendEmail({
+      mailClass: 'ticket',
+      senderId: 'sender-1',
+      to: 'client@example.test',
+      subject: 'Ticket update',
+      html: '<p>Ticket update</p>',
+    })).rejects.toThrow(/domain is no longer verified/);
+
+    expect(runtime.senderUpdates).toContainEqual(expect.objectContaining({ verification_status: 'failed' }));
+    expect(runtime.logged).toContainEqual(expect.objectContaining({ status: 'failed', provider_id: 'sender-validation' }));
+    expect(runtime.sent).toHaveLength(0);
   });
 });
