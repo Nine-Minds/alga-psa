@@ -245,6 +245,8 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   invoice_items: { scope: 'tenant' },
   invoice_line_items: { scope: 'tenant' },
   invoice_payment_links: { scope: 'tenant' },
+  billing_profile_autopay: { scope: 'tenant' },
+  invoice_autopay_attempts: { scope: 'tenant' },
   invoice_payments: { scope: 'tenant' },
   // System invoice template catalog; created without a tenant column.
   standard_invoice_templates: { scope: 'global' },

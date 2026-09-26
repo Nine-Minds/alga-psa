@@ -176,6 +176,10 @@ export interface PaymentWebhookEvent {
   paymentIntentId?: string;
   /** External customer ID */
   customerId?: string;
+  billingProfileId?: string;
+  autopayAttemptId?: string;
+  externalPaymentMethodId?: string;
+  setupIntentId?: string;
 }
 
 /**
@@ -244,6 +248,11 @@ export interface PaymentProvider {
    */
   getOrCreateCustomer(clientId: string, email: string, name: string): Promise<string>;
 
+  createPaymentMethodSetupSession?(request: CreatePaymentMethodSetupSessionRequest): Promise<{ externalSessionId: string; url: string }>;
+  retrieveSavedPaymentMethod?(externalId: string): Promise<SavedPaymentMethodDetails>;
+  detachPaymentMethod?(externalId: string): Promise<void>;
+  chargeSavedPaymentMethod?(request: ChargeSavedPaymentMethodRequest): Promise<SavedPaymentMethodChargeResult>;
+
   /**
    * Creates a payment link for an invoice.
    *
@@ -290,6 +299,43 @@ export interface PaymentProvider {
    * @returns Payment status and details
    */
   getPaymentLinkStatus(externalLinkId: string): Promise<PaymentDetails | null>;
+}
+
+export interface CreatePaymentMethodSetupSessionRequest {
+  clientId: string;
+  billingProfileId: string;
+  customerId: string;
+  currency: string;
+  successUrl: string;
+  cancelUrl: string;
+}
+export interface SavedPaymentMethodDetails {
+  externalPaymentMethodId: string;
+  externalCustomerId: string;
+  brand: string | null;
+  last4: string;
+  expMonth: number;
+  expYear: number;
+  fingerprint: string | null;
+}
+export interface ChargeSavedPaymentMethodRequest {
+  amount: number;
+  currency: string;
+  customerId: string;
+  paymentMethodId: string;
+  invoiceId: string;
+  clientId: string;
+  billingProfileId: string;
+  attemptId: string;
+  idempotencyKey: string;
+  description: string;
+}
+export interface SavedPaymentMethodChargeResult {
+  status: 'succeeded' | 'processing' | 'requires_action' | 'failed';
+  paymentIntentId: string;
+  failureCode?: string;
+  declineCode?: string;
+  message?: string;
 }
 
 // =============================================================================
@@ -394,6 +440,10 @@ export interface PaymentSettings {
   sendPaymentConfirmations: boolean;
   /** Number of hours before payment links expire (default: 168 = 7 days) */
   paymentLinkExpirationHours: number;
+  autopayEnabled: boolean;
+  autopayChargeTiming: 'on_finalize' | 'on_due_date';
+  autopayRetryDays: number[];
+  autopayConsentText: string;
 }
 
 /**
@@ -404,4 +454,43 @@ export const DEFAULT_PAYMENT_SETTINGS: PaymentSettings = {
   defaultProvider: undefined,
   sendPaymentConfirmations: true,
   paymentLinkExpirationHours: 168, // 7 days
+  autopayEnabled: false,
+  autopayChargeTiming: 'on_finalize',
+  autopayRetryDays: [3, 5, 7],
+  autopayConsentText: '',
 };
+
+export interface IBillingProfileAutopay extends TenantEntity {
+  billing_profile_id: string;
+  client_id: string;
+  is_enabled: boolean;
+  payment_method_id: string | null;
+  authorized_at: ISO8601String | null;
+  authorized_by_user_id: string | null;
+  authorization_source: 'client_portal' | 'msp' | null;
+  authorization_ip: string | null;
+  authorization_user_agent: string | null;
+  consent_text_version: string | null;
+  disabled_at: ISO8601String | null;
+  disabled_by_user_id: string | null;
+  disabled_reason: string | null;
+}
+
+export interface IInvoiceAutopayAttempt extends TenantEntity {
+  attempt_id: string;
+  invoice_id: string;
+  billing_profile_id: string;
+  payment_method_id: string;
+  attempt_number: number;
+  scheduled_for: ISO8601String;
+  status: 'scheduled' | 'processing' | 'succeeded' | 'failed' | 'requires_action' | 'cancelled';
+  amount: number;
+  currency: string;
+  provider_type: string;
+  payment_intent_id: string | null;
+  idempotency_key: string;
+  failure_code: string | null;
+  failure_message: string | null;
+  decline_code: string | null;
+  processed_at: ISO8601String | null;
+}

@@ -83,8 +83,15 @@ interface StripeCredentials {
  */
 const STRIPE_WEBHOOK_EVENTS: Stripe.WebhookEndpointCreateParams.EnabledEvent[] = [
   'checkout.session.completed',
+  'checkout.session.expired',
   'payment_intent.succeeded',
   'payment_intent.payment_failed',
+  'charge.refunded',
+  'setup_intent.succeeded',
+  'setup_intent.setup_failed',
+  'payment_method.detached',
+  'payment_method.updated',
+  'payment_method.automatically_updated',
 ];
 
 /**
