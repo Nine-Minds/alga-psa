@@ -304,7 +304,7 @@ describe('service request submission attachments', () => {
       name: 'Access Request',
       form_schema_snapshot: {
         fields: [
-          { key: 'access_target', type: 'long-text', label: 'Access Target', required: true },
+          { key: 'access_target', type: 'short-text', label: 'Access Target', required: true },
         ],
       },
       execution_provider: 'ticket-only',
@@ -323,7 +323,7 @@ describe('service request submission attachments', () => {
         requesterUserId,
         clientId,
         contactId,
-        payload: { access_target: '   ' },
+        payload: {},
       })
     ).rejects.toThrow('Required field missing: "access_target"');
 
