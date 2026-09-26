@@ -7,10 +7,14 @@ import { getTenantSettings } from '@alga-psa/tenancy/actions/tenant-settings-act
 
 const mockUsePathname = vi.fn(() => '/msp/tickets');
 const mockReplace = vi.fn();
+// Next's app-router useRouter() returns a stable instance. A fresh object per
+// render would re-run MspLayoutClient's router-dependent onboarding effect on
+// every re-render, resetting the check and remounting the license banner.
+const mockRouter = { replace: mockReplace };
 
 vi.mock('next/navigation', () => ({
   usePathname: () => mockUsePathname(),
-  useRouter: () => ({ replace: mockReplace }),
+  useRouter: () => mockRouter,
 }));
 
 vi.mock('@alga-psa/auth/client', () => ({
@@ -191,7 +195,14 @@ describe('MspLayoutClient product shell behavior', () => {
     );
 
     expect(screen.queryByTestId('license-banner')).not.toBeInTheDocument();
-    expect(await screen.findByTestId('license-banner')).toBeInTheDocument();
+    const banner = await screen.findByTestId('license-banner');
+    expect(banner).toBeInTheDocument();
+
+    // The resolved onboarding check must not be re-run by later re-renders,
+    // which would unmount the banner that was just shown.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(banner).toBeInTheDocument();
+    expect(mockGetTenantSettings).toHaveBeenCalledTimes(1);
   });
 
   it('does not show the self-host license banner while onboarding is still required', async () => {
