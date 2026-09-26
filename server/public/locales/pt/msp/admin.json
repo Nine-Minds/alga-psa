@@ -253,7 +253,8 @@
     },
     "states": {
       "running": "Executando diagnóstico...",
-      "diagnosticsFailed": "Falha no diagnóstico"
+      "diagnosticsFailed": "Falha no diagnóstico",
+      "callbackDiagnosticsCaptured": "Diagnóstico de retorno capturado em {{timestamp}}."
     },
     "statuses": {
       "pass": "Passar",

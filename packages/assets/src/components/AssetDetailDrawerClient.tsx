@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import Drawer from '@alga-psa/ui/components/Drawer';
+import { PhoneText } from '@alga-psa/ui/components/PhoneText';
 import { useClientDrawer } from '@alga-psa/ui';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@alga-psa/ui/components/Tabs';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -660,7 +661,7 @@ function InfoGrid({
 
 type InfoRowProps = {
   label: string;
-  value: string | number;
+  value: ReactNode;
 };
 
 function InfoRow({ label, value }: InfoRowProps) {
@@ -743,7 +744,7 @@ function renderTypeSpecificConfiguration(asset: Asset, t: TranslationFn) {
               <ConfigurationRow label={t('assetDetailDrawer.typeDetails.os', { defaultValue: 'OS' })} value={`${asset.mobile_device.os_type} ${asset.mobile_device.os_version}`} />
               <ConfigurationRow label={t('assetDetailDrawer.typeDetails.model', { defaultValue: 'Model' })} value={asset.mobile_device.model} />
               <ConfigurationRow label={t('assetDetailDrawer.typeDetails.imei', { defaultValue: 'IMEI' })} value={asset.mobile_device.imei || t('assetDetailDrawer.typeDetails.notProvided', { defaultValue: 'Not provided' })} />
-              <ConfigurationRow label={t('assetDetailDrawer.typeDetails.phoneNumber', { defaultValue: 'Phone number' })} value={asset.mobile_device.phone_number || t('assetDetailDrawer.typeDetails.notProvided', { defaultValue: 'Not provided' })} />
+              <ConfigurationRow label={t('assetDetailDrawer.typeDetails.phoneNumber', { defaultValue: 'Phone number' })} value={<PhoneText value={asset.mobile_device.phone_number} fallback={t('assetDetailDrawer.typeDetails.notProvided', { defaultValue: 'Not provided' })} />} />
               <ConfigurationRow label={t('assetDetailDrawer.typeDetails.carrier', { defaultValue: 'Carrier' })} value={asset.mobile_device.carrier || t('assetDetailDrawer.typeDetails.notProvided', { defaultValue: 'Not provided' })} />
               <ConfigurationRow label={t('assetDetailDrawer.typeDetails.lastCheckIn', { defaultValue: 'Last check-in' })} value={asset.mobile_device.last_check_in ? formatRelative(asset.mobile_device.last_check_in, t) : t('assetDetailDrawer.typeDetails.notReported', { defaultValue: 'Not reported' })} />
             </div>

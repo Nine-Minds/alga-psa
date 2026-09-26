@@ -89,6 +89,7 @@
     "recentlyUpdated": "Recently updated"
   },
   "detail": {
+    "phoneExtension": "ext.",
     "details": "Details",
     "loadingTicket": "Loading ticket…",
     "ticketNotFound": "Ticket not found",

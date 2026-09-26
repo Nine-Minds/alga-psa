@@ -229,7 +229,7 @@ async function fetchPeople(
       ? trx('contact_phone_numbers')
         .where({ tenant })
         .whereIn('contact_name_id', contactIds)
-        .select('contact_name_id', 'phone_number', 'is_default', 'display_order')
+        .select('contact_name_id', 'phone_number', 'extension', 'is_default', 'display_order')
         .orderBy([
           { column: 'is_default', order: 'desc' },
           { column: 'display_order', order: 'asc' },
@@ -239,10 +239,10 @@ async function fetchPeople(
       ? getContactAvatarUrlsBatchAsync(contactIds, tenant)
       : Promise.resolve(new Map<string, string | null>()),
   ]);
-  const phoneByContact = new Map<string, string>();
+  const phoneByContact = new Map<string, { number: string; extension: string | null }>();
   for (const phoneRow of phoneRows as any[]) {
     if (!phoneByContact.has(phoneRow.contact_name_id)) {
-      phoneByContact.set(phoneRow.contact_name_id, phoneRow.phone_number);
+      phoneByContact.set(phoneRow.contact_name_id, { number: phoneRow.phone_number, extension: phoneRow.extension ?? null });
     }
   }
 
@@ -253,7 +253,8 @@ async function fetchPeople(
       full_name: row.full_name ?? '',
       role: row.role ?? null,
       email: row.email ?? null,
-      phone: phoneByContact.get(row.contact_name_id) ?? null,
+      phone: phoneByContact.get(row.contact_name_id)?.number ?? null,
+      phone_extension: phoneByContact.get(row.contact_name_id)?.extension ?? null,
       is_default: Boolean(defaultContactId && row.contact_name_id === defaultContactId),
       avatarUrl: avatarUrls.get(row.contact_name_id) ?? null,
     })),
@@ -273,6 +274,8 @@ async function fetchLocations(
       'address_line1',
       'city',
       'phone',
+      'phone_extension',
+      'country_code',
       'email',
       'is_default',
       'is_billing_address',
@@ -287,6 +290,8 @@ async function fetchLocations(
     address_line1: row.address_line1 ?? null,
     city: row.city ?? null,
     phone: row.phone ?? null,
+    phone_extension: row.phone_extension ?? null,
+    country_code: row.country_code ?? null,
     email: row.email ?? null,
     is_default: Boolean(row.is_default),
     is_billing: Boolean(row.is_billing_address),

@@ -1,4 +1,7 @@
 {
+  "phone": {
+    "extension": "Durchw."
+  },
   "colorPicker": {
     "invalidHexBackground": "Ungültige Hex-Farbe (z. B. #FF0000)",
     "invalidHexText": "Ungültige Hex-Farbe (z. B. #FFFFFF)",

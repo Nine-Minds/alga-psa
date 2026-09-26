@@ -10,6 +10,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
+import { PhoneText } from '@alga-psa/ui/components/PhoneText';
 import { Label } from '@alga-psa/ui/components/Label';
 import { 
   DropdownMenu,
@@ -429,7 +430,7 @@ export function UserManagementSettings() {
       dataIndex: 'phone',
       width: '12%',
       render: (value, record) => (
-        <span>{record.phone || 'N/A'}</span>
+        <PhoneText value={record.phone} fallback="N/A" />
       ),
     },
     {

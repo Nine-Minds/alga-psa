@@ -65,7 +65,7 @@ async function renderScreen(): Promise<ReactTestRenderer> {
 describe("ClientDetailScreen calls", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getClientMock.mockResolvedValue({ ok: true, data: { data: { client_id: "client-1", client_name: "Acme", phone_no: " +15550200 ", email: null, url: null } } });
+    getClientMock.mockResolvedValue({ ok: true, data: { data: { client_id: "client-1", client_name: "Acme", phone_no: " +13202521658 ", email: null, url: null } } });
     getClientLocationsMock.mockResolvedValue({ ok: true, data: { data: [] } });
     getClientContactsMock.mockResolvedValue({ ok: true, data: { data: [], pagination: { total: 0 } } });
   });
@@ -73,12 +73,12 @@ describe("ClientDetailScreen calls", () => {
   it("dials the client's number through the shared call flow, attributed to the client", async () => {
     const renderer = await renderScreen();
 
-    const row = renderer.root.find((n) => n.props?.accessibilityLabel === "detail.phone:  +15550200 ");
+    const row = renderer.root.find((n) => n.props?.accessibilityLabel === "detail.phone: +1 320 252 1658");
     act(() => row.props.onPress());
 
     expect(placeCallMock).toHaveBeenCalledWith({
       origin: { kind: "client", id: "client-1" },
-      phone: "+15550200",
+      phone: "+13202521658",
       name: "Acme",
       contactId: null,
       clientId: "client-1",
