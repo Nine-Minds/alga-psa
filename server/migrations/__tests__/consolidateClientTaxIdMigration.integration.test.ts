@@ -143,6 +143,28 @@ describe('client Tax ID consolidation migration', () => {
     expect(await db('client_tax_id_migration_conflicts').where({ tenant: tenantB })).toHaveLength(1);
   });
 
+  it('retries after a partial failure leaves the table and an audit row behind', async () => {
+    const originalAudit = await db('client_tax_id_migration_conflicts')
+      .where({ tenant: tenantA, client_id: idsA.conflict }).first();
+    expect(originalAudit).toBeTruthy();
+
+    // Simulate a failure after the conflict insert but before key removal and
+    // before Knex records the migration as complete.
+    await db('clients').where({ tenant: tenantA, client_id: idsA.conflict })
+      .update({ properties: { tax_id: ' DISCARDED ' } });
+    await db('knex_migrations').where({ name: TARGET_MIGRATION }).del();
+
+    const retry = await db.migrate.up({ directory: preMigrationDir, name: TARGET_MIGRATION });
+    expect(retry[1]).toContain(TARGET_MIGRATION);
+    const retryAudit = await db('client_tax_id_migration_conflicts')
+      .where({ tenant: tenantA, client_id: idsA.conflict }).select('*');
+    expect(retryAudit).toHaveLength(1);
+    expect(retryAudit[0]).toEqual(originalAudit);
+    const retriedClient = await db('clients').where({ tenant: tenantA, client_id: idsA.conflict }).first();
+    expect(retriedClient.properties).not.toHaveProperty('tax_id');
+    expect(await db('knex_migrations').where({ name: TARGET_MIGRATION }).first()).toBeTruthy();
+  });
+
   it('records the migration in Knex history and a second runner call is a no-op', async () => {
     const before = await db('client_tax_id_migration_conflicts').count('* as count').first();
     const secondRun = await db.migrate.latest({ directory: preMigrationDir });

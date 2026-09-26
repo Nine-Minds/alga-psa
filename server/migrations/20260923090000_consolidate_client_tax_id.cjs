@@ -43,17 +43,23 @@ exports.consolidateTenant = async function consolidateTenant(knex, tenant) {
 };
 
 exports.up = async function up(knex) {
-  await knex.schema.createTable('client_tax_id_migration_conflicts', (table) => {
-    table.uuid('tenant').notNullable();
-    table.uuid('conflict_id').notNullable().defaultTo(knex.raw('gen_random_uuid()'));
-    table.uuid('client_id').notNullable();
-    table.text('client_name').notNullable();
-    table.text('canonical_value').notNullable();
-    table.text('discarded_legacy_value').notNullable();
-    table.timestamp('migrated_at', { useTz: true }).notNullable().defaultTo(knex.fn.now());
-    table.primary(['tenant', 'conflict_id']);
-    table.unique(['tenant', 'client_id'], 'client_tax_id_migration_conflicts_tenant_client_unique');
-  });
+  // Guarded: with transaction:false a failure after this CREATE (for example
+  // during tenant consolidation) leaves the table behind for the retry.
+  if (!(await knex.schema.hasTable('client_tax_id_migration_conflicts'))) {
+    await knex.schema.createTable('client_tax_id_migration_conflicts', (table) => {
+      table.uuid('tenant').notNullable();
+      table.uuid('conflict_id').notNullable().defaultTo(knex.raw('gen_random_uuid()'));
+      table.uuid('client_id').notNullable();
+      table.text('client_name').notNullable();
+      table.text('canonical_value').notNullable();
+      table.text('discarded_legacy_value').notNullable();
+      table.timestamp('migrated_at', { useTz: true }).notNullable().defaultTo(knex.fn.now());
+      table.primary(['tenant', 'conflict_id']);
+      table.unique(['tenant', 'client_id'], 'client_tax_id_migration_conflicts_tenant_client_unique');
+    });
+  }
+  // ensureTenantDistribution checks pg_dist_partition first and returns when
+  // this table is already distributed, so it is safe on a migration retry.
   await ensureTenantDistribution(knex, 'client_tax_id_migration_conflicts');
 
   const migrationDb = tenantDb(knex, MIGRATION_TENANT);
