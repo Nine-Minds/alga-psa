@@ -3,14 +3,14 @@ import React from 'react';
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createInstance } from 'i18next';
-import englishCommon from '../../../../server/public/locales/en/common.json';
-import germanCommon from '../../../../server/public/locales/de/common.json';
-import spanishCommon from '../../../../server/public/locales/es/common.json';
-import { PhoneText } from './PhoneText';
+import englishCommon from '../../../../public/locales/en/common.json';
+import germanCommon from '../../../../public/locales/de/common.json';
+import spanishCommon from '../../../../public/locales/es/common.json';
+import { PhoneText } from '@alga-psa/ui/components/PhoneText';
 
 const i18n = createInstance();
 
-vi.mock('../lib/i18n/client', () => ({
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: (namespace: string) => ({ t: i18n.getFixedT(null, namespace) }),
 }));
 
@@ -24,7 +24,18 @@ beforeEach(async () => {
 
 afterEach(cleanup);
 
+// App-owned locale resources belong in server tests: importing them from the
+// UI package creates a ui -> server dependency and closes workspace cycles.
 describe('PhoneText', () => {
+  it('updates the translated extension after a locale change without changing the dial target', async () => {
+    const { rerender } = render(<PhoneText value="+13202521658" extension="42" />);
+    expect(screen.getByRole('link').textContent).toBe('+1 320 252 1658 ext. 42');
+
+    await i18n.changeLanguage('de');
+    rerender(<PhoneText value="+13202521658" extension="42" />);
+    expect(screen.getByRole('link').textContent).toBe('+1 320 252 1658 Durchw. 42');
+    expect(screen.getByRole('link').getAttribute('href')).toBe('tel:+13202521658;ext=42');
+  });
   it('renders the Spanish extension label while preserving the dial target', async () => {
     await i18n.changeLanguage('es');
     render(<PhoneText value="+13202521658" extension="42" />);
