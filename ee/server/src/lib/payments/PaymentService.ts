@@ -748,6 +748,15 @@ export class PaymentService {
       };
     }
 
+    if (recordResult.alreadyRecorded) {
+      return {
+        success: true,
+        paymentRecorded: false,
+        paymentId: recordResult.paymentId,
+        invoiceId: event.invoiceId,
+      };
+    }
+
     const paymentId = recordResult.paymentId;
 
     logger.info('[PaymentService] Payment recorded', {

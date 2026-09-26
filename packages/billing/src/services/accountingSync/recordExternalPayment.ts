@@ -66,6 +66,8 @@ export interface ExternalPaymentResult {
   totalPaid?: number;
   clientId?: string;
   error?: string;
+  /** True when this provider reference was already landed for the invoice. */
+  alreadyRecorded?: boolean;
 }
 
 type InvoiceRow = {
@@ -179,14 +181,23 @@ export async function recordExternalPayment(
     };
   }
 
-  const { paymentId, newStatus, totalPaid } = await knex.transaction(async (trx) => {
+  const { paymentId, newStatus, totalPaid, alreadyRecorded } = await knex.transaction(async (trx) => {
     // Row lock so concurrent providers can't race the status computation.
     await tenantDb(trx, tenantId).table('invoices')
       .where({ invoice_id: input.invoiceId })
       .forUpdate()
       .first();
 
-    const [payment] = await tenantDb(trx, tenantId).table('invoice_payments')
+    const payments = tenantDb(trx, tenantId).table('invoice_payments');
+    const existing = await payments
+      .where({ invoice_id: input.invoiceId, payment_method: input.provider, reference_number: input.referenceNumber })
+      .first<{ payment_id: string }>();
+    if (existing) {
+      const paid = await sumPayments(trx, tenantId, input.invoiceId);
+      return { paymentId: existing.payment_id, newStatus: invoice.status, totalPaid: paid, alreadyRecorded: true };
+    }
+
+    const [payment] = await payments
       .insert({
         tenant: tenantId,
         invoice_id: input.invoiceId,
@@ -220,8 +231,12 @@ export async function recordExternalPayment(
       }
     });
 
-    return { paymentId: payment.payment_id as string, newStatus: status, totalPaid: paid };
+    return { paymentId: payment.payment_id as string, newStatus: status, totalPaid: paid, alreadyRecorded: false };
   });
+
+  if (alreadyRecorded) {
+    return { success: true, paymentRecorded: false, paymentId, newStatus, totalPaid, clientId: invoice.client_id, alreadyRecorded: true };
+  }
 
   // Fire-and-forget: push the payment to QBO on the next sync cycle.
   // Must never throw — a producer failure must not fail the payment action.
