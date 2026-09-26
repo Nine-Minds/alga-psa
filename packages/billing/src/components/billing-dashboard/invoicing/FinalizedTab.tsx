@@ -47,6 +47,8 @@ interface FinalizedTabProps {
   refreshTrigger: number;
 }
 
+export const FINALIZED_AUTOPAY_DATA_INDEX = 'autopay_status';
+
 const isInvoiceMutationError = (
   result: InvoiceMutationActionResult,
 ): result is Exclude<InvoiceMutationActionResult, { success: true }> => (
@@ -406,7 +408,7 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
     },
     {
       title: t('finalizedTab.columns.autopay', { defaultValue: 'Auto-pay' }),
-      dataIndex: 'invoice_id',
+      dataIndex: FINALIZED_AUTOPAY_DATA_INDEX,
       render: (_: unknown, record: DbInvoiceViewModel) => {
         const attempt = autopayStatuses[record.invoice_id];
         return attempt ? <Badge variant="warning">{t('finalizedTab.autopay.scheduled', { defaultValue: 'Auto-pay {{status}}', status: attempt.status })}</Badge> : null;

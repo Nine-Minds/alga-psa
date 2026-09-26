@@ -494,6 +494,9 @@ export const updatePaymentSettingsAction = withAuth(async (
       ...DEFAULT_PAYMENT_SETTINGS,
       ...currentSettings,
       ...settings,
+      ...(settings.autopayConsentText !== undefined && settings.autopayConsentText !== currentSettings.autopayConsentText
+        ? { autopayConsentTextVersion: String(Number(currentSettings.autopayConsentTextVersion ?? '0') + 1) }
+        : {}),
     };
 
     // Update config

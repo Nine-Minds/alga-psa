@@ -8,6 +8,8 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { toast } from 'react-hot-toast';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
+import { Input } from '@alga-psa/ui/components/Input';
 import { getClientAutopaySettings, setClientAutopay, startClientAutopaySetup } from '../../actions/clientBillingProfileActions';
 
 interface AutopayOverview {
@@ -28,6 +30,7 @@ export function ClientAutopaySettings({ clientId, billingProfileId, profileName 
   const [methodId, setMethodId] = useState('');
   const [attested, setAttested] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [setupUrl, setSetupUrl] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     try {
@@ -63,8 +66,13 @@ export function ClientAutopaySettings({ clientId, billingProfileId, profileName 
     try {
       const result = await startClientAutopaySetup(clientId, billingProfileId);
       if (isActionError(result) || !result?.url) throw new Error(getErrorMessage(result) || 'Unable to create setup link');
-      await navigator.clipboard.writeText(result.url);
-      toast.success(t('clientAutopay.linkCopied', { defaultValue: 'Card setup link copied' }));
+      try {
+        if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
+        await navigator.clipboard.writeText(result.url);
+        toast.success(t('clientAutopay.linkCopied', { defaultValue: 'Card setup link copied' }));
+      } catch {
+        setSetupUrl(result.url);
+      }
     } catch (error) {
       toast.error(getErrorMessage(error));
     } finally {
@@ -76,12 +84,12 @@ export function ClientAutopaySettings({ clientId, billingProfileId, profileName 
   const enrolled = overview.enrollment?.is_enabled === true;
   const selectedMethod = overview.chargeableMethods.find((method) => method.payment_method_id === methodId);
 
-  return <Card className="mt-3 border-border">
+  return <><Card className="mt-3 border-border">
     <CardHeader className="pb-2"><CardTitle className="text-base">{t('clientAutopay.title', { profile: profileName, defaultValue: 'Auto-pay · {{profile}}' })}</CardTitle></CardHeader>
     <CardContent className="space-y-3">
       {enrolled ? <>
         <p className="text-sm">{t('clientAutopay.active', { defaultValue: 'Enabled' })}: {overview.methods.find((method) => method.payment_method_id === overview.enrollment?.payment_method_id)?.brand ?? 'Card'} •••• {overview.methods.find((method) => method.payment_method_id === overview.enrollment?.payment_method_id)?.last4}</p>
-        <p className="text-xs text-muted-foreground">{t('clientAutopay.authorization', { source: overview.enrollment?.authorization_source, user: overview.enrollment?.authorized_by_user_id ?? '—', date: new Date(overview.enrollment!.authorized_at).toLocaleString(), defaultValue: 'Authorized by {{user}} on {{date}} ({{source}})' })}</p>
+        <p className="text-xs text-muted-foreground">{t('clientAutopay.authorization', { source: overview.enrollment?.authorization_source, user: (overview.enrollment as typeof overview.enrollment & { authorized_by_display_name?: string } | null)?.authorized_by_display_name ?? t('clientAutopay.unknownUser', { defaultValue: 'Unknown user' }), date: new Date(overview.enrollment!.authorized_at).toLocaleString(), defaultValue: 'Authorized by {{user}} on {{date}} ({{source}})' })}</p>
         <Button id={`msp-disable-autopay-${billingProfileId}`} variant="outline" disabled={busy} onClick={() => void changeEnrollment(false)}>{t('clientAutopay.disable', { defaultValue: 'Disable auto-pay' })}</Button>
       </> : <>
         <Button id={`msp-copy-card-setup-${billingProfileId}`} variant="outline" disabled={busy} onClick={() => void copySetupLink()}>{t('clientAutopay.copySetupLink', { defaultValue: 'Copy setup link' })}</Button>
@@ -97,5 +105,5 @@ export function ClientAutopaySettings({ clientId, billingProfileId, profileName 
         {overview.attempts.length === 0 ? <p className="text-sm text-muted-foreground">{t('clientAutopay.noAttempts', { defaultValue: 'No attempts yet' })}</p> : overview.attempts.map((attempt) => <p key={attempt.attempt_id} className="text-xs text-muted-foreground">{new Date(attempt.scheduled_for).toLocaleDateString()} · {attempt.status}{attempt.failure_code ? ` · ${attempt.failure_code}` : ''}{attempt.failure_message ? `: ${attempt.failure_message}` : ''}</p>)}
       </div>
     </CardContent>
-  </Card>;
+  </Card><Dialog isOpen={!!setupUrl} onClose={() => setSetupUrl(null)} title={t('clientAutopay.setupLinkTitle', { defaultValue: 'Card setup link' })} className="max-w-lg"><DialogContent><p className="mb-3 text-sm text-muted-foreground">{t('clientAutopay.setupLinkFallback', { defaultValue: 'Copy this link to share it with your client.' })}</p><Input id={`msp-card-setup-link-${billingProfileId}`} readOnly value={setupUrl ?? ''} onFocus={(event) => event.currentTarget.select()} /></DialogContent></Dialog></>;
 }

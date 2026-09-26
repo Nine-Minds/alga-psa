@@ -144,7 +144,7 @@ export const startClientAutopaySetup = withAuth(async (user, { tenant }, clientI
   const { knex } = await createTenantKnex();
   const profile = await tenantDb(knex, tenant).table('client_billing_profiles').where({ client_id: clientId, billing_profile_id: billingProfileId, is_active: true }).first();
   if (!profile) throw new Error('Billing profile not found');
-  return await startSavedPaymentMethodSetup(tenant, clientId, billingProfileId, `/msp/clients/${clientId}`);
+  return await startSavedPaymentMethodSetup(tenant, clientId, billingProfileId, undefined, true);
 });
 
 export const setClientAutopay = withAuth(async (user, { tenant }, input: { clientId: string; billingProfileId: string; paymentMethodId?: string; enabled: boolean; consentTextVersion: string; clientAuthorized?: boolean }) => {

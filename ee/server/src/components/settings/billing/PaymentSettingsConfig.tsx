@@ -301,7 +301,7 @@ export const PaymentSettingsConfig: React.FC = () => {
       </div>
       <div className="space-y-2">
         <Label htmlFor="autopay-consent-text">{t('payment.settings.autopay.consentText', { defaultValue: 'Auto-pay consent text' })}</Label>
-        <Input id="autopay-consent-text" value={localSettings?.autopayConsentText ?? ''} onChange={(event) => handleLocalSettingsChange({ autopayConsentText: event.target.value, autopayConsentTextVersion: String(Number(localSettings?.autopayConsentTextVersion ?? '0') + 1) })} disabled={savingSettings} />
+        <Input id="autopay-consent-text" value={localSettings?.autopayConsentText ?? ''} onChange={(event) => handleLocalSettingsChange({ autopayConsentText: event.target.value })} disabled={savingSettings} />
       </div>
 
       {/* Payment Link Expiration */}

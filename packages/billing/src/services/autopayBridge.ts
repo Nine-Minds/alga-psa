@@ -27,16 +27,22 @@ async function loadEnterpriseAutopay(): Promise<{ AutopayService?: any; SavedPay
 
 export type InvoiceAutopayContext = { scheduledFor: string; brand: string | null; last4: string; status: string };
 
-export async function startSavedPaymentMethodSetup(tenantId: string, clientId: string, billingProfileId: string, returnTo?: string): Promise<{ url: string } | null> {
+export async function startSavedPaymentMethodSetup(tenantId: string, clientId: string, billingProfileId: string, returnTo?: string, publicConfirmation = false): Promise<{ url: string } | null> {
   const ee = await loadEnterpriseAutopay();
   if (!ee?.SavedPaymentMethodService) return null;
-  return (await ee.SavedPaymentMethodService.create(tenantId)).startSetup(clientId, billingProfileId, returnTo);
+  return (await ee.SavedPaymentMethodService.create(tenantId)).startSetup(clientId, billingProfileId, returnTo, publicConfirmation);
 }
 
 export async function inspectSavedPaymentMethodSetup(tenantId: string, sessionId: string): Promise<{ clientId: string; billingProfileId: string; tenantId: string; status: string; paymentMethodId: string | null } | null> {
   const ee = await loadEnterpriseAutopay();
   if (!ee?.SavedPaymentMethodService) return null;
   return (await ee.SavedPaymentMethodService.create(tenantId)).inspectSetup(sessionId);
+}
+
+export async function resolvePublicSavedPaymentMethodSetupTenant(token: string): Promise<{ tenantId: string; clientId: string; billingProfileId: string } | null> {
+  const ee = await loadEnterpriseAutopay();
+  if (!ee?.SavedPaymentMethodService) return null;
+  return ee.SavedPaymentMethodService.resolvePublicSetupTenantContext(token);
 }
 
 export async function completeSavedPaymentMethodSetup(tenantId: string, sessionId: string): Promise<{ paymentMethodId: string } | null> {

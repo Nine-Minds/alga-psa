@@ -26,6 +26,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import toast from 'react-hot-toast';
 import { getErrorMessage, handleError, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { getRecurringServicePeriodSummary } from './recurringServicePeriodSummary';
+import { getInvoiceAutopayContexts } from '@alga-psa/billing/actions/paymentActions';
 
 interface InvoicesTabProps {
   formatCurrency: (amount: number, currencyCode?: string) => string;
@@ -54,6 +55,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceViewModel | null>(null);
   const [downloadingInvoices, setDownloadingInvoices] = useState<Set<string>>(new Set());
   const [sendingEmails, setSendingEmails] = useState<Set<string>>(new Set());
+  const [autopayContexts, setAutopayContexts] = useState<Record<string, { scheduledFor: string; brand: string | null; last4: string; status: string }>>({});
 
   const selectedInvoiceId = searchParams?.get('invoiceId');
   const selectedInvoiceServicePeriodSummary = useMemo(() => {
@@ -90,6 +92,8 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
           return;
         }
         setInvoices(fetchedInvoices);
+        const contexts = await getInvoiceAutopayContexts(fetchedInvoices.map((invoice) => invoice.invoice_id));
+        setAutopayContexts(contexts);
       } catch (err) {
         console.error('Error loading invoices:', err);
         setError(t('failedToLoad'));
@@ -203,7 +207,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
       dataIndex: 'invoice_number',
       render: (value, record) => (
         <span className="inline-flex items-center gap-2">
-          {value}
+          <span>{value}{autopayContexts[record.invoice_id] && <span className="block text-xs text-muted-foreground">{t('invoice.autopayWillCharge', { defaultValue: 'Will be charged on {{date}} to {{brand}} •••• {{last4}}', date: formatDate(autopayContexts[record.invoice_id].scheduledFor), brand: autopayContexts[record.invoice_id].brand ?? 'Card', last4: autopayContexts[record.invoice_id].last4 })}</span>}</span>
           {isCreditNote(record) && (
             <Badge variant="secondary">{t('invoice.creditNote', 'Credit Note')}</Badge>
           )}

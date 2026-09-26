@@ -51,6 +51,7 @@ const InvoiceDetailsDialog = dynamic(() => import('./InvoiceDetailsDialog'), {
 import BillingOverviewTab from './BillingOverviewTab';
 import { getPortalBillingProfiles } from '../../actions/client-portal-actions/client-billing-segments';
 import BillingSegmentsTab from './BillingSegmentsTab';
+import PaymentMethodsTab from './PaymentMethodsTab';
 
 // Lazy load other tabs
 const InvoicesTab = dynamic(() => import('./InvoicesTab'), {
@@ -115,6 +116,7 @@ const DEFAULT_BILLING_TAB = 'overview';
 const BILLING_TAB_IDS = [
   'overview',
   'invoices',
+  'payment-methods',
   'quotes',
   'segments',
   'hours-by-service',
@@ -133,6 +135,7 @@ export default function BillingOverview() {
 
   // Determine initial tab from URL parameter
   const initialTab = useMemo(() => {
+    if (searchParams?.get('cardSetup')) return 'payment-methods';
     if (tabParam && (BILLING_TAB_IDS as readonly string[]).includes(tabParam)) {
       return tabParam;
     }
@@ -190,13 +193,13 @@ export default function BillingOverview() {
 
   // Update active tab when URL parameter changes
   useEffect(() => {
-    const targetTab = tabParam && (BILLING_TAB_IDS as readonly string[]).includes(tabParam)
+    const targetTab = searchParams?.get('cardSetup') ? 'payment-methods' : tabParam && (BILLING_TAB_IDS as readonly string[]).includes(tabParam)
       ? tabParam
       : DEFAULT_BILLING_TAB;
     if (targetTab !== currentTab) {
       setCurrentTab(targetTab);
     }
-  }, [tabParam, currentTab]);
+  }, [tabParam, currentTab, searchParams]);
 
   // Credit held in the MSP's accounting system: invoices can show open here
   // until the bookkeeper applies that credit, so tell the customer.
@@ -501,7 +504,13 @@ export default function BillingOverview() {
       }
     ];
 
-    // Add Invoices tab only if user has access
+    tabsArray.push({
+      id: 'payment-methods',
+      label: t('tabs.paymentMethods', { defaultValue: 'Payment methods & auto-pay' }),
+      content: <div id="payment-methods-tab"><PaymentMethodsTab /></div>,
+    });
+
+    // Add invoice and quote tabs only if user has invoice access.
     if (hasInvoiceAccess) {
       tabsArray.push({
         id: 'invoices',

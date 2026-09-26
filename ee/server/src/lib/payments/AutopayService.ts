@@ -53,10 +53,15 @@ export class AutopayService {
       this.table('payment_methods').where({ billing_profile_id: billingProfileId, provider_type: 'stripe', is_deleted: false }).select('payment_method_id', 'brand', 'last4', 'exp_month', 'exp_year', 'status', 'external_payment_method_id'),
       this.table('invoice_autopay_attempts').where({ billing_profile_id: billingProfileId }).orderBy('created_at', 'desc').limit(5),
     ]);
+    let authorizedBy: string | null = null;
+    if (enrollment?.authorized_by_user_id) {
+      const author = await this.table('users').where({ user_id: enrollment.authorized_by_user_id }).first('first_name', 'last_name', 'email');
+      authorizedBy = [author?.first_name, author?.last_name].filter(Boolean).join(' ').trim() || author?.email || 'Unknown user';
+    }
     const safeMethods = methods.map(({ external_payment_method_id: _externalId, ...method }: any) => method);
     const chargeableMethodIds = new Set(methods.filter((method: any) => method.status === 'active' && !!method.external_payment_method_id).map((method: any) => method.payment_method_id));
     return { enabled: (config?.settings as any)?.autopayEnabled === true, consentText: (config?.settings as any)?.autopayConsentText ?? '',
-      consentTextVersion: (config?.settings as any)?.autopayConsentTextVersion ?? '1', enrollment: enrollment ?? null,
+      consentTextVersion: (config?.settings as any)?.autopayConsentTextVersion ?? '1', enrollment: enrollment ? { ...enrollment, authorized_by_display_name: authorizedBy } : null,
       methods: safeMethods,
       chargeableMethods: safeMethods.filter((method: any) => chargeableMethodIds.has(method.payment_method_id)), attempts };
   }

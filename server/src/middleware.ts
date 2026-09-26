@@ -543,7 +543,8 @@ const _middleware = auth((request) => {
   }
 
   // Protect Client Portal routes: validate user type (but not auth pages)
-  if (pathname.startsWith(clientPortalPrefix) && !isAuthPage) {
+  const isPublicCardSetupConfirmation = pathname === '/client-portal/billing/payment-methods/setup-complete-public';
+  if (pathname.startsWith(clientPortalPrefix) && !isAuthPage && !isPublicCardSetupConfirmation) {
     if (!request.auth) {
       // Same HMR-friendly behavior as /msp: avoid "logout-like" redirects when the session cookie exists.
       if (process.env.NODE_ENV === 'development') {
