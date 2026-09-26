@@ -11,7 +11,7 @@ import {
 import type { DocumentAssociationEntityType, IDocument, TemplateAst } from '@alga-psa/types';
 import type { FileStore } from '@alga-psa/storage/types/storage';
 import { StorageProviderFactory, generateStoragePath, FileStoreModel } from '@alga-psa/storage';
-import { convertBlockContentToHTML } from '@alga-psa/formatting/blocknoteUtils';
+import { convertBlockContentToHTML, getMeaningfulBlockContentMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildDocumentGeneratedPayload } from '@alga-psa/workflow-streams';
 // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- filing a generated PDF is a documents write; direct model access, as quoteActions did before this moved here
@@ -1095,9 +1095,11 @@ export class PDFGenerationService {
         .where({ document_id: documentId })
         .first();
 
-      if (blockContent && blockContent.block_data) {
+      if (blockContent && getMeaningfulBlockContentMarkdown(blockContent.block_data)) {
         htmlContent = convertBlockContentToHTML(blockContent.block_data);
-      } else {
+      }
+
+      if (!htmlContent.trim()) {
         const textContent = await db.table('document_content')
           .where({ document_id: documentId })
           .first();

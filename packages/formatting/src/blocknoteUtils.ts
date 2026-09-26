@@ -1260,6 +1260,14 @@ export function convertBlockContentToMarkdown(blockData: unknown): string {
   return convertBlockNoteToMarkdown(blockData);
 }
 
+/** Converts block content only when it contains readable content. */
+export function getMeaningfulBlockContentMarkdown(blockData: unknown): string | null {
+  if (blockData === null || blockData === undefined) return null;
+  const markdown = convertBlockContentToMarkdown(blockData);
+  const trimmed = markdown.trim();
+  return trimmed && !DEBUG_SENTINELS.includes(trimmed) ? markdown : null;
+}
+
 /**
  * Auto-detects whether block_data is BlockNote or ProseMirror format
  * and converts it to HTML using the appropriate converter.

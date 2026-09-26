@@ -1,6 +1,7 @@
 'use server';
 
 import { applyPublicCommentAttachmentFilter } from '@alga-psa/shared/lib/ticketCommentAttachments';
+import { getMeaningfulBlockContentMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 import { IDocument, IFolderNode } from '@alga-psa/types';
 import { IUser } from '@alga-psa/types';
 import { Knex } from 'knex';
@@ -289,9 +290,10 @@ export const getClientDocumentContent = withAuth(async (user, { tenant }, docume
     scoped.table('document_block_content').where({ document_id: documentId }).first('block_data'),
     scoped.table('document_content').where({ document_id: documentId }).first('content'),
   ]);
+  const hasReadableBlockContent = getMeaningfulBlockContentMarkdown(block?.block_data) !== null;
   return {
     document: { document_id: document.document_id, document_name: document.document_name, mime_type: document.mime_type, file_id: document.file_id },
-    content: block?.block_data != null ? { kind: 'block' as const, blockData: block.block_data } : text?.content != null ? { kind: 'text' as const, content: text.content } : document.file_id ? { kind: 'file' as const } : { kind: 'empty' as const },
+    content: hasReadableBlockContent ? { kind: 'block' as const, blockData: block!.block_data } : text?.content?.trim() ? { kind: 'text' as const, content: text.content } : document.file_id ? { kind: 'file' as const } : { kind: 'empty' as const },
   };
 });
 

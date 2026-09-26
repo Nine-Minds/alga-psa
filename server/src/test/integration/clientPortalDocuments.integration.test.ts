@@ -966,11 +966,15 @@ describe('Client Portal Documents Integration Tests', () => {
 
       const fileDocumentId = await createDocument(db, tenantId, mspUserId, 'Portal renamed report', true);
       const blockDocumentId = await createDocument(db, tenantId, mspUserId, 'Meeting Notes', true);
-      createdIds.documentIds.push(fileDocumentId, blockDocumentId);
+      const fallbackDocumentId = await createDocument(db, tenantId, mspUserId, 'Text Fallback Notes', true);
+      createdIds.documentIds.push(fileDocumentId, blockDocumentId, fallbackDocumentId);
       await createDocumentAssociation(db, tenantId, fileDocumentId, clientId, 'client');
       await createDocumentAssociation(db, tenantId, blockDocumentId, contractId, 'contract');
+      await createDocumentAssociation(db, tenantId, fallbackDocumentId, clientId, 'client');
       const blockData = [{ type: 'paragraph', content: [{ type: 'text', text: 'Owner contract meeting notes' }] }];
       await tenantTable(db, tenantId, 'document_block_content').insert({ tenant: tenantId, document_id: blockDocumentId, block_data: JSON.stringify(blockData) });
+      await tenantTable(db, tenantId, 'document_block_content').insert({ tenant: tenantId, document_id: fallbackDocumentId, block_data: JSON.stringify([]) });
+      await tenantTable(db, tenantId, 'document_content').insert({ tenant: tenantId, document_id: fallbackDocumentId, content: 'Actual notes', created_by_id: mspUserId, updated_by_id: mspUserId });
 
       const providerId = uuidv4();
       const configurationId = uuidv4();
@@ -1000,6 +1004,8 @@ describe('Client Portal Documents Integration Tests', () => {
 
       const contentResult = await getClientDocumentContent(blockDocumentId);
       expect(contentResult.content).toMatchObject({ kind: 'block', blockData });
+      const fallbackContentResult = await getClientDocumentContent(fallbackDocumentId);
+      expect(fallbackContentResult.content).toMatchObject({ kind: 'text', content: 'Actual notes' });
       const fileResponse = await getClientPortalFile(
         new NextRequest(`http://localhost/api/client-portal/documents/${fileDocumentId}/file`),
         { params: Promise.resolve({ documentId: fileDocumentId }) }
@@ -1026,6 +1032,13 @@ describe('Client Portal Documents Integration Tests', () => {
       expect(Buffer.from(await pdfResponse.arrayBuffer()).toString()).toBe('%PDF-integration');
       expect(Number((await tenantTable(db, tenantId, 'documents').count('* as count').first())?.count)).toBe(Number(documentsBefore?.count));
       expect(Number((await tenantTable(db, tenantId, 'external_files').count('* as count').first())?.count)).toBe(Number(externalFilesBefore?.count));
+
+      const fallbackPdfResponse = await getClientPortalExport(
+        new NextRequest(`http://localhost/api/client-portal/documents/${fallbackDocumentId}/export?format=pdf`),
+        { params: Promise.resolve({ documentId: fallbackDocumentId }) }
+      );
+      expect(fallbackPdfResponse.status).toBe(200);
+      expect(renderBuffer.mock.calls.some(([html]) => String(html).includes('Actual notes'))).toBe(true);
       renderBuffer.mockRestore();
     });
   });
