@@ -36,6 +36,7 @@ import {
   resolveMicrosoftEmailIssuerChoice,
   type MicrosoftEmailIssuerChoice,
 } from '../../lib/microsoftEmailIssuerSelection';
+import { getMicrosoftSenderDeleteBlockMessage } from './microsoftSenderDeleteGuard';
 import { getMicrosoftEmailSetupMetadataInternal } from '../integrations/microsoftActions';
 
 type EmailProviderActionError = ActionMessageError;
@@ -1330,9 +1331,10 @@ export const deleteEmailProvider = withAuth(async (
     const { knex } = await createTenantKnex();
     const routedSender = await tenantDb(knex, tenant).table('email_sender_addresses')
       .where({ microsoft_provider_id: providerId }).first('email_address');
-    if (routedSender) {
+    const senderDeleteBlockMessage = getMicrosoftSenderDeleteBlockMessage(routedSender?.email_address);
+    if (senderDeleteBlockMessage) {
       return actionError(
-        `Cannot delete this Microsoft mailbox while sender ${routedSender.email_address} uses it. Reassign or delete that sender first.`,
+        senderDeleteBlockMessage,
         'msp/email-providers:errors.provider.senderInUse'
       );
     }
