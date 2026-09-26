@@ -10,12 +10,23 @@ const entry: AssetTypeRegistryEntry = {
   fields_schema: [{ key: 'required_key', label: 'Required', kind: 'text', required: true }],
   is_builtin: false, display_order: 0, created_at: '', updated_at: '',
 };
+const builtinEntry: AssetTypeRegistryEntry = { ...entry, slug: 'workstation', name: 'Workstation', is_builtin: true };
 
 describe('assetAttributeWrites', () => {
-  it('resolves built-ins without registry lookup and custom types from the registry', async () => {
+  it('resolves custom types from the registry and built-ins with or without a registry schema', async () => {
+    vi.mocked(getAssetTypeBySlug).mockResolvedValueOnce(null);
     expect(await resolveWritableAssetType({} as any, 't', 'workstation')).toBeNull();
+    vi.mocked(getAssetTypeBySlug).mockResolvedValueOnce(builtinEntry);
+    expect(await resolveWritableAssetType({} as any, 't', 'workstation')).toEqual(builtinEntry);
     vi.mocked(getAssetTypeBySlug).mockResolvedValueOnce(entry);
     expect(await resolveWritableAssetType({} as any, 't', 'custom')).toEqual(entry);
+  });
+
+  it('validates merged attributes against a built-in type schema stored in the registry', async () => {
+    vi.mocked(getAssetTypeBySlug).mockResolvedValueOnce(builtinEntry);
+    const resolved = await resolveAttributeSchemaForWrite({} as any, 't', { storedAssetType: 'workstation', attributesProvided: true });
+    expect(resolved).toEqual(builtinEntry);
+    expect(validateAttributesForWrite(resolved, { required_key: '' }, 'merge')).toMatchObject([{ key: 'required_key', code: 'required' }]);
   });
 
   it('rejects unregistered types and handles missing registry fallback as supplied by lookup', async () => {

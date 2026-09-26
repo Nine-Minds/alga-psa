@@ -7,6 +7,7 @@
  */
 
 import { z } from 'zod';
+import { normalizeLocale } from '@alga-psa/core/i18n/config';
 import {
   uuidSchema,
   createListQuerySchema,
@@ -37,6 +38,14 @@ const {
 } = clientLocationCoreFieldsSchema.shape;
 
 // Client properties schema
+const defaultLocaleSchema = z.string().transform((locale, ctx) => {
+  const normalizedLocale = normalizeLocale(locale);
+  if (!normalizedLocale) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Unsupported locale: ${locale}` });
+    return z.NEVER;
+  }
+  return normalizedLocale;
+});
 const clientPropertiesSchema = z.object({
   industry: z.string().optional(),
   company_size: z.string().optional(),
@@ -53,7 +62,8 @@ const clientPropertiesSchema = z.object({
   parent_client_id: uuidSchema.optional(),
   parent_client_name: z.string().optional(),
   last_contact_date: z.string().datetime().optional(),
-  logo: z.string().optional()
+  logo: z.string().optional(),
+  defaultLocale: defaultLocaleSchema.optional()
 }).optional();
 
 // Create client schema
@@ -83,6 +93,8 @@ export const createClientSchema = z.object({
   billing_email: clientEmailField,
   account_manager_id: uuidSchema.optional(),
   is_inactive: z.boolean().optional().default(false),
+  // Calendar date the relationship began; null keeps the created_at fallback.
+  client_since: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'client_since must be a YYYY-MM-DD date').nullable().optional(),
   tags: z.array(z.string()).optional()
 });
 
@@ -140,6 +152,7 @@ export const clientResponseSchema = z.object({
   billing_email: z.string().nullable(),
   account_manager_id: uuidSchema.nullable(),
   account_manager_full_name: z.string().nullable().optional(),
+  client_since: z.string().nullable().optional(),
   logoUrl: z.string().nullable().optional(),
   tenant: uuidSchema,
   tags: z.array(z.string()).optional()
@@ -235,3 +248,71 @@ export type ClientResponse = z.infer<typeof clientResponseSchema>;
 export type CreateClientLocationData = z.infer<typeof createClientLocationSchema>;
 export type UpdateClientLocationData = z.infer<typeof updateClientLocationSchema>;
 export type ClientLocationResponse = z.infer<typeof clientLocationResponseSchema>;
+
+// ---------------------------------------------------------------------------
+// Client merge (absorbing a client as a billing profile)
+// ---------------------------------------------------------------------------
+
+export const clientMergePreviewRequestSchema = z.object({
+  source_client_id: uuidSchema
+});
+
+export const clientMergeContactAssignmentSchema = z.object({
+  contact_name_id: uuidSchema,
+  billing_profile_id: uuidSchema,
+  is_manager: z.boolean().optional(),
+  can_view_profile_tickets: z.boolean().optional()
+});
+
+export const clientMergeContractDecisionSchema = z.object({
+  client_contract_id: uuidSchema,
+  choice: z.enum(['original', 'cutover']),
+  // Only read for 'cutover'; a date on an 'original' row is ignored rather
+  // than rejected, so a UI that keeps both in state stays valid.
+  cutover_date: z.string().date().nullable().optional()
+});
+
+export const clientMergeExternalRemapChoiceSchema = z.object({
+  mapping_id: uuidSchema,
+  apply: z.boolean()
+});
+
+export const clientMergeRequestSchema = z.object({
+  source_client_id: uuidSchema,
+  contact_assignments: z.array(clientMergeContactAssignmentSchema).optional(),
+  contract_decisions: z.array(clientMergeContractDecisionSchema).optional(),
+  // Defaults to true in the engine: absence of a portal grant means "every
+  // profile", which after a merge would be the whole destination client.
+  pin_portal_grants: z.boolean().optional(),
+  external_remap_choices: z.array(clientMergeExternalRemapChoiceSchema).optional()
+});
+
+export const clientMergeResponseSchema = z.object({
+  merge_id: uuidSchema,
+  source_client_id: uuidSchema,
+  target_client_id: uuidSchema,
+  moved_profile_ids: z.array(uuidSchema),
+  moved_default_profile_id: uuidSchema.nullable(),
+  counts: z.record(z.number()),
+  remapped_external_mapping_ids: z.array(z.string()),
+  skipped_external_mapping_ids: z.array(z.string())
+});
+
+// ---------------------------------------------------------------------------
+// Billing profile contacts
+// ---------------------------------------------------------------------------
+
+export const billingProfileContactSchema = z.object({
+  contact_name_id: uuidSchema,
+  is_manager: z.boolean().optional(),
+  // A separate, explicit grant: naming a manager never widens what they read.
+  can_view_profile_tickets: z.boolean().optional()
+});
+
+export const setBillingProfileContactsSchema = z.object({
+  contacts: z.array(billingProfileContactSchema)
+});
+
+export type ClientMergePreviewRequest = z.infer<typeof clientMergePreviewRequestSchema>;
+export type ClientMergeRequest = z.infer<typeof clientMergeRequestSchema>;
+export type SetBillingProfileContactsRequest = z.infer<typeof setBillingProfileContactsSchema>;

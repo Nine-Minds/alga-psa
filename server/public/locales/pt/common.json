@@ -1,4 +1,7 @@
 {
+  "phone": {
+    "extension": "ramal"
+  },
   "colorPicker": {
     "invalidHexBackground": "Cor hexadecimal inválida (por exemplo, #FF0000)",
     "invalidHexText": "Cor hexadecimal inválida (por exemplo, #FFFFFF)",
@@ -1619,5 +1622,75 @@
     "disabledByAdmin": "Desativado pelo administrador",
     "mixed": "Parcialmente ativado",
     "empty": "Nenhuma categoria de notificação por e-mail disponível."
+  },
+  "listViews": {
+    "defaultView": "Visualização padrão",
+    "unsavedChanges": "Esta visualização tem alterações não salvas",
+    "searchPlaceholder": "Pesquisar visualizações",
+    "noMatches": "Nenhuma visualização correspondente",
+    "sections": {
+      "mine": "Minhas visualizações",
+      "mineEmpty": "Nenhuma visualização privada ainda",
+      "shared": "Visualizações compartilhadas",
+      "sharedEmpty": "Nenhuma visualização compartilhada ainda"
+    },
+    "labels": {
+      "myDefault": "Minha padrão",
+      "sharedByYou": "Compartilhada por você"
+    },
+    "visibility": {
+      "private": "Privada",
+      "shared": "Compartilhada"
+    },
+    "actions": {
+      "delete": "Excluir",
+      "manage": "Gerenciar",
+      "setDefault": "Definir como minha padrão",
+      "clearDefault": "Remover minha padrão",
+      "copyLink": "Copiar link",
+      "saveChanges": "Salvar alterações",
+      "saveChangesTo": "Salvar alterações em \"{{name}}\"",
+      "saveAsNew": "Salvar como nova visualização…",
+      "discardChanges": "Descartar alterações"
+    },
+    "dialog": {
+      "createTitle": "Salvar como nova visualização",
+      "manageTitle": "Gerenciar visualização",
+      "nameLabel": "Nome",
+      "nameInvalid": "Informe um nome de 1 a {{max}} caracteres.",
+      "visibilityLabel": "Quem pode vê-la",
+      "privateHint": "Somente você pode ver esta visualização.",
+      "sharedHint": "Todos que podem abrir esta lista podem vê-la e aplicá-la.",
+      "sharedDisabledHint": "Você não tem permissão para compartilhar visualizações."
+    },
+    "deleteDialog": {
+      "title": "Excluir visualização",
+      "message": "Excluir \"{{name}}\"?",
+      "messageShared": "Excluir \"{{name}}\"? Ela é compartilhada e vai desaparecer para todos que a usam."
+    },
+    "toasts": {
+      "saved": "\"{{name}}\" salva",
+      "updated": "\"{{name}}\" atualizada",
+      "deleted": "Visualização excluída",
+      "defaultSet": "Visualização padrão definida",
+      "defaultCleared": "Visualização padrão removida",
+      "linkCopied": "Link copiado",
+      "droppedReferences": "Alguns itens de \"{{name}}\" não existem mais e foram ignorados: {{fields}}"
+    },
+    "errors": {
+      "notFound": "Esta visualização é privada ou não existe mais.",
+      "unknownList": "Lista desconhecida.",
+      "invalidName": "O nome de uma visualização deve ter de 1 a 100 caracteres.",
+      "duplicateName": "Você já tem uma visualização chamada \"{{name}}\" nesta lista.",
+      "invalidSettings": "Não foi possível salvar a visualização: {{detail}}",
+      "invalidVisibility": "A visibilidade deve ser privada ou compartilhada.",
+      "cannotShare": "Você não tem permissão para compartilhar visualizações.",
+      "cannotEdit": "Você não tem permissão para alterar esta visualização.",
+      "cannotReadList": "Você não tem permissão para ver esta lista.",
+      "saveFailed": "Não foi possível salvar a visualização.",
+      "deleteFailed": "Não foi possível excluir a visualização.",
+      "defaultFailed": "Não foi possível alterar sua visualização padrão.",
+      "copyFailed": "Não foi possível copiar o link."
+    }
   }
 }

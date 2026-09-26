@@ -11,6 +11,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { DrawerFooter } from '@alga-psa/ui/components/Drawer';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ExternalLink } from 'lucide-react';
 import type { EmailProvider } from './types';
@@ -463,7 +464,7 @@ export function GmailProviderForm({
       />
 
       {/* Form Actions */}
-      <div className="flex items-center justify-end space-x-2">
+      <DrawerFooter className="items-center">
         <Button id="gmail-cancel-btn" type="button" variant="outline" onClick={onCancel}>
           {t('forms.common.actions.cancel', { defaultValue: 'Cancel' })}
         </Button>
@@ -489,7 +490,7 @@ export function GmailProviderForm({
             </>
           )}
         </Button>
-      </div>
+      </DrawerFooter>
     </form>
   );
 }

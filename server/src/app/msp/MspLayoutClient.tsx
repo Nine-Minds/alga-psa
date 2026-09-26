@@ -28,6 +28,12 @@ import { MspBrandingProvider, type MspBranding } from '@/components/layout/MspBr
 import { CurrencyFormatProvider, DateFormatProvider } from '@alga-psa/ui/lib';
 import type { CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
 import { useKeyboardShortcutPreferenceStorage } from '@/hooks/useKeyboardShortcutPreferenceStorage';
+import { useUserPreference } from '@alga-psa/user-composition/hooks';
+import {
+  DataTablePreferencesProvider,
+  DATA_TABLE_PAGE_SIZES_PREFERENCE_KEY,
+  type DataTablePageSizes,
+} from '@alga-psa/ui/components/DataTablePreferences';
 
 interface Props {
   children: React.ReactNode;
@@ -99,6 +105,11 @@ export function MspLayoutClient({
   const routeBehavior = resolveProductRouteBehavior(productCode, pathname);
   const sessionTenant = session?.user?.tenant;
   const shortcutPreference = useKeyboardShortcutPreferenceStorage({ userId: session?.user?.id });
+  const dataTablePreferences = useUserPreference<DataTablePageSizes>(DATA_TABLE_PAGE_SIZES_PREFERENCE_KEY, {
+    defaultValue: {},
+    localStorageKey: `${DATA_TABLE_PAGE_SIZES_PREFERENCE_KEY}:${session?.user?.id ?? 'anonymous'}`,
+    userId: session?.user?.id,
+  });
   const [clientNeedsOnboarding, setClientNeedsOnboarding] = useState(false);
   const [clientOnboardingCheckComplete, setClientOnboardingCheckComplete] = useState(false);
   const shouldForceOnboarding = needsOnboarding || clientNeedsOnboarding;
@@ -184,7 +195,12 @@ export function MspLayoutClient({
                 components: []
               }}
             >
-              {isOnboardingPage ? children : (
+              <DataTablePreferencesProvider
+                pageSizes={dataTablePreferences.value}
+                hasLoaded={dataTablePreferences.hasLoadedInitial && !dataTablePreferences.isLoading}
+                onPageSizesChange={dataTablePreferences.setValue}
+              >
+                {isOnboardingPage ? children : (
                 <KeyboardShortcutsProvider
                   routeKey={pathname ?? '/msp'}
                   storage={shortcutPreference.storage}
@@ -213,7 +229,8 @@ export function MspLayoutClient({
                   )
                   }
                 </KeyboardShortcutsProvider>
-              )}
+                )}
+              </DataTablePreferencesProvider>
             </ClientUIStateProvider>
           </TagProvider>
           </IncomingCallProvider>

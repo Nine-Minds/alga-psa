@@ -3055,7 +3055,7 @@
     "assetTypes": {
       "tab": "Activos",
       "title": "Tipos de activos",
-      "description": "Administre los tipos de activos disponibles en su módulo de activos. Los tipos personalizados llevan un esquema de campos que define sus formularios de creación y edición.",
+      "description": "Los tipos personalizados usan un esquema de campos para sus formularios; los tipos integrados también admiten campos adicionales.",
       "loading": "Cargando tipos de activos...",
       "table": {
         "name": "Nombre",
@@ -3083,7 +3083,7 @@
         "namePlaceholder": "p. ej., Firewall",
         "displayOrderLabel": "Orden de visualización",
         "iconLabel": "Icono",
-        "builtinSchemaHint": "Los tipos integrados usan formularios fijos administrados por AlgaPSA, por lo que su esquema de campos no se puede editar. Aún puede cambiar el nombre del tipo o su icono."
+        "builtinSchemaHint": "El formulario estándar integrado permanece fijo. Estos campos adicionales se definen para cada tenant."
       },
       "deleteDialog": {
         "title": "Eliminar tipo de activo",
@@ -3141,7 +3141,8 @@
           "invalidOptions": "Las opciones no pueden estar vacías.",
           "invalidField": "Este campo no es válido."
         }
-      }
+      },
+      "additionalFields": "Campos adicionales"
     }
   },
   "mcpServer": {

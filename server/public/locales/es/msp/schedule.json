@@ -12,14 +12,28 @@
       "clearAll": "Borrar todo",
       "viewWeek": "Ver semana",
       "compare": "Comparar",
-      "stopComparing": "Deja de comparar"
+      "stopComparing": "Deja de comparar",
+      "shareMyCalendar": "Compartir mi calendario",
+      "newGroupCalendar": "Nuevo calendario de grupo",
+      "manageGroupCalendar": "Administrar calendario"
     },
     "labels": {
-      "inactive": "(Inactivo)"
+      "inactive": "(Inactivo)",
+      "archived": "(Archivado)"
     },
     "aria": {
       "viewWeek": "Ver semana para {{name}}",
-      "compare": "Comparar {{name}}"
+      "compare": "Comparar {{name}}",
+      "toggleGroupCalendar": "Mostrar {{name}}"
+    },
+    "sections": {
+      "myCalendar": "Mi calendario",
+      "people": "Personas",
+      "groupCalendars": "Calendarios de grupo"
+    },
+    "empty": {
+      "people": "Nadie ha compartido un calendario con usted todavía. Comparta el suyo para que sus compañeros vean cuándo está libre.",
+      "groups": "Los calendarios de grupo contienen eventos compartidos, como guardias o cierres de oficina."
     }
   },
   "agentView": {
@@ -90,7 +104,8 @@
         "start": "Inicio: {{dateTime}}",
         "end": "Fin: {{dateTime}}",
         "multiDay": "(varios días)"
-      }
+      },
+      "busy": "Ocupado"
     },
     "deleteDialog": {
       "title": "Eliminar entrada de programación",
@@ -122,6 +137,11 @@
         "title": "Opciones de impresión",
         "description": "Elija qué columnas incluir al imprimir el calendario."
       }
+    },
+    "busyDialog": {
+      "title": "Ocupado",
+      "close": "Cerrar",
+      "timeRange": "{{start}} – {{end}}"
     }
   },
   "weeklyEvent": {
@@ -591,7 +611,11 @@
       "end": "Fin *",
       "notes": "Notas",
       "technician": "Técnico",
-      "notesPlaceholder": "Todo lo que el técnico debe saber antes de empezar"
+      "notesPlaceholder": "Todo lo que el técnico debe saber antes de empezar",
+      "calendarPersonal": "Personal",
+      "calendarUnavailable": "Calendario de grupo",
+      "calendar": "Calendario",
+      "assignedUsersOptional": "Usuarios asignados"
     },
     "actions": {
       "cancel": "Cancelar",
@@ -776,5 +800,58 @@
     "deleteFailed": "No se pudo eliminar la entrada de agenda",
     "loadFailed": "No se pudo cargar la entrada de agenda",
     "noPermission": "Necesita el permiso de actualización de agenda para programar trabajo."
+  },
+  "sharing": {
+    "levels": {
+      "freeBusy": "Libre/ocupado",
+      "read": "Ver detalles",
+      "edit": "Editar",
+      "manage": "Administrar"
+    },
+    "addRecipient": "Añadir una persona o equipo",
+    "noRecipients": "Aún no se ha compartido con nadie.",
+    "unknownRecipient": "Destinatario desconocido",
+    "removeRecipient": "Quitar a {{name}}",
+    "errors": {
+      "load": "No se pudo cargar el uso compartido del calendario.",
+      "save": "No se pudo guardar el uso compartido del calendario."
+    },
+    "shareDialog": {
+      "title": "Compartir mi calendario",
+      "description": "Libre/ocupado solo muestra cuándo está ocupado. Ver detalles muestra sus entradas, excepto las privadas. Editar además permite añadir y cambiar entradas por usted."
+    },
+    "actions": {
+      "cancel": "Cancelar",
+      "saving": "Guardando...",
+      "save": "Guardar"
+    },
+    "settings": {
+      "title": "Uso compartido del calendario",
+      "description": "Elija qué compañeros y equipos pueden ver su agenda y si pueden reservar tiempo por usted."
+    }
+  },
+  "groupCalendars": {
+    "errors": {
+      "load": "No se pudo cargar el calendario.",
+      "nameRequired": "El nombre del calendario es obligatorio.",
+      "save": "No se pudo guardar el calendario."
+    },
+    "dialog": {
+      "manageTitle": "Administrar calendario de grupo",
+      "createTitle": "Nuevo calendario de grupo"
+    },
+    "actions": {
+      "restore": "Restaurar",
+      "archive": "Archivar",
+      "create": "Crear calendario"
+    },
+    "fields": {
+      "name": "Nombre",
+      "namePlaceholder": "p. ej. Rotación de guardias",
+      "color": "Color",
+      "description": "Descripción (opcional)",
+      "members": "Miembros",
+      "creatorNote": "Podrá administrar este calendario."
+    }
   }
 }

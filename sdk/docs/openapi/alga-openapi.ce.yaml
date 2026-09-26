@@ -6509,6 +6509,405 @@ components:
           additionalProperties: {}
       required:
         - data
+    ClientMergeIdParams:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+      required:
+        - id
+    BillingProfileContactsParams:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        profileId:
+          type: string
+          format: uuid
+      required:
+        - id
+        - profileId
+    ClientMergePreviewBody:
+      type: object
+      properties:
+        source_client_id:
+          type: string
+          format: uuid
+          description: The client that would be absorbed.
+      required:
+        - source_client_id
+    ClientMergePreviewResource:
+      type: object
+      properties:
+        sourceClientId:
+          type: string
+          format: uuid
+        sourceClientName:
+          type: string
+        targetClientId:
+          type: string
+          format: uuid
+        targetClientName:
+          type: string
+        blockers:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+              message:
+                type: string
+              i18nKey:
+                type: string
+            required:
+              - code
+              - message
+              - i18nKey
+          description: Non-empty means the merge would be refused.
+        profiles:
+          type: array
+          items:
+            type: object
+            properties:
+              billingProfileId:
+                type: string
+                format: uuid
+              currentName:
+                type: string
+              mergedName:
+                type: string
+                description: The name the profile takes on the destination client.
+              isDefault:
+                type: boolean
+              isActive:
+                type: boolean
+            required:
+              - billingProfileId
+              - currentName
+              - mergedName
+              - isDefault
+              - isActive
+        movedDefaultProfileId:
+          type:
+            - string
+            - "null"
+          format: uuid
+        counts:
+          type: object
+          additionalProperties:
+            type: number
+          description: Rows that would move, by entity label.
+        contacts:
+          type: array
+          items:
+            type: object
+            properties:
+              contactNameId:
+                type: string
+                format: uuid
+              fullName:
+                type: string
+              email:
+                type:
+                  - string
+                  - "null"
+              suggestedBillingProfileId:
+                type:
+                  - string
+                  - "null"
+                format: uuid
+            required:
+              - contactNameId
+              - fullName
+              - email
+              - suggestedBillingProfileId
+        contracts:
+          type: array
+          items:
+            type: object
+            properties:
+              clientContractId:
+                type: string
+                format: uuid
+              contractName:
+                type:
+                  - string
+                  - "null"
+              startDate:
+                type: string
+              endDate:
+                type:
+                  - string
+                  - "null"
+              billingProfileId:
+                type:
+                  - string
+                  - "null"
+                format: uuid
+              isActive:
+                type: boolean
+              suggestedChoice:
+                type: string
+                enum:
+                  - original
+                  - cutover
+              suggestedCutoverDate:
+                type: string
+            required:
+              - clientContractId
+              - contractName
+              - startDate
+              - endDate
+              - billingProfileId
+              - isActive
+              - suggestedChoice
+              - suggestedCutoverDate
+        visibilityGroupRenames:
+          type: array
+          items:
+            type: object
+            properties:
+              groupId:
+                type: string
+                format: uuid
+              from:
+                type: string
+              to:
+                type: string
+            required:
+              - groupId
+              - from
+              - to
+        unrestrictedPortalUserIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Portal users of the source that currently see every billing profile.
+        externalMappings:
+          type: array
+          items:
+            type: object
+            properties:
+              mappingId:
+                type: string
+              integrationType:
+                type: string
+              algaEntityType:
+                type: string
+              externalEntityId:
+                type: string
+              externalRealmId:
+                type:
+                  - string
+                  - "null"
+              targetAlreadyMapped:
+                type: boolean
+            required:
+              - mappingId
+              - integrationType
+              - algaEntityType
+              - externalEntityId
+              - externalRealmId
+              - targetAlreadyMapped
+      required:
+        - sourceClientId
+        - sourceClientName
+        - targetClientId
+        - targetClientName
+        - blockers
+        - profiles
+        - movedDefaultProfileId
+        - counts
+        - contacts
+        - contracts
+        - visibilityGroupRenames
+        - unrestrictedPortalUserIds
+        - externalMappings
+    ClientMergeBody:
+      type: object
+      properties:
+        source_client_id:
+          type: string
+          format: uuid
+        contact_assignments:
+          type: array
+          items:
+            type: object
+            properties:
+              contact_name_id:
+                type: string
+                format: uuid
+              billing_profile_id:
+                type: string
+                format: uuid
+              is_manager:
+                type: boolean
+              can_view_profile_tickets:
+                type: boolean
+            required:
+              - contact_name_id
+              - billing_profile_id
+        contract_decisions:
+          type: array
+          items:
+            type: object
+            properties:
+              client_contract_id:
+                type: string
+                format: uuid
+              choice:
+                type: string
+                enum:
+                  - original
+                  - cutover
+              cutover_date:
+                type:
+                  - string
+                  - "null"
+            required:
+              - client_contract_id
+              - choice
+        pin_portal_grants:
+          type: boolean
+          description: "Defaults to true: records the billing segments unrestricted portal
+            users have today."
+        external_remap_choices:
+          type: array
+          items:
+            type: object
+            properties:
+              mapping_id:
+                type: string
+              apply:
+                type: boolean
+            required:
+              - mapping_id
+              - apply
+      required:
+        - source_client_id
+    ClientMergeResource:
+      type: object
+      properties:
+        merge_id:
+          type: string
+          format: uuid
+        source_client_id:
+          type: string
+          format: uuid
+        target_client_id:
+          type: string
+          format: uuid
+        moved_profile_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        moved_default_profile_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        counts:
+          type: object
+          additionalProperties:
+            type: number
+        remapped_external_mapping_ids:
+          type: array
+          items:
+            type: string
+        skipped_external_mapping_ids:
+          type: array
+          items:
+            type: string
+      required:
+        - merge_id
+        - source_client_id
+        - target_client_id
+        - moved_profile_ids
+        - moved_default_profile_id
+        - counts
+        - remapped_external_mapping_ids
+        - skipped_external_mapping_ids
+    BillingProfileContactResource:
+      type: object
+      properties:
+        contact_name_id:
+          type: string
+          format: uuid
+        full_name:
+          type: string
+        email:
+          type:
+            - string
+            - "null"
+        is_manager:
+          type: boolean
+        can_view_profile_tickets:
+          type: boolean
+          description: Lets this contact see every ticket attributed to the profile in the
+            client portal.
+      required:
+        - contact_name_id
+        - full_name
+        - email
+        - is_manager
+        - can_view_profile_tickets
+    BillingProfileContactsBody:
+      type: object
+      properties:
+        contacts:
+          type: array
+          items:
+            type: object
+            properties:
+              contact_name_id:
+                type: string
+                format: uuid
+              is_manager:
+                type: boolean
+              can_view_profile_tickets:
+                type: boolean
+            required:
+              - contact_name_id
+          description: Replaces the profile's contact list; omitting a contact removes it.
+      required:
+        - contacts
+    ClientMergePreviewEnvelope:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/ClientMergePreviewResource"
+        meta:
+          type: object
+          additionalProperties: {}
+      required:
+        - data
+    ClientMergeEnvelope:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/ClientMergeResource"
+        meta:
+          type: object
+          additionalProperties: {}
+      required:
+        - data
+    BillingProfileContactsEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/BillingProfileContactResource"
+        meta:
+          type: object
+          additionalProperties: {}
+      required:
+        - data
     ClientNotesResponse:
       type: object
       properties:
@@ -29807,6 +30206,287 @@ paths:
                 $ref: "#/components/schemas/ClientContactApiError"
         "500":
           description: Unexpected client location creation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientContactApiError"
+  /api/v1/clients/{id}/merge/preview:
+    post:
+      summary: Preview a client merge
+      description: Dry run of absorbing source_client_id into this client as a billing
+        profile. Writes nothing; returns the profiles that would move,
+        per-entity row counts, the contacts and contracts needing a decision,
+        the portal users whose billing-segment access would widen, the
+        accounting mappings that would need re-pointing, and any blockers.
+      tags:
+        - Clients
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: client
+        x-rbac-action: update
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientMergePreviewBody"
+      responses:
+        "200":
+          description: Merge preview returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientMergePreviewEnvelope"
+        "400":
+          description: Invalid client id or request payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientContactApiError"
+        "401":
+          description: API key missing/invalid or key user not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientContactApiError"
+        "403":
+          description: Permission denied for client update.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientContactApiError"
+        "404":
+          description: Client not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientContactApiError"
+        "500":
+          description: Unexpected merge preview failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientContactApiError"
+  /api/v1/clients/{id}/merge:
+    post:
+      summary: Merge a client into this one
+      description: Absorbs source_client_id into this client as a billing profile. The
+        source's billing profiles are re-parented keeping their ids, so
+        invoices, billing cycles, payment methods, credits and tax settings
+        follow them; tickets, contacts, projects, assets, contracts, locations
+        and portal visibility groups move to this client. The source client is
+        archived with a forwarding marker. Irreversible. Requires client update
+        and delete.
+      tags:
+        - Clients
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: client
+        x-rbac-action: update
+        x-chat-approval-required: true
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientMergeBody"
+      responses:
+        "200":
+          description: Merge completed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientMergeEnvelope"
+        "400":
+          description: Invalid payload, or the merge was refused (blockers are returned as
+            validation details).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientContactApiError"
+        "401":
+          description: API key missing/invalid or key user not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientContactApiError"
+        "403":
+          description: Permission denied for client update or delete.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientContactApiError"
+        "404":
+          description: Client not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientContactApiError"
+        "500":
+          description: Unexpected merge failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientContactApiError"
+  /api/v1/clients/{id}/billing-profiles/{profileId}/contacts:
+    get:
+      summary: List billing profile contacts
+      description: Returns the contacts attached to a billing profile, with the
+        manager designation and the separate grant that lets a contact see every
+        ticket attributed to the profile in the client portal.
+      tags:
+        - Clients
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: client
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: profileId
+          in: path
+      responses:
+        "200":
+          description: Billing profile contacts returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillingProfileContactsEnvelope"
+        "400":
+          description: Invalid client or profile id format.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientContactApiError"
+        "401":
+          description: API key missing/invalid or key user not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientContactApiError"
+        "403":
+          description: Permission denied for client read.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientContactApiError"
+        "404":
+          description: Billing profile not found for this client.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientContactApiError"
+        "500":
+          description: Unexpected billing profile contacts failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientContactApiError"
+    put:
+      summary: Replace billing profile contacts
+      description: Replaces the profile's contact list. At most one contact may be the
+        manager. can_view_profile_tickets is a separate opt-in and defaults to
+        false, so naming a manager never widens what they can read.
+      tags:
+        - Clients
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: client
+        x-rbac-action: update
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: profileId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BillingProfileContactsBody"
+      responses:
+        "200":
+          description: Billing profile contacts replaced.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillingProfileContactsEnvelope"
+        "400":
+          description: Invalid payload, a second manager, or a contact from another client.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientContactApiError"
+        "401":
+          description: API key missing/invalid or key user not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientContactApiError"
+        "403":
+          description: Permission denied for client update.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientContactApiError"
+        "404":
+          description: Billing profile not found for this client.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientContactApiError"
+        "500":
+          description: Unexpected billing profile contacts failure.
           content:
             application/json:
               schema:

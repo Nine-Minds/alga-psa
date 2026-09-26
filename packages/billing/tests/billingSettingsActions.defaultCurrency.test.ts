@@ -113,6 +113,7 @@ describe('getDefaultBillingSettings — default currency', () => {
     );
 
     expect(result.defaultCurrencyCode).toBe('USD');
+    expect(result.defaultQuoteValidityDays).toBe(30);
   });
 
   it('returns stored currency from existing settings', async () => {
@@ -121,6 +122,7 @@ describe('getDefaultBillingSettings — default currency', () => {
       zero_dollar_invoice_handling: 'normal',
       suppress_zero_dollar_invoices: false,
       default_currency_code: 'NZD',
+      default_quote_validity_days: 15,
     };
 
     const { getDefaultBillingSettings } = await import(
@@ -133,6 +135,17 @@ describe('getDefaultBillingSettings — default currency', () => {
     );
 
     expect(result.defaultCurrencyCode).toBe('NZD');
+    expect(result.defaultQuoteValidityDays).toBe(15);
+  });
+
+  it('requires billing settings read permission', async () => {
+    mockHasPermission.mockResolvedValueOnce(false);
+    const { getDefaultBillingSettings } = await import('../src/actions/billingSettingsActions');
+
+    const result = await getDefaultBillingSettings({ user_id: 'user-1' }, { tenant: 'tenant-1' });
+
+    expect(result).toMatchObject({ permissionError: 'Permission denied: Cannot read billing settings' });
+    expect(mockWithTransaction).not.toHaveBeenCalled();
   });
 
   it('falls back to USD when column value is null', async () => {
@@ -241,6 +254,65 @@ describe('updateDefaultBillingSettings — default currency', () => {
     expect(mockState.updates[0]?.payload).toMatchObject({
       default_currency_code: 'USD',
     });
+  });
+
+  it('saves quote validity without writing unrelated settings', async () => {
+    const { updateDefaultBillingSettings } = await import('../src/actions/billingSettingsActions');
+
+    const result = await updateDefaultBillingSettings(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      { defaultQuoteValidityDays: 15 },
+    );
+
+    expect(result).toEqual({ success: true });
+    expect(mockState.updates[0]?.payload).toEqual({
+      default_quote_validity_days: 15,
+      updated_at: '2026-04-01T12:00:00.000Z',
+    });
+  });
+
+  it('does not reset quote validity when updating another billing setting', async () => {
+    const { updateDefaultBillingSettings } = await import('../src/actions/billingSettingsActions');
+
+    await updateDefaultBillingSettings(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      { defaultCurrencyCode: 'CAD' },
+    );
+
+    expect(mockState.updates[0]?.payload).toHaveProperty('default_currency_code', 'CAD');
+    expect(mockState.updates[0]?.payload).not.toHaveProperty('default_quote_validity_days');
+  });
+
+  it('defaults quote validity on first insert and accepts a supplied value', async () => {
+    mockState.existingSettings = null;
+    const { updateDefaultBillingSettings } = await import('../src/actions/billingSettingsActions');
+
+    await updateDefaultBillingSettings(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      { defaultQuoteValidityDays: 15 },
+    );
+
+    expect(mockState.inserts[0]?.payload).toHaveProperty('default_quote_validity_days', 15);
+  });
+
+  it.each([0, -1, 366, 1.5, Number.NaN])('rejects invalid quote validity value %s', async (days) => {
+    const { updateDefaultBillingSettings } = await import('../src/actions/billingSettingsActions');
+
+    const result = await updateDefaultBillingSettings(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      { defaultQuoteValidityDays: days },
+    );
+
+    expect(result).toMatchObject({
+      actionError: 'Default quote validity must be between 1 and 365 days',
+      messageKey: 'msp/billing-settings:general.quotes.errors.range',
+    });
+    expect(mockState.updates).toHaveLength(0);
+    expect(mockState.inserts).toHaveLength(0);
   });
 });
 

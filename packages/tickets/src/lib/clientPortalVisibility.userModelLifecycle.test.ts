@@ -147,6 +147,14 @@ function createUserModelTrx(state: UserModelState) {
       };
     }
 
+    // Onboarding creates no billing-profile ticket grants, so a freshly
+    // provisioned contact-scoped user still sees only their own tickets.
+    if (table === 'client_billing_profiles' || table === 'billing_profile_contacts') {
+      return {
+        where: () => ({ select: async () => [] }),
+      };
+    }
+
     if (table === 'client_portal_visibility_group_boards as cvgb') {
       return {
         join: () => ({
@@ -262,6 +270,9 @@ describe('portal user creation preserves client portal visibility assignments', 
       clientId: 'client-a',
       visibilityGroupId: 'group-1',
       visibleBoardIds: ['board-1'],
+      // A brand-new portal user holds no billing-profile ticket grants.
+      grantedTicketProfileIds: [],
+      defaultBillingProfileId: null,
     });
   });
 

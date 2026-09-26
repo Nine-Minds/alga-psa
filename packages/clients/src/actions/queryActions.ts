@@ -12,6 +12,7 @@ import {
   getEntityImageUrl,
 } from '@alga-psa/formatting/avatarUtils';
 import { hasPermissionAsync } from '../lib/authHelpers';
+import { withClientSinceDateString } from '../lib/clientSince';
 import InteractionModel from '../models/interactions';
 import {
   actionError,
@@ -215,6 +216,8 @@ export const getClientById = withAuth(async (user, { tenant }, clientId: string)
         'c.*',
         'cl.email as location_email',
         'cl.phone as location_phone',
+        'cl.phone_extension as location_phone_extension',
+        'cl.country_code as location_country_code',
         'cl.address_line1 as location_address',
         trx.raw(`CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN CONCAT(u.first_name, ' ', u.last_name) ELSE NULL END as account_manager_full_name`)
       )
@@ -231,11 +234,11 @@ export const getClientById = withAuth(async (user, { tenant }, clientId: string)
     getEntityImageUrl('client', clientId, tenant, 'wide'),
   ]);
 
-  return {
+  return withClientSinceDateString({
     ...clientData,
     logoUrl,
     logoWideUrl,
-  } as IClientWithLocation;
+  }) as IClientWithLocation;
 });
 
 export const getAllClients = withAuth(async (user, { tenant }, includeInactive: boolean = true): Promise<IClient[]> => {
@@ -262,7 +265,7 @@ export const getAllClients = withAuth(async (user, { tenant }, includeInactive: 
   const clientIds = clients.map((client: any) => client.client_id);
   const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
 
-  const clientsWithLogos = clients.map((client: any) => ({
+  const clientsWithLogos = clients.map((client: any) => withClientSinceDateString({
     ...client,
     properties: client.properties || {},
     logoUrl: logoUrlsMap.get(client.client_id) || null,

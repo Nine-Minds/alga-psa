@@ -142,7 +142,7 @@ describe('MicrosoftGraphAdapter.testConnection', () => {
 
     expect(result).toEqual({ success: true });
     expect(get).toHaveBeenCalledTimes(1);
-    expect(get).toHaveBeenCalledWith('/users/support%2Bdesk%40example.com/mailFolders', {
+    expect(get).toHaveBeenCalledWith('/users/support%2Bdesk%40example.com/mailFolders/inbox', {
       params: { $top: 1, $select: 'id' },
     });
   });

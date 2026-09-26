@@ -163,6 +163,10 @@ export const deleteTeam = withAuth(async (
   try {
 
     const result = await deleteEntityWithValidation('team', teamId, knex, tenant, async (trx, tenantId) => {
+      // Calendar shares granted to the team (polymorphic grantee, no FK).
+      await tenantDb(trx, tenantId).table('calendar_shares')
+        .where({ grantee_type: 'team', grantee_id: teamId })
+        .del();
       await Team.delete(trx, tenantId, teamId);
     });
 

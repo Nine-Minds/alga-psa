@@ -142,6 +142,88 @@ describe('client currency and billing-profile lifecycle integration', () => {
     expect(persisted.default_currency_code).toBe('EUR');
   });
 
+  it('preserves partial properties and synchronizes both website copies only on explicit website updates', async () => {
+    const tenantId = await createTenant();
+    const clientId = await seedClient(tenantId);
+    const service = serviceFor(tenantId);
+    const website = 'https://digital-checkmark.example';
+    await tenantTable(tenantId, 'clients').where({ client_id: clientId }).update({
+      url: website,
+      properties: { website, industry: 'IT' },
+    });
+
+    const context = { tenant: tenantId, userId: uuidv4() } as any;
+    await service.update(clientId, updateClientSchema.parse({ client_name: 'Renamed' }) as any, context);
+    let persisted = await tenantTable(tenantId, 'clients').where({ client_id: clientId }).first();
+    expect(persisted.url).toBe(website);
+    expect(persisted.properties).toMatchObject({ website, industry: 'IT' });
+
+    await service.update(clientId, updateClientSchema.parse({ properties: { industry: 'Healthcare' } }) as any, context);
+    persisted = await tenantTable(tenantId, 'clients').where({ client_id: clientId }).first();
+    expect(persisted.url).toBe(website);
+    expect(persisted.properties).toEqual({ website, industry: 'Healthcare' });
+
+    // Older rows can have only properties.website populated; unrelated saves
+    // must preserve both stored values verbatim until the user edits website.
+    await tenantTable(tenantId, 'clients').where({ client_id: clientId }).update({
+      url: '',
+      properties: { website: 'https://properties-only.example', industry: 'Healthcare' },
+    });
+    await service.update(clientId, updateClientSchema.parse({ client_name: 'Still preserved' }) as any, context);
+    persisted = await tenantTable(tenantId, 'clients').where({ client_id: clientId }).first();
+    expect(persisted.url).toBe('');
+    expect(persisted.properties).toEqual({ website: 'https://properties-only.example', industry: 'Healthcare' });
+
+    await service.update(clientId, updateClientSchema.parse({ properties: { website: 'https://new.example' } }) as any, context);
+    persisted = await tenantTable(tenantId, 'clients').where({ client_id: clientId }).first();
+    expect(persisted.url).toBe('https://new.example');
+    expect(persisted.properties).toEqual({ website: 'https://new.example', industry: 'Healthcare' });
+
+    await service.update(clientId, updateClientSchema.parse({ properties: { website: '' } }) as any, context);
+    persisted = await tenantTable(tenantId, 'clients').where({ client_id: clientId }).first();
+    expect(persisted.url).toBe('');
+    expect(persisted.properties).toMatchObject({ website: '' });
+  });
+
+  it('preserves a properties-only website across a UI-shaped unchanged-website save', async () => {
+    const tenantId = await createTenant();
+    const service = serviceFor(tenantId);
+    const context = { tenant: tenantId, userId: uuidv4() } as any;
+    const website = 'https://zz-probe.example.com';
+    const created = await service.create(createClientSchema.parse({
+      client_name: 'Digital Checkmark repro',
+      billing_cycle: 'monthly',
+      properties: {
+        website,
+        industry: 'Testing',
+        company_size: '1-10',
+        tax_id: '11-1111111',
+      },
+    }) as any, context);
+
+    // The UI sends unrelated property values while omitting an unchanged
+    // website (and the legacy url column).
+    await service.update(created.client_id, updateClientSchema.parse({
+      client_name: created.client_name,
+      properties: {
+        industry: 'Testing',
+        company_size: '1-10',
+        tax_id: '11-1111111',
+      },
+    }) as any, context);
+
+    const persisted = await tenantTable(tenantId, 'clients')
+      .where({ client_id: created.client_id })
+      .first();
+    expect(persisted.url).toBe('');
+    expect(persisted.properties).toEqual({
+      website,
+      industry: 'Testing',
+      company_size: '1-10',
+      tax_id: '11-1111111',
+    });
+  });
+
   it('persists default_currency_code on create and defaults to USD when omitted', async () => {
     const tenantId = await createTenant();
     const service = serviceFor(tenantId);

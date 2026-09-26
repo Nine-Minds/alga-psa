@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { TICKET_LIST_SORT_KEYS } from '../lib/ticketListSort';
 
 export const ticketFormSchema = z.object({
   title: z.string(),
@@ -163,20 +164,7 @@ export const ticketListFiltersSchema = z.object({
   dueDateTo: z.string().datetime().optional(),
   responseState: z.enum(['awaiting_client', 'awaiting_internal', 'none', 'all']).optional(),
   slaStatusFilter: z.enum(['all', 'has_sla', 'no_sla', 'on_track', 'breached', 'paused']).optional(),
-  sortBy: z
-    .enum([
-      'ticket_number',
-      'title',
-      'status_name',
-      'priority_name',
-      'board_name',
-      'category_name',
-      'client_name',
-      'entered_at',
-      'entered_by_name',
-      'due_date',
-    ])
-    .optional(),
+  sortBy: z.enum(TICKET_LIST_SORT_KEYS).optional(),
   sortDirection: z.enum(['asc', 'desc']).optional(),
   bundleView: z.enum(['bundled', 'individual']).optional(),
 });

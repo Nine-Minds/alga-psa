@@ -100,6 +100,12 @@ vi.mock('./PortalBillingProfileAccess', () => ({
   PortalBillingProfileAccess: () => null,
 }));
 
+// Same reason, for the read-only profile-membership panel this tab gained with
+// the client merge work: it reaches the same barrel through its server action.
+vi.mock('./ContactBillingProfileAssociations', () => ({
+  ContactBillingProfileAssociations: () => null,
+}));
+
 vi.mock('@alga-psa/ui/components/Badge', () => ({
   Badge: ({ children }: any) => <span>{children}</span>,
 }));

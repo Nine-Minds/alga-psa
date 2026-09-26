@@ -27,6 +27,8 @@ import {
 } from 'lucide-react';
 import { format as formatDateFns, parse as parseDateFns } from 'date-fns';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { BillingProfilePicker } from '@alga-psa/ui/components/BillingProfilePicker';
+import { getClientBillingProfilesForBilling } from '@alga-psa/billing/actions/billingProfileActions';
 import { IClient } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useQuickAddClient } from '@alga-psa/ui/context';
@@ -50,6 +52,8 @@ interface ContractBasicsStepProps {
   isTemplateLoading: boolean;
   templateError?: string | null;
 }
+
+const loadBillingProfiles = (clientId: string) => getClientBillingProfilesForBilling(clientId);
 
 const parseLocalYMD = (ymd?: string): Date | undefined => {
   if (!ymd) return undefined;
@@ -251,6 +255,9 @@ export function ContractBasicsStep({
             updateData({
               client_id: id || '',
               currency_code: clientCurrency,
+              // A profile belongs to exactly one client; keeping the previous
+              // pick would be rejected on save.
+              billing_profile_id: null,
             });
           }}
           filterState={filterState}
@@ -278,6 +285,23 @@ export function ContractBasicsStep({
           </p>
         )}
       </div>
+
+      {/* Renders only for a client that holds more than one billing profile. */}
+      <BillingProfilePicker
+        id="contract-basics-billing-profile"
+        clientId={data.client_id || null}
+        loadProfiles={loadBillingProfiles}
+        value={data.billing_profile_id ?? null}
+        onChange={(billingProfileId) => updateData({ billing_profile_id: billingProfileId })}
+        label={t('wizardBasics.billingProfile.label', { defaultValue: 'Billing profile' })}
+        unassignedLabel={t('wizardBasics.billingProfile.none', {
+          defaultValue: "Use the client's default profile",
+        })}
+        hint={t('wizardBasics.billingProfile.hint', {
+          defaultValue: 'Charges from this contract are billed to this profile unless a line overrides it.',
+        })}
+        className="space-y-2"
+      />
 
       <div className="space-y-2">
         <Label htmlFor="contract_name" className="flex items-center gap-2">

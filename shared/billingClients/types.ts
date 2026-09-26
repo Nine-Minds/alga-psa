@@ -44,6 +44,12 @@ export type ClientContractAssignmentCreateInput = {
   po_required?: boolean;
   po_number?: string | null;
   po_amount?: number | null;
+  /**
+   * Billing profile this contract bills to — step 3 of the charge-attribution
+   * chain. Optional: NULL keeps the pre-profile behaviour of falling through to
+   * the client default.
+   */
+  billing_profile_id?: string | null;
 };
 
 export type ClientContractAssignmentUpdateInput = Partial<IClientContract>;

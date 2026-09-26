@@ -3,7 +3,14 @@
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { Knex } from 'knex';
-import { checklistActionErrorFrom, type ChecklistActionError } from './checklistActionErrors';
+import {
+  APPLY_RULE_CATEGORY_BOARD_MISMATCH,
+  APPLY_RULE_CATEGORY_INVALID,
+  APPLY_RULE_SUBCATEGORY_INVALID,
+  APPLY_RULE_SUBCATEGORY_REQUIRES_CATEGORY,
+  checklistActionErrorFrom,
+  type ChecklistActionError,
+} from './checklistActionErrors';
 
 /**
  * Admin-managed checklist templates, their items, and auto-apply matcher
@@ -71,6 +78,44 @@ function tenantScopedTable(
   tenant: string
 ): Knex.QueryBuilder {
   return tenantDb(conn, tenant).table(table);
+}
+
+/**
+ * Categories are board-scoped, so an apply rule can only match tickets when its
+ * category (and subcategory) sit on the rule's board. Reject combinations that
+ * could never fire instead of saving a silently dead rule.
+ */
+async function assertApplyRuleScopeIsConsistent(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  input: ChecklistTemplateApplyRuleInput
+): Promise<void> {
+  const boardId = input.board_id || null;
+  const categoryId = input.category_id || null;
+  const subcategoryId = input.subcategory_id || null;
+
+  if (subcategoryId && !categoryId) {
+    throw new Error(APPLY_RULE_SUBCATEGORY_REQUIRES_CATEGORY);
+  }
+  if (!categoryId) return;
+
+  const category = await tenantScopedTable(conn, 'categories', tenant)
+    .where({ category_id: categoryId })
+    .first('category_id', 'board_id', 'parent_category');
+  if (!category || category.parent_category) {
+    throw new Error(APPLY_RULE_CATEGORY_INVALID);
+  }
+  if (boardId && category.board_id && category.board_id !== boardId) {
+    throw new Error(APPLY_RULE_CATEGORY_BOARD_MISMATCH);
+  }
+
+  if (!subcategoryId) return;
+  const subcategory = await tenantScopedTable(conn, 'categories', tenant)
+    .where({ category_id: subcategoryId })
+    .first('category_id', 'parent_category');
+  if (!subcategory || subcategory.parent_category !== categoryId) {
+    throw new Error(APPLY_RULE_SUBCATEGORY_INVALID);
+  }
 }
 
 export const getChecklistTemplates = withAuth(
@@ -326,6 +371,7 @@ export const createChecklistTemplateApplyRule = withAuth(
           .where({ template_id: templateId })
           .first();
         if (!template) throw new Error('Checklist template not found');
+        await assertApplyRuleScopeIsConsistent(trx, tenant, input);
 
         const [row] = await tenantScopedTable(trx, 'checklist_template_apply_rules', tenant)
           .insert({
@@ -356,6 +402,7 @@ export const updateChecklistTemplateApplyRule = withAuth(
       await requireSettingsPermission(user);
 
       const { knex: db } = await createTenantKnex();
+      await assertApplyRuleScopeIsConsistent(db, tenant, input);
       const [row] = await tenantScopedTable(db, 'checklist_template_apply_rules', tenant)
         .where({ apply_rule_id: applyRuleId })
         .update({

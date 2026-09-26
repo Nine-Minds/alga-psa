@@ -143,6 +143,8 @@ export interface BucketPoolDraft {
 
 export interface ContractWizardData {
   client_id: string;
+  /** Billing profile the contract bills to; null falls back to the client default. */
+  billing_profile_id?: string | null;
   contract_name: string;
   start_date: string;
   end_date?: string;
@@ -200,6 +202,7 @@ export interface ContractWizardData {
 
 export const createDefaultContractWizardData = (): ContractWizardData => ({
   client_id: "",
+  billing_profile_id: null,
   contract_name: "",
   start_date: "",
   end_date: undefined,
@@ -536,6 +539,7 @@ export function ContractWizard({
         contract_name: wizardData.contract_name.trim(),
         description: wizardData.description?.trim() || undefined,
         client_id: wizardData.client_id || "",
+        billing_profile_id: wizardData.billing_profile_id ?? null,
         start_date: wizardData.start_date,
         renewal_mode: resolvedRenewalMode,
         notice_period_days: resolvedNoticePeriodDays,

@@ -8,15 +8,17 @@ import {
   type AttributeIssue,
 } from './assetTypeAttributes';
 
+// F310: asset_type must be one of the six built-ins or a tenant registry slug.
+// Returns the registry entry for both built-in and custom schemas.
 export async function resolveWritableAssetType(
   knex: Knex,
   tenant: string,
   assetType: string
 ): Promise<AssetTypeRegistryEntry | null> {
-  if (isBuiltinAssetTypeSlug(assetType)) return null;
   const entry = await getAssetTypeBySlug(knex, tenant, assetType);
-  if (!entry) throw invalidAssetTypeError(assetType);
-  return entry.is_builtin ? null : entry;
+  if (entry) return entry;
+  if (isBuiltinAssetTypeSlug(assetType)) return null;
+  throw invalidAssetTypeError(assetType);
 }
 
 export async function resolveAttributeSchemaForWrite(
@@ -25,7 +27,7 @@ export async function resolveAttributeSchemaForWrite(
   input: { nextAssetType?: string; storedAssetType?: string; attributesProvided: boolean }
 ): Promise<AssetTypeRegistryEntry | null> {
   if (input.nextAssetType !== undefined) return resolveWritableAssetType(knex, tenant, input.nextAssetType);
-  if (!input.attributesProvided || !input.storedAssetType || isBuiltinAssetTypeSlug(input.storedAssetType)) return null;
+  if (!input.attributesProvided || !input.storedAssetType) return null;
   return getAssetTypeBySlug(knex, tenant, input.storedAssetType);
 }
 

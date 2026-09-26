@@ -592,8 +592,6 @@ async function getExtensionData(knex: Knex, tenant: string, asset_id: string, as
     }
 }
 
-// F310: asset_type must be one of the six built-ins or a tenant registry slug.
-// Returns the registry entry when (and only when) the slug is a custom type.
 // Helper function to insert/update extension table data.
 // Trusts upstream Zod validation (createAssetSchema / updateAssetSchema in the action layer).
 async function upsertExtensionData(
