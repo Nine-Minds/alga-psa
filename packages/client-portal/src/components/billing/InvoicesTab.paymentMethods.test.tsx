@@ -89,7 +89,7 @@ describe('InvoicesTab Pay Now controls by invoice payment method', () => {
   it('retains Pay Now for Credit Card invoices in the menu and details', async () => {
     await renderInvoice('credit_card');
 
-    expect(screen.getAllByText('Pay Now')).toHaveLength(2);
+    await waitFor(() => expect(screen.getAllByText('Pay Now')).toHaveLength(2));
     expect(document.querySelector('#pay-invoice-INV-001')).toBeInTheDocument();
     expect(document.querySelector('#pay-invoice-INV-001-menu-item')).toBeInTheDocument();
   });
