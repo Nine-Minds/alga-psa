@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { classifyAutopayFailure, retryAt, shouldScheduleAutopay } from '../../../lib/payments/autopayPolicy';
-import { buildAutopayPaymentIntentRequest } from '../../../lib/payments/stripeAutopayParams';
+import { buildAutopayPaymentIntentRequest, mapStripeAutopayError } from '../../../lib/payments/stripeAutopayParams';
 
 const chargeRequest = {
   amount: 4550, currency: 'USD', customerId: 'cus_1', paymentMethodId: 'pm_1', invoiceId: 'inv_1', clientId: 'client_1',
@@ -18,6 +18,14 @@ describe('autopay policy and Stripe request construction', () => {
 
   it.each(['stolen_card', 'lost_card', 'fraudulent', 'expired_card'])('classifies %s as a hard decline', (declineCode) => {
     expect(classifyAutopayFailure(undefined, declineCode)).toMatchObject({ retryable: false, hardDecline: true });
+  });
+
+  it('maps Stripe card errors to failed and authentication_required to requires_action', () => {
+    expect(mapStripeAutopayError({ type: 'StripeCardError', code: 'card_declined', declineCode: 'do_not_honor', message: 'Declined', paymentIntentId: 'pi_1' }))
+      .toMatchObject({ status: 'failed', paymentIntentId: 'pi_1', failureCode: 'card_declined', declineCode: 'do_not_honor' });
+    expect(mapStripeAutopayError({ type: 'StripeInvalidRequestError', code: 'authentication_required' }))
+      .toMatchObject({ status: 'requires_action' });
+    expect(mapStripeAutopayError({ type: 'StripeAPIError', code: 'api_error' })).toBeNull();
   });
 
   it('stops retrying do_not_honor on the final retry and maps authentication to no retry', () => {

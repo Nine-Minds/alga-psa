@@ -504,6 +504,20 @@ export class PaymentService {
     return this.recordPaymentFromWebhook(event);
   }
 
+  async recordAutoPaySuccess(input: { invoiceId: string; amount: number; currency: string; paymentIntentId: string; attemptId: string }): Promise<WebhookProcessingResult> {
+    return this.recordPaymentFromWebhook({
+      eventId: `autopay:${input.attemptId}`,
+      eventType: 'payment_intent.succeeded',
+      provider: 'stripe',
+      payload: { autoPay: true, attemptId: input.attemptId },
+      invoiceId: input.invoiceId,
+      amount: input.amount,
+      currency: input.currency,
+      status: 'succeeded',
+      paymentIntentId: input.paymentIntentId,
+    });
+  }
+
   /**
    * Handles payment_intent.payment_failed event.
    */

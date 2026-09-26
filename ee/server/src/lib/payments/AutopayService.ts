@@ -2,7 +2,7 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
 import { getConnection } from 'server/src/lib/db/db';
-import { recordExternalPayment, computeBalanceDue } from '@alga-psa/billing/services/accountingSync/recordExternalPayment';
+import { computeBalanceDue } from '@alga-psa/billing/services/accountingSync/recordExternalPayment';
 import { PaymentService } from './PaymentService';
 import { createStripePaymentProvider } from './StripePaymentProvider';
 import { scheduleImmediateJob } from 'server/src/lib/jobs';
@@ -116,7 +116,8 @@ export class AutopayService {
         const invoice = await this.table('invoices').where({ invoice_id: attempt.invoice_id }).first();
         const payments = await this.table('invoice_payments').where({ invoice_id: attempt.invoice_id }).sum('amount as total').first();
         const balance = computeBalanceDue({ totalAmount: Number(invoice.total_amount), creditApplied: Number(invoice.credit_applied ?? 0), totalPaid: Number(payments?.total ?? 0) });
-        if (balance > 0) await recordExternalPayment(this.knex, this.tenantId, { invoiceId: attempt.invoice_id, amount: Math.min(balance, Number(intent.amount_received || intent.amount)), provider: 'stripe', referenceNumber: intent.id, currency: attempt.currency, notes: 'Auto-pay' });
+        if (balance > 0) await (await PaymentService.create(this.tenantId)).recordAutoPaySuccess({ invoiceId: attempt.invoice_id,
+          amount: Number(intent.amount_received || intent.amount), currency: attempt.currency, paymentIntentId: intent.id, attemptId: attempt.attempt_id });
         await this.table('invoice_autopay_attempts').where({ attempt_id: attempt.attempt_id }).update({ status: 'succeeded', payment_intent_id: intent.id, processed_at: this.knex.fn.now(), updated_at: this.knex.fn.now() });
       } else if (intent.status === 'requires_payment_method' || intent.status === 'canceled') {
         await this.failAttempt(attempt, { status: 'failed', paymentIntentId: intent.id, failureCode: intent.last_payment_error?.code,
@@ -151,8 +152,8 @@ export class AutopayService {
       clientId: invoice.client_id, billingProfileId: attempt.billing_profile_id, attemptId: attempt.attempt_id,
       idempotencyKey: attempt.idempotency_key, description: `Invoice ${invoice.invoice_number ?? attempt.invoice_id}` });
     if (result.status === 'succeeded') {
-      const landed = await recordExternalPayment(this.knex, this.tenantId, { invoiceId: attempt.invoice_id, amount, provider: 'stripe',
-        referenceNumber: result.paymentIntentId, currency: attempt.currency, notes: 'Auto-pay' });
+      const landed = await paymentService.recordAutoPaySuccess({ invoiceId: attempt.invoice_id, amount, currency: attempt.currency,
+        paymentIntentId: result.paymentIntentId, attemptId: attempt.attempt_id });
       if (!landed.success) throw new Error(landed.error ?? 'Unable to record auto-pay payment');
       await this.table('invoice_autopay_attempts').where({ attempt_id: attempt.attempt_id }).update({ status: 'succeeded', payment_intent_id: result.paymentIntentId, processed_at: this.knex.fn.now(), updated_at: this.knex.fn.now() });
       return;

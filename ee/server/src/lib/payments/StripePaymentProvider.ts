@@ -17,7 +17,7 @@ import { tenantDb } from '@alga-psa/db';
 import { getConnection } from 'server/src/lib/db/db';
 import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { buildAutopayPaymentIntentRequest } from './stripeAutopayParams';
+import { buildAutopayPaymentIntentRequest, mapStripeAutopayError } from './stripeAutopayParams';
 import {
   PaymentProvider,
   PaymentProviderCapabilities,
@@ -257,10 +257,9 @@ export class StripePaymentProvider implements PaymentProvider {
       const stripeError = error as Stripe.errors.StripeError;
       const rawError = stripeError.raw as any;
       const code = stripeError.code ?? rawError?.code;
-      if (stripeError.type === 'StripeCardError' || code === 'authentication_required') {
-        return { status: code === 'authentication_required' ? 'requires_action' : 'failed', paymentIntentId: stripeError.payment_intent?.id ?? '',
-          failureCode: code, declineCode: rawError?.decline_code, message: stripeError.message };
-      }
+      const mapped = mapStripeAutopayError({ type: stripeError.type, code, declineCode: rawError?.decline_code, message: stripeError.message,
+        paymentIntentId: stripeError.payment_intent?.id });
+      if (mapped) return mapped;
       throw error;
     }
   }
@@ -291,7 +290,7 @@ export class StripePaymentProvider implements PaymentProvider {
       // Verify the customer still exists in Stripe
       try {
         const customer = await stripe.customers.retrieve(existingMapping.external_customer_id);
-        if (!customer.deleted && customer.metadata?.tenant_id === this.tenantId && customer.metadata?.client_id === clientId &&
+        if (!('deleted' in customer) && customer.metadata?.tenant_id === this.tenantId && customer.metadata?.client_id === clientId &&
             (customer.metadata?.billing_profile_id === billingProfileId || (!customer.metadata?.billing_profile_id && existingMapping.billing_profile_id === billingProfileId))) {
           // Legacy default-profile customer mappings predate the profile metadata key.
           // The migrated local mapping is the authority for that one backfilled profile.
