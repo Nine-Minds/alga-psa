@@ -20,7 +20,8 @@
       "select": "Seleziona",
       "update": "Aggiorna",
       "uploadCsv": "Carica CSV",
-      "view": "Visualizza"
+      "view": "Visualizza",
+      "next": "Avanti"
     },
     "states": {
       "active": "Attivo",
@@ -197,6 +198,9 @@
     "opportunities": "Opportunità",
     "lifecycleStatus": "Ciclo di vita",
     "lifecycleStatusHelper": "I prospect sono disponibili nei flussi di vendita, ma sono nascosti per impostazione predefinita negli elenchi operativi dei clienti.",
+    "clientSince": "Cliente dal",
+    "clientSinceHelper": "Data di inizio della relazione. Se il campo resta vuoto, viene usata la data in cui questo cliente è stato aggiunto qui.",
+    "clientSincePlaceholder": "Data di aggiunta di questo cliente",
     "title": "Dettagli del cliente",
     "backToClients": "Torniamo ai Clienti",
     "openInNewTab": "Apri in una nuova scheda",
@@ -304,7 +308,13 @@
     "parentClientSelf": "Un cliente non può essere il proprio cliente principale",
     "parentClientPlaceholder": "Nessun cliente principale",
     "parentClientClear": "Cancella",
-    "parentClientLegacy": "Inserito in precedenza come testo: {{name}}"
+    "parentClientLegacy": "Inserito in precedenza come testo: {{name}}",
+    "mergeClient": "Unisci",
+    "mergeClientHelp": "Assorbire un altro cliente in questo come profilo di fatturazione",
+    "inboundDomainAutoCreateContacts": "Crea contatti per i nuovi mittenti",
+    "inboundDomainAutoCreateHelp": "I domini associati possono creare un contatto per un nuovo mittente attendibile.",
+    "inboundDomainAutoCreateUpdated": "Impostazione dei contatti mittente aggiornata.",
+    "inboundDomainAutoCreateUpdateFailed": "Impossibile aggiornare l’impostazione dei contatti mittente."
   },
   "clientCommandCenter": {
     "cards": {
@@ -1688,7 +1698,9 @@
     "archived": "«{{name}}» archiviato",
     "deleted": "«{{name}}» eliminato",
     "restored": "«{{name}}» ripristinato",
-    "settings": "Impostazioni di fatturazione"
+    "settings": "Impostazioni di fatturazione",
+    "mergeHelp": "Gestisci già una sede o un'entità come cliente a sé? Uniscila: diventerà un profilo di fatturazione qui, mantenendo fatture e storico.",
+    "mergeButton": "Unisci un cliente"
   },
   "portalBillingProfileAccess": {
     "label": "Segmenti di fatturazione",
@@ -1868,13 +1880,41 @@
       "otherClient": "Questo profilo di fatturazione appartiene a un altro cliente.",
       "archived": "Questo profilo di fatturazione è archiviato.",
       "selectionNotThisClient": "Uno dei profili di fatturazione selezionati non appartiene a questo cliente."
+    },
+    "clientMerge": {
+      "blocked": "Non è possibile completare questa unione.",
+      "signInRequired": "Devi aver effettuato l'accesso per unire i clienti.",
+      "sourceNotFound": "Il cliente da unire non esiste più.",
+      "targetNotFound": "Il cliente di destinazione non esiste più.",
+      "sameClient": "Un cliente non può essere unito a se stesso.",
+      "sourceAlreadyMerged": "Questo cliente è già stato unito a un altro cliente.",
+      "targetAlreadyMerged": "Il cliente di destinazione è stato a sua volta unito a un altro cliente. Unisci a quello.",
+      "sourceIsTenantDefault": "La scheda della tua organizzazione non può essere unita a un cliente.",
+      "parentLinkCycle": "Quel cliente risulta figlio di quello che stai unendo, quindi l'unione invertirebbe la gerarchia.",
+      "invalidContractCutover": "Una delle date di subentro è al di fuori della durata del relativo contratto."
+    },
+    "profileContacts": {
+      "duplicateManager": "Un profilo di fatturazione può avere un solo responsabile.",
+      "notThisClient": "Uno dei contatti selezionati non appartiene al cliente di questo profilo di fatturazione."
     }
   },
   "clientAutopay": {
     "setupLinkTitle": "Link di configurazione della carta",
     "setupLinkFallback": "Copia questo link per condividerlo con il tuo cliente.",
     "unknownUser": "Utente sconosciuto",
-    "changeCard": "Usa questa carta per il pagamento automatico"
+    "changeCard": "Usa questa carta per il pagamento automatico",
+    "title": "Pagamento automatico · {{profile}}",
+    "active": "Attivo",
+    "authorization": "Autorizzato da {{user}} il {{date}} ({{source}})",
+    "attestation": "Il cliente ha autorizzato addebiti ricorrenti",
+    "enable": "Attiva il pagamento automatico",
+    "disable": "Disattiva il pagamento automatico",
+    "copySetupLink": "Copia link di configurazione",
+    "enabled": "Pagamento automatico attivato",
+    "disabled": "Pagamento automatico disattivato",
+    "linkCopied": "Link di configurazione della carta copiato",
+    "recentAttempts": "Tentativi recenti",
+    "noAttempts": "Ancora nessun tentativo"
   },
   "mergeClients": {
     "title": "Unisci un cliente a questo",

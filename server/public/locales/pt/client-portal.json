@@ -478,13 +478,13 @@
       },
       "methodUpdateError": "Não foi possível atualizar este método de pagamento. Tente novamente.",
       "cardSetup": {
-        "success": "Cartão guardado com segurança.",
-        "error": "Não foi possível guardar o cartão. Tente novamente."
+        "success": "Cartão salvo com segurança.",
+        "error": "Não foi possível salvar o cartão. Tente novamente."
       },
       "autopay": {
         "title": "Métodos de pagamento e pagamento automático",
-        "loading": "A carregar métodos de pagamento…",
-        "profileUnavailable": "Os métodos de pagamento e as definições de pagamento automático não estão disponíveis para este perfil de faturação.",
+        "loading": "Carregando métodos de pagamento…",
+        "profileUnavailable": "Os métodos de pagamento e as configurações de pagamento automático não estão disponíveis para este perfil de faturamento.",
         "cardFallback": "Cartão",
         "enrolled": "O pagamento automático está ativado.",
         "disable": "Desativar o pagamento automático",
@@ -494,10 +494,10 @@
         "changeCard": "Usar este cartão para o pagamento automático"
       },
       "publicCardSetup": {
-        "saved": "Cartão guardado",
-        "failed": "Não foi possível guardar o seu cartão",
+        "saved": "Cartão salvo",
+        "failed": "Não foi possível salvar o seu cartão",
         "savedDescription": "O seu cartão está pronto para pagamentos futuros.",
-        "failedDescription": "Não foi possível verificar a configuração. Peça um novo link ao seu fornecedor de faturação."
+        "failedDescription": "Não foi possível verificar a configuração. Peça um novo link ao seu fornecedor de faturamento."
       }
     }
   },

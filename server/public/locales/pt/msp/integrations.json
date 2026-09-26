@@ -3716,7 +3716,8 @@
         "failedTitle": "Falha na configuração do webhook",
         "failedBody": "Falha na configuração automática do webhook. Clique em tentar novamente para tentar a configuração novamente.",
         "configuring": "Configurando...",
-        "retry": "Tentar novamente a configuração"
+        "retry": "Tentar novamente a configuração",
+        "eventsOutOfDate": "Os eventos do webhook estão desatualizados. Tente configurar o webhook novamente para atualizá-los."
       },
       "disconnectDialog": {
         "title": "Desconectar faixa",

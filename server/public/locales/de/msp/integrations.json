@@ -3716,7 +3716,8 @@
         "failedTitle": "Webhook-Konfiguration fehlgeschlagen",
         "failedBody": "Die automatische Webhook-Konfiguration ist fehlgeschlagen. Klicken Sie auf Erneut versuchen, um die Konfiguration erneut zu versuchen.",
         "configuring": "Wird konfiguriert...",
-        "retry": "Konfiguration erneut versuchen"
+        "retry": "Konfiguration erneut versuchen",
+        "eventsOutOfDate": "Die Webhook-Ereignisse sind veraltet. Wiederholen Sie die Webhook-Konfiguration, um sie zu aktualisieren."
       },
       "disconnectDialog": {
         "title": "Stripe trennen",

@@ -1310,7 +1310,19 @@
     "setupLinkTitle": "Card setup link",
     "setupLinkFallback": "Copy this link to share it with your client.",
     "unknownUser": "Unknown user",
-    "changeCard": "Use this card for auto-pay"
+    "changeCard": "Use this card for auto-pay",
+    "title": "Auto-pay · {{profile}}",
+    "active": "Enabled",
+    "authorization": "Authorized by {{user}} on {{date}} ({{source}})",
+    "attestation": "Client has authorized recurring charges",
+    "enable": "Enable auto-pay",
+    "disable": "Disable auto-pay",
+    "copySetupLink": "Copy setup link",
+    "enabled": "Auto-pay enabled",
+    "disabled": "Auto-pay disabled",
+    "linkCopied": "Card setup link copied",
+    "recentAttempts": "Recent attempts",
+    "noAttempts": "No attempts yet"
   },
   "actions": {
     "cancel": "Cancel",

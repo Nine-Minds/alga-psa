@@ -3739,7 +3739,8 @@
         "failedTitle": "Webhook configuration failed",
         "failedBody": "Automatic webhook configuration failed. Click retry to attempt configuration again.",
         "configuring": "Configuring...",
-        "retry": "Retry Configuration"
+        "retry": "Retry Configuration",
+        "eventsOutOfDate": "Webhook events are out of date. Retry webhook configuration to update them."
       },
       "disconnectDialog": {
         "title": "Disconnect Stripe",

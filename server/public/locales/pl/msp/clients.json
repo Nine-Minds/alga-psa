@@ -20,7 +20,8 @@
       "select": "Wybierz",
       "update": "Zaktualizuj",
       "uploadCsv": "Prześlij CSV",
-      "view": "Wyświetl"
+      "view": "Wyświetl",
+      "next": "Dalej"
     },
     "states": {
       "active": "Aktywny",
@@ -223,6 +224,9 @@
     "opportunities": "Szanse sprzedażowe",
     "lifecycleStatus": "Cykl życia",
     "lifecycleStatusHelper": "Potencjalni klienci są dostępni w procesach sprzedażowych, ale domyślnie ukryci na operacyjnych listach klientów.",
+    "clientSince": "Klient od",
+    "clientSinceHelper": "Data rozpoczęcia współpracy. Jeśli pole pozostanie puste, używana jest data dodania tego klienta.",
+    "clientSincePlaceholder": "Data dodania tego klienta",
     "title": "Dane Klienta",
     "backToClients": "Powrót do Klientów",
     "openInNewTab": "Otwórz w nowej karcie",
@@ -334,7 +338,13 @@
     "parentClientSelf": "Klient nie może być swoim własnym klientem nadrzędnym",
     "parentClientPlaceholder": "Brak klienta nadrzędnego",
     "parentClientClear": "Wyczyść",
-    "parentClientLegacy": "Wcześniej wprowadzono jako tekst: {{name}}"
+    "parentClientLegacy": "Wcześniej wprowadzono jako tekst: {{name}}",
+    "mergeClient": "Scal",
+    "mergeClientHelp": "Włącz innego klienta do tego klienta jako profil rozliczeniowy",
+    "inboundDomainAutoCreateContacts": "Twórz kontakty dla nowych nadawców",
+    "inboundDomainAutoCreateHelp": "Przypisane domeny mogą tworzyć kontakt dla zaufanego nowego nadawcy.",
+    "inboundDomainAutoCreateUpdated": "Zaktualizowano ustawienie kontaktów nadawców.",
+    "inboundDomainAutoCreateUpdateFailed": "Nie udało się zaktualizować ustawienia kontaktów nadawców."
   },
   "clientCommandCenter": {
     "cards": {
@@ -1740,7 +1750,9 @@
     "archived": "Zarchiwizowano „{{name}}”",
     "deleted": "Usunięto „{{name}}”",
     "restored": "Przywrócono „{{name}}”",
-    "settings": "Ustawienia rozliczeń"
+    "settings": "Ustawienia rozliczeń",
+    "mergeHelp": "Prowadzisz oddział lub podmiot jako osobnego klienta? Scal go — stanie się tutaj profilem rozliczeniowym i zachowa swoje faktury oraz historię.",
+    "mergeButton": "Scal klienta"
   },
   "portalBillingProfileAccess": {
     "label": "Segmenty rozliczeniowe",
@@ -1920,13 +1932,41 @@
       "otherClient": "Ten profil rozliczeniowy należy do innego klienta.",
       "archived": "Ten profil rozliczeniowy jest zarchiwizowany.",
       "selectionNotThisClient": "Jeden z wybranych profili rozliczeniowych nie należy do tego klienta."
+    },
+    "clientMerge": {
+      "blocked": "Nie można ukończyć tego scalenia.",
+      "signInRequired": "Aby scalać klientów, musisz być zalogowany.",
+      "sourceNotFound": "Scalany klient już nie istnieje.",
+      "targetNotFound": "Klient docelowy już nie istnieje.",
+      "sameClient": "Klienta nie można scalić z nim samym.",
+      "sourceAlreadyMerged": "Ten klient został już scalony z innym klientem.",
+      "targetAlreadyMerged": "Klient docelowy sam został scalony z innym klientem. Scal z tamtym klientem.",
+      "sourceIsTenantDefault": "Rekordu własnej organizacji nie można scalić z klientem.",
+      "parentLinkCycle": "Ten klient jest zapisany jako podrzędny wobec scalanego, więc scalenie odwróciłoby hierarchię.",
+      "invalidContractCutover": "Jedna z dat granicznych wykracza poza okres obowiązywania swojej umowy."
+    },
+    "profileContacts": {
+      "duplicateManager": "Profil rozliczeniowy może mieć tylko jednego kierownika.",
+      "notThisClient": "Jeden z wybranych kontaktów nie należy do klienta tego profilu rozliczeniowego."
     }
   },
   "clientAutopay": {
     "setupLinkTitle": "Link do konfiguracji karty",
     "setupLinkFallback": "Skopiuj ten link, aby udostępnić go klientowi.",
     "unknownUser": "Nieznany użytkownik",
-    "changeCard": "Użyj tej karty do płatności automatycznej"
+    "changeCard": "Użyj tej karty do płatności automatycznej",
+    "title": "Płatność automatyczna · {{profile}}",
+    "active": "Włączona",
+    "authorization": "Autoryzowane przez {{user}} dnia {{date}} ({{source}})",
+    "attestation": "Klient autoryzował cykliczne obciążenia",
+    "enable": "Włącz płatność automatyczną",
+    "disable": "Wyłącz płatność automatyczną",
+    "copySetupLink": "Kopiuj link konfiguracji",
+    "enabled": "Płatność automatyczna włączona",
+    "disabled": "Płatność automatyczna wyłączona",
+    "linkCopied": "Skopiowano link do konfiguracji karty",
+    "recentAttempts": "Ostatnie próby",
+    "noAttempts": "Brak prób"
   },
   "mergeClients": {
     "title": "Scal klienta z tym klientem",

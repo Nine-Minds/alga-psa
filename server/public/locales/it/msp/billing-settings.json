@@ -1446,6 +1446,15 @@
       "actions": {
         "save": "Salva impostazioni",
         "saving": "Salvataggio in corso..."
+      },
+      "autopay": {
+        "label": "Consenti il pagamento automatico",
+        "description": "Consenti ai profili di fatturazione di autorizzare pagamenti automatici con carta.",
+        "chargeTiming": "Momento dell’addebito",
+        "onFinalize": "Alla finalizzazione della fattura",
+        "onDueDate": "Alla data di scadenza",
+        "retryDays": "Intervalli tra i tentativi (giorni)",
+        "consentText": "Testo di consenso al pagamento automatico"
       }
     },
     "stripe": {

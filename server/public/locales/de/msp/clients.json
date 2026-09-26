@@ -20,7 +20,8 @@
       "select": "Auswählen",
       "update": "Aktualisieren",
       "uploadCsv": "CSV hochladen",
-      "view": "Anzeigen"
+      "view": "Anzeigen",
+      "next": "Weiter"
     },
     "states": {
       "active": "Aktiv",
@@ -197,6 +198,9 @@
     "opportunities": "Verkaufschancen",
     "lifecycleStatus": "Lebenszyklus",
     "lifecycleStatusHelper": "Interessenten stehen Vertriebsworkflows zur Verfügung, werden aber standardmäßig in operativen Kundenlisten ausgeblendet.",
+    "clientSince": "Kunde seit",
+    "clientSinceHelper": "Beginn der Geschäftsbeziehung. Bleibt das Feld leer, wird das Datum verwendet, an dem dieser Kunde hier angelegt wurde.",
+    "clientSincePlaceholder": "Anlagedatum dieses Kunden",
     "title": "Kundendaten",
     "backToClients": "Zurück zu Kunden",
     "openInNewTab": "In neuem Tab öffnen",
@@ -304,7 +308,13 @@
     "parentClientSelf": "Ein Kunde kann nicht sein eigener übergeordneter Kunde sein",
     "parentClientPlaceholder": "Kein übergeordneter Kunde",
     "parentClientClear": "Löschen",
-    "parentClientLegacy": "Zuvor als Text eingegeben: {{name}}"
+    "parentClientLegacy": "Zuvor als Text eingegeben: {{name}}",
+    "mergeClient": "Zusammenführen",
+    "mergeClientHelp": "Einen anderen Kunden als Abrechnungsprofil in diesen Kunden übernehmen",
+    "inboundDomainAutoCreateContacts": "Kontakte für neue Absender erstellen",
+    "inboundDomainAutoCreateHelp": "Zugeordnete Domains können für vertrauenswürdige neue Absender einen Kontakt erstellen.",
+    "inboundDomainAutoCreateUpdated": "Absendereinstellung aktualisiert.",
+    "inboundDomainAutoCreateUpdateFailed": "Absendereinstellung konnte nicht aktualisiert werden."
   },
   "clientCommandCenter": {
     "cards": {
@@ -1688,7 +1698,9 @@
     "archived": "„{{name}}“ archiviert",
     "deleted": "„{{name}}“ gelöscht",
     "restored": "„{{name}}“ wiederhergestellt",
-    "settings": "Abrechnungseinstellungen"
+    "settings": "Abrechnungseinstellungen",
+    "mergeHelp": "Führen Sie einen Standort oder Rechtsträger bisher als eigenen Kunden? Führen Sie ihn zusammen – er wird hier zu einem Abrechnungsprofil und behält seine Rechnungen und seine Historie.",
+    "mergeButton": "Kunden zusammenführen"
   },
   "portalBillingProfileAccess": {
     "label": "Abrechnungssegmente",
@@ -1868,13 +1880,41 @@
       "otherClient": "Dieses Abrechnungsprofil gehört zu einem anderen Kunden.",
       "archived": "Dieses Abrechnungsprofil ist archiviert.",
       "selectionNotThisClient": "Eines der ausgewählten Abrechnungsprofile gehört nicht zu diesem Kunden."
+    },
+    "clientMerge": {
+      "blocked": "Diese Zusammenführung kann nicht abgeschlossen werden.",
+      "signInRequired": "Sie müssen angemeldet sein, um Kunden zusammenzuführen.",
+      "sourceNotFound": "Der zusammenzuführende Kunde existiert nicht mehr.",
+      "targetNotFound": "Der Zielkunde existiert nicht mehr.",
+      "sameClient": "Ein Kunde kann nicht mit sich selbst zusammengeführt werden.",
+      "sourceAlreadyMerged": "Dieser Kunde wurde bereits in einen anderen Kunden zusammengeführt.",
+      "targetAlreadyMerged": "Der Zielkunde wurde selbst in einen anderen Kunden zusammengeführt. Führen Sie stattdessen dorthin zusammen.",
+      "sourceIsTenantDefault": "Der Datensatz Ihrer eigenen Organisation kann nicht in einen Kunden zusammengeführt werden.",
+      "parentLinkCycle": "Dieser Kunde ist als untergeordneter Kunde des zusammenzuführenden Kunden hinterlegt; die Zusammenführung würde die Hierarchie umkehren.",
+      "invalidContractCutover": "Einer der Stichtage liegt außerhalb der Laufzeit seines Vertrags."
+    },
+    "profileContacts": {
+      "duplicateManager": "Ein Abrechnungsprofil kann nur eine Leitung haben.",
+      "notThisClient": "Einer der ausgewählten Kontakte gehört nicht zum Kunden dieses Abrechnungsprofils."
     }
   },
   "clientAutopay": {
     "setupLinkTitle": "Link zur Karteneinrichtung",
     "setupLinkFallback": "Kopieren Sie diesen Link, um ihn mit Ihrem Kunden zu teilen.",
     "unknownUser": "Unbekannter Benutzer",
-    "changeCard": "Diese Karte für die automatische Zahlung verwenden"
+    "changeCard": "Diese Karte für die automatische Zahlung verwenden",
+    "title": "Automatische Zahlung · {{profile}}",
+    "active": "Aktiviert",
+    "authorization": "Autorisiert von {{user}} am {{date}} ({{source}})",
+    "attestation": "Der Kunde hat wiederkehrende Belastungen autorisiert",
+    "enable": "Automatische Zahlung aktivieren",
+    "disable": "Automatische Zahlung deaktivieren",
+    "copySetupLink": "Einrichtungslink kopieren",
+    "enabled": "Automatische Zahlung aktiviert",
+    "disabled": "Automatische Zahlung deaktiviert",
+    "linkCopied": "Link zur Karteneinrichtung kopiert",
+    "recentAttempts": "Letzte Versuche",
+    "noAttempts": "Noch keine Versuche"
   },
   "mergeClients": {
     "title": "Einen Kunden in diesen Kunden zusammenführen",

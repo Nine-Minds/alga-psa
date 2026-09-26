@@ -20,7 +20,8 @@
       "select": "Selecione",
       "update": "Atualizar",
       "uploadCsv": "Carregar CSV",
-      "view": "Visualizar"
+      "view": "Visualizar",
+      "next": "Avançar"
     },
     "states": {
       "active": "Ativo",
@@ -197,6 +198,9 @@
     "opportunities": "Oportunidades",
     "lifecycleStatus": "Ciclo de vida",
     "lifecycleStatusHelper": "Os clientes potenciais ficam disponíveis nos fluxos de vendas, mas são ocultados por padrão nas listas operacionais de clientes.",
+    "clientSince": "Cliente desde",
+    "clientSinceHelper": "Data de início do relacionamento. Se o campo ficar vazio, é usada a data em que este cliente foi adicionado aqui.",
+    "clientSincePlaceholder": "Data em que este cliente foi adicionado",
     "title": "Detalhes do cliente",
     "backToClients": "Voltar para Clientes",
     "openInNewTab": "Abrir em nova aba",
@@ -304,7 +308,13 @@
     "parentClientSelf": "Um cliente não pode ser seu próprio cliente principal",
     "parentClientPlaceholder": "Sem cliente principal",
     "parentClientClear": "Limpar",
-    "parentClientLegacy": "Inserido anteriormente como texto: {{name}}"
+    "parentClientLegacy": "Inserido anteriormente como texto: {{name}}",
+    "mergeClient": "Mesclar",
+    "mergeClientHelp": "Absorver outro cliente neste como perfil de faturamento",
+    "inboundDomainAutoCreateContacts": "Criar contatos para novos remetentes",
+    "inboundDomainAutoCreateHelp": "Os domínios mapeados podem, opcionalmente, criar um contato para um novo remetente confiável. Os domínios precisam ser únicos entre os clientes.",
+    "inboundDomainAutoCreateUpdated": "A configuração de contatos do remetente foi atualizada.",
+    "inboundDomainAutoCreateUpdateFailed": "Não foi possível atualizar a configuração de contatos do remetente."
   },
   "clientCommandCenter": {
     "cards": {
@@ -1688,7 +1698,9 @@
     "archived": "«{{name}}» arquivado",
     "deleted": "«{{name}}» eliminado",
     "restored": "«{{name}}» restaurado",
-    "settings": "Configurações de faturamento"
+    "settings": "Configurações de faturamento",
+    "mergeHelp": "Você mantém uma unidade ou entidade como cliente separado? Mescle-a: ela se torna um perfil de faturamento aqui, preservando faturas e histórico.",
+    "mergeButton": "Mesclar um cliente"
   },
   "portalBillingProfileAccess": {
     "label": "Segmentos de faturamento",
@@ -1868,13 +1880,41 @@
       "otherClient": "Esse perfil de faturamento pertence a outro cliente.",
       "archived": "Esse perfil de faturamento está arquivado.",
       "selectionNotThisClient": "Um dos perfis de faturamento selecionados não pertence a este cliente."
+    },
+    "clientMerge": {
+      "blocked": "Não é possível concluir esta mesclagem.",
+      "signInRequired": "Você precisa estar conectado para mesclar clientes.",
+      "sourceNotFound": "O cliente que seria mesclado não existe mais.",
+      "targetNotFound": "O cliente de destino não existe mais.",
+      "sameClient": "Um cliente não pode ser mesclado consigo mesmo.",
+      "sourceAlreadyMerged": "Este cliente já foi mesclado em outro cliente.",
+      "targetAlreadyMerged": "O cliente de destino foi ele próprio mesclado em outro cliente. Mescle naquele.",
+      "sourceIsTenantDefault": "O registro da sua própria organização não pode ser mesclado em um cliente.",
+      "parentLinkCycle": "Esse cliente está registrado como filho do que você está mesclando, então a mesclagem inverteria a hierarquia.",
+      "invalidContractCutover": "Uma das datas de virada está fora da vigência do contrato correspondente."
+    },
+    "profileContacts": {
+      "duplicateManager": "Um perfil de faturamento só pode ter um responsável.",
+      "notThisClient": "Um dos contatos selecionados não pertence ao cliente deste perfil de faturamento."
     }
   },
   "clientAutopay": {
     "setupLinkTitle": "Link de configuração do cartão",
-    "setupLinkFallback": "Copie este link para o partilhar com o seu cliente.",
-    "unknownUser": "Utilizador desconhecido",
-    "changeCard": "Usar este cartão para o pagamento automático"
+    "setupLinkFallback": "Copie este link para compartilhá-lo com o seu cliente.",
+    "unknownUser": "Usuário desconhecido",
+    "changeCard": "Usar este cartão para o pagamento automático",
+    "title": "Pagamento automático · {{profile}}",
+    "active": "Ativado",
+    "authorization": "Autorizado por {{user}} em {{date}} ({{source}})",
+    "attestation": "O cliente autorizou cobranças recorrentes",
+    "enable": "Ativar o pagamento automático",
+    "disable": "Desativar o pagamento automático",
+    "copySetupLink": "Copiar link de configuração",
+    "enabled": "Pagamento automático ativado",
+    "disabled": "Pagamento automático desativado",
+    "linkCopied": "Link de configuração do cartão copiado",
+    "recentAttempts": "Tentativas recentes",
+    "noAttempts": "Nenhuma tentativa ainda"
   },
   "mergeClients": {
     "title": "Mesclar um cliente neste",
