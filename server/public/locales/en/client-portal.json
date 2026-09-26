@@ -1,4 +1,10 @@
 {
+  "tabs": {
+    "paymentMethods": "Payment methods & auto-pay"
+  },
+  "invoice": {
+    "autopayWillCharge": "Will be charged on {{date}} to {{brand}} •••• {{last4}}"
+  },
   "nav": {
     "dashboard": "Dashboard",
     "tickets": "Tickets",
@@ -436,6 +442,7 @@
       "addPaymentError": "Failed to add payment method",
       "removePaymentError": "Failed to remove payment method",
       "setDefaultError": "Failed to set default payment method",
+      "methodUpdateError": "Could not update this payment method. Please try again.",
       "loadingBillingInfo": "Loading billing information...",
       "overviewTitle": "Billing Overview",
       "paymentMethodsTitle": "Payment Methods",
@@ -454,6 +461,27 @@
         "addPaymentMethod": "Add Payment Method",
         "adding": "Adding...",
         "view": "View"
+      },
+      "cardSetup": {
+        "success": "Card saved securely.",
+        "error": "We could not save the card. Please try again."
+      },
+      "autopay": {
+        "title": "Payment methods & auto-pay",
+        "loading": "Loading payment methods…",
+        "profileUnavailable": "Payment method and auto-pay settings are unavailable for this billing profile.",
+        "cardFallback": "Card",
+        "enrolled": "Auto-pay is enabled.",
+        "disable": "Turn off auto-pay",
+        "consent": "I authorize recurring charges to this card for finalized invoices.",
+        "enable": "Enable auto-pay",
+        "noCards": "Add a card to enable auto-pay."
+      },
+      "publicCardSetup": {
+        "saved": "Card saved",
+        "failed": "We could not save your card",
+        "savedDescription": "Your card is ready for future payments.",
+        "failedDescription": "The setup could not be verified. Please ask your billing provider for a new link."
       },
       "fields": {
         "cardNumber": "Card Number",

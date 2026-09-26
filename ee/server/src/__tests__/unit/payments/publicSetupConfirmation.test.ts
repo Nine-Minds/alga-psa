@@ -19,7 +19,12 @@ describe('public Stripe setup confirmation', () => {
   });
 
   it('does not put an MSP return path into a success URL', () => {
-    expect(buildSetupSuccessUrl('https://example.test', { tenantId: 'tenant-a', clientId: 'client', billingProfileId: 'profile' }, false, '/msp/clients/c1')).not.toContain('/msp');
+    const safeReturnUrl = buildSetupSuccessUrl('https://example.test', { tenantId: 'tenant-a', clientId: 'client', billingProfileId: 'profile' }, false, '/msp/clients/c1');
+    expect(safeReturnUrl).not.toContain('/msp');
+    process.env.NEXTAUTH_SECRET = 'unit-test-secret';
+    const publicUrl = buildSetupSuccessUrl('https://example.test', { tenantId: 'tenant-a', clientId: 'client', billingProfileId: 'profile' }, true, '/msp/clients/c1');
+    expect(new URL(publicUrl).pathname).toBe('/payment-methods/setup-complete');
+    expect(publicUrl).not.toContain('tenant-a');
   });
 
   it('fails before persistence when the session client or billing profile does not match the opaque context', async () => {

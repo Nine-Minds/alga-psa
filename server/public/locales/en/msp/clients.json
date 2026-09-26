@@ -1296,6 +1296,11 @@
     "loadErrorTitle": "Notes failed to load",
     "loadErrorDescription": "Could not load notes. Please try again."
   },
+  "clientAutopay": {
+    "setupLinkTitle": "Card setup link",
+    "setupLinkFallback": "Copy this link to share it with your client.",
+    "unknownUser": "Unknown user"
+  },
   "actions": {
     "cancel": "Cancel",
     "delete": "Delete",

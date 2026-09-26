@@ -34,7 +34,7 @@ export function resolvePublicSetupTenantContext(token: string): PublicSetupConte
 export function buildSetupSuccessUrl(baseUrl: string, context: PublicSetupContext, publicConfirmation: boolean, returnTo: string): string {
   if (publicConfirmation) {
     const token = createPublicSetupTenantContext(context);
-    return `${baseUrl}/client-portal/billing/payment-methods/setup-complete-public?tenantContext=${encodeURIComponent(token)}&session_id={CHECKOUT_SESSION_ID}`;
+    return `${baseUrl}/payment-methods/setup-complete?tenantContext=${encodeURIComponent(token)}&session_id={CHECKOUT_SESSION_ID}`;
   }
   const safeReturnTo = returnTo.startsWith('/') && !returnTo.startsWith('//') && !returnTo.startsWith('/msp/') ? returnTo : '/client-portal/billing';
   return `${baseUrl}/client-portal/billing/payment-methods/setup-complete?session_id={CHECKOUT_SESSION_ID}&returnTo=${encodeURIComponent(safeReturnTo)}`;

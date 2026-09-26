@@ -43,6 +43,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
   formatDate
 }) => {
   const { t } = useTranslation('features/billing');
+  const { t: tPortal } = useTranslation('client-portal');
   const { t: tCommon } = useTranslation('common');
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -92,8 +93,13 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
           return;
         }
         setInvoices(fetchedInvoices);
-        const contexts = await getInvoiceAutopayContexts(fetchedInvoices.map((invoice) => invoice.invoice_id));
-        setAutopayContexts(contexts);
+        try {
+          const contexts = await getInvoiceAutopayContexts(fetchedInvoices.map((invoice) => invoice.invoice_id));
+          setAutopayContexts(contexts);
+        } catch (contextError) {
+          console.warn('Unable to load invoice auto-pay context:', contextError);
+          setAutopayContexts({});
+        }
       } catch (err) {
         console.error('Error loading invoices:', err);
         setError(t('failedToLoad'));
@@ -207,7 +213,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
       dataIndex: 'invoice_number',
       render: (value, record) => (
         <span className="inline-flex items-center gap-2">
-          <span>{value}{autopayContexts[record.invoice_id] && <span className="block text-xs text-muted-foreground">{t('invoice.autopayWillCharge', { defaultValue: 'Will be charged on {{date}} to {{brand}} •••• {{last4}}', date: formatDate(autopayContexts[record.invoice_id].scheduledFor), brand: autopayContexts[record.invoice_id].brand ?? 'Card', last4: autopayContexts[record.invoice_id].last4 })}</span>}</span>
+          <span>{value}{autopayContexts[record.invoice_id] && <span className="block text-xs text-muted-foreground">{tPortal('invoice.autopayWillCharge', { date: formatDate(autopayContexts[record.invoice_id].scheduledFor), brand: autopayContexts[record.invoice_id].brand ?? tPortal('account.billing.autopay.cardFallback'), last4: autopayContexts[record.invoice_id].last4 })}</span>}</span>
           {isCreditNote(record) && (
             <Badge variant="secondary">{t('invoice.creditNote', 'Credit Note')}</Badge>
           )}

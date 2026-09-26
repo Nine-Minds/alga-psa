@@ -11,7 +11,8 @@ import {
   getClientInvoices,
   getClientQuotes,
   getClientExternalCreditNotice,
-  getCurrentUsage
+  getCurrentUsage,
+  getClientPortalAutopayProfile
 } from '@alga-psa/client-portal/actions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import {
@@ -130,6 +131,7 @@ const isBillingActionError = (
 export default function BillingOverview() {
   const { money } = useCurrencyFormat();
   const { t } = useTranslation('features/billing');
+  const { t: tPortal } = useTranslation('client-portal');
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
 
@@ -175,6 +177,8 @@ export default function BillingOverview() {
   // Segment count drives the D6 invisibility rule on the portal (F072/F077): a
   // client with one billing profile sees exactly the portal it saw before.
   const [segmentCount, setSegmentCount] = useState(0);
+  const [autopayEnabled, setAutopayEnabled] = useState(false);
+  const [autopaySettingsLoaded, setAutopaySettingsLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [billingError, setBillingError] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState({
@@ -193,13 +197,14 @@ export default function BillingOverview() {
 
   // Update active tab when URL parameter changes
   useEffect(() => {
-    const targetTab = searchParams?.get('cardSetup') ? 'payment-methods' : tabParam && (BILLING_TAB_IDS as readonly string[]).includes(tabParam)
-      ? tabParam
-      : DEFAULT_BILLING_TAB;
+    const requestsAutopayTab = searchParams?.get('cardSetup') || tabParam === 'payment-methods';
+    const targetTab = requestsAutopayTab
+      ? (!autopaySettingsLoaded || autopayEnabled ? 'payment-methods' : DEFAULT_BILLING_TAB)
+      : tabParam && (BILLING_TAB_IDS as readonly string[]).includes(tabParam) ? tabParam : DEFAULT_BILLING_TAB;
     if (targetTab !== currentTab) {
       setCurrentTab(targetTab);
     }
-  }, [tabParam, currentTab, searchParams]);
+  }, [tabParam, currentTab, searchParams, autopayEnabled, autopaySettingsLoaded]);
 
   // Credit held in the MSP's accounting system: invoices can show open here
   // until the bookkeeper applies that credit, so tell the customer.
@@ -282,8 +287,20 @@ export default function BillingOverview() {
           if (isMounted) {
             setSegmentCount(Array.isArray(segments) ? segments.length : 0);
           }
+          const firstProfile = Array.isArray(segments) ? segments[0] : undefined;
+          if (firstProfile) {
+            const autopayProfile = await getClientPortalAutopayProfile(firstProfile.billingProfileId);
+            if (isMounted) setAutopayEnabled(!isBillingActionError(autopayProfile) && autopayProfile?.enabled === true);
+          } else if (isMounted) {
+            setAutopayEnabled(false);
+          }
         } catch {
-          if (isMounted) setSegmentCount(0);
+          if (isMounted) {
+            setSegmentCount(0);
+            setAutopayEnabled(false);
+          }
+        } finally {
+          if (isMounted) setAutopaySettingsLoaded(true);
         }
         
         // Load enhanced bucket usage data
@@ -504,11 +521,13 @@ export default function BillingOverview() {
       }
     ];
 
-    tabsArray.push({
-      id: 'payment-methods',
-      label: t('tabs.paymentMethods', { defaultValue: 'Payment methods & auto-pay' }),
-      content: <div id="payment-methods-tab"><PaymentMethodsTab /></div>,
-    });
+    if (autopayEnabled) {
+      tabsArray.push({
+        id: 'payment-methods',
+        label: tPortal('tabs.paymentMethods'),
+        content: <div id="payment-methods-tab"><PaymentMethodsTab /></div>,
+      });
+    }
 
     // Add invoice and quote tabs only if user has invoice access.
     if (hasInvoiceAccess) {
@@ -600,6 +619,7 @@ export default function BillingOverview() {
     isBucketHistoryLoading,
     isLoading,
     hasInvoiceAccess,
+    autopayEnabled,
     segmentCount,
     currentPage,
     hoursByService,
@@ -614,7 +634,8 @@ export default function BillingOverview() {
     handleViewAllInvoices,
     handleViewAllQuotes,
     quotes,
-    t
+    t,
+    tPortal
   ]);
 
   // Helper function to update URL with tab parameter
