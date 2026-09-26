@@ -11,8 +11,10 @@
  * - T046: Contract-linked documents do not leak through stale shared assignments
  */
 import { beforeAll, afterAll, afterEach, describe, expect, it, vi } from 'vitest';
+import { execFileSync } from 'node:child_process';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import sharp from 'sharp';
 import { tenantDb } from '@alga-psa/db';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
@@ -123,6 +125,10 @@ function expectUsablePdf(bytes: Buffer): void {
   expect(pdf).toMatch(/\/Type \/Pages\b/);
   expect(pdf).toMatch(/\/Type \/Page\b/);
   expect(bytes.length).toBeGreaterThan(500);
+}
+
+function extractPdfText(bytes: Buffer): string {
+  return execFileSync('pdftotext', ['-layout', '-', '-'], { input: bytes, encoding: 'utf8' });
 }
 
 async function cleanupCreatedRecords(db: Knex, tenantId: string, ids: CreatedIds): Promise<void> {
@@ -938,7 +944,11 @@ describe('Client Portal Documents Integration Tests', () => {
       });
 
       const validPdfBytes = createPdfFixture('Quarterly Report');
-      const validPngBytes = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l9sAAAAASUVORK5CYII=', 'base64');
+      const validPngBytes = await sharp({
+        create: { width: 2, height: 2, channels: 4, background: { r: 24, g: 112, b: 208, alpha: 1 } },
+      }).png().toBuffer();
+      const decodedPng = await sharp(validPngBytes).raw().toBuffer({ resolveWithObject: true });
+      expect(decodedPng.info).toMatchObject({ width: 2, height: 2, channels: 4 });
       const fixtures = [
         { name: 'Quarterly Report', fileName: 'quarterly-report.pdf', mime: 'application/pdf', bytes: validPdfBytes },
         { name: 'Site Photo', fileName: 'site-photo.png', mime: 'image/png', bytes: validPngBytes },
@@ -1144,6 +1154,7 @@ describe('Client Portal Documents Integration Tests', () => {
       expect(pdfResponse.status).toBe(200);
       const exportedPdf = Buffer.from(await pdfResponse.arrayBuffer());
       expectUsablePdf(exportedPdf);
+      expect(extractPdfText(exportedPdf)).toContain('Owner contract meeting notes');
       expect(Number((await tenantTable(db, tenantId, 'documents').count('* as count').first())?.count)).toBe(Number(documentsBefore?.count));
       expect(Number((await tenantTable(db, tenantId, 'external_files').count('* as count').first())?.count)).toBe(Number(externalFilesBefore?.count));
 
@@ -1154,6 +1165,7 @@ describe('Client Portal Documents Integration Tests', () => {
       expect(fallbackPdfResponse.status).toBe(200);
       const fallbackPdf = Buffer.from(await fallbackPdfResponse.arrayBuffer());
       expectUsablePdf(fallbackPdf);
+      expect(extractPdfText(fallbackPdf)).toContain('Actual notes');
     });
   });
 });
