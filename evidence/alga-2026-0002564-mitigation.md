@@ -39,12 +39,14 @@ Passed:
 
 - `npx vitest run tests/billingSettingsActions.defaultCurrency.test.ts --reporter=verbose` — 18 tests passed, including default insertion, saving the validity field without clobbering other settings, and rejection of 0, -1, 366, 1.5, and NaN.
 - `npx vitest run src/components/billing-dashboard/quotes/QuoteForm.terms.test.tsx --reporter=verbose` — 7 tests passed, including 15-day defaulting, invalid-setting fallback, and preserving the stored validity date while editing.
-- `npm -w @alga-psa/billing run typecheck` — passed.
+- `NODE_OPTIONS=--max-old-space-size=8192 npm -w @alga-psa/billing run typecheck` — passed on Node `v22.18.0`. The default V8 heap limit in this environment was 4144 MiB; the command raised the Node heap allowance to 8192 MiB. Available host memory at the rerun was 45 GiB.
 - `npm -w @alga-psa/billing run build` — passed.
 
 A direct run of `src/constants/billingQuoteValidity.test.ts` initially found no tests because the suite was missing from the billing package Vitest include list. The include list was corrected and `npm -w @alga-psa/billing test -- src/constants/billingQuoteValidity.test.ts` passed (2 tests).
 
 The package build and the repository build both passed. The repository build command was `npm run build`; it completed the AssemblyScript build, Nx dependency builds, and the production Next.js build (`Compiled successfully`). Turbopack emitted five broad filesystem-trace warnings in unrelated document-preview and extension-asset code. The app build does not require the board service to be running.
+
+Review follow-up reconfirmed no listener on port 3212 (`curl` returned connection refused). Board-service restoration remains an external prerequisite for isolated authentication and all live behavior checks; the service was not started.
 
 ## Next action
 
