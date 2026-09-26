@@ -14,9 +14,8 @@ const MIGRATION = require(path.join(MIGRATIONS_DIR, TARGET_MIGRATION));
 
 let db: Knex;
 let tenantA: string;
-let tenantB: string;
+const createdTenants: string[] = [];
 let idsA: Record<string, string>;
-let idsB: Record<string, string>;
 let preMigrationDir: string;
 
 async function addTenant(tenant: string) {
@@ -66,9 +65,8 @@ beforeAll(async () => {
   db = await createTestDbConnection({ migrationsDir: preMigrationDir, runSeeds: false });
   fs.writeFileSync(path.join(preMigrationDir, TARGET_MIGRATION), `module.exports = require(${JSON.stringify(path.join(MIGRATIONS_DIR, TARGET_MIGRATION))});\n`);
   tenantA = randomUUID();
-  tenantB = randomUUID();
+  createdTenants.push(tenantA);
   idsA = Object.fromEntries(['conflict', 'backfill', 'blankLegacy', 'sameTrimmed', 'nullProperties', 'missingProperties', 'blankColumn', 'emptyLegacy'].map((key) => [key, randomUUID()]));
-  idsB = { conflict: randomUUID() };
   await addTenant(tenantA);
   await addClients(tenantA, idsA);
 
@@ -77,15 +75,13 @@ beforeAll(async () => {
   expect(result[1]).toContain(TARGET_MIGRATION);
   const history = await db('knex_migrations').where({ name: TARGET_MIGRATION }).first();
   expect(history).toBeTruthy();
-  await addTenant(tenantB);
-  await addClients(tenantB, idsB);
 }, 300_000);
 
 afterAll(async () => {
   if (db) {
-    await db('client_tax_id_migration_conflicts').whereIn('tenant', [tenantA, tenantB]).del().catch(() => undefined);
-    await db('clients').whereIn('tenant', [tenantA, tenantB]).del().catch(() => undefined);
-    await db('tenants').whereIn('tenant', [tenantA, tenantB]).del().catch(() => undefined);
+    await db('client_tax_id_migration_conflicts').whereIn('tenant', createdTenants).del().catch(() => undefined);
+    await db('clients').whereIn('tenant', createdTenants).del().catch(() => undefined);
+    await db('tenants').whereIn('tenant', createdTenants).del().catch(() => undefined);
     await db.destroy().catch(() => undefined);
   }
   if (preMigrationDir) fs.rmSync(preMigrationDir, { recursive: true, force: true });
@@ -123,6 +119,12 @@ describe('client Tax ID consolidation migration', () => {
   });
 
   it('is idempotent and isolates direct tenant reruns', async () => {
+    const tenantB = randomUUID();
+    const idsB = { conflict: randomUUID() };
+    createdTenants.push(tenantB);
+    await addTenant(tenantB);
+    await addClients(tenantB, idsB);
+
     const beforeA = await db('clients').where({ tenant: tenantA }).orderBy('client_id').select('*');
     const beforeAudit = await db('client_tax_id_migration_conflicts').where({ tenant: tenantA }).orderBy('client_id').select('*');
     await runTenant(tenantA);
@@ -144,23 +146,36 @@ describe('client Tax ID consolidation migration', () => {
   });
 
   it('retries after a partial failure leaves the table and an audit row behind', async () => {
+    const retryTenant = randomUUID();
+    const retryIds = { conflict: randomUUID() };
+    createdTenants.push(retryTenant);
+    await addTenant(retryTenant);
+    await addClients(retryTenant, retryIds);
+    await db('client_tax_id_migration_conflicts').insert({
+      tenant: retryTenant,
+      client_id: retryIds.conflict,
+      client_name: `Tax conflict ${retryTenant.slice(0, 8)}`,
+      canonical_value: 'CANONICAL',
+      discarded_legacy_value: 'DISCARDED',
+      migrated_at: db.fn.now(),
+    });
     const originalAudit = await db('client_tax_id_migration_conflicts')
-      .where({ tenant: tenantA, client_id: idsA.conflict }).first();
+      .where({ tenant: retryTenant, client_id: retryIds.conflict }).first();
     expect(originalAudit).toBeTruthy();
 
     // Simulate a failure after the conflict insert but before key removal and
     // before Knex records the migration as complete.
-    await db('clients').where({ tenant: tenantA, client_id: idsA.conflict })
+    await db('clients').where({ tenant: retryTenant, client_id: retryIds.conflict })
       .update({ properties: { tax_id: ' DISCARDED ' } });
     await db('knex_migrations').where({ name: TARGET_MIGRATION }).del();
 
     const retry = await db.migrate.up({ directory: preMigrationDir, name: TARGET_MIGRATION });
     expect(retry[1]).toContain(TARGET_MIGRATION);
     const retryAudit = await db('client_tax_id_migration_conflicts')
-      .where({ tenant: tenantA, client_id: idsA.conflict }).select('*');
+      .where({ tenant: retryTenant, client_id: retryIds.conflict }).select('*');
     expect(retryAudit).toHaveLength(1);
     expect(retryAudit[0]).toEqual(originalAudit);
-    const retriedClient = await db('clients').where({ tenant: tenantA, client_id: idsA.conflict }).first();
+    const retriedClient = await db('clients').where({ tenant: retryTenant, client_id: retryIds.conflict }).first();
     expect(retriedClient.properties).not.toHaveProperty('tax_id');
     expect(await db('knex_migrations').where({ name: TARGET_MIGRATION }).first()).toBeTruthy();
   });
