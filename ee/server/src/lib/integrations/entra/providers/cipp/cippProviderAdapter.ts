@@ -194,6 +194,44 @@ const CIPP_TENANT_LIST_CANDIDATES = [
 export class CippProviderAdapter implements EntraProviderAdapter {
   public readonly connectionType = 'cipp' as const;
 
+  public async listSharedMailboxIds(input: EntraListUsersForTenantInput): Promise<Set<string> | null> {
+    const credentials = await getEntraCippCredentials(input.tenant);
+    if (!credentials) return null;
+    try {
+      const tenantId = encodeURIComponent(input.managedTenantId);
+      const payload = await this.requestFromCandidates(credentials.baseUrl, credentials.apiToken, [
+        `/api/ListMailboxes?tenantFilter=${tenantId}&RecipientTypeDetails=SharedMailbox`,
+      ]);
+      const rows = Array.isArray(payload)
+        ? payload
+        : (() => {
+            const value = toObject(payload);
+            for (const key of ['data', 'value', 'items']) {
+              if (Array.isArray(value[key])) return value[key] as unknown[];
+            }
+            return null;
+          })();
+      if (!rows) return null;
+      const ids = new Set<string>();
+      for (const item of rows) {
+        const row = toObject(item);
+        const get = (key: string) => row[key] ?? row[key[0].toUpperCase() + key.slice(1)];
+        const recipientType = get('recipientTypeDetails');
+        const externalId = get('externalDirectoryObjectId');
+        if (typeof recipientType !== 'string' || typeof externalId !== 'string') return null;
+        if (recipientType === 'SharedMailbox' && externalId.trim()) ids.add(externalId.trim());
+      }
+      return ids;
+    } catch (error: unknown) {
+      if (
+        (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403 || error.response?.status === 404))
+        || (error instanceof EntraOperatorError && error.code === 'credential-rejected')
+        || (error instanceof EntraOperatorError && error.code === 'unreachable' && /HTTP 404\b/.test(error.message))
+      ) return null;
+      throw error;
+    }
+  }
+
   private async requestFromCandidates(
     baseUrl: string,
     apiToken: string,
@@ -425,6 +463,8 @@ export class CippProviderAdapter implements EntraProviderAdapter {
           toBoolean(raw.accountEnabled, true) &&
           toBoolean(raw.enabled, true) &&
           toBoolean(raw.isEnabled, true),
+        userType: raw.userType === 'Member' || raw.userType === 'Guest' ? raw.userType : null,
+        assignedLicenseCount: Array.isArray(raw.assignedLicenses) ? raw.assignedLicenses.length : null,
         jobTitle: toStringOrNull(raw.jobTitle) || toStringOrNull(raw.title),
         mobilePhone: toStringOrNull(raw.mobilePhone) || toStringOrNull(raw.phoneNumber),
         businessPhones:
@@ -478,7 +518,7 @@ export class CippProviderAdapter implements EntraProviderAdapter {
     managedTenantId: string;
     userEntraObjectId: string;
     groupId: string;
-    membershipMode: 'transitive';
+    membershipMode: 'direct' | 'transitive';
   }): Promise<boolean> {
     const credentials = await getEntraCippCredentials(input.tenant);
     if (!credentials) {
@@ -503,6 +543,18 @@ export class CippProviderAdapter implements EntraProviderAdapter {
         .filter((value): value is string => Boolean(value))
     );
     return groupIds.has(input.groupId);
+  }
+
+  public async listSecurityGroupMemberIds(input: { tenant: string; managedTenantId: string; groupId: string; membershipMode: 'direct' | 'transitive'; users?: EntraManagedUserRecord[] }): Promise<Set<string>> {
+    if (!input.users) throw new Error('CIPP group membership fallback requires the tenant user list.');
+    const matching: Array<{ id: string; member: boolean }> = [];
+    for (let offset = 0; offset < input.users.length; offset += 8) {
+      const page = input.users.slice(offset, offset + 8);
+      matching.push(...await Promise.all(page.map(async (user) => ({ id: user.entraObjectId, member: await this.isUserInSecurityGroup({
+        tenant: input.tenant, managedTenantId: input.managedTenantId, userEntraObjectId: user.entraObjectId, groupId: input.groupId, membershipMode: input.membershipMode,
+      }) }))));
+    }
+    return new Set(matching.filter((entry) => entry.member).map((entry) => entry.id));
   }
 }
 

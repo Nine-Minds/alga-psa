@@ -1,4 +1,5 @@
 import type { EntraSyncUser } from './types';
+import { DEACTIVATABLE_EXCLUSION_REASONS } from './userFilterPipeline';
 import { EntraSyncResultAggregator } from './syncResultAggregator';
 import { findContactMatchesByEmail } from './contactMatcher';
 import {
@@ -6,6 +7,7 @@ import {
   linkExistingMatchedContact,
   previewLinkedContactChange,
   queueAmbiguousContactMatch,
+  reactivateExcludedEntraContact,
 } from './contactReconciler';
 import {
   evaluateClientPortalProvisioningEligibility,
@@ -15,6 +17,8 @@ import {
 import { publishWorkflowManagedPortalProvisioningEvent } from './workflowManagedProvisioning';
 import {
   markDisabledEntraUsersInactive,
+  markExcludedEntraUsersInactive,
+  selectDeactivatableExcludedEntraIdentities,
   selectLinkedEntraIdentities,
   type EntraIdentityRef,
 } from './disableHandler';
@@ -29,6 +33,7 @@ export type EntraSyncPreviewBucket =
 
 export interface EntraSyncPreviewIdentity {
   bucket: EntraSyncPreviewBucket;
+  reason?: 'excluded_by_filter' | 'disabled_upstream';
   entraObjectId: string;
   displayName: string | null;
   email: string | null;
@@ -39,6 +44,10 @@ export interface EntraDisabledIdentityInput extends EntraIdentityRef {
   displayName?: string | null;
   email?: string | null;
   userPrincipalName?: string | null;
+}
+
+export interface EntraExcludedIdentityInput extends EntraDisabledIdentityInput {
+  reason: string;
 }
 
 export interface ExecuteEntraSyncInput {
@@ -65,6 +74,10 @@ export interface ExecuteEntraSyncInput {
    * function and outside the flag.
    */
   disabledIdentities?: EntraDisabledIdentityInput[];
+  excludedIdentities?: EntraExcludedIdentityInput[];
+  deactivateExcludedContacts?: boolean;
+  enabledSourceUserCount?: number;
+  entraTenantId?: string;
 }
 
 export interface ExecuteEntraSyncResult {
@@ -79,6 +92,8 @@ export interface ExecuteEntraSyncResult {
   };
   /** Per-identity classification. Only collected on a dry run. */
   preview?: EntraSyncPreviewIdentity[];
+  warnings?: string[];
+  excludedContactsOutOfScope: number;
 }
 
 function isInactivationEnabled(config: Record<string, unknown> | undefined): boolean {
@@ -110,6 +125,8 @@ export async function executeEntraSync(
   const dryRun = Boolean(input.dryRun);
   const counters = new EntraSyncResultAggregator();
   const preview: EntraSyncPreviewIdentity[] | undefined = dryRun ? [] : undefined;
+  const warnings: string[] = [];
+  let excludedContactsOutOfScope = 0;
 
   for (const user of input.users) {
     const userWithEntitlement: EntraSyncUser = input.portalEntitlement
@@ -154,6 +171,7 @@ export async function executeEntraSync(
         if (outcome.fieldsWouldChange) {
           counters.increment('updated');
         }
+        if (await reactivateExcludedEntraContact(input.tenantId, candidates[0].contactNameId, true)) counters.increment('updated');
         preview?.push(
           describeUser(
             user,
@@ -173,11 +191,16 @@ export async function executeEntraSync(
         if (linkedContact.fieldsUpdated) {
           counters.increment('updated');
         }
+        if (await reactivateExcludedEntraContact(input.tenantId, linkedContact.contactNameId, false)) {
+          counters.increment('updated');
+        }
         const eligibility = evaluateClientPortalProvisioningEligibility(
           userWithEntitlement,
           input.portalEntitlement
         );
-        if (eligibility.eligible) {
+        // A shared mailbox is never eligible for portal provisioning, including
+        // workflow-managed provisioning and existing-contact lifecycle actions.
+        if (userWithEntitlement.mailboxKind !== 'shared' && eligibility.eligible) {
           const provisioning = await handleEligibleClientPortalProvisioning(
             {
               tenantId: input.tenantId,
@@ -191,7 +214,7 @@ export async function executeEntraSync(
           if (provisioning.outcome === 'skipped_conflict') {
             counters.increment('skipped');
           }
-        } else if (eligibility.reason === 'workflow_managed') {
+        } else if (userWithEntitlement.mailboxKind !== 'shared' && eligibility.reason === 'workflow_managed') {
           await publishWorkflowManagedPortalProvisioningEvent(
             {
               tenantId: input.tenantId,
@@ -205,7 +228,7 @@ export async function executeEntraSync(
             },
             userWithEntitlement
           );
-        } else {
+        } else if (userWithEntitlement.mailboxKind !== 'shared') {
           const lifecycle = await handleIneligibleClientPortalLifecycle(
             {
               tenantId: input.tenantId,
@@ -234,11 +257,14 @@ export async function executeEntraSync(
       preview?.push(describeUser(user, 'create'));
     } else {
       const createdContact = await createContactForEntraUser(input.tenantId, input.clientId, userWithEntitlement);
+      if (createdContact.action === 'linked' && await reactivateExcludedEntraContact(input.tenantId, createdContact.contactNameId, false)) {
+        counters.increment('updated');
+      }
       const eligibility = evaluateClientPortalProvisioningEligibility(
         userWithEntitlement,
         input.portalEntitlement
       );
-      if (eligibility.eligible) {
+      if (userWithEntitlement.mailboxKind !== 'shared' && eligibility.eligible) {
         const provisioning = await handleEligibleClientPortalProvisioning(
           {
             tenantId: input.tenantId,
@@ -252,7 +278,7 @@ export async function executeEntraSync(
         if (provisioning.outcome === 'skipped_conflict') {
           counters.increment('skipped');
         }
-      } else if (eligibility.reason === 'workflow_managed') {
+      } else if (userWithEntitlement.mailboxKind !== 'shared' && eligibility.reason === 'workflow_managed') {
         await publishWorkflowManagedPortalProvisioningEvent(
           {
             tenantId: input.tenantId,
@@ -266,7 +292,7 @@ export async function executeEntraSync(
           },
           userWithEntitlement
         );
-      } else {
+      } else if (userWithEntitlement.mailboxKind !== 'shared') {
         const lifecycle = await handleIneligibleClientPortalLifecycle(
           {
             tenantId: input.tenantId,
@@ -305,6 +331,7 @@ export async function executeEntraSync(
         }
         preview?.push({
           bucket: 'mark_inactive',
+          reason: 'disabled_upstream',
           entraObjectId: entry.identity.entraObjectId,
           displayName: entry.identity.displayName ?? null,
           email: entry.identity.email ?? null,
@@ -325,9 +352,33 @@ export async function executeEntraSync(
     }
   }
 
+  const allowedExcludedIdentities = input.deactivateExcludedContacts
+    ? (input.excludedIdentities || []).filter((item) => DEACTIVATABLE_EXCLUSION_REASONS.includes(item.reason as typeof DEACTIVATABLE_EXCLUSION_REASONS[number]))
+    : [];
+  if (allowedExcludedIdentities.length > 0) {
+    const linked = await selectDeactivatableExcludedEntraIdentities(input.tenantId, allowedExcludedIdentities);
+    const linkedCount = linked.reduce((total, entry) => total + entry.linkedContactCount, 0);
+    const everyUserExcluded = (input.enabledSourceUserCount ?? 0) > 0 && input.users.length === 0;
+    if (everyUserExcluded && linkedCount > 0) {
+      warnings.push('Excluded contacts were left active because the filter excludes every enabled user and linked contacts exist.');
+    } else if (dryRun) {
+      for (const entry of linked) {
+        for (let index = 0; index < entry.linkedContactCount; index += 1) counters.increment('inactivated');
+        excludedContactsOutOfScope += entry.linkedContactCount;
+        preview?.push({ bucket: 'mark_inactive', reason: 'excluded_by_filter', entraObjectId: entry.identity.entraObjectId, displayName: entry.identity.displayName ?? null, email: entry.identity.email ?? null, userPrincipalName: entry.identity.userPrincipalName ?? null });
+      }
+    } else {
+      const inactivated = await markExcludedEntraUsersInactive(input.tenantId, allowedExcludedIdentities);
+      for (let index = 0; index < inactivated; index += 1) counters.increment('inactivated');
+      excludedContactsOutOfScope = inactivated;
+    }
+  }
+
   return {
     dryRun,
     counters: counters.toJSON(),
+    ...(warnings.length ? { warnings } : {}),
     ...(preview ? { preview } : {}),
+    excludedContactsOutOfScope,
   };
 }

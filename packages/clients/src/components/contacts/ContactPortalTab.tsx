@@ -9,6 +9,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { PortalBillingProfileAccess } from './PortalBillingProfileAccess';
+import { ContactBillingProfileAssociations } from './ContactBillingProfileAssociations';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Mail, Shield, User, Info, RefreshCw } from 'lucide-react';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -728,7 +729,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
           {!existingUser ? (
             <div className="space-y-6">
               {/* Portal Admin Setting - Only shows when no user exists */}
-              <div className="flex items-center justify-between">
+              {contact.contact_kind !== 'shared_mailbox' && <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label htmlFor="portal-admin" className="text-base">
                     {t('contactPortalTab.portalAdmin.label', { defaultValue: 'Portal Administrator' })}
@@ -743,9 +744,9 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                   onCheckedChange={handlePortalAdminToggle}
                   disabled={!currentUserPermissions.canUpdateRoles || isUpdating}
                 />
-              </div>
+              </div>}
 
-              <div className="border-t pt-6">
+              {contact.contact_kind !== 'shared_mailbox' && <div className="border-t pt-6">
                 <div className="space-y-4">
                 <Alert className="mb-4">
                   <Info className="h-4 w-4" />
@@ -776,7 +777,11 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                     </Button>
                   </div>
                 </div>
-              </div>
+              </div>}
+            </div>
+          ) : contact.contact_kind === 'shared_mailbox' ? (
+            <div className="rounded-md border p-3 text-sm text-muted-foreground">
+              <Badge variant="default-muted">{t('contactsPage.sharedMailbox')}</Badge>
             </div>
           ) : (
             <div className="border-t pt-6">
@@ -849,6 +854,11 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                   clientId={contact.client_id}
                   canEdit={currentUserPermissions.canUpdateRoles}
                 />
+
+                {/* Which segments this contact belongs to, and whether that
+                    comes with the profile's tickets. Read-only: membership is
+                    edited on the profile. */}
+                <ContactBillingProfileAssociations contactNameId={contact.contact_name_id} />
 
                 {/* Last Login Info */}
                 {existingUser.last_login_at && (

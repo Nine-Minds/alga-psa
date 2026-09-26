@@ -4,6 +4,7 @@
  */
 
 import { Knex } from 'knex';
+import { locationAddressSql } from './locationAddressSql';
 import { BaseService, ServiceContext, ListResult, tenantDb, withTransaction } from '@alga-psa/db';
 import { IClient, IClientLocation } from 'server/src/interfaces/client.interfaces';
 import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
@@ -17,6 +18,7 @@ import {
   deleteLocation as deleteClientLocation,
   updateLocation as updateClientLocation,
 } from '@alga-psa/clients/models';
+import { withClientSinceDateString } from '@alga-psa/clients/lib/clientSince';
 import {
   CreateClientData,
   UpdateClientData,
@@ -26,10 +28,13 @@ import {
 } from '../schemas/client';
 import { ListOptions } from '../controllers/types';
 import { runWithTenant } from 'server/src/lib/db';
+import { analytics } from '../../analytics/posthog';
+import { AnalyticsEvents } from '../../analytics/events';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import {
   buildClientArchivedPayload,
   buildClientCreatedPayload,
+  buildClientMergedPayload,
   buildClientOwnerAssignedPayload,
   buildClientStatusChangedPayload,
   buildClientUpdatedPayload,
@@ -39,6 +44,14 @@ import {
   ensureDefaultContractForClientIfBillingConfigured,
 } from '@alga-psa/shared/billingClients/defaultContract';
 import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
+import {
+  ClientMergeBlockedError,
+  executeClientMerge,
+  previewClientMerge,
+  type ClientMergePreview,
+  type ClientMergeResult,
+} from '@alga-psa/clients/lib/clientMergeEngine';
+import { mergeClientWebsiteUpdate } from '@alga-psa/clients/lib/clientWebsiteUpdate';
 
 function maybeUserActorFromContext(context: ServiceContext) {
   if (typeof context.userId !== 'string' || !context.userId) return undefined;
@@ -177,6 +190,28 @@ async function cleanupEntraReferencesBeforeClientDelete(
   }
 }
 
+// A client's phone, email and address are those of its default location (the
+// clients table has none of its own); the web actions derive them the same way.
+function joinDefaultLocation(db: ReturnType<typeof tenantDb>, query: Knex.QueryBuilder): void {
+  db.tenantJoinFirstMatching(query, 'client_locations', 'cl', 'c.client_id', 'client_id', {
+    type: 'left',
+    rootTenantColumn: 'c.tenant',
+    where: (q, alias) => q.where({
+      [`${alias}.is_default`]: true,
+      [`${alias}.is_active`]: true,
+    }),
+    orderBy: [
+      { column: 'updated_at', order: 'desc' },
+      { column: 'created_at', order: 'desc' },
+      { column: 'location_id', order: 'desc' },
+    ],
+  });
+}
+
+function defaultLocationContactColumns(trx: Knex): Array<string | Knex.Raw> {
+  return ['cl.phone as phone_no', 'cl.email as email', trx.raw(`${locationAddressSql('cl')} as address`)];
+}
+
 export class ClientService extends BaseService<IClient> {
   constructor() {
     super({
@@ -208,34 +243,10 @@ export class ClientService extends BaseService<IClient> {
       // Build base query with account manager and location joins
       let dataQuery = db.table('clients as c');
       db.tenantJoin(dataQuery, 'users as u', 'c.account_manager_id', 'u.user_id', { type: 'left' });
-      db.tenantJoinFirstMatching(dataQuery, 'client_locations', 'cl', 'c.client_id', 'client_id', {
-        type: 'left',
-        rootTenantColumn: 'c.tenant',
-        where: (query, alias) => query.where({
-          [`${alias}.is_default`]: true,
-          [`${alias}.is_active`]: true,
-        }),
-        orderBy: [
-          { column: 'updated_at', order: 'desc' },
-          { column: 'created_at', order: 'desc' },
-          { column: 'location_id', order: 'desc' },
-        ],
-      });
+      joinDefaultLocation(db, dataQuery);
 
       let countQuery = db.table('clients as c');
-      db.tenantJoinFirstMatching(countQuery, 'client_locations', 'cl', 'c.client_id', 'client_id', {
-        type: 'left',
-        rootTenantColumn: 'c.tenant',
-        where: (query, alias) => query.where({
-          [`${alias}.is_default`]: true,
-          [`${alias}.is_active`]: true,
-        }),
-        orderBy: [
-          { column: 'updated_at', order: 'desc' },
-          { column: 'created_at', order: 'desc' },
-          { column: 'location_id', order: 'desc' },
-        ],
-      });
+      joinDefaultLocation(db, countQuery);
 
       // Apply filters
       dataQuery = this.applyClientFilters(dataQuery, filters);
@@ -253,6 +264,7 @@ export class ClientService extends BaseService<IClient> {
       // Select fields
       dataQuery = dataQuery.select(
         'c.*',
+        ...defaultLocationContactColumns(trx),
         trx.raw(`${availableCreditSubquerySql('c')} as credit_balance`),
         trx.raw(`CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN CONCAT(u.first_name, ' ', u.last_name) ELSE NULL END as account_manager_full_name`)
       );
@@ -267,7 +279,7 @@ export class ClientService extends BaseService<IClient> {
       const clientsWithLogos = await Promise.all(
         (clients as IClient[]).map(async (client) => {
           const logoUrl = await getClientLogoUrl(client.client_id, context.tenant);
-          return { ...client, logoUrl };
+          return withClientSinceDateString({ ...client, logoUrl });
         })
       );
 
@@ -288,10 +300,12 @@ export class ClientService extends BaseService<IClient> {
       const db = tenantDb(trx, context.tenant);
       const clientQuery = db.table<IClient>('clients as c');
       db.tenantJoin(clientQuery, 'users as u', 'c.account_manager_id', 'u.user_id', { type: 'left' });
+      joinDefaultLocation(db, clientQuery);
 
       const client = await clientQuery
         .select(
           'c.*',
+          ...defaultLocationContactColumns(trx),
           trx.raw(`${availableCreditSubquerySql('c')} as credit_balance`),
           trx.raw(`CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN CONCAT(u.first_name, ' ', u.last_name) ELSE NULL END as account_manager_full_name`)
         )
@@ -305,10 +319,10 @@ export class ClientService extends BaseService<IClient> {
       // Get logo URL
       const logoUrl = await getClientLogoUrl(id, context.tenant);
 
-      return {
+      return withClientSinceDateString({
         ...client,
         logoUrl
-      } as unknown as IClient;
+      }) as unknown as IClient;
     });
   }
 
@@ -342,6 +356,7 @@ export class ClientService extends BaseService<IClient> {
         billing_email: data.billing_email,
         account_manager_id: data.account_manager_id,
         is_inactive: data.is_inactive || false,
+        client_since: data.client_since ?? null,
         tenant: context.tenant,
         created_at: knex.raw('now()'),
         updated_at: knex.raw('now()')
@@ -404,7 +419,7 @@ export class ClientService extends BaseService<IClient> {
       idempotencyKey: `client_created:${client.client_id}`,
     });
 
-    return client;
+    return withClientSinceDateString(client as Record<string, any>) as IClient;
   }
 
   async delete(id: string, context: ServiceContext): Promise<void> {
@@ -613,13 +628,28 @@ export class ClientService extends BaseService<IClient> {
         'client_name', 'url', 'client_type', 'tax_id_number', 'notes', 'properties',
         'payment_terms', 'billing_cycle', 'credit_limit', 'default_currency_code',
         'preferred_payment_method', 'auto_invoice', 'invoice_delivery_method', 'region_code',
-        'is_tax_exempt', 'tax_exemption_certificate', 'timezone', 'invoice_template_id',
+        'is_tax_exempt', 'tax_exemption_certificate', 'timezone', 'invoice_template_id', 'client_since',
         'billing_contact_id', 'billing_email', 'account_manager_id', 'is_inactive',
       ] as const;
       const updateData: Record<string, unknown> = { updated_at: knex.raw('now()') };
       for (const column of clientColumns) {
         const value = (data as Record<string, unknown>)[column];
         if (value !== undefined) updateData[column] = value;
+      }
+      if (data.properties !== undefined) {
+        updateData.properties = { ...(before.properties ?? {}), ...data.properties };
+      }
+
+      // API PATCH-style updates must preserve omitted properties and synchronize
+      // website copies only when url or properties.website was explicitly sent.
+      const websiteUpdate = mergeClientWebsiteUpdate(before.url, before.properties, data);
+      for (const column of clientColumns) {
+        const value = (websiteUpdate as Record<string, unknown>)[column];
+        if (value !== undefined) updateData[column] = value;
+      }
+      // A null properties value means "no property update" here.
+      if (data.properties === null) {
+        delete updateData.properties;
       }
 
       const updatedFieldKeys = Object.keys(updateData);
@@ -768,7 +798,7 @@ export class ClientService extends BaseService<IClient> {
       });
     }
 
-    return result.after as IClient;
+    return withClientSinceDateString(result.after as Record<string, any>) as IClient;
   }
 
   /**
@@ -1023,6 +1053,212 @@ export class ClientService extends BaseService<IClient> {
     });
 
     return query;
+  }
+
+  /**
+   * Dry run of absorbing `sourceClientId` into `clientId` as a billing profile.
+   *
+   * Writes nothing. Everything the caller needs to make the per-row decisions
+   * the merge asks for — profiles, contacts, contracts, counts, blockers — comes
+   * back here, so an API client can present the same choices the wizard does
+   * instead of guessing and discovering the answer afterwards.
+   */
+  async previewMerge(
+    clientId: string,
+    sourceClientId: string,
+    context: ServiceContext
+  ): Promise<ClientMergePreview> {
+    const { knex } = await this.getKnex();
+    return withTransaction(knex, (trx) =>
+      previewClientMerge(trx, context.tenant, {
+        sourceClientId,
+        targetClientId: clientId,
+      })
+    );
+  }
+
+  async mergeClient(
+    clientId: string,
+    input: {
+      sourceClientId: string;
+      contactAssignments?: Array<{
+        contactNameId: string;
+        billingProfileId: string;
+        isManager?: boolean;
+        canViewProfileTickets?: boolean;
+      }>;
+      contractDecisions?: Array<{
+        clientContractId: string;
+        choice: 'original' | 'cutover';
+        cutoverDate?: string | null;
+      }>;
+      pinPortalGrants?: boolean;
+      externalRemapChoices?: Array<{ mappingId: string; apply: boolean }>;
+    },
+    context: ServiceContext
+  ): Promise<ClientMergeResult> {
+    const { knex } = await this.getKnex();
+    let result: ClientMergeResult;
+    try {
+      result = await withTransaction(knex, (trx) =>
+        executeClientMerge(trx, context.tenant, context.userId ?? null, {
+          sourceClientId: input.sourceClientId,
+          targetClientId: clientId,
+          contactAssignments: input.contactAssignments,
+          contractDecisions: input.contractDecisions,
+          pinPortalGrants: input.pinPortalGrants,
+          externalRemapChoices: input.externalRemapChoices,
+        })
+      );
+    } catch (error) {
+      // A refused merge is the caller asking for something impossible, not a
+      // server fault; the blockers carry the reason.
+      if (error instanceof ClientMergeBlockedError) {
+        throw new ValidationError(error.message, error.blockers);
+      }
+      throw error;
+    }
+
+    const mergedAt = new Date().toISOString();
+    await runWithTenant(context.tenant, async () => {
+      await publishWorkflowEvent({
+        eventType: 'CLIENT_MERGED',
+        payload: buildClientMergedPayload({
+          sourceClientId: result.sourceClientId,
+          targetClientId: result.targetClientId,
+          mergedByUserId: typeof context.userId === 'string' ? context.userId : undefined,
+          mergedAt,
+          strategy: 'merge_into_billing_profile',
+        }),
+        ctx: {
+          tenantId: context.tenant,
+          occurredAt: mergedAt,
+          actor: maybeUserActorFromContext(context),
+        },
+        idempotencyKey: `client_merged:${result.mergeId}`,
+      });
+    });
+
+    // Same telemetry the server action sends, so a merge driven through the API
+    // or the MCP is not invisible next to one driven from the UI.
+    analytics.capture(AnalyticsEvents.CLIENT_MERGED, {
+      merge_id: result.mergeId,
+      source_client_id: result.sourceClientId,
+      target_client_id: result.targetClientId,
+      moved_profile_count: result.movedProfileIds.length,
+      moved_counts: result.counts,
+      pinned_portal_grants: input.pinPortalGrants !== false,
+      contract_decision_count: input.contractDecisions?.length ?? 0,
+      via: 'api',
+    }, typeof context.userId === 'string' ? context.userId : undefined);
+
+    return result;
+  }
+
+  /**
+   * The contacts attached to a billing profile, with the manager label and the
+   * ticket-visibility grant.
+   */
+  async getBillingProfileContacts(
+    clientId: string,
+    billingProfileId: string,
+    context: ServiceContext
+  ): Promise<Array<{
+    contact_name_id: string;
+    full_name: string;
+    email: string | null;
+    is_manager: boolean;
+    can_view_profile_tickets: boolean;
+  }>> {
+    const { knex } = await this.getKnex();
+    return withTransaction(knex, async (trx) => {
+      await this.assertProfileBelongsToClient(trx, clientId, billingProfileId, context);
+
+      const db = tenantDb(trx, context.tenant);
+      const query = db.table('billing_profile_contacts as bpc');
+      db.tenantJoin(query, 'contacts as c', 'c.contact_name_id', 'bpc.contact_name_id');
+      const rows = await query
+        .where({ 'bpc.billing_profile_id': billingProfileId })
+        .orderBy('c.full_name', 'asc')
+        .select(
+          'bpc.contact_name_id',
+          'bpc.is_manager',
+          'bpc.can_view_profile_tickets',
+          'c.full_name',
+          'c.email'
+        );
+
+      return rows.map((row: any) => ({
+        contact_name_id: row.contact_name_id,
+        full_name: row.full_name ?? '',
+        email: row.email ?? null,
+        is_manager: Boolean(row.is_manager),
+        can_view_profile_tickets: Boolean(row.can_view_profile_tickets),
+      }));
+    });
+  }
+
+  /** Replaces the profile's contact list; omitting a contact removes it. */
+  async setBillingProfileContacts(
+    clientId: string,
+    billingProfileId: string,
+    contacts: Array<{
+      contact_name_id: string;
+      is_manager?: boolean;
+      can_view_profile_tickets?: boolean;
+    }>,
+    context: ServiceContext
+  ): Promise<void> {
+    const { knex } = await this.getKnex();
+    await withTransaction(knex, async (trx) => {
+      await this.assertProfileBelongsToClient(trx, clientId, billingProfileId, context);
+
+      const db = tenantDb(trx, context.tenant);
+      const requested = [...new Map(contacts.map((entry) => [entry.contact_name_id, entry])).values()];
+
+      if (requested.filter((entry) => entry.is_manager).length > 1) {
+        throw new ValidationError('A billing profile can only have one manager');
+      }
+
+      if (requested.length > 0) {
+        const owned = await db.table('contacts')
+          .where({ client_id: clientId })
+          .whereIn('contact_name_id', requested.map((entry) => entry.contact_name_id))
+          .select('contact_name_id');
+        if (owned.length !== requested.length) {
+          throw new ValidationError('One of the selected contacts does not belong to this client');
+        }
+      }
+
+      await db.table('billing_profile_contacts')
+        .where({ billing_profile_id: billingProfileId })
+        .del();
+      if (requested.length > 0) {
+        await db.table('billing_profile_contacts').insert(requested.map((entry) => ({
+          tenant: context.tenant,
+          billing_profile_id: billingProfileId,
+          contact_name_id: entry.contact_name_id,
+          is_manager: Boolean(entry.is_manager),
+          can_view_profile_tickets: Boolean(entry.can_view_profile_tickets),
+          created_by: context.userId,
+        })));
+      }
+    });
+  }
+
+  private async assertProfileBelongsToClient(
+    trx: Knex.Transaction,
+    clientId: string,
+    billingProfileId: string,
+    context: ServiceContext
+  ): Promise<void> {
+    const profile = await tenantDb(trx, context.tenant)
+      .table('client_billing_profiles')
+      .where({ billing_profile_id: billingProfileId })
+      .first('client_id');
+    if (!profile || profile.client_id !== clientId) {
+      throw new NotFoundError('Billing profile not found for this client');
+    }
   }
 
   /**

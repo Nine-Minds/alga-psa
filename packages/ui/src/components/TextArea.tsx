@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useLayoutEffect, useEffect, useRef, useCallback } from 'react';
+import React, { useLayoutEffect, useEffect, useRef, useCallback, useState } from 'react';
 import { FormFieldComponent, AutomationProps } from '../ui-reflection/types';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
 import { cn } from '../lib/utils';
@@ -27,20 +27,24 @@ interface TextAreaProps extends Omit<React.TextareaHTMLAttributes<HTMLTextAreaEl
   size?: TextAreaSize;
 }
 
-export function TextArea({
-  label,
-  onChange,
-  className,
-  value = '',
-  id,
-  disabled,
-  required,
-  size = 'md',
-  ref: forwardedRef,
-  wrapperClassName,
-  "data-automation-id": dataAutomationId,
-  ...props
-}: TextAreaProps & AutomationProps) {
+export function TextArea(allProps: TextAreaProps & AutomationProps) {
+  const isControlled = Object.prototype.hasOwnProperty.call(allProps, 'value');
+  const {
+    label,
+    onChange,
+    className,
+    value,
+    id,
+    disabled,
+    required,
+    size = 'md',
+    ref: forwardedRef,
+    wrapperClassName,
+    "data-automation-id": dataAutomationId,
+    ...props
+  } = allProps;
+  const [uncontrolledValue, setUncontrolledValue] = useState(() => props.defaultValue ?? '');
+  const reflectedValue = isControlled ? value : uncontrolledValue;
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   const mergedRef = useCallback(
@@ -93,7 +97,7 @@ export function TextArea({
     if (textareaRef.current) {
       adjustHeight(textareaRef.current);
     }
-  }, [value]);
+  }, [reflectedValue]);
 
   // Use provided data-automation-id or register normally
   const { automationIdProps: textAreaProps, updateMetadata } = useAutomationIdAndRegister<FormFieldComponent>({
@@ -101,7 +105,7 @@ export function TextArea({
     fieldType: 'textField',
     id,
     label,
-    value: typeof value === 'string' ? value : undefined,
+    value: typeof reflectedValue === 'string' ? reflectedValue : undefined,
     disabled,
     required
   }, true, dataAutomationId);
@@ -111,17 +115,20 @@ export function TextArea({
 
   // Update metadata when field props change
   useEffect(() => {
-    if (updateMetadata && typeof value === 'string') {
+    if (updateMetadata && typeof reflectedValue === 'string') {
       updateMetadata({
-        value,
+        value: reflectedValue,
         label,
         disabled,
         required
       });
     }
-  }, [value, updateMetadata, label, disabled, required]);
+  }, [reflectedValue, updateMetadata, label, disabled, required]);
 
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    if (!isControlled) {
+      setUncontrolledValue(e.currentTarget.value);
+    }
     if (textareaRef.current) {
       adjustHeight(textareaRef.current);
     }
@@ -162,7 +169,7 @@ export function TextArea({
           ${className}
         `}
         onChange={handleInput}
-        value={value}
+        {...(isControlled ? { value: value ?? '' } : {})}
         disabled={disabled}
         required={required}
         {...finalAutomationProps}

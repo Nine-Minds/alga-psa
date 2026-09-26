@@ -306,7 +306,7 @@ const QuoteDocumentTemplatesPage: React.FC = () => {
           <CardTitle>{t('templatesPage.cards.availableLayouts', { defaultValue: 'Available Layouts' })}</CardTitle>
         </CardHeader>
         <CardContent>
-          <DataTable
+          <DataTable id="quotebilling-document-templates-table"
             data={templates}
             columns={columns}
             pagination

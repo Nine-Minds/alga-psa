@@ -46,6 +46,58 @@ async function resolveVisibleBoardIds(
     : groupBoardIds.filter((boardId) => visibleIds.has(boardId));
 }
 
+/**
+ * The billing profiles this contact may read every ticket of, plus their
+ * client's default profile.
+ *
+ * Only called under contact scope: a client-scoped user already sees the whole
+ * client, so loading grants for them would be two queries answering a question
+ * nobody asked. Grants are filtered to profiles of the contact's *own* client,
+ * so an association left behind by a merge cannot leak another client's
+ * tickets.
+ */
+async function resolveGrantedTicketProfiles(
+  trx: Knex.Transaction,
+  tenant: string,
+  contactId: string,
+  clientId: string
+): Promise<{ grantedTicketProfileIds: string[]; defaultBillingProfileId: string | null }> {
+  const profiles = await tenantScopedTable<{
+    billing_profile_id: string;
+    is_default: boolean;
+    client_id: string;
+  }>(
+    trx,
+    'client_billing_profiles',
+    tenant
+  )
+    .where({ client_id: clientId })
+    .select('billing_profile_id', 'is_default');
+
+  const ownedProfileIds = new Set(profiles.map((profile) => profile.billing_profile_id));
+  const defaultBillingProfileId =
+    profiles.find((profile) => profile.is_default)?.billing_profile_id ?? null;
+
+  const grants = await tenantScopedTable<{
+    billing_profile_id: string;
+    contact_name_id: string;
+    can_view_profile_tickets: boolean;
+  }>(
+    trx,
+    'billing_profile_contacts',
+    tenant
+  )
+    .where({ contact_name_id: contactId, can_view_profile_tickets: true })
+    .select('billing_profile_id');
+
+  return {
+    grantedTicketProfileIds: grants
+      .map((grant) => grant.billing_profile_id)
+      .filter((profileId) => ownedProfileIds.has(profileId)),
+    defaultBillingProfileId,
+  };
+}
+
 export async function getClientContactVisibilityContext(
   trx: Knex.Transaction,
   tenant: string,
@@ -75,6 +127,10 @@ export async function getClientContactVisibilityContext(
       clientId: contact.client_id,
       visibilityGroupId: null,
       visibleBoardIds: await resolveVisibleBoardIds(trx, tenant, null),
+      // Client scope already sees every ticket of the client, so a profile
+      // grant could only ever be a no-op here.
+      grantedTicketProfileIds: [],
+      defaultBillingProfileId: null,
     };
   }
 
@@ -117,13 +173,19 @@ export async function getClientContactVisibilityContext(
     .select('cvgb.board_id')
     .then((rows: Array<{ board_id: string }>) => rows.map((row) => row.board_id));
 
+  const effectiveTicketScope = contact.is_client_admin ? 'client' : group.ticket_scope;
+  const profileGrants = effectiveTicketScope === 'contact'
+    ? await resolveGrantedTicketProfiles(trx, tenant, contactId, contact.client_id)
+    : { grantedTicketProfileIds: [], defaultBillingProfileId: null };
+
   return {
     ticketScope: group.ticket_scope,
-    effectiveTicketScope: contact.is_client_admin ? 'client' : group.ticket_scope,
+    effectiveTicketScope,
     isClientAdmin: contact.is_client_admin ?? false,
     contactId,
     clientId: contact.client_id,
     visibilityGroupId: contact.portal_visibility_group_id,
     visibleBoardIds: await resolveVisibleBoardIds(trx, tenant, boardIds),
+    ...profileGrants,
   };
 }

@@ -146,6 +146,26 @@ redirect URI list.)
 
 ## Feature Flags (Phase 1)
 
+## Per managed tenant user import filters
+
+Open **Settings → Integrations → Entra → Clients** and expand a mapped managed tenant to edit its
+import filter. You can limit imports to licensed members, include or exclude security-group members,
+and add regular-expression exclusions. Group inclusion uses transitive membership with Direct Graph;
+CIPP currently checks the membership data returned by its user-group endpoint, which may be direct
+membership only.
+
+Filters are stored as per-managed-tenant overrides over tenant defaults. New settings are empty, so
+existing imports keep their current scope until you save a filter. Deactivating linked contacts that
+fall outside a filter is opt-in. Review the preflight before enabling it. A safety brake skips
+deactivation when a filter excludes every enabled user in a tenant that already has linked contacts.
+Contacts re-entering scope are reactivated only when the filter previously deactivated them.
+
+Shared mailboxes are not reliably identifiable in the current Graph/CIPP user records. Their
+Exchange recipient type requires additional Exchange data, and contacts do not have a service-contact
+type. Do not use display-name patterns as a mailbox classifier.
+
+## Feature Flags (Phase 1)
+
 Remaining flags:
 
 - `entra-integration-client-sync-action`

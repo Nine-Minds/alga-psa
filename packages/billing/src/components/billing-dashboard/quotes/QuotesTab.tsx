@@ -263,7 +263,7 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
             </div>
           )}
 
-          <DataTable
+          <DataTable id="quotes-table"
             key={tableKey}
             data={filteredQuotes}
             columns={columns}

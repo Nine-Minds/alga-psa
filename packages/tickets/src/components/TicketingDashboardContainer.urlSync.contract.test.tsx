@@ -1,7 +1,7 @@
 /* @vitest-environment jsdom */
 import React from 'react';
-import { act, render } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, render, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ITicketListFilters, IUser } from '@alga-psa/types';
 import type { TicketFilterChangeOptions } from '../lib/ticketFilterChange';
 
@@ -43,7 +43,21 @@ vi.mock('./TicketingDashboard', () => ({
 
 vi.mock('../actions/optimizedTicketActions', () => ({
   fetchTicketsWithPagination: (...args: unknown[]) => fetchTicketsWithPagination(...(args as [])),
+  loadTicketListItemsByIds: vi.fn(),
 }));
+
+// The container's saved-views hook loads views on mount. Left real, that server
+// action settles after jsdom is torn down and its state update throws an
+// unhandled `window is not defined` that fails the whole shard.
+const listViewActions = vi.hoisted(() => ({
+  listListViews: vi.fn(async () => ({ views: [], defaultViewId: null, canShare: false })),
+  getListView: vi.fn(async () => ({ actionError: 'View not found.' })),
+  createListView: vi.fn(),
+  updateListView: vi.fn(),
+  deleteListView: vi.fn(),
+  setMyDefaultListView: vi.fn(),
+}));
+vi.mock('@alga-psa/list-views/actions/listViewActions', () => listViewActions);
 
 vi.mock('react-hot-toast', () => ({
   toast: { error: vi.fn(), success: vi.fn() },
@@ -104,7 +118,21 @@ describe('ticket list URL sync after navigating away', () => {
     dashboardProps = null;
     currentPathname = '/msp/tickets';
     fetchTicketsWithPagination.mockClear();
+    listViewActions.listListViews.mockClear();
+    listViewActions.getListView.mockClear();
     window.history.replaceState(null, '', '/msp/tickets');
+  });
+
+  afterEach(async () => {
+    // Every render's view load must hit the stub and settle before teardown.
+    await waitFor(() => expect(listViewActions.listListViews).toHaveBeenCalledWith('tickets'));
+    await act(async () => {
+      await Promise.all(listViewActions.listListViews.mock.results.map((r) => r.value));
+    });
+    // A `?view=` the collection doesn't list is then resolved by id.
+    await act(async () => {
+      await Promise.all(listViewActions.getListView.mock.results.map((r) => r.value));
+    });
   });
 
   it('mirrors a filter change into the URL while the list is still the page', () => {
@@ -117,6 +145,44 @@ describe('ticket list URL sync after navigating away', () => {
     });
 
     expect(replaceState).toHaveBeenCalledTimes(1);
+    expect(pushState).not.toHaveBeenCalled();
+
+    replaceState.mockRestore();
+    pushState.mockRestore();
+  });
+
+  it('resolves an inaccessible saved view without losing explicit ticket filters', async () => {
+    const viewId = '11111111-1111-4111-8111-111111111111';
+    window.history.replaceState(null, '', `/msp/tickets?view=${viewId}&sortBy=updated_at&sortDirection=asc`);
+
+    renderContainer();
+
+    await waitFor(() => expect(listViewActions.getListView).toHaveBeenCalledWith(viewId));
+    await waitFor(() => {
+      const params = new URLSearchParams(window.location.search);
+      expect(params.has('view')).toBe(false);
+      expect(params.get('sortBy')).toBe('updated_at');
+      expect(params.get('sortDirection')).toBe('asc');
+    });
+    expect(fetchTicketsWithPagination).not.toHaveBeenCalled();
+  });
+
+  it('carries the applied view through a plain filter change in one write', () => {
+    const viewId = '11111111-1111-4111-8111-111111111111';
+    window.history.replaceState(null, '', `/msp/tickets?view=${viewId}`);
+
+    const { props } = renderContainer();
+    const replaceState = vi.spyOn(window.history, 'replaceState').mockImplementation(() => {});
+    const pushState = vi.spyOn(window.history, 'pushState').mockImplementation(() => {});
+
+    act(() => {
+      props.onFilterChange({ priorityId: 'priority-1' });
+    });
+
+    // A plain edit is one write, and the write still names the view being refined.
+    expect(replaceState).toHaveBeenCalledTimes(1);
+    const written = String(replaceState.mock.calls[0][2]);
+    expect(new URLSearchParams(written.split('?')[1]).get('view')).toBe(viewId);
     expect(pushState).not.toHaveBeenCalled();
 
     replaceState.mockRestore();

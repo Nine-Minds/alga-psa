@@ -24,6 +24,7 @@ describe('msp/opportunities translation namespace', () => {
       expect(locale(code)).toHaveProperty('opportunities.queue.needsYou_other');
       expect(locale(code)).toHaveProperty('opportunities.suggestedActions.scheduleDiscovery');
       expect(locale(code)).toHaveProperty('opportunities.why.actionDue.pastDue_other');
+      expect(locale(code)).toHaveProperty('opportunities.detail.noDocuments');
     }
   });
 

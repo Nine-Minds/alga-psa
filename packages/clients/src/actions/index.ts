@@ -15,6 +15,8 @@ export * from './clientLocaleActions';
 export * from './clientTaxRateActions';
 export * from './clientBillingProfileActions';
 export * from './portalBillingProfileAccessActions';
+export * from './billingProfileContactActions';
+export * from './clientMergeActions';
 export * from './clientContractLineActions';
 export * from './clientContractActions';
 export * from './clientNoteActions';

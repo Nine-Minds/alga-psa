@@ -255,30 +255,6 @@ export const deleteSecret = withAuth(async (user, { tenant }, name: string): Pro
 });
 
 /**
- * Resolve a secret value for runtime use (internal only).
- * This should NEVER be exposed via API - only called by the workflow runtime.
- *
- * @param name - Name of the secret to resolve
- * @param workflowRunId - Optional workflow run ID for audit logging
- * @returns The decrypted secret value
- */
-export const resolveSecretForRuntime = withAuth(async (
-  user,
-  { tenant },
-  name: string,
-  workflowRunId?: string
-): Promise<string> => {
-  const { knex } = await createTenantKnex();
-
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
-
-  const provider = createTenantSecretProvider(knex, tenant);
-  return provider.getValue(name, workflowRunId);
-});
-
-/**
  * Get workflows that reference a specific secret.
  * Used to warn users before deleting a secret.
  */

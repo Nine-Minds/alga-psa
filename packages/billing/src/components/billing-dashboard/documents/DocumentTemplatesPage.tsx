@@ -385,7 +385,7 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
           <CardTitle>{t('documentTemplates.availableLayouts', { defaultValue: 'Available Layouts' })}</CardTitle>
         </CardHeader>
         <CardContent>
-          <DataTable
+          <DataTable id="billing-document-templates-table"
             data={templates}
             columns={columns}
             pagination

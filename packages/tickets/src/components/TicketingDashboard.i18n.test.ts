@@ -24,7 +24,7 @@ function getLeaf(record: Record<string, unknown>, dottedPath: string): unknown {
 
 describe('ticketing dashboard i18n wiring contract', () => {
   it('T010: wires the dashboard shell and primary filter chrome through features/tickets translations', () => {
-    const source = read('./TicketingDashboard.tsx');
+    const source = read('./TicketingDashboard.tsx') + read('./BulkBundleDialog.tsx');
 
     expect(source).toContain("const { t } = useTranslation('features/tickets');");
     expect(source).toContain("t('dashboard.title', 'Ticketing Dashboard')");
@@ -103,7 +103,7 @@ describe('ticketing dashboard i18n wiring contract', () => {
   });
 
   it('T011: keeps the dashboard shell/bulk chrome backed by xx pseudo-locale strings instead of raw English', () => {
-    const source = read('./TicketingDashboard.tsx');
+    const source = read('./TicketingDashboard.tsx') + read('./BulkBundleDialog.tsx');
     const pseudo = readJson<Record<string, unknown>>('../../../../server/public/locales/xx/features/tickets.json');
 
     const pseudoKeys = [
@@ -118,6 +118,9 @@ describe('ticketing dashboard i18n wiring contract', () => {
       'bulk.move.dialogTitle',
       'bulk.delete.dialogTitle',
       'bulk.bundle.dialogTitle',
+      'bulk.bundle.membersLabel',
+      'bulk.bundle.addTicketSearchPlaceholder',
+      'bulk.bundle.needMoreTickets',
     ];
 
     for (const key of pseudoKeys) {

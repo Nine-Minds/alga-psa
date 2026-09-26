@@ -1,3 +1,4 @@
+import { formatPhoneForDisplay } from "../../../../packages/validation/src/lib/phone";
 import type { CompositeScreenProps } from "@react-navigation/native";
 import type { DrawerScreenProps } from "@react-navigation/drawer";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -271,7 +272,7 @@ const ClientRow = memo(function ClientRow({
   const clientName = item.client_name;
   const handlePress = useCallback(() => onPressClient(clientId, clientName), [clientId, clientName, onPressClient]);
 
-  const snippet = [item.phone_no, item.email].filter(Boolean).join(" • ");
+  const snippet = [item.phone_no ? formatPhoneForDisplay(item.phone_no).number : null, item.email].filter(Boolean).join(" • ");
   const imageUri = item.logoUrl && baseUrl ? `${baseUrl}${item.logoUrl}` : null;
 
   return (

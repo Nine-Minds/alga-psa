@@ -35,6 +35,7 @@
     "title": "Contactenpagina",
     "description": "Hoofdpagina voor contactbeheer met zoeken, filters, lijstweergave en bulkacties",
     "heading": "Contacten",
+    "sharedMailbox": "Gedeelde mailbox",
     "addContact": "+ Contact toevoegen",
     "actions": "Acties",
     "searchPlaceholder": "Zoek contacten, notities en interacties",

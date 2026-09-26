@@ -1313,7 +1313,7 @@
     },
     "domain": {
       "title": "Custom Domain",
-      "description": "Configure a branded hostname for your client portal. We will provision TLS certificates automatically once DNS is verified.",
+      "description": "Configure a branded hostname for your client portal.",
       "currentStatus": "Current status",
       "noDomainConfigured": "No custom domain configured",
       "defaultStatusMessage": "No custom domain registered yet.",
@@ -1355,7 +1355,8 @@
         "step3": "Obtain and maintain the TLS certificate for the domain on your proxy.",
         "step4": "Save the domain here — it activates immediately. Wire DNS and your proxy first, since portal links switch to this domain right away.",
         "docLinkText": "Reverse proxy setup & troubleshooting guide",
-        "neverSeenWarning": "No requests have reached {{domain}} yet. Check that your reverse proxy forwards the original Host header."
+        "neverSeenWarning": "No requests have reached {{domain}} yet. Check that your reverse proxy forwards the original Host header.",
+        "tlsNote": "TLS terminates at your reverse proxy, which holds the certificate."
       },
       "badges": {
         "pending_dns": "Pending DNS",
@@ -1380,7 +1381,8 @@
         "refreshFailed": "Failed to refresh domain status.",
         "retryFailed": "Retry failed.",
         "disableFailed": "Failed to disable custom domain."
-      }
+      },
+      "hostedTlsNote": "We will provision TLS certificates automatically once DNS is verified."
     },
     "yourCompanyName": "Your Company Name",
     "brandingPreviewMode": "Branding preview theme mode",
@@ -2179,6 +2181,18 @@
       "comingSoon": "Mapping templates and scheduled imports will live here. Save column mappings, share them across the team, and configure recurring jobs."
     },
     "migration": {
+      "customFields": {
+        "required": "required",
+        "title": "Fields for {{name}}",
+        "mapping": "Custom field mapping",
+        "description": "Map preserved CSV columns to fields on this asset type.",
+        "empty": "No custom columns were preserved for this asset type.",
+        "samples_one": "{{sample}} · {{count}} record",
+        "samples_other": "{{sample}} · {{count}} records",
+        "noSample": "No sample",
+        "missingRequired": "Required fields not mapped: {{fields}}",
+        "duplicate": "A custom field is mapped more than once. Choose a unique target for each source."
+      },
       "actions": {
         "back": "Back to migrations",
         "upload": "Upload package"
@@ -3055,7 +3069,7 @@
     "assetTypes": {
       "tab": "Assets",
       "title": "Asset Types",
-      "description": "Manage the asset types available in your asset module. Custom types carry a field schema that drives their create/edit forms.",
+      "description": "Custom types use a field schema for their forms; built-in types also support additional fields.",
       "loading": "Loading asset types...",
       "table": {
         "name": "Name",
@@ -3083,7 +3097,7 @@
         "namePlaceholder": "e.g. Firewall",
         "displayOrderLabel": "Display Order",
         "iconLabel": "Icon",
-        "builtinSchemaHint": "Built-in types use fixed forms managed by AlgaPSA, so their field schema cannot be edited. You can still rename the type or change its icon."
+        "builtinSchemaHint": "The standard built-in form stays fixed. These additional fields are tenant-defined."
       },
       "deleteDialog": {
         "title": "Delete Asset Type",
@@ -3141,7 +3155,8 @@
           "invalidOptions": "Options must be non-empty values.",
           "invalidField": "This field is invalid."
         }
-      }
+      },
+      "additionalFields": "Additional fields"
     }
   },
   "mcpServer": {

@@ -1,4 +1,7 @@
 {
+  "phone": {
+    "extension": "wew."
+  },
   "colorPicker": {
     "invalidHexBackground": "Nieprawidłowy kolor szesnastkowy (np. #FF0000)",
     "invalidHexText": "Nieprawidłowy kolor szesnastkowy (np. #FFFFFF)",
@@ -1653,5 +1656,75 @@
     "disabledByAdmin": "Wyłączone przez administratora",
     "mixed": "Częściowo włączone",
     "empty": "Brak kategorii powiadomień e-mail."
+  },
+  "listViews": {
+    "defaultView": "Widok domyślny",
+    "unsavedChanges": "Ten widok ma niezapisane zmiany",
+    "searchPlaceholder": "Szukaj widoków",
+    "noMatches": "Brak pasujących widoków",
+    "sections": {
+      "mine": "Moje widoki",
+      "mineEmpty": "Brak widoków prywatnych",
+      "shared": "Widoki udostępnione",
+      "sharedEmpty": "Brak widoków udostępnionych"
+    },
+    "labels": {
+      "myDefault": "Mój domyślny",
+      "sharedByYou": "Udostępniony przez Ciebie"
+    },
+    "visibility": {
+      "private": "Prywatny",
+      "shared": "Udostępniony"
+    },
+    "actions": {
+      "delete": "Usuń",
+      "manage": "Zarządzaj",
+      "setDefault": "Ustaw jako mój domyślny",
+      "clearDefault": "Wyczyść mój domyślny",
+      "copyLink": "Kopiuj link",
+      "saveChanges": "Zapisz zmiany",
+      "saveChangesTo": "Zapisz zmiany w „{{name}}”",
+      "saveAsNew": "Zapisz jako nowy widok…",
+      "discardChanges": "Odrzuć zmiany"
+    },
+    "dialog": {
+      "createTitle": "Zapisz jako nowy widok",
+      "manageTitle": "Zarządzaj widokiem",
+      "nameLabel": "Nazwa",
+      "nameInvalid": "Wpisz nazwę o długości od 1 do {{max}} znaków.",
+      "visibilityLabel": "Kto może go zobaczyć",
+      "privateHint": "Tylko Ty widzisz ten widok.",
+      "sharedHint": "Każdy, kto może otworzyć tę listę, może go zobaczyć i zastosować.",
+      "sharedDisabledHint": "Nie masz uprawnień do udostępniania widoków."
+    },
+    "deleteDialog": {
+      "title": "Usuń widok",
+      "message": "Usunąć „{{name}}”?",
+      "messageShared": "Usunąć „{{name}}”? Widok jest udostępniony, więc zniknie dla wszystkich, którzy z niego korzystają."
+    },
+    "toasts": {
+      "saved": "Zapisano „{{name}}”",
+      "updated": "Zaktualizowano „{{name}}”",
+      "deleted": "Widok usunięty",
+      "defaultSet": "Ustawiono widok domyślny",
+      "defaultCleared": "Wyczyszczono widok domyślny",
+      "linkCopied": "Link skopiowany",
+      "droppedReferences": "Niektóre elementy w „{{name}}” już nie istnieją i zostały pominięte: {{fields}}"
+    },
+    "errors": {
+      "notFound": "Ten widok jest prywatny lub już nie istnieje.",
+      "unknownList": "Nieznana lista.",
+      "invalidName": "Nazwa widoku musi mieć od 1 do 100 znaków.",
+      "duplicateName": "Masz już widok o nazwie „{{name}}” na tej liście.",
+      "invalidSettings": "Nie można zapisać widoku: {{detail}}",
+      "invalidVisibility": "Widoczność musi być prywatna lub udostępniona.",
+      "cannotShare": "Nie masz uprawnień do udostępniania widoków.",
+      "cannotEdit": "Nie masz uprawnień do zmiany tego widoku.",
+      "cannotReadList": "Nie masz uprawnień do wyświetlania tej listy.",
+      "saveFailed": "Nie można zapisać widoku.",
+      "deleteFailed": "Nie można usunąć widoku.",
+      "defaultFailed": "Nie można zmienić Twojego widoku domyślnego.",
+      "copyFailed": "Nie można skopiować linku."
+    }
   }
 }

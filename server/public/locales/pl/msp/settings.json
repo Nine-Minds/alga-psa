@@ -1319,7 +1319,7 @@
     },
     "domain": {
       "title": "Domena niestandardowa",
-      "description": "Skonfiguruj firmową nazwę hosta dla portalu klienta. Po zweryfikowaniu DNS automatycznie wystawimy certyfikaty TLS.",
+      "description": "Skonfiguruj firmową nazwę hosta dla portalu klienta.",
       "currentStatus": "Aktualny status",
       "noDomainConfigured": "Nie skonfigurowano domeny niestandardowej",
       "defaultStatusMessage": "Nie zarejestrowano jeszcze żadnej domeny niestandardowej.",
@@ -1361,7 +1361,8 @@
         "step3": "Uzyskaj i utrzymuj certyfikat TLS dla domeny na swoim proxy.",
         "step4": "Zapisz domenę tutaj — aktywuje się natychmiast. Najpierw skonfiguruj DNS i proxy, ponieważ linki portalu od razu przełączą się na tę domenę.",
         "docLinkText": "Przewodnik konfiguracji i rozwiązywania problemów z reverse proxy",
-        "neverSeenWarning": "Żadne żądania nie dotarły jeszcze do {{domain}}. Sprawdź, czy Twój reverse proxy przekazuje oryginalny nagłówek Host."
+        "neverSeenWarning": "Żadne żądania nie dotarły jeszcze do {{domain}}. Sprawdź, czy Twój reverse proxy przekazuje oryginalny nagłówek Host.",
+        "tlsNote": "TLS kończy się na Twoim reverse proxy, który przechowuje certyfikat."
       },
       "badges": {
         "pending_dns": "Oczekuje na DNS",
@@ -1386,7 +1387,8 @@
         "refreshFailed": "Nie udało się odświeżyć statusu domeny.",
         "retryFailed": "Ponowienie nie powiodło się.",
         "disableFailed": "Nie udało się wyłączyć domeny niestandardowej."
-      }
+      },
+      "hostedTlsNote": "Po zweryfikowaniu DNS automatycznie wystawimy certyfikaty TLS."
     },
     "yourCompanyName": "Nazwa Twojej firmy",
     "brandingPreviewMode": "Tryb motywu podglądu marki",
@@ -2185,6 +2187,20 @@
       "comingSoon": "Szablony mapowania i zaplanowane importy będą dostępne tutaj. Zapisuj mapowania kolumn, udostępniaj je zespołowi i konfiguruj powtarzające się zadania."
     },
     "migration": {
+      "customFields": {
+        "required": "wymagane",
+        "title": "Pola dla {{name}}",
+        "mapping": "Mapowanie pól niestandardowych",
+        "description": "Przypisz zachowane kolumny CSV do pól tego typu zasobu.",
+        "empty": "Nie zachowano kolumn niestandardowych dla tego typu zasobu.",
+        "samples_one": "{{sample}} · {{count}} rekord",
+        "samples_other": "{{sample}} · {{count}} rekordów",
+        "noSample": "Brak przykładu",
+        "missingRequired": "Nieprzypisane pola wymagane: {{fields}}",
+        "duplicate": "Pole niestandardowe jest przypisane więcej niż raz. Wybierz unikalne pole docelowe dla każdego źródła.",
+        "samples_few": "{{sample}} · {{count}} rekordy",
+        "samples_many": "{{sample}} · {{count}} rekordów"
+      },
       "actions": {
         "back": "Powrót do migracji",
         "upload": "Prześlij pakiet"
@@ -3083,7 +3099,7 @@
     "assetTypes": {
       "tab": "Zasoby",
       "title": "Typy zasobów",
-      "description": "Zarządzaj typami zasobów dostępnymi w module zasobów. Typy niestandardowe mają schemat pól, który steruje ich formularzami tworzenia/edycji.",
+      "description": "Typy niestandardowe używają schematu pól w formularzach; typy wbudowane również obsługują pola dodatkowe.",
       "loading": "Ładowanie typów zasobów...",
       "table": {
         "name": "Nazwa",
@@ -3111,7 +3127,7 @@
         "namePlaceholder": "np. Firewall",
         "displayOrderLabel": "Kolejność wyświetlania",
         "iconLabel": "Ikona",
-        "builtinSchemaHint": "Typy wbudowane używają stałych formularzy zarządzanych przez AlgaPSA, więc ich schematu pól nie można edytować. Nadal możesz zmienić nazwę typu lub jego ikonę."
+        "builtinSchemaHint": "Standardowy wbudowany formularz pozostaje niezmienny. Te dodatkowe pola są definiowane dla danego tenanta."
       },
       "deleteDialog": {
         "title": "Usuń typ zasobu",
@@ -3169,7 +3185,8 @@
           "invalidOptions": "Opcje nie mogą być puste.",
           "invalidField": "To pole jest nieprawidłowe."
         }
-      }
+      },
+      "additionalFields": "Pola dodatkowe"
     }
   },
   "mcpServer": {

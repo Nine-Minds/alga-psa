@@ -4,6 +4,7 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { DateFormatProvider } from '@alga-psa/ui/lib/dateFormat/useDateFormat';
 import type {
   ClientPulseDocuments,
   ClientPulseInstallBase,
@@ -270,7 +271,7 @@ describe('PeopleCard', () => {
           totalCount: 7,
           top: [{
             contact_name_id: 'c-1', full_name: 'Ada Lovelace', role: 'Ops',
-            email: 'ada@example.com', phone: null, is_default: true, avatarUrl: null,
+            email: 'ada@example.com', phone: null, phone_extension: null, is_default: true, avatarUrl: null,
           }],
         }}
         onOpen={null}
@@ -282,6 +283,14 @@ describe('PeopleCard', () => {
     expect(document.getElementById('ppl-more')).toHaveTextContent('+6 more');
   });
 
+  it('renders the default phone extension', () => {
+    render(<PeopleCard id="ppl" data={{ totalCount: 1, top: [{
+      contact_name_id: 'c-1', full_name: 'Ada Lovelace', role: null, email: null,
+      phone: '+13202521658', phone_extension: '42', is_default: true, avatarUrl: null,
+    }] }} onOpen={null} t={t} />);
+    expect(screen.getByText('+1 320 252 1658 ext. 42')).toBeInTheDocument();
+  });
+
   it('says so when a contact has neither phone nor email', () => {
     render(
       <PeopleCard
@@ -290,7 +299,7 @@ describe('PeopleCard', () => {
           totalCount: 1,
           top: [{
             contact_name_id: 'c-1', full_name: 'Ada Lovelace', role: null,
-            email: null, phone: null, is_default: false, avatarUrl: null,
+            email: null, phone: null, phone_extension: null, is_default: false, avatarUrl: null,
           }],
         }}
         onOpen={null}
@@ -305,7 +314,7 @@ describe('PeopleCard', () => {
 describe('LocationsCard', () => {
   const location = (id: string): ClientPulseLocation => ({
     location_id: id, location_name: `Site ${id}`, address_line1: '1 Main St', city: 'Springfield',
-    phone: null, email: null, is_default: false, is_billing: false, is_shipping: false,
+    phone: null, phone_extension: null, country_code: null, email: null, is_default: false, is_billing: false, is_shipping: false,
   });
 
   it('shows an empty state with no locations', () => {
@@ -320,6 +329,15 @@ describe('LocationsCard', () => {
     expect(screen.getByText('Site c')).toBeInTheDocument();
     expect(screen.queryByText('Site d')).toBeNull();
     expect(document.getElementById('loc-more')).toHaveTextContent('+2 more');
+  });
+
+  it('formats extensions and national legacy numbers using the location country', () => {
+    render(<LocationsCard id="loc" locations={[
+      { ...location('a'), phone: '+13202521658', phone_extension: '42', country_code: 'US' },
+      { ...location('b'), phone: '(507) 532-4482', country_code: 'US' },
+    ]} onManage={null} t={t} />);
+    expect(screen.getByText('+1 320 252 1658 ext. 42')).toBeInTheDocument();
+    expect(screen.getByText('+1 507 532 4482')).toBeInTheDocument();
   });
 });
 
@@ -377,8 +395,8 @@ describe('RecordCard', () => {
       <RecordCard
         id="rec"
         data={{
-          url: null, accountManagerName: 'Dorothy Gale', defaultContactName: null,
-          inboundDomains: [], taxRegion: null, clientSince: '2019-04-01T00:00:00.000Z', isInactive: false,
+          url: null, accountManagerName: 'Dorothy Gale', defaultContactName: null, defaultContactId: null,
+          inboundDomains: [], taxRegion: null, clientSince: '2019-04-01', isInactive: false,
         }}
         onOpen={null}
         onOpenAdditionalInfo={null}
@@ -388,13 +406,71 @@ describe('RecordCard', () => {
 
     expect(screen.getByText('Dorothy Gale')).toBeInTheDocument();
     expect(screen.getByText('not set')).toBeInTheDocument();
-    expect(screen.getByText('2019')).toBeInTheDocument();
+    expect(screen.getByText('04/01/2019')).toBeInTheDocument();
+  });
+
+  it("writes client since in the tenant country's date order", () => {
+    render(
+      <DateFormatProvider countryCode="AU">
+        <RecordCard
+          id="rec"
+          data={{
+            url: null, accountManagerName: null, defaultContactName: null, defaultContactId: null,
+            inboundDomains: [], taxRegion: null, clientSince: '2019-04-01', isInactive: false,
+          }}
+          onOpen={null}
+          onOpenAdditionalInfo={null}
+          t={t}
+        />
+      </DateFormatProvider>,
+    );
+
+    expect(screen.getByText('01/04/2019')).toBeInTheDocument();
+  });
+
+  it('shows the whole client_since day, not the day the row was created', () => {
+    // A migrated client: the relationship started years before the AlgaPSA row,
+    // and on Jan 1 a timezone-shifted re-parse would report 31/12/2014.
+    render(
+      <RecordCard
+        id="rec"
+        data={{
+          url: null, accountManagerName: null, defaultContactName: null, defaultContactId: null,
+          inboundDomains: [], taxRegion: null, clientSince: '2015-01-01', isInactive: false,
+        }}
+        onOpen={null}
+        onOpenAdditionalInfo={null}
+        t={t}
+      />,
+    );
+
+    expect(screen.getByText('01/01/2015')).toBeInTheDocument();
+  });
+
+  it('opens the default contact when there is a handler and a resolved contact', () => {
+    const onOpenContact = vi.fn();
+    const data = {
+      url: null, accountManagerName: null, defaultContactName: 'Glinda Good',
+      defaultContactId: 'contact-1', inboundDomains: [], taxRegion: null,
+      clientSince: null, isInactive: false,
+    };
+
+    const { rerender } = render(
+      <RecordCard id="rec" data={data} onOpen={null} onOpenAdditionalInfo={null} onOpenContact={onOpenContact} t={t} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Glinda Good' }));
+    expect(onOpenContact).toHaveBeenCalledWith('contact-1');
+
+    // Without a handler the name stays plain text — nothing to click.
+    rerender(<RecordCard id="rec" data={data} onOpen={null} onOpenAdditionalInfo={null} t={t} />);
+    expect(screen.queryByRole('button', { name: 'Glinda Good' })).toBeNull();
+    expect(screen.getByText('Glinda Good')).toBeInTheDocument();
   });
 
   it('renders the additional-info footer link only when it has a destination', () => {
     const onOpenAdditionalInfo = vi.fn();
     const data = {
-      url: null, accountManagerName: null, defaultContactName: null,
+      url: null, accountManagerName: null, defaultContactName: null, defaultContactId: null,
       inboundDomains: [], taxRegion: null, clientSince: null, isInactive: false,
     };
 

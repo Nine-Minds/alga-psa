@@ -137,6 +137,7 @@ async function registerContactUser(
           contact_name_id: 'contacts.contact_name_id',
           client_id: 'contacts.client_id',
           is_inactive: 'contacts.is_inactive',
+          contact_kind: 'contacts.contact_kind',
           full_name: 'contacts.full_name',
           tenant: 'clients.tenant',
         })
@@ -148,6 +149,10 @@ async function registerContactUser(
 
       if (contact.is_inactive) {
         return { success: false, error: 'Contact is inactive' };
+      }
+
+      if (contact.contact_kind === 'shared_mailbox') {
+        return { success: false, error: 'Shared mailbox contacts cannot have a client portal user.' };
       }
 
       // Check if user already exists

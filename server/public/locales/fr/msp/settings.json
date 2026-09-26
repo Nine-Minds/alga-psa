@@ -1313,7 +1313,7 @@
     },
     "domain": {
       "title": "Domaine personnalisé",
-      "description": "Configurez un nom d'hôte personnalisé pour votre portail client. Nous provisionnerons automatiquement les certificats TLS une fois le DNS vérifié.",
+      "description": "Configurez un nom d'hôte personnalisé pour votre portail client.",
       "currentStatus": "Statut actuel",
       "noDomainConfigured": "Aucun domaine personnalisé configuré",
       "defaultStatusMessage": "Aucun domaine personnalisé enregistré pour le moment.",
@@ -1355,7 +1355,8 @@
         "step3": "Obtenez et maintenez le certificat TLS pour le domaine sur votre proxy.",
         "step4": "Enregistrez le domaine ici — il s'active immédiatement. Configurez d'abord le DNS et votre proxy, car les liens du portail basculent immédiatement vers ce domaine.",
         "docLinkText": "Guide de configuration et de dépannage du proxy inverse",
-        "neverSeenWarning": "Aucune requête n'a encore atteint {{domain}}. Vérifiez que votre proxy inverse transmet l'en-tête Host d'origine."
+        "neverSeenWarning": "Aucune requête n'a encore atteint {{domain}}. Vérifiez que votre proxy inverse transmet l'en-tête Host d'origine.",
+        "tlsNote": "Le TLS se termine sur votre proxy inverse, qui détient le certificat."
       },
       "badges": {
         "pending_dns": "DNS en attente",
@@ -1380,7 +1381,8 @@
         "refreshFailed": "Échec de l'actualisation du statut du domaine.",
         "retryFailed": "Échec de la nouvelle tentative.",
         "disableFailed": "Échec de la désactivation du domaine personnalisé."
-      }
+      },
+      "hostedTlsNote": "Nous provisionnerons automatiquement les certificats TLS une fois le DNS vérifié."
     },
     "yourCompanyName": "Nom de votre entreprise",
     "brandingPreviewMode": "Mode de thème d'aperçu de la marque",
@@ -2179,6 +2181,18 @@
       "comingSoon": "Les modèles de correspondance et les importations planifiées seront disponibles ici. Enregistrez les correspondances de colonnes, partagez-les avec l'équipe et configurez des tâches récurrentes."
     },
     "migration": {
+      "customFields": {
+        "required": "obligatoire",
+        "title": "Champs de {{name}}",
+        "mapping": "Correspondance des champs personnalisés",
+        "description": "Associez les colonnes CSV conservées aux champs de ce type d’actif.",
+        "empty": "Aucune colonne personnalisée n’a été conservée pour ce type d’actif.",
+        "samples_one": "{{sample}} · {{count}} enregistrement",
+        "samples_other": "{{sample}} · {{count}} enregistrements",
+        "noSample": "Aucun exemple",
+        "missingRequired": "Champs obligatoires non associés : {{fields}}",
+        "duplicate": "Un champ personnalisé est associé plusieurs fois. Choisissez une destination unique pour chaque source."
+      },
       "actions": {
         "back": "Retour aux migrations",
         "upload": "Téléverser le paquet"
@@ -3055,7 +3069,7 @@
     "assetTypes": {
       "tab": "Actifs",
       "title": "Types d'actifs",
-      "description": "Gérez les types d'actifs disponibles dans votre module d'actifs. Les types personnalisés portent un schéma de champs qui pilote leurs formulaires de création/modification.",
+      "description": "Les types personnalisés utilisent un schéma de champs pour leurs formulaires ; les types intégrés prennent aussi en charge des champs supplémentaires.",
       "loading": "Chargement des types d'actifs...",
       "table": {
         "name": "Nom",
@@ -3083,7 +3097,7 @@
         "namePlaceholder": "p. ex. Pare-feu",
         "displayOrderLabel": "Ordre d'affichage",
         "iconLabel": "Icône",
-        "builtinSchemaHint": "Les types intégrés utilisent des formulaires fixes gérés par AlgaPSA ; leur schéma de champs ne peut donc pas être modifié. Vous pouvez toujours renommer le type ou changer son icône."
+        "builtinSchemaHint": "Le formulaire standard intégré reste fixe. Ces champs supplémentaires sont définis pour chaque tenant."
       },
       "deleteDialog": {
         "title": "Supprimer le type d'actif",
@@ -3141,7 +3155,8 @@
           "invalidOptions": "Les options ne peuvent pas être vides.",
           "invalidField": "Ce champ est invalide."
         }
-      }
+      },
+      "additionalFields": "Champs supplémentaires"
     }
   },
   "mcpServer": {

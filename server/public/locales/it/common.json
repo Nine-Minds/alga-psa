@@ -1,4 +1,7 @@
 {
+  "phone": {
+    "extension": "int."
+  },
   "colorPicker": {
     "invalidHexBackground": "Colore esadecimale non valido (ad es. #FF0000)",
     "invalidHexText": "Colore esadecimale non valido (ad es. #FFFFFF)",
@@ -1619,5 +1622,75 @@
     "disabledByAdmin": "Disattivato dall’amministratore",
     "mixed": "Parzialmente attivato",
     "empty": "Nessuna categoria di notifiche email disponibile."
+  },
+  "listViews": {
+    "defaultView": "Vista predefinita",
+    "unsavedChanges": "Questa vista ha modifiche non salvate",
+    "searchPlaceholder": "Cerca viste",
+    "noMatches": "Nessuna vista corrispondente",
+    "sections": {
+      "mine": "Le mie viste",
+      "mineEmpty": "Nessuna vista privata",
+      "shared": "Viste condivise",
+      "sharedEmpty": "Nessuna vista condivisa"
+    },
+    "labels": {
+      "myDefault": "La mia predefinita",
+      "sharedByYou": "Condivisa da te"
+    },
+    "visibility": {
+      "private": "Privata",
+      "shared": "Condivisa"
+    },
+    "actions": {
+      "delete": "Elimina",
+      "manage": "Gestisci",
+      "setDefault": "Imposta come mia predefinita",
+      "clearDefault": "Rimuovi la mia predefinita",
+      "copyLink": "Copia link",
+      "saveChanges": "Salva modifiche",
+      "saveChangesTo": "Salva modifiche in \"{{name}}\"",
+      "saveAsNew": "Salva come nuova vista…",
+      "discardChanges": "Annulla modifiche"
+    },
+    "dialog": {
+      "createTitle": "Salva come nuova vista",
+      "manageTitle": "Gestisci vista",
+      "nameLabel": "Nome",
+      "nameInvalid": "Inserisci un nome da 1 a {{max}} caratteri.",
+      "visibilityLabel": "Chi può vederla",
+      "privateHint": "Solo tu puoi vedere questa vista.",
+      "sharedHint": "Chiunque possa aprire questo elenco può vederla e applicarla.",
+      "sharedDisabledHint": "Non hai l'autorizzazione per condividere le viste."
+    },
+    "deleteDialog": {
+      "title": "Elimina vista",
+      "message": "Eliminare \"{{name}}\"?",
+      "messageShared": "Eliminare \"{{name}}\"? È condivisa, quindi scomparirà per chiunque la usi."
+    },
+    "toasts": {
+      "saved": "\"{{name}}\" salvata",
+      "updated": "\"{{name}}\" aggiornata",
+      "deleted": "Vista eliminata",
+      "defaultSet": "Vista predefinita impostata",
+      "defaultCleared": "Vista predefinita rimossa",
+      "linkCopied": "Link copiato",
+      "droppedReferences": "Alcuni elementi di \"{{name}}\" non esistono più e sono stati ignorati: {{fields}}"
+    },
+    "errors": {
+      "notFound": "Questa vista è privata o non esiste più.",
+      "unknownList": "Elenco sconosciuto.",
+      "invalidName": "Il nome di una vista deve contenere da 1 a 100 caratteri.",
+      "duplicateName": "Hai già una vista chiamata \"{{name}}\" in questo elenco.",
+      "invalidSettings": "Impossibile salvare la vista: {{detail}}",
+      "invalidVisibility": "La visibilità deve essere privata o condivisa.",
+      "cannotShare": "Non hai l'autorizzazione per condividere le viste.",
+      "cannotEdit": "Non hai l'autorizzazione per modificare questa vista.",
+      "cannotReadList": "Non hai l'autorizzazione per visualizzare questo elenco.",
+      "saveFailed": "Impossibile salvare la vista.",
+      "deleteFailed": "Impossibile eliminare la vista.",
+      "defaultFailed": "Impossibile modificare la tua vista predefinita.",
+      "copyFailed": "Impossibile copiare il link."
+    }
   }
 }

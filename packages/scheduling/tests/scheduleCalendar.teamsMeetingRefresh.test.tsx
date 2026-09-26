@@ -40,6 +40,7 @@ const {
   getCurrentUser,
   getCurrentUserPermissions,
   getUserAvatarUrlsBatchAction,
+  getShareableUsers,
 } = vi.hoisted(() => ({
   getScheduleEntries: vi.fn(),
   addScheduleEntry: vi.fn(),
@@ -55,9 +56,34 @@ const {
   getCurrentUser: vi.fn(),
   getCurrentUserPermissions: vi.fn(),
   getUserAvatarUrlsBatchAction: vi.fn(),
+  getShareableUsers: vi.fn(),
 }));
 
 vi.mock('@alga-psa/scheduling/actions', () => ({
+  // Shared calendars: the viewer sees every calendar (user_schedule:update).
+  getCalendarsVisibleToMe: vi.fn(async () => ({
+    success: true,
+    data: {
+      viewerUserId: 'tech-1',
+      canViewAll: true,
+      me: {
+        key: 'tech-1', calendar_type: 'personal', calendar_id: null, owner_user_id: 'tech-1',
+        name: 'Tess Tech', color: '#2563eb', access_level: 'edit',
+      },
+      people: [],
+      groups: [],
+    },
+  })),
+  getMyCalendarShares: vi.fn(async () => ({ success: true, data: [] })),
+  setMyCalendarShares: vi.fn(async () => ({ success: true, data: [] })),
+  getShareableTeams: vi.fn(async () => ({ success: true, data: [] })),
+  getShareableUsers,
+  createGroupCalendar: vi.fn(),
+  updateGroupCalendar: vi.fn(),
+  getGroupCalendarShares: vi.fn(async () => ({ success: true, data: [] })),
+  setGroupCalendarShares: vi.fn(),
+  archiveGroupCalendar: vi.fn(),
+  restoreGroupCalendar: vi.fn(),
   getScheduleEntries,
   addScheduleEntry,
   updateScheduleEntry,
@@ -226,7 +252,24 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/UserPicker', () => ({
-  default: ({ id }: any) => <select id={id} />,
+  // Expose the option set so a test can prove ScheduleCalendar fed the popup
+  // the gated getShareableUsers list rather than useUsers/displayedTechnicians.
+  default: ({ value, users, placeholder = 'Not assigned' }: any) => {
+    const current = (users ?? []).find((user: any) => user.user_id === value);
+    const name = (user: any) => `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim();
+    return (
+      <div data-testid="user-picker">
+        <span data-testid="user-picker-value">{current ? name(current) : placeholder}</span>
+        <ul data-testid="user-picker-options">
+          {(users ?? []).map((user: any) => (
+            <li key={user.user_id} data-testid={`user-option-${user.user_id}`}>
+              {name(user)}
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  },
 }));
 
 vi.mock('@alga-psa/ui/components/DateTimePicker', () => ({
@@ -369,6 +412,7 @@ describe('ScheduleCalendar refreshes its events after a Teams meeting is created
     getAppointmentRequestById.mockResolvedValue({ success: false });
     getWorkItemById.mockResolvedValue(null);
     getUserAvatarUrlsBatchAction.mockResolvedValue({});
+    getShareableUsers.mockResolvedValue({ success: true, data: [] });
     getScheduleEntryTeamsMeeting.mockImplementation(async (entryId: string) => ({
       success: true,
       data: serverMeetings[entryId] ?? null,
@@ -566,5 +610,26 @@ describe('ScheduleCalendar refreshes its events after a Teams meeting is created
     expect(savedEntryId).toBe('entry-materialized');
     expect(savedData.notes).toContain(JOIN_URL);
     expect(savedData.recurrence_pattern).toBeNull();
+  });
+
+  it('feeds the entry popup assignee options from the gated getShareableUsers action', async () => {
+    const tech = { user_id: 'tech-1', first_name: 'Tess', last_name: 'Tech', user_type: 'internal', is_inactive: false };
+    const alice = { user_id: 'alice', first_name: 'Alice', last_name: 'Adams', user_type: 'internal', is_inactive: false };
+    serverEvents = [baseEntry({ entry_id: 'entry-assignees' })];
+    getShareableUsers.mockResolvedValue({ success: true, data: [tech, alice] });
+
+    render(<ScheduleCalendar />);
+    await screen.findByTestId('calendar-event-entry-assignees');
+
+    openEntry('entry-assignees');
+
+    expect(await screen.findByTestId('user-picker')).toBeInTheDocument();
+    // The stored assignee is passed to the gated action so an inactive or
+    // out-of-scope assignee can still resolve to a name.
+    expect(getShareableUsers).toHaveBeenCalledWith(['tech-1']);
+    // Alice is not in useUsers() (which only has tech-1); her presence proves the
+    // popup is fed the gated list, not the getAllUsers-derived technicians.
+    expect(screen.getByTestId('user-option-alice')).toBeInTheDocument();
+    expect(screen.getByTestId('user-picker-value')).toHaveTextContent('Tess Tech');
   });
 });

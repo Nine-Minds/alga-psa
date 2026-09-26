@@ -2,9 +2,12 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { TestWorkflowEnvironment } from '@temporalio/testing';
 
 import { tenantDb } from '@alga-psa/db';
 import { convertSpreadsheets, inferSpreadsheetMapping } from '@alga-psa/migration-connectors/csv';
@@ -98,8 +101,197 @@ async function cleanupTenant(tenantId: string): Promise<void> {
   await tenantTable(tenantId, 'contracts').del();
   await tenantTable(tenantId, 'client_billing_profiles').del();
   await tenantTable(tenantId, 'clients').del();
+  await tenantTable(tenantId, 'job_details').del();
+  await tenantTable(tenantId, 'jobs').del();
   await tenantTable(tenantId, 'users').del();
   await tenantRows().where({ tenant: tenantId }).del();
+}
+
+/**
+ * Exercise the current EE background path without a running app server.
+ * Temporal uses a private namespace and task queue for this test. The activity
+ * and server subscriber use a disposable Redis container with a unique event
+ * stream prefix/group. Redis is a separate instance because the publisher also
+ * writes MAINTENANCE_JOB_REQUESTED to the global workflow stream; a prefix alone
+ * would leave that stream visible to consumers in another worktree.
+ */
+async function applyMigrationThroughIsolatedTemporalAndEventBus(
+  fixture: Fixture,
+  migrationJobId: string,
+): Promise<void> {
+  const isolatedToken = uuidv4().replaceAll('-', '');
+  const containerName = `amp-2567-redis-${isolatedToken.slice(0, 12)}`;
+  const envNames = [
+    'REDIS_HOST',
+    'REDIS_PORT',
+    'REDIS_PREFIX',
+    'REDIS_EVENT_STREAM_PREFIX',
+    'REDIS_EVENT_CONSUMER_GROUP',
+    'REDIS_PASSWORD',
+    'redis_password',
+    'SECRET_READ_CHAIN',
+  ] as const;
+  const priorEnv = Object.fromEntries(envNames.map((name) => [name, process.env[name]]));
+  let redisContainerId: string | undefined;
+  let environment: TestWorkflowEnvironment | undefined;
+  let temporalWorker: { shutdown(): Promise<void> } | undefined;
+  let temporalRunner: { stop(): Promise<void> } | undefined;
+  let eventBus: { close(): Promise<void> } | undefined;
+  let unregisterMaintenanceSubscriber: (() => Promise<void>) | undefined;
+  let resetTemporalRunner: (() => void) | undefined;
+  let clearServerRegistry: (() => void) | undefined;
+
+  try {
+    // Docker chooses an unused host port. This Redis instance and its global
+    // workflow stream are private to this test run, so no shared worker can
+    // claim the forwarded request.
+    redisContainerId = execFileSync('docker', [
+      'run', '--detach', '--rm', '--name', containerName,
+      '--publish', '127.0.0.1::6379',
+      'redis:7-alpine', 'redis-server', '--save', '', '--appendonly', 'no',
+    ], { encoding: 'utf8' }).trim();
+    const portMapping = execFileSync('docker', ['port', redisContainerId, '6379/tcp'], {
+      encoding: 'utf8',
+    }).trim().split('\n')[0];
+    const port = portMapping?.match(/:(\d+)$/)?.[1];
+    if (!port) throw new Error(`Could not read isolated Redis host port from: ${portMapping}`);
+
+    process.env.REDIS_HOST = '127.0.0.1';
+    process.env.REDIS_PORT = port;
+    process.env.REDIS_PREFIX = `amp-2567-${isolatedToken}:`;
+    process.env.REDIS_EVENT_STREAM_PREFIX = `event-stream-${isolatedToken}:`;
+    process.env.REDIS_EVENT_CONSUMER_GROUP = `amp-2567-${isolatedToken}`;
+    process.env.REDIS_PASSWORD = '';
+    process.env.redis_password = '';
+    process.env.SECRET_READ_CHAIN = 'env';
+
+    // Load the separately deployed worker as a runtime test fixture, just like
+    // workflowsPath below. A package import here makes Nx build the EE worker
+    // as a CE server dependency (and creates a worker -> server -> worker cycle).
+    const workerActivitiesPath = fileURLToPath(new URL(
+      '../../../../ee/temporal-workflows/src/activities/job-activities.ts',
+      import.meta.url,
+    ));
+    const [
+      workerActivities,
+      { TestWorkflowEnvironment: TemporalEnvironment },
+      { Worker: TemporalWorker },
+      { TemporalJobRunner },
+      { registerAllJobHandlers },
+      { JobHandlerRegistry },
+      maintenanceSubscriber,
+      eventBusPackage,
+    ] = await Promise.all([
+      import(workerActivitiesPath),
+      import('@temporalio/testing'),
+      import('@temporalio/worker'),
+      import('@alga-psa/jobs/runners/TemporalJobRunner'),
+      import('../../lib/jobs/registerAllHandlers'),
+      import('../../lib/jobs/jobHandlerRegistry'),
+      import('../../lib/eventBus/subscribers/maintenanceJobSubscriber'),
+      import('@alga-psa/event-bus'),
+    ]);
+
+    clearServerRegistry = () => JobHandlerRegistry.clear();
+    resetTemporalRunner = () => TemporalJobRunner.reset();
+    unregisterMaintenanceSubscriber = maintenanceSubscriber.unregisterMaintenanceJobSubscriber;
+
+    // Populate the real server registry through its production registration
+    // function, including the registered migration_apply wrapper.
+    JobHandlerRegistry.clear();
+    await registerAllJobHandlers({
+      jobService: {} as never,
+      storageService: {} as never,
+      includeEnterprise: true,
+      force: true,
+    });
+    const migrationHandler = JobHandlerRegistry.get('migration_apply');
+    expect(migrationHandler).toBeDefined();
+
+    // Register the exact branch activity and run it on an isolated Temporal
+    // namespace/queue, rather than calling the activity or server handler
+    // directly from the test.
+    await workerActivities.initializeJobHandlersForWorker();
+    const namespace = `amp-2567-${isolatedToken.slice(0, 24)}`;
+    const taskQueue = `amp-2567-${isolatedToken.slice(0, 24)}`;
+    environment = await TemporalEnvironment.createLocal({
+      server: {
+        namespace,
+        executable: { type: 'cached-download', version: 'v1.5.1' },
+      },
+    });
+    temporalRunner = await TemporalJobRunner.create({
+      address: environment.address,
+      namespace: environment.namespace,
+      taskQueue,
+    });
+    temporalRunner.registerHandler(migrationHandler!.config);
+    await temporalRunner.start();
+
+    await maintenanceSubscriber.registerMaintenanceJobSubscriber();
+    eventBus = eventBusPackage.getEventBus();
+
+    const scheduled = await temporalRunner.scheduleJob('migration_apply', {
+      tenantId: fixture.tenantId,
+      userId: fixture.ownerUserId,
+      migrationJobId,
+    });
+    if (!scheduled.externalId) throw new Error('Temporal schedule did not return its workflow ID');
+
+    const workflowsPath = fileURLToPath(new URL(
+      '../../../../ee/temporal-workflows/src/workflows/generic-job-workflow.ts',
+      import.meta.url,
+    ));
+    temporalWorker = await TemporalWorker.create({
+      connection: environment.nativeConnection,
+      namespace: environment.namespace,
+      taskQueue,
+      workflowsPath,
+      activities: {
+        executeJobHandler: workerActivities.executeJobHandler,
+        updateJobStatus: workerActivities.updateJobStatus,
+        createJobDetail: workerActivities.createJobDetail,
+      },
+    });
+    const workflowResult = await temporalWorker.runUntil(
+      environment.client.workflow.getHandle(scheduled.externalId).result(),
+    );
+    expect(workflowResult.success).toBe(true);
+
+    // Event publication is durable but asynchronous relative to the Temporal
+    // activity. Wait for the real subscriber + migration handler to reach a
+    // terminal state, failing early if the subscriber records an error.
+    const deadline = Date.now() + 60_000;
+    let appliedJob: Record<string, unknown> | undefined;
+    while (Date.now() < deadline) {
+      appliedJob = await tenantTable(fixture.tenantId, 'migration_jobs')
+        .where({ migration_job_id: migrationJobId })
+        .first();
+      if (appliedJob?.state === 'completed') break;
+      if (appliedJob?.state === 'failed' || appliedJob?.state === 'blocked') {
+        throw new Error(`Forwarded migration ended in ${String(appliedJob.state)}: ${String(appliedJob.error ?? '')}`);
+      }
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    expect(appliedJob?.state).toBe('completed');
+  } finally {
+    if (unregisterMaintenanceSubscriber) {
+      await unregisterMaintenanceSubscriber().catch(() => undefined);
+    }
+    if (eventBus) await eventBus.close().catch(() => undefined);
+    if (temporalRunner) await temporalRunner.stop().catch(() => undefined);
+    if (resetTemporalRunner) resetTemporalRunner();
+    if (environment) await environment.teardown().catch(() => undefined);
+    if (clearServerRegistry) clearServerRegistry();
+    if (redisContainerId) {
+      execFileSync('docker', ['stop', redisContainerId], { stdio: 'ignore' });
+    }
+    for (const name of envNames) {
+      const oldValue = priorEnv[name];
+      if (oldValue === undefined) delete process.env[name];
+      else process.env[name] = oldValue;
+    }
+  }
 }
 
 async function createFixture(): Promise<Fixture> {
@@ -454,9 +646,10 @@ describe('AMP migration pipeline integration', () => {
       tenantDb(db, fixture.tenantId),
       db,
       migrationJobId,
+      fixture.tenantId,
     );
 
-    expect(options.assetTypes).toContainEqual({ slug: 'door_access', name: 'Door Access' });
+    expect(options.assetTypes).toContainEqual(expect.objectContaining({ slug: 'door_access', name: 'Door Access', isBuiltin: false, fields: [] }));
   }, HOOK_TIMEOUT);
 
   it('recognizes an otherwise valid AMP package with no importable records', () => {
@@ -494,6 +687,83 @@ describe('AMP migration pipeline integration', () => {
       .where({ migration_job_id: migrationJobId })
       .first();
     expect(job.state).toBe('needs_configuration');
+  }, HOOK_TIMEOUT);
+
+  it('persists typed custom asset fields through isolated Temporal forwarding', async () => {
+    const fixture = await createFixture();
+    const fields = [
+      { key: 'controller_id', label: 'Controller ID', kind: 'text', required: true },
+      { key: 'door_count', label: 'Door Count', kind: 'number' },
+      { key: 'installed_on', label: 'Installed On', kind: 'date' },
+      { key: 'tier', label: 'Tier', kind: 'select', options: ['Gold', 'Silver'] },
+      { key: 'monitored', label: 'Monitored', kind: 'boolean' },
+    ];
+    await tenantTable(fixture.tenantId, 'asset_type_registry').insert({
+      tenant: fixture.tenantId, slug: 'door_access', name: 'Door Access', fields_schema: JSON.stringify(fields), is_builtin: false,
+    });
+    const inputPath = path.join(packageDir, `door-access-${uuidv4()}.csv`);
+    const packagePath = path.join(packageDir, `door-access-${uuidv4()}.amp`);
+    await fs.promises.writeFile(inputPath, 'Asset Name,Asset Type,Manufacturer,Model,Controller ID,Door Count,Installed On,Tier,Monitored,Notes\nFront Lobby,Door Access,Acme,DoorBox,C-2567,4,2026-09-01,gold,yes,keep out\nBlank Fields,Door Access,Acme,DoorBox,   ,   ,   ,   ,   ,blank values\n');
+    const conversion = await convertSpreadsheets({
+      outputPath: packagePath, namespace: `csv:${fixture.tenantId}`, sourceSystem: 'csv-upload',
+      files: [{ entityType: 'assets', path: inputPath, mapping: await inferSpreadsheetMapping(inputPath, 'assets') }],
+    }, packageDir);
+    expect(conversion.valid).toBe(true);
+    const migrationJobId = await createJob(fixture);
+    const staging = await new MigrationStager(db, fixture.tenantId).stage(migrationJobId, packagePath);
+    expect(staging.rejected).toBe(false);
+    const options = await loadMigrationConfigurationOptions(tenantDb(db, fixture.tenantId), db, migrationJobId, fixture.tenantId);
+    expect(options.assetTypes.find((type) => type.slug === 'door_access')?.fields).toEqual(fields);
+    expect(options.packageAssetCustomFields.map((row) => row.fieldName)).toEqual(['Controller ID', 'Door Count', 'Installed On', 'Monitored', 'Notes', 'Tier']);
+    await configureJob(fixture, migrationJobId, {
+      defaultClientId: fixture.clientId,
+      assets: {
+        assetTypeMapping: { 'Door Access': 'door_access' },
+        customFieldMapping: { door_access: { 'Controller ID': 'controller_id', 'Door Count': 'door_count', 'Installed On': 'installed_on', Tier: 'tier', Monitored: 'monitored' } },
+      },
+    });
+    const preflight = await new MigrationPlanner(db, fixture.tenantId).preflight(migrationJobId);
+    expect(preflight.state).toBe('ready');
+    expect(preflight.issues.map((issue) => issue.code)).toContain('ASSET_CUSTOM_FIELD_REQUIRED_MISSING');
+    const staged = await tenantTable(fixture.tenantId, 'migration_staged_records').where({ migration_job_id: migrationJobId, entity_type: 'assets' }).first();
+    const customValues = typeof staged.custom_field_values === 'string' ? JSON.parse(staged.custom_field_values) : staged.custom_field_values;
+    await tenantTable(fixture.tenantId, 'migration_staged_records').where({ migration_staged_record_id: staged.migration_staged_record_id }).update({ custom_field_values: JSON.stringify({ ...customValues, 'Door Count': 'four' }) });
+    const invalidValue = await new MigrationPlanner(db, fixture.tenantId).preflight(migrationJobId);
+    expect(invalidValue.issues.map((issue) => issue.code)).toContain('ASSET_CUSTOM_FIELD_INVALID');
+    await tenantTable(fixture.tenantId, 'migration_staged_records').where({ migration_staged_record_id: staged.migration_staged_record_id }).update({ custom_field_values: JSON.stringify(customValues) });
+    await configureJob(fixture, migrationJobId, { defaultClientId: fixture.clientId, assets: { assetTypeMapping: { 'Door Access': 'door_access' }, customFieldMapping: { door_access: { 'Door Count': 'missing_key' } } } });
+    const invalidKey = await new MigrationPlanner(db, fixture.tenantId).preflight(migrationJobId);
+    expect(invalidKey.issues.map((issue) => issue.code)).toContain('CONFIG_ASSET_FIELD_MAPPING_INVALID');
+    await configureJob(fixture, migrationJobId, { defaultClientId: fixture.clientId, assets: { assetTypeMapping: { 'Door Access': 'missing_type' }, customFieldMapping: { missing_type: { 'Door Count': 'door_count' } } } });
+    const missingType = await new MigrationPlanner(db, fixture.tenantId).preflight(migrationJobId);
+    expect(missingType.issues.map((issue) => issue.code)).toContain('CONFIG_ASSET_TYPE_NOT_FOUND');
+
+    await configureJob(fixture, migrationJobId, {
+      defaultClientId: fixture.clientId,
+      assets: {
+        assetTypeMapping: { 'Door Access': 'door_access' },
+        customFieldMapping: { door_access: { 'Controller ID': 'controller_id', 'Door Count': 'door_count', 'Installed On': 'installed_on', Tier: 'tier', Monitored: 'monitored' } },
+      },
+    });
+    const finalPreflight = await new MigrationPlanner(db, fixture.tenantId).preflight(migrationJobId);
+    expect(finalPreflight.state).toBe('ready');
+    await tenantTable(fixture.tenantId, 'migration_jobs').where({ migration_job_id: migrationJobId }).update({ state: 'queued' });
+    await applyMigrationThroughIsolatedTemporalAndEventBus(fixture, migrationJobId);
+
+    const completedJob = await tenantTable(fixture.tenantId, 'migration_jobs').where({ migration_job_id: migrationJobId }).first();
+    expect(completedJob.state).toBe('completed');
+    const temporalRunnerJob = await tenantTable(fixture.tenantId, 'jobs')
+      .where({ type: 'migration_apply' })
+      .orderBy('created_at', 'desc')
+      .first();
+    expect(temporalRunnerJob.status).toBe('completed');
+    const completedAssets = await tenantTable(fixture.tenantId, 'migration_job_entities').where({ migration_job_id: migrationJobId, entity_type: 'assets' }).first();
+    expect(Number(completedAssets.applied_count)).toBe(2);
+    expect(Number(completedAssets.failed_count)).toBe(0);
+    const asset = await tenantTable(fixture.tenantId, 'assets').where({ name: 'Front Lobby' }).first();
+    expect(typeof asset.attributes === 'string' ? JSON.parse(asset.attributes) : asset.attributes).toEqual({ manufacturer: 'Acme', model: 'DoorBox', controller_id: 'C-2567', door_count: 4, installed_on: '2026-09-01', tier: 'Gold', monitored: true });
+    const blankAsset = await tenantTable(fixture.tenantId, 'assets').where({ name: 'Blank Fields' }).first();
+    expect(typeof blankAsset.attributes === 'string' ? JSON.parse(blankAsset.attributes) : blankAsset.attributes).toEqual({ manufacturer: 'Acme', model: 'DoorBox' });
   }, HOOK_TIMEOUT);
 
   it('re-running the same job creates no duplicates', async () => {

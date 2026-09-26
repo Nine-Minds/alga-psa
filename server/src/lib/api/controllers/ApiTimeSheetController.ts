@@ -1779,21 +1779,15 @@ export class ApiTimeSheetController extends ApiBaseController {
           throw new ForbiddenError('Permission denied: Cannot read schedules');
         }
 
-        const canViewAllSchedules = await hasPermission(
-          user,
-          'user_schedule',
-          'update',
-          db
-        );
-
-        // Get filter parameters from query string
+        // Get filter parameters from query string. Visibility (own, shared
+        // and group calendars, or everything for user_schedule:update) is
+        // enforced by the service through the shared-calendar resolver, so
+        // any user_id may be requested; unshared calendars simply return none.
         const url = new URL(req.url);
         const filters = {
           start_date: url.searchParams.get('start_date') || undefined,
           end_date: url.searchParams.get('end_date') || undefined,
-          user_id: canViewAllSchedules
-            ? url.searchParams.get('user_id') || undefined
-            : user.user_id
+          user_id: url.searchParams.get('user_id') || undefined
         };
 
         // Get schedule entries within tenant context
@@ -1875,33 +1869,10 @@ export class ApiTimeSheetController extends ApiBaseController {
           });
         });
 
+        // The service applies the shared-calendar resolver: entries the
+        // viewer may not see come back null, Busy-level ones come back masked.
         if (!entry) {
           throw new NotFoundError('Schedule entry not found');
-        }
-
-        const assignedIds = (entry.assigned_users || []).map((u: any) => u.user_id);
-        const isOwnEntry = entry.created_by === user.user_id ||
-          assignedIds.includes(user.user_id);
-
-        if (!isOwnEntry) {
-          const canViewAllSchedules = await hasPermission(
-            user,
-            'user_schedule',
-            'update',
-            db
-          );
-          if (!canViewAllSchedules) {
-            throw new ForbiddenError('Permission denied: Cannot read schedules of other users');
-          }
-          if (entry.is_private) {
-            return createSuccessResponse({
-              ...entry,
-              title: 'Busy',
-              notes: '',
-              work_item_id: null,
-              work_item: null
-            });
-          }
         }
 
         return createSuccessResponse(entry);

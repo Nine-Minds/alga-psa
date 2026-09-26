@@ -646,7 +646,19 @@
       "propagationSummary": "{{masters}} ticket(s) seleccionado(s) son maestros en modo de sincronización; este cambio cerrará/reabrirá {{children}} ticket(s) hijos.",
       "masterSummary": "{{children}} ticket(s) hijos",
       "applyToChildren": "Aplicar a los hijos",
-      "mastersOnly": "Solo maestros"
+      "mastersOnly": "Solo maestros",
+      "membersLabel": "Tickets de este paquete",
+      "addTicketSearchPlaceholder": "Buscar tickets por número o título",
+      "addTicketEmpty": "Buscar tickets para añadir",
+      "badgeAdded": "Añadido",
+      "badgeInBundle": "En el paquete #{{number}}",
+      "badgeMaster": "Ticket principal del paquete",
+      "masterTag": "Principal",
+      "removeMember": "Quitar",
+      "needMoreTickets": "Añade al menos un ticket más al paquete.",
+      "unresolvedSelectedTickets_one": "No se pudo cargar {{count}} ticket seleccionado.",
+      "unresolvedSelectedTickets_other": "No se pudieron cargar {{count}} tickets seleccionados.",
+      "badgeClosed": "Cerrado"
     },
     "auth": {
       "moveRequired": "Debe iniciar sesión para mover tickets",
@@ -672,7 +684,8 @@
       "dueDate": "Fecha de vencimiento",
       "statusDisabledMultiBoard": "Los tickets seleccionados están en tableros distintos",
       "statusResolvingBoards": "Comprobando los tableros de los tickets seleccionados…",
-      "more": "Más"
+      "more": "Más",
+      "bundleNeedsOne": "Selecciona al menos 1 ticket para agrupar"
     },
     "assign": {
       "dialogTitle": "Asignar tickets seleccionados",
@@ -1074,7 +1087,21 @@
       "selectParentCategory": "Seleccione la categoría principal",
       "parentHelpWithBoard": "Seleccione una categoría principal para crear una subcategoría o déjelo vacío para el nivel superior",
       "parentHelpWithoutBoard": "Seleccione primero un tablero o elija una categoría principal para heredar su tablero",
-      "creating": "Creando..."
+      "creating": "Creando...",
+      "copyToBoard": "Copiar categorías a otro tablero",
+      "copyTitle": "Copiar categorías a otro tablero",
+      "copySourceLabel": "Seleccionar tablero de origen",
+      "copyTargetLabel": "Seleccionar tablero de destino",
+      "copySelected": "Copiar seleccionadas",
+      "copySuccess": "Se copiaron {{created}} categorías; se omitieron {{skipped}} que ya existían.",
+      "copyFailed": "No se pudieron copiar las categorías",
+      "copyEmpty": "No hay categorías en este tablero.",
+      "copying": "Copiando…",
+      "copySourceBoard": "Seleccionar tablero de origen",
+      "copyTargetBoard": "Seleccionar tablero de destino",
+      "copyBoardTypeMismatch": "Las categorías de tickets solo se pueden copiar entre tableros del mismo tipo de categoría.",
+      "copyConflicts_one": "{{count}} categoría omitida tiene una categoría superior distinta en el tablero de destino.",
+      "copyConflicts_other": "{{count}} categorías omitidas tienen una categoría superior distinta en el tablero de destino."
     },
     "display": {
       "responseStateTrackingTitle": "Seguimiento del estado de respuesta",
@@ -1454,7 +1481,11 @@
       "missingField": "Falta un campo obligatorio de la lista de verificación.",
       "missingFieldNamed": "Falta un campo obligatorio de la lista de verificación: {{field}}.",
       "referenceInvalid": "El ticket, la plantilla de lista de verificación o el filtro de regla seleccionados ya no son válidos. Actualice la página e inténtelo de nuevo.",
-      "invalidValue": "Uno de los valores de la lista de verificación no es válido. Actualice la página e inténtelo de nuevo."
+      "invalidValue": "Uno de los valores de la lista de verificación no es válido. Actualice la página e inténtelo de nuevo.",
+      "ruleCategoryBoardMismatch": "La categoría seleccionada pertenece a un tablero distinto al de la regla.",
+      "ruleCategoryInvalid": "La categoría seleccionada no es una categoría de nivel superior.",
+      "ruleSubcategoryInvalid": "La subcategoría seleccionada no pertenece a la categoría seleccionada.",
+      "ruleSubcategoryRequiresCategory": "Seleccione una categoría antes de elegir una subcategoría."
     }
   },
   "ticketSection": {

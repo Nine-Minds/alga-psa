@@ -5,7 +5,7 @@ const createTenantKnexMock = vi.fn();
 const runWithTenantMock = vi.fn();
 const getEntraProviderAdapterMock = vi.fn();
 const getActiveEntraPartnerConnectionMock = vi.fn();
-const filterEntraUsersForTenantMock = vi.fn();
+const filterEntraUsersForManagedTenantMock = vi.fn();
 const executeEntraSyncMock = vi.fn();
 
 vi.mock('@/lib/db', () => ({
@@ -22,7 +22,7 @@ vi.mock('@ee/lib/integrations/entra/connectionRepository', () => ({
 }));
 
 vi.mock('@ee/lib/integrations/entra/settingsService', () => ({
-  filterEntraUsersForTenant: filterEntraUsersForTenantMock,
+  filterEntraUsersForManagedTenant: filterEntraUsersForManagedTenantMock,
 }));
 
 vi.mock('@ee/lib/integrations/entra/sync/syncEngine', () => ({
@@ -77,7 +77,7 @@ describe('runEntraPreflight', () => {
     runWithTenantMock.mockReset();
     getEntraProviderAdapterMock.mockReset();
     getActiveEntraPartnerConnectionMock.mockReset();
-    filterEntraUsersForTenantMock.mockReset();
+    filterEntraUsersForManagedTenantMock.mockReset();
     executeEntraSyncMock.mockReset();
 
     runWithTenantMock.mockImplementation(async (_tenant: string, fn: () => Promise<unknown>) => fn());
@@ -90,8 +90,10 @@ describe('runEntraPreflight', () => {
 
     const listUsersForTenant = vi.fn(async () => [{ entraObjectId: 'o1' }]);
     getEntraProviderAdapterMock.mockReturnValue({ listUsersForTenant });
-    filterEntraUsersForTenantMock.mockResolvedValue({
+    filterEntraUsersForManagedTenantMock.mockResolvedValue({
       included: [{ entraObjectId: 'o1' }],
+      unknownFieldCounts: { userType: 0, assignedLicenseCount: 0 },
+      deactivateExcludedContacts: false,
       excluded: [
         {
           reason: 'account_disabled',

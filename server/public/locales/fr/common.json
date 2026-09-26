@@ -1,4 +1,7 @@
 {
+  "phone": {
+    "extension": "poste"
+  },
   "colorPicker": {
     "invalidHexBackground": "Couleur hexadécimale non valide (par ex. #FF0000)",
     "invalidHexText": "Couleur hexadécimale non valide (par ex. #FFFFFF)",
@@ -1619,5 +1622,75 @@
     "disabledByAdmin": "Désactivé par un administrateur",
     "mixed": "Partiellement activé",
     "empty": "Aucune catégorie de notification e-mail disponible."
+  },
+  "listViews": {
+    "defaultView": "Vue par défaut",
+    "unsavedChanges": "Cette vue comporte des modifications non enregistrées",
+    "searchPlaceholder": "Rechercher des vues",
+    "noMatches": "Aucune vue correspondante",
+    "sections": {
+      "mine": "Mes vues",
+      "mineEmpty": "Aucune vue privée pour l’instant",
+      "shared": "Vues partagées",
+      "sharedEmpty": "Aucune vue partagée pour l’instant"
+    },
+    "labels": {
+      "myDefault": "Ma vue par défaut",
+      "sharedByYou": "Partagée par vous"
+    },
+    "visibility": {
+      "private": "Privée",
+      "shared": "Partagée"
+    },
+    "actions": {
+      "delete": "Supprimer",
+      "manage": "Gérer",
+      "setDefault": "Définir comme ma vue par défaut",
+      "clearDefault": "Retirer ma vue par défaut",
+      "copyLink": "Copier le lien",
+      "saveChanges": "Enregistrer les modifications",
+      "saveChangesTo": "Enregistrer les modifications dans « {{name}} »",
+      "saveAsNew": "Enregistrer comme nouvelle vue…",
+      "discardChanges": "Annuler les modifications"
+    },
+    "dialog": {
+      "createTitle": "Enregistrer comme nouvelle vue",
+      "manageTitle": "Gérer la vue",
+      "nameLabel": "Nom",
+      "nameInvalid": "Saisissez un nom de 1 à {{max}} caractères.",
+      "visibilityLabel": "Qui peut la voir",
+      "privateHint": "Vous seul pouvez voir cette vue.",
+      "sharedHint": "Toutes les personnes qui peuvent ouvrir cette liste peuvent la voir et l’appliquer.",
+      "sharedDisabledHint": "Vous n’avez pas l’autorisation de partager des vues."
+    },
+    "deleteDialog": {
+      "title": "Supprimer la vue",
+      "message": "Supprimer « {{name}} » ?",
+      "messageShared": "Supprimer « {{name}} » ? Elle est partagée et disparaîtra pour toutes les personnes qui l’utilisent."
+    },
+    "toasts": {
+      "saved": "« {{name}} » enregistrée",
+      "updated": "« {{name}} » mise à jour",
+      "deleted": "Vue supprimée",
+      "defaultSet": "Vue par défaut définie",
+      "defaultCleared": "Vue par défaut retirée",
+      "linkCopied": "Lien copié",
+      "droppedReferences": "Certains éléments de « {{name}} » n’existent plus et ont été ignorés : {{fields}}"
+    },
+    "errors": {
+      "notFound": "Cette vue est privée ou n’existe plus.",
+      "unknownList": "Liste inconnue.",
+      "invalidName": "Le nom d’une vue doit comporter entre 1 et 100 caractères.",
+      "duplicateName": "Vous avez déjà une vue nommée « {{name}} » dans cette liste.",
+      "invalidSettings": "La vue n’a pas pu être enregistrée : {{detail}}",
+      "invalidVisibility": "La visibilité doit être privée ou partagée.",
+      "cannotShare": "Vous n’avez pas l’autorisation de partager des vues.",
+      "cannotEdit": "Vous n’avez pas l’autorisation de modifier cette vue.",
+      "cannotReadList": "Vous n’avez pas l’autorisation d’afficher cette liste.",
+      "saveFailed": "La vue n’a pas pu être enregistrée.",
+      "deleteFailed": "La vue n’a pas pu être supprimée.",
+      "defaultFailed": "Votre vue par défaut n’a pas pu être modifiée.",
+      "copyFailed": "Le lien n’a pas pu être copié."
+    }
   }
 }
