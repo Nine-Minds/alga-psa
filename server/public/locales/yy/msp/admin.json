@@ -254,7 +254,7 @@
     "states": {
       "running": "〖Řŭƞƞīƞɠ ḓīȧɠƞȯşŧīƈş... ·········〗",
       "diagnosticsFailed": "〖Ḓīȧɠƞȯşŧīƈş ƒȧīŀḗḓ ········〗",
-      "callbackDiagnosticsCaptured": "〖Ƈȧŀŀƀȧƈķ-ŧīḿḗ ḓīȧɠƞȯşŧīƈş ƈȧƥŧŭřḗḓ ȧŧ {{timestamp}} ·······〗"
+      "callbackDiagnosticsCaptured": "〖Ƈȧŀŀƀȧƈķ-ŧīḿḗ ḓīȧɠƞȯşŧīƈş ƈȧƥŧŭřḗḓ ȧŧ {{timestamp}}. ·····················〗"
     },
     "statuses": {
       "pass": "〖Ƥȧşş ··〗",
