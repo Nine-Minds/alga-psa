@@ -1,4 +1,7 @@
 {
+  "phone": {
+    "extension": "ext."
+  },
   "colorPicker": {
     "invalidHexBackground": "Color hexadecimal no válido (p. ej., #FF0000)",
     "invalidHexText": "Color hexadecimal no válido (p. ej., #FFFFFF)",

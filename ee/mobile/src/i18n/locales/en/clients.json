@@ -15,6 +15,7 @@
     "clientAccessibility": "Client {{name}}"
   },
   "detail": {
+    "phoneExtension": "ext.",
     "title": "Client",
     "loading": "Loading client…",
     "unableToLoad": "Unable to load client",

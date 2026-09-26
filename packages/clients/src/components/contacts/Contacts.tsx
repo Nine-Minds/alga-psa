@@ -967,7 +967,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
           contact.default_phone_number || phone?.phone_number,
           phone?.extension
         );
-        return formatPhoneLabel(formattedPhone, t('phone.extension', { defaultValue: 'ext.' }))
+        return formatPhoneLabel(formattedPhone, t('common:phone.extension', { defaultValue: 'ext.' }))
           || t('contactsPage.print.emptyValue', { defaultValue: '-' });
       },
     },

@@ -1,4 +1,7 @@
 {
+  "phone": {
+    "extension": "poste"
+  },
   "colorPicker": {
     "invalidHexBackground": "Couleur hexadécimale non valide (par ex. #FF0000)",
     "invalidHexText": "Couleur hexadécimale non valide (par ex. #FFFFFF)",

@@ -1380,7 +1380,7 @@ const Clients: React.FC = () => {
       header: t('clientsList.phone', { defaultValue: 'Phone' }),
       render: (client) => {
         const formattedPhone = formatPhoneForDisplay(client.location_phone ?? client.phone_no, client.location_phone_extension, client.location_country_code);
-        return formatPhoneLabel(formattedPhone, t('phone.extension', { defaultValue: 'ext.' }))
+        return formatPhoneLabel(formattedPhone, t('common:phone.extension', { defaultValue: 'ext.' }))
           || t('clientsPage.print.emptyValue', { defaultValue: '-' });
       },
     },
