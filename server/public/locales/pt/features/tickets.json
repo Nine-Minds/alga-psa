@@ -1074,7 +1074,21 @@
       "selectParentCategory": "Selecione a categoria pai",
       "parentHelpWithBoard": "Selecione um pai para criar uma subcategoria ou deixe em branco para o nível superior",
       "parentHelpWithoutBoard": "Selecione um quadro primeiro ou escolha uma categoria pai para herdar seu quadro",
-      "creating": "Criando..."
+      "creating": "Criando...",
+      "copyToBoard": "Copiar categorias para outro quadro",
+      "copyTitle": "Copiar categorias para outro quadro",
+      "copySourceLabel": "Selecionar quadro de origem",
+      "copyTargetLabel": "Selecionar quadro de destino",
+      "copySelected": "Copiar selecionadas",
+      "copySuccess": "{{created}} categorias copiadas; {{skipped}} existentes ignoradas.",
+      "copyFailed": "Falha ao copiar categorias",
+      "copyEmpty": "Não há categorias neste quadro.",
+      "copying": "Copiando…",
+      "copySourceBoard": "Selecionar quadro de origem",
+      "copyTargetBoard": "Selecionar quadro de destino",
+      "copyBoardTypeMismatch": "As categorias de tickets só podem ser copiadas entre quadros com o mesmo tipo de categoria.",
+      "copyConflicts_one": "{{count}} categoria ignorada tem uma categoria pai diferente no quadro de destino.",
+      "copyConflicts_other": "{{count}} categorias ignoradas têm uma categoria pai diferente no quadro de destino."
     },
     "display": {
       "responseStateTrackingTitle": "Acompanhamento do estado de resposta",
@@ -1454,7 +1468,11 @@
       "missingField": "Falta um campo obrigatório da lista de verificação.",
       "missingFieldNamed": "Falta um campo obrigatório da lista de verificação: {{field}}.",
       "referenceInvalid": "O ticket, o modelo de lista de verificação ou o filtro de regra selecionados não são mais válidos. Atualize a página e tente novamente.",
-      "invalidValue": "Um dos valores da lista de verificação é inválido. Atualize a página e tente novamente."
+      "invalidValue": "Um dos valores da lista de verificação é inválido. Atualize a página e tente novamente.",
+      "ruleCategoryBoardMismatch": "A categoria selecionada pertence a um quadro diferente do da regra.",
+      "ruleCategoryInvalid": "A categoria selecionada não é uma categoria de nível superior.",
+      "ruleSubcategoryInvalid": "A subcategoria selecionada não pertence à categoria selecionada.",
+      "ruleSubcategoryRequiresCategory": "Selecione uma categoria antes de escolher uma subcategoria."
     }
   },
   "ticketSection": {

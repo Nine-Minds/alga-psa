@@ -57,6 +57,7 @@ const SUBTYPES = [
   { category: 'appointments', name: 'appointment-request-declined', description: 'Appointment request declined' },
   { category: 'appointments', name: 'appointment-request-cancelled', description: 'Appointment request cancelled' },
   { category: 'appointments', name: 'appointment-assigned-technician', description: 'Appointment assigned to technician' },
+  { category: 'appointments', name: 'calendar-share-granted', description: 'A colleague shared their calendar with you' },
   // SLA
   { category: 'sla', name: 'sla-warning', description: 'SLA approaching breach threshold' },
   { category: 'sla', name: 'sla-breach', description: 'SLA has been breached' },

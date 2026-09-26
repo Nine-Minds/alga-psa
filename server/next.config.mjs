@@ -187,10 +187,13 @@ const nextConfig = {
   // and RSC requests from origins it does not recognize, which stalls
   // hydration when a phone/tablet loads the dev server by LAN IP.
   // Comma-separated hostnames, e.g. DEV_ALLOWED_ORIGINS=192.168.1.20,my-mac.local
-  allowedDevOrigins: (process.env.DEV_ALLOWED_ORIGINS ?? '')
-    .split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean),
+  allowedDevOrigins: [
+    '127.0.0.1',
+    ...(process.env.DEV_ALLOWED_ORIGINS ?? '')
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean),
+  ],
   env: {
     NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION || appVersion,
     // Propagate edition to client-side code
@@ -343,6 +346,11 @@ const nextConfig = {
       '@alga-psa/db/models/tenant': '../packages/db/src/models/tenant.ts',
       '@alga-psa/db/models/UserSession': '../packages/db/src/models/UserSession.ts',
       // Surveys package
+      '@alga-psa/list-views': '../packages/list-views/src',
+      '@alga-psa/list-views/': '../packages/list-views/src/',
+      '@alga-psa/list-views/actions': '../packages/list-views/src/actions/index.ts',
+      '@alga-psa/list-views/components': '../packages/list-views/src/components/index.ts',
+      '@alga-psa/list-views/hooks': '../packages/list-views/src/hooks/index.ts',
       '@alga-psa/surveys': '../packages/surveys/src',
       '@alga-psa/surveys/': '../packages/surveys/src/',
       '@alga-psa/surveys/actions': '../packages/surveys/src/actions/index.ts',
@@ -504,6 +512,7 @@ const nextConfig = {
     '@alga-psa/user-composition',
     '@alga-psa/user-activities',
     '@alga-psa/projects',
+    '@alga-psa/list-views',
     '@alga-psa/surveys',
     '@alga-psa/tickets',
     // Product feature packages (only those needed in this app)
@@ -665,6 +674,7 @@ const nextConfig = {
         : path.join(__dirname, '../packages/ee/src'),
       '@alga-psa/users': path.join(__dirname, '../packages/users/src'),
       '@alga-psa/teams': path.join(__dirname, '../packages/teams/src'),
+      '@alga-psa/list-views': path.join(__dirname, '../packages/list-views/src'),
       '@alga-psa/surveys': path.join(__dirname, '../packages/surveys/src'),
       '@alga-psa/client-portal': path.join(__dirname, '../packages/client-portal/src'),
       '@alga-psa/portal-shared': path.join(__dirname, '../packages/portal-shared/src'),

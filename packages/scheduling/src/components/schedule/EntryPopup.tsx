@@ -3,6 +3,7 @@
 import { calendarDisplayDates, calendarStoredDates, moveCalendarStart } from '../../lib/calendarDateDisplay';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
+import { DrawerFooter } from '@alga-psa/ui/components/Drawer';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
@@ -13,7 +14,7 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useDrawer, DeleteEntityDialog } from "@alga-psa/ui";
 import { WorkItemDrawer } from '@alga-psa/scheduling/components/time-management/time-entry/time-sheet/WorkItemDrawer';
-import { IScheduleEntry, IRecurrencePattern, IEditScope, DeletionValidationResult } from '@alga-psa/types';
+import { IScheduleEntry, IRecurrencePattern, IEditScope, DeletionValidationResult, IVisibleCalendar } from '@alga-psa/types';
 import { AddWorkItemDialog } from '@alga-psa/scheduling/components/time-management/time-entry/time-sheet/AddWorkItemDialog';
 import { IWorkItem, IExtendedWorkItem } from '@alga-psa/types';
 import { getWorkItemById } from '@alga-psa/scheduling/actions';
@@ -96,6 +97,21 @@ interface EntryPopupProps {
   canAssignOthers: boolean; // Derived from user_schedule:update permission in parent
   viewOnly?: boolean;
   /**
+   * Group calendars the viewer can add entries to (edit or manage). When
+   * non-empty, a Calendar field lets the entry be placed on one of them.
+   */
+  calendarOptions?: IVisibleCalendar[];
+  /**
+   * Every group calendar the viewer may see (including read-only ones), used
+   * only to resolve the real name of an entry's calendar in read-only mode.
+   */
+  visibleGroupCalendars?: IVisibleCalendar[];
+  /**
+   * Users whose calendars the viewer may assign entries to (self plus edit
+   * shares). Undefined means no delegate restriction beyond canAssignOthers.
+   */
+  assignableUserIds?: string[];
+  /**
    * Pre-selects a work item for a NEW entry (the `slot` path), so the editor
    * opens scoped to e.g. a ticket instead of ad-hoc. Ignored when editing an
    * existing `event`.
@@ -143,6 +159,9 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   focusedTechnicianId,
   canAssignOthers,
   viewOnly = false,
+  calendarOptions = [],
+  visibleGroupCalendars = [],
+  assignableUserIds,
   lockWorkItem = false,
   hideWorkItemRow = false,
   initialWorkItem = null
@@ -236,18 +255,52 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     const isEditing = !!event;
     const isCurrentUserSoleAssignee = isEditing && event.assigned_user_ids?.length === 1 && event.assigned_user_ids[0] === currentUserId;
     const isPrivateEvent = isEditing && event.is_private;
+    // Shared calendars: the server tells us whether this viewer may edit the
+    // entry (delegate edit share or group calendar edit access).
+    const serverAllowsEdit = isEditing && event.can_edit === true;
+    // Delegates may assign to themselves and to calendars shared with edit.
+    const canDelegateAssign = !canAssignOthers && (assignableUserIds?.length ?? 0) > 1;
+    const isGroupCalendarEntry = Boolean(entryData.calendar_id);
     
     const canEditFields = viewOnly ? false : (
       !isEditing ||
       (canModifySchedule && (!isPrivateEvent || isCurrentUserSoleAssignee)) ||
-      isCurrentUserSoleAssignee
+      isCurrentUserSoleAssignee ||
+      (serverAllowsEdit && !isPrivateEvent)
     );
     
     // User can modify assignment if they have the specific permission (passed as canAssignOthers)
-    // AND the entry is not private OR they are the creator
+    // or delegate edit access, AND the entry is not private OR they are the creator
     const canModifyAssignment = viewOnly ? false : (
-      canAssignOthers && (!isPrivateEvent || isCurrentUserSoleAssignee)
+      (canAssignOthers || canDelegateAssign || (isGroupCalendarEntry && canEditFields)) &&
+      (!isPrivateEvent || isCurrentUserSoleAssignee)
     );
+    const showAssigneePicker = canAssignMultipleAgents || canDelegateAssign || isGroupCalendarEntry;
+    const assigneeOptions = useMemo(() => {
+      if (canAssignOthers || !assignableUserIds) return users;
+      const allowed = new Set([...assignableUserIds, ...(entryData.assigned_user_ids ?? [])]);
+      return users.filter((user) => allowed.has(user.user_id));
+    }, [assignableUserIds, canAssignOthers, entryData.assigned_user_ids, users]);
+    const calendarSelectOptions = useMemo(() => {
+      const options = [
+        { value: 'personal', label: t('entryPopup.fields.calendarPersonal', { defaultValue: 'Personal' }) },
+        ...calendarOptions.map((calendar) => ({ value: calendar.key, label: calendar.name })),
+      ];
+      // Keep the entry's current group calendar selectable even if the viewer
+      // could not add new entries to it. Read-only viewers see the calendar's
+      // real name from the calendars already visible to them; only fall back to
+      // the generic label when it truly isn't in their visible set.
+      if (entryData.calendar_id && !options.some((option) => option.value === entryData.calendar_id)) {
+        const knownCalendar = [...calendarOptions, ...visibleGroupCalendars]
+          .find((calendar) => calendar.key === entryData.calendar_id);
+        options.push({
+          value: entryData.calendar_id,
+          label: knownCalendar?.name
+            ?? t('entryPopup.fields.calendarUnavailable', { defaultValue: 'Group calendar' }),
+        });
+      }
+      return options;
+    }, [calendarOptions, visibleGroupCalendars, entryData.calendar_id, t]);
     
     // Add a message to display when a user can't edit a private event
     const privateEventMessage = isPrivateEvent && !isCurrentUserSoleAssignee
@@ -856,7 +909,8 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     if (!entryData.scheduled_end) {
       errors.push(t('entryPopup.validation.endRequired', { defaultValue: 'End date/time' }));
     }
-    if (!entryData.assigned_user_ids || entryData.assigned_user_ids.length === 0) {
+    // Group calendar entries may be unassigned; personal entries need an assignee.
+    if (!entryData.calendar_id && (!entryData.assigned_user_ids || entryData.assigned_user_ids.length === 0)) {
       errors.push(t('entryPopup.validation.assigneeRequired', {
         defaultValue: 'At least one assigned user',
       }));
@@ -940,6 +994,9 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
       work_item_id: entryData.work_item_type === 'ad_hoc' ? null : entryData.work_item_id,
       status: entryData.status || 'scheduled',
       assigned_user_ids: Array.isArray(entryData.assigned_user_ids) ? entryData.assigned_user_ids : [],
+      calendar_id: entryData.calendar_id || null,
+      // Group calendar entries are never private.
+      is_private: entryData.calendar_id ? false : entryData.is_private,
     };
 
     // Show recurrence options only for existing recurring events. A
@@ -957,7 +1014,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   const popupTitle =
     isAppointmentRequest && appointmentRequestData && appointmentRequestData.status === 'pending'
       ? t('entryPopup.title.appointmentRequest', { defaultValue: 'Appointment Request' })
-      : viewOnly
+      : viewOnly || (isEditing && !canEditFields)
         ? t('entryPopup.title.view', { defaultValue: 'View Entry' })
         : event
           ? t('entryPopup.title.edit', { defaultValue: 'Edit Entry' })
@@ -1011,7 +1068,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     event.work_item_id
   );
   const showDeleteButton = Boolean(
-    event && onDelete && !viewOnly && (!event.is_private || isCurrentUserSoleAssignee)
+    event && onDelete && !viewOnly && event.can_edit !== false && (!event.is_private || isCurrentUserSoleAssignee)
   );
   const startDelete = () => {
     if (!event) return;
@@ -1366,7 +1423,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         {(!isAppointmentRequest || (appointmentRequestData && appointmentRequestData.status === 'approved')) && (
         <div className="min-w-0">
           <div className="relative">
-            {viewOnly || lockWorkItem || isSourceOwnedWorkItemType(entryData.work_item_type) ? (
+            {viewOnly || !canEditFields || lockWorkItem || isSourceOwnedWorkItemType(entryData.work_item_type) ? (
               <div className="flex justify-between items-start gap-3 pt-1 pb-4">
                 {selectedWorkItem ? (
                   <div className="min-w-0 flex-1 text-sm text-gray-500 space-y-0.5">
@@ -1476,25 +1533,46 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
               disabled={!canEditFields} // Disable based on permissions
             />
           </div>
-          {(canAssignMultipleAgents || (entryData.assigned_user_ids?.length === 1 && entryData.assigned_user_ids[0] === currentUserId)) && (
+          {(calendarOptions.length > 0 || entryData.calendar_id) && (
+            <div>
+              <CustomSelect
+                id="entry-calendar-select"
+                label={t('entryPopup.fields.calendar', { defaultValue: 'Calendar' })}
+                options={calendarSelectOptions}
+                value={entryData.calendar_id || 'personal'}
+                onValueChange={(value) => {
+                  clearErrorIfSubmitted();
+                  setEntryData(prev => ({
+                    ...prev,
+                    calendar_id: value === 'personal' ? null : value,
+                    is_private: value === 'personal' ? prev.is_private : false,
+                  }));
+                }}
+                disabled={!canEditFields}
+              />
+            </div>
+          )}
+          {(showAssigneePicker || (entryData.assigned_user_ids?.length === 1 && entryData.assigned_user_ids[0] === currentUserId)) && (
           <div className="flex gap-4 items-start">
-            {canAssignMultipleAgents && (
+            {showAssigneePicker && (
               <div className="flex-1">
                 <label htmlFor="assigned_users" className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('entryPopup.fields.assignedUsers', { defaultValue: 'Assigned Users *' })}
+                  {isGroupCalendarEntry
+                    ? t('entryPopup.fields.assignedUsersOptional', { defaultValue: 'Assigned Users' })
+                    : t('entryPopup.fields.assignedUsers', { defaultValue: 'Assigned Users *' })}
                 </label>
                 <UserPicker
-                  value={entryData.assigned_user_ids?.[0] || currentUserId}
-                  onValueChange={(userId) => handleAssignedUsersChange([userId])}
-                  users={users}
+                  value={entryData.assigned_user_ids?.[0] || (isGroupCalendarEntry ? '' : currentUserId)}
+                  onValueChange={(userId) => handleAssignedUsersChange(userId ? [userId] : [])}
+                  users={assigneeOptions}
                   getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                   // Disable if loading OR if user lacks permission to assign others
                   disabled={loading || !canModifyAssignment}
                 />
               </div>
             )}
-            {/* Only show private switch if the selected user is the current user */}
-            {entryData.assigned_user_ids?.length === 1 && entryData.assigned_user_ids[0] === currentUserId && (
+            {/* Only show private switch for personal entries of the current user */}
+            {!isGroupCalendarEntry && entryData.assigned_user_ids?.length === 1 && entryData.assigned_user_ids[0] === currentUserId && (
               <div className="flex-1 flex items-end">
                   <Switch
                     id="is-private"
@@ -1761,7 +1839,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         </div>
         )}
 
-      <div className="mt-4 flex items-center justify-end space-x-3">
+      <DrawerFooter className="items-center gap-3">
         {/* Destructive action sits apart from the primary pair, styled as a quiet action. */}
         {showDeleteButton && (
           <Button
@@ -1798,7 +1876,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
               (entryData.work_item_type === 'ad_hoc' && !entryData.title?.trim()) ||
               !entryData.scheduled_start ||
               !entryData.scheduled_end ||
-              entryData.assigned_user_ids.length === 0
+              (!entryData.calendar_id && entryData.assigned_user_ids.length === 0)
                 ? 'opacity-50' : ''
             }`}
             // Disable save only if editing AND user lacks permission to edit these fields
@@ -1807,7 +1885,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
             {t('entryPopup.actions.save', { defaultValue: 'Save' })}
           </Button>
         )}
-      </div>
+      </DrawerFooter>
     </form>
   );
 

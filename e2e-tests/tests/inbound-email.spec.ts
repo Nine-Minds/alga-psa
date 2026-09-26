@@ -148,13 +148,29 @@ test('built email service ingests MIME, preserves inline quotations, threads rep
     const ticket = await database('tickets').where({ tenant: tenant.tenantId, title }).first();
     expect(ticket).toMatchObject({ client_id: tenant.clients.primary.id, contact_name_id: tenant.portal.contactId,
       board_id: tenant.ticketing.boardId, status_id: tenant.ticketing.openStatusId });
+    const ticketWhere = { tenant: tenant.tenantId, ticket_id: ticket.ticket_id };
+    await expect.poll(async () => (await database('email_processed_messages')
+      .where({ tenant: tenant.tenantId, provider_id: provider.id }).first())?.processing_status).toBe('success');
+    // Attachments persist in artifact jobs after the ticket commits, and the
+    // ticket page renders its Documents tile and bodies from a load-time
+    // snapshot. Open it only once every attachment of this email has landed.
+    await expect.poll(async () => (await database('documents as d')
+      .join('document_associations as a', function () {
+        this.on('a.tenant', '=', 'd.tenant').andOn('a.document_id', '=', 'd.document_id');
+      }).where({ 'd.tenant': tenant.tenantId, 'a.entity_id': ticket.ticket_id })
+      .whereIn('d.document_name', ['diagnostic.txt', 'voicemail.wav', 'inline-logo.png'])
+      .pluck('d.document_name')).sort(), { timeout: 60_000 })
+      .toEqual(['diagnostic.txt', 'inline-logo.png', 'voicemail.wav']);
+    await expect.poll(async () => {
+      const row = await database('tickets').where(ticketWhere).first('attributes');
+      const attributes = typeof row?.attributes === 'string' ? JSON.parse(row.attributes) : row?.attributes;
+      const body = String(attributes?.description ?? '');
+      return body.includes('/api/documents/view/') && !body.includes('cid:');
+    }, { timeout: 60_000 }).toBe(true);
     await page.goto(`/msp/tickets/${ticket.ticket_id}`);
     const description = page.locator('#ticket-details-bento-hero-description-section');
     await expect(description.getByText(firstBody, { exact: true })).toBeVisible();
     await expect(description.getByText(inlineQuote, { exact: true })).toBeVisible();
-    const ticketWhere = { tenant: tenant.tenantId, ticket_id: ticket.ticket_id };
-    await expect.poll(async () => (await database('email_processed_messages')
-      .where({ tenant: tenant.tenantId, provider_id: provider.id }).first())?.processing_status).toBe('success');
     const attachments = await database('documents as d')
       .join('document_associations as a', function () {
         this.on('a.tenant', '=', 'd.tenant').andOn('a.document_id', '=', 'd.document_id');
@@ -179,6 +195,10 @@ test('built email service ingests MIME, preserves inline quotations, threads rep
     const audioDownload = await page.request.get(`/api/documents/download/${audioAttachments[0].file_id}`);
     expect(audioDownload.status()).toBe(200);
     expect(await audioDownload.body()).toEqual(wavBytes);
+    // The page was opened as soon as the ticket row existed, before processing
+    // attached documents and rewrote the inline cid: reference. It keeps what it
+    // first rendered, so reload to read the settled Documents tile and body.
+    await page.reload();
     // The Documents tile links the recording straight to the download route:
     // the view route refuses audio with 400, so a /view link is a dead click.
     const documentsTile = page.locator('#ticket-details-bento-documents-section');

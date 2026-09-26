@@ -9,6 +9,7 @@ import type {
 } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
+import { DrawerFooter } from '@alga-psa/ui/components/Drawer';
 import {
   getClientTaxRates,
   addClientTaxRate,
@@ -277,7 +278,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                         clientId={client.client_id}
                     />
 
-                    <div className="flex justify-end">
+                    <DrawerFooter>
                         <Button
                             id="save-billing-config-btn"
                             type="submit"
@@ -288,7 +289,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                                 ? t('common.actions.saving', { defaultValue: 'Saving...' })
                                 : t('billingConfiguration.save', { defaultValue: 'Save Billing Configuration' })}
                         </Button>
-                    </div>
+                    </DrawerFooter>
                 </TabsContent>
 
                 <TabsContent value="contracts" className="space-y-6">

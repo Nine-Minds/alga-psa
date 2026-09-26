@@ -140,11 +140,35 @@ jobs:
         if: matrix.suite == 'workspace-runtime'
         shell: bash
         run: |
+          # MinIO's own registries stopped serving anonymous pulls (quay.io and
+          # docker.io/minio both answer "unauthorized" now), which failed this
+          # step on every run. Same MinIO release — 2025.4.22 is
+          # RELEASE.2025-04-22T22-12-26Z — from a repository that still allows
+          # them. This packaging launches the server itself, so it takes no
+          # trailing `server /data` arguments.
           docker run -d --name workspace-test-minio \
             -p 127.0.0.1:59000:9000 \
             -e MINIO_ROOT_USER=regression-test \
             -e MINIO_ROOT_PASSWORD=regression-test-password \
-            quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z server /data
+            bitnamilegacy/minio:2025.4.22-debian-12-r2
+          # Bitnami's entrypoint boots a throwaway MinIO instance first to run
+          # its own setup, answers /minio/health/ready during that window,
+          # then stops it and starts the real, foreground server a few
+          # seconds later. Polling health/ready alone can observe the
+          # throwaway instance and return "ready" before the real server
+          # exists, so the first S3 call in the test suite races the
+          # stop/restart transition and fails with ECONNRESET. Wait for the
+          # entrypoint's own "MinIO setup finished" marker first so we only
+          # start polling health/ready once the real server is what answers.
+          for ((attempt = 1; attempt <= 60; attempt++)); do
+            if docker logs workspace-test-minio 2>&1 | grep -q "MinIO setup finished"; then break; fi
+            sleep 1
+            if [[ "$attempt" -eq 60 ]]; then
+              echo "MinIO setup never completed"
+              docker logs workspace-test-minio
+              exit 1
+            fi
+          done
           for ((attempt = 1; attempt <= 60; attempt++)); do
             if curl --fail --silent http://127.0.0.1:59000/minio/health/ready; then exit 0; fi
             sleep 1

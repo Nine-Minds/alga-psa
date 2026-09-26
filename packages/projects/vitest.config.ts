@@ -26,6 +26,9 @@ export default defineConfig({
       // which collapsed the TaskForm* suites. Point it at the real file, matching
       // the alias tickets/integrations already carry.
       { find: /^next\/server$/, replacement: path.resolve(__dirname, '../../node_modules/next/server.js') },
+      { find: /^@alga-psa\/list-views$/, replacement: path.resolve(__dirname, '../list-views/src/index.ts') },
+      { find: /^@alga-psa\/list-views\/(actions|components|hooks)$/, replacement: path.resolve(__dirname, '../list-views/src/$1/index.ts') },
+      { find: /^@alga-psa\/list-views\/(.*)$/, replacement: path.resolve(__dirname, '../list-views/src/$1') },
       { find: /^@alga-psa\/types$/, replacement: path.resolve(__dirname, '../types/src/index.ts') },
       // TaskForm imports `./billing/ProjectPaymentWarningBanner`, which is being
       // moved to @alga-psa/billing on this branch. Until TaskForm's import is

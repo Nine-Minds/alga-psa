@@ -22,6 +22,7 @@ const TENANT_TABLE_METADATA = {
   accounting_sync_operations: { scope: 'tenant' },
   asset_types: { scope: 'tenant' },
   asset_type_registry: { scope: 'tenant' },
+  asset_remote_access_links: { scope: 'tenant' },
   apple_iap_subscriptions: { scope: 'tenant' },
   // Reference table for tenantless Apple sign-in discovery, but tenant-known operations must scope by tenant.
   apple_user_identities: { scope: 'tenant' },
@@ -53,6 +54,8 @@ const TENANT_TABLE_METADATA = {
   calendar_event_mappings: { scope: 'tenant' },
   calendar_provider_health: { scope: 'tenant' },
   calendar_providers: { scope: 'tenant' },
+  calendar_shares: { scope: 'tenant' },
+  calendars: { scope: 'tenant' },
   // Confirmed tenant column in server/migrations/20251104120005_create_calendar_vendor_config_tables.cjs.
   google_calendar_provider_config: { scope: 'tenant' },
   microsoft_calendar_provider_config: { scope: 'tenant' },
@@ -60,6 +63,8 @@ const TENANT_TABLE_METADATA = {
   client_billing_plans: { scope: 'tenant' },
   client_billing_profiles: { scope: 'tenant' },
   client_portal_user_billing_profiles: { scope: 'tenant' },
+  billing_profile_contacts: { scope: 'tenant' },
+  client_merges: { scope: 'tenant' },
   client_billing_settings: { scope: 'tenant' },
   client_contracts: { scope: 'tenant' },
   client_contract_lines: { scope: 'tenant' },
@@ -209,6 +214,7 @@ const TENANT_TABLE_METADATA = {
   storage_usage: { scope: 'tenant' },
   external_entity_mappings: { scope: 'tenant' },
   external_entity_links: { scope: 'tenant' },
+  list_views: { scope: 'tenant' },
   external_tax_imports: { scope: 'tenant' },
   feature_toggles: { scope: 'tenant' },
   gmail_processed_history: { scope: 'tenant' },

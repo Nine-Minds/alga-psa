@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
-import type { IClient } from '@alga-psa/types';
+import type { IClient, IClientWithLocation } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import { useRouter } from 'next/navigation';
 import { MoreVertical, Pencil, Trash2, ExternalLink, Shield, ShieldOff } from "lucide-react";
@@ -17,6 +17,7 @@ import { useRegisterChild } from '@alga-psa/ui/ui-reflection/useRegisterChild';
 import { FormFieldComponent, ButtonComponent } from '@alga-psa/ui/ui-reflection/types';
 import { CommonActions } from '@alga-psa/ui/ui-reflection/actionBuilders';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { PhoneText } from '@alga-psa/ui/components/PhoneText';
 
 
 interface ClientsListProps {
@@ -37,6 +38,8 @@ interface ClientsListProps {
     sortBy?: string;
     sortDirection?: 'asc' | 'desc';
     onSortChange?: (sortBy: string, sortDirection: 'asc' | 'desc') => void;
+    columnSizing?: Record<string, number>;
+    onColumnSizingChange?: (columnSizing: Record<string, number>) => void;
 }
 
 // Component for client selection checkbox
@@ -137,7 +140,9 @@ const ClientsList = ({
   onTagsChange,
   sortBy,
   sortDirection,
-  onSortChange
+  onSortChange,
+  columnSizing,
+  onColumnSizingChange,
 }: ClientsListProps) => {
   const router = useRouter(); // Get router instance
   const { t } = useTranslation('msp/clients');
@@ -154,7 +159,7 @@ const ClientsList = ({
     router.push(`/msp/clients/${client.client_id}`);
   };
 
-    const columns: ColumnDefinition<IClient>[] = [
+    const columns: ColumnDefinition<IClientWithLocation>[] = [
         {
             title: '',
             dataIndex: 'checkbox',
@@ -218,7 +223,14 @@ const ClientsList = ({
             title: t('clientsList.phone', { defaultValue: 'Phone' }),
             dataIndex: 'phone_no',
             width: '10%',
-            render: (text: string | null, record: IClient) => (record as any).location_phone || t('common.states.na', { defaultValue: 'N/A' }),
+            render: (text: string | null, record: IClientWithLocation) => (
+                <PhoneText
+                    value={record.location_phone}
+                    extension={record.location_phone_extension}
+                    defaultCountry={record.location_country_code}
+                    fallback={t('common.states.na', { defaultValue: 'N/A' })}
+                />
+            ),
         },
         {
             title: t('clientsList.address', { defaultValue: 'Address' }),
@@ -353,6 +365,8 @@ const ClientsList = ({
                 sortBy={sortBy}
                 sortDirection={sortDirection}
                 onSortChange={onSortChange}
+                columnSizing={columnSizing}
+                onColumnSizingChange={onColumnSizingChange}
             />
         </div>
     );

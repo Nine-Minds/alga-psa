@@ -108,7 +108,7 @@ const pulse = (overrides: Partial<ClientPulse> = {}): ClientPulse => ({
   documents: { totalCount: 0, recent: [] },
   notes: { hasNotes: false, previewLines: [], lastEditedAt: null },
   record: {
-    url: 'example.com', accountManagerName: null, defaultContactName: null,
+    url: 'example.com', accountManagerName: null, defaultContactName: null, defaultContactId: null,
     inboundDomains: [], taxRegion: null, clientSince: null, isInactive: false,
   },
   ...overrides,
@@ -146,6 +146,17 @@ describe('ClientCommandCenter', () => {
     await waitFor(() => {
       expect(document.getElementById('cc-pulse-error')).toHaveTextContent('Could not load the client snapshot.');
     });
+  });
+
+  it('formats the default location phone with its country and extension in the identity strip', async () => {
+    getClientPulseMock.mockResolvedValue(pulse({ locations: [{
+      location_id: 'loc-1', location_name: 'HQ', address_line1: null, city: null,
+      phone: '+13202521658', phone_extension: '42', country_code: 'US', email: null,
+      is_default: true, is_billing: false, is_shipping: false,
+    }] }));
+    renderCenter();
+    expect(await screen.findAllByText('+1 320 252 1658 ext. 42')).toHaveLength(2);
+    expect(document.getElementById('cc-identity')).toHaveTextContent('+1 320 252 1658 ext. 42');
   });
 
   describe('deep links', () => {
@@ -245,7 +256,7 @@ describe('ClientCommandCenter', () => {
       getClientPulseMock.mockResolvedValue(pulse({
         people: {
           totalCount: 1,
-          top: [{ contact_name_id: 'c-1', full_name: 'Ada Lovelace', role: null, email: null, phone: null, is_default: false, avatarUrl: null }],
+          top: [{ contact_name_id: 'c-1', full_name: 'Ada Lovelace', role: null, email: null, phone: null, phone_extension: null, is_default: false, avatarUrl: null }],
         },
       }));
       renderCenter();

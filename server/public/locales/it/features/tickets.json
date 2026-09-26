@@ -1074,7 +1074,21 @@
       "selectParentCategory": "Seleziona categoria padre",
       "parentHelpWithBoard": "Seleziona una categoria padre per creare una sottocategoria, oppure lascia vuoto per il livello superiore",
       "parentHelpWithoutBoard": "Seleziona prima una bacheca oppure scegli una categoria padre per ereditarne la bacheca",
-      "creating": "Creazione..."
+      "creating": "Creazione...",
+      "copyToBoard": "Copia categorie su un’altra scheda",
+      "copyTitle": "Copia categorie su un’altra scheda",
+      "copySourceLabel": "Seleziona scheda di origine",
+      "copyTargetLabel": "Seleziona scheda di destinazione",
+      "copySelected": "Copia selezionate",
+      "copySuccess": "Copiate {{created}} categorie; {{skipped}} già presenti ignorate.",
+      "copyFailed": "Impossibile copiare le categorie",
+      "copyEmpty": "Nessuna categoria in questa scheda.",
+      "copying": "Copia in corso…",
+      "copySourceBoard": "Seleziona scheda di origine",
+      "copyTargetBoard": "Seleziona scheda di destinazione",
+      "copyBoardTypeMismatch": "Le categorie dei ticket possono essere copiate solo tra bacheche dello stesso tipo di categoria.",
+      "copyConflicts_one": "{{count}} categoria ignorata ha una categoria padre diversa nella scheda di destinazione.",
+      "copyConflicts_other": "{{count}} categorie ignorate hanno una categoria padre diversa nella scheda di destinazione."
     },
     "display": {
       "responseStateTrackingTitle": "Tracciamento dello stato di risposta",
@@ -1454,7 +1468,11 @@
       "missingField": "Manca un campo obbligatorio della lista di controllo.",
       "missingFieldNamed": "Manca un campo obbligatorio della lista di controllo: {{field}}.",
       "referenceInvalid": "Il ticket, il modello di lista di controllo o il filtro della regola selezionati non sono più validi. Aggiornare la pagina e riprovare.",
-      "invalidValue": "Uno dei valori della lista di controllo non è valido. Aggiornare la pagina e riprovare."
+      "invalidValue": "Uno dei valori della lista di controllo non è valido. Aggiornare la pagina e riprovare.",
+      "ruleCategoryBoardMismatch": "La categoria selezionata appartiene a una bacheca diversa da quella della regola.",
+      "ruleCategoryInvalid": "La categoria selezionata non è una categoria di primo livello.",
+      "ruleSubcategoryInvalid": "La sottocategoria selezionata non appartiene alla categoria selezionata.",
+      "ruleSubcategoryRequiresCategory": "Seleziona una categoria prima di scegliere una sottocategoria."
     }
   },
   "ticketSection": {

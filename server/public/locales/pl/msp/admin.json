@@ -253,7 +253,8 @@
     },
     "states": {
       "running": "Uruchamianie diagnostyki...",
-      "diagnosticsFailed": "Diagnostyka nie powiodła się"
+      "diagnosticsFailed": "Diagnostyka nie powiodła się",
+      "callbackDiagnosticsCaptured": "Diagnostyka zwrotna zapisana {{timestamp}}."
     },
     "statuses": {
       "pass": "Zaliczono",
