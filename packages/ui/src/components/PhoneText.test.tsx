@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createInstance } from 'i18next';
 import englishCommon from '../../../../server/public/locales/en/common.json';
 import germanCommon from '../../../../server/public/locales/de/common.json';
+import spanishCommon from '../../../../server/public/locales/es/common.json';
 import { PhoneText } from './PhoneText';
 
 const i18n = createInstance();
@@ -17,13 +18,19 @@ beforeEach(async () => {
   await i18n.init({
     lng: 'en',
     fallbackLng: false,
-    resources: { en: { common: englishCommon }, de: { common: germanCommon } },
+    resources: { en: { common: englishCommon }, de: { common: germanCommon }, es: { common: spanishCommon } },
   });
 });
 
 afterEach(cleanup);
 
 describe('PhoneText', () => {
+  it('renders the Spanish extension label while preserving the dial target', async () => {
+    await i18n.changeLanguage('es');
+    render(<PhoneText value="+13202521658" extension="42" />);
+    expect(screen.getByRole('link').textContent).toBe('+1 320 252 1658 extensión 42');
+    expect(screen.getByRole('link').getAttribute('href')).toBe('tel:+13202521658;ext=42');
+  });
   it('uses the locale extension label without changing the dial target', async () => {
     await i18n.changeLanguage('de');
     render(<PhoneText value="+13202521658" extension="42" />);
