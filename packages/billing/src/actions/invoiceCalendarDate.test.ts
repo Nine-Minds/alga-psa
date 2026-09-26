@@ -83,17 +83,20 @@ import { getInvoiceEmailRecipientAction, sendInvoiceEmailAction } from './invoic
 let smtp: EmulatorHost;
 let smtpPort: number;
 let controlUrl: string;
-const originalTimezone = process.env.TZ;
+const testEnvironmentKeys = [
+  'EMAIL_ENABLE', 'EMAIL_PROVIDER_TYPE', 'EMAIL_HOST', 'EMAIL_PORT', 'EMAIL_FROM',
+  'EMAIL_USERNAME', 'EMAIL_PASSWORD', 'NEXTAUTH_URL', 'TZ',
+] as const;
+const originalEnvironment = new Map(testEnvironmentKeys.map((key) => [key, process.env[key]]));
 
 function invoice(invoiceId: string, paymentMethod: 'check' | 'bank_transfer') {
   return {
     invoice_id: invoiceId,
     invoice_number: invoiceId === 'invoice-check' ? 'PM-SMOKE-0925-CHECK' : 'PM-SMOKE-0925-BANK',
     client_id: 'client-test',
-    // PostgreSQL's DATE parser returns Date objects through this model path.
-    // Other invoiceQueries paths convert date strings to Temporal.PlainDate.
-    invoice_date: new Date('2026-10-10T00:00:00.000Z'),
-    due_date: new Date('2026-10-10T00:00:00.000Z'),
+    // Match the PostgreSQL DATE parser's local-midnight Date boundary.
+    invoice_date: new Date(2026, 9, 10),
+    due_date: new Date(2026, 9, 10),
     status: 'finalized',
     finalized_at: '2026-10-10T12:00:00Z',
     invoice_type: 'standard',
@@ -112,8 +115,12 @@ async function capturedEmails() {
 }
 
 beforeAll(async () => {
-  controlUrl = process.env.SMTP_SINK_CONTROL_URL ?? '';
-  if (controlUrl) {
+  const externalControlUrl = process.env.BILLING_EMAIL_TEST_SMTP_CONTROL_URL;
+  if (process.env.BILLING_EMAIL_TEST_EXTERNAL_SMTP === 'true') {
+    if (!externalControlUrl || !process.env.EMAIL_PORT) {
+      throw new Error('External SMTP capture requires BILLING_EMAIL_TEST_SMTP_CONTROL_URL and EMAIL_PORT');
+    }
+    controlUrl = externalControlUrl;
     smtpPort = Number(process.env.EMAIL_PORT);
   } else {
     smtp = new EmulatorHost({ emulators: [smtpSink], controlPort: 0, ports: { 'smtp-sink': 0 } });
@@ -133,8 +140,11 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await smtp?.stop();
-  if (originalTimezone === undefined) delete process.env.TZ;
-  else process.env.TZ = originalTimezone;
+  for (const key of testEnvironmentKeys) {
+    const value = originalEnvironment.get(key);
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
+  }
 });
 
 beforeEach(async () => {
@@ -145,8 +155,10 @@ beforeEach(async () => {
 });
 
 describe('invoice email calendar dates and real SMTP delivery', () => {
-  it.each(['UTC', 'America/New_York'])('%s preserves dates in recipient output and delivered emails', async (timezone) => {
+  it.each(['UTC', 'America/New_York', 'Asia/Tokyo'])('%s preserves dates in recipient output and delivered emails', async (timezone) => {
     process.env.TZ = timezone;
+    mocks.invoiceById.set('invoice-check', invoice('invoice-check', 'check'));
+    mocks.invoiceById.set('invoice-bank', invoice('invoice-bank', 'bank_transfer'));
 
     const recipientResult = await getInvoiceEmailRecipientAction(['invoice-check']) as any;
     expect(recipientResult.errors).toEqual([]);
@@ -160,6 +172,16 @@ describe('invoice email calendar dates and real SMTP delivery', () => {
 
     const emails = await capturedEmails();
     expect(emails).toHaveLength(2);
+    if (process.env.BILLING_EMAIL_TEST_EXTERNAL_SMTP === 'true') {
+      console.info('[billing-email-smtp-capture]', JSON.stringify(emails.map((email) => {
+        const body = `${email.html}\n${email.text}`;
+        return {
+          subject: email.subject,
+          portalLinkRetained: body.includes('https://portal.example.test/client-portal/billing?tab=invoices'),
+          stripePayNowPresent: /pay now|checkout\.stripe/i.test(body),
+        };
+      })));
+    }
     for (const email of emails) {
       expect(email.to).toContain('billing@example.test');
       expect(email.html).toContain('October 10, 2026 / October 10, 2026');

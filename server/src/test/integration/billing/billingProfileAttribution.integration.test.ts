@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
 import Invoice from '@alga-psa/billing/models/invoice';
 import { Temporal } from '@js-temporal/polyfill';
+import { formatInvoiceCalendarDate } from '../../../../../packages/billing/src/actions/invoiceCalendarDate';
 import { buildContractCadenceDueSelectionInput } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 import { setupCommonMocks } from '../../../../test-utils/testMocks';
@@ -224,6 +225,8 @@ describe('billing profiles S2 — charge attribution and snapshots (T004, T010, 
     // Dedicated to this feature's recurring profile acceptance fixture. Never
     // use the shared `test_database`, which other worktrees recreate.
     db = await createTestDbConnection({ databaseName: 'test_db_billing_profile_recurring_acceptance' });
+    const databaseResult = await db.raw<{ database_name: string }[]>('select current_database() as database_name');
+    expect(databaseResult.rows[0]?.database_name).toBe('test_db_billing_profile_recurring_acceptance');
 
     tenantId = uuidv4();
     await tenantsUnscoped().insert({
@@ -478,7 +481,14 @@ describe('billing profiles S2 — charge attribution and snapshots (T004, T010, 
     );
     const snapshotFor = (invoiceId: string) => table('invoices')
       .where({ invoice_id: invoiceId })
-      .first('billing_profile_id', 'payment_method', 'invoice_date', 'due_date');
+      .select(
+        'billing_profile_id',
+        'payment_method',
+        db.raw('invoice_date::text as invoice_date'),
+        db.raw('due_date::text as due_date'),
+        db.raw('pg_typeof(invoice_date)::text as invoice_date_type'),
+      )
+      .first();
 
     const cardSnapshot = await snapshotFor(cardInvoice.invoice_id);
     const checkSnapshot = await snapshotFor(checkInvoice.invoice_id);
@@ -486,29 +496,42 @@ describe('billing profiles S2 — charge attribution and snapshots (T004, T010, 
       billing_profile_id: cardProfileId,
       payment_method: 'credit_card',
     });
+    expect(['date', 'timestamp with time zone']).toContain(cardSnapshot.invoice_date_type);
     expect(checkSnapshot).toMatchObject({
       billing_profile_id: checkProfileId,
       payment_method: 'check',
     });
 
-    const calendarDate = (value: unknown): string => value instanceof Date
-      ? value.toISOString().slice(0, 10)
-      : String(value).slice(0, 10);
+    // SQL's canonical text rendering provides the stored calendar day. Compare
+    // it to the formatter's output.
+    const calendarDate = (value: unknown): string => String(value).slice(0, 10);
+    const displayDate = (value: string): string => new Intl.DateTimeFormat('en-US', {
+      year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC',
+    }).format(new Date(`${value}T00:00:00Z`));
     const cardInvoiceDate = Temporal.PlainDate.from(calendarDate(cardSnapshot.invoice_date));
     const cardDueDate = Temporal.PlainDate.from(calendarDate(cardSnapshot.due_date));
     expect(cardDueDate.since(cardInvoiceDate).days).toBe(30);
     expect(calendarDate(checkSnapshot.due_date)).toBe(calendarDate(checkSnapshot.invoice_date));
 
-    // getInvoiceForRendering delegates to Invoice.getFullInvoiceById. The
-    // PostgreSQL DATE parser returns Date objects here; other invoiceQueries
+    // getInvoiceForRendering delegates to Invoice.getFullInvoiceById, which
+    // returns Date objects in this database boundary. Other invoiceQueries
     // paths explicitly convert date strings to Temporal.PlainDate.
-    const fullInvoice = await Invoice.getFullInvoiceById(db, tenantId, cardInvoice.invoice_id);
-    expect(fullInvoice.invoice_date).toBeInstanceOf(Date);
-    expect(fullInvoice.due_date).toBeInstanceOf(Date);
-    expect((fullInvoice.invoice_date as Date).toISOString().slice(0, 10))
-      .toBe(calendarDate(cardSnapshot.invoice_date));
-    expect((fullInvoice.due_date as Date).toISOString().slice(0, 10))
-      .toBe(calendarDate(cardSnapshot.due_date));
+    const originalTimezone = process.env.TZ;
+    try {
+      for (const timezone of ['UTC', 'America/New_York', 'Asia/Tokyo']) {
+        process.env.TZ = timezone;
+        const fullInvoice = await Invoice.getFullInvoiceById(db, tenantId, cardInvoice.invoice_id);
+        expect(fullInvoice.invoice_date).toBeInstanceOf(Date);
+        expect(fullInvoice.due_date).toBeInstanceOf(Date);
+        expect(formatInvoiceCalendarDate(fullInvoice.invoice_date as Date, 'en-US'))
+          .toBe(displayDate(calendarDate(cardSnapshot.invoice_date)));
+        expect(formatInvoiceCalendarDate(fullInvoice.due_date as Date, 'en-US'))
+          .toBe(displayDate(calendarDate(cardSnapshot.due_date)));
+      }
+    } finally {
+      if (originalTimezone === undefined) delete process.env.TZ;
+      else process.env.TZ = originalTimezone;
+    }
 
     const cardCharges = await chargesFor(cardInvoice.invoice_id);
     const checkCharges = await chargesFor(checkInvoice.invoice_id);
