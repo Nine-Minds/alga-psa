@@ -6,7 +6,7 @@ const { getTemporalClientMock, getConnectionMock, createServiceMock } = vi.hoist
 
 vi.mock('@ee/lib/temporal/client', () => ({ getTemporalClient: getTemporalClientMock }));
 vi.mock('@alga-psa/db', () => ({ getConnection: getConnectionMock, tenantDb: vi.fn() }));
-vi.mock('@ee/lib/payments/AutopayWorkerService', () => ({ AutopayWorkerService: { create: createServiceMock } }));
+vi.mock('@ee/lib/payments/AutopayService', () => ({ AutopayService: { create: createServiceMock } }));
 
 import { listAutopayReconcileWork } from '../autopay-activities';
 

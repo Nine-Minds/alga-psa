@@ -220,8 +220,15 @@ describe('invoice finalization kind classification', () => {
       'utf8',
     );
 
-    expect(source).toContain('function classifyInvoiceCreditHandling(');
-    expect(source).toContain('invoice?.is_prepayment');
+    const classifierSource = fs.readFileSync(
+      path.join(process.cwd(), '../packages/billing/src/services/prepaidReplenishmentSettlement.ts'),
+      'utf8',
+    );
+
+    expect(source).toContain('classifyInvoiceCreditHandling(invoice)');
+    expect(classifierSource).toContain('function classifyInvoiceCreditHandling(');
+    expect(classifierSource).toContain('invoice?.is_prepayment');
     expect(source).not.toContain('if (invoice && !invoice.billing_cycle_id)');
+    expect(classifierSource).not.toContain('if (invoice && !invoice.billing_cycle_id)');
   });
 });

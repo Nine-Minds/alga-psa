@@ -8,7 +8,7 @@ import { createStripePaymentProvider } from './StripePaymentProvider';
 import { classifyAutopayFailure, isAutopayEnrollmentValid, resolveConsentTextVersion, retryAt, shouldScheduleAutopay } from './autopayPolicy';
 import type { PaymentWebhookEvent } from '@alga-psa/types';
 import { buildPaymentFailedPayload } from 'server/src/lib/api/services/paymentWorkflowEvents';
-import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import logger from '@alga-psa/core/logger';
 import { reconcileStripeWebhookEvents } from './stripeWebhookEvents';
 import { startInvoiceAutopay, signalInvoiceAutopay, signalProfileAutopayChanged } from '../temporal/invoiceAutopay';

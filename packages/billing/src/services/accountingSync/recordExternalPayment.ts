@@ -3,7 +3,7 @@ import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { enqueueExternalPaymentPush } from './syncProducers';
 import { notifyInvoiceTerminalStatus } from './invoiceTerminalStatusHandlers';
-import { settlePrepaidReplenishmentInvoice } from '../../actions/invoiceModification';
+import { settlePrepaidReplenishmentInvoice } from '../prepaidReplenishmentSettlement';
 
 /**
  * Provider-agnostic landing for payments observed in an external system

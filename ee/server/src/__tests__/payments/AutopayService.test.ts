@@ -16,7 +16,7 @@ vi.mock('../../lib/payments/StripePaymentProvider', () => ({ createStripePayment
 vi.mock('../../lib/temporal/invoiceAutopay', () => ({ startInvoiceAutopay: vi.fn(), signalInvoiceAutopay: vi.fn(), signalProfileAutopayChanged: vi.fn() }));
 vi.mock('../../lib/payments/stripeWebhookEvents', () => ({ reconcileStripeWebhookEvents: vi.fn() }));
 vi.mock('@alga-psa/email', () => ({ getSystemEmailService: vi.fn() }));
-vi.mock('server/src/lib/eventBus/publishers', () => ({ publishWorkflowEvent: vi.fn() }));
+vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: vi.fn() }));
 
 import { getConnection } from '@alga-psa/db';
 import { AutopayService } from '../../lib/payments/AutopayService';

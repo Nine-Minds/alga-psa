@@ -39,7 +39,7 @@ import {
   listActiveInvoicePaymentLinks,
   listPendingInvoicePaymentLinks,
 } from '@alga-psa/billing/services/accountingSync/invoiceTerminalStatusHandlers';
-import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildPaymentAppliedPayload,
   buildPaymentFailedPayload,

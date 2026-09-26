@@ -21,7 +21,7 @@ vi.mock('@alga-psa/db', () => ({
 }));
 vi.mock('../src/services/accountingSync/syncProducers', () => ({ enqueueExternalPaymentPush: vi.fn() }));
 vi.mock('../src/services/accountingSync/invoiceTerminalStatusHandlers', () => ({ notifyInvoiceTerminalStatus: vi.fn() }));
-vi.mock('../src/actions/invoiceModification', () => ({ settlePrepaidReplenishmentInvoice: vi.fn() }));
+vi.mock('../src/services/prepaidReplenishmentSettlement', () => ({ settlePrepaidReplenishmentInvoice: vi.fn() }));
 
 import { recordExternalPayment } from '../src/services/accountingSync/recordExternalPayment';
 
