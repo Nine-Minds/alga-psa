@@ -4,7 +4,7 @@
 
 Smoke verification is blocked by the missing board-managed application service. At inspection time nothing was listening on port 3212 (`curl http://localhost:3212/` failed with connection refused; `ss` showed no listener). The `alga-psa-local-test` PgBouncer, PostgreSQL, and Redis containers were running, and PostgreSQL accepted connections. No application server was started, no account password was changed, and no feature code was modified.
 
-The working tree was clean before this report. Branch: `feature/alga-2026-0002564-configurable-default-quote-val`, two commits ahead of `origin/main`. The feature commits do not include an approved plan. `evidence/plan.txt` is absent from the worktree. The previous run's plan and artifacts are under `/tmp/alga-smoke-evidence/alga-2026-0002564-20260926T0005/` and are outside Git.
+The working tree was clean before this report. Branch: `feature/alga-2026-0002564-configurable-default-quote-val`, three commits ahead of `origin/main` after this report was committed. The feature commits do not include an approved plan. The recovered smoke procedure is now tracked at `evidence/plan.txt`. The previous run's plan and artifacts are under `/tmp/alga-smoke-evidence/alga-2026-0002564-20260926T0005/` and are outside Git.
 
 ## Diagnosis boundary
 
@@ -42,8 +42,10 @@ Passed:
 - `npm -w @alga-psa/billing run typecheck` — passed.
 - `npm -w @alga-psa/billing run build` — passed.
 
-A direct run of `src/constants/billingQuoteValidity.test.ts` was not selected by the billing package Vitest include list and exited with “No test files found”; the configured action and quote form suites above did run successfully. No full application build was attempted because no application server is available and package-level build/typecheck cover the changed package.
+A direct run of `src/constants/billingQuoteValidity.test.ts` initially found no tests because the suite was missing from the billing package Vitest include list. The include list was corrected and `npm -w @alga-psa/billing test -- src/constants/billingQuoteValidity.test.ts` passed (2 tests).
+
+The package build and the repository build both passed. The repository build command was `npm run build`; it completed the AssemblyScript build, Nx dependency builds, and the production Next.js build (`Compiled successfully`). Turbopack emitted five broad filesystem-trace warnings in unrelated document-preview and extension-asset code. The app build does not require the board service to be running.
 
 ## Next action
 
-Restore the board-managed app service on port 3212 through its normal board workflow, then use the isolated-account procedure above. Capture cookie names/counts/aggregate sizes only, inspect the relevant request-header limit and loopback asset failures, and rerun the five live behavior checks. Do not change product code unless that verification demonstrates a defect.
+Board-service restoration on port 3212 is an external prerequisite. Once restored through the normal board workflow, use the isolated-account procedure in `evidence/plan.txt`. Capture cookie names/counts/aggregate sizes only, inspect the relevant request-header limit and loopback asset failures, and rerun the live behavior checks. Do not change product code unless that verification demonstrates a defect.
