@@ -34,7 +34,7 @@ export interface SendEmailParams {
   templateData?: Record<string, any>;
   from?: EmailAddress;
   fromName?: string;
-  mailClass?: import('@alga-psa/types').OutboundMailClass;
+  mailClass: import('@alga-psa/types').OutboundMailClass;
   boardId?: string;
   senderId?: string;
   cc?: EmailAddress[];
@@ -510,7 +510,7 @@ export class TenantEmailService extends BaseEmailService {
     // Convert params to BaseEmailParams format
     const baseParams: BaseEmailParams = {
       to: params.to,
-      mailClass: params.mailClass ?? 'general',
+      mailClass: params.mailClass,
       cc: params.cc,
       bcc: params.bcc,
       attachments: params.attachments,

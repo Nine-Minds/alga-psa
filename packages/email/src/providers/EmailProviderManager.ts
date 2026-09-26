@@ -52,11 +52,15 @@ export class EmailProviderManager implements IEmailProviderManager {
 
         const configsToInitialize = enabledConfig.providerType === 'microsoft' ? enabledConfigs : [enabledConfig];
         for (const config of configsToInitialize) {
-          const configToInitialize = await this.resolveProviderConfig(tenantId, config);
+          const inboundProviderId = config.config?.inboundProviderId;
+          const configToInitialize = await this.resolveProviderConfig(
+            tenantId,
+            config,
+            config.providerType === 'microsoft' && typeof inboundProviderId === 'string' ? inboundProviderId : config.providerId
+          );
           const provider = await this.createProvider(config);
           await provider.initialize(configToInitialize);
           this.providerCache.set(config.providerId, provider);
-          const inboundProviderId = config.config?.inboundProviderId;
           if (config.providerType === 'microsoft' && typeof inboundProviderId === 'string') {
             this.providerCache.set(inboundProviderId, provider);
           }
@@ -76,17 +80,12 @@ export class EmailProviderManager implements IEmailProviderManager {
   }
 
   async sendEmail(message: EmailMessage, tenantId: string): Promise<EmailSendResult> {
-    const requestedProviderId = message.tags?.microsoftProviderId;
+    const requestedProviderId = message.microsoftProviderId;
     if (requestedProviderId && !this.providerCache.has(requestedProviderId)) {
       const microsoftConfig = this.tenantSettings.get(tenantId)?.providerConfigs.find(config => config.providerType === 'microsoft' && config.isEnabled);
       if (microsoftConfig) {
-        const routedConfig: EmailProviderConfig = {
-          ...microsoftConfig,
-          providerId: requestedProviderId,
-          config: { ...microsoftConfig.config, inboundProviderId: requestedProviderId },
-        };
-        const provider = await this.createProvider(routedConfig);
-        const resolvedConfig = await this.resolveProviderConfig(tenantId, routedConfig);
+        const provider = await this.createProvider(microsoftConfig);
+        const resolvedConfig = await this.resolveProviderConfig(tenantId, microsoftConfig, requestedProviderId);
         await provider.initialize(resolvedConfig);
         this.providerCache.set(requestedProviderId, provider);
       }
@@ -237,11 +236,11 @@ export class EmailProviderManager implements IEmailProviderManager {
     logger.info(`[EmailProviderManager] Updated settings for tenant: ${tenantId}`);
   }
 
-  private async resolveProviderConfig(tenantId: string, config: EmailProviderConfig): Promise<Record<string, any>> {
+  private async resolveProviderConfig(tenantId: string, config: EmailProviderConfig, providerId?: string): Promise<Record<string, any>> {
     const originalConfig = typeof config.config === 'object' && config.config !== null ? config.config : {};
 
     if (config.providerType === 'microsoft') {
-      return this.resolveMicrosoftProviderConfig(tenantId, config);
+      return this.resolveMicrosoftProviderConfig(tenantId, config, providerId ?? config.providerId);
     }
 
     if (config.providerType !== 'resend') {
@@ -269,10 +268,10 @@ export class EmailProviderManager implements IEmailProviderManager {
 
   private async resolveMicrosoftProviderConfig(
     tenantId: string,
-    config: EmailProviderConfig
+    config: EmailProviderConfig,
+    providerId: string
   ): Promise<Record<string, any>> {
-    const requestedProviderId = this.normalizeSecretValue(config.config?.inboundProviderId)
-      || config.providerId;
+    const requestedProviderId = providerId;
     const knex = await getConnection(tenantId);
     const db = tenantDb(knex, tenantId);
     const provider = await db.table('email_providers')

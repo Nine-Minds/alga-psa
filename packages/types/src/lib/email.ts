@@ -25,6 +25,8 @@ export interface EmailMessage {
   attachments?: EmailAttachment[];
   headers?: Record<string, string>;
   tags?: Record<string, string>;
+  /** Internal provider selection for routed Microsoft send-as identities. */
+  microsoftProviderId?: string;
   replyTo?: EmailAddress;
 }
 

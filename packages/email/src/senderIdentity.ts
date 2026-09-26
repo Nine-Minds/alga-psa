@@ -41,7 +41,9 @@ export function resolveOutboundSender(
     ...routes.filter((item) => item.route_type === 'mail_class' && item.mail_class === request.mailClass),
     ...routes.filter((item) => item.route_type === 'default'),
   ] : [];
-  const route = matchingRoutes.find((item) => item.display_name) ?? matchingRoutes[0];
+  // The most specific route supplying a sender or name decides the identity.
+  // A name-only route can decorate an address inherited from a less specific route.
+  const route = matchingRoutes.find((item) => item.sender_id || item.display_name);
   let routeSender: OutboundEmailSender | undefined;
   for (const candidate of matchingRoutes) {
     if (!candidate.sender_id) continue;

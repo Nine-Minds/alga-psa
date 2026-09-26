@@ -149,7 +149,7 @@ describe('EmailProviderManager Microsoft Graph support', () => {
   it('initializes and caches the routed connected mailbox on demand', async () => {
     const manager = new EmailProviderManager();
     await manager.initialize(settings());
-    await manager.sendEmail({ ...message('Routed mailbox'), tags: { microsoftProviderId: 'inbound-microsoft-2' } }, 'tenant-1');
+    await manager.sendEmail({ ...message('Routed mailbox'), microsoftProviderId: 'inbound-microsoft-2' }, 'tenant-1');
     expect(buildConfigMock).toHaveBeenLastCalledWith(expect.objectContaining({
       id: 'inbound-microsoft-2',
       mailbox: 'projects@example.com',

@@ -613,7 +613,7 @@ export abstract class BaseEmailService {
         text,
         attachments,
         headers,
-        tags: params.resolvedMicrosoftProviderId ? { microsoftProviderId: params.resolvedMicrosoftProviderId } : undefined,
+        microsoftProviderId: params.resolvedMicrosoftProviderId,
       };
 
       // Outbound email lifecycle workflow events (F071). Best-effort: publishing

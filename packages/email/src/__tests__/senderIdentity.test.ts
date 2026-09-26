@@ -53,4 +53,22 @@ describe('resolveOutboundSender', () => {
   it('rejects a sender id that is not owned by the tenant', () => {
     expect(() => resolveOutboundSender({ tenantId: 'tenant-2', mailClass: 'billing', senderId: 'billing' }, settings)).toThrow(/does not belong to tenant/);
   });
+
+  it('takes names from the most specific route that contributes sender or name data', () => {
+    const classNamed = settings.outboundRoutes!.map((r) => r.route_id === 'ticket-class' ? { ...r, display_name: 'Class name' } : r);
+    const boardSenderNoName = classNamed.map((r) => r.route_id === 'board' ? { ...r, sender_id: 'billing', display_name: null } : r);
+    expect(resolveOutboundSender({ tenantId: tenant, mailClass: 'ticket', boardId: 'board-1' }, { ...settings, outboundRoutes: boardSenderNoName }).from)
+      .toEqual({ email: 'billing@example.test', name: 'Billing team' });
+
+    const boardNameOnly = classNamed.map((r) => r.route_id === 'board' ? { ...r, sender_id: null, display_name: 'Board name' } : r);
+    expect(resolveOutboundSender({ tenantId: tenant, mailClass: 'ticket', boardId: 'board-1' }, { ...settings, outboundRoutes: boardNameOnly }).from)
+      .toEqual({ email: 'support@example.test', name: 'Board name' });
+
+    const boardSenderAndName = classNamed.map((r) => r.route_id === 'board' ? { ...r, sender_id: 'billing', display_name: 'Board sender name' } : r);
+    expect(resolveOutboundSender({ tenantId: tenant, mailClass: 'ticket', boardId: 'board-1' }, { ...settings, outboundRoutes: boardSenderAndName }).from)
+      .toEqual({ email: 'billing@example.test', name: 'Board sender name' });
+
+    expect(resolveOutboundSender({ tenantId: tenant, mailClass: 'ticket' }, { ...settings, outboundRoutes: classNamed }).from)
+      .toEqual({ email: 'support@example.test', name: 'Class name' });
+  });
 });

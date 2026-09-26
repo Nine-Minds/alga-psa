@@ -12,6 +12,7 @@ type RouteInput = {
   boardId?: string;
   senderId?: string | null;
   displayName?: string | null;
+  confirmUnverifiedSmtpSender?: boolean;
 };
 
 async function authorize(user: any, tenant: string, action: 'read' | 'update') {
@@ -40,8 +41,10 @@ export const listEmailSenders = withAuth(async (user, { tenant }) => {
   return { senders, routes };
 });
 
-export const listSelectableSenders = withAuth(async (user, { tenant }, input: { mailClass: OutboundMailClass; boardId?: string }) => {
-  const { db } = await authorize(user, tenant, 'read');
+export const listSelectableSenders = withAuth(async (_user, { tenant }, input: { mailClass: OutboundMailClass; boardId?: string }) => {
+  if (!tenant) throw new Error('A tenant is required.');
+  const { knex } = await createTenantKnex();
+  const db = tenantDb(knex, tenant);
   const [senders, routes] = await Promise.all([
     db.table('email_sender_addresses').where({ verification_status: 'verified' }).select('sender_id', 'email_address', 'display_name'),
     db.table('email_sender_routes').select('*'),
@@ -133,19 +136,28 @@ export const deleteEmailSender = withAuth(async (user, { tenant }, senderId: str
 });
 
 export const setEmailSenderRoute = withAuth(async (user, { tenant }, input: RouteInput) => {
-  const { db } = await authorize(user, tenant, 'update');
+  const { knex, db } = await authorize(user, tenant, 'update');
   if (!input.senderId && !input.displayName?.trim()) throw new Error('Choose a sender or provide a display name.');
   if (input.senderId) {
     const sender = await db.table('email_sender_addresses').where({ sender_id: input.senderId }).first();
-    if (!sender || sender.verification_status !== 'verified') throw new Error('Routes can use only verified sender addresses.');
+    if (!sender) throw new Error('Sender address was not found.');
+    if (sender.verification_status !== 'verified') {
+      const settings = await TenantEmailService.getTenantEmailSettings(tenant, knex);
+      if (settings?.emailProvider !== 'smtp' || !input.confirmUnverifiedSmtpSender) {
+        throw new Error('Routes can use only verified senders. For SMTP, explicitly confirm that the relay accepts this sender address.');
+      }
+    }
   }
   const key = routePredicate(input);
-  await db.table('email_sender_routes').where(key).del();
-  await db.table('email_sender_routes').insert({
-    ...key,
-    sender_id: input.senderId ?? null,
-    display_name: input.displayName?.trim() || null,
-    updated_at: new Date(),
+  await knex.transaction(async (trx) => {
+    const trxDb = tenantDb(trx, tenant);
+    await trxDb.table('email_sender_routes').where(key).del();
+    await trxDb.table('email_sender_routes').insert({
+      ...key,
+      sender_id: input.senderId ?? null,
+      display_name: input.displayName?.trim() || null,
+      updated_at: new Date(),
+    });
   });
   await TenantEmailService.invalidateTenantSettings(tenant);
   return { success: true };
