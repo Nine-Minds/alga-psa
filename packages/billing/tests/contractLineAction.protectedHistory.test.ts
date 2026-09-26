@@ -51,7 +51,7 @@ const invoke = updateContractLine as any;
 const user = { user_id: 'user-1' };
 const ctx = { tenant: 'tenant-1' };
 const claimedPeriod = {
-  lifecycle_state: 'locked', start: '2026-06-01', end: '2026-07-01',
+  lifecycle_state: 'locked', start: new Date('2026-06-01T00:00:00.000Z'), end: new Date('2026-07-01T00:00:00.000Z'),
 };
 
 describe('updateContractLine protected billed history', () => {
@@ -59,7 +59,7 @@ describe('updateContractLine protected billed history', () => {
     vi.clearAllMocks();
     state.currentLine = {
       contract_line_id: 'line-1', contract_id: 'contract-1', contract_line_type: 'Fixed',
-      start_date: '2026-05-01', end_date: null, billing_timing: 'arrears', cadence_owner: 'client',
+      start_date: new Date('2026-05-01T00:00:00.000Z'), end_date: null, billing_timing: 'arrears', cadence_owner: 'client',
     };
     state.periods = [{ ...claimedPeriod }];
     state.details = [];
@@ -86,21 +86,25 @@ describe('updateContractLine protected billed history', () => {
     expect(state.persisted).toHaveBeenCalledWith(expect.objectContaining({ invoice_line_description: 'Corrected text' }));
     state.persisted.mockClear();
     await expect(invoke(user, ctx, 'line-1', { start_date: '2026-06-01' })).resolves.toMatchObject({ start_date: '2026-06-01' });
+    state.currentLine.start_date = new Date('2026-06-01T00:00:00.000Z');
+    await expect(invoke(user, ctx, 'line-1', { start_date: null })).resolves.toMatchObject({ start_date: null });
+    state.currentLine.start_date = null;
     state.persisted.mockClear();
     await expect(invoke(user, ctx, 'line-1', { start_date: '2026-06-02' })).resolves.toMatchObject({
       messageKey: 'msp/contracts:contractLines.errors.protectedStartDate',
       messageParams: { boundary: '2026-06-01' },
     });
-    await expect(invoke(user, ctx, 'line-1', { start_date: null })).resolves.toMatchObject({
-      messageKey: 'msp/contracts:contractLines.errors.protectedStartDate',
-    });
-    expect(state.persisted).not.toHaveBeenCalled();
+    state.persisted.mockClear();
+    await expect(invoke(user, ctx, 'line-1', { end_date: '2027-01-01' })).resolves.toMatchObject({ end_date: '2027-01-01' });
+    state.currentLine.end_date = new Date('2027-01-01T00:00:00.000Z');
+    await expect(invoke(user, ctx, 'line-1', { end_date: null })).resolves.toMatchObject({ end_date: null });
+    expect(state.persisted).toHaveBeenLastCalledWith(expect.objectContaining({ end_date: null }));
   });
 
   it('includes invoice detail periods linked by service configuration, independent of invoice draft status', async () => {
     state.periods = [];
     state.currentLine.start_date = null;
-    state.details = [{ start: '2026-04-01', end: '2026-05-01' }];
+    state.details = [{ start: new Date('2026-04-01T00:00:00.000Z'), end: new Date('2026-05-01T00:00:00.000Z') }];
     await expect(invoke(user, ctx, 'line-1', { end_date: '2026-04-15' })).resolves.toMatchObject({
       messageKey: 'msp/contracts:contractLines.errors.protectedEndDate',
       messageParams: { boundary: '2026-05-01' },

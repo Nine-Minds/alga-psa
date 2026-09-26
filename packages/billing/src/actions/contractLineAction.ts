@@ -31,6 +31,11 @@ type ContractLineActionError = ActionMessageError | ActionPermissionError;
 async function getProtectedContractLinePeriods(trx: Knex | Knex.Transaction, tenant: string, contractLineId: string, lockRows = false) {
     const db = tenantDb(trx, tenant);
     const periods: Array<{ start: string; end: string }> = [];
+    const normalizedPeriod = (startValue: unknown, endValue: unknown) => {
+        const start = normalizeContractLineDate(startValue);
+        const end = normalizeContractLineDate(endValue);
+        return start && end ? { start, end } : null;
+    };
     let claimsQuery = db.table('recurring_service_periods')
         .whereIn('obligation_type', ['contract_line', 'client_contract_line'])
         .where('obligation_id', contractLineId)
@@ -38,7 +43,10 @@ async function getProtectedContractLinePeriods(trx: Knex | Knex.Transaction, ten
     if (lockRows && 'forUpdate' in claimsQuery) claimsQuery = claimsQuery.forUpdate();
     const allClaims = await claimsQuery;
     const claimed = allClaims.filter((p: any) => p.lifecycle_state === 'billed' || p.lifecycle_state === 'locked');
-    periods.push(...claimed.map((p: any) => ({ start: String(p.start).slice(0, 10), end: String(p.end).slice(0, 10) })));
+    periods.push(...claimed.flatMap((p: any) => {
+        const period = normalizedPeriod(p.start, p.end);
+        return period ? [period] : [];
+    }));
 
     // Detail rows are the canonical line-level invoice relationship. Joining
     // through configuration keeps draft invoices in scope without treating an
@@ -49,10 +57,29 @@ async function getProtectedContractLinePeriods(trx: Knex | Knex.Transaction, ten
     const details = await detailQuery.where('clsc.contract_line_id', contractLineId)
         .whereNotNull('iid.service_period_start').whereNotNull('iid.service_period_end')
         .select('iid.service_period_start as start', 'iid.service_period_end as end');
-    periods.push(...details.map((p: any) => ({ start: String(p.start).slice(0, 10), end: String(p.end).slice(0, 10) })));
+    periods.push(...details.flatMap((p: any) => {
+        const period = normalizedPeriod(p.start, p.end);
+        return period ? [period] : [];
+    }));
     return {
         earliestStart: periods.length ? periods.map(p => p.start).sort()[0] : null,
         latestEnd: periods.length ? periods.map(p => p.end).sort().at(-1)! : null,
+    };
+}
+
+async function getActiveContractLineAssignmentWindow(
+    trx: Knex | Knex.Transaction,
+    tenant: string,
+    contractId: string,
+): Promise<{ start: string | null; end: string | null }> {
+    const db = tenantDb(trx, tenant);
+    const query = db.table('client_contracts as cc');
+    db.tenantJoin(query, 'contracts as c', 'c.contract_id', 'cc.contract_id');
+    const assignment = await query.where({ 'cc.contract_id': contractId, 'cc.is_active': true })
+        .first('cc.start_date', 'cc.end_date');
+    return {
+        start: normalizeContractLineDate(assignment?.start_date),
+        end: normalizeContractLineDate(assignment?.end_date),
     };
 }
 
@@ -364,20 +391,25 @@ export const updateContractLine = withAuth(async (
                 safeUpdateData.end_date = normalizeContractLineDate(safeUpdateData.end_date);
             }
             const protectedPeriods = await getProtectedContractLinePeriods(trx, tenant, planId, true);
-            const proposedStart = 'start_date' in safeUpdateData ? safeUpdateData.start_date : existingPlan.start_date;
-            const proposedEnd = 'end_date' in safeUpdateData ? safeUpdateData.end_date : existingPlan.end_date;
+            const persistedStart = normalizeContractLineDate(existingPlan.start_date);
+            const persistedEnd = normalizeContractLineDate(existingPlan.end_date);
+            const proposedStart = 'start_date' in safeUpdateData
+                ? normalizeContractLineDate(safeUpdateData.start_date)
+                : persistedStart;
+            const proposedEnd = 'end_date' in safeUpdateData
+                ? normalizeContractLineDate(safeUpdateData.end_date)
+                : persistedEnd;
             const updatesWindow = 'start_date' in safeUpdateData || 'end_date' in safeUpdateData;
-            if (updatesWindow && protectedPeriods.earliestStart && (
-                (proposedStart == null && existingPlan.start_date != null) ||
-                (proposedStart != null && proposedStart > protectedPeriods.earliestStart)
-            )) {
-                throw new Error(`Protected line start date must be on or before ${protectedPeriods.earliestStart} because that is the earliest protected service-period start.`);
-            }
-            if (updatesWindow && protectedPeriods.latestEnd && (
-                (proposedEnd == null && existingPlan.end_date != null) ||
-                (proposedEnd != null && proposedEnd < protectedPeriods.latestEnd)
-            )) {
-                throw new Error(`Protected line end date must be on or after ${protectedPeriods.latestEnd} because that is the latest protected service-period end.`);
+            if (updatesWindow && existingPlan.contract_id && (protectedPeriods.earliestStart || protectedPeriods.latestEnd)) {
+                const assignmentWindow = await getActiveContractLineAssignmentWindow(trx, tenant, existingPlan.contract_id);
+                const effectiveStart = proposedStart ?? assignmentWindow.start;
+                const effectiveEnd = proposedEnd ?? assignmentWindow.end;
+                if (protectedPeriods.earliestStart && effectiveStart && effectiveStart > protectedPeriods.earliestStart) {
+                    throw new Error(`Protected line start date must be on or before ${protectedPeriods.earliestStart} because that is the earliest protected service-period start.`);
+                }
+                if (protectedPeriods.latestEnd && effectiveEnd && effectiveEnd < protectedPeriods.latestEnd) {
+                    throw new Error(`Protected line end date must be on or after ${protectedPeriods.latestEnd} because that is the latest protected service-period end.`);
+                }
             }
             if (typeof safeUpdateData.invoice_line_description === 'string') {
                 safeUpdateData.invoice_line_description = safeUpdateData.invoice_line_description.trim() || null;

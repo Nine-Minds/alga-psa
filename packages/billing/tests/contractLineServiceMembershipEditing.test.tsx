@@ -65,6 +65,9 @@ vi.mock('@alga-psa/billing/actions/billingClientLocationActions', () => ({
 }));
 
 const translate = (_key: string, options?: Record<string, unknown>) => {
+  if (_key === 'msp/contracts:contractLines.errors.protectedEndDate') {
+    return `End date must be on or after ${String(options?.boundary)} to include protected service history.`;
+  }
   let value = String(options?.defaultValue ?? _key);
   for (const [name, replacement] of Object.entries(options ?? {})) {
     value = value.replace(`{{${name}}}`, String(replacement));
@@ -86,7 +89,7 @@ vi.mock('@alga-psa/billing/hooks/useBillingEnumOptions', () => ({
 
 vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
   getErrorMessage: () => 'action error',
-  isActionMessageError: (value: any) => Boolean(value?.error),
+  isActionMessageError: (value: any) => Boolean(value?.actionError),
   isActionPermissionError: () => false,
 }));
 
@@ -296,7 +299,11 @@ describe('contract line service membership editing', () => {
 
   it('shows an actionable server rejection when a billed line date cuts into protected history', async () => {
     actionMocks.hasContractLineProtectedHistory.mockResolvedValue(true);
-    actionMocks.updateContractLine.mockResolvedValue({error: 'protected', code: 'ACTION_ERROR'});
+    actionMocks.updateContractLine.mockResolvedValue({
+      actionError: 'server fallback',
+      messageKey: 'msp/contracts:contractLines.errors.protectedEndDate',
+      messageParams: { boundary: '2026-07-01' },
+    });
     actionMocks.getDetailedContractLines.mockResolvedValue([{
       contract_id: 'contract-1', contract_line_id: 'line-1', contract_line_name: 'Billed fixed line',
       contract_line_type: 'Fixed', billing_frequency: 'monthly', display_order: 1,
@@ -307,7 +314,7 @@ describe('contract line service membership editing', () => {
     await waitFor(() => expect(document.getElementById('line-end-date-line-1')).toBeTruthy());
     fireEvent.change(document.getElementById('line-end-date-line-1')!, {target: {value: '2026-06-01'}});
     fireEvent.click(screen.getByRole('button', {name: 'Save'}));
-    expect(await screen.findByText('action error')).toBeTruthy();
+    expect(await screen.findByText('End date must be on or after 2026-07-01 to include protected service history.')).toBeTruthy();
     expect(actionMocks.updateContractLine).toHaveBeenCalledWith('line-1', expect.objectContaining({end_date: '2026-06-01'}));
   });
 
