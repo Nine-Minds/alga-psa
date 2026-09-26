@@ -2,7 +2,7 @@
 
 ## Environment and access
 
-- Use the board-managed application at `http://localhost:3212/`; do not start an app server in this worktree.
+- Use the board-managed application at `http://127.0.0.1:3212/` as the primary URL; do not start an app server in this worktree. This avoids shared `localhost` cookies and exercises the configured loopback HMR origin.
 - Confirm the service is listening and running from this worktree before using the UI. The database dependencies use PgBouncer on host port 6472 and PostgreSQL on 5472.
 - Use a fresh isolated browser profile. Obtain the dev-login credential directly from the board dev-server terminal history and enter it only in the browser. Never copy credentials, cookie values, or tokens into commands, logs, screenshots, evidence, or Git.
 - Use a tenant-appropriate account with `billing_settings:read`, `billing_settings:update`, and quote creation permission. Confirm permissions before mutations. Do not reset a shared account password.
@@ -12,7 +12,7 @@
 
 1. Verify the board app is available on port 3212. If absent, stop authenticated smoke work and report board-service restoration as an external prerequisite; do not start it locally.
 2. Sign in through the isolated browser profile. If an authenticated route returns HTTP 431, capture request cookie names, count, and aggregate/per-cookie byte sizes without recording values. Compare aggregate header size with the active server/proxy header limit and inspect server logs for the rejecting layer.
-3. If using `127.0.0.1` to isolate cookies, verify the login page and authenticated screens visibly render. Inspect translation and other asset requests, response status, origin/host handling, and authentication configuration. A successful sign-in response alone is not proof that the application rendered.
+3. Verify the login page and authenticated screens visibly render at `127.0.0.1`. Inspect translation and other asset requests, response status, HMR handshake, origin/host handling, and authentication configuration. A successful sign-in response alone is not proof that the application rendered. If translation loading still stalls, investigate it independently of HMR and record the cause and evidence.
 4. Confirm Billing Settings > General and the Quotes screen load. Confirm Quote Numbering remains under Numbering.
 
 ## Behavior checks
