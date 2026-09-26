@@ -1,5 +1,4 @@
 import type { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
 import {
   AMP_CONTACT_CLIENT_NAME_EXTENSION_KEY,
   type AmpAssetRecord,
@@ -15,6 +14,8 @@ import { ClientModel } from '@alga-psa/shared/models/clientModel';
 import { ContactModel } from '@alga-psa/shared/models/contactModel';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
 import { createAssetInTransaction } from '@alga-psa/assets/actions';
+// LEVERAGE: pattern asset-attribute-coercion — same coercion used by planner validation.
+import { coerceAttributeValue } from '@alga-psa/assets/lib/assetTypeAttributes';
 import type { ApplierContext } from './context';
 
 export interface AppliedTarget {
@@ -29,7 +30,8 @@ export interface EntityApplier {
   apply(
     trx: Knex.Transaction,
     context: ApplierContext,
-    payload: Record<string, unknown>
+    payload: Record<string, unknown>,
+    staged?: { customFieldValues: Record<string, unknown> }
   ): Promise<AppliedTarget>;
 }
 
@@ -374,7 +376,8 @@ export class AssetMigrationApplier implements EntityApplier {
   async apply(
     trx: Knex.Transaction,
     context: ApplierContext,
-    payload: Record<string, unknown>
+    payload: Record<string, unknown>,
+    staged?: { customFieldValues: Record<string, unknown> }
   ): Promise<AppliedTarget> {
     const record = payload as unknown as AmpAssetRecord;
     const assetConfig = context.configuration.assets;
@@ -384,7 +387,9 @@ export class AssetMigrationApplier implements EntityApplier {
     if (!record.asset_type_name) {
       throw new Error('Asset has no asset_type_name; AMP assets must carry a source type to map.');
     }
-    const assetTypeSlug = assetConfig.assetTypeMapping[record.asset_type_name];
+    const assetTypeSlug = Object.prototype.hasOwnProperty.call(assetConfig.assetTypeMapping, record.asset_type_name)
+      ? assetConfig.assetTypeMapping[record.asset_type_name]
+      : undefined;
     if (!assetTypeSlug) {
       throw new Error(`Source asset type "${record.asset_type_name}" is not mapped.`);
     }
@@ -417,6 +422,26 @@ export class AssetMigrationApplier implements EntityApplier {
       );
     }
 
+    const fields = await context.assetTypeFields(trx, assetTypeSlug);
+    const customFieldMappings = assetConfig.customFieldMapping;
+    const sourceMapping = customFieldMappings && Object.prototype.hasOwnProperty.call(customFieldMappings, assetTypeSlug)
+      ? customFieldMappings[assetTypeSlug]
+      : {};
+    const customAttributes: Record<string, unknown> = {};
+    for (const [sourceName, targetKey] of Object.entries(sourceMapping)) {
+      const values = staged?.customFieldValues;
+      const sourceValue = values && Object.prototype.hasOwnProperty.call(values, sourceName) ? values[sourceName] : undefined;
+      if (sourceValue === undefined || sourceValue === null || (typeof sourceValue === 'string' && sourceValue.trim() === '')) continue;
+      const field = fields.find((candidate) => candidate.key === targetKey);
+      if (!field) throw new Error(`Mapped custom asset field "${targetKey}" no longer exists; preflight must pass before applying.`);
+      const coerced = coerceAttributeValue(field, sourceValue);
+      if (coerced.ok === false) {
+        const valueDescription = typeof sourceValue === 'string' ? sourceValue : JSON.stringify(sourceValue) ?? '[value]';
+        throw new Error(`Custom asset field "${sourceName}" value "${valueDescription}" ${coerced.reason}.`);
+      }
+      customAttributes[targetKey] = coerced.value;
+    }
+
     const asset = await createAssetInTransaction(
       trx,
       context.tenant,
@@ -433,6 +458,7 @@ export class AssetMigrationApplier implements EntityApplier {
         attributes: {
           ...(record.manufacturer ? { manufacturer: record.manufacturer } : {}),
           ...(record.model ? { model: record.model } : {}),
+          ...customAttributes,
         },
       },
       { requireCustomAttributes: false }

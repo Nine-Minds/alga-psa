@@ -2181,6 +2181,18 @@
       "comingSoon": "Mapping templates and scheduled imports will live here. Save column mappings, share them across the team, and configure recurring jobs."
     },
     "migration": {
+      "customFields": {
+        "required": "required",
+        "title": "Fields for {{name}}",
+        "mapping": "Custom field mapping",
+        "description": "Map preserved CSV columns to fields on this asset type.",
+        "empty": "No custom columns were preserved for this asset type.",
+        "samples_one": "{{sample}} · {{count}} record",
+        "samples_other": "{{sample}} · {{count}} records",
+        "noSample": "No sample",
+        "missingRequired": "Required fields not mapped: {{fields}}",
+        "duplicate": "A custom field is mapped more than once. Choose a unique target for each source."
+      },
       "actions": {
         "back": "Back to migrations",
         "upload": "Upload package"

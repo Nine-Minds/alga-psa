@@ -2181,6 +2181,18 @@
       "comingSoon": "Toewijzingssjablonen en geplande imports komen hier. Sla kolomtoewijzingen op, deel ze met het team en configureer terugkerende taken."
     },
     "migration": {
+      "customFields": {
+        "required": "verplicht",
+        "title": "Velden voor {{name}}",
+        "mapping": "Koppeling van aangepaste velden",
+        "description": "Koppel bewaarde CSV-kolommen aan velden van dit assettype.",
+        "empty": "Er zijn geen aangepaste kolommen bewaard voor dit assettype.",
+        "samples_one": "{{sample}} · {{count}} gegevensrij",
+        "samples_other": "{{sample}} · {{count}} gegevensrijen",
+        "noSample": "Geen voorbeeld",
+        "missingRequired": "Niet-gekoppelde verplichte velden: {{fields}}",
+        "duplicate": "Een aangepast veld is meerdere keren gekoppeld. Kies een uniek doel voor elke bron."
+      },
       "actions": {
         "back": "Terug naar migraties",
         "upload": "Pakket uploaden"

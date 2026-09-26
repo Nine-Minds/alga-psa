@@ -2181,6 +2181,18 @@
       "comingSoon": "I modelli di mappatura e le importazioni pianificate saranno disponibili qui. Salva le mappature delle colonne, condividile con il team e configura operazioni ricorrenti."
     },
     "migration": {
+      "customFields": {
+        "required": "obbligatorio",
+        "title": "Campi di {{name}}",
+        "mapping": "Mappatura dei campi personalizzati",
+        "description": "Associa le colonne CSV conservate ai campi di questo tipo di asset.",
+        "empty": "Non sono state conservate colonne personalizzate per questo tipo di asset.",
+        "samples_one": "{{sample}} · {{count}} voce",
+        "samples_other": "{{sample}} · {{count}} voci",
+        "noSample": "Nessun esempio",
+        "missingRequired": "Campi obbligatori non associati: {{fields}}",
+        "duplicate": "Un campo personalizzato è associato più volte. Scegli una destinazione univoca per ogni origine."
+      },
       "actions": {
         "back": "Torna alle migrazioni",
         "upload": "Carica pacchetto"

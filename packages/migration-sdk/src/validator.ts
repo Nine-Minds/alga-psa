@@ -439,6 +439,7 @@ function validateAuxiliaryTables(
   limits: AmpLimits,
   diagnostics: AmpDiagnostic[]
 ): void {
+  const customFieldKeys = new Set<string>();
   for (const table of AMP_AUXILIARY_TABLES) {
     if (!presentTables.includes(table)) {
       continue;
@@ -492,6 +493,21 @@ function validateAuxiliaryTables(
           table,
           recordId,
         });
+      }
+      if (table === 'custom_field_values') {
+        const key = `${String(entityType)}\0${String(target)}\0${String(row.field_name)}`;
+        if (customFieldKeys.has(key)) {
+          diagnostics.push({ code: 'AMP_INVALID_VALUE', message: `Duplicate custom field "${String(row.field_name)}" for ${String(entityType)} record "${String(target)}".`, table, recordId, field: 'field_name' });
+        }
+        customFieldKeys.add(key);
+        if (typeof valueField !== 'string') {
+          diagnostics.push({ code: 'AMP_INVALID_VALUE', message: 'value_json must be a JSON string.', table, recordId, field: 'value_json' });
+        } else try {
+          const parsed = JSON.parse(valueField);
+          if (jsonDepth(parsed) > limits.extensionJsonDepth) throw new Error('depth');
+        } catch {
+          diagnostics.push({ code: 'AMP_INVALID_VALUE', message: 'value_json must be valid JSON within the allowed nesting depth.', table, recordId, field: 'value_json' });
+        }
       }
     }
   }
