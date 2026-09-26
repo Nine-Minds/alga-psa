@@ -32,10 +32,11 @@ export function seedCustomAssetFieldMappings(
     const previous = existing[slug] ?? {};
     seeded[slug] = Object.fromEntries(Object.entries(previous).filter(([sourceName]) => currentNames.has(sourceName)));
     if (Object.prototype.hasOwnProperty.call(existing, slug)) continue;
-    Object.assign(seeded[slug], Object.fromEntries(sources.flatMap((source) => {
+    const suggested = Object.fromEntries(sources.flatMap((source) => {
       const matches = (type?.fields ?? []).filter((field) => normalizeName(field.key) === normalizeName(source.fieldName) || normalizeName(field.label) === normalizeName(source.fieldName));
       return matches.length === 1 ? [[source.fieldName, matches[0].key]] : [];
-    })));
+    }));
+    seeded[slug] = { ...seeded[slug], ...suggested };
   }
   return seeded;
 }

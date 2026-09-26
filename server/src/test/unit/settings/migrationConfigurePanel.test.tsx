@@ -78,6 +78,18 @@ describe('custom asset field configuration defaults', () => {
     )).toEqual({ door_access: { 'Door Count': 'custom_key' } });
   });
 
+  it('seeds __proto__ as an own source mapping key', () => {
+    const seeded = seedCustomAssetFieldMappings(
+      { 'Door Access': 'door_access' },
+      {},
+      [{ slug: 'door_access', name: 'Door Access', isBuiltin: false, fields: [{ key: 'proto_value', label: '__proto__', kind: 'text', required: false }] }] as never,
+      [{ assetTypeName: 'Door Access', fieldName: '__proto__', sampleValue: 'value', recordCount: 1 }] as never
+    );
+
+    expect(Object.prototype.hasOwnProperty.call(seeded.door_access, '__proto__')).toBe(true);
+    expect(seeded.door_access['__proto__']).toBe('proto_value');
+  });
+
   it('removes stale source mappings after remapping and saves only the still-visible mapping', async () => {
     actions.getOptions.mockResolvedValue({
       boards: [], statuses: [], priorities: [], clients: [], users: [],
@@ -85,6 +97,7 @@ describe('custom asset field configuration defaults', () => {
         { slug: 'door_access', name: 'Door Access', isBuiltin: false, fields: [
           { key: 'count', label: 'Count', kind: 'number', required: false },
           { key: 'description', label: 'Description', kind: 'text', required: false },
+          { key: 'proto_value', label: '__proto__', kind: 'text', required: false },
         ] },
         { slug: 'workstation', name: 'Workstation', isBuiltin: true, fields: [] },
       ],
@@ -93,6 +106,7 @@ describe('custom asset field configuration defaults', () => {
         { assetTypeName: 'A', fieldName: 'OldColumn', sampleValue: '1', recordCount: 1 },
         { assetTypeName: 'B', fieldName: 'NewColumn', sampleValue: '2', recordCount: 1 },
         { assetTypeName: 'B', fieldName: 'LeaveBlank', sampleValue: null, recordCount: 1 },
+        { assetTypeName: 'B', fieldName: '__proto__', sampleValue: 'value', recordCount: 1 },
       ],
       stagedEntityTypes: ['assets'],
     });
@@ -101,7 +115,9 @@ describe('custom asset field configuration defaults', () => {
       migrationJobId: 'job-1',
       configuration: { assets: {
         assetTypeMapping: { A: 'door_access', B: 'door_access' },
-        customFieldMapping: { door_access: { OldColumn: 'count', NewColumn: 'count', LeaveBlank: 'description' } },
+        customFieldMapping: { door_access: Object.fromEntries([
+          ['OldColumn', 'count'], ['NewColumn', 'count'], ['LeaveBlank', 'description'], ['__proto__', 'proto_value'],
+        ]) },
       } },
     } as unknown as MigrationJobDetails;
 
@@ -122,11 +138,11 @@ describe('custom asset field configuration defaults', () => {
 
     fireEvent.click(save);
     await waitFor(() => expect(actions.saveConfiguration).toHaveBeenCalledTimes(1));
-    expect(actions.saveConfiguration).toHaveBeenCalledWith('job-1', expect.objectContaining({
-      assets: {
-        assetTypeMapping: { A: 'workstation', B: 'door_access' },
-        customFieldMapping: { door_access: { NewColumn: 'count' } },
-      },
-    }));
+    const savedConfiguration = actions.saveConfiguration.mock.calls[0][1];
+    expect(savedConfiguration.assets.assetTypeMapping).toEqual({ A: 'workstation', B: 'door_access' });
+    expect(Object.prototype.hasOwnProperty.call(savedConfiguration.assets.customFieldMapping.door_access, '__proto__')).toBe(true);
+    expect(savedConfiguration.assets.customFieldMapping.door_access['__proto__']).toBe('proto_value');
+    expect(savedConfiguration.assets.customFieldMapping.door_access).toMatchObject({ NewColumn: 'count' });
+    expect(Object.prototype.hasOwnProperty.call(savedConfiguration.assets.customFieldMapping.door_access, 'OldColumn')).toBe(false);
   });
 });
