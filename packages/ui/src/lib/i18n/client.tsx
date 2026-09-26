@@ -4,7 +4,7 @@
 
 'use client';
 
-import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, useCallback, ReactNode } from 'react';
 import i18next from 'i18next';
 import { initReactI18next, useTranslation as useI18nextTranslation } from 'react-i18next';
 import HttpBackend from 'i18next-http-backend';
@@ -31,6 +31,10 @@ import { useDateFormat } from '../dateFormat/useDateFormat';
  */
 let i18nInitialized = false;
 let i18nInitialization: Promise<void> | null = null;
+
+// Make the singleton available to useTranslation during server rendering too.
+// Loading the resources is still started by I18nProvider on the client.
+initReactI18next.init(i18next);
 
 const BOOTSTRAP_LOADING_TEXT: Record<
   SupportedLocale,
@@ -229,11 +233,23 @@ export function I18nProvider({
     initialLocale || (LOCALE_CONFIG.defaultLocale as SupportedLocale)
   );
   const [isInitialized, setIsInitialized] = useState(false);
-  const [hasStarted, setHasStarted] = useState(false);
 
   // Identity, not contents, is what would re-run the effect: callers that build
   // this array inline would otherwise reload namespaces on every render.
   const namespaceKey = namespaces ? namespaces.join(',') : '';
+
+  // A full-page sign-in response may be used before hydration (or while the
+  // locale backend is slow). Start the shared initialization synchronously in
+  // the browser render so useTranslation has its normal i18next instance
+  // before auth children render. The shared promise keeps Strict Mode replay
+  // from initializing the singleton twice.
+  if (renderChildrenWhileLoading && typeof window !== 'undefined' && !i18nInitialization) {
+    void initI18n(
+      locale,
+      preloadedResources,
+      namespaceKey ? namespaceKey.split(',') : undefined,
+    ).catch(() => undefined);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -248,7 +264,6 @@ export function I18nProvider({
       preloadedResources,
       namespaceKey ? namespaceKey.split(',') : undefined,
     );
-    setHasStarted(true);
     initialization.then(
       () => {
         if (!cancelled) setIsInitialized(true);
@@ -316,7 +331,7 @@ export function I18nProvider({
     isRTL: LOCALE_CONFIG.rtlLocales.includes(locale),
   };
 
-  if (!isInitialized && !(renderChildrenWhileLoading && hasStarted)) {
+  if (!isInitialized && !renderChildrenWhileLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-gray-500">{getBootstrapLoadingText(locale, 'translations')}</div>
@@ -354,7 +369,27 @@ export function useTranslation(
   namespace?: string | string[],
   options?: Parameters<typeof useI18nextTranslation>[1],
 ) {
-  return useI18nextTranslation(namespace as any, options as any);
+  const translation = useI18nextTranslation(namespace as any, options as any);
+  const [baseT, i18n, ready] = translation;
+  const t = useCallback((key: any, translationOptions?: any) => {
+    if (i18n?.isInitialized) {
+      return baseT(key, translationOptions);
+    }
+
+    // During the auth bootstrap, i18next has been attached to React but its
+    // backend may not have returned yet. Preserve the call site's fallback
+    // copy so the server-rendered controls remain labelled and usable.
+    if (typeof translationOptions === 'string') return translationOptions;
+    if (typeof translationOptions?.defaultValue === 'string') {
+      return translationOptions.defaultValue;
+    }
+    return Array.isArray(key) ? key[0] : key;
+  }, [baseT, i18n, ready]);
+
+  const wrapped = Object.assign([...translation], translation) as typeof translation;
+  wrapped[0] = t as typeof baseT;
+  wrapped.t = t as typeof baseT;
+  return wrapped;
 }
 
 /**

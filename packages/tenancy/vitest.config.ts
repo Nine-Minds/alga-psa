@@ -3,6 +3,7 @@ import path from 'path';
 import tsconfigPaths from 'vite-tsconfig-paths';
 
 export default defineConfig({
+  esbuild: { jsx: 'automatic' },
   plugins: [
     tsconfigPaths({
       projects: [path.resolve(__dirname, '../../tsconfig.base.json')],
@@ -25,6 +26,7 @@ export default defineConfig({
       { find: /^@alga-psa\/db\/models\/(.*)$/, replacement: path.resolve(__dirname, '../db/src/models/$1') },
       { find: /^@alga-psa\/db\/(.*)$/, replacement: path.resolve(__dirname, '../db/src/$1') },
       { find: /^@alga-psa\/auth$/, replacement: path.resolve(__dirname, '../auth/src/index.ts') },
+      { find: '@alga-psa/auth/sso/entry', replacement: path.resolve(__dirname, '../auth/src/components/SsoProviderButtons.tsx') },
       { find: /^@alga-psa\/auth\/(.*)$/, replacement: path.resolve(__dirname, '../auth/src/$1') },
       { find: /^@alga-psa\/types$/, replacement: path.resolve(__dirname, '../types/src/index.ts') },
       { find: /^@alga-psa\/types\/(.*)$/, replacement: path.resolve(__dirname, '../types/src/$1') },
