@@ -38,6 +38,7 @@ async function main() {
     workflowsPath,
     redisHost: process.env.REDIS_HOST,
     redisPort: process.env.REDIS_PORT,
+    redisStreamPrefix: `${process.env.REDIS_PREFIX || 'alga-psa:'}${process.env.REDIS_EVENT_STREAM_PREFIX || 'event-stream:'}`,
   });
 
   const { initializeJobHandlersForWorker, jobActivities } = await import(
