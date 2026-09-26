@@ -2147,8 +2147,12 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
   const { knex, tenant, selectorInputs } = params;
   const canonicalSelection = assertSameRecurringSelectionWindow(selectorInputs);
   const client_id = canonicalSelection.clientId;
-  const selectedProfileId = params.billingProfileId
-    ?? await resolveRecurringSelectionBillingProfileId(knex, tenant, selectorInputs);
+  const selectedProfileId = await resolveRecurringSelectionBillingProfileId(
+    knex,
+    tenant,
+    selectorInputs,
+    { fallbackBillingProfileId: params.billingProfileId },
+  );
   const cycleEnd = canonicalSelection.windowEnd;
   const previewInvoiceKey = selectorInputs
     .map((selectorInput) => selectorInput.executionWindow.identityKey)
@@ -2465,6 +2469,7 @@ async function resolveRecurringSelectionBillingProfileId(
   knex: Knex | Knex.Transaction,
   tenant: string,
   selectorInputs: IRecurringDueSelectionInput[],
+  options: { fallbackBillingProfileId?: string | null; userId?: string } = {},
 ): Promise<string | null> {
   const clientId = assertSameRecurringSelectionWindow(selectorInputs).clientId;
   const defaultProfileId = await getClientDefaultBillingProfileId(knex, tenant, clientId);
@@ -2513,10 +2518,45 @@ async function resolveRecurringSelectionBillingProfileId(
     }
   }
 
-  if (resolvedProfileIds.size > 1) {
-    throw new Error('A recurring invoice selection cannot combine charges assigned to different billing profiles.');
+  for (const billingProfileId of resolvedProfileIds) {
+    const ownedProfile = await tenantDb(knex, tenant)
+      .table('client_billing_profiles')
+      .where({ billing_profile_id: billingProfileId, client_id: clientId })
+      .first('billing_profile_id');
+    if (!ownedProfile) {
+      throw new Error(`Billing profile ${billingProfileId} does not belong to client ${clientId} in this tenant.`);
+    }
   }
-  return resolvedProfileIds.values().next().value ?? null;
+
+  const defaultScope = await resolveInvoiceProfileScope(
+    knex,
+    tenant,
+    clientId,
+    null,
+    { userId: options.userId },
+  );
+  if (!defaultScope.isScoped) {
+    return options.fallbackBillingProfileId ?? defaultScope.billingProfileId;
+  }
+
+  const separatelyBilledSelections = [...resolvedProfileIds].filter((billingProfileId) =>
+    defaultScope.separatelyBillingProfileIds.has(billingProfileId),
+  );
+  if (separatelyBilledSelections.length > 1) {
+    throw new Error('A recurring invoice selection cannot combine multiple separately billed profiles.');
+  }
+  if (separatelyBilledSelections.length === 1) {
+    return separatelyBilledSelections[0];
+  }
+  if (
+    options.fallbackBillingProfileId
+    && defaultScope.separatelyBillingProfileIds.has(options.fallbackBillingProfileId)
+  ) {
+    return options.fallbackBillingProfileId;
+  }
+
+  // Attributed profiles without separate invoicing remain reporting dimensions.
+  return defaultScope.billingProfileId;
 }
 
 async function buildPreviewInvoiceForSelectionInput(params: {
@@ -3237,15 +3277,15 @@ async function generateInvoiceForLockedSelectionInputs(params: Parameters<typeof
     throw withRecurringWindowErrorContext(new Error(billingResult.error), normalizedSelectorInput);
   }
 
-  const selectionBillingProfileId = await resolveRecurringSelectionBillingProfileId(
-    knex,
-    tenant,
-    params.normalizedSelectorInputs,
-  );
   const cycleBillingProfileId = billing_cycle_id
     ? await getCycleBillingProfileId(knex, tenant, billing_cycle_id, client_id)
     : null;
-  const intendedBillingProfileId = selectionBillingProfileId ?? cycleBillingProfileId;
+  const intendedBillingProfileId = await resolveRecurringSelectionBillingProfileId(
+    knex,
+    tenant,
+    params.normalizedSelectorInputs,
+    { fallbackBillingProfileId: cycleBillingProfileId, userId: user.user_id },
+  );
   if (intendedBillingProfileId) {
     const intendedScope = await resolveInvoiceProfileScope(
       knex,
@@ -3776,6 +3816,11 @@ export async function createInvoiceFromBillingResultImpl(
     // full set unchanged unless some profile of this client bills separately,
     // so an unsegmented client's invoice is untouched.
     const scopedCharges = scopeChargesToProfile(billingResult.charges, profileScope);
+    const scopedChargeSet = new Set(scopedCharges);
+    const excludedServicePeriodRecordIds = billingResult.charges
+      .filter((charge) => !scopedChargeSet.has(charge))
+      .map((charge) => charge.servicePeriodRecordId)
+      .filter((recordId): recordId is string => Boolean(recordId));
     const capDeltas = await prepareProjectCapChargesForPersistence(
       trx,
       scopedCharges,
@@ -3807,11 +3852,10 @@ export async function createInvoiceFromBillingResultImpl(
     );
     const calculatedSubtotal = standardSubtotal + projectScheduleSubtotal;
 
-    // Recurring windows must end this transaction fully claimed: every
-    // fulfilled recurring service period is linked to this invoice (including
-    // zero-dollar leftovers). Deliberately omitted, unreported usage stays due
-    // so a later report can be billed. This still arms the duplicate guard for
-    // grouped zero-dollar windows whose obligations have been fulfilled.
+    // Included recurring periods are linked to this invoice in this same
+    // transaction, including legitimate zero-dollar leftovers. Profile-excluded
+    // charge periods and deliberately omitted unreported usage stay due for the
+    // invoice that can actually fulfill them.
     if (options.recurringSelectorInputs?.length && !options.projectId) {
       await claimRecurringServicePeriodsForSelectionInputs({
         tx: trx,
@@ -3822,6 +3866,7 @@ export async function createInvoiceFromBillingResultImpl(
         selectorInputs: options.recurringSelectorInputs.filter((selector) => !isUnresolvedSelectorInput(selector)),
         linkedAt: Temporal.Now.instant().toString(),
         omittedUsagePeriods: selectUnreportedUsageStatuses(billingResult.usageServicePeriodStatuses ?? []),
+        excludedServicePeriodRecordIds,
       });
     }
 
