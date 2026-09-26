@@ -81,36 +81,6 @@ vi.mock('../hooks/useTicketFormOptions', () => ({
   useTicketFormOptions: () => ({ options: null }),
 }));
 
-// The real hook calls a `'use server'` action (createTenantKnex) that isn't
-// mocked here. `TicketingDashboard` is mocked to `null` below, so the picker
-// this hook feeds is never actually rendered — but the hook itself still runs
-// as part of `TicketingDashboardContainer`, and its unmocked DB round trip can
-// settle after the test (and jsdom) tear down, throwing an unhandled
-// "window is not defined" rejection unrelated to the navigation contract
-// under test.
-vi.mock('@alga-psa/list-views/hooks', () => ({
-  useListViews: () => ({
-    isLoading: false,
-    views: [],
-    myViews: [],
-    sharedViews: [],
-    activeView: null,
-    defaultViewId: null,
-    canShare: false,
-    isDirty: false,
-    isSaving: false,
-    applyView: vi.fn(),
-    discardChanges: vi.fn(),
-    saveChanges: vi.fn(async () => false),
-    saveAsNew: vi.fn(async () => false),
-    updateView: vi.fn(async () => false),
-    deleteView: vi.fn(async () => false),
-    setDefault: vi.fn(async () => false),
-    linkFor: vi.fn(() => ''),
-  }),
-  writeViewParam: vi.fn(),
-}));
-
 const { default: TicketingDashboardContainer } = await import('./TicketingDashboardContainer');
 
 const consolidatedData = {
@@ -178,6 +148,22 @@ describe('ticket list URL sync after navigating away', () => {
 
     replaceState.mockRestore();
     pushState.mockRestore();
+  });
+
+  it('resolves an inaccessible saved view without losing explicit ticket filters', async () => {
+    const viewId = '11111111-1111-4111-8111-111111111111';
+    window.history.replaceState(null, '', `/msp/tickets?view=${viewId}&sortBy=updated_at&sortDirection=asc`);
+
+    renderContainer();
+
+    await waitFor(() => expect(listViewActions.getListView).toHaveBeenCalledWith(viewId));
+    await waitFor(() => {
+      const params = new URLSearchParams(window.location.search);
+      expect(params.has('view')).toBe(false);
+      expect(params.get('sortBy')).toBe('updated_at');
+      expect(params.get('sortDirection')).toBe('asc');
+    });
+    expect(fetchTicketsWithPagination).not.toHaveBeenCalled();
   });
 
   it('carries the applied view through a plain filter change in one write', () => {
