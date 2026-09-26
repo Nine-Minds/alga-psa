@@ -88,12 +88,26 @@ export function registerEmailActions(): void {
       // it matches a configured sender; delivery still uses the central resolver.
       let senderId = input.sender_id;
       if (input.from) {
-        const matched = (settings.outboundSenders ?? []).find((sender: any) => sender.emailAddress?.toLowerCase() === input.from!.email.toLowerCase());
-        if (senderId && matched?.senderId !== senderId) {
+        const address = input.from.email.toLowerCase();
+        const senders = settings.outboundSenders ?? [];
+        const routes = settings.outboundRoutes ?? [];
+        const classRoute = routes.find((route: any) => route.route_type === 'mail_class' && route.mail_class === input.mail_class);
+        const defaultRoute = routes.find((route: any) => route.route_type === 'default');
+        const effectiveRoute = classRoute?.sender_id ? classRoute : defaultRoute;
+        const effectiveRouteSender = senders.find((sender: any) => sender.sender_id === effectiveRoute?.sender_id);
+        const matchedSender = senders.find((sender: any) => sender.email_address?.toLowerCase() === address);
+        const effectiveDefault = effectiveRouteSender?.email_address
+          ?? TenantEmailService.getDefaultFromAddress?.(settings)?.email;
+        const acceptedSender = matchedSender ?? (effectiveRouteSender?.email_address?.toLowerCase() === address
+          ? effectiveRouteSender
+          : null);
+        if (!acceptedSender && effectiveDefault?.toLowerCase() !== address) {
+          throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'The saved From address is not a configured sender or the effective default. Choose a sender identity.' });
+        }
+        if (senderId && acceptedSender?.sender_id !== senderId) {
           throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'The deprecated From address does not match sender_id' });
         }
-        if (!matched) throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'The saved From address is not a configured sender. Choose a sender identity.' });
-        senderId = matched.senderId;
+        senderId = acceptedSender?.sender_id ?? senderId;
       }
 
       // Attachments via storage file refs.

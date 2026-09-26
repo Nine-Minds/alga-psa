@@ -11,9 +11,10 @@
 export interface WorkflowEmailProvider {
   TenantEmailService: {
     getInstance(tenantId: string): {
-      sendEmail(params: unknown): Promise<{ success: boolean; error?: string }>;
+      sendEmail(params: unknown): Promise<{ success: boolean; error?: string; messageId?: string; sentAt?: Date | string }>;
     };
     getTenantEmailSettings(tenantId: string, trx: unknown): Promise<any>;
+    getDefaultFromAddress?(settings: unknown): { email: string; name?: string };
   };
   StaticTemplateProcessor: new (subject: string, html: string, text?: string) => {
     process(params: { templateData: Record<string, unknown> }): Promise<{ subject: string; html: string; text?: string }>;
