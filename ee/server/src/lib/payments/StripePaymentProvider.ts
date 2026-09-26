@@ -17,6 +17,7 @@ import { tenantDb } from '@alga-psa/db';
 import { getConnection } from 'server/src/lib/db/db';
 import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { buildAutopayPaymentIntentRequest } from './stripeAutopayParams';
 import {
   PaymentProvider,
   PaymentProviderCapabilities,
@@ -28,6 +29,10 @@ import {
   IPaymentProviderConfig,
   IClientPaymentCustomer,
   IInvoicePaymentLink,
+  CreatePaymentMethodSetupSessionRequest,
+  SavedPaymentMethodDetails,
+  ChargeSavedPaymentMethodRequest,
+  SavedPaymentMethodChargeResult,
 } from 'server/src/interfaces/payment.interfaces';
 
 /**
@@ -195,18 +200,83 @@ export class StripePaymentProvider implements PaymentProvider {
     };
   }
 
+  async createPaymentMethodSetupSession(request: CreatePaymentMethodSetupSessionRequest): Promise<{ externalSessionId: string; url: string }> {
+    const stripe = await this.getStripe();
+    const metadata = { tenant_id: this.tenantId, client_id: request.clientId, billing_profile_id: request.billingProfileId, purpose: 'autopay_setup' };
+    const session = await stripe.checkout.sessions.create({
+      mode: 'setup', customer: request.customerId, currency: request.currency.toLowerCase(), payment_method_types: ['card'],
+      setup_intent_data: { metadata }, metadata, success_url: request.successUrl, cancel_url: request.cancelUrl,
+    });
+    if (!session.url) throw new Error('Stripe setup session did not return a URL');
+    return { externalSessionId: session.id, url: session.url };
+  }
+
+  async retrieveSavedPaymentMethod(externalId: string): Promise<SavedPaymentMethodDetails> {
+    const stripe = await this.getStripe();
+    const pm = await stripe.paymentMethods.retrieve(externalId);
+    if (pm.type !== 'card' || !pm.card || typeof pm.customer !== 'string') throw new Error('Saved payment method is not an attached card');
+    return { externalPaymentMethodId: pm.id, externalCustomerId: pm.customer, brand: pm.card.brand, last4: pm.card.last4,
+      expMonth: pm.card.exp_month, expYear: pm.card.exp_year, fingerprint: pm.card.fingerprint ?? null };
+  }
+
+  async getSetupIntentFromCheckout(sessionId: string): Promise<Stripe.SetupIntent> {
+    const session = await (await this.getStripe()).checkout.sessions.retrieve(sessionId, { expand: ['setup_intent'] });
+    const setup = session.setup_intent;
+    if (!setup || typeof setup === 'string') throw new Error('Stripe Checkout session has no completed SetupIntent');
+    return setup as Stripe.SetupIntent;
+  }
+
+  async getSetupIntent(setupIntentId: string): Promise<Stripe.SetupIntent> {
+    return (await this.getStripe()).setupIntents.retrieve(setupIntentId);
+  }
+
+  async updateSavedPaymentMethodMetadata(externalId: string, metadata: Record<string, string>): Promise<void> {
+    await (await this.getStripe()).paymentMethods.update(externalId, { metadata });
+  }
+
+  async detachPaymentMethod(externalId: string): Promise<void> {
+    const stripe = await this.getStripe();
+    await stripe.paymentMethods.detach(externalId);
+  }
+
+  async chargeSavedPaymentMethod(request: ChargeSavedPaymentMethodRequest): Promise<SavedPaymentMethodChargeResult> {
+    const stripe = await this.getStripe();
+    try {
+      const charge = buildAutopayPaymentIntentRequest(this.tenantId, request);
+      const intent = await stripe.paymentIntents.create(charge.params, charge.options);
+      return { status: intent.status === 'succeeded' ? 'succeeded' : intent.status === 'processing' ? 'processing' : intent.status === 'requires_action' ? 'requires_action' : 'failed',
+        paymentIntentId: intent.id, failureCode: intent.last_payment_error?.code, declineCode: intent.last_payment_error?.decline_code,
+        message: intent.last_payment_error?.message };
+    } catch (error) {
+      const stripeError = error as Stripe.errors.StripeError;
+      const rawError = stripeError.raw as any;
+      const code = stripeError.code ?? rawError?.code;
+      if (stripeError.type === 'StripeCardError' || code === 'authentication_required') {
+        return { status: code === 'authentication_required' ? 'requires_action' : 'failed', paymentIntentId: stripeError.payment_intent?.id ?? '',
+          failureCode: code, declineCode: rawError?.decline_code, message: stripeError.message };
+      }
+      throw error;
+    }
+  }
+
   /**
    * Gets or creates a Stripe customer for a client.
    */
-  async getOrCreateCustomer(clientId: string, email: string, name: string): Promise<string> {
+  async getOrCreateCustomer(clientId: string, email: string, name: string, requestedBillingProfileId?: string): Promise<string> {
     const stripe = await this.getStripe();
     const knex = await getConnection();
+    const profile = requestedBillingProfileId
+      ? await tenantDb(knex, this.tenantId).table('client_billing_profiles').where({ billing_profile_id: requestedBillingProfileId, client_id: clientId }).first()
+      : await tenantDb(knex, this.tenantId).table('client_billing_profiles').where({ client_id: clientId, is_default: true }).first();
+    if (!profile) throw new Error(`Default billing profile not found for client ${clientId}`);
+    const billingProfileId = (profile as any).billing_profile_id as string;
 
     // Check if we already have a mapping
     const existingMapping = await tenantDb(knex, this.tenantId).table<IClientPaymentCustomer>('client_payment_customers')
       .where({
         tenant: this.tenantId,
         client_id: clientId,
+        billing_profile_id: billingProfileId,
         provider_type: 'stripe',
       })
       .first();
@@ -230,13 +300,17 @@ export class StripePaymentProvider implements PaymentProvider {
     // Search for existing customer by email in Stripe
     const existingCustomers = await stripe.customers.list({
       email,
-      limit: 1,
+      limit: 100,
     });
+    const matchedCustomer = existingCustomers.data.find((customer) =>
+      (customer as any).deleted !== true && customer.metadata?.tenant_id === this.tenantId &&
+      customer.metadata?.client_id === clientId && customer.metadata?.billing_profile_id === billingProfileId
+    );
 
     let customerId: string;
 
-    if (existingCustomers.data.length > 0) {
-      customerId = existingCustomers.data[0].id;
+    if (matchedCustomer) {
+      customerId = matchedCustomer.id;
       logger.info('[StripePaymentProvider] Found existing Stripe customer by email', {
         tenantId: this.tenantId,
         clientId,
@@ -251,6 +325,7 @@ export class StripePaymentProvider implements PaymentProvider {
         metadata: {
           tenant_id: this.tenantId,
           client_id: clientId,
+          billing_profile_id: billingProfileId,
           source: 'alga_psa_invoice_payment',
         },
       });
@@ -268,13 +343,14 @@ export class StripePaymentProvider implements PaymentProvider {
       .insert({
         tenant: this.tenantId,
         client_id: clientId,
+        billing_profile_id: billingProfileId,
         provider_type: 'stripe',
         external_customer_id: customerId,
         email,
         metadata: { name },
         updated_at: knex.fn.now(),
       } as any)
-      .onConflict(['tenant', 'client_id', 'provider_type'])
+      .onConflict(['tenant', 'client_id', 'billing_profile_id', 'provider_type'])
       .merge(['external_customer_id', 'email', 'metadata', 'updated_at']);
 
     return customerId;
@@ -288,10 +364,13 @@ export class StripePaymentProvider implements PaymentProvider {
     const knex = await getConnection();
 
     // Get or create customer
+    const invoice = await tenantDb(knex, this.tenantId).table('invoices').where({ invoice_id: request.invoiceId }).first();
+    const billingProfileId = request.billingProfileId ?? (invoice as any)?.billing_profile_id;
     const customerId = await this.getOrCreateCustomer(
       request.clientId,
       request.clientEmail,
-      request.clientName
+      request.clientName,
+      billingProfileId
     );
 
     // Calculate expiration (default 24 hours, max 24 hours for Stripe Checkout)
@@ -428,11 +507,22 @@ export class StripePaymentProvider implements PaymentProvider {
     let externalLinkId: string | undefined;
     let paymentIntentId: string | undefined;
     let customerId: string | undefined;
+    let billingProfileId: string | undefined;
+    let autopayAttemptId: string | undefined;
+    let externalPaymentMethodId: string | undefined;
+    let setupIntentId: string | undefined;
 
     // Extract data based on event type
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
+        if (session.mode === 'setup') {
+          billingProfileId = session.metadata?.billing_profile_id;
+          setupIntentId = session.setup_intent as string;
+          customerId = session.customer as string;
+          status = 'succeeded';
+          break;
+        }
         invoiceId = session.metadata?.invoice_id;
         amount = session.amount_total || undefined;
         currency = session.currency?.toUpperCase();
@@ -453,6 +543,8 @@ export class StripePaymentProvider implements PaymentProvider {
       case 'payment_intent.succeeded': {
         const paymentIntent = event.data.object as Stripe.PaymentIntent;
         invoiceId = paymentIntent.metadata?.invoice_id;
+        billingProfileId = paymentIntent.metadata?.billing_profile_id;
+        autopayAttemptId = paymentIntent.metadata?.autopay_attempt_id;
         amount = paymentIntent.amount;
         currency = paymentIntent.currency?.toUpperCase();
         customerId = paymentIntent.customer as string;
@@ -464,6 +556,8 @@ export class StripePaymentProvider implements PaymentProvider {
       case 'payment_intent.payment_failed': {
         const paymentIntent = event.data.object as Stripe.PaymentIntent;
         invoiceId = paymentIntent.metadata?.invoice_id;
+        billingProfileId = paymentIntent.metadata?.billing_profile_id;
+        autopayAttemptId = paymentIntent.metadata?.autopay_attempt_id;
         amount = paymentIntent.amount;
         currency = paymentIntent.currency?.toUpperCase();
         customerId = paymentIntent.customer as string;
@@ -493,6 +587,28 @@ export class StripePaymentProvider implements PaymentProvider {
         break;
       }
 
+      case 'setup_intent.succeeded':
+      case 'setup_intent.setup_failed': {
+        const setup = event.data.object as Stripe.SetupIntent;
+        billingProfileId = setup.metadata?.billing_profile_id;
+        setupIntentId = setup.id;
+        customerId = setup.customer as string;
+        externalPaymentMethodId = setup.payment_method as string;
+        status = event.type.endsWith('.succeeded') ? 'succeeded' : 'failed';
+        break;
+      }
+
+      case 'payment_method.detached':
+      case 'payment_method.updated':
+      case 'payment_method.automatically_updated': {
+        const method = event.data.object as Stripe.PaymentMethod;
+        externalPaymentMethodId = method.id;
+        customerId = method.customer as string;
+        billingProfileId = method.metadata?.billing_profile_id;
+        status = 'pending';
+        break;
+      }
+
       default:
         // For other events, try to extract common fields
         const obj = event.data.object as any;
@@ -513,6 +629,10 @@ export class StripePaymentProvider implements PaymentProvider {
       externalLinkId,
       paymentIntentId,
       customerId,
+      billingProfileId,
+      autopayAttemptId,
+      externalPaymentMethodId,
+      setupIntentId,
     };
   }
 

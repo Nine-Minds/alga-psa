@@ -55,6 +55,7 @@ export interface CreatePaymentLinkRequest {
   customerId?: string;
   /** Client ID in AlgaPSA (for customer creation if needed) */
   clientId: string;
+  billingProfileId?: string;
   /** Client email for customer creation */
   clientEmail: string;
   /** Client name for customer creation */
@@ -246,7 +247,7 @@ export interface PaymentProvider {
    * @param name - Customer name
    * @returns The external customer ID
    */
-  getOrCreateCustomer(clientId: string, email: string, name: string): Promise<string>;
+  getOrCreateCustomer(clientId: string, email: string, name: string, billingProfileId?: string): Promise<string>;
 
   createPaymentMethodSetupSession?(request: CreatePaymentMethodSetupSessionRequest): Promise<{ externalSessionId: string; url: string }>;
   retrieveSavedPaymentMethod?(externalId: string): Promise<SavedPaymentMethodDetails>;
@@ -364,6 +365,7 @@ export interface IPaymentProviderConfig extends TenantEntity {
 export interface IClientPaymentCustomer extends TenantEntity {
   mapping_id: string;
   client_id: string;
+  billing_profile_id: string;
   provider_type: string;
   external_customer_id: string;
   email?: string;

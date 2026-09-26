@@ -28,6 +28,7 @@ import {
 } from 'server/src/interfaces/payment.interfaces';
 import { PaymentProviderRegistry, PAYMENT_PROVIDER_TYPES } from './PaymentProviderRegistry';
 import { createStripePaymentProvider } from './StripePaymentProvider';
+import { SavedPaymentMethodService } from './SavedPaymentMethodService';
 import { recordTransaction } from 'server/src/lib/utils/transactionUtils';
 import { recordExternalPayment } from '@alga-psa/billing/services';
 import { resolveInvoiceBillingRecipient } from '@alga-psa/billing/services';
@@ -407,6 +408,19 @@ export class PaymentService {
    * Handles specific webhook event types.
    */
   private async handleWebhookEvent(event: PaymentWebhookEvent): Promise<WebhookProcessingResult> {
+    if (event.eventType === 'checkout.session.completed' && (event.payload as any)?.data?.object?.mode === 'setup') {
+      await (await SavedPaymentMethodService.create(this.tenantId)).completeSetup(event.externalLinkId ?? '');
+      return { success: true, paymentRecorded: false };
+    }
+    if (event.eventType === 'setup_intent.succeeded' && event.setupIntentId) {
+      await (await SavedPaymentMethodService.create(this.tenantId)).completeSetup(event.setupIntentId);
+      return { success: true, paymentRecorded: false };
+    }
+    if (event.eventType.startsWith('payment_method.') && event.externalPaymentMethodId) {
+      await (await SavedPaymentMethodService.create(this.tenantId)).syncFromProviderEvent(event);
+      return { success: true, paymentRecorded: false };
+    }
+
     switch (event.eventType) {
       case 'checkout.session.completed':
         return this.handleCheckoutCompleted(event);

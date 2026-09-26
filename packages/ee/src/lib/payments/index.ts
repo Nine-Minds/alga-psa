@@ -22,6 +22,8 @@ export type {
   IClientPaymentCustomer,
   IInvoicePaymentLink,
   IPaymentWebhookEvent,
+  IBillingProfileAutopay,
+  IInvoiceAutopayAttempt,
 } from '@alga-psa/types';
 
 export { DEFAULT_PAYMENT_SETTINGS } from '@alga-psa/types';
@@ -96,4 +98,20 @@ export class PaymentService {
       error: 'Payment provider is only available in Enterprise Edition',
     };
   }
+}
+
+export class SavedPaymentMethodService {
+  static async create(_tenantId: string): Promise<SavedPaymentMethodService> { return new SavedPaymentMethodService(); }
+  async startSetup(): Promise<never> { throw new Error('Saved payment methods require Enterprise Edition'); }
+  async completeSetup(): Promise<never> { throw new Error('Saved payment methods require Enterprise Edition'); }
+  async removeMethod(): Promise<never> { throw new Error('Saved payment methods require Enterprise Edition'); }
+}
+
+export class AutopayService {
+  static async create(_tenantId: string): Promise<AutopayService> { return new AutopayService(); }
+  static async enqueueInvoiceAutopay(): Promise<void> {}
+  async scheduleForFinalizedInvoice(): Promise<'not_available'> { return 'not_available'; }
+  async processDueAttempts(): Promise<'not_available'> { return 'not_available'; }
+  async enroll(): Promise<never> { throw new Error('Auto-pay requires Enterprise Edition'); }
+  async disenroll(): Promise<never> { throw new Error('Auto-pay requires Enterprise Edition'); }
 }
