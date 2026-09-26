@@ -8,7 +8,6 @@ const mocks = vi.hoisted(() => ({
   jobServiceCreate: vi.fn(),
   // Email
   sendInvoiceEmail: vi.fn(),
-  getEmailService: vi.fn(),
   // PDF generation
   generateAndStore: vi.fn(),
   createPDFGenerationService: vi.fn(),
@@ -36,9 +35,6 @@ const mocks = vi.hoisted(() => ({
     client: undefined as unknown,
     invoiceQueue: [] as unknown[],
   },
-  // fs
-  writeFile: vi.fn(),
-  unlink: vi.fn(),
   // logger
   loggerInfo: vi.fn(),
   loggerWarn: vi.fn(),
@@ -56,8 +52,11 @@ vi.mock('@alga-psa/billing/services', () => ({
   resolveInvoiceBillingRecipient: mocks.resolveInvoiceBillingRecipient,
 }));
 
-vi.mock('server/src/services/emailService', () => ({
-  getEmailService: mocks.getEmailService,
+vi.mock('@alga-psa/email', () => ({
+  TenantEmailService: { getInstance: vi.fn(() => ({ sendEmail: mocks.sendInvoiceEmail })) },
+  StaticTemplateProcessor: class {
+    constructor(public subject: string, public html: string, public text?: string) {}
+  },
 }));
 
 vi.mock('@alga-psa/storage/StorageService', () => ({
@@ -68,11 +67,6 @@ vi.mock('@alga-psa/clients/actions', () => ({
   getClientById: mocks.getClientById,
   getContactByContactNameId: mocks.getContactByContactNameId,
 }));
-
-vi.mock('fs/promises', () => {
-  const api = { writeFile: mocks.writeFile, unlink: mocks.unlink };
-  return { default: api, ...api };
-});
 
 vi.mock('server/src/lib/db/db', () => ({
   getConnection: mocks.getConnection,
@@ -190,16 +184,13 @@ describe('InvoiceEmailHandler', () => {
     mocks.updateJobDetailRecord.mockResolvedValue(undefined);
     mocks.updateJobStatus.mockResolvedValue(undefined);
 
-    mocks.getEmailService.mockResolvedValue({ sendInvoiceEmail: mocks.sendInvoiceEmail });
-    mocks.sendInvoiceEmail.mockResolvedValue(true);
+    mocks.sendInvoiceEmail.mockResolvedValue({ success: true, messageId: 'invoice-message-1' });
 
     mocks.createPDFGenerationService.mockReturnValue({ generateAndStore: mocks.generateAndStore });
     mocks.generateAndStore.mockResolvedValue({ file_id: 'file-1', document_id: 'doc-1' });
     mocks.publishGeneratedDocumentsToClient.mockResolvedValue(1);
 
     mocks.downloadFile.mockResolvedValue({ buffer: Buffer.from('%PDF-1.4 test') });
-    mocks.writeFile.mockResolvedValue(undefined);
-    mocks.unlink.mockResolvedValue(undefined);
 
     mocks.dbRows.invoice = buildInvoice();
     mocks.dbRows.client = buildClient();
@@ -287,27 +278,23 @@ describe('InvoiceEmailHandler', () => {
         userId: 'user-1',
       });
 
-      // Stored PDF is downloaded and written to a temp file before sending
+      // Stored PDF is downloaded and attached without a temporary path.
       expect(mocks.downloadFile).toHaveBeenCalledWith('file-1');
-      expect(mocks.writeFile).toHaveBeenCalledTimes(1);
-      const tempPath = mocks.writeFile.mock.calls[0][0] as string;
-      expect(tempPath).toContain('INV-100');
 
       // Email sent exactly once with recipient + payment/portal links + tenant company name
       expect(mocks.sendInvoiceEmail).toHaveBeenCalledTimes(1);
-      const [emailInvoice, emailPath, emailOptions] = mocks.sendInvoiceEmail.mock.calls[0];
-      expect(emailInvoice.recipientEmail).toBe('location@acme.test');
-      expect(emailInvoice.tenantId).toBe(TENANT);
-      expect(emailInvoice.client).toEqual({ name: 'Acme Corp', logo: '', address: '1 Main St' });
-      expect(emailPath).toBe(tempPath);
-      expect(emailOptions).toEqual({
-        paymentLink: 'https://pay.example/invoice-1',
-        portalLink: 'https://portal.example/client-portal/billing?tab=invoices&invoiceId=invoice-1',
-        companyName: 'MSP Co',
+      const emailParams = mocks.sendInvoiceEmail.mock.calls[0][0];
+      expect(emailParams).toMatchObject({
+        mailClass: 'billing',
+        tenantId: TENANT,
+        to: { email: 'location@acme.test', name: 'Acme Corp' },
+        entityType: 'invoice',
+        entityId: 'invoice-1',
       });
+      expect(emailParams.attachments[0]).toMatchObject({ filename: 'invoice_INV-100.pdf', contentType: 'application/pdf' });
+      expect(emailParams.templateProcessor.html).toContain('https://pay.example/invoice-1');
+      expect(emailParams.templateProcessor.html).toContain('https://portal.example/client-portal/billing?tab=invoices&invoiceId=invoice-1');
 
-      // Temp file always cleaned up
-      expect(mocks.unlink).toHaveBeenCalledWith(tempPath);
 
       // Job lifecycle: both steps tracked, then completed
       expect(mocks.createJobDetail).toHaveBeenCalledTimes(2);
@@ -334,7 +321,7 @@ describe('InvoiceEmailHandler', () => {
     });
 
     it('should leave the generated document MSP-only when the send fails', async () => {
-      mocks.sendInvoiceEmail.mockResolvedValue(false);
+      mocks.sendInvoiceEmail.mockResolvedValue({ success: false });
 
       await expect(InvoiceEmailHandler.handle('pg-1', buildJobData())).rejects.toThrow(
         'Failed to send invoice email',
@@ -361,8 +348,7 @@ describe('InvoiceEmailHandler', () => {
         // An invoice with no profile asks the resolver nothing extra.
         billingProfileId: null,
       });
-      expect(mocks.sendInvoiceEmail.mock.calls[0][0].recipientEmail).toBe('contact@acme.test');
-      expect(mocks.sendInvoiceEmail.mock.calls[0][0].contact).toEqual({ name: 'Jane Contact', address: '1 Main St' });
+      expect(mocks.sendInvoiceEmail.mock.calls[0][0].to).toEqual({ email: 'contact@acme.test', name: 'Jane Contact' });
     });
 
     it('resolves the recipient against the billing profile the invoice bills', async () => {
@@ -400,7 +386,7 @@ describe('InvoiceEmailHandler', () => {
       await InvoiceEmailHandler.handle('pg-1', buildJobData());
 
       expect(mocks.getContactByContactNameId).not.toHaveBeenCalled();
-      expect(mocks.sendInvoiceEmail.mock.calls[0][0].recipientEmail).toBe('billing@acme.test');
+      expect(mocks.sendInvoiceEmail.mock.calls[0][0].to.email).toBe('billing@acme.test');
     });
 
     it('should not request a payment link for paid invoices', async () => {
@@ -416,11 +402,7 @@ describe('InvoiceEmailHandler', () => {
         TENANT,
         expect.objectContaining({ status: 'paid' }),
       );
-      expect(mocks.sendInvoiceEmail.mock.calls[0][2]).toEqual({
-        paymentLink: undefined,
-        portalLink: undefined,
-        companyName: 'MSP Co',
-      });
+      expect(mocks.sendInvoiceEmail.mock.calls[0][0].templateProcessor.html).not.toContain('Pay invoice');
     });
 
     it('should still send the email when payment link generation fails', async () => {
@@ -436,11 +418,9 @@ describe('InvoiceEmailHandler', () => {
         expect.objectContaining({ error: expect.any(Error) }),
       );
       expect(mocks.sendInvoiceEmail).toHaveBeenCalledTimes(1);
-      expect(mocks.sendInvoiceEmail.mock.calls[0][2].paymentLink).toBeUndefined();
+      expect(mocks.sendInvoiceEmail.mock.calls[0][0].templateProcessor.html).not.toContain('Pay invoice');
       // The portal fallback is still forwarded on creation failure.
-      expect(mocks.sendInvoiceEmail.mock.calls[0][2].portalLink).toBe(
-        'https://portal.example/client-portal/billing?tab=invoices&invoiceId=invoice-1',
-      );
+      expect(mocks.sendInvoiceEmail.mock.calls[0][0].templateProcessor.html).toContain('https://portal.example/client-portal/billing?tab=invoices&invoiceId=invoice-1');
       const finalStatusCall = mocks.updateJobStatus.mock.calls.at(-1)!;
       expect(finalStatusCall[1]).toBe(JobStatus.Completed);
     });
@@ -470,7 +450,7 @@ describe('InvoiceEmailHandler', () => {
     });
 
     it('should record failure on both step details and fail the job when the email transport reports failure', async () => {
-      mocks.sendInvoiceEmail.mockResolvedValue(false);
+      mocks.sendInvoiceEmail.mockResolvedValue({ success: false });
 
       await expect(
         InvoiceEmailHandler.handle('pg-1', buildJobData()),
@@ -488,8 +468,7 @@ describe('InvoiceEmailHandler', () => {
       // The handler must never report completion for a failed run.
       expect(mocks.updateJobStatus).not.toHaveBeenCalledWith('job-service-1', JobStatus.Completed, expect.anything());
 
-      // Temp file is still cleaned up even when sending fails.
-      expect(mocks.unlink).toHaveBeenCalledTimes(1);
+      // Attachments travel as buffers; no temporary file is created.
     });
 
     it('should surface PDF generation failures with invoice context', async () => {

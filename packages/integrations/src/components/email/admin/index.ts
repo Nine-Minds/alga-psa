@@ -1,5 +1,4 @@
 export * from './EmailSettings';
-export * from './EmailSenderIdentityCards';
 export * from './EmailSenderRoutingCards';
 export * from './InboundTicketDefaultsManager';
 export * from './Microsoft365DiagnosticsDialog';

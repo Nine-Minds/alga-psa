@@ -874,7 +874,35 @@
         "errorTitle": "Fix the ticket identity",
         "clearButton": "Clear ticket identity",
         "savingButton": "Saving...",
-        "saveButton": "Save sender identities"
+        "saveButton": "Save sender identities",
+        "addresses": {
+          "title": "Sender addresses",
+          "description": "Create named addresses to use across your outbound email."
+        },
+        "routing": {
+          "title": "Sender routing",
+          "description": "Choose which sender each mail class uses.",
+          "default": "Default (all other mail)",
+          "useDefault": "Use default",
+          "sender": "Sender",
+          "displayName": "Display name",
+          "boardSummary": "Board-specific ticket senders are managed in each board’s settings."
+        },
+        "actions": {
+          "add": "Add sender",
+          "verify": "Verify",
+          "delete": "Delete"
+        },
+        "fields": {
+          "address": "Email address",
+          "localPart": "Address name",
+          "domain": "Verified domain",
+          "sendThrough": "Send through",
+          "displayName": "Display name",
+          "displayNamePlaceholder": "Support team"
+        },
+        "smtpHelp": "Your SMTP relay must allow this address.",
+        "microsoftHelp": "The connected mailbox needs Exchange Send As permission for this address."
       }
     },
     "inbound": {

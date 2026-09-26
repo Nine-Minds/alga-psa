@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const allowed = vi.hoisted(() => ({ value: true }));
 const routes = vi.hoisted(() => [] as any[]);
 const hasPermissionMock = vi.hoisted(() => vi.fn(async () => allowed.value));
+const getEmailSettingsMock = vi.hoisted(() => vi.fn(async () => ({ emailProvider: 'resend' })));
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => (...args: any[]) => fn({ user_id: 'user-1', email: 'admin@example.test' }, { tenant: 'tenant-1' }, ...args),
@@ -20,15 +21,16 @@ vi.mock('@alga-psa/db', () => ({
     }),
   }),
 }));
-vi.mock('@alga-psa/email', () => ({ TenantEmailService: { invalidateTenantSettings: vi.fn() } }));
+vi.mock('@alga-psa/email', () => ({ TenantEmailService: { invalidateTenantSettings: vi.fn(), getTenantEmailSettings: getEmailSettingsMock } }));
 
-import { deleteEmailSender, listEmailSenders } from './emailSenderActions';
+import { createEmailSender, deleteEmailSender, listEmailSenders } from './emailSenderActions';
 
 describe('email sender actions', () => {
   beforeEach(() => {
     allowed.value = true;
     routes.splice(0, routes.length);
     hasPermissionMock.mockClear();
+    getEmailSettingsMock.mockClear();
   });
 
   it('denies sender reads when settings:read is missing', async () => {
@@ -40,5 +42,9 @@ describe('email sender actions', () => {
   it('blocks deletion while a sender is routed', async () => {
     routes.push({ route_type: 'mail_class', mail_class: 'ticket', board_id: null });
     await expect(deleteEmailSender('sender-1')).rejects.toThrow(/ticket/);
+  });
+
+  it('rejects a Resend sender on a domain that is not verified', async () => {
+    await expect(createEmailSender({ emailAddress: 'support@unverified.example' })).rejects.toThrow(/not verified/);
   });
 });

@@ -32,7 +32,7 @@ import {
   type ManagedDomainActionResult,
   type ManagedDomainActionFailure,
 } from '@ee/lib/actions/email-actions/managedDomainActions';
-import { EmailProviderConfiguration, EmailSenderIdentityCards } from '@alga-psa/integrations/components';
+import { EmailProviderConfiguration, EmailSenderAddressesCard, EmailSenderRoutingCard } from '@alga-psa/integrations/components';
 import type { EmailProvider } from '@alga-psa/integrations/components';
 import type { TenantEmailSettings } from 'server/src/types/email.types';
 import { createDefaultProviderConfig } from '@alga-psa/email/providerConfig';
@@ -1091,85 +1091,15 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
         )}
 
         {emailSettings && (
-          <EmailSenderIdentityCards
-            copy={{
-              ticketTitle: t('managed.outbound.senderIdentities.ticket.title'),
-              ticketDescription: t('managed.outbound.senderIdentities.ticket.description'),
-              connectedInboxLabel: t('managed.outbound.senderIdentities.ticket.connectedInboxLabel'),
-              connectedInboxHelp: t('managed.outbound.senderIdentities.ticket.connectedInboxHelp'),
-              customAddressOption: t('managed.outbound.senderIdentities.ticket.customAddressOption'),
-              ticketAddressLabel: t('managed.outbound.senderIdentities.ticket.addressLabel'),
-              ticketAddressPlaceholder: t('managed.outbound.senderIdentities.ticket.addressPlaceholder'),
-              ticketAddressHelp: outboundProvider === 'microsoft'
-                ? t('managed.outbound.senderIdentities.ticket.microsoftAddressHelp', { mailbox: microsoftMailbox })
-                : t('managed.outbound.senderIdentities.ticket.addressHelp'),
-              ticketNameLabel: t('managed.outbound.senderIdentities.ticket.nameLabel'),
-              ticketNamePlaceholder: t('managed.outbound.senderIdentities.ticket.namePlaceholder'),
-              ticketNameHelp: t('managed.outbound.senderIdentities.ticket.nameHelp'),
-              warningTitle: t('managed.outbound.senderIdentities.warningTitle'),
-              errorTitle: t('managed.outbound.senderIdentities.errorTitle'),
-              notificationTitle: t('managed.outbound.senderIdentities.notification.title'),
-              notificationDescription: t('managed.outbound.senderIdentities.notification.description'),
-              notificationAddressLabel: t('managed.outbound.senderIdentities.notification.addressLabel'),
-              // Effective fallback sender goes in the placeholder, never the value:
-              // rendering it as the value makes an unsaved field look configured.
-              notificationAddressPlaceholder: emailSettings.effectiveNotificationFrom.email,
-              notificationAddressHelp: outboundProvider === 'smtp'
-                ? t('managed.outbound.senderIdentities.notification.smtpAddressHelp')
-                : t('managed.outbound.senderIdentities.notification.lockedAddressHelp'),
-              notificationNameLabel: t('managed.outbound.senderIdentities.notification.nameLabel'),
-              notificationNamePlaceholder: t('managed.outbound.senderIdentities.notification.namePlaceholder'),
-              notificationNameHelp: t('managed.outbound.senderIdentities.notification.nameHelp', {
-                company: emailSettings.tenantCompanyName || t('managed.outbound.senderIdentities.notification.companyFallback'),
-              }),
-            }}
-            ticketAddress={ticketingFromCustom}
-            ticketName={ticketingFromName}
-            connectedInboxes={ticketMailboxOptions}
-            ticketFieldsDisabled={outboundBusy || !outboundDomain}
-            ticketWarning={
-              !loadingOutbound && !outboundDomain
-                ? (outboundProvider === 'smtp'
-                    ? t('managed.validation.saveSmtpFirst')
-                    : t('managed.validation.addOutboundFirst'))
-                : ticketingFromWarning
-            }
-            ticketError={ticketingFromError}
-            notificationAddress={notificationConfig?.config.from || ''}
-            notificationName={notificationConfig?.config.fromName || ''}
-            // Shown only for managed/Microsoft, where the address comes from the
-            // domain or mailbox selection; SMTP edits its identity in the SMTP card.
-            showNotificationCard={outboundProvider !== 'smtp'}
-            notificationAddressReadOnly
-            notificationFieldsDisabled={outboundBusy}
-            onTicketAddressChange={handleTicketingFromChange}
-            onTicketNameChange={setTicketingFromName}
-            onNotificationAddressChange={(value) => updateNotificationIdentityField('from', value)}
-            onNotificationNameChange={(value) => updateNotificationIdentityField('fromName', value)}
-            actions={(
-              <div className="flex justify-end gap-2">
-                {emailSettings.ticketingFromEmail ? (
-                  <Button
-                    id="clear-ticketing-from"
-                    variant="outline"
-                    onClick={() => setShowClearTicketingFromDialog(true)}
-                    disabled={outboundBusy}
-                  >
-                    {t('managed.outbound.senderIdentities.clearButton')}
-                  </Button>
-                ) : null}
-                <Button
-                  id="save-sender-identities"
-                  onClick={handleSaveSenderIdentities}
-                  disabled={outboundBusy || !!ticketingFromError || !outboundDomain}
-                >
-                  {savingTicketingFrom
-                    ? t('managed.outbound.senderIdentities.savingButton')
-                    : t('managed.outbound.senderIdentities.saveButton')}
-                </Button>
-              </div>
-            )}
-          />
+          <div className="space-y-4">
+            <EmailSenderAddressesCard
+              t={(key, fallback) => t(key, { defaultValue: fallback })}
+              transport={outboundProvider}
+              verifiedDomains={domains.filter((domain) => domain.status === 'verified').map((domain) => domain.domain)}
+              microsoftMailboxes={microsoftMailboxes.map((mailbox) => ({ providerId: mailbox.providerId, mailbox: mailbox.mailbox, providerName: mailbox.providerName }))}
+            />
+            <EmailSenderRoutingCard t={(key, fallback) => t(key, { defaultValue: fallback })} />
+          </div>
         )}
       </TabsContent>
 

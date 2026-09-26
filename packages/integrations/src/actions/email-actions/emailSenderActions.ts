@@ -88,12 +88,32 @@ export const createEmailSender = withAuth(async (user, { tenant }, input: { emai
 });
 
 export const updateEmailSender = withAuth(async (user, { tenant }, input: { senderId: string; displayName?: string | null; emailAddress?: string }) => {
-  const { db } = await authorize(user, tenant, 'update');
+  const { knex, db } = await authorize(user, tenant, 'update');
   const update: Record<string, unknown> = { updated_at: new Date() };
   if (input.displayName !== undefined) update.display_name = input.displayName?.trim() || null;
   if (input.emailAddress !== undefined) {
     const address = input.emailAddress.trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) throw new Error('Enter a valid sender email address.');
+    const settings = await TenantEmailService.getTenantEmailSettings(tenant, knex);
+    if (!settings) throw new Error('Outbound email settings are not configured.');
+    if (settings.emailProvider === 'resend') {
+      const domain = address.split('@')[1];
+      const verified = await db.table('email_domains').where({ domain_name: domain, status: 'verified' }).first();
+      if (!verified) throw new Error(`Domain ${domain} is not verified for this tenant.`);
+      update.verification_status = 'verified';
+      update.verified_at = new Date();
+    } else if (settings.emailProvider === 'microsoft') {
+      const current = await db.table('email_sender_addresses').where({ sender_id: input.senderId }).first();
+      if (!current?.microsoft_provider_id) throw new Error('The sender is not linked to a connected Microsoft mailbox.');
+      const mailbox = await db.table('email_providers').where({ id: current.microsoft_provider_id, provider_type: 'microsoft', is_active: true, status: 'connected' }).first();
+      if (!mailbox) throw new Error('The linked Microsoft mailbox is not connected.');
+      update.verification_status = mailbox.mailbox.trim().toLowerCase() === address ? 'verified' : 'unverified';
+      update.verified_at = update.verification_status === 'verified' ? new Date() : null;
+    } else {
+      update.verification_status = 'unverified';
+      update.verified_at = null;
+    }
+    update.last_verification_error = null;
     update.email_address = address;
   }
   const [sender] = await db.table('email_sender_addresses').where({ sender_id: input.senderId }).update(update).returning('*');

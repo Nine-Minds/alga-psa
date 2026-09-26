@@ -173,6 +173,36 @@ describe('TenantEmailService from address resolution', () => {
     })).toEqual({ email: 'support@acme.com', name: 'Escalations' });
   });
 
+  it('uses a board route ahead of the ticket class route and keeps route display-name precedence', () => {
+    const settings = buildSettings({
+      outboundSenders: [
+        { tenant: 'ignored', sender_id: 'ticket-sender', email_address: 'support@acme.com', display_name: 'Support Team', microsoft_provider_id: null, verification_status: 'verified', verified_at: new Date(), last_verification_error: null, created_at: new Date(), updated_at: new Date() },
+        { tenant: 'ignored', sender_id: 'default-sender', email_address: 'general@acme.com', display_name: 'General Team', microsoft_provider_id: null, verification_status: 'verified', verified_at: new Date(), last_verification_error: null, created_at: new Date(), updated_at: new Date() },
+      ],
+      outboundRoutes: [
+        { tenant: 'ignored', route_id: 'route-class', route_type: 'mail_class', mail_class: 'ticket', board_id: null, sender_id: 'default-sender', display_name: null, created_at: new Date(), updated_at: new Date() },
+        { tenant: 'ignored', route_id: 'route-board', route_type: 'board', mail_class: null, board_id: 'board-1', sender_id: 'ticket-sender', display_name: 'North Support', created_at: new Date(), updated_at: new Date() },
+      ],
+    });
+
+    expect(resolveMessageFrom(settings, { mailClass: 'ticket', boardId: 'board-1' })).toEqual({
+      email: 'support@acme.com',
+      name: 'North Support',
+    });
+    expect(resolveMessageFrom(settings, { mailClass: 'ticket', boardId: 'board-1', fromName: 'VIP Support' })).toEqual({
+      email: 'support@acme.com',
+      name: 'VIP Support',
+    });
+  });
+
+  it('fails closed for unverified routed senders instead of silently using the default', () => {
+    const settings = buildSettings({
+      outboundSenders: [{ tenant: 'ignored', sender_id: 'unverified', email_address: 'draft@acme.com', display_name: null, microsoft_provider_id: null, verification_status: 'unverified', verified_at: null, last_verification_error: null, created_at: new Date(), updated_at: new Date() }],
+      outboundRoutes: [{ tenant: 'ignored', route_id: 'route-billing', route_type: 'mail_class', mail_class: 'billing', board_id: null, sender_id: 'unverified', display_name: null, created_at: new Date(), updated_at: new Date() }],
+    });
+    expect(() => resolveMessageFrom(settings, { mailClass: 'billing' })).toThrow(/cannot be used/);
+  });
+
   it('forces the verified system sender and tenant reply address for a system fallback', () => {
     const settings = buildSettings({
       defaultFromDomain: 'tenant.example',
