@@ -30,6 +30,7 @@ import { useDateFormat } from '../dateFormat/useDateFormat';
  * server text rendered in one language and client text in another.
  */
 let i18nInitialized = false;
+let i18nInitialization: Promise<void> | null = null;
 
 const BOOTSTRAP_LOADING_TEXT: Record<
   SupportedLocale,
@@ -147,39 +148,48 @@ async function initI18n(
   namespaces?: string[],
 ) {
   const resolvedLocale = (locale || LOCALE_CONFIG.defaultLocale) as SupportedLocale;
-  if (i18nInitialized) {
-    applyPreloadedResources(resolvedLocale, preloaded);
-    if (locale && i18next.language !== locale) {
-      await i18next.changeLanguage(locale);
+  if (!i18nInitialized) {
+    // React StrictMode mounts effects twice in development. Share the in-flight
+    // init so both effects/providers cannot call i18next.init concurrently.
+    if (!i18nInitialization) {
+      // Seed only when the server actually embedded namespace data — an empty
+      // seed would mark the bundle as loaded and mask fetched translations.
+      const hasPreloadedContent = preloaded && Object.keys(preloaded).length > 0;
+      const seededResources = hasPreloadedContent
+        ? { [resolvedLocale]: preloaded }
+        : undefined;
+
+      i18nInitialization = i18next
+        .use(HttpBackend)
+        .use(initReactI18next)
+        .init({
+          ...I18N_CONFIG,
+          lng: resolvedLocale,
+          // I18nProvider owns the page-level readiness gate. Keep hooks from
+          // suspending forever if init itself rejects; they can render keys.
+          react: { useSuspense: false },
+          resources: seededResources,
+          partialBundledLanguages: true,
+          backend: {
+            loadPath: '/locales/{{lng}}/{{ns}}.json',
+          },
+        })
+        .then(() => {
+          i18nInitialized = true;
+        })
+        .catch((error) => {
+          // Permit a later mount to retry after a transient backend/init error.
+          i18nInitialization = null;
+          throw error;
+        });
     }
-    await ensureNamespacesLoaded(resolvedLocale, namespaces);
-    return;
+    await i18nInitialization;
   }
 
-  // Seed only when the server actually embedded namespace data — an empty seed
-  // would mark the bundle as loaded and mask the real (fetched) translations
-  // with missing keys.
-  const hasPreloadedContent = preloaded && Object.keys(preloaded).length > 0;
-  const seededResources = hasPreloadedContent
-    ? { [resolvedLocale]: preloaded }
-    : undefined;
-
-  await i18next
-    .use(HttpBackend)
-    .use(initReactI18next)
-    .init({
-      ...I18N_CONFIG,
-      lng: resolvedLocale,
-      // Seed the route's namespaces so useTranslation() resolves them without a
-      // network round-trip; the HTTP backend still covers anything not seeded.
-      resources: seededResources,
-      partialBundledLanguages: true,
-      backend: {
-        loadPath: '/locales/{{lng}}/{{ns}}.json',
-      },
-    });
-
-  i18nInitialized = true;
+  applyPreloadedResources(resolvedLocale, preloaded);
+  if (locale && i18next.language !== locale) {
+    await i18next.changeLanguage(locale);
+  }
   await ensureNamespacesLoaded(resolvedLocale, namespaces);
 }
 
@@ -229,11 +239,18 @@ export function I18nProvider({
     // The route's namespaces are awaited as part of initialization rather than
     // in a follow-up effect, so `isInitialized` means "translations are ready"
     // and not merely "i18next exists". Children used to render in the gap.
-    initI18n(locale, preloadedResources, namespaceKey ? namespaceKey.split(',') : undefined).then(
-      () => {
+    initI18n(locale, preloadedResources, namespaceKey ? namespaceKey.split(',') : undefined)
+      .then(() => {
         if (!cancelled) setIsInitialized(true);
-      }
-    );
+      })
+      .catch((error) => {
+        // Initialization failures must not strand sign-in or other pages behind
+        // the bootstrap screen. i18next can still render keys/default values.
+        if (!cancelled) {
+          console.error('Failed to initialize translations:', error);
+          setIsInitialized(true);
+        }
+      });
     return () => {
       cancelled = true;
     };

@@ -15,6 +15,20 @@ Branch: `feature/alga-2026-0002563-quote-pdf-filename-from-the-qu`
 - Prior board smoke run verified the process cwd was this worktree's `server`, compose project `alga-psa-local-test` had Postgres/PgBouncer/Redis running, and a clean curl got HTTP 200. The real browser got HTTP 431 for `localhost`; `127.0.0.1` and fresh `127.0.0.2` rendered the page shell but stayed at “Loading translations…” with no inputs.
 - Archived network capture records the `127.0.0.2` sign-in page and its script requests as HTTP 200. It contains no locale request events. Archived console output repeatedly records `/_next/webpack-hmr` WebSocket `ERR_INVALID_HTTP_RESPONSE`. These observations do not establish whether the stall is a client initialization issue or a board/dev-server transport issue, or whether HMR failure causes the stall. Runtime root cause remains unconfirmed.
 - Browser login, authenticated navigation, live email attachment, and actual browser download/header checks could not be rerun because port 3050 was unavailable. Do not interpret the previous clean curl response as UI readiness.
+- Board-service restoration is an external prerequisite for any browser rerun. This mitigation did not start or restart the application server.
+
+## Offline i18n reproduction and repair
+
+- Source inspection found `i18nInitialized` was set only after awaiting `i18next.init()`, so overlapping provider effects could both call `init()` (React StrictMode does this on mount in development). The provider effect also attached only `.then()`: a rejected initialization promise was unhandled and left `isInitialized` false indefinitely.
+- Added a shared in-flight initialization promise. All concurrent mounts await the same `i18next.init()` call; a rejected promise clears the shared slot so a later mount can retry.
+- Added a rejection handler in `I18nProvider` that logs the initialization error and releases children instead of keeping the bootstrap screen forever. i18next hooks use `useSuspense: false` because the provider owns readiness; they can return fallback keys after init failure rather than suspending indefinitely.
+- `client.initialization.test.tsx` reproduces StrictMode effect replay with a rejected initializer. It confirms one `init()` call, no lingering loading screen, rendered sign-in content, and successful retry on a later mount. Namespace-load rejection and load ordering remain covered by `namespaceReadiness.test.tsx`.
+
+## Download response headers
+
+- Extracted the production document download `Response` construction into `createDocumentDownloadResponse`; `downloadDocument` uses this function directly.
+- `quotePdfDownloadResponse.test.ts` creates actual `Response` objects through that production function and asserts `Content-Disposition`, including the UTF-8 `filename*` value and decoded browser filename, for stored, renamed, Unicode-title, and `Quote_Q-0042.pdf` fallback artifacts.
+- This verifies response header construction offline. Browser download UX and live route/database/storage integration remain unverified until the board service is restored.
 
 ## Changes and code-level filename review
 
@@ -28,7 +42,10 @@ Branch: `feature/alga-2026-0002563-quote-pdf-filename-from-the-qu`
 - `npm run test -w @alga-psa/client-portal -- --run src/actions/client-portal-actions/client-billing.quote.test.ts` — passed, 16 tests.
 - `npm run test -w @alga-psa/core -- --run src/lib/fileNames.test.ts` — passed, 9 tests.
 - `npm run test -w @alga-psa/billing -- --run tests/quote/quoteFileNames.test.ts tests/quote/quoteActions.test.ts tests/quote/quotePdfGenerationService.test.ts` — passed, 56 tests.
+- `npm run test -w @alga-psa/ui -- --run src/lib/i18n/client.initialization.test.tsx src/lib/i18n/namespaceReadiness.test.tsx` — passed, 4 tests.
+- `npm run test -w @alga-psa/documents -- --run tests/quotePdfDownloadResponse.test.ts` — passed, 4 response-header cases.
 - `npm run typecheck -w @alga-psa/client-portal`, `npm run typecheck -w @alga-psa/billing`, and `npm run build -w @alga-psa/core` — completed successfully.
+- `npm run typecheck -w @alga-psa/ui` and `npm run typecheck -w @alga-psa/documents` — completed successfully.
 
 ## Prior browser artifacts
 
