@@ -23,6 +23,11 @@ interface AutopayOverview {
 }
 
 const isActionError = (value: unknown) => isActionMessageError(value) || isActionPermissionError(value);
+// LEVERAGE: pattern autopay-default-method — keep stale enrollment ids out of the chargeable card picker.
+const defaultChargeableMethod = (enrollmentMethodId: string | undefined, chargeableMethods: AutopayOverview['chargeableMethods']) =>
+  chargeableMethods.find((method) => method.payment_method_id === enrollmentMethodId)?.payment_method_id
+    ?? chargeableMethods[0]?.payment_method_id
+    ?? '';
 
 export function ClientAutopaySettings({ clientId, billingProfileId, profileName }: { clientId: string; billingProfileId: string; profileName: string }) {
   const { t } = useTranslation('msp/clients');
@@ -38,7 +43,7 @@ export function ClientAutopaySettings({ clientId, billingProfileId, profileName 
       if (isActionError(result)) throw new Error(getErrorMessage(result));
       const value = result as unknown as AutopayOverview | null;
       setOverview(value);
-      setMethodId(value?.enrollment?.payment_method_id ?? value?.chargeableMethods?.[0]?.payment_method_id ?? '');
+      setMethodId(defaultChargeableMethod(value?.enrollment?.payment_method_id, value?.chargeableMethods ?? []));
     } catch (error) {
       toast.error(getErrorMessage(error));
     }

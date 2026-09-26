@@ -409,6 +409,7 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
     {
       title: t('finalizedTab.columns.autopay', { defaultValue: 'Auto-pay' }),
       dataIndex: FINALIZED_AUTOPAY_DATA_INDEX,
+      width: '150px',
       render: (_: unknown, record: DbInvoiceViewModel) => {
         const attempt = autopayStatuses[record.invoice_id];
         return attempt ? <Badge variant="warning">{t('finalizedTab.autopay.scheduled', { defaultValue: 'Auto-pay {{status}}', status: attempt.status })}</Badge> : null;

@@ -489,7 +489,8 @@
       "finalizedDate": "Data Finalizada",
       "status": "Status",
       "actions": "Ações",
-      "quickbooks": "QuickBooks"
+      "quickbooks": "QuickBooks",
+      "autopay": "Pagamento automático"
     },
     "actions": {
       "downloadPdfs": "Baixar PDFs",
@@ -521,6 +522,9 @@
         "selectedCount": "{{count}} selecionado",
         "clear": "Limpar seleção"
       }
+    },
+    "autopay": {
+      "scheduled": "Pagamento automático {{status}}"
     }
   },
   "recurringServicePeriods": {
