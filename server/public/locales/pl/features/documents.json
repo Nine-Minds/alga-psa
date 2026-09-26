@@ -231,7 +231,19 @@
     "subtitle": "Przeglądaj i pobieraj udostępnione dokumenty",
     "searchPlaceholder": "Szukaj dokumentów...",
     "showing": "{{count}} dokumentów",
-    "loadError": "Nie udało się załadować dokumentów. Spróbuj ponownie."
+    "loadError": "Nie udało się załadować dokumentów. Spróbuj ponownie.",
+    "view": "Wyświetl",
+    "download": "Pobierz",
+    "downloadPdf": "Pobierz PDF",
+    "downloadMarkdown": "Pobierz Markdown",
+    "previewUnavailable": "Podgląd tego typu pliku jest niedostępny.",
+    "previewError": "Nie udało się wczytać podglądu. Spróbuj ponownie.",
+    "downloadError": "Nie udało się pobrać dokumentu. Spróbuj ponownie.",
+    "notFound": "Ten dokument jest już niedostępny.",
+    "noContent": "Ten dokument nie zawiera treści do eksportu.",
+    "accessDenied": "Nie masz dostępu do tego dokumentu.",
+    "loadingPreview": "Wczytywanie podglądu…",
+    "exportFailed": "Eksport PDF nie powiódł się. Spróbuj Markdown."
   },
   "kb": {
     "title": "Baza wiedzy",

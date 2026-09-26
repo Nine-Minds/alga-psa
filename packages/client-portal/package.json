@@ -17,6 +17,10 @@
     "./components": {
       "import": "./src/components/index.ts",
       "types": "./src/components/index.ts"
+    },
+    "./lib/*": {
+      "import": "./src/lib/*.ts",
+      "types": "./src/lib/*.ts"
     }
   },
   "scripts": {
