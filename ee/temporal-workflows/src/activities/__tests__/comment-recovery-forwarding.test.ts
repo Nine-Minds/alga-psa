@@ -30,6 +30,17 @@ describe('recover-comment-publications worker forwarding', () => {
     const validated = EventSchemas.MAINTENANCE_JOB_REQUESTED.parse({ id: randomUUID(), timestamp: new Date().toISOString(), ...event });
     // The server handler reads the tenant from the forwarded job data.
     expect(validated.payload).toMatchObject({ tenantId, jobId, jobName: 'recover-comment-publications', data: { tenantId } });
+
+    // Migration appliers depend on server-local packages and must use this
+    // same forwarding boundary when the edition-aware runner is Temporal.
+    const migrationJobId = randomUUID();
+    const migrationRunnerJobId = randomUUID();
+    const migrationUserId = randomUUID();
+    expect(await executeJobHandler({ jobName: 'migration_apply', jobId: migrationRunnerJobId, tenantId, jobExecutionId: randomUUID(), data: { tenantId, userId: migrationUserId, migrationJobId } })).toEqual({ success: true });
+    const [migrationEvent] = mocks.publish.mock.calls[1];
+    const validatedMigrationEvent = EventSchemas.MAINTENANCE_JOB_REQUESTED.parse({ id: randomUUID(), timestamp: new Date().toISOString(), ...migrationEvent });
+    expect(validatedMigrationEvent.payload).toMatchObject({ tenantId, jobId: migrationRunnerJobId, jobName: 'migration_apply', data: { tenantId, userId: migrationUserId, migrationJobId } });
+
     // Forwarding failures surface to the worker so Temporal retries the activity.
     mocks.publish.mockRejectedValueOnce(new Error('Redis unavailable'));
     expect(await executeJobHandler({ jobName: 'recover-comment-publications', jobId, tenantId, jobExecutionId: randomUUID(), data: {} })).toEqual({ success: false, error: 'Redis unavailable' });

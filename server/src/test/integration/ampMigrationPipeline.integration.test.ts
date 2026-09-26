@@ -1,4 +1,5 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import type { Job } from 'pg-boss';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createHash } from 'node:crypto';
@@ -16,6 +17,7 @@ import { loadMigrationConfigurationOptions } from '../../lib/migrations/migratio
 import { MigrationPlanner } from '../../lib/migrations/MigrationPlanner';
 import { MigrationDomainApplier } from '../../lib/migrations/appliers/MigrationDomainApplier';
 import { MigrationReportService } from '../../lib/migrations/MigrationReportService';
+import { handleMigrationApplyJob, type MigrationApplyJobData } from '../../lib/jobs/handlers/migrationJobHandler';
 import { spreadsheetImportNamespace } from '../../lib/migrations/spreadsheetNamespace';
 import type { MigrationJobConfiguration } from '../../lib/migrations/types';
 
@@ -511,7 +513,7 @@ describe('AMP migration pipeline integration', () => {
     });
     const inputPath = path.join(packageDir, `door-access-${uuidv4()}.csv`);
     const packagePath = path.join(packageDir, `door-access-${uuidv4()}.amp`);
-    await fs.promises.writeFile(inputPath, 'Asset Name,Asset Type,Controller ID,Door Count,Installed On,Tier,Monitored,Notes\nFront Lobby,Door Access,C-1,4,2026-01-05,gold,yes,keep out\n');
+    await fs.promises.writeFile(inputPath, 'Asset Name,Asset Type,Manufacturer,Model,Controller ID,Door Count,Installed On,Tier,Monitored,Notes\nFront Lobby,Door Access,Acme,DoorBox,C-2567,4,2026-09-01,gold,yes,keep out\nBlank Fields,Door Access,Acme,DoorBox,   ,   ,   ,   ,   ,blank values\n');
     const conversion = await convertSpreadsheets({
       outputPath: packagePath, namespace: `csv:${fixture.tenantId}`, sourceSystem: 'csv-upload',
       files: [{ entityType: 'assets', path: inputPath, mapping: await inferSpreadsheetMapping(inputPath, 'assets') }],
@@ -520,10 +522,6 @@ describe('AMP migration pipeline integration', () => {
     const migrationJobId = await createJob(fixture);
     const staging = await new MigrationStager(db, fixture.tenantId).stage(migrationJobId, packagePath);
     expect(staging.rejected).toBe(false);
-    // Direct AMP values can contain whitespace even though CSV conversion trims them.
-    const stagedAsset = await tenantTable(fixture.tenantId, 'migration_staged_records').where({ migration_job_id: migrationJobId, entity_type: 'assets' }).first();
-    const stagedCustomValues = typeof stagedAsset.custom_field_values === 'string' ? JSON.parse(stagedAsset.custom_field_values) : stagedAsset.custom_field_values;
-    await tenantTable(fixture.tenantId, 'migration_staged_records').where({ migration_staged_record_id: stagedAsset.migration_staged_record_id }).update({ custom_field_values: JSON.stringify({ ...stagedCustomValues, 'Controller ID': '   ' }) });
     const options = await loadMigrationConfigurationOptions(tenantDb(db, fixture.tenantId), db, migrationJobId, fixture.tenantId);
     expect(options.assetTypes.find((type) => type.slug === 'door_access')?.fields).toEqual(fields);
     expect(options.packageAssetCustomFields.map((row) => row.fieldName)).toEqual(['Controller ID', 'Door Count', 'Installed On', 'Monitored', 'Notes', 'Tier']);
@@ -537,22 +535,43 @@ describe('AMP migration pipeline integration', () => {
     const preflight = await new MigrationPlanner(db, fixture.tenantId).preflight(migrationJobId);
     expect(preflight.state).toBe('ready');
     expect(preflight.issues.map((issue) => issue.code)).toContain('ASSET_CUSTOM_FIELD_REQUIRED_MISSING');
-    const applied = await new MigrationDomainApplier(db, fixture.tenantId).applyJob(migrationJobId, fixture.ownerUserId);
-    expect(applied).toMatchObject({ created: 1, failed: 0 });
-    const asset = await tenantTable(fixture.tenantId, 'assets').where({ name: 'Front Lobby' }).first();
-    expect(typeof asset.attributes === 'string' ? JSON.parse(asset.attributes) : asset.attributes).toEqual({ door_count: 4, installed_on: '2026-01-05', tier: 'Gold', monitored: true });
-
     const staged = await tenantTable(fixture.tenantId, 'migration_staged_records').where({ migration_job_id: migrationJobId, entity_type: 'assets' }).first();
     const customValues = typeof staged.custom_field_values === 'string' ? JSON.parse(staged.custom_field_values) : staged.custom_field_values;
     await tenantTable(fixture.tenantId, 'migration_staged_records').where({ migration_staged_record_id: staged.migration_staged_record_id }).update({ custom_field_values: JSON.stringify({ ...customValues, 'Door Count': 'four' }) });
     const invalidValue = await new MigrationPlanner(db, fixture.tenantId).preflight(migrationJobId);
     expect(invalidValue.issues.map((issue) => issue.code)).toContain('ASSET_CUSTOM_FIELD_INVALID');
+    await tenantTable(fixture.tenantId, 'migration_staged_records').where({ migration_staged_record_id: staged.migration_staged_record_id }).update({ custom_field_values: JSON.stringify(customValues) });
     await configureJob(fixture, migrationJobId, { defaultClientId: fixture.clientId, assets: { assetTypeMapping: { 'Door Access': 'door_access' }, customFieldMapping: { door_access: { 'Door Count': 'missing_key' } } } });
     const invalidKey = await new MigrationPlanner(db, fixture.tenantId).preflight(migrationJobId);
     expect(invalidKey.issues.map((issue) => issue.code)).toContain('CONFIG_ASSET_FIELD_MAPPING_INVALID');
     await configureJob(fixture, migrationJobId, { defaultClientId: fixture.clientId, assets: { assetTypeMapping: { 'Door Access': 'missing_type' }, customFieldMapping: { missing_type: { 'Door Count': 'door_count' } } } });
     const missingType = await new MigrationPlanner(db, fixture.tenantId).preflight(migrationJobId);
     expect(missingType.issues.map((issue) => issue.code)).toContain('CONFIG_ASSET_TYPE_NOT_FOUND');
+
+    await configureJob(fixture, migrationJobId, {
+      defaultClientId: fixture.clientId,
+      assets: {
+        assetTypeMapping: { 'Door Access': 'door_access' },
+        customFieldMapping: { door_access: { 'Controller ID': 'controller_id', 'Door Count': 'door_count', 'Installed On': 'installed_on', Tier: 'tier', Monitored: 'monitored' } },
+      },
+    });
+    const finalPreflight = await new MigrationPlanner(db, fixture.tenantId).preflight(migrationJobId);
+    expect(finalPreflight.state).toBe('ready');
+    await tenantTable(fixture.tenantId, 'migration_jobs').where({ migration_job_id: migrationJobId }).update({ state: 'queued' });
+    await handleMigrationApplyJob({
+      id: uuidv4(),
+      data: { tenantId: fixture.tenantId, userId: fixture.ownerUserId, migrationJobId },
+    } as unknown as Job<MigrationApplyJobData>);
+
+    const completedJob = await tenantTable(fixture.tenantId, 'migration_jobs').where({ migration_job_id: migrationJobId }).first();
+    expect(completedJob.state).toBe('completed');
+    const completedAssets = await tenantTable(fixture.tenantId, 'migration_job_entities').where({ migration_job_id: migrationJobId, entity_type: 'assets' }).first();
+    expect(Number(completedAssets.applied_count)).toBe(2);
+    expect(Number(completedAssets.failed_count)).toBe(0);
+    const asset = await tenantTable(fixture.tenantId, 'assets').where({ name: 'Front Lobby' }).first();
+    expect(typeof asset.attributes === 'string' ? JSON.parse(asset.attributes) : asset.attributes).toEqual({ manufacturer: 'Acme', model: 'DoorBox', controller_id: 'C-2567', door_count: 4, installed_on: '2026-09-01', tier: 'Gold', monitored: true });
+    const blankAsset = await tenantTable(fixture.tenantId, 'assets').where({ name: 'Blank Fields' }).first();
+    expect(typeof blankAsset.attributes === 'string' ? JSON.parse(blankAsset.attributes) : blankAsset.attributes).toEqual({ manufacturer: 'Acme', model: 'DoorBox' });
   }, HOOK_TIMEOUT);
 
   it('re-running the same job creates no duplicates', async () => {

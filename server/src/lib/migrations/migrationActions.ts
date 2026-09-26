@@ -1,9 +1,10 @@
 'use server';
 
 import { createTenantKnex, tenantDb, type TenantDb } from '@alga-psa/db';
-import { JobService } from '@alga-psa/jobs';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { hasPermission } from '@alga-psa/auth';
+import { getJobRunner } from '@/lib/jobs/JobRunnerFactory';
+import { initializeJobRunner } from '@/lib/jobs/initializeJobRunner';
 import type { Knex } from 'knex';
 import type { AmpEntityType } from '@alga-psa/migration-spec';
 import type { AssetTypeField } from '@alga-psa/types';
@@ -237,25 +238,29 @@ export async function executeMigrationJob(migrationJobId: string): Promise<{ job
     throw new Error('Only a job with a clean preflight can run. Preflight it first.');
   }
 
-  const jobService = await JobService.create();
-  const { jobRecord } = await jobService.createAndScheduleJob('migration_apply', {
+  // AMP apply must use the same edition-aware runner that registers its worker
+  // handler. The legacy JobService always enqueues through pg-boss, which can
+  // be consumed by an unrelated CE worker in an enterprise deployment.
+  await initializeJobRunner();
+  const runner = await getJobRunner();
+  const { jobId } = await runner.scheduleJob('migration_apply', {
     tenantId: tenant,
     metadata: { user_id: userId, migrationJobId },
     migrationJobId,
     userId,
   });
-  if (!jobRecord.id) {
+  if (!jobId) {
     throw new Error('Migration job scheduling completed without returning a job id.');
   }
 
   await db.table('migration_jobs').where({ migration_job_id: migrationJobId }).update({
     state: 'queued',
-    job_id: jobRecord.id,
+    job_id: jobId,
     queued_at: knex.fn.now(),
     updated_at: knex.fn.now(),
   });
 
-  return { jobId: jobRecord.id };
+  return { jobId };
 }
 
 export async function cancelMigrationJob(migrationJobId: string): Promise<void> {
