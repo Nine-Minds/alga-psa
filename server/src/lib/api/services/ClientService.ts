@@ -49,20 +49,7 @@ export function normalizeLegacyClientTaxId<T extends { tax_id_number?: string; p
   return { ...data, ...(taxIdNumber === undefined ? {} : { tax_id_number: taxIdNumber }), ...(properties === undefined ? {} : { properties }) };
 }
 
-export function replaceClientPropertiesPreservingLegacyTaxId(properties: any, previousProperties: any): any {
-  if (!properties || typeof properties !== 'object') return properties;
-  const replacement = { ...properties };
-  if (
-    previousProperties && typeof previousProperties === 'object' &&
-    Object.prototype.hasOwnProperty.call(previousProperties, 'legacy_tax_id') &&
-    !Object.prototype.hasOwnProperty.call(replacement, 'legacy_tax_id')
-  ) {
-    replacement.legacy_tax_id = previousProperties.legacy_tax_id;
-  }
-  return replacement;
-}
-
-function stripLegacyClientTaxId<T>(client: T): T {
+export function stripLegacyClientTaxId<T>(client: T): T {
   const record = client as T & { properties?: any };
   if (!record.properties || typeof record.properties !== 'object') return client;
   const properties = { ...record.properties };
@@ -645,12 +632,6 @@ export class ClientService extends BaseService<IClient> {
         ...normalized,
         updated_at: knex.raw('now()'),
       };
-
-      // Keep PUT properties replacement semantics, retaining only the audit
-      // value introduced by the Tax ID consolidation migration.
-      if (normalized.properties && typeof normalized.properties === 'object') {
-        updateData.properties = replaceClientPropertiesPreservingLegacyTaxId(normalized.properties, before.properties);
-      }
 
       // Remove undefined values + non-column fields
       Object.keys(updateData).forEach((key) => {

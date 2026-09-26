@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createClientSchema, updateClientSchema } from '@/lib/api/schemas/client';
-import { normalizeLegacyClientTaxId, replaceClientPropertiesPreservingLegacyTaxId } from '@/lib/api/services/ClientService';
+import { normalizeLegacyClientTaxId, stripLegacyClientTaxId } from '@/lib/api/services/ClientService';
 
 describe('client Tax ID legacy API compatibility', () => {
   it('maps legacy properties.tax_id for create and update and removes it from properties', () => {
@@ -22,11 +22,11 @@ describe('client Tax ID legacy API compatibility', () => {
     expect(normalizeLegacyClientTaxId({ tax_id_number: 'canonical', properties: { tax_id: 'legacy' } })).toEqual({ tax_id_number: 'canonical', properties: {} });
   });
 
-  it('replaces properties while carrying forward the audit value and never saving tax_id', () => {
-    const normalized = normalizeLegacyClientTaxId({ properties: { tax_id: ' legacy ', industry: 'IT' } });
-    expect(normalized).toEqual({ tax_id_number: 'legacy', properties: { industry: 'IT' } });
-    expect(replaceClientPropertiesPreservingLegacyTaxId(normalized.properties, { retained: true, legacy_tax_id: ['older'] })).toEqual({ industry: 'IT', legacy_tax_id: ['older'] });
-    expect(replaceClientPropertiesPreservingLegacyTaxId(normalized.properties, { legacy_tax_id: 'older' })).not.toHaveProperty('tax_id');
-    expect(replaceClientPropertiesPreservingLegacyTaxId({ industry: 'new', legacy_tax_id: 'caller-value' }, { legacy_tax_id: 'older' })).toEqual({ industry: 'new', legacy_tax_id: 'caller-value' });
+  it('strips legacy properties from responses while preserving the canonical column', () => {
+    expect(stripLegacyClientTaxId({
+      tax_id_number: 'canonical',
+      properties: { tax_id: 'legacy', industry: 'IT' },
+    })).toEqual({ tax_id_number: 'canonical', properties: { industry: 'IT' } });
   });
+
 });

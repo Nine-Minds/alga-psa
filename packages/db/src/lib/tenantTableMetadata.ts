@@ -76,6 +76,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   client_payment_customers: { scope: 'tenant' },
   client_plan_bundles: { scope: 'tenant' },
   client_tax_rates: { scope: 'tenant' },
+  client_tax_id_migration_conflicts: { scope: 'tenant' },
   client_tax_settings: { scope: 'tenant' },
   categories: { scope: 'tenant' },
   checklist_template_apply_rules: { scope: 'tenant' },

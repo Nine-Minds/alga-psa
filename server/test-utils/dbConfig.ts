@@ -78,8 +78,6 @@ export interface CreateTestDbConnectionOptions {
    * @default true
    */
   recreate?: boolean;
-  /** Explicitly permits a non-recreating connection to a protected DB for isolated fixtures. */
-  allowProtectedDatabaseForTest?: boolean;
 }
 
 // For suites that vi.mock the secrets provider: .env.localtest points
@@ -123,13 +121,7 @@ export async function createTestDbConnection(
   const seedsDir = options.seedsDir || path.join(serverRoot, 'seeds', 'dev');
   const runSeeds = options.runSeeds ?? true;
 
-  const isolatedProtectedDbConnection = options.allowProtectedDatabaseForTest === true
-    && options.recreate === false
-    && databaseName === 'server'
-    && process.env.NODE_ENV === 'test';
-  if (!isolatedProtectedDbConnection) {
-    verifyTestDatabase(databaseName);
-  }
+  verifyTestDatabase(databaseName);
 
   const dbHost = process.env.DB_HOST || 'localhost';
   const dbPort = parseInt(process.env.DB_PORT || '5432', 10);
