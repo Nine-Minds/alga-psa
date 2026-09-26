@@ -422,6 +422,10 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Schedule entries
   'schedule_entries',
 
+  // Shared calendars (schedule_entries.calendar_id → calendars; shares → calendars;
+  // calendars.owner_user_id → users, so this block precedes users)
+  'calendar_shares', 'calendars',
+
   // Service catalog
   'service_catalog', 'service_types', 'service_categories',
 

@@ -61,6 +61,8 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   calendar_event_mappings: { scope: 'tenant' },
   calendar_provider_health: { scope: 'tenant' },
   calendar_providers: { scope: 'tenant' },
+  calendar_shares: { scope: 'tenant' },
+  calendars: { scope: 'tenant' },
   // Confirmed tenant column in server/migrations/20251104120005_create_calendar_vendor_config_tables.cjs.
   google_calendar_provider_config: { scope: 'tenant' },
   microsoft_calendar_provider_config: { scope: 'tenant' },

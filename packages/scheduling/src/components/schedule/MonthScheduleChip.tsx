@@ -10,6 +10,8 @@ interface MonthScheduleChipProps {
   isPrimary: boolean;
   opacity: number;
   tooltip: string;
+  /** Owning calendar's colour when overlaying several calendars; drawn as a left rule. */
+  calendarColor?: string;
   onClick: (e: React.MouseEvent) => void;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
@@ -28,6 +30,7 @@ const MonthScheduleChip: React.FC<MonthScheduleChipProps> = ({
   isPrimary,
   opacity,
   tooltip,
+  calendarColor,
   onClick,
   onMouseEnter,
   onMouseLeave,
@@ -47,6 +50,7 @@ const MonthScheduleChip: React.FC<MonthScheduleChipProps> = ({
         minHeight: '30px',
         cursor: 'pointer',
         opacity,
+        borderLeft: calendarColor ? `4px solid ${calendarColor}` : undefined,
       }}
       onClick={onClick}
       onMouseEnter={onMouseEnter}

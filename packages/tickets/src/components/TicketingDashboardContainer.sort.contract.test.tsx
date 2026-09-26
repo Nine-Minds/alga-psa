@@ -1,7 +1,7 @@
 /* @vitest-environment jsdom */
 import React from 'react';
-import { act, render } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, render, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ITicketListFilters, IUser } from '@alga-psa/types';
 
 /**
@@ -45,6 +45,19 @@ vi.mock('../actions/optimizedTicketActions', () => ({
   fetchTicketsWithPagination: (...args: Parameters<typeof fetchTicketsWithPagination>) =>
     fetchTicketsWithPagination(...args),
 }));
+
+// The container's saved-views hook loads views on mount. Left real, that server
+// action settles after jsdom is torn down and its state update throws an
+// unhandled `window is not defined` that fails the whole shard.
+const listViewActions = vi.hoisted(() => ({
+  listListViews: vi.fn(async () => ({ views: [], defaultViewId: null, canShare: false })),
+  getListView: vi.fn(async () => ({ actionError: 'View not found.' })),
+  createListView: vi.fn(),
+  updateListView: vi.fn(),
+  deleteListView: vi.fn(),
+  setMyDefaultListView: vi.fn(),
+}));
+vi.mock('@alga-psa/list-views/actions/listViewActions', () => listViewActions);
 
 vi.mock('react-hot-toast', () => ({
   toast: { error: vi.fn(), success: vi.fn() },
@@ -146,7 +159,21 @@ describe('ticket list sort contract', () => {
     dashboardProps = null;
     currentPathname = '/msp/tickets';
     fetchTicketsWithPagination.mockClear();
+    listViewActions.listListViews.mockClear();
+    listViewActions.getListView.mockClear();
     window.history.replaceState(null, '', '/msp/tickets');
+  });
+
+  afterEach(async () => {
+    // Every render's view load must hit the stub and settle before teardown.
+    await waitFor(() => expect(listViewActions.listListViews).toHaveBeenCalledWith('tickets'));
+    await act(async () => {
+      await Promise.all(listViewActions.listListViews.mock.results.map((r) => r.value));
+    });
+    // A `?view=` the collection doesn't list is then resolved by id.
+    await act(async () => {
+      await Promise.all(listViewActions.getListView.mock.results.map((r) => r.value));
+    });
   });
 
   it('forwards the Assigned To column id to the paginated fetch', async () => {
