@@ -38,11 +38,14 @@ function resolveKey(resource: unknown, key: string): string | undefined {
   return typeof value === 'string' ? value : undefined;
 }
 
+// Like react-i18next, `t` keeps a stable identity across renders. A fresh `t`
+// per render would churn the component's `load` callback and re-fetch status
+// on every render, leaving assertions racing a perpetual loading state.
+const translate = (key: string, options?: { defaultValue?: string }) =>
+  resolveKey(activeResource, key) ?? options?.defaultValue ?? key;
+
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
-  useTranslation: () => ({
-    t: (key: string, options?: { defaultValue?: string }) =>
-      resolveKey(activeResource, key) ?? options?.defaultValue ?? key
-  })
+  useTranslation: () => ({ t: translate })
 }));
 
 const useSearchParamsMock = vi.hoisted(() => vi.fn());
@@ -131,7 +134,10 @@ describe('XeroIntegrationSettings loaded-locale copy', () => {
     render(<XeroIntegrationSettings />);
 
     expect(await screen.findByText(settings.mapping.alert)).toBeInTheDocument();
-    expect(screen.getByText(settings.scopeReconnectNote)).toBeInTheDocument();
+    expect(await screen.findByText(settings.scopeReconnectNote)).toBeInTheDocument();
+    // Re-renders must not trigger another status fetch (which would flip the
+    // panel back into its loading state).
+    expect(getXeroConnectionStatusMock).toHaveBeenCalledTimes(1);
 
     const rendered = document.body.textContent ?? '';
     expect(rendered).not.toContain('first connected Xero organisation');

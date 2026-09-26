@@ -314,5 +314,6 @@ export {
   triggerRmmReboot,
   triggerRmmScript,
   getAssetRemoteControlUrl,
+  getAssetRemoteControlTypes,
   type RmmCommandResult,
 } from './integrations/assetRmmActions';

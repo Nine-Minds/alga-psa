@@ -57,6 +57,14 @@ type IapSubscriptionContext = {
 
 const SOLO_PRO_TRIAL_DAYS = 30;
 
+/** Webhook events that can change an appliance subscription's licensing state. */
+const APPLIANCE_LIFECYCLE_EVENT_TYPES = new Set<string>([
+  'customer.subscription.created',
+  'customer.subscription.updated',
+  'customer.subscription.deleted',
+  'invoice.payment_failed',
+]);
+
 /**
  * Stripe embedded checkout requires an https return URL.
  * In local dev NEXTAUTH_URL is typically http://localhost:3000,
@@ -1200,6 +1208,13 @@ export class StripeService {
     await this.ensureInitialized();
     logger.info(`[StripeService] Processing webhook event: ${event.type} (${event.id})`);
 
+    // Appliance (self-hosted) subscriptions are minted by nm-store and have no
+    // hosted tenant; their lifecycle is mirrored into the alga-license service
+    // instead of the tenant tables. Hand them off before tenant resolution.
+    if (!tenantId && (await this.handleApplianceLifecycleEvent(event))) {
+      return;
+    }
+
     // For most events, we need to determine the tenant from the event data
     const eventTenantId = tenantId || (await this.getTenantIdFromEvent(event));
 
@@ -1275,6 +1290,49 @@ export class StripeService {
           processing_error: error instanceof Error ? error.message : String(error),
         });
 
+      throw error;
+    }
+  }
+
+  /**
+   * Route an appliance-subscription event to the alga-license lifecycle mirror.
+   * Returns true when the event belonged to an appliance subscription (handled
+   * here, whether or not it required a C4 write), false to continue hosted processing.
+   */
+  private async handleApplianceLifecycleEvent(event: Stripe.Event): Promise<boolean> {
+    if (!APPLIANCE_LIFECYCLE_EVENT_TYPES.has(event.type)) return false;
+    try {
+      const { handleApplianceSubscriptionEvent } = await import('@ee/lib/applianceConsole/applianceSubscriptionLifecycle');
+      const masterTenantId = process.env.MASTER_BILLING_TENANT_ID;
+      const outcome = await handleApplianceSubscriptionEvent(event, this.stripe, {
+        revoke: async (stripeSubId) => {
+          const { revokeApplianceEntitlement } = await import('@ee/lib/applianceConsole/algaLicenseAdminClient');
+          return revokeApplianceEntitlement(stripeSubId);
+        },
+        syncSeats: async (applianceTenantId, seats) => {
+          const { updateApplianceEntitlementSeats } = await import('@ee/lib/applianceConsole/algaLicenseAdminClient');
+          return updateApplianceEntitlementSeats(applianceTenantId, seats);
+        },
+        audit: masterTenantId
+          ? async (details) => {
+              const { PlatformReportAuditService } = await import('@ee/lib/platformReports');
+              await new PlatformReportAuditService(masterTenantId).logEvent({
+                eventType: 'appliance.lifecycle.webhook',
+                resourceType: 'appliance',
+                resourceId: typeof details.tenant_id === 'string' ? details.tenant_id : null,
+                status: 'completed',
+                details,
+              });
+            }
+          : undefined,
+      });
+      if (outcome.handled) {
+        logger.info(`[StripeService] Appliance lifecycle handled ${event.type} for ${outcome.subscriptionId} (${outcome.action})`);
+      }
+      return outcome.handled;
+    } catch (error) {
+      // A C4 failure must surface as a webhook failure so Stripe retries it.
+      logger.error(`[StripeService] Appliance lifecycle handling failed for ${event.id}:`, error);
       throw error;
     }
   }

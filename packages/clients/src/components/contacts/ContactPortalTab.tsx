@@ -9,6 +9,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { PortalBillingProfileAccess } from './PortalBillingProfileAccess';
+import { ContactBillingProfileAssociations } from './ContactBillingProfileAssociations';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Mail, Shield, User, Info, RefreshCw } from 'lucide-react';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -853,6 +854,11 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                   clientId={contact.client_id}
                   canEdit={currentUserPermissions.canUpdateRoles}
                 />
+
+                {/* Which segments this contact belongs to, and whether that
+                    comes with the profile's tickets. Read-only: membership is
+                    edited on the profile. */}
+                <ContactBillingProfileAssociations contactNameId={contact.contact_name_id} />
 
                 {/* Last Login Info */}
                 {existingUser.last_login_at && (

@@ -69,6 +69,7 @@ function requestUpgrade(port: number, path: string): Promise<UpgradeOutcome> {
       method: 'GET',
       headers: {
         Host: `127.0.0.1:${port}`,
+        Origin: `http://127.0.0.1:${port}`,
         Connection: 'Upgrade',
         Upgrade: 'websocket',
         'Sec-WebSocket-Key': 'dGhlIHNhbXBsZSBub25jZQ==',
@@ -113,7 +114,7 @@ async function createFixtureApp(): Promise<string> {
   );
   await writeFile(
     path.join(dir, 'next.config.mjs'),
-    `export default { turbopack: { root: ${JSON.stringify(REPO_ROOT)} } };\n`,
+    `export default { allowedDevOrigins: ['127.0.0.1'], turbopack: { root: ${JSON.stringify(REPO_ROOT)} } };\n`,
   );
   await writeFile(
     path.join(dir, 'pages', 'index.js'),

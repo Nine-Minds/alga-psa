@@ -10,6 +10,7 @@ import { ensureDefaultContractForClientIfBillingConfigured } from '@alga-psa/sha
 import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
 
 import { createDefaultTaxSettingsAsync } from '../lib/billingHelpers';
+import { CLIENT_SINCE_FORMAT_MESSAGE, toClientSinceDate } from '../lib/clientSince';
 
 import {
   registerAction,
@@ -33,6 +34,7 @@ interface UpsertClientByExternalIdMappedValues extends Record<string, unknown> {
   country?: string;
   default_currency_code?: string;
   notes?: string;
+  client_since?: string | null;
   is_inactive?: boolean;
   properties?: Record<string, unknown>;
 }
@@ -110,6 +112,8 @@ const clientFields = [
   { name: 'country', type: 'string' as const, required: false, description: 'Country' },
   { name: 'default_currency_code', type: 'string' as const, required: false, description: 'Default currency code' },
   { name: 'notes', type: 'string' as const, required: false, description: 'Client notes' },
+  // The registry has no date type; the handler validates the shape.
+  { name: 'client_since', type: 'string' as const, required: false, description: 'Date the client relationship began (YYYY-MM-DD)' },
   { name: 'is_inactive', type: 'boolean' as const, required: false, description: 'Inactive flag' },
   { name: 'properties', type: 'json' as const, required: false, description: 'Additional client properties' },
 ];
@@ -465,6 +469,19 @@ function buildClientPayload(mappedValues: UpsertClientByExternalIdMappedValues):
   assignIfPresent(payload, 'country', mappedValues.country);
   assignIfPresent(payload, 'default_currency_code', mappedValues.default_currency_code);
   assignIfPresent(payload, 'notes', mappedValues.notes);
+
+  if (mappedValues.client_since !== undefined) {
+    const clientSince = toClientSinceDate(mappedValues.client_since);
+    if (clientSince === undefined) {
+      throwInboundFailure(
+        'VALIDATION_ERROR',
+        `${CLIENT_SINCE_FORMAT_MESSAGE} (received "${String(mappedValues.client_since)}")`,
+        'client',
+        mappedValues.external_id,
+      );
+    }
+    payload.client_since = clientSince;
+  }
 
   return payload;
 }

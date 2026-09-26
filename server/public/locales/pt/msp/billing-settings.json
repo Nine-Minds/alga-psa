@@ -165,6 +165,27 @@
         "loadStatuses": "Falha ao carregar status de tickets de renovação",
         "save": "Falha ao salvar as configurações de automação de renovação"
       }
+    },
+    "quotes": {
+      "title": "Cotações",
+      "description": "Defina o período de validade padrão para novas cotações.",
+      "fields": {
+        "validityDays": {
+          "label": "Período de validade padrão (dias)",
+          "help": "As novas cotações são válidas por este número de dias."
+        }
+      },
+      "actions": {
+        "save": "Salvar"
+      },
+      "toast": {
+        "updated": "As configurações de cotações foram atualizadas."
+      },
+      "errors": {
+        "load": "Falha ao carregar configurações",
+        "save": "Falha ao salvar configurações",
+        "range": "Insira um número inteiro de 1 a 365."
+      }
     }
   },
   "quoting": {

@@ -679,6 +679,7 @@ export const addContact = withAuth(async (
       is_inactive: contactData.is_inactive ?? undefined
     };
 
+    // LEVERAGE: pattern contact-create-with-event
     // Use the shared ContactModel to create the contact.
     // The model handles validation and business rules.
     const created = await withTransaction(db, async (trx: Knex.Transaction) => {
