@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 const actionMocks = vi.hoisted(() => ({ list: vi.fn(), create: vi.fn(), update: vi.fn(), remove: vi.fn(), verify: vi.fn(), clearRoute: vi.fn(), setRoute: vi.fn() }));
@@ -17,6 +17,9 @@ vi.mock('@alga-psa/ui/components/Dialog', () => ({
   Dialog: ({ id, isOpen, title, children, footer }: any) => isOpen ? <section id={id}><h2>{title}</h2>{children}{footer}</section> : null,
   DialogContent: ({ children }: any) => <div>{children}</div>,
   DialogDescription: ({ children }: any) => <p>{children}</p>,
+}));
+vi.mock('@alga-psa/ui/components/Button', () => ({
+  Button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>{children}</button>,
 }));
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
   default: ({ id, value, options, onValueChange }: any) => <select id={id} value={value} onChange={(event) => onValueChange(event.target.value)}>{options.map((option: any) => <option key={option.value} value={option.value}>{option.label}</option>)}</select>,
@@ -47,11 +50,13 @@ describe('outbound email sender cards', () => {
     actionMocks.list.mockResolvedValue({ senders: [], routes: [] });
     actionMocks.create.mockRejectedValue(Object.assign(new Error('duplicate key value violates unique constraint'), { code: '23505' }));
     const { container } = render(<EmailSenderAddressesCard t={t} transport="smtp" />);
-    fireEvent.click(screen.getAllByText('email.senderIdentities.actions.add')[0]);
+    fireEvent.click(container.querySelector('#email-sender-add-open')!);
     fireEvent.change(screen.getByLabelText('email.senderIdentities.fields.address'), { target: { value: 'duplicate@example.test' } });
-    fireEvent.click(document.getElementById('email-sender-add')!);
-    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('email.senderIdentities.errors.duplicateAddress'));
-    expect(container.querySelector('#email-sender-add-dialog')?.contains(screen.getByRole('alert'))).toBe(true);
+    const addDialog = container.querySelector<HTMLElement>('#email-sender-add-dialog');
+    expect(addDialog).toBeInTheDocument();
+    fireEvent.click(within(addDialog!).getByRole('button', { name: 'email.senderIdentities.actions.add' }));
+    await waitFor(() => expect(within(addDialog!).getByRole('alert')).toHaveTextContent('email.senderIdentities.errors.duplicateAddress'));
+    expect(addDialog).toContainElement(within(addDialog!).getByRole('alert'));
 
     actionMocks.create.mockReset();
     actionMocks.list.mockResolvedValue({ senders: [], routes: [] });

@@ -203,6 +203,13 @@ vi.mock('@alga-psa/tickets/actions/ticketActions', () => ({}));
 vi.mock('@alga-psa/integrations/emailSenderActions', () => ({
   clearEmailSenderRoute: vi.fn(),
   listEmailSenders: vi.fn(async () => ({ senders: [], routes: [] })),
+  listSelectableSenders: vi.fn(async () => ({
+    senders: [],
+    effectiveSenderId: null,
+    effectiveSenderAddress: 'notifications@example.test',
+    effectiveSenderDisplayName: 'Test Notifications',
+    allowOverride: false,
+  })),
   setEmailSenderRoute: vi.fn(),
 }));
 
