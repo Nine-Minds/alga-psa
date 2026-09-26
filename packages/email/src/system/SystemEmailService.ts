@@ -615,14 +615,14 @@ export class SystemEmailService extends BaseEmailService {
       template = this.getNewAppointmentRequestFallback(data);
     }
 
-    return this.sendEmail({
+    return this.sendTenantScopedEmail({
       to,
       subject: template.subject,
       html: template.html,
       text: template.text,
       locale,
       tenantId: options?.tenantId
-    });
+    }, 'scheduling');
   }
 
   // Template methods

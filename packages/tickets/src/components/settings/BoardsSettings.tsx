@@ -2008,6 +2008,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
               {editingBoard && (
                 <div className="space-y-2 border-t border-border pt-4">
                   <Label htmlFor="board-ticket-email-sender">{t('ticketing.boards.emailSender.label', 'Send ticket email from')}</Label>
+                  <p className="text-xs text-muted-foreground">{t('ticketing.boards.emailSender.inboundWarning', 'Changing this From address does not change where inbound replies are received.')}</p>
                   <CustomSelect
                     id="board-ticket-email-sender"
                     value={ticketSenderId}

@@ -19,9 +19,14 @@ describe('multiple outbound sender migration', () => {
     expect(senderBackfill).toContain('lower(trim(tes.ticketing_from_email))');
     expect(senderBackfill).toContain('coalesce(nullif(trim(tes.ticketing_from_name), \'\'), nullif(trim(ep.sender_display_name), \'\'))');
     expect(senderBackfill).toContain("ep.provider_type = 'microsoft'");
+    expect(senderBackfill).toContain("lower(tes.email_provider) = 'resend'");
+    expect(senderBackfill).toContain("ed.status = 'verified'");
+    expect(senderBackfill).toContain("THEN 'unverified' ELSE 'verified' END");
     expect(routeBackfill).toContain("'mail_class', 'ticket'");
     expect(routeBackfill).toContain('nullif(trim(tes.ticketing_from_name), \'\')');
     expect(routeBackfill).toContain('WHERE nullif(trim(tes.ticketing_from_email), \'\') IS NOT NULL');
     expect(routeBackfill).toContain('OR nullif(trim(tes.ticketing_from_name), \'\') IS NOT NULL');
+    expect(statements.join('\n')).toContain('ON DELETE RESTRICT');
+    expect(statements.join('\n')).toContain("create_distributed_table('email_sender_addresses', 'tenant')");
   });
 });

@@ -27,9 +27,6 @@ exports.up = async function up(knex) {
     table.primary(['tenant', 'route_id']);
   });
 
-  await knex.raw("ALTER TABLE email_sender_addresses ADD CONSTRAINT email_sender_addresses_status_check CHECK (verification_status IN ('unverified', 'verified', 'failed'))");
-  await knex.raw("ALTER TABLE email_sender_routes ADD CONSTRAINT email_sender_routes_shape_check CHECK ((route_type = 'default' AND mail_class IS NULL AND board_id IS NULL) OR (route_type = 'mail_class' AND mail_class IS NOT NULL AND board_id IS NULL) OR (route_type = 'board' AND board_id IS NOT NULL AND mail_class IS NULL))");
-  await knex.raw("ALTER TABLE email_sender_routes ADD CONSTRAINT email_sender_routes_value_check CHECK (sender_id IS NOT NULL OR display_name IS NOT NULL)");
   await knex.raw("CREATE UNIQUE INDEX email_sender_routes_default_unique ON email_sender_routes (tenant) WHERE route_type = 'default'");
   await knex.raw("CREATE UNIQUE INDEX email_sender_routes_class_unique ON email_sender_routes (tenant, mail_class) WHERE route_type = 'mail_class'");
   await knex.raw("CREATE UNIQUE INDEX email_sender_routes_board_unique ON email_sender_routes (tenant, board_id) WHERE route_type = 'board'");
@@ -39,6 +36,10 @@ exports.up = async function up(knex) {
     await knex.raw("SELECT create_distributed_table('email_sender_addresses', 'tenant')");
     await knex.raw("SELECT create_distributed_table('email_sender_routes', 'tenant')");
   }
+
+  await knex.raw("ALTER TABLE email_sender_addresses ADD CONSTRAINT email_sender_addresses_status_check CHECK (verification_status IN ('unverified', 'verified', 'failed'))");
+  await knex.raw("ALTER TABLE email_sender_routes ADD CONSTRAINT email_sender_routes_shape_check CHECK ((route_type = 'default' AND mail_class IS NULL AND board_id IS NULL) OR (route_type = 'mail_class' AND mail_class IS NOT NULL AND board_id IS NULL) OR (route_type = 'board' AND board_id IS NOT NULL AND mail_class IS NULL))");
+  await knex.raw("ALTER TABLE email_sender_routes ADD CONSTRAINT email_sender_routes_value_check CHECK (sender_id IS NOT NULL OR display_name IS NOT NULL)");
 
   await knex.raw('ALTER TABLE email_sender_addresses ADD CONSTRAINT email_sender_addresses_tenant_fk FOREIGN KEY (tenant) REFERENCES tenants(tenant) ON DELETE CASCADE');
   await knex.raw('ALTER TABLE email_sender_addresses ADD CONSTRAINT email_sender_addresses_microsoft_provider_fk FOREIGN KEY (microsoft_provider_id, tenant) REFERENCES email_providers(id, tenant) ON DELETE RESTRICT');

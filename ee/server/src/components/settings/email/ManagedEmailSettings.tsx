@@ -51,8 +51,6 @@ import ManagedDomainList from './ManagedDomainList';
 type OutboundProvider = 'resend' | 'smtp' | 'microsoft';
 type EmailSettingsUpdateInput = Omit<Partial<TenantEmailSettings>, 'defaultFromDomain' | 'ticketingFromEmail' | 'ticketingFromName'> & {
   defaultFromDomain?: string | null;
-  ticketingFromEmail?: string | null;
-  ticketingFromName?: string | null;
 };
 
 type ManagedEmailOverrides = {
@@ -366,8 +364,6 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
     try {
       const updates: EmailSettingsUpdateInput = {
         providerConfigs: emailSettings?.providerConfigs,
-        ticketingFromEmail: candidate || null,
-        ticketingFromName: ticketingFromName.trim() || null,
       };
       if (candidate || outboundProvider === 'smtp') {
         updates.defaultFromDomain = outboundDomain || emailSettings?.defaultFromDomain;
@@ -398,8 +394,6 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
     setSavingTicketingFrom(true);
     try {
       const updatedResult = await updateEmailSettings({
-        ticketingFromEmail: null,
-        ticketingFromName: null,
       } satisfies EmailSettingsUpdateInput);
       const updated = resolveEmailSettingsResult(updatedResult, t('managed.messages.ticketingFromClearFailed'));
       if (!updated) {
@@ -700,7 +694,6 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
       if (emailSettings && (removesActiveOutboundDomain || removesTicketingFromDomain)) {
         const updatedSettingsResult = await updateEmailSettings({
           defaultFromDomain: removesActiveOutboundDomain ? null : emailSettings.defaultFromDomain,
-          ticketingFromEmail: removesTicketingFromDomain ? null : emailSettings.ticketingFromEmail,
         } satisfies EmailSettingsUpdateInput);
         const updatedSettings = resolveEmailSettingsResult(
           updatedSettingsResult,
@@ -1098,7 +1091,7 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
               verifiedDomains={domains.filter((domain) => domain.status === 'verified').map((domain) => domain.domain)}
               microsoftMailboxes={microsoftMailboxes.map((mailbox) => ({ providerId: mailbox.providerId, mailbox: mailbox.mailbox, providerName: mailbox.providerName }))}
             />
-            <EmailSenderRoutingCard t={(key, fallback) => t(key, { defaultValue: fallback })} />
+            <EmailSenderRoutingCard t={(key, fallback) => t(key, { defaultValue: fallback })} transport={outboundProvider} />
           </div>
         )}
       </TabsContent>
@@ -1109,17 +1102,6 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
         </div>
         <EmailProviderConfiguration />
       </TabsContent>
-      <ConfirmationDialog
-        isOpen={showClearTicketingFromDialog}
-        onClose={() => setShowClearTicketingFromDialog(false)}
-        onConfirm={handleClearTicketingFrom}
-        title={t('managed.dialogs.clearTicketingFrom.title')}
-        message={t('managed.dialogs.clearTicketingFrom.message')}
-        confirmLabel={t('managed.dialogs.clearTicketingFrom.confirm')}
-        cancelLabel={t('managed.dialogs.cancel')}
-        isConfirming={savingTicketingFrom}
-        id="managed-email-clear-ticketing-from"
-      />
       <ConfirmationDialog
         isOpen={!!pendingDomainRemoval}
         onClose={() => setPendingDomainRemoval(null)}

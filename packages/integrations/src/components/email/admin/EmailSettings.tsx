@@ -726,7 +726,7 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
           </Card>
 
             <EmailSenderAddressesCard t={(key, fallback) => t(key, { defaultValue: fallback })} transport={selectedProvider} verifiedDomains={domains.filter(domain => domain.status === 'verified').map(domain => domain.domain)} microsoftMailboxes={microsoftMailboxes.map(mailbox => ({ providerId: mailbox.providerId, mailbox: mailbox.mailbox, providerName: mailbox.providerName }))} />
-            <EmailSenderRoutingCard t={(key, fallback) => t(key, { defaultValue: fallback })} />
+            <EmailSenderRoutingCard t={(key, fallback) => t(key, { defaultValue: fallback })} transport={selectedProvider} />
 
 
 

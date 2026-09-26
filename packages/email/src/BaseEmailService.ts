@@ -43,6 +43,7 @@ export interface EmailSendResult {
   retryCount?: number;   // current retry attempt (0 = first attempt)
   providerId?: string;
   providerType?: string;
+  sentAt?: Date;
   metadata?: Record<string, any>;
 }
 
@@ -743,6 +744,7 @@ export abstract class BaseEmailService {
         error: result.error,
         providerId: result.providerId,
         providerType: result.providerType,
+        sentAt: result.sentAt,
         metadata: result.metadata
       };
     } catch (error) {

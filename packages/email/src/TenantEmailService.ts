@@ -225,6 +225,10 @@ export class TenantEmailService extends BaseEmailService {
     );
     params.resolvedTenantEmailSettings = providerSnapshot.settings;
 
+    if (params.senderId && !providerSnapshot.settings) {
+      throw new Error(`Outbound sender ${params.senderId} cannot be resolved because tenant email settings are unavailable.`);
+    }
+
     if (providerSnapshot.settings && params.mailClass) {
       const sender = resolveOutboundSender({
         tenantId: this.tenantId,

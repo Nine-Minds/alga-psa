@@ -720,6 +720,9 @@ describe('BoardsSettings ticket status copy flow', () => {
 
     // Editor opened in edit mode with the clicked board's name loaded.
     expect(screen.getByDisplayValue('Support')).toBeInTheDocument();
+    expandSection('inbound');
+    expect(screen.getByText('ticketing.boards.emailSender.label')).toBeInTheDocument();
+    expect(screen.getByText('ticketing.boards.emailSender.inboundWarning')).toBeInTheDocument();
   });
 
   it('keeps the editor open after saving changes to an existing board', async () => {

@@ -320,7 +320,7 @@ async function fetchTaskResourceEmails(
  * @param recipientUserId - Optional user ID for preference checking (only for internal users)
  */
 async function sendNotificationIfEnabled(
-  params: SendEmailParams,
+  params: Omit<SendEmailParams, 'mailClass'>,
   subtypeName: string,
   recipientUserId?: string
 ): Promise<void> {
@@ -455,7 +455,7 @@ async function sendNotificationIfEnabled(
     if (isEmailProviderError && (error as any).isRetryable === true) {
       const queue = EventEmailRetryQueue.getInstance();
       if (queue.isReady()) {
-        await queue.enqueue(params, {
+        await queue.enqueue({ ...params, mailClass: 'project' }, {
           retryAfterMs:
             typeof (error as any).metadata?.retryAfterMs === 'number'
               ? (error as any).metadata.retryAfterMs

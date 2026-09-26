@@ -45,12 +45,10 @@ export const listSelectableSenders = withAuth(async (_user, { tenant }, input: {
   if (!tenant) throw new Error('A tenant is required.');
   const { knex } = await createTenantKnex();
   const db = tenantDb(knex, tenant);
-  const settings = await TenantEmailService.getTenantEmailSettings(tenant, knex);
-  const [allSenders, routes] = await Promise.all([
-    db.table('email_sender_addresses').select('sender_id', 'email_address', 'display_name', 'verification_status'),
+  const [senders, routes] = await Promise.all([
+    db.table('email_sender_addresses').where({ verification_status: 'verified' }).select('sender_id', 'email_address', 'display_name'),
     db.table('email_sender_routes').select('*'),
   ]);
-  const senders = settings?.emailProvider === 'smtp' ? allSenders : allSenders.filter((sender: any) => sender.verification_status === 'verified');
   const effective = input.boardId
     ? routes.find((route: any) => route.route_type === 'board' && route.board_id === input.boardId)
     : null;

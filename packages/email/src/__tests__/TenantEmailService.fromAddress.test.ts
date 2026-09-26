@@ -197,6 +197,7 @@ describe('TenantEmailService from address resolution', () => {
 
   it('fails closed for unverified routed senders instead of silently using the default', () => {
     const settings = buildSettings({
+      emailProvider: 'resend',
       outboundSenders: [{ tenant: 'ignored', sender_id: 'unverified', email_address: 'draft@acme.com', display_name: null, microsoft_provider_id: null, verification_status: 'unverified', verified_at: null, last_verification_error: null, created_at: new Date(), updated_at: new Date() }],
       outboundRoutes: [{ tenant: 'ignored', route_id: 'route-billing', route_type: 'mail_class', mail_class: 'billing', board_id: null, sender_id: 'unverified', display_name: null, created_at: new Date(), updated_at: new Date() }],
     });

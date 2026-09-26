@@ -9,6 +9,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { listSelectableSenders } from '@alga-psa/integrations/actions';
 import CurrencyPicker from '@alga-psa/ui/components/CurrencyPicker';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
@@ -210,6 +211,9 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   const [isWorking, setIsWorking] = useState(false);
   const [approvalRequired, setApprovalRequired] = useState(false);
   const [isSendDialogOpen, setIsSendDialogOpen] = useState(false);
+  const [quoteSenders, setQuoteSenders] = useState<Array<{ sender_id: string; email_address: string }>>([]);
+  const [quoteEffectiveSenderId, setQuoteEffectiveSenderId] = useState<string | null>(null);
+  const [quoteSenderId, setQuoteSenderId] = useState('');
   const [sendRecipients, setSendRecipients] = useState<QuoteRecipient[]>([]);
   const [sendAdditionalEmails, setSendAdditionalEmails] = useState('');
   const [sendMessage, setSendMessage] = useState('');
@@ -757,6 +761,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
       () => sendQuote(quote.quote_id, {
         message: sendMessage.trim() || undefined,
         email_addresses: combined.length > 0 ? combined : undefined,
+        senderId: quoteSenderId || undefined,
       }),
       { notifyStatusChanged: true },
     );
@@ -770,6 +775,15 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
       );
     }
   };
+
+  useEffect(() => {
+    if (!isSendDialogOpen) return;
+    void listSelectableSenders({ mailClass: 'sales' }).then((result) => {
+      setQuoteSenders(result.senders);
+      setQuoteEffectiveSenderId(result.effectiveSenderId);
+      setQuoteSenderId(result.effectiveSenderId ?? '');
+    });
+  }, [isSendDialogOpen]);
 
   const handleResendQuote = async () => {
     if (!quote) return;
@@ -1842,6 +1856,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
             })}
           </DialogDescription>
           <div className="space-y-3 py-2">
+            {quoteSenders.length > 1 && <div className="space-y-1"><label htmlFor="quote-form-send-sender" className="text-sm font-medium">{t('quoteForm.dialogs.send.from', { defaultValue: 'From' })}</label><CustomSelect id="quote-form-send-sender" value={quoteSenderId || quoteEffectiveSenderId || ''} onValueChange={setQuoteSenderId} options={quoteSenders.map(sender => ({ value: sender.sender_id, label: sender.email_address }))} /></div>}
             <label className="flex flex-col gap-1 text-sm font-medium">
               {t('quoteForm.fields.recipients', { defaultValue: 'Recipients' })}
               <QuoteSendRecipientsField

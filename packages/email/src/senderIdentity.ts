@@ -54,7 +54,8 @@ export function resolveOutboundSender(
     break;
   }
   const selectedSender = explicitSender ?? routeSender;
-  if (selectedSender && selectedSender.verification_status !== 'verified' && !request.allowUnverifiedSender && settings.emailProvider !== 'smtp') {
+  const explicitlyConfirmedSmtpRoute = settings.emailProvider === 'smtp' && Boolean(routeSender) && routeSender?.sender_id === selectedSender?.sender_id;
+  if (selectedSender && selectedSender.verification_status !== 'verified' && !request.allowUnverifiedSender && !explicitlyConfirmedSmtpRoute) {
     throw new Error(`Outbound sender ${selectedSender.email_address} is ${selectedSender.verification_status} and cannot be used for ${route?.route_type ?? 'this send'} routing`);
   }
   const legacy = !explicitSender && !routeSender && !route?.display_name && request.from

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
-import { createTenantKnex, runWithTenant } from '@alga-psa/db';
+import { createTenantKnex, runWithTenant, tenantDb } from '@alga-psa/db';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { TenantEmailService, StaticTemplateProcessor } from '@alga-psa/email';
 import { verifyAttachmentLink } from '@shared/lib/ticketCommentAttachmentToken';
