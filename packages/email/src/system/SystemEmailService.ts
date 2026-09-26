@@ -31,7 +31,7 @@ interface SystemProviderSnapshot {
 }
 
 // Extend BaseEmailParams for system-specific parameters
-export interface SystemEmailParams extends BaseEmailParams {
+export interface SystemEmailParams extends Omit<BaseEmailParams, 'mailClass'> {
   subject?: string;
   html?: string;
   text?: string;
@@ -267,6 +267,8 @@ export class SystemEmailService extends BaseEmailService {
     const providerSnapshot = await this.refreshProviderState();
     return super.sendEmail({
       ...params,
+      to: params.to ?? '',
+      mailClass: 'general',
       resolvedSystemFromAddress: providerSnapshot.fromAddress,
       resolvedEmailProvider: providerSnapshot.emailProvider,
       resolvedProviderInitError: providerSnapshot.providerInitError,

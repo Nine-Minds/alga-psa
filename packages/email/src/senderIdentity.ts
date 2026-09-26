@@ -1,6 +1,83 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import type { EmailAddress, TenantEmailSettings } from '@alga-psa/types';
+import type { EmailAddress, OutboundMailClass, OutboundEmailSender, OutboundEmailRoute, TenantEmailSettings } from '@alga-psa/types';
+
+export interface OutboundSenderRequest {
+  tenantId: string;
+  mailClass: OutboundMailClass;
+  boardId?: string;
+  senderId?: string;
+  from?: string | EmailAddress;
+  fromName?: string;
+}
+
+export interface ResolvedOutboundSender {
+  from: EmailAddress;
+  microsoftProviderId?: string;
+  sender?: OutboundEmailSender;
+  route?: OutboundEmailRoute;
+}
+
+export function resolveOutboundSender(
+  request: OutboundSenderRequest,
+  settings: TenantEmailSettings,
+  tenantCompanyName?: string | null,
+  boardName?: string | null,
+): ResolvedOutboundSender {
+  const senders = settings.outboundSenders ?? [];
+  const routes = settings.outboundRoutes ?? [];
+  const explicitSender = request.senderId
+    ? senders.find((sender) => sender.sender_id === request.senderId)
+    : undefined;
+  if (request.senderId && (!explicitSender || explicitSender.tenant !== request.tenantId)) {
+    throw new Error(`Outbound sender ${request.senderId} does not belong to tenant ${request.tenantId}`);
+  }
+
+  const matchingRoutes = !explicitSender ? [
+    ...(request.mailClass === 'ticket' && request.boardId
+      ? routes.filter((item) => item.route_type === 'board' && item.board_id === request.boardId)
+      : []),
+    ...routes.filter((item) => item.route_type === 'mail_class' && item.mail_class === request.mailClass),
+    ...routes.filter((item) => item.route_type === 'default'),
+  ] : [];
+  const route = matchingRoutes.find((item) => item.display_name) ?? matchingRoutes[0];
+  let routeSender: OutboundEmailSender | undefined;
+  for (const candidate of matchingRoutes) {
+    if (!candidate.sender_id) continue;
+    routeSender = senders.find((sender) => sender.sender_id === candidate.sender_id);
+    if (!routeSender) {
+      throw new Error(`Outbound route ${candidate.route_type}:${candidate.mail_class ?? candidate.board_id ?? 'default'} references a missing sender`);
+    }
+    break;
+  }
+  const selectedSender = explicitSender ?? routeSender;
+  if (selectedSender && selectedSender.verification_status !== 'verified') {
+    throw new Error(`Outbound sender ${selectedSender.email_address} is ${selectedSender.verification_status} and cannot be used for ${route?.route_type ?? 'this send'} routing`);
+  }
+  const legacy = !explicitSender && !routeSender && !route?.display_name && request.from
+    ? parseEmailAddress(request.from)
+    : null;
+  const fallback = !explicitSender && !routeSender && !legacy
+    ? resolveDefaultFromAddress(settings, tenantCompanyName)
+    : null;
+  const from = explicitSender
+    ? { email: explicitSender.email_address, name: explicitSender.display_name ?? undefined }
+    : routeSender
+      ? { email: routeSender.email_address, name: routeSender.display_name ?? undefined }
+      : legacy ?? fallback ?? resolveDefaultFromAddress(settings, tenantCompanyName);
+  const name = request.fromName?.trim()
+    || route?.display_name?.trim()
+    || (explicitSender ?? routeSender)?.display_name?.trim()
+    || (request.mailClass === 'ticket' ? boardName?.trim() || 'Support' : '')
+    || from.name
+    || undefined;
+  return {
+    from: { email: from.email, ...(name ? { name } : {}) },
+    microsoftProviderId: selectedSender?.microsoft_provider_id ?? undefined,
+    sender: selectedSender,
+    route,
+  };
+}
 
 export function parseEmailAddress(value?: string | EmailAddress | null): EmailAddress | null {
   if (!value) {

@@ -102,6 +102,7 @@ describe('TenantEmailService system-Resend fallback smoke', () => {
     const service = TenantEmailService.getInstance(tenantId);
 
     await expect(service.sendEmail({
+      mailClass: 'general',
       tenantId,
       to: 'customer@example.test',
       subject: 'Fallback status',

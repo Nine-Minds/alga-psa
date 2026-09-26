@@ -103,6 +103,8 @@ export interface TenantEmailSettings {
   maxDailyEmails?: number;
   createdAt: Date;
   updatedAt: Date;
+  outboundSenders?: OutboundEmailSender[];
+  outboundRoutes?: OutboundEmailRoute[];
 }
 
 export type OutboundMailClass =

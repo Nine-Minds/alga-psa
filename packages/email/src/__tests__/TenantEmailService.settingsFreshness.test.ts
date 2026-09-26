@@ -140,6 +140,7 @@ describe('TenantEmailService settings freshness', () => {
   it('reloads provider credentials and notification identity on a reused instance', async () => {
     const service = TenantEmailService.getInstance('tenant-settings-freshness');
     const params = {
+      mailClass: 'general' as const,
       tenantId: 'tenant-settings-freshness',
       to: 'client@example.test',
       subject: 'Status update',
@@ -222,6 +223,7 @@ describe('TenantEmailService settings freshness', () => {
     });
 
     const firstSend = service.sendEmail({
+      mailClass: 'general',
       tenantId: 'tenant-settings-freshness',
       to: 'first@example.test',
       templateProcessor: {
@@ -240,6 +242,7 @@ describe('TenantEmailService settings freshness', () => {
       fromName: 'New Notifications',
     });
     await service.sendEmail({
+      mailClass: 'general',
       tenantId: 'tenant-settings-freshness',
       to: 'second@example.test',
       subject: 'Second',

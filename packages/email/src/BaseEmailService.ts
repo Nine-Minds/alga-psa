@@ -12,6 +12,7 @@ import { publishWorkflowEvent, type WorkflowActor } from '@alga-psa/event-bus/pu
 import { embedBrandLogo } from './inlineBrandLogo';
 import { SupportedLocale } from './lib/localeConfig';
 import type { Knex } from 'knex';
+import type { OutboundMailClass } from '@alga-psa/types';
 
 const tenantScopedTable = (knex: Knex | Knex.Transaction, table: string, tenant: string) =>
   tenantDb(knex, tenant).table(table);
@@ -62,6 +63,9 @@ export interface EmailTemplateContent {
 }
 
 export interface BaseEmailParams {
+  mailClass: OutboundMailClass;
+  boardId?: string;
+  senderId?: string;
   revalidateCommentOnRetry?: boolean;
   to: string | string[] | EmailAddress | EmailAddress[];
   from?: string | EmailAddress;

@@ -24,6 +24,7 @@ import {
   applyFromNameOverride,
   parseEmailAddress,
   resolveDefaultFromAddress,
+  resolveOutboundSender,
   resolveTenantCompanyName,
 } from './senderIdentity';
 
@@ -33,6 +34,9 @@ export interface SendEmailParams {
   templateData?: Record<string, any>;
   from?: EmailAddress;
   fromName?: string;
+  mailClass?: import('@alga-psa/types').OutboundMailClass;
+  boardId?: string;
+  senderId?: string;
   cc?: EmailAddress[];
   bcc?: EmailAddress[];
   attachments?: any[];
@@ -121,10 +125,7 @@ export class TenantEmailService extends BaseEmailService {
    * Override sendEmail to support provider-specific routing and rate limiting
    */
   public async sendEmail(params: BaseEmailParams): Promise<EmailSendResult> {
-    // Note: We are intentionally ignoring params.providerId for routing purposes.
-    // All outbound emails should go through the configured outbound provider (e.g. Resend/SMTP).
-    // The providerId from ticket metadata is used upstream (in ticketEmailSubscriber) to resolve
-    // the correct 'From' address, which is passed in params.from.
+    // The inbound provider id describes where a ticket arrived; outbound identity is resolved by mail class and route.
 
     // Belt-and-braces: no tenant-scoped email leaves a suspended tenant
     // (cancelled, pending deletion) even if some generator was missed by the
@@ -355,10 +356,21 @@ export class TenantEmailService extends BaseEmailService {
       return params.resolvedSystemFallbackFromAddress;
     }
 
-    const resolved = params?.from
-      ? params.from as EmailAddress | string
-      : params?.resolvedTenantFromAddress
-        ?? this.buildTenantFromAddress(params?.resolvedTenantCompanyName);
+    const settings = this.tenantSettings;
+    if (params && settings) {
+      const routed = resolveOutboundSender({
+        tenantId: this.tenantId,
+        mailClass: params.mailClass,
+        boardId: params.boardId,
+        senderId: params.senderId,
+        from: params.from,
+        fromName: params.fromName,
+      }, settings, params.resolvedTenantCompanyName, params.boardName);
+      return routed.from;
+    }
+    const resolved = params?.from as EmailAddress | string | undefined
+      ?? params?.resolvedTenantFromAddress
+      ?? this.buildTenantFromAddress(params?.resolvedTenantCompanyName);
     return applyFromNameOverride(resolved, params?.fromName);
   }
 
@@ -470,6 +482,7 @@ export class TenantEmailService extends BaseEmailService {
     // Convert params to BaseEmailParams format
     const baseParams: BaseEmailParams = {
       to: params.to,
+      mailClass: params.mailClass ?? 'general',
       cc: params.cc,
       bcc: params.bcc,
       attachments: params.attachments,
@@ -718,15 +731,23 @@ export class TenantEmailService extends BaseEmailService {
     tenantId: string,
     knex: Knex | Knex.Transaction
   ): Promise<TenantEmailSettings | null> {
-    const settings = await tenantDb(knex, tenantId).table('tenant_email_settings')
-      .first();
+    const db = tenantDb(knex, tenantId);
+    const [settings, outboundSenders, outboundRoutes] = await Promise.all([
+      db.table('tenant_email_settings').first(),
+      db.table('email_sender_addresses').select('*'),
+      db.table('email_sender_routes').select('*'),
+    ]);
 
     if (!settings) {
       logger.warn(`[TenantEmailService] No email settings found for tenant ${tenantId}`);
       return null;
     }
 
-    return TenantEmailService.normalizeSettingsRecord(tenantId, settings);
+    return {
+      ...TenantEmailService.normalizeSettingsRecord(tenantId, settings),
+      outboundSenders,
+      outboundRoutes,
+    };
   }
 
   /**

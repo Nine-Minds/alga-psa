@@ -45,6 +45,9 @@ export type {
   DnsRecord,
   DnsLookupResult,
   TenantEmailSettings,
+  OutboundMailClass,
+  OutboundEmailSender,
+  OutboundEmailRoute,
   IEmailProvider,
   IEmailProviderManager
 } from './lib/email';
