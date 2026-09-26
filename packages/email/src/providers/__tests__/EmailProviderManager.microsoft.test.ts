@@ -6,12 +6,14 @@ const {
   connectMock,
   sendMailMock,
   testConnectionMock,
+  smtpSendMock,
   tableRows,
 } = vi.hoisted(() => ({
   buildConfigMock: vi.fn(async (config: any) => config),
   connectMock: vi.fn(async () => undefined),
   sendMailMock: vi.fn(async () => ({ requestId: 'request-1' })),
   testConnectionMock: vi.fn(async () => ({ success: true })),
+  smtpSendMock: vi.fn(async () => ({ success: true, messageId: 'smtp-message-1', providerId: 'smtp-provider', providerType: 'smtp', sentAt: new Date() })),
   tableRows: {
     email_providers: null as any,
     microsoft_email_provider_config: null as any,
@@ -44,6 +46,16 @@ vi.mock('@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter', () =>
     connect = connectMock;
     sendMail = sendMailMock;
     testConnection = testConnectionMock;
+  },
+}));
+
+vi.mock('../SMTPEmailProvider', () => ({
+  SMTPEmailProvider: class {
+    providerId: string;
+    providerType = 'smtp';
+    constructor(providerId: string) { this.providerId = providerId; }
+    initialize = vi.fn(async () => undefined);
+    sendEmail = smtpSendMock;
   },
 }));
 
@@ -166,5 +178,28 @@ describe('EmailProviderManager Microsoft Graph support', () => {
       errorCode: 'MICROSOFT_PROVIDER_NOT_CONNECTED',
     });
     expect(connectMock).not.toHaveBeenCalled();
+  });
+
+  it('ignores a stale Microsoft sender link when SMTP is the active transport', async () => {
+    const manager = new EmailProviderManager();
+    await manager.initialize({
+      ...settings(),
+      emailProvider: 'smtp',
+      providerConfigs: [{
+        providerId: 'smtp-provider',
+        providerType: 'smtp',
+        isEnabled: true,
+        config: { host: 'smtp.example.test', port: 587, from: 'support@example.com' },
+      }],
+    });
+
+    const result = await manager.sendEmail({
+      ...message('SMTP with stale Microsoft link'),
+      microsoftProviderId: 'old-inbound-microsoft-id',
+    }, 'tenant-1');
+
+    expect(smtpSendMock).toHaveBeenCalledWith(expect.objectContaining({ subject: 'SMTP with stale Microsoft link' }), 'tenant-1');
+    expect(result).toMatchObject({ success: true, providerType: 'smtp' });
+    expect(buildConfigMock).not.toHaveBeenCalled();
   });
 });

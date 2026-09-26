@@ -77,7 +77,9 @@ export function resolveOutboundSender(
     || undefined;
   return {
     from: { email: from.email, ...(name ? { name } : {}) },
-    microsoftProviderId: selectedSender?.microsoft_provider_id ?? undefined,
+    microsoftProviderId: settings.emailProvider?.toLowerCase() === 'microsoft'
+      ? selectedSender?.microsoft_provider_id ?? undefined
+      : undefined,
     sender: selectedSender,
     route,
   };

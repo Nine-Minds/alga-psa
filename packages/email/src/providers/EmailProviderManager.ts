@@ -80,7 +80,8 @@ export class EmailProviderManager implements IEmailProviderManager {
   }
 
   async sendEmail(message: EmailMessage, tenantId: string): Promise<EmailSendResult> {
-    const requestedProviderId = message.microsoftProviderId;
+    const activeTransport = this.tenantSettings.get(tenantId)?.emailProvider?.toLowerCase();
+    const requestedProviderId = activeTransport === 'microsoft' ? message.microsoftProviderId : undefined;
     if (requestedProviderId && !this.providerCache.has(requestedProviderId)) {
       const microsoftConfig = this.tenantSettings.get(tenantId)?.providerConfigs.find(config => config.providerType === 'microsoft' && config.isEnabled);
       if (microsoftConfig) {

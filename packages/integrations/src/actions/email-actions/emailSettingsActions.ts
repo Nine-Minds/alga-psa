@@ -321,22 +321,29 @@ export const updateEmailSettings = withAuth(async (
       updated_at: now
     };
 
-    const settingsTable = () => tenantDb(knex, tenant).table('tenant_email_settings');
+    await knex.transaction(async (trx) => {
+      const settingsTable = () => tenantDb(trx, tenant).table('tenant_email_settings');
 
-    // Check if settings exist
-    const existing = await settingsTable().first();
+      // Check if settings exist
+      const existing = await settingsTable().first();
 
-    if (existing) {
-      // Update existing settings
-      await settingsTable().update(settingsData);
-    } else {
-      // Create new settings
-      await settingsTable()
-        .insert({
-          ...settingsData,
-          created_at: now
-        });
-    }
+      if (existing) {
+        // Update settings and transport-specific sender links together.
+        await settingsTable().update(settingsData);
+      } else {
+        await settingsTable()
+          .insert({
+            ...settingsData,
+            created_at: now
+          });
+      }
+
+      if (selectedProviderType.toLowerCase() !== 'microsoft') {
+        await tenantDb(trx, tenant).table('email_sender_addresses')
+          .whereNotNull('microsoft_provider_id')
+          .update({ microsoft_provider_id: null, updated_at: now });
+      }
+    });
 
     // Refresh any process-local singleton immediately. TenantEmailService also
     // checks persisted settings before every send, covering other processes and

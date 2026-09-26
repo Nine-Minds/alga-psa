@@ -81,4 +81,18 @@ describe('resolveOutboundSender', () => {
     };
     expect(resolveOutboundSender({ tenantId: tenant, mailClass: 'survey', boardId: 'board-1' }, unverifiedSmtp).from.email).toBe('billing@example.test');
   });
+
+  it('does not return a Microsoft provider link for a sender on an SMTP tenant', () => {
+    const staleMicrosoftLink: TenantEmailSettings = {
+      ...settings,
+      emailProvider: 'smtp',
+      outboundSenders: settings.outboundSenders?.map(sender => sender.sender_id === 'support'
+        ? { ...sender, microsoft_provider_id: 'inbound-microsoft-1' }
+        : sender),
+    };
+
+    const resolved = resolveOutboundSender({ tenantId: tenant, mailClass: 'ticket' }, staleMicrosoftLink);
+    expect(resolved.from.email).toBe('support@example.test');
+    expect(resolved.microsoftProviderId).toBeUndefined();
+  });
 });

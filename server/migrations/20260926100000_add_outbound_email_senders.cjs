@@ -56,6 +56,7 @@ exports.up = async function up(knex) {
     LEFT JOIN email_providers ep
       ON ep.tenant = tes.tenant AND lower(ep.mailbox) = lower(trim(tes.ticketing_from_email))
       AND ep.provider_type = 'microsoft'
+      AND lower(tes.email_provider) = 'microsoft'
     LEFT JOIN email_domains ed
       ON ed.tenant = tes.tenant
       AND ed.domain_name = lower(split_part(trim(tes.ticketing_from_email), '@', 2))
@@ -77,6 +78,7 @@ exports.up = async function up(knex) {
     LEFT JOIN email_providers ep
       ON ep.tenant = tes.tenant AND lower(ep.mailbox) = lower(trim(tes.ticketing_from_email))
       AND ep.provider_type = 'microsoft'
+      AND lower(tes.email_provider) = 'microsoft'
     WHERE (nullif(trim(tes.ticketing_from_email), '') IS NOT NULL
        OR nullif(trim(tes.ticketing_from_name), '') IS NOT NULL)
       AND (esa.verification_status = 'verified'
