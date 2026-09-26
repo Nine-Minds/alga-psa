@@ -529,3 +529,18 @@ Follow-up fixes from human review of the recurring-terms repair.
 | `tsc --noEmit` billing | pass |
 | `eslint` changed/new files | 0 errors |
 | `packages/billing` `npx tsup` | pass |
+
+## Billed contract-line edit repair (2026-09-26)
+
+The review guide's step 1 now uses Mountain Dental's billed fixed line on
+`SMOKE Contract Cadence 20260716-2300`, claimed by draft invoice `SMOKE-ADJ-1`.
+The reviewer should record its current invoice text and dates, save a text change
+and valid future end date, reload and confirm persistence, then try an end date
+inside the invoice's actual service period. The server should reject that edit
+with the latest protected service-period end and leave stored values unchanged.
+Finally restore and verify the original values.
+
+Current-revision browser evidence is outstanding: the existing review app build
+has not been proven to contain the repair, and the application server for this
+worktree remains stopped. The earlier unbilled-line screenshots do not verify
+this billed-history repair.

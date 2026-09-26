@@ -552,7 +552,8 @@
       "startDate": "Startdatum",
       "endDate": "Einddatum",
       "inheritsContract": "Contractstart",
-      "inheritsContractEnd": "Contracteinde"
+      "inheritsContractEnd": "Contracteinde",
+      "billedEditExplanation": "Na facturering blijven factuurtekst en regeldatums bewerkbaar. Datums mogen al gefactureerde of geclaimde serviceperioden niet uitsluiten; tarieven en aantallen worden prospectief gewijzigd."
     },
     "customRate": "Aangepast",
     "description": {
@@ -568,13 +569,14 @@
       "selectAbove": "Selecteer hierboven een contractregel om te beginnen."
     },
     "errors": {
-      "cannotEditWithInvoices": "Kan contractregel niet bewerken: dit contract heeft bijbehorende facturen. Contractregels kunnen niet worden bewerkt zodra facturen zijn gegenereerd.",
       "failedToCheckEditable": "Controleren of contract kan worden bewerkt is mislukt",
       "failedToLoad": "Contractregels laden is mislukt",
       "failedToRefresh": "Contractregels vernieuwen is mislukt",
       "failedToRemove": "Contractregel verwijderen is mislukt",
       "failedToUpdate": "Contractregel bijwerken is mislukt",
-      "failedToResetRate": "Kan het regeltarief niet opnieuw instellen"
+      "failedToResetRate": "Kan het regeltarief niet opnieuw instellen",
+      "protectedStartDate": "De startdatum moet op of vóór {{boundary}} liggen om beschermde servicehistorie mee te nemen.",
+      "protectedEndDate": "De einddatum moet op of na {{boundary}} liggen om beschermde servicehistorie mee te nemen."
     },
     "loading": {
       "contractLines": "Contractregels laden",

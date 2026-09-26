@@ -28,6 +28,44 @@ import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib
 
 type ContractLineActionError = ActionMessageError | ActionPermissionError;
 
+async function getProtectedContractLinePeriods(trx: Knex | Knex.Transaction, tenant: string, contractLineId: string, lockRows = false) {
+    const db = tenantDb(trx, tenant);
+    const periods: Array<{ start: string; end: string }> = [];
+    let claimsQuery = db.table('recurring_service_periods')
+        .whereIn('obligation_type', ['contract_line', 'client_contract_line'])
+        .where('obligation_id', contractLineId)
+        .select('lifecycle_state', 'service_period_start as start', 'service_period_end as end');
+    if (lockRows && 'forUpdate' in claimsQuery) claimsQuery = claimsQuery.forUpdate();
+    const allClaims = await claimsQuery;
+    const claimed = allClaims.filter((p: any) => p.lifecycle_state === 'billed' || p.lifecycle_state === 'locked');
+    periods.push(...claimed.map((p: any) => ({ start: String(p.start).slice(0, 10), end: String(p.end).slice(0, 10) })));
+
+    // Detail rows are the canonical line-level invoice relationship. Joining
+    // through configuration keeps draft invoices in scope without treating an
+    // unrelated line on the same contract as history for this line.
+    const detailQuery = db.table('invoice_charge_details as iid');
+    db.tenantJoin(detailQuery, 'contract_line_service_configuration as clsc', 'iid.config_id', 'clsc.config_id');
+    db.tenantJoin(detailQuery, 'invoice_charges as ic', 'iid.item_id', 'ic.item_id');
+    const details = await detailQuery.where('clsc.contract_line_id', contractLineId)
+        .whereNotNull('iid.service_period_start').whereNotNull('iid.service_period_end')
+        .select('iid.service_period_start as start', 'iid.service_period_end as end');
+    periods.push(...details.map((p: any) => ({ start: String(p.start).slice(0, 10), end: String(p.end).slice(0, 10) })));
+    return {
+        earliestStart: periods.length ? periods.map(p => p.start).sort()[0] : null,
+        latestEnd: periods.length ? periods.map(p => p.end).sort().at(-1)! : null,
+    };
+}
+
+export const hasContractLineProtectedHistory = withAuth(async (
+    user, { tenant }, contractLineId: string,
+): Promise<boolean | ContractLineActionError> => {
+    const { knex } = await createTenantKnex();
+    if (!tenant) throw new Error('tenant context not found');
+    if (!await hasPermission(user, 'billing', 'update', knex)) throw new Error('Permission denied: Cannot update contract lines');
+    const bounds = await getProtectedContractLinePeriods(knex, tenant, contractLineId);
+    return Boolean(bounds.earliestStart || bounds.latestEnd);
+});
+
 function contractLineActionErrorFrom(error: unknown): ContractLineActionError | null {
     if (error instanceof Error && error.message.startsWith('Permission denied:')) {
         return permissionError(error.message);
@@ -49,9 +87,14 @@ function contractLineActionErrorFrom(error: unknown): ContractLineActionError | 
         if (error.message.includes('must be zero or greater')) {
             return actionError(error.message);
         }
-        if (error.message.startsWith('Line start date') || error.message.startsWith('Line end date')) {
-            return actionError(error.message);
+        if (error.message.startsWith('Protected line start date') || error.message.startsWith('Protected line end date')) {
+            const start = error.message.startsWith('Protected line start date');
+            return actionError(error.message, start
+                ? 'msp/contracts:contractLines.errors.protectedStartDate'
+                : 'msp/contracts:contractLines.errors.protectedEndDate',
+                { boundary: error.message.match(/on or (?:before|after) ([0-9-]+)/)?.[1] ?? '' });
         }
+        if (error.message.startsWith('Line start date') || error.message.startsWith('Line end date')) return actionError(error.message);
     }
 
     const dbError = error as { code?: string; column?: string };
@@ -284,6 +327,8 @@ export const updateContractLine = withAuth(async (
             }
 
             // Fetch the existing plan to check its type
+            await tenantDb(trx, tenant).table('contract_lines')
+                .where('contract_line_id', planId).forUpdate().first('contract_line_id');
             const existingPlan = await ContractLine.findById(trx, planId);
             if (!existingPlan) {
                 // Handle case where plan is not found before update attempt
@@ -317,6 +362,22 @@ export const updateContractLine = withAuth(async (
             }
             if ('end_date' in safeUpdateData) {
                 safeUpdateData.end_date = normalizeContractLineDate(safeUpdateData.end_date);
+            }
+            const protectedPeriods = await getProtectedContractLinePeriods(trx, tenant, planId, true);
+            const proposedStart = 'start_date' in safeUpdateData ? safeUpdateData.start_date : existingPlan.start_date;
+            const proposedEnd = 'end_date' in safeUpdateData ? safeUpdateData.end_date : existingPlan.end_date;
+            const updatesWindow = 'start_date' in safeUpdateData || 'end_date' in safeUpdateData;
+            if (updatesWindow && protectedPeriods.earliestStart && (
+                (proposedStart == null && existingPlan.start_date != null) ||
+                (proposedStart != null && proposedStart > protectedPeriods.earliestStart)
+            )) {
+                throw new Error(`Protected line start date must be on or before ${protectedPeriods.earliestStart} because that is the earliest protected service-period start.`);
+            }
+            if (updatesWindow && protectedPeriods.latestEnd && (
+                (proposedEnd == null && existingPlan.end_date != null) ||
+                (proposedEnd != null && proposedEnd < protectedPeriods.latestEnd)
+            )) {
+                throw new Error(`Protected line end date must be on or after ${protectedPeriods.latestEnd} because that is the latest protected service-period end.`);
             }
             if (typeof safeUpdateData.invoice_line_description === 'string') {
                 safeUpdateData.invoice_line_description = safeUpdateData.invoice_line_description.trim() || null;

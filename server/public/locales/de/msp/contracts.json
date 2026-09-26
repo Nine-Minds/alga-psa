@@ -552,7 +552,8 @@
       "startDate": "Startdatum",
       "endDate": "Enddatum",
       "inheritsContract": "Vertragsbeginn",
-      "inheritsContractEnd": "Vertragsende"
+      "inheritsContractEnd": "Vertragsende",
+      "billedEditExplanation": "Nach einer Abrechnung bleiben Rechnungstext und Liniendaten bearbeitbar. Start- und Enddaten dürfen bereits abgerechnete oder beanspruchte Leistungszeiträume nicht ausschließen; Preise und Mengen werden prospektiv geändert."
     },
     "customRate": "Benutzerdefiniert",
     "description": {
@@ -568,13 +569,14 @@
       "selectAbove": "Wählen Sie oben eine Vertragslinie aus, um zu beginnen."
     },
     "errors": {
-      "cannotEditWithInvoices": "Vertragslinie kann nicht bearbeitet werden: Zu diesem Vertrag gibt es zugeordnete Rechnungen. Vertragslinien können nicht mehr bearbeitet werden, sobald Rechnungen erstellt wurden.",
       "failedToCheckEditable": "Prüfung, ob der Vertrag bearbeitet werden kann, fehlgeschlagen",
       "failedToLoad": "Vertragslinien konnten nicht geladen werden",
       "failedToRefresh": "Vertragslinien konnten nicht aktualisiert werden",
       "failedToRemove": "Vertragslinie konnte nicht entfernt werden",
       "failedToUpdate": "Vertragslinie konnte nicht aktualisiert werden",
-      "failedToResetRate": "Zurücksetzen des Positionspreises fehlgeschlagen"
+      "failedToResetRate": "Zurücksetzen des Positionspreises fehlgeschlagen",
+      "protectedStartDate": "Das Startdatum muss am oder vor dem {{boundary}} liegen, damit geschützte Leistungszeiträume enthalten bleiben.",
+      "protectedEndDate": "Das Enddatum muss am oder nach dem {{boundary}} liegen, damit geschützte Leistungszeiträume enthalten bleiben."
     },
     "loading": {
       "contractLines": "Vertragslinien werden geladen",

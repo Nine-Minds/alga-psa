@@ -10,13 +10,12 @@ import { Plus, ChevronDown, ChevronUp, Trash2, Package, Edit, Check, X, Loader2,
 import { IContract, IContractLineServiceRateTier } from '@alga-psa/types';
 import { UsageServiceConfigPanel } from '../service-configurations/UsageServiceConfigPanel';
 import { getNextContractServiceBoundary } from '@alga-psa/billing/actions/contractLineSemanticsActions';
-import { updateContractLine } from '@alga-psa/billing/actions/contractLineAction';
+import { hasContractLineProtectedHistory, updateContractLine } from '@alga-psa/billing/actions/contractLineAction';
 import {
   getDetailedContractLines,
   removeContractLine,
   updateContractLineAssociation,
 } from '@alga-psa/billing/actions/contractLineMappingActions';
-import { checkContractHasInvoices } from '@alga-psa/billing/actions/contractActions';
 import { resetContractLineRateToStandard, previewContractLineRateReset } from '@alga-psa/billing/actions/rateReviewActions';
 import {
   applyContractLineServiceMembershipChanges,
@@ -613,14 +612,11 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
     if (!contract.contract_id) return;
 
     try {
-      // Check if contract has invoices
-      const hasInvoices = await checkContractHasInvoices(contract.contract_id);
+      // Use line-level claimed/invoiced history to decide whether ordinary
+      // terms stay locked while keeping the narrow text/window editor available.
+      const hasInvoices = await hasContractLineProtectedHistory(line.contract_line_id);
 
       const services = await loadServicesForLine(line.contract_line_id);
-      if (hasInvoices && !services.some(service => service.typeConfig?.pricing_basis === 'unit' || service.configuration.configuration_type === 'Usage')) {
-        setError(t('contractLines.errors.cannotEditWithInvoices', {defaultValue: 'This contract has invoices. Use a prospective service configuration change to preserve billed history.'}));
-        return;
-      }
       setPricingOnly(Boolean(hasInvoices));
       const boundary = await getNextContractServiceBoundary(line.contract_line_id);
       if (isReturnedActionError(boundary)) { setError(getErrorMessage(boundary)); return; }
@@ -773,18 +769,24 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
     try {
       // Persist recurring authoring fields in one mutation so service periods
       // are rematerialized once from the final contract-line state.
-      const updateResult = pricingOnly ? true : await updateContractLine(contractLineId, {
+      const narrowInvoiceEdit = {
+        invoice_line_description: editLineData.invoice_line_description?.trim() || null,
+        start_date: editLineData.start_date || null,
+        end_date: editLineData.end_date || null,
+      };
+      const updateResult = await updateContractLine(contractLineId, pricingOnly ? narrowInvoiceEdit : {
         billing_timing: editLineData.billing_timing,
         cadence_owner: editLineData.cadence_owner,
         minimum_billable_time: editLineData.minimum_billable_time,
         round_up_to_nearest: editLineData.round_up_to_nearest,
         location_id: editLineData.location_id ?? null,
-        invoice_line_description: editLineData.invoice_line_description?.trim() || null,
-        start_date: editLineData.start_date || null,
-        end_date: editLineData.end_date || null,
+        ...narrowInvoiceEdit,
       });
       if (isReturnedActionError(updateResult)) {
-        setError(getErrorMessage(updateResult));
+        const actionError = updateResult as { messageKey?: string; messageParams?: Record<string, string | number> };
+        setError(actionError.messageKey
+          ? t(actionError.messageKey, { ...(actionError.messageParams ?? {}), defaultValue: getErrorMessage(updateResult) })
+          : getErrorMessage(updateResult));
         return;
       }
       // If the saved line adopts a pending location, drop it from the pending set
@@ -1549,7 +1551,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                                   {t('contractLines.configuration.invoiceText', { defaultValue: 'Invoice line text' })}
                                 </Label>
-                                {editingLineId === line.contract_line_id && !pricingOnly ? (
+                                {editingLineId === line.contract_line_id ? (
                                   <Input
                                     id={`invoice-text-${line.contract_line_id}`}
                                     value={editLineData.invoice_line_description ?? ''}
@@ -1573,7 +1575,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                                   {t('contractLines.configuration.startDate', { defaultValue: 'Start date' })}
                                 </Label>
-                                {editingLineId === line.contract_line_id && !pricingOnly ? (
+                                {editingLineId === line.contract_line_id ? (
                                   <Input
                                     id={`line-start-date-${line.contract_line_id}`}
                                     type="date"
@@ -1594,7 +1596,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                                   {t('contractLines.configuration.endDate', { defaultValue: 'End date' })}
                                 </Label>
-                                {editingLineId === line.contract_line_id && !pricingOnly ? (
+                                {editingLineId === line.contract_line_id ? (
                                   <Input
                                     id={`line-end-date-${line.contract_line_id}`}
                                     type="date"
@@ -1612,6 +1614,11 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                 )}
                               </div>
                             </div>
+                            {pricingOnly && editingLineId === line.contract_line_id && (
+                              <p className="text-sm text-[rgb(var(--color-text-600))]">
+                                {t('contractLines.configuration.billedEditExplanation', { defaultValue: 'After a line has billed, invoice text and line dates remain editable. Dates cannot exclude service periods already billed or claimed; rates and quantities use prospective changes.' })}
+                              </p>
+                            )}
 
                             <div className="grid gap-4 md:grid-cols-2">
                               {line.contract_line_type === 'Hourly' && (

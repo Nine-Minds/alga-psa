@@ -552,7 +552,8 @@
       "startDate": "Data de início",
       "endDate": "Data de término",
       "inheritsContract": "Início do contrato",
-      "inheritsContractEnd": "Fim do contrato"
+      "inheritsContractEnd": "Fim do contrato",
+      "billedEditExplanation": "Depois que uma linha é faturada, o texto da fatura e as datas continuam editáveis. As datas não podem excluir períodos de serviço já faturados ou reivindicados; tarifas e quantidades são alteradas prospectivamente."
     },
     "customRate": "Personalizado",
     "description": {
@@ -568,13 +569,14 @@
       "selectAbove": "Selecione uma linha de contrato acima para começar."
     },
     "errors": {
-      "cannotEditWithInvoices": "Não é possível editar a linha de contrato: este contrato tem faturas associadas. As linhas de contrato não podem ser editadas depois que as faturas forem geradas.",
       "failedToCheckEditable": "Falha ao verificar se o contrato pode ser editado",
       "failedToLoad": "Falha ao carregar linhas de contrato",
       "failedToRefresh": "Falha ao atualizar linhas de contrato",
       "failedToRemove": "Falha ao remover a linha de contrato",
       "failedToUpdate": "Falha ao atualizar a linha de contrato",
-      "failedToResetRate": "Falha ao redefinir o preço da linha"
+      "failedToResetRate": "Falha ao redefinir o preço da linha",
+      "protectedStartDate": "A data de início deve ser {{boundary}} ou anterior para incluir o histórico protegido.",
+      "protectedEndDate": "A data de término deve ser {{boundary}} ou posterior para incluir o histórico protegido."
     },
     "loading": {
       "contractLines": "Carregando linhas de contrato",

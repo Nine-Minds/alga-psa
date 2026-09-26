@@ -552,7 +552,8 @@
       "startDate": "Data rozpoczęcia",
       "endDate": "Data zakończenia",
       "inheritsContract": "Początek kontraktu",
-      "inheritsContractEnd": "Koniec kontraktu"
+      "inheritsContractEnd": "Koniec kontraktu",
+      "billedEditExplanation": "Po zafakturowaniu pozycji można nadal edytować tekst faktury i daty. Daty nie mogą wykluczać już zafakturowanych ani zarezerwowanych okresów usług; stawki i ilości zmienia się prospektywnie."
     },
     "customRate": "Niestandardowy",
     "description": {
@@ -568,13 +569,14 @@
       "selectAbove": "Wybierz linię kontraktową powyżej, aby rozpocząć."
     },
     "errors": {
-      "cannotEditWithInvoices": "Nie można edytować linii kontraktowej: ta umowa ma powiązane faktury. Linii kontraktowych nie można edytować po wygenerowaniu faktur.",
       "failedToCheckEditable": "Nie udało się sprawdzić, czy umowę można edytować",
       "failedToLoad": "Nie udało się wczytać linii kontraktowych",
       "failedToRefresh": "Nie udało się odświeżyć linii kontraktowych",
       "failedToRemove": "Nie udało się usunąć linii kontraktowej",
       "failedToUpdate": "Nie udało się zaktualizować linii kontraktowej",
-      "failedToResetRate": "Nie udało się przywrócić stawki pozycji"
+      "failedToResetRate": "Nie udało się przywrócić stawki pozycji",
+      "protectedStartDate": "Data rozpoczęcia musi przypadać {{boundary}} lub wcześniej, aby uwzględnić chronioną historię usług.",
+      "protectedEndDate": "Data zakończenia musi przypadać {{boundary}} lub później, aby uwzględnić chronioną historię usług."
     },
     "loading": {
       "contractLines": "Ładowanie linii kontraktowych",

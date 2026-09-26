@@ -552,7 +552,8 @@
       "startDate": "Data di inizio",
       "endDate": "Data di fine",
       "inheritsContract": "Inizio contratto",
-      "inheritsContractEnd": "Fine contratto"
+      "inheritsContractEnd": "Fine contratto",
+      "billedEditExplanation": "Dopo la fatturazione di una riga, il testo della fattura e le date restano modificabili. Le date non possono escludere periodi di servizio già fatturati o rivendicati; tariffe e quantità si modificano in modo prospettico."
     },
     "customRate": "Personalizzato",
     "description": {
@@ -568,13 +569,14 @@
       "selectAbove": "Seleziona una linea contrattuale sopra per iniziare."
     },
     "errors": {
-      "cannotEditWithInvoices": "Impossibile modificare la linea contrattuale: questo contratto ha fatture associate. Le linee contrattuali non possono essere modificate una volta generate le fatture.",
       "failedToCheckEditable": "Impossibile verificare se il contratto può essere modificato",
       "failedToLoad": "Impossibile caricare le linee contrattuali",
       "failedToRefresh": "Impossibile aggiornare le linee contrattuali",
       "failedToRemove": "Impossibile rimuovere la linea contrattuale",
       "failedToUpdate": "Impossibile aggiornare la linea contrattuale",
-      "failedToResetRate": "Impossibile ripristinare la tariffa della riga"
+      "failedToResetRate": "Impossibile ripristinare la tariffa della riga",
+      "protectedStartDate": "La data di inizio deve essere il {{boundary}} o precedente per includere la cronologia protetta.",
+      "protectedEndDate": "La data di fine deve essere il {{boundary}} o successiva per includere la cronologia protetta."
     },
     "loading": {
       "contractLines": "Caricamento linee contrattuali",
