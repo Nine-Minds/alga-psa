@@ -22,6 +22,12 @@ vi.mock('@alga-psa/db', () => ({
   withTransaction: (conn: any, handler: (trx: any) => Promise<unknown>) => handler(conn),
   tenantDb: () => ({
     table: (table: string) => {
+      if (table === 'quotes') {
+        const query: any = {};
+        query.where = vi.fn(() => query);
+        query.first = vi.fn(async () => ({ title: 'Proposal', quote_number: 'Q-0042' }));
+        return query;
+      }
       throw new Error(`Unexpected tenantDb table access: ${table}`);
     },
     tenantJoin: (builder: any) => builder,
@@ -177,13 +183,13 @@ describe('quotePdfGenerationService', () => {
     const service = createPDFGenerationService(TENANT_ID);
     const result = await service.generateAndStore({ quoteId: QUOTE_ID, quoteNumber: 'Q-0042', userId: USER_ID });
 
-    expect(uploadMock).toHaveBeenCalledWith(expect.any(Buffer), '22222222-2222-4222-8222-222222222222/pdfs/Q-0042.pdf', {
+    expect(uploadMock).toHaveBeenCalledWith(expect.any(Buffer), '22222222-2222-4222-8222-222222222222/pdfs/Proposal.pdf', {
       mime_type: 'application/pdf',
     });
     expect(createFileStoreMock).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
-        original_name: 'Q-0042.pdf',
+        original_name: 'Proposal.pdf',
         uploaded_by_id: USER_ID,
       })
     );
@@ -197,7 +203,7 @@ describe('quotePdfGenerationService', () => {
     expect(documentInsertMock).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
-        document_name: 'Quote_Q-0042.pdf',
+        document_name: 'Proposal.pdf',
         mime_type: 'application/pdf',
         file_id: 'file-1',
         folder_path: '/Quotes/Generated',
@@ -226,7 +232,7 @@ describe('quotePdfGenerationService', () => {
       documentId: result.document_id,
       sourceType: 'quote',
       sourceId: QUOTE_ID,
-      fileName: 'Q-0042.pdf',
+      fileName: 'Proposal.pdf',
     });
     expect(event.payload.documentId).not.toBe('file-1');
   });

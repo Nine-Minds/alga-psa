@@ -484,7 +484,7 @@ describe('client quote billing actions', () => {
     docAssocQuery.whereNotNull = vi.fn(() => docAssocQuery);
     docAssocQuery.orderBy = vi.fn(() => docAssocQuery);
     docAssocQuery.select = vi.fn(() => docAssocQuery);
-    docAssocQuery.first = vi.fn(async () => ({ file_id: 'stored-pdf-file-1' }));
+    docAssocQuery.first = vi.fn(async () => ({ file_id: 'stored-pdf-file-1', document_name: 'Managed Services Proposal.pdf' }));
 
     getConnectionMock.mockResolvedValue(
       Object.assign(
@@ -502,6 +502,34 @@ describe('client quote billing actions', () => {
     const result = await downloadClientQuotePdf('quote-1');
 
     expect(result).toEqual({ success: true, fileId: 'stored-pdf-file-1', fileName: 'Managed Services Proposal.pdf' });
+  });
+
+  it('regenerates a stored quote PDF after its title has changed', async () => {
+    const docAssocQuery: any = {};
+    docAssocQuery.join = vi.fn(() => docAssocQuery);
+    docAssocQuery.where = vi.fn(() => docAssocQuery);
+    docAssocQuery.whereNotNull = vi.fn(() => docAssocQuery);
+    docAssocQuery.orderBy = vi.fn(() => docAssocQuery);
+    docAssocQuery.select = vi.fn(() => docAssocQuery);
+    docAssocQuery.first = vi.fn(async () => ({ file_id: 'old-pdf-file', document_name: 'Old quote title.pdf' }));
+
+    getConnectionMock.mockResolvedValue(
+      Object.assign((table: string) => {
+        if (table === 'document_associations as da') return docAssocQuery;
+        throw new Error(`Unexpected table: ${table}`);
+      }, { tenant: 'tenant-1' })
+    );
+    const generateAndStore = vi.fn(async () => ({ file_id: 'new-pdf-file' }));
+    vi.doMock('@alga-psa/billing/services', () => ({
+      recalculateQuoteFinancials: (...args: any[]) => recalculateQuoteFinancialsMock(...args),
+      createPDFGenerationService: vi.fn(() => ({ generateAndStore })),
+    }));
+
+    const { downloadClientQuotePdf } = await import('./client-billing');
+    const result = await downloadClientQuotePdf('quote-1');
+
+    expect(generateAndStore).toHaveBeenCalledWith({ quoteId: 'quote-1', quoteNumber: 'Q-0001', userId: 'portal-user-1' });
+    expect(result).toEqual({ success: true, fileId: 'new-pdf-file', fileName: 'Managed Services Proposal.pdf' });
   });
 
   it('T137: downloadClientQuotePdf generates PDF on the fly when none stored', async () => {
