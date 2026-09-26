@@ -267,6 +267,18 @@ describe('BulkBundleDialog', () => {
     expect(screen.getByRole('button', { name: 'Bundle Tickets' })).toBeDisabled();
   });
 
+  it('clears the multiple-masters error once only one existing master remains', async () => {
+    mocks.status.mockImplementation(async ({ ticketIds }: { ticketIds: string[] }) => ({
+      masterTicketIds: ticketIds.filter(ticketId => ticketId === 'one' || ticketId === 'two'),
+    }));
+    renderDialog({ initialTicketIds: ['one', 'two', 'three'], knownRows: [[ticket('one'), ticket('two'), ticket('three')]] });
+    expect(await screen.findByText(/Multiple selected tickets are already bundle masters/)).toBeTruthy();
+    fireEvent.click(getElement('bundle-test-bundle-member-remove-two'));
+    expect(await screen.findByText(/It will be used as the master/)).toBeTruthy();
+    expect(screen.queryByText(/Multiple selected tickets are already bundle masters/)).toBeNull();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Bundle Tickets' })).toBeEnabled());
+  });
+
   it('removes a member and reassigns master to the first remaining member', async () => {
     renderDialog({ initialTicketIds: ['one', 'two'], knownRows: [[ticket('one'), ticket('two')]] });
     await waitFor(() => expect(mocks.status).toHaveBeenCalled());

@@ -34,7 +34,6 @@ export default function BulkBundleDialog({ id, isOpen, onClose, initialTicketIds
   const [masterId, setMasterId] = useState<string | null>(null);
   const [syncUpdates, setSyncUpdates] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const multipleMastersErrorRef = useRef<string | null>(null);
   const [existingMasterIds, setExistingMasterIds] = useState<Set<string>>(new Set());
   const [closedContext, setClosedContext] = useState<BundleMasterClosedContextActionResult | null>(null);
   const [closedChoice, setClosedChoice] = useState<ClosedMasterChoice | null>(null);
@@ -51,6 +50,13 @@ export default function BulkBundleDialog({ id, isOpen, onClose, initialTicketIds
   const memberKey = useMemo(() => members.map(member => member.ticket_id).filter((ticketId): ticketId is string => Boolean(ticketId)).sort().join('|'), [members]);
   const multiClient = useMemo(() => new Set(members.map(member => member.client_id).filter(Boolean)).size > 1, [members]);
   const hasMultipleMasters = existingMasterIds.size > 1;
+  const multipleMastersError = hasMultipleMasters
+    ? t('bulk.bundle.multipleExistingMasters', {
+      count: existingMasterIds.size,
+      defaultValue: 'Multiple selected tickets are already bundle masters ({{count}}). Unbundle all but one before bundling.',
+    })
+    : null;
+  const displayedError = error ?? multipleMastersError;
   const needsClosedChoice = closedContext?.isClosed === true;
   const choiceReady = !needsClosedChoice || Boolean(closedChoice);
 
@@ -59,7 +65,6 @@ export default function BulkBundleDialog({ id, isOpen, onClose, initialTicketIds
 
     let cancelled = false;
     setError(null);
-    multipleMastersErrorRef.current = null;
     setSyncUpdates(true);
     setExistingMasterIds(new Set());
     setClosedContext(null);
@@ -124,15 +129,6 @@ export default function BulkBundleDialog({ id, isOpen, onClose, initialTicketIds
         setMasterId(Array.from(masterIds)[0]);
       } else if (masterIds.size > 1) {
         setMasterId(null);
-        const message = t('bulk.bundle.multipleExistingMasters', {
-          count: masterIds.size,
-          defaultValue: 'Multiple selected tickets are already bundle masters ({{count}}). Unbundle all but one before bundling.',
-        });
-        multipleMastersErrorRef.current = message;
-        setError(message);
-      } else {
-        setError(currentError => currentError === multipleMastersErrorRef.current ? null : currentError);
-        multipleMastersErrorRef.current = null;
       }
     }).catch(loadError => {
       if (!cancelled) setError(getErrorMessage(loadError));
@@ -141,7 +137,7 @@ export default function BulkBundleDialog({ id, isOpen, onClose, initialTicketIds
     });
 
     return () => { cancelled = true; };
-  }, [isOpen, memberKey, t]);
+  }, [isOpen, memberKey]);
 
   useEffect(() => {
     if (!isOpen || !masterId) {
@@ -299,12 +295,12 @@ export default function BulkBundleDialog({ id, isOpen, onClose, initialTicketIds
       <Dialog isOpen={isOpen} onClose={onClose} id={`${id}-bundle-dialog`} title={t('bulk.bundle.dialogTitle', 'Bundle Tickets')} className="max-w-2xl">
         <DialogContent>
           <div ref={setPortalEl} className="space-y-4">
-            {error && (
+            {displayedError && (
               <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
+                <AlertDescription>{displayedError}</AlertDescription>
               </Alert>
             )}
-            {existingMasterIds.size === 1 && !error && (
+            {existingMasterIds.size === 1 && !displayedError && (
               <Alert variant="warning">
                 <AlertDescription>{t('bulk.bundle.existingMasterLocked', 'One selected ticket is already a bundle master. It will be used as the master; the others will be added as children.')}</AlertDescription>
               </Alert>
