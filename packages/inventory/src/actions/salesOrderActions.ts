@@ -280,9 +280,10 @@ async function allocateLine(
       .forUpdate()
       .skipLocked()
       .limit(remaining);
+    // LEVERAGE: pattern fifo-unit-order — allocation, fulfillment candidates, and this pick list share FIFO ordering.
     const units = preferred
-      ? ((await q.orderByRaw('CASE WHEN location_id = ? THEN 0 ELSE 1 END ASC, received_at ASC NULLS LAST', [preferred])) as any[])
-      : ((await q.orderByRaw('received_at ASC NULLS LAST')) as any[]);
+      ? ((await q.orderByRaw('CASE WHEN location_id = ? THEN 0 ELSE 1 END ASC, received_at ASC NULLS LAST, unit_id ASC', [preferred])) as any[])
+      : ((await q.orderByRaw('received_at ASC NULLS LAST, unit_id ASC')) as any[]);
 
     const touched = new Set<string>();
     const stockUnitTouches: StockUnitSearchTouch[] = [];

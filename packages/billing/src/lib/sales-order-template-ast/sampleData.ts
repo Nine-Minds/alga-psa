@@ -20,7 +20,7 @@ export function buildSampleSalesOrderViewModel(): SalesOrderViewModel {
       client_id: 'sample-client',
     },
     lines: [
-      { so_line_id: 's1', service_id: 'svc-switch', quantity_ordered: 10, quantity_fulfilled: 10, unit_price: 38000, fulfillment_type: 'from_stock' },
+      { so_line_id: 's1', service_id: 'svc-switch', quantity_ordered: 10, quantity_fulfilled: 8, unit_price: 38000, fulfillment_type: 'from_stock', allocated_serials: ['SW-24001', 'SW-24002'] },
       { so_line_id: 's2', service_id: 'svc-laptop', quantity_ordered: 5, quantity_fulfilled: 3, unit_price: 124000, fulfillment_type: 'drop_ship' },
       { so_line_id: 's3', service_id: 'svc-cable', quantity_ordered: 50, quantity_fulfilled: 0, unit_price: 450, fulfillment_type: 'from_stock' },
     ],

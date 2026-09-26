@@ -77,7 +77,9 @@
       "pickedBy": "Prelevato da: ____________________     Data: ____________",
       "preTaxTotals": "I totali indicati sono al netto delle imposte. L'imposta applicabile viene calcolata sulla fattura.",
       "thankYouForOrder": "Grazie per il vostro ordine."
-    }
+    },
+    "serialNumbers": "Numeri di serie",
+    "allocatedSerialsNote": "Numeri di serie assegnati; soggetti a modifica al momento dell’evasione."
   },
   "errors": {
     "permissions": {

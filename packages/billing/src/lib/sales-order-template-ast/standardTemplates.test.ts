@@ -86,3 +86,21 @@ describe('standard sales order confirmation template', () => {
     expect(result.ast.metadata?.templateName).toBe('Standard Sales Order Confirmation');
   });
 });
+
+describe('standard sales order pick list template', () => {
+  it('renders allocated serials with the fulfillment note and leaves other lines unchanged', async () => {
+    const ast = Object.values(STANDARD_PICK_LIST_TEMPLATE_ASTS)[0]!;
+    const vm = sampleViewModel();
+    vm.line_items[1]!.allocated_serials = ['LT-002', 'LT-001'];
+    vm.line_items[1]!.allocated_serials_display = 'LT-002, LT-001';
+    const evaluation = evaluateTemplateAst(ast, vm as unknown as Record<string, unknown>);
+    const html = await renderTemplateAstHtmlDocument(ast, evaluation, { title: 'Pick List' });
+    expect(html).toContain('LT-002, LT-001');
+    expect(html).toContain('Allocated serial numbers; subject to change at fulfillment.');
+    expect(html).toContain('UniFi Switch 24 PoE');
+    expect(vm.line_items[0]!.allocated_serials_display).toBe('');
+    expect(html).not.toContain('undefined');
+    expect(html).not.toContain('null');
+    expect(html).toContain('width:43%');
+  });
+});

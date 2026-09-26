@@ -2,10 +2,26 @@ import { describe, expect, it } from 'vitest';
 
 import {
   assembleSalesOrderViewModel,
+  groupAllocatedSerialsByLine,
   type SalesOrderLineRowForDocument,
   type SalesOrderRowForDocument,
   type ServiceNameRecord,
 } from './salesOrderAdapters';
+
+describe('groupAllocatedSerialsByLine', () => {
+  it('preserves FIFO row order per line and skips null or blank serials', () => {
+    expect(groupAllocatedSerialsByLine([
+      { allocated_so_line_id: 'l1', serial_number: 'LT-002' },
+      { allocated_so_line_id: 'l2', serial_number: 'SW-001' },
+      { allocated_so_line_id: 'l1', serial_number: null },
+      { allocated_so_line_id: 'l1', serial_number: ' LT-001 ' },
+      { allocated_so_line_id: 'l2', serial_number: '   ' },
+    ])).toEqual(new Map([
+      ['l1', ['LT-002', 'LT-001']],
+      ['l2', ['SW-001']],
+    ]));
+  });
+});
 
 const so: SalesOrderRowForDocument = {
   so_id: 'so-1',
@@ -61,6 +77,51 @@ describe('assembleSalesOrderViewModel', () => {
     expect(vm.customer?.name).toBe('Acme Corp');
     expect(vm.tenantClient?.name).toBe('Northwind MSP');
     expect(vm.line_items[1].quantity_fulfilled).toBe(3);
+  });
+
+  it('passes allocated serial numbers and their display string through to each line', () => {
+    const vm = assembleSalesOrderViewModel({ so, lines, servicesById, customer, tenantParty,
+      allocatedSerialsByLine: new Map([['l2', ['LT-002', 'LT-001', 'LT-003', 'LT-004']]]),
+    });
+    expect(vm.line_items[0].allocated_serials).toEqual([]);
+    expect(vm.line_items[1].allocated_serials).toEqual(['LT-002', 'LT-001']);
+    expect(vm.line_items[1].allocated_serials_display).toBe('LT-002, LT-001');
+  });
+
+  it('caps allocated serials at remaining quantity and clears them for fully fulfilled lines', () => {
+    const vm = assembleSalesOrderViewModel({
+      so,
+      lines: [
+        { so_line_id: 'partial', service_id: 'svc-laptop', quantity_ordered: 4, quantity_fulfilled: 2, unit_price: 10 },
+        { so_line_id: 'complete', service_id: 'svc-laptop', quantity_ordered: 2, quantity_fulfilled: 2, unit_price: 10 },
+      ],
+      servicesById,
+      customer,
+      tenantParty,
+      allocatedSerialsByLine: new Map([
+        ['partial', ['LT-003', 'LT-004', 'LT-005']],
+        ['complete', ['LT-006']],
+      ]),
+    });
+
+    expect(vm.line_items.map((line) => line.allocated_serials)).toEqual([['LT-003', 'LT-004'], []]);
+  });
+
+  it('keeps serial cells empty for non-serialized and unallocated lines', () => {
+    const vm = assembleSalesOrderViewModel({
+      so,
+      lines: [
+        { so_line_id: 'non-serialized', service_id: 'svc-switch', quantity_ordered: 2, unit_price: 10 },
+        { so_line_id: 'unallocated', service_id: 'svc-laptop', quantity_ordered: 2, unit_price: 10 },
+        { so_line_id: 'drop-ship', service_id: 'svc-laptop', quantity_ordered: 2, unit_price: 10, fulfillment_type: 'drop_ship' },
+      ],
+      servicesById,
+      customer,
+      tenantParty,
+      allocatedSerialsByLine: new Map([['drop-ship', ['SHOULD-NOT-PRINT']]]),
+    });
+
+    expect(vm.line_items.map((line) => line.allocated_serials_display)).toEqual(['', '', '']);
   });
 
   it('handles a sales order with no lines without throwing (zero totals)', () => {

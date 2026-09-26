@@ -77,7 +77,9 @@
       "pickedBy": "Gepickt door: ____________________     Datum: ____________",
       "preTaxTotals": "De getoonde totalen zijn exclusief belasting. De verschuldigde belasting wordt op uw factuur berekend.",
       "thankYouForOrder": "Bedankt voor uw order."
-    }
+    },
+    "serialNumbers": "Serienummers",
+    "allocatedSerialsNote": "Toegewezen serienummers; kunnen bij uitvoering wijzigen."
   },
   "errors": {
     "permissions": {
