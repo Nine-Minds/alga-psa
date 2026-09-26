@@ -256,19 +256,21 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              id={`pay-invoice-${record.invoice_number}-menu-item`}
-              disabled={!canPayInvoice(record)}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (canPayInvoice(record)) {
-                  handlePayInvoice(record.invoice_id);
-                }
-              }}
-            >
-              <CreditCard className="mr-2 h-4 w-4" />
-              {t('invoice.pay', 'Pay Now')}
-            </DropdownMenuItem>
+            {!isOfflinePaymentMethod(record.payment_method) && (
+              <DropdownMenuItem
+                id={`pay-invoice-${record.invoice_number}-menu-item`}
+                disabled={!canPayInvoice(record)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (canPayInvoice(record)) {
+                    handlePayInvoice(record.invoice_id);
+                  }
+                }}
+              >
+                <CreditCard className="mr-2 h-4 w-4" />
+                {t('invoice.pay', 'Pay Now')}
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem
               id={`view-invoice-${record.invoice_number}-menu-item`}
               onClick={(e) => {
@@ -412,14 +414,16 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
                 <Download className="mr-2 h-4 w-4" />
                 {downloadingInvoices.has(selectedInvoice.invoice_id) ? 'Preparing...' : 'Download PDF'}
               </Button>
-              <Button
-                id={`pay-invoice-${selectedInvoice.invoice_number}`}
-                disabled={!canPayInvoice(selectedInvoice)}
-                onClick={() => handlePayInvoice(selectedInvoice.invoice_id)}
-              >
-                <CreditCard className="mr-2 h-4 w-4" />
-                Pay Now
-              </Button>
+              {!isOfflinePaymentMethod(selectedInvoice.payment_method) && (
+                <Button
+                  id={`pay-invoice-${selectedInvoice.invoice_number}`}
+                  disabled={!canPayInvoice(selectedInvoice)}
+                  onClick={() => handlePayInvoice(selectedInvoice.invoice_id)}
+                >
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  Pay Now
+                </Button>
+              )}
             </div>
           </div>
         </div>
