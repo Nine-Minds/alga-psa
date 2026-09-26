@@ -57,6 +57,17 @@ describe('client portal document routes', () => {
     expect(Buffer.from(await attachment.arrayBuffer()).toString()).toBe('%PDF-example');
   });
 
+  it('preserves legitimate uploaded JSON files as attachments', async () => {
+    const jsonBytes = Buffer.from('{"meeting":"agenda"}');
+    mocks.document.mockResolvedValueOnce(documentRecord({ mime_type: 'application/json', document_name: 'agenda.json' }));
+    mocks.downloadFile.mockResolvedValueOnce({ buffer: jsonBytes, metadata: { mime_type: 'application/json' } });
+    const response = await getFile(request('/api/client-portal/documents/doc-1/file'), params);
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toBe('application/json');
+    expect(response.headers.get('Content-Disposition')).toContain('filename="agenda.json"');
+    expect(Buffer.from(await response.arrayBuffer())).toEqual(jsonBytes);
+  });
+
   it('returns JSON errors for missing files, unsupported inline types, and invisible documents', async () => {
     mocks.document.mockResolvedValueOnce(documentRecord({ file_id: null }));
     const noFile = await getFile(request('/api/client-portal/documents/doc-1/file'), params);
@@ -101,5 +112,17 @@ describe('client portal document routes', () => {
     mocks.currentUser.mockResolvedValueOnce(null);
     expect((await getExport(request('/export?format=md'), params)).status).toBe(401);
     expect(mocks.document).not.toHaveBeenCalled();
+  });
+
+  it('denies inaccessible documents on both file and export requests', async () => {
+    mocks.document.mockResolvedValueOnce({ actionError: 'not visible' });
+    const fileResponse = await getFile(request('/api/client-portal/documents/doc-1/file'), params);
+    expect(fileResponse.status).toBe(404);
+    expect(mocks.downloadFile).not.toHaveBeenCalled();
+
+    mocks.document.mockResolvedValueOnce({ permissionError: 'not authorized' });
+    const exportResponse = await getExport(request('/api/client-portal/documents/doc-1/export?format=md'), params);
+    expect(exportResponse.status).toBe(404);
+    expect(mocks.generatePDF).not.toHaveBeenCalled();
   });
 });

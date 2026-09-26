@@ -95,7 +95,11 @@ vi.mock('@alga-psa/documents/lib/documentUtils', () => ({
   downloadDocument: vi.fn(),
 }));
 
-vi.mock('../../lib/fetchAndSaveFile', () => ({ fetchAndSaveFile: vi.fn() }));
+vi.mock('../../lib/fetchAndSaveFile', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/fetchAndSaveFile')>()),
+  fetchAndSaveFile: vi.fn(),
+}));
+vi.mock('react-hot-toast', () => ({ toast: { error: vi.fn() } }));
 
 vi.mock('@alga-psa/core/context/DocumentsCrossFeatureContext', () => ({
   useDocumentsCrossFeature: () => ({
@@ -129,6 +133,8 @@ vi.mock('@alga-psa/ui/components/Card', () => ({
 describe('ClientDocumentsPage', () => {
   afterEach(() => {
     cleanup();
+    mockDocuments[0].file_id = 'file-1';
+    mockDocuments[0].document_name = 'Service Agreement.pdf';
     vi.clearAllMocks();
     vi.unstubAllGlobals();
   });
@@ -161,6 +167,35 @@ describe('ClientDocumentsPage', () => {
     await waitFor(() => expect(screen.getByText('Service Agreement.pdf')).toBeInTheDocument());
     fireEvent.click(document.getElementById('client-docs-download-document-doc-1')!);
     await waitFor(() => expect(fetchAndSaveFile).toHaveBeenCalledWith('/api/client-portal/documents/doc-1/file?disposition=attachment', 'Service Agreement.pdf'));
+  });
+
+  it('shows a visible error when a file download request fails', async () => {
+    const { fetchAndSaveFile } = await import('../../lib/fetchAndSaveFile');
+    const { toast } = await import('react-hot-toast');
+    vi.mocked(fetchAndSaveFile).mockRejectedValueOnce(new Error('Missing storage object'));
+    render(<ClientDocumentsPage />);
+    await waitFor(() => expect(screen.getByText('Service Agreement.pdf')).toBeInTheDocument());
+    fireEvent.click(document.getElementById('client-docs-download-document-doc-1')!);
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Could not download this document. Please try again.'));
+  });
+
+  it('offers readable PDF and Markdown exports for an in-app document', async () => {
+    mockDocuments[0].file_id = null;
+    mockDocuments[0].document_name = 'Meeting Notes';
+    render(<ClientDocumentsPage />);
+    await waitFor(() => expect(screen.getByText('Meeting Notes')).toBeInTheDocument());
+    fireEvent.click(document.getElementById('client-docs-title-view-doc-1')!);
+    await waitFor(() => expect(screen.getByText('Download')).toBeInTheDocument());
+    fireEvent.click(screen.getByText('Download'));
+    await waitFor(async () => {
+      const { fetchAndSaveFile } = await import('../../lib/fetchAndSaveFile');
+      expect(fetchAndSaveFile).toHaveBeenCalledWith('/api/client-portal/documents/doc-1/export?format=pdf', 'Meeting Notes.pdf');
+    });
+    fireEvent.click(screen.getByText('Markdown'));
+    await waitFor(async () => {
+      const { fetchAndSaveFile } = await import('../../lib/fetchAndSaveFile');
+      expect(fetchAndSaveFile).toHaveBeenCalledWith('/api/client-portal/documents/doc-1/export?format=md', 'Meeting Notes.md');
+    });
   });
 
   it.each([
