@@ -895,7 +895,9 @@
           "survey": "E-mail ankiety",
           "account": "E-mail konta",
           "general": "E-mail ogólny",
-          "noneProviderFrom": "Brak (użyj adresu nadawcy dostawcy)"
+          "noneProviderFrom": "Brak (użyj adresu nadawcy dostawcy)",
+          "confirmSmtp": "Potwierdzam, że serwer SMTP akceptuje ten adres nadawcy.",
+          "inboundReplyWarning": "Odpowiedzi przychodzące nadal trafiają do skonfigurowanej skrzynki; zmiana tego adresu nie zmienia kierowania odpowiedzi."
         },
         "actions": {
           "add": "Dodaj nadawcę",

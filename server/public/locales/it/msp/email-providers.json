@@ -895,7 +895,9 @@
           "survey": "Email sondaggio",
           "account": "Email account",
           "general": "Email generica",
-          "noneProviderFrom": "Nessuno (usa il mittente del provider)"
+          "noneProviderFrom": "Nessuno (usa il mittente del provider)",
+          "confirmSmtp": "Confermo che il relay SMTP accetta questo indirizzo mittente.",
+          "inboundReplyWarning": "Le risposte in entrata continuano a raggiungere la casella configurata; cambiare questo indirizzo non modifica l’instradamento delle risposte."
         },
         "actions": {
           "add": "Aggiungi mittente",

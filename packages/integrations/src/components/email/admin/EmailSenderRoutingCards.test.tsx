@@ -23,6 +23,7 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
 }));
 
 import { EmailSenderAddressesCard, EmailSenderRoutingCard } from './EmailSenderRoutingCards';
+import enAdmin from '../../../../../../server/public/locales/en/msp/admin.json';
 
 const t = (key: string) => key;
 
@@ -55,8 +56,8 @@ describe('outbound email sender cards', () => {
     actionMocks.create.mockReset();
     actionMocks.list.mockResolvedValue({ senders: [], routes: [] });
     const routeContainer = render(<EmailSenderRoutingCard t={t} />);
-    await waitFor(() => expect(screen.getByText('email.senderIdentities.routes.default')).toBeInTheDocument());
-    expect(routeContainer.container.textContent).toContain('email.senderIdentities.routes.noneProviderFrom');
+    await waitFor(() => expect(screen.getByText('email.senderIdentities.routing.default')).toBeInTheDocument());
+    expect(routeContainer.container.textContent).toContain('email.senderIdentities.routing.noneProviderFrom');
     fireEvent.click(routeContainer.container.querySelector('#email-sender-route-default-save')!);
     await waitFor(() => expect(actionMocks.clearRoute).toHaveBeenCalledWith(expect.objectContaining({ routeType: 'default' })));
 
@@ -65,6 +66,17 @@ describe('outbound email sender cards', () => {
     await waitFor(() => expect(actionMocks.setRoute).toHaveBeenCalledWith(expect.objectContaining({
       routeType: 'default', senderId: null, displayName: 'Billing team',
     })));
+  });
+
+  it('renders the Default row with its English locale label', async () => {
+    actionMocks.list.mockResolvedValue({ senders: [], routes: [] });
+    const englishT = (key: string, fallback?: string) => {
+      const value = key.split('.').reduce<any>((current, part) => current?.[part], enAdmin);
+      return typeof value === 'string' ? value : fallback ?? key;
+    };
+    render(<EmailSenderRoutingCard t={englishT} />);
+    await waitFor(() => expect(screen.getByText('Default (all other mail)')).toBeInTheDocument());
+    expect(screen.queryByText('default')).not.toBeInTheDocument();
   });
 
   it('shows ticket inbound-reply guidance and a read-only board override summary', async () => {
@@ -77,6 +89,6 @@ describe('outbound email sender cards', () => {
     });
     render(<EmailSenderRoutingCard t={t} />);
     await waitFor(() => expect(screen.getByText(/board-1: support@example.test/)).toBeInTheDocument());
-    expect(screen.getAllByText('email.senderIdentities.routes.inboundReplyWarning').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('email.senderIdentities.routing.inboundReplyWarning').length).toBeGreaterThan(0);
   });
 });

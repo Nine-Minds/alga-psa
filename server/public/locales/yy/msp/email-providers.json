@@ -895,7 +895,9 @@
           "survey": "⟦Survey email⟧",
           "account": "⟦Account email⟧",
           "general": "⟦General email⟧",
-          "noneProviderFrom": "⟦None (use provider From)⟧"
+          "noneProviderFrom": "⟦None (use provider From)⟧",
+          "confirmSmtp": "〖Ī ƈȯƞƒīřḿ ŧħḗ ŞḾŦƤ řḗŀȧẏ ȧƈƈḗƥŧş ŧħīş şḗƞḓḗř ȧḓḓřḗşş. ······················〗",
+          "inboundReplyWarning": "〖Īƞƀȯŭƞḓ řḗƥŀīḗş şŧīŀŀ ɠȯ ŧȯ ŧħḗ ƈȯƞƒīɠŭřḗḓ īƞƀȯŭƞḓ ḿȧīŀƀȯẋ; ƈħȧƞɠīƞɠ ŧħīş Ƒřȯḿ ȧḓḓřḗşş ḓȯḗş ƞȯŧ ƈħȧƞɠḗ řḗƥŀẏ řȯŭŧīƞɠ. ···············································〗"
         },
         "actions": {
           "add": "〖Ȧḓḓ ŝḗƞḓḗŕ ·········〗",

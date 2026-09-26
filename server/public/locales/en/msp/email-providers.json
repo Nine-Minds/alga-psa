@@ -895,7 +895,9 @@
           "survey": "Survey email",
           "account": "Account email",
           "general": "General email",
-          "noneProviderFrom": "None (use provider From)"
+          "noneProviderFrom": "None (use provider From)",
+          "confirmSmtp": "I confirm the SMTP relay accepts this sender address.",
+          "inboundReplyWarning": "Inbound replies still go to the configured inbound mailbox; changing this From address does not change reply routing."
         },
         "actions": {
           "add": "Add sender",

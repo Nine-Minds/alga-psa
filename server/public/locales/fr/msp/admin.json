@@ -247,7 +247,9 @@
         "survey": "E-mail de sondage",
         "account": "E-mail de compte",
         "general": "E-mail général",
-        "noneProviderFrom": "Aucun (utiliser l’expéditeur du fournisseur)"
+        "noneProviderFrom": "Aucun (utiliser l’expéditeur du fournisseur)",
+        "confirmSmtp": "Je confirme que le relais SMTP accepte cette adresse d’expéditeur.",
+        "inboundReplyWarning": "Les réponses entrantes continuent d’arriver dans la boîte configurée ; modifier cette adresse ne change pas leur acheminement."
       },
       "actions": {
         "add": "Ajouter",

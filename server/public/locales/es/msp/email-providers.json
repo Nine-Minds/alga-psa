@@ -895,7 +895,9 @@
           "survey": "Correo de encuestas",
           "account": "Correo de cuentas",
           "general": "Correo general",
-          "noneProviderFrom": "Ninguno (usar remitente del proveedor)"
+          "noneProviderFrom": "Ninguno (usar remitente del proveedor)",
+          "confirmSmtp": "Confirmo que el servidor SMTP acepta esta dirección del remitente.",
+          "inboundReplyWarning": "Las respuestas entrantes seguirán llegando al buzón configurado; cambiar esta dirección no cambia el enrutamiento de respuestas."
         },
         "actions": {
           "add": "Añadir remitente",

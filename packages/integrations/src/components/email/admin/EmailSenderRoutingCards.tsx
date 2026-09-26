@@ -216,9 +216,9 @@ export function EmailSenderRoutingCard({ t, transport = 'resend' }: { t: Transla
     const rowKey = routeType === 'default' ? 'default' : key;
     const value = route?.sender_id ?? '__default__';
     const options = routeType === 'default'
-      ? [{ value: '__default__', label: t('email.senderIdentities.routes.noneProviderFrom', '') }, ...senders.map(sender => ({ value: sender.sender_id, label: sender.email_address }))]
-      : [{ value: '__default__', label: t('email.senderIdentities.routes.useDefault', '') }, ...senders.map(sender => ({ value: sender.sender_id, label: sender.email_address }))];
-        return <RouteRow key={rowKey} id={`email-sender-route-${rowKey}`} title={t(`email.senderIdentities.routes.${rowKey}`, rowKey)} routeType={routeType} routeKey={rowKey} route={route} value={value} options={options} senders={senders} transport={transport} busy={busyRoute === rowKey} t={t} onSave={(senderId, name, confirm) => void save(routeType, rowKey, senderId, name, confirm)} />;
+      ? [{ value: '__default__', label: t('email.senderIdentities.routing.noneProviderFrom', 'None (use provider From)') }, ...senders.map(sender => ({ value: sender.sender_id, label: sender.email_address }))]
+      : [{ value: '__default__', label: t('email.senderIdentities.routing.useDefault', 'Use default') }, ...senders.map(sender => ({ value: sender.sender_id, label: sender.email_address }))];
+        return <RouteRow key={rowKey} id={`email-sender-route-${rowKey}`} title={t(`email.senderIdentities.routing.${rowKey}`, rowKey === 'default' ? 'Default (all other mail)' : rowKey)} routeType={routeType} routeKey={rowKey} route={route} value={value} options={options} senders={senders} transport={transport} busy={busyRoute === rowKey} t={t} onSave={(senderId, name, confirm) => void save(routeType, rowKey, senderId, name, confirm)} />;
   };
 
   return <Card>
@@ -232,7 +232,7 @@ export function EmailSenderRoutingCard({ t, transport = 'resend' }: { t: Transla
         <p className="text-sm text-muted-foreground">{t('email.senderIdentities.routing.boardSummary', 'Board-specific ticket senders are managed in each board’s settings.')}</p>
         {routes.filter(route => route.route_type === 'board').map(route => {
           const sender = senders.find(item => item.sender_id === route.sender_id);
-          return <p key={route.route_id ?? route.board_id} className="text-sm text-foreground">{route.board_id}: {sender?.email_address ?? t('email.senderIdentities.routes.useDefault', 'Use ticket default')}{route.display_name ? ` · ${route.display_name}` : ''}</p>;
+          return <p key={route.route_id ?? route.board_id} className="text-sm text-foreground">{route.board_id}: {sender?.email_address ?? t('email.senderIdentities.routing.useDefault', 'Use ticket default')}{route.display_name ? ` · ${route.display_name}` : ''}</p>;
         })}
       </div>
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
@@ -251,10 +251,10 @@ function RouteRow({ id, title, routeType, routeKey, route, value, options, sende
   const label = title;
   return <div className="grid gap-3 p-3 md:grid-cols-[minmax(8rem,1fr)_minmax(12rem,1.3fr)_minmax(10rem,1fr)_auto] md:items-end">
     <div className="pb-2 text-sm font-medium">{label}</div>
-    <div className="space-y-1"><Label htmlFor={`${id}-sender`}>{t('email.senderIdentities.routes.sender', 'Sender')}</Label><CustomSelect id={`${id}-sender`} value={senderId} onValueChange={setSenderId} options={options} /></div>
-    <div className="space-y-1"><Label htmlFor={`${id}-display-name`}>{t('email.senderIdentities.routes.displayName', 'Display name')}</Label><Input id={`${id}-display-name`} value={displayName} onChange={(event) => setDisplayName(event.target.value)} /></div>
-    {transport === 'smtp' && senderId !== '__default__' && senders.find(sender => sender.sender_id === senderId)?.verification_status !== 'verified' && <label className="flex gap-2 text-xs text-muted-foreground md:col-span-3"><input type="checkbox" checked={confirmUnverifiedSmtpSender} onChange={event => setConfirmUnverifiedSmtpSender(event.target.checked)} />{t('email.senderIdentities.routes.confirmSmtp', 'I confirm the SMTP relay accepts this sender address.')}</label>}
+    <div className="space-y-1"><Label htmlFor={`${id}-sender`}>{t('email.senderIdentities.routing.sender', 'Sender')}</Label><CustomSelect id={`${id}-sender`} value={senderId} onValueChange={setSenderId} options={options} /></div>
+    <div className="space-y-1"><Label htmlFor={`${id}-display-name`}>{t('email.senderIdentities.routing.displayName', 'Display name')}</Label><Input id={`${id}-display-name`} value={displayName} onChange={(event) => setDisplayName(event.target.value)} /></div>
+    {transport === 'smtp' && senderId !== '__default__' && senders.find(sender => sender.sender_id === senderId)?.verification_status !== 'verified' && <label className="flex gap-2 text-xs text-muted-foreground md:col-span-3"><input type="checkbox" checked={confirmUnverifiedSmtpSender} onChange={event => setConfirmUnverifiedSmtpSender(event.target.checked)} />{t('email.senderIdentities.routing.confirmSmtp', 'I confirm the SMTP relay accepts this sender address.')}</label>}
     <Button id={`${id}-save`} variant="outline" disabled={busy || (transport === 'smtp' && senderId !== '__default__' && senders.find(sender => sender.sender_id === senderId)?.verification_status !== 'verified' && !confirmUnverifiedSmtpSender)} onClick={() => onSave(senderId, displayName, confirmUnverifiedSmtpSender)}>{t('common.actions.save', 'Save')}</Button>
-    {routeKey === 'ticket' && <p className="text-xs text-muted-foreground md:col-span-4">{t('email.senderIdentities.routes.inboundReplyWarning', 'Inbound replies still go to the configured inbound mailbox; changing this From address does not change reply routing.')}</p>}
+    {routeKey === 'ticket' && <p className="text-xs text-muted-foreground md:col-span-4">{t('email.senderIdentities.routing.inboundReplyWarning', 'Inbound replies still go to the configured inbound mailbox; changing this From address does not change reply routing.')}</p>}
   </div>;
 }
