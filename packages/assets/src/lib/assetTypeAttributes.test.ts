@@ -28,6 +28,10 @@ describe('coerceAttributeValue', () => {
     expect(coerceAttributeValue(FIELDS[1], '1,234').ok).toBe(false);
     expect(coerceAttributeValue(FIELDS[2], '2026-02-30').ok).toBe(false);
     expect(coerceAttributeValue(FIELDS[2], '2026-01-05T23:00:00Z')).toEqual({ ok: true, value: '2026-01-05' });
+    expect(coerceAttributeValue(FIELDS[2], '2026-01-05T01:00:00+02:00')).toEqual({ ok: true, value: '2026-01-04' });
+    expect(coerceAttributeValue(FIELDS[2], '2026-02-30T00:00:00Z').ok).toBe(false);
+    expect(coerceAttributeValue(FIELDS[2], '2026-01-05T24:00:00Z').ok).toBe(false);
+    expect(coerceAttributeValue(FIELDS[2], '2026-01-05T12:60:00Z').ok).toBe(false);
     expect(coerceAttributeValue(FIELDS[3], 'PROD')).toEqual({ ok: true, value: 'prod' });
     expect(coerceAttributeValue(FIELDS[4], ' https://example.com ')).toEqual({ ok: true, value: 'https://example.com' });
     expect(coerceAttributeValue(FIELDS[5], 'yes')).toEqual({ ok: true, value: true });

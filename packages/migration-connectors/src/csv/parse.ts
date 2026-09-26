@@ -54,7 +54,10 @@ async function parseCsv(path: string): Promise<ParsedSheet> {
   if (headers.length === 0) {
     throw new Error(`CSV file ${path} has no header row.`);
   }
-  const rows = dataRows.map((cells) => {
+  const rows = dataRows.map((cells, index) => {
+    if (cells.length !== headerRow.length) {
+      throw new Error(`CSV file ${path}: row ${index + 2} has ${cells.length} columns; expected ${headerRow.length}. Check for missing or extra delimiters.`);
+    }
     const record: Record<string, string> = Object.create(null) as Record<string, string>;
     headersByColumn.forEach((header, index) => {
       if (header) record[header] = String(cells[index] ?? '');

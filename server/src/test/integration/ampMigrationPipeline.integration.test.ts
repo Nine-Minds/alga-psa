@@ -520,6 +520,10 @@ describe('AMP migration pipeline integration', () => {
     const migrationJobId = await createJob(fixture);
     const staging = await new MigrationStager(db, fixture.tenantId).stage(migrationJobId, packagePath);
     expect(staging.rejected).toBe(false);
+    // Direct AMP values can contain whitespace even though CSV conversion trims them.
+    const stagedAsset = await tenantTable(fixture.tenantId, 'migration_staged_records').where({ migration_job_id: migrationJobId, entity_type: 'assets' }).first();
+    const stagedCustomValues = typeof stagedAsset.custom_field_values === 'string' ? JSON.parse(stagedAsset.custom_field_values) : stagedAsset.custom_field_values;
+    await tenantTable(fixture.tenantId, 'migration_staged_records').where({ migration_staged_record_id: stagedAsset.migration_staged_record_id }).update({ custom_field_values: JSON.stringify({ ...stagedCustomValues, 'Controller ID': '   ' }) });
     const options = await loadMigrationConfigurationOptions(tenantDb(db, fixture.tenantId), db, migrationJobId, fixture.tenantId);
     expect(options.assetTypes.find((type) => type.slug === 'door_access')?.fields).toEqual(fields);
     expect(options.packageAssetCustomFields.map((row) => row.fieldName)).toEqual(['Controller ID', 'Door Count', 'Installed On', 'Monitored', 'Notes', 'Tier']);
@@ -532,11 +536,11 @@ describe('AMP migration pipeline integration', () => {
     });
     const preflight = await new MigrationPlanner(db, fixture.tenantId).preflight(migrationJobId);
     expect(preflight.state).toBe('ready');
-    expect(preflight.issues).toEqual([]);
+    expect(preflight.issues.map((issue) => issue.code)).toContain('ASSET_CUSTOM_FIELD_REQUIRED_MISSING');
     const applied = await new MigrationDomainApplier(db, fixture.tenantId).applyJob(migrationJobId, fixture.ownerUserId);
     expect(applied).toMatchObject({ created: 1, failed: 0 });
     const asset = await tenantTable(fixture.tenantId, 'assets').where({ name: 'Front Lobby' }).first();
-    expect(typeof asset.attributes === 'string' ? JSON.parse(asset.attributes) : asset.attributes).toEqual({ controller_id: 'C-1', door_count: 4, installed_on: '2026-01-05', tier: 'Gold', monitored: true });
+    expect(typeof asset.attributes === 'string' ? JSON.parse(asset.attributes) : asset.attributes).toEqual({ door_count: 4, installed_on: '2026-01-05', tier: 'Gold', monitored: true });
 
     const staged = await tenantTable(fixture.tenantId, 'migration_staged_records').where({ migration_job_id: migrationJobId, entity_type: 'assets' }).first();
     const customValues = typeof staged.custom_field_values === 'string' ? JSON.parse(staged.custom_field_values) : staged.custom_field_values;

@@ -421,7 +421,7 @@ export class AssetMigrationApplier implements EntityApplier {
     for (const [sourceName, targetKey] of Object.entries(sourceMapping)) {
       const values = staged?.customFieldValues;
       const sourceValue = values && Object.prototype.hasOwnProperty.call(values, sourceName) ? values[sourceName] : undefined;
-      if (sourceValue === undefined || sourceValue === null || sourceValue === '') continue;
+      if (sourceValue === undefined || sourceValue === null || (typeof sourceValue === 'string' && sourceValue.trim() === '')) continue;
       const field = fields.find((candidate) => candidate.key === targetKey);
       if (!field) throw new Error(`Mapped custom asset field "${targetKey}" no longer exists; preflight must pass before applying.`);
       const coerced = coerceAttributeValue(field, sourceValue);

@@ -66,6 +66,17 @@ afterAll(async () => {
 });
 
 describe('convertSpreadsheets', () => {
+  it('rejects rows with extra or missing cells and reports the row width', async () => {
+    for (const [fileName, csv, count] of [
+      ['wide.csv', 'Asset Name,Asset Type,Door Count\nFront,Door Access,1,234\n', 4],
+      ['short.csv', 'Asset Name,Asset Type,Door Count\nFront,Door Access\n', 2],
+    ] as const) {
+      const path = join(workDir, fileName);
+      await writeFile(path, csv);
+      await expect(inferSpreadsheetMapping(path, 'assets')).rejects.toThrow(`row 2 has ${count} columns; expected 3`);
+    }
+  });
+
   it('infers canonical headers and legacy asset aliases', async () => {
     const canonicalPath = join(workDir, 'canonical-assets.csv');
     await writeFile(canonicalPath, 'name,serial_number,asset_type_name\nrouter,R-1,network_device\n');

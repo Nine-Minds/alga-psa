@@ -312,14 +312,14 @@ export class MigrationPlanner {
       const values = typeof row.custom_field_values === 'string' ? JSON.parse(row.custom_field_values) : row.custom_field_values ?? {};
       const fields = types.get(slug)?.fields_schema ?? [];
       for (const field of fields.filter((candidate) => candidate.required)) {
-        if (!Object.values(sourceMap).includes(field.key) || !Object.entries(sourceMap).some(([sourceName, key]) => key === field.key && Object.prototype.hasOwnProperty.call(values, sourceName) && values[sourceName] !== undefined && values[sourceName] !== null && values[sourceName] !== '')) {
+        if (!Object.values(sourceMap).includes(field.key) || !Object.entries(sourceMap).some(([sourceName, key]) => key === field.key && hasPresentCustomValue(values[sourceName]))) {
           requiredMissing.add(row.package_record_id);
           break;
         }
       }
       for (const [sourceName, key] of Object.entries(sourceMap)) {
         const value = Object.prototype.hasOwnProperty.call(values, sourceName) ? values[sourceName] : undefined;
-        if (value === undefined || value === null || value === '') continue;
+        if (!hasPresentCustomValue(value)) continue;
         const field = fields.find((candidate) => candidate.key === key);
         if (!field) continue;
         const coerced = coerceAttributeValue(field, value);
@@ -526,6 +526,10 @@ export class MigrationPlanner {
       .count({ count: '*' });
     return Object.fromEntries(rows.map((row) => [row.entity_type, Number(row.count)]));
   }
+}
+
+function hasPresentCustomValue(value: unknown): boolean {
+  return value !== undefined && value !== null && (typeof value !== 'string' || value.trim().length > 0);
 }
 
 export function parseConfiguration(raw: unknown): MigrationJobConfiguration {

@@ -14,6 +14,29 @@ import {
 import type { MigrationJobDetails } from '@/lib/migrations/types';
 import { migrationErrorMessage } from './migrationUi';
 
+export function seedCustomAssetFieldMappings(
+  mapping: Record<string, string>,
+  existing: Record<string, Record<string, string>>,
+  assetTypes: MigrationConfigurationOptions['assetTypes'],
+  sourceFields: MigrationConfigurationOptions['packageAssetCustomFields']
+): Record<string, Record<string, string>> {
+  const eligibleSlugs = new Set(Object.values(mapping).filter((slug) => {
+    const type = assetTypes.find((candidate) => candidate.slug === slug);
+    return Boolean(type && !type.isBuiltin && type.fields.length > 0);
+  }));
+  const seeded = Object.fromEntries(Object.entries(existing).filter(([slug]) => eligibleSlugs.has(slug)));
+  for (const slug of eligibleSlugs) {
+    if (Object.prototype.hasOwnProperty.call(existing, slug)) continue;
+    const type = assetTypes.find((candidate) => candidate.slug === slug);
+    const sources = sourceFields.filter((field) => Object.entries(mapping).some(([sourceType, targetSlug]) => sourceType === field.assetTypeName && targetSlug === slug));
+    seeded[slug] = Object.fromEntries(sources.flatMap((source) => {
+      const matches = (type?.fields ?? []).filter((field) => normalizeName(field.key) === normalizeName(source.fieldName) || normalizeName(field.label) === normalizeName(source.fieldName));
+      return matches.length === 1 ? [[source.fieldName, matches[0].key]] : [];
+    }));
+  }
+  return seeded;
+}
+
 interface MigrationConfigurePanelProps {
   details: MigrationJobDetails;
   /** Called after a successful save so the parent can refresh job state. */
@@ -64,20 +87,7 @@ const MigrationConfigurePanel = ({ details, onSaved }: MigrationConfigurePanelPr
         setPriorityMapping(configuration.tickets?.priorityMapping ?? {});
         setAssetTypeMapping(configuration.assets?.assetTypeMapping ?? {});
         const savedFieldMapping = configuration.assets?.customFieldMapping ?? {};
-        const seeded: Record<string, Record<string, string>> = { ...savedFieldMapping };
-        for (const slug of new Set(Object.values(configuration.assets?.assetTypeMapping ?? {}))) {
-          if (Object.prototype.hasOwnProperty.call(seeded, slug)) continue;
-          const type = loaded.assetTypes.find((candidate) => candidate.slug === slug);
-          const sources = loaded.packageAssetCustomFields.filter((field) => {
-            const sourceTypeMapping = configuration.assets?.assetTypeMapping ?? {};
-            return Object.prototype.hasOwnProperty.call(sourceTypeMapping, field.assetTypeName) && sourceTypeMapping[field.assetTypeName] === slug;
-          });
-          seeded[slug] = Object.fromEntries(sources.flatMap((source) => {
-            const matches = (type?.fields ?? []).filter((field) => normalizeName(field.key) === normalizeName(source.fieldName) || normalizeName(field.label) === normalizeName(source.fieldName));
-            return matches.length === 1 ? [[source.fieldName, matches[0].key]] : [];
-          }));
-        }
-        setCustomFieldMapping(seeded);
+        setCustomFieldMapping(seedCustomAssetFieldMappings(configuration.assets?.assetTypeMapping ?? {}, savedFieldMapping, loaded.assetTypes, loaded.packageAssetCustomFields));
         setDefaultClientId(configuration.defaultClientId ?? '');
       })
       .catch((error) => {
@@ -152,7 +162,7 @@ const MigrationConfigurePanel = ({ details, onSaved }: MigrationConfigurePanelPr
               },
             }
           : {}),
-        ...(hasAssets ? { assets: { assetTypeMapping, customFieldMapping: Object.fromEntries(Object.entries(customFieldMapping).filter(([slug]) => Object.values(assetTypeMapping).includes(slug))) } } : {}),
+        ...(hasAssets ? { assets: { assetTypeMapping, customFieldMapping: seedCustomAssetFieldMappings(assetTypeMapping, customFieldMapping, options.assetTypes, options.packageAssetCustomFields) } } : {}),
       });
       setSaveSucceeded(true);
       await onSaved();
@@ -282,7 +292,10 @@ const MigrationConfigurePanel = ({ details, onSaved }: MigrationConfigurePanelPr
             sourceNames={options.packageAssetTypeNames}
             targetOptions={assetTypeOptions}
             mapping={assetTypeMapping}
-            onChange={setAssetTypeMapping}
+            onChange={(next) => {
+              setAssetTypeMapping(next);
+              setCustomFieldMapping((current) => seedCustomAssetFieldMappings(next, current, options.assetTypes, options.packageAssetCustomFields));
+            }}
             allowClear
             emptyMessage="The package's assets carry no asset type names."
           />

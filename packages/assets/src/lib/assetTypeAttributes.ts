@@ -60,7 +60,14 @@ export function coerceAttributeValue(
         if (parsed.toISOString().slice(0, 10) === date) return { ok: true, value: date };
         return fail();
       }
-      if (!/^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:?\d{2})$/.test(date) || !Number.isFinite(Date.parse(date))) return fail();
+      const timestamp = date.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?(Z|([+-])(\d{2}):(\d{2}))$/);
+      if (!timestamp) return fail();
+      const [, year, month, day, hour, minute, second, , zone, , offsetHour, offsetMinute] = timestamp;
+      const calendarDate = new Date(0);
+      calendarDate.setUTCHours(0, 0, 0, 0);
+      calendarDate.setUTCFullYear(Number(year), Number(month) - 1, Number(day));
+      if (calendarDate.toISOString().slice(0, 10) !== `${year}-${month}-${day}` || Number(hour) > 23 || Number(minute) > 59 || Number(second) > 59 || (zone !== 'Z' && (Number(offsetHour) > 23 || Number(offsetMinute) > 59))) return fail();
+      if (!Number.isFinite(Date.parse(date))) return fail();
       return { ok: true, value: new Date(date).toISOString().slice(0, 10) };
     }
     case 'select': {
