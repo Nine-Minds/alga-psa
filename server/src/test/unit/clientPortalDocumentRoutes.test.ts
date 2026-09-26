@@ -118,6 +118,26 @@ describe('client portal document routes', () => {
     expect(mocks.generatePDF).toHaveBeenCalledWith({ documentId: 'doc-1', userId: 'client-user' });
   });
 
+  it('falls back to stored text when block content is empty and rejects genuinely empty exports', async () => {
+    mocks.document.mockResolvedValueOnce(documentRecord({ file_id: null }));
+    mocks.blockContent = { block_data: [] };
+    mocks.textContent = { content: 'Actual notes' };
+    const markdown = await getExport(request('/api/client-portal/documents/doc-1/export?format=md'), params);
+    expect(markdown.status).toBe(200);
+    expect(await markdown.text()).toBe('Actual notes\n');
+
+    mocks.document.mockResolvedValueOnce(documentRecord({ file_id: null }));
+    mocks.textContent = { content: '  ' };
+    const emptyMarkdown = await getExport(request('/api/client-portal/documents/doc-1/export?format=md'), params);
+    expect(emptyMarkdown.status).toBe(404);
+    expect(await emptyMarkdown.json()).toMatchObject({ code: 'no_content' });
+    mocks.document.mockResolvedValueOnce(documentRecord({ file_id: null }));
+    const emptyPdf = await getExport(request('/api/client-portal/documents/doc-1/export?format=pdf'), params);
+    expect(emptyPdf.status).toBe(404);
+    expect(await emptyPdf.json()).toMatchObject({ code: 'no_content' });
+    expect(mocks.generatePDF).not.toHaveBeenCalled();
+  });
+
   it('denies internal and unauthenticated callers before looking up documents', async () => {
     mocks.currentUser.mockResolvedValueOnce({ ...client, user_type: 'internal' });
     expect((await getFile(request('/file'), params)).status).toBe(403);

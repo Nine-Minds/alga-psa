@@ -277,6 +277,8 @@ export default function ClientDocumentsPage() {
       console.error('Failed to download document:', error);
       const message = error instanceof DocumentRequestError && error.code === 'no_content'
         ? t('portal.noContent', 'This document has no content to export.')
+        : error instanceof DocumentRequestError && error.code === 'export_failed'
+          ? t('portal.exportFailed', 'PDF export failed. Try Markdown instead.')
         : error instanceof DocumentRequestError && (error.code === 'no_file' || error.code === 'missing_file' || error.code === 'not_found')
           ? t('portal.notFound', 'This document is no longer available.')
           : error instanceof DocumentRequestError && (error.status === 403 || error.status === 401)

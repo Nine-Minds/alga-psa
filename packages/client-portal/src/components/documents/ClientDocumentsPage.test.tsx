@@ -200,6 +200,19 @@ describe('ClientDocumentsPage', () => {
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Could not download this document. Please try again.'));
   });
 
+  it('suggests Markdown when PDF export fails', async () => {
+    const { fetchAndSaveFile, DocumentRequestError } = await import('../../lib/fetchAndSaveFile');
+    const { toast } = await import('react-hot-toast');
+    mockDocuments[0].file_id = null;
+    mockDocuments[0].document_name = 'Meeting Notes';
+    vi.mocked(fetchAndSaveFile).mockRejectedValueOnce(new DocumentRequestError('PDF export failed', 500, 'export_failed'));
+    render(<ClientDocumentsPage />);
+    await waitFor(() => expect(screen.getByText('Meeting Notes')).toBeInTheDocument());
+    fireEvent.click(document.getElementById('client-docs-download-document-doc-1')!);
+    fireEvent.click(await screen.findByText('Download PDF'));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('PDF export failed. Try Markdown instead.'));
+  });
+
   it('offers readable PDF and Markdown exports for an in-app document', async () => {
     mockDocuments[0].file_id = null;
     mockDocuments[0].document_name = 'Meeting Notes';

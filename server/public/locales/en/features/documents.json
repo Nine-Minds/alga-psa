@@ -228,7 +228,8 @@
     "notFound": "This document is no longer available.",
     "noContent": "This document has no content to export.",
     "accessDenied": "You do not have access to this document.",
-    "loadingPreview": "Loading preview…"
+    "loadingPreview": "Loading preview…",
+    "exportFailed": "PDF export failed. Try Markdown instead."
   },
   "kb": {
     "title": "Knowledge Base",

@@ -32,17 +32,16 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       scopedDb.table('document_block_content').where({ document_id: documentId }).first('block_data'),
       scopedDb.table('document_content').where({ document_id: documentId }).first('content'),
     ]);
-    const content = block?.block_data != null ? { kind: 'block' as const, blockData: block.block_data } : text?.content != null ? { kind: 'text' as const, content: text.content } : { kind: 'empty' as const };
     const format = request.nextUrl.searchParams.get('format');
     const name = authorized.document_name || 'document';
+    const markdown = buildDocumentMarkdown(block?.block_data, text?.content);
     if (format === 'md') {
-      const markdown = buildDocumentMarkdown(content.kind === 'block' ? content.blockData : null, content.kind === 'text' ? content.content : null);
       if (!markdown?.trim()) return NextResponse.json({ error: 'This document has no content to export.', code: 'no_content' }, { status: 404 });
       const headers = new Headers({ 'Content-Type': 'text/markdown; charset=utf-8', 'Content-Disposition': `attachment; filename="document.md"; filename*=UTF-8''${encodeURIComponent(name)}.md`, 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff' });
       return new Response(markdown, { headers });
     }
     if (format === 'pdf') {
-      if (content.kind === 'empty') return NextResponse.json({ error: 'This document has no content to export.', code: 'no_content' }, { status: 404 });
+      if (!markdown?.trim()) return NextResponse.json({ error: 'This document has no content to export.', code: 'no_content' }, { status: 404 });
       try {
         const pdf = await createPDFGenerationService(user.tenant).generatePDF({ documentId, userId: user.user_id });
         return new Response(pdf as any, { headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="document.pdf"; filename*=UTF-8''${encodeURIComponent(name)}.pdf`, 'Content-Length': String(pdf.length), 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff' } });

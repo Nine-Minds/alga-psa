@@ -228,7 +228,8 @@
     "notFound": "Ce document n’est plus disponible.",
     "noContent": "Ce document ne contient rien à exporter.",
     "accessDenied": "Vous n’avez pas accès à ce document.",
-    "loadingPreview": "Chargement de l’aperçu…"
+    "loadingPreview": "Chargement de l’aperçu…",
+    "exportFailed": "Échec de l’export PDF. Essayez plutôt Markdown."
   },
   "kb": {
     "title": "Base de connaissances",

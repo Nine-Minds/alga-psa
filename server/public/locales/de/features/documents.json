@@ -228,7 +228,8 @@
     "notFound": "Dieses Dokument ist nicht mehr verfügbar.",
     "noContent": "Dieses Dokument enthält keine exportierbaren Inhalte.",
     "accessDenied": "Sie haben keinen Zugriff auf dieses Dokument.",
-    "loadingPreview": "Vorschau wird geladen …"
+    "loadingPreview": "Vorschau wird geladen …",
+    "exportFailed": "Der PDF-Export ist fehlgeschlagen. Versuchen Sie stattdessen Markdown."
   },
   "kb": {
     "title": "Wissensdatenbank",

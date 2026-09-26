@@ -9,4 +9,9 @@ describe('buildDocumentMarkdown', () => {
   it('converts stored BlockNote content to Markdown', () => {
     expect(buildDocumentMarkdown([{ type: 'paragraph', content: [{ type: 'text', text: 'Meeting Notes' }] }], null)).toContain('Meeting Notes');
   });
+  it('falls back to valid text when block content is empty or cannot be converted', () => {
+    expect(buildDocumentMarkdown([], null)).toBeNull();
+    expect(buildDocumentMarkdown([], 'Actual notes')).toBe('Actual notes\n');
+    expect(buildDocumentMarkdown({ invalid: true }, 'Actual notes')).toBe('Actual notes\n');
+  });
 });

@@ -242,7 +242,8 @@
     "notFound": "Ten dokument jest już niedostępny.",
     "noContent": "Ten dokument nie zawiera treści do eksportu.",
     "accessDenied": "Nie masz dostępu do tego dokumentu.",
-    "loadingPreview": "Wczytywanie podglądu…"
+    "loadingPreview": "Wczytywanie podglądu…",
+    "exportFailed": "Eksport PDF nie powiódł się. Spróbuj Markdown."
   },
   "kb": {
     "title": "Baza wiedzy",
