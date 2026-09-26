@@ -18,7 +18,7 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { assertMspPermission } from '../lib/authHelpers';
-import { disableBillingProfileAutopay, enrollBillingProfileAutopay, getAutopayProfileOverview, startSavedPaymentMethodSetup } from '@alga-psa/billing/actions/paymentActions';
+import { disableBillingProfileAutopay, enrollBillingProfileAutopay, getAutopayProfileOverview, startSavedPaymentMethodSetup } from '@alga-psa/billing/services/autopayBridge';
 import { headers } from 'next/headers';
 
 /**
@@ -147,13 +147,14 @@ export const startClientAutopaySetup = withAuth(async (user, { tenant }, clientI
   return await startSavedPaymentMethodSetup(tenant, clientId, billingProfileId, `/msp/clients/${clientId}`);
 });
 
-export const setClientAutopay = withAuth(async (user, { tenant }, input: { clientId: string; billingProfileId: string; paymentMethodId?: string; enabled: boolean; consentTextVersion: string }) => {
+export const setClientAutopay = withAuth(async (user, { tenant }, input: { clientId: string; billingProfileId: string; paymentMethodId?: string; enabled: boolean; consentTextVersion: string; clientAuthorized?: boolean }) => {
   await assertMspPermission(user, 'billing', 'update', 'Permission denied: Cannot manage auto-pay settings');
   const { knex } = await createTenantKnex();
   const profile = await tenantDb(knex, tenant).table('client_billing_profiles').where({ client_id: input.clientId, billing_profile_id: input.billingProfileId }).first();
   if (!profile) throw new Error('Billing profile not found');
   if (!input.enabled) return await disableBillingProfileAutopay(tenant, input.billingProfileId, 'msp_request', user.user_id);
   if (!input.paymentMethodId) throw new Error('Select a chargeable card');
+  if (input.clientAuthorized !== true) throw new Error('Confirm that the client has authorized recurring charges');
   const requestHeaders = await headers();
   await enrollBillingProfileAutopay(tenant, input.billingProfileId, input.paymentMethodId, {
     userId: user.user_id, source: 'msp', consentTextVersion: input.consentTextVersion,

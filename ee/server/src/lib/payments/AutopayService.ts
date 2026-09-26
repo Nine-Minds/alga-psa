@@ -6,12 +6,12 @@ import { computeBalanceDue } from '@alga-psa/billing/services/accountingSync/rec
 import { PaymentService } from './PaymentService';
 import { createStripePaymentProvider } from './StripePaymentProvider';
 import { scheduleImmediateJob } from 'server/src/lib/jobs';
-import { classifyAutopayFailure, isAutopayEnrollmentValid, retryAt, shouldScheduleAutopay } from './autopayPolicy';
+import { classifyAutopayFailure, isAutopayEnrollmentValid, resolveConsentTextVersion, retryAt, shouldScheduleAutopay } from './autopayPolicy';
 import type { PaymentWebhookEvent } from '@alga-psa/types';
 import { buildPaymentFailedPayload } from 'server/src/lib/api/services/paymentWorkflowEvents';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import logger from '@alga-psa/core/logger';
-import { reconcileStripeWebhookEvents } from '../actions/payment-actions';
+import { reconcileStripeWebhookEvents } from './stripeWebhookEvents';
 
 type Authorization = { userId: string | null; source: 'client_portal' | 'msp'; ip?: string | null; userAgent?: string | null; consentTextVersion: string };
 
@@ -31,13 +31,15 @@ export class AutopayService {
       providerType: method?.provider_type, status: method?.status, externalPaymentMethodId: method?.external_payment_method_id, externalCustomerId: method?.external_customer_id })) {
       throw new Error(settings.autopayEnabled !== true ? 'Auto-pay is disabled for this tenant' : 'Selected card is not chargeable for this billing profile');
     }
+    const consentTextVersion = resolveConsentTextVersion({ source: authorization.source, submittedVersion: authorization.consentTextVersion,
+      currentVersion: settings.autopayConsentTextVersion as string | undefined });
     const profile = await this.table('client_billing_profiles').where({ billing_profile_id: billingProfileId }).first();
     if (!profile) throw new Error('Billing profile not found');
     await reconcileStripeWebhookEvents(this.tenantId);
     await this.table('billing_profile_autopay').insert({ tenant: this.tenantId, billing_profile_id: billingProfileId, client_id: profile.client_id,
       is_enabled: true, payment_method_id: paymentMethodId, authorized_at: this.knex.fn.now(), authorized_by_user_id: authorization.userId,
       authorization_source: authorization.source, authorization_ip: authorization.ip ?? null, authorization_user_agent: authorization.userAgent ?? null,
-      consent_text_version: authorization.consentTextVersion, disabled_at: null, disabled_by_user_id: null, disabled_reason: null,
+      consent_text_version: consentTextVersion, disabled_at: null, disabled_by_user_id: null, disabled_reason: null,
       created_at: this.knex.fn.now(), updated_at: this.knex.fn.now() })
       .onConflict(['tenant', 'billing_profile_id']).merge();
   }

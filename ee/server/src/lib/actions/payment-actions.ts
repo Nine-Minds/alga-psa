@@ -14,6 +14,7 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import logger from '@alga-psa/core/logger';
 import { tenantDb } from '@alga-psa/db';
 import Stripe from 'stripe';
+import { STRIPE_WEBHOOK_EVENTS, reconcileStripeWebhookEvents } from '../payments/stripeWebhookEvents';
 import * as fs from 'fs';
 import {
   IPaymentProviderConfig,
@@ -75,40 +76,6 @@ interface PaymentActionResult<T = void> {
 interface StripeCredentials {
   secretKey: string;
   publishableKey: string;
-}
-
-/**
- * Events we subscribe to for invoice payment processing.
- * These are automatically configured when connecting Stripe.
- */
-const STRIPE_WEBHOOK_EVENTS: Stripe.WebhookEndpointCreateParams.EnabledEvent[] = [
-  'checkout.session.completed',
-  'checkout.session.expired',
-  'payment_intent.succeeded',
-  'payment_intent.payment_failed',
-  'charge.refunded',
-  'setup_intent.succeeded',
-  'setup_intent.setup_failed',
-  'payment_method.detached',
-  'payment_method.updated',
-  'payment_method.automatically_updated',
-];
-
-export async function reconcileStripeWebhookEvents(tenant: string): Promise<boolean> {
-  const { knex } = await createTenantKnex();
-  const config = await tenantDb(knex, tenant).table<IPaymentProviderConfig>('payment_provider_configs')
-    .where({ provider_type: 'stripe', is_enabled: true }).first();
-  const endpointId = (config?.configuration as any)?.webhook_endpoint_id;
-  if (!config || !endpointId) return false;
-  const secretProvider = await getSecretProviderInstance();
-  const secretKey = await secretProvider.getTenantSecret(tenant, 'stripe_payment_secret_key');
-  if (!secretKey) return false;
-  const stripe = new Stripe(secretKey, { apiVersion: '2024-12-18.acacia' as any });
-  const endpoint = await stripe.webhookEndpoints.update(endpointId, { enabled_events: STRIPE_WEBHOOK_EVENTS });
-  await tenantDb(knex, tenant).table('payment_provider_configs').where({ config_id: config.config_id }).update({
-    configuration: { ...(config.configuration as any), webhook_events: endpoint.enabled_events }, updated_at: knex.fn.now(),
-  });
-  return true;
 }
 
 /**

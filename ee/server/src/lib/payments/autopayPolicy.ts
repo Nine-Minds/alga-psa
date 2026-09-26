@@ -26,6 +26,20 @@ export function isAutopayEnrollmentValid(input: {
     !!input.externalPaymentMethodId && !!input.externalCustomerId;
 }
 
+/**
+ * The consent version a portal user accepted must be the tenant's current one;
+ * a stale page (text changed since render) or a forged value is rejected.
+ * MSP attestations always record the current version.
+ */
+export function resolveConsentTextVersion(input: { source: 'client_portal' | 'msp'; submittedVersion?: string | null; currentVersion?: string | null }): string {
+  const current = String(input.currentVersion ?? '1');
+  if (input.source === 'msp') return current;
+  if (String(input.submittedVersion ?? '') !== current) {
+    throw new Error('The auto-pay authorization text has changed. Please review it and authorize again.');
+  }
+  return current;
+}
+
 export function classifyAutopayFailure(code?: string, declineCode?: string, attemptNumber = 1, retryCount = 3): { retryable: boolean; hardDecline: boolean } {
   const decline = declineCode ?? code ?? '';
   const hardDecline = ['stolen_card', 'lost_card', 'fraudulent', 'expired_card'].includes(decline) || (decline === 'do_not_honor' && attemptNumber > retryCount);

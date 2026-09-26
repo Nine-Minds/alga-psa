@@ -6,6 +6,7 @@ import { getCurrentUserAsync } from '../lib/authHelpers';
 import { PaymentLinkError } from './paymentLinkError';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { getInvoiceAutopayContextsForTenant, type InvoiceAutopayContext } from '../services/autopayBridge';
 
 export type { PaymentLinkErrorCode } from './paymentLinkError';
 
@@ -16,16 +17,12 @@ function isEnterpriseBuild(): boolean {
 async function loadEnterprisePayments(): Promise<{
   PaymentService: any;
   createStripePaymentProvider: any;
-  AutopayService?: any;
-  SavedPaymentMethodService?: any;
 } | null> {
   try {
     const mod = await import('@enterprise/lib/payments');
     return {
       PaymentService: (mod as any).PaymentService,
       createStripePaymentProvider: (mod as any).createStripePaymentProvider,
-      AutopayService: (mod as any).AutopayService,
-      SavedPaymentMethodService: (mod as any).SavedPaymentMethodService,
     };
   } catch (error) {
     if (isEnterpriseBuild()) {
@@ -40,69 +37,20 @@ async function loadEnterprisePayments(): Promise<{
   }
 }
 
-/** Hosted Stripe Setup checkout. CE returns null through the existing loader boundary. */
-export async function startSavedPaymentMethodSetup(tenantId: string, clientId: string, billingProfileId: string, returnTo?: string): Promise<{ url: string } | null> {
-  if (!isEnterpriseBuild()) return null;
-  const ee = await loadEnterprisePayments();
-  if (!ee?.SavedPaymentMethodService) return null;
-  const service = await ee.SavedPaymentMethodService.create(tenantId);
-  return service.startSetup(clientId, billingProfileId, returnTo);
-}
-
-export async function completeSavedPaymentMethodSetup(tenantId: string, sessionId: string): Promise<{ paymentMethodId: string } | null> {
-  if (!isEnterpriseBuild()) return null;
-  const ee = await loadEnterprisePayments();
-  if (!ee?.SavedPaymentMethodService) return null;
-  const service = await ee.SavedPaymentMethodService.create(tenantId);
-  return service.completeSetup(sessionId);
-}
-
-export async function removeSavedPaymentMethod(tenantId: string, paymentMethodId: string): Promise<boolean> {
-  if (!isEnterpriseBuild()) return false;
-  const ee = await loadEnterprisePayments();
-  if (!ee?.SavedPaymentMethodService) return false;
-  await (await ee.SavedPaymentMethodService.create(tenantId)).removeMethod(paymentMethodId);
-  return true;
-}
-
-export async function inspectSavedPaymentMethodSetup(tenantId: string, sessionId: string): Promise<Record<string, unknown> | null> {
-  if (!isEnterpriseBuild()) return null;
-  const ee = await loadEnterprisePayments();
-  if (!ee?.SavedPaymentMethodService) return null;
-  return (await ee.SavedPaymentMethodService.create(tenantId)).inspectSetup(sessionId);
-}
-
-export async function getAutopayProfileOverview(tenantId: string, billingProfileId: string): Promise<Record<string, unknown> | null> {
-  if (!isEnterpriseBuild()) return null;
-  const ee = await loadEnterprisePayments();
-  if (!ee?.AutopayService) return null;
-  return (await ee.AutopayService.create(tenantId)).getProfileOverview(billingProfileId);
-}
-
-export async function enrollBillingProfileAutopay(tenantId: string, billingProfileId: string, paymentMethodId: string, authorization: Record<string, unknown>): Promise<boolean> {
-  if (!isEnterpriseBuild()) return false;
-  const ee = await loadEnterprisePayments();
-  if (!ee?.AutopayService) return false;
-  await (await ee.AutopayService.create(tenantId)).enroll(billingProfileId, paymentMethodId, authorization);
-  return true;
-}
-
-export async function disableBillingProfileAutopay(tenantId: string, billingProfileId: string, reason: string, actor: string | null): Promise<boolean> {
-  if (!isEnterpriseBuild()) return false;
-  const ee = await loadEnterprisePayments();
-  if (!ee?.AutopayService) return false;
-  await (await ee.AutopayService.create(tenantId)).disenroll(billingProfileId, reason, actor);
-  return true;
-}
-
-export async function getInvoiceAutopayContexts(invoiceIds: string[]): Promise<Record<string, { scheduledFor: string; brand: string | null; last4: string; status: string }>> {
-  if (!isEnterpriseBuild()) return {};
+/**
+ * Auto-pay status for invoice lists (MSP finalized tab, client portal invoices).
+ * Authenticated here; the tenant-trusting bridge is only reached after the
+ * invoice ids are narrowed to what this user may see.
+ */
+export async function getInvoiceAutopayContexts(invoiceIds: string[]): Promise<Record<string, InvoiceAutopayContext>> {
+  if (!isEnterpriseBuild() || invoiceIds.length === 0) return {};
   const user = await getCurrentUserAsync();
   if (!user) return {};
   const tenantId = user.tenant;
   const { knex } = await createTenantKnex();
   let permittedInvoiceIds = invoiceIds;
-  if (user.contact_id) {
+  if (user.user_type === 'client') {
+    if (!user.contact_id) return {};
     const contact = await tenantDb(knex, tenantId).table('contacts').where({ contact_name_id: user.contact_id }).first('client_id');
     if (!contact?.client_id) return {};
     const rows = await tenantDb(knex, tenantId).table('invoices').where({ client_id: contact.client_id }).whereIn('invoice_id', invoiceIds).select('invoice_id');
@@ -110,21 +58,7 @@ export async function getInvoiceAutopayContexts(invoiceIds: string[]): Promise<R
   } else if (!await hasPermission(user, 'billing', 'read')) {
     return {};
   }
-  const ee = await loadEnterprisePayments();
-  if (!ee?.AutopayService) return {};
-  return (await ee.AutopayService.create(tenantId)).getInvoiceAutopayContexts(permittedInvoiceIds);
-}
-
-/** Best-effort finalize producer. It is intentionally isolated from finalize. */
-export async function enqueueInvoiceAutopay(_knex: unknown, tenantId: string, invoiceId: string): Promise<void> {
-  try {
-    if (!isEnterpriseBuild()) return;
-    const ee = await loadEnterprisePayments();
-    if (!ee?.AutopayService) return;
-    await ee.AutopayService.enqueueInvoiceAutopay(tenantId, invoiceId);
-  } catch (error) {
-    logger.error('[billing/paymentActions] Failed to enqueue invoice auto-pay', { tenantId, invoiceId, error });
-  }
+  return getInvoiceAutopayContextsForTenant(tenantId, permittedInvoiceIds);
 }
 
 export async function getPaymentService(tenantId: string): Promise<any | null> {

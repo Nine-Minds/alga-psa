@@ -13,7 +13,7 @@ import {
   resolvePaymentBillingProfileId,
 } from '@alga-psa/shared/billingClients/billingProfilePayments';
 import { getPermittedBillingProfileIds } from './client-portal-actions/clientBillingProfileAccess';
-import { completeSavedPaymentMethodSetup, disableBillingProfileAutopay, enrollBillingProfileAutopay, getAutopayProfileOverview, getInvoiceAutopayContexts, inspectSavedPaymentMethodSetup, removeSavedPaymentMethod as removeSavedMethod, startSavedPaymentMethodSetup } from '@alga-psa/billing/actions/paymentActions';
+import { completeSavedPaymentMethodSetup, disableBillingProfileAutopay, enrollBillingProfileAutopay, getAutopayProfileOverview, getInvoiceAutopayContextsForTenant, inspectSavedPaymentMethodSetup, removeSavedPaymentMethod as removeSavedMethod, startSavedPaymentMethodSetup } from '@alga-psa/billing/services/autopayBridge';
 import { headers } from 'next/headers';
 
 export type ClientPortalAccountActionError = ActionMessageError;
@@ -533,7 +533,7 @@ export const getInvoices = withAuth(async (user, { tenant }): Promise<Invoice[] 
       .select('*') as unknown as InvoiceRow[];
   });
 
-  const autopayContexts = await getInvoiceAutopayContexts(invoices.map((invoice) => invoice.invoice_id));
+  const autopayContexts = await getInvoiceAutopayContextsForTenant(tenant, invoices.map((invoice) => invoice.invoice_id));
   return invoices.map((invoice): Invoice => {
     // Determine status based on due date and existing status. Credit notes
     // reduce what the client owes — pending/overdue semantics don't apply.

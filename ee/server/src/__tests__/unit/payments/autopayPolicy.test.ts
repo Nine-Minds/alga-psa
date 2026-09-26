@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { classifyAutopayFailure, isAutopayEnrollmentValid, isMissedFinalizeCandidate, retryAt, shouldScheduleAutopay } from '../../../lib/payments/autopayPolicy';
+import { classifyAutopayFailure, isAutopayEnrollmentValid, resolveConsentTextVersion, isMissedFinalizeCandidate, retryAt, shouldScheduleAutopay } from '../../../lib/payments/autopayPolicy';
 import { buildAutopayPaymentIntentRequest, mapStripeAutopayError } from '../../../lib/payments/stripeAutopayParams';
 
 const chargeRequest = {
@@ -55,6 +55,14 @@ describe('autopay policy and Stripe request construction', () => {
     expect(isAutopayEnrollmentValid({ ...valid, providerType: 'manual' })).toBe(false);
     expect(isAutopayEnrollmentValid({ ...valid, status: 'requires_update' })).toBe(false);
     expect(isAutopayEnrollmentValid({ ...valid, externalPaymentMethodId: null })).toBe(false);
+  });
+
+  it('requires portal consent to match the current authorization text version', () => {
+    expect(resolveConsentTextVersion({ source: 'client_portal', submittedVersion: '3', currentVersion: '3' })).toBe('3');
+    expect(() => resolveConsentTextVersion({ source: 'client_portal', submittedVersion: '2', currentVersion: '3' })).toThrow();
+    expect(() => resolveConsentTextVersion({ source: 'client_portal', submittedVersion: null, currentVersion: '3' })).toThrow();
+    expect(resolveConsentTextVersion({ source: 'client_portal', submittedVersion: '1', currentVersion: undefined })).toBe('1');
+    expect(resolveConsentTextVersion({ source: 'msp', submittedVersion: 'anything', currentVersion: '4' })).toBe('4');
   });
 
   it('skips attempts unless every chargeability and invoice rule passes', () => {

@@ -28,7 +28,7 @@ import {
 
 import { validateInvoiceFinalization, validateInvoiceFinalizationInternal } from './taxSourceActions';
 import { enqueueInvoiceAutoExport } from '../services/accountingSync/syncProducers';
-import { enqueueInvoiceAutopay } from './paymentActions';
+import { enqueueInvoiceAutopay } from '../services/autopayBridge';
 import { assertInvoiceNotExported } from '../services/accountingSync/invoiceExportGuards';
 import { assertInvoiceExportReady, InvoiceExportReadinessError } from '../services/accountingSync/exportReadiness';
 import { withAuth } from '@alga-psa/auth';
