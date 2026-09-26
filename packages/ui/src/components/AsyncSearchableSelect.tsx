@@ -402,6 +402,13 @@ export function AsyncSearchableSelect({
           aria-expanded={open}
           className={cn('w-full justify-between', disabled && 'opacity-50 cursor-not-allowed', className)}
           onClick={() => !disabled && setOpen(!open)}
+          onKeyDown={(e) => {
+            if (disabled) return;
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+              e.preventDefault();
+              setOpen(true);
+            }
+          }}
           disabled={disabled}
           {...automationIdProps}
         >
