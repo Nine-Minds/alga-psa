@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -53,6 +54,7 @@ interface MigrationConfigurePanelProps {
  * only appear for entity types the package actually staged.
  */
 const MigrationConfigurePanel = ({ details, onSaved }: MigrationConfigurePanelProps): React.JSX.Element => {
+  const { t } = useTranslation('msp/settings');
   const [options, setOptions] = useState<MigrationConfigurationOptions | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -309,30 +311,30 @@ const MigrationConfigurePanel = ({ details, onSaved }: MigrationConfigurePanelPr
             const sourceRows = options.packageAssetCustomFields.filter((field) => Object.entries(assetTypeMapping).some(([sourceType, targetSlug]) => targetSlug === slug && sourceType === field.assetTypeName));
             const sourceNames = [...new Set(sourceRows.map((field) => field.fieldName))];
             const mapping = customFieldMapping[slug] ?? {};
-            const targets = type.fields.map((field) => ({ value: field.key, label: `${field.label} · ${field.kind}${field.required ? ' · required' : ''}` }));
+            const targets = type.fields.map((field) => ({ value: field.key, label: `${field.label} · ${field.kind}${field.required ? ` · ${t('importExport.migration.customFields.required')}` : ''}` }));
             const duplicateTargets = Object.values(mapping).filter(Boolean).filter((key, index, values) => values.indexOf(key) !== index);
             const missingRequired = type.fields.filter((field) => field.required && !Object.values(mapping).includes(field.key));
             return <section key={slug} className="space-y-3 rounded-md border border-border p-4">
-              <h5 className="text-sm font-semibold text-foreground">Fields for {type.name}</h5>
+              <h5 className="text-sm font-semibold text-foreground">{t('importExport.migration.customFields.title', { name: type.name })}</h5>
               <MappingGrid
-                title="Custom field mapping"
-                description="Map preserved CSV columns to fields on this asset type."
+                title={t('importExport.migration.customFields.mapping')}
+                description={t('importExport.migration.customFields.description')}
                 idPrefix={`amp-config-asset-fields-${slug}`}
                 sourceNames={sourceNames}
                 targetOptions={targets}
                 mapping={mapping}
                 onChange={(next) => setCustomFieldMapping({ ...customFieldMapping, [slug]: next })}
-                emptyMessage="No custom columns were preserved for this asset type."
+                emptyMessage={t('importExport.migration.customFields.empty')}
                 allowClear
                 preserveClears
                 detail={(sourceName) => {
                   const rows = sourceRows.filter((row) => row.fieldName === sourceName);
                   const samples = [...new Set(rows.map((row) => row.sampleValue).filter(Boolean))];
-                  return `${samples.join(', ') || 'No sample'} · ${rows.reduce((count, row) => count + row.recordCount, 0)} records`;
+                  return t('importExport.migration.customFields.samples', { sample: samples.join(', ') || t('importExport.migration.customFields.noSample'), count: rows.reduce((count, row) => count + row.recordCount, 0) });
                 }}
               />
-              {missingRequired.length > 0 && <p className="text-xs text-muted-foreground">Required fields not mapped: {missingRequired.map((field) => field.label).join(', ')}</p>}
-              {duplicateTargets.length > 0 && <p className="text-xs text-destructive">A custom field is mapped more than once. Choose a unique target for each source.</p>}
+              {missingRequired.length > 0 && <p className="text-xs text-muted-foreground">{t('importExport.migration.customFields.missingRequired', { fields: missingRequired.map((field) => field.label).join(', ') })}</p>}
+              {duplicateTargets.length > 0 && <p className="text-xs text-destructive">{t('importExport.migration.customFields.duplicate')}</p>}
             </section>;
           })}
         </section>

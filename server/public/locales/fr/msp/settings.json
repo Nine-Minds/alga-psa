@@ -2179,6 +2179,18 @@
       "comingSoon": "Les modèles de correspondance et les importations planifiées seront disponibles ici. Enregistrez les correspondances de colonnes, partagez-les avec l'équipe et configurez des tâches récurrentes."
     },
     "migration": {
+      "customFields": {
+        "required": "obligatoire",
+        "title": "Champs de {{name}}",
+        "mapping": "Correspondance des champs personnalisés",
+        "description": "Associez les colonnes CSV conservées aux champs de ce type d’actif.",
+        "empty": "Aucune colonne personnalisée n’a été conservée pour ce type d’actif.",
+        "samples_one": "{{sample}} · {{count}} enregistrement",
+        "samples_other": "{{sample}} · {{count}} enregistrements",
+        "noSample": "Aucun exemple",
+        "missingRequired": "Champs obligatoires non associés : {{fields}}",
+        "duplicate": "Un champ personnalisé est associé plusieurs fois. Choisissez une destination unique pour chaque source."
+      },
       "actions": {
         "back": "Retour aux migrations",
         "upload": "Téléverser le paquet"

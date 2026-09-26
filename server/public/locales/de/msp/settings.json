@@ -2179,6 +2179,18 @@
       "comingSoon": "Zuordnungsvorlagen und geplante Importe werden hier verfügbar sein. Speichern Sie Spaltenzuordnungen, teilen Sie sie mit dem Team und konfigurieren Sie wiederkehrende Aufträge."
     },
     "migration": {
+      "customFields": {
+        "required": "erforderlich",
+        "title": "Felder für {{name}}",
+        "mapping": "Zuordnung benutzerdefinierter Felder",
+        "description": "Ordnen Sie beibehaltene CSV-Spalten den Feldern dieses Asset-Typs zu.",
+        "empty": "Für diesen Asset-Typ wurden keine benutzerdefinierten Spalten beibehalten.",
+        "samples_one": "{{sample}} · {{count}} Datensatz",
+        "samples_other": "{{sample}} · {{count}} Datensätze",
+        "noSample": "Kein Beispiel",
+        "missingRequired": "Nicht zugeordnete Pflichtfelder: {{fields}}",
+        "duplicate": "Ein benutzerdefiniertes Feld wurde mehrfach zugeordnet. Wählen Sie für jede Quelle ein eindeutiges Ziel."
+      },
       "actions": {
         "back": "Zurück zu Migrationen",
         "upload": "Paket hochladen"

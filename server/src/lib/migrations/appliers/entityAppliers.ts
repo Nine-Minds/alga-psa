@@ -425,7 +425,7 @@ export class AssetMigrationApplier implements EntityApplier {
       const field = fields.find((candidate) => candidate.key === targetKey);
       if (!field) throw new Error(`Mapped custom asset field "${targetKey}" no longer exists; preflight must pass before applying.`);
       const coerced = coerceAttributeValue(field, sourceValue);
-      if (!coerced.ok) {
+      if (coerced.ok === false) {
         const valueDescription = typeof sourceValue === 'string' ? sourceValue : JSON.stringify(sourceValue) ?? '[value]';
         throw new Error(`Custom asset field "${sourceName}" value "${valueDescription}" ${coerced.reason}.`);
       }

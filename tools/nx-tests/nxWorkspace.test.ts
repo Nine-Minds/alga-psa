@@ -75,6 +75,9 @@ describe('nx workspace', () => {
         expect.objectContaining({ project: '@alga-psa/billing', target: 'build' }),
         expect.objectContaining({ project: '@alga-psa/opportunities', target: 'build' }),
       ]));
+      // Runtime integration fixtures must not pull the separately deployed EE
+      // worker (or its EE-only imports) into the community image build.
+      expect(targets.some(target => target.project === 'temporal-workflows')).toBe(false);
       expect(targets.filter(target => target.project === 'server')).toEqual([
         expect.objectContaining({ project: 'server', target: 'build-deps' }),
       ]);

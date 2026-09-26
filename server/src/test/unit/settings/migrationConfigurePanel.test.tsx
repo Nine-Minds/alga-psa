@@ -6,6 +6,16 @@ import type { MigrationJobDetails } from '../../../lib/migrations/types';
 
 type SelectOption = { value: string; label: string };
 
+const locale = vi.hoisted(() => ({ language: 'en' }));
+vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
+  const { createInstance } = await import('i18next');
+  const en = (await import('../../../../public/locales/en/msp/settings.json')).default;
+  const fr = (await import('../../../../public/locales/fr/msp/settings.json')).default;
+  const i18n = createInstance();
+  await i18n.init({ resources: { en: { settings: en }, fr: { settings: fr } }, fallbackLng: 'en' });
+  return { useTranslation: () => ({ t: i18n.getFixedT(locale.language, 'settings') }) };
+});
+
 const actions = vi.hoisted(() => ({ getOptions: vi.fn(), saveConfiguration: vi.fn() }));
 vi.mock('@/lib/migrations/migrationActions', () => ({
   getMigrationConfigurationOptions: actions.getOptions,
@@ -34,7 +44,7 @@ vi.mock('@alga-psa/ui/components/Label', () => ({ Label: ({ children, ...props }
 import { seedCustomAssetFieldMappings } from '../../../components/settings/migrations/MigrationConfigurePanel';
 import MigrationConfigurePanel from '../../../components/settings/migrations/MigrationConfigurePanel';
 
-afterEach(() => { cleanup(); vi.clearAllMocks(); });
+afterEach(() => { cleanup(); vi.clearAllMocks(); locale.language = 'en'; });
 
 function elementById(id: string): HTMLElement {
   const element = document.getElementById(id);
@@ -88,6 +98,37 @@ describe('custom asset field configuration defaults', () => {
 
     expect(Object.prototype.hasOwnProperty.call(seeded.door_access, '__proto__')).toBe(true);
     expect(seeded.door_access['__proto__']).toBe('proto_value');
+  });
+
+  it('renders custom-field guidance and sample counts in the selected locale', async () => {
+    locale.language = 'fr';
+    actions.getOptions.mockResolvedValue({
+      boards: [], statuses: [], priorities: [], clients: [], users: [],
+      assetTypes: [{ slug: 'door_access', name: 'Door Access', isBuiltin: false, fields: [
+        { key: 'count', label: 'Count', kind: 'number', required: true },
+      ] }],
+      packageStatusNames: [], packagePriorityNames: [], packageAssetTypeNames: ['Doors'],
+      packageAssetCustomFields: [
+        { assetTypeName: 'Doors', fieldName: 'Column A', sampleValue: null, recordCount: 1 },
+        { assetTypeName: 'Doors', fieldName: 'Column B', sampleValue: '2', recordCount: 2 },
+      ],
+      stagedEntityTypes: ['assets'],
+    });
+    const details = {
+      migrationJobId: 'job-fr',
+      configuration: { assets: { assetTypeMapping: { Doors: 'door_access' }, customFieldMapping: { door_access: {} } } },
+    } as unknown as MigrationJobDetails;
+    render(<MigrationConfigurePanel details={details} onSaved={vi.fn()} />);
+    expect(await screen.findByText('Champs de Door Access')).toBeInTheDocument();
+    expect(screen.getByText('Correspondance des champs personnalisés')).toBeInTheDocument();
+    expect(screen.getByText('Aucun exemple · 1 enregistrement')).toBeInTheDocument();
+    expect(screen.getByText('2 · 2 enregistrements')).toBeInTheDocument();
+    expect(screen.getByText('Champs obligatoires non associés : Count')).toBeInTheDocument();
+    expect(screen.getAllByRole('option', { name: 'Count · number · obligatoire' })).toHaveLength(2);
+    fireEvent.change(elementById('amp-config-asset-fields-door_access-0-select'), { target: { value: 'count' } });
+    fireEvent.change(elementById('amp-config-asset-fields-door_access-1-select'), { target: { value: 'count' } });
+    expect(screen.getByText('Un champ personnalisé est associé plusieurs fois. Choisissez une destination unique pour chaque source.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save configuration' })).toBeDisabled();
   });
 
   it('removes stale source mappings after remapping and saves only the still-visible mapping', async () => {

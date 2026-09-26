@@ -323,7 +323,7 @@ export class MigrationPlanner {
         const field = fields.find((candidate) => candidate.key === key);
         if (!field) continue;
         const coerced = coerceAttributeValue(field, value);
-        if (!coerced.ok) {
+        if (coerced.ok === false) {
           const valueDescription = typeof value === 'string' ? value : JSON.stringify(value) ?? '[value]';
           failures.set(row.package_record_id, `"${sourceName}" value "${valueDescription}" ${coerced.reason}`);
           break;

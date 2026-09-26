@@ -2179,6 +2179,18 @@
       "comingSoon": "Las plantillas de mapeo y las importaciones programadas se ubicarán aquí. Guarde mapeos de columnas, compártalos con el equipo y configure trabajos recurrentes."
     },
     "migration": {
+      "customFields": {
+        "required": "obligatorio",
+        "title": "Campos de {{name}}",
+        "mapping": "Asignación de campos personalizados",
+        "description": "Asigne las columnas CSV conservadas a los campos de este tipo de activo.",
+        "empty": "No se conservaron columnas personalizadas para este tipo de activo.",
+        "samples_one": "{{sample}} · {{count}} registro",
+        "samples_other": "{{sample}} · {{count}} registros",
+        "noSample": "Sin muestra",
+        "missingRequired": "Campos obligatorios sin asignar: {{fields}}",
+        "duplicate": "Un campo personalizado está asignado más de una vez. Elija un destino único para cada origen."
+      },
       "actions": {
         "back": "Volver a migraciones",
         "upload": "Subir paquete"

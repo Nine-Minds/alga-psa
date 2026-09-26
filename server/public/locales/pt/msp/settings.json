@@ -2179,6 +2179,18 @@
       "comingSoon": "Os modelos de mapeamento e as importações programadas ficarão aqui. Salve mapeamentos de colunas, compartilhe-os com toda a equipe e configure trabalhos recorrentes."
     },
     "migration": {
+      "customFields": {
+        "required": "obrigatório",
+        "title": "Campos de {{name}}",
+        "mapping": "Mapeamento de campos personalizados",
+        "description": "Associe as colunas CSV preservadas aos campos deste tipo de ativo.",
+        "empty": "Não foram preservadas colunas personalizadas para este tipo de ativo.",
+        "samples_one": "{{sample}} · {{count}} registro",
+        "samples_other": "{{sample}} · {{count}} registros",
+        "noSample": "Sem exemplo",
+        "missingRequired": "Campos obrigatórios não associados: {{fields}}",
+        "duplicate": "Um campo personalizado está associado mais de uma vez. Escolha um destino único para cada origem."
+      },
       "actions": {
         "back": "Voltar para migrações",
         "upload": "Enviar pacote"

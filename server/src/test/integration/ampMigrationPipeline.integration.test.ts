@@ -165,6 +165,13 @@ async function applyMigrationThroughIsolatedTemporalAndEventBus(
     process.env.redis_password = '';
     process.env.SECRET_READ_CHAIN = 'env';
 
+    // Load the separately deployed worker as a runtime test fixture, just like
+    // workflowsPath below. A package import here makes Nx build the EE worker
+    // as a CE server dependency (and creates a worker -> server -> worker cycle).
+    const workerActivitiesPath = fileURLToPath(new URL(
+      '../../../../ee/temporal-workflows/src/activities/job-activities.ts',
+      import.meta.url,
+    ));
     const [
       workerActivities,
       { TestWorkflowEnvironment: TemporalEnvironment },
@@ -175,7 +182,7 @@ async function applyMigrationThroughIsolatedTemporalAndEventBus(
       maintenanceSubscriber,
       eventBusPackage,
     ] = await Promise.all([
-      import('../../../../ee/temporal-workflows/src/activities/job-activities'),
+      import(workerActivitiesPath),
       import('@temporalio/testing'),
       import('@temporalio/worker'),
       import('@alga-psa/jobs/runners/TemporalJobRunner'),
