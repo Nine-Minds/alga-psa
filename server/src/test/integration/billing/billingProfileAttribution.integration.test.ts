@@ -69,6 +69,24 @@ vi.mock('server/src/lib/tenant', () => ({
   getTenantFromHeaders: vi.fn(() => tenantId ?? null),
 }));
 
+vi.mock('../../../../../packages/billing/src/lib/authHelpers', async () => {
+  const actual = await vi.importActual<typeof import('../../../../../packages/billing/src/lib/authHelpers')>(
+    '../../../../../packages/billing/src/lib/authHelpers',
+  );
+  return {
+    ...actual,
+    getCurrentUserAsync: vi.fn(async () => ({
+      user_id: userId,
+      tenant: tenantId,
+      username: 'profile-attribution-tester',
+      email: 'profile-attribution@profiles.test',
+      user_type: 'internal',
+      roles: [{ role_name: 'Admin' }],
+    })),
+    hasPermissionAsync: vi.fn(async () => true),
+  };
+});
+
 vi.mock('@alga-psa/auth/withAuth', () => ({
   withAuth: (action: (...args: any[]) => Promise<unknown>) =>
     (...args: any[]) =>
@@ -102,7 +120,7 @@ let tenantId: string;
 let userId: string;
 
 let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration')['generateInvoice'];
-let generateInvoiceForSelectionInput: typeof import('@alga-psa/billing/actions/invoiceGeneration')['generateInvoiceForSelectionInput'];
+let generateGroupedInvoicesAsRecurringBillingRun: typeof import('@alga-psa/billing/actions/recurringBillingRunActions')['generateGroupedInvoicesAsRecurringBillingRun'];
 let syncRecurringServicePeriodsForContractLine:
   typeof import('@alga-psa/billing/actions/recurringServicePeriodSync')['syncRecurringServicePeriodsForContractLine'];
 
@@ -254,7 +272,7 @@ describe('billing profiles S2 — charge attribution and snapshots (T004, T010, 
     await ensureClientPlanBundlesTable({ db, tenantId } as any);
 
     ({ generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
-    ({ generateInvoiceForSelectionInput } = await import('@alga-psa/billing/actions/invoiceGeneration'));
+    ({ generateGroupedInvoicesAsRecurringBillingRun } = await import('@alga-psa/billing/actions/recurringBillingRunActions'));
     ({ syncRecurringServicePeriodsForContractLine } = await import(
       '@alga-psa/billing/actions/recurringServicePeriodSync'
     ));
@@ -391,6 +409,10 @@ describe('billing profiles S2 — charge attribution and snapshots (T004, T010, 
     await table('client_billing_profiles')
       .where({ billing_profile_id: checkProfileId })
       .update({ preferred_payment_method: 'check', payment_terms: 'due_on_receipt' });
+    const inheritingDefaultProfile = await table('client_billing_profiles')
+      .where({ billing_profile_id: cardProfileId })
+      .first('preferred_payment_method', 'payment_terms');
+    expect(inheritingDefaultProfile).toMatchObject({ preferred_payment_method: null, payment_terms: null });
 
     const checkCycleId = uuidv4();
     await seedBillingCycle(db, tenantId, {
@@ -465,20 +487,36 @@ describe('billing profiles S2 — charge attribution and snapshots (T004, T010, 
       });
     }
 
-    const cardInvoice = unwrapInvoiceResult<{ invoice_id: string }>(
-      await generateInvoiceForSelectionInput(
-        selectors[0].selectorInput,
-        {},
-        { billingCycleId: selectors[0].billingCycleId },
-      ),
-    );
-    const checkInvoice = unwrapInvoiceResult<{ invoice_id: string }>(
-      await generateInvoiceForSelectionInput(
-        selectors[1].selectorInput,
-        {},
-        { billingCycleId: selectors[1].billingCycleId },
-      ),
-    );
+    const generateSelectedRow = async (index: number) => {
+      const selected = selectors[index];
+      const run = await generateGroupedInvoicesAsRecurringBillingRun({
+        groupedTargets: [{
+          groupKey: `T004-selected-row-${index}`,
+          selectorInputs: [selected.selectorInput],
+          // Contract-cadence rows from Generate have no client cycle bridge.
+          // The chosen row's execution identity must determine its profile.
+          billingCycleId: null,
+        }],
+      });
+      expect(run).toMatchObject({ invoicesCreated: 1, failedCount: 0 });
+      const persistedInvoice = await table('invoices')
+        .where({ client_id: clientId, billing_profile_id: index === 0 ? cardProfileId : checkProfileId })
+        .orderBy('created_at', 'desc')
+        .select('invoice_id')
+        .first();
+      expect(persistedInvoice?.invoice_id).toBeTruthy();
+      return { invoice_id: persistedInvoice.invoice_id as string };
+    };
+    const cardInvoice = await generateSelectedRow(0);
+    const excludedCheckPeriods = await table('recurring_service_periods')
+      .where({ obligation_id: selectors[1].selectorInput.executionWindow.contractLineId })
+      .where({ invoice_window_start: JANUARY_START, invoice_window_end: FEBRUARY_START })
+      .select('lifecycle_state', 'invoice_id', 'invoice_charge_id');
+    expect(excludedCheckPeriods.length).toBeGreaterThan(0);
+    expect(excludedCheckPeriods.every((period) =>
+      period.lifecycle_state !== 'billed' && period.invoice_id == null && period.invoice_charge_id == null,
+    )).toBe(true);
+    const checkInvoice = await generateSelectedRow(1);
     const snapshotFor = (invoiceId: string) => table('invoices')
       .where({ invoice_id: invoiceId })
       .select(
@@ -539,6 +577,21 @@ describe('billing profiles S2 — charge attribution and snapshots (T004, T010, 
     expect(checkCharges.length).toBeGreaterThan(0);
     expect(cardCharges.every((charge) => charge.billing_profile_id === cardProfileId)).toBe(true);
     expect(checkCharges.every((charge) => charge.billing_profile_id === checkProfileId)).toBe(true);
+    expect(cardCharges.map((charge) => charge.description)).toEqual(['T004 Card Plan']);
+    expect(checkCharges.map((charge) => charge.description)).toEqual(['T004 Check Plan']);
+    expect(Number(checkCharges[0].net_amount)).toBe(FIXED_RATE_CENTS);
+
+    const checkPeriods = await table('recurring_service_periods')
+      .where({ obligation_id: selectors[1].selectorInput.executionWindow.contractLineId })
+      .where({ invoice_window_start: JANUARY_START, invoice_window_end: FEBRUARY_START })
+      .select('lifecycle_state', 'invoice_id', 'invoice_charge_id');
+    expect(checkPeriods.length).toBeGreaterThan(0);
+    expect(checkPeriods.every((period) =>
+      period.lifecycle_state === 'billed'
+      && period.invoice_id === checkInvoice.invoice_id
+      && period.invoice_charge_id
+      && checkCharges.some((charge) => charge.item_id === period.invoice_charge_id),
+    )).toBe(true);
 
     await table('client_billing_profiles')
       .where({ billing_profile_id: cardProfileId })
