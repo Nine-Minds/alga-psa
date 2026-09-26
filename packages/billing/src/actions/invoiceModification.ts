@@ -28,6 +28,7 @@ import {
 
 import { validateInvoiceFinalization, validateInvoiceFinalizationInternal } from './taxSourceActions';
 import { enqueueInvoiceAutoExport } from '../services/accountingSync/syncProducers';
+import { enqueueInvoiceAutopay } from './paymentActions';
 import { assertInvoiceNotExported } from '../services/accountingSync/invoiceExportGuards';
 import { assertInvoiceExportReady, InvoiceExportReadinessError } from '../services/accountingSync/exportReadiness';
 import { withAuth } from '@alga-psa/auth';
@@ -1481,6 +1482,8 @@ export async function finalizeInvoiceWithKnex(
 
   // Auto-export producer (accounting sync): fire-and-forget, never blocks finalize.
   await enqueueInvoiceAutoExport(knex, tenant, invoiceId);
+  // Post-commit, fire-and-forget scheduling. Payment setup must never slow or fail finalize.
+  void enqueueInvoiceAutopay(knex, tenant, invoiceId);
 
   if (deferPrepaidActivation && options.markReplenishmentIssued !== false) {
     await tenantScopedTable(knex, tenant, 'prepaid_balance_alerts')

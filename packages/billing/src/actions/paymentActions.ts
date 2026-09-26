@@ -14,12 +14,14 @@ function isEnterpriseBuild(): boolean {
 async function loadEnterprisePayments(): Promise<{
   PaymentService: any;
   createStripePaymentProvider: any;
+  AutopayService?: any;
 } | null> {
   try {
     const mod = await import('@enterprise/lib/payments');
     return {
       PaymentService: (mod as any).PaymentService,
       createStripePaymentProvider: (mod as any).createStripePaymentProvider,
+      AutopayService: (mod as any).AutopayService,
     };
   } catch (error) {
     if (isEnterpriseBuild()) {
@@ -31,6 +33,18 @@ async function loadEnterprisePayments(): Promise<{
     }
     logger.debug('[billing/paymentActions] enterprise payments module not available', { error });
     return null;
+  }
+}
+
+/** Best-effort finalize producer. It is intentionally isolated from finalize. */
+export async function enqueueInvoiceAutopay(_knex: unknown, tenantId: string, invoiceId: string): Promise<void> {
+  try {
+    if (!isEnterpriseBuild()) return;
+    const ee = await loadEnterprisePayments();
+    if (!ee?.AutopayService) return;
+    await ee.AutopayService.enqueueInvoiceAutopay(tenantId, invoiceId);
+  } catch (error) {
+    logger.error('[billing/paymentActions] Failed to enqueue invoice auto-pay', { tenantId, invoiceId, error });
   }
 }
 

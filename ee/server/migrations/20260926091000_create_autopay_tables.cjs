@@ -30,5 +30,13 @@ exports.up = async function up(knex) {
     await knex.raw("CREATE UNIQUE INDEX invoice_autopay_one_open_per_invoice ON invoice_autopay_attempts (tenant, invoice_id) WHERE status IN ('scheduled','processing')");
     await knex.raw('CREATE INDEX invoice_autopay_due_idx ON invoice_autopay_attempts (tenant, status, scheduled_for)');
   }
+  const citus = await knex.raw("SELECT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'create_distributed_table') AS available");
+  if (citus.rows?.[0]?.available) {
+    for (const table of ['billing_profile_autopay', 'invoice_autopay_attempts']) {
+      const state = await knex.raw('SELECT EXISTS (SELECT 1 FROM pg_dist_partition WHERE logicalrelid = ?::regclass) AS distributed', [table]);
+      if (!state.rows?.[0]?.distributed) await knex.raw(`SELECT create_distributed_table('${table}', 'tenant', colocate_with => 'tenants')`);
+    }
+  }
 };
 exports.down = async function down(knex) { await knex.schema.dropTableIfExists('invoice_autopay_attempts'); await knex.schema.dropTableIfExists('billing_profile_autopay'); };
+exports.config = { transaction: false };
