@@ -14,7 +14,7 @@ interface TwoFactorInputProps {
 }
 
 const TwoFactorInput: React.FC<TwoFactorInputProps> = ({ isOpen, onClose, onComplete }) => {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation('common', { useSuspense: false });
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
 
