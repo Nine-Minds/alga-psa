@@ -333,6 +333,21 @@ const User = {
     }
   },
 
+  updatePasswordIfUnset: async (user_id: string, tenant: string, hashed_password: string): Promise<boolean> => {
+    const db = await getAdminConnection();
+    try {
+      const updated = await tenantDb(db, tenant)
+        .table<IUser>('users')
+        .where({ user_id })
+        .whereNull('hashed_password')
+        .update({ hashed_password });
+      return updated > 0;
+    } catch (error) {
+      logger.error(`Error initializing password for user ${user_id} in tenant ${tenant}:`, error);
+      throw error;
+    }
+  },
+
   verifyPassword: async (user_id: string, password: string): Promise<boolean> => {
     const db = await getAdminConnection();
     try {

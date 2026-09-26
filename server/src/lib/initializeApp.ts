@@ -6,7 +6,7 @@ import { validateRequiredConfiguration, validateDatabaseConnectivity, validateSe
 import { config } from 'dotenv';
 import User from '@alga-psa/db/models/user';
 import { tenantDb } from '@alga-psa/db';
-import { hashPassword, generateSecurePassword } from 'server/src/utils/encryption/encryption';
+import { hashPassword, generateSecurePassword } from '@alga-psa/core/encryption';
 import { JobScheduler, IJobScheduler } from 'server/src/lib/jobs/jobScheduler';
 import { JobService } from 'server/src/services/job.service';
 import { InvoiceZipJobHandler } from 'server/src/lib/jobs/handlers/invoiceZipHandler';
@@ -40,6 +40,7 @@ import { inboundWebhookRateLimitConfigGetter } from './inboundWebhooks/rateLimit
 import { bootstrapInboundWebhookActions } from './inboundWebhooks/actions/bootstrap';
 import { WebhookDeliveryQueue } from './webhooks/WebhookDeliveryQueue';
 import { processWebhookDeliveryJob } from './webhooks/processWebhookDeliveryJob';
+import { shouldInitializeDevelopmentPassword } from './developmentCredentials';
 
 let isFunctionExecuted = false;
 
@@ -772,19 +773,35 @@ async function initializeJobScheduler(storageService: StorageService) {
 
 // Helper function to setup development environment
 async function setupDevelopmentEnvironment() {
-  let newPassword;
-  const glinda = await User.findUserByEmail("glinda@emeraldcity.oz");
-  if (glinda) {
-    newPassword = generateSecurePassword();
-    const hashedPassword = await hashPassword(newPassword);
-    await User.updatePassword(glinda.user_id, glinda.tenant, hashedPassword);
-  } else {
+  if (process.env.NODE_ENV !== 'development') return;
+
+  const glinda = await User.findUserByEmail('glinda@emeraldcity.oz');
+  if (!glinda) {
     logger.info('Glinda not found. Skipping password update.');
+    return;
   }
 
-  if (process.env.NODE_ENV === 'development') {
-    try {
-      logger.info(`
+  // Development worktrees can share a database. Rotating this password on
+  // each boot invalidates credentials announced by other running worktrees.
+  if (!shouldInitializeDevelopmentPassword(glinda.hashed_password)) {
+    logger.info('Development user already has a password; preserving it.');
+    return;
+  }
+
+  const newPassword = generateSecurePassword();
+  const hashedPassword = await hashPassword(newPassword);
+  const credentialEstablished = await User.updatePasswordIfUnset(
+    glinda.user_id,
+    glinda.tenant,
+    hashedPassword,
+  );
+  if (!credentialEstablished) {
+    logger.info('Development user password was established by another server; preserving it.');
+    return;
+  }
+
+  try {
+    logger.info(`
 :::::::::  :::::::::: :::     ::: :::::::::: :::        ::::::::  :::::::::  ::::    ::::  :::::::::: ::::    ::: :::::::::::      ::::    ::::   ::::::::  :::::::::  ::::::::::
 :+:    :+: :+:        :+:     :+: :+:        :+:       :+:    :+: :+:    :+: +:+:+: :+:+:+ :+:        :+:+:   :+:     :+:          +:+:+: :+:+:+ :+:    :+: :+:    :+: :+:
 +:+    +:+ +:+        +:+     +:+ +:+        +:+       +:+    +:+ +:+    +:+ +:+ +:+:+ +:+ +:+        :+:+:+  +:+     +:+          +:+ +:+:+ +:+ +:+    +:+ +:+    +:+ :+:
@@ -796,15 +813,12 @@ async function setupDevelopmentEnvironment() {
     } catch (error) {
       logger.error('Error displaying development banner:', error);
     }
-  }
 
-  if (glinda && newPassword) {
-    logger.info('*************************************************************');
-    logger.info(`********                                             ********`);
-    logger.info(`******** User Email is -> [ ${glinda.email} ]  ********`);
-    logger.info(`********                                             ********`);
-    logger.info(`********       Password is -> [ ${newPassword} ]   ********`);
-    logger.info(`********                                             ********`);
-    logger.info('*************************************************************');
-  }
+  logger.info('*************************************************************');
+  logger.info(`********                                             ********`);
+  logger.info(`******** User Email is -> [ ${glinda.email} ]  ********`);
+  logger.info(`********                                             ********`);
+  logger.info(`********       Password is -> [ ${newPassword} ]   ********`);
+  logger.info(`********                                             ********`);
+  logger.info('*************************************************************');
 }

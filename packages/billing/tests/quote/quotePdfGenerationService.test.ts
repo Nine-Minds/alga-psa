@@ -183,7 +183,7 @@ describe('quotePdfGenerationService', () => {
     const service = createPDFGenerationService(TENANT_ID);
     const result = await service.generateAndStore({ quoteId: QUOTE_ID, quoteNumber: 'Q-0042', userId: USER_ID });
 
-    expect(uploadMock).toHaveBeenCalledWith(expect.any(Buffer), '22222222-2222-4222-8222-222222222222/pdfs/Proposal.pdf', {
+    expect(uploadMock).toHaveBeenCalledWith(Buffer.from('%PDF-quote-test'), '22222222-2222-4222-8222-222222222222/pdfs/Proposal.pdf', {
       mime_type: 'application/pdf',
     });
     expect(createFileStoreMock).toHaveBeenCalledWith(
