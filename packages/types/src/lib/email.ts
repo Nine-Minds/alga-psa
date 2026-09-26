@@ -105,6 +105,41 @@ export interface TenantEmailSettings {
   updatedAt: Date;
 }
 
+export type OutboundMailClass =
+  | 'ticket'
+  | 'project'
+  | 'billing'
+  | 'sales'
+  | 'scheduling'
+  | 'survey'
+  | 'account'
+  | 'general';
+
+export interface OutboundEmailSender {
+  tenant: string;
+  sender_id: string;
+  email_address: string;
+  display_name: string | null;
+  microsoft_provider_id: string | null;
+  verification_status: 'unverified' | 'verified' | 'failed';
+  verified_at: Date | null;
+  last_verification_error: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface OutboundEmailRoute {
+  tenant: string;
+  route_id: string;
+  route_type: 'default' | 'mail_class' | 'board';
+  mail_class: OutboundMailClass | null;
+  board_id: string | null;
+  sender_id: string | null;
+  display_name: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
 export interface IEmailProvider {
   readonly providerId: string;
   readonly providerType: string;

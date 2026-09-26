@@ -170,6 +170,8 @@ const TENANT_TABLE_METADATA = {
   email_provider_configs: { scope: 'tenant' },
   email_provider_health: { scope: 'tenant' },
   email_providers: { scope: 'tenant' },
+  email_sender_addresses: { scope: 'tenant' },
+  email_sender_routes: { scope: 'tenant' },
   email_rate_limits: { scope: 'tenant' },
   email_reply_tokens: { scope: 'tenant' },
   email_sending_logs: { scope: 'tenant' },
