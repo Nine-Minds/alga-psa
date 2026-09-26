@@ -447,6 +447,7 @@ export interface PaymentSettings {
   autopayChargeTiming: 'on_finalize' | 'on_due_date';
   autopayRetryDays: number[];
   autopayConsentText: string;
+  autopayConsentTextVersion: string;
 }
 
 /**
@@ -461,6 +462,7 @@ export const DEFAULT_PAYMENT_SETTINGS: PaymentSettings = {
   autopayChargeTiming: 'on_finalize',
   autopayRetryDays: [3, 5, 7],
   autopayConsentText: '',
+  autopayConsentTextVersion: '1',
 };
 
 export interface IBillingProfileAutopay extends TenantEntity {

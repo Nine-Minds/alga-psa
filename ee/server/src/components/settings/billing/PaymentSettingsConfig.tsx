@@ -288,6 +288,24 @@ export const PaymentSettingsConfig: React.FC = () => {
       </div>
 
       {/* Payment Link Expiration */}
+      <div className="flex items-center justify-between">
+        <div className="space-y-0.5"><Label>{t('payment.settings.autopay.label', { defaultValue: 'Allow auto-pay' })}</Label><p className="text-sm text-muted-foreground">{t('payment.settings.autopay.description', { defaultValue: 'Allow billing profiles to authorize automatic card payments.' })}</p></div>
+        <Switch id="autopay-enabled" checked={localSettings?.autopayEnabled ?? false} onCheckedChange={(checked) => handleLocalSettingsChange({ autopayEnabled: checked })} disabled={savingSettings} />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="autopay-charge-timing">{t('payment.settings.autopay.chargeTiming', { defaultValue: 'Charge timing' })}</Label>
+        <CustomSelect id="autopay-charge-timing" value={localSettings?.autopayChargeTiming ?? 'on_finalize'} onValueChange={(value) => handleLocalSettingsChange({ autopayChargeTiming: value as 'on_finalize' | 'on_due_date' })} options={[{ value: 'on_finalize', label: t('payment.settings.autopay.onFinalize', { defaultValue: 'When invoice is finalized' }) }, { value: 'on_due_date', label: t('payment.settings.autopay.onDueDate', { defaultValue: 'On due date' }) }]} />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="autopay-retry-days">{t('payment.settings.autopay.retryDays', { defaultValue: 'Retry intervals (days)' })}</Label>
+        <Input id="autopay-retry-days" value={(localSettings?.autopayRetryDays ?? [3, 5, 7]).join(', ')} onChange={(event) => handleLocalSettingsChange({ autopayRetryDays: event.target.value.split(',').map((day) => Number(day.trim())).filter((day) => Number.isInteger(day) && day > 0) })} disabled={savingSettings} />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="autopay-consent-text">{t('payment.settings.autopay.consentText', { defaultValue: 'Auto-pay consent text' })}</Label>
+        <Input id="autopay-consent-text" value={localSettings?.autopayConsentText ?? ''} onChange={(event) => handleLocalSettingsChange({ autopayConsentText: event.target.value, autopayConsentTextVersion: String(Number(localSettings?.autopayConsentTextVersion ?? '0') + 1) })} disabled={savingSettings} />
+      </div>
+
+      {/* Payment Link Expiration */}
       <div className="space-y-2">
         <Label>{t('payment.settings.paymentLinkExpiration.label')}</Label>
         <p className="text-sm text-gray-500">
