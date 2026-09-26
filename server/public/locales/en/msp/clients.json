@@ -1299,7 +1299,8 @@
   "clientAutopay": {
     "setupLinkTitle": "Card setup link",
     "setupLinkFallback": "Copy this link to share it with your client.",
-    "unknownUser": "Unknown user"
+    "unknownUser": "Unknown user",
+    "changeCard": "Use this card for auto-pay"
   },
   "actions": {
     "cancel": "Cancel",

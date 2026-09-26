@@ -1921,5 +1921,11 @@
       "archived": "Ten profil rozliczeniowy jest zarchiwizowany.",
       "selectionNotThisClient": "Jeden z wybranych profili rozliczeniowych nie należy do tego klienta."
     }
+  },
+  "clientAutopay": {
+    "setupLinkTitle": "Link do konfiguracji karty",
+    "setupLinkFallback": "Skopiuj ten link, aby udostępnić go klientowi.",
+    "unknownUser": "Nieznany użytkownik",
+    "changeCard": "Użyj tej karty do płatności automatycznej"
   }
 }

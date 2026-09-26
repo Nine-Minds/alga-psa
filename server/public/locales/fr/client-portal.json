@@ -426,6 +426,29 @@
         "expMonth": "Veuillez saisir un mois valide (01-12)",
         "expYear": "Veuillez saisir une année valide (2024-2099)",
         "cvv": "Veuillez saisir un code CVV valide"
+      },
+      "methodUpdateError": "Impossible de mettre à jour ce moyen de paiement. Veuillez réessayer.",
+      "cardSetup": {
+        "success": "Carte enregistrée en toute sécurité.",
+        "error": "Nous n'avons pas pu enregistrer la carte. Veuillez réessayer."
+      },
+      "autopay": {
+        "title": "Moyens de paiement et prélèvement automatique",
+        "loading": "Chargement des moyens de paiement…",
+        "profileUnavailable": "Les moyens de paiement et les paramètres de prélèvement automatique ne sont pas disponibles pour ce profil de facturation.",
+        "cardFallback": "Carte",
+        "enrolled": "Le prélèvement automatique est activé.",
+        "disable": "Désactiver le prélèvement automatique",
+        "consent": "J'autorise des débits récurrents sur cette carte pour les factures finalisées.",
+        "enable": "Activer le prélèvement automatique",
+        "noCards": "Ajoutez une carte pour activer le prélèvement automatique.",
+        "changeCard": "Utiliser cette carte pour le prélèvement automatique"
+      },
+      "publicCardSetup": {
+        "saved": "Carte enregistrée",
+        "failed": "Nous n'avons pas pu enregistrer votre carte",
+        "savedDescription": "Votre carte est prête pour vos prochains paiements.",
+        "failedDescription": "La configuration n'a pas pu être vérifiée. Demandez un nouveau lien à votre prestataire de facturation."
       }
     }
   },
@@ -1011,5 +1034,11 @@
       "duplicate": "Un groupe de visibilité avec ces informations existe déjà pour ce client.",
       "invalidData": "Données de groupe de visibilité non valides. Vérifiez les informations du groupe et les tableaux sélectionnés."
     }
+  },
+  "tabs": {
+    "paymentMethods": "Moyens de paiement et prélèvement automatique"
+  },
+  "invoice": {
+    "autopayWillCharge": "Sera débité le {{date}} sur {{brand}} •••• {{last4}}"
   }
 }

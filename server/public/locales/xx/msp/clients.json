@@ -1296,6 +1296,12 @@
     "loadErrorTitle": "⟦Ƞȯŧḗş ƒȧīŀḗḓ ŧȯ ŀȯȧḓ⟧",
     "loadErrorDescription": "⟦Ƈȯŭŀḓ ƞȯŧ ŀȯȧḓ ƞȯŧḗş. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧"
   },
+  "clientAutopay": {
+    "setupLinkTitle": "⟦Ƈȧřḓ şḗŧŭƥ ŀīƞķ⟧",
+    "setupLinkFallback": "⟦Ƈȯƥẏ ŧħīş ŀīƞķ ŧȯ şħȧřḗ īŧ ẇīŧħ ẏȯŭř ƈŀīḗƞŧ.⟧",
+    "unknownUser": "⟦Ŭƞķƞȯẇƞ ŭşḗř⟧",
+    "changeCard": "⟦Ŭşḗ ŧħīş ƈȧřḓ ƒȯř ȧŭŧȯ-ƥȧẏ⟧"
+  },
   "actions": {
     "cancel": "⟦Ƈȧƞƈḗŀ⟧",
     "delete": "⟦Ḓḗŀḗŧḗ⟧",

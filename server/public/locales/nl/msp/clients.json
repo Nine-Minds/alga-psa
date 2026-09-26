@@ -1869,5 +1869,11 @@
       "archived": "Dat facturatieprofiel is gearchiveerd.",
       "selectionNotThisClient": "Een van de geselecteerde facturatieprofielen hoort niet bij deze klant."
     }
+  },
+  "clientAutopay": {
+    "setupLinkTitle": "Link voor kaartinstelling",
+    "setupLinkFallback": "Kopieer deze link om met uw klant te delen.",
+    "unknownUser": "Onbekende gebruiker",
+    "changeCard": "Deze kaart gebruiken voor automatische betaling"
   }
 }

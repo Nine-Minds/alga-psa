@@ -475,7 +475,8 @@
         "disable": "Turn off auto-pay",
         "consent": "I authorize recurring charges to this card for finalized invoices.",
         "enable": "Enable auto-pay",
-        "noCards": "Add a card to enable auto-pay."
+        "noCards": "Add a card to enable auto-pay.",
+        "changeCard": "Use this card for auto-pay"
       },
       "publicCardSetup": {
         "saved": "Card saved",

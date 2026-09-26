@@ -426,6 +426,29 @@
         "expMonth": "Voer een geldige maand in (01-12)",
         "expYear": "Voer een geldig jaar in (2024-2099)",
         "cvv": "Voer een geldige CVV in"
+      },
+      "methodUpdateError": "Deze betaalmethode kon niet worden bijgewerkt. Probeer het opnieuw.",
+      "cardSetup": {
+        "success": "Kaart veilig opgeslagen.",
+        "error": "We konden de kaart niet opslaan. Probeer het opnieuw."
+      },
+      "autopay": {
+        "title": "Betaalmethoden en automatische betaling",
+        "loading": "Betaalmethoden laden…",
+        "profileUnavailable": "Betaalmethoden en instellingen voor automatische betaling zijn niet beschikbaar voor dit factuurprofiel.",
+        "cardFallback": "Kaart",
+        "enrolled": "Automatische betaling is ingeschakeld.",
+        "disable": "Automatische betaling uitschakelen",
+        "consent": "Ik machtig terugkerende afschrijvingen van deze kaart voor definitieve facturen.",
+        "enable": "Automatische betaling inschakelen",
+        "noCards": "Voeg een kaart toe om automatische betaling in te schakelen.",
+        "changeCard": "Deze kaart gebruiken voor automatische betaling"
+      },
+      "publicCardSetup": {
+        "saved": "Kaart opgeslagen",
+        "failed": "We konden uw kaart niet opslaan",
+        "savedDescription": "Uw kaart is klaar voor toekomstige betalingen.",
+        "failedDescription": "De instelling kon niet worden geverifieerd. Vraag uw factuurverstrekker om een nieuwe link."
       }
     }
   },
@@ -1011,5 +1034,11 @@
       "duplicate": "Er bestaat al een zichtbaarheidsgroep met deze gegevens voor deze klant.",
       "invalidData": "Ongeldige gegevens voor de zichtbaarheidsgroep. Controleer de groepsgegevens en de geselecteerde borden."
     }
+  },
+  "tabs": {
+    "paymentMethods": "Betaalmethoden en automatische betaling"
+  },
+  "invoice": {
+    "autopayWillCharge": "Wordt op {{date}} afgeschreven van {{brand}} •••• {{last4}}"
   }
 }

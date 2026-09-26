@@ -426,6 +426,29 @@
         "expMonth": "Wprowadź poprawny miesiąc (01-12)",
         "expYear": "Wprowadź poprawny rok (2024-2099)",
         "cvv": "Wprowadź poprawny CVV"
+      },
+      "methodUpdateError": "Nie udało się zaktualizować tej metody płatności. Spróbuj ponownie.",
+      "cardSetup": {
+        "success": "Karta została bezpiecznie zapisana.",
+        "error": "Nie udało się zapisać karty. Spróbuj ponownie."
+      },
+      "autopay": {
+        "title": "Metody płatności i płatność automatyczna",
+        "loading": "Ładowanie metod płatności…",
+        "profileUnavailable": "Metody płatności i ustawienia płatności automatycznej są niedostępne dla tego profilu rozliczeniowego.",
+        "cardFallback": "Karta",
+        "enrolled": "Płatność automatyczna jest włączona.",
+        "disable": "Wyłącz płatność automatyczną",
+        "consent": "Upoważniam do cyklicznego obciążania tej karty za zatwierdzone faktury.",
+        "enable": "Włącz płatność automatyczną",
+        "noCards": "Dodaj kartę, aby włączyć płatność automatyczną.",
+        "changeCard": "Użyj tej karty do płatności automatycznej"
+      },
+      "publicCardSetup": {
+        "saved": "Karta zapisana",
+        "failed": "Nie udało się zapisać Twojej karty",
+        "savedDescription": "Twoja karta jest gotowa do przyszłych płatności.",
+        "failedDescription": "Nie udało się zweryfikować konfiguracji. Poproś dostawcę rozliczeń o nowy link."
       }
     }
   },
@@ -1015,5 +1038,11 @@
       "duplicate": "Grupa widoczności o takich danych już istnieje dla tego klienta.",
       "invalidData": "Nieprawidłowe dane grupy widoczności. Sprawdź dane grupy i wybrane tablice."
     }
+  },
+  "tabs": {
+    "paymentMethods": "Metody płatności i płatność automatyczna"
+  },
+  "invoice": {
+    "autopayWillCharge": "Zostanie obciążona {{date}} karta {{brand}} •••• {{last4}}"
   }
 }

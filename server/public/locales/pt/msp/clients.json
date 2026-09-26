@@ -1869,5 +1869,11 @@
       "archived": "Esse perfil de faturamento está arquivado.",
       "selectionNotThisClient": "Um dos perfis de faturamento selecionados não pertence a este cliente."
     }
+  },
+  "clientAutopay": {
+    "setupLinkTitle": "Link de configuração do cartão",
+    "setupLinkFallback": "Copie este link para o partilhar com o seu cliente.",
+    "unknownUser": "Utilizador desconhecido",
+    "changeCard": "Usar este cartão para o pagamento automático"
   }
 }

@@ -78,7 +78,9 @@ export default function PaymentMethodsTab() {
     setMessage('');
     try {
       const result = enabled ? await enrollClientPortalAutopay(profileId, selected[profileId] ?? '', info.consentTextVersion) : await disableClientPortalAutopay(profileId);
-      if (actionError(result)) throw new Error(getErrorMessage(result)); await load();
+      if (actionError(result)) throw new Error(getErrorMessage(result));
+      setConsented(s => ({ ...s, [profileId]: false }));
+      await load();
     } catch (e) { setMessage(getErrorMessage(e)); } finally { setBusy(false); }
   };
   const text = (key: string, fallback: string) => t(`account.billing.${key}`, { defaultValue: fallback });
@@ -89,6 +91,11 @@ export default function PaymentMethodsTab() {
       if (!info) return <Card key={profile.billingProfileId} className="p-5"><p className="text-sm text-muted-foreground">{text('autopay.profileUnavailable', 'Payment method and auto-pay settings are unavailable for this billing profile.')}</p></Card>;
       if (!info.enabled) return <Card key={profile.billingProfileId} className="p-5"><p className="text-sm text-muted-foreground">{text('autopay.profileUnavailable', 'Payment method and auto-pay settings are unavailable for this billing profile.')}</p></Card>;
       const enrolled = info.enrollment?.is_enabled === true;
+      const enrolledMethodId = enrolled ? info.enrollment?.payment_method_id : undefined;
+      const selectedChargeable = info.chargeableMethods.some(method => method.payment_method_id === selected[profile.billingProfileId]);
+      // Switching cards keeps auto-pay on; a pending retry charges the new card promptly.
+      const canChangeCard = enrolled && info.chargeableMethods.some(method => method.payment_method_id !== enrolledMethodId);
+      const cardAuthorization = <><CustomSelect id={`portal-autopay-card-${profile.billingProfileId}`} value={selected[profile.billingProfileId] ?? ''} onValueChange={v => setSelected(s => ({...s, [profile.billingProfileId]: v}))} options={info.chargeableMethods.map(m => ({ value: m.payment_method_id, label: `${m.brand ?? text('autopay.cardFallback', 'Card')} •••• ${m.last4} (${m.exp_month}/${m.exp_year})` }))} /><p className="text-sm">{info.consentText}</p><Checkbox id={`portal-autopay-consent-${profile.billingProfileId}`} checked={consented[profile.billingProfileId] ?? false} onChange={e => setConsented(s => ({...s, [profile.billingProfileId]: (e.target as HTMLInputElement).checked}))} label={text('autopay.consent', 'I authorize recurring charges to this card for finalized invoices.')} /></>;
       return <Card key={profile.billingProfileId} className="p-5 space-y-3">
         <h3 className="font-medium">{text('autopay.title', 'Payment methods & auto-pay')} · {profile.name}</h3>
         {methods.filter(m => m.billingProfileId === profile.billingProfileId).map(method => <div key={method.id} className="flex items-center justify-between text-sm">
@@ -96,8 +103,8 @@ export default function PaymentMethodsTab() {
           <div className="flex gap-2">{!method.isDefault && <Button id={`portal-default-card-${method.id}`} variant="outline" size="sm" disabled={busy} onClick={() => void updateMethod(method.id, () => setDefaultPaymentMethod(method.id))}>{text('actions.setDefault', 'Set default')}</Button>}<Button id={`portal-remove-card-${method.id}`} variant="ghost" size="sm" disabled={busy} onClick={() => void updateMethod(method.id, () => removePaymentMethod(method.id))}>{text('actions.remove', 'Remove')}</Button></div>
         </div>)}
         <Button id={`portal-add-card-${profile.billingProfileId}`} variant="outline" disabled={busy} onClick={() => void addCard(profile.billingProfileId)}>{text('actions.addPaymentMethod', 'Add card')}</Button>
-        {enrolled ? <><p className="text-sm">{text('autopay.enrolled', 'Auto-pay is enabled.')}</p><Button id={`portal-disable-autopay-${profile.billingProfileId}`} variant="outline" disabled={busy} onClick={() => void toggle(profile.billingProfileId, false)}>{text('autopay.disable', 'Turn off auto-pay')}</Button></> : <>
-          {info.chargeableMethods.length > 0 && <><CustomSelect id={`portal-autopay-card-${profile.billingProfileId}`} value={selected[profile.billingProfileId] ?? ''} onValueChange={v => setSelected(s => ({...s, [profile.billingProfileId]: v}))} options={info.chargeableMethods.map(m => ({ value: m.payment_method_id, label: `${m.brand ?? text('autopay.cardFallback', 'Card')} •••• ${m.last4} (${m.exp_month}/${m.exp_year})` }))} /><p className="text-sm">{info.consentText}</p><Checkbox id={`portal-autopay-consent-${profile.billingProfileId}`} checked={consented[profile.billingProfileId] ?? false} onChange={e => setConsented(s => ({...s, [profile.billingProfileId]: (e.target as HTMLInputElement).checked}))} label={text('autopay.consent', 'I authorize recurring charges to this card for finalized invoices.')} /><Button id={`portal-enable-autopay-${profile.billingProfileId}`} disabled={busy || !info.chargeableMethods.some(method => method.payment_method_id === selected[profile.billingProfileId]) || !consented[profile.billingProfileId]} onClick={() => void toggle(profile.billingProfileId, true)}>{text('autopay.enable', 'Enable auto-pay')}</Button></>}
+        {enrolled ? <><p className="text-sm">{text('autopay.enrolled', 'Auto-pay is enabled.')}</p>{canChangeCard && <>{cardAuthorization}<Button id={`portal-change-autopay-card-${profile.billingProfileId}`} disabled={busy || !selectedChargeable || selected[profile.billingProfileId] === enrolledMethodId || !consented[profile.billingProfileId]} onClick={() => void toggle(profile.billingProfileId, true)}>{text('autopay.changeCard', 'Use this card for auto-pay')}</Button></>}<Button id={`portal-disable-autopay-${profile.billingProfileId}`} variant="outline" disabled={busy} onClick={() => void toggle(profile.billingProfileId, false)}>{text('autopay.disable', 'Turn off auto-pay')}</Button></> : <>
+          {info.chargeableMethods.length > 0 && <>{cardAuthorization}<Button id={`portal-enable-autopay-${profile.billingProfileId}`} disabled={busy || !selectedChargeable || !consented[profile.billingProfileId]} onClick={() => void toggle(profile.billingProfileId, true)}>{text('autopay.enable', 'Enable auto-pay')}</Button></>}
           {info.chargeableMethods.length === 0 && <p className="text-sm">{text('autopay.noCards', 'Add a card to enable auto-pay.')}</p>}
         </>}
       </Card>;

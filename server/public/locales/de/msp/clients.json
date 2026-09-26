@@ -1869,5 +1869,11 @@
       "archived": "Dieses Abrechnungsprofil ist archiviert.",
       "selectionNotThisClient": "Eines der ausgewählten Abrechnungsprofile gehört nicht zu diesem Kunden."
     }
+  },
+  "clientAutopay": {
+    "setupLinkTitle": "Link zur Karteneinrichtung",
+    "setupLinkFallback": "Kopieren Sie diesen Link, um ihn mit Ihrem Kunden zu teilen.",
+    "unknownUser": "Unbekannter Benutzer",
+    "changeCard": "Diese Karte für die automatische Zahlung verwenden"
   }
 }

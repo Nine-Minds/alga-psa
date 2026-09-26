@@ -88,6 +88,14 @@ export function ClientAutopaySettings({ clientId, billingProfileId, profileName 
   if (!overview?.enabled) return null;
   const enrolled = overview.enrollment?.is_enabled === true;
   const selectedMethod = overview.chargeableMethods.find((method) => method.payment_method_id === methodId);
+  const enrolledMethodId = enrolled ? overview.enrollment?.payment_method_id : undefined;
+  // Re-enrolling on another card keeps auto-pay on; a pending retry charges the new card promptly.
+  const canChangeCard = enrolled && overview.chargeableMethods.some((method) => method.payment_method_id !== enrolledMethodId);
+  const cardAuthorization = <>
+    <CustomSelect id={`msp-autopay-card-${billingProfileId}`} value={methodId} onValueChange={setMethodId} options={overview.chargeableMethods.map((method) => ({ value: method.payment_method_id, label: `${method.brand ?? 'Card'} •••• ${method.last4} (${method.exp_month}/${method.exp_year}) · ${method.status}` }))} />
+    <p className="text-sm text-muted-foreground">{overview.consentText}</p>
+    <Checkbox id={`msp-autopay-attestation-${billingProfileId}`} checked={attested} onChange={(event) => setAttested((event.target as HTMLInputElement).checked)} label={t('clientAutopay.attestation', { defaultValue: 'Client has authorized recurring charges' })} />
+  </>;
 
   return <><Card className="mt-3 border-border">
     <CardHeader className="pb-2"><CardTitle className="text-base">{t('clientAutopay.title', { profile: profileName, defaultValue: 'Auto-pay · {{profile}}' })}</CardTitle></CardHeader>
@@ -95,13 +103,15 @@ export function ClientAutopaySettings({ clientId, billingProfileId, profileName 
       {enrolled ? <>
         <p className="text-sm">{t('clientAutopay.active', { defaultValue: 'Enabled' })}: {overview.methods.find((method) => method.payment_method_id === overview.enrollment?.payment_method_id)?.brand ?? 'Card'} •••• {overview.methods.find((method) => method.payment_method_id === overview.enrollment?.payment_method_id)?.last4}</p>
         <p className="text-xs text-muted-foreground">{t('clientAutopay.authorization', { source: overview.enrollment?.authorization_source, user: (overview.enrollment as typeof overview.enrollment & { authorized_by_display_name?: string } | null)?.authorized_by_display_name ?? t('clientAutopay.unknownUser', { defaultValue: 'Unknown user' }), date: new Date(overview.enrollment!.authorized_at).toLocaleString(), defaultValue: 'Authorized by {{user}} on {{date}} ({{source}})' })}</p>
+        {canChangeCard && <>
+          {cardAuthorization}
+          <Button id={`msp-change-autopay-card-${billingProfileId}`} disabled={busy || !selectedMethod || methodId === enrolledMethodId || !attested} onClick={() => void changeEnrollment(true)}>{t('clientAutopay.changeCard', { defaultValue: 'Use this card for auto-pay' })}</Button>
+        </>}
         <Button id={`msp-disable-autopay-${billingProfileId}`} variant="outline" disabled={busy} onClick={() => void changeEnrollment(false)}>{t('clientAutopay.disable', { defaultValue: 'Disable auto-pay' })}</Button>
       </> : <>
         <Button id={`msp-copy-card-setup-${billingProfileId}`} variant="outline" disabled={busy} onClick={() => void copySetupLink()}>{t('clientAutopay.copySetupLink', { defaultValue: 'Copy setup link' })}</Button>
         {overview.chargeableMethods.length > 0 && <>
-          <CustomSelect id={`msp-autopay-card-${billingProfileId}`} value={methodId} onValueChange={setMethodId} options={overview.chargeableMethods.map((method) => ({ value: method.payment_method_id, label: `${method.brand ?? 'Card'} •••• ${method.last4} (${method.exp_month}/${method.exp_year}) · ${method.status}` }))} />
-          <p className="text-sm text-muted-foreground">{overview.consentText}</p>
-          <Checkbox id={`msp-autopay-attestation-${billingProfileId}`} checked={attested} onChange={(event) => setAttested((event.target as HTMLInputElement).checked)} label={t('clientAutopay.attestation', { defaultValue: 'Client has authorized recurring charges' })} />
+          {cardAuthorization}
           <Button id={`msp-enable-autopay-${billingProfileId}`} disabled={busy || !selectedMethod || !attested} onClick={() => void changeEnrollment(true)}>{t('clientAutopay.enable', { defaultValue: 'Enable auto-pay' })}</Button>
         </>}
       </>}

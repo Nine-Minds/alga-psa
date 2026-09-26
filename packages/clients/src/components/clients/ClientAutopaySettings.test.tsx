@@ -38,4 +38,30 @@ describe('ClientAutopaySettings auto-pay card selection', () => {
     fireEvent.click(enable);
     await waitFor(() => expect(mocks.setClientAutopay).toHaveBeenCalledWith(expect.objectContaining({ paymentMethodId: 'card-b', enabled: true })));
   });
+
+  it('switches an enrolled profile to another chargeable card without disabling auto-pay', async () => {
+    mocks.getClientAutopaySettings.mockResolvedValue({
+      enabled: true, consentText: 'Recurring charges are authorized.', consentTextVersion: 'v1',
+      enrollment: { is_enabled: true, payment_method_id: 'card-a', authorized_at: '2026-09-01T00:00:00Z', authorization_source: 'msp', authorized_by_user_id: null },
+      methods: [{ payment_method_id: 'card-a', brand: 'Visa', last4: '0341' }],
+      chargeableMethods: [
+        { payment_method_id: 'card-a', brand: 'Visa', last4: '0341', exp_month: '12', exp_year: '2030', status: 'active' },
+        { payment_method_id: 'card-b', brand: 'Visa', last4: '4242', exp_month: '12', exp_year: '2030', status: 'active' },
+      ],
+      attempts: [],
+    });
+    mocks.setClientAutopay.mockResolvedValue(true);
+
+    render(<ClientAutopaySettings clientId="client-1" billingProfileId="profile-1" profileName="Main" />);
+
+    await waitFor(() => expect(screen.getByRole('combobox')).toHaveValue('card-a'));
+    const change = screen.getByRole('button', { name: 'Use this card for auto-pay' });
+    fireEvent.click(screen.getByRole('checkbox'));
+    expect(change).toBeDisabled();
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'card-b' } });
+    expect(change).toBeEnabled();
+    fireEvent.click(change);
+    await waitFor(() => expect(mocks.setClientAutopay).toHaveBeenCalledWith(expect.objectContaining({ paymentMethodId: 'card-b', enabled: true, clientAuthorized: true })));
+    expect(screen.getByRole('button', { name: 'Disable auto-pay' })).toBeInTheDocument();
+  });
 });
