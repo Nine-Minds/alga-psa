@@ -108,6 +108,8 @@ async function handleTicketAutoCloseWarningEvent(event: unknown): Promise<void> 
       const userIdForLog = portalUser?.user_id ?? assignedTo ?? enteredBy;
 
       await getEmailNotificationService().sendNotification({
+        mailClass: 'ticket',
+        boardId: ticket.board_id,
         tenant: tenantId,
         userId: userIdForLog,
         subtypeId: subtype.id,

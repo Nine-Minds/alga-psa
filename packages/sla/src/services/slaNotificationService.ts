@@ -549,6 +549,8 @@ async function sendEmailNotification(
       trx,
       () =>
         emailService.sendNotification({
+          mailClass: 'ticket',
+          boardId: ticket.board_id,
           tenant,
           userId: recipient.user_id,
           subtypeId: subtype.id,

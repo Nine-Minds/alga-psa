@@ -146,6 +146,7 @@ async function deliverEmail(
     if (!user?.email) return;
 
     await sendEventEmail({
+      mailClass: 'ticket',
       tenantId,
       to: user.email,
       subject: `RMM Alert (${context.severity}): ${context.deviceName}`,

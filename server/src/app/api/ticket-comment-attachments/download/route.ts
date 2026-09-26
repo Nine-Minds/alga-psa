@@ -48,7 +48,11 @@ export async function POST(request: NextRequest) {
     try {
       const browser = await issueAttachmentChallenge(knex, claims, token, secret, async code => {
         const text = `Your attachment download code is ${code}. It expires in ten minutes. If you did not request it, ignore this email.`;
+        const ticket = await tenantDb(knex, claims.tenant).table('tickets')
+          .where({ ticket_id: claims.ticketId }).first('board_id');
         const result = await TenantEmailService.getInstance(claims.tenant).sendEmail({
+          mailClass: 'ticket',
+          boardId: ticket?.board_id,
           tenantId: claims.tenant, to: claims.recipient,
           templateProcessor: new StaticTemplateProcessor('Your attachment download code', `<p>${text}</p>`, text),
         });
