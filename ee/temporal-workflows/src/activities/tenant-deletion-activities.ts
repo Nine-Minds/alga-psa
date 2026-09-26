@@ -358,6 +358,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // Entra integration (dependent rows first, then parents)
   'entra_contact_reconciliation_queue', 'entra_contact_links',
+  'entra_managed_tenant_user_filters',
   'entra_client_tenant_mappings', 'entra_sync_run_tenants',
   'entra_sync_runs', 'entra_managed_tenants',
   'entra_partner_connections', 'entra_sync_settings',

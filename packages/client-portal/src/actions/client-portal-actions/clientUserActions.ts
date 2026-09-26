@@ -214,6 +214,16 @@ async function assertCanManageClientUser(
     throw new Error('User not found');
   }
 
+  const targetContact = targetUser.contact_id
+    ? await scopedDb.table('contacts')
+        .where({ contact_name_id: targetUser.contact_id })
+        .select('client_id', 'contact_kind')
+        .first()
+    : undefined;
+  if (targetContact?.contact_kind === 'shared_mailbox') {
+    throw new Error('Shared mailbox contacts cannot have a client portal user.');
+  }
+
   // MSP staff: gate on the standard user-management permission.
   if (user.user_type !== 'client') {
     const canUpdate = await hasPermission(user, 'user', 'update', knex);
@@ -228,18 +238,10 @@ async function assertCanManageClientUser(
     throw new Error('Permission denied: Client portal admin access is required');
   }
 
-  const [actorContact, targetContact] = await Promise.all([
-    scopedDb.table('contacts')
-      .where({ contact_name_id: user.contact_id })
-      .select('client_id', 'is_client_admin')
-      .first(),
-    targetUser.contact_id
-      ? scopedDb.table('contacts')
-          .where({ contact_name_id: targetUser.contact_id })
-          .select('client_id')
-          .first()
-      : Promise.resolve(undefined),
-  ]);
+  const actorContact = await scopedDb.table('contacts')
+    .where({ contact_name_id: user.contact_id })
+    .select('client_id', 'is_client_admin')
+    .first();
 
   if (!actorContact?.is_client_admin || !actorContact.client_id) {
     throw new Error('Permission denied: Client portal admin access is required');
@@ -268,6 +270,16 @@ async function assertCanCreateClientUser(
   contactId: string,
   clientId: string
 ): Promise<void> {
+  const scopedDb = tenantDb(knex, tenant);
+  const targetContact = await scopedDb.table('contacts')
+    .where({ contact_name_id: contactId })
+    .select('client_id', 'contact_kind')
+    .first();
+  if (!targetContact) throw new Error('Contact not found');
+  if (targetContact.contact_kind === 'shared_mailbox') {
+    throw new Error('Shared mailbox contacts cannot have a client portal user.');
+  }
+
   // MSP staff: gate on the standard user-management permission.
   if (user.user_type !== 'client') {
     const canCreate = await hasPermission(user, 'user', 'create', knex);
@@ -282,25 +294,13 @@ async function assertCanCreateClientUser(
     throw new Error('Permission denied: Client portal admin access is required');
   }
 
-  const scopedDb = tenantDb(knex, tenant);
-
-  const [actorContact, targetContact] = await Promise.all([
-    scopedDb.table('contacts')
-      .where({ contact_name_id: user.contact_id })
-      .select('client_id', 'is_client_admin')
-      .first(),
-    scopedDb.table('contacts')
-      .where({ contact_name_id: contactId })
-      .select('client_id')
-      .first(),
-  ]);
+  const actorContact = await scopedDb.table('contacts')
+    .where({ contact_name_id: user.contact_id })
+    .select('client_id', 'is_client_admin')
+    .first();
 
   if (!actorContact?.is_client_admin || !actorContact.client_id) {
     throw new Error('Permission denied: Client portal admin access is required');
-  }
-
-  if (!targetContact) {
-    throw new Error('Contact not found');
   }
 
   if (targetContact.client_id !== actorContact.client_id) {

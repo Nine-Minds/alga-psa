@@ -25,4 +25,6 @@ export const routes: Record<string, RouteLoader> = {
     dismissQueueItemRoute: unavailable,
     diagnosticsRoute: unavailable,
     clientDiagnosticsRoute: unavailable,
+    userFilterDefaultsRoute: unavailable,
+    managedUserFilterRoute: unavailable,
 };

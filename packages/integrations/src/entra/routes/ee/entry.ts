@@ -34,4 +34,6 @@ export const routes: Record<string, RouteLoader> = {
     dismissQueueItemRoute: () => import('@enterprise/app/api/integrations/entra/reconciliation-queue/dismiss/route'),
     diagnosticsRoute: () => import('@enterprise/app/api/integrations/entra/diagnostics/route'),
     clientDiagnosticsRoute: () => import('@enterprise/app/api/integrations/entra/diagnostics/clients/route'),
+    userFilterDefaultsRoute: () => import('@enterprise/app/api/integrations/entra/filters/route'),
+    managedUserFilterRoute: () => import('@enterprise/app/api/integrations/entra/filters/managed/route'),
 };

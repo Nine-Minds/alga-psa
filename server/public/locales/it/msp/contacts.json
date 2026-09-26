@@ -35,6 +35,7 @@
     "title": "Pagina contatti",
     "description": "Pagina principale di gestione dei contatti con ricerca, filtri, vista elenco e azioni di massa",
     "heading": "Contatti",
+    "sharedMailbox": "Cassetta postale condivisa",
     "addContact": "+ Aggiungi contatto",
     "actions": "Azioni",
     "searchPlaceholder": "Cerca contatti, note e interazioni",

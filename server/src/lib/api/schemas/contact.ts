@@ -70,6 +70,7 @@ const contactEmailAddressResponseSchema = z.object({
 
 // Create contact schema
 export const createContactSchema = z.object({
+  contact_kind: z.enum(['person', 'shared_mailbox']).optional(),
   full_name: contactNameField,
   client_id: uuidSchema.optional(),
   phone_numbers: z.array(contactPhoneNumberInputSchema).optional().default([]),
@@ -85,7 +86,9 @@ export const createContactSchema = z.object({
 }).strict();
 
 // Update contact schema (all fields optional)
-export const updateContactSchema = createUpdateSchema(createContactSchema);
+// Contact kind is established by sync or at creation. Generic updates cannot
+// downgrade a shared mailbox to person and bypass portal eligibility checks.
+export const updateContactSchema = createUpdateSchema(createContactSchema).omit({ contact_kind: true });
 
 // Contact filter schema
 export const contactFilterSchema = baseFilterSchema.extend({
@@ -104,6 +107,7 @@ export const contactListQuerySchema = createListQuerySchema(contactFilterSchema)
 
 // Contact response schema
 export const contactResponseSchema = z.object({
+  contact_kind: z.enum(['person', 'shared_mailbox']).optional(),
   contact_name_id: uuidSchema,
   full_name: z.string(),
   client_id: uuidSchema.nullable(),

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { IContact } from '@alga-psa/types';
 import { Flex, Text, Heading } from '@radix-ui/themes';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import { QuickAddInteraction } from '../interactions/QuickAddInteraction';
 import { Button } from '@alga-psa/ui/components/Button';
 import { PhoneText } from '@alga-psa/ui/components/PhoneText';
@@ -346,6 +347,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
                 </div>
               )}
               <Heading size="6">{contact.full_name}</Heading>
+              {contact.contact_kind === 'shared_mailbox' && <Badge variant="default-muted">{t('contactsPage.sharedMailbox')}</Badge>}
             </div>
             <div className="flex items-center space-x-2">
               {(!quickView || isInDrawer) && (
