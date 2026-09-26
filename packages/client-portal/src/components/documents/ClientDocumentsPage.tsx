@@ -6,12 +6,15 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { CollapseToggleButton } from '@alga-psa/ui/components/CollapseToggleButton';
 import { Input } from '@alga-psa/ui/components/Input';
 import Spinner from '@alga-psa/ui/components/Spinner';
-import { Search, ChevronRight, ChevronDown, Download, FileText, Image, File, Video, ChevronUp, FolderOpen } from 'lucide-react';
+import { Search, ChevronRight, ChevronDown, Download, FileText, Image, File, Video, ChevronUp, FolderOpen, Eye } from 'lucide-react';
 import { Card, CardContent } from '@alga-psa/ui/components/Card';
 import type { IDocument, IFolderNode } from '@alga-psa/types';
-import { getClientDocuments, getClientDocumentFolders, downloadClientDocument, ClientDocumentFilters, PaginatedClientDocuments } from '@alga-psa/client-portal/actions/client-portal-actions/client-documents';
+import { getClientDocuments, getClientDocumentFolders, getClientDocumentContent, ClientDocumentFilters } from '@alga-psa/client-portal/actions/client-portal-actions/client-documents';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
+import { DocumentRequestError, fetchAndSaveFile } from '../../lib/fetchAndSaveFile';
+import { toast } from 'react-hot-toast';
 
 const isReturnedActionError = (
   value: unknown
@@ -126,11 +129,12 @@ function FolderTreeNode({ node, selectedPath, onSelect, level = 0 }: FolderTreeN
 
 interface DocumentCardProps {
   document: IDocument;
+  onView: (doc: IDocument) => void;
   onDownload: (doc: IDocument) => void;
   isDownloading: boolean;
 }
 
-function DocumentCard({ document, onDownload, isDownloading }: DocumentCardProps) {
+function DocumentCard({ document, onView, onDownload, isDownloading }: DocumentCardProps) {
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardContent className="p-4">
@@ -139,7 +143,7 @@ function DocumentCard({ document, onDownload, isDownloading }: DocumentCardProps
             {getDocumentIcon(document.mime_type)}
           </div>
           <div className="flex-1 min-w-0">
-            <h4 className="text-sm font-medium truncate">{document.document_name}</h4>
+            <button type="button" id={`client-docs-title-view-${document.document_id}`} className="text-sm font-medium truncate text-left" onClick={() => onView(document)}>{document.document_name}</button>
             <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
               <span>{formatFileSize(document.file_size)}</span>
               <span>·</span>
@@ -147,7 +151,11 @@ function DocumentCard({ document, onDownload, isDownloading }: DocumentCardProps
             </div>
           </div>
           <Button
-            id="client-docs-download-document"
+            id={`client-docs-view-document-${document.document_id}`}
+            variant="ghost" size="sm" onClick={() => onView(document)} aria-label="View document"
+            className="flex-shrink-0"><Eye className="w-4 h-4" /></Button>
+          <Button
+            id={`client-docs-download-document-${document.document_id}`}
             variant="ghost"
             size="sm"
             onClick={() => onDownload(document)}
@@ -163,7 +171,7 @@ function DocumentCard({ document, onDownload, isDownloading }: DocumentCardProps
 }
 
 export default function ClientDocumentsPage() {
-  const { downloadDocument, getDocumentDownloadUrl } = useDocumentsCrossFeature();
+  const { renderDocumentViewer } = useDocumentsCrossFeature();
   const { t } = useTranslation('features/documents');
 
   const [documents, setDocuments] = useState<IDocument[]>([]);
@@ -177,6 +185,10 @@ export default function ClientDocumentsPage() {
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [isFolderSidebarCollapsed, setIsFolderSidebarCollapsed] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [preview, setPreview] = useState<IDocument | null>(null);
+  const [previewContent, setPreviewContent] = useState<any>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
 
   const pageSize = 20;
 
@@ -239,23 +251,43 @@ export default function ClientDocumentsPage() {
     setPage(1);
   }, [selectedFolder]);
 
-  const handleDownload = useCallback(async (doc: IDocument) => {
+  const handleDownload = useCallback(async (doc: IDocument, format?: 'md' | 'pdf') => {
     try {
       setDownloadingId(doc.document_id);
-      // Verify access before downloading
-      const accessResult = await downloadClientDocument(doc.document_id);
-      if (isReturnedActionError(accessResult)) {
-        setLoadError(getErrorMessage(accessResult));
-        return;
-      }
-      // Use the standard download utility
-      await downloadDocument(await getDocumentDownloadUrl(doc.document_id), doc.document_name);
+      const url = doc.file_id
+        ? `/api/client-portal/documents/${encodeURIComponent(doc.document_id)}/file?disposition=attachment`
+        : `/api/client-portal/documents/${encodeURIComponent(doc.document_id)}/export?format=${format || 'pdf'}`;
+      await fetchAndSaveFile(url, `${doc.document_name}${format === 'md' ? '.md' : format === 'pdf' && !doc.file_id ? '.pdf' : ''}`);
     } catch (error) {
       console.error('Failed to download document:', error);
+      const message = error instanceof DocumentRequestError && error.code === 'no_content'
+        ? t('portal.noContent', 'This document has no content to export.')
+        : error instanceof DocumentRequestError && (error.code === 'no_file' || error.code === 'missing_file' || error.code === 'not_found')
+          ? t('portal.notFound', 'This document is no longer available.')
+          : error instanceof DocumentRequestError && (error.status === 403 || error.status === 401)
+            ? t('portal.accessDenied', 'You do not have access to this document.')
+            : t('portal.downloadError', 'Could not download this document. Please try again.');
+      toast.error(message);
     } finally {
       setDownloadingId(null);
     }
-  }, []);
+  }, [t]);
+
+  const handleView = useCallback(async (doc: IDocument) => {
+    setPreview(doc); setPreviewContent(null); setPreviewError(null); setPreviewUrl(null);
+    try {
+      const content = await getClientDocumentContent(doc.document_id);
+      if (isReturnedActionError(content) || !content || !('content' in content)) throw new Error(getErrorMessage(content));
+      setPreviewContent(content);
+      if (content.content.kind === 'file' && (doc.mime_type === 'application/pdf' || doc.mime_type?.startsWith('image/') && doc.mime_type !== 'image/svg+xml')) {
+        const response = await fetch(`/api/client-portal/documents/${encodeURIComponent(doc.document_id)}/file?disposition=inline`, { credentials: 'include' });
+        if (!response.ok) throw new Error(t('portal.previewError', 'Could not load this preview.'));
+        setPreviewUrl(URL.createObjectURL(await response.blob()));
+      }
+    } catch (error) { setPreviewError(error instanceof Error ? error.message : t('portal.previewError', 'Could not load this preview.')); }
+  }, [t]);
+
+  useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
 
   return (
     <div className="flex flex-col h-full">
@@ -355,6 +387,7 @@ export default function ClientDocumentsPage() {
                   <DocumentCard
                     key={doc.document_id}
                     document={doc}
+                    onView={handleView}
                     onDownload={handleDownload}
                     isDownloading={downloadingId === doc.document_id}
                   />
@@ -391,6 +424,11 @@ export default function ClientDocumentsPage() {
           )}
         </div>
       </div>
+      <Dialog isOpen={!!preview} onClose={() => { setPreview(null); setPreviewContent(null); setPreviewError(null); }} title={preview?.document_name || t('portal.view', 'View document')} className="max-w-4xl" footer={preview && <div className="flex justify-end gap-2"><Button id={`client-docs-preview-download-${preview.document_id}`} onClick={() => void handleDownload(preview, 'pdf')}>{t('portal.download', 'Download')}</Button>{!preview.file_id && <Button id={`client-docs-preview-markdown-${preview.document_id}`} variant="outline" onClick={() => void handleDownload(preview, 'md')}>{t('portal.downloadMarkdown', 'Markdown')}</Button>}</div>}>
+        <DialogContent>
+          {previewError ? <p role="alert" className="text-destructive">{previewError}</p> : !previewContent ? <Spinner size="sm" /> : previewContent.content.kind === 'block' ? renderDocumentViewer({ content: previewContent.content.blockData }) : previewContent.content.kind === 'text' ? <pre className="whitespace-pre-wrap">{previewContent.content.content}</pre> : previewUrl && preview?.mime_type === 'application/pdf' ? <iframe title={preview.document_name} src={previewUrl} className="w-full h-[70vh]" /> : previewUrl ? <img alt={preview?.document_name} src={previewUrl} className="max-w-full max-h-[70vh] mx-auto" /> : <p>{t('portal.previewUnavailable', 'Preview is not available for this file type.')}</p>}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

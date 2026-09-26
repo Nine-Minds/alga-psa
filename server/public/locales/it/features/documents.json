@@ -217,7 +217,17 @@
     "subtitle": "Visualizza e scarica i tuoi documenti condivisi",
     "searchPlaceholder": "Cerca documenti...",
     "showing": "{{count}} documenti",
-    "loadError": "Caricamento dei documenti non riuscito. Riprova."
+    "loadError": "Caricamento dei documenti non riuscito. Riprova.",
+    "view": "Visualizza",
+    "download": "Scarica",
+    "downloadPdf": "Scarica PDF",
+    "downloadMarkdown": "Scarica Markdown",
+    "previewUnavailable": "L’anteprima non è disponibile per questo tipo di file.",
+    "previewError": "Impossibile caricare l’anteprima. Riprova.",
+    "downloadError": "Impossibile scaricare il documento. Riprova.",
+    "notFound": "Questo documento non è più disponibile.",
+    "noContent": "Questo documento non contiene dati da esportare.",
+    "accessDenied": "Non hai accesso a questo documento."
   },
   "kb": {
     "title": "Base di conoscenza",

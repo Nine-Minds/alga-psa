@@ -21,6 +21,7 @@ export interface DocumentStorageCardRenderProps {
 }
 
 export interface DocumentsCrossFeatureCallbacks {
+  renderDocumentViewer: (props: { content: unknown }) => ReactNode;
   renderDocuments: (props: DocumentsRenderProps) => ReactNode;
   renderDocumentUpload: (props: DocumentUploadRenderProps) => ReactNode;
   renderDocumentSelector: (props: DocumentSelectorRenderProps) => ReactNode;

@@ -217,7 +217,17 @@
     "subtitle": "Sehen und laden Sie Ihre freigegebenen Dokumente herunter",
     "searchPlaceholder": "Dokumente suchen...",
     "showing": "{{count}} Dokumente",
-    "loadError": "Fehler beim Laden der Dokumente. Bitte versuchen Sie es erneut."
+    "loadError": "Fehler beim Laden der Dokumente. Bitte versuchen Sie es erneut.",
+    "view": "Ansehen",
+    "download": "Herunterladen",
+    "downloadPdf": "PDF herunterladen",
+    "downloadMarkdown": "Markdown herunterladen",
+    "previewUnavailable": "Für diesen Dateityp ist keine Vorschau verfügbar.",
+    "previewError": "Die Vorschau konnte nicht geladen werden. Bitte versuchen Sie es erneut.",
+    "downloadError": "Dieses Dokument konnte nicht heruntergeladen werden. Bitte versuchen Sie es erneut.",
+    "notFound": "Dieses Dokument ist nicht mehr verfügbar.",
+    "noContent": "Dieses Dokument enthält keine exportierbaren Inhalte.",
+    "accessDenied": "Sie haben keinen Zugriff auf dieses Dokument."
   },
   "kb": {
     "title": "Wissensdatenbank",

@@ -46,6 +46,10 @@
       "import": "./src/lib/documentPreviewGenerator.ts",
       "types": "./src/lib/documentPreviewGenerator.ts"
     },
+    "./lib/documentMarkdownExport": {
+      "import": "./src/lib/documentMarkdownExport.ts",
+      "types": "./src/lib/documentMarkdownExport.ts"
+    },
     "./lib/documentUtils": {
       "import": "./src/lib/documentUtils.ts",
       "types": "./src/lib/documentUtils.ts"

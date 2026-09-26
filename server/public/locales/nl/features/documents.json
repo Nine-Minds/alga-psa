@@ -217,7 +217,17 @@
     "subtitle": "Bekijk en download uw gedeelde documenten",
     "searchPlaceholder": "Documenten zoeken...",
     "showing": "{{count}} documenten",
-    "loadError": "Laden van documenten mislukt. Probeer het opnieuw."
+    "loadError": "Laden van documenten mislukt. Probeer het opnieuw.",
+    "view": "Bekijken",
+    "download": "Downloaden",
+    "downloadPdf": "PDF downloaden",
+    "downloadMarkdown": "Markdown downloaden",
+    "previewUnavailable": "Voor dit bestandstype is geen voorbeeld beschikbaar.",
+    "previewError": "Voorbeeld laden is mislukt. Probeer het opnieuw.",
+    "downloadError": "Downloaden is mislukt. Probeer het opnieuw.",
+    "notFound": "Dit document is niet meer beschikbaar.",
+    "noContent": "Dit document bevat geen exporteerbare inhoud.",
+    "accessDenied": "Je hebt geen toegang tot dit document."
   },
   "kb": {
     "title": "Kennisbank",

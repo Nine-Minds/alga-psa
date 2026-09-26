@@ -12,7 +12,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   }),
 }));
 
-const { mockFolders, mockDocuments } = vi.hoisted(() => {
+const { mockFolders, mockDocuments, mockRenderViewer } = vi.hoisted(() => {
   const mockFolders = [
     {
       name: 'Contracts',
@@ -39,6 +39,7 @@ const { mockFolders, mockDocuments } = vi.hoisted(() => {
     {
       tenant: 'tenant-1',
       document_id: 'doc-1',
+      file_id: 'file-1',
       document_name: 'Service Agreement.pdf',
       type_id: null,
       user_id: 'user-1',
@@ -54,6 +55,7 @@ const { mockFolders, mockDocuments } = vi.hoisted(() => {
     {
       tenant: 'tenant-1',
       document_id: 'doc-2',
+      file_id: 'file-2',
       document_name: 'Network Diagram.png',
       type_id: null,
       user_id: 'user-1',
@@ -68,7 +70,7 @@ const { mockFolders, mockDocuments } = vi.hoisted(() => {
     },
   ] as IDocument[];
 
-  return { mockFolders, mockDocuments };
+  return { mockFolders, mockDocuments, mockRenderViewer: vi.fn(() => null) };
 });
 
 vi.mock('@alga-psa/client-portal/actions/client-portal-actions/client-documents', () => ({
@@ -80,6 +82,7 @@ vi.mock('@alga-psa/client-portal/actions/client-portal-actions/client-documents'
     totalPages: 1,
   }),
   getClientDocumentFolders: vi.fn().mockResolvedValue(mockFolders),
+  getClientDocumentContent: vi.fn().mockResolvedValue({ document: { document_id: 'doc-1' }, content: { kind: 'file' } }),
   downloadClientDocument: vi.fn().mockResolvedValue({
     success: true,
     fileId: 'file-1',
@@ -92,8 +95,11 @@ vi.mock('@alga-psa/documents/lib/documentUtils', () => ({
   downloadDocument: vi.fn(),
 }));
 
+vi.mock('../../lib/fetchAndSaveFile', () => ({ fetchAndSaveFile: vi.fn() }));
+
 vi.mock('@alga-psa/core/context/DocumentsCrossFeatureContext', () => ({
   useDocumentsCrossFeature: () => ({
+    renderDocumentViewer: mockRenderViewer,
     downloadDocument: vi.fn(),
     getDocumentDownloadUrl: vi.fn(),
   }),
@@ -124,6 +130,7 @@ describe('ClientDocumentsPage', () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it('renders folder tree sidebar', async () => {
@@ -146,6 +153,36 @@ describe('ClientDocumentsPage', () => {
     // Check for download buttons
     const downloadButtons = screen.getAllByRole('button');
     expect(downloadButtons.length).toBeGreaterThan(0);
+  });
+
+  it('routes uploaded document downloads through the checked portal file endpoint', async () => {
+    const { fetchAndSaveFile } = await import('../../lib/fetchAndSaveFile');
+    render(<ClientDocumentsPage />);
+    await waitFor(() => expect(screen.getByText('Service Agreement.pdf')).toBeInTheDocument());
+    fireEvent.click(document.getElementById('client-docs-download-document-doc-1')!);
+    await waitFor(() => expect(fetchAndSaveFile).toHaveBeenCalledWith('/api/client-portal/documents/doc-1/file?disposition=attachment', 'Service Agreement.pdf'));
+  });
+
+  it.each([
+    ['doc-1', 'application/pdf'],
+    ['doc-2', 'image/png'],
+  ])('fetches uploaded %s preview bytes from the inline endpoint', async (documentId) => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(new Blob(['preview'])));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<ClientDocumentsPage />);
+    await waitFor(() => expect(screen.getByText('Service Agreement.pdf')).toBeInTheDocument());
+    fireEvent.click(document.getElementById(`client-docs-view-document-${documentId}`)!);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(`/api/client-portal/documents/${documentId}/file?disposition=inline`, { credentials: 'include' }));
+  });
+
+  it('renders readable BlockNote content for an in-app document', async () => {
+    const { getClientDocumentContent } = await import('@alga-psa/client-portal/actions/client-portal-actions/client-documents');
+    const blockData = [{ type: 'paragraph', content: [{ type: 'text', text: 'Meeting Notes' }] }];
+    vi.mocked(getClientDocumentContent).mockResolvedValueOnce({ document: { document_id: 'doc-1' }, content: { kind: 'block', blockData } } as any);
+    render(<ClientDocumentsPage />);
+    await waitFor(() => expect(screen.getByText('Service Agreement.pdf')).toBeInTheDocument());
+    fireEvent.click(document.getElementById('client-docs-title-view-doc-1')!);
+    await waitFor(() => expect(mockRenderViewer).toHaveBeenCalledWith({ content: blockData }));
   });
 
   it('renders search filter input', async () => {

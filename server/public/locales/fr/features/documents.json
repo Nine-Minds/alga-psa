@@ -217,7 +217,17 @@
     "subtitle": "Consultez et téléchargez vos documents partagés",
     "searchPlaceholder": "Rechercher des documents...",
     "showing": "{{count}} documents",
-    "loadError": "Échec du chargement des documents. Veuillez réessayer."
+    "loadError": "Échec du chargement des documents. Veuillez réessayer.",
+    "view": "Voir",
+    "download": "Télécharger",
+    "downloadPdf": "Télécharger le PDF",
+    "downloadMarkdown": "Télécharger le Markdown",
+    "previewUnavailable": "L’aperçu n’est pas disponible pour ce type de fichier.",
+    "previewError": "Impossible de charger l’aperçu. Réessayez.",
+    "downloadError": "Impossible de télécharger ce document. Réessayez.",
+    "notFound": "Ce document n’est plus disponible.",
+    "noContent": "Ce document ne contient rien à exporter.",
+    "accessDenied": "Vous n’avez pas accès à ce document."
   },
   "kb": {
     "title": "Base de connaissances",

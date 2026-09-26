@@ -426,6 +426,22 @@ export const downloadClientDocument = withAuth(
   }
 );
 
+/** Returns portal-visible document metadata/content through the same visibility gate as the list. */
+export const getClientDocumentContent = withAuth(async (user, { tenant }, documentId: string) => {
+  const document = await downloadClientDocument(documentId);
+  if (!document || 'actionError' in document || 'permissionError' in document) return document;
+  const db = await getConnection(tenant);
+  const scoped = tenantDb(db, tenant);
+  const [block, text] = await Promise.all([
+    scoped.table('document_block_content').where({ document_id: documentId }).first('block_data'),
+    scoped.table('document_content').where({ document_id: documentId }).first('content'),
+  ]);
+  return {
+    document: { document_id: document.document_id, document_name: document.document_name, mime_type: document.mime_type, file_id: document.file_id },
+    content: block?.block_data != null ? { kind: 'block' as const, blockData: block.block_data } : text?.content != null ? { kind: 'text' as const, content: text.content } : document.file_id ? { kind: 'file' as const } : { kind: 'empty' as const },
+  };
+});
+
 /**
  * Build a folder tree from a list of folder paths.
  * Used internally for constructing the client-visible folder hierarchy.

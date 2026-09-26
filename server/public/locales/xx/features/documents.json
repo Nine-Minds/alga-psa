@@ -217,7 +217,17 @@
     "subtitle": "⟦Ṽīḗẇ ȧƞḓ ḓȯẇƞŀȯȧḓ ẏȯŭř şħȧřḗḓ ḓȯƈŭḿḗƞŧş⟧",
     "searchPlaceholder": "⟦Şḗȧřƈħ ḓȯƈŭḿḗƞŧş...⟧",
     "showing": "⟦{{count}} ḓȯƈŭḿḗƞŧş⟧",
-    "loadError": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ḓȯƈŭḿḗƞŧş. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧"
+    "loadError": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ḓȯƈŭḿḗƞŧş. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧",
+    "view": "View",
+    "download": "Download",
+    "downloadPdf": "Download PDF",
+    "downloadMarkdown": "Download Markdown",
+    "previewUnavailable": "Preview is not available for this file type.",
+    "previewError": "Could not load this preview. Please try again.",
+    "downloadError": "Could not download this document. Please try again.",
+    "notFound": "This document is no longer available.",
+    "noContent": "This document has no content to export.",
+    "accessDenied": "You do not have access to this document."
   },
   "kb": {
     "title": "⟦Ķƞȯẇŀḗḓɠḗ Ɓȧşḗ⟧",
