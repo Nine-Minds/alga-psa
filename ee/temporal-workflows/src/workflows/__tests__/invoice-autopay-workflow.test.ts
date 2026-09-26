@@ -192,6 +192,25 @@ describe('invoiceAutopayWorkflow', () => {
     } finally { await test.env.teardown(); }
   });
 
+  it('runs the fallback when auto-pay is disabled while a charge is processing', async () => {
+    let processing!: () => void;
+    const processingReady = new Promise<void>((resolve) => { processing = resolve; });
+    const test = await setup({
+      executeAutopayAttempt: async () => { processing(); return { status: 'processing' }; },
+      evaluateEnrollmentForInvoice: async () => ({ status: 'disabled' }),
+    });
+    try {
+      await test.worker.runUntil(async () => {
+        const handle = await test.env.client.workflow.start(invoiceAutopayWorkflow, { args: [input], taskQueue: test.taskQueue, workflowId: 'autopay-disable-processing' });
+        await processingReady;
+        await handle.signal('enrollmentChanged');
+        await handle.result();
+      });
+      expect(test.calls.filter(({ name }) => name === 'fallback')).toHaveLength(1);
+      expect(test.calls.filter(({ name }) => name === 'reconcile')).toHaveLength(0);
+    } finally { await test.env.teardown(); }
+  });
+
   it('reconciles a processing charge when invoiceSettled arrives before paymentIntentSettled', async () => {
     let processing!: () => void;
     const processingReady = new Promise<void>((resolve) => { processing = resolve; });

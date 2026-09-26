@@ -1,132 +1,32 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import { tenantDb } from '@alga-psa/db';
-import { getConnection } from '@alga-psa/db';
-import { computeBalanceDue } from '@alga-psa/billing/services/accountingSync/recordExternalPayment';
-import { PaymentService } from './PaymentService';
+import { getConnection, tenantDb } from '@alga-psa/db';
 import { createStripePaymentProvider } from './StripePaymentProvider';
-import { classifyAutopayFailure, isAutopayEnrollmentValid, resolveConsentTextVersion, retryAt, shouldScheduleAutopay } from './autopayPolicy';
-import type { PaymentWebhookEvent } from '@alga-psa/types';
-import { buildPaymentFailedPayload } from 'server/src/lib/api/services/paymentWorkflowEvents';
-import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
-import logger from '@alga-psa/core/logger';
-import { reconcileStripeWebhookEvents } from './stripeWebhookEvents';
-import { startInvoiceAutopay, signalInvoiceAutopay, signalProfileAutopayChanged } from '../temporal/invoiceAutopay';
-import { getSystemEmailService } from '@alga-psa/email';
+import { classifyAutopayFailure, retryAt, shouldScheduleAutopay } from './autopayPolicy';
+import { getAutopayPaymentLink, expireAutopayPaymentLinks, recordAutopayPayment } from './autopayWorkerPayments';
 import { resolveInvoiceBillingRecipient } from '@alga-psa/billing/services/invoiceBillingRecipientService';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import logger from '@alga-psa/core/logger';
 
-type Authorization = { userId: string | null; source: 'client_portal' | 'msp'; ip?: string | null; userAgent?: string | null; consentTextVersion: string };
+function computeBalanceDue(input: { totalAmount: number; creditApplied: number; totalPaid: number }): number {
+  return Math.round(input.totalAmount) - Math.round(input.creditApplied) - Math.round(input.totalPaid);
+}
 
-export class AutopayService {
+function buildAutopayPaymentFailedPayload(params: {
+  invoiceId: string; clientId: string; failedAt: string; amount: number; currency: string;
+  method: string; failureCode: string; failureMessage: string; retryable: boolean;
+}) {
+  return { ...params, amount: String(Math.max(0, Number.isFinite(params.amount) ? params.amount : 0)) };
+}
 
+export class AutopayWorkerService {
   private constructor(private readonly tenantId: string, private readonly knex: Knex) {}
-  static async create(tenantId: string): Promise<AutopayService> { return new AutopayService(tenantId, await getConnection()); }
-  static async startInvoiceAutopay(tenantId: string, invoiceId: string): Promise<void> {
-    await startInvoiceAutopay(tenantId, invoiceId);
+  static async create(tenantId: string): Promise<AutopayWorkerService> {
+    return new AutopayWorkerService(tenantId, await getConnection());
   }
-  static async signalInvoiceSettled(tenantId: string, invoiceId: string): Promise<void> {
-    await signalInvoiceAutopay(tenantId, invoiceId, 'invoiceSettled');
+  private table(name: string): Knex.QueryBuilder<any, any> {
+    return tenantDb(this.knex, this.tenantId).table(name);
   }
-  static async chargeInvoiceNow(tenantId: string, invoiceId: string): Promise<boolean> {
-    await startInvoiceAutopay(tenantId, invoiceId);
-    return signalInvoiceAutopay(tenantId, invoiceId, 'chargeNow');
-  }
-  private table(name: string): Knex.QueryBuilder<any, any> { return tenantDb(this.knex, this.tenantId).table(name); }
-
-  async enroll(billingProfileId: string, paymentMethodId: string, authorization: Authorization): Promise<void> {
-    const config = await this.table('payment_provider_configs').where({ provider_type: 'stripe', is_enabled: true }).first();
-    const settings = (config?.settings ?? {}) as Record<string, unknown>;
-    const method = await this.table('payment_methods').where({ payment_method_id: paymentMethodId, billing_profile_id: billingProfileId, is_deleted: false }).first();
-    if (!isAutopayEnrollmentValid({ tenantEnabled: settings.autopayEnabled === true, profileMatches: method?.billing_profile_id === billingProfileId,
-      providerType: method?.provider_type, status: method?.status, externalPaymentMethodId: method?.external_payment_method_id, externalCustomerId: method?.external_customer_id })) {
-      throw new Error(settings.autopayEnabled !== true ? 'Auto-pay is disabled for this tenant' : 'Selected card is not chargeable for this billing profile');
-    }
-    const consentTextVersion = resolveConsentTextVersion({ source: authorization.source, submittedVersion: authorization.consentTextVersion,
-      currentVersion: settings.autopayConsentTextVersion as string | undefined });
-    const profile = await this.table('client_billing_profiles').where({ billing_profile_id: billingProfileId }).first();
-    if (!profile) throw new Error('Billing profile not found');
-    await reconcileStripeWebhookEvents(this.tenantId);
-    await this.table('billing_profile_autopay').insert({ tenant: this.tenantId, billing_profile_id: billingProfileId, client_id: profile.client_id,
-      is_enabled: true, payment_method_id: paymentMethodId, authorized_at: this.knex.fn.now(), authorized_by_user_id: authorization.userId,
-      authorization_source: authorization.source, authorization_ip: authorization.ip ?? null, authorization_user_agent: authorization.userAgent ?? null,
-      consent_text_version: consentTextVersion, disabled_at: null, disabled_by_user_id: null, disabled_reason: null,
-      created_at: this.knex.fn.now(), updated_at: this.knex.fn.now() })
-      .onConflict(['tenant', 'billing_profile_id']).merge();
-    await signalProfileAutopayChanged(this.knex, this.tenantId, billingProfileId);
-  }
-
-  async getProfileOverview(billingProfileId: string): Promise<Record<string, unknown> | null> {
-    const profile = await this.table('client_billing_profiles').where({ billing_profile_id: billingProfileId }).first('client_id');
-    if (!profile) return null;
-    const [config, enrollment, methods, attempts] = await Promise.all([
-      this.table('payment_provider_configs').where({ provider_type: 'stripe', is_enabled: true }).first('settings'),
-      this.table('billing_profile_autopay').where({ billing_profile_id: billingProfileId }).first(),
-      this.table('payment_methods').where({ billing_profile_id: billingProfileId, provider_type: 'stripe', is_deleted: false }).select('payment_method_id', 'brand', 'last4', 'exp_month', 'exp_year', 'status', 'external_payment_method_id'),
-      this.table('invoice_autopay_attempts').where({ billing_profile_id: billingProfileId }).orderBy('created_at', 'desc').limit(5),
-    ]);
-    let authorizedBy: string | null = null;
-    if (enrollment?.authorized_by_user_id) {
-      const author = await this.table('users').where({ user_id: enrollment.authorized_by_user_id }).first('first_name', 'last_name', 'email');
-      authorizedBy = [author?.first_name, author?.last_name].filter(Boolean).join(' ').trim() || author?.email || 'Unknown user';
-    }
-    const safeMethods = methods.map(({ external_payment_method_id: _externalId, ...method }: any) => method);
-    const chargeableMethodIds = new Set(methods.filter((method: any) => method.status === 'active' && !!method.external_payment_method_id).map((method: any) => method.payment_method_id));
-    return { enabled: (config?.settings as any)?.autopayEnabled === true, consentText: (config?.settings as any)?.autopayConsentText ?? '',
-      consentTextVersion: (config?.settings as any)?.autopayConsentTextVersion ?? '1', enrollment: enrollment ? { ...enrollment, authorized_by_display_name: authorizedBy } : null,
-      methods: safeMethods,
-      chargeableMethods: safeMethods.filter((method: any) => chargeableMethodIds.has(method.payment_method_id)), attempts };
-  }
-
-  async getInvoiceAutopayContexts(invoiceIds: string[]): Promise<Record<string, { scheduledFor: string; brand: string | null; last4: string; status: string }>> {
-    if (invoiceIds.length === 0) return {};
-    const rows = await this.table('invoice_autopay_attempts as aa')
-      .join('payment_methods as pm', function () {
-        this.on('pm.payment_method_id', '=', 'aa.payment_method_id').andOn('pm.tenant', '=', 'aa.tenant');
-      })
-      .join('billing_profile_autopay as bpa', function () {
-        this.on('bpa.tenant', '=', 'aa.tenant').andOn('bpa.billing_profile_id', '=', 'aa.billing_profile_id');
-      })
-      .where('bpa.is_enabled', true).where('bpa.payment_method_id', this.knex.ref('aa.payment_method_id'))
-      .where('pm.status', 'active').where('pm.is_deleted', false)
-      .whereIn('aa.invoice_id', invoiceIds).where(function () {
-        this.where('aa.status', 'processing').orWhere(function () {
-          this.where('aa.status', 'scheduled').whereRaw('aa.scheduled_for >= now()');
-        });
-      })
-      .select('aa.invoice_id', 'aa.scheduled_for', 'aa.status', 'pm.brand', 'pm.last4').orderBy('aa.scheduled_for', 'asc');
-    const result: Record<string, { scheduledFor: string; brand: string | null; last4: string; status: string }> = {};
-    for (const row of rows) result[row.invoice_id] ??= { scheduledFor: row.status === 'processing' ? new Date().toISOString() : row.scheduled_for, brand: row.brand, last4: row.last4, status: row.status };
-    return result;
-  }
-
-  async disenroll(billingProfileId: string, reason: string, actor: string | null): Promise<void> {
-    await this.table('billing_profile_autopay').where({ billing_profile_id: billingProfileId, is_enabled: true }).update({ is_enabled: false,
-      disabled_at: this.knex.fn.now(), disabled_by_user_id: actor, disabled_reason: reason, updated_at: this.knex.fn.now() });
-    await signalProfileAutopayChanged(this.knex, this.tenantId, billingProfileId);
-  }
-
-  async handleProviderEvent(event: PaymentWebhookEvent): Promise<void> {
-    if (!event.autopayAttemptId) return;
-    const attempt = await this.table('invoice_autopay_attempts').where({ attempt_id: event.autopayAttemptId }).first();
-    if (!attempt) return;
-    if (attempt.status !== 'processing') return;
-    if (event.eventType === 'payment_intent.succeeded') {
-      const updated = await this.table('invoice_autopay_attempts').where({ attempt_id: event.autopayAttemptId, status: 'processing' }).update({ status: 'succeeded',
-        payment_intent_id: event.paymentIntentId, processed_at: this.knex.fn.now(), updated_at: this.knex.fn.now() });
-      if (updated !== 1) return;
-      await signalInvoiceAutopay(this.tenantId, attempt.invoice_id, 'paymentIntentSettled', { attemptId: attempt.attempt_id, status: 'succeeded' });
-      return;
-    }
-    if (event.eventType === 'payment_intent.payment_failed') {
-      const raw = event.payload as any;
-      const intent = raw?.data?.object ?? {};
-      const error = intent.last_payment_error ?? {};
-      await this.failAttempt(attempt, { status: error.code === 'authentication_required' ? 'requires_action' : 'failed',
-        paymentIntentId: event.paymentIntentId ?? intent.id, failureCode: error.code, declineCode: error.decline_code, message: error.message });
-      await signalInvoiceAutopay(this.tenantId, attempt.invoice_id, 'paymentIntentSettled', { attemptId: attempt.attempt_id, status: 'payment_failed' });
-    }
-  }
-
   async prepareInvoiceAutopay(invoiceId: string): Promise<{ status: 'skip'; reason: string } | { attemptId: string; scheduledFor: string; processingStartedAt?: string }> {
     const invoice = await this.table('invoices').where({ invoice_id: invoiceId }).first();
     const open = await this.table('invoice_autopay_attempts').where({ invoice_id: invoiceId }).whereIn('status', ['scheduled', 'processing']).first();
@@ -189,17 +89,17 @@ export class AutopayService {
     const payments = await this.table('invoice_payments').where({ invoice_id: attempt.invoice_id }).sum('amount as total').first();
     const amount = computeBalanceDue({ totalAmount: Number(invoice.total_amount), creditApplied: Number(invoice.credit_applied ?? 0), totalPaid: Number(payments?.total ?? 0) });
     if (amount <= 0) { await this.cancelAttempt(attemptId); return { status: 'cancelled', reason: 'no_balance' }; }
-    const paymentService = await PaymentService.create(this.tenantId);
+    const stripeProvider = createStripePaymentProvider(this.tenantId);
     // A live Checkout link is retired before the charge; failure leaves this attempt processing for reconciliation.
-    await paymentService.expireActiveLinksForInvoice(attempt.invoice_id, 'stale_balance');
+    await expireAutopayPaymentLinks(this.knex, this.tenantId, attempt.invoice_id, stripeProvider);
     let result;
     if (Date.now() - new Date(attempt.updated_at).getTime() >= 24 * 60 * 60 * 1000) {
       const existingIntent = await createStripePaymentProvider(this.tenantId).retrieveAttemptPaymentIntent(attempt.attempt_id);
       if (!existingIntent) return { status: 'processing', processingStartedAt: new Date(attempt.updated_at).toISOString() };
       if (existingIntent.status === 'succeeded') {
-        const landed = await paymentService.recordAutoPaySuccess({ invoiceId: attempt.invoice_id,
+        const landed = await recordAutopayPayment(this.knex, this.tenantId, { invoiceId: attempt.invoice_id,
           amount: Number(existingIntent.amount_received || existingIntent.amount), currency: attempt.currency,
-          paymentIntentId: existingIntent.id, attemptId: attempt.attempt_id });
+          paymentIntentId: existingIntent.id });
         if (!landed.success) throw new Error(landed.error ?? 'Unable to record auto-pay payment');
         await this.table('invoice_autopay_attempts').where({ attempt_id: attempt.attempt_id, status: 'processing' }).update({ status: 'succeeded', payment_intent_id: existingIntent.id, processed_at: this.knex.fn.now(), updated_at: this.knex.fn.now() });
         return { status: 'succeeded' };
@@ -222,8 +122,8 @@ export class AutopayService {
       return { status: 'processing', processingStartedAt: new Date(attempt.updated_at).toISOString() };
     }
     if (result.status === 'succeeded') {
-      const landed = await paymentService.recordAutoPaySuccess({ invoiceId: attempt.invoice_id, amount, currency: attempt.currency,
-        paymentIntentId: result.paymentIntentId, attemptId: attempt.attempt_id });
+      const landed = await recordAutopayPayment(this.knex, this.tenantId, { invoiceId: attempt.invoice_id, amount, currency: attempt.currency,
+        paymentIntentId: result.paymentIntentId });
       if (!landed.success) throw new Error(landed.error ?? 'Unable to record auto-pay payment');
       const updated = await this.table('invoice_autopay_attempts').where({ attempt_id: attempt.attempt_id, status: 'processing' }).update({ status: 'succeeded', payment_intent_id: result.paymentIntentId, processed_at: this.knex.fn.now(), updated_at: this.knex.fn.now() });
       if (updated !== 1) return this.outcomeForExistingAttempt(attemptId, await this.table('invoice_autopay_attempts').where({ attempt_id: attemptId }).first());
@@ -281,8 +181,7 @@ export class AutopayService {
       return this.failAttempt(attempt, { status: 'failed', failureCode: 'no_intent_found', message: 'No Stripe payment intent was found after 72 hours' });
     }
     if (intent.status === 'succeeded') {
-      const paymentService = await PaymentService.create(this.tenantId);
-      await paymentService.recordAutoPaySuccess({ invoiceId: attempt.invoice_id, amount: Number(intent.amount_received || intent.amount), currency: attempt.currency, paymentIntentId: intent.id, attemptId });
+      await recordAutopayPayment(this.knex, this.tenantId, { invoiceId: attempt.invoice_id, amount: Number(intent.amount_received || intent.amount), currency: attempt.currency, paymentIntentId: intent.id });
       await this.table('invoice_autopay_attempts').where({ attempt_id: attemptId, status: 'processing' }).update({ status: 'succeeded', payment_intent_id: intent.id, processed_at: this.knex.fn.now(), updated_at: this.knex.fn.now() });
       return { status: 'succeeded' };
     }
@@ -299,10 +198,10 @@ export class AutopayService {
     const payments = await this.table('invoice_payments').where({ invoice_id: invoiceId }).sum('amount as total').first();
     const balanceDue = computeBalanceDue({ totalAmount: Number(invoice.total_amount), creditApplied: Number(invoice.credit_applied ?? 0), totalPaid: Number(payments?.total ?? 0) });
     if (invoice.status !== 'sent' || balanceDue <= 0) return;
-    const paymentService = await PaymentService.create(this.tenantId);
-    const link = await paymentService.getOrCreatePaymentLink(invoiceId);
+    const link = await getAutopayPaymentLink(this.knex, this.tenantId, invoiceId, createStripePaymentProvider(this.tenantId));
     const recipient = await resolveInvoiceBillingRecipient({ knexOrTrx: this.knex, tenantId: this.tenantId, clientId: invoice.client_id });
     if (recipient.recipientEmail && link?.url) {
+      const { getSystemEmailService } = await import('@alga-psa/email');
       const emailService = await getSystemEmailService();
       const safeUrl = link.url.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
       await emailService.sendEmail({ to: recipient.recipientEmail, tenantId: this.tenantId, entityType: 'invoice', entityId: invoiceId,
@@ -311,11 +210,46 @@ export class AutopayService {
         text: `We could not complete auto-pay for invoice ${invoice.invoice_number ?? ''}. Pay here: ${link.url}` });
     }
     const failedAt = new Date().toISOString();
-    await publishWorkflowEvent({ eventType: 'PAYMENT_FAILED', payload: buildPaymentFailedPayload({ invoiceId, clientId: invoice.client_id,
+    await publishWorkflowEvent({ eventType: 'PAYMENT_FAILED', payload: buildAutopayPaymentFailedPayload({ invoiceId, clientId: invoice.client_id,
       failedAt, amount: Number(invoice.total_amount), currency: invoice.currency_code ?? 'USD', method: 'stripe', failureCode: reason,
       failureMessage: reason === 'payment_failed' ? 'Auto-pay attempts were exhausted' : 'Auto-pay is no longer available for this billing profile', retryable: false }),
       ctx: { tenantId: this.tenantId, occurredAt: failedAt, actor: { actorType: 'SYSTEM' } },
       idempotencyKey: `autopay_fallback:${attemptId ?? invoiceId}` });
+
+    let profileQuery = this.table('client_billing_profiles');
+    if (invoice.billing_profile_id) {
+      profileQuery = profileQuery.where({ billing_profile_id: invoice.billing_profile_id });
+    } else {
+      profileQuery = profileQuery.where({ client_id: invoice.client_id, is_default: true });
+    }
+    const profile = await profileQuery.first('created_by', 'updated_by');
+    const client = await this.table('clients').where({ client_id: invoice.client_id }).first('account_manager_id');
+    const recipientIds = [...new Set([client?.account_manager_id, profile?.updated_by, profile?.created_by].filter(Boolean))];
+    const recipients = recipientIds.length
+      ? await this.table('users').whereIn('user_id', recipientIds).where({ user_type: 'internal', is_inactive: false }).select('user_id')
+      : [];
+    for (const { user_id: userId } of recipients) {
+      const existing = await this.table('internal_notifications').where({ user_id: userId, template_name: 'autopay-payment-failed' })
+        .whereRaw("metadata->>'invoiceId' = ?", [invoiceId]).first('internal_notification_id');
+      if (existing) continue;
+      await this.table('internal_notifications').insert({
+        tenant: this.tenantId,
+        user_id: userId,
+        template_name: 'autopay-payment-failed',
+        language_code: 'en',
+        title: `Auto-pay failed for invoice ${invoice.invoice_number ?? invoiceId}`,
+        message: `Auto-pay could not be completed. The client has been sent a payment link. Reason: ${reason}.`,
+        type: 'warning',
+        category: 'billing',
+        link: `/msp/billing/invoices/${invoiceId}`,
+        metadata: JSON.stringify({ invoiceId, reason, paymentLinkId: link?.paymentLinkId ?? null }),
+        is_read: false,
+        delivery_status: 'pending',
+        delivery_attempts: 0,
+        created_at: this.knex.fn.now(),
+        updated_at: this.knex.fn.now(),
+      });
+    }
   }
 
   async cancelAttemptById(attemptId: string): Promise<void> {
@@ -353,7 +287,7 @@ export class AutopayService {
     if (hard) await this.table('payment_methods').where({ payment_method_id: attempt.payment_method_id }).update({ status: 'requires_update', updated_at: this.knex.fn.now() });
     const invoice = await this.table('invoices').where({ invoice_id: attempt.invoice_id }).first();
     const failureAt = new Date().toISOString();
-    await publishWorkflowEvent({ eventType: 'PAYMENT_FAILED', payload: buildPaymentFailedPayload({ invoiceId: attempt.invoice_id, clientId: invoice?.client_id,
+    await publishWorkflowEvent({ eventType: 'PAYMENT_FAILED', payload: buildAutopayPaymentFailedPayload({ invoiceId: attempt.invoice_id, clientId: invoice?.client_id,
       failedAt: failureAt, amount: Number(attempt.amount), currency: attempt.currency, method: 'stripe', failureCode: failure.failureCode,
       failureMessage: failure.message, retryable: !!retry }), ctx: { tenantId: this.tenantId, occurredAt: failureAt, actor: { actorType: 'SYSTEM' } },
       idempotencyKey: `autopay_failed:${attempt.attempt_id}` });

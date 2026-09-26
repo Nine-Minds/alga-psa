@@ -31,8 +31,9 @@ import { SavedPaymentMethodService } from './SavedPaymentMethodService';
 import { AutopayService } from './AutopayService';
 import { signalInvoiceAutopay } from '../temporal/invoiceAutopay';
 import { recordTransaction } from 'server/src/lib/utils/transactionUtils';
-import { recordExternalPayment } from '@alga-psa/billing/services';
-import { resolveInvoiceBillingRecipient } from '@alga-psa/billing/services';
+// LEVERAGE: friction — importing the billing services barrel pulls UI, notification, and inventory modules into the Temporal worker graph.
+import { recordExternalPayment } from '@alga-psa/billing/services/accountingSync/recordExternalPayment';
+import { resolveInvoiceBillingRecipient } from '@alga-psa/billing/services/invoiceBillingRecipientService';
 import {
   registerInvoiceTerminalStatusHandler,
   listActiveInvoicePaymentLinks,

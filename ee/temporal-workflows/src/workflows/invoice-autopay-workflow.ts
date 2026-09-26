@@ -92,7 +92,8 @@ export async function invoiceAutopayWorkflow(input: InvoiceAutopayInput): Promis
       const processingStartedAt = outcome.processingStartedAt ? new Date(outcome.processingStartedAt).getTime() : Date.now();
       let backoffMs = 60 * 60 * 1000;
       while (Date.now() - processingStartedAt < NO_INTENT_LIMIT_MS) {
-        await condition(() => invoiceSettledFlag || (settledAttemptId === attempt.attemptId && !!settledStatus), '1h');
+        await condition(() => invoiceSettledFlag || enrollmentChangedFlag || chargeNowFlag ||
+          (settledAttemptId === attempt.attemptId && !!settledStatus), '1h');
         if (invoiceSettledFlag) {
           invoiceSettledFlag = false;
           const reconciled = await activities.reconcileAutopayAttempt({ ...input, attemptId: attempt.attemptId });
@@ -101,6 +102,19 @@ export async function invoiceAutopayWorkflow(input: InvoiceAutopayInput): Promis
           backoffMs = Math.min(backoffMs * 2, 6 * 60 * 60 * 1000);
           continue;
         }
+        if (enrollmentChangedFlag) {
+          enrollmentChangedFlag = false;
+          const enrollment = await activities.evaluateEnrollmentForInvoice({ ...input, attemptId: attempt.attemptId });
+          if (enrollment.status === 'disabled' || enrollment.status === 'none') {
+            await activities.finishAutopayWithFallback({ ...input, attemptId: attempt.attemptId, reason: enrollment.status });
+            return;
+          }
+          if (enrollment.status === 'changed') {
+            const reconciled = await activities.reconcileAutopayAttempt({ ...input, attemptId: attempt.attemptId });
+            if (reconciled.status === 'succeeded' || reconciled.status === 'failed' || reconciled.status === 'requires_action' || reconciled.status === 'cancelled') return;
+          }
+        }
+        if (chargeNowFlag) chargeNowFlag = false;
         if (settledAttemptId === attempt.attemptId && settledStatus === 'succeeded') return;
         if (settledAttemptId === attempt.attemptId && settledStatus === 'payment_failed') {
           const reconciled = await activities.reconcileAutopayAttempt({ ...input, attemptId: attempt.attemptId });

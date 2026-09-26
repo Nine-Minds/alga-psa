@@ -3,7 +3,7 @@ import { tenantDb } from '@alga-psa/db';
 import { getConnection } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { createStripePaymentProvider } from './StripePaymentProvider';
-import { resolveInvoiceBillingRecipient } from '@alga-psa/billing/services';
+import { resolveInvoiceBillingRecipient } from '@alga-psa/billing/services/invoiceBillingRecipientService';
 import { buildSetupSuccessUrl, resolvePublicSetupTenantContext, type PublicSetupContext } from './publicSetupConfirmation';
 import { signalProfileAutopayChanged } from '../temporal/invoiceAutopay';
 
