@@ -786,6 +786,7 @@ async function sendQuoteEmailBestEffort(params: {
     );
 
     const emailResult = await service.sendEmail({
+      mailClass: 'sales',
       tenantId: params.tenantId,
       to: params.recipients.map((email) => ({ email })),
       templateProcessor,

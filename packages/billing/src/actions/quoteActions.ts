@@ -596,6 +596,7 @@ const sendQuoteEmailWithAttachment = async ({
   const resolvedQuoteNumber = quote.quote_number ?? quote.quote_id;
 
   return await TenantEmailService.getInstance(tenant).sendEmail({
+    mailClass: 'sales',
     tenantId: tenant,
     to: recipients,
     subject,

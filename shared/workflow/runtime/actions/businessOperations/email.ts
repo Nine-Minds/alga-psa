@@ -29,6 +29,8 @@ export function registerEmailActions(): void {
       cc: z.array(z.object({ email: z.string().email(), name: z.string().optional() })).optional(),
       bcc: z.array(z.object({ email: z.string().email(), name: z.string().optional() })).optional(),
       from: z.object({ email: z.string().email(), name: z.string().optional() }).optional().describe('Optional from override'),
+      sender_id: uuidSchema.optional().describe('Configured outbound sender identity'),
+      mail_class: z.enum(['ticket', 'project', 'billing', 'sales', 'scheduling', 'survey', 'account', 'general']).optional().default('general'),
       subject: z.string().min(1).describe('Subject template (supports {{var}})'),
       html: z.string().optional().describe('HTML template (supports {{var}})'),
       text: z.string().optional().describe('Text template (supports {{var}})'),
@@ -82,25 +84,16 @@ export function registerEmailActions(): void {
       const templateProcessor = new StaticTemplateProcessor(input.subject, input.html ?? '', input.text);
       const content = await templateProcessor.process({ templateData: (input.template_data ?? {}) as any });
 
-      // Resolve from address.
-      const resolveDefaultFrom = (): { email: string; name?: string } => {
-        const fallbackDomain = settings.defaultFromDomain || settings.customDomains?.[0];
-        const email = settings.ticketingFromEmail || (fallbackDomain ? `no-reply@${fallbackDomain}` : null);
-        if (!email) {
-          throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'No default From address configured for tenant' });
+      // `from` remains for saved workflows for one release. Accept it only if
+      // it matches a configured sender; delivery still uses the central resolver.
+      let senderId = input.sender_id;
+      if (input.from) {
+        const matched = (settings.outboundSenders ?? []).find((sender: any) => sender.emailAddress?.toLowerCase() === input.from!.email.toLowerCase());
+        if (senderId && matched?.senderId !== senderId) {
+          throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'The deprecated From address does not match sender_id' });
         }
-        return { email };
-      };
-      const from = input.from ?? resolveDefaultFrom();
-
-      // From domain constraints: allow tenant custom domains or the defaultFromDomain.
-      const fromDomain = String(from.email).split('@')[1]?.toLowerCase() ?? '';
-      const allowedDomains = new Set<string>([
-        ...(settings.customDomains ?? []).map((d: string) => String(d).toLowerCase()),
-        ...(settings.defaultFromDomain ? [String(settings.defaultFromDomain).toLowerCase()] : [])
-      ]);
-      if (fromDomain && allowedDomains.size > 0 && !allowedDomains.has(fromDomain)) {
-        throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'From address domain is not allowed for this tenant' });
+        if (!matched) throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'The saved From address is not a configured sender. Choose a sender identity.' });
+        senderId = matched.senderId;
       }
 
       // Attachments via storage file refs.
@@ -143,9 +136,9 @@ export function registerEmailActions(): void {
       }
 
       try {
-        const result = await manager.sendEmail(
-          {
-            from,
+        const result = await TenantEmailService.getInstance(tx.tenantId).sendEmail({
+            mailClass: input.mail_class,
+            senderId,
             to: input.to,
             cc: input.cc,
             bcc: input.bcc,
@@ -153,9 +146,7 @@ export function registerEmailActions(): void {
             html: content.html,
             text: content.text,
             attachments: attachments.length ? attachments : undefined
-          } as any,
-          tx.tenantId
-        );
+          } as any);
 
         if (!result.success) {
           throwActionError(ctx, { category: 'TransientError', code: 'TRANSIENT_FAILURE', message: result.error ?? 'Email send failed' });
@@ -164,14 +155,14 @@ export function registerEmailActions(): void {
         await writeRunAudit(ctx, tx, {
           operation: 'workflow_action:email.send',
           changedData: { to_count: input.to.length, cc_count: input.cc?.length ?? 0, bcc_count: input.bcc?.length ?? 0 },
-          details: { action_id: 'email.send', action_version: 1, provider_id: result.providerId, provider_type: result.providerType, message_id: result.messageId ?? null }
+          details: { action_id: 'email.send', action_version: 1, message_id: (result as any).messageId ?? null }
         });
 
         return {
           success: true,
-          message_id: result.messageId ?? null,
-          provider_id: result.providerId ?? null,
-          provider_type: result.providerType ?? null,
+          message_id: (result as any).messageId ?? null,
+          provider_id: null,
+          provider_type: null,
           status: 'sent' as const,
           sent_at: result.sentAt ? new Date(result.sentAt).toISOString() : null
         };

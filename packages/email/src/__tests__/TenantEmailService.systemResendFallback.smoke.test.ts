@@ -26,6 +26,7 @@ vi.mock('@alga-psa/db', () => ({
     table: (table: string) => {
       if (table === 'tenant_email_settings') return { first: vi.fn(async () => tenantSettingsRow) };
       if (table === 'email_sending_logs') return { insert: vi.fn(async () => 1) };
+      if (table === 'email_sender_addresses' || table === 'email_sender_routes') return { select: vi.fn(async () => []) };
       throw new Error(`Unexpected table in system Resend fallback smoke: ${table}`);
     },
   }),

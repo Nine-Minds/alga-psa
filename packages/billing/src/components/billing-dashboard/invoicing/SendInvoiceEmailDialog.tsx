@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { listSelectableSenders } from '@alga-psa/integrations/actions';
 import { Mail, User, Building, AlertCircle, CheckCircle, Loader2, FileText, Layers } from 'lucide-react';
 import {
   getInvoiceEmailRecipientAction,
@@ -37,6 +39,9 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
   const [recipients, setRecipients] = useState<InvoiceEmailRecipientInfo[]>([]);
   const [errors, setErrors] = useState<Array<{ invoiceId: string; error: string; messageKey?: string }>>([]);
   const [customMessage, setCustomMessage] = useState('');
+  const [senders, setSenders] = useState<Array<{ sender_id: string; email_address: string; display_name: string | null }>>([]);
+  const [effectiveSenderId, setEffectiveSenderId] = useState<string | null>(null);
+  const [senderId, setSenderId] = useState<string | undefined>();
 
   const getRecipientSourceLabel = (source: InvoiceEmailRecipientInfo['recipientSource']) => {
     switch (source) {
@@ -77,6 +82,10 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
       }
       setRecipients(result.recipients);
       setErrors(result.errors);
+      const selectable = await listSelectableSenders({ mailClass: 'billing' });
+      setSenders(selectable.senders);
+      setEffectiveSenderId(selectable.effectiveSenderId);
+      setSenderId(undefined);
     } catch (error) {
       const fallbackError = t('sendEmail.errors.loadRecipients', { defaultValue: 'Failed to load recipient info' });
       handleError(error, fallbackError);
@@ -105,7 +114,8 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
     try {
       const result = await sendInvoiceEmailAction(
         validRecipients.map(r => r.invoiceId),
-        customMessage.trim() || undefined
+        customMessage.trim() || undefined,
+        senderId
       );
       if (isActionMessageError(result) || isActionPermissionError(result)) {
         toast.error(getErrorMessage(result), { id: toastId });
@@ -149,6 +159,9 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
 
   const validRecipientCount = recipients.filter(r => r.recipientEmail).length;
   const invalidRecipientCount = recipients.filter(r => !r.recipientEmail).length;
+  const resolvedFromEmail = senders.find(sender => sender.sender_id === (senderId ?? effectiveSenderId))?.email_address
+    || senders[0]?.email_address
+    || recipients[0]?.fromEmail;
 
   return (
     <Dialog
@@ -210,6 +223,19 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
         </div>
       ) : (
         <div className="space-y-6">
+          {senders.length > 1 && (
+            <div className="space-y-2">
+              <label htmlFor="invoice-email-sender-select" className="text-sm font-medium">
+                {t('sendEmail.fields.from', { defaultValue: 'From' })}
+              </label>
+              <CustomSelect
+                id="invoice-email-sender-select"
+                value={senderId ?? effectiveSenderId ?? senders[0].sender_id}
+                onValueChange={setSenderId}
+                options={senders.map(sender => ({ value: sender.sender_id, label: sender.email_address }))}
+              />
+            </div>
+          )}
           {/* Summary */}
           <div className="bg-muted rounded-lg p-4">
             <div className="flex items-center gap-4">
@@ -376,9 +402,9 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
               <Mail className="h-4 w-4 mt-0.5 text-blue-500" />
               <span>
                 {t('sendEmail.preview', {
-                  fromEmail: recipients[0]?.fromEmail || t('sendEmail.values.defaultFromEmail', { defaultValue: 'noreply@example.com' }),
+                  fromEmail: resolvedFromEmail || t('sendEmail.values.defaultFromEmail', { defaultValue: 'noreply@example.com' }),
                   companyName: recipients[0]?.companyName || t('sendEmail.values.defaultCompanyName', { defaultValue: 'Your Company' }),
-                  defaultValue: `Emails will be sent from ${recipients[0]?.fromEmail || 'noreply@example.com'} on behalf of ${recipients[0]?.companyName || 'Your Company'}. Each invoice will be attached as a PDF.`,
+                  defaultValue: `Emails will be sent from ${resolvedFromEmail || 'noreply@example.com'} on behalf of ${recipients[0]?.companyName || 'Your Company'}. Each invoice will be attached as a PDF.`,
                 })}
               </span>
             </p>

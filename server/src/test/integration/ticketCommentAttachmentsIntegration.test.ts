@@ -599,7 +599,7 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
     const event = { id: randomUUID(), eventType: 'TICKET_COMMENT_ADDED', payload: { tenantId: tenant, ticketId: ticket, actorUserId: actor,
       comment: { id: comment, content, author: 'Agent', isInternal: false } } } as any;
     try {
-      const pending = { tenantId: tenant, to: childEmail, subject: 'Pending bundle update', template: 'ticket-comment-added', locale: 'en' as const,
+      const pending = { mailClass: 'ticket' as const, tenantId: tenant, to: childEmail, subject: 'Pending bundle update', template: 'ticket-comment-added', locale: 'en' as const,
         context: { ticket: { id: 'ATT-CHILD' }, comment: { content } },
         commentSource: { ticketId: ticket, commentId: comment }, replyContext: { ticketId: child } };
       if (['source-internal', 'source-canceled', 'source-deleted', 'child-internal', 'child-canceled', 'detached', 'wrong-tenant', 'wrong-source-ticket', 'wrong-reply-comment', 'forged-mirror', 'disabled-child', 'blocked-child-board', 'retry-revoked'].includes(mode)) {
@@ -734,7 +734,7 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
       zRem:async(k:string,id:string)=>Number(scores.get(k)?.delete(id)),zRangeByScore:async(k:string)=>[...(scores.get(k)?.keys()||[])],zCard:async(k:string)=>scores.get(k)?.size||0};
     (EventEmailRetryQueue as any).instance=null;
     const queue=EventEmailRetryQueue.getInstance({checkIntervalMs:3600000}); await queue.initialize(async()=>redis as any);
-    const params={tenantId:tenant,to:recipient,subject:'Recovery',template:'ticket-comment-added',context:{ticket:{id:'ATT-1'},comment:{content:'ignored'}},replyContext:{ticketId:ticket,commentId:comment}};
+    const params={mailClass:'ticket' as const,tenantId:tenant,to:recipient,subject:'Recovery',template:'ticket-comment-added',context:{ticket:{id:'ATT-1'},comment:{content:'ignored'}},replyContext:{ticketId:ticket,commentId:comment}};
     routeSession.permitted=true;
     try {
       await sendEventEmail(params);
@@ -826,7 +826,7 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
       }
       const publish = vi.spyOn(publishers, 'publishEvent')
         .mockRejectedValueOnce(new Error('Recoverable publication transport outage'))
-        .mockImplementation(async () => sendEventEmail({ tenantId: tenant, to: mailbox, subject: 'Worker recovery', template: 'ticket-comment-added', context: { comment: { content: 'Recovery smoke' } }, replyContext: { ticketId: ticket, commentId: comment } }));
+        .mockImplementation(async () => sendEventEmail({ mailClass: 'ticket', tenantId: tenant, to: mailbox, subject: 'Worker recovery', template: 'ticket-comment-added', context: { comment: { content: 'Recovery smoke' } }, replyContext: { ticketId: ticket, commentId: comment } }));
       spy(publish);
       const runRecovery = async () => {
         const id = await boss.send('recover-comment-publications', { tenantId: tenant });

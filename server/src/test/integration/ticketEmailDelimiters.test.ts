@@ -1102,6 +1102,7 @@ describe('sendEventEmail reply markers', () => {
 
     await expect(
       sendEventEmail({
+        mailClass: 'ticket',
         tenantId: randomUUID(),
         to: 'user@example.com',
         subject: 'New Ticket',
@@ -1134,6 +1135,7 @@ describe('sendEventEmail reply markers', () => {
 
     await expect(
       sendEventEmail({
+        mailClass: 'ticket',
         tenantId,
         to: 'user@example.com',
         subject: 'Ticket Updated',
@@ -1165,6 +1167,7 @@ describe('sendEventEmail reply markers', () => {
 
     await expect(
       sendEventEmail({
+        mailClass: 'ticket',
         tenantId,
         to: 'user@example.com',
         subject: 'Comment Added',

@@ -62,6 +62,7 @@ interface TenantProviderSnapshot {
   providerInitError: string | null;
   fromAddress: EmailAddress;
   systemFallbackFromAddress?: EmailAddress;
+  settings: TenantEmailSettings | null;
 }
 
 function isValidEmailAddress(value: string): boolean {
@@ -222,6 +223,31 @@ export class TenantEmailService extends BaseEmailService {
       suspensionKnex,
       resolvedTenantCompanyName
     );
+    params.resolvedTenantEmailSettings = providerSnapshot.settings;
+
+    if (this.tenantSettings && params.mailClass) {
+      const sender = resolveOutboundSender({
+        tenantId: this.tenantId,
+        mailClass: params.mailClass,
+        boardId: params.boardId,
+        senderId: params.senderId,
+        from: params.from,
+        fromName: params.fromName,
+        allowUnverifiedSender: params.allowUnverifiedSender,
+      }, this.tenantSettings, resolvedTenantCompanyName, params.boardName).sender;
+      if (sender && this.tenantSettings.emailProvider === 'resend') {
+        const domain = sender.email_address.split('@').at(-1)?.toLowerCase();
+        const verifiedDomain = domain && await tenantDb(suspensionKnex, this.tenantId).table('email_domains')
+          .where({ domain_name: domain, status: 'verified' }).first('domain_name');
+        if (!verifiedDomain) {
+          const message = `Outbound sender ${sender.email_address} is routed for ${params.mailClass}, but its domain is no longer verified.`;
+          await tenantDb(suspensionKnex, this.tenantId).table('email_sender_addresses')
+            .where({ sender_id: sender.sender_id }).update({ last_verification_error: message, verification_status: 'failed', updated_at: new Date() });
+          await TenantEmailService.invalidateTenantSettings(this.tenantId);
+          throw new Error(message);
+        }
+      }
+    }
 
     return super.sendEmail({
       ...params,
@@ -356,7 +382,7 @@ export class TenantEmailService extends BaseEmailService {
       return params.resolvedSystemFallbackFromAddress;
     }
 
-    const settings = this.tenantSettings;
+    const settings = params?.resolvedTenantEmailSettings ?? this.tenantSettings;
     if (params && settings) {
       const routed = resolveOutboundSender({
         tenantId: this.tenantId,
@@ -665,6 +691,7 @@ export class TenantEmailService extends BaseEmailService {
           emailProvider: this.emailProvider,
           providerInitError: this.providerInitError,
           fromAddress: this.buildTenantFromAddress(tenantCompanyName),
+          settings,
           ...(this.usingSystemProvider ? {
             systemFallbackFromAddress: this.buildSystemFallbackFromAddress(tenantCompanyName),
           } : {}),
@@ -680,6 +707,7 @@ export class TenantEmailService extends BaseEmailService {
         emailProvider: this.emailProvider,
         providerInitError: this.providerInitError,
         fromAddress: this.buildTenantFromAddress(tenantCompanyName),
+        settings,
         ...(this.usingSystemProvider ? {
           systemFallbackFromAddress: this.buildSystemFallbackFromAddress(tenantCompanyName),
         } : {}),

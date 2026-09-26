@@ -42,6 +42,9 @@ vi.mock('@alga-psa/db', () => ({
       if (table === 'email_sending_logs') {
         return { insert: vi.fn(async () => 1) };
       }
+      if (table === 'email_sender_addresses' || table === 'email_sender_routes') {
+        return { select: vi.fn(async () => []) };
+      }
       throw new Error(`Unexpected table in email freshness test: ${table}`);
     },
   }),
@@ -62,6 +65,14 @@ vi.mock('../senderIdentity', () => ({
       name: provider?.config?.fromName?.trim() || companyName || 'AlgaPSA Notifications',
     };
   },
+  resolveOutboundSender: ({ from, fromName }: any, settings: Record<string, any>, companyName?: string | null) => ({
+    sender: null,
+    microsoftProviderId: null,
+    from: from ?? {
+      email: settings.providerConfigs?.find((config: any) => config.isEnabled)?.config?.from || 'notifications@example.test',
+      name: fromName || settings.providerConfigs?.find((config: any) => config.isEnabled)?.config?.fromName || companyName || 'AlgaPSA Notifications',
+    },
+  }),
   resolveTenantCompanyName: vi.fn(async () => runtime.companyName),
 }));
 

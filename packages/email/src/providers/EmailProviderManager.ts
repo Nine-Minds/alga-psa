@@ -77,8 +77,21 @@ export class EmailProviderManager implements IEmailProviderManager {
 
   async sendEmail(message: EmailMessage, tenantId: string): Promise<EmailSendResult> {
     const requestedProviderId = message.tags?.microsoftProviderId;
-    const provider = (requestedProviderId && this.providerCache.get(requestedProviderId))
-      || this.providers.get(tenantId);
+    if (requestedProviderId && !this.providerCache.has(requestedProviderId)) {
+      const microsoftConfig = this.tenantSettings.get(tenantId)?.providerConfigs.find(config => config.providerType === 'microsoft' && config.isEnabled);
+      if (microsoftConfig) {
+        const routedConfig: EmailProviderConfig = {
+          ...microsoftConfig,
+          providerId: requestedProviderId,
+          config: { ...microsoftConfig.config, inboundProviderId: requestedProviderId },
+        };
+        const provider = await this.createProvider(routedConfig);
+        const resolvedConfig = await this.resolveProviderConfig(tenantId, routedConfig);
+        await provider.initialize(resolvedConfig);
+        this.providerCache.set(requestedProviderId, provider);
+      }
+    }
+    const provider = (requestedProviderId && this.providerCache.get(requestedProviderId)) || this.providers.get(tenantId);
     if (requestedProviderId && !this.providerCache.has(requestedProviderId)) {
       throw new EmailProviderError(`Microsoft sender provider ${requestedProviderId} is not configured`, requestedProviderId, 'microsoft', false, 'MICROSOFT_PROVIDER_NOT_CONFIGURED');
     }

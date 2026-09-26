@@ -48,7 +48,7 @@ exports.up = async function up(knex) {
   await knex.raw(`
     INSERT INTO email_sender_addresses
       (tenant, email_address, display_name, microsoft_provider_id, verification_status)
-    SELECT tes.tenant, lower(trim(tes.ticketing_from_email)), nullif(trim(tes.ticketing_from_name), ''),
+    SELECT tes.tenant, lower(trim(tes.ticketing_from_email)), coalesce(nullif(trim(tes.ticketing_from_name), ''), nullif(trim(ep.sender_display_name), '')),
       ep.id, 'verified'
     FROM tenant_email_settings tes
     LEFT JOIN email_providers ep

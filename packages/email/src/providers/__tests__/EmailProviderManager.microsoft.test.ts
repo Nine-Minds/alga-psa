@@ -22,8 +22,14 @@ vi.mock('@alga-psa/db', () => ({
   getConnection: vi.fn(async () => ({})),
   tenantDb: () => ({
     table: (tableName: keyof typeof tableRows) => ({
-      where: () => ({
-        first: vi.fn(async () => tableRows[tableName]),
+      where: (criteria?: any) => ({
+        first: vi.fn(async () => {
+          const row = tableRows[tableName];
+          if (tableName === 'email_providers' && criteria?.id && row && criteria.id !== row.id) {
+            return { ...row, id: criteria.id, mailbox: 'projects@example.com' };
+          }
+          return row;
+        }),
       }),
     }),
   }),
@@ -120,6 +126,7 @@ describe('EmailProviderManager Microsoft Graph support', () => {
     expect(buildConfigMock.mock.calls[0]?.[0].provider_config.accessToken).toBeUndefined();
     expect(sendMailMock).toHaveBeenCalledWith({
       kind: 'json',
+      fromAddress: 'support@example.com',
       message: expect.objectContaining({ subject: 'Common path' }),
     });
     expect(result).toMatchObject({ success: true, providerType: 'microsoft' });
@@ -137,6 +144,17 @@ describe('EmailProviderManager Microsoft Graph support', () => {
     expect(sendMailMock).toHaveBeenCalledTimes(2);
     expect(results).toHaveLength(2);
     expect(results.every(result => result.success)).toBe(true);
+  });
+
+  it('initializes and caches the routed connected mailbox on demand', async () => {
+    const manager = new EmailProviderManager();
+    await manager.initialize(settings());
+    await manager.sendEmail({ ...message('Routed mailbox'), tags: { microsoftProviderId: 'inbound-microsoft-2' } }, 'tenant-1');
+    expect(buildConfigMock).toHaveBeenLastCalledWith(expect.objectContaining({
+      id: 'inbound-microsoft-2',
+      mailbox: 'projects@example.com',
+    }));
+    expect(connectMock).toHaveBeenCalledTimes(2);
   });
 
   it('fails before adapter construction when the selected mailbox is disconnected', async () => {

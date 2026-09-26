@@ -2,9 +2,8 @@ import { JobService, JobStepResult } from 'server/src/services/job.service';
 import { runAsJobActingUser } from './jobActingUser';
 import { PDFGenerationService, createPDFGenerationService, publishGeneratedDocumentsToClient } from '@alga-psa/billing/services';
 import { resolveInvoiceBillingRecipient } from '@alga-psa/billing/services';
-import { getEmailService } from 'server/src/services/emailService';
+import { StaticTemplateProcessor, TenantEmailService } from '@alga-psa/email';
 import { StorageService } from '@alga-psa/storage/StorageService';
-import fs from 'fs/promises';
 import { getConnection } from 'server/src/lib/db/db';
 import { tenantDb } from '@alga-psa/db';
 import { JobStatus } from 'server/src/types/job';
@@ -69,6 +68,7 @@ export interface InvoiceEmailJobData extends Record<string, unknown> {
   jobServiceId: string;
   tenantId: string;
   invoiceIds: string[];
+  senderId?: string;
   steps: {
     stepName: string;
     type: string;
@@ -110,7 +110,6 @@ export class InvoiceEmailHandler {
     console.log(`Starting invoice email job: Processing ${invoiceIds.length} invoice(s) for tenant ${tenantId}`);
 
     const jobService = await JobService.create();
-    const emailService = await getEmailService();
     // Use the factory function to create the PDF generation service
     const pdfService = createPDFGenerationService(tenantId);
 
@@ -259,10 +258,7 @@ export class InvoiceEmailHandler {
 
           // Get the PDF content and send email
           const { buffer } = await StorageService.downloadFile(file_id);
-          const tempPath = `/tmp/invoice_${invoice.invoice_number}_${Date.now()}.pdf`;
-          await fs.writeFile(tempPath, buffer);
-
-          try {
+          {
             // Build the shared invoice-email link context (payment + portal
             // URLs). Link failures never fail the email; the retained error is
             // logged and the email falls back to the portal CTA.
@@ -292,31 +288,25 @@ export class InvoiceEmailHandler {
             // Get tenant company name for email template
             const companyName = await getTenantCompanyName(tenantId);
 
-            // Send email using the new email service. The raw invoice row
-            // carries every column the template reads; the view-model type
-            // names them individually, which an index signature cannot satisfy.
-            const success = await emailService.sendInvoiceEmail(
-              {
-                ...(invoice as unknown as import('server/src/interfaces/invoice.interfaces').InvoiceViewModel),
-                recipientEmail,
-                tenantId,
-                client: {
-                  name: client.client_name,
-                  logo: '',
-                  address: client.location_address || ''
-                }
-              },
-              tempPath,
-              {
-                paymentLink: linkContext.paymentUrl,
-                portalLink: linkContext.portalUrl,
-                companyName,
-              }
+            const currencyCode = invoice.currencyCode || 'USD';
+            const amount = new Intl.NumberFormat('en-US', { style: 'currency', currency: currencyCode }).format(
+              ((invoice.total_amount || 0) - (invoice.credit_applied || 0)) / 100
             );
-
-            if (!success) {
-              throw new Error('Failed to send invoice email');
-            }
+            const subject = `Invoice ${invoice.invoice_number} from ${companyName}`;
+            const html = `<p>Dear ${client.client_name},</p><p>Please find attached your invoice ${invoice.invoice_number} for ${amount}.</p>${linkContext.paymentUrl ? `<p><a href="${linkContext.paymentUrl}">Pay invoice</a></p>` : ''}${linkContext.portalUrl ? `<p><a href="${linkContext.portalUrl}">View invoice in the client portal</a></p>` : ''}<p>Thank you for your business!</p><p>Best regards,<br>${companyName}</p>`;
+            const text = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+            const sendResult = await TenantEmailService.getInstance(tenantId).sendEmail({
+              tenantId,
+              mailClass: 'billing',
+              senderId: data.senderId,
+              to: { email: recipientEmail, name: recipientName },
+              templateProcessor: new StaticTemplateProcessor(subject, html, text),
+              attachments: [{ filename: `invoice_${invoice.invoice_number}.pdf`, content: buffer, contentType: 'application/pdf' }],
+              entityType: 'invoice',
+              entityId: invoiceId,
+              userId: data.metadata?.user_id,
+            });
+            if (!sendResult.success || sendResult.queued) throw new Error(sendResult.error || 'Failed to send invoice email');
 
             // The invoice has reached the client, so the filed document may now
             // be shown in the client portal.
@@ -351,9 +341,6 @@ export class InvoiceEmailHandler {
               }
             });
 
-          } finally {
-            // Clean up temporary file
-            await fs.unlink(tempPath);
           }
 
         } catch (error) {

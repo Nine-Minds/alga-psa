@@ -351,7 +351,7 @@ async function sendNotificationIfEnabled(
         recipient: params.to
       });
       // Continue anyway to avoid breaking existing functionality
-      await sendEventEmail(params);
+      await sendEventEmail({ ...params, mailClass: 'project' });
       return;
     }
 
@@ -411,6 +411,7 @@ async function sendNotificationIfEnabled(
     // Pass recipientUserId for rate limiting in TenantEmailService
     await sendEventEmail({
       ...params,
+      mailClass: 'project',
       recipientUserId
     });
 
