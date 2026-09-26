@@ -887,6 +887,80 @@ describe('Client Portal Documents Integration Tests', () => {
   });
 
   describe('Client portal content, file, and export routes use live visibility queries', () => {
+    it('serves uploaded PDF and PNG bytes with safe inline preview headers and usable attachment names', async () => {
+      const clientId = await createClient(db, tenantId, 'Preview Route Client');
+      createdIds.clientIds.push(clientId);
+      const contactId = await createContact(db, tenantId, clientId, 'preview-route@test.com');
+      createdIds.contactIds.push(contactId);
+      const clientUserId = await createClientUser(db, tenantId, contactId);
+      createdIds.userIds.push(clientUserId);
+      const providerId = uuidv4();
+      const configurationId = uuidv4();
+      createdIds.storageProviderIds.push(providerId);
+      createdIds.storageBucketIds.push(configurationId);
+      await tenantTable(db, tenantId, 'storage_providers').insert({
+        tenant: tenantId, provider_id: providerId, provider_type: 'local', provider_name: 'Portal preview test', config: {},
+      });
+      await tenantTable(db, tenantId, 'storage_configurations').insert({
+        tenant: tenantId, configuration_id: configurationId, provider_id: providerId, name: 'Portal preview test', path: '/', is_default: true,
+      });
+
+      const fixtures = [
+        { name: 'Quarterly Report', fileName: 'quarterly-report.pdf', mime: 'application/pdf', bytes: Buffer.from('%PDF-1.7 test') },
+        { name: 'Site Photo', fileName: 'site-photo.png', mime: 'image/png', bytes: Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 1]) },
+      ];
+      const documentIds: string[] = [];
+      for (const fixture of fixtures) {
+        const documentId = await createDocument(db, tenantId, mspUserId, fixture.name, true);
+        const fileId = uuidv4();
+        documentIds.push(documentId);
+        createdIds.documentIds.push(documentId);
+        createdIds.fileIds.push(fileId);
+        await createDocumentAssociation(db, tenantId, documentId, clientId, 'client');
+        await tenantTable(db, tenantId, 'external_files').insert({
+          tenant: tenantId, file_id: fileId, file_name: fixture.fileName, original_name: fixture.fileName,
+          mime_type: fixture.mime, file_size: fixture.bytes.length, storage_path: `test/${fixture.fileName}`, uploaded_by_id: mspUserId,
+        });
+        await tenantTable(db, tenantId, 'documents').where({ document_id: documentId }).update({ file_id: fileId, mime_type: fixture.mime });
+      }
+
+      const clientUser = createMockUser('client', { user_id: clientUserId, tenant: tenantId, contact_id: contactId });
+      setMockUser(clientUser, ['document:read']);
+      setupCommonMocks({ tenantId, userId: clientUserId, user: clientUser, permissionCheck: () => true });
+      for (let index = 0; index < fixtures.length; index++) {
+        const fixture = fixtures[index];
+        portalRouteMocks.downloadFile.mockResolvedValueOnce({
+          buffer: fixture.bytes,
+          metadata: { original_name: fixture.fileName, mime_type: fixture.mime, size: fixture.bytes.length },
+        });
+        const inline = await getClientPortalFile(
+          new NextRequest(`http://localhost/api/client-portal/documents/${documentIds[index]}/file?disposition=inline`),
+          { params: Promise.resolve({ documentId: documentIds[index] }) }
+        );
+        expect(inline.status).toBe(200);
+        expect(inline.headers.get('Content-Type')).toBe(fixture.mime);
+        expect(inline.headers.get('Content-Disposition')).toContain(`inline; filename=\"${fixture.fileName}\"`);
+        expect(inline.headers.get('Content-Length')).toBe(String(fixture.bytes.length));
+        expect(inline.headers.get('Cache-Control')).toBe('private, no-store');
+        expect(inline.headers.get('X-Content-Type-Options')).toBe('nosniff');
+        expect(inline.headers.get('Content-Security-Policy')).toContain('sandbox');
+        expect(Buffer.from(await inline.arrayBuffer())).toEqual(fixture.bytes);
+
+        portalRouteMocks.downloadFile.mockResolvedValueOnce({
+          buffer: fixture.bytes,
+          metadata: { original_name: fixture.fileName, mime_type: fixture.mime, size: fixture.bytes.length },
+        });
+        const attachment = await getClientPortalFile(
+          new NextRequest(`http://localhost/api/client-portal/documents/${documentIds[index]}/file?disposition=attachment`),
+          { params: Promise.resolve({ documentId: documentIds[index] }) }
+        );
+        expect(attachment.status).toBe(200);
+        expect(attachment.headers.get('Content-Disposition')).toContain(`attachment; filename=\"${fixture.fileName}\"`);
+        expect(attachment.headers.get('Content-Type')).toBe(fixture.mime);
+        expect(Buffer.from(await attachment.arrayBuffer())).toEqual(fixture.bytes);
+      }
+    });
+
     it('denies another client, another tenant, hidden documents, and private comment attachments', async () => {
       const clientAId = await createClient(db, tenantId, 'Route Client A');
       const clientBId = await createClient(db, tenantId, 'Route Client B');
