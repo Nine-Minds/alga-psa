@@ -135,8 +135,12 @@ export class AutopayService {
         const balance = computeBalanceDue({ totalAmount: Number(invoice.total_amount), creditApplied: Number(invoice.credit_applied ?? 0), totalPaid: Number(payments?.total ?? 0) });
         if (balance > 0) await (await PaymentService.create(this.tenantId)).recordAutoPaySuccess({ invoiceId: attempt.invoice_id,
           amount: Number(intent.amount_received || intent.amount), currency: attempt.currency, paymentIntentId: intent.id, attemptId: attempt.attempt_id });
-        const updated = await this.knex.transaction(async (trx) => tenantDb(trx, this.tenantId).table('invoice_autopay_attempts')
-          .where({ attempt_id: attempt.attempt_id, status: 'processing' }).update({ status: 'succeeded', payment_intent_id: intent.id, processed_at: trx.fn.now(), updated_at: trx.fn.now() }));
+        const updated = await this.knex.transaction(async (trx) => {
+          const rows = await tenantDb(trx, this.tenantId).table('invoice_autopay_attempts')
+            .where({ attempt_id: attempt.attempt_id, status: 'processing' })
+            .update({ status: 'succeeded', payment_intent_id: intent.id, processed_at: trx.fn.now(), updated_at: trx.fn.now() }).returning('attempt_id');
+          return rows.length;
+        });
         if (updated !== 1) continue;
       } else if (intent.status === 'requires_payment_method' || intent.status === 'canceled') {
         await this.failAttempt(attempt, { status: 'failed', paymentIntentId: intent.id, failureCode: intent.last_payment_error?.code,

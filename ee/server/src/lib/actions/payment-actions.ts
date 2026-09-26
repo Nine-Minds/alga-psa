@@ -480,8 +480,6 @@ export const disconnectStripeAction = withAuth(async (user, { tenant }): Promise
         webhook_secret_vault_path: null,
         updated_at: knex.fn.now(),
       });
-    if (newSettings.autopayEnabled && !currentSettings.autopayEnabled) await reconcileStripeWebhookEvents(tenant);
-
     // Delete the webhook secret from vault
     try {
       await secretProvider.deleteTenantSecret(tenant, 'stripe_payment_webhook_secret');
@@ -538,6 +536,7 @@ export const updatePaymentSettingsAction = withAuth(async (
         settings: newSettings,
         updated_at: knex.fn.now(),
       });
+    if (newSettings.autopayEnabled && !currentSettings.autopayEnabled) await reconcileStripeWebhookEvents(tenant);
 
     logger.info('[PaymentActions] Payment settings updated', {
       tenantId: tenant,
