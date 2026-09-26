@@ -6,17 +6,22 @@ import type { Knex } from 'knex';
 
 export type InvoiceAutopaySignal = 'enrollmentChanged' | 'paymentIntentSettled' | 'invoiceSettled' | 'chargeNow';
 
-export async function signalInvoiceAutopay(tenant: string, invoiceId: string, signal: InvoiceAutopaySignal, arg?: unknown): Promise<void> {
+export async function signalInvoiceAutopay(tenant: string, invoiceId: string, signal: InvoiceAutopaySignal, arg?: unknown): Promise<boolean> {
   const workflowId = `invoice-autopay:${tenant}:${invoiceId}`;
   try {
     const client = await getTemporalClient();
-    await client.workflow.getHandle(workflowId).signal(signal, ...(arg === undefined ? [] : [arg]));
+    const handle = client.workflow.getHandle(workflowId);
+    const description = await handle.describe();
+    if (description.status.name !== 'RUNNING') return false;
+    await handle.signal(signal, ...(arg === undefined ? [] : [arg]));
+    return true;
   } catch (error) {
     if (error instanceof WorkflowNotFoundError || (error as any)?.name === 'WorkflowNotFoundError') {
       logger.debug('[autopay] Workflow not found while signalling', { tenant, invoiceId, signal });
-      return;
+      return false;
     }
     logger.warn('[autopay] Failed to signal invoice workflow', { tenant, invoiceId, signal, error });
+    return false;
   }
 }
 

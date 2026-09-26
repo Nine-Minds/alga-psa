@@ -1342,6 +1342,7 @@ registerInvoiceTerminalStatusHandler(async (params) => {
         excludeSettledReference: params.settledReference,
       }
     );
+    await signalInvoiceAutopay(params.tenantId, params.invoiceId, 'invoiceSettled');
     return;
   }
 

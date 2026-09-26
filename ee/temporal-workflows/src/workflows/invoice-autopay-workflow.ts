@@ -3,7 +3,8 @@ import { condition, defineSignal, proxyActivities, setHandler, sleep } from '@te
 export interface InvoiceAutopayInput { tenantId: string; invoiceId: string }
 export interface InvoiceAutopayAttempt { attemptId: string; scheduledFor: string; processingStartedAt?: string }
 export type AutopayOutcome =
-  | { status: 'succeeded' | 'cancelled' | 'requires_action' }
+  | { status: 'succeeded' | 'requires_action' }
+  | { status: 'cancelled'; reason: 'invoice_settled' | 'no_balance' | 'no_chargeable_method' }
   | { status: 'processing'; processingStartedAt?: string }
   | { status: 'failed'; retryAt: string | null; hard: boolean };
 export type EnrollmentEvaluation = { status: 'enabled'; paymentMethodId: string } | { status: 'disabled' | 'none' | 'unchanged' | 'changed'; paymentMethodId?: string };
@@ -48,7 +49,7 @@ export async function invoiceAutopayWorkflow(input: InvoiceAutopayInput): Promis
     }
     const waitMs = Math.max(0, new Date(attempt.scheduledFor).getTime() - Date.now());
     if (waitMs > 0) {
-      await Promise.race([sleep(waitMs), condition(() => invoiceSettledFlag || enrollmentChangedFlag || chargeNowFlag).then(() => undefined)]);
+      const signalled = await condition(() => invoiceSettledFlag || enrollmentChangedFlag || chargeNowFlag, waitMs);
       if (invoiceSettledFlag) {
         await activities.cancelAutopayAttempt({ ...input, attemptId: attempt.attemptId });
         return;
@@ -65,6 +66,7 @@ export async function invoiceAutopayWorkflow(input: InvoiceAutopayInput): Promis
           attempt = next;
           continue;
         }
+        if (enrollment.status === 'unchanged' && !chargeNowFlag && signalled) continue;
       }
       if (chargeNowFlag) chargeNowFlag = false;
     }
@@ -73,7 +75,7 @@ export async function invoiceAutopayWorkflow(input: InvoiceAutopayInput): Promis
     if (outcome.status === 'succeeded') return;
     if (outcome.status === 'cancelled') {
       const enrollment = await activities.evaluateEnrollmentForInvoice({ ...input, attemptId: attempt.attemptId });
-      if (enrollment.status === 'disabled' || enrollment.status === 'none') {
+      if (outcome.reason === 'no_chargeable_method' && (enrollment.status === 'disabled' || enrollment.status === 'none')) {
         await activities.finishAutopayWithFallback({ ...input, attemptId: attempt.attemptId, reason: enrollment.status });
       }
       return;
@@ -82,10 +84,7 @@ export async function invoiceAutopayWorkflow(input: InvoiceAutopayInput): Promis
       const processingStartedAt = outcome.processingStartedAt ? new Date(outcome.processingStartedAt).getTime() : Date.now();
       let backoffMs = 60 * 60 * 1000;
       while (Date.now() - processingStartedAt < NO_INTENT_LIMIT_MS) {
-        await Promise.race([
-          condition(() => invoiceSettledFlag || (settledAttemptId === attempt.attemptId && !!settledStatus), '1h'),
-          sleep('1h'),
-        ]);
+        await condition(() => invoiceSettledFlag || (settledAttemptId === attempt.attemptId && !!settledStatus), '1h');
         if (invoiceSettledFlag) {
           await activities.cancelAutopayAttempt({ ...input, attemptId: attempt.attemptId });
           return;

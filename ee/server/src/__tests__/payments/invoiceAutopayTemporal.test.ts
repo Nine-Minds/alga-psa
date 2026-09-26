@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
-const { start, signal } = vi.hoisted(() => ({ start: vi.fn(), signal: vi.fn() }));
+const { start, signal, describeStatus } = vi.hoisted(() => ({ start: vi.fn(), signal: vi.fn(), describeStatus: vi.fn() }));
 vi.mock('../../lib/temporal/client', () => ({
   getTemporalClient: vi.fn(async () => ({ workflow: {
     start,
-    getHandle: vi.fn(() => ({ signal })),
+    getHandle: vi.fn(() => ({ signal, describe: describeStatus })),
   } })),
 }));
 
@@ -26,7 +26,13 @@ describe('invoice auto-pay Temporal client helpers', () => {
   it('swallows a missing workflow when sending a signal', async () => {
     const missing = new Error('not found');
     missing.name = 'WorkflowNotFoundError';
-    signal.mockRejectedValueOnce(missing);
-    await expect(signalInvoiceAutopay('tenant-1', 'invoice-1', 'invoiceSettled')).resolves.toBeUndefined();
+    describeStatus.mockRejectedValueOnce(missing);
+    await expect(signalInvoiceAutopay('tenant-1', 'invoice-1', 'invoiceSettled')).resolves.toBe(false);
+  });
+
+  it('does not report success for a completed workflow', async () => {
+    describeStatus.mockResolvedValueOnce({ status: { name: 'COMPLETED' } });
+    await expect(signalInvoiceAutopay('tenant-1', 'invoice-1', 'chargeNow')).resolves.toBe(false);
+    expect(signal).not.toHaveBeenCalled();
   });
 });

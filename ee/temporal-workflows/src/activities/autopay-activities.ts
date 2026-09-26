@@ -43,7 +43,12 @@ export async function cancelAutopayAttempt(input: { tenantId: string; invoiceId:
 
 export async function listAutopayReconcileWork() {
   const knex = await getConnection();
-  const tenants = await knex('tenants').select('tenant');
+  const tenants = await knex('tenants').whereExists(function (this: any) {
+    this.select(knex.raw('1')).from('payment_provider_configs as ppc')
+      .whereRaw('ppc.tenant = tenants.tenant')
+      .where({ 'ppc.provider_type': 'stripe', 'ppc.is_enabled': true })
+      .whereRaw("ppc.settings->>'autopayEnabled' = 'true'");
+  }).select('tenant');
   const results = await Promise.all(tenants.map(async ({ tenant }: { tenant: string }) =>
     (await AutopayService.create(tenant)).listAutopayReconcileWork().then((items: any[]) => items.map((item) => ({ ...item, tenantId: tenant })))
   ));
@@ -53,8 +58,8 @@ export async function listAutopayReconcileWork() {
     if (!item.hasOpenAttempt) return item;
     try {
       const description = await client.workflow.getHandle(`invoice-autopay:${item.tenantId}:${item.invoiceId}`).describe();
-      const status = String(description.status);
-      return ['FAILED', 'TERMINATED', 'NOT_FOUND'].includes(status) ? item : null;
+      const status = description.status.name;
+      return ['FAILED', 'TERMINATED', 'CANCELLED', 'TIMED_OUT'].includes(status) ? item : null;
     } catch (error) {
       if ((error as any)?.name === 'WorkflowNotFoundError') return item;
       throw error;

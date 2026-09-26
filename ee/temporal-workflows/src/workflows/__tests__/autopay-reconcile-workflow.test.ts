@@ -34,13 +34,13 @@ async function runReconciler(items: Array<{ tenantId: string; invoiceId: string 
 
 describe('autopayReconcileWorkflow', () => {
   it('starts a workflow for a lost start', async () => {
-    const result = await runReconciler([{ tenantId: 'tenant-1', invoiceId: 'lost-invoice' }]);
+    const result = await runReconciler([{ tenantId: 'tenant-1', invoiceId: 'lost-invoice', hasOpenAttempt: false } as any]);
     expect(result.starts).toEqual([{ tenantId: 'tenant-1', invoiceId: 'lost-invoice' }]);
     expect(result.stripeCalls).toEqual([]);
   });
 
   it('restarts an orphaned workflow and does not call Stripe', async () => {
-    const result = await runReconciler([{ tenantId: 'tenant-2', invoiceId: 'orphan-invoice' }]);
+    const result = await runReconciler([{ tenantId: 'tenant-2', invoiceId: 'orphan-invoice', hasOpenAttempt: true } as any]);
     expect(result.starts).toEqual([{ tenantId: 'tenant-2', invoiceId: 'orphan-invoice' }]);
     expect(result.stripeCalls).toEqual([]);
   });

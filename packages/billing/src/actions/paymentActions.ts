@@ -69,7 +69,10 @@ export async function chargeInvoiceAutopayNow(invoiceId: string): Promise<{ succ
   const { knex } = await createTenantKnex();
   const invoice = await tenantDb(knex, user.tenant).table('invoices').where({ invoice_id: invoiceId }).first('invoice_id');
   if (!invoice) return { success: false, error: 'Invoice not found' };
-  return { success: await chargeInvoiceWithAutopayNow(user.tenant, invoiceId) };
+  const signalled = await chargeInvoiceWithAutopayNow(user.tenant, invoiceId);
+  return signalled
+    ? { success: true }
+    : { success: false, error: 'Auto-pay is not waiting on this invoice; no active workflow received the charge request.' };
 }
 
 export async function getPaymentService(tenantId: string): Promise<any | null> {

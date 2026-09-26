@@ -119,6 +119,52 @@ describe('invoiceAutopayWorkflow', () => {
     } finally { await test.env.teardown(); }
   });
 
+  it('keeps waiting after unchanged enrollment during a retry wait', async () => {
+    let retryCreated!: () => void;
+    const retryReady = new Promise<void>((resolve) => { retryCreated = resolve; });
+    let enrollmentEvaluated!: () => void;
+    const enrollmentReady = new Promise<void>((resolve) => { enrollmentEvaluated = resolve; });
+    let retryAt = new Date();
+    const executeTimes: number[] = [];
+    let executeCount = 0;
+    let test: Awaited<ReturnType<typeof setup>>;
+    test = await setup({
+      executeAutopayAttempt: async () => {
+        executeTimes.push(await test.env.currentTimeMs());
+        executeCount += 1;
+        return executeCount === 1 ? { status: 'failed', retryAt: retryAt.toISOString(), hard: false } : { status: 'succeeded' };
+      },
+      createRetryAttempt: async () => { retryCreated(); return attempt('attempt-2', retryAt.toISOString()); },
+      evaluateEnrollmentForInvoice: async () => { enrollmentEvaluated(); return { status: 'unchanged' }; },
+    });
+    try {
+      retryAt = new Date((await test.env.currentTimeMs()) + 3 * 24 * 60 * 60 * 1000);
+      await test.worker.runUntil(async () => {
+        const handle = await test.env.client.workflow.start(invoiceAutopayWorkflow, { args: [input], taskQueue: test.taskQueue, workflowId: 'autopay-unchanged-enrollment' });
+        await retryReady;
+        await handle.signal('enrollmentChanged');
+        await enrollmentReady;
+        await handle.result();
+      });
+      expect(executeTimes).toHaveLength(2);
+      expect(executeTimes[1]).toBeGreaterThanOrEqual(retryAt.getTime());
+    } finally { await test.env.teardown(); }
+  });
+
+  it('does not run fallback when a settled invoice is cancelled while enrollment is disabled', async () => {
+    const test = await setup({
+      executeAutopayAttempt: async () => ({ status: 'cancelled', reason: 'invoice_settled' }),
+      evaluateEnrollmentForInvoice: async () => ({ status: 'disabled' }),
+    });
+    try {
+      await test.worker.runUntil(async () => {
+        const handle = await test.env.client.workflow.start(invoiceAutopayWorkflow, { args: [input], taskQueue: test.taskQueue, workflowId: 'autopay-settled-disabled' });
+        await handle.result();
+      });
+      expect(test.calls.filter(({ name }) => name === 'fallback')).toHaveLength(0);
+    } finally { await test.env.teardown(); }
+  });
+
   it('does not retry a hard decline', async () => {
     const test = await setup({ executeAutopayAttempt: async () => ({ status: 'failed', retryAt: null, hard: true }) });
     try {
