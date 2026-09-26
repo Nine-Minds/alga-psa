@@ -18,7 +18,20 @@ function makeQueryBuilder() {
     where: vi.fn().mockReturnThis(),
     whereRaw: vi.fn().mockReturnThis(),
     whereIn: vi.fn().mockReturnThis(),
+    orWhereIn: vi.fn().mockReturnThis(),
+    orWhereNull: vi.fn().mockReturnThis(),
   } as any;
+}
+
+/** Runs the nested builder the profile-grant branch passes to `where()`. */
+function capturedGroupedPredicate(query: any) {
+  const grouped = query.where.mock.calls.find(
+    ([first]: any[]) => typeof first === 'function'
+  );
+  if (!grouped) return null;
+  const inner = makeQueryBuilder();
+  grouped[0](inner);
+  return inner;
 }
 
 function buildTrx(params: {
@@ -26,11 +39,29 @@ function buildTrx(params: {
   group?: { group_id: string; client_id: string; ticket_scope?: 'client' | 'contact' };
   boardIds?: string[];
   boards?: Array<{ board_id: string; client_portal_visible: boolean }>;
+  profiles?: Array<{ billing_profile_id: string; is_default: boolean }>;
+  grants?: Array<{ billing_profile_id: string }>;
 }) {
   return ((table: string) => {
     if (table === 'boards') {
       return {
         select: vi.fn().mockResolvedValue(params.boards ?? []),
+      };
+    }
+
+    if (table === 'client_billing_profiles') {
+      return {
+        where: vi.fn().mockReturnValue({
+          select: vi.fn().mockResolvedValue(params.profiles ?? []),
+        }),
+      };
+    }
+
+    if (table === 'billing_profile_contacts') {
+      return {
+        where: vi.fn().mockReturnValue({
+          select: vi.fn().mockResolvedValue(params.grants ?? []),
+        }),
       };
     }
 
@@ -87,6 +118,8 @@ describe('client portal visibility resolver', () => {
       clientId: 'client-1',
       visibilityGroupId: null,
       visibleBoardIds: null,
+      grantedTicketProfileIds: [],
+      defaultBillingProfileId: null,
     });
   });
 
@@ -114,6 +147,8 @@ describe('client portal visibility resolver', () => {
       clientId: 'client-1',
       visibilityGroupId: 'group-1',
       visibleBoardIds: ['board-1', 'board-2'],
+      grantedTicketProfileIds: [],
+      defaultBillingProfileId: null,
     });
   });
 
@@ -159,6 +194,8 @@ describe('client portal visibility resolver', () => {
       clientId: 'client-1',
       visibilityGroupId: 'group-empty',
       visibleBoardIds: [],
+      grantedTicketProfileIds: [],
+      defaultBillingProfileId: null,
     });
   });
 
@@ -222,9 +259,146 @@ describe('contact scope', () => {
     else expect(query.where).toHaveBeenCalledWith('t.contact_name_id', 'contact-1');
   });
 
+  it('TM005: loads only granted profiles that belong to the contact\'s own client', async () => {
+    const result = await getClientContactVisibilityContext(buildTrx({
+      contact: { contact_name_id: 'contact-1', client_id: 'client-1', portal_visibility_group_id: 'g' },
+      group: { group_id: 'g', client_id: 'client-1', ticket_scope: 'contact' },
+      boardIds: ['board-1'],
+      profiles: [
+        { billing_profile_id: 'profile-default', is_default: true },
+        { billing_profile_id: 'profile-north', is_default: false },
+      ],
+      // 'profile-elsewhere' is a leftover association pointing at another
+      // client's profile; it must not widen what this contact can read.
+      grants: [{ billing_profile_id: 'profile-north' }, { billing_profile_id: 'profile-elsewhere' }],
+    }), 'tenant-1', 'contact-1');
+
+    expect(result).toMatchObject({
+      grantedTicketProfileIds: ['profile-north'],
+      defaultBillingProfileId: 'profile-default',
+    });
+  });
+
+  it('does not query grants for a client-scoped contact', async () => {
+    // buildTrx throws on tables it is not asked about, so reaching the grant
+    // tables here would fail the test outright.
+    await expect(getClientContactVisibilityContext(buildTrx({
+      contact: { contact_name_id: 'contact-1', client_id: 'client-1', portal_visibility_group_id: 'g' },
+      group: { group_id: 'g', client_id: 'client-1', ticket_scope: 'client' },
+      boardIds: ['board-1'],
+    }), 'tenant-1', 'contact-1')).resolves.toMatchObject({ grantedTicketProfileIds: [] });
+  });
+
   it('fails closed when the group is missing or its scope is invalid', async () => {
     const contact = { contact_name_id: 'contact-1', client_id: 'client-1', portal_visibility_group_id: 'g' };
     await expect(getClientContactVisibilityContext(buildTrx({ contact }), 'tenant-1', 'contact-1')).rejects.toThrow('missing or inaccessible');
     await expect(getClientContactVisibilityContext(buildTrx({ contact, group: { group_id: 'g', client_id: 'client-1', ticket_scope: 'bad' as any } }), 'tenant-1', 'contact-1')).rejects.toThrow('invalid ticket scope');
+  });
+});
+
+describe('billing-profile ticket grants', () => {
+  const contactScope = {
+    ticketScope: 'contact' as const,
+    effectiveTicketScope: 'contact' as const,
+    isClientAdmin: false,
+    contactId: 'contact-1',
+    clientId: 'client-1',
+    visibilityGroupId: 'g',
+    visibleBoardIds: null,
+  };
+  const profileColumns = { ...columns, billingProfileColumn: 't.billing_profile_id' };
+
+  it('TM001: with no grants the predicate is exactly today\'s own-tickets rule', () => {
+    const query = makeQueryBuilder();
+    applyTicketVisibilityFilter(
+      query,
+      { ...contactScope, grantedTicketProfileIds: [], defaultBillingProfileId: 'profile-default' },
+      profileColumns
+    );
+    expect(query.where).toHaveBeenCalledWith('t.contact_name_id', 'contact-1');
+    expect(capturedGroupedPredicate(query)).toBeNull();
+  });
+
+  it('TM002: a granted profile widens to own tickets OR that profile', () => {
+    const query = makeQueryBuilder();
+    applyTicketVisibilityFilter(
+      query,
+      {
+        ...contactScope,
+        grantedTicketProfileIds: ['profile-north'],
+        defaultBillingProfileId: 'profile-default',
+      },
+      profileColumns
+    );
+
+    const inner = capturedGroupedPredicate(query);
+    expect(inner.where).toHaveBeenCalledWith('t.contact_name_id', 'contact-1');
+    expect(inner.orWhereIn).toHaveBeenCalledWith('t.billing_profile_id', ['profile-north']);
+    // The default was not granted, so unattributed tickets stay hidden.
+    expect(inner.orWhereNull).not.toHaveBeenCalled();
+  });
+
+  it('TM002: granting the client default also reveals unattributed tickets', () => {
+    const query = makeQueryBuilder();
+    applyTicketVisibilityFilter(
+      query,
+      {
+        ...contactScope,
+        grantedTicketProfileIds: ['profile-default'],
+        defaultBillingProfileId: 'profile-default',
+      },
+      profileColumns
+    );
+
+    const inner = capturedGroupedPredicate(query);
+    expect(inner.orWhereIn).toHaveBeenCalledWith('t.billing_profile_id', ['profile-default']);
+    expect(inner.orWhereNull).toHaveBeenCalledWith('t.billing_profile_id');
+  });
+
+  it('TM003: client scope and the admin override ignore grants entirely', () => {
+    for (const visibility of [
+      { ...contactScope, ticketScope: 'client' as const, effectiveTicketScope: 'client' as const },
+      { ...contactScope, isClientAdmin: true, effectiveTicketScope: 'client' as const },
+    ]) {
+      const query = makeQueryBuilder();
+      applyTicketVisibilityFilter(
+        query,
+        { ...visibility, grantedTicketProfileIds: ['profile-north'], defaultBillingProfileId: 'profile-default' },
+        profileColumns
+      );
+      expect(query.where).not.toHaveBeenCalled();
+      expect(query.whereIn).not.toHaveBeenCalled();
+    }
+  });
+
+  it('TM004: a call site that omits the profile column narrows instead of widening', () => {
+    const query = makeQueryBuilder();
+    applyTicketVisibilityFilter(
+      query,
+      {
+        ...contactScope,
+        grantedTicketProfileIds: ['profile-north'],
+        defaultBillingProfileId: 'profile-default',
+      },
+      columns
+    );
+    expect(query.where).toHaveBeenCalledWith('t.contact_name_id', 'contact-1');
+    expect(capturedGroupedPredicate(query)).toBeNull();
+  });
+
+  it('keeps the board restriction alongside a profile grant', () => {
+    const query = makeQueryBuilder();
+    applyTicketVisibilityFilter(
+      query,
+      {
+        ...contactScope,
+        visibleBoardIds: ['board-1'],
+        grantedTicketProfileIds: ['profile-north'],
+        defaultBillingProfileId: 'profile-default',
+      },
+      profileColumns
+    );
+    expect(query.whereIn).toHaveBeenCalledWith('t.board_id', ['board-1']);
+    expect(capturedGroupedPredicate(query)).not.toBeNull();
   });
 });

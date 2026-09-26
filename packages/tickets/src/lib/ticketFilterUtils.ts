@@ -67,6 +67,36 @@ export function normalizeAssignedToIds(raw: string | null | undefined): {
 }
 
 /**
+ * Normalize a stored/list-shaped `assignedToIds` array.
+ *
+ * Stored board/tenant views accept arbitrary strings — a hand-written or older
+ * document can hold anything — and on the SSR remembered-board path the
+ * known-user universe is not loaded, so membership validation cannot remove
+ * them. The UUID-only ticket-list schema then rejects the whole request and the
+ * board fails to load. Shape-validate here: keep valid UUIDs, deduplicate, and
+ * drop everything else (including the `unassigned` URL sentinel, which the list
+ * models with `includeUnassigned`). Returns `undefined` when nothing survives,
+ * so callers omit the key rather than forwarding an empty list.
+ */
+export function normalizeAssignedToIdList(
+  values: readonly string[] | null | undefined,
+): string[] | undefined {
+  if (!values || values.length === 0) return undefined;
+
+  const normalized: string[] = [];
+  for (const raw of values) {
+    if (typeof raw !== 'string') continue;
+    const value = raw.trim();
+    if (value === UNASSIGNED_FILTER_SENTINEL) continue;
+    if (ASSIGNEE_UUID_PATTERN.test(value) && !normalized.includes(value)) {
+      normalized.push(value);
+    }
+  }
+
+  return normalized.length > 0 ? normalized : undefined;
+}
+
+/**
  * Parse a returnFilters query string (from the ticket detail URL) back into
  * ITicketListFilters with proper defaults applied.
  *

@@ -4,21 +4,29 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection } from '@main-test-utils/dbConfig';
 import {
+  createTicketForAlert,
   processRmmAlertEvent,
+  rmmAlertRuleActionsSchema,
+  createTicketForAlertId,
   registerRmmAlertFetcher,
   runRmmAlertReconciliation,
   type NormalizedRmmAlertEvent,
   type RmmAlertProcessingResult,
 } from '@alga-psa/shared/rmm/alerts';
+import { enrichMissingDeviceDetails } from '@ee/lib/integrations/ninjaone/alerts/deviceDetailsEnrichment';
 import { ninjaOneAlertFetcher } from '@ee/lib/integrations/ninjaone/alerts/reconciliationFetcher';
+import { mapNinjaOneWebhookToAlertEvent } from '@ee/lib/integrations/ninjaone/alerts/normalizer';
 import type { NinjaOneAlert } from '@ee/interfaces/ninjaone.interfaces';
 
 /**
- * Regression coverage for org enrichment of sparse polled NinjaOne alerts.
+ * Regression coverage for organization and device name enrichment of sparse
+ * polled NinjaOne alerts.
  *
  * Real reconciliation payloads contain `deviceId` but usually no embedded
  * `device` object, so the poller previously dropped the external organization
  * and org-scoped rules rejected otherwise valid alerts before any ticket work.
+ * The same mapping also supplies a device display name for `{{device}}` when
+ * the poll payload omits the embedded device object.
  * These suites feed the actual sparse API shape through the real NinjaOne
  * fetcher (only the HTTP client is mocked), so normalization -> enrichment ->
  * rule evaluation -> ticket creation are all exercised against the DB.
@@ -258,14 +266,15 @@ async function seedMappedAsset(
   deviceId: string | number,
   realm: string | null,
   assetId = uuid(),
-  integration_type = 'ninjaone'
+  integration_type = 'ninjaone',
+  assetName = `node-${deviceId}`
 ): Promise<void> {
   const asset = assetId;
   await tenantTable(tenant, 'assets').insert({
     tenant,
     asset_id: asset,
     asset_type: 'server',
-    name: `node-${deviceId}`,
+    name: assetName,
     asset_tag: `tag-${deviceId}`,
     serial_number: `sn-${deviceId}`,
     status: 'active',
@@ -393,6 +402,7 @@ beforeAll(async () => {
     { organizationIds: ['500'], severities: ['critical', 'major', 'moderate', 'minor'] },
     {
       createTicket: true,
+      ticketTemplate: { titleTemplate: '{{device}} alert' },
       boardId: fixture.boardId,
       priorityOverride: fixture.priorityUrgentId,
       assignToUserId: fixture.userId,
@@ -453,6 +463,11 @@ describe('sparse NinjaOne alert normalization + organization enrichment', { shuf
     await seedDeviceMapping(tenantId, 900006, '500', 'tacticalrmm', uuid());
     await seedDeviceMapping(otherTenantId, 900007, '500', 'ninjaone', uuid());
     await seedDeviceMapping(tenantId, 900008, '500', 'ninjaone', uuid());
+    await seedMappedAsset(tenantId, fixture.clientId, 900009, '500', uuid(), 'ninjaone', 'FRONTDESK-PC');
+    await seedMappedAsset(tenantId, fixture.clientId, 900010, '500', uuid(), 'ninjaone', 'mapped-device-name');
+    await seedMappedAsset(tenantId, fixture.clientId, 900010, '501', uuid(), 'ninjaone', 'another-device-name');
+    await seedMappedAsset(tenantId, fixture.clientId, 900011, '500', uuid(), 'tacticalrmm', 'wrong-provider-name');
+    await seedMappedAsset(otherTenantId, fixture.clientId, 900012, '500', uuid(), 'ninjaone', 'other-tenant-name');
   }, HOOK_TIMEOUT);
 
   it('enriches a sparse payload from a single mapped realm and preserves order and other fields', async () => {
@@ -484,6 +499,48 @@ describe('sparse NinjaOne alert normalization + organization enrichment', { shuf
     expect(events).toHaveLength(1);
     expect(events[0].externalDeviceId).toBe('900002');
     expect(events[0].externalOrganizationId).toBe('501'); // not '500'
+  });
+
+  it('backfills exactly one mapped asset name and preserves a provider supplied display name', async () => {
+    mockState.remoteAlerts = [
+      sparseAlert({ uid: 'mapped-name', deviceId: 900009 }),
+      sparseAlert({
+        uid: 'provider-name',
+        deviceId: 900009,
+        device: { id: 900009, displayName: 'provider-display-name' } as unknown as NinjaOneAlert['device'],
+      }),
+    ];
+    const events = await ninjaOneAlertFetcher.fetchActiveAlerts({ tenantId, integrationId });
+    expect(events.map((event) => event.deviceName)).toEqual(['FRONTDESK-PC', 'provider-display-name']);
+  });
+
+  it('does not infer names for unmapped, ambiguous, cross-provider, or cross-tenant devices', async () => {
+    mockState.remoteAlerts = [
+      sparseAlert({ uid: 'unmapped-name', deviceId: 900003 }),
+      sparseAlert({ uid: 'ambiguous-name', deviceId: 900010 }),
+      sparseAlert({ uid: 'cross-provider-name', deviceId: 900011 }),
+      sparseAlert({ uid: 'cross-tenant-name', deviceId: 900012 }),
+    ];
+    const events = await ninjaOneAlertFetcher.fetchActiveAlerts({ tenantId, integrationId });
+    expect(events.map((event) => event.deviceName)).toEqual([null, null, null, null]);
+  });
+
+  it('keeps an ambiguous asset name unresolved so ticket templates fall back to the device ID', async () => {
+    mockState.remoteAlerts = [sparseAlert({ uid: 'ambiguous-ticket-name', deviceId: 900010 })];
+    const [event] = await ninjaOneAlertFetcher.fetchActiveAlerts({ tenantId, integrationId });
+    expect(event.deviceName).toBeNull();
+    const created = await db.transaction((trx) => createTicketForAlert(trx, {
+      event,
+      actions: rmmAlertRuleActionsSchema.parse({
+        createTicket: true,
+        boardId: fixture.boardId,
+        ticketTemplate: { titleTemplate: '{{device}} alert' },
+      }),
+      clientId: fixture.clientId,
+    }));
+    const ticket = await tenantTable(tenantId, 'tickets')
+      .where({ tenant: tenantId, ticket_id: created.ticket_id }).first();
+    expect(ticket.title).toBe('900010 alert');
   });
 
   it('leaves missing, null-realm, ambiguous, cross-provider, and cross-tenant devices unresolved', async () => {
@@ -521,7 +578,7 @@ describe('enriched sparse alerts reach the normal ticket pipeline', { shuffle: f
     });
 
   beforeAll(async () => {
-    await seedMappedAsset(tenantId, fixture.clientId, happyDevice, '500');
+    await seedMappedAsset(tenantId, fixture.clientId, happyDevice, '500', uuid(), 'ninjaone', 'FRONTDESK-PC');
     remoteAlerts.push(happyAlert());
     mockState.remoteAlerts = remoteAlerts;
   }, HOOK_TIMEOUT);
@@ -558,6 +615,9 @@ describe('enriched sparse alerts reach the normal ticket pipeline', { shuffle: f
     expect(ticket.client_id).toBe(fixture.clientId);
     expect(ticket.source).toBe('ninjaone');
     expect(String(ticket.status_id)).toBe(String(fixture.statusOpenId));
+    expect(ticket.title).toBe('FRONTDESK-PC alert');
+    expect(ticket.title).not.toContain(String(happyDevice));
+    expect(alertRow.device_name).toBe('FRONTDESK-PC');
   });
 
   it('redelivering the same active alert creates no duplicate ticket', async () => {
@@ -571,6 +631,71 @@ describe('enriched sparse alerts reach the normal ticket pipeline', { shuffle: f
     const rows = await tenantTable(tenantId, 'rmm_alerts')
       .where({ tenant: tenantId, external_alert_id: 'happy-sparse-1' });
     expect(rows).toHaveLength(1);
+  });
+
+  it('refreshes a previously null device name on an active alert redelivery', async () => {
+    const event = sparseAlert({ uid: 'name-refresh', deviceId: 900013 });
+    await fetchAndProcess(tenantId, integrationId, [event]);
+    const alert = await tenantTable(tenantId, 'rmm_alerts')
+      .where({ tenant: tenantId, external_alert_id: 'name-refresh' }).first();
+    expect(alert.device_name).toBeNull();
+    await seedMappedAsset(tenantId, fixture.clientId, 900013, '500', uuid(), 'ninjaone', 'REFRESHED-NAME');
+    await fetchAndProcess(tenantId, integrationId, [event]);
+    const refreshed = await tenantTable(tenantId, 'rmm_alerts')
+      .where({ tenant: tenantId, external_alert_id: 'name-refresh' }).first();
+    expect(refreshed.device_name).toBe('REFRESHED-NAME');
+  });
+
+  it('does not replace an existing device name on alert redelivery', async () => {
+    const event = sparseAlert({ uid: 'name-preserve', deviceId: 900014 });
+    await seedMappedAsset(tenantId, fixture.clientId, 900014, '500', uuid(), 'ninjaone', 'MAPPED-NAME');
+    await fetchAndProcess(tenantId, integrationId, [event]);
+    await tenantTable(tenantId, 'rmm_alerts')
+      .where({ tenant: tenantId, external_alert_id: 'name-preserve' })
+      .update({ device_name: 'EXISTING-NAME' });
+    await fetchAndProcess(tenantId, integrationId, [event]);
+    const preserved = await tenantTable(tenantId, 'rmm_alerts')
+      .where({ tenant: tenantId, external_alert_id: 'name-preserve' }).first();
+    expect(preserved.device_name).toBe('EXISTING-NAME');
+  });
+
+  it('uses the mapped asset name for manually created tickets when the alert name is null', async () => {
+    mockState.remoteAlerts = [sparseAlert({ uid: 'manual-name', deviceId: 900009 })];
+    const [sparseEvent] = await ninjaOneAlertFetcher.fetchActiveAlerts({ tenantId, integrationId });
+    await processRmmAlertEvent({ knex: db }, {
+      ...sparseEvent,
+      deviceName: null,
+      externalOrganizationId: null,
+    });
+    const alert = await tenantTable(tenantId, 'rmm_alerts')
+      .where({ tenant: tenantId, external_alert_id: 'manual-name' }).first();
+    await tenantTable(tenantId, 'rmm_alerts').where({ tenant: tenantId, alert_id: alert.alert_id }).update({ device_name: null });
+    const created = await createTicketForAlertId(db, {
+      tenantId,
+      alertId: alert.alert_id,
+      overrides: { ticketTemplate: { titleTemplate: '{{device}} alert' } },
+    });
+    const ticket = await tenantTable(tenantId, 'tickets').where({ tenant: tenantId, ticket_id: created.ticket_id }).first();
+    expect(ticket.title).toBe('FRONTDESK-PC alert');
+    expect(ticket.title).not.toContain('900009');
+  });
+
+  it('enriches webhook payloads that omit the embedded device object', async () => {
+    const event = mapNinjaOneWebhookToAlertEvent({
+      tenantId,
+      integrationId,
+      externalOrganizationId: '500',
+      payload: {
+        activityId: 778899,
+        activityType: 'CONDITION',
+        status: 'TRIGGERED',
+        deviceId: 900009,
+        organizationId: 500,
+      },
+    });
+    expect(event).not.toBeNull();
+    const [enriched] = await enrichMissingDeviceDetails([event!], tenantId);
+    expect(enriched.deviceName).toBe('FRONTDESK-PC');
   });
 });
 

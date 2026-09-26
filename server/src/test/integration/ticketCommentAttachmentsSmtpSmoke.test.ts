@@ -1,11 +1,29 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
+import type { AsyncLocalStorage } from 'node:async_hooks';
 import type { Knex } from 'knex';
 import { simpleParser } from 'mailparser';
 import * as dbModule from '@alga-psa/db';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { reconcileCommentAttachments } from '@shared/lib/ticketCommentAttachments';
+
+// What this file proves about tenancy is that the send path establishes its own
+// tenant — the direct mode through runWithTenant, the subscriber mode from the
+// event payload — so neither may ride on whatever tenant happens to be ambient.
+// Ambient state is not this file's to control: the shared integration fork
+// reaches @/lib/db's createTenantKnex(), whose non-production fallback resolves
+// "the first tenant in the database" and enters it into the AsyncLocalStorage,
+// so the tenant a run ends up with depends on which files the shard scheduler
+// put before this one. Asserting the store is empty therefore tested the
+// scheduler; run the send with the store explicitly exited instead, which is
+// the property the file actually means. The store is pinned on globalThis by
+// @alga-psa/db precisely so every copy of the module shares one instance.
+const tenantStore = (globalThis as {
+  __ALGA_PSA_TENANT_CONTEXT__?: AsyncLocalStorage<string>;
+}).__ALGA_PSA_TENANT_CONTEXT__;
+const withoutAmbientTenant = <T>(fn: () => Promise<T>): Promise<T> =>
+  tenantStore ? tenantStore.exit(fn) : fn();
 
 // Real migrated DB, email service/provider and SMTP. Only storage bytes and
 // connection routing are supplied by the fixture; no sender/subscriber mocks.
@@ -93,8 +111,10 @@ describe('comment attachment delivery over isolated SMTP', () => {
         replyContext: { ticketId: ticket, commentId: comment } }))
       : () => ticketEmailSubscriberTestHarness.handleTicketCommentAdded(event);
     expect(await messages()).toHaveLength(0);
-    expect(dbModule.getTenantContext()).toBeUndefined();
-    await send();
+    await withoutAmbientTenant(async () => {
+      expect(dbModule.getTenantContext()).toBeUndefined();
+      await send();
+    });
     const received = await messages();
     expect(received).toHaveLength(1);
     const parsed = await simpleParser(received[0].mimeMessage);
@@ -104,7 +124,7 @@ describe('comment attachment delivery over isolated SMTP', () => {
     expect(parsed.attachments[0].content).toEqual(pdf);
     expect(parsed.html).toContain('comment-smoke.pdf');
     expect(await table('ticket_comment_email_deliveries').where({ comment_id: comment, recipient, state: 'sent' })).toHaveLength(1);
-    await send();
+    await withoutAmbientTenant(send);
     expect(await messages()).toHaveLength(1);
   }, 60_000);
 });

@@ -20,7 +20,8 @@
       "select": "Sélectionner",
       "update": "Mettre à jour",
       "uploadCsv": "Télécharger CSV",
-      "view": "Voir"
+      "view": "Voir",
+      "next": "Suivant"
     },
     "states": {
       "active": "Actif",
@@ -197,6 +198,9 @@
     "opportunities": "Opportunités",
     "lifecycleStatus": "Cycle de vie",
     "lifecycleStatusHelper": "Les prospects sont disponibles dans les flux de vente, mais masqués par défaut dans les listes opérationnelles de clients.",
+    "clientSince": "Client depuis",
+    "clientSinceHelper": "Date de début de la relation. Si ce champ reste vide, la date d'ajout de ce client est utilisée.",
+    "clientSincePlaceholder": "Date d'ajout de ce client",
     "title": "Détails du client",
     "backToClients": "Retour aux Clients",
     "openInNewTab": "Ouvrir dans un nouvel onglet",
@@ -304,7 +308,13 @@
     "parentClientSelf": "Un client ne peut pas être son propre parent",
     "parentClientPlaceholder": "Aucun client parent",
     "parentClientClear": "Effacer",
-    "parentClientLegacy": "Précédemment saisi comme texte : {{name}}"
+    "parentClientLegacy": "Précédemment saisi comme texte : {{name}}",
+    "mergeClient": "Fusionner",
+    "mergeClientHelp": "Absorber un autre client dans celui-ci sous forme de profil de facturation",
+    "inboundDomainAutoCreateContacts": "Créer des contacts pour les nouveaux expéditeurs",
+    "inboundDomainAutoCreateHelp": "Les domaines associés peuvent créer un contact pour un nouvel expéditeur de confiance.",
+    "inboundDomainAutoCreateUpdated": "Paramètre des contacts expéditeurs mis à jour.",
+    "inboundDomainAutoCreateUpdateFailed": "Impossible de mettre à jour le paramètre des contacts expéditeurs."
   },
   "clientCommandCenter": {
     "cards": {
@@ -1688,7 +1698,9 @@
     "archived": "« {{name}} » archivé",
     "deleted": "« {{name}} » supprimé",
     "restored": "« {{name}} » restauré",
-    "settings": "Paramètres de facturation"
+    "settings": "Paramètres de facturation",
+    "mergeHelp": "Vous gérez déjà un site ou une entité comme un client distinct ? Fusionnez-le : il devient ici un profil de facturation et conserve ses factures et son historique.",
+    "mergeButton": "Fusionner un client"
   },
   "portalBillingProfileAccess": {
     "label": "Segments de facturation",
@@ -1868,6 +1880,81 @@
       "otherClient": "Ce profil de facturation appartient à un autre client.",
       "archived": "Ce profil de facturation est archivé.",
       "selectionNotThisClient": "L’un des profils de facturation sélectionnés n’appartient pas à ce client."
+    },
+    "clientMerge": {
+      "blocked": "Cette fusion ne peut pas être effectuée.",
+      "signInRequired": "Vous devez être connecté pour fusionner des clients.",
+      "sourceNotFound": "Le client à fusionner n'existe plus.",
+      "targetNotFound": "Le client de destination n'existe plus.",
+      "sameClient": "Un client ne peut pas être fusionné avec lui-même.",
+      "sourceAlreadyMerged": "Ce client a déjà été fusionné dans un autre client.",
+      "targetAlreadyMerged": "Le client de destination a lui-même été fusionné dans un autre client. Fusionnez vers celui-ci à la place.",
+      "sourceIsTenantDefault": "La fiche de votre propre organisation ne peut pas être fusionnée dans un client.",
+      "parentLinkCycle": "Ce client est enregistré comme enfant de celui que vous fusionnez ; la fusion inverserait la hiérarchie.",
+      "invalidContractCutover": "L'une des dates de bascule se situe en dehors de la durée de son contrat."
+    },
+    "profileContacts": {
+      "duplicateManager": "Un profil de facturation ne peut avoir qu'un seul responsable.",
+      "notThisClient": "L'un des contacts sélectionnés n'appartient pas au client de ce profil de facturation."
     }
+  },
+  "mergeClients": {
+    "title": "Fusionner un client dans celui-ci",
+    "description": "Le client choisi devient un profil de facturation du client de destination. Ses factures, cycles de facturation, moyens de paiement et avoirs restent rattachés à ce profil ; ses tickets, contacts, actifs et contrats sont transférés. Cette opération est irréversible.",
+    "sourceLabel": "Client à fusionner",
+    "sourcePlaceholder": "Sélectionner un client",
+    "targetLabel": "Client de destination",
+    "targetPlaceholder": "Sélectionner un client",
+    "cannotMergeIntoItself": "Un client ne peut pas être fusionné avec lui-même",
+    "recordedParent": "« {{source}} » indique « {{parent}} » comme client parent.",
+    "useRecordedParent": "Utiliser",
+    "contactsDescription": "Tous les contacts sont transférés vers le client de destination. Indiquez le profil de facturation auquel chacun appartient et, si vous le savez déjà, désignez ici le responsable d'un segment. La case tickets est une autorisation distincte : elle permet à cette personne de voir dans le portail tous les tickets de son profil.",
+    "contactColumn": "Contact",
+    "profileColumn": "Profil de facturation",
+    "managerColumn": "Responsable",
+    "seesTicketsColumn": "Voit les tickets du profil",
+    "noContacts": "Ce client n'a aucun contact.",
+    "noProfile": "Aucun profil",
+    "contractsDescription": "Transférer un contrat avec ses dates d'origine ne modifie aucune période de facturation. Une bascule met fin au contrat chez l'ancien client et démarre une copie chez le client de destination à la date choisie.",
+    "noContracts": "Ce client n'a aucun contrat.",
+    "unnamedContract": "Contrat",
+    "openEnded": "sans échéance",
+    "keepOriginalDates": "Conserver les dates d'origine",
+    "cutOver": "Basculer",
+    "cutoverDate": "Date de bascule",
+    "pinGrantsLabel": "Maintenir les utilisateurs du portail sur leurs segments de facturation actuels",
+    "pinGrantsHelp": "Un utilisateur du portail sans restriction de segment voit aujourd'hui tous les profils de son client. Après la fusion, ce serait tous les profils du client de destination. En laissant cette option activée, les segments dont il dispose aujourd'hui sont enregistrés explicitement.",
+    "pinGrantsCount": "{{count}} utilisateur(s) du portail concerné(s)",
+    "groupRenames": "Groupes de visibilité renommés pour éviter un conflit",
+    "previewHeading": "Ce qui sera transféré",
+    "profilesHeading": "Profils de facturation après la fusion",
+    "confirmLabel": "Saisissez « {{name}} » pour confirmer",
+    "loadingPreview": "Calcul de ce qui serait transféré…",
+    "submit": "Fusionner le client",
+    "merging": "Fusion en cours…",
+    "merged": "« {{source}} » a été fusionné dans « {{target}} »",
+    "accountingDescription": "Ces correspondances comptables pointent encore vers le client fusionné. Les rediriger vers le client de destination est suggéré, mais rien n'est modifié sans votre confirmation : laissez une ligne décochée pour la relier manuellement plus tard.",
+    "accountingAlreadyMapped": "Le client de destination possède déjà une correspondance pour cette intégration ; celle-ci devra être reliée manuellement.",
+    "accountingApply": "Appliquer la sélection",
+    "accountingSkip": "Ignorer pour l'instant",
+    "accountingRemapped": "Correspondances comptables redirigées",
+    "accountingSkipped": "{{count}} correspondance(s) n'ont pas pu être redirigées et doivent être reliées manuellement."
+  },
+  "billingProfileContacts": {
+    "title": "Contacts du profil",
+    "description": "Les personnes qui appartiennent à ce segment de facturation. Désigner un responsable indique qui le pilote ; la case « tickets » est une autorisation distincte qui lui permet de voir dans le portail client tous les tickets attribués à ce profil.",
+    "loading": "Chargement des contacts du profil…",
+    "noContacts": "Ce client n'a pas encore de contacts.",
+    "contact": "Contact",
+    "inProfile": "Dans le profil",
+    "manager": "Responsable",
+    "seesTickets": "Voit les tickets du profil",
+    "saved": "Contacts du profil enregistrés"
+  },
+  "contactBillingProfiles": {
+    "label": "Profils de facturation",
+    "manager": "Responsable",
+    "seesTickets": "Voit les tickets du profil",
+    "editHint": "Ces éléments se modifient sur le profil de facturation, dans les paramètres de facturation du client."
   }
 }

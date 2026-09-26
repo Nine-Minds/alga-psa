@@ -70,14 +70,14 @@ function tenantScopedTable(knex: Knex, tenant: string, table: string): Knex.Quer
   return tenantDb(knex, tenant).table(table) as Knex.QueryBuilder<any, any>;
 }
 
-function builtinAssetTypeEntries(tenant: string): AssetTypeRegistryEntry[] {
+function builtinAssetTypeEntries(tenant: string, schemas: Map<string, AssetTypeField[]> = new Map()): AssetTypeRegistryEntry[] {
   return BUILTIN_ASSET_TYPES.map((type) => ({
     tenant,
     type_id: `builtin_${type.slug}`,
     slug: type.slug,
     name: type.name,
     icon: null,
-    fields_schema: [],
+    fields_schema: schemas.get(type.slug) ?? [],
     is_builtin: true,
     display_order: type.display_order,
     created_at: '',
@@ -101,7 +101,10 @@ export async function listAssetTypes(knex: Knex, tenant: string): Promise<AssetT
       .orderBy('is_builtin', 'desc')
       .orderBy('display_order', 'asc')
       .orderBy('name', 'asc');
-    return rows.map(mapRow);
+    const entries: AssetTypeRegistryEntry[] = rows.map(mapRow);
+    const bySlug = new Map(entries.filter((entry) => entry.is_builtin).map((entry) => [entry.slug, entry]));
+    const builtins = builtinAssetTypeEntries(tenant).map((fallback) => bySlug.get(fallback.slug) ?? fallback);
+    return [...builtins, ...entries.filter((entry) => !entry.is_builtin)];
   } catch (error) {
     if (isMissingAssetTypeRegistryTable(error)) {
       return builtinAssetTypeEntries(tenant);
@@ -183,14 +186,23 @@ export async function updateAssetType(
   slug: string,
   input: UpdateAssetTypeInput
 ): Promise<AssetTypeRegistryResult<AssetTypeRegistryEntry>> {
-  const row = await tenantScopedTable(knex, tenant, 'asset_type_registry').where({ slug }).first();
+  let row = await tenantScopedTable(knex, tenant, 'asset_type_registry').where({ slug }).first();
+  if (!row && BUILTIN_ASSET_TYPES.some((type) => type.slug === slug) && input.fields_schema !== undefined) {
+    const validation = validateFieldsSchema(input.fields_schema);
+    if (!validation.valid) return fail({ code: 'invalid_schema', issues: validation.issues });
+    const builtin = BUILTIN_ASSET_TYPES.find((type) => type.slug === slug)!;
+    await tenantScopedTable(knex, tenant, 'asset_type_registry').insert({
+      tenant, slug, name: builtin.name, icon: null, fields_schema: JSON.stringify(validation.fields),
+      is_builtin: true, display_order: builtin.display_order,
+    });
+    row = await tenantScopedTable(knex, tenant, 'asset_type_registry').where({ slug }).first();
+  }
   if (!row) {
     return fail({ code: 'not_found', slug });
   }
 
   if (row.is_builtin) {
     const attempted: string[] = [];
-    if (input.fields_schema !== undefined) attempted.push('fields_schema');
     if (input.display_order !== undefined) attempted.push('display_order');
     if (attempted.length > 0) {
       return fail({ code: 'builtin_immutable', slug, attempted });
@@ -231,6 +243,7 @@ export async function updateAssetType(
   const updated = await tenantScopedTable(knex, tenant, 'asset_type_registry').where({ slug }).first();
   return ok(mapRow(updated));
 }
+
 
 export async function deleteAssetType(
   knex: Knex,

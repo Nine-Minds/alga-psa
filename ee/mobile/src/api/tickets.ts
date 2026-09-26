@@ -87,6 +87,7 @@ export type TicketDetail = TicketListItem & {
   client_email?: string | null;
   client_phone?: string | null;
   location_name?: string | null;
+  location_address?: string | null;
   location_id?: string | null;
 } & Record<string, unknown>;
 

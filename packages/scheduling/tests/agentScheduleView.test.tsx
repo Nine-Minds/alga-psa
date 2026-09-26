@@ -7,9 +7,10 @@ import toast from 'react-hot-toast';
 
 // vi.hoisted: mock factories run while this module's imports evaluate —
 // plain consts would still be in their temporal dead zone at that point.
-const { calendarSpy, getScheduleEntries, addScheduleEntry, updateScheduleEntry, deleteScheduleEntry, getScheduleEntryById, getCurrentUser, getCurrentUserPermissions, useUsers } =
+const { calendarSpy, getCalendarsVisibleToMe, getScheduleEntries, addScheduleEntry, updateScheduleEntry, deleteScheduleEntry, getScheduleEntryById, getCurrentUser, getCurrentUserPermissions, useUsers } =
   vi.hoisted(() => ({
     calendarSpy: vi.fn(),
+    getCalendarsVisibleToMe: vi.fn(),
     getScheduleEntries: vi.fn(),
     addScheduleEntry: vi.fn(),
     updateScheduleEntry: vi.fn(),
@@ -28,6 +29,7 @@ vi.mock('next/dynamic', () => ({
 }));
 
 vi.mock('@alga-psa/scheduling/actions', () => ({
+  getCalendarsVisibleToMe,
   getScheduleEntries,
   addScheduleEntry,
   updateScheduleEntry,
@@ -104,7 +106,16 @@ beforeEach(() => {
   deleteScheduleEntry.mockClear();
   deleteScheduleEntry.mockResolvedValue({ success: true, deleted: true, canDelete: true, dependencies: [], alternatives: [] });
   getCurrentUser.mockResolvedValue({ user_id: 'user-1' });
-  getCurrentUserPermissions.mockResolvedValue(['user_schedule:read:all', 'user_schedule:update']);
+  getCurrentUserPermissions.mockResolvedValue(['user_schedule:read', 'user_schedule:update']);
+  // Shared calendars: agent-1 and user-2 have shared their calendars with the viewer.
+  const shared = (key: string) => ({
+    key, calendar_type: 'personal', calendar_id: null, owner_user_id: key,
+    name: key, color: '#2563eb', access_level: 'read',
+  });
+  getCalendarsVisibleToMe.mockResolvedValue({
+    success: true,
+    data: { viewerUserId: 'user-1', canViewAll: false, me: shared('user-1'), people: [shared('agent-1'), shared('user-2')], groups: [] },
+  });
 });
 
 describe('AgentScheduleView', () => {
@@ -278,7 +289,7 @@ describe('AgentScheduleView', () => {
   });
 
   it('keeps the grid static without update permission', async () => {
-    getCurrentUserPermissions.mockResolvedValueOnce(['user_schedule:read:all']);
+    getCurrentUserPermissions.mockResolvedValueOnce(['user_schedule:read']);
     render(<AgentScheduleView agentId="agent-1" />);
     await waitFor(() => expect(getScheduleEntries).toHaveBeenCalledTimes(1));
     const props = calendarSpy.mock.calls.at(-1)[0];
@@ -325,6 +336,10 @@ describe('AgentScheduleView', () => {
   it('restricts users with user_schedule:read to their own schedule', async () => {
     getCurrentUser.mockResolvedValue({ user_id: 'user-1' });
     getCurrentUserPermissions.mockResolvedValue(['user_schedule:read']);
+    getCalendarsVisibleToMe.mockResolvedValue({
+      success: true,
+      data: { viewerUserId: 'user-1', canViewAll: false, me: null, people: [], groups: [] },
+    });
 
     const { getByText } = render(<AgentScheduleView agentId="user-2" />);
 
@@ -332,9 +347,9 @@ describe('AgentScheduleView', () => {
     expect(getScheduleEntries).not.toHaveBeenCalled();
   });
 
-  it('allows users with user_schedule:read:all to view any agent', async () => {
+  it('allows users to view an agent whose calendar is shared with them', async () => {
     getCurrentUser.mockResolvedValue({ user_id: 'user-1' });
-    getCurrentUserPermissions.mockResolvedValue(['user_schedule:read:all']);
+    getCurrentUserPermissions.mockResolvedValue(['user_schedule:read']);
 
     render(<AgentScheduleView agentId="user-2" />);
 
@@ -373,7 +388,7 @@ describe('AgentScheduleView', () => {
   });
 
   it('keeps selection disabled for a work item context without update permission', async () => {
-    getCurrentUserPermissions.mockResolvedValue(['user_schedule:read:all']);
+    getCurrentUserPermissions.mockResolvedValue(['user_schedule:read']);
 
     render(
       <AgentScheduleView
@@ -500,7 +515,7 @@ describe('AgentScheduleView', () => {
   });
 
   it('explains the read-only calendar when the user lacks update permission', async () => {
-    getCurrentUserPermissions.mockResolvedValueOnce(['user_schedule:read:all']);
+    getCurrentUserPermissions.mockResolvedValueOnce(['user_schedule:read']);
     const { findByText } = render(
       <AgentScheduleView
         agentId="agent-1"

@@ -1,0 +1,337 @@
+[
+  {
+    "id": "F001",
+    "description": "Migration creates `calendars` table (personal/group, owner_user_id, name, description, color, is_archived, created_by, timestamps) with PK (tenant, calendar_id), partial unique personal-per-user index, type check constraints, Citus distribution by tenant.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Migration creates `calendar_shares` table (calendar_id, grantee_type user|team, grantee_id, access_level free_busy|read|edit|manage) with unique (tenant, calendar_id, grantee_type, grantee_id), cascade FK to calendars, Citus distribution.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Migration adds nullable `schedule_entries.calendar_id` with composite FK to calendars and (tenant, calendar_id) index.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Register `calendars` and `calendar_shares` in packages/db tenantTableMetadata and the migration shim registry (server/migrations/utils/tenantDb.cjs).",
+    "implemented": true,
+    "prdRefs": [
+      "Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Add ICalendar, ICalendarShare, CalendarAccessLevel types and extend IScheduleEntry with calendar_id, access ('full'|'busy'), can_edit.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "calendarAccess.resolveCalendarAccess(viewer) returns visible personal-calendar user ids with effective level, visible group calendars with level, and canViewAll, in a bounded number of queries (direct shares + team shares + group calendars).",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Effective level is the max of direct user grants and grants to any team the viewer belongs to; team membership is resolved at read time.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Shares granted by or to inactive users are ignored during access resolution.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "`user_schedule:update` holders resolve as edit on every internal user's personal calendar and manage on every group calendar (preserves current behavior).",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "calendarAccess.evaluateEntryAccess(entry, access) returns full/busy/none and canEdit per the ordered PRD visibility and modify rules (assignee, group calendar level, best assignee personal level, private masking).",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "maskEntry strips title (→ translated Busy), notes, work item, and assignee details server-side for busy entries.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "ScheduleEntry.getAll accepts an optional visibility filter (userIds, calendarIds, includeUnassignedAppointmentRequests) applied in SQL before recurrence expansion.",
+    "implemented": true,
+    "prdRefs": [
+      "Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Recurring virtual instances inherit calendar_id and are evaluated/masked identically to their parent.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "getScheduleEntries uses the resolver: returns only visible entries (own, shared personal, group calendars), masked where busy, annotated with access and can_edit; honours requested user/calendar overlays.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "getScheduleEntryById enforces user_schedule:read and the resolver (returns not-found for none, masked for busy).",
+    "implemented": true,
+    "prdRefs": [
+      "Problem",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "addScheduleEntry allows creating entries for users the viewer has edit on, and on group calendars where the viewer has edit+; rejects otherwise.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "updateScheduleEntry/deleteScheduleEntry allow changes when the viewer is an assignee, has edit on any assignee's personal calendar, edit+ on the entry's group calendar, or user_schedule:update; private entries remain sole-assignee only.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Assignee changes by non-admins are restricted to users the viewer has edit on plus themselves (server-enforced).",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Server rejects/clears is_private when calendar_id is set; calendar_id may only reference a non-archived group calendar the viewer can edit.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "getMyCalendarShares / setMyCalendarShares: owner lists and upserts/removes shares on their personal calendar (lazy personal calendar creation, no self-share, internal-user grantees only, free_busy/read/edit only).",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "user_schedule:update holders can view and change shares on any user's personal calendar.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "getCalendarsVisibleToMe returns My calendar, People (visible personal calendars with level and deterministic color) and Group calendars (with level, color, archived only for managers) plus viewer capabilities.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "createGroupCalendar creates a group calendar with name, color, description and initial members; creator is added as manage.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "updateGroupCalendar and setGroupCalendarShares (manage/admin only) rename/recolor/describe and upsert/remove member shares; reject removing or downgrading the last manager.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "archiveGroupCalendar / restoreGroupCalendar (manage/admin only); archived calendars and their entries are excluded from non-manager views.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "User deletion and team deletion paths remove calendar_shares where the deleted user/team is the grantee.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Add CALENDAR_SHARE_GRANTED event schema and publish it when a user grantee is newly added or their level changes.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "internalNotificationSubscriber creates an internal notification for user grantees on CALENDAR_SHARE_GRANTED; migration seeds the notification template.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "REST GET /api/v1/schedules (list and by id) uses the resolver instead of canViewAllSchedules.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Replace client-side `user_schedule:read:all` checks (useScheduleViewer, ScheduleCalendar) with server-provided capabilities.",
+    "implemented": true,
+    "prdRefs": [
+      "Problem",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Schedule sidebar gains a Calendars section: My calendar, People, Group calendars, with visibility checkboxes and color swatches; People lists only calendars the viewer can see.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Overlay selection (people + group calendars) persists in user_preferences and restores on load, dropping calendars that are no longer visible.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Focus can be set to self or any calendar the viewer has edit on; new entries default the assignee to the focused owner.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Overlay entries render with their calendar color stripe; busy entries render as 'Busy' blocks.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Drag/resize enabled for any entry with can_edit (not only the focused user's).",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "Opening a busy entry shows a read-only popup with time and 'Busy' only.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Share my calendar dialog (Schedule page + Profile > Calendar settings): list current shares, add users/teams via UserAndTeamPicker with level, change level, remove.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "New/Manage group calendar dialogs: name, color (ColorPicker), description, member list with levels, archive/restore.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "EntryPopup: Calendar field (Personal or editable group calendars); hides Private toggle when a group calendar is selected; assignee picker limited to editable users for non-admins; assignees optional on group entries.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "Empty-state calls to action in People and Group calendars groups.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "All new UI strings added to msp/schedule namespace for every supported locale.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  }
+]

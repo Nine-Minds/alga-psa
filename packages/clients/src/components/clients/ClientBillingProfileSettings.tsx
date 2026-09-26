@@ -18,6 +18,7 @@ import {
   updateClientBillingProfileSettings,
   type ClientBillingProfileSettingsInput,
 } from '../../actions/clientBillingProfileActions';
+import BillingProfileContacts from './BillingProfileContacts';
 
 /**
  * A billing profile's own bill-to identity, tax, PO, and delivery settings
@@ -238,6 +239,8 @@ export function ClientBillingProfileSettings({
           {t('common.actions.save', { defaultValue: 'Save' })}
         </Button>
       </div>
+
+      <BillingProfileContacts billingProfileId={billingProfileId} />
 
       <p className="text-xs text-gray-500">
         {t('clientBillingProfileSettings.regionNote', {

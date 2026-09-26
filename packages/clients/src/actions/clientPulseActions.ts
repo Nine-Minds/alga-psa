@@ -4,6 +4,7 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
+import { toClientSinceDate } from '../lib/clientSince';
 import { getContactAvatarUrlsBatchAsync } from '../lib/documentsHelpers';
 import {
   actionError,
@@ -364,7 +365,7 @@ async function fetchRecord(
     defaultContactId
       ? trx('contacts')
         .where({ tenant, contact_name_id: defaultContactId, client_id: clientRow.client_id })
-        .select('full_name')
+        .select('contact_name_id', 'full_name')
         .first()
       : Promise.resolve(null),
     trx('client_inbound_email_domains')
@@ -392,9 +393,14 @@ async function fetchRecord(
     url: clientRow.url ?? null,
     accountManagerName: formatUserName(clientRow),
     defaultContactName: defaultContact?.full_name ?? null,
+    // Only when the contact resolved — the query is what proves it still
+    // belongs to this client, and a stale id would open the wrong drawer.
+    defaultContactId: defaultContact?.contact_name_id ?? null,
     inboundDomains: inboundDomains.map((domain) => String(domain)),
     taxRegion: taxRegion?.region_name ?? null,
-    clientSince: toIsoString(clientRow.created_at),
+    // Calendar date, not a timestamp: the card reads the year off it, and a
+    // UTC re-parse would lose a January 1 for anyone east of Greenwich.
+    clientSince: toClientSinceDate(clientRow.client_since ?? clientRow.created_at) ?? null,
     isInactive: Boolean(clientRow.is_inactive),
   };
 }
@@ -1001,6 +1007,7 @@ export const getClientPulse = withAuth(async (
       .select(
         'c.client_id',
         'c.created_at',
+        'c.client_since',
         'c.url',
         'c.account_manager_id',
         'c.is_inactive',

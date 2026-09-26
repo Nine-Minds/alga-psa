@@ -24,7 +24,8 @@ const mocks = vi.hoisted(() => ({
   resolveInboundTicketDefaults: vi.fn(),
   resolveEffectiveInboundTicketDefaults: vi.fn(),
   findContactByEmail: vi.fn(),
-  findClientIdByInboundEmailDomain: vi.fn(),
+  findInboundEmailDomainMapping: vi.fn(),
+  createContactForInboundSender: vi.fn(),
   findValidClientPrimaryContactId: vi.fn(),
   findEmailProviderMailboxAddress: vi.fn(),
   upsertTicketWatchListRecipients: vi.fn(),
@@ -69,8 +70,10 @@ vi.mock('@alga-psa/shared/workflow/actions/emailWorkflowActions', () => ({
   resolveEffectiveInboundTicketDefaults: (...args: unknown[]) =>
     mocks.resolveEffectiveInboundTicketDefaults(...args),
   findContactByEmail: (...args: unknown[]) => mocks.findContactByEmail(...args),
-  findClientIdByInboundEmailDomain: (...args: unknown[]) =>
-    mocks.findClientIdByInboundEmailDomain(...args),
+  findInboundEmailDomainMapping: (...args: unknown[]) =>
+    mocks.findInboundEmailDomainMapping(...args),
+  createContactForInboundSender: (...args: unknown[]) =>
+    mocks.createContactForInboundSender(...args),
   findValidClientPrimaryContactId: (...args: unknown[]) =>
     mocks.findValidClientPrimaryContactId(...args),
   findEmailProviderMailboxAddress: (...args: unknown[]) =>
@@ -278,7 +281,7 @@ describe('email thread outbound/inbound round trip', () => {
       source: 'provider_default',
     });
     mocks.findContactByEmail.mockResolvedValue(null);
-    mocks.findClientIdByInboundEmailDomain.mockResolvedValue(null);
+    mocks.findInboundEmailDomainMapping.mockResolvedValue(null);
     mocks.findValidClientPrimaryContactId.mockResolvedValue(null);
     mocks.findEmailProviderMailboxAddress.mockResolvedValue('support@example.com');
     mocks.upsertTicketWatchListRecipients.mockResolvedValue({ updated: true, watchList: [] });

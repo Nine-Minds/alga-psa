@@ -34,6 +34,7 @@ interface ServiceRecord {
   category_id: string | null;
   tax_rate_id: string | null;
   description: string | null;
+  is_active: boolean;
   tenant: string;
   service_type_name?: string;
   created_at?: string;
@@ -248,6 +249,46 @@ describe('Services API E2E Tests', () => {
         unit_of_measure: updatePayload.unit_of_measure
       });
       expect(response.data.data.default_rate).toBe(updatePayload.default_rate);
+    }, TEST_TIMEOUT);
+
+    it('toggles a service active state through PUT and GET', async () => {
+      const payload: ServiceRequestPayload = await createServiceRequestData(env.db, env.tenant, {
+        custom_service_type_id: serviceTypeIds.fixed
+      });
+      const createResponse = await env.apiClient.post<SuccessResponse<ServiceRecord>>(
+        '/api/v1/services',
+        payload
+      );
+
+      expect(createResponse.status).toBe(201);
+      const serviceId = createResponse.data.data.service_id;
+      createdServiceIds.add(serviceId);
+
+      const deactivateResponse = await env.apiClient.put<SuccessResponse<ServiceRecord>>(
+        `/api/v1/services/${serviceId}`,
+        { is_active: false }
+      );
+      expect(deactivateResponse.status).toBe(200);
+      expect(deactivateResponse.data.data.is_active).toBe(false);
+
+      const inactiveGetResponse = await env.apiClient.get<SuccessResponse<ServiceRecord>>(
+        `/api/v1/services/${serviceId}`
+      );
+      expect(inactiveGetResponse.status).toBe(200);
+      expect(inactiveGetResponse.data.data.is_active).toBe(false);
+
+      const activateResponse = await env.apiClient.put<SuccessResponse<ServiceRecord>>(
+        `/api/v1/services/${serviceId}`,
+        { is_active: true }
+      );
+      expect(activateResponse.status).toBe(200);
+      expect(activateResponse.data.data.is_active).toBe(true);
+
+      const activeGetResponse = await env.apiClient.get<SuccessResponse<ServiceRecord>>(
+        `/api/v1/services/${serviceId}`
+      );
+      expect(activeGetResponse.status).toBe(200);
+      expect(activeGetResponse.data.data.is_active).toBe(true);
     }, TEST_TIMEOUT);
 
     it('deletes a service', async () => {

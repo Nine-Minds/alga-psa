@@ -46,6 +46,62 @@ function tenantScopedTable(
 }
 
 /**
+ * Optional SQL visibility filter for schedule entry reads. When supplied, only
+ * entries assigned to one of `userIds`, placed on one of `calendarIds`, or
+ * (optionally) unassigned appointment requests are returned. Entries placed on
+ * `excludeCalendarIds` (e.g. archived group calendars) are always dropped.
+ * Omitting the filter returns every entry in the tenant (admin view).
+ */
+export interface ScheduleEntryVisibilityFilter {
+  userIds: string[];
+  calendarIds: string[];
+  includeUnassignedAppointmentRequests: boolean;
+  excludeCalendarIds?: string[];
+}
+
+function applyVisibilityFilter(
+  knexOrTrx: Knex | Knex.Transaction,
+  query: Knex.QueryBuilder,
+  tenant: string,
+  filter: ScheduleEntryVisibilityFilter | undefined
+): Knex.QueryBuilder {
+  const excluded = filter?.excludeCalendarIds ?? [];
+  if (excluded.length > 0) {
+    query.where(function () {
+      this.whereNull('schedule_entries.calendar_id')
+        .orWhereNotIn('schedule_entries.calendar_id', excluded);
+    });
+  }
+  if (!filter) return query;
+
+  const db = tenantDb(knexOrTrx, tenant);
+  const assigneeSubquery = (alias: string) => {
+    const sub = db.subquery(`schedule_entry_assignees as ${alias}`)
+      .select(knexOrTrx.raw('1'))
+      .whereRaw('?? = ??', [`${alias}.entry_id`, 'schedule_entries.entry_id']);
+    db.tenantWhereColumn(sub, `${alias}.tenant`, 'schedule_entries.tenant');
+    return sub;
+  };
+
+  return query.where(function () {
+    // Always a valid predicate even when every list is empty.
+    this.whereRaw('false');
+    if (filter.userIds.length > 0) {
+      this.orWhereExists(assigneeSubquery('sea_visible').whereIn('sea_visible.user_id', filter.userIds));
+    }
+    if (filter.calendarIds.length > 0) {
+      this.orWhereIn('schedule_entries.calendar_id', filter.calendarIds);
+    }
+    if (filter.includeUnassignedAppointmentRequests) {
+      this.orWhere(function () {
+        this.where('schedule_entries.work_item_type', 'appointment_request')
+          .whereNotExists(assigneeSubquery('sea_any'));
+      });
+    }
+  });
+}
+
+/**
  * Schedule Entry model with tenant-explicit methods.
  * All methods require an explicit tenant parameter for multi-tenant safety.
  */
@@ -163,7 +219,8 @@ const ScheduleEntry = {
     knexOrTrx: Knex | Knex.Transaction,
     tenant: string,
     start: Date,
-    end: Date
+    end: Date,
+    visibility?: ScheduleEntryVisibilityFilter
   ): Promise<IScheduleEntry[]> => {
     if (!tenant) {
       throw new Error('Tenant context is required for getting recurring entries');
@@ -187,7 +244,9 @@ const ScheduleEntry = {
     }
 
     // Get master recurring entries that might have occurrences in the range
-    const masterEntries = await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
+    const masterQuery = tenantScopedTable(knexOrTrx, 'schedule_entries', tenant);
+    applyVisibilityFilter(knexOrTrx, masterQuery, tenant, visibility);
+    const masterEntries = await masterQuery
       .where('is_recurring', true)
       .whereNotNull('recurrence_pattern')
       .whereNull('original_entry_id')
@@ -299,7 +358,8 @@ const ScheduleEntry = {
     knexOrTrx: Knex | Knex.Transaction,
     tenant: string,
     start: Date,
-    end: Date
+    end: Date,
+    visibility?: ScheduleEntryVisibilityFilter
   ): Promise<IScheduleEntry[]> => {
     if (!tenant) {
       throw new Error('Tenant context is required for getting schedule entries');
@@ -309,7 +369,9 @@ const ScheduleEntry = {
     // Recurring masters are excluded here because they are represented
     // by the virtual instances generated below — including them would
     // cause a duplicate on the first occurrence day.
-    const regularEntries = (await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
+    const regularQuery = tenantScopedTable(knexOrTrx, 'schedule_entries', tenant);
+    applyVisibilityFilter(knexOrTrx, regularQuery, tenant, visibility);
+    const regularEntries = (await regularQuery
       .whereNull('original_entry_id')
       .andWhere(function () {
         this.where('is_recurring', false).orWhereNull('is_recurring');
@@ -328,7 +390,8 @@ const ScheduleEntry = {
       knexOrTrx,
       tenant,
       start,
-      end
+      end,
+      visibility
     );
 
     const allEntries = [...regularEntries, ...virtualEntries];
@@ -447,8 +510,10 @@ const ScheduleEntry = {
         typeof entry.recurrence_pattern === 'object' &&
         Object.keys(entry.recurrence_pattern).length > 0
       ),
-      is_private: entry.is_private || false,
+      // Group calendar entries are never private.
+      is_private: entry.calendar_id ? false : (entry.is_private || false),
       is_all_day: entry.is_all_day ?? false,
+      calendar_id: entry.calendar_id ?? null,
     };
 
     // Create main entry
@@ -547,6 +612,7 @@ const ScheduleEntry = {
               recurrence_pattern: null,
               is_private: entry.is_private !== undefined ? entry.is_private : originalEntry.is_private,
               is_all_day: entry.is_all_day ?? originalEntry.is_all_day,
+              calendar_id: entry.calendar_id !== undefined ? entry.calendar_id : (originalEntry.calendar_id ?? null),
             });
 
             // Copy assignments from master to standalone entry
@@ -591,6 +657,7 @@ const ScheduleEntry = {
               original_entry_id: null,
               is_private: entry.is_private !== undefined ? entry.is_private : originalEntry.is_private,
               is_all_day: entry.is_all_day ?? originalEntry.is_all_day,
+              calendar_id: entry.calendar_id !== undefined ? entry.calendar_id : (originalEntry.calendar_id ?? null),
               assigned_user_ids: entry.assigned_user_ids || assignedUserIds[masterEntryId] || [],
             };
           }
@@ -659,6 +726,7 @@ const ScheduleEntry = {
               original_entry_id: null,
               is_private: entry.is_private !== undefined ? entry.is_private : originalEntry.is_private,
               is_all_day: entry.is_all_day ?? originalEntry.is_all_day,
+              calendar_id: entry.calendar_id !== undefined ? entry.calendar_id : (originalEntry.calendar_id ?? null),
             };
 
             await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant).insert(newMasterEntry);
@@ -712,6 +780,7 @@ const ScheduleEntry = {
                 recurrence_pattern: JSON.stringify(allUpdatePattern),
                 is_recurring: true,
                 is_all_day: entry.is_all_day ?? originalEntry.is_all_day,
+                calendar_id: entry.calendar_id !== undefined ? entry.calendar_id : (originalEntry.calendar_id ?? null),
               })
               .returning('*');
 
@@ -762,6 +831,11 @@ const ScheduleEntry = {
     if (entry.work_item_type !== undefined) updateData.work_item_type = entry.work_item_type;
     if (entry.is_private !== undefined) updateData.is_private = entry.is_private;
     if (entry.is_all_day !== undefined) updateData.is_all_day = entry.is_all_day;
+    if (entry.calendar_id !== undefined) updateData.calendar_id = entry.calendar_id;
+    if (updateData.calendar_id || (updateData.calendar_id === undefined && originalEntry.calendar_id)) {
+      // Group calendar entries are never private.
+      if (updateData.is_private) updateData.is_private = false;
+    }
 
     if (entry.recurrence_pattern !== undefined && !isRemovingRecurrence) {
       updateData.recurrence_pattern =
@@ -904,6 +978,7 @@ const ScheduleEntry = {
                   recurrence_pattern: JSON.stringify(newPattern),
                   is_recurring: true,
                   is_private: originalEntry.is_private,
+                  calendar_id: originalEntry.calendar_id ?? null,
                   is_all_day: originalEntry.is_all_day,
                 });
 

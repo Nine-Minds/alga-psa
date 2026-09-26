@@ -330,6 +330,7 @@ export default function ClientCommandCenter({
               data={pulse.record}
               onOpen={focusOpener('details')}
               onOpenAdditionalInfo={focusOpener('additional-info')}
+              onOpenContact={handleOpenContact}
               className={pulse.service ? SPAN_THIRD : SPAN_FULL}
               t={t}
             />

@@ -1184,7 +1184,23 @@
       "selectParentCategory": "Wybierz kategorię nadrzędną",
       "parentHelpWithBoard": "Wybierz kategorię nadrzędną, aby utworzyć podkategorię, lub pozostaw puste dla poziomu najwyższego",
       "parentHelpWithoutBoard": "Najpierw wybierz tablicę albo kategorię nadrzędną, aby odziedziczyć jej tablicę",
-      "creating": "Tworzenie..."
+      "creating": "Tworzenie...",
+      "copyToBoard": "Kopiuj kategorie do innej tablicy",
+      "copyTitle": "Kopiuj kategorie do innej tablicy",
+      "copySourceLabel": "Wybierz tablicę źródłową",
+      "copyTargetLabel": "Wybierz tablicę docelową",
+      "copySelected": "Kopiuj wybrane",
+      "copySuccess": "Skopiowano {{created}} kategorii; pominięto {{skipped}} już istniejących.",
+      "copyFailed": "Nie udało się skopiować kategorii",
+      "copyEmpty": "Brak kategorii na tej tablicy.",
+      "copying": "Kopiowanie…",
+      "copySourceBoard": "Wybierz tablicę źródłową",
+      "copyTargetBoard": "Wybierz tablicę docelową",
+      "copyBoardTypeMismatch": "Kategorie zgłoszeń można kopiować tylko między tablicami tego samego typu kategorii.",
+      "copyConflicts_one": "{{count}} pominięta kategoria ma inną kategorię nadrzędną na tablicy docelowej.",
+      "copyConflicts_other": "{{count}} pominięte kategorie mają inną kategorię nadrzędną na tablicy docelowej.",
+      "copyConflicts_few": "{{count}} pominięte kategorie mają inną kategorię nadrzędną na tablicy docelowej.",
+      "copyConflicts_many": "{{count}} pominiętych kategorii ma inną kategorię nadrzędną na tablicy docelowej."
     },
     "display": {
       "responseStateTrackingTitle": "Śledzenie stanu odpowiedzi",
@@ -1588,7 +1604,11 @@
       "missingField": "Brakuje wymaganego pola listy kontrolnej.",
       "missingFieldNamed": "Brakuje wymaganego pola listy kontrolnej: {{field}}.",
       "referenceInvalid": "Wybrane zgłoszenie, szablon listy kontrolnej lub filtr reguły nie jest już prawidłowy. Odśwież stronę i spróbuj ponownie.",
-      "invalidValue": "Jedna z wartości listy kontrolnej jest nieprawidłowa. Odśwież stronę i spróbuj ponownie."
+      "invalidValue": "Jedna z wartości listy kontrolnej jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "ruleCategoryBoardMismatch": "Wybrana kategoria należy do innej tablicy niż reguła.",
+      "ruleCategoryInvalid": "Wybrana kategoria nie jest kategorią najwyższego poziomu.",
+      "ruleSubcategoryInvalid": "Wybrana podkategoria nie należy do wybranej kategorii.",
+      "ruleSubcategoryRequiresCategory": "Wybierz kategorię przed wybraniem podkategorii."
     }
   },
   "ticketSection": {
