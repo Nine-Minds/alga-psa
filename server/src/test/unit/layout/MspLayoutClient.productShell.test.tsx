@@ -194,6 +194,37 @@ describe('MspLayoutClient product shell behavior', () => {
     expect(await screen.findByTestId('license-banner')).toBeInTheDocument();
   });
 
+  it('checks onboarding once and keeps the license banner mounted across re-renders with a new router identity', async () => {
+    mockGetTenantSettings.mockResolvedValue({
+      tenant: 'tenant-1',
+      onboarding_completed: true,
+      onboarding_skipped: false,
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
+
+    const view = (
+      <MspLayoutClient
+        session={{ user: { tenant: 'tenant-1' } } as any}
+        productCode="psa"
+        needsOnboarding={false}
+        initialSidebarCollapsed={false}
+        selfHostLicensing={true}
+      >
+        <div>psa content</div>
+      </MspLayoutClient>
+    );
+    const { rerender } = render(view);
+
+    const banner = await screen.findByTestId('license-banner');
+    // useRouter() hands back a fresh object on every render in this suite.
+    rerender(view);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    expect(banner).toBeInTheDocument();
+    expect(mockGetTenantSettings).toHaveBeenCalledTimes(1);
+  });
+
   it('does not show the self-host license banner while onboarding is still required', async () => {
     mockGetTenantSettings.mockResolvedValue({
       tenant: 'tenant-1',
