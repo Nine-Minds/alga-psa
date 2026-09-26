@@ -73,7 +73,7 @@ export function registerEmailActions(): void {
       }
 
       const manager = new EmailProviderManager();
-      await manager.initialize({ ...settings, providerConfigs } as any);
+      await manager.initialize({ ...settings, providerConfigs });
       const providers = await manager.getAvailableProviders(tx.tenantId);
       const provider = providers[0] ?? null;
       if (!provider) {
@@ -82,32 +82,17 @@ export function registerEmailActions(): void {
 
       // Build content via static templating.
       const templateProcessor = new StaticTemplateProcessor(input.subject, input.html ?? '', input.text);
-      const content = await templateProcessor.process({ templateData: (input.template_data ?? {}) as any });
+      const content = await templateProcessor.process({ templateData: input.template_data ?? {} });
 
       // `from` remains for saved workflows for one release. Accept it only if
       // it matches a configured sender; delivery still uses the central resolver.
       let senderId = input.sender_id;
       if (input.from) {
         const address = input.from.email.toLowerCase();
-        const senders = settings.outboundSenders ?? [];
-        const routes = settings.outboundRoutes ?? [];
-        const classRoute = routes.find((route: any) => route.route_type === 'mail_class' && route.mail_class === input.mail_class);
-        const defaultRoute = routes.find((route: any) => route.route_type === 'default');
-        const effectiveRoute = classRoute?.sender_id ? classRoute : defaultRoute;
-        const effectiveRouteSender = senders.find((sender: any) => sender.sender_id === effectiveRoute?.sender_id);
-        const matchedSender = senders.find((sender: any) => sender.email_address?.toLowerCase() === address);
-        const effectiveDefault = effectiveRouteSender?.email_address
-          ?? TenantEmailService.getDefaultFromAddress?.(settings)?.email;
-        const acceptedSender = matchedSender ?? (effectiveRouteSender?.email_address?.toLowerCase() === address
-          ? effectiveRouteSender
-          : null);
-        if (!acceptedSender && effectiveDefault?.toLowerCase() !== address) {
+        const resolved = await TenantEmailService.resolveOutboundSenderForTenant?.({ tenantId: tx.tenantId, mailClass: input.mail_class ?? 'general', senderId }, settings, tx.trx);
+        if (!resolved || resolved.from.email.toLowerCase() !== address) {
           throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'The saved From address is not a configured sender or the effective default. Choose a sender identity.' });
         }
-        if (senderId && acceptedSender?.sender_id !== senderId) {
-          throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'The deprecated From address does not match sender_id' });
-        }
-        senderId = acceptedSender?.sender_id ?? senderId;
       }
 
       // Attachments via storage file refs.
@@ -160,7 +145,7 @@ export function registerEmailActions(): void {
             html: content.html,
             text: content.text,
             attachments: attachments.length ? attachments : undefined
-          } as any);
+          });
 
         if (!result.success) {
           throwActionError(ctx, { category: 'TransientError', code: 'TRANSIENT_FAILURE', message: result.error ?? 'Email send failed' });
@@ -169,14 +154,14 @@ export function registerEmailActions(): void {
         await writeRunAudit(ctx, tx, {
           operation: 'workflow_action:email.send',
           changedData: { to_count: input.to.length, cc_count: input.cc?.length ?? 0, bcc_count: input.bcc?.length ?? 0 },
-          details: { action_id: 'email.send', action_version: 1, message_id: (result as any).messageId ?? null }
+          details: { action_id: 'email.send', action_version: 1, message_id: result.messageId ?? null }
         });
 
         return {
           success: true,
-          message_id: (result as any).messageId ?? null,
-          provider_id: null,
-          provider_type: null,
+          message_id: result.messageId ?? null,
+          provider_id: result.providerId ?? null,
+          provider_type: result.providerType ?? null,
           status: 'sent' as const,
           sent_at: result.sentAt ? new Date(result.sentAt).toISOString() : null
         };

@@ -12,8 +12,6 @@ exports.up = async function up(knex) {
     table.timestamp('updated_at', { useTz: true }).notNullable().defaultTo(knex.fn.now());
     table.primary(['tenant', 'sender_id']);
     table.unique(['tenant', 'email_address']);
-    table.foreign('tenant').references('tenants.tenant').onDelete('CASCADE');
-    table.foreign(['microsoft_provider_id', 'tenant']).references(['id', 'tenant']).inTable('email_providers');
   });
 
   await knex.schema.createTable('email_sender_routes', (table) => {
@@ -27,9 +25,6 @@ exports.up = async function up(knex) {
     table.timestamp('created_at', { useTz: true }).notNullable().defaultTo(knex.fn.now());
     table.timestamp('updated_at', { useTz: true }).notNullable().defaultTo(knex.fn.now());
     table.primary(['tenant', 'route_id']);
-    table.foreign('tenant').references('tenants.tenant').onDelete('CASCADE');
-    table.foreign(['tenant', 'board_id']).references(['tenant', 'board_id']).inTable('boards').onDelete('CASCADE');
-    table.foreign(['tenant', 'sender_id']).references(['tenant', 'sender_id']).inTable('email_sender_addresses').onDelete('RESTRICT');
   });
 
   await knex.raw("ALTER TABLE email_sender_addresses ADD CONSTRAINT email_sender_addresses_status_check CHECK (verification_status IN ('unverified', 'verified', 'failed'))");
@@ -45,15 +40,25 @@ exports.up = async function up(knex) {
     await knex.raw("SELECT create_distributed_table('email_sender_routes', 'tenant')");
   }
 
+  await knex.raw('ALTER TABLE email_sender_addresses ADD CONSTRAINT email_sender_addresses_tenant_fk FOREIGN KEY (tenant) REFERENCES tenants(tenant) ON DELETE CASCADE');
+  await knex.raw('ALTER TABLE email_sender_addresses ADD CONSTRAINT email_sender_addresses_microsoft_provider_fk FOREIGN KEY (microsoft_provider_id, tenant) REFERENCES email_providers(id, tenant) ON DELETE RESTRICT');
+  await knex.raw('ALTER TABLE email_sender_routes ADD CONSTRAINT email_sender_routes_tenant_fk FOREIGN KEY (tenant) REFERENCES tenants(tenant) ON DELETE CASCADE');
+  await knex.raw('ALTER TABLE email_sender_routes ADD CONSTRAINT email_sender_routes_board_fk FOREIGN KEY (tenant, board_id) REFERENCES boards(tenant, board_id) ON DELETE CASCADE');
+  await knex.raw('ALTER TABLE email_sender_routes ADD CONSTRAINT email_sender_routes_sender_fk FOREIGN KEY (tenant, sender_id) REFERENCES email_sender_addresses(tenant, sender_id) ON DELETE RESTRICT');
+
   await knex.raw(`
     INSERT INTO email_sender_addresses
       (tenant, email_address, display_name, microsoft_provider_id, verification_status)
     SELECT tes.tenant, lower(trim(tes.ticketing_from_email)), coalesce(nullif(trim(tes.ticketing_from_name), ''), nullif(trim(ep.sender_display_name), '')),
-      ep.id, 'verified'
+      ep.id, CASE WHEN lower(tes.email_provider) = 'resend' AND ed.domain_name IS NULL THEN 'unverified' ELSE 'verified' END
     FROM tenant_email_settings tes
     LEFT JOIN email_providers ep
       ON ep.tenant = tes.tenant AND lower(ep.mailbox) = lower(trim(tes.ticketing_from_email))
       AND ep.provider_type = 'microsoft'
+    LEFT JOIN email_domains ed
+      ON ed.tenant = tes.tenant
+      AND ed.domain_name = lower(split_part(trim(tes.ticketing_from_email), '@', 2))
+      AND ed.status = 'verified'
     WHERE nullif(trim(tes.ticketing_from_email), '') IS NOT NULL
     ON CONFLICT (tenant, email_address) DO NOTHING
   `);

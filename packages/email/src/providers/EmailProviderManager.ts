@@ -131,6 +131,12 @@ export class EmailProviderManager implements IEmailProviderManager {
     }
   }
 
+  async validateMicrosoftProvider(providerId: string, tenantId: string): Promise<void> {
+    const config = this.tenantSettings.get(tenantId)?.providerConfigs.find((item) => item.providerType === 'microsoft' && item.isEnabled);
+    if (!config) throw new EmailProviderError('No Microsoft mailbox is configured for this tenant.', providerId, 'microsoft', false, 'MICROSOFT_PROVIDER_NOT_CONFIGURED');
+    await this.resolveMicrosoftProviderConfig(tenantId, config, providerId);
+  }
+
   async sendBulkEmails(messages: EmailMessage[], tenantId: string): Promise<EmailSendResult[]> {
     const provider = this.providers.get(tenantId);
     

@@ -21,6 +21,7 @@ import { SupportedLocale, LOCALE_CONFIG, isSupportedLocale } from '../lib/locale
 import { resolveEmailLocale } from '../emailLocaleResolver';
 import Handlebars from 'handlebars';
 import { applyFromNameOverride } from '../senderIdentity';
+import { TenantEmailService } from '../TenantEmailService';
 
 const SYSTEM_EMAIL_TEMPLATE_LOOKUP_TENANT = '__system_email_template_lookup__';
 
@@ -32,6 +33,7 @@ interface SystemProviderSnapshot {
 
 // Extend BaseEmailParams for system-specific parameters
 export interface SystemEmailParams extends Omit<BaseEmailParams, 'mailClass'> {
+  to: BaseEmailParams['to'];
   subject?: string;
   html?: string;
   text?: string;
@@ -275,6 +277,14 @@ export class SystemEmailService extends BaseEmailService {
     });
   }
 
+  /** Send tenant-scoped appointment mail through tenant routing, then retain the established system fallback. */
+  public async sendTenantScopedEmail(params: SystemEmailParams, mailClass: import('@alga-psa/types').OutboundMailClass): Promise<EmailSendResult> {
+    if (!params.tenantId) return this.sendEmail(params);
+    const result = await TenantEmailService.getInstance(params.tenantId).sendEmail({ ...params, to: params.to, mailClass });
+    if (result.success || result.providerId === 'system-email-provider') return result;
+    return this.sendEmail(params);
+  }
+
   public override async isConfigured(): Promise<boolean> {
     const providerSnapshot = await this.refreshProviderState();
     return providerSnapshot.emailProvider !== null;
@@ -444,14 +454,14 @@ export class SystemEmailService extends BaseEmailService {
       template = this.getAppointmentRequestReceivedFallback(data);
     }
 
-    return this.sendEmail({
+    return this.sendTenantScopedEmail({
       to: data.requesterEmail,
       subject: template.subject,
       html: template.html,
       text: template.text,
       locale,
       tenantId: options?.tenantId
-    });
+    }, 'scheduling');
   }
 
   /**
@@ -488,7 +498,7 @@ export class SystemEmailService extends BaseEmailService {
       contentType: 'text/calendar; charset=utf-8; method=REQUEST'
     }] : undefined;
 
-    return this.sendEmail({
+    return this.sendTenantScopedEmail({
       to: data.requesterEmail,
       subject: template.subject,
       html: template.html,
@@ -496,7 +506,7 @@ export class SystemEmailService extends BaseEmailService {
       locale,
       tenantId: options?.tenantId,
       attachments
-    });
+    }, 'scheduling');
   }
 
   /**
@@ -528,7 +538,7 @@ export class SystemEmailService extends BaseEmailService {
       contentType: 'text/calendar; charset=utf-8; method=REQUEST'
     }] : undefined;
 
-    return this.sendEmail({
+    return this.sendTenantScopedEmail({
       to: data.technicianEmail,
       subject: template.subject,
       html: template.html,
@@ -536,7 +546,7 @@ export class SystemEmailService extends BaseEmailService {
       locale,
       tenantId: options?.tenantId,
       attachments
-    });
+    }, 'scheduling');
   }
 
   /**
@@ -566,14 +576,14 @@ export class SystemEmailService extends BaseEmailService {
       template = this.getAppointmentRequestDeclinedFallback(data);
     }
 
-    return this.sendEmail({
+    return this.sendTenantScopedEmail({
       to: data.requesterEmail,
       subject: template.subject,
       html: template.html,
       text: template.text,
       locale,
       tenantId: options?.tenantId
-    });
+    }, 'scheduling');
   }
 
   /**

@@ -225,7 +225,7 @@ export class TenantEmailService extends BaseEmailService {
     );
     params.resolvedTenantEmailSettings = providerSnapshot.settings;
 
-    if (this.tenantSettings && params.mailClass) {
+    if (providerSnapshot.settings && params.mailClass) {
       const sender = resolveOutboundSender({
         tenantId: this.tenantId,
         mailClass: params.mailClass,
@@ -234,8 +234,8 @@ export class TenantEmailService extends BaseEmailService {
         from: params.from,
         fromName: params.fromName,
         allowUnverifiedSender: params.allowUnverifiedSender,
-      }, this.tenantSettings, resolvedTenantCompanyName, params.boardName).sender;
-      if (sender && this.tenantSettings.emailProvider === 'resend') {
+      }, providerSnapshot.settings, resolvedTenantCompanyName, params.boardName).sender;
+      if (sender && providerSnapshot.settings.emailProvider === 'resend') {
         const domain = sender.email_address.split('@').at(-1)?.toLowerCase();
         const verifiedDomain = domain && await tenantDb(suspensionKnex, this.tenantId).table('email_domains')
           .where({ domain_name: domain, status: 'verified' }).first('domain_name');
@@ -244,7 +244,20 @@ export class TenantEmailService extends BaseEmailService {
           await tenantDb(suspensionKnex, this.tenantId).table('email_sender_addresses')
             .where({ sender_id: sender.sender_id }).update({ last_verification_error: message, verification_status: 'failed', updated_at: new Date() });
           await TenantEmailService.invalidateTenantSettings(this.tenantId);
+          await this.logSenderValidationFailure(params, providerSnapshot.settings, message);
           throw new Error(message);
+        }
+      }
+      if (sender?.microsoft_provider_id && providerSnapshot.settings.emailProvider === 'microsoft') {
+        try {
+          if (!this.providerManager) throw new Error('Microsoft provider manager is unavailable.');
+          await this.providerManager.validateMicrosoftProvider(sender.microsoft_provider_id, this.tenantId);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          await tenantDb(suspensionKnex, this.tenantId).table('email_sender_addresses')
+            .where({ sender_id: sender.sender_id }).update({ last_verification_error: message, updated_at: new Date() });
+          await this.logSenderValidationFailure(params, providerSnapshot.settings, message);
+          throw error;
         }
       }
     }
@@ -259,6 +272,33 @@ export class TenantEmailService extends BaseEmailService {
         resolvedSystemFallbackFromAddress: providerSnapshot.systemFallbackFromAddress,
         resolvedSystemFallbackReplyTo: providerSnapshot.fromAddress,
       } : {}),
+    });
+  }
+
+  private async logSenderValidationFailure(params: BaseEmailParams, settings: TenantEmailSettings, error: string): Promise<void> {
+    const resolved = resolveOutboundSender({
+      tenantId: this.tenantId,
+      mailClass: params.mailClass,
+      boardId: params.boardId,
+      senderId: params.senderId,
+      from: params.from,
+      fromName: params.fromName,
+      allowUnverifiedSender: true,
+    }, settings, params.resolvedTenantCompanyName, params.boardName);
+    const recipients = Array.isArray(params.to) ? params.to : [params.to];
+    await this.logEmailSendResult({
+      tenantId: this.tenantId,
+      providerResult: { success: false, providerId: 'sender-validation', providerType: 'validation', error, sentAt: new Date() },
+      message: {
+        from: resolved.from,
+        to: recipients.map((value) => typeof value === 'string' ? { email: value } : value),
+        subject: typeof params.subject === 'string' ? params.subject : 'Outbound sender validation failed',
+      },
+      entityType: params.entityType,
+      entityId: params.entityId,
+      contactId: params.contactId,
+      notificationSubtypeId: params.notificationSubtypeId,
+      replyContext: params.replyContext,
     });
   }
 
@@ -520,6 +560,8 @@ export class TenantEmailService extends BaseEmailService {
       from: params.from,
       fromName: params.fromName,
       tenantId,
+      boardId: params.boardId,
+      senderId: params.senderId,
       locale: params.locale
     };
 
@@ -793,5 +835,14 @@ export class TenantEmailService extends BaseEmailService {
     tenantCompanyName?: string | null
   ): EmailAddress {
     return resolveDefaultFromAddress(settings, tenantCompanyName);
+  }
+
+  static resolveOutboundSender(request: { tenantId: string; mailClass: import('@alga-psa/types').OutboundMailClass; senderId?: string }, settings: TenantEmailSettings, companyName?: string | null) {
+    return resolveOutboundSender(request, settings, companyName);
+  }
+
+  static async resolveOutboundSenderForTenant(request: { tenantId: string; mailClass: import('@alga-psa/types').OutboundMailClass; senderId?: string }, settings: TenantEmailSettings, knex: Knex | Knex.Transaction) {
+    const companyName = await resolveTenantCompanyName(knex, request.tenantId);
+    return resolveOutboundSender(request, settings, companyName);
   }
 }

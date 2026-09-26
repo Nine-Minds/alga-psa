@@ -1327,6 +1327,15 @@ export const deleteEmailProvider = withAuth(async (
   providerId: string
 ): Promise<{ success: true } | EmailProviderActionError> => {
   try {
+    const { knex } = await createTenantKnex();
+    const routedSender = await tenantDb(knex, tenant).table('email_sender_addresses')
+      .where({ microsoft_provider_id: providerId }).first('email_address');
+    if (routedSender) {
+      return actionError(
+        `Cannot delete this Microsoft mailbox while sender ${routedSender.email_address} uses it. Reassign or delete that sender first.`,
+        'msp/email-providers:errors.provider.senderInUse'
+      );
+    }
     await new EmailProviderService().deleteProvider(providerId, tenant);
     return { success: true };
   } catch (error) {

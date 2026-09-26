@@ -71,4 +71,14 @@ describe('resolveOutboundSender', () => {
     expect(resolveOutboundSender({ tenantId: tenant, mailClass: 'ticket' }, { ...settings, outboundRoutes: classNamed }).from)
       .toEqual({ email: 'support@example.test', name: 'Class name' });
   });
+
+  it('uses board routing for ticket surveys and permits saved SMTP relay identities', () => {
+    const unverifiedSmtp: TenantEmailSettings = {
+      ...settings,
+      emailProvider: 'smtp',
+      outboundSenders: settings.outboundSenders?.map(sender => sender.sender_id === 'billing' ? { ...sender, verification_status: 'unverified' } : sender),
+      outboundRoutes: settings.outboundRoutes?.map(route => route.route_id === 'board' ? { ...route, sender_id: 'billing', display_name: null } : route),
+    };
+    expect(resolveOutboundSender({ tenantId: tenant, mailClass: 'survey', boardId: 'board-1' }, unverifiedSmtp).from.email).toBe('billing@example.test');
+  });
 });

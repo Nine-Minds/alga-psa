@@ -35,7 +35,7 @@ export function resolveOutboundSender(
   }
 
   const matchingRoutes = !explicitSender ? [
-    ...(request.mailClass === 'ticket' && request.boardId
+    ...((request.mailClass === 'ticket' || request.mailClass === 'survey') && request.boardId
       ? routes.filter((item) => item.route_type === 'board' && item.board_id === request.boardId)
       : []),
     ...routes.filter((item) => item.route_type === 'mail_class' && item.mail_class === request.mailClass),
@@ -54,7 +54,7 @@ export function resolveOutboundSender(
     break;
   }
   const selectedSender = explicitSender ?? routeSender;
-  if (selectedSender && selectedSender.verification_status !== 'verified' && !request.allowUnverifiedSender) {
+  if (selectedSender && selectedSender.verification_status !== 'verified' && !request.allowUnverifiedSender && settings.emailProvider !== 'smtp') {
     throw new Error(`Outbound sender ${selectedSender.email_address} is ${selectedSender.verification_status} and cannot be used for ${route?.route_type ?? 'this send'} routing`);
   }
   const legacy = !explicitSender && !routeSender && !route?.display_name && request.from
