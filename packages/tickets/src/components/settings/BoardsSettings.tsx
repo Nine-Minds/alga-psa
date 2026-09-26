@@ -59,7 +59,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
-import { clearEmailSenderRoute, listEmailSenders, setEmailSenderRoute } from '@alga-psa/integrations/actions';
+import { clearEmailSenderRoute, listEmailSenders, setEmailSenderRoute } from '@alga-psa/integrations/emailSenderActions';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import type { ColumnDefinition } from '@alga-psa/types';
 import {

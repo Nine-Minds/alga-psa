@@ -874,7 +874,35 @@
         "errorTitle": "Absenderidentität für Tickets korrigieren",
         "clearButton": "Absenderidentität für Tickets löschen",
         "savingButton": "Wird gespeichert...",
-        "saveButton": "Absenderidentitäten speichern"
+        "saveButton": "Absenderidentitäten speichern",
+        "addresses": {
+          "title": "Absenderadressen",
+          "description": "Erstelle benannte Adressen für ausgehende E-Mails."
+        },
+        "routing": {
+          "title": "Absenderzuordnung",
+          "description": "Wähle den Absender für jede E-Mail-Klasse.",
+          "default": "Standard (alle übrigen E-Mails)",
+          "useDefault": "Standard verwenden",
+          "sender": "Absender",
+          "displayName": "Anzeigename",
+          "boardSummary": "Ticketabsender pro Board werden in den Einstellungen des jeweiligen Boards verwaltet."
+        },
+        "actions": {
+          "add": "Absender hinzufügen",
+          "verify": "Verifizieren",
+          "delete": "Löschen"
+        },
+        "fields": {
+          "address": "E-Mail-Adresse",
+          "localPart": "Adressname",
+          "domain": "Verifizierte Domain",
+          "sendThrough": "Senden über",
+          "displayName": "Anzeigename",
+          "displayNamePlaceholder": "Supportteam"
+        },
+        "smtpHelp": "Dein SMTP-Relay muss diese Adresse erlauben.",
+        "microsoftHelp": "Das verbundene Postfach benötigt die Exchange-Berechtigung „Send As“ für diese Adresse."
       }
     },
     "inbound": {

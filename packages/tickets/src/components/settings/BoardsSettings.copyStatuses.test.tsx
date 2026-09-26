@@ -39,6 +39,12 @@ vi.mock('@alga-psa/tickets/actions', () => ({
   deleteBoardAutoCloseRule: vi.fn(),
 }));
 
+vi.mock('@alga-psa/integrations/emailSenderActions', () => ({
+  clearEmailSenderRoute: vi.fn(),
+  listEmailSenders: vi.fn(async () => ({ senders: [], routes: [] })),
+  setEmailSenderRoute: vi.fn(),
+}));
+
 vi.mock('@alga-psa/tickets/actions/board-actions/boardActions', () => ({
   getAllBoards: (...args: unknown[]) => getAllBoardsMock(...args),
   getBoardListStats: () => Promise.resolve({}),

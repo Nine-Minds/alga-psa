@@ -226,7 +226,35 @@
         "companyFallback": "la empresa de su inquilino"
       },
       "warningTitle": "Revise el enrutamiento de respuestas",
-      "errorTitle": "Corrija la identidad de tickets"
+      "errorTitle": "Corrija la identidad de tickets",
+      "addresses": {
+        "title": "Direcciones de remitente",
+        "description": "Crea direcciones con nombre para tus correos salientes."
+      },
+      "routing": {
+        "title": "Enrutamiento de remitentes",
+        "description": "Elige qué remitente se usa para cada tipo de correo.",
+        "default": "Predeterminado (resto del correo)",
+        "useDefault": "Usar predeterminado",
+        "sender": "Remitente",
+        "displayName": "Nombre mostrado",
+        "boardSummary": "Los remitentes de tickets por tablero se administran en la configuración de cada tablero."
+      },
+      "actions": {
+        "add": "Añadir remitente",
+        "verify": "Verificar",
+        "delete": "Eliminar"
+      },
+      "fields": {
+        "address": "Dirección de correo",
+        "localPart": "Nombre de dirección",
+        "domain": "Dominio verificado",
+        "sendThrough": "Enviar mediante",
+        "displayName": "Nombre mostrado",
+        "displayNamePlaceholder": "Equipo de soporte"
+      },
+      "smtpHelp": "Tu servidor SMTP debe permitir esta dirección.",
+      "microsoftHelp": "El buzón conectado necesita permiso Send As de Exchange para esta dirección."
     }
   },
   "microsoft365": {

@@ -226,7 +226,35 @@
         "companyFallback": "uw tenantbedrijf"
       },
       "warningTitle": "Antwoordroutering controleren",
-      "errorTitle": "Ticketidentiteit corrigeren"
+      "errorTitle": "Ticketidentiteit corrigeren",
+      "addresses": {
+        "title": "Afzenderadressen",
+        "description": "Maak benoemde adressen voor uitgaande e-mail."
+      },
+      "routing": {
+        "title": "Afzenderroutering",
+        "description": "Kies welke afzender voor elke e-mailklasse wordt gebruikt.",
+        "default": "Standaard (alle overige e-mail)",
+        "useDefault": "Standaard gebruiken",
+        "sender": "Afzender",
+        "displayName": "Weergavenaam",
+        "boardSummary": "Ticketafzenders per bord beheer je in de instellingen van elk bord."
+      },
+      "actions": {
+        "add": "Afzender toevoegen",
+        "verify": "Verifiëren",
+        "delete": "Verwijderen"
+      },
+      "fields": {
+        "address": "E-mailadres",
+        "localPart": "Adresnaam",
+        "domain": "Geverifieerd domein",
+        "sendThrough": "Verzenden via",
+        "displayName": "Weergavenaam",
+        "displayNamePlaceholder": "Supportteam"
+      },
+      "smtpHelp": "Je SMTP-relay moet dit adres toestaan.",
+      "microsoftHelp": "De verbonden mailbox heeft Exchange Send As-rechten voor dit adres nodig."
     }
   },
   "microsoft365": {

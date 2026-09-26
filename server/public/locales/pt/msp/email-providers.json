@@ -874,7 +874,35 @@
         "errorTitle": "Corrija a identidade dos tickets",
         "clearButton": "Limpar identidade dos tickets",
         "savingButton": "Salvando...",
-        "saveButton": "Salvar identidades dos remetentes"
+        "saveButton": "Salvar identidades dos remetentes",
+        "addresses": {
+          "title": "Endereços do remetente",
+          "description": "Crie endereços nomeados para seus e-mails enviados."
+        },
+        "routing": {
+          "title": "Roteamento de remetentes",
+          "description": "Escolha qual remetente será usado em cada classe de e-mail.",
+          "default": "Padrão (todos os outros e-mails)",
+          "useDefault": "Usar padrão",
+          "sender": "Remetente",
+          "displayName": "Nome de exibição",
+          "boardSummary": "Os remetentes de tickets por quadro são gerenciados nas configurações de cada quadro."
+        },
+        "actions": {
+          "add": "Adicionar remetente",
+          "verify": "Verificar",
+          "delete": "Excluir"
+        },
+        "fields": {
+          "address": "Endereço de e-mail",
+          "localPart": "Nome do endereço",
+          "domain": "Domínio verificado",
+          "sendThrough": "Enviar por",
+          "displayName": "Nome de exibição",
+          "displayNamePlaceholder": "Equipe de suporte"
+        },
+        "smtpHelp": "Seu relay SMTP precisa permitir este endereço.",
+        "microsoftHelp": "A caixa conectada precisa da permissão Exchange Send As para este endereço."
       }
     },
     "inbound": {

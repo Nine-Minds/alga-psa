@@ -10,7 +10,6 @@ import { StaticTemplateProcessor, TenantEmailService } from '@alga-psa/email';
 import { formatCurrency, dateValueToDate, isValidEmail, enqueueImmediateJob } from '@alga-psa/core';
 import { resolveEmailLocale, getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import Handlebars from 'handlebars';
-import fs from 'fs/promises';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -467,8 +466,6 @@ export const sendInvoiceEmailAction = withAuth(async (
   const companyName = tenantParty?.name || 'Your Company';
 
   for (const invoiceId of invoiceIds) {
-    let tempPdfPath: string | null = null;
-
     try {
       const invoice = await getInvoiceForRendering(invoiceId);
       if (isInvoiceJobActionError(invoice)) {
@@ -534,9 +531,6 @@ export const sendInvoiceEmailAction = withAuth(async (
       });
 
       const { buffer } = await StorageService.downloadFile(file_id);
-      tempPdfPath = `/tmp/invoice_${invoice.invoice_number}_${Date.now()}.pdf`;
-      await fs.writeFile(tempPdfPath, buffer);
-      const pdfBuffer = await fs.readFile(tempPdfPath);
 
       const currencyCode = (invoice as any).currencyCode || 'USD';
       const amountLocale = await getTenantDefaultLocale(tenant, 'client');
@@ -623,7 +617,7 @@ export const sendInvoiceEmailAction = withAuth(async (
         attachments: [
           {
             filename: `Invoice_${invoice.invoice_number}.pdf`,
-            content: pdfBuffer,
+            content: buffer,
             contentType: 'application/pdf',
           },
         ],
@@ -667,14 +661,6 @@ export const sendInvoiceEmailAction = withAuth(async (
         error: INVOICE_EMAIL_SEND_FAILURE,
         messageKey: 'msp/invoicing:errors.jobs.sendFailed',
       });
-    } finally {
-      if (tempPdfPath) {
-        try {
-          await fs.unlink(tempPdfPath);
-        } catch {
-          // ignore
-        }
-      }
     }
   }
 

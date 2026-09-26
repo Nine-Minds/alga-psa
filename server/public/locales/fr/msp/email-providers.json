@@ -874,7 +874,35 @@
         "errorTitle": "Corrigez l'identité e-mail des tickets",
         "clearButton": "Effacer l'identité des tickets",
         "savingButton": "Enregistrement…",
-        "saveButton": "Enregistrer les identités d'expéditeur"
+        "saveButton": "Enregistrer les identités d'expéditeur",
+        "addresses": {
+          "title": "Adresses d’expéditeur",
+          "description": "Créez des adresses nommées pour vos e-mails sortants."
+        },
+        "routing": {
+          "title": "Routage des expéditeurs",
+          "description": "Choisissez l’expéditeur utilisé pour chaque catégorie d’e-mail.",
+          "default": "Par défaut (tous les autres e-mails)",
+          "useDefault": "Utiliser la valeur par défaut",
+          "sender": "Expéditeur",
+          "displayName": "Nom affiché",
+          "boardSummary": "Les expéditeurs des tickets par tableau se gèrent dans les paramètres de chaque tableau."
+        },
+        "actions": {
+          "add": "Ajouter",
+          "verify": "Vérifier",
+          "delete": "Supprimer"
+        },
+        "fields": {
+          "address": "Adresse e-mail",
+          "localPart": "Nom de l’adresse",
+          "domain": "Domaine vérifié",
+          "sendThrough": "Envoyer via",
+          "displayName": "Nom affiché",
+          "displayNamePlaceholder": "Équipe Assistance"
+        },
+        "smtpHelp": "Votre relais SMTP doit autoriser cette adresse.",
+        "microsoftHelp": "La boîte connectée doit disposer de l’autorisation Exchange Send As pour cette adresse."
       }
     },
     "inbound": {

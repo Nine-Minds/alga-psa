@@ -874,7 +874,35 @@
         "errorTitle": "Popraw tożsamość nadawcy zgłoszeń",
         "clearButton": "Wyczyść tożsamość nadawcy zgłoszeń",
         "savingButton": "Zapisywanie...",
-        "saveButton": "Zapisz tożsamości nadawców"
+        "saveButton": "Zapisz tożsamości nadawców",
+        "addresses": {
+          "title": "Adresy nadawców",
+          "description": "Twórz nazwane adresy do wysyłania poczty."
+        },
+        "routing": {
+          "title": "Reguły nadawców",
+          "description": "Wybierz nadawcę dla każdej klasy wiadomości.",
+          "default": "Domyślny (pozostała poczta)",
+          "useDefault": "Użyj domyślnego",
+          "sender": "Nadawca",
+          "displayName": "Nazwa wyświetlana",
+          "boardSummary": "Nadawców wiadomości zgłoszeń dla tablicy ustawisz w ustawieniach tej tablicy."
+        },
+        "actions": {
+          "add": "Dodaj nadawcę",
+          "verify": "Zweryfikuj",
+          "delete": "Usuń"
+        },
+        "fields": {
+          "address": "Adres e-mail",
+          "localPart": "Nazwa adresu",
+          "domain": "Zweryfikowana domena",
+          "sendThrough": "Wysyłaj przez",
+          "displayName": "Nazwa wyświetlana",
+          "displayNamePlaceholder": "Zespół pomocy"
+        },
+        "smtpHelp": "Twój serwer SMTP musi zezwalać na ten adres.",
+        "microsoftHelp": "Połączona skrzynka musi mieć uprawnienie Exchange Send As dla tego adresu."
       }
     },
     "inbound": {
