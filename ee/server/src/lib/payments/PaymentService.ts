@@ -10,8 +10,7 @@
  */
 
 import { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
-import { getConnection } from 'server/src/lib/db/db';
+import { getConnection, tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import {
   PaymentProvider,

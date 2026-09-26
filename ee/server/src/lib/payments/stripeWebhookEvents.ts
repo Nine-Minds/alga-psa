@@ -1,7 +1,7 @@
 import Stripe from 'stripe';
 import { tenantDb } from '@alga-psa/db';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { getConnection } from 'server/src/lib/db/db';
+import { getConnection } from '@alga-psa/db';
 import type { IPaymentProviderConfig } from 'server/src/interfaces/payment.interfaces';
 
 /**

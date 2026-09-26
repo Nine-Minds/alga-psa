@@ -7,8 +7,10 @@ const expireActiveLinksForInvoice = vi.fn();
 const getOrCreatePaymentLink = vi.fn();
 const currentPaymentMethod = { payment_method_id: 'pm-new', external_payment_method_id: 'stripe-pm-new', external_customer_id: 'cus-1' };
 
-vi.mock('server/src/lib/db/db', () => ({ getConnection: vi.fn() }));
-vi.mock('@alga-psa/db', () => ({ tenantDb: vi.fn((knex: any) => ({ table: (name: string) => knex.table(name) })) }));
+vi.mock('@alga-psa/db', () => ({
+  getConnection: vi.fn(),
+  tenantDb: vi.fn((knex: any) => ({ table: (name: string) => knex.table(name) })),
+}));
 vi.mock('../../lib/payments/PaymentService', () => ({ PaymentService: { create: vi.fn(async () => ({ recordAutoPaySuccess, expireActiveLinksForInvoice, getOrCreatePaymentLink })) } }));
 vi.mock('../../lib/payments/StripePaymentProvider', () => ({ createStripePaymentProvider: vi.fn(() => ({ chargeSavedPaymentMethod: stripeCharge, retrieveAttemptPaymentIntent })) }));
 vi.mock('../../lib/temporal/invoiceAutopay', () => ({ startInvoiceAutopay: vi.fn(), signalInvoiceAutopay: vi.fn(), signalProfileAutopayChanged: vi.fn() }));
@@ -16,7 +18,7 @@ vi.mock('../../lib/payments/stripeWebhookEvents', () => ({ reconcileStripeWebhoo
 vi.mock('@alga-psa/email', () => ({ getSystemEmailService: vi.fn() }));
 vi.mock('server/src/lib/eventBus/publishers', () => ({ publishWorkflowEvent: vi.fn() }));
 
-import { getConnection } from 'server/src/lib/db/db';
+import { getConnection } from '@alga-psa/db';
 import { AutopayService } from '../../lib/payments/AutopayService';
 
 function makeKnex(updatedAt = new Date(), invoiceStatus = 'sent') {

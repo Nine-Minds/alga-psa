@@ -14,7 +14,7 @@
 import Stripe from 'stripe';
 import { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import { getConnection } from 'server/src/lib/db/db';
+import { getConnection } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { buildAutopayPaymentIntentRequest, mapStripeAutopayError } from './stripeAutopayParams';

@@ -1,7 +1,7 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
-import { getConnection } from 'server/src/lib/db/db';
+import { getConnection } from '@alga-psa/db';
 import { computeBalanceDue } from '@alga-psa/billing/services/accountingSync/recordExternalPayment';
 import { PaymentService } from './PaymentService';
 import { createStripePaymentProvider } from './StripePaymentProvider';

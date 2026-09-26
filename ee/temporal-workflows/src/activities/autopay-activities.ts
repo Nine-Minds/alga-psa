@@ -1,6 +1,6 @@
 import { ApplicationFailure } from '@temporalio/common';
 import { AutopayService } from '@ee/lib/payments/AutopayService';
-import { getConnection } from 'server/src/lib/db/db';
+import { getConnection } from '@alga-psa/db';
 import { getTemporalClient } from '@ee/lib/temporal/client';
 
 function failValidation(error: unknown): never {
