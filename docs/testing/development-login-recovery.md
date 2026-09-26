@@ -33,9 +33,20 @@ Smoke Test through the private test handoff.
 
 Smoke Test should open `http://127.0.0.1:3927/auth/msp/signin` after confirming
 the service and worktree behind port 3927. The service operator should provide
-the verified startup credential through the private handoff (or arrange a
-development boot with `DEV_LOGIN_PASSWORD` set in the service's secret store).
-Smoke Test then verifies sign-in and session persistence, input hydration and
-the Google SSO label, priority color save/reload persistence, Enter to commit a
-hex draft, and Cancel to discard it. Plain PostgreSQL does not validate Citus
-distribution-column compatibility.
+the configured credential from this worktree's private, ignored
+`server/.env.local` file (mode `0600`). Never copy it into a ticket or durable
+report.
+For this recovery, the effective secret from the same file was confirmed to
+match the hash verification secret. A fresh process with inherited auth and
+password variables unset loaded that file, verified the stored hash, and
+successfully authenticated `glinda@emeraldcity.oz` through `authenticateUser`
+against the configured `server` database. The one-time recovery flag was
+removed; `DEV_LOGIN_PASSWORD` remains configured, so the next Next.js service
+boot loads and reports the matching credential. The worktree's configured
+port `3927` had no listener during this implementation step.
+
+Smoke Test now only needs the browser checks: authenticate and reload to
+confirm the session persists, confirm sign-in input hydration and the Google
+SSO label, and change a priority hex color, save/reload, and check Enter commits
+the draft while Cancel discards it. This plain PostgreSQL database does not
+validate Citus distribution-column compatibility.
