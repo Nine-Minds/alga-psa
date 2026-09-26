@@ -62,6 +62,19 @@ export function setDeepLinkSignedIn(next: boolean): void {
   signedIn = next;
 }
 
+/**
+ * True when the next container mount will be driven by a deep link. React
+ * Navigation never calls `getInitialURL` while an `initialState` is supplied,
+ * so restored navigation state must be skipped in that case or the link is
+ * silently lost and the app opens on the last-visited screen instead.
+ */
+export async function hasPendingDeepLink(): Promise<boolean> {
+  if (pendingUrl) return true;
+  const url = await Linking.getInitialURL();
+  if (!url || url === consumedInitialUrl) return false;
+  return safeDeepLinkUrl(url) !== null;
+}
+
 function requiresSession(url: string): boolean {
   return url.startsWith("alga://ticket/");
 }
