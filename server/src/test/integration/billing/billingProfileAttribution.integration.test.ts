@@ -3,6 +3,7 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
 import { tenantDb } from '@alga-psa/db';
+import { buildContractCadenceDueSelectionInput } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 import { setupCommonMocks } from '../../../../test-utils/testMocks';
 import {
@@ -26,7 +27,7 @@ import {
 } from '../../../../test-utils/billingProfileTestHelpers';
 
 /**
- * S2 — charge attribution (T010, T014, T016, T017).
+ * S2 — charge attribution and payment-method snapshots (T004, T010, T014, T016, T017).
  *
  * The exit criterion of the resolver slice is a property, not an example:
  * **every row written to `invoice_charges` carries a non-null
@@ -98,6 +99,7 @@ let tenantId: string;
 let userId: string;
 
 let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration')['generateInvoice'];
+let generateInvoiceForSelectionInput: typeof import('@alga-psa/billing/actions/invoiceGeneration')['generateInvoiceForSelectionInput'];
 let syncRecurringServicePeriodsForContractLine:
   typeof import('@alga-psa/billing/actions/recurringServicePeriodSync')['syncRecurringServicePeriodsForContractLine'];
 
@@ -214,7 +216,7 @@ async function chargesFor(invoiceId: string) {
     .select('item_id', 'description', 'net_amount', 'billing_profile_id', 'billing_profile_source');
 }
 
-describe('billing profiles S2 — charge attribution (T010, T014, T016, T017)', () => {
+describe('billing profiles S2 — charge attribution and snapshots (T004, T010, T014, T016, T017)', () => {
   beforeAll(async () => {
     process.env.APP_ENV = process.env.APP_ENV || 'test';
     // A dedicated database: the shared `test_database` is recreated by every
@@ -248,6 +250,7 @@ describe('billing profiles S2 — charge attribution (T010, T014, T016, T017)', 
     await ensureClientPlanBundlesTable({ db, tenantId } as any);
 
     ({ generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
+    ({ generateInvoiceForSelectionInput } = await import('@alga-psa/billing/actions/invoiceGeneration'));
     ({ syncRecurringServicePeriodsForContractLine } = await import(
       '@alga-psa/billing/actions/recurringServicePeriodSync'
     ));
@@ -362,6 +365,143 @@ describe('billing profiles S2 — charge attribution (T010, T014, T016, T017)', 
         `charge "${charge.description}" has no attribution source`,
       ).toBeTruthy();
     }
+  }, HOOK_TIMEOUT);
+
+  it('T004: generated invoices snapshot each profile payment method and keep it after profile edits', async () => {
+    const { clientId, cycleId: cardCycleId } = await seedClient('T004 Payment Method Snapshot Client');
+    await table('clients').where({ client_id: clientId }).update({
+      preferred_payment_method: 'credit_card',
+    });
+
+    const cardProfileId = await ensureDefaultBillingProfile(
+      { db, tenantId },
+      clientId,
+      { name: 'Card Site' },
+    );
+    const checkProfileId = await createBillingProfile(
+      { db, tenantId },
+      clientId,
+      'Check Site',
+    );
+    await table('client_billing_profiles')
+      .where({ billing_profile_id: checkProfileId })
+      .update({ preferred_payment_method: 'check' });
+
+    const checkCycleId = uuidv4();
+    await seedBillingCycle(db, tenantId, {
+      billing_cycle_id: checkCycleId,
+      tenant: tenantId,
+      client_id: clientId,
+      billing_profile_id: checkProfileId,
+      billing_cycle: 'monthly',
+      effective_date: `${JANUARY_START}T00:00:00Z`,
+      period_start_date: `${JANUARY_START}T00:00:00Z`,
+      period_end_date: `${FEBRUARY_START}T00:00:00Z`,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+
+    await assignServiceTaxRate({ db, tenantId, clientId } as any, '*', 'US-NY', {
+      onlyUnset: true,
+    });
+
+    const selectors: Array<{
+      billingCycleId: string;
+      selectorInput: ReturnType<typeof buildContractCadenceDueSelectionInput>;
+    }> = [];
+    for (const profile of [
+      { id: cardProfileId, suffix: 'Card' },
+      { id: checkProfileId, suffix: 'Check' },
+    ]) {
+      const serviceId = await createTestService({ db, tenantId, clientId } as any, {
+        service_name: `T004 ${profile.suffix} Service`,
+        billing_method: 'fixed',
+        default_rate: FIXED_RATE_CENTS,
+        unit_of_measure: 'month',
+        tax_region: 'US-NY',
+      });
+      await ensureUsdServicePrice({ db, tenantId }, serviceId, FIXED_RATE_CENTS);
+      const assignment = await createFixedPlanAssignment(
+        { db, tenantId, clientId } as any,
+        serviceId,
+        {
+          planName: `T004 ${profile.suffix} Plan`,
+          billingFrequency: 'monthly',
+          baseRateCents: FIXED_RATE_CENTS,
+          startDate: '2024-12-01',
+          endDate: null,
+          billingTiming: 'arrears',
+          cadenceOwner: 'contract',
+          clientId,
+          enableProration: false,
+        },
+      );
+      await assignContractToProfile(
+        { db, tenantId },
+        assignment.clientContractId,
+        profile.id,
+      );
+      await db.transaction(async (trx) => {
+        await syncRecurringServicePeriodsForContractLine(trx, {
+          tenant: tenantId,
+          contractLineId: assignment.contractLineId,
+          sourceRunPrefix: 't004-payment-method-snapshot',
+        });
+      });
+      selectors.push({
+        billingCycleId: profile.id === cardProfileId ? cardCycleId : checkCycleId,
+        selectorInput: buildContractCadenceDueSelectionInput({
+          clientId,
+          contractId: assignment.contractId,
+          contractLineId: assignment.contractLineId,
+          windowStart: JANUARY_START,
+          windowEnd: FEBRUARY_START,
+        }),
+      });
+    }
+
+    const cardInvoice = unwrapInvoiceResult<{ invoice_id: string }>(
+      await generateInvoiceForSelectionInput(
+        selectors[0].selectorInput,
+        {},
+        { billingCycleId: selectors[0].billingCycleId },
+      ),
+    );
+    const checkInvoice = unwrapInvoiceResult<{ invoice_id: string }>(
+      await generateInvoiceForSelectionInput(
+        selectors[1].selectorInput,
+        {},
+        { billingCycleId: selectors[1].billingCycleId },
+      ),
+    );
+    const snapshotFor = (invoiceId: string) => table('invoices')
+      .where({ invoice_id: invoiceId })
+      .first('billing_profile_id', 'payment_method');
+
+    expect(await snapshotFor(cardInvoice.invoice_id)).toMatchObject({
+      billing_profile_id: cardProfileId,
+      payment_method: 'credit_card',
+    });
+    expect(await snapshotFor(checkInvoice.invoice_id)).toMatchObject({
+      billing_profile_id: checkProfileId,
+      payment_method: 'check',
+    });
+
+    await table('client_billing_profiles')
+      .where({ billing_profile_id: cardProfileId })
+      .update({ preferred_payment_method: 'bank_transfer' });
+    await table('client_billing_profiles')
+      .where({ billing_profile_id: checkProfileId })
+      .update({ preferred_payment_method: 'credit_card' });
+
+    expect(await snapshotFor(cardInvoice.invoice_id)).toMatchObject({
+      billing_profile_id: cardProfileId,
+      payment_method: 'credit_card',
+    });
+    expect(await snapshotFor(checkInvoice.invoice_id)).toMatchObject({
+      billing_profile_id: checkProfileId,
+      payment_method: 'check',
+    });
   }, HOOK_TIMEOUT);
 
   // T014 / D4 — shape A (multi-site group). The contract owns the segment, and
