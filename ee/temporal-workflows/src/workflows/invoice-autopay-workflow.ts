@@ -43,9 +43,17 @@ export async function invoiceAutopayWorkflow(input: InvoiceAutopayInput): Promis
   if ('status' in prepared && prepared.status === 'skip') return;
   let attempt = prepared as InvoiceAutopayAttempt;
   while (true) {
+    let reconciledBeforeExecute: AutopayOutcome | undefined;
     if (invoiceSettledFlag) {
-      await activities.cancelAutopayAttempt({ ...input, attemptId: attempt.attemptId });
-      return;
+      invoiceSettledFlag = false;
+      if (attempt.processingStartedAt) {
+        const reconciled = await activities.reconcileAutopayAttempt({ ...input, attemptId: attempt.attemptId });
+        if (reconciled.status === 'succeeded' || reconciled.status === 'failed' || reconciled.status === 'requires_action' || reconciled.status === 'cancelled') return;
+        reconciledBeforeExecute = { status: 'processing', processingStartedAt: attempt.processingStartedAt };
+      } else {
+        await activities.cancelAutopayAttempt({ ...input, attemptId: attempt.attemptId });
+        return;
+      }
     }
     const waitMs = Math.max(0, new Date(attempt.scheduledFor).getTime() - Date.now());
     if (waitMs > 0) {
@@ -71,7 +79,7 @@ export async function invoiceAutopayWorkflow(input: InvoiceAutopayInput): Promis
       if (chargeNowFlag) chargeNowFlag = false;
     }
 
-    let outcome = await activities.executeAutopayAttempt({ ...input, attemptId: attempt.attemptId });
+    let outcome = reconciledBeforeExecute ?? await activities.executeAutopayAttempt({ ...input, attemptId: attempt.attemptId });
     if (outcome.status === 'succeeded') return;
     if (outcome.status === 'cancelled') {
       const enrollment = await activities.evaluateEnrollmentForInvoice({ ...input, attemptId: attempt.attemptId });
@@ -86,8 +94,12 @@ export async function invoiceAutopayWorkflow(input: InvoiceAutopayInput): Promis
       while (Date.now() - processingStartedAt < NO_INTENT_LIMIT_MS) {
         await condition(() => invoiceSettledFlag || (settledAttemptId === attempt.attemptId && !!settledStatus), '1h');
         if (invoiceSettledFlag) {
-          await activities.cancelAutopayAttempt({ ...input, attemptId: attempt.attemptId });
-          return;
+          invoiceSettledFlag = false;
+          const reconciled = await activities.reconcileAutopayAttempt({ ...input, attemptId: attempt.attemptId });
+          if (reconciled.status === 'succeeded' || reconciled.status === 'failed' || reconciled.status === 'requires_action' || reconciled.status === 'cancelled') return;
+          await sleep(backoffMs);
+          backoffMs = Math.min(backoffMs * 2, 6 * 60 * 60 * 1000);
+          continue;
         }
         if (settledAttemptId === attempt.attemptId && settledStatus === 'succeeded') return;
         if (settledAttemptId === attempt.attemptId && settledStatus === 'payment_failed') {

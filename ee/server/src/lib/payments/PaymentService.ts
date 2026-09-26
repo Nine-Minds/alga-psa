@@ -804,9 +804,6 @@ export class PaymentService {
     });
 
     const occurredAt = new Date().toISOString();
-    if (!event.autopayAttemptId && recordResult.newStatus === 'paid') {
-      await signalInvoiceAutopay(this.tenantId, event.invoiceId, 'invoiceSettled');
-    }
     await publishWorkflowEvent({
       eventType: 'PAYMENT_RECORDED',
       payload: buildPaymentRecordedPayload({

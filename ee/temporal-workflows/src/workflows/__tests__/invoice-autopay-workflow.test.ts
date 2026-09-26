@@ -192,6 +192,29 @@ describe('invoiceAutopayWorkflow', () => {
     } finally { await test.env.teardown(); }
   });
 
+  it('reconciles a processing charge when invoiceSettled arrives before paymentIntentSettled', async () => {
+    let processing!: () => void;
+    const processingReady = new Promise<void>((resolve) => { processing = resolve; });
+    const reconciledStatuses: string[] = [];
+    let reconcileCalls = 0;
+    const test = await setup({
+      executeAutopayAttempt: async () => { processing(); return { status: 'processing' }; },
+      reconcileAutopayAttempt: async () => { reconcileCalls += 1; reconciledStatuses.push('succeeded'); return { status: 'succeeded' }; },
+    });
+    try {
+      await test.worker.runUntil(async () => {
+        const handle = await test.env.client.workflow.start(invoiceAutopayWorkflow, { args: [input], taskQueue: test.taskQueue, workflowId: 'autopay-invoice-settled-race' });
+        await processingReady;
+        await handle.signal('invoiceSettled');
+        await handle.result();
+      });
+      expect(test.calls.filter(({ name }) => name === 'cancel')).toHaveLength(0);
+      expect(reconcileCalls).toBe(1);
+      expect(reconciledStatuses).toEqual(['succeeded']);
+      expect(test.calls.filter(({ name }) => name === 'fallback')).toHaveLength(0);
+    } finally { await test.env.teardown(); }
+  });
+
   it('honours chargeNow while waiting on a timer', async () => {
     let prepared!: () => void;
     const ready = new Promise<void>((resolve) => { prepared = resolve; });

@@ -319,7 +319,7 @@ export class AutopayService {
   }
 
   async cancelAttemptById(attemptId: string): Promise<void> {
-    await this.table('invoice_autopay_attempts').where({ attempt_id: attemptId }).whereIn('status', ['scheduled', 'processing'])
+    await this.table('invoice_autopay_attempts').where({ attempt_id: attemptId }).where({ status: 'scheduled' })
       .update({ status: 'cancelled', processed_at: this.knex.fn.now(), updated_at: this.knex.fn.now() });
   }
 
@@ -361,7 +361,12 @@ export class AutopayService {
   }
 
   private async cancelAttempt(attemptId: string): Promise<void> {
-    await this.cancelAttemptById(attemptId);
+    await this.cancelProcessingAttemptById(attemptId);
+  }
+
+  private async cancelProcessingAttemptById(attemptId: string): Promise<void> {
+    await this.table('invoice_autopay_attempts').where({ attempt_id: attemptId, status: 'processing' })
+      .update({ status: 'cancelled', processed_at: this.knex.fn.now(), updated_at: this.knex.fn.now() });
   }
 
   private async outcomeForExistingAttempt(attemptId: string, attempt: any): Promise<any> {

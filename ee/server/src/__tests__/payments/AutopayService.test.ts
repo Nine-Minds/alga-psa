@@ -33,11 +33,12 @@ function makeKnex(updatedAt = new Date(), invoiceStatus = 'sent') {
     payment_methods: currentPaymentMethod,
     invoice_payments: { total: 0 },
   };
+  const whereClauses: Record<string, any>[] = [];
   const knex: any = {
     fn: { now: () => new Date() },
     table(name: string) {
       const query: any = {
-        where: () => query,
+        where: (clause: Record<string, any>) => { whereClauses.push(clause); return query; },
         whereIn: () => query,
         update: async () => 1,
         first: async () => rows[name],
@@ -46,7 +47,7 @@ function makeKnex(updatedAt = new Date(), invoiceStatus = 'sent') {
       return query;
     },
   };
-  return { knex, attempt };
+  return { knex, attempt, whereClauses };
 }
 
 describe('AutopayService single-attempt executor', () => {
@@ -91,5 +92,16 @@ describe('AutopayService single-attempt executor', () => {
     const service = await AutopayService.create('tenant-1');
     await service.finishAutopayWithFallback('invoice-1', 'attempt-1', 'payment_failed');
     expect(getOrCreatePaymentLink).not.toHaveBeenCalled();
+  });
+
+  it('does not cancel a processing row through the invoice-settled cancellation path', async () => {
+    const { knex, attempt, whereClauses } = makeKnex();
+    vi.mocked(getConnection).mockResolvedValue(knex);
+    const service = await AutopayService.create('tenant-1');
+    await service.cancelAttemptById('attempt-1');
+    expect(attempt.status).toBe('processing');
+    expect(whereClauses).toContainEqual({ attempt_id: 'attempt-1' });
+    expect(whereClauses).toContainEqual({ status: 'scheduled' });
+    expect(whereClauses).not.toContainEqual({ attempt_id: 'attempt-1', status: 'processing' });
   });
 });
