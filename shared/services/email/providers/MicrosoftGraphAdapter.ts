@@ -99,8 +99,8 @@ export interface MicrosoftGraphSendMailResult {
 const MICROSOFT_MESSAGE_SUBSCRIPTION_EXPIRATION_MS = 60 * 60 * 60 * 1000;
 
 export type MicrosoftGraphSendMailPayload =
-  | { kind: 'json'; message: Record<string, unknown> }
-  | { kind: 'mime'; content: string };
+  | { kind: 'json'; message: Record<string, unknown>; fromAddress?: string }
+  | { kind: 'mime'; content: string; fromAddress?: string };
 
 function classifySubscriptionError(error: any): MicrosoftSubscriptionErrorKind {
   const status = error?.response?.status ?? error?.status;
@@ -523,7 +523,11 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       throw new Error('Microsoft sending mailbox is not configured');
     }
 
-    const endpoint = `${this.getMailboxBasePath()}/sendMail`;
+    const requestedFrom = payload.fromAddress?.trim();
+    const endpointBase = requestedFrom && requestedFrom.toLowerCase() !== mailbox.toLowerCase()
+      ? `/users/${encodeURIComponent(requestedFrom)}`
+      : this.getMailboxBasePath();
+    const endpoint = `${endpointBase}/sendMail`;
     const send = () => payload.kind === 'mime'
       ? this.httpClient.post(endpoint, payload.content, {
           headers: { 'Content-Type': 'text/plain' },

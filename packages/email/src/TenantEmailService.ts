@@ -366,6 +366,7 @@ export class TenantEmailService extends BaseEmailService {
         from: params.from,
         fromName: params.fromName,
       }, settings, params.resolvedTenantCompanyName, params.boardName);
+      params.resolvedMicrosoftProviderId = routed.microsoftProviderId;
       return routed.from;
     }
     const resolved = params?.from as EmailAddress | string | undefined

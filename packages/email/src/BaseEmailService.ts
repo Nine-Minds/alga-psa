@@ -91,6 +91,7 @@ export interface BaseEmailParams {
   resolvedTenantCompanyName?: string | null;
   /** Internal provider snapshot used by TenantEmailService during cache refreshes. */
   resolvedEmailProvider?: IEmailProvider | null;
+  resolvedMicrosoftProviderId?: string;
   /** Internal initialization error paired with resolvedEmailProvider. */
   resolvedProviderInitError?: string | null;
   /** Internal forced sender identity for a system-provider fallback. */
@@ -608,7 +609,8 @@ export abstract class BaseEmailService {
         html,
         text,
         attachments,
-        headers
+        headers,
+        tags: params.resolvedMicrosoftProviderId ? { microsoftProviderId: params.resolvedMicrosoftProviderId } : undefined,
       };
 
       // Outbound email lifecycle workflow events (F071). Best-effort: publishing

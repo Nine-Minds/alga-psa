@@ -41,18 +41,28 @@ export class EmailProviderManager implements IEmailProviderManager {
       }
     }
     
-    // Find the first enabled provider
-    const enabledConfig = tenantSettings.providerConfigs.find(config => config.isEnabled);
+    // Microsoft senders may be backed by different connected mailboxes. Keep
+    // one initialized provider per enabled mailbox and retain the first as default.
+    const enabledConfigs = tenantSettings.providerConfigs.filter(config => config.isEnabled);
+    const enabledConfig = enabledConfigs[0];
     
     if (enabledConfig) {
       try {
         logger.debug(`[EmailProviderManager] Initializing provider: ${enabledConfig.providerId} (${enabledConfig.providerType})`);
 
-        const configToInitialize = await this.resolveProviderConfig(tenantId, enabledConfig);
-        const provider = await this.createProvider(enabledConfig);
-        await provider.initialize(configToInitialize);
-        this.providers.set(tenantId, provider);
-        this.providerCache.set(enabledConfig.providerId, provider);
+        const configsToInitialize = enabledConfig.providerType === 'microsoft' ? enabledConfigs : [enabledConfig];
+        for (const config of configsToInitialize) {
+          const configToInitialize = await this.resolveProviderConfig(tenantId, config);
+          const provider = await this.createProvider(config);
+          await provider.initialize(configToInitialize);
+          this.providerCache.set(config.providerId, provider);
+          const inboundProviderId = config.config?.inboundProviderId;
+          if (config.providerType === 'microsoft' && typeof inboundProviderId === 'string') {
+            this.providerCache.set(inboundProviderId, provider);
+          }
+          if (!this.providers.has(tenantId)) this.providers.set(tenantId, provider);
+        }
+        const provider = this.providers.get(tenantId)!;
         
         logger.info(`[EmailProviderManager] Initialized provider: ${provider.providerId} (${provider.providerType}) for tenant ${tenantId}`);
       } catch (error: any) {
@@ -66,7 +76,12 @@ export class EmailProviderManager implements IEmailProviderManager {
   }
 
   async sendEmail(message: EmailMessage, tenantId: string): Promise<EmailSendResult> {
-    const provider = this.providers.get(tenantId);
+    const requestedProviderId = message.tags?.microsoftProviderId;
+    const provider = (requestedProviderId && this.providerCache.get(requestedProviderId))
+      || this.providers.get(tenantId);
+    if (requestedProviderId && !this.providerCache.has(requestedProviderId)) {
+      throw new EmailProviderError(`Microsoft sender provider ${requestedProviderId} is not configured`, requestedProviderId, 'microsoft', false, 'MICROSOFT_PROVIDER_NOT_CONFIGURED');
+    }
     
     if (!provider) {
       throw new EmailProviderError(
