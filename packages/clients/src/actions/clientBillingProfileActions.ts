@@ -18,7 +18,7 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { assertMspPermission } from '../lib/authHelpers';
-import { disableBillingProfileAutopay, enrollBillingProfileAutopay, getAutopayProfileOverview, startSavedPaymentMethodSetup } from '@alga-psa/billing/services/autopayBridge';
+import { disableBillingProfileAutopay, enrollBillingProfileAutopay, getAutopayProfileOverview, startSavedPaymentMethodSetup } from '../lib/autopayBridge';
 import { headers } from 'next/headers';
 
 /**

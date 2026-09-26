@@ -15,7 +15,8 @@ function isEnterpriseBuild(): boolean {
 }
 
 // LEVERAGE: pattern ee-payments-loader — same dynamic @enterprise/lib/payments loader as
-// actions/paymentActions.ts, webhooks/stripe/payments.ts and invoiceTerminalStatusHandlers.ts.
+// actions/paymentActions.ts, webhooks/stripe/payments.ts, invoiceTerminalStatusHandlers.ts and
+// packages/clients/src/lib/autopayBridge.ts.
 async function loadEnterpriseAutopay(): Promise<{ AutopayService?: any; SavedPaymentMethodService?: any } | null> {
   if (!isEnterpriseBuild()) return null;
   const mod = await import('@enterprise/lib/payments');
