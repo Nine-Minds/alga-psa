@@ -8,9 +8,12 @@ const state = vi.hoisted(() => ({
   routes: [] as any[],
   insertedSender: null as any,
   insertedRoute: null as any,
+  insertError: null as any,
 }));
 const hasPermissionMock = vi.hoisted(() => vi.fn(async () => state.permitted));
 const getEmailSettingsMock = vi.hoisted(() => vi.fn(async () => ({ emailProvider: state.provider })));
+const loggerMock = vi.hoisted(() => ({ error: vi.fn() }));
+vi.mock('@alga-psa/core/logger', () => ({ default: loggerMock }));
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => (...args: any[]) => fn({ user_id: 'user-1', email: 'admin@example.test' }, { tenant: 'tenant-1' }, ...args),
@@ -34,7 +37,7 @@ vi.mock('@alga-psa/db', () => {
         select: async () => rows().filter(matches),
         orderBy: () => query,
         first: async () => rows().find(matches) ?? null,
-        insert: (row: any) => { if (name === 'email_sender_routes') { state.insertedRoute = row; state.routes.push(row); } else { state.insertedSender = { sender_id: 'new-sender', verification_status: 'unverified', ...row }; } return query; },
+        insert: (row: any) => { if (state.insertError) throw state.insertError; if (name === 'email_sender_routes') { state.insertedRoute = row; state.routes.push(row); } else { state.insertedSender = { sender_id: 'new-sender', verification_status: 'unverified', ...row }; } return query; },
         returning: async () => [state.insertedSender],
         update: (row: any) => { state.sender = { ...state.sender, ...row }; return query; },
         del: async () => { state.sender = null; return 1; },
@@ -44,9 +47,9 @@ vi.mock('@alga-psa/db', () => {
   });
   return { createTenantKnex: vi.fn(async () => ({ knex })), tenantDb };
 });
-vi.mock('@alga-psa/email', () => ({ TenantEmailService: { invalidateTenantSettings: vi.fn(), getTenantEmailSettings: getEmailSettingsMock, getInstance: () => ({ sendEmail: vi.fn(async () => ({ success: true })) }) } }));
+vi.mock('@alga-psa/email', () => ({ TenantEmailService: { invalidateTenantSettings: vi.fn(), getTenantEmailSettings: getEmailSettingsMock, getDefaultFromAddress: () => ({ email: 'provider@example.test', name: 'Provider' }), getInstance: () => ({ sendEmail: vi.fn(async () => ({ success: true })) }) } }));
 
-import { clearEmailSenderRoute, createEmailSender, deleteEmailSender, listEmailSenders, setEmailSenderRoute, updateEmailSender, verifyEmailSender } from './emailSenderActions';
+import { clearEmailSenderRoute, createEmailSender, deleteEmailSender, listEmailSenders, listSelectableSenders, setEmailSenderRoute, updateEmailSender, verifyEmailSender } from './emailSenderActions';
 
 describe('email sender actions', () => {
   beforeEach(() => {
@@ -57,8 +60,28 @@ describe('email sender actions', () => {
     state.routes.splice(0, state.routes.length);
     state.insertedSender = null;
     state.insertedRoute = null;
+    state.insertError = null;
     hasPermissionMock.mockClear();
     getEmailSettingsMock.mockClear();
+    loggerMock.error.mockClear();
+  });
+
+  it('returns the resolved provider fallback when no route exists and the routed address when present', async () => {
+    const fallback = await listSelectableSenders({ mailClass: 'billing' });
+    expect(fallback).toMatchObject({ effectiveSenderId: null, effectiveSenderAddress: 'provider@example.test' });
+    state.routes.push({ route_type: 'mail_class', mail_class: 'billing', sender_id: 'sender-1', display_name: null });
+    expect(await listSelectableSenders({ mailClass: 'billing' })).toMatchObject({ effectiveSenderId: 'sender-1', effectiveSenderAddress: 'support@example.test' });
+  });
+
+  it('maps and logs sender and route unique violations on the server', async () => {
+    state.verifiedDomain = true;
+    state.insertError = Object.assign(new Error('sensitive SQL details'), { code: '23505' });
+    await expect(createEmailSender({ emailAddress: 'support@verified.example' })).rejects.toThrow('This sender address already exists.');
+    expect(loggerMock.error).toHaveBeenCalledWith(expect.stringContaining('Duplicate sender address'), state.insertError);
+
+    state.insertError = Object.assign(new Error('sensitive SQL details'), { code: '23505' });
+    await expect(setEmailSenderRoute({ routeType: 'mail_class', mailClass: 'ticket', senderId: 'sender-1' })).rejects.toThrow('That sender route already exists.');
+    expect(loggerMock.error).toHaveBeenCalledWith(expect.stringContaining('Duplicate sender route'), state.insertError);
   });
 
   it('denies sender reads when settings:read is missing', async () => {

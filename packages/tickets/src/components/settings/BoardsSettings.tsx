@@ -399,6 +399,7 @@ interface BoardSlaPolicyOption {
 interface BoardEmailSender {
   sender_id: string;
   email_address: string;
+  display_name?: string | null;
   verification_status: string;
 }
 
@@ -423,11 +424,12 @@ interface BoardsSettingsProps {
   getSlaPolicies?: () => Promise<BoardSlaPolicyOption[]>;
   /** Email sender actions are injected by the host to keep tickets independent of integrations. */
   listEmailSenders?: () => Promise<{ senders: BoardEmailSender[]; routes: BoardEmailSenderRoute[] }>;
+  listSelectableSenders?: (input: { mailClass: 'ticket'; ignoreBoardRoute: true; boardName?: string }) => Promise<{ effectiveSenderAddress: string; effectiveSenderDisplayName: string }>;
   setEmailSenderRoute?: (input: BoardEmailSenderRouteInput) => Promise<unknown>;
   clearEmailSenderRoute?: (input: Pick<BoardEmailSenderRouteInput, 'routeType' | 'boardId'>) => Promise<unknown>;
 }
 
-const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, getSlaPolicies, listEmailSenders, setEmailSenderRoute, clearEmailSenderRoute }) => {
+const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, getSlaPolicies, listEmailSenders, listSelectableSenders, setEmailSenderRoute, clearEmailSenderRoute }) => {
   const { t } = useTranslation('msp/settings');
   // BoardHeader is a ticket-list component and asks for dashboard.boardHeader.*
   // and bulk.move.unnamedBoard, which live in features/tickets. Handing it this
@@ -556,7 +558,10 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
       setTicketDefaultAddress('');
       return;
     }
-    void listEmailSenders().then(({ senders, routes }) => {
+    void Promise.all([
+      listEmailSenders(),
+      listSelectableSenders?.({ mailClass: 'ticket', ignoreBoardRoute: true, boardName: editingBoard.board_name }),
+    ]).then(([{ senders, routes }, ticketDefault]) => {
       if (!active) return;
       setTicketSenderOptions(senders.filter((sender: any) => sender.verification_status === 'verified').map((sender: any) => ({ value: sender.sender_id, label: sender.email_address })));
       const route = routes.find((item: any) => item.route_type === 'board' && item.board_id === editingBoard.board_id);
@@ -564,16 +569,19 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
       setTicketSenderName(route?.display_name ?? '');
       const ticketRoute = routes.find((item: any) => item.route_type === 'mail_class' && item.mail_class === 'ticket')
         ?? routes.find((item: any) => item.route_type === 'default');
-      setTicketDefaultAddress(senders.find((sender: any) => sender.sender_id === ticketRoute?.sender_id)?.email_address ?? '');
+      const fallbackSender = senders.find((sender: any) => sender.sender_id === ticketRoute?.sender_id);
+      const defaultAddress = ticketDefault?.effectiveSenderAddress ?? fallbackSender?.email_address ?? '';
+      const defaultName = ticketDefault?.effectiveSenderDisplayName ?? fallbackSender?.display_name ?? editingBoard.board_name;
+      setTicketDefaultAddress(defaultName ? `${defaultAddress} · ${defaultName}` : defaultAddress);
     }).catch((error) => toast.error(error instanceof Error ? error.message : 'Could not load ticket senders.'));
     return () => { active = false; };
-  }, [editingBoard?.board_id, listEmailSenders]);
+  }, [editingBoard?.board_id, listEmailSenders, listSelectableSenders]);
 
   const saveTicketSenderRoute = async () => {
     if (!editingBoard?.board_id || !setEmailSenderRoute || !clearEmailSenderRoute) return;
     setTicketSenderSaving(true);
     try {
-      if (!ticketSenderId) {
+      if (!ticketSenderId && !ticketSenderName.trim()) {
         await clearEmailSenderRoute({ routeType: 'board', boardId: editingBoard.board_id });
       } else {
         await setEmailSenderRoute({ routeType: 'board', boardId: editingBoard.board_id, senderId: ticketSenderId || null, displayName: ticketSenderName });
@@ -582,7 +590,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
     } catch (error) {
       const code = (error as any)?.code ?? (error as any)?.cause?.code;
       const message = error instanceof Error ? error.message : String(error);
-      toast.error(code === '23505' || /unique constraint|duplicate key/i.test(message)
+      toast.error(code === '23505' || /unique constraint|duplicate key|already exists/i.test(message)
         ? t('ticketing.boards.emailSender.duplicateRoute', 'That sender route already exists.')
         : t('ticketing.boards.emailSender.saveFailed', 'Could not save ticket sender. Please try again.'));
     } finally {

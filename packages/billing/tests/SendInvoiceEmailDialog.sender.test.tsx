@@ -34,7 +34,7 @@ import { SendInvoiceEmailDialog } from '../src/components/billing-dashboard/invo
 describe('SendInvoiceEmailDialog sender selection', () => {
   beforeEach(() => {
     mocks.recipients.mockResolvedValue({ recipients: [{ invoiceId: 'invoice-1', invoiceNumber: 'INV-1', clientName: 'Example', recipientEmail: 'billing@example.test', recipientName: 'Billing', recipientSource: 'billing_contact', totalAmount: '10.00', currencyCode: 'USD', dueDate: null, invoiceDate: null, companyName: 'Example', fromEmail: 'default@example.test' }], errors: [] });
-    mocks.senders.mockResolvedValue({ senders: [{ sender_id: 'billing', email_address: 'billing@example.test', display_name: 'Billing' }, { sender_id: 'accounts', email_address: 'accounts@example.test', display_name: 'Accounts' }], effectiveSenderId: 'billing' });
+    mocks.senders.mockResolvedValue({ senders: [{ sender_id: 'billing', email_address: 'billing@example.test', display_name: 'Billing' }, { sender_id: 'accounts', email_address: 'accounts@example.test', display_name: 'Accounts' }], effectiveSenderId: 'billing', effectiveSenderAddress: 'billing@example.test' });
     mocks.send.mockResolvedValue({ successCount: 1, failureCount: 0 });
   });
 
@@ -42,5 +42,24 @@ describe('SendInvoiceEmailDialog sender selection', () => {
     render(<SendInvoiceEmailDialog isOpen onClose={vi.fn()} invoiceIds={['invoice-1']} />);
     await waitFor(() => expect(screen.getByLabelText('sendEmail.fields.from')).toBeTruthy());
     expect(screen.getByRole('option', { name: 'accounts@example.test' })).toBeTruthy();
+  });
+
+  it('selects provider From by sentinel and sends without pinning the first saved sender when no route exists', async () => {
+    mocks.senders.mockResolvedValue({
+      senders: [
+        { sender_id: 'first', email_address: 'first@example.test', display_name: null },
+        { sender_id: 'second', email_address: 'second@example.test', display_name: null },
+      ],
+      effectiveSenderId: null,
+      effectiveSenderAddress: 'provider-from@example.test',
+    });
+    render(<SendInvoiceEmailDialog isOpen onClose={vi.fn()} invoiceIds={['invoice-1']} />);
+
+    const select = await screen.findByLabelText('sendEmail.fields.from') as HTMLSelectElement;
+    expect(select.value).toBe('__default__');
+    expect(screen.getByRole('option', { name: 'sendEmail.fields.useDefault (provider-from@example.test)' })).toBeTruthy();
+
+    fireEvent.click(document.getElementById('send-invoice-email-send')!);
+    await waitFor(() => expect(mocks.send).toHaveBeenCalledWith(['invoice-1'], undefined, undefined));
   });
 });

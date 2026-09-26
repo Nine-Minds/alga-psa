@@ -3,14 +3,14 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-const actionMocks = vi.hoisted(() => ({ list: vi.fn(), create: vi.fn(), update: vi.fn(), remove: vi.fn(), verify: vi.fn(), clearRoute: vi.fn() }));
+const actionMocks = vi.hoisted(() => ({ list: vi.fn(), create: vi.fn(), update: vi.fn(), remove: vi.fn(), verify: vi.fn(), clearRoute: vi.fn(), setRoute: vi.fn() }));
 vi.mock('../../../actions/email-actions/emailSenderActions', () => ({
   listEmailSenders: actionMocks.list,
   createEmailSender: actionMocks.create,
   updateEmailSender: actionMocks.update,
   deleteEmailSender: actionMocks.remove,
   verifyEmailSender: actionMocks.verify,
-  setEmailSenderRoute: vi.fn(),
+  setEmailSenderRoute: actionMocks.setRoute,
   clearEmailSenderRoute: actionMocks.clearRoute,
 }));
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
@@ -59,6 +59,12 @@ describe('outbound email sender cards', () => {
     expect(routeContainer.container.textContent).toContain('email.senderIdentities.routes.noneProviderFrom');
     fireEvent.click(routeContainer.container.querySelector('#email-sender-route-default-save')!);
     await waitFor(() => expect(actionMocks.clearRoute).toHaveBeenCalledWith(expect.objectContaining({ routeType: 'default' })));
+
+    fireEvent.change(routeContainer.container.querySelector('#email-sender-route-default-display-name')!, { target: { value: 'Billing team' } });
+    fireEvent.click(routeContainer.container.querySelector('#email-sender-route-default-save')!);
+    await waitFor(() => expect(actionMocks.setRoute).toHaveBeenCalledWith(expect.objectContaining({
+      routeType: 'default', senderId: null, displayName: 'Billing team',
+    })));
   });
 
   it('shows ticket inbound-reply guidance and a read-only board override summary', async () => {

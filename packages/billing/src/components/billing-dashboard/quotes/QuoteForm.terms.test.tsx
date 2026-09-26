@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PartialBlock } from '@blocknote/core';
 
 vi.mock('../../../../../integrations/src/actions/email-actions/emailSenderActions', () => ({
-  listSelectableSenders: vi.fn(async () => ({ senders: [], effectiveSenderId: null, allowOverride: false })),
+  listSelectableSenders: vi.fn(async () => ({ senders: [], effectiveSenderId: null, effectiveSenderAddress: 'provider@example.test', effectiveSenderDisplayName: 'Provider', allowOverride: false })),
 }));
 
 const editorMounts: Array<{ initialContent: unknown; mountedAt: number }> = [];

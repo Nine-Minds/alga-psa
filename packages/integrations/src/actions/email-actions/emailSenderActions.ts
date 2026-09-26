@@ -1,6 +1,7 @@
 'use server';
 
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import logger from '@alga-psa/core/logger';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { TenantEmailService } from '@alga-psa/email';
@@ -41,7 +42,7 @@ export const listEmailSenders = withAuth(async (user, { tenant }) => {
   return { senders, routes };
 });
 
-export const listSelectableSenders = withAuth(async (_user, { tenant }, input: { mailClass: OutboundMailClass; boardId?: string }) => {
+export const listSelectableSenders = withAuth(async (_user, { tenant }, input: { mailClass: OutboundMailClass; boardId?: string; ignoreBoardRoute?: boolean; boardName?: string }) => {
   if (!tenant) throw new Error('A tenant is required.');
   const { knex } = await createTenantKnex();
   const db = tenantDb(knex, tenant);
@@ -52,12 +53,30 @@ export const listSelectableSenders = withAuth(async (_user, { tenant }, input: {
     ? senderQuery.select('sender_id', 'email_address', 'display_name')
     : senderQuery.where({ verification_status: 'verified' }).select('sender_id', 'email_address', 'display_name'));
   const routes = await db.table('email_sender_routes').select('*');
-  const effective = input.boardId
-    ? routes.find((route: any) => route.route_type === 'board' && route.board_id === input.boardId)
-    : null;
-  const route = effective?.sender_id ? effective : routes.find((item: any) => item.route_type === 'mail_class' && item.mail_class === input.mailClass)
-    ?? routes.find((item: any) => item.route_type === 'default');
-  return { senders, effectiveSenderId: route?.sender_id ?? null, allowOverride: senders.length > 1 };
+  const matchingRoutes = [
+    ...(input.boardId && !input.ignoreBoardRoute
+      ? routes.filter((route: any) => route.route_type === 'board' && route.board_id === input.boardId)
+      : []),
+    ...routes.filter((route: any) => route.route_type === 'mail_class' && route.mail_class === input.mailClass),
+    ...routes.filter((route: any) => route.route_type === 'default'),
+  ];
+  const route = matchingRoutes.find((item: any) => item.sender_id || item.display_name);
+  const routedSender = matchingRoutes.reduce((found: any, item: any) => found ?? (item.sender_id
+    ? senders.find((sender: any) => sender.sender_id === item.sender_id)
+    : null), null);
+  const defaultFrom = TenantEmailService.getDefaultFromAddress(settings);
+  const effectiveSenderAddress = routedSender?.email_address ?? defaultFrom.email;
+  const effectiveSenderDisplayName = route?.display_name?.trim()
+    || routedSender?.display_name?.trim()
+    || (input.mailClass === 'ticket' ? input.boardName?.trim() : undefined)
+    || defaultFrom.name;
+  return {
+    senders,
+    effectiveSenderId: routedSender?.sender_id ?? null,
+    effectiveSenderAddress,
+    effectiveSenderDisplayName,
+    allowOverride: senders.length > 1,
+  };
 });
 
 export const createEmailSender = withAuth(async (user, { tenant }, input: { emailAddress: string; displayName?: string | null; microsoftProviderId?: string | null }) => {
@@ -83,14 +102,24 @@ export const createEmailSender = withAuth(async (user, { tenant }, input: { emai
     verificationStatus = 'unverified';
   }
   // LEVERAGE: friction tenantdb-insert — tenantDb scopes reads/updates/deletes but not inserts
-  const [sender] = await db.table('email_sender_addresses').insert({
-    tenant,
-    email_address: emailAddress,
-    display_name: input.displayName?.trim() || null,
-    microsoft_provider_id: microsoftProviderId,
-    verification_status: verificationStatus,
-    verified_at: verificationStatus === 'verified' ? new Date() : null,
-  }).returning('*');
+  let sender: any;
+  try {
+    // LEVERAGE: friction tenantdb-insert — tenantDb scopes reads/updates/deletes but not inserts
+    [sender] = await db.table('email_sender_addresses').insert({
+      tenant,
+      email_address: emailAddress,
+      display_name: input.displayName?.trim() || null,
+      microsoft_provider_id: microsoftProviderId,
+      verification_status: verificationStatus,
+      verified_at: verificationStatus === 'verified' ? new Date() : null,
+    }).returning('*');
+  } catch (error) {
+    if ((error as any)?.code === '23505') {
+      logger.error('[emailSenderActions] Duplicate sender address insert failed', error);
+      throw new Error('This sender address already exists.');
+    }
+    throw error;
+  }
   await TenantEmailService.invalidateTenantSettings(tenant);
   return sender;
 });
@@ -154,18 +183,26 @@ export const setEmailSenderRoute = withAuth(async (user, { tenant }, input: Rout
     }
   }
   const key = routePredicate(input);
-  await knex.transaction(async (trx) => {
-    const trxDb = tenantDb(trx, tenant);
-    await trxDb.table('email_sender_routes').where(key).del();
-    // LEVERAGE: friction tenantdb-insert — tenantDb scopes reads/updates/deletes but not inserts
-    await trxDb.table('email_sender_routes').insert({
-      tenant,
-      ...key,
-      sender_id: input.senderId ?? null,
-      display_name: input.displayName?.trim() || null,
-      updated_at: new Date(),
+  try {
+    await knex.transaction(async (trx) => {
+      const trxDb = tenantDb(trx, tenant);
+      await trxDb.table('email_sender_routes').where(key).del();
+      // LEVERAGE: friction tenantdb-insert — tenantDb scopes reads/updates/deletes but not inserts
+      await trxDb.table('email_sender_routes').insert({
+        tenant,
+        ...key,
+        sender_id: input.senderId ?? null,
+        display_name: input.displayName?.trim() || null,
+        updated_at: new Date(),
+      });
     });
-  });
+  } catch (error) {
+    if ((error as any)?.code === '23505') {
+      logger.error('[emailSenderActions] Duplicate sender route insert failed', error);
+      throw new Error('That sender route already exists.');
+    }
+    throw error;
+  }
   await TenantEmailService.invalidateTenantSettings(tenant);
   return { success: true };
 });

@@ -12,7 +12,7 @@ import DisplaySettings from '@alga-psa/tickets/components/settings/DisplaySettin
 import NumberingSettings from '@alga-psa/reference-data/components/settings/NumberingSettings';
 import PrioritySettings from '@alga-psa/reference-data/components/settings/PrioritySettings';
 import { getSlaPolicies } from '@alga-psa/sla/actions/slaActions';
-import { clearEmailSenderRoute, listEmailSenders, setEmailSenderRoute } from '@alga-psa/integrations/emailSenderActions';
+import { clearEmailSenderRoute, listEmailSenders, listSelectableSenders, setEmailSenderRoute } from '@alga-psa/integrations/emailSenderActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useProduct } from '@/context/ProductContext';
 
@@ -58,7 +58,7 @@ const TicketingSettingsRefactored = (): React.JSX.Element => {
     {
       id: 'boards',
       label: t('ticketing.tabs.boards'),
-      content: <BoardsSettings isAlgaDesk={isAlgaDesk} getSlaPolicies={getSlaPolicies} listEmailSenders={listEmailSenders} setEmailSenderRoute={setEmailSenderRoute} clearEmailSenderRoute={clearEmailSenderRoute} />
+      content: <BoardsSettings isAlgaDesk={isAlgaDesk} getSlaPolicies={getSlaPolicies} listEmailSenders={listEmailSenders} listSelectableSenders={listSelectableSenders} setEmailSenderRoute={setEmailSenderRoute} clearEmailSenderRoute={clearEmailSenderRoute} />
     },
     {
       id: 'priorities',

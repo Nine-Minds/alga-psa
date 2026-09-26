@@ -71,7 +71,7 @@ export function EmailSenderAddressesCard({
     } catch (reason) {
       const code = (reason as any)?.code ?? (reason as any)?.cause?.code;
       const message = reason instanceof Error ? reason.message : String(reason);
-      const duplicate = code === '23505' || /unique constraint|duplicate key/i.test(message);
+      const duplicate = code === '23505' || /unique constraint|duplicate key|already exists/i.test(message);
       setDialogError(duplicate ? t('email.senderIdentities.errors.duplicateAddress', 'This sender address already exists.') : t('email.senderIdentities.errors.saveFailed', 'Could not add sender. Check the address and try again.'));
       return false;
     } finally {
@@ -89,7 +89,7 @@ export function EmailSenderAddressesCard({
     } catch (reason) {
       const code = (reason as any)?.code ?? (reason as any)?.cause?.code;
       const message = reason instanceof Error ? reason.message : String(reason);
-      setError(code === '23505' || /unique constraint|duplicate key/i.test(message)
+      setError(code === '23505' || /unique constraint|duplicate key|already exists/i.test(message)
         ? t('email.senderIdentities.errors.duplicateRoute', 'That sender route already exists.')
         : t('email.senderIdentities.errors.saveRoutingFailed', 'Could not save sender routing. Please try again.'));
       await reload();
@@ -196,9 +196,9 @@ export function EmailSenderRoutingCard({ t, transport = 'resend' }: { t: Transla
     setError(null);
     try {
       const args = routeType === 'default'
-        ? { routeType, senderId: senderId || null, displayName }
-        : { routeType, mailClass: key as OutboundMailClass, senderId: senderId || null, displayName };
-      if (senderId === '__default__' || (!senderId && !displayName.trim())) await clearEmailSenderRoute(args as any);
+        ? { routeType, senderId: senderId === '__default__' ? null : senderId || null, displayName }
+        : { routeType, mailClass: key as OutboundMailClass, senderId: senderId === '__default__' ? null : senderId || null, displayName };
+      if ((senderId === '__default__' || !senderId) && !displayName.trim()) await clearEmailSenderRoute(args as any);
       else await setEmailSenderRoute({ ...args, confirmUnverifiedSmtpSender } as any);
       await reload();
     } catch (reason) {

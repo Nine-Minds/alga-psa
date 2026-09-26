@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { buildSenderOptions, DEFAULT_SENDER_SELECTION, senderIdForSend } from '../../../lib/senderSelection';
 import { listSelectableSenders } from '@alga-psa/integrations/actions';
 import { Mail, User, Building, AlertCircle, CheckCircle, Loader2, FileText, Layers } from 'lucide-react';
 import {
@@ -40,8 +41,8 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
   const [errors, setErrors] = useState<Array<{ invoiceId: string; error: string; messageKey?: string }>>([]);
   const [customMessage, setCustomMessage] = useState('');
   const [senders, setSenders] = useState<Array<{ sender_id: string; email_address: string; display_name: string | null }>>([]);
-  const [effectiveSenderId, setEffectiveSenderId] = useState<string | null>(null);
-  const [senderId, setSenderId] = useState<string | undefined>();
+  const [effectiveSenderAddress, setEffectiveSenderAddress] = useState('');
+  const [senderId, setSenderId] = useState(DEFAULT_SENDER_SELECTION);
 
   const getRecipientSourceLabel = (source: InvoiceEmailRecipientInfo['recipientSource']) => {
     switch (source) {
@@ -84,8 +85,8 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
       setErrors(result.errors);
       const selectable = await listSelectableSenders({ mailClass: 'billing' });
       setSenders(selectable.senders);
-      setEffectiveSenderId(selectable.effectiveSenderId);
-      setSenderId(undefined);
+      setEffectiveSenderAddress(selectable.effectiveSenderAddress);
+      setSenderId(DEFAULT_SENDER_SELECTION);
     } catch (error) {
       const fallbackError = t('sendEmail.errors.loadRecipients', { defaultValue: 'Failed to load recipient info' });
       handleError(error, fallbackError);
@@ -115,7 +116,7 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
       const result = await sendInvoiceEmailAction(
         validRecipients.map(r => r.invoiceId),
         customMessage.trim() || undefined,
-        senderId
+        senderIdForSend(senderId)
       );
       if (isActionMessageError(result) || isActionPermissionError(result)) {
         toast.error(getErrorMessage(result), { id: toastId });
@@ -159,9 +160,9 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
 
   const validRecipientCount = recipients.filter(r => r.recipientEmail).length;
   const invalidRecipientCount = recipients.filter(r => !r.recipientEmail).length;
-  const resolvedFromEmail = senders.find(sender => sender.sender_id === (senderId ?? effectiveSenderId))?.email_address
-    || senders[0]?.email_address
-    || recipients[0]?.fromEmail;
+  const resolvedFromEmail = senderId === DEFAULT_SENDER_SELECTION
+    ? effectiveSenderAddress || recipients[0]?.fromEmail
+    : senders.find(sender => sender.sender_id === senderId)?.email_address || recipients[0]?.fromEmail;
 
   return (
     <Dialog
@@ -230,9 +231,9 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
               </label>
               <CustomSelect
                 id="invoice-email-sender-select"
-                value={senderId ?? effectiveSenderId ?? senders[0].sender_id}
+                value={senderId}
                 onValueChange={setSenderId}
-                options={[{ value: effectiveSenderId ?? senders[0].sender_id, label: `${t('sendEmail.fields.useDefault', { defaultValue: 'Use default' })} (${senders.find(sender => sender.sender_id === effectiveSenderId)?.email_address ?? senders[0].email_address})` }, ...senders.filter(sender => sender.sender_id !== effectiveSenderId).map(sender => ({ value: sender.sender_id, label: sender.email_address }))]}
+                options={buildSenderOptions(senders, effectiveSenderAddress, t('sendEmail.fields.useDefault', { defaultValue: 'Use default' }))}
               />
             </div>
           )}

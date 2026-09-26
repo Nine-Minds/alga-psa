@@ -9,6 +9,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { buildSenderOptions, DEFAULT_SENDER_SELECTION, senderIdForSend } from '../../../lib/senderSelection';
 import { listSelectableSenders } from '../../../../../integrations/src/actions/email-actions/emailSenderActions';
 import CurrencyPicker from '@alga-psa/ui/components/CurrencyPicker';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
@@ -212,8 +213,8 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   const [approvalRequired, setApprovalRequired] = useState(false);
   const [isSendDialogOpen, setIsSendDialogOpen] = useState(false);
   const [quoteSenders, setQuoteSenders] = useState<Array<{ sender_id: string; email_address: string }>>([]);
-  const [quoteEffectiveSenderId, setQuoteEffectiveSenderId] = useState<string | null>(null);
-  const [quoteSenderId, setQuoteSenderId] = useState('');
+  const [quoteEffectiveSenderAddress, setQuoteEffectiveSenderAddress] = useState('');
+  const [quoteSenderId, setQuoteSenderId] = useState(DEFAULT_SENDER_SELECTION);
   const [sendRecipients, setSendRecipients] = useState<QuoteRecipient[]>([]);
   const [sendAdditionalEmails, setSendAdditionalEmails] = useState('');
   const [sendMessage, setSendMessage] = useState('');
@@ -761,7 +762,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
       () => sendQuote(quote.quote_id, {
         message: sendMessage.trim() || undefined,
         email_addresses: combined.length > 0 ? combined : undefined,
-        senderId: quoteSenderId || undefined,
+        senderId: senderIdForSend(quoteSenderId),
       }),
       { notifyStatusChanged: true },
     );
@@ -780,8 +781,8 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
     if (!isSendDialogOpen) return;
     void listSelectableSenders({ mailClass: 'sales' }).then((result) => {
       setQuoteSenders(result.senders);
-      setQuoteEffectiveSenderId(result.effectiveSenderId);
-      setQuoteSenderId(result.effectiveSenderId ?? '');
+      setQuoteEffectiveSenderAddress(result.effectiveSenderAddress);
+      setQuoteSenderId(DEFAULT_SENDER_SELECTION);
     });
   }, [isSendDialogOpen]);
 
@@ -1856,7 +1857,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
             })}
           </DialogDescription>
           <div className="space-y-3 py-2">
-            {quoteSenders.length > 1 && <div className="space-y-1"><label htmlFor="quote-form-send-sender" className="text-sm font-medium">{t('quoteForm.dialogs.send.from', { defaultValue: 'From' })}</label><CustomSelect id="quote-form-send-sender" value={quoteSenderId || quoteEffectiveSenderId || ''} onValueChange={setQuoteSenderId} options={[{ value: quoteEffectiveSenderId ?? quoteSenders[0].sender_id, label: `${t('quoteForm.dialogs.send.useDefault', { defaultValue: 'Use default' })} (${quoteSenders.find(sender => sender.sender_id === quoteEffectiveSenderId)?.email_address ?? quoteSenders[0].email_address})` }, ...quoteSenders.filter(sender => sender.sender_id !== quoteEffectiveSenderId).map(sender => ({ value: sender.sender_id, label: sender.email_address }))]} /></div>}
+            {quoteSenders.length > 1 && <div className="space-y-1"><label htmlFor="quote-form-send-sender" className="text-sm font-medium">{t('quoteForm.dialogs.send.from', { defaultValue: 'From' })}</label><CustomSelect id="quote-form-send-sender" value={quoteSenderId} onValueChange={setQuoteSenderId} options={buildSenderOptions(quoteSenders, quoteEffectiveSenderAddress, t('quoteForm.dialogs.send.useDefault', { defaultValue: 'Use default' }))} /></div>}
             <label className="flex flex-col gap-1 text-sm font-medium">
               {t('quoteForm.fields.recipients', { defaultValue: 'Recipients' })}
               <QuoteSendRecipientsField

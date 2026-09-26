@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 
 vi.mock('../../../integrations/src/actions/email-actions/emailSenderActions', () => ({
-  listSelectableSenders: vi.fn(async () => ({ senders: [], effectiveSenderId: null, allowOverride: false })),
+  listSelectableSenders: vi.fn(async () => ({ senders: [], effectiveSenderId: null, effectiveSenderAddress: 'provider@example.test', effectiveSenderDisplayName: 'Provider', allowOverride: false })),
 }));
 
 const mockRouter = {

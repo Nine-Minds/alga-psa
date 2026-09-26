@@ -40,9 +40,10 @@ vi.mock('@alga-psa/tickets/actions', () => ({
 }));
 
 const listEmailSendersMock = vi.fn(async () => ({ senders: [], routes: [] }));
+const listSelectableSendersMock = vi.fn(async () => ({ effectiveSenderAddress: 'provider@example.test', effectiveSenderDisplayName: 'Support' }));
 const setEmailSenderRouteMock = vi.fn();
 const clearEmailSenderRouteMock = vi.fn();
-const renderBoardsSettings = () => render(<BoardsSettings listEmailSenders={listEmailSendersMock} setEmailSenderRoute={setEmailSenderRouteMock} clearEmailSenderRoute={clearEmailSenderRouteMock} />);
+const renderBoardsSettings = () => render(<BoardsSettings listEmailSenders={listEmailSendersMock} listSelectableSenders={listSelectableSendersMock} setEmailSenderRoute={setEmailSenderRouteMock} clearEmailSenderRoute={clearEmailSenderRouteMock} />);
 
 vi.mock('@alga-psa/tickets/actions/board-actions/boardActions', () => ({
   getAllBoards: (...args: unknown[]) => getAllBoardsMock(...args),
@@ -322,6 +323,7 @@ describe('BoardsSettings ticket status copy flow', () => {
     getAllUsersMock.mockResolvedValue([]);
     getSlaPoliciesMock.mockResolvedValue([]);
     getTeamsMock.mockResolvedValue([]);
+    listSelectableSendersMock.mockResolvedValue({ effectiveSenderAddress: 'provider@example.test', effectiveSenderDisplayName: 'Support' });
   });
 
   it('loads copied board statuses into the embedded editor and saves edited statuses', async () => {
@@ -722,6 +724,15 @@ describe('BoardsSettings ticket status copy flow', () => {
     expandSection('inbound');
     expect(screen.getByText('ticketing.boards.emailSender.label')).toBeInTheDocument();
     expect(screen.getByText('ticketing.boards.emailSender.inboundWarning')).toBeInTheDocument();
+    expect(listSelectableSendersMock).toHaveBeenCalledWith({ mailClass: 'ticket', ignoreBoardRoute: true, boardName: 'Support' });
+    expect(screen.getByRole('option', { name: 'ticketing.boards.emailSender.useDefault (provider@example.test · Support)' })).toBeInTheDocument();
+
+    fireEvent.change(document.getElementById('board-ticket-email-sender-name') as HTMLInputElement, { target: { value: 'Support desk' } });
+    fireEvent.click(screen.getByTestId('board-ticket-email-sender-save'));
+    await waitFor(() => expect(setEmailSenderRouteMock).toHaveBeenCalledWith(expect.objectContaining({
+      routeType: 'board', boardId: 'board-source', senderId: null, displayName: 'Support desk',
+    })));
+    expect(clearEmailSenderRouteMock).not.toHaveBeenCalled();
   });
 
   it('keeps the editor open after saving changes to an existing board', async () => {
