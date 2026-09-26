@@ -830,7 +830,12 @@
         }
       },
       "empty": "No boards found.",
-      "searchPlaceholder": "Search boards…"
+      "searchPlaceholder": "Search boards…",
+      "emailSender": {
+        "useDefault": "Use ticket default",
+        "duplicateRoute": "That sender route already exists.",
+        "saveFailed": "Could not save ticket sender. Please try again."
+      }
     },
     "priorities": {
       "title": {

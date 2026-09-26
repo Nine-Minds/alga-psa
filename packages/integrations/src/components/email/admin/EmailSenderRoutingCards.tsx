@@ -44,6 +44,7 @@ export function EmailSenderAddressesCard({
   const [busy, setBusy] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dialogError, setDialogError] = useState<string | null>(null);
 
   const reload = async () => {
     const result = await listEmailSenders();
@@ -54,7 +55,7 @@ export function EmailSenderAddressesCard({
 
   const addSender = async () => {
     setBusy(true);
-    setError(null);
+    setDialogError(null);
     try {
       const address = transport === 'resend' ? `${localPart.trim()}@${domain}` : emailAddress;
       await (await import('../../../actions/email-actions/emailSenderActions')).createEmailSender({
@@ -68,7 +69,10 @@ export function EmailSenderAddressesCard({
       await reload();
       return true;
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : String(reason));
+      const code = (reason as any)?.code ?? (reason as any)?.cause?.code;
+      const message = reason instanceof Error ? reason.message : String(reason);
+      const duplicate = code === '23505' || /unique constraint|duplicate key/i.test(message);
+      setDialogError(duplicate ? t('email.senderIdentities.errors.duplicateAddress', 'This sender address already exists.') : t('email.senderIdentities.errors.saveFailed', 'Could not add sender. Check the address and try again.'));
       return false;
     } finally {
       setBusy(false);
@@ -83,7 +87,11 @@ export function EmailSenderAddressesCard({
       await verifyEmailSender(senderId);
       await reload();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : String(reason));
+      const code = (reason as any)?.code ?? (reason as any)?.cause?.code;
+      const message = reason instanceof Error ? reason.message : String(reason);
+      setError(code === '23505' || /unique constraint|duplicate key/i.test(message)
+        ? t('email.senderIdentities.errors.duplicateRoute', 'That sender route already exists.')
+        : t('email.senderIdentities.errors.saveRoutingFailed', 'Could not save sender routing. Please try again.'));
       await reload();
     } finally {
       setBusy(false);
@@ -160,10 +168,11 @@ export function EmailSenderAddressesCard({
           <div className="space-y-2"><Label htmlFor="email-sender-display-name">{t('email.senderIdentities.fields.displayName', 'Display name')}</Label><Input id="email-sender-display-name" value={displayName} onChange={(event) => setDisplayName(event.target.value)} placeholder={t('email.senderIdentities.fields.displayNamePlaceholder', 'Support team')} /></div>
           {transport === 'smtp' && <p className="text-xs text-muted-foreground md:col-span-2">{t('email.senderIdentities.smtpHelp', 'Your SMTP relay must allow this address.')}</p>}
           {transport === 'microsoft' && <p className="text-xs text-muted-foreground md:col-span-2">{t('email.senderIdentities.microsoftHelp', 'The connected mailbox needs Exchange Send As permission for this address.')}</p>}
+          {dialogError && <p role="alert" className="text-sm text-destructive md:col-span-2">{dialogError}</p>}
         </div>
         </DialogContent>
         </Dialog>
-        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+        {error && !addOpen && <p role="alert" className="text-sm text-destructive">{error}</p>}
       </CardContent>
     </Card>
   );
@@ -189,11 +198,14 @@ export function EmailSenderRoutingCard({ t, transport = 'resend' }: { t: Transla
       const args = routeType === 'default'
         ? { routeType, senderId: senderId || null, displayName }
         : { routeType, mailClass: key as OutboundMailClass, senderId: senderId || null, displayName };
-      if (!senderId && !displayName.trim()) await clearEmailSenderRoute(args as any);
+      if (senderId === '__default__' || (!senderId && !displayName.trim())) await clearEmailSenderRoute(args as any);
       else await setEmailSenderRoute({ ...args, confirmUnverifiedSmtpSender } as any);
       await reload();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : String(reason));
+      const code = (reason as any)?.code ?? (reason as any)?.cause?.code;
+      setError(code === '23505'
+        ? t('email.senderIdentities.errors.duplicateRoute', 'That sender route already exists.')
+        : t('email.senderIdentities.errors.saveFailed', 'Could not save sender routing. Please try again.'));
     } finally {
       setBusyRoute(null);
     }
@@ -204,9 +216,9 @@ export function EmailSenderRoutingCard({ t, transport = 'resend' }: { t: Transla
     const rowKey = routeType === 'default' ? 'default' : key;
     const value = route?.sender_id ?? '__default__';
     const options = routeType === 'default'
-      ? senders.map(sender => ({ value: sender.sender_id, label: sender.email_address }))
-      : [{ value: '__default__', label: t('email.senderIdentities.routes.useDefault', 'Use default') }, ...senders.map(sender => ({ value: sender.sender_id, label: sender.email_address }))];
-    return <RouteRow key={rowKey} id={`email-sender-route-${rowKey}`} title={t(`email.senderIdentities.routes.${rowKey}`, rowKey === 'default' ? 'Default (all other mail)' : rowKey)} routeType={routeType} routeKey={rowKey} route={route} value={value} options={options} senders={senders} transport={transport} busy={busyRoute === rowKey} t={t} onSave={(senderId, name, confirm) => void save(routeType, rowKey, senderId === '__default__' ? '' : senderId, name, confirm)} />;
+      ? [{ value: '__default__', label: t('email.senderIdentities.routes.noneProviderFrom', '') }, ...senders.map(sender => ({ value: sender.sender_id, label: sender.email_address }))]
+      : [{ value: '__default__', label: t('email.senderIdentities.routes.useDefault', '') }, ...senders.map(sender => ({ value: sender.sender_id, label: sender.email_address }))];
+        return <RouteRow key={rowKey} id={`email-sender-route-${rowKey}`} title={t(`email.senderIdentities.routes.${rowKey}`, rowKey)} routeType={routeType} routeKey={rowKey} route={route} value={value} options={options} senders={senders} transport={transport} busy={busyRoute === rowKey} t={t} onSave={(senderId, name, confirm) => void save(routeType, rowKey, senderId, name, confirm)} />;
   };
 
   return <Card>
@@ -236,7 +248,7 @@ function RouteRow({ id, title, routeType, routeKey, route, value, options, sende
   const [displayName, setDisplayName] = useState(route?.display_name ?? '');
   const [confirmUnverifiedSmtpSender, setConfirmUnverifiedSmtpSender] = useState(false);
   useEffect(() => { setSenderId(value); setDisplayName(route?.display_name ?? ''); }, [value, route?.display_name]);
-  const label = routeType === 'default' ? 'Default (all other mail)' : title;
+  const label = title;
   return <div className="grid gap-3 p-3 md:grid-cols-[minmax(8rem,1fr)_minmax(12rem,1.3fr)_minmax(10rem,1fr)_auto] md:items-end">
     <div className="pb-2 text-sm font-medium">{label}</div>
     <div className="space-y-1"><Label htmlFor={`${id}-sender`}>{t('email.senderIdentities.routes.sender', 'Sender')}</Label><CustomSelect id={`${id}-sender`} value={senderId} onValueChange={setSenderId} options={options} /></div>

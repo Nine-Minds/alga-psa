@@ -830,7 +830,12 @@
         }
       },
       "empty": "Nenhum quadro encontrado.",
-      "searchPlaceholder": "Pesquisar quadros…"
+      "searchPlaceholder": "Pesquisar quadros…",
+      "emailSender": {
+        "useDefault": "Usar padrão do chamado",
+        "duplicateRoute": "Esta rota de remetente já existe.",
+        "saveFailed": "Não foi possível salvar o remetente do chamado. Tente novamente."
+      }
     },
     "priorities": {
       "title": {

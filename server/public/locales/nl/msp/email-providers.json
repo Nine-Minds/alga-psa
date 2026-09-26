@@ -886,7 +886,16 @@
           "useDefault": "Standaard gebruiken",
           "sender": "Afzender",
           "displayName": "Weergavenaam",
-          "boardSummary": "Ticketafzenders per bord beheer je in de instellingen van elk bord."
+          "boardSummary": "Ticketafzenders per bord beheer je in de instellingen van elk bord.",
+          "ticket": "Ticket-e-mail",
+          "project": "Projecte-mail",
+          "billing": "Facturatie-e-mail",
+          "sales": "Verkoop-e-mail",
+          "scheduling": "Planningse-mail",
+          "survey": "Enquête-e-mail",
+          "account": "Account-e-mail",
+          "general": "Algemene e-mail",
+          "noneProviderFrom": "Geen (afzender van provider gebruiken)"
         },
         "actions": {
           "add": "Afzender toevoegen",
@@ -902,7 +911,13 @@
           "displayNamePlaceholder": "Supportteam"
         },
         "smtpHelp": "Je SMTP-relay moet dit adres toestaan.",
-        "microsoftHelp": "De verbonden mailbox heeft Exchange Send As-rechten voor dit adres nodig."
+        "microsoftHelp": "De verbonden mailbox heeft Exchange Send As-rechten voor dit adres nodig.",
+        "errors": {
+          "duplicateAddress": "Dit afzenderadres bestaat al.",
+          "saveFailed": "Afzender toevoegen mislukt. Controleer het adres en probeer het opnieuw.",
+          "duplicateRoute": "Deze afzenderroute bestaat al.",
+          "saveRoutingFailed": "Afzenderroute opslaan is mislukt. Probeer het opnieuw."
+        }
       }
     },
     "inbound": {

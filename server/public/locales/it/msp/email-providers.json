@@ -886,7 +886,16 @@
           "useDefault": "Usa predefinito",
           "sender": "Mittente",
           "displayName": "Nome visualizzato",
-          "boardSummary": "I mittenti dei ticket per scheda si gestiscono nelle impostazioni di ciascuna scheda."
+          "boardSummary": "I mittenti dei ticket per scheda si gestiscono nelle impostazioni di ciascuna scheda.",
+          "ticket": "Email ticket",
+          "project": "Email progetto",
+          "billing": "Email fatturazione",
+          "sales": "Email vendite",
+          "scheduling": "Email pianificazione",
+          "survey": "Email sondaggio",
+          "account": "Email account",
+          "general": "Email generica",
+          "noneProviderFrom": "Nessuno (usa il mittente del provider)"
         },
         "actions": {
           "add": "Aggiungi mittente",
@@ -902,7 +911,13 @@
           "displayNamePlaceholder": "Team di supporto"
         },
         "smtpHelp": "Il relay SMTP deve consentire questo indirizzo.",
-        "microsoftHelp": "La casella connessa deve avere l’autorizzazione Exchange Send As per questo indirizzo."
+        "microsoftHelp": "La casella connessa deve avere l’autorizzazione Exchange Send As per questo indirizzo.",
+        "errors": {
+          "duplicateAddress": "Questo indirizzo mittente esiste già.",
+          "saveFailed": "Impossibile aggiungere il mittente. Controlla l’indirizzo e riprova.",
+          "duplicateRoute": "Questa regola mittente esiste già.",
+          "saveRoutingFailed": "Impossibile salvare la regola mittente. Riprova."
+        }
       }
     },
     "inbound": {

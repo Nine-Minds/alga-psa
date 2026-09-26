@@ -1533,7 +1533,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
             })}
           </DialogDescription>
           <div className="space-y-3 py-2">
-            {quoteSenders.length > 1 && <div className="space-y-1"><label htmlFor="quote-detail-send-sender" className="text-sm font-medium">{t('quoteForm.dialogs.send.from', { defaultValue: 'From' })}</label><CustomSelect id="quote-detail-send-sender" value={quoteSenderId || quoteEffectiveSenderId || ''} onValueChange={setQuoteSenderId} options={quoteSenders.map(sender => ({ value: sender.sender_id, label: sender.email_address }))} /></div>}
+            {quoteSenders.length > 1 && <div className="space-y-1"><label htmlFor="quote-detail-send-sender" className="text-sm font-medium">{t('quoteForm.dialogs.send.from', { defaultValue: 'From' })}</label><CustomSelect id="quote-detail-send-sender" value={quoteSenderId || quoteEffectiveSenderId || ''} onValueChange={setQuoteSenderId} options={[{ value: quoteEffectiveSenderId ?? quoteSenders[0].sender_id, label: `${t('quoteForm.dialogs.send.useDefault', { defaultValue: 'Use default' })} (${quoteSenders.find(sender => sender.sender_id === quoteEffectiveSenderId)?.email_address ?? quoteSenders[0].email_address})` }, ...quoteSenders.filter(sender => sender.sender_id !== quoteEffectiveSenderId).map(sender => ({ value: sender.sender_id, label: sender.email_address }))]} /></div>}
             <label className="flex flex-col gap-1 text-sm font-medium">
               {t('quoteForm.fields.recipients', { defaultValue: 'Recipients' })}
               <QuoteSendRecipientsField

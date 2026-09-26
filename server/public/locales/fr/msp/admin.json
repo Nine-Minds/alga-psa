@@ -238,7 +238,16 @@
         "useDefault": "Utiliser la valeur par défaut",
         "sender": "Expéditeur",
         "displayName": "Nom affiché",
-        "boardSummary": "Les expéditeurs des tickets par tableau se gèrent dans les paramètres de chaque tableau."
+        "boardSummary": "Les expéditeurs des tickets par tableau se gèrent dans les paramètres de chaque tableau.",
+        "ticket": "E-mail de ticket",
+        "project": "E-mail de projet",
+        "billing": "E-mail de facturation",
+        "sales": "E-mail commercial",
+        "scheduling": "E-mail de planification",
+        "survey": "E-mail de sondage",
+        "account": "E-mail de compte",
+        "general": "E-mail général",
+        "noneProviderFrom": "Aucun (utiliser l’expéditeur du fournisseur)"
       },
       "actions": {
         "add": "Ajouter",
@@ -254,7 +263,13 @@
         "displayNamePlaceholder": "Équipe Assistance"
       },
       "smtpHelp": "Votre relais SMTP doit autoriser cette adresse.",
-      "microsoftHelp": "La boîte connectée doit disposer de l’autorisation Exchange Send As pour cette adresse."
+      "microsoftHelp": "La boîte connectée doit disposer de l’autorisation Exchange Send As pour cette adresse.",
+      "errors": {
+        "duplicateAddress": "Cette adresse d’expéditeur existe déjà.",
+        "saveFailed": "Impossible d’ajouter l’expéditeur. Vérifiez l’adresse et réessayez.",
+        "duplicateRoute": "Cette route d’expéditeur existe déjà.",
+        "saveRoutingFailed": "Impossible d’enregistrer la route d’expéditeur. Réessayez."
+      }
     }
   },
   "microsoft365": {

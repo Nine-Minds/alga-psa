@@ -830,7 +830,12 @@
         }
       },
       "empty": "〖Ƞȯ ƀȯȧřḓş ƒȯŭƞḓ. ·······〗",
-      "searchPlaceholder": "〖Şḗȧřƈħ ƀȯȧřḓş… ······〗"
+      "searchPlaceholder": "〖Şḗȧřƈħ ƀȯȧřḓş… ······〗",
+      "emailSender": {
+        "useDefault": "⟦Use ticket default⟧",
+        "duplicateRoute": "⟦That sender route already exists.⟧",
+        "saveFailed": "⟦Could not save ticket sender. Please try again.⟧"
+      }
     },
     "priorities": {
       "title": {

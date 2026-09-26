@@ -2,6 +2,8 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { cleanup, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -314,5 +316,22 @@ describe('/msp/settings ticketing i18n integration', () => {
     expect(screen.queryByText('Display under Title')).not.toBeInTheDocument();
     expect(screen.queryByText('Display in separate column')).not.toBeInTheDocument();
     expect(screen.queryByText('Save')).not.toBeInTheDocument();
+  });
+
+  it('keeps all outbound sender route labels in both MSP locale namespaces', () => {
+    const locales = ['en', 'de', 'es', 'fr', 'it', 'nl', 'pl', 'pt', 'xx', 'yy'];
+    const keys = ['default', 'ticket', 'project', 'billing', 'sales', 'scheduling', 'survey', 'account', 'general'];
+    for (const locale of locales) {
+      for (const namespace of ['admin', 'email-providers']) {
+        const file = path.resolve(__dirname, `../../../../../../public/locales/${locale}/msp/${namespace}.json`);
+        const messages = JSON.parse(readFileSync(file, 'utf8'));
+        const senderIdentities = namespace === 'admin'
+          ? messages.email.senderIdentities
+          : messages.managed.outbound.senderIdentities;
+        for (const key of keys) {
+          expect(senderIdentities.routing[key], `${locale}/${namespace}: ${key}`).toBeTruthy();
+        }
+      }
+    }
   });
 });

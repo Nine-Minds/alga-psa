@@ -3,7 +3,7 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-const actionMocks = vi.hoisted(() => ({ list: vi.fn(), create: vi.fn(), update: vi.fn(), remove: vi.fn(), verify: vi.fn() }));
+const actionMocks = vi.hoisted(() => ({ list: vi.fn(), create: vi.fn(), update: vi.fn(), remove: vi.fn(), verify: vi.fn(), clearRoute: vi.fn() }));
 vi.mock('../../../actions/email-actions/emailSenderActions', () => ({
   listEmailSenders: actionMocks.list,
   createEmailSender: actionMocks.create,
@@ -11,10 +11,10 @@ vi.mock('../../../actions/email-actions/emailSenderActions', () => ({
   deleteEmailSender: actionMocks.remove,
   verifyEmailSender: actionMocks.verify,
   setEmailSenderRoute: vi.fn(),
-  clearEmailSenderRoute: vi.fn(),
+  clearEmailSenderRoute: actionMocks.clearRoute,
 }));
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
-  Dialog: ({ isOpen, title, children, footer }: any) => isOpen ? <section><h2>{title}</h2>{children}{footer}</section> : null,
+  Dialog: ({ id, isOpen, title, children, footer }: any) => isOpen ? <section id={id}><h2>{title}</h2>{children}{footer}</section> : null,
   DialogContent: ({ children }: any) => <div>{children}</div>,
   DialogDescription: ({ children }: any) => <p>{children}</p>,
 }));
@@ -40,6 +40,25 @@ describe('outbound email sender cards', () => {
     fireEvent.click(screen.getAllByText('email.senderIdentities.actions.add')[0]);
     expect(screen.getByLabelText('email.senderIdentities.fields.address')).toBeInTheDocument();
     expect(screen.getByText('email.senderIdentities.smtpHelp')).toBeInTheDocument();
+  });
+
+  it('shows add sender failures inside the dialog and offers a clear default route', async () => {
+    actionMocks.list.mockResolvedValue({ senders: [], routes: [] });
+    actionMocks.create.mockRejectedValue(Object.assign(new Error('duplicate key value violates unique constraint'), { code: '23505' }));
+    const { container } = render(<EmailSenderAddressesCard t={t} transport="smtp" />);
+    fireEvent.click(screen.getAllByText('email.senderIdentities.actions.add')[0]);
+    fireEvent.change(screen.getByLabelText('email.senderIdentities.fields.address'), { target: { value: 'duplicate@example.test' } });
+    fireEvent.click(document.getElementById('email-sender-add')!);
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('email.senderIdentities.errors.duplicateAddress'));
+    expect(container.querySelector('#email-sender-add-dialog')?.contains(screen.getByRole('alert'))).toBe(true);
+
+    actionMocks.create.mockReset();
+    actionMocks.list.mockResolvedValue({ senders: [], routes: [] });
+    const routeContainer = render(<EmailSenderRoutingCard t={t} />);
+    await waitFor(() => expect(screen.getByText('email.senderIdentities.routes.default')).toBeInTheDocument());
+    expect(routeContainer.container.textContent).toContain('email.senderIdentities.routes.noneProviderFrom');
+    fireEvent.click(routeContainer.container.querySelector('#email-sender-route-default-save')!);
+    await waitFor(() => expect(actionMocks.clearRoute).toHaveBeenCalledWith(expect.objectContaining({ routeType: 'default' })));
   });
 
   it('shows ticket inbound-reply guidance and a read-only board override summary', async () => {

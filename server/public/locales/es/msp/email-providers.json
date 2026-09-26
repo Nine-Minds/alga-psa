@@ -882,11 +882,20 @@
         "routing": {
           "title": "Enrutamiento de remitentes",
           "description": "Elige qué remitente se usa para cada tipo de correo.",
-          "default": "Predeterminado (resto del correo)",
+          "default": "Predeterminado (todo el resto del correo)",
           "useDefault": "Usar predeterminado",
           "sender": "Remitente",
           "displayName": "Nombre mostrado",
-          "boardSummary": "Los remitentes de tickets por tablero se administran en la configuración de cada tablero."
+          "boardSummary": "Los remitentes de tickets por tablero se administran en la configuración de cada tablero.",
+          "ticket": "Correo de tickets",
+          "project": "Correo de proyectos",
+          "billing": "Correo de facturación",
+          "sales": "Correo de ventas",
+          "scheduling": "Correo de programación",
+          "survey": "Correo de encuestas",
+          "account": "Correo de cuentas",
+          "general": "Correo general",
+          "noneProviderFrom": "Ninguno (usar remitente del proveedor)"
         },
         "actions": {
           "add": "Añadir remitente",
@@ -902,7 +911,13 @@
           "displayNamePlaceholder": "Equipo de soporte"
         },
         "smtpHelp": "Tu servidor SMTP debe permitir esta dirección.",
-        "microsoftHelp": "El buzón conectado necesita permiso Send As de Exchange para esta dirección."
+        "microsoftHelp": "El buzón conectado necesita permiso Send As de Exchange para esta dirección.",
+        "errors": {
+          "duplicateAddress": "Esta dirección de remitente ya existe.",
+          "saveFailed": "No se pudo añadir el remitente. Compruebe la dirección e inténtelo de nuevo.",
+          "duplicateRoute": "Esta ruta de remitente ya existe.",
+          "saveRoutingFailed": "No se pudo guardar la ruta del remitente. Inténtelo de nuevo."
+        }
       }
     },
     "inbound": {

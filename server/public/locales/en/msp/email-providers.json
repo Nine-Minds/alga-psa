@@ -886,7 +886,16 @@
           "useDefault": "Use default",
           "sender": "Sender",
           "displayName": "Display name",
-          "boardSummary": "Board-specific ticket senders are managed in each board’s settings."
+          "boardSummary": "Board-specific ticket senders are managed in each board’s settings.",
+          "ticket": "Ticket email",
+          "project": "Project email",
+          "billing": "Billing email",
+          "sales": "Sales email",
+          "scheduling": "Scheduling email",
+          "survey": "Survey email",
+          "account": "Account email",
+          "general": "General email",
+          "noneProviderFrom": "None (use provider From)"
         },
         "actions": {
           "add": "Add sender",
@@ -902,7 +911,13 @@
           "displayNamePlaceholder": "Support team"
         },
         "smtpHelp": "Your SMTP relay must allow this address.",
-        "microsoftHelp": "The connected mailbox needs Exchange Send As permission for this address."
+        "microsoftHelp": "The connected mailbox needs Exchange Send As permission for this address.",
+        "errors": {
+          "duplicateAddress": "This sender address already exists.",
+          "saveFailed": "Could not add sender. Check the address and try again.",
+          "duplicateRoute": "That sender route already exists.",
+          "saveRoutingFailed": "Could not save sender routing. Please try again."
+        }
       }
     },
     "inbound": {

@@ -886,7 +886,16 @@
           "useDefault": "Usar padrão",
           "sender": "Remetente",
           "displayName": "Nome de exibição",
-          "boardSummary": "Os remetentes de tickets por quadro são gerenciados nas configurações de cada quadro."
+          "boardSummary": "Os remetentes de tickets por quadro são gerenciados nas configurações de cada quadro.",
+          "ticket": "E-mail de chamado",
+          "project": "E-mail de projeto",
+          "billing": "E-mail de cobrança",
+          "sales": "E-mail de vendas",
+          "scheduling": "E-mail de agendamento",
+          "survey": "E-mail de pesquisa",
+          "account": "E-mail de conta",
+          "general": "E-mail geral",
+          "noneProviderFrom": "Nenhum (usar remetente do provedor)"
         },
         "actions": {
           "add": "Adicionar remetente",
@@ -902,7 +911,13 @@
           "displayNamePlaceholder": "Equipe de suporte"
         },
         "smtpHelp": "Seu relay SMTP precisa permitir este endereço.",
-        "microsoftHelp": "A caixa conectada precisa da permissão Exchange Send As para este endereço."
+        "microsoftHelp": "A caixa conectada precisa da permissão Exchange Send As para este endereço.",
+        "errors": {
+          "duplicateAddress": "Este endereço de remetente já existe.",
+          "saveFailed": "Não foi possível adicionar o remetente. Verifique o endereço e tente novamente.",
+          "duplicateRoute": "Esta rota de remetente já existe.",
+          "saveRoutingFailed": "Não foi possível salvar a rota do remetente. Tente novamente."
+        }
       }
     },
     "inbound": {

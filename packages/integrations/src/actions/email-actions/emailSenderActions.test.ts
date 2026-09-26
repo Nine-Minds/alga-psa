@@ -7,6 +7,7 @@ const state = vi.hoisted(() => ({
   sender: null as any,
   routes: [] as any[],
   insertedSender: null as any,
+  insertedRoute: null as any,
 }));
 const hasPermissionMock = vi.hoisted(() => vi.fn(async () => state.permitted));
 const getEmailSettingsMock = vi.hoisted(() => vi.fn(async () => ({ emailProvider: state.provider })));
@@ -33,7 +34,7 @@ vi.mock('@alga-psa/db', () => {
         select: async () => rows().filter(matches),
         orderBy: () => query,
         first: async () => rows().find(matches) ?? null,
-        insert: (row: any) => { state.insertedSender = { sender_id: 'new-sender', tenant: 'tenant-1', verification_status: 'unverified', ...row }; return query; },
+        insert: (row: any) => { if (name === 'email_sender_routes') { state.insertedRoute = row; state.routes.push(row); } else { state.insertedSender = { sender_id: 'new-sender', verification_status: 'unverified', ...row }; } return query; },
         returning: async () => [state.insertedSender],
         update: (row: any) => { state.sender = { ...state.sender, ...row }; return query; },
         del: async () => { state.sender = null; return 1; },
@@ -55,6 +56,7 @@ describe('email sender actions', () => {
     state.sender = { tenant: 'tenant-1', sender_id: 'sender-1', email_address: 'support@example.test', verification_status: 'verified' };
     state.routes.splice(0, state.routes.length);
     state.insertedSender = null;
+    state.insertedRoute = null;
     hasPermissionMock.mockClear();
     getEmailSettingsMock.mockClear();
   });
@@ -67,7 +69,7 @@ describe('email sender actions', () => {
 
   it('allows verified Resend domains and rejects unverified domains', async () => {
     state.verifiedDomain = true;
-    await expect(createEmailSender({ emailAddress: 'support@verified.example' })).resolves.toMatchObject({ verification_status: 'verified' });
+    await expect(createEmailSender({ emailAddress: 'support@verified.example' })).resolves.toMatchObject({ tenant: 'tenant-1', verification_status: 'verified' });
     state.insertedSender = null;
     await expect(createEmailSender({ emailAddress: 'support@unverified.example' })).rejects.toThrow(/not verified/);
   });
@@ -78,6 +80,7 @@ describe('email sender actions', () => {
     state.sender.verification_status = 'unverified';
     await expect(setEmailSenderRoute({ routeType: 'mail_class', mailClass: 'ticket', senderId: 'sender-1' })).rejects.toThrow(/explicitly confirm/);
     await expect(setEmailSenderRoute({ routeType: 'mail_class', mailClass: 'ticket', senderId: 'sender-1', confirmUnverifiedSmtpSender: true })).resolves.toMatchObject({ success: true });
+    expect(state.insertedRoute).toMatchObject({ tenant: 'tenant-1', route_type: 'mail_class', mail_class: 'ticket' });
   });
 
   it('distinguishes Microsoft mailbox send-as from using the mailbox itself', async () => {

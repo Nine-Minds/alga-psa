@@ -830,7 +830,12 @@
         }
       },
       "empty": "No se encontraron tableros.",
-      "searchPlaceholder": "Buscar tableros…"
+      "searchPlaceholder": "Buscar tableros…",
+      "emailSender": {
+        "useDefault": "Usar valor predeterminado del ticket",
+        "duplicateRoute": "Esta ruta de remitente ya existe.",
+        "saveFailed": "No se pudo guardar el remitente del ticket. Inténtelo de nuevo."
+      }
     },
     "priorities": {
       "title": {

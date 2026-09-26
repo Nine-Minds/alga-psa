@@ -534,6 +534,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
   const [ticketSenderOptions, setTicketSenderOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [ticketSenderId, setTicketSenderId] = useState('');
   const [ticketSenderName, setTicketSenderName] = useState('');
+  const [ticketDefaultAddress, setTicketDefaultAddress] = useState('');
   const [ticketSenderSaving, setTicketSenderSaving] = useState(false);
   const [isLoadingBoardStatuses, setIsLoadingBoardStatuses] = useState(false);
   // Tracks the close-rules / auto-close fetch on edit so the dirty baseline is
@@ -552,6 +553,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
       setTicketSenderOptions([]);
       setTicketSenderId('');
       setTicketSenderName('');
+      setTicketDefaultAddress('');
       return;
     }
     void listEmailSenders().then(({ senders, routes }) => {
@@ -560,6 +562,9 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
       const route = routes.find((item: any) => item.route_type === 'board' && item.board_id === editingBoard.board_id);
       setTicketSenderId(route?.sender_id ?? '');
       setTicketSenderName(route?.display_name ?? '');
+      const ticketRoute = routes.find((item: any) => item.route_type === 'mail_class' && item.mail_class === 'ticket')
+        ?? routes.find((item: any) => item.route_type === 'default');
+      setTicketDefaultAddress(senders.find((sender: any) => sender.sender_id === ticketRoute?.sender_id)?.email_address ?? '');
     }).catch((error) => toast.error(error instanceof Error ? error.message : 'Could not load ticket senders.'));
     return () => { active = false; };
   }, [editingBoard?.board_id, listEmailSenders]);
@@ -568,14 +573,18 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
     if (!editingBoard?.board_id || !setEmailSenderRoute || !clearEmailSenderRoute) return;
     setTicketSenderSaving(true);
     try {
-      if (!ticketSenderId && !ticketSenderName.trim()) {
+      if (!ticketSenderId) {
         await clearEmailSenderRoute({ routeType: 'board', boardId: editingBoard.board_id });
       } else {
         await setEmailSenderRoute({ routeType: 'board', boardId: editingBoard.board_id, senderId: ticketSenderId || null, displayName: ticketSenderName });
       }
       toast.success(t('ticketing.boards.emailSender.saved', 'Ticket sender saved'));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not save ticket sender.');
+      const code = (error as any)?.code ?? (error as any)?.cause?.code;
+      const message = error instanceof Error ? error.message : String(error);
+      toast.error(code === '23505' || /unique constraint|duplicate key/i.test(message)
+        ? t('ticketing.boards.emailSender.duplicateRoute', 'That sender route already exists.')
+        : t('ticketing.boards.emailSender.saveFailed', 'Could not save ticket sender. Please try again.'));
     } finally {
       setTicketSenderSaving(false);
     }
@@ -2036,7 +2045,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
                     id="board-ticket-email-sender"
                     value={ticketSenderId}
                     onValueChange={setTicketSenderId}
-                    options={[{ value: '', label: t('ticketing.boards.emailSender.useMailClass', 'Use ticket mail routing') }, ...ticketSenderOptions]}
+                    options={[{ value: '', label: t('ticketing.boards.emailSender.useDefault', 'Use ticket default') + (ticketDefaultAddress ? ` (${ticketDefaultAddress})` : '') }, ...ticketSenderOptions]}
                   />
                   <Label htmlFor="board-ticket-email-sender-name">{t('ticketing.boards.emailSender.displayName', 'Display name override (optional)')}</Label>
                   <Input id="board-ticket-email-sender-name" value={ticketSenderName} onChange={(event) => setTicketSenderName(event.target.value)} />

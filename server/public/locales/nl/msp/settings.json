@@ -830,7 +830,12 @@
         }
       },
       "empty": "Geen borden gevonden.",
-      "searchPlaceholder": "Borden zoeken…"
+      "searchPlaceholder": "Borden zoeken…",
+      "emailSender": {
+        "useDefault": "Ticketstandaard gebruiken",
+        "duplicateRoute": "Deze afzenderroute bestaat al.",
+        "saveFailed": "Ticketafzender opslaan is mislukt. Probeer het opnieuw."
+      }
     },
     "priorities": {
       "title": {

@@ -232,7 +232,7 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
                 id="invoice-email-sender-select"
                 value={senderId ?? effectiveSenderId ?? senders[0].sender_id}
                 onValueChange={setSenderId}
-                options={senders.map(sender => ({ value: sender.sender_id, label: sender.email_address }))}
+                options={[{ value: effectiveSenderId ?? senders[0].sender_id, label: `${t('sendEmail.fields.useDefault', { defaultValue: 'Use default' })} (${senders.find(sender => sender.sender_id === effectiveSenderId)?.email_address ?? senders[0].email_address})` }, ...senders.filter(sender => sender.sender_id !== effectiveSenderId).map(sender => ({ value: sender.sender_id, label: sender.email_address }))]}
               />
             </div>
           )}

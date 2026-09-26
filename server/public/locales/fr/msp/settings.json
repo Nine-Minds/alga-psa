@@ -830,7 +830,12 @@
         }
       },
       "empty": "Aucun tableau trouvé.",
-      "searchPlaceholder": "Rechercher des tableaux…"
+      "searchPlaceholder": "Rechercher des tableaux…",
+      "emailSender": {
+        "useDefault": "Utiliser la valeur par défaut du ticket",
+        "duplicateRoute": "Cette route d’expéditeur existe déjà.",
+        "saveFailed": "Impossible d’enregistrer l’expéditeur du ticket. Réessayez."
+      }
     },
     "priorities": {
       "title": {

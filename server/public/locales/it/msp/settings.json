@@ -830,7 +830,12 @@
         }
       },
       "empty": "Nessuna bacheca trovata.",
-      "searchPlaceholder": "Cerca bacheche…"
+      "searchPlaceholder": "Cerca bacheche…",
+      "emailSender": {
+        "useDefault": "Usa il mittente predefinito del ticket",
+        "duplicateRoute": "Questa regola mittente esiste già.",
+        "saveFailed": "Impossibile salvare il mittente del ticket. Riprova."
+      }
     },
     "priorities": {
       "title": {

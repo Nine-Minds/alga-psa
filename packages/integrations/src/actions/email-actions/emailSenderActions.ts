@@ -82,7 +82,9 @@ export const createEmailSender = withAuth(async (user, { tenant }, input: { emai
   } else if (settings.emailProvider === 'smtp') {
     verificationStatus = 'unverified';
   }
+  // LEVERAGE: friction tenantdb-insert — tenantDb scopes reads/updates/deletes but not inserts
   const [sender] = await db.table('email_sender_addresses').insert({
+    tenant,
     email_address: emailAddress,
     display_name: input.displayName?.trim() || null,
     microsoft_provider_id: microsoftProviderId,
@@ -155,7 +157,9 @@ export const setEmailSenderRoute = withAuth(async (user, { tenant }, input: Rout
   await knex.transaction(async (trx) => {
     const trxDb = tenantDb(trx, tenant);
     await trxDb.table('email_sender_routes').where(key).del();
+    // LEVERAGE: friction tenantdb-insert — tenantDb scopes reads/updates/deletes but not inserts
     await trxDb.table('email_sender_routes').insert({
+      tenant,
       ...key,
       sender_id: input.senderId ?? null,
       display_name: input.displayName?.trim() || null,

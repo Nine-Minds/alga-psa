@@ -834,7 +834,12 @@
         }
       },
       "empty": "Nie znaleziono tablic.",
-      "searchPlaceholder": "Szukaj tablic…"
+      "searchPlaceholder": "Szukaj tablic…",
+      "emailSender": {
+        "useDefault": "Użyj nadawcy domyślnego zgłoszenia",
+        "duplicateRoute": "Ta trasa nadawcy już istnieje.",
+        "saveFailed": "Nie można zapisać nadawcy zgłoszenia. Spróbuj ponownie."
+      }
     },
     "priorities": {
       "title": {
