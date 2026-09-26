@@ -37,11 +37,27 @@ the configured credential from this worktree's private, ignored
 `server/.env.local` file (mode `0600`). Never copy it into a ticket or durable
 report.
 The initial recovery handoff was subsequently found to reject the configured
-password, including when checked with Next.js's environment loader. The cause
-of that intervening mismatch was not established. Takeover repeated the scoped
-recovery, then confirmed authentication in separate processes before and after
-the regression suite. Other worktrees using the old startup code can still
-rotate a shared database credential; this branch cannot prevent their writes.
+password, including when checked with Next.js's environment loader. Review
+reproduced the failure twice. Private diagnostics then established that the
+configured password did not verify against the selected database row, the
+effective secret provider agreed with the loaded auth-secret environment
+setting, and exactly one active internal row matched the seeded email; the
+tenant-scoped account lookup agreed with that row. This rules out ambiguous
+account selection and an in-process hash/verify secret mismatch. It does not
+establish whether the stored hash was later changed by another database writer
+or was originally created under different secret configuration; no external
+writer was identified.
+
+After that diagnosis, explicit tenant-scoped recovery authenticated in its
+process and an independent fresh-process check passed immediately afterward.
+Following focused tests and typechecking, a later fresh-process check failed;
+private diagnostics again showed one selected account, matching loaded and
+effective auth-secret configuration, and a stored hash that did not match the
+configured password. This establishes credential instability across checks,
+consistent with a shared database row changing between them. The writer has
+not been identified, so the credential gate is not currently satisfied. Do
+not treat the immediate post-recovery pass as durable; resolve the shared
+database writer or configuration ownership before handoff.
 
 Run this read-only check from `server/` immediately before browser smoke:
 
@@ -50,9 +66,12 @@ NODE_ENV=development node --import tsx scripts/check-development-login.mjs
 ```
 
 It uses Next.js's development environment loader and `authenticateUser` against
-the configured database. It emits only a result, never the password, and starts
-no server. To verify the private file independently of inherited credential
-variables, prefix the command with
+the configured database. It emits only a result and a redacted failure class,
+never the password, and starts no server. A mismatch against the selected
+account hash indicates possible shared-database rotation or secret
+configuration drift; a discovery/scoped-account mismatch indicates account
+selection drift. To verify the private file independently of inherited
+credential variables, prefix the command with
 `env -u NEXTAUTH_SECRET -u nextauth_secret -u DEV_LOGIN_PASSWORD -u DEV_LOGIN_PASSWORD_RECOVERY`.
 If verification fails and recovery of this fixture is intended, append
 `--recover`. That option calls the same tenant-scoped compare-and-set recovery
@@ -63,8 +82,10 @@ unset for normal service boots.
 The private `DEV_LOGIN_PASSWORD` remains configured for the next Next.js boot.
 Port `3927` had no listener during this implementation step.
 
-Smoke Test now only needs the browser checks: authenticate and reload to
-confirm the session persists, confirm sign-in input hydration and the Google
-SSO label, and change a priority hex color, save/reload, and check Enter commits
-the draft while Cancel discards it. This plain PostgreSQL database does not
-validate Citus distribution-column compatibility.
+The credential gate must pass in a fresh process immediately before browser
+smoke; it currently fails intermittently, so live sign-in is not ready to hand
+off. Once the shared database credential remains stable, validate sign-in and
+session survival after reload, sign-in input and Google SSO label hydration, and
+priority hex Save followed by dialog Save and reload/database persistence. Also
+confirm Enter commits the picker draft while Cancel discards it. This plain
+PostgreSQL database does not validate Citus distribution-column compatibility.

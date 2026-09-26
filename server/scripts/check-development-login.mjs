@@ -30,6 +30,10 @@ try {
   const email = 'glinda@emeraldcity.oz';
   const user = await User.findUserByEmailAndType(email, 'internal');
   if (!user || user.is_inactive) throw new Error('Active seeded internal user not found.');
+  const tenantScopedUser = await User.findUserByEmailTenantAndType(email, user.tenant, 'internal');
+  if (tenantScopedUser?.user_id !== user.user_id) {
+    throw new Error('Seeded account discovery does not match the tenant-scoped authentication account.');
+  }
 
   if (recover) {
     const { initializeDevelopmentCredential } = await import('../src/lib/developmentCredential.ts');
@@ -46,12 +50,16 @@ try {
     });
   }
 
+  if (!user.hashed_password || !await verifyPassword(password, user.hashed_password)) {
+    throw new Error('Configured credential does not verify against the selected account hash under the effective secret; shared-database rotation or secret configuration drift is possible.');
+  }
+
   const authenticated = await authenticateUser(email, password, 'internal', {
     tenantId: user.tenant,
     requireTenantMatch: true,
   });
   if (authenticated?.user_id !== user.user_id) {
-    throw new Error('Configured credential rejected. Check the effective secret and shared-database rotation; use --recover only for intentional recovery.');
+    throw new Error('Stored credential verifies, but authenticateUser did not return the tenant-scoped seeded account.');
   }
   report('Development credential authenticated against the configured database. No server was started.');
 } catch (error) {
@@ -59,7 +67,9 @@ try {
   const known = [
     'DEV_LOGIN_PASSWORD must be configured privately before running this check.',
     'Active seeded internal user not found.',
-    'Configured credential rejected. Check the effective secret and shared-database rotation; use --recover only for intentional recovery.',
+    'Seeded account discovery does not match the tenant-scoped authentication account.',
+    'Configured credential does not verify against the selected account hash under the effective secret; shared-database rotation or secret configuration drift is possible.',
+    'Stored credential verifies, but authenticateUser did not return the tenant-scoped seeded account.',
   ];
   report(known.includes(error?.message) ? error.message : 'Development credential check failed; inspect configuration privately.');
   process.exitCode = 1;
