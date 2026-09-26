@@ -19,12 +19,14 @@ export class SavedPaymentMethodService {
     if (!profile) throw new Error('Billing profile is unavailable');
     const recipient = await resolveInvoiceBillingRecipient({ knexOrTrx: this.knex, tenantId: this.tenantId, clientId });
     if (!recipient.clientName) throw new Error('Client is unavailable');
+    const client = await tenantDb(this.knex, this.tenantId).table('clients').where({ client_id: clientId }).first('default_currency_code');
     const provider = createStripePaymentProvider(this.tenantId);
     const customerId = await provider.getOrCreateCustomer(clientId, recipient.recipientEmail, String(profile.name ?? recipient.clientName), billingProfileId);
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL;
     if (!baseUrl) throw new Error('Application base URL is not configured');
     const safeReturnTo = returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//') ? returnTo : '/client-portal/billing';
-    const currency = String(profile.currency_code ?? profile.currency ?? process.env.DEFAULT_CURRENCY ?? 'USD').toLowerCase();
+    const currency = String(profile.currency_code ?? profile.currency ?? client?.default_currency_code ?? process.env.DEFAULT_CURRENCY ?? '').toLowerCase();
+    if (!currency) throw new Error('Billing currency is not configured for this client');
     const session = await provider.createPaymentMethodSetupSession({ clientId, billingProfileId, customerId, currency,
       successUrl: `${baseUrl}/client-portal/billing/payment-methods/setup-complete?session_id={CHECKOUT_SESSION_ID}&returnTo=${encodeURIComponent(safeReturnTo)}`,
       cancelUrl: `${baseUrl}${safeReturnTo}` });

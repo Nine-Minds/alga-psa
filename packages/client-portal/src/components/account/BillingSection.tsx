@@ -6,16 +6,13 @@ import { Table } from "@alga-psa/ui/components/Table";
 import { Button } from "@alga-psa/ui/components/Button";
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { Dialog, DialogContent } from "@alga-psa/ui/components/Dialog";
-import { Input } from "@alga-psa/ui/components/Input";
-import { Checkbox } from "@alga-psa/ui/components/Checkbox";
-import CustomSelect from "@alga-psa/ui/components/CustomSelect";
 import { useState, useEffect } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getInvoices,
   getBillingCycles,
   getPaymentMethods,
-  addPaymentMethod,
+  startClientPortalCardSetup,
   removePaymentMethod,
   setDefaultPaymentMethod,
   type Invoice,
@@ -32,19 +29,6 @@ const isReturnedActionError = (
   value: unknown
 ): value is { readonly actionError: string } | { readonly permissionError: string } =>
   isActionMessageError(value) || isActionPermissionError(value);
-
-// Validation rules
-const CARD_NUMBER_REGEX = /^[0-9]{16}$/;
-const CVV_REGEX = /^[0-9]{3,4}$/;
-const MONTH_REGEX = /^(0[1-9]|1[0-2])$/;
-const YEAR_REGEX = /^20[2-9][0-9]$/;
-
-interface ValidationErrors {
-  cardNumber?: string;
-  expMonth?: string;
-  expYear?: string;
-  cvv?: string;
-}
 
 export default function BillingSection() {
   const { money } = useCurrencyFormat();
@@ -69,20 +53,8 @@ export default function BillingSection() {
     billingProfiles.find((profile) => profile.isDefault)?.billingProfileId ?? '';
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  const [isAddingPayment, setIsAddingPayment] = useState(false);
-  const [addPaymentError, setAddPaymentError] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
-
-  // Form state for adding payment method
-  const [paymentForm, setPaymentForm] = useState({
-    cardNumber: '',
-    expMonth: '',
-    expYear: '',
-    cvv: '',
-    setDefault: true,
-    billingProfileId: ''
-  });
+  const [setupError, setSetupError] = useState('');
+  const [startingSetup, setStartingSetup] = useState(false);
 
   useEffect(() => {
     const loadBillingData = async () => {
@@ -112,87 +84,6 @@ export default function BillingSection() {
 
     loadBillingData();
   }, []);
-
-  const validatePaymentForm = (): boolean => {
-    const errors: ValidationErrors = {};
-    let isValid = true;
-
-    if (!CARD_NUMBER_REGEX.test(paymentForm.cardNumber)) {
-      errors.cardNumber = tAccountBilling('validation.cardNumber', 'Please enter a valid 16-digit card number');
-      isValid = false;
-    }
-
-    if (!MONTH_REGEX.test(paymentForm.expMonth)) {
-      errors.expMonth = tAccountBilling('validation.expMonth', 'Please enter a valid month (01-12)');
-      isValid = false;
-    }
-
-    if (!YEAR_REGEX.test(paymentForm.expYear)) {
-      errors.expYear = tAccountBilling('validation.expYear', 'Please enter a valid year (2024-2099)');
-      isValid = false;
-    }
-
-    if (!CVV_REGEX.test(paymentForm.cvv)) {
-      errors.cvv = tAccountBilling('validation.cvv', 'Please enter a valid CVV');
-      isValid = false;
-    }
-
-    setValidationErrors(errors);
-    return isValid;
-  };
-
-  const handleAddPayment = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setAddPaymentError('');
-    
-    if (!validatePaymentForm()) {
-      return;
-    }
-
-    setIsProcessing(true);
-
-    try {
-      // This is a placeholder - you would integrate with your payment processor here
-      const token = await processPaymentDetails(paymentForm);
-      
-      const result = await addPaymentMethod({
-        type: 'credit_card',
-        token,
-        setDefault: paymentForm.setDefault,
-        // Omitted for an unsegmented client, where the server files the card
-        // under the client's only profile.
-        billingProfileId: paymentForm.billingProfileId || undefined
-      });
-      if (isReturnedActionError(result)) {
-        setAddPaymentError(getErrorMessage(result));
-        return;
-      }
-
-      // Refresh payment methods
-      const updatedMethods = await getPaymentMethods();
-      if (isReturnedActionError(updatedMethods)) {
-        setAddPaymentError(getErrorMessage(updatedMethods));
-        return;
-      }
-      setPaymentMethods(updatedMethods);
-      
-      // Reset form and close dialog
-      setPaymentForm({
-        cardNumber: '',
-        expMonth: '',
-        expYear: '',
-        cvv: '',
-        setDefault: true,
-        billingProfileId: ''
-      });
-      setIsAddingPayment(false);
-    } catch (err) {
-      console.error('Failed to add payment method:', err);
-      setAddPaymentError(tAccountBilling('addPaymentError', 'Failed to add payment method'));
-    } finally {
-      setIsProcessing(false);
-    }
-  };
 
   const handleRemovePayment = async (id: string) => {
     try {
@@ -232,14 +123,23 @@ export default function BillingSection() {
     }
   };
 
-  // This is a placeholder function - replace with actual payment processor integration
-  const processPaymentDetails = async (details: typeof paymentForm) => {
-    // Simulate payment processor API call
-    return new Promise<string>((resolve) => {
-      setTimeout(() => {
-        resolve('mock_payment_token');
-      }, 500);
-    });
+  const handleAddPaymentMethod = async () => {
+    const billingProfileId = defaultProfileId || billingProfiles[0]?.billingProfileId;
+    if (!billingProfileId) return;
+    setStartingSetup(true);
+    setSetupError('');
+    try {
+      const result = await startClientPortalCardSetup(billingProfileId);
+      if (isReturnedActionError(result)) {
+        setSetupError(getErrorMessage(result));
+        return;
+      }
+      window.location.assign(result.url);
+    } catch (setupFailure) {
+      setSetupError(getErrorMessage(setupFailure));
+    } finally {
+      setStartingSetup(false);
+    }
   };
 
   // money() takes minor units and formats with the tenant's locale + currency
@@ -324,14 +224,10 @@ export default function BillingSection() {
                   ))}
                 </div>
               )}
-              <Button
-                id="add-payment-method"
-                variant="outline"
-                className="mt-4"
-                onClick={() => setIsAddingPayment(true)}
-              >
-                {tAccountBilling('actions.addPaymentMethod', 'Add Payment Method')}
+              <Button id="add-payment-method" variant="outline" className="mt-4" onClick={handleAddPaymentMethod} disabled={startingSetup || !defaultProfileId}>
+                {startingSetup ? tAccountBilling('actions.adding', 'Opening secure setup…') : tAccountBilling('actions.addPaymentMethod', 'Add Payment Method')}
               </Button>
+              {setupError && <p className="mt-2 text-sm text-destructive">{setupError}</p>}
             </div>
             <div>
               <h4 className="text-sm font-medium mb-2">{tAccountBilling('billingCycleTitle', 'Billing Cycle')}</h4>
@@ -342,160 +238,6 @@ export default function BillingSection() {
           </div>
         </Card>
       </section>
-
-      {/* Add Payment Method Dialog */}
-      <Dialog isOpen={isAddingPayment} onClose={() => setIsAddingPayment(false)}>
-        <DialogContent>
-          <form onSubmit={handleAddPayment} className="space-y-4">
-            <h3 className="text-lg font-medium">{tAccountBilling('actions.addPaymentMethod', 'Add Payment Method')}</h3>
-            
-            <div>
-              <label htmlFor="cardNumber" className="block text-sm font-medium mb-1">
-                {tAccountBilling('fields.cardNumber', 'Card Number')}
-              </label>
-              <Input
-                id="cardNumber"
-                value={paymentForm.cardNumber}
-                onChange={(e) => setPaymentForm(prev => ({
-                  ...prev,
-                  cardNumber: e.target.value
-                }))}
-                maxLength={16}
-                placeholder="1234 5678 9012 3456"
-                className={validationErrors.cardNumber ? 'border-red-500' : ''}
-              />
-              {validationErrors.cardNumber && (
-                <p className="mt-1 text-sm text-red-500">{validationErrors.cardNumber}</p>
-              )}
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label htmlFor="expMonth" className="block text-sm font-medium mb-1">
-                  {tAccountBilling('fields.expiryMonth', 'Month')}
-                </label>
-                <Input
-                  id="expMonth"
-                  value={paymentForm.expMonth}
-                  onChange={(e) => setPaymentForm(prev => ({
-                    ...prev,
-                    expMonth: e.target.value
-                  }))}
-                  maxLength={2}
-                  placeholder="MM"
-                  className={validationErrors.expMonth ? 'border-red-500' : ''}
-                />
-                {validationErrors.expMonth && (
-                  <p className="mt-1 text-sm text-red-500">{validationErrors.expMonth}</p>
-                )}
-              </div>
-
-              <div>
-                <label htmlFor="expYear" className="block text-sm font-medium mb-1">
-                  {tAccountBilling('fields.expiryYear', 'Year')}
-                </label>
-                <Input
-                  id="expYear"
-                  value={paymentForm.expYear}
-                  onChange={(e) => setPaymentForm(prev => ({
-                    ...prev,
-                    expYear: e.target.value
-                  }))}
-                  maxLength={4}
-                  placeholder="YYYY"
-                  className={validationErrors.expYear ? 'border-red-500' : ''}
-                />
-                {validationErrors.expYear && (
-                  <p className="mt-1 text-sm text-red-500">{validationErrors.expYear}</p>
-                )}
-              </div>
-
-              <div>
-                <label htmlFor="cvv" className="block text-sm font-medium mb-1">
-                  {tAccountBilling('fields.cvv', 'CVV')}
-                </label>
-                <Input
-                  id="cvv"
-                  value={paymentForm.cvv}
-                  onChange={(e) => setPaymentForm(prev => ({
-                    ...prev,
-                    cvv: e.target.value
-                  }))}
-                  maxLength={4}
-                  placeholder="123"
-                  className={validationErrors.cvv ? 'border-red-500' : ''}
-                />
-                {validationErrors.cvv && (
-                  <p className="mt-1 text-sm text-red-500">{validationErrors.cvv}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Which entity the card belongs to. Only offered when the client
-                actually has more than one (decision D6); an unsegmented client
-                never sees a field with a single choice. */}
-            {isSegmented && (
-              <div>
-                <label htmlFor="payment-billing-profile" className="block text-sm font-medium mb-1">
-                  {tAccountBilling('fields.billingProfile', 'Pays for')}
-                </label>
-                <CustomSelect
-                  id="payment-billing-profile"
-                  value={paymentForm.billingProfileId || defaultProfileId}
-                  onValueChange={(value) => setPaymentForm(prev => ({
-                    ...prev,
-                    billingProfileId: value
-                  }))}
-                  options={billingProfiles.map((profile) => ({
-                    value: profile.billingProfileId,
-                    label: profile.name,
-                  }))}
-                />
-              </div>
-            )}
-
-            <div className="flex items-center">
-              <Checkbox
-                id="setDefault"
-                label={tAccountBilling('fields.setAsDefault', 'Set as default payment method')}
-                checked={paymentForm.setDefault}
-                onChange={(e) => setPaymentForm(prev => ({
-                  ...prev,
-                  setDefault: (e.target as HTMLInputElement).checked
-                }))}
-              />
-              <label htmlFor="setDefault" className="text-sm">
-                {tAccountBilling('fields.setAsDefault', 'Set as default payment method')}
-              </label>
-            </div>
-
-            {addPaymentError && (
-              <p className="text-sm text-red-500">{addPaymentError}</p>
-            )}
-
-            <div className="flex justify-end space-x-2">
-              <Button
-                id="cancel-add-payment"
-                type="button"
-                variant="ghost"
-                onClick={() => setIsAddingPayment(false)}
-                disabled={isProcessing}
-              >
-                {tCommon('common.cancel', 'Cancel')}
-              </Button>
-              <Button
-                id="submit-add-payment"
-                type="submit"
-                disabled={isProcessing}
-              >
-                {isProcessing
-                  ? tAccountBilling('actions.adding', 'Adding...')
-                  : tAccountBilling('actions.addPaymentMethod', 'Add Payment Method')}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
 
       {/* Recent Invoices */}
       <section>

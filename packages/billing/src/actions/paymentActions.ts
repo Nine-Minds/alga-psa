@@ -15,6 +15,7 @@ async function loadEnterprisePayments(): Promise<{
   PaymentService: any;
   createStripePaymentProvider: any;
   AutopayService?: any;
+  SavedPaymentMethodService?: any;
 } | null> {
   try {
     const mod = await import('@enterprise/lib/payments');
@@ -22,6 +23,7 @@ async function loadEnterprisePayments(): Promise<{
       PaymentService: (mod as any).PaymentService,
       createStripePaymentProvider: (mod as any).createStripePaymentProvider,
       AutopayService: (mod as any).AutopayService,
+      SavedPaymentMethodService: (mod as any).SavedPaymentMethodService,
     };
   } catch (error) {
     if (isEnterpriseBuild()) {
@@ -34,6 +36,31 @@ async function loadEnterprisePayments(): Promise<{
     logger.debug('[billing/paymentActions] enterprise payments module not available', { error });
     return null;
   }
+}
+
+/** Hosted Stripe Setup checkout. CE returns null through the existing loader boundary. */
+export async function startSavedPaymentMethodSetup(tenantId: string, clientId: string, billingProfileId: string, returnTo?: string): Promise<{ url: string } | null> {
+  if (!isEnterpriseBuild()) return null;
+  const ee = await loadEnterprisePayments();
+  if (!ee?.SavedPaymentMethodService) return null;
+  const service = await ee.SavedPaymentMethodService.create(tenantId);
+  return service.startSetup(clientId, billingProfileId, returnTo);
+}
+
+export async function completeSavedPaymentMethodSetup(tenantId: string, sessionId: string): Promise<{ paymentMethodId: string } | null> {
+  if (!isEnterpriseBuild()) return null;
+  const ee = await loadEnterprisePayments();
+  if (!ee?.SavedPaymentMethodService) return null;
+  const service = await ee.SavedPaymentMethodService.create(tenantId);
+  return service.completeSetup(sessionId);
+}
+
+export async function removeSavedPaymentMethod(tenantId: string, paymentMethodId: string): Promise<boolean> {
+  if (!isEnterpriseBuild()) return false;
+  const ee = await loadEnterprisePayments();
+  if (!ee?.SavedPaymentMethodService) return false;
+  await (await ee.SavedPaymentMethodService.create(tenantId)).removeMethod(paymentMethodId);
+  return true;
 }
 
 /** Best-effort finalize producer. It is intentionally isolated from finalize. */

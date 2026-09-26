@@ -13,6 +13,7 @@ import {
   resolvePaymentBillingProfileId,
 } from '@alga-psa/shared/billingClients/billingProfilePayments';
 import { getPermittedBillingProfileIds } from './client-portal-actions/clientBillingProfileAccess';
+import { completeSavedPaymentMethodSetup, removeSavedPaymentMethod as removeSavedMethod, startSavedPaymentMethodSetup } from '@alga-psa/billing/actions/paymentActions';
 
 export type ClientPortalAccountActionError = ActionMessageError;
 
@@ -400,77 +401,44 @@ export const getPaymentMethods = withAuth(async (
   }));
 });
 
-export const addPaymentMethod = withAuth(async (user, { tenant }, data: {
-  type: PaymentMethod['type'];
-  token: string;
-  setDefault: boolean;
-  billingProfileId?: string;
-}): Promise<{ success: boolean } | ClientPortalAccountActionError> => {
-  const { knex } = await createTenantKnex();
-
-  const clientId = await getClientIdFromUser(knex, user, tenant);
-  if (!clientId) return noClientForUserError();
-
-  // Start a transaction
-  await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const billingProfileId = await resolvePaymentBillingProfileId(
-      trx,
-      tenant,
-      clientId,
-      data.billingProfileId ?? null,
-    );
-
-    const permitted = await getPermittedBillingProfileIds(trx, tenant, user, clientId);
-    if (permitted && !permitted.has(billingProfileId)) {
-      throw new Error('You do not have access to that billing profile.');
-    }
-
-    // If this is set as default, unset the existing default *for this profile*.
-    // Clearing the whole client here would strip a sibling entity of its
-    // default card as a side effect of someone else adding theirs (F104).
-    if (data.setDefault) {
-      await clearDefaultPaymentMethod(trx, tenant, clientId, billingProfileId);
-    }
-
-    // Process the payment token and get card/bank details
-    // This is a placeholder - you would integrate with your payment processor here
-    const paymentDetails = await processPaymentToken(data.token);
-
-    // Add the new payment method
-    return await tenantDb(trx, tenant).table('payment_methods').insert({
-      client_id: clientId,
-      tenant,
-      billing_profile_id: billingProfileId,
-      type: data.type,
-      last4: paymentDetails.last4,
-      exp_month: paymentDetails.expMonth,
-      exp_year: paymentDetails.expYear,
-      is_default: data.setDefault,
-      created_at: new Date().toISOString()
-    });
-  });
-
-  return { success: true };
-});
-
 export const removePaymentMethod = withAuth(async (user, { tenant }, id: string): Promise<{ success: boolean } | ClientPortalAccountActionError> => {
   const { knex } = await createTenantKnex();
 
   const clientId = await getClientIdFromUser(knex, user, tenant);
   if (!clientId) return noClientForUserError();
 
-  await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await tenantDb(trx, tenant).table('payment_methods')
-      .where({
-        payment_method_id: id,
-        client_id: clientId
-      })
-      .update({
-        is_deleted: true,
-        updated_at: new Date().toISOString()
-      });
-  });
+  const method = await tenantDb(knex, tenant).table('payment_methods').where({ payment_method_id: id, client_id: clientId, is_deleted: false }).first();
+  if (!method) throw new Error('Payment method not found.');
+  const permitted = await getPermittedBillingProfileIds(knex, tenant, user, clientId);
+  if (permitted && !permitted.has(method.billing_profile_id)) throw new Error('You do not have access to that billing profile.');
+  if (!(await removeSavedMethod(tenant, id))) await tenantDb(knex, tenant).table('payment_methods').where({ payment_method_id: id, client_id: clientId }).update({ is_deleted: true, updated_at: new Date().toISOString() });
 
+  return { success: true };
+});
+
+export const startClientPortalCardSetup = withAuth(async (user, { tenant }, billingProfileId: string): Promise<{ url: string } | ClientPortalAccountActionError> => {
+  const { knex } = await createTenantKnex();
+  const clientId = await getClientIdFromUser(knex, user, tenant);
+  if (!clientId) return noClientForUserError();
+  const permitted = await getPermittedBillingProfileIds(knex, tenant, user, clientId);
+  if (permitted && !permitted.has(billingProfileId)) throw new Error('You do not have access to that billing profile.');
+  const profile = await tenantDb(knex, tenant).table('client_billing_profiles').where({ billing_profile_id: billingProfileId, client_id: clientId, is_active: true }).first();
+  if (!profile) throw new Error('Billing profile is unavailable.');
+  const setup = await startSavedPaymentMethodSetup(tenant, clientId, billingProfileId, '/client-portal/billing');
+  if (!setup?.url) throw new Error('Hosted card setup is unavailable.');
+  return { url: setup.url };
+});
+
+export const completeClientPortalCardSetup = withAuth(async (user, { tenant }, sessionId: string): Promise<{ success: boolean } | ClientPortalAccountActionError> => {
+  const { knex } = await createTenantKnex();
+  const clientId = await getClientIdFromUser(knex, user, tenant);
+  if (!clientId) return noClientForUserError();
+  const completed = await completeSavedPaymentMethodSetup(tenant, sessionId);
+  if (!completed) throw new Error('Hosted card setup is unavailable.');
+  const method = await tenantDb(knex, tenant).table('payment_methods').where({ payment_method_id: completed.paymentMethodId, client_id: clientId }).first('billing_profile_id');
+  if (!method) throw new Error('Card setup does not belong to this client.');
+  const permitted = await getPermittedBillingProfileIds(knex, tenant, user, clientId);
+  if (permitted && !permitted.has(method.billing_profile_id)) throw new Error('You do not have access to that billing profile.');
   return { success: true };
 });
 
@@ -512,24 +480,6 @@ export const setDefaultPaymentMethod = withAuth(async (user, { tenant }, id: str
 
   return { success: true };
 });
-
-// This is a placeholder function - replace with actual payment processor integration
-async function processPaymentToken(token: string) {
-  // Simulate API call to payment processor
-  return new Promise<{
-    last4: string;
-    expMonth: string;
-    expYear: string;
-  }>((resolve) => {
-    setTimeout(() => {
-      resolve({
-        last4: '4242',
-        expMonth: '12',
-        expYear: '2025'
-      });
-    }, 500);
-  });
-}
 
 export const getInvoices = withAuth(async (user, { tenant }): Promise<Invoice[] | ClientPortalAccountActionError> => {
   const { knex } = await createTenantKnex();
