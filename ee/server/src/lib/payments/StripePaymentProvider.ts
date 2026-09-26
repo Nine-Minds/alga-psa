@@ -242,7 +242,21 @@ export class StripePaymentProvider implements PaymentProvider {
 
   async detachPaymentMethod(externalId: string): Promise<void> {
     const stripe = await this.getStripe();
-    await stripe.paymentMethods.detach(externalId);
+    try {
+      await stripe.paymentMethods.detach(externalId);
+    } catch (error) {
+      const stripeError = error as Stripe.errors.StripeError;
+      const rawError = stripeError.raw as any;
+      const code = stripeError.code ?? rawError?.code;
+      if (code === 'resource_missing') {
+        logger.warn('[StripePaymentProvider] Payment method already missing during detach', {
+          tenantId: this.tenantId,
+          externalId,
+        });
+        return;
+      }
+      throw error;
+    }
   }
 
   async chargeSavedPaymentMethod(request: ChargeSavedPaymentMethodRequest): Promise<SavedPaymentMethodChargeResult> {
