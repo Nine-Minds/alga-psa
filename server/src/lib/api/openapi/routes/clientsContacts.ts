@@ -82,6 +82,8 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     }),
   );
 
+  const ClientUpdateBody = ClientBody.omit({ email: true, phone_no: true, address: true });
+
   const ClientLocationBody = registry.registerSchema(
     'ClientLocationBody',
     zOpenApi.object({
@@ -404,10 +406,10 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     method: 'put',
     path: '/api/v1/clients/{id}',
     summary: 'Update client',
-    description: 'Inherited ApiBaseController update route for one client_id.',
+    description: 'Updates client fields for one client_id. email, phone_no, and address are location fields and must be managed through /api/v1/clients/{id}/locations.',
     tags: [clientTag],
     security: [{ ApiKeyAuth: [] }],
-    request: { params: ClientIdParam, body: { schema: ClientBody.partial() } },
+    request: { params: ClientIdParam, body: { schema: ClientUpdateBody.partial() } },
     responses: {
       200: { description: 'Client updated.', schema: ClientEnvelope },
       400: { description: 'Invalid client id or request payload.', schema: ApiError },
