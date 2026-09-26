@@ -371,11 +371,9 @@ export function useTranslation(
 ) {
   const translation = useI18nextTranslation(namespace as any, options as any);
   const [, i18n] = translation;
-  // Once initialized, preserve react-i18next's translator and its complete
-  // overloads (including defaultValue plus interpolation/plural options).
-  if (i18n?.isInitialized) return translation;
-
-  const t = (...args: any[]) => {
+  // Keep this hook unconditional across initialization and the callback stable:
+  // sign-in alert effects depend on t and update state while resources load.
+  const t = useCallback((...args: any[]) => {
     const [key, translationOptions] = args;
     // During the auth bootstrap, i18next has been attached to React but its
     // backend may not have returned yet. Preserve the call site's fallback
@@ -385,7 +383,11 @@ export function useTranslation(
       return translationOptions.defaultValue;
     }
     return Array.isArray(key) ? key[0] : key;
-  };
+  }, []);
+
+  // Once initialized, preserve react-i18next's translator and its complete
+  // overloads (including defaultValue plus interpolation/plural options).
+  if (i18n?.isInitialized) return translation;
 
   const wrapped = Object.assign([...translation], translation) as typeof translation;
   wrapped[0] = t as typeof translation[0];

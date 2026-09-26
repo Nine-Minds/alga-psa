@@ -6,9 +6,11 @@ import { hydrateRoot, type Root } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import i18next from 'i18next';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import MspLoginForm from '@alga-psa/auth/components/MspLoginForm';
+import MspSignIn from '@alga-psa/auth/components/MspSignIn';
 import { I18nWrapper } from './I18nWrapper';
 import { ThemeBridge } from '../../../../../server/src/components/providers/ThemeBridge';
+
+const signInState = vi.hoisted(() => ({ error: 'AccessDenied', alertRenders: 0 }));
 
 const pendingReads = vi.hoisted(() => [] as Array<{
   language: string;
@@ -30,9 +32,20 @@ vi.mock('i18next-http-backend', () => ({
 
 vi.mock('next/navigation', () => ({
   usePathname: () => '/auth/msp/signin',
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => new URLSearchParams({ error: signInState.error }),
 }));
 vi.mock('../../actions', () => ({ getHierarchicalLocaleAction: vi.fn() }));
+vi.mock('next/image', () => ({
+  default: ({ priority, ...props }: React.ImgHTMLAttributes<HTMLImageElement> & { priority?: boolean }) => <img {...props} />,
+}));
+vi.mock('@alga-psa/auth/components/TwoFA', () => ({ default: () => null }));
+vi.mock('@alga-psa/auth/components/Alert', () => ({
+  default: ({ isOpen, title, message }: { isOpen: boolean; title: string; message: string }) => {
+    // Fail promptly if a translation-dependent effect repeatedly updates state.
+    if (++signInState.alertRenders > 50) throw new Error('Sign-in alert render loop');
+    return isOpen ? <div role="alert">{title}: {message}</div> : null;
+  },
+}));
 vi.mock('next-auth/react', () => ({ signIn: vi.fn() }));
 vi.mock('next/link', () => ({
   default: ({ children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
@@ -88,19 +101,12 @@ vi.mock('@radix-ui/themes', () => ({
 }));
 vi.mock('next-themes', () => ({ useTheme: () => ({ resolvedTheme: undefined }) }));
 
-const onError = vi.fn();
-const onTwoFactorRequired = vi.fn();
-
 function SignInTree() {
   return (
     <React.StrictMode>
       <ThemeBridge>
         <I18nWrapper initialLocale="en" portal="msp" renderChildrenWhileLoading>
-          <MspLoginForm
-            callbackUrl="/msp/dashboard"
-            onError={onError}
-            onTwoFactorRequired={onTwoFactorRequired}
-          />
+          <MspSignIn />
         </I18nWrapper>
       </ThemeBridge>
     </React.StrictMode>
@@ -149,6 +155,7 @@ describe('MSP sign-in bootstrap during pending translations', () => {
     expect(i18next.isInitialized).not.toBe(true);
     expect(initSpy).toHaveBeenCalledTimes(1);
     expect(recoverableErrors).toEqual([]);
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain('Access Denied');
 
     const email = container.querySelector<HTMLInputElement>('#msp-email-field');
     const password = container.querySelector<HTMLInputElement>('#msp-password-field');
@@ -165,6 +172,14 @@ describe('MSP sign-in bootstrap during pending translations', () => {
     expect(password?.value).toBe('secret');
     const reactPropsKey = Object.keys(email!).find((key) => key.startsWith('__reactProps'));
     expect(reactPropsKey && (email as any)[reactPropsKey].value).toBe('operator@example.test');
+
+    signInState.error = 'SessionRevoked';
+    await act(async () => root?.render(<SignInTree />));
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain('Session Ended');
+    expect(container.querySelector<HTMLInputElement>('#msp-email-field')?.value)
+      .toBe('operator@example.test');
+    expect(i18next.isInitialized).not.toBe(true);
+    expect(recoverableErrors).toEqual([]);
 
     await act(async () => root?.unmount());
     initSpy.mockRestore();
