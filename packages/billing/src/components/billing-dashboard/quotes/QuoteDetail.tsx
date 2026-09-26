@@ -17,7 +17,7 @@ import LocationAddress from '../locations/LocationAddress';
 import { buildLocationGroups, shouldShowLocationGroups } from '../locations/locationGrouping';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { buildSenderOptions, DEFAULT_SENDER_SELECTION, senderIdForSend } from '../../../lib/senderSelection';
-import { listSelectableSenders } from '../../../../../integrations/src/actions/email-actions/emailSenderActions';
+import { listSelectableSenders } from '@alga-psa/integrations/actions';
 import type { IQuoteDocumentTemplate } from '@alga-psa/types';
 import { approveQuote, convertQuoteToContract, convertQuoteToInvoice, convertQuoteToSalesOrder, createQuoteRevision, deleteQuote, downloadQuotePdf, duplicateQuote, getQuote, getQuoteApprovalSettings, getQuoteConversionPreview, listQuoteVersions, renderQuotePreview, requestQuoteApprovalChanges, resendQuote, saveQuoteAsTemplate, sendQuote, sendQuoteReminder, submitQuoteForApproval, updateQuote } from '../../../actions/quoteActions';
 import { getQuoteDocumentTemplates } from '../../../actions/quoteDocumentTemplates';
@@ -658,7 +658,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       setQuoteSenders(result.senders);
       setQuoteEffectiveSenderAddress(result.effectiveSenderAddress);
       setQuoteSenderId(DEFAULT_SENDER_SELECTION);
-    });
+    }).catch((reason) => setError(reason instanceof Error ? reason.message : 'Could not load sender addresses.'));
   }, [isSendDialogOpen]);
 
   const handleReviseQuote = async () => {

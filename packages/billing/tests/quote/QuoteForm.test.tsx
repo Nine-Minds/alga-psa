@@ -5,7 +5,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const senderActions = vi.hoisted(() => ({ list: vi.fn(async () => ({ senders: [], effectiveSenderId: null, effectiveSenderAddress: 'provider@example.test', allowOverride: false })) }));
-vi.mock('../../../integrations/src/actions/email-actions/emailSenderActions', () => ({ listSelectableSenders: senderActions.list }));
+vi.mock('@alga-psa/integrations/actions', () => ({ listSelectableSenders: senderActions.list }));
 
 const actions = vi.hoisted(() => ({
   addQuoteItem: vi.fn(),
@@ -502,7 +502,7 @@ describe('QuoteForm quote status change callback', () => {
     fireEvent.click(document.getElementById('quote-form-send') as HTMLButtonElement);
     const senderSelect = await screen.findByLabelText('From') as HTMLSelectElement;
     expect(senderSelect.value).toBe('__default__');
-    expect(screen.getByRole('option', { name: 'Use default (provider@example.test)' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Use default (provider@example.test)' })).not.toBeNull();
     await waitFor(() => expect(document.getElementById('quote-form-send-confirm')).not.toBeNull());
     fireEvent.click(document.getElementById('quote-form-send-confirm') as HTMLButtonElement);
 

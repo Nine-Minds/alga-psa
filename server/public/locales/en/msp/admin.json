@@ -249,7 +249,8 @@
         "general": "General email",
         "noneProviderFrom": "None (use provider From)",
         "confirmSmtp": "I confirm the SMTP relay accepts this sender address.",
-        "inboundReplyWarning": "Inbound replies still go to the configured inbound mailbox; changing this From address does not change reply routing."
+        "inboundReplyWarning": "Inbound replies still go to the configured inbound mailbox; changing this From address does not change reply routing.",
+        "unknownBoard": "Unknown board"
       },
       "actions": {
         "add": "Add sender",

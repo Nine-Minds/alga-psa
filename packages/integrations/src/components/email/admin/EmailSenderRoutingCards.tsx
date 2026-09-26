@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -16,23 +17,38 @@ import {
 } from '../../../actions/email-actions/emailSenderActions';
 
 type Sender = { sender_id: string; email_address: string; display_name: string | null; verification_status: string; microsoft_provider_id?: string | null };
-type Route = { route_id?: string; route_type: 'default' | 'mail_class' | 'board'; mail_class: OutboundMailClass | null; board_id: string | null; sender_id: string | null; display_name: string | null };
+type Route = { route_id?: string; route_type: 'default' | 'mail_class' | 'board'; mail_class: OutboundMailClass | null; board_id: string | null; board_name?: string | null; sender_id: string | null; display_name: string | null };
 type Translate = (key: string, defaultValue: string) => string;
+
+type SenderState = { senders: Sender[]; routes: Route[]; reload: () => Promise<void> };
+const SenderStateContext = createContext<SenderState>({ senders: [], routes: [], reload: async () => {} });
+
+export function EmailSenderCardsProvider({ children }: { children: ReactNode }) {
+  const [senders, setSenders] = useState<Sender[]>([]);
+  const [routes, setRoutes] = useState<Route[]>([]);
+  const reload = useCallback(async () => {
+    const result = await listEmailSenders();
+    setSenders(result.senders as Sender[]);
+    setRoutes(result.routes as Route[]);
+  }, []);
+  useEffect(() => { void reload().catch(() => {}); }, [reload]);
+  return <SenderStateContext.Provider value={{ senders, routes, reload }}>{children}</SenderStateContext.Provider>;
+}
 
 const MAIL_CLASSES: OutboundMailClass[] = ['ticket', 'project', 'billing', 'sales', 'scheduling', 'survey', 'account', 'general'];
 
 export function EmailSenderAddressesCard({
-  t,
   transport,
   verifiedDomains = [],
   microsoftMailboxes = [],
 }: {
-  t: Translate;
   transport: 'smtp' | 'resend' | 'microsoft';
   verifiedDomains?: string[];
   microsoftMailboxes?: Array<{ providerId: string; mailbox: string; providerName: string }>;
 }) {
-  const [senders, setSenders] = useState<Sender[]>([]);
+  const { t: translate } = useTranslation('msp/admin');
+  const t: Translate = (key, fallback) => translate(key, { defaultValue: fallback });
+  const { senders, reload } = useContext(SenderStateContext);
   const [emailAddress, setEmailAddress] = useState('');
   const [localPart, setLocalPart] = useState('');
   const [domain, setDomain] = useState(verifiedDomains[0] ?? '');
@@ -45,13 +61,6 @@ export function EmailSenderAddressesCard({
   const [addOpen, setAddOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dialogError, setDialogError] = useState<string | null>(null);
-
-  const reload = async () => {
-    const result = await listEmailSenders();
-    setSenders(result.senders as Sender[]);
-  };
-
-  useEffect(() => { void reload().catch((reason) => setError(reason instanceof Error ? reason.message : String(reason))); }, []);
 
   const addSender = async () => {
     setBusy(true);
@@ -178,18 +187,12 @@ export function EmailSenderAddressesCard({
   );
 }
 
-export function EmailSenderRoutingCard({ t, transport = 'resend' }: { t: Translate; transport?: 'smtp' | 'resend' | 'microsoft' }) {
-  const [senders, setSenders] = useState<Sender[]>([]);
-  const [routes, setRoutes] = useState<Route[]>([]);
+export function EmailSenderRoutingCard({ transport = 'resend' }: { transport?: 'smtp' | 'resend' | 'microsoft' }) {
+  const { t: translate } = useTranslation('msp/admin');
+  const t: Translate = (key, fallback) => translate(key, { defaultValue: fallback });
+  const { senders, routes, reload } = useContext(SenderStateContext);
   const [busyRoute, setBusyRoute] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  const reload = async () => {
-    const data = await listEmailSenders();
-    setSenders(data.senders as Sender[]);
-    setRoutes(data.routes as Route[]);
-  };
-  useEffect(() => { void reload().catch((reason) => setError(reason instanceof Error ? reason.message : String(reason))); }, []);
 
   const save = async (routeType: Route['route_type'], key: string, senderId: string, displayName: string, confirmUnverifiedSmtpSender: boolean) => {
     setBusyRoute(key);
@@ -232,7 +235,7 @@ export function EmailSenderRoutingCard({ t, transport = 'resend' }: { t: Transla
         <p className="text-sm text-muted-foreground">{t('email.senderIdentities.routing.boardSummary', 'Board-specific ticket senders are managed in each board’s settings.')}</p>
         {routes.filter(route => route.route_type === 'board').map(route => {
           const sender = senders.find(item => item.sender_id === route.sender_id);
-          return <p key={route.route_id ?? route.board_id} className="text-sm text-foreground">{route.board_id}: {sender?.email_address ?? t('email.senderIdentities.routing.useDefault', 'Use ticket default')}{route.display_name ? ` · ${route.display_name}` : ''}</p>;
+          return <p key={route.route_id ?? route.board_id} className="text-sm text-foreground">{route.board_name || t('email.senderIdentities.routing.unknownBoard', 'Unknown board')}: {sender?.email_address ?? t('email.senderIdentities.routing.useDefault', 'Use ticket default')}{route.display_name ? ` · ${route.display_name}` : ''}</p>;
         })}
       </div>
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}

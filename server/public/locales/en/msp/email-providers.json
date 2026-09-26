@@ -748,7 +748,7 @@
       "domainRemovalScheduledWithClear": "Domain removal scheduled and ticketing From address cleared",
       "removeDomainFailed": "Failed to remove domain",
       "testOutboundFailed": "Failed to test outbound email",
-      "senderIdentitiesUpdated": "Sender identities updated."
+      "senderSettingsUpdated": "Sender identities updated."
     },
     "tabs": {
       "inboundEmail": "Inbound Email",
@@ -842,84 +842,6 @@
         "description": "Messages are sent as the selected mailbox through Microsoft Graph and saved to Sent Items.",
         "loadFailed": "Could not load Microsoft 365 mailboxes.",
         "saved": "Outbound sending mailbox updated."
-      },
-      "senderIdentities": {
-        "ticket": {
-          "title": "Ticket email identity",
-          "description": "Replies to ticket emails must return to this address so they can be matched and added to the ticket. Use a connected, monitored inbox.",
-          "connectedInboxLabel": "Connected inbox",
-          "connectedInboxHelp": "A connected inbox keeps client replies in the ticket conversation.",
-          "customAddressOption": "Use another address",
-          "addressLabel": "From address",
-          "addressPlaceholder": "support@example.com",
-          "addressHelp": "This address controls reply routing for ticket email only.",
-          "microsoftAddressHelp": "Microsoft 365 requires ticket email to use the selected sending mailbox ({{mailbox}}).",
-          "nameLabel": "Sender display name",
-          "namePlaceholder": "Support",
-          "nameHelp": "Leave blank to use the connected mailbox name or ticket board name."
-        },
-        "notification": {
-          "title": "All other email identity",
-          "description": "Brand portal invitations, password resets, invoices, project updates, and general notifications independently from ticket routing.",
-          "addressLabel": "From address",
-          "addressPlaceholder": "notifications@example.com",
-          "smtpAddressHelp": "Set by the From Address in the SMTP configuration above. All non-ticket email is sent from it.",
-          "lockedAddressHelp": "This address is determined by the active managed domain or selected Microsoft 365 mailbox.",
-          "nameLabel": "Sender display name",
-          "namePlaceholder": "Your company name",
-          "nameHelp": "Leave blank to use {{company}} automatically.",
-          "companyFallback": "your tenant company"
-        },
-        "warningTitle": "Check reply routing",
-        "errorTitle": "Fix the ticket identity",
-        "clearButton": "Clear ticket identity",
-        "savingButton": "Saving...",
-        "saveButton": "Save sender identities",
-        "addresses": {
-          "title": "Sender addresses",
-          "description": "Create named addresses to use across your outbound email."
-        },
-        "routing": {
-          "title": "Sender routing",
-          "description": "Choose which sender each mail class uses.",
-          "default": "Default (all other mail)",
-          "useDefault": "Use default",
-          "sender": "Sender",
-          "displayName": "Display name",
-          "boardSummary": "Board-specific ticket senders are managed in each board’s settings.",
-          "ticket": "Ticket email",
-          "project": "Project email",
-          "billing": "Billing email",
-          "sales": "Sales email",
-          "scheduling": "Scheduling email",
-          "survey": "Survey email",
-          "account": "Account email",
-          "general": "General email",
-          "noneProviderFrom": "None (use provider From)",
-          "confirmSmtp": "I confirm the SMTP relay accepts this sender address.",
-          "inboundReplyWarning": "Inbound replies still go to the configured inbound mailbox; changing this From address does not change reply routing."
-        },
-        "actions": {
-          "add": "Add sender",
-          "verify": "Verify",
-          "delete": "Delete"
-        },
-        "fields": {
-          "address": "Email address",
-          "localPart": "Address name",
-          "domain": "Verified domain",
-          "sendThrough": "Send through",
-          "displayName": "Display name",
-          "displayNamePlaceholder": "Support team"
-        },
-        "smtpHelp": "Your SMTP relay must allow this address.",
-        "microsoftHelp": "The connected mailbox needs Exchange Send As permission for this address.",
-        "errors": {
-          "duplicateAddress": "This sender address already exists.",
-          "saveFailed": "Could not add sender. Check the address and try again.",
-          "duplicateRoute": "That sender route already exists.",
-          "saveRoutingFailed": "Could not save sender routing. Please try again."
-        }
       }
     },
     "inbound": {

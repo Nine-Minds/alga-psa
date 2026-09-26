@@ -325,20 +325,17 @@ describe('/msp/settings ticketing i18n integration', () => {
     expect(screen.queryByText('Save')).not.toBeInTheDocument();
   });
 
-  it('keeps all outbound sender route labels in both MSP locale namespaces', () => {
+  it('keeps outbound sender route labels in the admin namespace', () => {
     const locales = ['en', 'de', 'es', 'fr', 'it', 'nl', 'pl', 'pt', 'xx', 'yy'];
     const keys = ['default', 'ticket', 'project', 'billing', 'sales', 'scheduling', 'survey', 'account', 'general'];
     for (const locale of locales) {
-      for (const namespace of ['admin', 'email-providers']) {
-        const file = path.resolve(__dirname, `../../../../../../public/locales/${locale}/msp/${namespace}.json`);
-        const messages = JSON.parse(readFileSync(file, 'utf8'));
-        const senderIdentities = namespace === 'admin'
-          ? messages.email.senderIdentities
-          : messages.managed.outbound.senderIdentities;
-        for (const key of keys) {
-          expect(senderIdentities.routing[key], `${locale}/${namespace}: ${key}`).toBeTruthy();
-        }
+      const adminFile = path.resolve(__dirname, `../../../../../../public/locales/${locale}/msp/admin.json`);
+      const messages = JSON.parse(readFileSync(adminFile, 'utf8'));
+      for (const key of keys) {
+        expect(messages.email.senderIdentities.routing[key], `${locale}/admin: ${key}`).toBeTruthy();
       }
+      const providersFile = path.resolve(__dirname, `../../../../../../public/locales/${locale}/msp/email-providers.json`);
+      expect(readFileSync(providersFile, 'utf8')).not.toContain('senderIdentities');
     }
   });
 });

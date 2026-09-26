@@ -10,7 +10,7 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { buildSenderOptions, DEFAULT_SENDER_SELECTION, senderIdForSend } from '../../../lib/senderSelection';
-import { listSelectableSenders } from '../../../../../integrations/src/actions/email-actions/emailSenderActions';
+import { listSelectableSenders } from '@alga-psa/integrations/actions';
 import CurrencyPicker from '@alga-psa/ui/components/CurrencyPicker';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
@@ -783,7 +783,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
       setQuoteSenders(result.senders);
       setQuoteEffectiveSenderAddress(result.effectiveSenderAddress);
       setQuoteSenderId(DEFAULT_SENDER_SELECTION);
-    });
+    }).catch((reason) => setError(reason instanceof Error ? reason.message : 'Could not load sender addresses.'));
   }, [isSendDialogOpen]);
 
   const handleResendQuote = async () => {

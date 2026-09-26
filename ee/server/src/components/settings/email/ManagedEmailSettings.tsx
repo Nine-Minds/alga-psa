@@ -32,7 +32,7 @@ import {
   type ManagedDomainActionResult,
   type ManagedDomainActionFailure,
 } from '@ee/lib/actions/email-actions/managedDomainActions';
-import { EmailProviderConfiguration, EmailSenderAddressesCard, EmailSenderRoutingCard } from '@alga-psa/integrations/components';
+import { EmailProviderConfiguration, EmailSenderAddressesCard, EmailSenderCardsProvider, EmailSenderRoutingCard } from '@alga-psa/integrations/components';
 import type { EmailProvider } from '@alga-psa/integrations/components';
 import type { TenantEmailSettings } from 'server/src/types/email.types';
 import { createDefaultProviderConfig } from '@alga-psa/email/providerConfig';
@@ -117,6 +117,7 @@ function extractEmailDomain(value?: string | null): string | null {
 
 export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
   const { t } = useTranslation('msp/email-providers');
+  const { t: adminT } = useTranslation('msp/admin');
   const { isHosted } = useTier();
   const canUseManagedEmail = isHosted;
   const [domains, setDomains] = useState<ManagedDomainStatus[]>([]);
@@ -377,7 +378,7 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
 
       setEmailSettings(updated);
       initializeTicketingFromSelection(updated, inboundProviders);
-      toast.success(t('managed.messages.senderIdentitiesUpdated'));
+      toast.success(t('managed.messages.senderSettingsUpdated'));
     } catch (err: any) {
       console.error('[ManagedEmailSettings] Failed to update ticketing from address', err);
       toast.error(t('managed.messages.ticketingFromSaveFailed'));
@@ -966,18 +967,18 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
                       </div>
                       <div>
                         <Label htmlFor="smtp-from-name">
-                          {t('managed.outbound.senderIdentities.notification.nameLabel')}
+                          {adminT('email.senderIdentities.notification.nameLabel')}
                         </Label>
                         <Input
                           id="smtp-from-name"
                           value={smtpConfig?.config.fromName || ''}
-                          placeholder={t('managed.outbound.senderIdentities.notification.namePlaceholder')}
+                          placeholder={adminT('email.senderIdentities.notification.namePlaceholder')}
                           onChange={(e) => updateSmtpField('fromName', e.target.value)}
                         />
                         <p className="text-sm text-muted-foreground mt-1">
-                          {t('managed.outbound.senderIdentities.notification.nameHelp', {
+                          {adminT('email.senderIdentities.notification.nameHelp', {
                             company: emailSettings?.tenantCompanyName
-                              || t('managed.outbound.senderIdentities.notification.companyFallback'),
+                              || adminT('email.senderIdentities.notification.companyFallback'),
                           })}
                         </p>
                       </div>
@@ -1084,15 +1085,16 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
         )}
 
         {emailSettings && (
+          <EmailSenderCardsProvider>
           <div className="space-y-4">
             <EmailSenderAddressesCard
-              t={(key, fallback) => t(key, { defaultValue: fallback })}
               transport={outboundProvider}
               verifiedDomains={domains.filter((domain) => domain.status === 'verified').map((domain) => domain.domain)}
               microsoftMailboxes={microsoftMailboxes.map((mailbox) => ({ providerId: mailbox.providerId, mailbox: mailbox.mailbox, providerName: mailbox.providerName }))}
             />
-            <EmailSenderRoutingCard t={(key, fallback) => t(key, { defaultValue: fallback })} transport={outboundProvider} />
+            <EmailSenderRoutingCard transport={outboundProvider} />
           </div>
+          </EmailSenderCardsProvider>
         )}
       </TabsContent>
 

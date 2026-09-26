@@ -249,7 +249,8 @@
         "general": "Correo general",
         "noneProviderFrom": "Ninguno (usar remitente del proveedor)",
         "confirmSmtp": "Confirmo que el servidor SMTP acepta esta dirección del remitente.",
-        "inboundReplyWarning": "Las respuestas entrantes seguirán llegando al buzón configurado; cambiar esta dirección no cambia el enrutamiento de respuestas."
+        "inboundReplyWarning": "Las respuestas entrantes seguirán llegando al buzón configurado; cambiar esta dirección no cambia el enrutamiento de respuestas.",
+        "unknownBoard": "Unknown board"
       },
       "actions": {
         "add": "Añadir remitente",

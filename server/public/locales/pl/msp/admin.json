@@ -249,7 +249,8 @@
         "general": "E-mail ogólny",
         "noneProviderFrom": "Brak (użyj adresu nadawcy dostawcy)",
         "confirmSmtp": "Potwierdzam, że serwer SMTP akceptuje ten adres nadawcy.",
-        "inboundReplyWarning": "Odpowiedzi przychodzące nadal trafiają do skonfigurowanej skrzynki; zmiana tego adresu nie zmienia kierowania odpowiedzi."
+        "inboundReplyWarning": "Odpowiedzi przychodzące nadal trafiają do skonfigurowanej skrzynki; zmiana tego adresu nie zmienia kierowania odpowiedzi.",
+        "unknownBoard": "Unknown board"
       },
       "actions": {
         "add": "Dodaj nadawcę",

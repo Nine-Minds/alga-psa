@@ -249,7 +249,8 @@
         "general": "E-mail geral",
         "noneProviderFrom": "Nenhum (usar remetente do provedor)",
         "confirmSmtp": "Confirmo que o servidor SMTP aceita este endereço do remetente.",
-        "inboundReplyWarning": "As respostas recebidas continuarão na caixa configurada; alterar este endereço não muda o roteamento das respostas."
+        "inboundReplyWarning": "As respostas recebidas continuarão na caixa configurada; alterar este endereço não muda o roteamento das respostas.",
+        "unknownBoard": "Unknown board"
       },
       "actions": {
         "add": "Adicionar remetente",

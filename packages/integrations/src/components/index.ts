@@ -8,6 +8,7 @@ export type { AccountingMappingContext, AccountingMappingModule, AccountingMappi
 export {
   EmailProviderConfiguration,
   EmailSenderAddressesCard,
+  EmailSenderCardsProvider,
   EmailSenderRoutingCard,
   INBOUND_DEFAULTS_WARNING,
   providerNeedsInboundDefaults,

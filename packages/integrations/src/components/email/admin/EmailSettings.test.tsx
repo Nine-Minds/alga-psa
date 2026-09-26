@@ -40,6 +40,7 @@ vi.mock('../EmailProviderConfiguration', () => ({
 }));
 
 vi.mock('./EmailSenderRoutingCards', () => ({
+  EmailSenderCardsProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   EmailSenderAddressesCard: () => <div data-testid="sender-addresses-card" />,
   EmailSenderRoutingCard: () => <div data-testid="sender-routing-card" />,
 }));

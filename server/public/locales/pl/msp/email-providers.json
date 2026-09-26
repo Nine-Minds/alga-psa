@@ -748,7 +748,7 @@
       "domainRemovalScheduledWithClear": "Zaplanowano usunięcie domeny i wyczyszczono adres nadawcy zgłoszeń",
       "removeDomainFailed": "Nie udało się usunąć domeny",
       "testOutboundFailed": "Nie udało się przetestować poczty wychodzącej",
-      "senderIdentitiesUpdated": "Zaktualizowano tożsamości nadawców."
+      "senderSettingsUpdated": "Zaktualizowano tożsamości nadawców."
     },
     "tabs": {
       "inboundEmail": "Poczta przychodząca",
@@ -842,84 +842,6 @@
         "description": "Wiadomości są wysyłane z wybranej skrzynki przez Microsoft Graph i zapisywane w Elementach wysłanych.",
         "loadFailed": "Nie można załadować skrzynek Microsoft 365.",
         "saved": "Zaktualizowano skrzynkę wysyłkową."
-      },
-      "senderIdentities": {
-        "ticket": {
-          "title": "Tożsamość nadawcy zgłoszeń",
-          "description": "Odpowiedzi na wiadomości e-mail dotyczące zgłoszeń muszą wracać na ten adres, aby można je było dopasować i dodać do zgłoszenia. Użyj podłączonej, monitorowanej skrzynki odbiorczej.",
-          "connectedInboxLabel": "Podłączona skrzynka odbiorcza",
-          "connectedInboxHelp": "Podłączona skrzynka odbiorcza zachowuje odpowiedzi klientów w konwersacji dotyczącej zgłoszenia.",
-          "customAddressOption": "Użyj innego adresu",
-          "addressLabel": "Adres nadawcy",
-          "addressPlaceholder": "support@example.com",
-          "addressHelp": "Ten adres steruje routingiem odpowiedzi tylko dla wiadomości e-mail dotyczących zgłoszeń.",
-          "microsoftAddressHelp": "Microsoft 365 wymaga, aby wiadomości e-mail dotyczące zgłoszeń korzystały z wybranej skrzynki nadawczej ({{mailbox}}).",
-          "nameLabel": "Wyświetlana nazwa nadawcy",
-          "namePlaceholder": "Pomoc techniczna",
-          "nameHelp": "Pozostaw puste, aby użyć nazwy podłączonej skrzynki pocztowej lub tablicy zgłoszeń."
-        },
-        "notification": {
-          "title": "Tożsamość nadawcy pozostałej poczty",
-          "description": "Oddziel identyfikację nadawcy zaproszeń do portalu, wiadomości o resetowaniu haseł, faktur, aktualizacji projektów i ogólnych powiadomień od routingu zgłoszeń.",
-          "addressLabel": "Adres nadawcy",
-          "addressPlaceholder": "notifications@example.com",
-          "smtpAddressHelp": "Ustalany przez adres nadawcy w konfiguracji SMTP powyżej. Cała poczta niezwiązana ze zgłoszeniami jest wysyłana z tego adresu.",
-          "lockedAddressHelp": "Ten adres wynika z aktywnej domeny zarządzanej lub wybranej skrzynki pocztowej Microsoft 365.",
-          "nameLabel": "Wyświetlana nazwa nadawcy",
-          "namePlaceholder": "Nazwa Twojej firmy",
-          "nameHelp": "Pozostaw puste. Automatyczna nazwa: {{company}}.",
-          "companyFallback": "Twoja organizacja"
-        },
-        "warningTitle": "Sprawdź routing odpowiedzi",
-        "errorTitle": "Popraw tożsamość nadawcy zgłoszeń",
-        "clearButton": "Wyczyść tożsamość nadawcy zgłoszeń",
-        "savingButton": "Zapisywanie...",
-        "saveButton": "Zapisz tożsamości nadawców",
-        "addresses": {
-          "title": "Adresy nadawców",
-          "description": "Twórz nazwane adresy do wysyłania poczty."
-        },
-        "routing": {
-          "title": "Reguły nadawców",
-          "description": "Wybierz nadawcę dla każdej klasy wiadomości.",
-          "default": "Domyślnie (pozostałe wiadomości)",
-          "useDefault": "Użyj domyślnego",
-          "sender": "Nadawca",
-          "displayName": "Nazwa wyświetlana",
-          "boardSummary": "Nadawców wiadomości zgłoszeń dla tablicy ustawisz w ustawieniach tej tablicy.",
-          "ticket": "E-mail zgłoszenia",
-          "project": "E-mail projektu",
-          "billing": "E-mail rozliczeniowy",
-          "sales": "E-mail sprzedażowy",
-          "scheduling": "E-mail harmonogramu",
-          "survey": "E-mail ankiety",
-          "account": "E-mail konta",
-          "general": "E-mail ogólny",
-          "noneProviderFrom": "Brak (użyj adresu nadawcy dostawcy)",
-          "confirmSmtp": "Potwierdzam, że serwer SMTP akceptuje ten adres nadawcy.",
-          "inboundReplyWarning": "Odpowiedzi przychodzące nadal trafiają do skonfigurowanej skrzynki; zmiana tego adresu nie zmienia kierowania odpowiedzi."
-        },
-        "actions": {
-          "add": "Dodaj nadawcę",
-          "verify": "Zweryfikuj",
-          "delete": "Usuń"
-        },
-        "fields": {
-          "address": "Adres e-mail",
-          "localPart": "Nazwa adresu",
-          "domain": "Zweryfikowana domena",
-          "sendThrough": "Wysyłaj przez",
-          "displayName": "Nazwa wyświetlana",
-          "displayNamePlaceholder": "Zespół pomocy"
-        },
-        "smtpHelp": "Twój serwer SMTP musi zezwalać na ten adres.",
-        "microsoftHelp": "Połączona skrzynka musi mieć uprawnienie Exchange Send As dla tego adresu.",
-        "errors": {
-          "duplicateAddress": "Ten adres nadawcy już istnieje.",
-          "saveFailed": "Nie można dodać nadawcy. Sprawdź adres i spróbuj ponownie.",
-          "duplicateRoute": "Ta trasa nadawcy już istnieje.",
-          "saveRoutingFailed": "Nie można zapisać trasy nadawcy. Spróbuj ponownie."
-        }
       }
     },
     "inbound": {

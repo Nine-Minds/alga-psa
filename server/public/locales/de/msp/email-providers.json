@@ -748,7 +748,7 @@
       "domainRemovalScheduledWithClear": "Domainentfernung geplant und Ticketing-Absenderadresse gelöscht",
       "removeDomainFailed": "Domain konnte nicht entfernt werden",
       "testOutboundFailed": "Test der ausgehenden E-Mail fehlgeschlagen",
-      "senderIdentitiesUpdated": "Absenderidentitäten aktualisiert."
+      "senderSettingsUpdated": "Absenderidentitäten aktualisiert."
     },
     "tabs": {
       "inboundEmail": "Eingehende E-Mail",
@@ -842,84 +842,6 @@
         "description": "Nachrichten werden über Microsoft Graph als das ausgewählte Postfach gesendet und in „Gesendete Elemente“ gespeichert.",
         "loadFailed": "Microsoft 365-Postfächer konnten nicht geladen werden.",
         "saved": "Sendepostfach aktualisiert."
-      },
-      "senderIdentities": {
-        "ticket": {
-          "title": "Absenderidentität für Ticket-E-Mails",
-          "description": "Antworten auf Ticket-E-Mails müssen an diese Adresse zurückgesendet werden, damit sie zugeordnet und dem Ticket hinzugefügt werden können. Verwenden Sie ein verbundenes, überwachtes Postfach.",
-          "connectedInboxLabel": "Verbundenes Postfach",
-          "connectedInboxHelp": "Ein verbundenes Postfach sorgt dafür, dass Kundenantworten in der Ticket-Konversation bleiben.",
-          "customAddressOption": "Andere Adresse verwenden",
-          "addressLabel": "Absenderadresse",
-          "addressPlaceholder": "support@example.com",
-          "addressHelp": "Diese Adresse steuert ausschließlich das Antwort-Routing für Ticket-E-Mails.",
-          "microsoftAddressHelp": "Microsoft 365 erfordert, dass Ticket-E-Mails das ausgewählte Sendepostfach ({{mailbox}}) verwenden.",
-          "nameLabel": "Anzeigename des Absenders",
-          "namePlaceholder": "Support",
-          "nameHelp": "Leer lassen, um den Namen des verbundenen Postfachs oder des Ticket-Boards zu verwenden."
-        },
-        "notification": {
-          "title": "Absenderidentität für alle anderen E-Mails",
-          "description": "Versehen Sie Portal-Einladungen, Passwortrücksetzungen, Rechnungen, Projektaktualisierungen und allgemeine Benachrichtigungen unabhängig vom Ticket-Routing mit Ihrem Branding.",
-          "addressLabel": "Absenderadresse",
-          "addressPlaceholder": "notifications@example.com",
-          "smtpAddressHelp": "Wird durch die Absenderadresse in der SMTP-Konfiguration oben festgelegt. Alle E-Mails ohne Ticketbezug werden von dieser Adresse gesendet.",
-          "lockedAddressHelp": "Diese Adresse wird durch die aktive verwaltete Domain oder das ausgewählte Microsoft 365-Postfach bestimmt.",
-          "nameLabel": "Anzeigename des Absenders",
-          "namePlaceholder": "Name Ihres Unternehmens",
-          "nameHelp": "Leer lassen, um automatisch {{company}} zu verwenden.",
-          "companyFallback": "Ihr Mandantenunternehmen"
-        },
-        "warningTitle": "Antwort-Routing prüfen",
-        "errorTitle": "Absenderidentität für Tickets korrigieren",
-        "clearButton": "Absenderidentität für Tickets löschen",
-        "savingButton": "Wird gespeichert...",
-        "saveButton": "Absenderidentitäten speichern",
-        "addresses": {
-          "title": "Absenderadressen",
-          "description": "Erstelle benannte Adressen für ausgehende E-Mails."
-        },
-        "routing": {
-          "title": "Absenderzuordnung",
-          "description": "Wähle den Absender für jede E-Mail-Klasse.",
-          "default": "Standard (alle übrigen E-Mails)",
-          "useDefault": "Standard verwenden",
-          "sender": "Absender",
-          "displayName": "Anzeigename",
-          "boardSummary": "Ticketabsender pro Board werden in den Einstellungen des jeweiligen Boards verwaltet.",
-          "ticket": "Ticket-E-Mail",
-          "project": "Projekt-E-Mail",
-          "billing": "Abrechnung-E-Mail",
-          "sales": "Vertriebs-E-Mail",
-          "scheduling": "Terminplanungs-E-Mail",
-          "survey": "Umfrage-E-Mail",
-          "account": "Konto-E-Mail",
-          "general": "Allgemeine E-Mail",
-          "noneProviderFrom": "Keine (Provider-Absender verwenden)",
-          "confirmSmtp": "Ich bestätige, dass das SMTP-Relay diese Absenderadresse akzeptiert.",
-          "inboundReplyWarning": "Eingehende Antworten gehen weiterhin an das konfigurierte Postfach; eine Änderung dieser Absenderadresse ändert nicht die Antwortzustellung."
-        },
-        "actions": {
-          "add": "Absender hinzufügen",
-          "verify": "Verifizieren",
-          "delete": "Löschen"
-        },
-        "fields": {
-          "address": "E-Mail-Adresse",
-          "localPart": "Adressname",
-          "domain": "Verifizierte Domain",
-          "sendThrough": "Senden über",
-          "displayName": "Anzeigename",
-          "displayNamePlaceholder": "Supportteam"
-        },
-        "smtpHelp": "Dein SMTP-Relay muss diese Adresse erlauben.",
-        "microsoftHelp": "Das verbundene Postfach benötigt die Exchange-Berechtigung „Send As“ für diese Adresse.",
-        "errors": {
-          "duplicateAddress": "Diese Absenderadresse ist bereits vorhanden.",
-          "saveFailed": "Absender konnte nicht hinzugefügt werden. Prüfen Sie die Adresse und versuchen Sie es erneut.",
-          "duplicateRoute": "Diese Absenderroute ist bereits vorhanden.",
-          "saveRoutingFailed": "Absenderzuordnung konnte nicht gespeichert werden. Bitte versuchen Sie es erneut."
-        }
       }
     },
     "inbound": {

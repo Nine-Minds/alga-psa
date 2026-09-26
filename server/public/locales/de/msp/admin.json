@@ -249,7 +249,8 @@
         "general": "Allgemeine E-Mail",
         "noneProviderFrom": "Keine (Provider-Absender verwenden)",
         "confirmSmtp": "Ich bestätige, dass das SMTP-Relay diese Absenderadresse akzeptiert.",
-        "inboundReplyWarning": "Eingehende Antworten gehen weiterhin an das konfigurierte Postfach; eine Änderung dieser Absenderadresse ändert nicht die Antwortzustellung."
+        "inboundReplyWarning": "Eingehende Antworten gehen weiterhin an das konfigurierte Postfach; eine Änderung dieser Absenderadresse ändert nicht die Antwortzustellung.",
+        "unknownBoard": "Unbekanntes Board"
       },
       "actions": {
         "add": "Absender hinzufügen",

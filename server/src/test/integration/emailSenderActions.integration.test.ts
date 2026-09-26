@@ -8,7 +8,7 @@ vi.mock('@alga-psa/auth', () => ({
 }));
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: async () => true }));
 
-import { clearEmailSenderRoute, createEmailSender, listEmailSenders, setEmailSenderRoute } from '@alga-psa/integrations/actions';
+import { clearEmailSenderRoute, createEmailSender, deleteEmailSender, listEmailSenders, setEmailSenderRoute } from '@alga-psa/integrations/actions';
 
 describe('email sender actions persistence', () => {
   let db: Knex;
@@ -47,6 +47,9 @@ describe('email sender actions persistence', () => {
 
     await setEmailSenderRoute({ routeType: 'board', boardId, senderId, confirmUnverifiedSmtpSender: true });
     expect(await db('email_sender_routes').where({ tenant: tenantId, route_type: 'board', board_id: boardId }).first()).toMatchObject({ sender_id: senderId });
+    const board = await db('boards').where({ tenant: tenantId, board_id: boardId }).first('board_name');
+    expect((await listEmailSenders()).routes).toContainEqual(expect.objectContaining({ board_id: boardId, board_name: board.board_name }));
+    await expect(deleteEmailSender(senderId)).rejects.toThrow(`board "${board.board_name}"`);
     await setEmailSenderRoute({ routeType: 'board', boardId, displayName: 'Board team' });
     expect(await db('email_sender_routes').where({ tenant: tenantId, route_type: 'board', board_id: boardId })).toHaveLength(1);
     await clearEmailSenderRoute({ routeType: 'mail_class', mailClass: 'billing' });

@@ -27,7 +27,7 @@ import {
 } from '../../../actions/email-actions/emailSettingsActions';
 import { getEmailProviders } from '../../../actions/email-actions/emailProviderActions';
 import type { EmailProvider } from '../types';
-import { EmailSenderAddressesCard, EmailSenderRoutingCard } from './EmailSenderRoutingCards';
+import { EmailSenderAddressesCard, EmailSenderCardsProvider, EmailSenderRoutingCard } from './EmailSenderRoutingCards';
 import {
   getEmailDomains,
   addEmailDomain,
@@ -725,8 +725,10 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
             </CardContent>
           </Card>
 
-            <EmailSenderAddressesCard t={(key, fallback) => t(key, { defaultValue: fallback })} transport={selectedProvider} verifiedDomains={domains.filter(domain => domain.status === 'verified').map(domain => domain.domain)} microsoftMailboxes={microsoftMailboxes.map(mailbox => ({ providerId: mailbox.providerId, mailbox: mailbox.mailbox, providerName: mailbox.providerName }))} />
-            <EmailSenderRoutingCard t={(key, fallback) => t(key, { defaultValue: fallback })} transport={selectedProvider} />
+            <EmailSenderCardsProvider>
+              <EmailSenderAddressesCard transport={selectedProvider} verifiedDomains={domains.filter(domain => domain.status === 'verified').map(domain => domain.domain)} microsoftMailboxes={microsoftMailboxes.map(mailbox => ({ providerId: mailbox.providerId, mailbox: mailbox.mailbox, providerName: mailbox.providerName }))} />
+              <EmailSenderRoutingCard transport={selectedProvider} />
+            </EmailSenderCardsProvider>
 
 
 

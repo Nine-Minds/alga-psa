@@ -25,44 +25,46 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
   default: ({ id, value, options, onValueChange }: any) => <select id={id} value={value} onChange={(event) => onValueChange(event.target.value)}>{options.map((option: any) => <option key={option.value} value={option.value}>{option.label}</option>)}</select>,
 }));
 
-import { EmailSenderAddressesCard, EmailSenderRoutingCard } from './EmailSenderRoutingCards';
+import { EmailSenderAddressesCard, EmailSenderCardsProvider, EmailSenderRoutingCard } from './EmailSenderRoutingCards';
 import enAdmin from '../../../../../../server/public/locales/en/msp/admin.json';
 
-const t = (key: string) => key;
+const renderCards = (addresses: React.ReactNode, routing: React.ReactNode) => render(
+  <EmailSenderCardsProvider><>{addresses}{routing}</></EmailSenderCardsProvider>,
+);
 
 describe('outbound email sender cards', () => {
   it('adapts the Add dialog to managed domains and SMTP relay requirements', async () => {
     actionMocks.list.mockResolvedValue({ senders: [], routes: [] });
-    const { rerender } = render(<EmailSenderAddressesCard t={t} transport="resend" verifiedDomains={['example.test']} />);
-    fireEvent.click(screen.getAllByText('email.senderIdentities.actions.add')[0]);
-    expect(screen.getByLabelText('email.senderIdentities.fields.localPart')).toBeInTheDocument();
-    expect(screen.getByLabelText('email.senderIdentities.fields.domain')).toBeInTheDocument();
+    const { rerender } = renderCards(<EmailSenderAddressesCard transport="resend" verifiedDomains={['example.test']} />, null);
+    fireEvent.click(screen.getAllByText('Add sender')[0]);
+    expect(screen.getByLabelText('Address name')).toBeInTheDocument();
+    expect(screen.getByLabelText('Verified domain')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText('common.actions.cancel'));
-    rerender(<EmailSenderAddressesCard t={t} transport="smtp" />);
-    await waitFor(() => expect(screen.getByText('email.senderIdentities.addresses.title')).toBeInTheDocument());
-    fireEvent.click(screen.getAllByText('email.senderIdentities.actions.add')[0]);
-    expect(screen.getByLabelText('email.senderIdentities.fields.address')).toBeInTheDocument();
-    expect(screen.getByText('email.senderIdentities.smtpHelp')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Cancel'));
+    rerender(<EmailSenderCardsProvider><EmailSenderAddressesCard transport="smtp" /></EmailSenderCardsProvider>);
+    await waitFor(() => expect(screen.getByText('Sender addresses')).toBeInTheDocument());
+    fireEvent.click(screen.getAllByText('Add sender')[0]);
+    expect(screen.getByLabelText('Email address')).toBeInTheDocument();
+    expect(screen.getByText('Your SMTP relay must allow this address.')).toBeInTheDocument();
   });
 
   it('shows add sender failures inside the dialog and offers a clear default route', async () => {
     actionMocks.list.mockResolvedValue({ senders: [], routes: [] });
     actionMocks.create.mockRejectedValue(Object.assign(new Error('duplicate key value violates unique constraint'), { code: '23505' }));
-    const { container } = render(<EmailSenderAddressesCard t={t} transport="smtp" />);
+    const { container } = renderCards(<EmailSenderAddressesCard transport="smtp" />, null);
     fireEvent.click(container.querySelector('#email-sender-add-open')!);
-    fireEvent.change(screen.getByLabelText('email.senderIdentities.fields.address'), { target: { value: 'duplicate@example.test' } });
+    fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'duplicate@example.test' } });
     const addDialog = container.querySelector<HTMLElement>('#email-sender-add-dialog');
     expect(addDialog).toBeInTheDocument();
-    fireEvent.click(within(addDialog!).getByRole('button', { name: 'email.senderIdentities.actions.add' }));
-    await waitFor(() => expect(within(addDialog!).getByRole('alert')).toHaveTextContent('email.senderIdentities.errors.duplicateAddress'));
+    fireEvent.click(within(addDialog!).getByRole('button', { name: 'Add sender' }));
+    await waitFor(() => expect(within(addDialog!).getByRole('alert')).toHaveTextContent('This sender address already exists.'));
     expect(addDialog).toContainElement(within(addDialog!).getByRole('alert'));
 
     actionMocks.create.mockReset();
     actionMocks.list.mockResolvedValue({ senders: [], routes: [] });
-    const routeContainer = render(<EmailSenderRoutingCard t={t} />);
-    await waitFor(() => expect(screen.getByText('email.senderIdentities.routing.default')).toBeInTheDocument());
-    expect(routeContainer.container.textContent).toContain('email.senderIdentities.routing.noneProviderFrom');
+    const routeContainer = renderCards(null, <EmailSenderRoutingCard />);
+    await waitFor(() => expect(screen.getByText('Default (all other mail)')).toBeInTheDocument());
+    expect(routeContainer.container.textContent).toContain('None (use provider From)');
     fireEvent.click(routeContainer.container.querySelector('#email-sender-route-default-save')!);
     await waitFor(() => expect(actionMocks.clearRoute).toHaveBeenCalledWith(expect.objectContaining({ routeType: 'default' })));
 
@@ -75,25 +77,34 @@ describe('outbound email sender cards', () => {
 
   it('renders the Default row with its English locale label', async () => {
     actionMocks.list.mockResolvedValue({ senders: [], routes: [] });
-    const englishT = (key: string, fallback?: string) => {
-      const value = key.split('.').reduce<any>((current, part) => current?.[part], enAdmin);
-      return typeof value === 'string' ? value : fallback ?? key;
-    };
-    render(<EmailSenderRoutingCard t={englishT} />);
+    renderCards(null, <EmailSenderRoutingCard />);
     await waitFor(() => expect(screen.getByText('Default (all other mail)')).toBeInTheDocument());
-    expect(screen.queryByText('default')).not.toBeInTheDocument();
+    expect(enAdmin.email.senderIdentities.routing.default).toBe('Default (all other mail)');
   });
 
   it('shows ticket inbound-reply guidance and a read-only board override summary', async () => {
     actionMocks.list.mockResolvedValue({
       senders: [{ sender_id: 'support', email_address: 'support@example.test', display_name: null, verification_status: 'verified' }],
       routes: [
-        { route_id: 'board-route', route_type: 'board', mail_class: null, board_id: 'board-1', sender_id: 'support', display_name: null },
+        { route_id: 'board-route', route_type: 'board', mail_class: null, board_id: 'board-1', board_name: 'Service Desk', sender_id: 'support', display_name: null },
         { route_id: 'ticket-route', route_type: 'mail_class', mail_class: 'ticket', board_id: null, sender_id: 'support', display_name: null },
       ],
     });
-    render(<EmailSenderRoutingCard t={t} />);
-    await waitFor(() => expect(screen.getByText(/board-1: support@example.test/)).toBeInTheDocument());
-    expect(screen.getAllByText('email.senderIdentities.routing.inboundReplyWarning').length).toBeGreaterThan(0);
+    renderCards(null, <EmailSenderRoutingCard />);
+    await waitFor(() => expect(screen.getByText(/Service Desk: support@example.test/)).toBeInTheDocument());
+    expect(screen.queryByText(/board-1:/)).not.toBeInTheDocument();
+    expect(screen.getAllByText('Inbound replies still go to the configured inbound mailbox; changing this From address does not change reply routing.').length).toBeGreaterThan(0);
+  });
+
+  it('shows a newly added sender in routing without remounting', async () => {
+    const sender = { sender_id: 'new-sender', email_address: 'new@example.test', display_name: null, verification_status: 'verified' };
+    actionMocks.list.mockResolvedValueOnce({ senders: [], routes: [] }).mockResolvedValue({ senders: [sender], routes: [] });
+    actionMocks.create.mockResolvedValue(sender);
+    const { container } = renderCards(<EmailSenderAddressesCard transport="smtp" />, <EmailSenderRoutingCard />);
+    await waitFor(() => expect(actionMocks.list).toHaveBeenCalled());
+    fireEvent.click(container.querySelector('#email-sender-add-open')!);
+    fireEvent.change(screen.getByLabelText('Email address'), { target: { value: sender.email_address } });
+    fireEvent.click(container.querySelector('#email-sender-add')!);
+    await waitFor(() => expect(screen.getAllByRole('option', { name: sender.email_address }).length).toBeGreaterThan(0));
   });
 });

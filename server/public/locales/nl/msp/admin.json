@@ -249,7 +249,8 @@
         "general": "Algemene e-mail",
         "noneProviderFrom": "Geen (afzender van provider gebruiken)",
         "confirmSmtp": "Ik bevestig dat de SMTP-relay dit afzenderadres accepteert.",
-        "inboundReplyWarning": "Inkomende antwoorden blijven naar de geconfigureerde mailbox gaan; dit Van-adres wijzigen verandert de routering van antwoorden niet."
+        "inboundReplyWarning": "Inkomende antwoorden blijven naar de geconfigureerde mailbox gaan; dit Van-adres wijzigen verandert de routering van antwoorden niet.",
+        "unknownBoard": "Unknown board"
       },
       "actions": {
         "add": "Afzender toevoegen",

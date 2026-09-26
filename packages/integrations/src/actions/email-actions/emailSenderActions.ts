@@ -37,7 +37,12 @@ export const listEmailSenders = withAuth(async (user, { tenant }) => {
   const { db } = await authorize(user, tenant, 'read');
   const [senders, routes] = await Promise.all([
     db.table('email_sender_addresses').select('*').orderBy('email_address'),
-    db.table('email_sender_routes').select('*').orderBy('route_type'),
+    db.table('email_sender_routes as routes')
+      .leftJoin('boards as boards', function () {
+        this.on('boards.tenant', '=', 'routes.tenant').andOn('boards.board_id', '=', 'routes.board_id');
+      })
+      .select('routes.*', 'boards.board_name')
+      .orderBy('routes.route_type'),
   ]);
   return { senders, routes };
 });
@@ -161,8 +166,16 @@ export const updateEmailSender = withAuth(async (user, { tenant }, input: { send
 
 export const deleteEmailSender = withAuth(async (user, { tenant }, senderId: string) => {
   const { db } = await authorize(user, tenant, 'update');
-  const routes = await db.table('email_sender_routes').where({ sender_id: senderId }).select('route_type', 'mail_class', 'board_id');
-  if (routes.length) throw new Error(`This sender is still used by ${routes.map((route: any) => route.route_type === 'board' ? `board ${route.board_id}` : route.mail_class ?? 'the default route').join(', ')}.`);
+  const routes = await db.table('email_sender_routes as routes')
+    .leftJoin('boards as boards', function () {
+      this.on('boards.tenant', '=', 'routes.tenant').andOn('boards.board_id', '=', 'routes.board_id');
+    })
+    .where('routes.sender_id', senderId)
+    .select('routes.route_type', 'routes.mail_class', 'boards.board_name');
+  if (routes.length) {
+    const mailClassNames: Record<string, string> = { ticket: 'ticket email', project: 'project email', billing: 'billing email', sales: 'sales email', scheduling: 'scheduling email', survey: 'survey email', account: 'account email', general: 'general email' };
+    throw new Error(`This sender is still used by ${routes.map((route: any) => route.route_type === 'board' ? `board "${route.board_name ?? 'Unknown board'}"` : route.mail_class ? (mailClassNames[route.mail_class] ?? route.mail_class) : 'the default route').join(', ')}.`);
+  }
   const deleted = await db.table('email_sender_addresses').where({ sender_id: senderId }).del();
   if (!deleted) throw new Error('Sender address was not found.');
   await TenantEmailService.invalidateTenantSettings(tenant);
