@@ -1032,7 +1032,12 @@
       "saving": "Wird gespeichert…",
       "startDelimiter": "Start-Trennzeichen",
       "update": "Regel aktualisieren",
-      "valuePlaceholder": "Wert"
+      "valuePlaceholder": "Wert",
+      "matchTargets": "Extrahierten Wert abgleichen mit",
+      "matchClientName": "Kundenname oder Alias",
+      "matchContactEmail": "Kontakt-E-Mail",
+      "matchAssetName": "Geräte- (Asset-)Name",
+      "matchTargetRequired": "Wählen Sie mindestens ein Abgleichziel aus."
     },
     "header": {
       "description": "Gleichen Sie eingehende E-Mails anhand von Absender oder Betreff ab, um Störmeldungen zu überspringen, den richtigen Kunden zuzuweisen oder an ein Ziel weiterzuleiten. Regeln werden der Reihe nach ausgeführt; der erste Treffer gewinnt.",
@@ -1090,7 +1095,10 @@
       "running": "Wird getestet…",
       "subject": "Betreff",
       "title": "Diese Regel testen",
-      "to": "An"
+      "to": "An",
+      "contactEmail": "Kontakt-E-Mail",
+      "deviceName": "Gerätename",
+      "ambiguous": "{{target}} stimmt bei {{count}} Kunden überein — keine Zuordnung"
     }
   },
   "errors": {

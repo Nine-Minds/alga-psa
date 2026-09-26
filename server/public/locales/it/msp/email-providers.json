@@ -1032,7 +1032,12 @@
       "saving": "Salvataggio…",
       "startDelimiter": "Delimitatore iniziale",
       "update": "Aggiorna regola",
-      "valuePlaceholder": "Valore"
+      "valuePlaceholder": "Valore",
+      "matchTargets": "Confronta il valore estratto con",
+      "matchClientName": "Nome o alias del cliente",
+      "matchContactEmail": "Email del contatto",
+      "matchAssetName": "Nome del dispositivo (asset)",
+      "matchTargetRequired": "Seleziona almeno una destinazione."
     },
     "header": {
       "description": "Abbina le email in entrata per mittente o oggetto per ignorare il rumore, assegnare il cliente giusto o instradarle verso una destinazione. Le regole vengono eseguite in ordine; vince la prima corrispondenza.",
@@ -1090,7 +1095,10 @@
       "running": "Test in corso…",
       "subject": "Oggetto",
       "title": "Testa questa regola",
-      "to": "A"
+      "to": "A",
+      "contactEmail": "email del contatto",
+      "deviceName": "nome del dispositivo",
+      "ambiguous": "{{target}} corrisponde a {{count}} clienti — non assegnato"
     }
   },
   "errors": {

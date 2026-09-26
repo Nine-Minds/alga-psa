@@ -81,6 +81,19 @@ describe('inboundEmailRuleInputSchema', () => {
     expect(result.success).toBe(true);
   });
 
+  it('validates optional match_by targets and rejects empty, duplicate, or unknown targets', () => {
+    const config = { source: 'subject', extraction: { type: 'after', marker: 'Agent:' } };
+    const parse = (match_by?: unknown) => inboundEmailRuleInputSchema.safeParse(baseRule({
+      action_type: 'extract_assign_client',
+      action_config: match_by === undefined ? config : { ...config, match_by },
+    }));
+    expect(parse().success).toBe(true);
+    expect(parse(['asset_name', 'contact_email']).success).toBe(true);
+    expect(parse([]).success).toBe(false);
+    expect(parse(['asset_name', 'asset_name']).success).toBe(false);
+    expect(parse(['future_target']).success).toBe(false);
+  });
+
   it('rejects over-length extraction regex patterns', () => {
     expect(
       inboundEmailRuleInputSchema.safeParse(
