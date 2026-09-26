@@ -93,6 +93,38 @@ function tenantTable(db: Knex, tenantId: string, table: string) {
   return tenantDb(db, tenantId).table(table);
 }
 
+function createPdfFixture(text: string): Buffer {
+  const safeText = text.replace(/[()\\]/g, '\\$&');
+  const stream = `BT /F1 16 Tf 24 72 Td (${safeText}) Tj ET`;
+  const objects = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 144] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>',
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+    `<< /Length ${Buffer.byteLength(stream)} >>\nstream\n${stream}\nendstream`,
+  ];
+  let pdf = '%PDF-1.4\n';
+  const offsets = [0];
+  objects.forEach((object, index) => {
+    offsets.push(Buffer.byteLength(pdf, 'ascii'));
+    pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
+  });
+  const xrefOffset = Buffer.byteLength(pdf, 'ascii');
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  for (const offset of offsets.slice(1)) pdf += `${String(offset).padStart(10, '0')} 00000 n \n`;
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`;
+  return Buffer.from(pdf, 'ascii');
+}
+
+function expectUsablePdf(bytes: Buffer): void {
+  const pdf = bytes.toString('latin1');
+  expect(pdf.slice(0, 5)).toBe('%PDF-');
+  expect(pdf).toContain('%%EOF');
+  expect(pdf).toMatch(/\/Type \/Pages\b/);
+  expect(pdf).toMatch(/\/Type \/Page\b/);
+  expect(bytes.length).toBeGreaterThan(500);
+}
+
 async function cleanupCreatedRecords(db: Knex, tenantId: string, ids: CreatedIds): Promise<void> {
   const safeDelete = async (table: string, where: Record<string, unknown>) => {
     try {
@@ -887,7 +919,7 @@ describe('Client Portal Documents Integration Tests', () => {
   });
 
   describe('Client portal content, file, and export routes use live visibility queries', () => {
-    it('serves uploaded PDF and PNG bytes with safe inline preview headers and usable attachment names', async () => {
+    it('forwards valid uploaded PDF and PNG bytes with safe preview headers and usable attachment names', async () => {
       const clientId = await createClient(db, tenantId, 'Preview Route Client');
       createdIds.clientIds.push(clientId);
       const contactId = await createContact(db, tenantId, clientId, 'preview-route@test.com');
@@ -905,10 +937,13 @@ describe('Client Portal Documents Integration Tests', () => {
         tenant: tenantId, configuration_id: configurationId, provider_id: providerId, name: 'Portal preview test', path: '/', is_default: true,
       });
 
+      const validPdfBytes = createPdfFixture('Quarterly Report');
+      const validPngBytes = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l9sAAAAASUVORK5CYII=', 'base64');
       const fixtures = [
-        { name: 'Quarterly Report', fileName: 'quarterly-report.pdf', mime: 'application/pdf', bytes: Buffer.from('%PDF-1.7 test') },
-        { name: 'Site Photo', fileName: 'site-photo.png', mime: 'image/png', bytes: Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 1]) },
+        { name: 'Quarterly Report', fileName: 'quarterly-report.pdf', mime: 'application/pdf', bytes: validPdfBytes },
+        { name: 'Site Photo', fileName: 'site-photo.png', mime: 'image/png', bytes: validPngBytes },
       ];
+      expectUsablePdf(fixtures[0].bytes);
       const documentIds: string[] = [];
       for (const fixture of fixtures) {
         const documentId = await createDocument(db, tenantId, mspUserId, fixture.name, true);
@@ -1080,6 +1115,12 @@ describe('Client Portal Documents Integration Tests', () => {
       expect(contentResult.content).toMatchObject({ kind: 'block', blockData });
       const fallbackContentResult = await getClientDocumentContent(fallbackDocumentId);
       expect(fallbackContentResult.content).toMatchObject({ kind: 'text', content: 'Actual notes' });
+      const fallbackMarkdownResponse = await getClientPortalExport(
+        new NextRequest(`http://localhost/api/client-portal/documents/${fallbackDocumentId}/export?format=md`),
+        { params: Promise.resolve({ documentId: fallbackDocumentId }) }
+      );
+      expect(fallbackMarkdownResponse.status).toBe(200);
+      expect(await fallbackMarkdownResponse.text()).toContain('Actual notes');
       const fileResponse = await getClientPortalFile(
         new NextRequest(`http://localhost/api/client-portal/documents/${fileDocumentId}/file`),
         { params: Promise.resolve({ documentId: fileDocumentId }) }
@@ -1094,8 +1135,6 @@ describe('Client Portal Documents Integration Tests', () => {
       expect(markdownResponse.status).toBe(200);
       expect(await markdownResponse.text()).toContain('Owner contract meeting notes');
 
-      const { PDFGenerationService } = await import('@alga-psa/billing/services');
-      const renderBuffer = vi.spyOn(PDFGenerationService.prototype as any, 'generatePDFBuffer').mockResolvedValue(Buffer.from('%PDF-integration'));
       const documentsBefore = await tenantTable(db, tenantId, 'documents').count('* as count').first();
       const externalFilesBefore = await tenantTable(db, tenantId, 'external_files').count('* as count').first();
       const pdfResponse = await getClientPortalExport(
@@ -1103,7 +1142,8 @@ describe('Client Portal Documents Integration Tests', () => {
         { params: Promise.resolve({ documentId: blockDocumentId }) }
       );
       expect(pdfResponse.status).toBe(200);
-      expect(Buffer.from(await pdfResponse.arrayBuffer()).toString()).toBe('%PDF-integration');
+      const exportedPdf = Buffer.from(await pdfResponse.arrayBuffer());
+      expectUsablePdf(exportedPdf);
       expect(Number((await tenantTable(db, tenantId, 'documents').count('* as count').first())?.count)).toBe(Number(documentsBefore?.count));
       expect(Number((await tenantTable(db, tenantId, 'external_files').count('* as count').first())?.count)).toBe(Number(externalFilesBefore?.count));
 
@@ -1112,8 +1152,8 @@ describe('Client Portal Documents Integration Tests', () => {
         { params: Promise.resolve({ documentId: fallbackDocumentId }) }
       );
       expect(fallbackPdfResponse.status).toBe(200);
-      expect(renderBuffer.mock.calls.some(([html]) => String(html).includes('Actual notes'))).toBe(true);
-      renderBuffer.mockRestore();
+      const fallbackPdf = Buffer.from(await fallbackPdfResponse.arrayBuffer());
+      expectUsablePdf(fallbackPdf);
     });
   });
 });
