@@ -161,7 +161,7 @@ export function MspLayoutClient({
     return () => {
       isCancelled = true;
     };
-  }, [needsOnboarding, isOnboardingPage, sessionTenant, router]);
+  }, [needsOnboarding, onboardingResolvedServerSide, isOnboardingPage, sessionTenant, router]);
 
   const isAlgaDesk = productCode === 'algadesk';
 

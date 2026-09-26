@@ -1,16 +1,18 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import { MspLayoutClient } from '@/app/msp/MspLayoutClient';
 import { getTenantSettings } from '@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions';
 
 const mockUsePathname = vi.fn(() => '/msp/tickets');
 const mockReplace = vi.fn();
+// Next's router comes from context and remains stable across state updates.
+const mockRouter = { replace: mockReplace };
 
 vi.mock('next/navigation', () => ({
   usePathname: () => mockUsePathname(),
-  useRouter: () => ({ replace: mockReplace }),
+  useRouter: () => mockRouter,
 }));
 
 vi.mock('@alga-psa/auth/client', () => ({
@@ -192,6 +194,47 @@ describe('MspLayoutClient product shell behavior', () => {
 
     expect(screen.queryByTestId('license-banner')).not.toBeInTheDocument();
     expect(await screen.findByTestId('license-banner')).toBeInTheDocument();
+  });
+
+  it('uses newly resolved server onboarding status while a client check is pending', async () => {
+    let resolveSettings!: (settings: Awaited<ReturnType<typeof getTenantSettings>>) => void;
+    mockGetTenantSettings.mockReturnValue(new Promise((resolve) => {
+      resolveSettings = resolve;
+    }));
+    const session = { user: { tenant: 'tenant-1' } } as any;
+    const layout = (resolved: boolean) => (
+      <MspLayoutClient
+        session={session}
+        productCode="psa"
+        needsOnboarding={false}
+        onboardingResolvedServerSide={resolved}
+        initialSidebarCollapsed={false}
+        selfHostLicensing={true}
+      >
+        <div>psa content</div>
+      </MspLayoutClient>
+    );
+    const { rerender } = render(layout(false));
+    expect(mockGetTenantSettings).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('license-banner')).not.toBeInTheDocument();
+
+    rerender(layout(true));
+    expect(screen.getByTestId('license-banner')).toBeInTheDocument();
+
+    // A stale client response must not override the authoritative server result.
+    await act(async () => {
+      resolveSettings({
+        tenant: 'tenant-1',
+        onboarding_completed: false,
+        onboarding_skipped: false,
+        created_at: new Date(),
+        updated_at: new Date(),
+      });
+    });
+    expect(screen.getByTestId('license-banner')).toBeInTheDocument();
+    expect(screen.getByText('psa content')).toBeInTheDocument();
+    expect(mockReplace).not.toHaveBeenCalled();
+    expect(mockGetTenantSettings).toHaveBeenCalledTimes(1);
   });
 
   it('does not show the self-host license banner while onboarding is still required', async () => {
