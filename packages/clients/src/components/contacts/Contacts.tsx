@@ -10,6 +10,7 @@ import { getAllContacts, getContactsByClient, getAllClients, searchContactListId
 import { exportContactsToCSV, deleteContact, updateContact, getContactLastUsagePhoneTypes, deleteOrphanedPhoneTypes } from '@alga-psa/clients/actions';
 import { findTagsByEntityIds, findAllTagsByType, isTagActionError } from '@alga-psa/tags/actions';
 import { Button } from '@alga-psa/ui/components/Button';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import {
   DropdownMenuContent as StyledDropdownMenuContent,
@@ -713,6 +714,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
           </div>
           {/* Renders nothing unless this contact is directory-maintained. */}
           <EntraContactBadge contact={record as unknown as Record<string, unknown>} />
+          {record.contact_kind === 'shared_mailbox' && <Badge variant="default-muted">{t('contactsPage.sharedMailbox')}</Badge>}
         </div>
       ),
     },

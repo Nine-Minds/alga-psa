@@ -26,6 +26,28 @@ import { ValidationResult } from '../interfaces/validation.interfaces';
 const canonicalPhoneTypeSchema = z.enum(CONTACT_PHONE_CANONICAL_TYPES);
 const canonicalEmailTypeSchema = z.enum(CONTACT_EMAIL_CANONICAL_TYPES);
 
+export async function isSharedMailboxContact(
+  db: Knex | Knex.Transaction,
+  tenant: string,
+  contactId: string
+): Promise<boolean> {
+  const contact = await tenantDb(db, tenant).table('contacts')
+    .where({ contact_name_id: contactId })
+    .first('contact_kind');
+  return contact?.contact_kind === 'shared_mailbox';
+}
+
+export async function assertContactIsNotSharedMailbox(
+  db: Knex | Knex.Transaction,
+  tenant: string,
+  contactId: string,
+  message = 'Shared mailbox contacts cannot have a client portal user.'
+): Promise<void> {
+  if (await isSharedMailboxContact(db, tenant, contactId)) {
+    throw new Error(message);
+  }
+}
+
 const phoneRowInputSchema = z.object({
   contact_phone_number_id: z.string().uuid().optional(),
   phone_number: z.string().trim().min(1, 'Phone number is required'),
@@ -50,6 +72,7 @@ const emailRowInputSchema = z.object({
 // =============================================================================
 
 export const contactFormSchema = z.object({
+  contact_kind: z.enum(['person', 'shared_mailbox']).optional(),
   full_name: z.string().trim().min(1, 'Full name is required'),
   // Validate with the same pattern the action/model/client all use, and surface a
   // single clear message. A z.union([...email(), '', null]) here reported a confusing
@@ -77,6 +100,7 @@ export const contactFormSchema = z.object({
 });
 
 export const contactSchema = z.object({
+  contact_kind: z.enum(['person', 'shared_mailbox']).optional(),
   contact_name_id: z.string().uuid(),
   tenant: z.string().uuid(),
   full_name: z.string(),
@@ -750,6 +774,7 @@ export class ContactModel {
     const primaryEmailCustomTypeId = await this.resolvePrimaryCustomEmailTypeId(validatedInput, tenant, trx, now);
 
     const insertData = {
+      contact_kind: input.contact_kind ?? 'person',
       contact_name_id: contactId,
       tenant,
       full_name: input.full_name.trim(),

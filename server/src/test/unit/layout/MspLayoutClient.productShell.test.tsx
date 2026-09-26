@@ -7,10 +7,9 @@ import { getTenantSettings } from '@alga-psa/tenancy/actions/tenant-settings-act
 
 const mockUsePathname = vi.fn(() => '/msp/tickets');
 const mockReplace = vi.fn();
-// Next's app-router useRouter() returns a stable instance. A fresh object per
-// render would re-run MspLayoutClient's router-dependent onboarding effect on
-// every re-render, resetting the check and remounting the license banner.
-const mockRouter = { replace: mockReplace };
+// Match Next's stable router by default; the identity-change regression test
+// explicitly replaces it to verify that onboarding is not fetched again.
+let mockRouter = { replace: mockReplace };
 
 vi.mock('next/navigation', () => ({
   usePathname: () => mockUsePathname(),
@@ -89,6 +88,7 @@ vi.mock('@/components/product/ProductRouteBoundary', () => ({
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  mockRouter = { replace: mockReplace };
   mockUsePathname.mockReturnValue('/msp/tickets');
 });
 
@@ -201,6 +201,37 @@ describe('MspLayoutClient product shell behavior', () => {
     // The resolved onboarding check must not be re-run by later re-renders,
     // which would unmount the banner that was just shown.
     await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(banner).toBeInTheDocument();
+    expect(mockGetTenantSettings).toHaveBeenCalledTimes(1);
+  });
+
+  it('checks onboarding once and keeps the license banner mounted across re-renders with a new router identity', async () => {
+    mockGetTenantSettings.mockResolvedValue({
+      tenant: 'tenant-1',
+      onboarding_completed: true,
+      onboarding_skipped: false,
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
+
+    const view = (
+      <MspLayoutClient
+        session={{ user: { tenant: 'tenant-1' } } as any}
+        productCode="psa"
+        needsOnboarding={false}
+        initialSidebarCollapsed={false}
+        selfHostLicensing={true}
+      >
+        <div>psa content</div>
+      </MspLayoutClient>
+    );
+    const { rerender } = render(view);
+
+    const banner = await screen.findByTestId('license-banner');
+    mockRouter = { replace: mockReplace };
+    rerender(React.cloneElement(view));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
     expect(banner).toBeInTheDocument();
     expect(mockGetTenantSettings).toHaveBeenCalledTimes(1);
   });

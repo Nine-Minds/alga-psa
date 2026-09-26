@@ -155,8 +155,10 @@ export function MspLayoutClient({
           Object.prototype.hasOwnProperty.call(settings, 'onboarding_skipped');
 
         if (hasOnboardingFlags && !settings.onboarding_completed && !settings.onboarding_skipped) {
+          // The redirect effect above performs the navigation; keeping `router`
+          // out of this effect means a new router identity never re-fetches
+          // tenant settings (which would blink the license banner off and on).
           setClientNeedsOnboarding(true);
-          router.replace('/msp/onboarding');
           return;
         }
 
@@ -172,7 +174,7 @@ export function MspLayoutClient({
     return () => {
       isCancelled = true;
     };
-  }, [needsOnboarding, onboardingResolvedServerSide, isOnboardingPage, sessionTenant, router]);
+  }, [needsOnboarding, isOnboardingPage, sessionTenant, onboardingResolvedServerSide]);
 
   const isAlgaDesk = productCode === 'algadesk';
 

@@ -1614,6 +1614,7 @@ export const registerClientUser = withAuth(async (
           client_id: 'contacts.client_id',
           tenant: 'contacts.tenant',
           is_inactive: 'contacts.is_inactive',
+          contact_kind: 'contacts.contact_kind',
           full_name: 'contacts.full_name',
         })
         .first();
@@ -1624,6 +1625,10 @@ export const registerClientUser = withAuth(async (
 
       if (contact.is_inactive) {
         return { success: false, code: 'CONTACT_INACTIVE', error: 'Contact is inactive' };
+      }
+
+      if (contact.contact_kind === 'shared_mailbox') {
+        return { success: false, code: 'REGISTRATION_FAILED', error: 'Shared mailbox contacts cannot have a client portal user.' };
       }
 
       // Check if a client user with this email already exists. Internal users

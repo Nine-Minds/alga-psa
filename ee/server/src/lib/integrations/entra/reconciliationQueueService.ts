@@ -241,6 +241,8 @@ function queueRowToSyncUser(queueRow: QueueRow): EntraSyncUser {
     givenName: null,
     surname: null,
     accountEnabled: true,
+    userType: null,
+    assignedLicenseCount: null,
     jobTitle: null,
     mobilePhone: null,
     businessPhones: [],

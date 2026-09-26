@@ -35,6 +35,7 @@
     "title": "Contactos",
     "description": "Página principal de gestión de contactos con búsqueda, filtros, vista de lista y acciones masivas",
     "heading": "Contactos",
+    "sharedMailbox": "Buzón compartido",
     "addContact": "+ Añadir contacto",
     "actions": "Acciones",
     "searchPlaceholder": "Buscar contactos, notas e interacciones",
