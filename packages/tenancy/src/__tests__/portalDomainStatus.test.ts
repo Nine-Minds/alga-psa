@@ -61,6 +61,7 @@ describe('getPortalDomainStatusForTenant', () => {
     expect(response.domain).toBeNull();
     expect(response.status).toBe('disabled');
     expect(response.edition).toBe('ce');
+    expect(response.mode).toBe('direct');
     expect(response.isEditable).toBe(false);
     expect(response.canonicalHost).toBe('tenant-.portal.algapsa.com');
     expect(response.verificationDetails).toEqual({ expected_cname: 'tenant-.portal.algapsa.com' });

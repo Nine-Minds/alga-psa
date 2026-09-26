@@ -1313,7 +1313,7 @@
     },
     "domain": {
       "title": "Domaine personnalisé",
-      "description": "Configurez un nom d'hôte personnalisé pour votre portail client. Nous provisionnerons automatiquement les certificats TLS une fois le DNS vérifié.",
+      "description": "Configurez un nom d'hôte personnalisé pour votre portail client.",
       "currentStatus": "Statut actuel",
       "noDomainConfigured": "Aucun domaine personnalisé configuré",
       "defaultStatusMessage": "Aucun domaine personnalisé enregistré pour le moment.",
@@ -1355,7 +1355,8 @@
         "step3": "Obtenez et maintenez le certificat TLS pour le domaine sur votre proxy.",
         "step4": "Enregistrez le domaine ici — il s'active immédiatement. Configurez d'abord le DNS et votre proxy, car les liens du portail basculent immédiatement vers ce domaine.",
         "docLinkText": "Guide de configuration et de dépannage du proxy inverse",
-        "neverSeenWarning": "Aucune requête n'a encore atteint {{domain}}. Vérifiez que votre proxy inverse transmet l'en-tête Host d'origine."
+        "neverSeenWarning": "Aucune requête n'a encore atteint {{domain}}. Vérifiez que votre proxy inverse transmet l'en-tête Host d'origine.",
+        "tlsNote": "Le TLS se termine sur votre proxy inverse, qui détient le certificat."
       },
       "badges": {
         "pending_dns": "DNS en attente",
@@ -1380,7 +1381,8 @@
         "refreshFailed": "Échec de l'actualisation du statut du domaine.",
         "retryFailed": "Échec de la nouvelle tentative.",
         "disableFailed": "Échec de la désactivation du domaine personnalisé."
-      }
+      },
+      "hostedTlsNote": "Nous provisionnerons automatiquement les certificats TLS une fois le DNS vérifié."
     },
     "yourCompanyName": "Nom de votre entreprise",
     "brandingPreviewMode": "Mode de thème d'aperçu de la marque",

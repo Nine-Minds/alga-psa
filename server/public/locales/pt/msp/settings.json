@@ -1313,7 +1313,7 @@
     },
     "domain": {
       "title": "Domínio Personalizado",
-      "description": "Configure um nome de host de marca para seu portal do cliente. Forneceremos certificados TLS automaticamente assim que o DNS for verificado.",
+      "description": "Configure um nome de host de marca para seu portal do cliente.",
       "currentStatus": "Estado atual",
       "noDomainConfigured": "Nenhum domínio personalizado configurado",
       "defaultStatusMessage": "Nenhum domínio personalizado registrado ainda.",
@@ -1355,7 +1355,8 @@
         "step3": "Obtenha e mantenha o certificado TLS para o domínio no seu proxy.",
         "step4": "Salve o domínio aqui — ele é ativado imediatamente. Configure primeiro o DNS e o seu proxy, pois os links do portal mudam para este domínio imediatamente.",
         "docLinkText": "Guia de configuração e solução de problemas do proxy reverso",
-        "neverSeenWarning": "Nenhuma solicitação chegou a {{domain}} ainda. Verifique se o seu proxy reverso encaminha o cabeçalho Host original."
+        "neverSeenWarning": "Nenhuma solicitação chegou a {{domain}} ainda. Verifique se o seu proxy reverso encaminha o cabeçalho Host original.",
+        "tlsNote": "O TLS termina no seu proxy reverso, que mantém o certificado."
       },
       "badges": {
         "pending_dns": "DNS pendente",
@@ -1380,7 +1381,8 @@
         "refreshFailed": "Falha ao atualizar o status do domínio.",
         "retryFailed": "Falha na nova tentativa.",
         "disableFailed": "Falha ao desativar o domínio personalizado."
-      }
+      },
+      "hostedTlsNote": "Forneceremos certificados TLS automaticamente assim que o DNS for verificado."
     },
     "yourCompanyName": "Nome da sua empresa",
     "brandingPreviewMode": "Modo de tema de visualização da marca",

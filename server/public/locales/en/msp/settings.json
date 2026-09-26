@@ -1313,7 +1313,7 @@
     },
     "domain": {
       "title": "Custom Domain",
-      "description": "Configure a branded hostname for your client portal. We will provision TLS certificates automatically once DNS is verified.",
+      "description": "Configure a branded hostname for your client portal.",
       "currentStatus": "Current status",
       "noDomainConfigured": "No custom domain configured",
       "defaultStatusMessage": "No custom domain registered yet.",
@@ -1355,7 +1355,8 @@
         "step3": "Obtain and maintain the TLS certificate for the domain on your proxy.",
         "step4": "Save the domain here — it activates immediately. Wire DNS and your proxy first, since portal links switch to this domain right away.",
         "docLinkText": "Reverse proxy setup & troubleshooting guide",
-        "neverSeenWarning": "No requests have reached {{domain}} yet. Check that your reverse proxy forwards the original Host header."
+        "neverSeenWarning": "No requests have reached {{domain}} yet. Check that your reverse proxy forwards the original Host header.",
+        "tlsNote": "TLS terminates at your reverse proxy, which holds the certificate."
       },
       "badges": {
         "pending_dns": "Pending DNS",
@@ -1380,7 +1381,8 @@
         "refreshFailed": "Failed to refresh domain status.",
         "retryFailed": "Retry failed.",
         "disableFailed": "Failed to disable custom domain."
-      }
+      },
+      "hostedTlsNote": "We will provision TLS certificates automatically once DNS is verified."
     },
     "yourCompanyName": "Your Company Name",
     "brandingPreviewMode": "Branding preview theme mode",

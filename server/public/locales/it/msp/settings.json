@@ -1313,7 +1313,7 @@
     },
     "domain": {
       "title": "Dominio personalizzato",
-      "description": "Configura un hostname personalizzato per il tuo portale clienti. Provvederemo automaticamente al provisioning dei certificati TLS una volta verificato il DNS.",
+      "description": "Configura un hostname personalizzato per il tuo portale clienti.",
       "currentStatus": "Stato attuale",
       "noDomainConfigured": "Nessun dominio personalizzato configurato",
       "defaultStatusMessage": "Nessun dominio personalizzato ancora registrato.",
@@ -1355,7 +1355,8 @@
         "step3": "Ottieni e mantieni il certificato TLS per il dominio sul tuo proxy.",
         "step4": "Salva il dominio qui — si attiva immediatamente. Configura prima il DNS e il tuo proxy, poiché i link del portale passano subito a questo dominio.",
         "docLinkText": "Guida alla configurazione e risoluzione dei problemi del reverse proxy",
-        "neverSeenWarning": "Nessuna richiesta ha ancora raggiunto {{domain}}. Verifica che il tuo reverse proxy inoltri l'header Host originale."
+        "neverSeenWarning": "Nessuna richiesta ha ancora raggiunto {{domain}}. Verifica che il tuo reverse proxy inoltri l'header Host originale.",
+        "tlsNote": "Il TLS termina sul tuo reverse proxy, che conserva il certificato."
       },
       "badges": {
         "pending_dns": "DNS in attesa",
@@ -1380,7 +1381,8 @@
         "refreshFailed": "Impossibile aggiornare lo stato del dominio.",
         "retryFailed": "Nuovo tentativo non riuscito.",
         "disableFailed": "Impossibile disattivare il dominio personalizzato."
-      }
+      },
+      "hostedTlsNote": "Provvederemo automaticamente al provisioning dei certificati TLS una volta verificato il DNS."
     },
     "yourCompanyName": "Nome della tua azienda",
     "brandingPreviewMode": "Modalità tema anteprima branding",
