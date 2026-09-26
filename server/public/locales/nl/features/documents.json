@@ -227,7 +227,7 @@
     "downloadError": "Downloaden is mislukt. Probeer het opnieuw.",
     "notFound": "Dit document is niet meer beschikbaar.",
     "noContent": "Dit document bevat geen exporteerbare inhoud.",
-    "accessDenied": "Je hebt geen toegang tot dit document.",
+    "accessDenied": "U hebt geen toegang tot dit document.",
     "loadingPreview": "Voorbeeld laden…",
     "exportFailed": "PDF-export mislukt. Probeer in plaats daarvan Markdown."
   },

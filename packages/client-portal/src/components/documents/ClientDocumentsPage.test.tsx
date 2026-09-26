@@ -148,6 +148,13 @@ vi.mock('@alga-psa/ui/components/DropdownMenu', () => ({
 }));
 
 describe('ClientDocumentsPage', () => {
+  beforeEach(() => {
+    // jsdom has no blob URL API. Preserve URL parsing and restore the global after each test.
+    vi.stubGlobal('URL', class extends URL {
+      static createObjectURL = vi.fn(() => 'blob:test');
+      static revokeObjectURL = vi.fn();
+    });
+  });
   afterEach(async () => {
     cleanup();
     mockDocuments[0].file_id = 'file-1';
@@ -253,8 +260,8 @@ describe('ClientDocumentsPage', () => {
   ])('fetches uploaded %s preview bytes from the inline endpoint', async (documentId) => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(new Blob(['preview'])));
     vi.stubGlobal('fetch', fetchMock);
-    vi.spyOn(URL, 'createObjectURL').mockReturnValue(`blob:${documentId}`);
-    const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+    vi.mocked(URL.createObjectURL).mockReturnValue(`blob:${documentId}`);
+    const revoke = vi.mocked(URL.revokeObjectURL).mockImplementation(() => {});
     render(<ClientDocumentsPage />);
     await waitFor(() => expect(screen.getByText('Service Agreement.pdf')).toBeInTheDocument());
     fireEvent.click(document.getElementById(`client-docs-view-document-${documentId}`)!);
@@ -280,8 +287,8 @@ describe('ClientDocumentsPage', () => {
     const secondBytes = deferred<Response>();
     vi.mocked(getClientDocumentContent).mockReturnValueOnce(firstContent.promise).mockReturnValueOnce(secondContent.promise);
     vi.stubGlobal('fetch', vi.fn((url: string) => url.includes('doc-1') ? firstBytes.promise : secondBytes.promise));
-    const createUrl = vi.spyOn(URL, 'createObjectURL').mockImplementation((blob) => `blob:${blob.size}`);
-    const revokeUrl = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+    const createUrl = vi.mocked(URL.createObjectURL).mockImplementation((blob) => `blob:${blob.size}`);
+    const revokeUrl = vi.mocked(URL.revokeObjectURL).mockImplementation(() => {});
     render(<ClientDocumentsPage />);
     await waitFor(() => {
       expect(screen.getByText('Service Agreement.pdf')).toBeInTheDocument();
@@ -341,7 +348,7 @@ describe('ClientDocumentsPage', () => {
   it('shows a visible render error for a broken image or block renderer', async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(new Blob(['image'])));
     vi.stubGlobal('fetch', fetchMock);
-    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:bad-image');
+    vi.mocked(URL.createObjectURL).mockReturnValue('blob:bad-image');
     render(<ClientDocumentsPage />);
     await waitFor(() => expect(screen.getByText('Service Agreement.pdf')).toBeInTheDocument());
     fireEvent.click(document.getElementById('client-docs-view-document-doc-2')!);
