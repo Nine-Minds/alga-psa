@@ -137,4 +137,20 @@ describe('client portal document routes', () => {
     expect(exportResponse.status).toBe(404);
     expect(mocks.generatePDF).not.toHaveBeenCalled();
   });
+
+  it('returns a useful authorization error when the shared visibility check rejects the caller', async () => {
+    mocks.document.mockRejectedValueOnce(new Error('Insufficient permissions to view documents'));
+    const fileResponse = await getFile(request('/api/client-portal/documents/doc-1/file'), params);
+    expect(fileResponse.status).toBe(403);
+    expect(await fileResponse.json()).toMatchObject({ code: 'forbidden' });
+
+    mocks.document.mockRejectedValueOnce(new Error('Insufficient permissions to view documents'));
+    const exportResponse = await getExport(request('/api/client-portal/documents/doc-1/export?format=md'), params);
+    expect(exportResponse.status).toBe(403);
+    expect(await exportResponse.json()).toMatchObject({ code: 'forbidden' });
+
+    mocks.document.mockRejectedValueOnce(new Error('Contact not associated with a client'));
+    const missingClientResponse = await getFile(request('/api/client-portal/documents/doc-1/file'), params);
+    expect(missingClientResponse.status).toBe(403);
+  });
 });

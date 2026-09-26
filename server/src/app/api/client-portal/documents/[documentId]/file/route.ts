@@ -32,7 +32,16 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const { documentId } = await params;
   return runWithTenant(user.tenant, async () => {
     const db = await getConnection(user.tenant);
-    const authorized = await withTransaction(db, (trx) => resolveClientPortalDocument(trx, user.tenant!, user as IUser, documentId));
+    let authorized;
+    try {
+      authorized = await withTransaction(db, (trx) => resolveClientPortalDocument(trx, user.tenant!, user as IUser, documentId));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      if (/access denied|insufficient permissions|not associated with a (?:contact|client)/i.test(message)) {
+        return NextResponse.json({ error: 'You do not have access to this document.', code: 'forbidden' }, { status: 403 });
+      }
+      return NextResponse.json({ error: 'Could not verify document access.', code: 'access_check_failed' }, { status: 500 });
+    }
     if (!authorized) return NextResponse.json({ error: 'Document not found or unavailable.', code: 'not_found' }, { status: 404 });
     if (!authorized.file_id) return NextResponse.json({ error: 'This document has no uploaded file.', code: 'no_file' }, { status: 404 });
     const disposition = request.nextUrl.searchParams.get('disposition') === 'inline' ? 'inline' : 'attachment';
