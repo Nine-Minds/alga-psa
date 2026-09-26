@@ -10,7 +10,11 @@ exports.up = async function up(knex) {
   for (const [name, add] of columns) {
     if (!(await knex.schema.hasColumn('payment_methods', name))) await knex.schema.alterTable('payment_methods', add);
   }
-  await knex.raw("ALTER TABLE payment_methods ADD CONSTRAINT payment_methods_status_check CHECK (status IN ('active','expired','detached','requires_update'))").catch(() => undefined);
+  await knex.raw(`DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'payment_methods_status_check' AND conrelid = 'payment_methods'::regclass) THEN
+      ALTER TABLE payment_methods ADD CONSTRAINT payment_methods_status_check CHECK (status IN ('active','expired','detached','requires_update'));
+    END IF;
+  END $$`);
   await knex.raw('CREATE UNIQUE INDEX IF NOT EXISTS payment_methods_external_id_unique ON payment_methods (tenant, provider_type, external_payment_method_id) WHERE external_payment_method_id IS NOT NULL');
 };
 
