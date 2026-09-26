@@ -67,7 +67,9 @@ const clientPropertiesSchema = z.object({
 }).optional();
 
 // Create client schema
-export const createClientSchema = z.object({
+const clientContactFields = ['email', 'phone_no', 'address'] as const;
+
+const clientBodySchema = z.object({
   client_name: clientNameField,
   phone_no: clientPhoneField,
   email: clientEmailField,
@@ -98,8 +100,16 @@ export const createClientSchema = z.object({
   tags: z.array(z.string()).optional()
 });
 
-// Update client schema (all fields optional)
-export const updateClientSchema = createUpdateSchema(createClientSchema);
+function rejectClientLocationFields(data: Record<string, unknown>, ctx: z.RefinementCtx): void {
+  for (const field of clientContactFields) {
+    if (Object.prototype.hasOwnProperty.call(data, field)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: [field], message: `Use the client locations endpoint to set ${field}` });
+    }
+  }
+}
+
+export const createClientSchema = clientBodySchema;
+export const updateClientSchema = createUpdateSchema(clientBodySchema).superRefine(rejectClientLocationFields);
 
 // Client filter schema
 export const clientFilterSchema = baseFilterSchema.extend({
