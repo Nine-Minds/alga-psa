@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { createTenant } from '../../../../../test-utils/testDataFactory';
 import { createTestService } from '../../../../../test-utils/billingTestHelpers';
+import { runWithTenant } from '@alga-psa/db';
 
 const authState = vi.hoisted(() => ({ tenant: '' }));
 vi.mock('@alga-psa/auth', () => ({
@@ -12,7 +13,7 @@ vi.mock('@alga-psa/auth', () => ({
 }));
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: vi.fn(async () => true) }));
 
-import { hasContractLineProtectedHistory } from '@alga-psa/billing/actions/contractLineAction';
+import { hasContractLineProtectedHistory, updateContractLine } from '@alga-psa/billing/actions/contractLineAction';
 
 describe('contract-line protected history database relationships', () => {
   let context: TestContext;
@@ -43,8 +44,30 @@ describe('contract-line protected history database relationships', () => {
       cadence_owner: 'contract',
       is_active: true,
       custom_rate: 10000,
+      start_date: null,
+      end_date: null,
     }, 'contract_line_id');
     return lineId;
+  }
+
+  async function createAssignment(contractId: string, start: string, end: string | null) {
+    await context.db('client_contracts').insert({
+      client_contract_id: randomUUID(), tenant: context.tenantId, contract_id: contractId,
+      client_id: context.clientId, start_date: start, end_date: end, is_active: true,
+      created_at: context.db.fn.now(), updated_at: context.db.fn.now(),
+    });
+  }
+
+  async function persistedLine(lineId: string) {
+    return context.db('contract_lines').where({ contract_line_id: lineId }).first();
+  }
+
+  function dateOnly(value: Date | string | null) {
+    return value instanceof Date ? value.toISOString().slice(0, 10) : value;
+  }
+
+  async function updateLine(lineId: string, update: Record<string, unknown>) {
+    return runWithTenant(context.tenantId, () => updateContractLine(lineId, update as any));
   }
 
   async function seedClaim(tenant: string, lineId: string, start: string, end: string) {
@@ -124,5 +147,100 @@ describe('contract-line protected history database relationships', () => {
     expect(parsedDetail.service_period_end).toBeInstanceOf(Date);
     expect(await hasContractLineProtectedHistory(lineId)).toBe(true);
     expect(await hasContractLineProtectedHistory(siblingLineId)).toBe(false);
+  });
+
+  it('updates through the real action while preserving claimed and invoiced history across date edits and clears', async () => {
+    const now = context.db.fn.now();
+    const contractId = await context.createEntity('contracts', {
+      contract_name: `Action history ${randomUUID().slice(0, 8)}`, status: 'draft', is_template: false,
+      is_active: true, billing_frequency: 'monthly', currency_code: 'USD', owner_client_id: context.clientId,
+      created_at: now, updated_at: now,
+    }, 'contract_id');
+    const lineId = await createLine(contractId);
+    // The effective inherited window safely encloses the service periods.
+    await createAssignment(contractId, '2026-01-01', '2027-12-31');
+    await seedClaim(context.tenantId, lineId, '2026-06-01', '2026-07-01');
+
+    const serviceId = await createTestService(context, { service_name: `Action service ${randomUUID().slice(0, 8)}` });
+    const configId = randomUUID();
+    await context.db('contract_line_service_configuration').insert({
+      config_id: configId, tenant: context.tenantId, contract_line_id: lineId, service_id: serviceId,
+      configuration_type: 'Fixed', created_at: now, updated_at: now,
+    });
+    const invoiceId = await context.createEntity('invoices', {
+      invoice_number: `ACTION-${randomUUID().slice(0, 8)}`, invoice_date: '2026-07-01', due_date: '2026-08-01',
+      status: 'draft', client_id: context.clientId, currency_code: 'USD', is_manual: false,
+      total_amount: 10000, subtotal: 10000, tax: 0, created_at: now, updated_at: now,
+    }, 'invoice_id');
+    const itemId = randomUUID();
+    await context.db('invoice_charges').insert({
+      item_id: itemId, tenant: context.tenantId, invoice_id: invoiceId,
+      description: 'Draft recurring charge', quantity: 1, unit_price: 10000,
+      total_price: 10000, net_amount: 10000, tax_amount: 0, tax_rate: 0,
+      is_manual: false, is_discount: false, is_taxable: false,
+    });
+    await context.db('invoice_charge_details').insert({
+      item_detail_id: randomUUID(), item_id: itemId, tenant: context.tenantId, service_id: serviceId,
+      config_id: configId, quantity: 1, rate: 10000,
+      service_period_start: '2026-06-01', service_period_end: '2026-07-01', created_at: now, updated_at: now,
+    });
+
+    const textAndFutureEnd = await updateLine(lineId, {
+      invoice_line_description: '  Revised billed line  ', end_date: '2027-01-01',
+    });
+    expect(textAndFutureEnd.invoice_line_description).toBe('Revised billed line');
+    expect(dateOnly(textAndFutureEnd.end_date as Date | string)).toBe('2027-01-01');
+    const persistedAfterSave = await persistedLine(lineId);
+    expect(persistedAfterSave.invoice_line_description).toBe('Revised billed line');
+    expect(dateOnly(persistedAfterSave.end_date)).toBe('2027-01-01');
+
+    const beforeRejectedEdits = await persistedLine(lineId);
+    const rejectedEnd = await updateLine(lineId, { end_date: '2026-06-15' });
+    expect(rejectedEnd).toMatchObject({ messageKey: 'msp/contracts:contractLines.errors.protectedEndDate', messageParams: { boundary: '2026-07-01' } });
+    expect(await persistedLine(lineId)).toMatchObject({ end_date: beforeRejectedEdits.end_date, invoice_line_description: beforeRejectedEdits.invoice_line_description });
+
+    const rejectedStart = await updateLine(lineId, { start_date: '2026-06-15' });
+    expect(rejectedStart).toMatchObject({ messageKey: 'msp/contracts:contractLines.errors.protectedStartDate', messageParams: { boundary: '2026-06-01' } });
+    expect(await persistedLine(lineId)).toMatchObject({ start_date: beforeRejectedEdits.start_date, end_date: beforeRejectedEdits.end_date });
+
+    // Both explicit bounds can be set at the exact protected boundaries, then
+    // cleared safely because the assignment window still covers the history.
+    expect(dateOnly((await updateLine(lineId, { start_date: '2026-06-01' })).start_date as Date | string)).toBe('2026-06-01');
+    expect(dateOnly((await persistedLine(lineId)).start_date)).toBe('2026-06-01');
+    expect(await updateLine(lineId, { start_date: null })).toMatchObject({ start_date: null });
+    expect((await persistedLine(lineId)).start_date).toBeNull();
+    expect(dateOnly((await updateLine(lineId, { end_date: '2026-07-01' })).end_date as Date | string)).toBe('2026-07-01');
+    expect(dateOnly((await persistedLine(lineId)).end_date)).toBe('2026-07-01');
+    expect(await updateLine(lineId, { end_date: null })).toMatchObject({ end_date: null });
+    expect((await persistedLine(lineId)).end_date).toBeNull();
+  });
+
+  it('rejects cleared bounds when actual assignment dates would inherit a window excluding claimed history', async () => {
+    const now = context.db.fn.now();
+    const startContractId = await context.createEntity('contracts', {
+      contract_name: `Inherited start ${randomUUID().slice(0, 8)}`, status: 'draft', is_template: false,
+      is_active: true, billing_frequency: 'monthly', currency_code: 'USD', owner_client_id: context.clientId,
+      created_at: now, updated_at: now,
+    }, 'contract_id');
+    const startLineId = await createLine(startContractId);
+    await createAssignment(startContractId, '2026-06-15', '2027-12-31');
+    await seedClaim(context.tenantId, startLineId, '2026-06-01', '2026-07-01');
+
+    const rejectedStartClear = await updateLine(startLineId, { start_date: null });
+    expect(rejectedStartClear).toMatchObject({ messageKey: 'msp/contracts:contractLines.errors.protectedStartDate', messageParams: { boundary: '2026-06-01' } });
+    expect((await persistedLine(startLineId)).start_date).toBeNull();
+
+    const endContractId = await context.createEntity('contracts', {
+      contract_name: `Inherited end ${randomUUID().slice(0, 8)}`, status: 'draft', is_template: false,
+      is_active: true, billing_frequency: 'monthly', currency_code: 'USD', owner_client_id: context.clientId,
+      created_at: now, updated_at: now,
+    }, 'contract_id');
+    const endLineId = await createLine(endContractId);
+    await createAssignment(endContractId, '2026-01-01', '2026-06-20');
+    await seedClaim(context.tenantId, endLineId, '2026-06-01', '2026-07-01');
+
+    const rejectedEndClear = await updateLine(endLineId, { end_date: null });
+    expect(rejectedEndClear).toMatchObject({ messageKey: 'msp/contracts:contractLines.errors.protectedEndDate', messageParams: { boundary: '2026-07-01' } });
+    expect((await persistedLine(endLineId)).end_date).toBeNull();
   });
 });

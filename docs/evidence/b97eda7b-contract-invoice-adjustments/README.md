@@ -540,7 +540,11 @@ inside the invoice's actual service period. The server should reject that edit
 with the latest protected service-period end and leave stored values unchanged.
 Finally restore and verify the original values.
 
-Current-revision browser evidence is outstanding: the existing review app build
-has not been proven to contain the repair, and the application server for this
-worktree remains stopped. The earlier unbilled-line screenshots do not verify
-this billed-history repair.
+Current-revision browser evidence is outstanding. The review build marker at
+`server/.next-review/.alga-review-revision` currently records
+`885ca978df04570fcd1b6e4a834b00bf590c239f+da39a3ee5e6b`, which does not
+identify this repair commit. The application server for this worktree remains
+stopped, as required. The earlier unbilled-line screenshots do not verify this
+billed-history repair. Capture the persistence, protected-date rejection, and
+restoration steps above when an updated review app is available; automated
+tests are not live evidence.
