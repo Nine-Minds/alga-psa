@@ -19,7 +19,7 @@ export class SavedPaymentMethodService {
     const client = await tenantDb(this.knex, this.tenantId).table('clients').where({ client_id: clientId }).first();
     if (!client) throw new Error('Client is unavailable');
     const provider = createStripePaymentProvider(this.tenantId);
-    const customerId = await provider.getOrCreateCustomer(clientId, String(client.billing_email ?? ''), String(client.client_name ?? ''), billingProfileId);
+    const customerId = await provider.getOrCreateCustomer(clientId, String(client.billing_email ?? ''), String(profile.name ?? client.client_name ?? ''), billingProfileId);
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL;
     if (!baseUrl) throw new Error('Application base URL is not configured');
     const safeReturnTo = returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//') ? returnTo : '/client-portal/billing';

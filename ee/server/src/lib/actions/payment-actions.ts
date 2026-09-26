@@ -94,6 +94,23 @@ const STRIPE_WEBHOOK_EVENTS: Stripe.WebhookEndpointCreateParams.EnabledEvent[] =
   'payment_method.automatically_updated',
 ];
 
+export async function reconcileStripeWebhookEvents(tenant: string): Promise<boolean> {
+  const { knex } = await createTenantKnex();
+  const config = await tenantDb(knex, tenant).table<IPaymentProviderConfig>('payment_provider_configs')
+    .where({ provider_type: 'stripe', is_enabled: true }).first();
+  const endpointId = (config?.configuration as any)?.webhook_endpoint_id;
+  if (!config || !endpointId) return false;
+  const secretProvider = await getSecretProviderInstance();
+  const secretKey = await secretProvider.getTenantSecret(tenant, 'stripe_payment_secret_key');
+  if (!secretKey) return false;
+  const stripe = new Stripe(secretKey, { apiVersion: '2024-12-18.acacia' as any });
+  const endpoint = await stripe.webhookEndpoints.update(endpointId, { enabled_events: STRIPE_WEBHOOK_EVENTS });
+  await tenantDb(knex, tenant).table('payment_provider_configs').where({ config_id: config.config_id }).update({
+    configuration: { ...(config.configuration as any), webhook_events: endpoint.enabled_events }, updated_at: knex.fn.now(),
+  });
+  return true;
+}
+
 /**
  * Payment provider configuration for display.
  */
@@ -108,6 +125,7 @@ interface PaymentProviderDisplay {
   has_webhook_secret: boolean;
   webhook_url?: string;
   webhook_events?: string[];
+  webhook_events_out_of_date?: boolean;
   webhook_status?: 'enabled' | 'disabled' | 'not_configured';
 }
 
@@ -133,6 +151,8 @@ export const getPaymentConfigAction = withAuth(async (user, { tenant }): Promise
 
     // Determine webhook status - verify the secret actually exists, not just the path
     const configuration = config.configuration as any;
+    const configuredWebhookEvents = Array.isArray(configuration?.webhook_events) ? [...configuration.webhook_events].sort() : [];
+    const requiredWebhookEvents = [...STRIPE_WEBHOOK_EVENTS].sort();
     let webhookStatus: 'enabled' | 'disabled' | 'not_configured' = 'not_configured';
     let hasWebhookSecret = false;
 
@@ -176,7 +196,8 @@ export const getPaymentConfigAction = withAuth(async (user, { tenant }): Promise
       publishable_key: configuration?.publishable_key,
       has_webhook_secret: hasWebhookSecret,
       webhook_url: webhookUrl,
-      webhook_events: STRIPE_WEBHOOK_EVENTS as string[],
+      webhook_events: ((configuration?.webhook_events as string[] | undefined) ?? STRIPE_WEBHOOK_EVENTS) as string[],
+      webhook_events_out_of_date: JSON.stringify(configuredWebhookEvents) !== JSON.stringify(requiredWebhookEvents),
       webhook_status: webhookStatus,
     };
 
@@ -386,6 +407,7 @@ export const connectStripeAction = withAuth(async (
       userId: user.user_id,
       webhookConfigured,
     });
+    if (webhookConfigured) await reconcileStripeWebhookEvents(tenant);
 
     return {
       success: true,
@@ -733,6 +755,8 @@ export const retryStripeWebhookConfigurationAction = withAuth(async (user, { ten
         webhook_secret_vault_path: `tenant/${tenant}/stripe_payment_webhook_secret`,
         updated_at: knex.fn.now(),
       });
+
+    await reconcileStripeWebhookEvents(tenant);
 
     logger.info('[PaymentActions] Webhook configuration retry successful', {
       endpointId: webhookEndpointId,

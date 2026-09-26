@@ -291,7 +291,15 @@ export class StripePaymentProvider implements PaymentProvider {
       // Verify the customer still exists in Stripe
       try {
         const customer = await stripe.customers.retrieve(existingMapping.external_customer_id);
-        if (!customer.deleted) {
+        if (!customer.deleted && customer.metadata?.tenant_id === this.tenantId && customer.metadata?.client_id === clientId &&
+            (customer.metadata?.billing_profile_id === billingProfileId || (!customer.metadata?.billing_profile_id && existingMapping.billing_profile_id === billingProfileId))) {
+          // Legacy default-profile customer mappings predate the profile metadata key.
+          // The migrated local mapping is the authority for that one backfilled profile.
+          if (!customer.metadata?.billing_profile_id) {
+            await stripe.customers.update(existingMapping.external_customer_id, { metadata: {
+              ...customer.metadata, tenant_id: this.tenantId, client_id: clientId, billing_profile_id: billingProfileId,
+            } });
+          }
           return existingMapping.external_customer_id;
         }
       } catch (error) {
