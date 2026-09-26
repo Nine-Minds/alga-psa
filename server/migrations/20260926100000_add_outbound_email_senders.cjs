@@ -13,7 +13,7 @@ exports.up = async function up(knex) {
     table.primary(['tenant', 'sender_id']);
     table.unique(['tenant', 'email_address']);
     table.foreign('tenant').references('tenants.tenant').onDelete('CASCADE');
-    table.foreign(['microsoft_provider_id', 'tenant']).references(['email_providers.id', 'email_providers.tenant']);
+    table.foreign(['microsoft_provider_id', 'tenant']).references(['id', 'tenant']).inTable('email_providers');
   });
 
   await knex.schema.createTable('email_sender_routes', (table) => {
@@ -28,8 +28,8 @@ exports.up = async function up(knex) {
     table.timestamp('updated_at', { useTz: true }).notNullable().defaultTo(knex.fn.now());
     table.primary(['tenant', 'route_id']);
     table.foreign('tenant').references('tenants.tenant').onDelete('CASCADE');
-    table.foreign(['tenant', 'board_id']).references(['boards.tenant', 'boards.board_id']).onDelete('CASCADE');
-    table.foreign(['tenant', 'sender_id']).references(['email_sender_addresses.tenant', 'email_sender_addresses.sender_id']).onDelete('RESTRICT');
+    table.foreign(['tenant', 'board_id']).references(['tenant', 'board_id']).inTable('boards').onDelete('CASCADE');
+    table.foreign(['tenant', 'sender_id']).references(['tenant', 'sender_id']).inTable('email_sender_addresses').onDelete('RESTRICT');
   });
 
   await knex.raw("ALTER TABLE email_sender_addresses ADD CONSTRAINT email_sender_addresses_status_check CHECK (verification_status IN ('unverified', 'verified', 'failed'))");
