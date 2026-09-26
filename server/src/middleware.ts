@@ -211,6 +211,9 @@ const exactApiKeySkipPaths = [
 
 export function shouldSkipApiKeyAuth(pathname: string): boolean {
   return pathname === '/api/ticket-comment-attachments/download' ||
+    // Client portal document handlers authenticate the portal session and run
+    // the shared tenant/client visibility resolver before serving content.
+    /^\/api\/client-portal\/documents\/[^/]+\/(?:file|export)$/.test(pathname) ||
     exactApiKeySkipPaths.includes(pathname) ||
     apiKeySkipPaths.some((path) => pathname.startsWith(path)) ||
     (pathname.startsWith('/api/tickets/') && pathname.endsWith('/live-token')) ||

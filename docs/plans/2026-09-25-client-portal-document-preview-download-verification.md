@@ -119,3 +119,19 @@ Smoke checkpoints to capture in that run:
 6. In separate harness runs, authenticate as the second client and a contact in the second tenant. Use `probe` with document IDs from the first identity for file/PDF/Markdown routes, and exercise the content View action where the UI exposes the test ID. Confirm denials and capture status/body evidence. Record any content-action denial that cannot be invoked through the UI as unverified, rather than inferring it from file/export denial.
 
 Prepared mitigation is **not verified recovery**: the offline test proves the browser context is isolated and preserves a separate session, but authenticated cookie-bearing requests, browser-visible document behavior, and authorization denials remain unverified until the board-managed service is available on Smoke Test. The last readiness check for this run returned no live services for the card; `curl http://localhost:3284/auth/client-portal/signin` failed with connection refused (HTTP 000). No existing behavioral suites were rerun in this preparation round, and no header limit was changed.
+
+## API-key middleware repair (2026-09-26)
+
+Added a path-boundary matcher in `server/src/middleware.ts` for exactly `/api/client-portal/documents/{documentId}/file` and `/export`. The existing handlers remain responsible for auth: both load the current session user, require `user_type === 'client'` and a tenant, and call `resolveClientPortalDocument` within that tenant before serving file bytes or exporting content. The resolver enforces tenant and client-visible document access. The matcher unit test also rejects deeper/prefixed sibling routes and confirms unrelated APIs remain behind the API-key check.
+
+Verification on this revision:
+
+| Command | Result |
+| --- | --- |
+| `npx vitest run src/test/unit/middleware.apiKeyAuth.test.ts src/test/integration/clientPortalDocuments.integration.test.ts --coverage.enabled=false` (from `server`) | Passed: 33 tests (19 middleware, 14 document integration). Integration cases include unauthenticated access, cross-client/tenant/hidden-document denials, PDF/image bytes, and Markdown/PDF export. |
+| `npx vitest run src/components/documents/ClientDocumentsPage.test.tsx src/lib/fetchAndSaveFile.test.ts --coverage.enabled=false` (from `packages/client-portal`) | Passed: 23 tests. |
+| `npm run typecheck` (from `packages/client-portal`) | Passed. |
+| `NODE_OPTIONS=--max-old-space-size=12288 npm run typecheck` (from `server`) | Passed. |
+| `NODE_OPTIONS=--max-old-space-size=12288 npm run build:source` (repository root) | Passed; all 74 pages generated. Existing dynamic-file tracing/NFT warnings remain. |
+
+Live smoke was not run: a read-only request to `http://localhost:3284/auth/client-portal/signin` returned HTTP 000 / connection refused. No service was started, resumed, replaced, or reconfigured. Browser-visible previews/downloads/exports and the real storage round trip therefore remain unverified and must be completed at the Smoke Test step using the prepared isolated browser harness. Mocked storage integration tests are not live storage evidence.
