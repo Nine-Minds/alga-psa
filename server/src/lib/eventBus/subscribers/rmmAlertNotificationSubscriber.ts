@@ -69,7 +69,7 @@ async function handleAlertTriggered(event: unknown): Promise<void> {
 
     const ticket = await db.table('tickets')
       .where({ ticket_id: alert.ticket_id })
-      .first('ticket_number');
+      .first('ticket_number', 'board_id');
     const provider = typeof payload.provider === 'string' ? providerLabel(payload.provider) : 'RMM';
     const deviceName = alert.device_name ?? 'unknown device';
     const link = `/msp/tickets/${alert.ticket_id}`;
@@ -84,7 +84,7 @@ async function handleAlertTriggered(event: unknown): Promise<void> {
 
     for (const userId of notifyUserIds) {
       await deliverInApp(knex, tenantId, userId, alert.severity, link, context);
-      await deliverEmail(knex, tenantId, userId, context);
+      await deliverEmail(knex, tenantId, userId, context, ticket?.board_id);
     }
   } catch (error) {
     logger.error('[RmmAlertNotificationSubscriber] Failed handling RMM_ALERT_TRIGGERED', {
@@ -126,7 +126,8 @@ async function deliverEmail(
   knex: Knex,
   tenantId: string,
   userId: string,
-  context: Record<string, string>
+  context: Record<string, string>,
+  boardId?: string
 ): Promise<void> {
   try {
     const db = tenantDb(knex, tenantId);
@@ -147,6 +148,7 @@ async function deliverEmail(
 
     await sendEventEmail({
       mailClass: 'ticket',
+      boardId,
       tenantId,
       to: user.email,
       subject: `RMM Alert (${context.severity}): ${context.deviceName}`,
