@@ -133,7 +133,8 @@ The following REST API groups are available in the Community Edition under the b
 - **Users** — Create and administer user accounts, manage passwords and two-factor authentication, and read roles, teams, and effective permissions.
 - **Billing** — Access contracts, contract lines, invoices, and billing analytics.
 - **Email Templates** — Read, create, and delete per-language notification email templates. `GET /api/v1/email/templates` lists all effective templates, merging system defaults with tenant overrides, and is filterable by `name`, `language`, `category`, and `customized` (pass `customized=true` to list only templates the tenant has overridden). `GET`, `PUT`, and `DELETE` on `/api/v1/email/templates/{name}` read, upsert, and remove individual tenant overrides; on the first `PUT` the system default is cloned as the baseline. Write and delete operations require the `settings` write permission and are flagged as requiring approval in the AI/MCP tool registry.
-- Additional endpoints: companies (clients), contacts, projects, boards, categories, priorities, statuses, time entries, schedules, and more.
+- **Companies (Clients)** — Create, read, update, and delete client records. `GET /api/v1/clients` and `GET /api/v1/clients/{id}` include `phone_no`, `email`, and `address` fields populated from the client's default active location, so callers do not need a separate locations fetch for basic contact display. See the Client Merge and Billing Profile Contacts sections below for new sub-resources.
+- Additional endpoints: contacts, projects, boards, categories, priorities, statuses, time entries, schedules, and more.
 
 #### Ticket Bundling
 
@@ -183,6 +184,34 @@ Beyond the primary assignee set via `PUT /tickets/{id}/assignment`, a ticket can
 **Assignment consistency fix:** `PUT /tickets/{id}/assignment` previously failed with an "Invalid reference" FK error when the ticket already had additional agents. The endpoint now atomically clears and re-keys `ticket_resources` rows before updating `tickets.assigned_to`, making primary-assignee changes reliable regardless of how many additional agents are attached.
 
 **Permissions:** all five routes require `ticket:update`.
+
+#### Ticket Location Address
+
+The single-ticket detail endpoint `GET /api/v1/tickets/{id}` includes `location_address` alongside `location_name` in its response. `location_address` is the full formatted postal address of the ticket's linked location — `address_line1`, `city`, `state_province`, `postal_code`, and `country_name` joined with commas — or `null` if the location has no address data. Use this field when building map links or displaying location context in field-service workflows; the location name alone is a poor geocoding input.
+
+#### Client Merge
+
+When a company is acquired or multiple client records represent the same entity, you can merge one client into another. The source client's billing profiles — including their invoices, billing cycles, payment methods, transactions, credits, and tax settings — are re-parented to the target rather than copied, so the financial history stays intact. Work items such as tickets, projects, assets, and contacts are re-attributed to the target. The merge is permanent; the source client becomes a tombstone record and can no longer be edited or billed.
+
+| Method | Path | Purpose |
+|--------|------|-------|
+| `POST` | `/clients/{id}/merge/preview` | Dry run: returns the merge plan and any blockers without committing |
+| `POST` | `/clients/{id}/merge` | Execute the merge; `{id}` is the **source** client being absorbed |
+
+Both endpoints require `client:update` and `client:delete` permissions. The execute endpoint is flagged `approvalRequired: true` in the AI/MCP tool registry so AI-driven callers prompt for human confirmation before proceeding. The preview endpoint is safe to call at any time; it identifies blockers (source already merged, tenant-default client, parent-link cycle, invalid contract cutover) and describes the full plan.
+
+Supply `target_client_id` in the request body. Additional options control per-contract date treatment (`original` vs `cutover`), contact-to-billing-profile mapping, and whether existing portal access grants are pinned to the target profile.
+
+#### Billing Profile Contacts
+
+After a merge, a target client may carry multiple billing profiles — one per absorbed source client. Each profile can have dedicated contacts designated as profile managers, who gain visibility into that profile's tickets from the client portal without affecting any other contact's access.
+
+| Method | Path | Purpose |
+|--------|------|-------|
+| `GET` | `/clients/{id}/billing-profiles/{profileId}/contacts` | List contacts assigned as managers of a billing profile |
+| `PUT` | `/clients/{id}/billing-profiles/{profileId}/contacts` | Replace the full contact list for a billing profile |
+
+A contact designated as a profile manager with `can_view_profile_tickets: true` gains read access to tickets attributed to that billing profile. Clients that have only one billing profile do not require profile contact management and behave exactly as before.
 
 ### Enterprise Edition APIs
 - **Tenant Provisioning API:** Enables partner-driven tenant management. See [tenant_provisioning_api.md](tenant_provisioning_api.md) for details.
