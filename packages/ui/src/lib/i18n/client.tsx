@@ -30,7 +30,13 @@ import { useDateFormat } from '../dateFormat/useDateFormat';
  * server text rendered in one language and client text in another.
  */
 let i18nInitialized = false;
-let i18nInitialization: Promise<void> | null = null;
+type I18nInitializationAttempt = {
+  promise: Promise<void>;
+  state: 'pending' | 'timed-out' | 'ready' | 'failed';
+};
+let i18nInitialization: I18nInitializationAttempt | null = null;
+// A fallback deadline for the UI readiness gate; it is not a diagnosis that
+// this timeout caused any particular browser bootstrap failure.
 const I18N_READINESS_TIMEOUT_MS = 10_000;
 
 const BOOTSTRAP_LOADING_TEXT: Record<
@@ -150,6 +156,12 @@ async function initI18n(
 ) {
   const resolvedLocale = (locale || LOCALE_CONFIG.defaultLocale) as SupportedLocale;
   if (!i18nInitialized) {
+    // A timed-out init still owns the singleton i18next instance. Do not start
+    // another init against it; later mounts use fallback keys while that one
+    // attempt either completes or rejects. Rejection releases the slot below,
+    // so a future mount can retry without overlapping the old attempt.
+    if (i18nInitialization?.state === 'timed-out') return;
+
     // React StrictMode mounts effects twice in development. Share the in-flight
     // init so both effects/providers cannot call i18next.init concurrently.
     if (!i18nInitialization) {
@@ -160,31 +172,46 @@ async function initI18n(
         ? { [resolvedLocale]: preloaded }
         : undefined;
 
-      i18nInitialization = i18next
-        .use(HttpBackend)
-        .use(initReactI18next)
-        .init({
-          ...I18N_CONFIG,
-          lng: resolvedLocale,
-          // I18nProvider owns the page-level readiness gate. Keep hooks from
-          // suspending forever if init itself rejects; they can render keys.
-          react: { useSuspense: false },
-          resources: seededResources,
-          partialBundledLanguages: true,
-          backend: {
-            loadPath: '/locales/{{lng}}/{{ns}}.json',
-          },
+      const attempt: I18nInitializationAttempt = {
+        state: 'pending',
+        // The promise is assigned synchronously before its work starts so
+        // another provider cannot enter i18next.init in the same tick.
+        promise: Promise.resolve(),
+      };
+      i18nInitialization = attempt;
+      attempt.promise = Promise.resolve()
+        .then(() => {
+          return i18next
+            .use(HttpBackend)
+            .use(initReactI18next)
+            .init({
+              ...I18N_CONFIG,
+              lng: resolvedLocale,
+              // I18nProvider owns the page-level readiness gate. Keep hooks from
+              // suspending forever if init itself rejects; they can render keys.
+              react: { useSuspense: false },
+              resources: seededResources,
+              partialBundledLanguages: true,
+              backend: {
+                loadPath: '/locales/{{lng}}/{{ns}}.json',
+              },
+            });
         })
         .then(() => {
-          i18nInitialized = true;
+          if (i18nInitialization === attempt) {
+            attempt.state = 'ready';
+            i18nInitialized = true;
+          }
         })
         .catch((error) => {
-          // Permit a later mount to retry after a transient backend/init error.
-          i18nInitialization = null;
+          attempt.state = 'failed';
+          // Only the attempt that owns the slot may release it. A stale
+          // completion cannot clear a newer initialization.
+          if (i18nInitialization === attempt) i18nInitialization = null;
           throw error;
         });
     }
-    await i18nInitialization;
+    await i18nInitialization.promise;
   }
 
   applyPreloadedResources(resolvedLocale, preloaded);
@@ -239,15 +266,25 @@ export function I18nProvider({
     let cancelled = false;
     let readinessTimer: ReturnType<typeof setTimeout> | undefined;
     // The route's namespaces are awaited as part of initialization rather than
-    // in a follow-up effect, so `isInitialized` means "translations are ready"
-    // and not merely "i18next exists". Children used to render in the gap.
+    // in a follow-up effect. The readiness deadline below is a fallback for a
+    // request that never settles; it does not mean translations are ready.
     const readiness = initI18n(
       locale,
       preloadedResources,
       namespaceKey ? namespaceKey.split(',') : undefined,
     );
+    const initializationAttempt = i18nInitialization;
     const readinessDeadline = new Promise<never>((_, reject) => {
       readinessTimer = setTimeout(() => {
+        if (
+          initializationAttempt &&
+          i18nInitialization === initializationAttempt &&
+          initializationAttempt.state === 'pending'
+        ) {
+          // Keep ownership of the singleton while its init promise is pending.
+          // This prevents a timed-out provider remount from overlapping init.
+          i18nInitialization.state = 'timed-out';
+        }
         reject(new Error(`Translation initialization exceeded ${I18N_READINESS_TIMEOUT_MS}ms`));
       }, I18N_READINESS_TIMEOUT_MS);
     });

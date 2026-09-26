@@ -38,9 +38,13 @@ describe('I18nProvider pending initialization', () => {
     vi.restoreAllMocks();
   });
 
-  it('releases the sign-in content when initialization never settles', async () => {
+  it('falls back without overlapping init and retries after a timed-out attempt rejects', async () => {
     vi.useFakeTimers();
-    initMock.mockReturnValue(new Promise(() => {}));
+    let rejectInitialization!: (error: Error) => void;
+    const pendingInitialization = new Promise<void>((_resolve, reject) => {
+      rejectInitialization = reject;
+    });
+    initMock.mockReturnValue(pendingInitialization);
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     render(
@@ -62,5 +66,38 @@ describe('I18nProvider pending initialization', () => {
       'Failed to initialize translations:',
       expect.objectContaining({ message: 'Translation initialization exceeded 10000ms' }),
     );
+
+    // A remount after the deadline must use the degraded instance rather than
+    // calling init() a second time while the original singleton attempt owns it.
+    const secondMount = render(
+      <I18nProvider initialLocale="en">
+        <div>Second sign-in form</div>
+      </I18nProvider>,
+    );
+    await act(async () => {
+      for (let index = 0; index < 8; index += 1) await Promise.resolve();
+    });
+    expect(screen.getByText('Second sign-in form')).toBeTruthy();
+    expect(initMock).toHaveBeenCalledTimes(1);
+
+    // Do not retry against the singleton while the first init remains pending.
+    // Once it rejects, a later mount may safely retry.
+    await act(async () => {
+      rejectInitialization(new Error('backend initialization failed late'));
+      for (let index = 0; index < 8; index += 1) await Promise.resolve();
+    });
+    initMock.mockResolvedValueOnce(undefined);
+    render(
+      <I18nProvider initialLocale="en">
+        <div>Retried sign-in form</div>
+      </I18nProvider>,
+    );
+    await act(async () => {
+      for (let index = 0; index < 8; index += 1) await Promise.resolve();
+    });
+    expect(screen.getByText('Retried sign-in form')).toBeTruthy();
+    expect(initMock).toHaveBeenCalledTimes(2);
+
+    secondMount.unmount();
   });
 });
