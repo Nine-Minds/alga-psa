@@ -1018,7 +1018,7 @@
       "mailboxesHint": "Leave all unchecked to apply this rule to every mailbox.",
       "marker": "Marker text",
       "markerPlaceholder": "e.g. Customer:",
-      "matchHint": "The extracted text is matched against client names and client aliases (case-insensitive).",
+      "matchHint": "The extracted value is checked against the selected targets. Contact email matching accepts an address in display-name format.",
       "name": "Rule name",
       "namePlaceholder": "e.g. Huntress customer routing",
       "noMailboxes": "No mailboxes configured yet.",
@@ -1032,7 +1032,12 @@
       "saving": "Saving…",
       "startDelimiter": "Start delimiter",
       "update": "Update rule",
-      "valuePlaceholder": "Value"
+      "valuePlaceholder": "Value",
+      "matchTargets": "Match extracted value against",
+      "matchClientName": "Client name or alias",
+      "matchContactEmail": "Contact email",
+      "matchAssetName": "Device (asset) name",
+      "matchTargetRequired": "Select at least one match target."
     },
     "header": {
       "description": "Match inbound email by sender or subject to skip noise, assign the right client, or route to a destination. Rules run in order; the first match wins.",
@@ -1090,7 +1095,10 @@
       "running": "Testing…",
       "subject": "Subject",
       "title": "Test this rule",
-      "to": "To"
+      "to": "To",
+      "contactEmail": "Contact email",
+      "deviceName": "device name",
+      "ambiguous": "{{target}} matches at {{count}} clients — not assigned"
     }
   },
   "errors": {

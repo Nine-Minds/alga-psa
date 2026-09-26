@@ -165,6 +165,27 @@
         "loadStatuses": "No se pudieron cargar los estados de los tickets de renovación",
         "save": "No se pudo guardar la configuración de automatización de renovación"
       }
+    },
+    "quotes": {
+      "title": "Cotizaciones",
+      "description": "Establezca el período de validez predeterminado para nuevas cotizaciones.",
+      "fields": {
+        "validityDays": {
+          "label": "Período de validez predeterminado (días)",
+          "help": "Las nuevas cotizaciones son válidas durante este número de días."
+        }
+      },
+      "actions": {
+        "save": "Guardar"
+      },
+      "toast": {
+        "updated": "Se actualizaron los ajustes de cotizaciones."
+      },
+      "errors": {
+        "load": "No se pudieron cargar los ajustes",
+        "save": "No se pudieron guardar los ajustes",
+        "range": "Introduzca un número entero del 1 al 365."
+      }
     }
   },
   "quoting": {

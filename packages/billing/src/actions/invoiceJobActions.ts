@@ -210,12 +210,30 @@ export interface InvoiceEmailRecipientInfo {
 
   recipientEmail: string;
   recipientName: string;
-  recipientSource: 'billing_contact' | 'billing_email' | 'billing_location' | 'default_location' | 'client_email' | 'none';
+  recipientSource:
+    | 'profile_billing_contact'
+    | 'profile_billing_email'
+    | 'profile_location'
+    | 'billing_contact'
+    | 'billing_email'
+    | 'billing_location'
+    | 'default_location'
+    | 'client_email'
+    | 'none';
 
   totalAmount: string;
   currencyCode: string;
   dueDate: string | null;
   invoiceDate: string | null;
+
+  /**
+   * The profile this invoice bills, named so the operator can tell a right
+   * address from a surprising one before sending. Null means the invoice
+   * carries no profile and bills the client itself.
+   */
+  billingProfileName: string | null;
+  /** D6 — only a segmented client is told about profiles at all. */
+  clientHasMultipleBillingProfiles: boolean;
 
   companyName: string;
   fromEmail: string;
@@ -270,6 +288,7 @@ export const getInvoiceEmailRecipientAction = withAuth(async (
         knexOrTrx: knex,
         tenantId: tenant,
         clientId: invoice.client_id,
+        billingProfileId: invoice.billing_profile_id ?? null,
       });
 
       let recipientEmail = resolved.recipientEmail;
@@ -307,6 +326,8 @@ export const getInvoiceEmailRecipientAction = withAuth(async (
         currencyCode,
         dueDate,
         invoiceDate,
+        billingProfileName: invoice.billing_profile_name ?? null,
+        clientHasMultipleBillingProfiles: Boolean(invoice.client_has_multiple_billing_profiles),
         companyName,
         fromEmail,
       });
@@ -487,6 +508,7 @@ export const sendInvoiceEmailAction = withAuth(async (
         knexOrTrx: knex,
         tenantId: tenant,
         clientId: invoice.client_id,
+        billingProfileId: invoice.billing_profile_id ?? null,
       });
 
       let recipientEmail = resolved.recipientEmail;

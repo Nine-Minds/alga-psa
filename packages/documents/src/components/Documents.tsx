@@ -102,7 +102,7 @@ interface DocumentsProps {
   userId: string;
   searchTermFromParent?: string;
   entityId?: string;
-  entityType?: 'ticket' | 'client' | 'contact' | 'asset' | 'project_task' | 'contract';
+  entityType?: 'ticket' | 'client' | 'contact' | 'asset' | 'project_task' | 'contract' | 'opportunity';
   isLoading?: boolean;
   onDocumentCreated?: () => Promise<void>;
   isInDrawer?: boolean;

@@ -40,6 +40,7 @@
     "@alga-psa/documents": "*",
     "@alga-psa/email": "*",
     "@alga-psa/formatting": "*",
+    "@alga-psa/list-views": "*",
     "@alga-psa/inventory": "*",
     "@alga-psa/notifications": "*",
     "@alga-psa/shared": "*",

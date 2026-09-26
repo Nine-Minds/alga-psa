@@ -49,8 +49,8 @@ const CONTACT = {
       client_name: "Acme",
       email: "jane@acme.com",
       phone_numbers: [
-        { contact_phone_number_id: "p1", phone_number: "+15550100", canonical_type: "mobile", is_default: true },
-        { contact_phone_number_id: "p2", phone_number: "+15550101", canonical_type: "work" },
+        { contact_phone_number_id: "p1", phone_number: "+13202521658", canonical_type: "mobile", is_default: true },
+        { contact_phone_number_id: "p2", phone_number: "+442079460958", canonical_type: "work" },
       ],
     },
   },
@@ -84,13 +84,13 @@ describe("ContactDetailScreen calls", () => {
 
   it("dials a phone number through the shared call flow, attributed to this contact and their client", async () => {
     const renderer = await renderScreen();
-    expect(texts(renderer)).toEqual(expect.arrayContaining(["+15550100", "+15550101"]));
+    expect(texts(renderer)).toEqual(expect.arrayContaining(["+1 320 252 1658", "+44 20 7946 0958"]));
 
     act(() => renderer.root.find((n) => n.props?.testID === "contact-detail-call-p2").props.onPress());
 
     expect(placeCallMock).toHaveBeenCalledWith({
       origin: { kind: "contact", id: "contact-1" },
-      phone: "+15550101",
+      phone: "+442079460958",
       name: "Jane Doe",
       contactId: "contact-1",
       clientId: "client-1",

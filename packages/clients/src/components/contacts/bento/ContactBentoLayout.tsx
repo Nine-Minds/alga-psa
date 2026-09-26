@@ -455,7 +455,11 @@ export function ContactBentoLayout({
               <span className="truncate">
                 {primaryPhone ? (
                   <>
-                    <CallLink id={`${id}-primary-phone-call`} phoneNumber={primaryPhone} />
+                    <CallLink
+                      id={`${id}-primary-phone-call`}
+                      phoneNumber={primaryPhone}
+                      extension={primaryPhoneEntry?.extension}
+                    />
                     {primaryPhoneEntry ? ` · ${phoneType(primaryPhoneEntry).toLowerCase()}` : ''}
                   </>
                 ) : 'No phone number'}
@@ -531,6 +535,7 @@ export function ContactBentoLayout({
                 <CallLink
                   id={`${id}-phone-call-${phone.contact_phone_number_id ?? phone.phone_number}`}
                   phoneNumber={phone.phone_number}
+                  extension={phone.extension}
                 />
               )}
               meta={[phoneType(phone).toLowerCase(), phone.is_default ? 'primary' : null].filter(Boolean).join(' · ')}

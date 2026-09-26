@@ -2,7 +2,7 @@
 
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal settings intentionally compose client feature components/actions for self-service account maintenance. */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import {
@@ -17,6 +17,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { getCurrentUser, getUserRolesWithPermissions, getUserClientId } from '@alga-psa/user-composition/actions/userQueryActions';
 import { getClientById } from '@alga-psa/clients/actions/queryActions';
 import { updateClient, uploadClientLogo, deleteClientLogo, recropClientLogo } from '@alga-psa/clients/actions/clientActions';
+import { clientWebsiteFieldsForSave } from '@alga-psa/clients/lib/clientWebsiteUpdate';
 import { IClient } from '@alga-psa/types';
 import { IPermission } from '@alga-psa/types';
 import EntityImageUpload from '@alga-psa/ui/components/EntityImageUpload';
@@ -73,6 +74,7 @@ export function ClientDetailsSettings() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [clientDetails, setClientDetails] = useState<IClient | null>(null);
+  const savedClientRef = useRef<IClient | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isLocationsDialogOpen, setIsLocationsDialogOpen] = useState(false);
   const [locationsRefreshKey, setLocationsRefreshKey] = useState(0);
@@ -112,6 +114,7 @@ export function ClientDetailsSettings() {
           return;
         }
 
+        savedClientRef.current = client;
         setClientDetails(client);
 
       } catch (error) {
@@ -164,7 +167,10 @@ export function ClientDetailsSettings() {
     
     setIsLoading(true);
     try {
-      const updatedClient = await updateClient(clientDetails.client_id, {
+      if (!savedClientRef.current) {
+        throw new Error('Client website baseline is unavailable; reload client settings before saving.');
+      }
+      const updateData: Partial<IClient> = {
         client_name: clientDetails.client_name,
         url: clientDetails.url,
         properties: {
@@ -173,12 +179,25 @@ export function ClientDetailsSettings() {
           company_size: clientDetails.properties?.company_size,
           annual_revenue: clientDetails.properties?.annual_revenue
         }
-      });
+      };
+      const websiteFields = clientWebsiteFieldsForSave(clientDetails, savedClientRef.current);
+      if (!websiteFields.changed) {
+        delete updateData.url;
+        if (updateData.properties) delete updateData.properties.website;
+      } else {
+        updateData.url = websiteFields.url;
+        updateData.properties = {
+          ...(updateData.properties ?? {}),
+          website: websiteFields.website,
+        };
+      }
+      const updatedClient = await updateClient(clientDetails.client_id, updateData);
       if (isReturnedActionError(updatedClient)) {
         handleError(updatedClient);
         return;
       }
 
+      savedClientRef.current = updatedClient;
       setClientDetails(updatedClient);
       setHasUnsavedChanges(false);
       toast.success(tProfile('clientSettings.messages.updateSuccess'));

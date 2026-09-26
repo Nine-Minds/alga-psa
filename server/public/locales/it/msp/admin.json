@@ -253,7 +253,8 @@
     },
     "states": {
       "running": "Diagnostica in esecuzione...",
-      "diagnosticsFailed": "Diagnostica non riuscita"
+      "diagnosticsFailed": "Diagnostica non riuscita",
+      "callbackDiagnosticsCaptured": "Diagnostica del callback acquisita il {{timestamp}}."
     },
     "statuses": {
       "pass": "Superato",

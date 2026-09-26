@@ -5379,7 +5379,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets",
     "displayName": "Create asset",
     "summary": "Create asset",
-    "description": "Creates an asset for the authenticated tenant. The request body is validated with createAssetWithExtensionSchema; client_id, asset_type, asset_tag, name, and status are required. AssetService.create writes assets.tenant from the request context, inserts the asset, optionally upserts asset-type-specific extension_data, publishes an ASSET_CREATED event, and returns getWithDetails with HATEOAS links.",
+    "description": "Creates an asset for the authenticated tenant. The request body is validated with createAssetWithExtensionSchema; client_id, asset_type, asset_tag, name, and status are required. Custom attributes are checked against the registered type schema and required fields must be present. Unknown asset_type slugs and invalid/missing required attributes return 400. AssetService.create writes the attributes map, optionally upserts extension_data, publishes ASSET_CREATED, and returns getWithDetails.",
     "tags": [
       "Assets"
     ],
@@ -5395,7 +5395,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "asset_type": {
           "type": "string",
-          "description": "Asset type. Determines the optional extension data table."
+          "description": "Must be a built-in slug or registered custom slug; unknown slugs return 400."
         },
         "asset_tag": {
           "type": "string",
@@ -5439,6 +5439,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string",
           "format": "date-time",
           "description": "Optional warranty end date/time."
+        },
+        "attributes": {
+          "$ref": "#/components/schemas/AssetAttributes"
         },
         "extension_data": {
           "$ref": "#/components/schemas/AssetExtensionData"
@@ -5547,7 +5550,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/bulk-update",
     "displayName": "Bulk update assets",
     "summary": "Bulk update assets",
-    "description": "Updates up to 50 assets in the authenticated tenant. Each array item supplies an asset_id and partial update data validated with updateAssetSchema. The controller calls AssetService.update for every item, tenant-scoping each update by asset_id and context.tenant and publishing ASSET_UPDATED events.",
+    "description": "Updates up to 50 assets in the authenticated tenant. Each item is validated and written independently; custom attributes are validated against that asset type and merged into its stored map. Unknown types and invalid attributes return 400. Earlier items may remain committed if a later item fails.",
     "tags": [
       "Assets"
     ],
@@ -6127,7 +6130,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/{id}",
     "displayName": "Update asset",
     "summary": "Update asset",
-    "description": "Partially updates base asset fields for the authenticated tenant. The request body is validated with updateAssetSchema, where all fields are optional. AssetService.update scopes the update by asset_id and context.tenant, writes updated_at, publishes ASSET_UPDATED, and returns the refreshed base asset with joined client_name and warranty_status. This REST path does not update extension data, create asset history records, or wrap the update in a transaction. Missing assets currently lead to a 500 when the controller tries to add links to a null result rather than a clean 404.",
+    "description": "Partially updates base asset fields for the authenticated tenant. Custom attributes are validated against the next asset type when asset_type changes, then merged into the stored map so omitted keys remain. Required custom fields cannot be blanked. Unknown asset_type slugs and invalid attributes return 400.",
     "tags": [
       "Assets"
     ],
@@ -6155,7 +6158,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "asset_type": {
           "type": "string",
-          "description": "Asset type to store in assets.asset_type."
+          "description": "Must be a built-in slug or registered custom slug; unknown slugs return 400."
         },
         "asset_tag": {
           "type": "string",
@@ -6199,6 +6202,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string",
           "format": "date-time",
           "description": "Warranty end date/time."
+        },
+        "attributes": {
+          "$ref": "#/components/schemas/AssetAttributes"
         }
       }
     },
@@ -12362,6 +12368,318 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "updated_at",
             "tenant"
           ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_clients_id_merge_preview",
+    "method": "post",
+    "path": "/api/v1/clients/{id}/merge/preview",
+    "displayName": "Preview a client merge",
+    "summary": "Preview a client merge",
+    "description": "Dry run of absorbing source_client_id into this client as a billing profile. Writes nothing; returns the profiles that would move, per-entity row counts, the contacts and contracts needing a decision, the portal users whose billing-segment access would widen, the accounting mappings that would need re-pointing, and any blockers.",
+    "tags": [
+      "Clients"
+    ],
+    "rbacResource": "client",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "source_client_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "The client that would be absorbed."
+        }
+      },
+      "required": [
+        "source_client_id"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/ClientMergePreviewResource"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_clients_id_merge",
+    "method": "post",
+    "path": "/api/v1/clients/{id}/merge",
+    "displayName": "Merge a client into this one",
+    "summary": "Merge a client into this one",
+    "description": "Absorbs source_client_id into this client as a billing profile. The source's billing profiles are re-parented keeping their ids, so invoices, billing cycles, payment methods, credits and tax settings follow them; tickets, contacts, projects, assets, contracts, locations and portal visibility groups move to this client. The source client is archived with a forwarding marker. Irreversible. Requires client update and delete.",
+    "tags": [
+      "Clients"
+    ],
+    "rbacResource": "client",
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "source_client_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "contact_assignments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "contact_name_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "billing_profile_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "is_manager": {
+                "type": "boolean"
+              },
+              "can_view_profile_tickets": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "contact_name_id",
+              "billing_profile_id"
+            ]
+          }
+        },
+        "contract_decisions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "client_contract_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "choice": {
+                "type": "string",
+                "enum": [
+                  "original",
+                  "cutover"
+                ]
+              },
+              "cutover_date": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "client_contract_id",
+              "choice"
+            ]
+          }
+        },
+        "pin_portal_grants": {
+          "type": "boolean",
+          "description": "Defaults to true: records the billing segments unrestricted portal users have today."
+        },
+        "external_remap_choices": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "mapping_id": {
+                "type": "string"
+              },
+              "apply": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "mapping_id",
+              "apply"
+            ]
+          }
+        }
+      },
+      "required": [
+        "source_client_id"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/ClientMergeResource"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_clients_id_billingprofiles_profileid_contacts",
+    "method": "get",
+    "path": "/api/v1/clients/{id}/billing-profiles/{profileId}/contacts",
+    "displayName": "List billing profile contacts",
+    "summary": "List billing profile contacts",
+    "description": "Returns the contacts attached to a billing profile, with the manager designation and the separate grant that lets a contact see every ticket attributed to the profile in the client portal.",
+    "tags": [
+      "Clients"
+    ],
+    "rbacResource": "client",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "profileId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/BillingProfileContactResource"
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_clients_id_billingprofiles_profileid_contacts",
+    "method": "put",
+    "path": "/api/v1/clients/{id}/billing-profiles/{profileId}/contacts",
+    "displayName": "Replace billing profile contacts",
+    "summary": "Replace billing profile contacts",
+    "description": "Replaces the profile's contact list. At most one contact may be the manager. can_view_profile_tickets is a separate opt-in and defaults to false, so naming a manager never widens what they can read.",
+    "tags": [
+      "Clients"
+    ],
+    "rbacResource": "client",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "profileId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "contacts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "contact_name_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "is_manager": {
+                "type": "boolean"
+              },
+              "can_view_profile_tickets": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "contact_name_id"
+            ]
+          },
+          "description": "Replaces the profile's contact list; omitting a contact removes it."
+        }
+      },
+      "required": [
+        "contacts"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/BillingProfileContactResource"
+          }
         },
         "meta": {
           "type": "object",

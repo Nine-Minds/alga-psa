@@ -49,6 +49,8 @@ export type { FieldValidation, Translator, ValidationMessage } from './lib/field
 // Phone normalization (libphonenumber-js)
 export {
   normalizePhone,
+  formatPhoneForDisplay,
+  formatPhoneLabel,
   isDialPrefixOnly,
   isStructurallyValidPhone,
   splitPackedExtension,

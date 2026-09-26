@@ -165,6 +165,27 @@
         "loadStatuses": "Kan de status van het verlengingsticket niet laden",
         "save": "Kan de automatiseringsinstellingen voor verlenging niet opslaan"
       }
+    },
+    "quotes": {
+      "title": "Offertes",
+      "description": "Stel de standaardgeldigheidsduur voor nieuwe offertes in.",
+      "fields": {
+        "validityDays": {
+          "label": "Standaardgeldigheidsduur (dagen)",
+          "help": "Nieuwe offertes zijn dit aantal dagen geldig."
+        }
+      },
+      "actions": {
+        "save": "Opslaan"
+      },
+      "toast": {
+        "updated": "Offerte-instellingen zijn bijgewerkt."
+      },
+      "errors": {
+        "load": "Instellingen laden mislukt",
+        "save": "Instellingen opslaan mislukt",
+        "range": "Voer een geheel getal van 1 tot en met 365 in."
+      }
     }
   },
   "quoting": {

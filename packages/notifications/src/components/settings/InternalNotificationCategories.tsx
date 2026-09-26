@@ -682,6 +682,7 @@ function InternalNotificationCategoriesContent({
 
       <DataTable
         id="internal-notification-categories-table"
+        persistPageSize={false}
         data={flatList}
         columns={columns}
         pagination={true}

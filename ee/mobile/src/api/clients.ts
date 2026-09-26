@@ -35,7 +35,9 @@ export type ClientLocation = {
   state_province?: string | null;
   postal_code?: string | null;
   country_name?: string | null;
+  country_code?: string | null;
   phone?: string | null;
+  phone_extension?: string | null;
   email?: string | null;
   is_default?: boolean;
 };

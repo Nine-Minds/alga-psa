@@ -254,6 +254,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'import_sources',
 
   // Asset details
+  'asset_remote_access_links',
   'asset_maintenance_occurrences',
   'asset_maintenance_notifications', 'asset_maintenance_history', 'asset_service_history',
   'asset_ticket_associations', 'asset_document_associations', 'asset_relationships',
@@ -281,6 +282,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // External references depend on tickets and their creating users. Purge them
   // explicitly before either parent, along with the tenant's custom systems.
   'external_entity_links', 'tenant_external_systems',
+
+  // Named list views reference their owning user; purge before users.
+  'list_views',
 
   // SLA leaf tables (must be before tickets, statuses, priorities, boards)
   // ticket_audit_logs sits with sla_audit_log: same shape, FKs to tickets/users,
@@ -418,6 +422,10 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Schedule entries
   'schedule_entries',
 
+  // Shared calendars (schedule_entries.calendar_id → calendars; shares → calendars;
+  // calendars.owner_user_id → users, so this block precedes users)
+  'calendar_shares', 'calendars',
+
   // Service catalog
   'service_catalog', 'service_types', 'service_categories',
 
@@ -538,7 +546,13 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // those and before clients. The portal access grants reference profiles, so
   // they go first (S12).
   'client_portal_user_billing_profiles',
+  // Profile contacts reference both a profile and a contact; contacts are
+  // deleted after clients, so this has to go before the profiles it hangs off.
+  'billing_profile_contacts',
   'client_billing_profiles',
+  // Merge audit rows reference nothing but the tenant, so the position is
+  // advisory — listed beside the clients they describe so the order reads.
+  'client_merges',
   'clients',    // Delete clients FIRST (after NULLing account_manager references)
   'contacts',   // Delete contacts SECOND (after clients, before users that have NOT NULL contact_id)
   'contact_email_type_definitions', // contacts.primary_email_custom_type_id → this table (RESTRICT)

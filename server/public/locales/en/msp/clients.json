@@ -20,7 +20,8 @@
       "select": "Select",
       "update": "Update",
       "uploadCsv": "Upload CSV",
-      "view": "View"
+      "view": "View",
+      "next": "Next"
     },
     "states": {
       "active": "Active",
@@ -197,6 +198,9 @@
     "opportunities": "Opportunities",
     "lifecycleStatus": "Lifecycle",
     "lifecycleStatusHelper": "Prospects are available to sales workflows but hidden from operational client lists by default.",
+    "clientSince": "Client since",
+    "clientSinceHelper": "When the relationship started. Leave it empty to use the date this client was added here.",
+    "clientSincePlaceholder": "Date this client was added",
     "title": "Client Details",
     "backToClients": "Back to Clients",
     "openInNewTab": "Open in new tab",
@@ -304,7 +308,13 @@
     "parentClientSelf": "A client cannot be its own parent",
     "parentClientPlaceholder": "No parent client",
     "parentClientClear": "Clear",
-    "parentClientLegacy": "Previously entered as text: {{name}}"
+    "parentClientLegacy": "Previously entered as text: {{name}}",
+    "mergeClient": "Merge",
+    "mergeClientHelp": "Absorb another client into this one as a billing profile",
+    "inboundDomainAutoCreateContacts": "Create contacts for new senders",
+    "inboundDomainAutoCreateHelp": "Mapped domains can optionally create a contact for a trusted new sender. Domains must be unique across clients.",
+    "inboundDomainAutoCreateUpdated": "Sender contact setting updated.",
+    "inboundDomainAutoCreateUpdateFailed": "Could not update sender contact setting."
   },
   "clientCommandCenter": {
     "cards": {
@@ -1688,7 +1698,9 @@
     "archived": "\"{{name}}\" archived",
     "deleted": "\"{{name}}\" deleted",
     "restored": "\"{{name}}\" restored",
-    "settings": "Billing settings"
+    "settings": "Billing settings",
+    "mergeHelp": "Already track a site or entity as its own client? Merge it in and it becomes a billing profile here, keeping its invoices and history.",
+    "mergeButton": "Merge a client in"
   },
   "portalBillingProfileAccess": {
     "label": "Billing segments",
@@ -1868,6 +1880,81 @@
       "otherClient": "That billing profile belongs to a different client.",
       "archived": "That billing profile is archived.",
       "selectionNotThisClient": "One of the selected billing profiles does not belong to this client."
+    },
+    "clientMerge": {
+      "blocked": "This merge cannot be completed.",
+      "signInRequired": "You must be signed in to merge clients.",
+      "sourceNotFound": "The client being merged no longer exists.",
+      "targetNotFound": "The client being merged into no longer exists.",
+      "sameClient": "A client cannot be merged into itself.",
+      "sourceAlreadyMerged": "This client has already been merged into another client.",
+      "targetAlreadyMerged": "The destination client has itself been merged into another client. Merge into that one instead.",
+      "sourceIsTenantDefault": "Your own organisation record cannot be merged into a client.",
+      "parentLinkCycle": "That client is recorded as a child of the one you are merging, so merging this way would invert the hierarchy.",
+      "invalidContractCutover": "One of the cutover dates falls outside its contract term."
+    },
+    "profileContacts": {
+      "duplicateManager": "A billing profile can only have one manager.",
+      "notThisClient": "One of the selected contacts does not belong to this billing profile's client."
     }
+  },
+  "mergeClients": {
+    "title": "Merge a client into this one",
+    "description": "The client you choose becomes a billing profile of the destination client. Its invoices, billing cycles, payment methods and credits stay attached to that profile; its tickets, contacts, assets and contracts move across. This cannot be undone.",
+    "sourceLabel": "Client to merge",
+    "sourcePlaceholder": "Select a client",
+    "targetLabel": "Destination client",
+    "targetPlaceholder": "Select a client",
+    "cannotMergeIntoItself": "A client cannot be merged into itself",
+    "recordedParent": "\"{{source}}\" records \"{{parent}}\" as its parent client.",
+    "useRecordedParent": "Use it",
+    "contactsDescription": "Every contact moves to the destination client. Choose which billing profile each one belongs to, and name the manager of a segment here if you already know who it is. The ticket checkbox is a separate grant: it lets that person see every ticket attributed to their profile in the portal.",
+    "contactColumn": "Contact",
+    "profileColumn": "Billing profile",
+    "managerColumn": "Manager",
+    "seesTicketsColumn": "Sees profile tickets",
+    "noContacts": "This client has no contacts.",
+    "noProfile": "No profile",
+    "contractsDescription": "Moving a contract with its original dates changes no billing period. A cutover ends the contract on the old client and starts a copy on the destination from the date you choose.",
+    "noContracts": "This client has no contracts.",
+    "unnamedContract": "Contract",
+    "openEnded": "open-ended",
+    "keepOriginalDates": "Keep original dates",
+    "cutOver": "Cut over",
+    "cutoverDate": "Cutover date",
+    "pinGrantsLabel": "Keep portal users on their own billing segments",
+    "pinGrantsHelp": "A portal user with no billing-segment restriction currently sees every profile of their client. After the merge that would be every profile of the destination client. Leaving this on records the segments they have today.",
+    "pinGrantsCount": "{{count}} portal user(s) affected",
+    "groupRenames": "Visibility groups renamed to avoid a clash",
+    "previewHeading": "What will move",
+    "profilesHeading": "Billing profiles after the merge",
+    "confirmLabel": "Type \"{{name}}\" to confirm",
+    "loadingPreview": "Working out what would move…",
+    "submit": "Merge client",
+    "merging": "Merging…",
+    "merged": "\"{{source}}\" merged into \"{{target}}\"",
+    "accountingDescription": "These accounting mappings still point at the merged client. Re-pointing them at the destination is suggested, but nothing is changed unless you confirm it — leave a row unticked to re-link it by hand later.",
+    "accountingAlreadyMapped": "The destination client is already mapped for this integration, so this one has to be re-linked by hand.",
+    "accountingApply": "Apply selected",
+    "accountingSkip": "Skip for now",
+    "accountingRemapped": "Accounting mappings re-pointed",
+    "accountingSkipped": "{{count}} mapping(s) could not be re-pointed and need a manual re-link."
+  },
+  "billingProfileContacts": {
+    "title": "Profile contacts",
+    "description": "The people who belong to this billing segment. Naming a manager records who runs it; the ticket checkbox is a separate grant that lets them see every ticket attributed to this profile in the client portal.",
+    "loading": "Loading profile contacts…",
+    "noContacts": "This client has no contacts yet.",
+    "contact": "Contact",
+    "inProfile": "In profile",
+    "manager": "Manager",
+    "seesTickets": "Sees profile tickets",
+    "saved": "Profile contacts saved"
+  },
+  "contactBillingProfiles": {
+    "label": "Billing profiles",
+    "manager": "Manager",
+    "seesTickets": "Sees profile tickets",
+    "editHint": "Edit these on the billing profile, under the client's billing settings."
   }
 }

@@ -3,6 +3,9 @@ import { tenantDb } from '@alga-psa/db';
 import { isValidEmail } from '@alga-psa/core';
 
 export type InvoiceBillingRecipientSource =
+  | 'profile_billing_contact'
+  | 'profile_billing_email'
+  | 'profile_location'
   | 'billing_contact'
   | 'billing_email'
   | 'billing_location'
@@ -21,13 +24,25 @@ export interface ResolveInvoiceBillingRecipientInput {
   knexOrTrx: Knex | Knex.Transaction;
   tenantId: string;
   clientId: string;
+  /**
+   * The billing profile the invoice bills. A segmented client's profile — the
+   * shape a merged-in client takes — carries its own AP contact and address,
+   * and sending its invoice to the parent's inbox is the whole point of
+   * segmenting. Omitted (or a profile with nothing filled in) falls straight
+   * through to the client chain below, so an unsegmented client is untouched.
+   */
+  billingProfileId?: string | null;
 }
 
 /**
- * Resolves the billing-recipient email for an invoice's client with a single,
+ * Resolves the billing-recipient email for an invoice with a single,
  * tenant-scoped precedence shared by email preview, direct delivery, scheduled
  * delivery, and Stripe customer creation:
  *
+ *   0. The invoice's billing profile, when one was supplied: its billing
+ *      contact, then its billing_email, then its bill-to location's email.
+ *      Every profile field is nullable and NULL means "inherit", so a profile
+ *      that sets nothing adds no step at all.
  *   1. Valid email on the active billing contact belonging to the client
  *      (clients.billing_contact_id).
  *   2. Valid clients.billing_email.
@@ -43,7 +58,7 @@ export interface ResolveInvoiceBillingRecipientInput {
 export async function resolveInvoiceBillingRecipient(
   input: ResolveInvoiceBillingRecipientInput
 ): Promise<InvoiceBillingRecipient> {
-  const { knexOrTrx, tenantId, clientId } = input;
+  const { knexOrTrx, tenantId, clientId, billingProfileId } = input;
   const db = tenantDb(knexOrTrx, tenantId);
 
   const trimmedIfValid = (email: string | null | undefined): string | null => {
@@ -82,25 +97,88 @@ export async function resolveInvoiceBillingRecipient(
     };
   }
 
-  if (client.billing_contact_id) {
+  const contactEmailFor = async (
+    contactNameId: string
+  ): Promise<{ email: string; name: string | null } | null> => {
     const contact = await db
       .table('contacts')
-      .where({
-        contact_name_id: client.billing_contact_id,
-        client_id: client.client_id,
-      })
+      .where({ contact_name_id: contactNameId, client_id: client.client_id })
       .andWhere((qb) => {
         qb.where('is_inactive', false).orWhereNull('is_inactive');
       })
       .first<{ email?: string | null; full_name?: string | null }>();
 
-    const contactEmail = trimmedIfValid(contact?.email);
-    if (contactEmail) {
+    const email = trimmedIfValid(contact?.email);
+    return email ? { email, name: contact?.full_name?.trim() || null } : null;
+  };
+
+  // The profile the invoice bills, when it carries its own AP identity.
+  const profile = billingProfileId
+    ? await db
+        .table('client_billing_profiles')
+        .where({ billing_profile_id: billingProfileId, client_id: client.client_id })
+        .first<{
+          bill_to_name?: string | null;
+          billing_contact_id?: string | null;
+          billing_email?: string | null;
+          bill_to_location_id?: string | null;
+        }>()
+    : undefined;
+
+  // The bill-to name is what the profile prints on the invoice, so it is also
+  // who the invoice is addressed to; NULL keeps inheriting the client name.
+  const recipientNameFallback = profile?.bill_to_name?.trim() || client.client_name;
+
+  if (profile?.billing_contact_id) {
+    const profileContact = await contactEmailFor(profile.billing_contact_id);
+    if (profileContact) {
       return {
         clientId: client.client_id,
         clientName: client.client_name,
-        recipientEmail: contactEmail,
-        recipientName: contact.full_name?.trim() || client.client_name,
+        recipientEmail: profileContact.email,
+        recipientName: profileContact.name || recipientNameFallback,
+        recipientSource: 'profile_billing_contact',
+      };
+    }
+  }
+
+  const profileBillingEmail = trimmedIfValid(profile?.billing_email);
+  if (profileBillingEmail) {
+    return {
+      clientId: client.client_id,
+      clientName: client.client_name,
+      recipientEmail: profileBillingEmail,
+      recipientName: recipientNameFallback,
+      recipientSource: 'profile_billing_email',
+    };
+  }
+
+  if (profile?.bill_to_location_id) {
+    const billToLocation = await db
+      .table('client_locations')
+      .where({ location_id: profile.bill_to_location_id, client_id: client.client_id })
+      .first<{ email?: string | null }>('email');
+
+    const billToLocationEmail = trimmedIfValid(billToLocation?.email);
+    if (billToLocationEmail) {
+      return {
+        clientId: client.client_id,
+        clientName: client.client_name,
+        recipientEmail: billToLocationEmail,
+        recipientName: recipientNameFallback,
+        recipientSource: 'profile_location',
+      };
+    }
+  }
+
+  if (client.billing_contact_id) {
+    const billingContact = await contactEmailFor(client.billing_contact_id);
+    if (billingContact) {
+      return {
+        clientId: client.client_id,
+        clientName: client.client_name,
+        recipientEmail: billingContact.email,
+        recipientName: billingContact.name || recipientNameFallback,
         recipientSource: 'billing_contact',
       };
     }
@@ -112,7 +190,7 @@ export async function resolveInvoiceBillingRecipient(
       clientId: client.client_id,
       clientName: client.client_name,
       recipientEmail: billingEmail,
-      recipientName: client.client_name,
+      recipientName: recipientNameFallback,
       recipientSource: 'billing_email',
     };
   }
@@ -130,7 +208,7 @@ export async function resolveInvoiceBillingRecipient(
       clientId: client.client_id,
       clientName: client.client_name,
       recipientEmail: billingLocationEmail,
-      recipientName: client.client_name,
+      recipientName: recipientNameFallback,
       recipientSource: 'billing_location',
     };
   }
@@ -148,7 +226,7 @@ export async function resolveInvoiceBillingRecipient(
       clientId: client.client_id,
       clientName: client.client_name,
       recipientEmail: defaultLocationEmail,
-      recipientName: client.client_name,
+      recipientName: recipientNameFallback,
       recipientSource: 'default_location',
     };
   }
@@ -157,7 +235,7 @@ export async function resolveInvoiceBillingRecipient(
     clientId: client.client_id,
     clientName: client.client_name,
     recipientEmail: '',
-    recipientName: client.client_name,
+    recipientName: recipientNameFallback,
     recipientSource: 'none',
   };
 }
