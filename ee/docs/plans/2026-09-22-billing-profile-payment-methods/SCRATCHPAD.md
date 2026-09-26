@@ -321,3 +321,89 @@ reproduction remains deferred to the server-enabled smoke step.
 - `knex migrate:latest` refuses on the shared local-test DB (EE and
   other-branch migrations recorded); the migration was applied with a script
   calling its `up()`.
+
+## Setup and acceptance handoff (2026-09-26)
+
+### Portal tenant prerequisite
+
+A fresh read-only query against the local-test `server` database traced retained
+contact `3d727620-6baa-4219-babc-25c2259e7574` to tenant
+`dd8cb218-d46d-47f3-be27-8aa50aad5fce` and client
+`a3ad6e99-5ed9-4a1c-9cf3-b0b49c1c3d84` (display label `PM Acceptance 0926
+1822`). That tenant has no active `tenant_companies` rows. The label and contact
+association do not establish an intended MSP/default client. Do not set a
+shared default or insert tenant membership directly. Invitation looks up the
+tenant's `tenant_companies.is_default` row and then requires its active default
+location and either tenant portal support email or location email. The
+supported setter is `setDefaultClient` from General Settings; only use it after
+the tenant owner identifies the intended MSP company.
+
+No authenticated, supported isolated-tenant provisioning flow was available
+without the app server, so no portal invitation, activation, or portal-auth
+fixture was created. Next server-enabled step must first get the tenant owner's
+intended default-client identity (or an authorized isolated-tenant provisioning
+path), configure it through supported General Settings, and verify its default
+location/email before inviting the retained contact. Never fabricate a portal
+user/authentication record.
+
+After activation, use unpaid finalized invoices with immutable snapshots
+`check`, `bank_transfer`, `credit_card`, and `NULL`. Verify Check and Bank
+Transfer omit Pay Now in invoice rows and details, and directly visit
+`/client-portal/billing/invoices/<invoiceId>/pay`. The implemented page invokes
+`getClientPortalInvoicePaymentLink`; offline snapshots must show the unavailable
+state with `offline_payment_method` and create no checkout. Verify Card and NULL
+retain their configured checkout behavior. A 404 does not establish this
+acceptance.
+
+### Recurring profile preparation
+
+Automated T004 already creates real generated invoices in the isolated
+`test_db_billing_profile_recurring_acceptance` database. It creates a randomized
+tenant/client on each run with client `T004 Payment Method Snapshot Client`,
+default inheriting profile `Card Site`, sibling override profile `Check Site`,
+and separate `T004 Card Service` / `T004 Check Service` contracts and due
+service periods. Client settings are Credit Card / Net 30; the sibling override
+is Check / Due on Receipt. The test asserts separate invoices and charges,
+profile attribution, 30-day versus same-day due dates, and unchanged issued
+method/date snapshots after both profile settings are edited. UUIDs are
+deliberately generated at runtime; this dedicated test database is not an
+authenticated UI tenant and its rows are not offered as Generate-screen
+fixtures.
+
+For live Generate-through-UI acceptance, use a dedicated correctly provisioned
+test tenant/client with two sibling profiles. Set client Credit Card / Net 30;
+leave profile A inheriting and set profile B to Check / Due on Receipt. Assign
+separate recurring contracts/lines and due service periods to A and B. In
+Billing > Invoicing > Generate, generate each profile's due period separately;
+verify each invoice contains only its profile's charges, A snapshots Card and
+is due 30 days after invoice date, and B snapshots Check and is due on the
+invoice date. Edit both profile settings after issuance, reload both invoices,
+and confirm snapshots/dates and charge attribution remain unchanged. This
+browser acceptance remains pending; T004 is its automated behavioral coverage,
+not a substitute for the UI run.
+
+### Fresh mitigation checks
+
+- Read-only schema check on local-test database `server`: both
+  `client_billing_profiles.preferred_payment_method` and
+  `invoices.payment_method` exist, and migration
+  `20260922120000_add_billing_profile_payment_method.cjs` is recorded. No
+  migration was run.
+- Billing profile integration and recurring attribution/T004 suites: 12/12
+  passed against dedicated test databases.
+- Offline email link, invoice adapter, portal payment action/list, and supported
+  pay-page route suites: 36/36 passed.
+- Server typecheck with `NODE_OPTIONS=--max-old-space-size=12288`, client-portal
+  typecheck, and clients typecheck passed. Billing typecheck initially hit the
+  default Node heap limit while concurrent checks were running; the documented
+  12 GiB rerun and billing build both passed.
+- `packages/client-portal npm run build` still fails with tsup `No input files,
+  try "tsup <your-file>" instead`. This is the package baseline: both this
+  branch and `main` define `build` as bare `tsup` and track no tsup config for
+  the package. It is not a regression from this feature.
+- The full server/Next build was not run: the existing `server/.next` cache is
+  7.6 GiB and only 12 GiB is free on the shared filesystem. The focused package
+  builds and all requested typechecks completed.
+- No app server was started. Invitation/activation, authenticated portal row
+  and detail controls, direct-pay behavior, and Generate-through-UI recurring
+  acceptance remain unverified.
