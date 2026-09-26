@@ -55,6 +55,7 @@ export { default as CustomSelect } from './CustomSelect';
 export * from './CustomTabs';
 export { default as CustomTabs } from './CustomTabs';
 export * from './DataTable';
+export * from './DataTablePreferences';
 export * from './DatePicker';
 export * from './DateRangePicker';
 export * from './DateTimeField';

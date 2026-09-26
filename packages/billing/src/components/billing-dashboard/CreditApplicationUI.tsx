@@ -48,6 +48,7 @@ const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
   const [applying, setApplying] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [totalCredits, setTotalCredits] = useState<number>(0);
   const [creditOrder, setCreditOrder] = useState<'expiration_first' | 'oldest_first' | 'newest_first'>('expiration_first');
@@ -78,7 +79,7 @@ const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
         setLoading(true);
         
         // Fetch real credits from the server using the server action
-        const result = await listClientCredits(clientId, false, page, 10);
+        const result = await listClientCredits(clientId, false, page, pageSize);
         const returnedError = getReturnedActionError(result);
         if (returnedError) {
           setError(returnedError);
@@ -110,7 +111,7 @@ const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
     };
     
     fetchCredits();
-  }, [clientId, invoiceAmount, page, selectedCreditId]);
+  }, [clientId, invoiceAmount, page, pageSize, selectedCreditId]);
 
   const handleCreditSelection = (creditId: string) => {
     setSelectedCreditId(creditId);
@@ -279,9 +280,10 @@ const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
                 columns={columns}
                 pagination={true}
                 onPageChange={setPage}
+                onItemsPerPageChange={(nextPageSize) => { setPageSize(nextPageSize); setPage(1); }}
                 currentPage={page}
                 totalItems={totalCredits}
-                pageSize={10}
+                pageSize={pageSize}
               />
             </div>
             
