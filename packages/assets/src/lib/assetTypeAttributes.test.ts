@@ -9,6 +9,7 @@ import {
   isTypedAssetWriteError,
   pickSchemaAttributes,
   validateAttributesAgainstSchema,
+  coerceAttributeValue,
 } from './assetTypeAttributes';
 
 const FIELDS: AssetTypeField[] = [
@@ -19,6 +20,20 @@ const FIELDS: AssetTypeField[] = [
   { key: 'portal_url', label: 'Portal URL', kind: 'url' },
   { key: 'mfa_enabled', label: 'MFA Enabled', kind: 'boolean' },
 ];
+
+describe('coerceAttributeValue', () => {
+  it('coerces supported kinds and rejects locale numbers and invalid dates', () => {
+    expect(coerceAttributeValue(FIELDS[0], 42)).toEqual({ ok: true, value: '42' });
+    expect(coerceAttributeValue(FIELDS[1], '1.25e2')).toEqual({ ok: true, value: 125 });
+    expect(coerceAttributeValue(FIELDS[1], '1,234').ok).toBe(false);
+    expect(coerceAttributeValue(FIELDS[2], '2026-02-30').ok).toBe(false);
+    expect(coerceAttributeValue(FIELDS[2], '2026-01-05T23:00:00Z')).toEqual({ ok: true, value: '2026-01-05' });
+    expect(coerceAttributeValue(FIELDS[3], 'PROD')).toEqual({ ok: true, value: 'prod' });
+    expect(coerceAttributeValue(FIELDS[4], ' https://example.com ')).toEqual({ ok: true, value: 'https://example.com' });
+    expect(coerceAttributeValue(FIELDS[5], 'yes')).toEqual({ ok: true, value: true });
+    expect(coerceAttributeValue(FIELDS[5], 'maybe').ok).toBe(false);
+  });
+});
 
 describe('builtin slug helpers', () => {
   it('recognizes exactly the six reserved slugs', () => {

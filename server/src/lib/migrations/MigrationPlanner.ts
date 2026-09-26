@@ -1,6 +1,8 @@
 import type { Knex } from 'knex';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import type { AmpEntityType } from '@alga-psa/migration-spec';
+import { getAssetTypeBySlug } from '@alga-psa/assets/lib/assetTypeRegistry';
+import { coerceAttributeValue, isBuiltinAssetTypeSlug } from '@alga-psa/assets/lib/assetTypeAttributes';
 import {
   MIGRATION_PHASE_ORDER,
   type MigrationJobConfiguration,
@@ -244,7 +246,7 @@ export class MigrationPlanner {
     }
 
     const names = await this.distinctPayloadValues(migrationJobId, 'assets', 'asset_type_name');
-    const unmapped = names.filter((name) => !assetConfig.assetTypeMapping[name]);
+    const unmapped = names.filter((name) => !Object.prototype.hasOwnProperty.call(assetConfig.assetTypeMapping, name) || !assetConfig.assetTypeMapping[name]);
     if (unmapped.length > 0) {
       const blocked = await this.blockRecords(
         migrationJobId,
@@ -264,6 +266,78 @@ export class MigrationPlanner {
         sampleRecordIds: blocked.sample,
       });
     }
+
+    const slugs = [...new Set(Object.values(assetConfig.assetTypeMapping).filter(Boolean))];
+    const types = new Map<string, Awaited<ReturnType<typeof getAssetTypeBySlug>>>();
+    for (const slug of slugs) {
+      const type = await getAssetTypeBySlug(this.knex, this.tenant, slug);
+      types.set(slug, type);
+      if (!type && !isBuiltinAssetTypeSlug(slug)) issues.push({ severity: 'blocking', code: 'CONFIG_ASSET_TYPE_NOT_FOUND', message: `Mapped asset type "${slug}" does not exist in this tenant.`, entityType: 'assets' });
+    }
+
+    const sourceTypesForSlug = new Map<string, Set<string>>();
+    for (const [sourceName, slug] of Object.entries(assetConfig.assetTypeMapping)) {
+      if (!slug) continue;
+      const namesForSlug = sourceTypesForSlug.get(slug) ?? new Set<string>();
+      namesForSlug.add(sourceName);
+      sourceTypesForSlug.set(slug, namesForSlug);
+    }
+    const customMapping = assetConfig.customFieldMapping ?? {};
+    let mappingInvalid = false;
+    for (const [slug, sourceMap] of Object.entries(customMapping)) {
+      const type = types.get(slug);
+      const invalid = !type || type.is_builtin || !sourceTypesForSlug.has(slug);
+      const keys = Object.values(sourceMap);
+      if (invalid || keys.some((key) => !type?.fields_schema.some((field) => field.key === key)) || new Set(keys).size !== keys.length) mappingInvalid = true;
+    }
+    if (mappingInvalid) issues.push({ severity: 'blocking', code: 'CONFIG_ASSET_FIELD_MAPPING_INVALID', message: 'Custom field mappings must target fields on a custom type that is mapped from at least one source type, without duplicate target keys.', entityType: 'assets' });
+
+    const db = tenantDb(this.knex, this.tenant);
+    const failures = new Map<string, string>();
+    const requiredMissing = new Set<string>();
+    let lastPackageRecordId = '';
+    for (;;) {
+      const rows = await db.table('migration_staged_records')
+        .where({ migration_job_id: migrationJobId, entity_type: 'assets', validation_state: 'valid' })
+        .where('package_record_id', '>', lastPackageRecordId)
+        .orderBy('package_record_id')
+        .limit(500)
+        .select('package_record_id', 'payload', 'custom_field_values');
+      if (rows.length === 0) break;
+      lastPackageRecordId = rows[rows.length - 1].package_record_id;
+      for (const row of rows) {
+      const payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload;
+      const slug = Object.prototype.hasOwnProperty.call(assetConfig.assetTypeMapping, payload.asset_type_name) ? assetConfig.assetTypeMapping[payload.asset_type_name] : '';
+      const sourceMap = Object.prototype.hasOwnProperty.call(customMapping, slug) ? customMapping[slug] : {};
+      const values = typeof row.custom_field_values === 'string' ? JSON.parse(row.custom_field_values) : row.custom_field_values ?? {};
+      const fields = types.get(slug)?.fields_schema ?? [];
+      for (const field of fields.filter((candidate) => candidate.required)) {
+        if (!Object.values(sourceMap).includes(field.key) || !Object.entries(sourceMap).some(([sourceName, key]) => key === field.key && Object.prototype.hasOwnProperty.call(values, sourceName) && values[sourceName] !== undefined && values[sourceName] !== null && values[sourceName] !== '')) {
+          requiredMissing.add(row.package_record_id);
+          break;
+        }
+      }
+      for (const [sourceName, key] of Object.entries(sourceMap)) {
+        const value = Object.prototype.hasOwnProperty.call(values, sourceName) ? values[sourceName] : undefined;
+        if (value === undefined || value === null || value === '') continue;
+        const field = fields.find((candidate) => candidate.key === key);
+        if (!field) continue;
+        const coerced = coerceAttributeValue(field, value);
+        if (!coerced.ok) {
+          const valueDescription = typeof value === 'string' ? value : JSON.stringify(value) ?? '[value]';
+          failures.set(row.package_record_id, `"${sourceName}" value "${valueDescription}" ${coerced.reason}`);
+          break;
+        }
+      }
+      }
+    }
+    if (failures.size) {
+      const ids = [...failures.keys()];
+      const byMessage = [...failures.entries()];
+      for (const [id, message] of byMessage) await this.blockRecords(migrationJobId, 'assets', (query) => query.where({ package_record_id: id }), { code: 'ASSET_CUSTOM_FIELD_INVALID', message });
+      issues.push({ severity: 'blocking', code: 'ASSET_CUSTOM_FIELD_INVALID', message: `${failures.size} asset record(s) have custom field values that cannot be imported: ${byMessage.slice(0, 10).map(([id, reason]) => `${id}: ${reason}`).join('; ')}.`, entityType: 'assets', recordCount: failures.size, sampleRecordIds: ids.slice(0, SAMPLE_LIMIT) });
+    }
+    if (requiredMissing.size) issues.push({ severity: 'warning', code: 'ASSET_CUSTOM_FIELD_REQUIRED_MISSING', message: `${requiredMissing.size} asset record(s) are missing one or more required custom fields; they can be completed when the assets are edited.`, entityType: 'assets', recordCount: requiredMissing.size, sampleRecordIds: [...requiredMissing].slice(0, SAMPLE_LIMIT) });
     return issues;
   }
 

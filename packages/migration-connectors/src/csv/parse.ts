@@ -26,8 +26,8 @@ export async function parseSpreadsheet(path: string): Promise<ParsedSheet> {
 
 async function parseCsv(path: string): Promise<ParsedSheet> {
   const text = await readFile(path, 'utf8');
-  const parsed = Papa.parse<Record<string, string>>(text, {
-    header: true,
+  const parsed = Papa.parse<string[]>(text, {
+    header: false,
     skipEmptyLines: 'greedy',
   });
   if (parsed.errors.length > 0) {
@@ -35,11 +35,33 @@ async function parseCsv(path: string): Promise<ParsedSheet> {
     const location = first.row === undefined ? '' : ` (data row ${first.row + 1})`;
     throw new Error(`Could not parse CSV file ${path}: ${first.message}${location}`);
   }
-  const headers = (parsed.meta.fields ?? []).filter((field) => field.trim().length > 0);
+  const [headerRow = [], ...dataRows] = parsed.data;
+  const seenHeaders = new Set<string>();
+  const headersByColumn = headerRow.map((rawField) => {
+    const field = String(rawField ?? '');
+    const normalized = field.replace(/^\uFEFF/, '');
+    if (!normalized.trim()) return '';
+    let header = normalized;
+    let suffix = 0;
+    while (seenHeaders.has(header)) {
+      suffix += 1;
+      header = `${normalized}_${suffix}`;
+    }
+    seenHeaders.add(header);
+    return header;
+  });
+  const headers = headersByColumn.filter((field) => field.length > 0);
   if (headers.length === 0) {
     throw new Error(`CSV file ${path} has no header row.`);
   }
-  return { headers, rows: parsed.data };
+  const rows = dataRows.map((cells) => {
+    const record: Record<string, string> = Object.create(null) as Record<string, string>;
+    headersByColumn.forEach((header, index) => {
+      if (header) record[header] = String(cells[index] ?? '');
+    });
+    return record;
+  });
+  return { headers, rows };
 }
 
 async function parseXlsx(path: string): Promise<ParsedSheet> {
@@ -67,7 +89,7 @@ async function parseXlsx(path: string): Promise<ParsedSheet> {
     if (rowNumber === 1) {
       return;
     }
-    const record: Record<string, string> = {};
+    const record: Record<string, string> = Object.create(null) as Record<string, string>;
     for (const [column, header] of headersByColumn) {
       record[header] = cellString(row.getCell(column));
     }

@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -27,7 +26,6 @@ interface MigrationConfigurePanelProps {
  * only appear for entity types the package actually staged.
  */
 const MigrationConfigurePanel = ({ details, onSaved }: MigrationConfigurePanelProps): React.JSX.Element => {
-  const { t } = useTranslation('msp/settings');
   const [options, setOptions] = useState<MigrationConfigurationOptions | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -38,6 +36,7 @@ const MigrationConfigurePanel = ({ details, onSaved }: MigrationConfigurePanelPr
   const [statusMapping, setStatusMapping] = useState<Record<string, string>>({});
   const [priorityMapping, setPriorityMapping] = useState<Record<string, string>>({});
   const [assetTypeMapping, setAssetTypeMapping] = useState<Record<string, string>>({});
+  const [customFieldMapping, setCustomFieldMapping] = useState<Record<string, Record<string, string>>>({});
   const [defaultClientId, setDefaultClientId] = useState('');
 
   const [isSaving, setIsSaving] = useState(false);
@@ -64,6 +63,21 @@ const MigrationConfigurePanel = ({ details, onSaved }: MigrationConfigurePanelPr
         setStatusMapping(configuration.tickets?.statusMapping ?? {});
         setPriorityMapping(configuration.tickets?.priorityMapping ?? {});
         setAssetTypeMapping(configuration.assets?.assetTypeMapping ?? {});
+        const savedFieldMapping = configuration.assets?.customFieldMapping ?? {};
+        const seeded: Record<string, Record<string, string>> = { ...savedFieldMapping };
+        for (const slug of new Set(Object.values(configuration.assets?.assetTypeMapping ?? {}))) {
+          if (Object.prototype.hasOwnProperty.call(seeded, slug)) continue;
+          const type = loaded.assetTypes.find((candidate) => candidate.slug === slug);
+          const sources = loaded.packageAssetCustomFields.filter((field) => {
+            const sourceTypeMapping = configuration.assets?.assetTypeMapping ?? {};
+            return Object.prototype.hasOwnProperty.call(sourceTypeMapping, field.assetTypeName) && sourceTypeMapping[field.assetTypeName] === slug;
+          });
+          seeded[slug] = Object.fromEntries(sources.flatMap((source) => {
+            const matches = (type?.fields ?? []).filter((field) => normalizeName(field.key) === normalizeName(source.fieldName) || normalizeName(field.label) === normalizeName(source.fieldName));
+            return matches.length === 1 ? [[source.fieldName, matches[0].key]] : [];
+          }));
+        }
+        setCustomFieldMapping(seeded);
         setDefaultClientId(configuration.defaultClientId ?? '');
       })
       .catch((error) => {
@@ -111,6 +125,11 @@ const MigrationConfigurePanel = ({ details, onSaved }: MigrationConfigurePanelPr
     () => (options?.users ?? []).map((user) => ({ value: user.id, label: user.name })),
     [options]
   );
+  const hasDuplicateCustomFieldMappings = Object.entries(customFieldMapping).some(([slug, mapping]) => {
+    if (!Object.values(assetTypeMapping).includes(slug)) return false;
+    const values = Object.values(mapping).filter(Boolean);
+    return new Set(values).size !== values.length;
+  });
 
   const handleSave = useCallback(async () => {
     if (!options) {
@@ -133,7 +152,7 @@ const MigrationConfigurePanel = ({ details, onSaved }: MigrationConfigurePanelPr
               },
             }
           : {}),
-        ...(hasAssets ? { assets: { assetTypeMapping } } : {}),
+        ...(hasAssets ? { assets: { assetTypeMapping, customFieldMapping: Object.fromEntries(Object.entries(customFieldMapping).filter(([slug]) => Object.values(assetTypeMapping).includes(slug))) } } : {}),
       });
       setSaveSucceeded(true);
       await onSaved();
@@ -144,6 +163,7 @@ const MigrationConfigurePanel = ({ details, onSaved }: MigrationConfigurePanelPr
     }
   }, [
     assetTypeMapping,
+    customFieldMapping,
     boardId,
     defaultAssigneeId,
     defaultClientId,
@@ -263,8 +283,40 @@ const MigrationConfigurePanel = ({ details, onSaved }: MigrationConfigurePanelPr
             targetOptions={assetTypeOptions}
             mapping={assetTypeMapping}
             onChange={setAssetTypeMapping}
+            allowClear
             emptyMessage="The package's assets carry no asset type names."
           />
+          {[...new Set(Object.values(assetTypeMapping))].map((slug) => {
+            const type = options.assetTypes.find((candidate) => candidate.slug === slug);
+            if (!type || type.isBuiltin || type.fields.length === 0) return null;
+            const sourceRows = options.packageAssetCustomFields.filter((field) => Object.entries(assetTypeMapping).some(([sourceType, targetSlug]) => targetSlug === slug && sourceType === field.assetTypeName));
+            const sourceNames = [...new Set(sourceRows.map((field) => field.fieldName))];
+            const mapping = customFieldMapping[slug] ?? {};
+            const targets = type.fields.map((field) => ({ value: field.key, label: `${field.label} · ${field.kind}${field.required ? ' · required' : ''}` }));
+            const duplicateTargets = Object.values(mapping).filter(Boolean).filter((key, index, values) => values.indexOf(key) !== index);
+            const missingRequired = type.fields.filter((field) => field.required && !Object.values(mapping).includes(field.key));
+            return <section key={slug} className="space-y-3 rounded-md border border-border p-4">
+              <h5 className="text-sm font-semibold text-foreground">Fields for {type.name}</h5>
+              <MappingGrid
+                title="Custom field mapping"
+                description="Map preserved CSV columns to fields on this asset type."
+                idPrefix={`amp-config-asset-fields-${slug}`}
+                sourceNames={sourceNames}
+                targetOptions={targets}
+                mapping={mapping}
+                onChange={(next) => setCustomFieldMapping({ ...customFieldMapping, [slug]: next })}
+                emptyMessage="No custom columns were preserved for this asset type."
+                allowClear
+                detail={(sourceName) => {
+                  const rows = sourceRows.filter((row) => row.fieldName === sourceName);
+                  const samples = [...new Set(rows.map((row) => row.sampleValue).filter(Boolean))];
+                  return `${samples.join(', ') || 'No sample'} · ${rows.reduce((count, row) => count + row.recordCount, 0)} records`;
+                }}
+              />
+              {missingRequired.length > 0 && <p className="text-xs text-muted-foreground">Required fields not mapped: {missingRequired.map((field) => field.label).join(', ')}</p>}
+              {duplicateTargets.length > 0 && <p className="text-xs text-destructive">A custom field is mapped more than once. Choose a unique target for each source.</p>}
+            </section>;
+          })}
         </section>
       )}
 
@@ -302,7 +354,7 @@ const MigrationConfigurePanel = ({ details, onSaved }: MigrationConfigurePanelPr
       )}
 
       <div className="flex justify-end">
-        <Button id="amp-save-configuration-button" onClick={() => void handleSave()} disabled={isSaving}>
+        <Button id="amp-save-configuration-button" onClick={() => void handleSave()} disabled={isSaving || hasDuplicateCustomFieldMappings}>
           {isSaving ? (
             <span className="flex items-center gap-2">
               <Spinner size="sm" />
@@ -326,6 +378,8 @@ const MappingGrid = ({
   mapping,
   onChange,
   emptyMessage,
+  allowClear = false,
+  detail,
 }: {
   title: string;
   description: string;
@@ -335,6 +389,8 @@ const MappingGrid = ({
   mapping: Record<string, string>;
   onChange: (next: Record<string, string>) => void;
   emptyMessage: string;
+  allowClear?: boolean;
+  detail?: (sourceName: string) => string;
 }): React.JSX.Element => (
   <div className="space-y-2">
     <div>
@@ -352,13 +408,20 @@ const MappingGrid = ({
           >
             <span className="truncate text-sm text-foreground" title={sourceName}>
               {sourceName}
+              {detail && <span className="block text-xs text-muted-foreground">{detail(sourceName)}</span>}
             </span>
             <CustomSelect
               id={`${idPrefix}-${index}-select`}
               options={targetOptions}
-              value={mapping[sourceName] ?? ''}
-              onValueChange={(value) => onChange({ ...mapping, [sourceName]: value })}
+              value={Object.prototype.hasOwnProperty.call(mapping, sourceName) ? mapping[sourceName] : ''}
               placeholder="Select a mapping"
+              allowClear={allowClear}
+              onValueChange={(value) => {
+                const next = value
+                  ? { ...mapping, [sourceName]: value }
+                  : Object.fromEntries(Object.entries(mapping).filter(([source]) => source !== sourceName));
+                onChange(next);
+              }}
             />
           </div>
         ))}
@@ -368,3 +431,7 @@ const MappingGrid = ({
 );
 
 export default MigrationConfigurePanel;
+
+function normalizeName(value: string): string {
+  return value.trim().toLowerCase().replace(/[\s_-]+/g, '_');
+}

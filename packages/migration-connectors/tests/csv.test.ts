@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import ExcelJS from 'exceljs';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AmpSqliteReader, validateAmpPackage } from '@alga-psa/migration-sdk';
+import { AMP_LIMITS } from '@alga-psa/migration-spec';
 import {
   convertSpreadsheets,
   convertSpreadsheetsToAmp,
@@ -97,7 +98,34 @@ describe('convertSpreadsheets', () => {
     const reader = new AmpSqliteReader(outputPath);
     try {
       expect(reader.allRows('assets')[0]).toMatchObject({ name: 'router', asset_type_name: 'network_device', serial_number: 'R-1' });
-      expect(JSON.parse(String(reader.allRows('assets')[0].extension_json))).toEqual({ 'MAC Address': '00:11:22:33:44:55' });
+      expect(reader.allRows('custom_field_values')).toContainEqual(expect.objectContaining({ field_name: 'MAC Address', value_json: '"00:11:22:33:44:55"' }));
+    } finally { reader.close(); }
+  });
+
+  it('keeps accepted custom cells independently and emits no auxiliary rows for skipped assets', async () => {
+    const inputPath = join(workDir, 'custom-cells.csv');
+    const outputPath = join(workDir, 'custom-cells.amp');
+    await writeFile(inputPath, `Asset Name,Asset Type,Notes,Extra\n,Door Access,skipped,small\nDoor,Door Access,kept,${'x'.repeat(AMP_LIMITS.extensionJsonBytes + 1)}\n`);
+    const result = await convertSpreadsheets({ outputPath, namespace: 'custom-cells', sourceSystem: 'csv', files: [{ entityType: 'assets', path: inputPath, mapping: await inferSpreadsheetMapping(inputPath, 'assets') }] }, workDir);
+    expect(result.valid).toBe(true);
+    expect(result.diagnostics.some((diagnostic) => diagnostic.code === 'CSV_CUSTOM_FIELD_TOO_LARGE')).toBe(true);
+    const reader = new AmpSqliteReader(outputPath);
+    try {
+      const customRows = reader.allRows('custom_field_values');
+      expect(customRows).toHaveLength(1);
+      expect(customRows[0]).toMatchObject({ entity_package_record_id: 'assets-row-2', field_name: 'Notes', value_json: '"kept"' });
+    } finally { reader.close(); }
+  });
+
+  it('treats __proto__ as an ordinary source field name', async () => {
+    const inputPath = join(workDir, 'proto-header.csv');
+    const outputPath = join(workDir, 'proto-header.amp');
+    await writeFile(inputPath, 'Asset Name,Asset Type,__proto__\nDoor,Door Access,ordinary\n');
+    const result = await convertSpreadsheets({ outputPath, namespace: 'proto-header', sourceSystem: 'csv', files: [{ entityType: 'assets', path: inputPath, mapping: await inferSpreadsheetMapping(inputPath, 'assets') }] }, workDir);
+    expect(result.valid).toBe(true);
+    const reader = new AmpSqliteReader(outputPath);
+    try {
+      expect(reader.allRows('custom_field_values')).toContainEqual(expect.objectContaining({ field_name: '__proto__', value_json: '"ordinary"' }));
     } finally { reader.close(); }
   });
 
@@ -133,7 +161,7 @@ describe('convertSpreadsheets', () => {
       );
       expect(bluebird).toBeDefined();
       expect(bluebird?.external_identifier_namespace).toBe('fixture-csv:2026-08');
-      expect(JSON.parse(String(bluebird?.extension_json))).toEqual({ Region: 'West' });
+      expect(reader.allRows('custom_field_values')).toContainEqual(expect.objectContaining({ entity_package_record_id: 'organizations-ACME-002', field_name: 'Region', value_json: '"West"' }));
 
       const cascade = organizations.find(
         (row) => row.package_record_id === 'organizations-ACME-004'
@@ -169,9 +197,9 @@ describe('convertSpreadsheets', () => {
     const xlsxPath = join(workDir, 'organizations.xlsx');
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('organizations');
-    sheet.addRow(['Account #', 'Company Name', 'Region']);
-    sheet.addRow(['X-1', 'Juniper Bookkeeping', 'North']);
-    sheet.addRow(['X-2', 'Copperleaf Landscaping', 'South']);
+    sheet.addRow(['Account #', 'Company Name', 'Region', 'Installed On']);
+    sheet.addRow(['X-1', 'Juniper Bookkeeping', 'North', new Date('2026-01-05T00:00:00.000Z')]);
+    sheet.addRow(['X-2', 'Copperleaf Landscaping', 'South', new Date('2026-01-06T00:00:00.000Z')]);
     await workbook.xlsx.writeFile(xlsxPath);
 
     const outputPath = join(workDir, 'from-xlsx.amp');
@@ -200,7 +228,8 @@ describe('convertSpreadsheets', () => {
         .allRows('organizations')
         .find((row) => row.package_record_id === 'organizations-X-1');
       expect(juniper?.name).toBe('Juniper Bookkeeping');
-      expect(JSON.parse(String(juniper?.extension_json))).toEqual({ Region: 'North' });
+      expect(reader.allRows('custom_field_values')).toContainEqual(expect.objectContaining({ entity_package_record_id: 'organizations-X-1', field_name: 'Region', value_json: '"North"' }));
+      expect(reader.allRows('custom_field_values')).toContainEqual(expect.objectContaining({ entity_package_record_id: 'organizations-X-1', field_name: 'Installed On', value_json: '"2026-01-05T00:00:00Z"' }));
     } finally {
       reader.close();
     }
