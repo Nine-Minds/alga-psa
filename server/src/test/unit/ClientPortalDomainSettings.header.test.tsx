@@ -3,6 +3,11 @@
 import React from 'react';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import englishSettings from '../../../public/locales/en/msp/settings.json';
+import expandedSettings from '../../../public/locales/yy/msp/settings.json';
+import { pseudoString } from '../../../../tools/i18n/lib/pseudo-locale.mjs';
+
+let settings = englishSettings;
 
 const { getStatus } = vi.hoisted(() => ({ getStatus: vi.fn() }));
 
@@ -16,12 +21,9 @@ vi.mock('@/lib/actions/tenant-actions/portalDomainActions', () => ({
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({
-    t: (key: string) => ({
-      'clientPortal.domain.title': 'Custom Domain',
-      'clientPortal.domain.description': 'Configure a branded hostname for your client portal.',
-      'clientPortal.domain.hostedTlsNote': 'We will provision TLS certificates automatically once DNS is verified.',
-      'clientPortal.domain.appliance.tlsNote': 'TLS terminates at your reverse proxy, which holds the certificate.',
-    }[key] ?? key),
+    t: (key: string) => key.split('.').reduce<unknown>((value, part) =>
+      value && typeof value === 'object' ? (value as Record<string, unknown>)[part] : undefined,
+    settings) ?? key,
   }),
 }));
 
@@ -47,6 +49,7 @@ const status = (mode: 'temporal' | 'direct', edition: 'ce' | 'ee' = mode === 'di
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  settings = englishSettings;
 });
 
 describe('client portal custom domain header TLS note', () => {
@@ -77,6 +80,17 @@ describe('client portal custom domain header TLS note', () => {
 
     expect(await screen.findByText(/Configure a branded hostname.*TLS terminates at your reverse proxy, which holds the certificate\./)).toBeTruthy();
     expect(screen.queryByText(/We will provision TLS certificates automatically/)).toBeNull();
+  });
+
+  it('renders the generated expanded-locale proxy note in direct mode', async () => {
+    settings = expandedSettings;
+    getStatus.mockResolvedValue(status('direct', 'ce'));
+    render(<ClientPortalDomainSettings />);
+
+    const domain = englishSettings.clientPortal.domain;
+    const expected = `${pseudoString(domain.description, 'yy')} ${pseudoString(domain.appliance.tlsNote, 'yy')}`;
+    expect(await screen.findByText(expected)).toBeTruthy();
+    expect(screen.queryByText(pseudoString(domain.hostedTlsNote, 'yy'), { exact: false })).toBeNull();
   });
 
   it('shows only neutral copy when the loaded mode is unrecognized', async () => {
