@@ -227,7 +227,8 @@
     "downloadError": "Could not download this document. Please try again.",
     "notFound": "This document is no longer available.",
     "noContent": "This document has no content to export.",
-    "accessDenied": "You do not have access to this document."
+    "accessDenied": "You do not have access to this document.",
+    "loadingPreview": "Loading preview…"
   },
   "kb": {
     "title": "Knowledge Base",

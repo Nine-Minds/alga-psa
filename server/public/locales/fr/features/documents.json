@@ -227,7 +227,8 @@
     "downloadError": "Impossible de télécharger ce document. Réessayez.",
     "notFound": "Ce document n’est plus disponible.",
     "noContent": "Ce document ne contient rien à exporter.",
-    "accessDenied": "Vous n’avez pas accès à ce document."
+    "accessDenied": "Vous n’avez pas accès à ce document.",
+    "loadingPreview": "Chargement de l’aperçu…"
   },
   "kb": {
     "title": "Base de connaissances",

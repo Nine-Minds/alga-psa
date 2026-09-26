@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { cleanup, render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, fireEvent } from '@testing-library/react';
 import ClientDocumentsPage from './ClientDocumentsPage';
 import type { IDocument, IFolderNode } from '@alga-psa/types';
 
@@ -121,6 +121,16 @@ vi.mock('@alga-psa/ui/components/Input', () => ({
   Input: (props: any) => <input {...props} />,
 }));
 
+vi.mock('@alga-psa/ui/components/Dialog', () => ({
+  Dialog: ({ isOpen, onClose, title, children, footer }: any) => isOpen ? (
+    <div role="dialog" aria-label={title}>
+      <button type="button" aria-label="Close" onClick={onClose}>Close</button>
+      {children}{footer}
+    </div>
+  ) : null,
+  DialogContent: ({ children }: any) => <div>{children}</div>,
+}));
+
 vi.mock('@alga-psa/ui/components/Card', () => ({
   Card: ({ children, className }: { children: React.ReactNode; className?: string }) => (
     <div className={className} data-testid="card">{children}</div>
@@ -130,11 +140,22 @@ vi.mock('@alga-psa/ui/components/Card', () => ({
   ),
 }));
 
+vi.mock('@alga-psa/ui/components/DropdownMenu', () => ({
+  DropdownMenu: ({ children }: any) => <div>{children}</div>,
+  DropdownMenuTrigger: ({ children }: any) => children,
+  DropdownMenuContent: ({ children }: any) => <div>{children}</div>,
+  DropdownMenuItem: ({ children, onSelect, ...props }: any) => <button {...props} onClick={onSelect}>{children}</button>,
+}));
+
 describe('ClientDocumentsPage', () => {
-  afterEach(() => {
+  afterEach(async () => {
     cleanup();
     mockDocuments[0].file_id = 'file-1';
     mockDocuments[0].document_name = 'Service Agreement.pdf';
+    mockRenderViewer.mockReset().mockReturnValue(null);
+    const actions = await import('@alga-psa/client-portal/actions/client-portal-actions/client-documents');
+    vi.mocked(actions.getClientDocuments).mockReset().mockResolvedValue({ documents: mockDocuments, total: 2, page: 1, pageSize: 20, totalPages: 1 } as any);
+    vi.mocked(actions.getClientDocumentContent).mockReset().mockResolvedValue({ document: { document_id: 'doc-1' }, content: { kind: 'file' } } as any);
     vi.clearAllMocks();
     vi.unstubAllGlobals();
   });
@@ -185,17 +206,32 @@ describe('ClientDocumentsPage', () => {
     render(<ClientDocumentsPage />);
     await waitFor(() => expect(screen.getByText('Meeting Notes')).toBeInTheDocument());
     fireEvent.click(document.getElementById('client-docs-title-view-doc-1')!);
-    await waitFor(() => expect(screen.getByText('Download')).toBeInTheDocument());
-    fireEvent.click(screen.getByText('Download'));
+    await waitFor(() => expect(screen.getByText('Download PDF')).toBeInTheDocument());
+    fireEvent.click(document.getElementById('client-docs-preview-download-pdf-doc-1')!);
     await waitFor(async () => {
       const { fetchAndSaveFile } = await import('../../lib/fetchAndSaveFile');
       expect(fetchAndSaveFile).toHaveBeenCalledWith('/api/client-portal/documents/doc-1/export?format=pdf', 'Meeting Notes.pdf');
     });
-    fireEvent.click(screen.getByText('Markdown'));
+    fireEvent.click(document.getElementById('client-docs-preview-markdown-doc-1')!);
     await waitFor(async () => {
       const { fetchAndSaveFile } = await import('../../lib/fetchAndSaveFile');
       expect(fetchAndSaveFile).toHaveBeenCalledWith('/api/client-portal/documents/doc-1/export?format=md', 'Meeting Notes.md');
     });
+  });
+
+  it('offers explicit translated format choices from the in-app card download menu', async () => {
+    mockDocuments[0].file_id = null;
+    mockDocuments[0].document_name = 'Meeting Notes';
+    render(<ClientDocumentsPage />);
+    await waitFor(() => expect(screen.getByText('Meeting Notes')).toBeInTheDocument());
+    fireEvent.click(document.getElementById('client-docs-download-document-doc-1')!);
+    await waitFor(() => {
+      expect(screen.getByText('Download PDF')).toBeInTheDocument();
+      expect(screen.getByText('Download Markdown')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText('Download Markdown'));
+    const { fetchAndSaveFile } = await import('../../lib/fetchAndSaveFile');
+    await waitFor(() => expect(fetchAndSaveFile).toHaveBeenCalledWith('/api/client-portal/documents/doc-1/export?format=md', 'Meeting Notes.md'));
   });
 
   it.each([
@@ -204,20 +240,112 @@ describe('ClientDocumentsPage', () => {
   ])('fetches uploaded %s preview bytes from the inline endpoint', async (documentId) => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(new Blob(['preview'])));
     vi.stubGlobal('fetch', fetchMock);
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue(`blob:${documentId}`);
+    const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
     render(<ClientDocumentsPage />);
     await waitFor(() => expect(screen.getByText('Service Agreement.pdf')).toBeInTheDocument());
     fireEvent.click(document.getElementById(`client-docs-view-document-${documentId}`)!);
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(`/api/client-portal/documents/${documentId}/file?disposition=inline`, { credentials: 'include' }));
+    if (documentId === 'doc-1') await waitFor(() => expect(screen.getByTitle('Service Agreement.pdf')).toHaveAttribute('src', 'blob:doc-1'));
+    else await waitFor(() => expect(screen.getByAltText('Network Diagram.png')).toHaveAttribute('src', 'blob:doc-2'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Close' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(revoke).toHaveBeenCalledWith(`blob:${documentId}`);
+  });
+
+  const deferred = <T,>() => {
+    let resolve!: (value: T) => void;
+    const promise = new Promise<T>((res) => { resolve = res; });
+    return { promise, resolve };
+  };
+
+  it('keeps the newer preview when older content and byte responses finish later', async () => {
+    const { getClientDocumentContent } = await import('@alga-psa/client-portal/actions/client-portal-actions/client-documents');
+    const firstContent = deferred<any>();
+    const secondContent = deferred<any>();
+    const firstBytes = deferred<Response>();
+    const secondBytes = deferred<Response>();
+    vi.mocked(getClientDocumentContent).mockReturnValueOnce(firstContent.promise).mockReturnValueOnce(secondContent.promise);
+    vi.stubGlobal('fetch', vi.fn((url: string) => url.includes('doc-1') ? firstBytes.promise : secondBytes.promise));
+    const createUrl = vi.spyOn(URL, 'createObjectURL').mockImplementation((blob) => `blob:${blob.size}`);
+    const revokeUrl = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+    render(<ClientDocumentsPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Service Agreement.pdf')).toBeInTheDocument();
+      expect(screen.getByText('Network Diagram.png')).toBeInTheDocument();
+    });
+    fireEvent.click(document.getElementById('client-docs-view-document-doc-1')!);
+    await waitFor(() => expect(getClientDocumentContent).toHaveBeenCalledTimes(1));
+    act(() => firstContent.resolve({ document: { document_id: 'doc-1' }, content: { kind: 'file' } }));
+    await waitFor(() => expect(fetch).toHaveBeenCalledWith('/api/client-portal/documents/doc-1/file?disposition=inline', { credentials: 'include' }));
+    fireEvent.click(document.getElementById('client-docs-view-document-doc-2')!);
+    await waitFor(() => expect(getClientDocumentContent).toHaveBeenCalledTimes(2));
+    act(() => secondContent.resolve({ document: { document_id: 'doc-2' }, content: { kind: 'file' } }));
+    await waitFor(() => expect(fetch).toHaveBeenCalledWith('/api/client-portal/documents/doc-2/file?disposition=inline', { credentials: 'include' }));
+    expect(screen.getByRole('status', { name: 'Loading preview' })).toBeInTheDocument();
+    expect(screen.queryByAltText('Network Diagram.png')).not.toBeInTheDocument();
+    act(() => secondBytes.resolve(new Response(new Blob(['image bytes']))));
+    await waitFor(() => expect(screen.getByAltText('Network Diagram.png')).toHaveAttribute('src', createUrl.mock.results[0]?.value));
+    act(() => firstBytes.resolve(new Response(new Blob(['pdf bytes']))));
+    await waitFor(() => expect(screen.getByAltText('Network Diagram.png')).toBeInTheDocument());
+    expect(screen.getByAltText('Network Diagram.png')).toHaveAttribute('src', createUrl.mock.results[0]?.value);
+    expect(createUrl).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores content and bytes that resolve after the preview is closed', async () => {
+    const { getClientDocumentContent } = await import('@alga-psa/client-portal/actions/client-portal-actions/client-documents');
+    const content = deferred<any>();
+    vi.mocked(getClientDocumentContent).mockReturnValueOnce(content.promise);
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    render(<ClientDocumentsPage />);
+    await waitFor(() => expect(screen.getByText('Service Agreement.pdf')).toBeInTheDocument());
+    fireEvent.click(document.getElementById('client-docs-view-document-doc-1')!);
+    await screen.findByRole('dialog');
+    await waitFor(() => expect(getClientDocumentContent).toHaveBeenCalledWith('doc-1'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Close' }));
+    act(() => content.resolve({ document: { document_id: 'doc-1' }, content: { kind: 'block', blockData: [] } }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.queryByTitle('Service Agreement.pdf')).not.toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(mockRenderViewer).not.toHaveBeenCalled();
   });
 
   it('renders readable BlockNote content for an in-app document', async () => {
     const { getClientDocumentContent } = await import('@alga-psa/client-portal/actions/client-portal-actions/client-documents');
     const blockData = [{ type: 'paragraph', content: [{ type: 'text', text: 'Meeting Notes' }] }];
     vi.mocked(getClientDocumentContent).mockResolvedValueOnce({ document: { document_id: 'doc-1' }, content: { kind: 'block', blockData } } as any);
+    mockRenderViewer.mockReturnValue(<div>Rendered meeting notes</div>);
     render(<ClientDocumentsPage />);
     await waitFor(() => expect(screen.getByText('Service Agreement.pdf')).toBeInTheDocument());
     fireEvent.click(document.getElementById('client-docs-title-view-doc-1')!);
-    await waitFor(() => expect(mockRenderViewer).toHaveBeenCalledWith({ content: blockData }));
+    await waitFor(() => {
+      expect(mockRenderViewer).toHaveBeenCalledWith({ content: blockData });
+      expect(screen.getByText('Rendered meeting notes')).toBeInTheDocument();
+    });
+  });
+
+  it('shows a visible render error for a broken image or block renderer', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(new Blob(['image'])));
+    vi.stubGlobal('fetch', fetchMock);
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:bad-image');
+    render(<ClientDocumentsPage />);
+    await waitFor(() => expect(screen.getByText('Service Agreement.pdf')).toBeInTheDocument());
+    fireEvent.click(document.getElementById('client-docs-view-document-doc-2')!);
+    const image = await screen.findByAltText('Network Diagram.png');
+    fireEvent.error(image);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not load this preview. Please try again.');
+  });
+
+  it('shows a visible error when the in-app document renderer throws', async () => {
+    const { getClientDocumentContent } = await import('@alga-psa/client-portal/actions/client-portal-actions/client-documents');
+    mockDocuments[0].file_id = null;
+    vi.mocked(getClientDocumentContent).mockResolvedValueOnce({ document: { document_id: 'doc-1' }, content: { kind: 'block', blockData: [] } } as any);
+    mockRenderViewer.mockImplementation(() => { throw new Error('renderer failed'); });
+    render(<ClientDocumentsPage />);
+    await waitFor(() => expect(screen.getByText('Service Agreement.pdf')).toBeInTheDocument());
+    fireEvent.click(document.getElementById('client-docs-title-view-doc-1')!);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not load this preview. Please try again.');
   });
 
   it('renders search filter input', async () => {

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { Component, useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Button } from '@alga-psa/ui/components/Button';
 import { CollapseToggleButton } from '@alga-psa/ui/components/CollapseToggleButton';
@@ -15,6 +15,7 @@ import { getErrorMessage, isActionMessageError, isActionPermissionError } from '
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { DocumentRequestError, fetchAndSaveFile } from '../../lib/fetchAndSaveFile';
 import { toast } from 'react-hot-toast';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@alga-psa/ui/components/DropdownMenu';
 
 const isReturnedActionError = (
   value: unknown
@@ -130,11 +131,12 @@ function FolderTreeNode({ node, selectedPath, onSelect, level = 0 }: FolderTreeN
 interface DocumentCardProps {
   document: IDocument;
   onView: (doc: IDocument) => void;
-  onDownload: (doc: IDocument) => void;
+  onDownload: (doc: IDocument, format?: 'md' | 'pdf') => void;
   isDownloading: boolean;
+  labels: { view: string; download: string; downloadPdf: string; downloadMarkdown: string };
 }
 
-function DocumentCard({ document, onView, onDownload, isDownloading }: DocumentCardProps) {
+function DocumentCard({ document, onView, onDownload, isDownloading, labels }: DocumentCardProps) {
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardContent className="p-4">
@@ -152,9 +154,9 @@ function DocumentCard({ document, onView, onDownload, isDownloading }: DocumentC
           </div>
           <Button
             id={`client-docs-view-document-${document.document_id}`}
-            variant="ghost" size="sm" onClick={() => onView(document)} aria-label="View document"
+            variant="ghost" size="sm" onClick={() => onView(document)} aria-label={labels.view}
             className="flex-shrink-0"><Eye className="w-4 h-4" /></Button>
-          <Button
+          {document.file_id ? <Button
             id={`client-docs-download-document-${document.document_id}`}
             variant="ghost"
             size="sm"
@@ -163,7 +165,17 @@ function DocumentCard({ document, onView, onDownload, isDownloading }: DocumentC
             className="flex-shrink-0"
           >
             <Download className="w-4 h-4" />
-          </Button>
+          </Button> : <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button id={`client-docs-download-document-${document.document_id}`} variant="ghost" size="sm" disabled={isDownloading} aria-label={labels.download}>
+                <Download className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem id={`client-docs-download-pdf-${document.document_id}`} onSelect={() => onDownload(document, 'pdf')}>{labels.downloadPdf}</DropdownMenuItem>
+              <DropdownMenuItem id={`client-docs-download-markdown-${document.document_id}`} onSelect={() => onDownload(document, 'md')}>{labels.downloadMarkdown}</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>}
         </div>
       </CardContent>
     </Card>
@@ -189,6 +201,9 @@ export default function ClientDocumentsPage() {
   const [previewContent, setPreviewContent] = useState<any>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const previewRequestId = useRef(0);
+  const previewUrlRef = useRef<string | null>(null);
 
   const pageSize = 20;
 
@@ -274,20 +289,47 @@ export default function ClientDocumentsPage() {
   }, [t]);
 
   const handleView = useCallback(async (doc: IDocument) => {
-    setPreview(doc); setPreviewContent(null); setPreviewError(null); setPreviewUrl(null);
+    const requestId = ++previewRequestId.current;
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+    previewUrlRef.current = null;
+    setPreviewUrl(null);
+    setPreview(doc); setPreviewContent(null); setPreviewError(null); setIsPreviewLoading(true);
     try {
       const content = await getClientDocumentContent(doc.document_id);
+      if (requestId !== previewRequestId.current) return;
       if (isReturnedActionError(content) || !content || !('content' in content)) throw new Error(getErrorMessage(content));
-      setPreviewContent(content);
       if (content.content.kind === 'file' && (doc.mime_type === 'application/pdf' || doc.mime_type?.startsWith('image/') && doc.mime_type !== 'image/svg+xml')) {
         const response = await fetch(`/api/client-portal/documents/${encodeURIComponent(doc.document_id)}/file?disposition=inline`, { credentials: 'include' });
-        if (!response.ok) throw new Error(t('portal.previewError', 'Could not load this preview.'));
-        setPreviewUrl(URL.createObjectURL(await response.blob()));
+        if (requestId !== previewRequestId.current) return;
+        if (!response.ok) throw new Error(t('portal.previewError', 'Could not load this preview. Please try again.'));
+        const objectUrl = URL.createObjectURL(await response.blob());
+        if (requestId !== previewRequestId.current) { URL.revokeObjectURL(objectUrl); return; }
+        previewUrlRef.current = objectUrl;
+        setPreviewUrl(objectUrl);
       }
-    } catch (error) { setPreviewError(error instanceof Error ? error.message : t('portal.previewError', 'Could not load this preview.')); }
+      if (requestId === previewRequestId.current) setPreviewContent(content);
+    } catch (error) {
+      if (requestId === previewRequestId.current) setPreviewError(error instanceof Error ? error.message : t('portal.previewError', 'Could not load this preview. Please try again.'));
+    } finally {
+      if (requestId === previewRequestId.current) setIsPreviewLoading(false);
+    }
   }, [t]);
 
-  useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
+  const closePreview = useCallback(() => {
+    previewRequestId.current += 1;
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+    previewUrlRef.current = null;
+    setPreview(null);
+    setPreviewContent(null);
+    setPreviewError(null);
+    setPreviewUrl(null);
+    setIsPreviewLoading(false);
+  }, []);
+
+  useEffect(() => () => {
+    previewRequestId.current += 1;
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+  }, []);
 
   return (
     <div className="flex flex-col h-full">
@@ -390,6 +432,12 @@ export default function ClientDocumentsPage() {
                     onView={handleView}
                     onDownload={handleDownload}
                     isDownloading={downloadingId === doc.document_id}
+                    labels={{
+                      view: t('portal.view', 'View'),
+                      download: t('portal.download', 'Download'),
+                      downloadPdf: t('portal.downloadPdf', 'Download PDF'),
+                      downloadMarkdown: t('portal.downloadMarkdown', 'Download Markdown'),
+                    }}
                   />
                 ))}
               </div>
@@ -424,11 +472,21 @@ export default function ClientDocumentsPage() {
           )}
         </div>
       </div>
-      <Dialog isOpen={!!preview} onClose={() => { setPreview(null); setPreviewContent(null); setPreviewError(null); }} title={preview?.document_name || t('portal.view', 'View document')} className="max-w-4xl" footer={preview && <div className="flex justify-end gap-2"><Button id={`client-docs-preview-download-${preview.document_id}`} onClick={() => void handleDownload(preview, 'pdf')}>{t('portal.download', 'Download')}</Button>{!preview.file_id && <Button id={`client-docs-preview-markdown-${preview.document_id}`} variant="outline" onClick={() => void handleDownload(preview, 'md')}>{t('portal.downloadMarkdown', 'Markdown')}</Button>}</div>}>
+      <Dialog isOpen={!!preview} onClose={closePreview} title={preview?.document_name || t('portal.view', 'View document')} className="max-w-4xl" footer={preview && <div className="flex justify-end gap-2">{preview.file_id ? <Button id={`client-docs-preview-download-${preview.document_id}`} onClick={() => void handleDownload(preview)}>{t('portal.download', 'Download')}</Button> : <><Button id={`client-docs-preview-download-pdf-${preview.document_id}`} onClick={() => void handleDownload(preview, 'pdf')}>{t('portal.downloadPdf', 'Download PDF')}</Button><Button id={`client-docs-preview-markdown-${preview.document_id}`} variant="outline" onClick={() => void handleDownload(preview, 'md')}>{t('portal.downloadMarkdown', 'Download Markdown')}</Button></>}</div>}>
         <DialogContent>
-          {previewError ? <p role="alert" className="text-destructive">{previewError}</p> : !previewContent ? <Spinner size="sm" /> : previewContent.content.kind === 'block' ? renderDocumentViewer({ content: previewContent.content.blockData }) : previewContent.content.kind === 'text' ? <pre className="whitespace-pre-wrap">{previewContent.content.content}</pre> : previewUrl && preview?.mime_type === 'application/pdf' ? <iframe title={preview.document_name} src={previewUrl} className="w-full h-[70vh]" /> : previewUrl ? <img alt={preview?.document_name} src={previewUrl} className="max-w-full max-h-[70vh] mx-auto" /> : <p>{t('portal.previewUnavailable', 'Preview is not available for this file type.')}</p>}
+          {previewError ? <p role="alert" className="text-destructive">{previewError}</p> : isPreviewLoading || !previewContent ? <div role="status" aria-label={t('portal.loadingPreview', 'Loading preview')}><Spinner size="sm" /></div> : previewContent.content.kind === 'block' ? <DocumentRenderBoundary key={preview?.document_id} fallback={t('portal.previewError', 'Could not load this preview. Please try again.')}><DocumentViewerRenderer render={renderDocumentViewer} content={previewContent.content.blockData} /></DocumentRenderBoundary> : previewContent.content.kind === 'text' ? <pre className="whitespace-pre-wrap">{previewContent.content.content}</pre> : previewUrl && preview?.mime_type === 'application/pdf' ? <iframe title={preview.document_name} src={previewUrl} onError={() => setPreviewError(t('portal.previewError', 'Could not load this preview. Please try again.'))} className="w-full h-[70vh]" /> : previewUrl ? <img alt={preview?.document_name} src={previewUrl} onError={() => setPreviewError(t('portal.previewError', 'Could not load this preview. Please try again.'))} className="max-w-full max-h-[70vh] mx-auto" /> : <p>{t('portal.previewUnavailable', 'Preview is not available for this file type.')}</p>}
         </DialogContent>
       </Dialog>
     </div>
   );
+}
+
+class DocumentRenderBoundary extends Component<React.PropsWithChildren<{ fallback: string }>, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  render() { return this.state.failed ? <p role="alert" className="text-destructive">{this.props.fallback}</p> : this.props.children; }
+}
+
+function DocumentViewerRenderer({ render, content }: { render: (props: { content: unknown }) => React.ReactNode; content: unknown }) {
+  return <>{render({ content })}</>;
 }

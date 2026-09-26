@@ -227,7 +227,8 @@
     "downloadError": "Downloaden is mislukt. Probeer het opnieuw.",
     "notFound": "Dit document is niet meer beschikbaar.",
     "noContent": "Dit document bevat geen exporteerbare inhoud.",
-    "accessDenied": "Je hebt geen toegang tot dit document."
+    "accessDenied": "Je hebt geen toegang tot dit document.",
+    "loadingPreview": "Voorbeeld laden…"
   },
   "kb": {
     "title": "Kennisbank",

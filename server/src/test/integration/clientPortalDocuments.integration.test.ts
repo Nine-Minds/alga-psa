@@ -18,6 +18,13 @@ import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { createTenant, createClient, createUser } from '../../../test-utils/testDataFactory';
 import { setupCommonMocks, createMockUser, setMockUser } from '../../../test-utils/testMocks';
+import { NextRequest } from 'next/server';
+
+const portalRouteMocks = vi.hoisted(() => ({ downloadFile: vi.fn() }));
+vi.mock('@alga-psa/storage/StorageService', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/storage/StorageService')>();
+  return { ...actual, StorageService: { ...actual.StorageService, downloadFile: portalRouteMocks.downloadFile } };
+});
 
 let db: Knex;
 let tenantId: string;
@@ -27,6 +34,9 @@ let mspUserId: string;
 let getClientDocuments: typeof import('@alga-psa/client-portal/actions').getClientDocuments;
 let getClientDocumentFolders: typeof import('@alga-psa/client-portal/actions').getClientDocumentFolders;
 let downloadClientDocument: typeof import('@alga-psa/client-portal/actions').downloadClientDocument;
+let getClientDocumentContent: typeof import('@alga-psa/client-portal/actions/client-portal-actions/client-documents').getClientDocumentContent;
+let getClientPortalFile: typeof import('../../app/api/client-portal/documents/[documentId]/file/route').GET;
+let getClientPortalExport: typeof import('../../app/api/client-portal/documents/[documentId]/export/route').GET;
 
 // Mock the database module to return test database
 vi.mock('server/src/lib/db', async () => {
@@ -58,6 +68,13 @@ type CreatedIds = {
   ticketIds: string[];
   contractIds: string[];
   clientContractIds: string[];
+  storageProviderIds: string[];
+  storageBucketIds: string[];
+  fileIds: string[];
+  commentIds: string[];
+  commentThreadIds: string[];
+  commentAttachmentIds: string[];
+  foreignDocuments: Array<{ tenantId: string; documentId: string; userId: string }>;
 };
 
 let createdIds: CreatedIds = {
@@ -68,7 +85,8 @@ let createdIds: CreatedIds = {
   folderIds: [],
   ticketIds: [],
   contractIds: [],
-  clientContractIds: []
+  clientContractIds: [],
+  storageProviderIds: [], storageBucketIds: [], fileIds: [], commentIds: [], commentThreadIds: [], commentAttachmentIds: [], foreignDocuments: [],
 };
 
 function tenantTable(db: Knex, tenantId: string, table: string) {
@@ -86,11 +104,30 @@ async function cleanupCreatedRecords(db: Knex, tenantId: string, ids: CreatedIds
 
   // Delete in reverse dependency order
   for (const docId of ids.documentIds) {
+    await safeDelete('ticket_comment_attachments', { tenant: tenantId, document_id: docId });
+    await safeDelete('document_block_content', { tenant: tenantId, document_id: docId });
+    await safeDelete('document_content', { tenant: tenantId, document_id: docId });
     await safeDelete('document_associations', { tenant: tenantId, document_id: docId });
     await safeDelete('documents', { tenant: tenantId, document_id: docId });
   }
+  for (const record of ids.foreignDocuments) {
+    try {
+      await tenantDb(db, record.tenantId).table('document_associations').where({ document_id: record.documentId }).del();
+      await tenantDb(db, record.tenantId).table('documents').where({ document_id: record.documentId }).del();
+      await tenantDb(db, record.tenantId).table('users').where({ user_id: record.userId }).del();
+    } catch {
+      // Ignore cleanup issues in test teardown.
+    }
+  }
+
+  for (const commentId of ids.commentIds) await safeDelete('comments', { tenant: tenantId, comment_id: commentId });
+  for (const threadId of ids.commentThreadIds) await safeDelete('comment_threads', { tenant: tenantId, thread_id: threadId });
 
   await safeDelete('document_folders', { tenant: tenantId });
+
+  for (const fileId of ids.fileIds) await safeDelete('external_files', { tenant: tenantId, file_id: fileId });
+  for (const bucketId of ids.storageBucketIds) await safeDelete('storage_configurations', { tenant: tenantId, configuration_id: bucketId });
+  for (const providerId of ids.storageProviderIds) await safeDelete('storage_providers', { tenant: tenantId, provider_id: providerId });
 
   for (const ticketId of ids.ticketIds) {
     await safeDelete('tickets', { tenant: tenantId, ticket_id: ticketId });
@@ -308,6 +345,9 @@ describe('Client Portal Documents Integration Tests', () => {
     getClientDocuments = clientPortalActions.getClientDocuments;
     getClientDocumentFolders = clientPortalActions.getClientDocumentFolders;
     downloadClientDocument = clientPortalActions.downloadClientDocument;
+    getClientDocumentContent = (await import('@alga-psa/client-portal/actions/client-portal-actions/client-documents')).getClientDocumentContent;
+    getClientPortalFile = (await import('../../app/api/client-portal/documents/[documentId]/file/route')).GET;
+    getClientPortalExport = (await import('../../app/api/client-portal/documents/[documentId]/export/route')).GET;
   }, 120_000);
 
   afterAll(async () => {
@@ -326,9 +366,11 @@ describe('Client Portal Documents Integration Tests', () => {
       folderIds: [],
       ticketIds: [],
       contractIds: [],
-      clientContractIds: []
+      clientContractIds: [],
+      storageProviderIds: [], storageBucketIds: [], fileIds: [], commentIds: [], commentThreadIds: [], commentAttachmentIds: [], foreignDocuments: [],
     };
     vi.clearAllMocks();
+    portalRouteMocks.downloadFile.mockReset();
   });
 
   describe('T015: getClientDocuments visibility filtering', () => {
@@ -841,6 +883,150 @@ describe('Client Portal Documents Integration Tests', () => {
       expect(listed.documents.map((doc) => doc.document_id)).not.toContain(leakedDocumentId);
       expect(collectFolderPaths(folders)).not.toContain('/contracts/owner-only');
       await expect(downloadClientDocument(leakedDocumentId)).rejects.toThrow(/not found|access denied/i);
+    });
+  });
+
+  describe('Client portal content, file, and export routes use live visibility queries', () => {
+    it('denies another client, another tenant, hidden documents, and private comment attachments', async () => {
+      const clientAId = await createClient(db, tenantId, 'Route Client A');
+      const clientBId = await createClient(db, tenantId, 'Route Client B');
+      createdIds.clientIds.push(clientAId, clientBId);
+      const contactAId = await createContact(db, tenantId, clientAId, 'route-a@test.com');
+      createdIds.contactIds.push(contactAId);
+      const clientAUserId = await createClientUser(db, tenantId, contactAId);
+      createdIds.userIds.push(clientAUserId);
+
+      const anotherClientDocument = await createDocument(db, tenantId, mspUserId, 'Other Client Route Doc', true);
+      const hiddenDocument = await createDocument(db, tenantId, mspUserId, 'Hidden Route Doc', false);
+      const privateDocument = await createDocument(db, tenantId, mspUserId, 'Private Comment Attachment', true);
+      createdIds.documentIds.push(anotherClientDocument, hiddenDocument, privateDocument);
+      await createDocumentAssociation(db, tenantId, anotherClientDocument, clientBId, 'client');
+      await createDocumentAssociation(db, tenantId, hiddenDocument, clientAId, 'client');
+      await createDocumentAssociation(db, tenantId, privateDocument, clientAId, 'client');
+
+      const ticketId = uuidv4();
+      const threadId = uuidv4();
+      const commentId = uuidv4();
+      const attachmentId = uuidv4();
+      createdIds.ticketIds.push(ticketId);
+      createdIds.commentThreadIds.push(threadId);
+      createdIds.commentIds.push(commentId);
+      createdIds.commentAttachmentIds.push(attachmentId);
+      await tenantTable(db, tenantId, 'tickets').insert({
+        tenant: tenantId, ticket_id: ticketId, ticket_number: `DOC-${Date.now()}`, title: 'Private attachment ticket',
+        client_id: clientAId, entered_by: mspUserId, entered_at: new Date(), updated_at: new Date(), attributes: {},
+      });
+      await tenantTable(db, tenantId, 'comment_threads').insert({
+        tenant: tenantId, thread_id: threadId, ticket_id: ticketId, root_comment_id: commentId, is_internal: true,
+      });
+      await tenantTable(db, tenantId, 'comments').insert({
+        tenant: tenantId, comment_id: commentId, ticket_id: ticketId, thread_id: threadId, user_id: mspUserId,
+        note: 'private', is_internal: true, is_resolution: false,
+        author_type: 'internal', publish_state: 'published',
+      });
+      await tenantTable(db, tenantId, 'ticket_comment_attachments').insert({
+        tenant: tenantId, attachment_id: attachmentId, ticket_id: ticketId, document_id: privateDocument,
+        created_by: mspUserId, comment_id: commentId, state: 'attached', expires_at: new Date(Date.now() + 60_000),
+      });
+
+      const foreignTenantId = await createTenant(db, 'Foreign Document Route Tenant');
+      const foreignUserId = await createUser(db, foreignTenantId, { username: `foreign-${uuidv4().slice(0, 8)}` });
+      const foreignDocumentId = await createDocument(db, foreignTenantId, foreignUserId, 'Foreign Tenant Route Doc', true);
+      createdIds.foreignDocuments.push({ tenantId: foreignTenantId, documentId: foreignDocumentId, userId: foreignUserId });
+
+      const clientUser = createMockUser('client', { user_id: clientAUserId, tenant: tenantId, contact_id: contactAId });
+      setMockUser(clientUser, ['document:read']);
+      setupCommonMocks({ tenantId, userId: clientAUserId, user: clientUser, permissionCheck: () => true });
+      const callFile = (documentId: string) => getClientPortalFile(
+        new NextRequest(`http://localhost/api/client-portal/documents/${documentId}/file`),
+        { params: Promise.resolve({ documentId }) }
+      );
+      const callExport = (documentId: string) => getClientPortalExport(
+        new NextRequest(`http://localhost/api/client-portal/documents/${documentId}/export?format=md`),
+        { params: Promise.resolve({ documentId }) }
+      );
+
+      for (const documentId of [anotherClientDocument, hiddenDocument, privateDocument, foreignDocumentId]) {
+        expect((await callFile(documentId)).status).toBe(404);
+        expect((await callExport(documentId)).status).toBe(404);
+      }
+      expect(portalRouteMocks.downloadFile).not.toHaveBeenCalled();
+    });
+
+    it('serves a renamed upload, exports owner_client_id-only block content, and does not file PDF exports', async () => {
+      const clientId = await createClient(db, tenantId, 'Route Owner Client');
+      createdIds.clientIds.push(clientId);
+      const contactId = await createContact(db, tenantId, clientId, 'route-owner@test.com');
+      createdIds.contactIds.push(contactId);
+      const clientUserId = await createClientUser(db, tenantId, contactId);
+      createdIds.userIds.push(clientUserId);
+      const { contractId, clientContractId } = await createOwnedContract(db, tenantId, clientId, 'Route Owned Contract');
+      createdIds.contractIds.push(contractId);
+      createdIds.clientContractIds.push(clientContractId);
+
+      const fileDocumentId = await createDocument(db, tenantId, mspUserId, 'Portal renamed report', true);
+      const blockDocumentId = await createDocument(db, tenantId, mspUserId, 'Meeting Notes', true);
+      createdIds.documentIds.push(fileDocumentId, blockDocumentId);
+      await createDocumentAssociation(db, tenantId, fileDocumentId, clientId, 'client');
+      await createDocumentAssociation(db, tenantId, blockDocumentId, contractId, 'contract');
+      const blockData = [{ type: 'paragraph', content: [{ type: 'text', text: 'Owner contract meeting notes' }] }];
+      await tenantTable(db, tenantId, 'document_block_content').insert({ tenant: tenantId, document_id: blockDocumentId, block_data: JSON.stringify(blockData) });
+
+      const providerId = uuidv4();
+      const configurationId = uuidv4();
+      const fileId = uuidv4();
+      createdIds.storageProviderIds.push(providerId);
+      createdIds.storageBucketIds.push(configurationId);
+      createdIds.fileIds.push(fileId);
+      await tenantTable(db, tenantId, 'storage_providers').insert({
+        tenant: tenantId, provider_id: providerId, provider_type: 'local', provider_name: 'Portal route test', config: {},
+      });
+      await tenantTable(db, tenantId, 'storage_configurations').insert({
+        tenant: tenantId, configuration_id: configurationId, provider_id: providerId, name: 'Portal test', path: '/', is_default: true,
+      });
+      await tenantTable(db, tenantId, 'external_files').insert({
+        tenant: tenantId, file_id: fileId, file_name: 'stored-id', original_name: 'quarterly-report.xlsx',
+        mime_type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', file_size: 4,
+        storage_path: 'test/quarterly-report.xlsx', uploaded_by_id: mspUserId,
+      });
+      await tenantTable(db, tenantId, 'documents').where({ document_id: fileDocumentId }).update({
+        file_id: fileId, mime_type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+
+      portalRouteMocks.downloadFile.mockResolvedValue({ buffer: Buffer.from('xlsx'), metadata: { original_name: 'quarterly-report.xlsx', mime_type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', size: 4 } });
+      const clientUser = createMockUser('client', { user_id: clientUserId, tenant: tenantId, contact_id: contactId });
+      setMockUser(clientUser, ['document:read']);
+      setupCommonMocks({ tenantId, userId: clientUserId, user: clientUser, permissionCheck: () => true });
+
+      const contentResult = await getClientDocumentContent(blockDocumentId);
+      expect(contentResult.content).toMatchObject({ kind: 'block', blockData });
+      const fileResponse = await getClientPortalFile(
+        new NextRequest(`http://localhost/api/client-portal/documents/${fileDocumentId}/file`),
+        { params: Promise.resolve({ documentId: fileDocumentId }) }
+      );
+      expect(fileResponse.headers.get('Content-Disposition')).toContain('filename="quarterly-report.xlsx"');
+      expect(Buffer.from(await fileResponse.arrayBuffer()).toString()).toBe('xlsx');
+
+      const markdownResponse = await getClientPortalExport(
+        new NextRequest(`http://localhost/api/client-portal/documents/${blockDocumentId}/export?format=md`),
+        { params: Promise.resolve({ documentId: blockDocumentId }) }
+      );
+      expect(markdownResponse.status).toBe(200);
+      expect(await markdownResponse.text()).toContain('Owner contract meeting notes');
+
+      const { PDFGenerationService } = await import('@alga-psa/billing/services');
+      const renderBuffer = vi.spyOn(PDFGenerationService.prototype as any, 'generatePDFBuffer').mockResolvedValue(Buffer.from('%PDF-integration'));
+      const documentsBefore = await tenantTable(db, tenantId, 'documents').count('* as count').first();
+      const externalFilesBefore = await tenantTable(db, tenantId, 'external_files').count('* as count').first();
+      const pdfResponse = await getClientPortalExport(
+        new NextRequest(`http://localhost/api/client-portal/documents/${blockDocumentId}/export?format=pdf`),
+        { params: Promise.resolve({ documentId: blockDocumentId }) }
+      );
+      expect(pdfResponse.status).toBe(200);
+      expect(Buffer.from(await pdfResponse.arrayBuffer()).toString()).toBe('%PDF-integration');
+      expect(Number((await tenantTable(db, tenantId, 'documents').count('* as count').first())?.count)).toBe(Number(documentsBefore?.count));
+      expect(Number((await tenantTable(db, tenantId, 'external_files').count('* as count').first())?.count)).toBe(Number(externalFilesBefore?.count));
+      renderBuffer.mockRestore();
     });
   });
 });

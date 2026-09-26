@@ -227,7 +227,8 @@
     "downloadError": "Impossibile scaricare il documento. Riprova.",
     "notFound": "Questo documento non è più disponibile.",
     "noContent": "Questo documento non contiene dati da esportare.",
-    "accessDenied": "Non hai accesso a questo documento."
+    "accessDenied": "Non hai accesso a questo documento.",
+    "loadingPreview": "Caricamento anteprima…"
   },
   "kb": {
     "title": "Base di conoscenza",

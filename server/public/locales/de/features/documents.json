@@ -227,7 +227,8 @@
     "downloadError": "Dieses Dokument konnte nicht heruntergeladen werden. Bitte versuchen Sie es erneut.",
     "notFound": "Dieses Dokument ist nicht mehr verfügbar.",
     "noContent": "Dieses Dokument enthält keine exportierbaren Inhalte.",
-    "accessDenied": "Sie haben keinen Zugriff auf dieses Dokument."
+    "accessDenied": "Sie haben keinen Zugriff auf dieses Dokument.",
+    "loadingPreview": "Vorschau wird geladen …"
   },
   "kb": {
     "title": "Wissensdatenbank",

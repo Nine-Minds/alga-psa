@@ -241,7 +241,8 @@
     "downloadError": "Nie udało się pobrać dokumentu. Spróbuj ponownie.",
     "notFound": "Ten dokument jest już niedostępny.",
     "noContent": "Ten dokument nie zawiera treści do eksportu.",
-    "accessDenied": "Nie masz dostępu do tego dokumentu."
+    "accessDenied": "Nie masz dostępu do tego dokumentu.",
+    "loadingPreview": "Wczytywanie podglądu…"
   },
   "kb": {
     "title": "Baza wiedzy",

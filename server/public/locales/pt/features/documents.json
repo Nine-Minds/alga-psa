@@ -227,7 +227,8 @@
     "downloadError": "Não foi possível transferir este documento. Tente novamente.",
     "notFound": "Este documento já não está disponível.",
     "noContent": "Este documento não tem conteúdo para exportar.",
-    "accessDenied": "Não tem acesso a este documento."
+    "accessDenied": "Não tem acesso a este documento.",
+    "loadingPreview": "Carregando pré-visualização…"
   },
   "kb": {
     "title": "Base de conhecimento",
