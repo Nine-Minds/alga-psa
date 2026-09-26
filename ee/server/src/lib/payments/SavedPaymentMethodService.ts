@@ -3,6 +3,7 @@ import { tenantDb } from '@alga-psa/db';
 import { getConnection } from 'server/src/lib/db/db';
 import { v4 as uuidv4 } from 'uuid';
 import { createStripePaymentProvider } from './StripePaymentProvider';
+import { resolveInvoiceBillingRecipient } from '@alga-psa/billing/services';
 
 /** EE-owned bridge between hosted Stripe setup and profile-scoped payment_methods. */
 export class SavedPaymentMethodService {
@@ -16,14 +17,15 @@ export class SavedPaymentMethodService {
     const profile = await tenantDb(this.knex, this.tenantId).table('client_billing_profiles')
       .where({ client_id: clientId, billing_profile_id: billingProfileId, is_active: true }).first();
     if (!profile) throw new Error('Billing profile is unavailable');
-    const client = await tenantDb(this.knex, this.tenantId).table('clients').where({ client_id: clientId }).first();
-    if (!client) throw new Error('Client is unavailable');
+    const recipient = await resolveInvoiceBillingRecipient({ knexOrTrx: this.knex, tenantId: this.tenantId, clientId });
+    if (!recipient.clientName) throw new Error('Client is unavailable');
     const provider = createStripePaymentProvider(this.tenantId);
-    const customerId = await provider.getOrCreateCustomer(clientId, String(client.billing_email ?? ''), String(profile.name ?? client.client_name ?? ''), billingProfileId);
+    const customerId = await provider.getOrCreateCustomer(clientId, recipient.recipientEmail, String(profile.name ?? recipient.clientName), billingProfileId);
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL;
     if (!baseUrl) throw new Error('Application base URL is not configured');
     const safeReturnTo = returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//') ? returnTo : '/client-portal/billing';
-    const session = await provider.createPaymentMethodSetupSession({ clientId, billingProfileId, customerId, currency: 'usd',
+    const currency = String(profile.currency_code ?? profile.currency ?? process.env.DEFAULT_CURRENCY ?? 'USD').toLowerCase();
+    const session = await provider.createPaymentMethodSetupSession({ clientId, billingProfileId, customerId, currency,
       successUrl: `${baseUrl}/client-portal/billing/payment-methods/setup-complete?session_id={CHECKOUT_SESSION_ID}&returnTo=${encodeURIComponent(safeReturnTo)}`,
       cancelUrl: `${baseUrl}${safeReturnTo}` });
     return session;
@@ -35,6 +37,7 @@ export class SavedPaymentMethodService {
       ? await stripe.getSetupIntentFromCheckout(externalSessionOrSetupIntentId)
       : await stripe.getSetupIntent(externalSessionOrSetupIntentId);
     const metadata = eventObject.metadata;
+    if (eventObject.status !== 'succeeded') throw new Error(`Stripe SetupIntent is not complete (status: ${eventObject.status})`);
     const clientId = metadata?.client_id;
     const billingProfileId = metadata?.billing_profile_id;
     const paymentMethodExternalId = typeof eventObject.payment_method === 'string' ? eventObject.payment_method : eventObject.payment_method?.id;

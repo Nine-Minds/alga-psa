@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { classifyAutopayFailure, retryAt, shouldScheduleAutopay } from '../../../lib/payments/autopayPolicy';
+import { classifyAutopayFailure, isMissedFinalizeCandidate, retryAt, shouldScheduleAutopay } from '../../../lib/payments/autopayPolicy';
 import { buildAutopayPaymentIntentRequest, mapStripeAutopayError } from '../../../lib/payments/stripeAutopayParams';
 
 const chargeRequest = {
@@ -36,6 +36,15 @@ describe('autopay policy and Stripe request construction', () => {
   it('applies the configured day offsets from the failure time', () => {
     expect(retryAt(new Date('2026-01-01T00:00:00Z'), [3, 5, 7], 2)?.toISOString()).toBe('2026-01-06T00:00:00.000Z');
     expect(retryAt(new Date(), [3], 2)).toBeNull();
+  });
+
+  it('only sweeps recent sent invoices finalized after enrollment', () => {
+    const now = new Date('2026-09-26T00:00:00Z');
+    const base = { status: 'sent', invoiceType: 'standard', finalizedAt: '2026-09-25T00:00:00Z', authorizedAt: '2026-09-24T00:00:00Z', now };
+    expect(isMissedFinalizeCandidate(base)).toBe(true);
+    expect(isMissedFinalizeCandidate({ ...base, authorizedAt: '2026-09-26T00:00:00Z' })).toBe(false);
+    expect(isMissedFinalizeCandidate({ ...base, finalizedAt: '2026-09-01T00:00:00Z' })).toBe(false);
+    expect(isMissedFinalizeCandidate({ ...base, status: 'partially_applied' })).toBe(false);
   });
 
   it('skips attempts unless every chargeability and invoice rule passes', () => {

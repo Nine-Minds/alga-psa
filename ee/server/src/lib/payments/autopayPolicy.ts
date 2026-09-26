@@ -6,6 +6,18 @@ export function shouldScheduleAutopay(input: {
     input.chargeableMethod && input.providerEnabled && input.balanceCents > 0 && input.currencySupported && !input.hasOpenAttempt;
 }
 
+export function isMissedFinalizeCandidate(input: {
+  status: string; invoiceType?: string | null; finalizedAt?: Date | string | null;
+  authorizedAt?: Date | string | null; now?: Date; maxAgeDays?: number;
+}): boolean {
+  if (input.status !== 'sent' || input.invoiceType === 'credit_note' || !input.finalizedAt || !input.authorizedAt) return false;
+  const finalizedAt = new Date(input.finalizedAt).getTime();
+  const authorizedAt = new Date(input.authorizedAt).getTime();
+  const now = (input.now ?? new Date()).getTime();
+  const windowMs = (input.maxAgeDays ?? 7) * 24 * 60 * 60 * 1000;
+  return Number.isFinite(finalizedAt) && Number.isFinite(authorizedAt) && finalizedAt >= now - windowMs && finalizedAt <= now && authorizedAt <= finalizedAt;
+}
+
 export function classifyAutopayFailure(code?: string, declineCode?: string, attemptNumber = 1, retryCount = 3): { retryable: boolean; hardDecline: boolean } {
   const decline = declineCode ?? code ?? '';
   const hardDecline = ['stolen_card', 'lost_card', 'fraudulent', 'expired_card'].includes(decline) || (decline === 'do_not_honor' && attemptNumber > retryCount);

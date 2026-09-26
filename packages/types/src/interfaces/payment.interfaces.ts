@@ -253,6 +253,7 @@ export interface PaymentProvider {
   retrieveSavedPaymentMethod?(externalId: string): Promise<SavedPaymentMethodDetails>;
   detachPaymentMethod?(externalId: string): Promise<void>;
   chargeSavedPaymentMethod?(request: ChargeSavedPaymentMethodRequest): Promise<SavedPaymentMethodChargeResult>;
+  retrieveAttemptPaymentIntent?(attemptId: string): Promise<unknown | null>;
 
   /**
    * Creates a payment link for an invoice.
