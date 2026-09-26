@@ -1093,6 +1093,29 @@ async function findExistingRecurringInvoiceForSelectionInput(params: {
   selectorInput: IRecurringDueSelectionInput;
 }): Promise<{ invoiceId: string } | null> {
   const executionWindow = params.selectorInput.executionWindow;
+  const selectedObligations = executionWindow.kind === 'client_cadence_window'
+    ? await withTransaction(params.knex, async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, params.tenant);
+      const query = db.table('recurring_service_periods as rsp');
+      db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_line_id', 'rsp.obligation_id');
+      db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
+      db.tenantJoin(query, 'client_contracts as cc', 'cc.contract_id', 'ct.contract_id');
+      return query.where({
+        'rsp.cadence_owner': 'client',
+        'rsp.schedule_key': executionWindow.scheduleKey,
+        'rsp.period_key': executionWindow.periodKey,
+        'rsp.invoice_window_start': params.selectorInput.windowStart,
+        'rsp.invoice_window_end': params.selectorInput.windowEnd,
+        'ct.owner_client_id': params.selectorInput.clientId,
+        'cc.client_id': params.selectorInput.clientId,
+      }).whereIn('rsp.obligation_type', [...POST_DROP_RECURRING_OBLIGATION_TYPES])
+        .whereNotIn('rsp.lifecycle_state', ['archived', 'superseded'])
+        .select('rsp.obligation_id', 'rsp.invoice_id', 'rsp.invoice_charge_id', 'cl.billing_profile_id as line_profile_id', 'ct.contract_id', 'cc.billing_profile_id as contract_profile_id');
+    })
+    : [];
+  const selectedProfileId = executionWindow.kind === 'client_cadence_window'
+    ? await resolveRecurringSelectionBillingProfileId(params.knex, params.tenant, [params.selectorInput])
+    : null;
   const findExistingByChargeDetails = async () => withTransaction(
     params.knex,
     async (trx: Knex.Transaction) => {
@@ -1118,7 +1141,12 @@ async function findExistingRecurringInvoiceForSelectionInput(params: {
         );
         query.where('clsc.contract_line_id', executionWindow.contractLineId);
       } else if (executionWindow.kind === 'client_cadence_window') {
-        query.where('i.client_id', params.selectorInput.clientId);
+        const lineIds = [...new Set(selectedObligations.map((row: any) => row.obligation_id).filter(Boolean))];
+        if (!lineIds.length) return null;
+        db.tenantJoin(query, 'contract_line_service_configuration as clsc', 'clsc.config_id', 'iid.config_id');
+        query.where('i.client_id', params.selectorInput.clientId)
+          .whereIn('clsc.contract_line_id', lineIds)
+          .where('i.billing_profile_id', selectedProfileId);
       } else {
         return null;
       }
@@ -1133,22 +1161,16 @@ async function findExistingRecurringInvoiceForSelectionInput(params: {
     && executionWindow.scheduleKey
     && executionWindow.periodKey
   ) {
-    const linkedRow = await withTransaction(params.knex, async (trx: Knex.Transaction) => {
-      return tenantDb(trx, params.tenant).table('recurring_service_periods')
-        .where({
-          cadence_owner: 'client',
-          schedule_key: executionWindow.scheduleKey,
-          period_key: executionWindow.periodKey,
-          invoice_window_start: params.selectorInput.windowStart,
-          invoice_window_end: params.selectorInput.windowEnd,
-        })
-        .whereNotNull('invoice_id')
+    const linkedInvoices = [...new Set(selectedObligations.map((row: any) => row.invoice_id).filter(Boolean))];
+    if (linkedInvoices.length) {
+      const linked = await tenantDb(params.knex, params.tenant).table('invoices')
+        .whereIn('invoice_id', linkedInvoices)
+        .where({ client_id: params.selectorInput.clientId })
+        .whereNotIn('status', ['cancelled'])
         .first('invoice_id');
-    });
-
-    return linkedRow?.invoice_id
-      ? { invoiceId: linkedRow.invoice_id }
-      : findExistingByChargeDetails();
+      if (linked?.invoice_id) return { invoiceId: linked.invoice_id };
+    }
+    return findExistingByChargeDetails();
   }
 
   if (
@@ -2479,6 +2501,34 @@ async function resolveRecurringSelectionBillingProfileId(
     const executionWindow = selector.executionWindow;
     if (selector.clientId !== clientId || (executionWindow.clientId && executionWindow.clientId !== clientId)) {
       throw new Error('A recurring selection contains inconsistent client identifiers.');
+    }
+    if (executionWindow.kind === 'client_cadence_window') {
+      if (!executionWindow.scheduleKey || !executionWindow.periodKey) {
+        throw new Error('A client-cadence recurring selection must include its schedule and period keys.');
+      }
+      const db = tenantDb(knex, tenant);
+      const query = db.table('recurring_service_periods as rsp');
+      db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_line_id', 'rsp.obligation_id');
+      db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
+      db.tenantJoin(query, 'client_contracts as cc', 'cc.contract_id', 'ct.contract_id');
+      const obligations = await query.where({
+        'rsp.cadence_owner': 'client',
+        'rsp.schedule_key': executionWindow.scheduleKey,
+        'rsp.period_key': executionWindow.periodKey,
+        'rsp.invoice_window_start': selector.windowStart,
+        'rsp.invoice_window_end': selector.windowEnd,
+        'ct.owner_client_id': clientId,
+        'cc.client_id': clientId,
+      }).whereIn('rsp.obligation_type', [...POST_DROP_RECURRING_OBLIGATION_TYPES])
+        .whereNotIn('rsp.lifecycle_state', ['archived', 'superseded'])
+        .select('rsp.obligation_id', 'cl.billing_profile_id as line_profile_id', 'cc.billing_profile_id as contract_profile_id');
+      if (obligations.length === 0) {
+        throw new Error('The selected client-cadence period does not resolve to an eligible persisted contract-line obligation for this client and tenant.');
+      }
+      for (const obligation of obligations) {
+        resolvedProfileIds.add(obligation.line_profile_id ?? obligation.contract_profile_id ?? defaultProfileId);
+      }
+      continue;
     }
     if (executionWindow.contractLineId) {
       const assignment = await tenantDb(knex, tenant)

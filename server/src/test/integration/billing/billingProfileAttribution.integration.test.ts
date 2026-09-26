@@ -8,6 +8,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import { formatInvoiceCalendarDate } from '../../../../../packages/billing/src/actions/invoiceCalendarDate';
 import { PER_PROFILE_INVOICING_FLAG } from '../../../../../packages/billing/src/lib/billing/billingProfileInvoiceScope';
 import { buildContractCadenceDueSelectionInput } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
+import { getAvailableRecurringDueWork } from '@alga-psa/billing/actions/billingAndTax';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 import { setupCommonMocks } from '../../../../test-utils/testMocks';
 import {
@@ -771,6 +772,190 @@ describe('billing profiles S2 — charge attribution and snapshots (T004, T010, 
         && flagOffCharges.some((charge) => charge.item_id === period.invoice_charge_id),
       )).toBe(true);
     }
+  }, HOOK_TIMEOUT);
+
+  it('T004: client-cadence due-reader selectors resolve obligations, scope duplicates, and roll back failures', async () => {
+    const { clientId } = await seedClient('T004 Reader Shaped Client Cadence');
+    await table('clients').where({ client_id: clientId }).update({
+      preferred_payment_method: 'credit_card',
+      payment_terms: 'net_30',
+    });
+    const cardProfileId = await ensureDefaultBillingProfile({ db, tenantId }, clientId, { name: 'Reader Card' });
+    const checkProfileId = await createBillingProfile({ db, tenantId }, clientId, 'Reader Check');
+    await table('client_billing_profiles').where({ billing_profile_id: checkProfileId })
+      .update({ preferred_payment_method: 'check', payment_terms: 'due_on_receipt', bills_separately: true });
+
+    const assignments: Array<{ label: string; profileId: string; contractLineId: string }> = [];
+    for (const entry of [
+      { label: 'Card', profileId: cardProfileId },
+      { label: 'Check', profileId: checkProfileId },
+    ]) {
+      const serviceId = await createTestService({ db, tenantId, clientId } as any, {
+        service_name: `T004 Reader ${entry.label} Service`, billing_method: 'fixed',
+        default_rate: FIXED_RATE_CENTS, unit_of_measure: 'month', tax_region: 'US-NY',
+      });
+      await ensureUsdServicePrice({ db, tenantId }, serviceId, FIXED_RATE_CENTS);
+      const assignment = await createFixedPlanAssignment({ db, tenantId, clientId } as any, serviceId, {
+        planName: `T004 Reader ${entry.label} Plan`, billingFrequency: 'monthly',
+        baseRateCents: FIXED_RATE_CENTS, startDate: '2024-12-01', endDate: null,
+        billingTiming: 'arrears', cadenceOwner: 'client', clientId, enableProration: false,
+      });
+      await assignContractToProfile(
+        { db, tenantId },
+        assignment.clientContractId,
+        entry.label === 'Check' ? cardProfileId : entry.profileId,
+      );
+      if (entry.label === 'Check') {
+        await table('contract_lines').where({ contract_line_id: assignment.contractLineId })
+          .update({ billing_profile_id: checkProfileId });
+      }
+      await db.transaction(async (trx) => syncRecurringServicePeriodsForContractLine(trx, {
+        tenant: tenantId, contractLineId: assignment.contractLineId, sourceRunPrefix: 't004-client-cadence-reader',
+      }));
+      assignments.push({ label: entry.label, profileId: entry.profileId, contractLineId: assignment.contractLineId });
+    }
+
+    const dueWork = await getAvailableRecurringDueWork({
+      dateRange: { from: JANUARY_START, to: FEBRUARY_START }, pageSize: 100,
+    } as any) as any;
+    const members = dueWork.invoiceCandidates.flatMap((candidate: any) => candidate.members)
+      .filter((member: any) => member.clientId === clientId
+        && member.servicePeriodStart === JANUARY_START
+        && member.servicePeriodEnd === FEBRUARY_START);
+    expect(members).toHaveLength(2);
+    const selectors = members.map((member: any) => member.selectorInput);
+    for (const selector of selectors) {
+      expect(selector.executionWindow).toMatchObject({ kind: 'client_cadence_window', cadenceOwner: 'client' });
+      expect(selector.executionWindow.scheduleKey).toBeTruthy();
+      expect(selector.executionWindow.periodKey).toBeTruthy();
+      expect(selector.executionWindow.contractLineId).toBeUndefined();
+      expect(selector.executionWindow.contractId).toBeUndefined();
+    }
+
+    const core = await import('@alga-psa/core/server');
+    const originalIsEnabled = core.featureFlags.isEnabled.bind(core.featureFlags);
+    perProfileFlagSpy = vi.spyOn(core.featureFlags, 'isEnabled').mockImplementation(async (flag, context) => {
+      if (flag === PER_PROFILE_INVOICING_FLAG) return perProfileInvoicingEnabledInTest;
+      return originalIsEnabled(flag, context);
+    });
+    perProfileInvoicingEnabledInTest = true;
+    transactionControl.useRealTransactions = true;
+
+    const invoiceCountBefore = Number((await table('invoices').where({ client_id: clientId })
+      .count<{ count: string }[]>('* as count'))[0].count);
+    const checkSelector = selectors.find((selector: any) => {
+      const member = members.find((candidate: any) => candidate.selectorInput.executionWindow.scheduleKey === selector.executionWindow.scheduleKey);
+      return member?.contractLineName === 'T004 Reader Check Plan';
+    });
+    const cardSelector = selectors.find((selector: any) => selector !== checkSelector);
+    expect(checkSelector).toBeTruthy();
+    const triggerName = 't004_fail_charge_persistence';
+    const functionName = 't004_fail_charge_persistence_fn';
+    await db.raw(`CREATE OR REPLACE FUNCTION ${functionName}() RETURNS trigger AS $$
+      BEGIN
+        IF NEW.tenant::text = TG_ARGV[0] THEN
+          RAISE EXCEPTION 'T004 injected charge persistence failure';
+        END IF;
+        RETURN NEW;
+      END;
+    $$ LANGUAGE plpgsql`);
+    await db.raw(`DROP TRIGGER IF EXISTS ${triggerName} ON invoice_charges`);
+    await db.raw(`CREATE TRIGGER ${triggerName} BEFORE INSERT ON invoice_charges
+      FOR EACH ROW EXECUTE FUNCTION ${functionName}('${tenantId}')`);
+    let badRun: any;
+    try {
+      badRun = await generateGroupedInvoicesAsRecurringBillingRun({
+        groupedTargets: [{ groupKey: 'T004-reader-rollback', selectorInputs: [checkSelector], billingCycleId: null }],
+      });
+    } finally {
+      await db.raw(`DROP TRIGGER IF EXISTS ${triggerName} ON invoice_charges`);
+      await db.raw(`DROP FUNCTION IF EXISTS ${functionName}()`);
+    }
+    expect(badRun).toMatchObject({ invoicesCreated: 0, failedCount: 1 });
+    expect(Number((await table('invoices').where({ client_id: clientId }).count<{ count: string }[]>('* as count'))[0].count))
+      .toBe(invoiceCountBefore);
+    expect(await table('invoice_charges as ic').join('invoices as i', 'i.invoice_id', 'ic.invoice_id')
+      .where('i.client_id', clientId)).toHaveLength(0);
+    const periodState = async () => table('recurring_service_periods')
+      .whereIn('obligation_id', assignments.map((item) => item.contractLineId))
+      .where({ invoice_window_start: selectors[0].windowStart, invoice_window_end: selectors[0].windowEnd })
+      .select('lifecycle_state', 'invoice_id', 'invoice_charge_id');
+    expect((await periodState()).every((row: any) => row.lifecycle_state !== 'billed'
+      && row.invoice_id == null && row.invoice_charge_id == null)).toBe(true);
+
+    const generateOne = async (selectorInputs: any[], groupKey: string) => {
+      const result = await generateGroupedInvoicesAsRecurringBillingRun({
+        groupedTargets: [{ groupKey, selectorInputs, billingCycleId: null }],
+      });
+      expect(result).toMatchObject({ invoicesCreated: 1, failedCount: 0 });
+      return table('invoices').where({ client_id: clientId }).orderBy('created_at', 'desc').first();
+    };
+
+    // The mixed selection resolves to the separately billed Check profile.
+    // Card is excluded from that invoice and remains independently billable.
+    const checkInvoice = await generateOne(selectors, 'T004-reader-mixed');
+    expect(checkInvoice).toMatchObject({ billing_profile_id: checkProfileId, payment_method: 'check' });
+    expect(await periodState()).toEqual(expect.arrayContaining([
+      expect.objectContaining({ lifecycle_state: 'billed', invoice_id: checkInvoice.invoice_id }),
+      expect.objectContaining({ lifecycle_state: expect.not.stringMatching(/^billed$/), invoice_id: null }),
+    ]));
+    expect(String(checkInvoice.due_date).slice(0, 10)).toBe(String(checkInvoice.invoice_date).slice(0, 10));
+    const checkCharges = await chargesFor(checkInvoice.invoice_id);
+    expect(checkCharges).toHaveLength(1);
+    expect(Number(checkCharges[0].net_amount)).toBe(FIXED_RATE_CENTS);
+    expect(checkCharges[0].billing_profile_id).toBe(checkProfileId);
+    const checkPeriods = await table('recurring_service_periods')
+      .where({ obligation_id: assignments.find((item) => item.label === 'Check')!.contractLineId,
+        invoice_window_start: selectors[0].windowStart, invoice_window_end: selectors[0].windowEnd })
+      .select('lifecycle_state', 'invoice_id', 'invoice_charge_id');
+    expect(checkPeriods.length).toBeGreaterThan(0);
+    expect(checkPeriods.every((row: any) => row.lifecycle_state === 'billed'
+      && row.invoice_id === checkInvoice.invoice_id
+      && checkCharges.some((charge) => charge.item_id === row.invoice_charge_id))).toBe(true);
+
+    const cardInvoice = await generateOne([cardSelector], 'T004-reader-independent-card');
+    expect(cardInvoice).toMatchObject({ billing_profile_id: cardProfileId, payment_method: 'credit_card' });
+
+    // A persisted invoice link remains authoritative if an administrator
+    // later changes the selected line's profile assignment.
+    await table('contract_lines')
+      .where({ contract_line_id: assignments.find((item) => item.label === 'Check')!.contractLineId })
+      .update({ billing_profile_id: cardProfileId });
+    const duplicate = await generateGroupedInvoicesAsRecurringBillingRun({
+      groupedTargets: [{ groupKey: 'T004-reader-real-duplicate', selectorInputs: [checkSelector], billingCycleId: null }],
+    });
+    expect(duplicate).toMatchObject({ invoicesCreated: 0, failedCount: 0 });
+    expect(Number((await table('invoices').where({ client_id: clientId }).count<{ count: string }[]>('* as count'))[0].count))
+      .toBe(invoiceCountBefore + 2);
+    await table('contract_lines')
+      .where({ contract_line_id: assignments.find((item) => item.label === 'Check')!.contractLineId })
+      .update({ billing_profile_id: checkProfileId });
+
+    const nextDueWork = await getAvailableRecurringDueWork({
+      dateRange: { from: FEBRUARY_START, to: '2025-03-01' }, pageSize: 100,
+    } as any) as any;
+    const nextMembers = nextDueWork.invoiceCandidates.flatMap((candidate: any) => candidate.members)
+      .filter((member: any) => member.clientId === clientId
+        && member.servicePeriodStart === FEBRUARY_START
+        && member.servicePeriodEnd === '2025-03-01');
+    const nextCheckSelector = nextMembers.find((member: any) => member.contractLineName === 'T004 Reader Check Plan')?.selectorInput;
+    expect(nextMembers).toHaveLength(2);
+    expect(nextCheckSelector?.executionWindow).toMatchObject({ kind: 'client_cadence_window' });
+    const checkOnly = await generateOne([nextCheckSelector], 'T004-reader-check-only');
+    expect(checkOnly).toMatchObject({ billing_profile_id: checkProfileId, payment_method: 'check' });
+    expect(String(checkOnly.due_date).slice(0, 10)).toBe(String(checkOnly.invoice_date).slice(0, 10));
+    const checkOnlyCharges = await chargesFor(checkOnly.invoice_id);
+    expect(checkOnlyCharges).toHaveLength(1);
+    expect(Number(checkOnlyCharges[0].net_amount)).toBe(FIXED_RATE_CENTS);
+    expect(checkOnlyCharges[0].billing_profile_id).toBe(checkProfileId);
+    const checkOnlyPeriods = await table('recurring_service_periods')
+      .where({ obligation_id: assignments.find((item) => item.label === 'Check')!.contractLineId,
+        invoice_window_start: nextCheckSelector.windowStart, invoice_window_end: nextCheckSelector.windowEnd })
+      .select('lifecycle_state', 'invoice_id', 'invoice_charge_id');
+    expect(checkOnlyPeriods.length).toBeGreaterThan(0);
+    expect(checkOnlyPeriods.every((row: any) => row.lifecycle_state === 'billed'
+      && row.invoice_id === checkOnly.invoice_id
+      && checkOnlyCharges.some((charge) => charge.item_id === row.invoice_charge_id))).toBe(true);
   }, HOOK_TIMEOUT);
 
   // T014 / D4 — shape A (multi-site group). The contract owns the segment, and

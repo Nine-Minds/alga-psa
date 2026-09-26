@@ -461,6 +461,46 @@ stopped. Live Generate-through-UI and portal acceptance remain pending.
 
 ### Fresh mitigation checks
 
+- (2026-09-26) Recurring profile repair follows the actual `client_cadence_window`
+  selector emitted by `getAvailableRecurringDueWork`: `scheduleKey` and
+  `periodKey` are present while contract IDs are intentionally absent. T004
+  now reads those selectors from the due reader and proves persisted-obligation
+  profile resolution, Check profile/method/terms/charge linkage, sibling work
+  remaining billable and independently generating, duplicate protection after
+  profile reassignment, and failure rollback in the dedicated recurring
+  acceptance database. Once an obligation has a non-cancelled invoice link,
+  that link remains authoritative even if its line's profile later changes.
+- (2026-09-26) Smoke reproduction retained on client
+  `a3ad6e99-5ed9-4a1c-9cf3-b0b49c1c3d84`: child profile
+  `c2981c43-4afd-47ec-bd53-bb372f4c62c0` (PMR-2100-Check) is Check / Due on
+  Receipt; the Check charge is $25. The report's September 26 invoice-date
+  scenario expects that same due date. The live mixed run produced Card first
+  and left Check unlinked; a later Check attempt falsely succeeded without an
+  invoice, while a clean-window Check-only attempt failed. These are the exact
+  defects the reader-shaped T004 now covers. Retained period receipts identify
+  the Card obligation as `21e2cb88-5683-4dd6-b6cd-8ded0cd1af41` and Check as
+  `8adb8b2a-9817-4094-83d2-2b3d01106dba`; the Card schedule selector in
+  `live-selector.txt` is
+  `schedule:dd8cb218-d46d-47f3-be27-8aa50aad5fce:client_contract_line:21e2cb88-5683-4dd6-b6cd-8ded0cd1af41:client:arrears`.
+  No retained smoke data was edited.
+- (2026-09-26) Dedicated verification after mitigation: server Vitest command
+  `npx vitest run src/test/integration/billing/billingProfilePaymentMethod.integration.test.ts src/test/integration/billing/billingProfileAttribution.integration.test.ts --pool=forks --maxWorkers=1`
+  passed 13/13 using the suites' dedicated databases; extended T004 includes an
+  injected charge-persistence failure proving transaction rollback and a
+  duplicate retry after Check's line is reassigned to the default profile.
+  `packages/billing` typecheck/build and `packages/client-portal` typecheck
+  passed. The first server typecheck attempt found malformed ignored generated
+  route declarations; `npx next typegen` regenerated those declarations without
+  starting the server, and
+  `NODE_OPTIONS=--max-old-space-size=12288 npm run typecheck` then passed.
+  A later default-heap billing typecheck hit Node's 4 GiB heap limit; rerunning
+  `NODE_OPTIONS=--max-old-space-size=12288 npm run typecheck` in
+  `packages/billing` passed, and its `npm run build` passed.
+  Client-portal `npm run build` reproduced tsup's `No input files` baseline;
+  `main` also defines bare `"build": "tsup"` and tracks no client-portal tsup
+  config/input. No Next build, server, browser acceptance, or live acceptance
+  was run.
+
 - Read-only schema check on local-test database `server`: both
   `client_billing_profiles.preferred_payment_method` and
   `invoices.payment_method` exist, and migration
@@ -470,17 +510,16 @@ stopped. Live Generate-through-UI and portal acceptance remain pending.
   passed against dedicated test databases.
 - Offline email link, invoice adapter, portal payment action/list, and supported
   pay-page route suites: 36/36 passed.
-- Server typecheck with `NODE_OPTIONS=--max-old-space-size=12288`, client-portal
-  typecheck, and clients typecheck passed. Billing typecheck initially hit the
-  default Node heap limit while concurrent checks were running; the documented
-  12 GiB rerun and billing build both passed.
+- Earlier mitigation checks recorded successful server, client-portal, clients,
+  and billing typechecks; this rerun regenerated malformed ignored route types
+  and passed server typechecking without changing tracked configuration.
 - `packages/client-portal npm run build` still fails with tsup `No input files,
   try "tsup <your-file>" instead`. This is the package baseline: both this
   branch and `main` define `build` as bare `tsup` and track no tsup config for
   the package. It is not a regression from this feature.
 - The full server/Next build was not run: the existing `server/.next` cache is
-  7.6 GiB and only 12 GiB is free on the shared filesystem. The focused package
-  builds and all requested typechecks completed.
+  7.7 GiB and only 7.7 GiB is now free on the shared filesystem. Focused
+  package builds and typechecks are reported with their current results above.
 - No app server was started. Invitation/activation, authenticated portal row
   and detail controls, direct-pay behavior, and Generate-through-UI recurring
   acceptance remain unverified.
