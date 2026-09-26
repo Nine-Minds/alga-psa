@@ -6,7 +6,7 @@ import { validateRequiredConfiguration, validateDatabaseConnectivity, validateSe
 import { config } from 'dotenv';
 import User from '@alga-psa/db/models/user';
 import { tenantDb } from '@alga-psa/db';
-import { hashPassword, generateSecurePassword } from 'server/src/utils/encryption/encryption';
+import { hashPassword, verifyPassword, generateSecurePassword } from 'server/src/utils/encryption/encryption';
 import { JobScheduler, IJobScheduler } from 'server/src/lib/jobs/jobScheduler';
 import { JobService } from 'server/src/services/job.service';
 import { InvoiceZipJobHandler } from 'server/src/lib/jobs/handlers/invoiceZipHandler';
@@ -778,9 +778,13 @@ async function setupDevelopmentEnvironment() {
   const glinda = await User.findUserByEmail("glinda@emeraldcity.oz");
   await initializeDevelopmentCredential({
     user: glinda,
+    configuredPassword: process.env.DEV_LOGIN_PASSWORD,
+    recoverExistingCredential: process.env.DEV_LOGIN_PASSWORD_RECOVERY === 'true',
     generatePassword: generateSecurePassword,
     hashPassword,
+    verifyPassword,
     updatePasswordIfUnchanged: User.updatePasswordIfUnchanged,
+    readCurrentHash: User.getPasswordHash,
     log: (message) => logger.info(message),
   });
 

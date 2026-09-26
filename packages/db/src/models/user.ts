@@ -347,6 +347,15 @@ const User = {
     return updated > 0;
   },
 
+  getPasswordHash: async (user_id: string, tenant: string): Promise<string | null> => {
+    const db = await getAdminConnection();
+    const user = await tenantDb(db, tenant).table<IUser>('users')
+      .select('hashed_password')
+      .where({ user_id })
+      .first();
+    return user?.hashed_password ?? null;
+  },
+
   verifyPassword: async (user_id: string, password: string): Promise<boolean> => {
     const db = await getAdminConnection();
     try {

@@ -33,7 +33,9 @@ describe('development credential initialization', () => {
       user: { ...user, hashed_password: storedHash },
       generatePassword,
       hashPassword,
+      verifyPassword,
       updatePasswordIfUnchanged,
+      readCurrentHash: async () => storedHash,
       log,
     });
 
@@ -48,7 +50,9 @@ describe('development credential initialization', () => {
       user: { ...user, hashed_password: storedHash },
       generatePassword,
       hashPassword,
+      verifyPassword,
       updatePasswordIfUnchanged,
+      readCurrentHash: async () => storedHash,
       log,
     });
 
@@ -71,7 +75,9 @@ describe('development credential initialization', () => {
       user: { ...user, hashed_password: null },
       generatePassword: () => generated[index],
       hashPassword,
+      verifyPassword,
       updatePasswordIfUnchanged,
+      readCurrentHash: async () => storedHash,
       log,
     }));
 
