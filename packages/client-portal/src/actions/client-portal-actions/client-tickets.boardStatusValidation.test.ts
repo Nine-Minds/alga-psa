@@ -159,6 +159,16 @@ function createClientPortalTrx(overrides: {
         };
       }
 
+      // The creating contact belongs to no billing profile here, so ticket
+      // creation leaves attribution to the location → client-default chain.
+      if (table === 'billing_profile_contacts as bpc') {
+        return {
+          where: vi.fn().mockReturnValue({
+            select: vi.fn().mockResolvedValue([]),
+          }),
+        };
+      }
+
       if (table === 'statuses') {
         let whereObj: Record<string, unknown> = {};
         let directSelectable: boolean | null = null;

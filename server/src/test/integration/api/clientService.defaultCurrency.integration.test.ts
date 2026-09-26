@@ -106,6 +106,48 @@ describe('client currency and billing-profile lifecycle integration', () => {
     }
   });
 
+  it('rejects location fields, ignores unknown keys, updates real columns, and preserves omitted flags', async () => {
+    for (const [field, value] of [['email', 'x@example.com'], ['phone_no', '555-0100'], ['address', '1 Main St']] as const) {
+      const result = updateClientSchema.safeParse({ [field]: value });
+      expect(result.success).toBe(false);
+      if (!result.success) expect(result.error.issues.some((issue) => issue.path.includes(field))).toBe(true);
+    }
+
+    const tenantId = await createTenant();
+    const clientId = await seedClient(tenantId);
+    const initialFlags = {
+      ...(hasColumn(clientColumns, 'auto_invoice') ? { auto_invoice: true } : {}),
+      ...(hasColumn(clientColumns, 'is_tax_exempt') ? { is_tax_exempt: true } : {}),
+      ...(hasColumn(clientColumns, 'is_inactive') ? { is_inactive: true } : {}),
+    };
+    await tenantTable(tenantId, 'clients').where({ client_id: clientId }).update(initialFlags);
+
+    const parsed = updateClientSchema.parse({ client_name: 'Renamed client', default_locale: 'fr', foo: 'bar' });
+    expect(parsed).toMatchObject({ client_name: 'Renamed client' });
+    expect(parsed).not.toHaveProperty('default_locale');
+    expect(parsed).not.toHaveProperty('foo');
+    const updated = await serviceFor(tenantId).update(clientId, parsed as any, { tenant: tenantId, userId: uuidv4() } as any);
+    expect(updated.client_name).toBe('Renamed client');
+    const persisted = await tenantTable(tenantId, 'clients').where({ client_id: clientId }).first();
+    for (const [field, value] of Object.entries(initialFlags)) expect(persisted[field]).toBe(value);
+  });
+
+  it('keeps location fields accepted by the create schema', () => {
+    const parsed = createClientSchema.parse({
+      client_name: 'Created client',
+      billing_cycle: 'monthly',
+      email: 'x@example.com',
+      phone_no: '555-0100',
+      address: '1 Main St',
+    });
+
+    expect(parsed).toMatchObject({
+      email: 'x@example.com',
+      phone_no: '555-0100',
+      address: '1 Main St',
+    });
+  });
+
   // Regression: the field was absent from the request schema, so Zod stripped it
   // and the write returned 200 with the currency silently discarded.
   it('survives request-schema validation instead of being stripped', () => {
@@ -140,6 +182,88 @@ describe('client currency and billing-profile lifecycle integration', () => {
 
     const persisted = await tenantTable(tenantId, 'clients').where({ client_id: clientId }).first();
     expect(persisted.default_currency_code).toBe('EUR');
+  });
+
+  it('preserves partial properties and synchronizes both website copies only on explicit website updates', async () => {
+    const tenantId = await createTenant();
+    const clientId = await seedClient(tenantId);
+    const service = serviceFor(tenantId);
+    const website = 'https://digital-checkmark.example';
+    await tenantTable(tenantId, 'clients').where({ client_id: clientId }).update({
+      url: website,
+      properties: { website, industry: 'IT' },
+    });
+
+    const context = { tenant: tenantId, userId: uuidv4() } as any;
+    await service.update(clientId, updateClientSchema.parse({ client_name: 'Renamed' }) as any, context);
+    let persisted = await tenantTable(tenantId, 'clients').where({ client_id: clientId }).first();
+    expect(persisted.url).toBe(website);
+    expect(persisted.properties).toMatchObject({ website, industry: 'IT' });
+
+    await service.update(clientId, updateClientSchema.parse({ properties: { industry: 'Healthcare' } }) as any, context);
+    persisted = await tenantTable(tenantId, 'clients').where({ client_id: clientId }).first();
+    expect(persisted.url).toBe(website);
+    expect(persisted.properties).toEqual({ website, industry: 'Healthcare' });
+
+    // Older rows can have only properties.website populated; unrelated saves
+    // must preserve both stored values verbatim until the user edits website.
+    await tenantTable(tenantId, 'clients').where({ client_id: clientId }).update({
+      url: '',
+      properties: { website: 'https://properties-only.example', industry: 'Healthcare' },
+    });
+    await service.update(clientId, updateClientSchema.parse({ client_name: 'Still preserved' }) as any, context);
+    persisted = await tenantTable(tenantId, 'clients').where({ client_id: clientId }).first();
+    expect(persisted.url).toBe('');
+    expect(persisted.properties).toEqual({ website: 'https://properties-only.example', industry: 'Healthcare' });
+
+    await service.update(clientId, updateClientSchema.parse({ properties: { website: 'https://new.example' } }) as any, context);
+    persisted = await tenantTable(tenantId, 'clients').where({ client_id: clientId }).first();
+    expect(persisted.url).toBe('https://new.example');
+    expect(persisted.properties).toEqual({ website: 'https://new.example', industry: 'Healthcare' });
+
+    await service.update(clientId, updateClientSchema.parse({ properties: { website: '' } }) as any, context);
+    persisted = await tenantTable(tenantId, 'clients').where({ client_id: clientId }).first();
+    expect(persisted.url).toBe('');
+    expect(persisted.properties).toMatchObject({ website: '' });
+  });
+
+  it('preserves a properties-only website across a UI-shaped unchanged-website save', async () => {
+    const tenantId = await createTenant();
+    const service = serviceFor(tenantId);
+    const context = { tenant: tenantId, userId: uuidv4() } as any;
+    const website = 'https://zz-probe.example.com';
+    const created = await service.create(createClientSchema.parse({
+      client_name: 'Digital Checkmark repro',
+      billing_cycle: 'monthly',
+      properties: {
+        website,
+        industry: 'Testing',
+        company_size: '1-10',
+        tax_id: '11-1111111',
+      },
+    }) as any, context);
+
+    // The UI sends unrelated property values while omitting an unchanged
+    // website (and the legacy url column).
+    await service.update(created.client_id, updateClientSchema.parse({
+      client_name: created.client_name,
+      properties: {
+        industry: 'Testing',
+        company_size: '1-10',
+        tax_id: '11-1111111',
+      },
+    }) as any, context);
+
+    const persisted = await tenantTable(tenantId, 'clients')
+      .where({ client_id: created.client_id })
+      .first();
+    expect(persisted.url).toBe('');
+    expect(persisted.properties).toEqual({
+      website,
+      industry: 'Testing',
+      company_size: '1-10',
+      tax_id: '11-1111111',
+    });
   });
 
   it('persists default_currency_code on create and defaults to USD when omitted', async () => {

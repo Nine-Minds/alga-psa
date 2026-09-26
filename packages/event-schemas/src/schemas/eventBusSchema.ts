@@ -246,6 +246,9 @@ export const EVENT_TYPES = [
   'SCHEDULE_ENTRY_UPDATED',
   'SCHEDULE_ENTRY_DELETED',
 
+  // Scheduling (shared calendars)
+  'CALENDAR_SHARE_GRANTED',
+
   // Scheduling (domain expansion)
   'APPOINTMENT_CREATED',
   'APPOINTMENT_RESCHEDULED',
@@ -955,6 +958,18 @@ export const AccountingExportEventPayloadSchema = BasePayloadSchema.extend({
 });
 
 // Schedule entry event payload schema
+// Shared calendars: a user or team was granted (or had changed) access to a calendar.
+export const CalendarShareGrantedPayloadSchema = BasePayloadSchema.extend({
+  calendarId: z.string().uuid(),
+  calendarType: z.enum(['personal', 'group']),
+  ownerUserId: z.string().uuid().nullable(),
+  calendarName: z.string().nullable().optional(),
+  granteeType: z.enum(['user', 'team']),
+  granteeId: z.string().uuid(),
+  accessLevel: z.enum(['free_busy', 'read', 'edit', 'manage']),
+  grantedByUserId: z.string().uuid(),
+});
+
 export const ScheduleEntryEventPayloadSchema = BasePayloadSchema.extend({
   entryId: z.string().uuid(),
   userId: z.string().uuid(),
@@ -1247,6 +1262,7 @@ export const EventPayloadSchemas = {
   SCHEDULE_ENTRY_CREATED: ScheduleEntryEventPayloadSchema,
   SCHEDULE_ENTRY_UPDATED: ScheduleEntryEventPayloadSchema,
   SCHEDULE_ENTRY_DELETED: ScheduleEntryEventPayloadSchema,
+  CALENDAR_SHARE_GRANTED: CalendarShareGrantedPayloadSchema,
 
   // Scheduling (domain expansion)
   APPOINTMENT_CREATED: appointmentCreatedEventPayloadSchema,
@@ -1603,6 +1619,7 @@ export type AccountingExportFailedEvent = z.infer<typeof EventSchemas.ACCOUNTING
 export type ScheduleEntryCreatedEvent = z.infer<typeof EventSchemas.SCHEDULE_ENTRY_CREATED>;
 export type ScheduleEntryUpdatedEvent = z.infer<typeof EventSchemas.SCHEDULE_ENTRY_UPDATED>;
 export type ScheduleEntryDeletedEvent = z.infer<typeof EventSchemas.SCHEDULE_ENTRY_DELETED>;
+export type CalendarShareGrantedEvent = z.infer<typeof EventSchemas.CALENDAR_SHARE_GRANTED>;
 export type BoardCreatedEvent = z.infer<typeof EventSchemas.BOARD_CREATED>;
 export type BoardUpdatedEvent = z.infer<typeof EventSchemas.BOARD_UPDATED>;
 export type BoardDeletedEvent = z.infer<typeof EventSchemas.BOARD_DELETED>;

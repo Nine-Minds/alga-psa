@@ -165,6 +165,27 @@
         "loadStatuses": "Nie udało się załadować statusów zgłoszeń odnowienia",
         "save": "Nie udało się zapisać ustawień automatyzacji odnawiania"
       }
+    },
+    "quotes": {
+      "title": "Oferty",
+      "description": "Ustaw domyślny okres ważności nowych ofert.",
+      "fields": {
+        "validityDays": {
+          "label": "Domyślny okres ważności (dni)",
+          "help": "Nowe oferty są ważne przez tę liczbę dni."
+        }
+      },
+      "actions": {
+        "save": "Zapisz"
+      },
+      "toast": {
+        "updated": "Ustawienia ofert zostały zaktualizowane."
+      },
+      "errors": {
+        "load": "Nie udało się wczytać ustawień",
+        "save": "Nie udało się zapisać ustawień",
+        "range": "Wpisz liczbę całkowitą od 1 do 365."
+      }
     }
   },
   "quoting": {

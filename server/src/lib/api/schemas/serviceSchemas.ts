@@ -29,7 +29,8 @@ const serviceShape = {
   unit_of_measure: z.string().min(1).max(128),
   category_id: nullableUuidSchema.optional(),
   tax_rate_id: nullableUuidSchema.optional(),
-  description: descriptionSchema.optional()
+  description: descriptionSchema.optional(),
+  is_active: z.boolean().optional()
 } as const;
 
 export const createServiceSchema = z.object(serviceShape);

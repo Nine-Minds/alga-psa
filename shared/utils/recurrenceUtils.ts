@@ -1,6 +1,7 @@
 import type { IScheduleEntry, IHoliday } from '@alga-psa/types';
 import * as rrulePkg from 'rrule';
 import type { Frequency, Weekday } from 'rrule';
+import { toCalendarDateString } from '@alga-psa/core';
 
 type RRuleConstructor = typeof import('rrule').RRule;
 
@@ -33,19 +34,29 @@ function formatDateString(date: Date, utc = false): string {
  * Check if a date falls on a holiday.
  * Handles both one-time and recurring (annual) holidays.
  */
-export function isHolidayDate(date: Date, holidays: IHoliday[], utc = false): boolean {
+type HolidayDateInput = Omit<IHoliday, 'holiday_date'> & { holiday_date: string | Date };
+
+export function isHolidayDate(date: Date, holidays: HolidayDateInput[], utc = false): boolean {
   if (!holidays || holidays.length === 0) return false;
 
   const dateStr = formatDateString(date, utc);
 
   return holidays.some(holiday => {
+    let holidayDate: string | null;
+    // LEVERAGE: pattern holiday-date-normalize — keep defensive DB DATE conversion at this matcher.
+    try {
+      holidayDate = toCalendarDateString(holiday.holiday_date);
+    } catch {
+      holidayDate = null;
+    }
+    if (!holidayDate) return false;
     if (holiday.is_recurring) {
       // For recurring holidays, compare only month and day (MM-DD)
-      const holidayMonthDay = holiday.holiday_date.slice(5);
+      const holidayMonthDay = holidayDate.slice(5);
       const dateMonthDay = dateStr.slice(5);
       return holidayMonthDay === dateMonthDay;
     }
-    return holiday.holiday_date === dateStr;
+    return holidayDate === dateStr;
   });
 }
 

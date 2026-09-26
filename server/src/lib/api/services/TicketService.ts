@@ -54,6 +54,8 @@ import {
   publishExternalLinkEvent,
 } from '@alga-psa/tickets/actions/externalLinks/externalLinkPersistence';
 import { NotFoundError, ValidationError, ConflictError, ForbiddenError } from '../middleware/apiMiddleware';
+import { locationAddressSql } from './locationAddressSql';
+import { inboundSenderLabel } from './ticketCommentAuthor';
 import { hasPermission } from '../../auth/rbac';
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
 import {
@@ -351,7 +353,11 @@ export class TicketService extends BaseService<ITicket> {
     visibility: ContactVisibilityContext
   ): Knex.QueryBuilder {
     query = query.where('t.client_id', visibility.clientId);
-    return applyTicketVisibilityFilter(query, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id' });
+    return applyTicketVisibilityFilter(query, visibility, {
+      boardColumn: 't.board_id',
+      contactColumn: 't.contact_name_id',
+      billingProfileColumn: 't.billing_profile_id',
+    });
   }
 
   /**
@@ -706,6 +712,8 @@ export class TicketService extends BaseService<ITicket> {
         ),
         'comp.client_name',
         'cl.location_name as location_name',
+        // One-line postal address for map links; the name alone is a poor geocoding query.
+        knex.raw(`${locationAddressSql('cl')} as location_address`),
         'cl.email as client_email',
         'cl.phone as client_phone',
         'cont.full_name as contact_name',
@@ -2230,6 +2238,8 @@ export class TicketService extends BaseService<ITicket> {
     const commentsQuery = tenantScopedTable(knex, 'comments as tc', context.tenant);
     scopedDb.tenantJoin(commentsQuery, 'users as u', 'tc.user_id', 'u.user_id', { type: 'left' });
     scopedDb.tenantJoin(commentsQuery, 'contacts as c', 'tc.contact_id', 'c.contact_name_id', { type: 'left' });
+    // Client-portal comments carry only user_id; the user's contact names them when the user row has no name.
+    scopedDb.tenantJoin(commentsQuery, 'contacts as uc', 'u.contact_id', 'uc.contact_name_id', { type: 'left' });
 
     const clientVisibility = await this.resolveClientTicketVisibility(context);
     if (clientVisibility) {
@@ -2251,11 +2261,11 @@ export class TicketService extends BaseService<ITicket> {
     const comments = await commentsQuery
       .select(
         'tc.*',
-        knex.raw(`CASE 
-          WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL 
-          THEN CONCAT(u.first_name, ' ', u.last_name) 
-          ELSE NULL 
-        END as created_by_name`),
+        knex.raw(`COALESCE(
+          NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''),
+          NULLIF(TRIM(uc.full_name), ''),
+          NULLIF(TRIM(u.email), '')
+        ) as created_by_name`),
         'c.contact_name_id as author_contact_id',
         'c.full_name as author_contact_name',
         'c.email as author_contact_email'
@@ -2321,7 +2331,7 @@ export class TicketService extends BaseService<ITicket> {
           created_at: comment.created_at,
           updated_at: comment.updated_at,
           created_by: comment.user_id ?? null,
-          created_by_name: comment.created_by_name || comment.author_contact_name || null,
+          created_by_name: comment.created_by_name || comment.author_contact_name || inboundSenderLabel(comment.metadata),
           author_contact_id: comment.author_contact_id || comment.contact_id || null,
           author_contact_name: comment.author_contact_name || null,
           // Threading fields (mobile threaded comments) — explicitly enumerated
@@ -2340,7 +2350,7 @@ export class TicketService extends BaseService<ITicket> {
         markdown_content: comment.markdown_content || null,
         comment_html: renderTicketRichTextHtml(comment.note),
         created_by: comment.user_id ?? null,
-        created_by_name: comment.created_by_name || comment.author_contact_name || null,
+        created_by_name: comment.created_by_name || comment.author_contact_name || inboundSenderLabel(comment.metadata),
         created_by_avatar_url: comment.user_id ? (avatarMap[comment.user_id] ?? null) : null,
         author_contact_id: comment.author_contact_id || comment.contact_id || null,
         author_contact_name: comment.author_contact_name || null,

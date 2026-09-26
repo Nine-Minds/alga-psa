@@ -2239,7 +2239,8 @@
       "×",
       "—",
       "{{count}} h",
-      "{{hours}} h {{minutes}} min"
+      "{{hours}} h {{minutes}} min",
+      "TeamViewer"
     ],
     "caseInsensitive": [
       "api",

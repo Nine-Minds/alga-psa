@@ -1313,7 +1313,7 @@
     },
     "domain": {
       "title": "Domínio Personalizado",
-      "description": "Configure um nome de host de marca para seu portal do cliente. Forneceremos certificados TLS automaticamente assim que o DNS for verificado.",
+      "description": "Configure um nome de host de marca para seu portal do cliente.",
       "currentStatus": "Estado atual",
       "noDomainConfigured": "Nenhum domínio personalizado configurado",
       "defaultStatusMessage": "Nenhum domínio personalizado registrado ainda.",
@@ -1355,7 +1355,8 @@
         "step3": "Obtenha e mantenha o certificado TLS para o domínio no seu proxy.",
         "step4": "Salve o domínio aqui — ele é ativado imediatamente. Configure primeiro o DNS e o seu proxy, pois os links do portal mudam para este domínio imediatamente.",
         "docLinkText": "Guia de configuração e solução de problemas do proxy reverso",
-        "neverSeenWarning": "Nenhuma solicitação chegou a {{domain}} ainda. Verifique se o seu proxy reverso encaminha o cabeçalho Host original."
+        "neverSeenWarning": "Nenhuma solicitação chegou a {{domain}} ainda. Verifique se o seu proxy reverso encaminha o cabeçalho Host original.",
+        "tlsNote": "O TLS termina no seu proxy reverso, que mantém o certificado."
       },
       "badges": {
         "pending_dns": "DNS pendente",
@@ -1380,7 +1381,8 @@
         "refreshFailed": "Falha ao atualizar o status do domínio.",
         "retryFailed": "Falha na nova tentativa.",
         "disableFailed": "Falha ao desativar o domínio personalizado."
-      }
+      },
+      "hostedTlsNote": "Forneceremos certificados TLS automaticamente assim que o DNS for verificado."
     },
     "yourCompanyName": "Nome da sua empresa",
     "brandingPreviewMode": "Modo de tema de visualização da marca",
@@ -2179,6 +2181,18 @@
       "comingSoon": "Os modelos de mapeamento e as importações programadas ficarão aqui. Salve mapeamentos de colunas, compartilhe-os com toda a equipe e configure trabalhos recorrentes."
     },
     "migration": {
+      "customFields": {
+        "required": "obrigatório",
+        "title": "Campos de {{name}}",
+        "mapping": "Mapeamento de campos personalizados",
+        "description": "Associe as colunas CSV preservadas aos campos deste tipo de ativo.",
+        "empty": "Não foram preservadas colunas personalizadas para este tipo de ativo.",
+        "samples_one": "{{sample}} · {{count}} registro",
+        "samples_other": "{{sample}} · {{count}} registros",
+        "noSample": "Sem exemplo",
+        "missingRequired": "Campos obrigatórios não associados: {{fields}}",
+        "duplicate": "Um campo personalizado está associado mais de uma vez. Escolha um destino único para cada origem."
+      },
       "actions": {
         "back": "Voltar para migrações",
         "upload": "Enviar pacote"
@@ -3055,7 +3069,7 @@
     "assetTypes": {
       "tab": "Ativos",
       "title": "Tipos de ativos",
-      "description": "Gerencie os tipos de ativos disponíveis em seu módulo de ativos. Os tipos personalizados carregam um esquema de campo que orienta seus formulários de criação/edição.",
+      "description": "Tipos personalizados usam um esquema de campos nos formulários; tipos integrados também aceitam campos adicionais.",
       "loading": "Carregando tipos de recursos...",
       "table": {
         "name": "Nome",
@@ -3083,7 +3097,7 @@
         "namePlaceholder": "por exemplo Firewall",
         "displayOrderLabel": "Ordem de exibição",
         "iconLabel": "Ícone",
-        "builtinSchemaHint": "Os tipos integrados usam formulários fixos gerenciados pelo AlgaPSA, portanto seu esquema de campo não pode ser editado. Você ainda pode renomear o tipo ou alterar seu ícone."
+        "builtinSchemaHint": "O formulário padrão integrado permanece fixo. Estes campos adicionais são definidos por tenant."
       },
       "deleteDialog": {
         "title": "Excluir tipo de ativo",
@@ -3141,7 +3155,8 @@
           "invalidOptions": "As opções devem ser valores não vazios.",
           "invalidField": "Este campo é inválido."
         }
-      }
+      },
+      "additionalFields": "Campos adicionais"
     }
   },
   "mcpServer": {

@@ -26,6 +26,15 @@ const directoryUserParams = {
 
 export function register(reg: ControlRegistry, core: MsGraphCore): void {
   reg.seeder({
+    name: 'mailbox-folder-permission',
+    description: 'Set delegated mailbox access for an OAuth client, with full access or specific folder ids/well-known names',
+    params: z.object({ mailbox: z.string(), delegate: z.string(), fullAccess: z.boolean().default(false), folders: z.array(z.string()).default([]) }),
+    run: ({ mailbox, delegate, fullAccess, folders }) => {
+      core.setMailboxFolderPermissions(mailbox, delegate, { fullAccess, folders });
+      return { mailbox, delegate, fullAccess, folders };
+    },
+  });
+  reg.seeder({
     name: 'directory-group',
     description: 'Add an Entra group and its membership for read-only access diagnostics',
     params: z.object({ id: z.string(), displayName: z.string(),

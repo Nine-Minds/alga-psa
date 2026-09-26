@@ -15,6 +15,18 @@ export type ContractLineType = (typeof CONTRACT_LINE_TYPE_VALUES)[number];
 export const BILLING_FREQUENCY_VALUES = ['weekly', 'monthly', 'quarterly', 'annually'] as const;
 export type BillingFrequency = (typeof BILLING_FREQUENCY_VALUES)[number];
 
+export const DEFAULT_QUOTE_VALIDITY_DAYS = 30;
+export const MIN_QUOTE_VALIDITY_DAYS = 1;
+export const MAX_QUOTE_VALIDITY_DAYS = 365;
+
+export const getQuoteValidityDays = (value: unknown): number =>
+  isValidQuoteValidityDays(value)
+    ? value
+    : DEFAULT_QUOTE_VALIDITY_DAYS;
+
+export const isValidQuoteValidityDays = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isInteger(value) && value >= MIN_QUOTE_VALIDITY_DAYS && value <= MAX_QUOTE_VALIDITY_DAYS;
+
 /**
  * English fallbacks for {@link CONTRACT_LINE_TYPE_VALUES}. Consumed as `defaultValue`
  * by `useContractLineTypeOptions` / `useFormatContractLineType` so the UI stays readable

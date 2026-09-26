@@ -51,6 +51,9 @@ import { fetchInvoicesByContract } from '@alga-psa/billing/actions/invoiceQuerie
 import { getInvoiceTemplates } from '@alga-psa/billing/actions/invoiceTemplates';
 
 import { useBillingFrequencyOptions } from '@alga-psa/billing/hooks/useBillingEnumOptions';
+import { BillingProfilePicker } from '@alga-psa/ui/components/BillingProfilePicker';
+import { useClientBillingProfiles } from '@alga-psa/ui/hooks/useClientBillingProfiles';
+import { getClientBillingProfilesForBilling } from '@alga-psa/billing/actions/billingProfileActions';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import ContractHeader from './ContractHeader';
 import ContractLines from './ContractLines';
@@ -100,6 +103,8 @@ const ContractSimulator = dynamic(
     ssr: false,
   }
 );
+
+const loadBillingProfiles = (clientId: string) => getClientBillingProfilesForBilling(clientId);
 
 const isReturnedActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
@@ -165,6 +170,77 @@ const ContractInvoicePreviewDrawerContent: React.FC<ContractInvoicePreviewDrawer
       onTemplateChange={setSelectedTemplateId}
       isFinalized={isFinalized}
     />
+  );
+};
+
+interface AssignmentBillingProfileFieldProps {
+  clientContractId: string;
+  clientId: string;
+  billingProfileId: string | null;
+  billingProfileName: string | null;
+  isEditing: boolean;
+  onChange: (billingProfileId: string | null) => void;
+}
+
+/**
+ * The billing profile a client assignment bills, on the contract itself.
+ *
+ * A contract raised against a merged-in client bills that client's profile, and
+ * this is the screen where an operator comes back to check or change it. The
+ * hook lives in its own component because the assignments are rendered in a
+ * map — and it keeps the D6 invisibility rule: a single-profile client sees
+ * nothing here at all.
+ */
+const AssignmentBillingProfileField: React.FC<AssignmentBillingProfileFieldProps> = ({
+  clientContractId,
+  clientId,
+  billingProfileId,
+  billingProfileName,
+  isEditing,
+  onChange,
+}) => {
+  const { t } = useTranslation('msp/contracts');
+  const { profiles, isSegmented } = useClientBillingProfiles(clientId || null, loadBillingProfiles);
+
+  if (!isSegmented) {
+    return null;
+  }
+
+  const selectedName = billingProfileId
+    ? profiles.find((profile) => profile.billing_profile_id === billingProfileId)?.name
+      ?? billingProfileName
+    : null;
+
+  return (
+    <div>
+      <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+        {t('contractDetail.clientAssignment.billingProfile', { defaultValue: 'Billing Profile' })}
+      </Label>
+      {isEditing ? (
+        <div className="mt-1 w-full md:w-72">
+          <BillingProfilePicker
+            id={`assignment-billing-profile-${clientContractId}`}
+            clientId={clientId || null}
+            loadProfiles={loadBillingProfiles}
+            value={billingProfileId}
+            onChange={onChange}
+            label={t('contractDetail.clientAssignment.billingProfileLabel', {
+              defaultValue: 'Assignment billing profile',
+            })}
+            unassignedLabel={t('contractDetail.clientAssignment.billingProfileNone', {
+              defaultValue: "Use the client's default profile",
+            })}
+          />
+        </div>
+      ) : (
+        <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
+          {selectedName
+            ?? t('contractDetail.clientAssignment.billingProfileNone', {
+              defaultValue: "Use the client's default profile",
+            })}
+        </p>
+      )}
+    </div>
   );
 };
 
@@ -969,6 +1045,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
         }
         if (editedAssignment.credit_drawdown_opt_out !== originalAssignment.credit_drawdown_opt_out) {
           updatePayload.credit_drawdown_opt_out = editedAssignment.credit_drawdown_opt_out ?? false;
+        }
+        if ((editedAssignment.billing_profile_id ?? null) !== (originalAssignment.billing_profile_id ?? null)) {
+          updatePayload.billing_profile_id = editedAssignment.billing_profile_id ?? null;
         }
 
         // Only update if there are changes
@@ -2120,6 +2199,22 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                 </p>
                               )}
                             </div>
+                            <AssignmentBillingProfileField
+                              clientContractId={assignment.client_contract_id}
+                              clientId={assignment.client_id}
+                              billingProfileId={editData.billing_profile_id ?? null}
+                              billingProfileName={assignment.billing_profile_name ?? null}
+                              isEditing={isEditing}
+                              onChange={(billingProfileId) =>
+                                setEditAssignments((prev) => ({
+                                  ...prev,
+                                  [assignment.client_contract_id]: {
+                                    ...(prev[assignment.client_contract_id] || assignment),
+                                    billing_profile_id: billingProfileId,
+                                  },
+                                }))
+                              }
+                            />
                           </div>
 
                           <div className="grid gap-4 md:grid-cols-2">

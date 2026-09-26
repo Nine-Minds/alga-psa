@@ -876,6 +876,8 @@ export const getContractAssignments = withAuth(async (user, { tenant }, contract
       'cc.credit_drawdown_opt_out',
       'cc.renewal_ticket_board_id',
       'cc.renewal_ticket_status_id',
+      'cc.billing_profile_id',
+      'bp.name as billing_profile_name',
       'co.status as contract_status',
     ];
 
@@ -884,6 +886,9 @@ export const getContractAssignments = withAuth(async (user, { tenant }, contract
     facade.tenantJoin(query, 'clients as c', 'cc.client_id', 'c.client_id', { type: 'left' });
     facade.tenantJoin(query, 'default_billing_settings as dbs', 'cc.tenant', 'dbs.tenant', { type: 'left' });
     facade.tenantJoin(query, 'contracts as co', 'cc.contract_id', 'co.contract_id');
+    // Which billing profile this assignment bills — the field that decides
+    // where its charges land, so the contract has to be able to state it.
+    facade.tenantJoin(query, 'client_billing_profiles as bp', 'cc.billing_profile_id', 'bp.billing_profile_id', { type: 'left' });
 
     const rows = await query
       .where({ 'cc.contract_id': contractId })
@@ -930,6 +935,8 @@ export const getContractAssignments = withAuth(async (user, { tenant }, contract
         client_contract_id: row.client_contract_id,
         client_id: row.client_id,
         client_name: row.client_name ?? null,
+        billing_profile_id: row.billing_profile_id ?? null,
+        billing_profile_name: row.billing_profile_name ?? null,
         assignment_status: deriveClientContractStatus({
           isActive: Boolean(row.is_active),
           startDate: row.start_date,

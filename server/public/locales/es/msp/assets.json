@@ -103,6 +103,8 @@
       "selectAsset": "Seleccionar activo {{name}}",
       "selectedAssets_one": "{{count}} activo seleccionado",
       "selectedAssets_other": "{{count}} activos seleccionados",
+      "selectedAssets_few": "{{count}} activos seleccionados",
+      "selectedAssets_many": "{{count}} activos seleccionados",
       "clearSelection": "Borrar selección",
       "bulkActionsComingSoon": "Próximamente acciones masivas"
     },
@@ -389,10 +391,16 @@
       "momentsAgo": "hace momentos",
       "minutesAgo_one": "Hace {{count}} minuto",
       "minutesAgo_other": "Hace {{count}} minutos",
+      "minutesAgo_few": "Hace {{count}} minutos",
+      "minutesAgo_many": "Hace {{count}} minutos",
       "hoursAgo_one": "Hace {{count}} hora",
       "hoursAgo_other": "Hace {{count}} horas",
+      "hoursAgo_few": "Hace {{count}} horas",
+      "hoursAgo_many": "Hace {{count}} horas",
       "daysAgo_one": "Hace {{count}} día",
-      "daysAgo_other": "Hace {{count}} días"
+      "daysAgo_other": "Hace {{count}} días",
+      "daysAgo_few": "Hace {{count}} días",
+      "daysAgo_many": "Hace {{count}} días"
     }
   },
   "assetDetailHeader": {
@@ -655,7 +663,8 @@
       "mobileDevice": "Detalles del dispositivo móvil",
       "printer": "Detalles de la impresora",
       "custom": "Detalles de {{typeName}}"
-    }
+    },
+    "additionalFields": "Campos adicionales"
   },
   "assetFormClient": {
     "title": "Cliente de formulario de activos",
@@ -733,20 +742,64 @@
     "more": "+{{count}} más"
   },
   "remoteAccess": {
+    "connectionTypes": {
+      "teamviewer": "TeamViewer",
+      "vnc": "VNC",
+      "rdp": "RDP"
+    },
     "remoteDesktop": "Escritorio remoto",
     "remoteShell": "Shell remoto",
     "remoteAccess": "Acceso remoto",
     "deviceOverdue": "El dispositivo está vencido",
     "deviceOffline": "El dispositivo está desconectado",
     "errors": {
-      "urlFetchFailed": "Error al obtener la URL de acceso remoto",
-      "initiateFailed": "Error al iniciar el acceso remoto"
+      "urlFetchFailed": "No se pudo obtener la URL de acceso remoto",
+      "initiateFailed": "No se pudo iniciar el acceso remoto",
+      "managePermission": "Permiso denegado: no se puede administrar la configuración de los activos.",
+      "readPermission": "Permiso denegado: no se pueden leer los activos."
     },
     "indicator": {
       "online": "En línea",
       "offline": "Desconectado",
       "available": "Acceso remoto disponible",
       "deviceOffline": "Dispositivo desconectado"
+    },
+    "links": {
+      "title": "Enlaces de acceso remoto",
+      "description": "Configura plantillas de URL para ScreenConnect y otras herramientas de acceso remoto.",
+      "errors": {
+        "load": "No se pudieron cargar los enlaces de acceso remoto.",
+        "save": "No se pudo guardar el enlace de acceso remoto.",
+        "delete": "No se pudo eliminar el enlace de acceso remoto.",
+        "templateHttp": "La plantilla debe comenzar con http:// o https:// y un host literal.",
+        "templatePlaceholder": "La plantilla contiene un marcador de posición no compatible.",
+        "templateUrl": "La plantilla debe generar una URL http o https válida.",
+        "required": "Se requieren una etiqueta y una plantilla de URL.",
+        "partialDelete": "No se pudieron eliminar {{count}} enlace(s) seleccionado(s)."
+      },
+      "noneAvailable": "No hay opciones de acceso remoto disponibles.",
+      "confirmDeleteTitle": "¿Eliminar enlace de acceso remoto?",
+      "confirmDeleteMessage": "¿Seguro que desea eliminar “{{label}}”? Esta acción no se puede deshacer.",
+      "openMenu": "Abrir menú",
+      "selectLabel": "Seleccionar {{label}}",
+      "confirmBulkDeleteTitle": "¿Eliminar los enlaces seleccionados?",
+      "confirmBulkDeleteMessage": "¿Eliminar {{count}} enlace(s) de acceso remoto seleccionado(s)?",
+      "selectedCount": "{{count}} seleccionado(s)",
+      "add": "Agregar enlace",
+      "empty": "No hay enlaces de acceso remoto configurados.",
+      "edit": "Editar",
+      "delete": "Eliminar",
+      "addTitle": "Agregar enlace de acceso remoto",
+      "editTitle": "Editar enlace de acceso remoto",
+      "cancel": "Cancelar",
+      "save": "Guardar",
+      "label": "Etiqueta del botón",
+      "template": "Plantilla de URL",
+      "tokens": "Usa {asset.name}, {asset.asset_tag}, {asset.serial_number}, {client.name} y {field.<key>} con claves de campos personalizados definidas en Configuración → Activos → Tipos de activo.",
+      "loading": "Cargando opciones de acceso remoto…",
+      "unavailable": "No disponible para este activo",
+      "actions": "Acciones",
+      "selectAll": "Seleccionar todos los enlaces"
     }
   },
   "assetListErrors": {
@@ -766,7 +819,9 @@
       "addAsset": "Agregar activo",
       "showLess": "Mostrar menos",
       "moreAssets_one": "{{count}} activo más",
-      "moreAssets_other": "{{count}} activos más"
+      "moreAssets_other": "{{count}} activos más",
+      "moreAssets_few": "{{count}} activos más",
+      "moreAssets_many": "{{count}} activos más"
     },
     "errors": {
       "loadAvailableAssets": "No se pudieron cargar los recursos disponibles",
@@ -780,8 +835,12 @@
     "success": {
       "associated_one": "{{count}} activo asociado correctamente",
       "associated_other": "{{count}} activos asociados correctamente",
+      "associated_few": "{{count}} activos asociados correctamente",
+      "associated_many": "{{count}} activos asociados correctamente",
       "associatedPartial_one": "{{count}} activo asociado correctamente, {{failed}} con error (puede que ya esté asociado)",
       "associatedPartial_other": "{{count}} activos asociados correctamente, {{failed}} con error (puede que ya estén asociados)",
+      "associatedPartial_few": "{{count}} activos asociados correctamente, {{failed}} con error (puede que ya estén asociados)",
+      "associatedPartial_many": "{{count}} activos asociados correctamente, {{failed}} con error (puede que ya estén asociados)",
       "removed": "Se eliminó la asociación de recursos"
     },
     "empty": {
@@ -805,7 +864,9 @@
       },
       "actions": {
         "addAssets_one": "Agregar activo",
-        "addAssets_other": "Agregar activos"
+        "addAssets_other": "Agregar activos",
+        "addAssets_few": "Agregar activos",
+        "addAssets_many": "Agregar activos"
       }
     },
     "table": {
@@ -1194,17 +1255,29 @@
     "frequency": {
       "every_one": "Cada {{frequency}}",
       "every_other": "Cada {{count}} {{frequency}}",
+      "every_few": "Cada {{count}} {{frequency}}",
+      "every_many": "Cada {{count}} {{frequency}}",
       "units": {
         "daily_one": "día",
         "daily_other": "días",
+        "daily_few": "días",
+        "daily_many": "días",
         "weekly_one": "semana",
         "weekly_other": "semanas",
+        "weekly_few": "semanas",
+        "weekly_many": "semanas",
         "monthly_one": "mes",
         "monthly_other": "meses",
+        "monthly_few": "meses",
+        "monthly_many": "meses",
         "quarterly_one": "trimestre",
         "quarterly_other": "trimestres",
+        "quarterly_few": "trimestres",
+        "quarterly_many": "trimestres",
         "yearly_one": "año",
-        "yearly_other": "años"
+        "yearly_other": "años",
+        "yearly_few": "años",
+        "yearly_many": "años"
       }
     },
     "status": {

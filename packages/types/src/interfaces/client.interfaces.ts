@@ -27,6 +27,14 @@ export interface IClient extends TenantEntity, ITaggable {
   default_currency_code?: string | null;
   notes?: string | null;
   is_inactive: boolean;
+  /**
+   * Forwarding address left by a merge. Set means this client was absorbed
+   * into another as a billing profile and only survives as a tombstone.
+   */
+  merged_into_client_id?: string | null;
+  merged_at?: string | null;
+  /** Date the relationship began; null falls back to created_at. */
+  client_since?: string | null;
   created_at: string;
   updated_at: string;
   properties?: ({[key: string]: any} & {
@@ -118,6 +126,8 @@ export interface IClientLocation extends TenantEntity {
 export interface IClientWithLocation extends IClient {
   location_email?: string;
   location_phone?: string;
+  location_phone_extension?: string | null;
+  location_country_code?: string | null;
   location_address?: string;
 }
 
