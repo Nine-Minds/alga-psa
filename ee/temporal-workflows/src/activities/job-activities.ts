@@ -149,7 +149,7 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
   registerJobHandlerForActivities(HUDU_AUTO_SYNC_JOB, forwardJobToServer(HUDU_AUTO_SYNC_JOB));
   // AMP apply uses server-bound migration appliers and the tenant database
   // connection, so Temporal forwards it to the server's registered handler.
-  registerJobHandlerForActivities(MIGRATION_APPLY_JOB, forwardJobToServer(MIGRATION_APPLY_JOB));
+  registerJobHandlerForActivities(MIGRATION_APPLY_JOB, forwardJobToServer(MIGRATION_APPLY_JOB, { strict: true }));
   // Teams meeting Graph cleanup (cancel/decline): the handler imports
   // src-consumed vertical packages (@alga-psa/clients + EE Teams lib), so the
   // worker forwards it to the server like the polling jobs above. The
