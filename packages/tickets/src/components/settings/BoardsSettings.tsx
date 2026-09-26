@@ -59,7 +59,6 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
-import { clearEmailSenderRoute, listEmailSenders, setEmailSenderRoute } from '@alga-psa/integrations/emailSenderActions';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import type { ColumnDefinition } from '@alga-psa/types';
 import {
@@ -397,14 +396,38 @@ interface BoardSlaPolicyOption {
   is_default?: boolean;
 }
 
+interface BoardEmailSender {
+  sender_id: string;
+  email_address: string;
+  verification_status: string;
+}
+
+interface BoardEmailSenderRoute {
+  route_type: string;
+  board_id?: string | null;
+  sender_id?: string | null;
+  display_name?: string | null;
+}
+
+interface BoardEmailSenderRouteInput {
+  routeType: 'board';
+  boardId: string;
+  senderId?: string | null;
+  displayName?: string | null;
+}
+
 interface BoardsSettingsProps {
   /** Hide SLA configuration in AlgaDesk edition. Passed by the host page from useProduct(). */
   isAlgaDesk?: boolean;
   /** Loads SLA policies for the board picker. Injected by the host (server can import @alga-psa/sla). */
   getSlaPolicies?: () => Promise<BoardSlaPolicyOption[]>;
+  /** Email sender actions are injected by the host to keep tickets independent of integrations. */
+  listEmailSenders?: () => Promise<{ senders: BoardEmailSender[]; routes: BoardEmailSenderRoute[] }>;
+  setEmailSenderRoute?: (input: BoardEmailSenderRouteInput) => Promise<unknown>;
+  clearEmailSenderRoute?: (input: Pick<BoardEmailSenderRouteInput, 'routeType' | 'boardId'>) => Promise<unknown>;
 }
 
-const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, getSlaPolicies }) => {
+const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, getSlaPolicies, listEmailSenders, setEmailSenderRoute, clearEmailSenderRoute }) => {
   const { t } = useTranslation('msp/settings');
   // BoardHeader is a ticket-list component and asks for dashboard.boardHeader.*
   // and bulk.move.unnamedBoard, which live in features/tickets. Handing it this
@@ -525,7 +548,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
 
   useEffect(() => {
     let active = true;
-    if (!editingBoard?.board_id) {
+    if (!editingBoard?.board_id || !listEmailSenders) {
       setTicketSenderOptions([]);
       setTicketSenderId('');
       setTicketSenderName('');
@@ -539,10 +562,10 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
       setTicketSenderName(route?.display_name ?? '');
     }).catch((error) => toast.error(error instanceof Error ? error.message : 'Could not load ticket senders.'));
     return () => { active = false; };
-  }, [editingBoard?.board_id]);
+  }, [editingBoard?.board_id, listEmailSenders]);
 
   const saveTicketSenderRoute = async () => {
-    if (!editingBoard?.board_id) return;
+    if (!editingBoard?.board_id || !setEmailSenderRoute || !clearEmailSenderRoute) return;
     setTicketSenderSaving(true);
     try {
       if (!ticketSenderId && !ticketSenderName.trim()) {
@@ -2005,7 +2028,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
               </div>
               )}
 
-              {editingBoard && (
+              {editingBoard && listEmailSenders && setEmailSenderRoute && clearEmailSenderRoute && (
                 <div className="space-y-2 border-t border-border pt-4">
                   <Label htmlFor="board-ticket-email-sender">{t('ticketing.boards.emailSender.label', 'Send ticket email from')}</Label>
                   <p className="text-xs text-muted-foreground">{t('ticketing.boards.emailSender.inboundWarning', 'Changing this From address does not change where inbound replies are received.')}</p>

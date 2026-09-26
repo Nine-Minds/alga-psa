@@ -39,11 +39,10 @@ vi.mock('@alga-psa/tickets/actions', () => ({
   deleteBoardAutoCloseRule: vi.fn(),
 }));
 
-vi.mock('@alga-psa/integrations/emailSenderActions', () => ({
-  clearEmailSenderRoute: vi.fn(),
-  listEmailSenders: vi.fn(async () => ({ senders: [], routes: [] })),
-  setEmailSenderRoute: vi.fn(),
-}));
+const listEmailSendersMock = vi.fn(async () => ({ senders: [], routes: [] }));
+const setEmailSenderRouteMock = vi.fn();
+const clearEmailSenderRouteMock = vi.fn();
+const renderBoardsSettings = () => render(<BoardsSettings listEmailSenders={listEmailSendersMock} setEmailSenderRoute={setEmailSenderRouteMock} clearEmailSenderRoute={clearEmailSenderRouteMock} />);
 
 vi.mock('@alga-psa/tickets/actions/board-actions/boardActions', () => ({
   getAllBoards: (...args: unknown[]) => getAllBoardsMock(...args),
@@ -349,7 +348,7 @@ describe('BoardsSettings ticket status copy flow', () => {
       return [];
     });
 
-    render(<BoardsSettings />);
+    renderBoardsSettings();
 
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
@@ -424,7 +423,7 @@ describe('BoardsSettings ticket status copy flow', () => {
       return [];
     });
 
-    render(<BoardsSettings />);
+    renderBoardsSettings();
 
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
@@ -462,7 +461,7 @@ describe('BoardsSettings ticket status copy flow', () => {
   });
 
   it('passes inline-authored ticket statuses when creating a board from a new inline lifecycle', async () => {
-    render(<BoardsSettings />);
+    renderBoardsSettings();
 
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
@@ -514,7 +513,7 @@ describe('BoardsSettings ticket status copy flow', () => {
       },
     ]);
 
-    render(<BoardsSettings />);
+    renderBoardsSettings();
 
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
@@ -576,7 +575,7 @@ describe('BoardsSettings ticket status copy flow', () => {
   });
 
   it('T020: blocks board save when inline ticket statuses do not contain exactly one open default', async () => {
-    render(<BoardsSettings />);
+    renderBoardsSettings();
 
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
@@ -638,7 +637,7 @@ describe('BoardsSettings ticket status copy flow', () => {
       },
     ]);
 
-    render(<BoardsSettings />);
+    renderBoardsSettings();
 
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
@@ -664,7 +663,7 @@ describe('BoardsSettings ticket status copy flow', () => {
   });
 
   it('opens the create editor with General and the required Statuses section expanded', async () => {
-    render(<BoardsSettings />);
+    renderBoardsSettings();
 
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
@@ -699,7 +698,7 @@ describe('BoardsSettings ticket status copy flow', () => {
       },
     ]);
 
-    render(<BoardsSettings />);
+    renderBoardsSettings();
 
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
@@ -736,7 +735,7 @@ describe('BoardsSettings ticket status copy flow', () => {
       },
     ]);
 
-    render(<BoardsSettings />);
+    renderBoardsSettings();
 
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
@@ -802,7 +801,7 @@ describe('BoardsSettings ticket status copy flow', () => {
       },
     ]);
 
-    render(<BoardsSettings />);
+    renderBoardsSettings();
 
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
@@ -844,7 +843,7 @@ describe('BoardsSettings ticket status copy flow', () => {
     }));
     getAllBoardsMock.mockResolvedValue(manyBoards);
 
-    render(<BoardsSettings />);
+    renderBoardsSettings();
 
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
@@ -880,7 +879,7 @@ describe('BoardsSettings ticket status copy flow', () => {
     }));
     getAllBoardsMock.mockResolvedValue(manyBoards);
 
-    render(<BoardsSettings />);
+    renderBoardsSettings();
 
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);

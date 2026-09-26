@@ -198,6 +198,11 @@ vi.mock('@alga-psa/ui/components/CustomTabs', () => ({
 }));
 
 vi.mock('@alga-psa/tickets/actions/ticketActions', () => ({}));
+vi.mock('@alga-psa/integrations/emailSenderActions', () => ({
+  clearEmailSenderRoute: vi.fn(),
+  listEmailSenders: vi.fn(async () => ({ senders: [], routes: [] })),
+  setEmailSenderRoute: vi.fn(),
+}));
 
 const ticketingSettingsComponentMocks = vi.hoisted(() => async () => {
   const ReactModule = await import('react');

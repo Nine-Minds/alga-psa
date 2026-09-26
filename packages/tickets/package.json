@@ -51,7 +51,6 @@
     "@alga-psa/event-bus": "*",
     "@alga-psa/formatting": "*",
     "@alga-psa/list-views": "*",
-    "@alga-psa/integrations": "*",
     "@alga-psa/shared": "*",
     "@alga-psa/tags": "*",
     "@alga-psa/types": "*",
