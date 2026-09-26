@@ -812,6 +812,13 @@ export interface DraftInvoicePropertiesUpdateInput {
   invoiceNumber: string;
   invoiceDate: string;
   dueDate: string | null;
+  /**
+   * Re-point the draft at another of its client's billing profiles. Omitted
+   * (undefined) leaves the attribution alone; null unassigns it back to the
+   * client default. A finalized invoice is never re-pointed — the draft is the
+   * only place the pick can still be corrected.
+   */
+  billingProfileId?: string | null;
 }
 
 export interface DraftInvoicePropertiesUpdateResult {
@@ -819,6 +826,8 @@ export interface DraftInvoicePropertiesUpdateResult {
   invoiceNumber: string;
   invoiceDate: string;
   dueDate: string | null;
+  billingProfileId: string | null;
+  billingProfileName: string | null;
 }
 
 class ExpectedInvoiceActionError extends Error {}
@@ -937,6 +946,10 @@ export const updateDraftInvoiceProperties = withAuth(async (
   const currentDate = Temporal.Now.plainDateISO().toString();
   const { knex } = await createTenantKnex();
   let expectedError: InvoiceActionError | null = null;
+  const repointsProfile = input.billingProfileId !== undefined;
+  const nextBillingProfileId = input.billingProfileId?.trim() || null;
+  let resolvedBillingProfileId: string | null = null;
+  let resolvedBillingProfileName: string | null = null;
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     const invoice = await tenantScopedTable(trx, tenant, 'invoices')
@@ -954,6 +967,28 @@ export const updateDraftInvoiceProperties = withAuth(async (
     if (invoice.finalized_at || invoice.status !== 'draft') {
       expectedError = actionError('Only draft invoices can be edited', 'msp/invoicing:errors.invoice.onlyDraftEditable');
       return;
+    }
+
+    resolvedBillingProfileId = invoice.billing_profile_id ?? null;
+    const movesProfile = repointsProfile && nextBillingProfileId !== resolvedBillingProfileId;
+
+    // Correcting the profile a draft bills. The pick is validated against the
+    // invoice's own client so a profile that moved in with a merged client can
+    // never be billed under the wrong customer.
+    if (movesProfile && nextBillingProfileId) {
+      const profile = await tenantScopedTable(trx, tenant, 'client_billing_profiles')
+        .where({ billing_profile_id: nextBillingProfileId })
+        .first('client_id', 'is_active', 'name');
+
+      if (!profile || profile.client_id !== invoice.client_id || profile.is_active === false) {
+        expectedError = actionError(
+          'The selected billing profile is not available for this client',
+          'msp/invoicing:errors.invoice.billingProfileUnavailable',
+        );
+        return;
+      }
+
+      resolvedBillingProfileName = profile.name ?? null;
     }
 
     const duplicateInvoice = await tenantScopedTable(trx, tenant, 'invoices')
@@ -996,6 +1031,43 @@ export const updateDraftInvoiceProperties = withAuth(async (
 
       throw error;
     }
+
+    // Written only once every guard above has passed: an expected error returns
+    // from this callback, which commits rather than rolls back, so a rejected
+    // edit must not have moved anything.
+    if (movesProfile) {
+      // Charges keep their own attribution when they came from elsewhere (a
+      // contract line carrying a different profile); only the ones that
+      // followed the invoice header move with it, so profile spend and AR stay
+      // consistent with what the invoice now bills.
+      const previousBillingProfileId = resolvedBillingProfileId;
+      const chargeRepoint = tenantScopedTable(trx, tenant, 'invoice_charges')
+        .where({ invoice_id: invoiceId });
+      if (previousBillingProfileId) {
+        chargeRepoint.where((qb) => {
+          qb.where('billing_profile_id', previousBillingProfileId).orWhereNull('billing_profile_id');
+        });
+      } else {
+        chargeRepoint.whereNull('billing_profile_id');
+      }
+      await chargeRepoint.update({ billing_profile_id: nextBillingProfileId });
+
+      await tenantScopedTable(trx, tenant, 'invoices')
+        .where({ invoice_id: invoiceId, tenant })
+        .update({ billing_profile_id: nextBillingProfileId });
+
+      resolvedBillingProfileId = nextBillingProfileId;
+      if (!nextBillingProfileId) {
+        resolvedBillingProfileName = null;
+      }
+    }
+
+    if (resolvedBillingProfileId && !resolvedBillingProfileName) {
+      const currentProfile = await tenantScopedTable(trx, tenant, 'client_billing_profiles')
+        .where({ billing_profile_id: resolvedBillingProfileId })
+        .first('name');
+      resolvedBillingProfileName = currentProfile?.name ?? null;
+    }
   });
 
   if (expectedError) {
@@ -1007,6 +1079,8 @@ export const updateDraftInvoiceProperties = withAuth(async (
     invoiceNumber: trimmedInvoiceNumber,
     invoiceDate: normalizedInvoiceDate,
     dueDate: normalizedDueDate,
+    billingProfileId: resolvedBillingProfileId,
+    billingProfileName: resolvedBillingProfileName,
   };
 });
 

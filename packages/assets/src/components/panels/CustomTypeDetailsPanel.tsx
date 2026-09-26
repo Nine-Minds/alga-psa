@@ -6,7 +6,6 @@ import type { Asset, AssetTypeField } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useContentCardVariant } from '@alga-psa/ui/components/ContentCard';
 import { BentoTile } from '@alga-psa/ui/components/bento';
-import { isBuiltinAssetTypeSlug } from '../../lib/assetTypeAttributes';
 import { useAssetTypeRegistry } from '../shared/useAssetTypeOptions';
 
 interface CustomTypeDetailsPanelProps {
@@ -63,22 +62,17 @@ function renderFieldValue(field: AssetTypeField, value: unknown, t: TranslateFn)
 
 /**
  * F312: read-only schema panel for a custom-type asset. Renders the type's
- * fields_schema rows with the asset's attributes[key] values; built-ins,
- * unregistered slugs, empty schemas, and value-less assets render nothing
+ * fields_schema rows with the asset's attributes[key] values; unregistered
+ * slugs, empty schemas, and value-less assets render nothing
  * (data-presence gate, like HuduDocumentationCard).
  */
 export const CustomTypeDetailsPanel: React.FC<CustomTypeDetailsPanelProps> = ({ asset }) => {
   const { t } = useTranslation('msp/assets');
   const variant = useContentCardVariant();
-  const isCustom = !isBuiltinAssetTypeSlug(asset.asset_type);
-  const entries = useAssetTypeRegistry(isCustom);
-
-  if (!isCustom) {
-    return null;
-  }
+  const entries = useAssetTypeRegistry(true);
 
   const entry = entries?.find(
-    (candidate) => candidate.slug === asset.asset_type && !candidate.is_builtin
+    (candidate) => candidate.slug === asset.asset_type
   );
   if (!entry || entry.fields_schema.length === 0) {
     return null;

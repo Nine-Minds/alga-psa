@@ -448,11 +448,17 @@ export async function getClientDetails(knex: Knex, tenant: string, clientId: str
  *
  * Returns null when no candidate carries a valid email.
  */
-export async function getClientBillingEmail(knex: Knex, tenant: string, clientId: string): Promise<string | null> {
+export async function getClientBillingEmail(
+  knex: Knex,
+  tenant: string,
+  clientId: string,
+  billingProfileId?: string | null,
+): Promise<string | null> {
   const recipient = await resolveInvoiceBillingRecipient({
     knexOrTrx: knex,
     tenantId: tenant,
     clientId,
+    billingProfileId,
   });
 
   return recipient.recipientEmail || null;
@@ -470,8 +476,17 @@ export interface ValidationResult {
  * This is required for online payments via Stripe.
  * Returns a validation result instead of throwing an error.
  */
-export async function validateClientBillingEmail(knex: Knex, tenant: string, clientId: string, clientName: string): Promise<ValidationResult> {
-  const billingEmail = await getClientBillingEmail(knex, tenant, clientId);
+export async function validateClientBillingEmail(
+  knex: Knex,
+  tenant: string,
+  clientId: string,
+  clientName: string,
+  billingProfileId?: string | null,
+): Promise<ValidationResult> {
+  // A segmented client may hold its billing address on the profile alone, so
+  // the gate has to ask about the profile this invoice bills — otherwise a
+  // profile with a perfectly good AP inbox is refused an invoice.
+  const billingEmail = await getClientBillingEmail(knex, tenant, clientId, billingProfileId);
   if (!billingEmail) {
     return {
       valid: false,

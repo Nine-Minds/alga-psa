@@ -2352,7 +2352,8 @@
       "{{count}} h",
       "{{hours}} h {{minutes}} min",
       "3CX",
-      "Teams Phone"
+      "Teams Phone",
+      "TeamViewer"
     ],
     "caseInsensitive": [
       "account",
