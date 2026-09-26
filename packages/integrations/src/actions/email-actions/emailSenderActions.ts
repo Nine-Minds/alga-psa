@@ -1,0 +1,167 @@
+'use server';
+
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
+import { TenantEmailService } from '@alga-psa/email';
+import type { OutboundMailClass } from '@alga-psa/types';
+
+type RouteInput = {
+  routeType: 'default' | 'mail_class' | 'board';
+  mailClass?: OutboundMailClass;
+  boardId?: string;
+  senderId?: string | null;
+  displayName?: string | null;
+};
+
+async function authorize(user: any, tenant: string, action: 'read' | 'update') {
+  const { knex } = await createTenantKnex();
+  if (!await hasPermission(user, 'settings', action, knex)) throw new Error('You do not have permission to manage email sender settings.');
+  if (!tenant) throw new Error('A tenant is required.');
+  return { knex, db: tenantDb(knex, tenant) };
+}
+
+function routePredicate(route: RouteInput) {
+  if (route.routeType === 'default') return { route_type: 'default' };
+  if (route.routeType === 'mail_class') {
+    if (!route.mailClass) throw new Error('A mail class is required for this route.');
+    return { route_type: 'mail_class', mail_class: route.mailClass };
+  }
+  if (!route.boardId) throw new Error('A board is required for this route.');
+  return { route_type: 'board', board_id: route.boardId };
+}
+
+export const listEmailSenders = withAuth(async (user, { tenant }) => {
+  const { db } = await authorize(user, tenant, 'read');
+  const [senders, routes] = await Promise.all([
+    db.table('email_sender_addresses').select('*').orderBy('email_address'),
+    db.table('email_sender_routes').select('*').orderBy('route_type'),
+  ]);
+  return { senders, routes };
+});
+
+export const listSelectableSenders = withAuth(async (user, { tenant }, input: { mailClass: OutboundMailClass; boardId?: string }) => {
+  const { db } = await authorize(user, tenant, 'read');
+  const [senders, routes] = await Promise.all([
+    db.table('email_sender_addresses').where({ verification_status: 'verified' }).select('sender_id', 'email_address', 'display_name'),
+    db.table('email_sender_routes').select('*'),
+  ]);
+  const effective = input.boardId
+    ? routes.find((route: any) => route.route_type === 'board' && route.board_id === input.boardId)
+    : null;
+  const route = effective?.sender_id ? effective : routes.find((item: any) => item.route_type === 'mail_class' && item.mail_class === input.mailClass)
+    ?? routes.find((item: any) => item.route_type === 'default');
+  return { senders, effectiveSenderId: route?.sender_id ?? null, allowOverride: senders.length > 1 };
+});
+
+export const createEmailSender = withAuth(async (user, { tenant }, input: { emailAddress: string; displayName?: string | null; microsoftProviderId?: string | null }) => {
+  const { knex, db } = await authorize(user, tenant, 'update');
+  const emailAddress = input.emailAddress.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailAddress)) throw new Error('Enter a valid sender email address.');
+  const settings = await TenantEmailService.getTenantEmailSettings(tenant, knex);
+  if (!settings) throw new Error('Outbound email settings are not configured.');
+  let microsoftProviderId: string | null = null;
+  let verificationStatus: 'unverified' | 'verified' = 'unverified';
+  if (settings.emailProvider === 'resend') {
+    const domain = emailAddress.split('@')[1];
+    const verified = await db.table('email_domains').where({ domain_name: domain, status: 'verified' }).first();
+    if (!verified) throw new Error(`Domain ${domain} is not verified for this tenant.`);
+    verificationStatus = 'verified';
+  } else if (settings.emailProvider === 'microsoft') {
+    if (!input.microsoftProviderId) throw new Error('Choose a connected Microsoft mailbox to send through.');
+    const mailbox = await db.table('email_providers').where({ id: input.microsoftProviderId, provider_type: 'microsoft', is_active: true, status: 'connected' }).first();
+    if (!mailbox) throw new Error('The selected Microsoft mailbox is not connected.');
+    microsoftProviderId = mailbox.id;
+    verificationStatus = mailbox.mailbox.trim().toLowerCase() === emailAddress ? 'verified' : 'unverified';
+  } else if (settings.emailProvider === 'smtp') {
+    verificationStatus = 'unverified';
+  }
+  const [sender] = await db.table('email_sender_addresses').insert({
+    email_address: emailAddress,
+    display_name: input.displayName?.trim() || null,
+    microsoft_provider_id: microsoftProviderId,
+    verification_status: verificationStatus,
+    verified_at: verificationStatus === 'verified' ? new Date() : null,
+  }).returning('*');
+  await TenantEmailService.invalidateTenantSettings(tenant);
+  return sender;
+});
+
+export const updateEmailSender = withAuth(async (user, { tenant }, input: { senderId: string; displayName?: string | null; emailAddress?: string }) => {
+  const { db } = await authorize(user, tenant, 'update');
+  const update: Record<string, unknown> = { updated_at: new Date() };
+  if (input.displayName !== undefined) update.display_name = input.displayName?.trim() || null;
+  if (input.emailAddress !== undefined) {
+    const address = input.emailAddress.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) throw new Error('Enter a valid sender email address.');
+    update.email_address = address;
+  }
+  const [sender] = await db.table('email_sender_addresses').where({ sender_id: input.senderId }).update(update).returning('*');
+  if (!sender) throw new Error('Sender address was not found.');
+  await TenantEmailService.invalidateTenantSettings(tenant);
+  return sender;
+});
+
+export const deleteEmailSender = withAuth(async (user, { tenant }, senderId: string) => {
+  const { db } = await authorize(user, tenant, 'update');
+  const routes = await db.table('email_sender_routes').where({ sender_id: senderId }).select('route_type', 'mail_class', 'board_id');
+  if (routes.length) throw new Error(`This sender is still used by ${routes.map((route: any) => route.route_type === 'board' ? `board ${route.board_id}` : route.mail_class ?? 'the default route').join(', ')}.`);
+  const deleted = await db.table('email_sender_addresses').where({ sender_id: senderId }).del();
+  if (!deleted) throw new Error('Sender address was not found.');
+  await TenantEmailService.invalidateTenantSettings(tenant);
+  return { success: true };
+});
+
+export const setEmailSenderRoute = withAuth(async (user, { tenant }, input: RouteInput) => {
+  const { db } = await authorize(user, tenant, 'update');
+  if (!input.senderId && !input.displayName?.trim()) throw new Error('Choose a sender or provide a display name.');
+  if (input.senderId) {
+    const sender = await db.table('email_sender_addresses').where({ sender_id: input.senderId }).first();
+    if (!sender || sender.verification_status !== 'verified') throw new Error('Routes can use only verified sender addresses.');
+  }
+  const key = routePredicate(input);
+  await db.table('email_sender_routes').where(key).del();
+  await db.table('email_sender_routes').insert({
+    ...key,
+    sender_id: input.senderId ?? null,
+    display_name: input.displayName?.trim() || null,
+    updated_at: new Date(),
+  });
+  await TenantEmailService.invalidateTenantSettings(tenant);
+  return { success: true };
+});
+
+export const clearEmailSenderRoute = withAuth(async (user, { tenant }, input: RouteInput) => {
+  const { db } = await authorize(user, tenant, 'update');
+  await db.table('email_sender_routes').where(routePredicate(input)).del();
+  await TenantEmailService.invalidateTenantSettings(tenant);
+  return { success: true };
+});
+
+export const verifyEmailSender = withAuth(async (user, { tenant }, senderId: string) => {
+  const { db } = await authorize(user, tenant, 'update');
+  const sender = await db.table('email_sender_addresses').where({ sender_id: senderId }).first();
+  if (!sender) throw new Error('Sender address was not found.');
+  const recipient = (user as any)?.email;
+  if (!recipient) throw new Error('The current user has no email address for verification.');
+  try {
+    const result = await TenantEmailService.getInstance(tenant).sendEmail({
+      tenantId: tenant,
+      to: recipient,
+      mailClass: 'general',
+      senderId,
+      allowUnverifiedSender: true,
+      subject: 'Outbound sender verification',
+      html: `Test message from ${sender.email_address}`,
+    });
+    if (!result.success) throw new Error(result.error || 'The provider did not accept the verification message.');
+    await db.table('email_sender_addresses').where({ sender_id: senderId }).update({ verification_status: 'verified', verified_at: new Date(), last_verification_error: null });
+    await TenantEmailService.invalidateTenantSettings(tenant);
+    return { success: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    await db.table('email_sender_addresses').where({ sender_id: senderId }).update({ verification_status: 'failed', last_verification_error: message });
+    await TenantEmailService.invalidateTenantSettings(tenant);
+    throw error;
+  }
+});

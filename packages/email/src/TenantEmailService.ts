@@ -365,6 +365,7 @@ export class TenantEmailService extends BaseEmailService {
         senderId: params.senderId,
         from: params.from,
         fromName: params.fromName,
+        allowUnverifiedSender: params.allowUnverifiedSender,
       }, settings, params.resolvedTenantCompanyName, params.boardName);
       params.resolvedMicrosoftProviderId = routed.microsoftProviderId;
       return routed.from;

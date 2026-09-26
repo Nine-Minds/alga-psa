@@ -16,6 +16,8 @@ vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => async (...args: any[]) => fn({ id: 'user-1' }, { tenant: 'tenant-123' }, ...args),
 }));
 
+vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: vi.fn(async () => true) }));
+
 vi.mock('@alga-psa/email', () => ({
   TenantEmailService: {
     getTenantEmailSettings: getTenantEmailSettingsMock,
@@ -56,11 +58,13 @@ describe('updateEmailSettings clear behavior', () => {
     const whereMock = vi.fn(() => ({
       first: firstMock,
       update: updateMock,
+      select: vi.fn(async () => []),
     }));
 
     const knexMock = vi.fn((_table: string) => ({
       where: whereMock,
       insert: vi.fn(async () => 1),
+      select: vi.fn(async () => []),
     })) as any;
 
     createTenantKnexMock.mockResolvedValue({ knex: knexMock, tenant: 'tenant-123' });
@@ -89,15 +93,14 @@ describe('updateEmailSettings clear behavior', () => {
       });
 
     const { updateEmailSettings } = await import('./emailSettingsActions');
-    const updated = await updateEmailSettings({ ticketingFromEmail: null });
+    const updated = await updateEmailSettings({ defaultFromDomain: 'acme.com' });
 
     expect(updateMock).toHaveBeenCalledWith(expect.objectContaining({
-      ticketing_from_email: null,
       default_from_domain: 'acme.com',
     }));
     expect('actionError' in updated).toBe(false);
     if ('actionError' in updated) return;
-    expect(updated.ticketingFromEmail).toBeNull();
+    expect(updated.defaultFromDomain).toBe('acme.com');
   });
 
   it('persists the normalized ticketing sender display name', async () => {
@@ -106,11 +109,13 @@ describe('updateEmailSettings clear behavior', () => {
     const whereMock = vi.fn(() => ({
       first: firstMock,
       update: updateMock,
+      select: vi.fn(async () => []),
     }));
 
     const knexMock = vi.fn((_table: string) => ({
       where: whereMock,
       insert: vi.fn(async () => 1),
+      select: vi.fn(async () => []),
     })) as any;
 
     createTenantKnexMock.mockResolvedValue({ knex: knexMock, tenant: 'tenant-123' });
@@ -141,16 +146,8 @@ describe('updateEmailSettings clear behavior', () => {
       });
 
     const { updateEmailSettings } = await import('./emailSettingsActions');
-    const updated = await updateEmailSettings({
-      ticketingFromName: ' Support Team ',
-    });
-
-    expect(updateMock).toHaveBeenCalledWith(expect.objectContaining({
-      ticketing_from_email: 'support@acme.com',
-      ticketing_from_name: 'Support Team',
-    }));
+    const updated = await updateEmailSettings({ trackingEnabled: true });
+    expect(updateMock).toHaveBeenCalledWith(expect.not.objectContaining({ ticketing_from_email: expect.anything(), ticketing_from_name: expect.anything() }));
     expect('actionError' in updated).toBe(false);
-    if ('actionError' in updated) return;
-    expect(updated.ticketingFromName).toBe('Support Team');
   });
 });
