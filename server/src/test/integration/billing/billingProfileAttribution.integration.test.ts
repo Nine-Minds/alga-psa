@@ -3,6 +3,8 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
 import { tenantDb } from '@alga-psa/db';
+import Invoice from '@alga-psa/billing/models/invoice';
+import { Temporal } from '@js-temporal/polyfill';
 import { buildContractCadenceDueSelectionInput } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 import { setupCommonMocks } from '../../../../test-utils/testMocks';
@@ -219,10 +221,9 @@ async function chargesFor(invoiceId: string) {
 describe('billing profiles S2 — charge attribution and snapshots (T004, T010, T014, T016, T017)', () => {
   beforeAll(async () => {
     process.env.APP_ENV = process.env.APP_ENV || 'test';
-    // A dedicated database: the shared `test_database` is recreated by every
-    // other integration suite, including ones running concurrently in sibling
-    // worktrees, which drops this suite's connection mid-run.
-    db = await createTestDbConnection({ databaseName: 'test_db_billing_profiles' });
+    // Dedicated to this feature's recurring profile acceptance fixture. Never
+    // use the shared `test_database`, which other worktrees recreate.
+    db = await createTestDbConnection({ databaseName: 'test_db_billing_profile_recurring_acceptance' });
 
     tenantId = uuidv4();
     await tenantsUnscoped().insert({
@@ -371,6 +372,7 @@ describe('billing profiles S2 — charge attribution and snapshots (T004, T010, 
     const { clientId, cycleId: cardCycleId } = await seedClient('T004 Payment Method Snapshot Client');
     await table('clients').where({ client_id: clientId }).update({
       preferred_payment_method: 'credit_card',
+      payment_terms: 'net_30',
     });
 
     const cardProfileId = await ensureDefaultBillingProfile(
@@ -385,7 +387,7 @@ describe('billing profiles S2 — charge attribution and snapshots (T004, T010, 
     );
     await table('client_billing_profiles')
       .where({ billing_profile_id: checkProfileId })
-      .update({ preferred_payment_method: 'check' });
+      .update({ preferred_payment_method: 'check', payment_terms: 'due_on_receipt' });
 
     const checkCycleId = uuidv4();
     await seedBillingCycle(db, tenantId, {
@@ -476,31 +478,63 @@ describe('billing profiles S2 — charge attribution and snapshots (T004, T010, 
     );
     const snapshotFor = (invoiceId: string) => table('invoices')
       .where({ invoice_id: invoiceId })
-      .first('billing_profile_id', 'payment_method');
+      .first('billing_profile_id', 'payment_method', 'invoice_date', 'due_date');
 
-    expect(await snapshotFor(cardInvoice.invoice_id)).toMatchObject({
+    const cardSnapshot = await snapshotFor(cardInvoice.invoice_id);
+    const checkSnapshot = await snapshotFor(checkInvoice.invoice_id);
+    expect(cardSnapshot).toMatchObject({
       billing_profile_id: cardProfileId,
       payment_method: 'credit_card',
     });
-    expect(await snapshotFor(checkInvoice.invoice_id)).toMatchObject({
+    expect(checkSnapshot).toMatchObject({
       billing_profile_id: checkProfileId,
       payment_method: 'check',
     });
+
+    const calendarDate = (value: unknown): string => value instanceof Date
+      ? value.toISOString().slice(0, 10)
+      : String(value).slice(0, 10);
+    const cardInvoiceDate = Temporal.PlainDate.from(calendarDate(cardSnapshot.invoice_date));
+    const cardDueDate = Temporal.PlainDate.from(calendarDate(cardSnapshot.due_date));
+    expect(cardDueDate.since(cardInvoiceDate).days).toBe(30);
+    expect(calendarDate(checkSnapshot.due_date)).toBe(calendarDate(checkSnapshot.invoice_date));
+
+    // getInvoiceForRendering delegates to Invoice.getFullInvoiceById. The
+    // PostgreSQL DATE parser returns Date objects here; other invoiceQueries
+    // paths explicitly convert date strings to Temporal.PlainDate.
+    const fullInvoice = await Invoice.getFullInvoiceById(db, tenantId, cardInvoice.invoice_id);
+    expect(fullInvoice.invoice_date).toBeInstanceOf(Date);
+    expect(fullInvoice.due_date).toBeInstanceOf(Date);
+    expect((fullInvoice.invoice_date as Date).toISOString().slice(0, 10))
+      .toBe(calendarDate(cardSnapshot.invoice_date));
+    expect((fullInvoice.due_date as Date).toISOString().slice(0, 10))
+      .toBe(calendarDate(cardSnapshot.due_date));
+
+    const cardCharges = await chargesFor(cardInvoice.invoice_id);
+    const checkCharges = await chargesFor(checkInvoice.invoice_id);
+    expect(cardCharges.length).toBeGreaterThan(0);
+    expect(checkCharges.length).toBeGreaterThan(0);
+    expect(cardCharges.every((charge) => charge.billing_profile_id === cardProfileId)).toBe(true);
+    expect(checkCharges.every((charge) => charge.billing_profile_id === checkProfileId)).toBe(true);
 
     await table('client_billing_profiles')
       .where({ billing_profile_id: cardProfileId })
-      .update({ preferred_payment_method: 'bank_transfer' });
+      .update({ preferred_payment_method: 'bank_transfer', payment_terms: 'due_on_receipt' });
     await table('client_billing_profiles')
       .where({ billing_profile_id: checkProfileId })
-      .update({ preferred_payment_method: 'credit_card' });
+      .update({ preferred_payment_method: 'credit_card', payment_terms: 'net_30' });
 
     expect(await snapshotFor(cardInvoice.invoice_id)).toMatchObject({
       billing_profile_id: cardProfileId,
       payment_method: 'credit_card',
+      invoice_date: cardSnapshot.invoice_date,
+      due_date: cardSnapshot.due_date,
     });
     expect(await snapshotFor(checkInvoice.invoice_id)).toMatchObject({
       billing_profile_id: checkProfileId,
       payment_method: 'check',
+      invoice_date: checkSnapshot.invoice_date,
+      due_date: checkSnapshot.due_date,
     });
   }, HOOK_TIMEOUT);
 
