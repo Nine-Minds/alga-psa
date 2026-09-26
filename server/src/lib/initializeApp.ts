@@ -40,6 +40,7 @@ import { inboundWebhookRateLimitConfigGetter } from './inboundWebhooks/rateLimit
 import { bootstrapInboundWebhookActions } from './inboundWebhooks/actions/bootstrap';
 import { WebhookDeliveryQueue } from './webhooks/WebhookDeliveryQueue';
 import { processWebhookDeliveryJob } from './webhooks/processWebhookDeliveryJob';
+import { initializeDevelopmentCredential } from './developmentCredential';
 
 let isFunctionExecuted = false;
 
@@ -772,19 +773,19 @@ async function initializeJobScheduler(storageService: StorageService) {
 
 // Helper function to setup development environment
 async function setupDevelopmentEnvironment() {
-  let newPassword;
-  const glinda = await User.findUserByEmail("glinda@emeraldcity.oz");
-  if (glinda) {
-    newPassword = generateSecurePassword();
-    const hashedPassword = await hashPassword(newPassword);
-    await User.updatePassword(glinda.user_id, glinda.tenant, hashedPassword);
-  } else {
-    logger.info('Glinda not found. Skipping password update.');
-  }
+  if (process.env.NODE_ENV !== 'development') return;
 
-  if (process.env.NODE_ENV === 'development') {
-    try {
-      logger.info(`
+  const glinda = await User.findUserByEmail("glinda@emeraldcity.oz");
+  await initializeDevelopmentCredential({
+    user: glinda,
+    generatePassword: generateSecurePassword,
+    hashPassword,
+    updatePasswordIfUnchanged: User.updatePasswordIfUnchanged,
+    log: (message) => logger.info(message),
+  });
+
+  try {
+    logger.info(`
 :::::::::  :::::::::: :::     ::: :::::::::: :::        ::::::::  :::::::::  ::::    ::::  :::::::::: ::::    ::: :::::::::::      ::::    ::::   ::::::::  :::::::::  ::::::::::
 :+:    :+: :+:        :+:     :+: :+:        :+:       :+:    :+: :+:    :+: +:+:+: :+:+:+ :+:        :+:+:   :+:     :+:          +:+:+: :+:+:+ :+:    :+: :+:    :+: :+:
 +:+    +:+ +:+        +:+     +:+ +:+        +:+       +:+    +:+ +:+    +:+ +:+ +:+:+ +:+ +:+        :+:+:+  +:+     +:+          +:+ +:+:+ +:+ +:+    +:+ +:+    +:+ :+:
@@ -792,19 +793,8 @@ async function setupDevelopmentEnvironment() {
 +#+    +#+ +#+         +#+   +#+  +#+        +#+       +#+    +#+ +#+        +#+       +#+ +#+        +#+  +#+#+#     +#+          +#+       +#+ +#+    +#+ +#+    +#+ +#+
 #+#    #+# #+#          #+#+#+#   #+#        #+#       #+#    #+# #+#        #+#       #+# #+#        #+#   #+#+#     #+#          #+#       #+# #+#    #+# #+#    #+# #+#
 #########  ##########     ###     ########## ########## ########  ###        ###       ### ########## ###    ####     ###          ###       ###  ########  #########  ##########
-      `);
-    } catch (error) {
-      logger.error('Error displaying development banner:', error);
-    }
-  }
-
-  if (glinda && newPassword) {
-    logger.info('*************************************************************');
-    logger.info(`********                                             ********`);
-    logger.info(`******** User Email is -> [ ${glinda.email} ]  ********`);
-    logger.info(`********                                             ********`);
-    logger.info(`********       Password is -> [ ${newPassword} ]   ********`);
-    logger.info(`********                                             ********`);
-    logger.info('*************************************************************');
+    `);
+  } catch (error) {
+    logger.error('Error displaying development banner:', error);
   }
 }
