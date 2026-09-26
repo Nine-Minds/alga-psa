@@ -271,7 +271,7 @@ describe('PeopleCard', () => {
           totalCount: 7,
           top: [{
             contact_name_id: 'c-1', full_name: 'Ada Lovelace', role: 'Ops',
-            email: 'ada@example.com', phone: null, is_default: true, avatarUrl: null,
+            email: 'ada@example.com', phone: null, phone_extension: null, is_default: true, avatarUrl: null,
           }],
         }}
         onOpen={null}
@@ -283,6 +283,14 @@ describe('PeopleCard', () => {
     expect(document.getElementById('ppl-more')).toHaveTextContent('+6 more');
   });
 
+  it('renders the default phone extension', () => {
+    render(<PeopleCard id="ppl" data={{ totalCount: 1, top: [{
+      contact_name_id: 'c-1', full_name: 'Ada Lovelace', role: null, email: null,
+      phone: '+13202521658', phone_extension: '42', is_default: true, avatarUrl: null,
+    }] }} onOpen={null} t={t} />);
+    expect(screen.getByText('+1 320 252 1658 ext. 42')).toBeInTheDocument();
+  });
+
   it('says so when a contact has neither phone nor email', () => {
     render(
       <PeopleCard
@@ -291,7 +299,7 @@ describe('PeopleCard', () => {
           totalCount: 1,
           top: [{
             contact_name_id: 'c-1', full_name: 'Ada Lovelace', role: null,
-            email: null, phone: null, is_default: false, avatarUrl: null,
+            email: null, phone: null, phone_extension: null, is_default: false, avatarUrl: null,
           }],
         }}
         onOpen={null}
@@ -306,7 +314,7 @@ describe('PeopleCard', () => {
 describe('LocationsCard', () => {
   const location = (id: string): ClientPulseLocation => ({
     location_id: id, location_name: `Site ${id}`, address_line1: '1 Main St', city: 'Springfield',
-    phone: null, email: null, is_default: false, is_billing: false, is_shipping: false,
+    phone: null, phone_extension: null, country_code: null, email: null, is_default: false, is_billing: false, is_shipping: false,
   });
 
   it('shows an empty state with no locations', () => {
@@ -321,6 +329,15 @@ describe('LocationsCard', () => {
     expect(screen.getByText('Site c')).toBeInTheDocument();
     expect(screen.queryByText('Site d')).toBeNull();
     expect(document.getElementById('loc-more')).toHaveTextContent('+2 more');
+  });
+
+  it('formats extensions and national legacy numbers using the location country', () => {
+    render(<LocationsCard id="loc" locations={[
+      { ...location('a'), phone: '+13202521658', phone_extension: '42', country_code: 'US' },
+      { ...location('b'), phone: '(507) 532-4482', country_code: 'US' },
+    ]} onManage={null} t={t} />);
+    expect(screen.getByText('+1 320 252 1658 ext. 42')).toBeInTheDocument();
+    expect(screen.getByText('+1 507 532 4482')).toBeInTheDocument();
   });
 });
 
