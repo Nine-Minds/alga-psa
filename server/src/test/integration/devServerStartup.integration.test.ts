@@ -44,7 +44,7 @@ type UpgradeOutcome =
   | { kind: 'response'; statusCode: number }
   | { kind: 'error'; error: Error };
 
-function requestUpgrade(port: number, path: string): Promise<UpgradeOutcome> {
+function requestUpgrade(port: number, path: string, origin?: string): Promise<UpgradeOutcome> {
   return new Promise((resolve) => {
     let settled = false;
     const finish = (outcome: UpgradeOutcome) => {
@@ -73,6 +73,7 @@ function requestUpgrade(port: number, path: string): Promise<UpgradeOutcome> {
         Upgrade: 'websocket',
         'Sec-WebSocket-Key': 'dGhlIHNhbXBsZSBub25jZQ==',
         'Sec-WebSocket-Version': '13',
+        ...(origin ? { Origin: origin } : {}),
       },
     });
     req.on('upgrade', (res, socket) => {
@@ -113,7 +114,8 @@ async function createFixtureApp(): Promise<string> {
   );
   await writeFile(
     path.join(dir, 'next.config.mjs'),
-    `export default { turbopack: { root: ${JSON.stringify(REPO_ROOT)} } };\n`,
+    `import { getAllowedDevOrigins } from ${JSON.stringify(path.join(SERVER_DIR, 'src/lib/http/devAllowedOrigins.mjs'))};\n` +
+      `export default { allowedDevOrigins: getAllowedDevOrigins(), turbopack: { root: ${JSON.stringify(REPO_ROOT)} } };\n`,
   );
   await writeFile(
     path.join(dir, 'pages', 'index.js'),
@@ -218,6 +220,9 @@ describe('development server turbopack entrypoint (dev:turbo)', () => {
   beforeAll(async () => {
     ({ running, fixtureDir } = await bootFixture({
       turbopack: true,
+      // Match the common dev setup: listen on all interfaces, then browse via
+      // loopback. The HMR Origin must be allowed independently of hostname.
+      hostname: '0.0.0.0',
       // No upstream configured: /hocuspocus must still be rejected promptly.
       hocuspocusHost: undefined,
       hocuspocusPort: undefined,
@@ -241,6 +246,7 @@ describe('development server turbopack entrypoint (dev:turbo)', () => {
     const outcome = await requestUpgrade(
       running.port,
       '/_next/webpack-hmr?id=turbo-test',
+      `http://127.0.0.1:${running.port}`,
     );
     expect(outcome.kind).toBe('upgrade');
     if (outcome.kind === 'upgrade') {
