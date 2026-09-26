@@ -1,22 +1,21 @@
 # Asked
 
-For alga-2026-0002563, derive quote PDF filenames from the quote title across email and downloads. Review the approved draft and run focused checks before handing it back to XO.
+For alga-2026-0002563, verify title-derived PDF filenames across email and downloads after smoke-fix round 3, rerun focused checks, and report implementation readiness to XO.
 
 # Done
 
-Reviewed the draft at `46c0b011b9cfa947ca8137a04ef9c5f62ca24f6a` against `636c648b53`. No further source changes were needed.
+Reviewed HEAD `856bf6610f` against `636c648b53`. **The filename implementation is genuinely present and wired through the production paths.** The latest draft left it unchanged; no further source changes were needed. This finalization updates only the review packet.
 
 - `packages/core/src/lib/fileNames.ts:17` sanitizes the title, preserves Unicode, limits length, handles reserved names, and appends `.pdf`. `packages/billing/src/lib/quoteFileNames.ts:7` supplies `Quote_<number>` (or quote ID) only when the title is unusable.
-- `packages/billing/src/actions/quoteActions.ts:605` names email attachments from the title; `:2187` returns the same filename for MSP downloads. Consumers use it in `packages/billing/src/components/billing-dashboard/quotes/QuoteDetail.tsx:698`, `QuoteForm.tsx:913`, and `QuotesTab.tsx:402`.
+- `packages/billing/src/actions/quoteActions.ts:605` names email attachments from the title. Send, resend, and reminder paths call this helper at `:1607`, `:1707`, and `:1803`. The download action returns the same filename at `:2187`; consumers use it in `packages/billing/src/components/billing-dashboard/quotes/QuoteDetail.tsx:698`, `QuoteForm.tsx:913`, and `QuotesTab.tsx:402`.
 - `packages/billing/src/services/pdfGenerationService.ts:376` reads the tenant-scoped quote title and stores the title-derived document name. `packages/client-portal/src/actions/client-portal-actions/client-billing.ts:1225` checks stored names and regenerates a PDF when the current title produces a different name. `packages/client-portal/src/components/billing/QuoteDetailPage.tsx:307` uses the returned filename.
-- `packages/documents/src/actions/documentActions.ts:1534` delegates the response to `packages/documents/src/lib/documentDownloadResponse.ts:13`, which encodes the Unicode filename in `Content-Disposition`.
-- Reviewed the existing sign-in repairs: `server/src/lib/initializeApp.ts:776` wires development credential initialization; `server/src/lib/developmentCredentials.ts:47` recognizes unset/seed credentials and preserves other credentials by default; `packages/db/src/models/user.ts:336` conditionally persists by tenant, user, and observed hash before credentials are announced. Authentication verifies the password at `packages/auth/src/actions/auth.tsx:119`.
+- `packages/billing/src/services/pdfGenerationService.ts:517` persists `target.documentName`. `packages/documents/src/actions/documentActions.ts:1534` builds the download response from that document metadata through `packages/documents/src/lib/documentDownloadResponse.ts:18`, including the Unicode filename in `Content-Disposition`.
 
-Repository searches found no remaining unconditional hardcoded quote PDF filename in the production paths inspected.
+Production-source searches across `packages`, `server/src`, and `ee/server/src` found only three remaining `Quote_` literals: the explicit fallback arguments in the billing helper, PDF service, and portal action cited above. A title of `Estimate` produces `Estimate.pdf`; an unusable title falls back to `Quote_<number>.pdf` or the quote ID. No matching plan was found under `docs/plans` or `ee/docs/plans`; this review verifies the existing implementation directly.
 
 # Verified
 
-Fresh checks on 2026-09-26: **105 tests passed across 12 files**.
+Fresh round-3 checks on 2026-09-26 at 15:50 EDT: **88 tests passed across 6 files** (core 9, billing 56, portal 16, documents 7). Coverage includes title-based email attachments, fallback names, stored PDF naming, portal regeneration after rename, Unicode, and parsed response headers.
 
 Commands from the worktree root:
 
@@ -25,19 +24,14 @@ npm run test -w @alga-psa/core -- --run src/lib/fileNames.test.ts
 npm run test -w @alga-psa/billing -- --run tests/quote/quoteFileNames.test.ts tests/quote/quoteActions.test.ts tests/quote/quotePdfGenerationService.test.ts
 npm run test -w @alga-psa/client-portal -- --run src/actions/client-portal-actions/client-billing.quote.test.ts
 npm run test -w @alga-psa/documents -- --run tests/quotePdfDownloadResponse.test.ts
-npm run test -w @alga-psa/ui -- --run src/lib/i18n/client.initialization.test.tsx src/lib/i18n/client.pending-initialization.test.tsx src/lib/i18n/namespaceReadiness.test.tsx
-npm run test -w @alga-psa/auth -- --run src/components/MspSignIn.i18nBootstrap.test.ts
-npm run test -w @alga-psa/db -- src/models/user.updatePasswordIfCurrent.test.ts
 ```
-
-From `server/`: `../node_modules/.bin/vitest run src/test/unit/developmentCredentials.test.ts --coverage.enabled=false` passed (8 tests, including authentication with the generated credential).
 
 `NODE_OPTIONS=--max-old-space-size=8192 npm run typecheck -w @alga-psa/<package>` passed for `billing`, `client-portal`, and `documents`. `npm run build -w @alga-psa/core` and `git diff --check 636c648b53` passed.
 
 # Unsure
 
-Live sign-in recovery, browser filenames, delivered email attachments, and stored-PDF download headers remain unverified in this assignment. Tests exercise mocked persistence and response construction; they do not establish behavior against the running database/storage. The prior smoke failure therefore remains for the next Smoke Test to resolve. No full smoke or service restart was performed.
+Live sign-in recovery, browser filenames, delivered email attachments, and stored-PDF download headers remain unverified in this assignment. Tests exercise mocked persistence and response construction; they do not establish behavior against the running database/storage. XO reports that the smoke failures concern the development server/environment; these checks establish no filename regression and do not independently diagnose that environment. No full smoke or service restart was performed.
 
 # Recommendation
 
-**Advance** to Smoke Test under XO control. The implementation and focused checks pass; live acceptance is still pending.
+**Advance** under XO control. The filename implementation and focused checks pass; live acceptance remains pending. This recommendation does not mark smoke passed or advance the board.
