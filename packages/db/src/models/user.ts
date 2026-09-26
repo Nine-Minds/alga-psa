@@ -333,17 +333,24 @@ const User = {
     }
   },
 
-  updatePasswordIfUnset: async (user_id: string, tenant: string, hashed_password: string): Promise<boolean> => {
+  updatePasswordIfCurrent: async (
+    user_id: string,
+    tenant: string,
+    observed_hash: string | null,
+    hashed_password: string,
+  ): Promise<boolean> => {
     const db = await getAdminConnection();
     try {
-      const updated = await tenantDb(db, tenant)
+      let query = tenantDb(db, tenant)
         .table<IUser>('users')
-        .where({ user_id })
-        .whereNull('hashed_password')
-        .update({ hashed_password });
+        .where({ user_id });
+      query = observed_hash === null
+        ? query.whereNull('hashed_password')
+        : query.where({ hashed_password: observed_hash });
+      const updated = await query.update({ hashed_password });
       return updated > 0;
     } catch (error) {
-      logger.error(`Error initializing password for user ${user_id} in tenant ${tenant}:`, error);
+      logger.error(`Error conditionally updating password for user ${user_id} in tenant ${tenant}:`, error);
       throw error;
     }
   },

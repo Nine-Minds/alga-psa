@@ -40,7 +40,7 @@ import { inboundWebhookRateLimitConfigGetter } from './inboundWebhooks/rateLimit
 import { bootstrapInboundWebhookActions } from './inboundWebhooks/actions/bootstrap';
 import { WebhookDeliveryQueue } from './webhooks/WebhookDeliveryQueue';
 import { processWebhookDeliveryJob } from './webhooks/processWebhookDeliveryJob';
-import { shouldInitializeDevelopmentPassword } from './developmentCredentials';
+import { initializeDevelopmentCredential } from './developmentCredentials';
 
 let isFunctionExecuted = false;
 
@@ -773,52 +773,21 @@ async function initializeJobScheduler(storageService: StorageService) {
 
 // Helper function to setup development environment
 async function setupDevelopmentEnvironment() {
-  if (process.env.NODE_ENV !== 'development') return;
-
-  const glinda = await User.findUserByEmail('glinda@emeraldcity.oz');
-  if (!glinda) {
-    logger.info('Glinda not found. Skipping password update.');
-    return;
-  }
-
-  // Development worktrees can share a database. Rotating this password on
-  // each boot invalidates credentials announced by other running worktrees.
-  if (!shouldInitializeDevelopmentPassword(glinda.hashed_password)) {
-    logger.info('Development user already has a password; preserving it.');
-    return;
-  }
-
-  const newPassword = generateSecurePassword();
-  const hashedPassword = await hashPassword(newPassword);
-  const credentialEstablished = await User.updatePasswordIfUnset(
-    glinda.user_id,
-    glinda.tenant,
-    hashedPassword,
-  );
-  if (!credentialEstablished) {
-    logger.info('Development user password was established by another server; preserving it.');
-    return;
-  }
-
-  try {
-    logger.info(`
-:::::::::  :::::::::: :::     ::: :::::::::: :::        ::::::::  :::::::::  ::::    ::::  :::::::::: ::::    ::: :::::::::::      ::::    ::::   ::::::::  :::::::::  ::::::::::
-:+:    :+: :+:        :+:     :+: :+:        :+:       :+:    :+: :+:    :+: +:+:+: :+:+:+ :+:        :+:+:   :+:     :+:          +:+:+: :+:+:+ :+:    :+: :+:    :+: :+:
-+:+    +:+ +:+        +:+     +:+ +:+        +:+       +:+    +:+ +:+    +:+ +:+ +:+:+ +:+ +:+        :+:+:+  +:+     +:+          +:+ +:+:+ +:+ +:+    +:+ +:+    +:+ :+:
-+#+    +:+ +#++:++#   +#+     +:+ +#++:++#   +#+       +#+    +:+ +#++:++#+  +#+  +:+  +#+ +#++:++#   +#+ +:+ +#+     +#+          +#+  +:+  +#+ +#+    +:+ +#+    +:+ +#++:++#
-+#+    +#+ +#+         +#+   +#+  +#+        +#+       +#+    +#+ +#+        +#+       +#+ +#+        +#+  +#+#+#     +#+          +#+       +#+ +#+    +#+ +#+    +#+ +#+
-#+#    #+# #+#          #+#+#+#   #+#        #+#       #+#    #+# #+#        #+#       #+# #+#        #+#   #+#+#     #+#          #+#       #+# #+#    #+# #+#    #+# #+#
-#########  ##########     ###     ########## ########## ########  ###        ###       ### ########## ###    ####     ###          ###       ###  ########  #########  ##########
-      `);
-    } catch (error) {
-      logger.error('Error displaying development banner:', error);
-    }
-
-  logger.info('*************************************************************');
-  logger.info(`********                                             ********`);
-  logger.info(`******** User Email is -> [ ${glinda.email} ]  ********`);
-  logger.info(`********                                             ********`);
-  logger.info(`********       Password is -> [ ${newPassword} ]   ********`);
-  logger.info(`********                                             ********`);
-  logger.info('*************************************************************');
+  await initializeDevelopmentCredential({
+    enabled: process.env.NODE_ENV === 'development',
+    provisionRequested: process.env.DEV_USER_PASSWORD_PROVISION === 'true',
+    provisionPassword: process.env.DEV_USER_PASSWORD,
+    findUserByEmail: (email) => User.findUserByEmail(email),
+    updatePasswordIfCurrent: (userId, tenant, observedHash, replacementHash) =>
+      User.updatePasswordIfCurrent(userId, tenant, observedHash, replacementHash),
+    hashPassword,
+    generatePassword: () => generateSecurePassword(),
+    announceCredentials: (email, password) => {
+      logger.info('*************************************************************');
+      logger.info(`******** User Email is -> [ ${email} ]`);
+      logger.info(`******** Password is -> [ ${password} ]`);
+      logger.info('*************************************************************');
+    },
+    logInfo: (message) => logger.info(message),
+  });
 }
