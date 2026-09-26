@@ -3055,7 +3055,7 @@
     "assetTypes": {
       "tab": "Asset",
       "title": "Tipi di asset",
-      "description": "Gestisci i tipi di asset disponibili nel modulo asset. I tipi personalizzati hanno uno schema di campi che determina i loro moduli di creazione/modifica.",
+      "description": "I tipi personalizzati usano uno schema di campi per i moduli; anche i tipi integrati supportano campi aggiuntivi.",
       "loading": "Caricamento dei tipi di asset...",
       "table": {
         "name": "Nome",
@@ -3083,7 +3083,7 @@
         "namePlaceholder": "es. Firewall",
         "displayOrderLabel": "Ordine di visualizzazione",
         "iconLabel": "Icona",
-        "builtinSchemaHint": "I tipi integrati usano moduli fissi gestiti da AlgaPSA, quindi il loro schema di campi non può essere modificato. Puoi comunque rinominare il tipo o cambiarne l'icona."
+        "builtinSchemaHint": "Il modulo standard integrato resta fisso. Questi campi aggiuntivi sono definiti per ciascun tenant."
       },
       "deleteDialog": {
         "title": "Elimina tipo di asset",
@@ -3141,7 +3141,8 @@
           "invalidOptions": "Le opzioni non possono essere vuote.",
           "invalidField": "Questo campo non è valido."
         }
-      }
+      },
+      "additionalFields": "Campi aggiuntivi"
     }
   },
   "mcpServer": {

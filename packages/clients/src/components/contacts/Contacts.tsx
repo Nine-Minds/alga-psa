@@ -59,6 +59,12 @@ import { useUserPreference } from '@alga-psa/user-composition/hooks';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ShortcutActiveRegion, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import { PhoneText } from '@alga-psa/ui/components/PhoneText';
+import { useListViews } from '@alga-psa/list-views/hooks';
+import { ListViewPicker } from '@alga-psa/list-views/components';
+import {
+  createContactListViewAdapter,
+  type ContactListLiveState,
+} from '../../lib/clientListViewAdapters';
 
 const CONTACTS_PAGE_SIZE_SETTING = 'contacts_page_size';
 const isReturnedActionError = (value: unknown) =>
@@ -639,6 +645,43 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
     setCurrentPage(1); // Reset to first page when page size changes
   };
 
+  // ── Named list views ──────────────────────────────────────────────────────
+  const [columnSizing, setColumnSizing] = useState<Record<string, number> | undefined>(undefined);
+
+  const listViewLive = useMemo<ContactListLiveState>(() => ({
+    filters: { status: filterStatus, tags: selectedTags },
+    sort: { by: sortBy, direction: sortDirection },
+    pageSize: pageSize ?? 10,
+    columnSizing,
+  }), [filterStatus, selectedTags, sortBy, sortDirection, pageSize, columnSizing]);
+
+  const contactListViewAdapter = useMemo(() => createContactListViewAdapter({
+    defaultPageSize: 10,
+    // Tags load after the contacts; until then nothing is dropped.
+    knownTags: allUniqueTags.length > 0 ? new Set(allUniqueTags.map((tag) => tag.tag_text)) : undefined,
+  }), [allUniqueTags]);
+
+  const handleListViewApply = useCallback((next: ContactListLiveState) => {
+    const status = next.filters.status ?? 'active';
+    const tags = next.filters.tags ?? [];
+    // A view replaces the whole filter set; search text is not part of it.
+    setSearchTerm('');
+    setFilterStatus(status);
+    setSelectedTags(tags);
+    setIsFiltered(tags.length > 0 || status !== 'active');
+    setSortBy(next.sort.by);
+    setSortDirection(next.sort.direction);
+    setPageSize(next.pageSize);
+    setColumnSizing(next.columnSizing);
+    setCurrentPage(1);
+  }, [setPageSize]);
+
+  const listViews = useListViews({
+    adapter: contactListViewAdapter,
+    live: listViewLive,
+    onApply: handleListViewApply,
+  });
+
 
   const columns: ColumnDefinition<IContact>[] = [
     {
@@ -1095,6 +1138,9 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
                   <XCircle className="h-4 w-4" />
                   {t('contactsPage.resetFilters', { defaultValue: 'Reset' })}
                 </Button>
+                <div className="ml-auto shrink-0">
+                  <ListViewPicker id="contacts-view-picker" controller={listViews} />
+                </div>
             </div>
           </ReflectionContainer>
           <ShortcutActiveRegion id="contacts-shortcut-region" className="outline-none">
@@ -1112,6 +1158,8 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
               sortDirection={sortDirection}
               onSortChange={handleSortChange}
               manualSorting={true}
+              columnSizing={columnSizing}
+              onColumnSizingChange={setColumnSizing}
             />
           </ShortcutActiveRegion>
           <div className="app-print-root app-print-only">

@@ -179,6 +179,10 @@ test('built email service ingests MIME, preserves inline quotations, threads rep
     const audioDownload = await page.request.get(`/api/documents/download/${audioAttachments[0].file_id}`);
     expect(audioDownload.status()).toBe(200);
     expect(await audioDownload.body()).toEqual(wavBytes);
+    // The page was opened as soon as the ticket row existed, before processing
+    // attached documents and rewrote the inline cid: reference. It keeps what it
+    // first rendered, so reload to read the settled Documents tile and body.
+    await page.reload();
     // The Documents tile links the recording straight to the download route:
     // the view route refuses audio with 400, so a /view link is a dead click.
     const documentsTile = page.locator('#ticket-details-bento-documents-section');
@@ -195,9 +199,6 @@ test('built email service ingests MIME, preserves inline quotations, threads rep
       .select('d.file_id', 'd.document_name');
     expect(imageDocuments).toHaveLength(1);
     expect(imageDocuments[0].document_name).toBe('inline-logo.png');
-    // The page was opened before processing finished, so the description may
-    // still hold the pre-rewrite cid: reference; reload to read the settled body.
-    await page.reload();
     await expect(description.locator(`img[src*="/api/documents/view/${imageDocuments[0].file_id}"]`)).toHaveCount(1);
 
     // Both persisted bodies (the new-ticket description and the originating

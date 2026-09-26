@@ -20,7 +20,8 @@
       "select": "Seleccionar",
       "update": "Actualizar",
       "uploadCsv": "Subir CSV",
-      "view": "Ver"
+      "view": "Ver",
+      "next": "Siguiente"
     },
     "states": {
       "active": "Activo",
@@ -307,7 +308,13 @@
     "parentClientSelf": "Un cliente no puede ser su propio cliente principal",
     "parentClientPlaceholder": "Sin cliente principal",
     "parentClientClear": "Borrar",
-    "parentClientLegacy": "Introducido anteriormente como texto: {{name}}"
+    "parentClientLegacy": "Introducido anteriormente como texto: {{name}}",
+    "mergeClient": "Fusionar",
+    "mergeClientHelp": "Absorber otro cliente en este como perfil de facturación",
+    "inboundDomainAutoCreateContacts": "Crear contactos para nuevos remitentes",
+    "inboundDomainAutoCreateHelp": "Los dominios asignados pueden crear un contacto para un nuevo remitente de confianza.",
+    "inboundDomainAutoCreateUpdated": "Se actualizó la configuración de contactos.",
+    "inboundDomainAutoCreateUpdateFailed": "No se pudo actualizar la configuración de contactos."
   },
   "clientCommandCenter": {
     "cards": {
@@ -1691,7 +1698,9 @@
     "archived": "«{{name}}» archivado",
     "deleted": "«{{name}}» eliminado",
     "restored": "«{{name}}» restaurado",
-    "settings": "Configuración de facturación"
+    "settings": "Configuración de facturación",
+    "mergeHelp": "¿Gestiona una sede o entidad como cliente independiente? Fusiónela y pasará a ser un perfil de facturación aquí, conservando sus facturas y su historial.",
+    "mergeButton": "Fusionar un cliente"
   },
   "portalBillingProfileAccess": {
     "label": "Segmentos de facturación",
@@ -1871,6 +1880,81 @@
       "otherClient": "Ese perfil de facturación pertenece a otro cliente.",
       "archived": "Ese perfil de facturación está archivado.",
       "selectionNotThisClient": "Uno de los perfiles de facturación seleccionados no pertenece a este cliente."
+    },
+    "clientMerge": {
+      "blocked": "Esta fusión no se puede completar.",
+      "signInRequired": "Debe iniciar sesión para fusionar clientes.",
+      "sourceNotFound": "El cliente que se iba a fusionar ya no existe.",
+      "targetNotFound": "El cliente de destino ya no existe.",
+      "sameClient": "Un cliente no puede fusionarse consigo mismo.",
+      "sourceAlreadyMerged": "Este cliente ya se ha fusionado en otro cliente.",
+      "targetAlreadyMerged": "El cliente de destino se ha fusionado a su vez en otro cliente. Fusione en ese en su lugar.",
+      "sourceIsTenantDefault": "El registro de su propia organización no puede fusionarse en un cliente.",
+      "parentLinkCycle": "Ese cliente figura como hijo del que está fusionando, por lo que la fusión invertiría la jerarquía.",
+      "invalidContractCutover": "Una de las fechas de corte queda fuera de la vigencia de su contrato."
+    },
+    "profileContacts": {
+      "duplicateManager": "Un perfil de facturación solo puede tener un responsable.",
+      "notThisClient": "Uno de los contactos seleccionados no pertenece al cliente de este perfil de facturación."
     }
+  },
+  "mergeClients": {
+    "title": "Fusionar un cliente en este",
+    "description": "El cliente que elija pasa a ser un perfil de facturación del cliente de destino. Sus facturas, ciclos de facturación, métodos de pago y créditos siguen vinculados a ese perfil; sus tickets, contactos, activos y contratos se trasladan. Esta acción no se puede deshacer.",
+    "sourceLabel": "Cliente que se va a fusionar",
+    "sourcePlaceholder": "Seleccione un cliente",
+    "targetLabel": "Cliente de destino",
+    "targetPlaceholder": "Seleccione un cliente",
+    "cannotMergeIntoItself": "Un cliente no puede fusionarse consigo mismo",
+    "recordedParent": "«{{source}}» tiene registrado a «{{parent}}» como cliente matriz.",
+    "useRecordedParent": "Usarlo",
+    "contactsDescription": "Todos los contactos se trasladan al cliente de destino. Indique a qué perfil de facturación pertenece cada uno y, si ya lo sabe, designe aquí mismo al responsable de un segmento. La casilla de tickets es un permiso aparte: permite a esa persona ver en el portal todos los tickets de su perfil.",
+    "contactColumn": "Contacto",
+    "profileColumn": "Perfil de facturación",
+    "managerColumn": "Responsable",
+    "seesTicketsColumn": "Ve los tickets del perfil",
+    "noContacts": "Este cliente no tiene contactos.",
+    "noProfile": "Sin perfil",
+    "contractsDescription": "Trasladar un contrato con sus fechas originales no altera ningún periodo de facturación. Un cambio con fecha de corte finaliza el contrato en el cliente anterior e inicia una copia en el de destino a partir de la fecha que elija.",
+    "noContracts": "Este cliente no tiene contratos.",
+    "unnamedContract": "Contrato",
+    "openEnded": "sin fecha de fin",
+    "keepOriginalDates": "Mantener las fechas originales",
+    "cutOver": "Cambiar con fecha de corte",
+    "cutoverDate": "Fecha de corte",
+    "pinGrantsLabel": "Mantener a los usuarios del portal en sus segmentos de facturación actuales",
+    "pinGrantsHelp": "Un usuario del portal sin restricción de segmento ve hoy todos los perfiles de su cliente. Tras la fusión serían todos los perfiles del cliente de destino. Si deja esta opción activada, se registran los segmentos que tiene hoy.",
+    "pinGrantsCount": "{{count}} usuario(s) del portal afectados",
+    "groupRenames": "Grupos de visibilidad renombrados para evitar un conflicto",
+    "previewHeading": "Qué se trasladará",
+    "profilesHeading": "Perfiles de facturación tras la fusión",
+    "confirmLabel": "Escriba «{{name}}» para confirmar",
+    "loadingPreview": "Calculando qué se trasladaría…",
+    "submit": "Fusionar cliente",
+    "merging": "Fusionando…",
+    "merged": "«{{source}}» se ha fusionado en «{{target}}»",
+    "accountingDescription": "Estas correspondencias contables siguen apuntando al cliente fusionado. Se sugiere redirigirlas al cliente de destino, pero no se modifica nada sin su confirmación: deje una fila sin marcar para volver a vincularla manualmente más adelante.",
+    "accountingAlreadyMapped": "El cliente de destino ya tiene una correspondencia para esta integración, por lo que esta deberá vincularse manualmente.",
+    "accountingApply": "Aplicar la selección",
+    "accountingSkip": "Omitir por ahora",
+    "accountingRemapped": "Correspondencias contables redirigidas",
+    "accountingSkipped": "No se han podido redirigir {{count}} correspondencia(s); hay que volver a vincularlas manualmente."
+  },
+  "billingProfileContacts": {
+    "title": "Contactos del perfil",
+    "description": "Las personas que pertenecen a este segmento de facturación. Designar un responsable deja constancia de quién lo dirige; la casilla de tickets es un permiso independiente que le permite ver en el portal del cliente todos los tickets atribuidos a este perfil.",
+    "loading": "Cargando los contactos del perfil…",
+    "noContacts": "Este cliente aún no tiene contactos.",
+    "contact": "Contacto",
+    "inProfile": "En el perfil",
+    "manager": "Responsable",
+    "seesTickets": "Ve los tickets del perfil",
+    "saved": "Contactos del perfil guardados"
+  },
+  "contactBillingProfiles": {
+    "label": "Perfiles de facturación",
+    "manager": "Responsable",
+    "seesTickets": "Ve los tickets del perfil",
+    "editHint": "Esto se edita en el perfil de facturación, dentro de los ajustes de facturación del cliente."
   }
 }

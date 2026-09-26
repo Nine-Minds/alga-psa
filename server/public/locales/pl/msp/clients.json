@@ -20,7 +20,8 @@
       "select": "Wybierz",
       "update": "Zaktualizuj",
       "uploadCsv": "Prześlij CSV",
-      "view": "Wyświetl"
+      "view": "Wyświetl",
+      "next": "Dalej"
     },
     "states": {
       "active": "Aktywny",
@@ -337,7 +338,13 @@
     "parentClientSelf": "Klient nie może być swoim własnym klientem nadrzędnym",
     "parentClientPlaceholder": "Brak klienta nadrzędnego",
     "parentClientClear": "Wyczyść",
-    "parentClientLegacy": "Wcześniej wprowadzono jako tekst: {{name}}"
+    "parentClientLegacy": "Wcześniej wprowadzono jako tekst: {{name}}",
+    "mergeClient": "Scal",
+    "mergeClientHelp": "Włącz innego klienta do tego klienta jako profil rozliczeniowy",
+    "inboundDomainAutoCreateContacts": "Twórz kontakty dla nowych nadawców",
+    "inboundDomainAutoCreateHelp": "Przypisane domeny mogą tworzyć kontakt dla zaufanego nowego nadawcy.",
+    "inboundDomainAutoCreateUpdated": "Zaktualizowano ustawienie kontaktów nadawców.",
+    "inboundDomainAutoCreateUpdateFailed": "Nie udało się zaktualizować ustawienia kontaktów nadawców."
   },
   "clientCommandCenter": {
     "cards": {
@@ -1743,7 +1750,9 @@
     "archived": "Zarchiwizowano „{{name}}”",
     "deleted": "Usunięto „{{name}}”",
     "restored": "Przywrócono „{{name}}”",
-    "settings": "Ustawienia rozliczeń"
+    "settings": "Ustawienia rozliczeń",
+    "mergeHelp": "Prowadzisz oddział lub podmiot jako osobnego klienta? Scal go — stanie się tutaj profilem rozliczeniowym i zachowa swoje faktury oraz historię.",
+    "mergeButton": "Scal klienta"
   },
   "portalBillingProfileAccess": {
     "label": "Segmenty rozliczeniowe",
@@ -1923,6 +1932,81 @@
       "otherClient": "Ten profil rozliczeniowy należy do innego klienta.",
       "archived": "Ten profil rozliczeniowy jest zarchiwizowany.",
       "selectionNotThisClient": "Jeden z wybranych profili rozliczeniowych nie należy do tego klienta."
+    },
+    "clientMerge": {
+      "blocked": "Nie można ukończyć tego scalenia.",
+      "signInRequired": "Aby scalać klientów, musisz być zalogowany.",
+      "sourceNotFound": "Scalany klient już nie istnieje.",
+      "targetNotFound": "Klient docelowy już nie istnieje.",
+      "sameClient": "Klienta nie można scalić z nim samym.",
+      "sourceAlreadyMerged": "Ten klient został już scalony z innym klientem.",
+      "targetAlreadyMerged": "Klient docelowy sam został scalony z innym klientem. Scal z tamtym klientem.",
+      "sourceIsTenantDefault": "Rekordu własnej organizacji nie można scalić z klientem.",
+      "parentLinkCycle": "Ten klient jest zapisany jako podrzędny wobec scalanego, więc scalenie odwróciłoby hierarchię.",
+      "invalidContractCutover": "Jedna z dat granicznych wykracza poza okres obowiązywania swojej umowy."
+    },
+    "profileContacts": {
+      "duplicateManager": "Profil rozliczeniowy może mieć tylko jednego kierownika.",
+      "notThisClient": "Jeden z wybranych kontaktów nie należy do klienta tego profilu rozliczeniowego."
     }
+  },
+  "mergeClients": {
+    "title": "Scal klienta z tym klientem",
+    "description": "Wybrany klient stanie się profilem rozliczeniowym klienta docelowego. Jego faktury, cykle rozliczeniowe, metody płatności i środki pozostaną powiązane z tym profilem; zgłoszenia, kontakty, zasoby i umowy zostaną przeniesione. Operacji nie można cofnąć.",
+    "sourceLabel": "Klient do scalenia",
+    "sourcePlaceholder": "Wybierz klienta",
+    "targetLabel": "Klient docelowy",
+    "targetPlaceholder": "Wybierz klienta",
+    "cannotMergeIntoItself": "Klienta nie można scalić z nim samym",
+    "recordedParent": "Dla „{{source}}” zapisano „{{parent}}” jako klienta nadrzędnego.",
+    "useRecordedParent": "Użyj",
+    "contactsDescription": "Wszystkie kontakty przechodzą do klienta docelowego. Wskaż, do którego profilu rozliczeniowego należy każdy z nich, i od razu wyznacz tutaj kierownika segmentu, jeśli już go znasz. Pole wyboru zgłoszeń to osobne uprawnienie: pozwala tej osobie widzieć w portalu wszystkie zgłoszenia swojego profilu.",
+    "contactColumn": "Kontakt",
+    "profileColumn": "Profil rozliczeniowy",
+    "managerColumn": "Kierownik",
+    "seesTicketsColumn": "Widzi zgłoszenia profilu",
+    "noContacts": "Ten klient nie ma kontaktów.",
+    "noProfile": "Brak profilu",
+    "contractsDescription": "Przeniesienie umowy z pierwotnymi datami nie zmienia żadnego okresu rozliczeniowego. Przejście z datą graniczną kończy umowę u dotychczasowego klienta i rozpoczyna jej kopię u klienta docelowego od wybranej daty.",
+    "noContracts": "Ten klient nie ma umów.",
+    "unnamedContract": "Umowa",
+    "openEnded": "bezterminowa",
+    "keepOriginalDates": "Zachowaj pierwotne daty",
+    "cutOver": "Data graniczna",
+    "cutoverDate": "Data graniczna",
+    "pinGrantsLabel": "Pozostaw użytkowników portalu przy ich dotychczasowych segmentach rozliczeniowych",
+    "pinGrantsHelp": "Użytkownik portalu bez ograniczenia segmentów widzi dziś wszystkie profile swojego klienta. Po scaleniu byłyby to wszystkie profile klienta docelowego. Pozostawienie tej opcji zapisuje segmenty, które ma dzisiaj.",
+    "pinGrantsCount": "Dotyczy {{count}} użytkowników portalu",
+    "groupRenames": "Grupy widoczności zmieniły nazwy, aby uniknąć konfliktu",
+    "previewHeading": "Co zostanie przeniesione",
+    "profilesHeading": "Profile rozliczeniowe po scaleniu",
+    "confirmLabel": "Wpisz „{{name}}”, aby potwierdzić",
+    "loadingPreview": "Ustalanie, co zostałoby przeniesione…",
+    "submit": "Scal klienta",
+    "merging": "Scalanie…",
+    "merged": "„{{source}}” scalono z „{{target}}”",
+    "accountingDescription": "Te powiązania księgowe nadal wskazują scalonego klienta. Sugerujemy przestawienie ich na klienta docelowego, ale nic nie zostanie zmienione bez Twojego potwierdzenia — pozostaw wiersz niezaznaczony, aby powiązać go ręcznie później.",
+    "accountingAlreadyMapped": "Klient docelowy ma już powiązanie dla tej integracji, więc to trzeba powiązać ręcznie.",
+    "accountingApply": "Zastosuj zaznaczone",
+    "accountingSkip": "Pomiń na razie",
+    "accountingRemapped": "Powiązania księgowe przestawione",
+    "accountingSkipped": "Nie udało się przestawić {{count}} powiązań — wymagają ręcznego powiązania."
+  },
+  "billingProfileContacts": {
+    "title": "Kontakty profilu",
+    "description": "Osoby należące do tego segmentu rozliczeniowego. Wskazanie kierownika zapisuje, kto go prowadzi; pole zgłoszeń to osobne uprawnienie, dzięki któremu widzi on w portalu klienta wszystkie zgłoszenia przypisane do tego profilu.",
+    "loading": "Wczytywanie kontaktów profilu…",
+    "noContacts": "Ten klient nie ma jeszcze kontaktów.",
+    "contact": "Kontakt",
+    "inProfile": "W profilu",
+    "manager": "Kierownik",
+    "seesTickets": "Widzi zgłoszenia profilu",
+    "saved": "Zapisano kontakty profilu"
+  },
+  "contactBillingProfiles": {
+    "label": "Profile rozliczeniowe",
+    "manager": "Kierownik",
+    "seesTickets": "Widzi zgłoszenia profilu",
+    "editHint": "Edytuje się je przy profilu rozliczeniowym, w ustawieniach rozliczeń klienta."
   }
 }

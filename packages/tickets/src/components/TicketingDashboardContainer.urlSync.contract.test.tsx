@@ -1,7 +1,7 @@
 /* @vitest-environment jsdom */
 import React from 'react';
-import { act, render } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, render, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ITicketListFilters, IUser } from '@alga-psa/types';
 import type { TicketFilterChangeOptions } from '../lib/ticketFilterChange';
 
@@ -45,6 +45,19 @@ vi.mock('../actions/optimizedTicketActions', () => ({
   fetchTicketsWithPagination: (...args: unknown[]) => fetchTicketsWithPagination(...(args as [])),
 }));
 
+// The container's saved-views hook loads views on mount. Left real, that server
+// action settles after jsdom is torn down and its state update throws an
+// unhandled `window is not defined` that fails the whole shard.
+const listViewActions = vi.hoisted(() => ({
+  listListViews: vi.fn(async () => ({ views: [], defaultViewId: null, canShare: false })),
+  getListView: vi.fn(async () => ({ actionError: 'View not found.' })),
+  createListView: vi.fn(),
+  updateListView: vi.fn(),
+  deleteListView: vi.fn(),
+  setMyDefaultListView: vi.fn(),
+}));
+vi.mock('@alga-psa/list-views/actions/listViewActions', () => listViewActions);
+
 vi.mock('react-hot-toast', () => ({
   toast: { error: vi.fn(), success: vi.fn() },
 }));
@@ -66,6 +79,36 @@ vi.mock('@alga-psa/user-composition/hooks', () => ({
 
 vi.mock('../hooks/useTicketFormOptions', () => ({
   useTicketFormOptions: () => ({ options: null }),
+}));
+
+// The real hook calls a `'use server'` action (createTenantKnex) that isn't
+// mocked here. `TicketingDashboard` is mocked to `null` below, so the picker
+// this hook feeds is never actually rendered — but the hook itself still runs
+// as part of `TicketingDashboardContainer`, and its unmocked DB round trip can
+// settle after the test (and jsdom) tear down, throwing an unhandled
+// "window is not defined" rejection unrelated to the navigation contract
+// under test.
+vi.mock('@alga-psa/list-views/hooks', () => ({
+  useListViews: () => ({
+    isLoading: false,
+    views: [],
+    myViews: [],
+    sharedViews: [],
+    activeView: null,
+    defaultViewId: null,
+    canShare: false,
+    isDirty: false,
+    isSaving: false,
+    applyView: vi.fn(),
+    discardChanges: vi.fn(),
+    saveChanges: vi.fn(async () => false),
+    saveAsNew: vi.fn(async () => false),
+    updateView: vi.fn(async () => false),
+    deleteView: vi.fn(async () => false),
+    setDefault: vi.fn(async () => false),
+    linkFor: vi.fn(() => ''),
+  }),
+  writeViewParam: vi.fn(),
 }));
 
 const { default: TicketingDashboardContainer } = await import('./TicketingDashboardContainer');
@@ -104,7 +147,21 @@ describe('ticket list URL sync after navigating away', () => {
     dashboardProps = null;
     currentPathname = '/msp/tickets';
     fetchTicketsWithPagination.mockClear();
+    listViewActions.listListViews.mockClear();
+    listViewActions.getListView.mockClear();
     window.history.replaceState(null, '', '/msp/tickets');
+  });
+
+  afterEach(async () => {
+    // Every render's view load must hit the stub and settle before teardown.
+    await waitFor(() => expect(listViewActions.listListViews).toHaveBeenCalledWith('tickets'));
+    await act(async () => {
+      await Promise.all(listViewActions.listListViews.mock.results.map((r) => r.value));
+    });
+    // A `?view=` the collection doesn't list is then resolved by id.
+    await act(async () => {
+      await Promise.all(listViewActions.getListView.mock.results.map((r) => r.value));
+    });
   });
 
   it('mirrors a filter change into the URL while the list is still the page', () => {
@@ -117,6 +174,28 @@ describe('ticket list URL sync after navigating away', () => {
     });
 
     expect(replaceState).toHaveBeenCalledTimes(1);
+    expect(pushState).not.toHaveBeenCalled();
+
+    replaceState.mockRestore();
+    pushState.mockRestore();
+  });
+
+  it('carries the applied view through a plain filter change in one write', () => {
+    const viewId = '11111111-1111-4111-8111-111111111111';
+    window.history.replaceState(null, '', `/msp/tickets?view=${viewId}`);
+
+    const { props } = renderContainer();
+    const replaceState = vi.spyOn(window.history, 'replaceState').mockImplementation(() => {});
+    const pushState = vi.spyOn(window.history, 'pushState').mockImplementation(() => {});
+
+    act(() => {
+      props.onFilterChange({ priorityId: 'priority-1' });
+    });
+
+    // A plain edit is one write, and the write still names the view being refined.
+    expect(replaceState).toHaveBeenCalledTimes(1);
+    const written = String(replaceState.mock.calls[0][2]);
+    expect(new URLSearchParams(written.split('?')[1]).get('view')).toBe(viewId);
     expect(pushState).not.toHaveBeenCalled();
 
     replaceState.mockRestore();

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -36,6 +36,7 @@ import { CustomTypeDetailsPanel } from './panels/CustomTypeDetailsPanel';
 import CreateTicketFromAssetButton from './CreateTicketFromAssetButton';
 import DeleteAssetButton from './DeleteAssetButton';
 import { RemoteAccessButton } from './RemoteAccessButton';
+import { hasRemoteAccessLinks } from '../actions/remoteAccessLinkActions';
 import { AssetAlertsSection } from './AssetAlertsSection';
 import { AssetPatchStatusSection } from './AssetPatchStatusSection';
 import { AssetTimeline } from './AssetTimeline';
@@ -99,6 +100,8 @@ export function AssetDetailDrawerClient({
   const router = useRouter();
   const clientDrawer = useClientDrawer();
   const desiredTab = activeTab;
+  const [hasTemplateLinks, setHasTemplateLinks] = useState(false);
+  useEffect(() => { void hasRemoteAccessLinks().then((result) => setHasTemplateLinks(result === true)).catch(() => setHasTemplateLinks(false)); }, []);
 
   const tabLabels = useMemo(() => ({
     [ASSET_DRAWER_TABS.OVERVIEW]: t('assetDetailDrawer.tabs.overview', { defaultValue: 'Overview' }),
@@ -197,6 +200,7 @@ export function AssetDetailDrawerClient({
           onClientClick: asset.client_id && clientDrawer
             ? () => clientDrawer.openClientDrawer(asset.client_id)
             : undefined,
+          hasTemplateLinks,
         });
       case ASSET_DRAWER_TABS.MAINTENANCE:
         return renderMaintenanceTab({
@@ -289,9 +293,10 @@ type OverviewTabProps = {
   defaultBoardId?: string;
   t: TranslationFn;
   onClientClick?: () => void;
+  hasTemplateLinks: boolean;
 };
 
-function renderOverviewTab({ asset, maintenanceReport, history, router, statusBadge, onClose, defaultBoardId, t, onClientClick }: OverviewTabProps) {
+function renderOverviewTab({ asset, maintenanceReport, history, router, statusBadge, onClose, defaultBoardId, t, onClientClick, hasTemplateLinks }: OverviewTabProps) {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -330,9 +335,7 @@ function renderOverviewTab({ asset, maintenanceReport, history, router, statusBa
             <FileText className="h-4 w-4" />
             {t('assetDetailDrawer.actions.openAssetRecord', { defaultValue: 'Open asset record' })}
           </Button>
-          {asset.rmm_provider && asset.rmm_device_id && (
-            <RemoteAccessButton asset={asset} variant="default" size="sm" />
-          )}
+          <RemoteAccessButton asset={asset} variant="default" size="sm" hasTemplateLinks={hasTemplateLinks} surface="asset-drawer" />
           <CreateTicketFromAssetButton asset={asset} defaultBoardId={defaultBoardId} variant="default" size="sm" />
           <DeleteAssetButton
             assetId={asset.asset_id}

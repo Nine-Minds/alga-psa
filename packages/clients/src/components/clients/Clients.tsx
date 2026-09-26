@@ -58,6 +58,12 @@ import {
   isActionMessageError,
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { useListViews } from '@alga-psa/list-views/hooks';
+import { ListViewPicker } from '@alga-psa/list-views/components';
+import {
+  createClientListViewAdapter,
+  type ClientListLiveState,
+} from '../../lib/clientListViewAdapters';
 
 const COMPANY_VIEW_MODE_SETTING = 'client_list_view_mode';
 const CLIENTS_GRID_PAGE_SIZE_SETTING = 'clients_grid_page_size';
@@ -134,6 +140,8 @@ interface ClientResultsProps {
   sortBy?: string;
   sortDirection?: 'asc' | 'desc';
   onSortChange?: (sortBy: string, sortDirection: 'asc' | 'desc') => void;
+  columnSizing?: Record<string, number>;
+  onColumnSizingChange?: (columnSizing: Record<string, number>) => void;
 }
 
 const ClientResults = memo(({
@@ -160,7 +168,9 @@ const ClientResults = memo(({
   allUniqueTagsFromParent,
   sortBy,
   sortDirection,
-  onSortChange
+  onSortChange,
+  columnSizing,
+  onColumnSizingChange,
 }: ClientResultsProps) => {
   const { t } = useTranslation('msp/clients');
   const [clients, setClients] = useState<IClient[]>([]);
@@ -336,6 +346,8 @@ const ClientResults = memo(({
           sortBy={sortBy}
           sortDirection={sortDirection}
           onSortChange={onSortChange}
+          columnSizing={columnSizing}
+          onColumnSizingChange={onColumnSizingChange}
         />
       )}
     </ShortcutActiveRegion>
@@ -1039,6 +1051,50 @@ const Clients: React.FC = () => {
     setSortDirection(newSortDirection);
     setCurrentPage(1); // Reset to first page when sorting changes
   }, []);
+
+  // ── Named list views ──────────────────────────────────────────────────────
+  // The filters live in separate pieces of state; they are assembled into one
+  // typed live state for capture and spread back out on apply.
+  const [columnSizing, setColumnSizing] = useState<Record<string, number> | undefined>(undefined);
+
+  const listViewLive = useMemo<ClientListLiveState>(() => ({
+    filters: {
+      status: filterStatus,
+      clientType: clientTypeFilter,
+      lifecycle: lifecycleFilter,
+      tags: selectedTags,
+    },
+    sort: { by: sortBy, direction: sortDirection },
+    pageSize: listPageSize ?? 10,
+    columnSizing,
+  }), [filterStatus, clientTypeFilter, lifecycleFilter, selectedTags, sortBy, sortDirection, listPageSize, columnSizing]);
+
+  const clientListViewAdapter = useMemo(() => createClientListViewAdapter({
+    defaultPageSize: 10,
+    // Tags arrive after the first page of clients; until then nothing is dropped.
+    knownTags: allUniqueTags.length > 0 ? new Set(allUniqueTags.map((tag) => tag.tag_text)) : undefined,
+  }), [allUniqueTags]);
+
+  const handleListViewApply = useCallback((next: ClientListLiveState) => {
+    // A view replaces the whole filter set; search text is not part of it.
+    setSearchInput('');
+    setSearchTerm('');
+    setFilterStatus(next.filters.status ?? 'active');
+    setClientTypeFilter(next.filters.clientType ?? 'all');
+    setLifecycleFilter(next.filters.lifecycle ?? 'active');
+    setSelectedTags(next.filters.tags ?? []);
+    setSortBy(next.sort.by);
+    setSortDirection(next.sort.direction);
+    setListPageSize(next.pageSize);
+    setColumnSizing(next.columnSizing);
+    setCurrentPage(1);
+  }, [setListPageSize]);
+
+  const listViews = useListViews({
+    adapter: clientListViewAdapter,
+    live: listViewLive,
+    onApply: handleListViewApply,
+  });
   
   const confirmMultiDelete = async () => {
     try {
@@ -1571,6 +1627,10 @@ const Clients: React.FC = () => {
               <XCircle className="h-4 w-4" />
               {t('clientsPage.reset', { defaultValue: 'Reset' })}
             </Button>
+
+            <div className="ml-auto shrink-0">
+              <ListViewPicker id="clients-view-picker" controller={listViews} />
+            </div>
         </div>
 
       {/* Selection */}
@@ -1674,6 +1734,8 @@ const Clients: React.FC = () => {
         sortBy={sortBy}
         sortDirection={sortDirection}
         onSortChange={handleSortChange}
+        columnSizing={columnSizing}
+        onColumnSizingChange={setColumnSizing}
       />
         </div>
 

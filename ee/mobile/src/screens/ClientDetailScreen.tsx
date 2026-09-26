@@ -1,5 +1,6 @@
 import { formatPhoneForDisplay, formatPhoneLabel } from "../../../../packages/validation/src/lib/phone";
 import { Linking, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { buildMapsUrl, mapsQueryFromLines } from "../urls/mapsUrl";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { CommonActions } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
@@ -287,7 +288,12 @@ export function ClientDetailScreen({ navigation, route }: Props) {
       value: detail.url,
       onPress: detail.url ? () => void Linking.openURL(websiteUrl(detail.url ?? "")) : undefined,
     },
-    { icon: "map-pin", label: t("detail.address"), value: detail.address },
+    {
+      icon: "map-pin",
+      label: t("detail.address"),
+      value: detail.address,
+      onPress: detail.address ? () => void Linking.openURL(buildMapsUrl(mapsQueryFromLines(detail.address ?? ""))) : undefined,
+    },
     { icon: "briefcase", label: t("detail.clientType", { defaultValue: "Client type" }), value: detail.client_type },
     { icon: "layers", label: t("detail.industry", { defaultValue: "Industry" }), value: detail.properties?.industry },
     {
@@ -459,9 +465,18 @@ export function ClientDetailScreen({ navigation, route }: Props) {
                   {location.location_name || t("detail.locationFallback")}
                   {location.is_default ? ` • ${t("detail.defaultLocation")}` : ""}
                 </Text>
-                <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: 2 }}>
-                  {locationLine(location)}
-                </Text>
+                {locationLine(location) ? (
+                  <Pressable
+                    onPress={() => void Linking.openURL(buildMapsUrl(mapsQueryFromLines(locationLine(location))))}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("detail.openInMaps")}
+                    hitSlop={4}
+                  >
+                    <Text style={{ ...theme.typography.caption, color: theme.colors.primary, marginTop: 2 }}>
+                      {locationLine(location)}
+                    </Text>
+                  </Pressable>
+                ) : null}
                 {location.phone ? (
                   <Pressable
                     onPress={() => {

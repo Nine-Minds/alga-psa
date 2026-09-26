@@ -20,7 +20,8 @@
       "select": "Selecteer",
       "update": "Bijwerken",
       "uploadCsv": "CSV uploaden",
-      "view": "Weergave"
+      "view": "Weergave",
+      "next": "Volgende"
     },
     "states": {
       "active": "Actief",
@@ -307,7 +308,13 @@
     "parentClientSelf": "Een klant kan niet zijn eigen bovenliggende klant zijn",
     "parentClientPlaceholder": "Geen bovenliggende klant",
     "parentClientClear": "Wissen",
-    "parentClientLegacy": "Eerder als tekst ingevoerd: {{name}}"
+    "parentClientLegacy": "Eerder als tekst ingevoerd: {{name}}",
+    "mergeClient": "Samenvoegen",
+    "mergeClientHelp": "Een andere klant in deze klant opnemen als facturatieprofiel",
+    "inboundDomainAutoCreateContacts": "Contacten maken voor nieuwe afzenders",
+    "inboundDomainAutoCreateHelp": "Gekoppelde domeinen kunnen een contact maken voor een vertrouwde nieuwe afzender.",
+    "inboundDomainAutoCreateUpdated": "Instelling voor afzendercontacten bijgewerkt.",
+    "inboundDomainAutoCreateUpdateFailed": "Instelling voor afzendercontacten kan niet worden bijgewerkt."
   },
   "clientCommandCenter": {
     "cards": {
@@ -1691,7 +1698,9 @@
     "archived": "“{{name}}” gearchiveerd",
     "deleted": "“{{name}}” verwijderd",
     "restored": "“{{name}}” hersteld",
-    "settings": "Facturatie-instellingen"
+    "settings": "Facturatie-instellingen",
+    "mergeHelp": "Houdt u een locatie of entiteit nog als aparte klant bij? Voeg die samen: hij wordt hier een facturatieprofiel en behoudt zijn facturen en historie.",
+    "mergeButton": "Een klant samenvoegen"
   },
   "portalBillingProfileAccess": {
     "label": "Facturatiesegmenten",
@@ -1871,6 +1880,81 @@
       "otherClient": "Dat facturatieprofiel hoort bij een andere klant.",
       "archived": "Dat facturatieprofiel is gearchiveerd.",
       "selectionNotThisClient": "Een van de geselecteerde facturatieprofielen hoort niet bij deze klant."
+    },
+    "clientMerge": {
+      "blocked": "Deze samenvoeging kan niet worden voltooid.",
+      "signInRequired": "U moet aangemeld zijn om klanten samen te voegen.",
+      "sourceNotFound": "De samen te voegen klant bestaat niet meer.",
+      "targetNotFound": "De doelklant bestaat niet meer.",
+      "sameClient": "Een klant kan niet met zichzelf worden samengevoegd.",
+      "sourceAlreadyMerged": "Deze klant is al met een andere klant samengevoegd.",
+      "targetAlreadyMerged": "De doelklant is zelf met een andere klant samengevoegd. Voeg met die klant samen.",
+      "sourceIsTenantDefault": "Het record van uw eigen organisatie kan niet met een klant worden samengevoegd.",
+      "parentLinkCycle": "Die klant staat geregistreerd als onderliggend aan de klant die u samenvoegt; zo zou de hiërarchie worden omgedraaid.",
+      "invalidContractCutover": "Een van de overstapdatums valt buiten de looptijd van het bijbehorende contract."
+    },
+    "profileContacts": {
+      "duplicateManager": "Een facturatieprofiel kan maar één beheerder hebben.",
+      "notThisClient": "Een van de geselecteerde contactpersonen hoort niet bij de klant van dit facturatieprofiel."
     }
+  },
+  "mergeClients": {
+    "title": "Een klant in deze klant samenvoegen",
+    "description": "De gekozen klant wordt een facturatieprofiel van de doelklant. Zijn facturen, facturatiecycli, betaalmethoden en tegoeden blijven aan dat profiel gekoppeld; zijn tickets, contactpersonen, assets en contracten gaan mee over. Dit kan niet ongedaan worden gemaakt.",
+    "sourceLabel": "Samen te voegen klant",
+    "sourcePlaceholder": "Kies een klant",
+    "targetLabel": "Doelklant",
+    "targetPlaceholder": "Kies een klant",
+    "cannotMergeIntoItself": "Een klant kan niet met zichzelf worden samengevoegd",
+    "recordedParent": "Bij ‘{{source}}’ staat ‘{{parent}}’ geregistreerd als bovenliggende klant.",
+    "useRecordedParent": "Gebruiken",
+    "contactsDescription": "Alle contactpersonen gaan over naar de doelklant. Geef aan bij welk facturatieprofiel elk van hen hoort en benoem hier meteen de beheerder van een segment als u die al kent. Het ticketvinkje is een aparte machtiging: daarmee ziet die persoon in het portaal alle tickets van zijn profiel.",
+    "contactColumn": "Contactpersoon",
+    "profileColumn": "Facturatieprofiel",
+    "managerColumn": "Beheerder",
+    "seesTicketsColumn": "Ziet profieltickets",
+    "noContacts": "Deze klant heeft geen contactpersonen.",
+    "noProfile": "Geen profiel",
+    "contractsDescription": "Een contract met zijn oorspronkelijke datums meenemen verandert geen enkele facturatieperiode. Bij een overstapdatum eindigt het contract bij de oude klant en start een kopie bij de doelklant vanaf de gekozen datum.",
+    "noContracts": "Deze klant heeft geen contracten.",
+    "unnamedContract": "Contract",
+    "openEnded": "doorlopend",
+    "keepOriginalDates": "Oorspronkelijke datums behouden",
+    "cutOver": "Overstappen",
+    "cutoverDate": "Overstapdatum",
+    "pinGrantsLabel": "Portaalgebruikers op hun eigen facturatiesegmenten houden",
+    "pinGrantsHelp": "Een portaalgebruiker zonder segmentbeperking ziet nu alle profielen van zijn klant. Na het samenvoegen zouden dat alle profielen van de doelklant zijn. Laat u dit aan staan, dan worden de segmenten die hij vandaag heeft expliciet vastgelegd.",
+    "pinGrantsCount": "{{count}} portaalgebruiker(s) betrokken",
+    "groupRenames": "Zichtbaarheidsgroepen hernoemd om een naamconflict te voorkomen",
+    "previewHeading": "Wat er wordt overgezet",
+    "profilesHeading": "Facturatieprofielen na het samenvoegen",
+    "confirmLabel": "Typ ‘{{name}}’ om te bevestigen",
+    "loadingPreview": "Bezig met bepalen wat er zou worden overgezet…",
+    "submit": "Klant samenvoegen",
+    "merging": "Bezig met samenvoegen…",
+    "merged": "‘{{source}}’ is samengevoegd met ‘{{target}}’",
+    "accountingDescription": "Deze boekhoudkoppelingen verwijzen nog naar de samengevoegde klant. Ze omzetten naar de doelklant wordt voorgesteld, maar er wordt niets gewijzigd zonder uw bevestiging — laat een regel uitgevinkt om die later handmatig te koppelen.",
+    "accountingAlreadyMapped": "De doelklant heeft al een koppeling voor deze integratie, dus deze moet handmatig opnieuw worden gekoppeld.",
+    "accountingApply": "Selectie toepassen",
+    "accountingSkip": "Voorlopig overslaan",
+    "accountingRemapped": "Boekhoudkoppelingen omgezet",
+    "accountingSkipped": "{{count}} koppeling(en) konden niet worden omgezet en moeten handmatig opnieuw worden gekoppeld."
+  },
+  "billingProfileContacts": {
+    "title": "Profielcontactpersonen",
+    "description": "De mensen die bij dit facturatiesegment horen. Een beheerder aanwijzen legt vast wie het segment leidt; het ticketvinkje is een aparte machtiging waarmee diegene in het klantportaal alle tickets van dit profiel ziet.",
+    "loading": "Profielcontactpersonen laden…",
+    "noContacts": "Deze klant heeft nog geen contactpersonen.",
+    "contact": "Contactpersoon",
+    "inProfile": "In profiel",
+    "manager": "Beheerder",
+    "seesTickets": "Ziet profieltickets",
+    "saved": "Profielcontactpersonen opgeslagen"
+  },
+  "contactBillingProfiles": {
+    "label": "Facturatieprofielen",
+    "manager": "Beheerder",
+    "seesTickets": "Ziet profieltickets",
+    "editHint": "Deze worden bewerkt op het facturatieprofiel, bij de facturatie-instellingen van de klant."
   }
 }
