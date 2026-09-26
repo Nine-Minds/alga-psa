@@ -310,7 +310,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
         </DropdownMenu>
       )
     }
-  ], [formatDate, formatCurrency, t]);
+  ], [formatDate, formatCurrency, t, autopayContexts, tPortal]);
 
   // Loading state with skeleton
   if (isLoading) {

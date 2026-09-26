@@ -72,6 +72,11 @@ export class AutopayService {
       .join('payment_methods as pm', function () {
         this.on('pm.payment_method_id', '=', 'aa.payment_method_id').andOn('pm.tenant', '=', 'aa.tenant');
       })
+      .join('billing_profile_autopay as bpa', function () {
+        this.on('bpa.tenant', '=', 'aa.tenant').andOn('bpa.billing_profile_id', '=', 'aa.billing_profile_id');
+      })
+      .where('bpa.is_enabled', true).where('bpa.payment_method_id', this.knex.ref('aa.payment_method_id'))
+      .where('pm.status', 'active').where('pm.is_deleted', false)
       .whereIn('aa.invoice_id', invoiceIds).where(function () {
         this.where('aa.status', 'processing').orWhere(function () {
           this.where('aa.status', 'scheduled').whereRaw('aa.scheduled_for >= now()');
