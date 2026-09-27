@@ -76,17 +76,16 @@ describe('development credential recovery against PostgreSQL', () => {
       .update({ hashed_password: 'legacy-seed-placeholder' });
     const malformedSeedUser = await getSeededUser();
     expect(malformedSeedUser.hashed_password).not.toMatch(/^[0-9a-f]+:[0-9a-f]+$/i);
-    const { run, log } = setup(malformedSeedUser);
+    const generatedPassword = generateSecurePassword();
+    const { run, log } = setup(malformedSeedUser, { generatePassword: () => generatedPassword });
     await run;
 
-    const reportedPassword = log.mock.calls
-      .map(([line]) => String(line).match(/Password is -> \[ (.+) \]/)?.[1])
-      .find((value): value is string => Boolean(value));
-    expect(reportedPassword).toBeTruthy();
     const persistedHash = await User.getPasswordHash(seededUser.user_id, seededUser.tenant);
     expect(persistedHash).toMatch(/^[0-9a-f]+:[0-9a-f]+$/i);
-    expect(await verifyPassword(reportedPassword!, persistedHash!)).toBe(true);
-    await expect(authenticateUser(EMAIL, reportedPassword!, 'internal')).resolves.toMatchObject({
+    expect(await verifyPassword(generatedPassword, persistedHash!)).toBe(true);
+    expect(JSON.stringify(log.mock.calls)).not.toContain(generatedPassword);
+    expect(JSON.stringify(log.mock.calls)).not.toContain(persistedHash);
+    await expect(authenticateUser(EMAIL, generatedPassword, 'internal')).resolves.toMatchObject({
       user_id: seededUser.user_id,
       tenant: seededUser.tenant,
     });
@@ -103,7 +102,7 @@ describe('development credential recovery against PostgreSQL', () => {
     await run;
 
     expect(await User.getPasswordHash(seededUser.user_id, seededUser.tenant)).toBe(existingHash);
-    expect(log.mock.calls.some(([line]) => String(line).includes(credential))).toBe(true);
+    expect(JSON.stringify(log.mock.calls)).not.toContain(credential);
     await expect(authenticateUser(EMAIL, credential, 'internal')).resolves.toMatchObject({ user_id: seededUser.user_id });
   });
 
@@ -137,10 +136,10 @@ describe('development credential recovery against PostgreSQL', () => {
     await expect(authenticateUser(EMAIL, recoveryPassword, 'internal')).resolves.toMatchObject({
       user_id: seededUser.user_id,
     });
-    expect(log.mock.calls.some(([line]) => String(line).includes(recoveryPassword))).toBe(true);
+    expect(JSON.stringify(log.mock.calls)).not.toContain(recoveryPassword);
   });
 
-  it('allows one concurrent initializer to replace a malformed hash and authenticates its reported password', async () => {
+  it('allows one concurrent initializer to replace a malformed hash without logging either password', async () => {
     const placeholder = 'legacy-seed-placeholder';
     await db('users').where({ tenant: seededUser.tenant, user_id: seededUser.user_id })
       .update({ hashed_password: placeholder });
@@ -151,11 +150,12 @@ describe('development credential recovery against PostgreSQL', () => {
       await setup(user, { generatePassword: () => password, log: logs[index] }).run;
     }));
 
-    const reported = logs.flatMap((log) => log.mock.calls
-      .map(([line]) => String(line).match(/Password is -> \[ (.+) \]/)?.[1])
-      .filter((value): value is string => Boolean(value)));
-    expect(reported).toHaveLength(1);
-    await expect(authenticateUser(EMAIL, reported[0], 'internal')).resolves.toMatchObject({
+    const persistedHash = await User.getPasswordHash(seededUser.user_id, seededUser.tenant);
+    const matching = await Promise.all(passwords.map((password) => verifyPassword(password, persistedHash!)));
+    expect(matching.filter(Boolean)).toHaveLength(1);
+    expect(JSON.stringify(logs.map((log) => log.mock.calls))).not.toMatch(/Password is ->/);
+    expect(passwords.every((password) => !JSON.stringify(logs.map((log) => log.mock.calls)).includes(password))).toBe(true);
+    await expect(authenticateUser(EMAIL, passwords[matching.findIndex(Boolean)], 'internal')).resolves.toMatchObject({
       user_id: seededUser.user_id,
     });
   });

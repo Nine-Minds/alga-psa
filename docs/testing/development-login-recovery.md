@@ -6,30 +6,32 @@ Development startup bootstraps only the seeded MSP fixture account
 For a fresh development seed, Glinda's password hash is deliberately empty. The
 first development boot generates a random password, hashes it with the same
 effective secret used by authentication, verifies the new hash, then stores it
-with a tenant-scoped compare-and-set. Only the process that wins that update
-prints the password. A later boot retains the valid hash and does not rotate it.
+with a tenant-scoped compare-and-set. Startup never logs passwords or hashes.
+Configure `DEV_LOGIN_PASSWORD` privately before first boot when a known login is
+needed. If the account was initialized without one, use the explicit recovery
+procedure below with a privately configured password.
 
-For a repeatable startup-log handoff, configure `DEV_LOGIN_PASSWORD` in the
+For a repeatable private login, configure `DEV_LOGIN_PASSWORD` in the
 development service's secret/environment configuration. Keep its value private
 and use the same value in worktrees that share a database. Startup verifies it
-against the stored hash and prints it only after verification succeeds.
+against the stored hash and logs only a redacted success status.
 
 To recover a well-formed hash that does not verify with this stack's effective
 authentication secret, configure both `DEV_LOGIN_PASSWORD` and
 `DEV_LOGIN_PASSWORD_RECOVERY=true` for one development boot. Startup replaces
 the hash only if the stored value still matches the value it read, then verifies
-the resulting hash before printing the configured credential. Keep
-`DEV_LOGIN_PASSWORD` configured for later startup-log handoffs; the recovery
-flag can be removed once recovery succeeds. Competing boots using the same
-password and effective secret converge on the same usable credential. A boot
-that loses the compare-and-set reports the configured password only after it
-reads and verifies the winner's stored hash.
+the resulting hash without logging the configured credential. Keep
+`DEV_LOGIN_PASSWORD` configured privately for later development starts; the
+recovery flag can be removed once recovery succeeds. Competing boots using the
+same password and effective secret converge on the same usable credential. A
+boot that loses the compare-and-set confirms a configured credential only after
+it reads and verifies the winner's stored hash, and logs only a redacted status.
 
 All worktrees sharing this database must resolve the same effective
 `nextauth_secret` / `NEXTAUTH_SECRET`; password hashes use that secret as a
-pepper. Startup never prints either secret. Do not copy the password from
-startup logs into commits, tickets, or durable workflow facts. Provide it to
-Smoke Test through the private test handoff.
+pepper. Startup never prints either secret. Do not copy the password into logs,
+commits, tickets, or durable workflow facts. Provide it to Smoke Test through the
+private test handoff.
 
 Smoke Test should open `http://127.0.0.1:3927/auth/msp/signin` after confirming
 the service and worktree behind port 3927. The service operator should provide
@@ -180,3 +182,15 @@ login validation requires the operator's existing valid private database
 credential source. No database role password, shared service, or priority color
 implementation was changed during takeover. Browser smoke remains deferred
 under the no-server-start restriction.
+
+
+### Credential log redaction (2026-09-27)
+
+The development initializer now logs only redacted status messages; it never
+prints configured/generated passwords or stored hashes. Focused tests assert this
+for first initialization, concurrent initialization, valid credential retention,
+and explicit recovery. A fresh-process check on 2026-09-27 failed with PostgreSQL
+SQLSTATE `28P01` during seeded-account lookup, before account/hash verification.
+This is a database-role authentication failure and does not establish a Glinda
+password-hash mismatch. Database-backed stability and recovery remain unverified
+until an existing valid private database credential is restored.

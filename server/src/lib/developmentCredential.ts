@@ -34,8 +34,7 @@ export async function initializeDevelopmentCredential(input: {
     : undefined;
 
   if (existingHash && configuredPassword && await input.verifyPassword(configuredPassword, existingHash)) {
-    input.log(`******** User Email is -> [ ${user.email} ]  ********`);
-    input.log(`********       Password is -> [ ${configuredPassword} ]   ********`);
+    input.log('Development sign-in credential verified for the seeded account.');
     return;
   }
 
@@ -65,18 +64,18 @@ export async function initializeDevelopmentCredential(input: {
     if (configuredPassword) {
       const currentHash = await input.readCurrentHash(user.user_id, user.tenant);
       if (currentHash && await input.verifyPassword(configuredPassword, currentHash)) {
-        input.log(`******** User Email is -> [ ${user.email} ]  ********`);
-        input.log(`********       Password is -> [ ${configuredPassword} ]   ********`);
+        input.log('Development sign-in credential verified after concurrent initialization.');
       } else {
         input.log('Development credential changed concurrently; configured credential was not confirmed.');
       }
     } else {
       // We cannot report a generated password from a losing initializer.
-      input.log('Development credential was initialized by another stack; use the credential from its startup log.');
+      input.log('Development credential was initialized by another stack; configure DEV_LOGIN_PASSWORD privately and explicitly recover if needed.');
     }
     return;
   }
 
-  input.log(`******** User Email is -> [ ${user.email} ]  ********`);
-  input.log(`********       Password is -> [ ${password} ]   ********`);
+  input.log(configuredPassword
+    ? 'Development sign-in credential initialized from private configuration.'
+    : 'Development sign-in credential initialized. Configure DEV_LOGIN_PASSWORD privately and explicitly recover if a known login is needed.');
 }

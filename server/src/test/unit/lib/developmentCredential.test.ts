@@ -22,7 +22,8 @@ describe('development credential initialization', () => {
     process.env.NEXTAUTH_SECRET = `test-secret-${crypto.randomUUID()}`;
     let storedHash: string | null = null;
     const log = vi.fn();
-    const generatePassword = vi.fn(generateSecurePassword);
+    const generatedPassword = generateSecurePassword();
+    const generatePassword = vi.fn(() => generatedPassword);
     const updatePasswordIfUnchanged = vi.fn(async (_id: string, _tenant: string, expected: string | null, hash: string) => {
       if (storedHash !== expected) return false;
       storedHash = hash;
@@ -39,12 +40,10 @@ describe('development credential initialization', () => {
       log,
     });
 
-    const reportedPassword = log.mock.calls
-      .map(([message]) => message.match(/Password is -> \[ (.+) \]/)?.[1])
-      .find((password): password is string => Boolean(password));
-    expect(reportedPassword).toBeTruthy();
     expect(storedHash).toBeTruthy();
-    expect(await verifyPassword(reportedPassword!, storedHash!)).toBe(true);
+    expect(await verifyPassword(generatedPassword, storedHash!)).toBe(true);
+    expect(JSON.stringify(log.mock.calls)).not.toContain(generatedPassword);
+    expect(JSON.stringify(log.mock.calls)).not.toContain(storedHash);
 
     await initializeDevelopmentCredential({
       user: { ...user, hashed_password: storedHash },
@@ -58,7 +57,7 @@ describe('development credential initialization', () => {
 
     expect(generatePassword).toHaveBeenCalledTimes(1);
     expect(updatePasswordIfUnchanged).toHaveBeenCalledTimes(1);
-    expect(await verifyPassword(reportedPassword!, storedHash!)).toBe(true);
+    expect(await verifyPassword(generatedPassword, storedHash!)).toBe(true);
   });
 
   it('allows only one winner when two stacks initialize an unset shared credential concurrently', async () => {
@@ -83,10 +82,9 @@ describe('development credential initialization', () => {
 
     await Promise.all(inputs.map((input) => initializeDevelopmentCredential(input)));
 
-    const winners = logs.map((log) => log.mock.calls.some(([message]) => message.includes('Password is ->')));
-    expect(winners.filter(Boolean)).toHaveLength(1);
-    const reportedPassword = generated[winners.findIndex(Boolean)];
-    expect(await verifyPassword(reportedPassword, storedHash!)).toBe(true);
+    const matchingPasswords = await Promise.all(generated.map((password) => verifyPassword(password, storedHash!)));
+    expect(matchingPasswords.filter(Boolean)).toHaveLength(1);
+    expect(JSON.stringify(logs.flatMap((log) => log.mock.calls))).not.toMatch(/Password is ->/);
   });
 
   it('uses the same configured secret for hashing and verification', async () => {
