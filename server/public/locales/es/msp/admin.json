@@ -230,7 +230,7 @@
       "errorTitle": "Corrija la identidad de tickets",
       "addresses": {
         "title": "Direcciones de remitente",
-        "description": "Crea direcciones con nombre para tus correos salientes."
+        "description": "Cree direcciones con nombre para sus correos salientes."
       },
       "routing": {
         "title": "Enrutamiento de remitentes",
@@ -251,7 +251,7 @@
         "noneProviderFrom": "Ninguno (usar remitente del proveedor)",
         "confirmSmtp": "Confirmo que el servidor SMTP acepta esta dirección del remitente.",
         "inboundReplyWarning": "Las respuestas entrantes seguirán llegando al buzón configurado; cambiar esta dirección no cambia el enrutamiento de respuestas.",
-        "unknownBoard": "Unknown board"
+        "unknownBoard": "Tablero desconocido"
       },
       "actions": {
         "add": "Añadir remitente",
@@ -266,7 +266,7 @@
         "displayName": "Nombre mostrado",
         "displayNamePlaceholder": "Equipo de soporte"
       },
-      "smtpHelp": "Tu servidor SMTP debe permitir esta dirección.",
+      "smtpHelp": "Su servidor SMTP debe permitir esta dirección.",
       "microsoftHelp": "El buzón conectado necesita permiso Send As de Exchange para esta dirección.",
       "errors": {
         "duplicateAddress": "Esta dirección de remitente ya existe.",

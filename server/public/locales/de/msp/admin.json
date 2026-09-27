@@ -234,7 +234,7 @@
       },
       "routing": {
         "title": "Absenderzuordnung",
-        "description": "Wähle den Absender für jede E-Mail-Klasse.",
+        "description": "Wählen Sie den Absender für jede E-Mail-Klasse.",
         "default": "Standard (alle übrigen E-Mails)",
         "useDefault": "Standard verwenden",
         "sender": "Absender",
@@ -266,7 +266,7 @@
         "displayName": "Anzeigename",
         "displayNamePlaceholder": "Supportteam"
       },
-      "smtpHelp": "Dein SMTP-Relay muss diese Adresse erlauben.",
+      "smtpHelp": "Ihr SMTP-Relay muss diese Adresse erlauben.",
       "microsoftHelp": "Das verbundene Postfach benötigt die Exchange-Berechtigung „Send As“ für diese Adresse.",
       "errors": {
         "duplicateAddress": "Diese Absenderadresse ist bereits vorhanden.",

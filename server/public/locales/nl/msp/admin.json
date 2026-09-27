@@ -239,7 +239,7 @@
         "useDefault": "Standaard gebruiken",
         "sender": "Afzender",
         "displayName": "Weergavenaam",
-        "boardSummary": "Ticketafzenders per bord beheer je in de instellingen van elk bord.",
+        "boardSummary": "Ticketafzenders per bord beheert u in de instellingen van elk bord.",
         "ticket": "Ticket-e-mail",
         "project": "Projecte-mail",
         "billing": "Facturatie-e-mail",
@@ -251,7 +251,7 @@
         "noneProviderFrom": "Geen (afzender van provider gebruiken)",
         "confirmSmtp": "Ik bevestig dat de SMTP-relay dit afzenderadres accepteert.",
         "inboundReplyWarning": "Inkomende antwoorden blijven naar de geconfigureerde mailbox gaan; dit Van-adres wijzigen verandert de routering van antwoorden niet.",
-        "unknownBoard": "Unknown board"
+        "unknownBoard": "Onbekend bord"
       },
       "actions": {
         "add": "Afzender toevoegen",
@@ -266,7 +266,7 @@
         "displayName": "Weergavenaam",
         "displayNamePlaceholder": "Supportteam"
       },
-      "smtpHelp": "Je SMTP-relay moet dit adres toestaan.",
+      "smtpHelp": "Uw SMTP-relay moet dit adres toestaan.",
       "microsoftHelp": "De verbonden mailbox heeft Exchange Send As-rechten voor dit adres nodig.",
       "errors": {
         "duplicateAddress": "Dit afzenderadres bestaat al.",
