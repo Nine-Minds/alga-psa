@@ -997,7 +997,9 @@
     "fields": {
       "due": "⟦Ḓŭḗ⟧",
       "additionalMessage": "⟦Ȧḓḓīŧīȯƞȧŀ Ḿḗşşȧɠḗ⟧",
-      "additionalMessagePlaceholder": "⟦Ȧḓḓ ȧ ƥḗřşȯƞȧŀ ƞȯŧḗ ŧȯ īƞƈŀŭḓḗ īƞ ŧħḗ ḗḿȧīŀ...⟧"
+      "additionalMessagePlaceholder": "⟦Ȧḓḓ ȧ ƥḗřşȯƞȧŀ ƞȯŧḗ ŧȯ īƞƈŀŭḓḗ īƞ ŧħḗ ḗḿȧīŀ...⟧",
+      "from": "⟦Ƒřȯḿ⟧",
+      "useDefault": "⟦Ŭşḗ ḓḗƒȧŭŀŧ şḗƞḓḗř⟧"
     },
     "preview": "⟦Ḗḿȧīŀş ẇīŀŀ ƀḗ şḗƞŧ ƒřȯḿ {{fromEmail}} ȯƞ ƀḗħȧŀƒ ȯƒ {{companyName}}. Ḗȧƈħ īƞṽȯīƈḗ ẇīŀŀ ƀḗ ȧŧŧȧƈħḗḓ ȧş ȧ ƤḒƑ.⟧",
     "values": {

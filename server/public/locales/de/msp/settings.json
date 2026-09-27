@@ -834,7 +834,12 @@
       "emailSender": {
         "useDefault": "Ticket-Standard verwenden",
         "duplicateRoute": "Diese Absenderroute ist bereits vorhanden.",
-        "saveFailed": "Ticket-Absender konnte nicht gespeichert werden. Bitte versuchen Sie es erneut."
+        "saveFailed": "Ticket-Absender konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.",
+        "label": "Absender für ausgehende E-Mails",
+        "inboundWarning": "Dieser Absender wird für ausgehende Ticket-E-Mails verwendet. Die Einstellungen für eingehende E-Mails bleiben unverändert.",
+        "displayName": "Anzeigename",
+        "save": "Absender speichern",
+        "saved": "Absender gespeichert"
       }
     },
     "priorities": {
@@ -3481,5 +3486,8 @@
       "nothingToRetry": "Es gibt keine fehlgeschlagene Registrierung einer eigenen Domain, die wiederholt werden könnte.",
       "retryOnlyAfterFailure": "Ein erneuter Versuch ist nur nach einer fehlgeschlagenen Registrierung möglich."
     }
+  },
+  "common": {
+    "saving": "Wird gespeichert…"
   }
 }

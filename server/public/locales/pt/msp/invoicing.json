@@ -997,7 +997,9 @@
     "fields": {
       "due": "Devido",
       "additionalMessage": "Mensagem Adicional",
-      "additionalMessagePlaceholder": "Adicione uma nota pessoal para incluir no e-mail..."
+      "additionalMessagePlaceholder": "Adicione uma nota pessoal para incluir no e-mail...",
+      "from": "De",
+      "useDefault": "Usar remetente predefinido"
     },
     "preview": "Os e-mails serão enviados de {{fromEmail}} em nome de {{companyName}}. Cada fatura será anexada em formato PDF.",
     "values": {

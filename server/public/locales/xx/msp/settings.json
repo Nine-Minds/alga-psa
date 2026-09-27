@@ -834,7 +834,12 @@
       "emailSender": {
         "useDefault": "[Üsë tïckët dëfåült]",
         "duplicateRoute": "[Thïs sëndër røütë ålrëådy ëxïsts.]",
-        "saveFailed": "[Cøüld nøt såvë tïckët sëndër. Try ågåïn.]"
+        "saveFailed": "[Cøüld nøt såvë tïckët sëndër. Try ågåïn.]",
+        "label": "⟦Ȯŭŧƀȯŭƞḓ şḗƞḓḗř⟧",
+        "inboundWarning": "⟦Ŧħīş şḗƞḓḗř īş ŭşḗḓ ƒȯř ȯŭŧƀȯŭƞḓ ŧīƈķḗŧ ḗḿȧīŀ. Īƞƀȯŭƞḓ ḿȧīŀ şḗŧŧīƞɠş ȧřḗ ŭƞƈħȧƞɠḗḓ.⟧",
+        "displayName": "⟦Ḓīşƥŀȧẏ ƞȧḿḗ⟧",
+        "save": "⟦Şȧṽḗ şḗƞḓḗř⟧",
+        "saved": "⟦Şḗƞḓḗř şȧṽḗḓ⟧"
       }
     },
     "priorities": {
@@ -3481,5 +3486,8 @@
       "nothingToRetry": "⟦Ƞȯ ƒȧīŀḗḓ ƈŭşŧȯḿ ḓȯḿȧīƞ řḗɠīşŧřȧŧīȯƞ ŧȯ řḗŧřẏ.⟧",
       "retryOnlyAfterFailure": "⟦Řḗŧřẏ īş ȯƞŀẏ ȧṽȧīŀȧƀŀḗ ȧƒŧḗř ȧ ƒȧīŀḗḓ řḗɠīşŧřȧŧīȯƞ.⟧"
     }
+  },
+  "common": {
+    "saving": "⟦Şȧṽīƞɠ...⟧"
   }
 }

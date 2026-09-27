@@ -9,7 +9,8 @@
       "edit": "Modifier",
       "delete": "Supprimer",
       "deleting": "Suppression…",
-      "verify": "Vérifier"
+      "verify": "Vérifier",
+      "cancel": "Annuler"
     },
     "states": {
       "active": "Actif",

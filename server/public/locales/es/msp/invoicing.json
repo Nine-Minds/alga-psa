@@ -997,7 +997,9 @@
     "fields": {
       "due": "Vencimiento",
       "additionalMessage": "Mensaje adicional",
-      "additionalMessagePlaceholder": "Añada una nota personal para incluirla en el correo electrónico..."
+      "additionalMessagePlaceholder": "Añada una nota personal para incluirla en el correo electrónico...",
+      "from": "De",
+      "useDefault": "Usar remitente predeterminado"
     },
     "preview": "Los correos electrónicos se enviarán desde {{fromEmail}} en nombre de {{companyName}}. Cada factura se adjuntará en formato PDF.",
     "values": {

@@ -997,7 +997,9 @@
     "fields": {
       "due": "Fällig",
       "additionalMessage": "Zusätzliche Nachricht",
-      "additionalMessagePlaceholder": "Fügen Sie eine persönliche Notiz hinzu, die Sie in die E-Mail einfügen möchten..."
+      "additionalMessagePlaceholder": "Fügen Sie eine persönliche Notiz hinzu, die Sie in die E-Mail einfügen möchten...",
+      "from": "Von",
+      "useDefault": "Standardabsender verwenden"
     },
     "preview": "E-Mails werden von {{fromEmail}} im Namen von {{companyName}} gesendet. Jede Rechnung wird als PDF beigefügt.",
     "values": {

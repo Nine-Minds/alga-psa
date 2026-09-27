@@ -834,7 +834,12 @@
       "emailSender": {
         "useDefault": "Usar valor predeterminado del ticket",
         "duplicateRoute": "Esta ruta de remitente ya existe.",
-        "saveFailed": "No se pudo guardar el remitente del ticket. Inténtelo de nuevo."
+        "saveFailed": "No se pudo guardar el remitente del ticket. Inténtelo de nuevo.",
+        "label": "Remitente saliente",
+        "inboundWarning": "Este remitente se usa para los correos salientes de tickets. La configuración del correo entrante no cambia.",
+        "displayName": "Nombre para mostrar",
+        "save": "Guardar remitente",
+        "saved": "Remitente guardado"
       }
     },
     "priorities": {
@@ -3481,5 +3486,8 @@
       "nothingToRetry": "No hay ningún registro de dominio personalizado fallido que reintentar.",
       "retryOnlyAfterFailure": "El reintento solo está disponible después de un registro fallido."
     }
+  },
+  "common": {
+    "saving": "Guardando…"
   }
 }

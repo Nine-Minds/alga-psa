@@ -834,7 +834,12 @@
       "emailSender": {
         "useDefault": "⟦Use ticket default⟧",
         "duplicateRoute": "⟦That sender route already exists.⟧",
-        "saveFailed": "⟦Could not save ticket sender. Please try again.⟧"
+        "saveFailed": "⟦Could not save ticket sender. Please try again.⟧",
+        "label": "〖Ȯŭŧƀȯŭƞḓ şḗƞḓḗř ······〗",
+        "inboundWarning": "〖Ŧħīş şḗƞḓḗř īş ŭşḗḓ ƒȯř ȯŭŧƀȯŭƞḓ ŧīƈķḗŧ ḗḿȧīŀ. Īƞƀȯŭƞḓ ḿȧīŀ şḗŧŧīƞɠş ȧřḗ ŭƞƈħȧƞɠḗḓ. ··································〗",
+        "displayName": "〖Ḓīşƥŀȧẏ ƞȧḿḗ ·····〗",
+        "save": "〖Şȧṽḗ şḗƞḓḗř ·····〗",
+        "saved": "〖Şḗƞḓḗř şȧṽḗḓ ·····〗"
       }
     },
     "priorities": {
@@ -3481,5 +3486,8 @@
       "nothingToRetry": "〖Ƞȯ ƒȧīŀḗḓ ƈŭşŧȯḿ ḓȯḿȧīƞ řḗɠīşŧřȧŧīȯƞ ŧȯ řḗŧřẏ. ···················〗",
       "retryOnlyAfterFailure": "〖Řḗŧřẏ īş ȯƞŀẏ ȧṽȧīŀȧƀŀḗ ȧƒŧḗř ȧ ƒȧīŀḗḓ řḗɠīşŧřȧŧīȯƞ. ·····················〗"
     }
+  },
+  "common": {
+    "saving": "〖Şȧṽīƞɠ... ····〗"
   }
 }

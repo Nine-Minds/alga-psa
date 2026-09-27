@@ -834,7 +834,12 @@
       "emailSender": {
         "useDefault": "Usa il mittente predefinito del ticket",
         "duplicateRoute": "Questa regola mittente esiste già.",
-        "saveFailed": "Impossibile salvare il mittente del ticket. Riprova."
+        "saveFailed": "Impossibile salvare il mittente del ticket. Riprova.",
+        "label": "Mittente in uscita",
+        "inboundWarning": "Questo mittente viene usato per le e-mail in uscita dei ticket. Le impostazioni della posta in arrivo non cambiano.",
+        "displayName": "Nome visualizzato",
+        "save": "Salva mittente",
+        "saved": "Mittente salvato"
       }
     },
     "priorities": {
@@ -3481,5 +3486,8 @@
       "nothingToRetry": "Non c'è alcuna registrazione di dominio personalizzato non riuscita da ritentare.",
       "retryOnlyAfterFailure": "Il nuovo tentativo è disponibile solo dopo una registrazione non riuscita."
     }
+  },
+  "common": {
+    "saving": "Salvataggio…"
   }
 }

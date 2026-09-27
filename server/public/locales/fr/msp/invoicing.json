@@ -997,7 +997,9 @@
     "fields": {
       "due": "Échéance",
       "additionalMessage": "Message supplémentaire",
-      "additionalMessagePlaceholder": "Ajoutez une note personnelle à inclure dans l'e-mail..."
+      "additionalMessagePlaceholder": "Ajoutez une note personnelle à inclure dans l'e-mail...",
+      "from": "De",
+      "useDefault": "Utiliser l’expéditeur par défaut"
     },
     "preview": "Les e-mails seront envoyés depuis {{fromEmail}} au nom de {{companyName}}. Chaque facture sera jointe au format PDF.",
     "values": {

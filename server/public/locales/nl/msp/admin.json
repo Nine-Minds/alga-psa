@@ -9,7 +9,8 @@
       "edit": "Bewerken",
       "delete": "Verwijderen",
       "deleting": "Bezig met verwijderen…",
-      "verify": "Verifiëren"
+      "verify": "Verifiëren",
+      "cancel": "Annuleren"
     },
     "states": {
       "active": "Actief",

@@ -997,7 +997,9 @@
     "fields": {
       "due": "Due",
       "additionalMessage": "Additional Message",
-      "additionalMessagePlaceholder": "Add a personal note to include in the email..."
+      "additionalMessagePlaceholder": "Add a personal note to include in the email...",
+      "from": "From",
+      "useDefault": "Use default sender"
     },
     "preview": "Emails will be sent from {{fromEmail}} on behalf of {{companyName}}. Each invoice will be attached as a PDF.",
     "values": {

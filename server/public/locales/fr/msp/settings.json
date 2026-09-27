@@ -834,7 +834,12 @@
       "emailSender": {
         "useDefault": "Utiliser la valeur par défaut du ticket",
         "duplicateRoute": "Cette route d’expéditeur existe déjà.",
-        "saveFailed": "Impossible d’enregistrer l’expéditeur du ticket. Réessayez."
+        "saveFailed": "Impossible d’enregistrer l’expéditeur du ticket. Réessayez.",
+        "label": "Expéditeur sortant",
+        "inboundWarning": "Cet expéditeur est utilisé pour les e-mails sortants des tickets. Les paramètres des e-mails entrants restent inchangés.",
+        "displayName": "Nom affiché",
+        "save": "Enregistrer l’expéditeur",
+        "saved": "Expéditeur enregistré"
       }
     },
     "priorities": {
@@ -3481,5 +3486,8 @@
       "nothingToRetry": "Aucun enregistrement de domaine personnalisé en échec à relancer.",
       "retryOnlyAfterFailure": "La relance n'est possible qu'après un enregistrement en échec."
     }
+  },
+  "common": {
+    "saving": "Enregistrement…"
   }
 }
