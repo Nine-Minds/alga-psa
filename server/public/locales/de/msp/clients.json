@@ -1726,7 +1726,20 @@
     "paymentTerms": "Zahlungsbedingungen",
     "taxExempt": "Steuerbefreit",
     "taxExemptInherited": "Wird vom Kunden geerbt ({{value}})",
-    "regionNote": "Die Steuerregion wird hier nicht gesetzt. Sie richtet sich nach dem Leistungsort – Leistung, dann Standort der Vertragsposition, dann Kundenstandard."
+    "regionNote": "Die Steuerregion wird hier nicht gesetzt. Sie richtet sich nach dem Leistungsort – Leistung, dann Standort der Vertragsposition, dann Kundenstandard.",
+    "inheritFromClient": "Vom Kunden übernehmen ({{value}})",
+    "paymentMethod": "Zahlungsmethode",
+    "paymentMethodHint": "Rechnungen für Scheck oder Banküberweisung enthalten keinen Online-Link „Jetzt bezahlen“.",
+    "cardOnFileLabel": "Hinterlegte Karte",
+    "cardOnFileHint": "Hinterlegte Karten werden vom Kunden im Kundenportal verwaltet.",
+    "noCardOnFile": "Keine Karte hinterlegt",
+    "cardType": {
+      "card": "Karte",
+      "bankAccount": "Bankkonto"
+    },
+    "cardExpiry": ", gültig bis {{month}}/{{year}}",
+    "legacyPaymentTerms": "„{{value}}“ ist keine anerkannte Zahlungsbedingung und wurde nie angewendet. Beim Speichern wird sie gelöscht.",
+    "cardOnFile": "{{type}} mit Endziffern {{last4}}{{expiry}}"
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Prepaid-Saldo-Warnungen",

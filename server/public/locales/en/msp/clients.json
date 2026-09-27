@@ -1726,7 +1726,20 @@
     "paymentTerms": "Payment terms",
     "taxExempt": "Tax exempt",
     "taxExemptInherited": "Inheriting from the client ({{value}})",
-    "regionNote": "Tax region is not set here. It follows where the work was delivered — the service, then the contract line’s location, then the client default."
+    "regionNote": "Tax region is not set here. It follows where the work was delivered — the service, then the contract line’s location, then the client default.",
+    "inheritFromClient": "Inherit from client ({{value}})",
+    "paymentMethod": "Payment method",
+    "paymentMethodHint": "Invoices for Check or Bank Transfer do not include an online \"Pay now\" link.",
+    "cardOnFileLabel": "Saved card on file",
+    "cardOnFileHint": "Saved cards are managed by the client in the client portal.",
+    "noCardOnFile": "No card on file",
+    "cardType": {
+      "card": "Card",
+      "bankAccount": "Bank account"
+    },
+    "cardExpiry": ", exp {{month}}/{{year}}",
+    "legacyPaymentTerms": "\"{{value}}\" is not a recognized payment term and was never applied. Saving clears it.",
+    "cardOnFile": "{{type}} ending in {{last4}}{{expiry}}"
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Prepaid Balance Alerts",

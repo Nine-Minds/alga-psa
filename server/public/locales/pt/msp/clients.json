@@ -1726,7 +1726,20 @@
     "paymentTerms": "Condições de pagamento",
     "taxExempt": "Isento de imposto",
     "taxExemptInherited": "Herdado do cliente ({{value}})",
-    "regionNote": "A região fiscal não é definida aqui. Ela segue o local de entrega — o serviço, depois a localização da linha de contrato, depois o padrão do cliente."
+    "regionNote": "A região fiscal não é definida aqui. Ela segue o local de entrega — o serviço, depois a localização da linha de contrato, depois o padrão do cliente.",
+    "inheritFromClient": "Herdar do cliente ({{value}})",
+    "paymentMethod": "Método de pagamento",
+    "paymentMethodHint": "As faturas pagas por cheque ou transferência bancária não incluem uma ligação online «Pagar agora».",
+    "cardOnFileLabel": "Cartão guardado",
+    "cardOnFileHint": "Os cartões guardados são geridos pelo cliente no portal do cliente.",
+    "noCardOnFile": "Nenhum cartão guardado",
+    "cardType": {
+      "card": "Cartão",
+      "bankAccount": "Conta bancária"
+    },
+    "cardExpiry": ", expira em {{month}}/{{year}}",
+    "legacyPaymentTerms": "«{{value}}» não é uma condição de pagamento reconhecida e nunca foi aplicada. Será removida ao guardar.",
+    "cardOnFile": "{{type}} com final {{last4}}{{expiry}}"
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Alertas de saldo pré-pago",
