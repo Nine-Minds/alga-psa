@@ -1,16 +1,15 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import { MspLayoutClient } from '@/app/msp/MspLayoutClient';
 import { getTenantSettings } from '@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions';
 
 const mockUsePathname = vi.fn(() => '/msp/tickets');
 const mockReplace = vi.fn();
-// Next's app-router useRouter() returns a stable instance. A fresh object per
-// render would re-run MspLayoutClient's router-dependent onboarding effect on
-// every re-render, resetting the check and remounting the license banner.
-const mockRouter = { replace: mockReplace };
+// Match Next's stable router by default; the identity-change regression test
+// explicitly replaces it to verify that onboarding is not fetched again.
+let mockRouter = { replace: mockReplace };
 
 vi.mock('next/navigation', () => ({
   usePathname: () => mockUsePathname(),
@@ -89,6 +88,7 @@ vi.mock('@/components/product/ProductRouteBoundary', () => ({
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  mockRouter = { replace: mockReplace };
   mockUsePathname.mockReturnValue('/msp/tickets');
 });
 
@@ -228,11 +228,52 @@ describe('MspLayoutClient product shell behavior', () => {
     const { rerender } = render(view);
 
     const banner = await screen.findByTestId('license-banner');
-    // useRouter() hands back a fresh object on every render in this suite.
-    rerender(view);
+    mockRouter = { replace: mockReplace };
+    rerender(React.cloneElement(view));
     await new Promise((resolve) => setTimeout(resolve, 20));
 
     expect(banner).toBeInTheDocument();
+    expect(mockGetTenantSettings).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses newly resolved server onboarding status while a client check is pending', async () => {
+    let resolveSettings!: (settings: Awaited<ReturnType<typeof getTenantSettings>>) => void;
+    mockGetTenantSettings.mockReturnValue(new Promise((resolve) => {
+      resolveSettings = resolve;
+    }));
+    const session = { user: { tenant: 'tenant-1' } } as any;
+    const layout = (resolved: boolean) => (
+      <MspLayoutClient
+        session={session}
+        productCode="psa"
+        needsOnboarding={false}
+        onboardingResolvedServerSide={resolved}
+        initialSidebarCollapsed={false}
+        selfHostLicensing={true}
+      >
+        <div>psa content</div>
+      </MspLayoutClient>
+    );
+    const { rerender } = render(layout(false));
+    expect(mockGetTenantSettings).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('license-banner')).not.toBeInTheDocument();
+
+    rerender(layout(true));
+    expect(screen.getByTestId('license-banner')).toBeInTheDocument();
+
+    // A stale client response must not override the authoritative server result.
+    await act(async () => {
+      resolveSettings({
+        tenant: 'tenant-1',
+        onboarding_completed: false,
+        onboarding_skipped: false,
+        created_at: new Date(),
+        updated_at: new Date(),
+      });
+    });
+    expect(screen.getByTestId('license-banner')).toBeInTheDocument();
+    expect(screen.getByText('psa content')).toBeInTheDocument();
+    expect(mockReplace).not.toHaveBeenCalled();
     expect(mockGetTenantSettings).toHaveBeenCalledTimes(1);
   });
 

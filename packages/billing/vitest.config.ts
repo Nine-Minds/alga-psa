@@ -48,6 +48,8 @@ export default defineConfig({
       // Ticket-level billed-time detail: snapshot aggregation, standard-template
       // bindings, and render parity — listed for the same reason as above.
       'src/lib/adapters/invoiceAdapters.test.ts',
+      'src/lib/adapters/salesOrderAdapters.test.ts',
+      'src/lib/sales-order-template-ast/standardTemplates.test.ts',
       'src/lib/invoice-template-ast/standardTemplates.test.ts',
       'src/lib/invoice-template-ast/standardTemplates.byTicket.test.ts',
       // Rich Terms & Conditions: write-path projection + designer richText
