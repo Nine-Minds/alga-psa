@@ -576,3 +576,16 @@ the round-1 behavior.
    timing and competing-second-draft cases are covered only indirectly (the
    sequential next-invoice assertion); live changed-artifact UI smoke remains
    incomplete because the review deployment is unavailable.
+
+### Round-2 follow-up checks
+
+- `cd server && npx vitest run src/test/unit/billing` — **897 passed, 19
+  skipped, 170 files**; `taxRateCaps.db.test.ts` is the only failed suite and it
+  is environmental (`beforeAll` requires `DB_NAME_SERVER` to contain "test"),
+  unrelated to this change.
+- Adjusted characterization fixtures for the new draft reconciliation step
+  (`billingEngine.recalculateInvoice.detailPeriods`, `invoiceGeneration.headerPeriods`,
+  `projectBillingEngine`): the extra invoice probe is part of the intentional
+  reconcile-before-tax behavior.
+- Added a no-connection guard to the pending-adjustment lookup so pure unit
+  fixtures without a knex instance are unaffected.

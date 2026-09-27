@@ -6642,6 +6642,8 @@ export class BillingEngine {
     if (!this.tenant) {
       throw new Error("tenant context not found");
     }
+    // No initialized connection (e.g. a pure unit fixture): nothing to read.
+    if (!this.knex || typeof this.knex !== "function") return [];
     const lineIds = [
       ...new Set(
         clientContractLines
@@ -6659,7 +6661,7 @@ export class BillingEngine {
         .where({ tenant: this.tenant })
         .whereIn("status", ["pending", "settled"])
         .whereIn("contract_line_id", lineIds)
-        .whereNot("amount_cents", 0)
+        .andWhere("amount_cents", "!=", 0)
         // The affected period must have begun by the end of this billing window.
         // A pending adjustment whose affected invoice finalized first therefore
         // carries forward onto the next eligible draft; a draft for an earlier

@@ -79,7 +79,7 @@ describe('BillingEngine recalculation recurring detail preservation', () => {
         transactionType: 'invoice_adjustment',
       })
     );
-    expect(queriedTables).toEqual(['invoices', 'clients']);
+    expect(queriedTables).toEqual(['invoices', 'clients', 'trx:invoices']);
     expect(queriedTables).not.toContain('invoice_charge_details');
     expect(queriedTables).not.toContain('trx:invoice_charge_details');
   });
@@ -123,7 +123,7 @@ describe('BillingEngine recalculation recurring detail preservation', () => {
     expect(knex).not.toHaveBeenCalled();
     expect(knex.transaction).not.toHaveBeenCalled();
     expect((engine as any).initKnex).not.toHaveBeenCalled();
-    expect(queriedTables).toEqual(['trx:invoices', 'trx:clients']);
+    expect(queriedTables).toEqual(['trx:invoices', 'trx:clients', 'trx:invoices']);
     expect(calculateAndDistributeTax).toHaveBeenLastCalledWith(
       trx,
       'invoice-1',

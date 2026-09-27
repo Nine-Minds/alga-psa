@@ -70,6 +70,11 @@ const mocks = vi.hoisted(() => {
           queryState.andWhere.push(args);
           return builder;
         }),
+        // Draft reconciliation probes the invoice before touching it; no draft
+        // adjustment exists in these header-period fixtures.
+        first: vi.fn(async () => undefined),
+        select: vi.fn(async () => []),
+        whereIn: vi.fn(() => builder),
         update: vi.fn(async (patch: Record<string, any>) => {
           if (tableName === 'invoices') {
             state.invoiceUpdates.push({
