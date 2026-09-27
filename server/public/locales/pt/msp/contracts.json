@@ -2495,7 +2495,8 @@
       "missingClient": "Falta a atribuição de cliente no contrato em rascunho",
       "invalidStartDate": "O contrato em rascunho tem uma data de início inválida",
       "recordInvalid": "Um dos registros selecionados do assistente de contrato não é mais válido. Atualize a página e tente novamente.",
-      "duplicate": "Já existe um registro correspondente do assistente de contrato."
+      "duplicate": "Já existe um registro correspondente do assistente de contrato.",
+      "standingTerms": "Este rascunho contém condições de desconto recorrentes. Edite os separadores Linhas e Descontos para as preservar."
     },
     "pricingSchedule": {
       "endAfterEffective": "A data de término deve ser posterior à data de vigência",

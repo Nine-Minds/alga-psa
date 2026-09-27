@@ -1,5 +1,31 @@
 # Contract invoice adjustments
 
+## Takeover repair (2026-09-27)
+
+Template-origin services must retain their source line boundaries when the client
+wizard creates fixed, product, hourly, or usage lines. A line discount must not
+expand to other source lines merely because they use the same billing method.
+Services added without a template source retain the existing grouping. The fixed
+fee remains the wizard's authored total, allocated across the resulting lines
+using the existing quantity-weighted allocation and remainder rule. Bucket pools
+must resolve to one line containing their members; ambiguous cross-line pools
+are rejected rather than assigned to an arbitrary line.
+
+The template discount copy ledger must be tenant-distributed and colocated with
+client contracts on Citus, including upgrades where the table already exists.
+Foreign keys are added after distribution. The initial contract-discount attachment
+migration follows the same ordering and uses sequential Citus modification mode
+when adding its reference-table foreign key. Tenant deletion removes the ledger
+before its client-contract and discount parents. Verification covers same-method
+source lines, repeated services, scoped settlements, and migration retries.
+
+Resaving a draft through the wizard rebuilds assignments and lines. Drafts with
+standing terms or copied-term history must instead use the Lines and Discounts
+tabs; the wizard returns that instruction before deleting any rows. This keeps
+independent contract terms intact after template edits. Legacy invoices without
+detail periods use the full invoice-date day as their half-open eligibility
+window, rather than an empty interval.
+
 ## Round 3 repair record (2026-09-27)
 
 Original customer request: provide a contract-level discount/adjustment authored

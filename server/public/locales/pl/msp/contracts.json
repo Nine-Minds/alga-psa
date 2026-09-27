@@ -2499,7 +2499,8 @@
       "missingClient": "W roboczej wersji umowy brakuje przypisania klienta",
       "invalidStartDate": "Robocza wersja umowy ma nieprawidłową datę rozpoczęcia",
       "recordInvalid": "Jeden z wybranych rekordów kreatora umowy nie jest już prawidłowy. Odśwież stronę i spróbuj ponownie.",
-      "duplicate": "Pasujący rekord kreatora umowy już istnieje."
+      "duplicate": "Pasujący rekord kreatora umowy już istnieje.",
+      "standingTerms": "Ten szkic zawiera stałe warunki rabatowe. Edytuj karty Pozycje i Rabaty, aby je zachować."
     },
     "pricingSchedule": {
       "endAfterEffective": "Data zakończenia musi być późniejsza niż data wejścia w życie",

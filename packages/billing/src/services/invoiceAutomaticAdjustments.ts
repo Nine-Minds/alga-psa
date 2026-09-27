@@ -99,7 +99,7 @@ export async function loadInvoiceServiceWindow(
     return { start: detailStart, end: detailEnd };
   }
   const date = toDateOnly(invoice?.invoice_date) ?? Temporal.Now.plainDateISO().toString();
-  return { start: date, end: date };
+  return { start: date, end: Temporal.PlainDate.from(date).add({ days: 1 }).toString() };
 }
 
 function toAdjustmentCharges(rows: StoredChargeRow[]): InvoiceAdjustmentCharge[] {

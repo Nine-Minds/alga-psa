@@ -1813,6 +1813,20 @@ describe('contract invoice adjustments (DB-backed)', () => {
     }
   });
 
+  it('uses a full invoice-date day when legacy charges have no detail periods', async () => {
+    const fixture = await createDraftWithGeneratedChargeAndDiscount();
+    try {
+      await db('discounts').where({ tenant, discount_id: discountId }).update({ start_date: '2026-09-01', end_date: null });
+      const active = await db.transaction((trx) => reconcileAutomaticInvoiceAdjustments(trx, tenant, fixture.invoiceId));
+      expect(active.automaticDiscountAmount).toBe(39_000);
+      await db('discounts').where({ tenant, discount_id: discountId }).update({ start_date: '2026-09-02' });
+      const future = await db.transaction((trx) => reconcileAutomaticInvoiceAdjustments(trx, tenant, fixture.invoiceId));
+      expect(future.automaticDiscountAmount).toBe(0);
+    } finally {
+      await db('discounts').where({ tenant, discount_id: discountId }).update({ start_date: '2026-01-01', end_date: null });
+    }
+  });
+
   it('copies template default discounts into independent client-contract definitions', async () => {
     const templateId = uuidv4();
     const isolatedContractId = uuidv4();
@@ -1943,22 +1957,23 @@ describe('contract invoice adjustments (DB-backed)', () => {
     await db('contracts').where({ tenant, contract_id: isolatedContractId }).delete();
   });
 
-  it('maps repeated template services to their source lines through the client-contract wizard action', async () => {
+  it.each(['Fixed', 'Hourly'] as const)('keeps fixed and %s template sources separate through creation and settlement', async (secondType) => {
     const templateId = uuidv4();
     const fixedTemplateLineId = uuidv4();
     const hourlyTemplateLineId = uuidv4();
     let createdContractId: string | undefined;
+    const scopedInvoiceId = uuidv4();
     await db('contract_templates').insert({
       tenant, template_id: templateId, template_name: 'Repeated-service identity template',
       default_billing_frequency: 'monthly', template_status: 'published',
       template_metadata: { default_discounts: [
-        { template_discount_key: uuidv4(), discount_name: 'Fixed source line', discount_type: 'fixed', value: 1, start_date: '2026-01-01', scope: 'line', contract_line_id: fixedTemplateLineId },
-        { template_discount_key: uuidv4(), discount_name: 'Hourly source line', discount_type: 'fixed', value: 2, start_date: '2026-01-01', scope: 'line', contract_line_id: hourlyTemplateLineId },
+        { template_discount_key: uuidv4(), discount_name: 'Fixed source line', discount_type: 'percentage', value: 10, start_date: '2026-01-01', scope: 'line', contract_line_id: fixedTemplateLineId },
+        { template_discount_key: uuidv4(), discount_name: 'Hourly source line', discount_type: 'percentage', value: 20, start_date: '2026-01-01', scope: 'line', contract_line_id: hourlyTemplateLineId },
       ] },
     });
     await db('contract_template_lines').insert([
       { tenant, template_line_id: fixedTemplateLineId, template_id: templateId, template_line_name: 'Fixed source', billing_frequency: 'monthly', line_type: 'Fixed', is_active: true },
-      { tenant, template_line_id: hourlyTemplateLineId, template_id: templateId, template_line_name: 'Hourly source', billing_frequency: 'monthly', line_type: 'Hourly', is_active: true },
+      { tenant, template_line_id: hourlyTemplateLineId, template_id: templateId, template_line_name: 'Hourly source', billing_frequency: 'monthly', line_type: secondType, is_active: true },
     ]);
     try {
       const { createClientContractFromWizard } = await import('../actions/contractWizardActions');
@@ -1966,8 +1981,11 @@ describe('contract invoice adjustments (DB-backed)', () => {
       const created = await runWithTenant(tenant, () => createClientContractFromWizard({
         contract_name: 'Repeated service contract', client_id: clientId, start_date: '2026-09-01', currency_code: 'USD',
         enable_proration: false, template_id: templateId, fixed_base_rate: 10_000,
-        fixed_services: [{ service_id: serviceId, quantity: 1, source_template_line_id: fixedTemplateLineId }],
-        hourly_services: [{ service_id: serviceId, hourly_rate: 2_000, source_template_line_id: hourlyTemplateLineId }],
+        fixed_services: [
+          { service_id: serviceId, quantity: 1, source_template_line_id: fixedTemplateLineId },
+          ...(secondType === 'Fixed' ? [{ service_id: serviceId, quantity: 1, source_template_line_id: hourlyTemplateLineId }] : []),
+        ],
+        hourly_services: secondType === 'Hourly' ? [{ service_id: serviceId, hourly_rate: 2_000, source_template_line_id: hourlyTemplateLineId }] : [],
       }, { isDraft: true }));
       expect(created).toHaveProperty('contract_id');
       createdContractId = (created as any).contract_id;
@@ -1982,7 +2000,54 @@ describe('contract invoice adjustments (DB-backed)', () => {
         { discount_name: 'Hourly source line', contract_line_id: hourlyTarget },
       ]));
       expect(fixedTarget).not.toBe(hourlyTarget);
+      const resave = await runWithTenant(tenant, () => createClientContractFromWizard({
+        contract_id: createdContractId, contract_name: 'Attempted rewrite', client_id: clientId,
+        start_date: '2026-09-01', currency_code: 'USD',
+        fixed_services: [{ service_id: serviceId, quantity: 4 }], fixed_base_rate: 99_000, enable_proration: false,
+      }, { isDraft: true }));
+      expect(resave).toMatchObject({ actionError: expect.stringContaining('standing discount terms') });
+      expect(await db('client_contracts').where({ tenant, client_contract_id: clientAssignment.client_contract_id }).first()).toBeDefined();
+      const retainedTerms = await db('contract_line_discounts')
+        .where({ tenant, client_contract_id: clientAssignment.client_contract_id }).pluck('discount_id');
+      expect(retainedTerms).toHaveLength(2);
+      const fixedConfigs = await db('contract_lines')
+        .where({ tenant }).whereIn('contract_line_id', [fixedTarget, hourlyTarget]);
+      expect(fixedConfigs.reduce((sum, row) => sum + Number(row.custom_rate), 0)).toBe(10_000);
+      await db('invoices').insert({
+        tenant, invoice_id: scopedInvoiceId, client_id: clientId,
+        client_contract_id: clientAssignment.client_contract_id,
+        invoice_number: `SOURCE-${scopedInvoiceId.slice(0, 8)}`, invoice_date: '2026-09-01',
+        due_date: '2026-09-30', status: 'draft', subtotal: 30_000, tax: 0,
+        total_amount: 30_000, currency_code: 'USD', is_manual: false,
+      });
+      for (const [index, target] of [fixedTarget, hourlyTarget].entries()) {
+        const config = await db('contract_line_service_configuration')
+          .where({ tenant, contract_line_id: target, service_id: serviceId }).first('config_id');
+        const itemId = uuidv4();
+        const amount = (index + 1) * 10_000;
+        await db('invoice_charges').insert({
+          tenant, item_id: itemId, invoice_id: scopedInvoiceId, service_id: serviceId,
+          client_contract_id: clientAssignment.client_contract_id, description: `Source ${index}`,
+          quantity: 1, unit_price: amount, net_amount: amount, total_price: amount,
+          tax_amount: 0, is_manual: false, is_discount: false, is_taxable: false,
+        });
+        await db('invoice_charge_details').insert({
+          tenant, item_detail_id: uuidv4(), item_id: itemId, service_id: serviceId,
+          config_id: config.config_id, quantity: 1, rate: amount,
+          service_period_start: '2026-09-01', service_period_end: '2026-09-30',
+        });
+      }
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        await db.transaction((trx) => reconcileAutomaticInvoiceAdjustments(trx, tenant, scopedInvoiceId));
+        const settlements = await db('invoice_charges')
+          .where({ tenant, invoice_id: scopedInvoiceId, is_discount: true }).orderBy('description');
+        expect(settlements.map((row) => Number(row.net_amount))).toEqual([-1_000, -4_000]);
+      }
     } finally {
+      const chargeIds = await db('invoice_charges').where({ tenant, invoice_id: scopedInvoiceId }).pluck('item_id');
+      await db('invoice_charge_details').where({ tenant }).whereIn('item_id', chargeIds).delete();
+      await db('invoice_charges').where({ tenant, invoice_id: scopedInvoiceId }).delete();
+      await db('invoices').where({ tenant, invoice_id: scopedInvoiceId }).delete();
       if (createdContractId) {
         const owner = await db('client_contracts').where({ tenant, contract_id: createdContractId }).first('client_contract_id');
         if (owner) {

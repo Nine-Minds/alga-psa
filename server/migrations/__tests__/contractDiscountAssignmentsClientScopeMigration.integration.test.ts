@@ -16,6 +16,17 @@ const lineOwnershipMigration = require(path.resolve(__dirname, '../2026092706000
   up: (knex: Knex | Knex.Transaction) => Promise<void>;
 };
 
+const createAssignmentsMigration = require(path.resolve(__dirname, '../20260927010000_add_contract_discount_assignments.cjs')) as {
+  up: (knex: Knex | Knex.Transaction) => Promise<void>;
+};
+
+const copyLedgerMigration = require(path.resolve(__dirname, '../20260927050000_track_contract_template_discount_copies.cjs')) as {
+  up: (knex: Knex | Knex.Transaction) => Promise<void>;
+};
+const copyLedgerRepair = require(path.resolve(__dirname, '../20260927070000_distribute_contract_template_discount_copies.cjs')) as {
+  up: (knex: Knex | Knex.Transaction) => Promise<void>;
+};
+
 let db: Knex;
 
 beforeAll(async () => {
@@ -26,6 +37,49 @@ beforeAll(async () => {
 afterAll(async () => { await db?.destroy().catch(() => undefined); });
 
 describe('contract discount assignment client-scope migration', () => {
+  it('creates attachment foreign keys after table creation and safely reruns after client scoping', async () => {
+    const rollback = new Error('rollback assignment creation fixture');
+    await expect(db.transaction(async (trx) => {
+      await trx.schema.dropTable('contract_discount_assignments');
+      await createAssignmentsMigration.up(trx);
+      await createAssignmentsMigration.up(trx);
+      const foreignKeys = await trx.raw("SELECT conname FROM pg_constraint WHERE conrelid = 'contract_discount_assignments'::regclass AND contype = 'f'");
+      expect(foreignKeys.rows).toHaveLength(3);
+      await migration.up(trx);
+      await createAssignmentsMigration.up(trx);
+      expect(await trx.schema.hasColumn('contract_discount_assignments', 'client_contract_id')).toBe(true);
+      expect(await trx.schema.hasColumn('contract_discount_assignments', 'contract_id')).toBe(false);
+      throw rollback;
+    })).rejects.toBe(rollback);
+  });
+
+  it('creates and repairs the copy ledger without losing identities and cascades parent deletion', async () => {
+    const rollback = new Error('rollback copy ledger fixture');
+    await expect(db.transaction(async (trx) => {
+      await trx.schema.dropTableIfExists('contract_template_discount_copies');
+      await copyLedgerMigration.up(trx);
+      const client = await trx('clients').first('tenant', 'client_id');
+      const tenant = client.tenant;
+      const contractId = randomUUID();
+      const ownerId = randomUUID();
+      const discountId = randomUUID();
+      const key = randomUUID();
+      await trx('contracts').insert({ tenant, contract_id: contractId, contract_name: 'Copy ledger', billing_frequency: 'monthly', is_active: true });
+      await trx('client_contracts').insert({ tenant, client_contract_id: ownerId, client_id: client.client_id, contract_id: contractId, start_date: '2026-01-01', is_active: true });
+      await trx('discounts').insert({ tenant, discount_id: discountId, discount_name: 'Copied', discount_type: 'fixed', value: 10, start_date: '2026-01-01', is_active: true });
+      const row = { tenant, client_contract_id: ownerId, discount_id: discountId, template_discount_key: key };
+      await trx('contract_template_discount_copies').insert(row);
+      await copyLedgerMigration.up(trx);
+      await copyLedgerRepair.up(trx);
+      expect(await trx('contract_template_discount_copies').where({ tenant, client_contract_id: ownerId })).toEqual([row]);
+      const foreignKeys = await trx.raw("SELECT conname FROM pg_constraint WHERE conrelid = 'contract_template_discount_copies'::regclass AND contype = 'f'");
+      expect(foreignKeys.rows).toHaveLength(2);
+      await trx('client_contracts').where({ tenant, client_contract_id: ownerId }).delete();
+      expect(await trx('contract_template_discount_copies').where({ tenant, discount_id: discountId })).toEqual([]);
+      throw rollback;
+    })).rejects.toBe(rollback);
+  });
+
   it('splits legacy line definitions per client-contract and safely reruns', async () => {
     const rollback = new Error('rollback line ownership fixture');
     await expect(db.transaction(async (trx) => {
@@ -114,7 +168,7 @@ describe('contract discount assignment client-scope migration', () => {
       const firstPass = await trx('contract_discount_assignments').where({ tenant: realTenant }).orderBy('client_contract_id');
       expect(firstPass).toHaveLength(3);
       expect(firstPass.find((row) => row.client_contract_id === clientContracts[0])?.assignment_id).toBe(oneAssignment);
-      expect(firstPass.find((row) => row.client_contract_id === [...clientContracts].sort()[0])?.assignment_id).toBe(multiAssignment);
+      expect(firstPass.find((row) => row.client_contract_id === clientContracts.slice(1).sort()[0])?.assignment_id).toBe(multiAssignment);
       expect(firstPass.map((row) => row.discount_id)).toEqual(expect.arrayContaining([oneDiscount, multiDiscount, multiDiscount]));
       expect(new Set(firstPass.map((row) => row.assignment_id)).size).toBe(3);
       await migration.up(trx);

@@ -2495,7 +2495,8 @@
       "missingClient": "Dem Vertragsentwurf fehlt die Kundenzuordnung",
       "invalidStartDate": "Der Vertragsentwurf hat ein ungültiges Startdatum",
       "recordInvalid": "Einer der ausgewählten Datensätze des Vertragsassistenten ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
-      "duplicate": "Ein passender Datensatz des Vertragsassistenten existiert bereits."
+      "duplicate": "Ein passender Datensatz des Vertragsassistenten existiert bereits.",
+      "standingTerms": "Dieser Entwurf enthält dauerhafte Rabattbedingungen. Bearbeiten Sie die Registerkarten Positionen und Rabatte, um diese Bedingungen beizubehalten."
     },
     "pricingSchedule": {
       "endAfterEffective": "Das Enddatum muss nach dem Gültigkeitsdatum liegen",

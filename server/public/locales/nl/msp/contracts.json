@@ -2495,7 +2495,8 @@
       "missingClient": "Bij het conceptcontract ontbreekt de klanttoewijzing",
       "invalidStartDate": "Het conceptcontract heeft een ongeldige startdatum",
       "recordInvalid": "Een van de geselecteerde records van de contractwizard is niet meer geldig. Vernieuw de pagina en probeer het opnieuw.",
-      "duplicate": "Er bestaat al een overeenkomend record van de contractwizard."
+      "duplicate": "Er bestaat al een overeenkomend record van de contractwizard.",
+      "standingTerms": "Dit concept bevat terugkerende kortingsvoorwaarden. Bewerk de tabbladen Regels en Kortingen om deze te behouden."
     },
     "pricingSchedule": {
       "endAfterEffective": "De einddatum moet na de ingangsdatum liggen",

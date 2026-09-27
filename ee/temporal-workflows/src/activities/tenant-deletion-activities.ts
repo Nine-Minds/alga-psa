@@ -325,6 +325,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Accounting sync engine (leaf tables: nothing references them)
   'accounting_sync_operations', 'accounting_sync_cycles',
   'contract_line_bucket_services', 'contract_line_buckets',
+  'contract_template_discount_copies',
   'client_contracts', 'contract_line_service_rate_tiers', 'contract_line_service_bucket_config',
   'contract_line_service_hourly_config', 'contract_line_service_hourly_configs', 'contract_line_service_usage_config',
   'contract_line_service_fixed_config', 'contract_line_service_configuration',

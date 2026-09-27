@@ -14,3 +14,15 @@ The source handoff file was absent from this checkout. This file records the int
 - Applicable positive true-ups participate in discount bases and tax recalculation as service charges; credits retain their supplied sign and tax behavior. This card does not delete companion source rows during discount refresh. Manual rows are preserved. Invoice cancellation does not unlock billed/locked line history or permit historical date/text edits.
 
 This handoff is an integration contract from captain instructions, not a claim that the companion implementation was inspected in this checkout. Confirm field names and exact retry semantics against PR #3492 before live acceptance.
+
+## Read-only verification during takeover
+
+The locally available remote ref was inspected at
+`50ce6d41f78a2ee4186779b5d05b447c7845a5ef`. Its handoff describes the older
+next-period-only policy, and its `RecurringUnitSchedulePanel` accepts line,
+service, and configuration IDs but no initial effective-date property. The
+invoice calculator therefore links to the selected line without pretending to
+prefill that date. This ref does not contain the new mid-period settlement writer.
+The captain's later `contract_change` contract above remains authoritative;
+combined-branch true-up verification is still needed when that implementation is
+available. No companion branch or worktree was changed.

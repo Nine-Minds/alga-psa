@@ -2495,7 +2495,8 @@
       "missingClient": "Al contrato en borrador le falta la asignación de cliente",
       "invalidStartDate": "El contrato en borrador tiene una fecha de inicio no válida",
       "recordInvalid": "Uno de los registros seleccionados del asistente de contratos ya no es válido. Actualice la página e inténtelo de nuevo.",
-      "duplicate": "Ya existe un registro coincidente del asistente de contratos."
+      "duplicate": "Ya existe un registro coincidente del asistente de contratos.",
+      "standingTerms": "Este borrador tiene condiciones de descuento recurrentes. Edite las pestañas Líneas y Descuentos para conservarlas."
     },
     "pricingSchedule": {
       "endAfterEffective": "La fecha de fin debe ser posterior a la fecha de entrada en vigor",

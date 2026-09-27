@@ -2495,7 +2495,8 @@
       "missingClient": "Al contratto in bozza manca l’assegnazione del cliente",
       "invalidStartDate": "Il contratto in bozza ha una data di inizio non valida",
       "recordInvalid": "Uno dei record selezionati della procedura guidata del contratto non è più valido. Aggiornare la pagina e riprovare.",
-      "duplicate": "Esiste già un record corrispondente della procedura guidata del contratto."
+      "duplicate": "Esiste già un record corrispondente della procedura guidata del contratto.",
+      "standingTerms": "Questa bozza contiene condizioni di sconto ricorrenti. Modifica le schede Righe e Sconti per conservarle."
     },
     "pricingSchedule": {
       "endAfterEffective": "La data di fine deve essere successiva alla data di decorrenza",

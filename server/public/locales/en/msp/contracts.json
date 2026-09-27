@@ -2495,7 +2495,8 @@
       "missingClient": "Draft contract is missing client assignment",
       "invalidStartDate": "Draft contract has an invalid start date",
       "recordInvalid": "One of the selected contract wizard records is no longer valid. Please refresh and try again.",
-      "duplicate": "A matching contract wizard record already exists."
+      "duplicate": "A matching contract wizard record already exists.",
+      "standingTerms": "This draft has standing discount terms. Edit its Lines and Discounts tabs to preserve those terms."
     },
     "pricingSchedule": {
       "endAfterEffective": "End date must be after effective date",
