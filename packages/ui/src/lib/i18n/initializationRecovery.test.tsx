@@ -23,7 +23,11 @@ vi.mock('i18next-http-backend', () => ({
   },
 }));
 
-vi.unmock('i18next');
+// Use the real engine with a fresh singleton so other suites cannot pre-initialize it.
+vi.mock('i18next', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('i18next')>();
+  return { ...actual, default: actual.createInstance() };
+});
 vi.unmock('react-i18next');
 vi.unmock('@alga-psa/ui/lib/i18n/client');
 

@@ -13,6 +13,12 @@ import { ThemeBridge } from '../../../components/providers/ThemeBridge';
 // Exercise the real bootstrap lifecycle instead of the server suite's default i18n stub.
 vi.unmock('@alga-psa/ui/lib/i18n/client');
 
+// Cold-start assertions must not inherit initialization from another suite.
+vi.mock('i18next', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('i18next')>();
+  return { ...actual, default: actual.createInstance() };
+});
+
 const signInState = vi.hoisted(() => ({ error: 'AccessDenied', alertRenders: 0 }));
 
 const pendingReads = vi.hoisted(() => [] as Array<{
