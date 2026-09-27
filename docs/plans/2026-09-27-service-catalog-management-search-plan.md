@@ -109,8 +109,8 @@ and Billing Method filters, with correct pagination and totals.
 - Change the filter container `className="flex space-x-2"` to `flex flex-wrap gap-2` so three
   controls wrap cleanly on narrow widths.
 - Don't swap the table for the `LoadingIndicator` on every keystroke. At `:1161-1168` the
-  whole table is replaced while `isLoading`, which would unmount the table and steal focus
-  from nothing but flicker badly. Use the full-page loader only for the initial load
+  whole table is replaced while `isLoading`, so every debounced search would unmount the
+  table and make it flicker. Use the full-page loader only for the initial load
   (`isLoading && services.length === 0 && !hasLoadedOnce`). For refetches, keep the table
   mounted and show `loading` on the `SearchInput`.
 - **Empty result:** when `totalCount === 0` and a search or filter is active, show
