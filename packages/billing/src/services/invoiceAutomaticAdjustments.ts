@@ -1,3 +1,4 @@
+import { loadInvoiceChargeLineIds } from './invoiceChargeLineage';
 import { Temporal } from '@js-temporal/polyfill';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
@@ -141,19 +142,7 @@ async function loadInvoiceCharges(
       'manual_line_metadata',
     );
   if (rows.length === 0) return rows;
-  const details: Array<{ item_id: string; contract_line_id: string }> = await tenantScopedTable<{ item_id: string; contract_line_id: string }>(conn, tenant, 'invoice_charge_details as detail')
-    .join('contract_line_service_configuration as config', function () {
-      this.on('config.tenant', '=', 'detail.tenant').andOn('config.config_id', '=', 'detail.config_id');
-    })
-    .where('detail.tenant', tenant)
-    .whereIn('detail.item_id', rows.map((row) => row.item_id))
-    .select('detail.item_id', 'config.contract_line_id');
-  const lineIdsByCharge = new Map<string, Set<string>>();
-  for (const detail of details) {
-    const ids = lineIdsByCharge.get(detail.item_id) ?? new Set<string>();
-    ids.add(detail.contract_line_id);
-    lineIdsByCharge.set(detail.item_id, ids);
-  }
+  const lineIdsByCharge = await loadInvoiceChargeLineIds(conn, tenant, invoiceId);
   return rows.map((row) => {
     const lineIds = lineIdsByCharge.get(row.item_id) ?? new Set<string>();
     const metadata = typeof row.manual_line_metadata === 'string'

@@ -1,5 +1,52 @@
 # Contract invoice adjustments: implementation evidence
 
+## Implement desk verification (2026-09-27)
+
+Baseline: `4ff933a279`. This pass found and fixed gaps in the existing implementation:
+
+- Template defaults now support edit/save/cancel in place, preserving their copy
+  identity, priority, other defaults and unrelated template metadata. The panel
+  remains mounted on `ContractTemplateDetail`; it was extracted to
+  `TemplateDefaultDiscountsPanel.tsx` for behavioral component coverage.
+- `Invoice.getInvoiceCharges` now returns canonical line IDs and adjustment
+  provenance. Previously `ManualInvoices` fetched rows without those fields,
+  so its permanent-change link and early overlap warning could not work.
+  Adjustment dates are returned as date-only strings for the overlap predicate.
+- `invoiceChargeLineage.ts` resolves both detail-backed generated charges and
+  detail-free companion true-ups through their revision ledger, with tenant
+  equality and text/UUID compatibility. The invoice reader, automatic discount
+  base loader and server overlap check share this resolver.
+- Calculator saves derive line identity from the billed source rather than
+  trusting optional request metadata. Omitting the line no longer bypasses
+  overlap confirmation; ambiguous source lines are rejected.
+
+| Requirement | Inspected implementation and behavioral coverage |
+| --- | --- |
+| Contract-wide standing terms | `discountActions.ts` assigns to `client_contract_id`; `contractInvoiceAdjustments.ts` selects the contract's positive eligible charges across lines. DB coverage verifies 405,000 minor units and exactly one -40,500 settlement on retry. |
+| Independent template copies | Wizard calls `cloneTemplateDefaultDiscounts`; new UUIDs and the per-term copy ledger isolate client definitions. Existing DB coverage exercises independent copies and template-edit isolation. New panel tests verify in-place edits, cancellation and rejected saves. |
+| Standing charges/credits | Positive recurring charges retain catalog-backed contract lines for tax/accounting classification. A fixed contract discount authors the recurring credit, using the existing evaluator. |
+| One-time calculator | Empty initial units/source/date, source-derived service/rate/period, real quantity and signed prorated unit rate remain. DB coverage executes increases/decreases, edits/reload, decimal rounding, missing-line overlap rejection and explicit confirmation. The fetched rows now expose the line and contract used by the permanent-change link. |
+| Companion contract | Read-only inspection of companion `558c78e26a` confirms its plan and writer use `contract_change`, revision/version provenance, half-open adjustment periods and source-per-invoice retries. The new DB test uses its detail-free ledger shape and verifies read projection, tenant isolation, unchanged already-prorated amount, one line-scoped discount on retry and overlap rejection. |
+| Customer walkthrough | Template default → two independent client copies → one invoice settlement each → template edit isolation, then calculator save/reload and permanent-change link. Live execution and `SMOKE-ADJ-1` reseeding remain for the separate smoke step. |
+
+Fresh focused checks:
+
+- Evaluator, automatic-adjustment helper, invoice model, template editor and
+  three wizard suites: **73 passed** across seven files.
+- Invoice adjustment database suite: **41 passed**; migration suite: **5 passed**.
+  Both ran serially against isolated `test_adj_implement_desk` on port 5472.
+- Billing build passed. Focused lint returned **0 errors** (existing and test
+  mock warnings remain). Translation validation/audits passed; **32 i18n tooling
+  tests passed**. No locale additions were needed because the editor reuses
+  existing translated action labels.
+- Billing typecheck reports **11 baseline diagnostics**: six in unchanged
+  `profitabilityReportActions.ts` and five in unchanged `packages/ui/src/editor`
+  files. None are in changed files. Typecheck is not claimed green.
+
+The fixes above establish implementation and automated evidence, not current-
+revision live UI, PDF, portal or accounting-export acceptance. No board state,
+companion working tree, application data or live smoke fixture was changed.
+
 ## Review first
 
 Start with template default discounts, then create two client contracts and inspect

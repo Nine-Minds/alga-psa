@@ -1,6 +1,7 @@
 // @ts-nocheck
 'use server'
 
+import { loadInvoiceChargeLineIds } from '../services/invoiceChargeLineage';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { Session } from 'next-auth';
@@ -1946,6 +1947,9 @@ async function updateManualInvoiceItemsInternal(
       ...(changes.newItems ?? []),
       ...(changes.updatedItems ?? []),
     ] as Array<Record<string, unknown>>;
+    const invoiceLineIds = partialRows.some((item) => (item.manual_line_metadata as any)?.partialPeriod?.source_kind === 'invoice_charge')
+      ? await loadInvoiceChargeLineIds(trx, tenant, invoiceId)
+      : new Map<string, Set<string>>();
     for (const item of partialRows) {
       const metadata = item.manual_line_metadata as Record<string, unknown> | null | undefined;
       const partial = metadata?.partialPeriod as ManualPartialPeriodMetadata | undefined;
@@ -1977,6 +1981,16 @@ async function updateManualInvoiceItemsInternal(
         .where({ 'detail.item_id': sourceId, 'detail.tenant': tenant })
         .select('config.contract_line_id') : [];
       const sourceLineIds = new Set(sourceLineRows.map((row: { contract_line_id: string }) => row.contract_line_id));
+      // The billed source owns line identity. Omitting it from a calculator
+      // payload must not disable line-scoped overlap checks or attribution.
+      if (sourceLineIds.size > 1) {
+        throw expectedInvoiceActionError('The selected billed service spans multiple contract lines. Choose a charge belonging to one contract line.');
+      }
+      const sourceLineId = sourceLineIds.values().next().value ?? null;
+      if (partial.contract_line_id != null && partial.contract_line_id !== sourceLineId) {
+        throw expectedInvoiceActionError('The partial-period contract line does not match its billed source. Reopen the calculator and choose a current billed service.');
+      }
+      partial.contract_line_id = sourceLineId;
       const effective = dateOnly(partial.effective_date);
       const [sourceStart, sourceEnd] = sourcePeriodKeys.length === 1 ? sourcePeriodKeys[0].split(':') : [null, null];
       const units = Number(partial.units);
@@ -2016,22 +2030,17 @@ async function updateManualInvoiceItemsInternal(
       }
       if (partial.contract_line_id) {
         const companionOverlaps = await tenantScopedTable(trx, tenant, 'invoice_charges as charge')
-          .join('invoice_charge_details as detail', function () {
-            this.on('detail.tenant', '=', 'charge.tenant').andOn('detail.item_id', '=', 'charge.item_id');
-          })
-          .join('contract_line_service_configuration as config', function () {
-            this.on('config.tenant', '=', 'detail.tenant').andOn('config.config_id', '=', 'detail.config_id');
-          })
           .where({
             'charge.invoice_id': invoiceId,
             'charge.adjustment_source_kind': 'contract_change',
-            'config.contract_line_id': partial.contract_line_id,
           })
           .whereNotNull('charge.adjustment_period_start').whereNotNull('charge.adjustment_period_end')
           .andWhere('charge.adjustment_period_start', '<', sourceEnd)
           .andWhere('charge.adjustment_period_end', '>', effective)
           .select('charge.item_id');
-        const overlapIds = companionOverlaps.map((row: { item_id: string }) => row.item_id);
+        const overlapIds = companionOverlaps
+          .filter((row: { item_id: string }) => invoiceLineIds.get(row.item_id)?.has(partial.contract_line_id!))
+          .map((row: { item_id: string }) => row.item_id);
         const confirmedIds = new Set(Array.isArray(metadata?.confirmed_overlap_item_ids)
           ? metadata.confirmed_overlap_item_ids.filter((value: unknown): value is string => typeof value === 'string')
           : []);

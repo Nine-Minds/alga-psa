@@ -1,3 +1,4 @@
+import { loadInvoiceChargeLineIds } from '../services/invoiceChargeLineage';
 /**
  * @alga-psa/billing - Invoice Model
  *
@@ -747,6 +748,10 @@ const Invoice = {
           'ic.billing_charge_type',
           'ic.service_id',
           'ic.client_contract_id',
+          'ic.adjustment_source_kind',
+          'ic.adjustment_source_id',
+          'ic.adjustment_source_revision',
+          'ic.adjustment_reason',
           'ic.adjustment_period_start',
           'ic.adjustment_period_end',
           'sc.item_kind as service_item_kind',
@@ -773,6 +778,17 @@ const Invoice = {
       const items = (await query) as InvoiceChargeDisplayRow[];
       if (items.length === 0) {
         return items;
+      }
+
+      const lineIds = await loadInvoiceChargeLineIds(knexOrTrx, tenant, invoiceId);
+      for (const item of items) {
+        item.adjustment_period_start = normalizeRecurringDetailPeriodDate(item.adjustment_period_start)?.slice(0, 10) ?? null;
+        item.adjustment_period_end = normalizeRecurringDetailPeriodDate(item.adjustment_period_end)?.slice(0, 10) ?? null;
+        const ids = lineIds.get(item.item_id);
+        const partial = (item.manual_line_metadata as any)?.partialPeriod;
+        (item as IInvoiceCharge).contract_line_id = ids?.size === 1
+          ? ids.values().next().value ?? null
+          : ids?.size ? null : partial?.contract_line_id ?? null;
       }
 
       const itemIds = items.map((item) => item.item_id).filter(Boolean);

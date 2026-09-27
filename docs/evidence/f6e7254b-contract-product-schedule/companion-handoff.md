@@ -26,3 +26,26 @@ prefill that date. This ref does not contain the new mid-period settlement write
 The captain's later `contract_change` contract above remains authoritative;
 combined-branch true-up verification is still needed when that implementation is
 available. No companion branch or worktree was changed.
+
+## Implement desk interface check
+
+The companion checkout at `558c78e26a2d8eb5fcaadf1d7063e0191dff3183` now
+contains the mid-period writer. Its plan
+`docs/plans/2026-09-22-contract-products-quantity-price-changes-plan.md`
+records the same source kind, revision/version identity, half-open periods and
+source-per-invoice retry rule as this card's plan. The earlier next-period-only
+availability note above is superseded by this inspection.
+
+`reconcileContractChangeAdjustments.ts` writes already-prorated `net_amount`
+with the original unit rate and actual quantity delta. It does not create
+invoice detail rows. Resolve the source line by joining the charge's
+`adjustment_source_id` to `contract_recurring_unit_adjustments.revision_id`,
+including tenant equality. That ledger's `contract_line_id` drives the early
+UI warning, transactional overlap guard and line-scoped discount base. Read it
+only when the companion table exists; retain detail-backed source resolution
+for generated charges. Do not manufacture recurring coverage for a true-up.
+
+Both branches contain the discount evaluator; merge integration must retain one
+implementation and one evaluation pass. This inspection and the fabricated
+ledger-row database test establish the consumer contract, not live combined-
+branch acceptance. Neither the companion writer nor its working tree was edited.

@@ -517,6 +517,8 @@ describe('contract invoice adjustments (DB-backed)', () => {
 
     const reloaded = await Invoice.getInvoiceCharges(db, tenant, fixture.invoiceId);
     const loadedIncrease = reloaded.find((row) => row.item_id === increaseId) as any;
+    expect(reloaded.find((row) => row.item_id === fixture.generatedChargeId)?.contract_line_id).toBe(contractLineId);
+    expect(reloaded.find((row) => row.item_id === fixture.generatedChargeId)?.client_contract_id).toBe(clientContractId);
     expect(loadedIncrease.manual_line_metadata.partialPeriod).toMatchObject({ direction: 'increase', units: 3 });
     const edited = await updateInvoiceManualItems(fixture.invoiceId, {
       newItems: [],
@@ -553,6 +555,11 @@ describe('contract invoice adjustments (DB-backed)', () => {
       service_id: serviceId, quantity: 1, rate: 1000,
       service_period_start: '2026-09-01', service_period_end: '2026-09-30',
     });
+    // Exercise the real companion writer shape: no detail row, only a
+    // canonical revision -> line ledger. The legacy detail-backed case above
+    // is also resolved by the shared reader.
+    const displayedOverlap = (await Invoice.getInvoiceCharges(db, tenant, fixture.invoiceId)).find((row) => row.item_id === overlapItemId)!;
+    expect(displayedOverlap).toMatchObject({ adjustment_source_kind: 'contract_change', contract_line_id: contractLineId });
     const overlapCalculatorId = uuidv4();
     const overlapCandidate = makeUiRow(overlapCalculatorId, 'increase') as any;
     const overlapResult = await updateInvoiceManualItems(fixture.invoiceId, {
@@ -560,6 +567,24 @@ describe('contract invoice adjustments (DB-backed)', () => {
     } as any);
     expect(overlapResult).toMatchObject({ success: false, code: 'SOURCE_NOT_ELIGIBLE' });
     expect((overlapResult as any).params).toMatchObject({ overlapConfirmationRequired: 'true', overlapItemIds: overlapItemId });
+    // Missing client metadata must not bypass the source line's overlap guard.
+    const omittedLineCandidate = makeUiRow(uuidv4(), 'increase') as any;
+    delete omittedLineCandidate.manual_line_metadata.partialPeriod.contract_line_id;
+    const omittedLineResult = await updateInvoiceManualItems(fixture.invoiceId, {
+      newItems: [omittedLineCandidate], updatedItems: [], removedItemIds: [],
+    } as any);
+    expect(omittedLineResult).toMatchObject({ success: false, code: 'SOURCE_NOT_ELIGIBLE' });
+    expect((omittedLineResult as any).params.overlapItemIds).toBe(overlapItemId);
+    expect(await db('invoice_charges').where({ tenant, item_id: omittedLineCandidate.item_id })).toHaveLength(0);
+    const confirmedOmittedLine = await updateInvoiceManualItems(fixture.invoiceId, {
+      newItems: [{ ...omittedLineCandidate, manual_line_metadata: {
+        ...omittedLineCandidate.manual_line_metadata, confirmed_overlap_item_ids: [overlapItemId],
+      } }], updatedItems: [], removedItemIds: [],
+    } as any);
+    expect(confirmedOmittedLine).not.toHaveProperty('actionError');
+    const derivedLineRow = await db('invoice_charges').where({ tenant, item_id: omittedLineCandidate.item_id }).first();
+    expect(derivedLineRow.manual_line_metadata.partialPeriod.contract_line_id).toBe(contractLineId);
+
     const confirmedResult = await updateInvoiceManualItems(fixture.invoiceId, {
       newItems: [{ ...overlapCandidate, manual_line_metadata: { ...overlapCandidate.manual_line_metadata, confirmed_overlap_item_ids: [overlapItemId] } }],
       updatedItems: [], removedItemIds: [],
@@ -845,6 +870,62 @@ describe('contract invoice adjustments (DB-backed)', () => {
     const discountRows = await db('invoice_charges').where({ tenant, invoice_id: fixture.invoiceId, adjustment_source_kind: 'discount' });
     expect(discountRows).toHaveLength(1);
     expect(Number(discountRows[0].net_amount)).toBe(-40_500);
+  });
+
+  it('resolves detail-free companion ledger rows for display, line discounts and manual overlap checks', async () => {
+    const fixture = await createDraftWithGeneratedChargeAndDiscount();
+    const configId = uuidv4();
+    const revisionId = uuidv4();
+    const trueUpId = uuidv4();
+    await db('contract_line_service_configuration').insert({ tenant, config_id: configId, contract_line_id: contractLineId, service_id: serviceId, configuration_type: 'Fixed', quantity: 1 });
+    await db('invoice_charge_details').insert({ tenant, item_detail_id: uuidv4(), item_id: fixture.generatedChargeId, config_id: configId, service_id: serviceId, quantity: 39, rate: 10_000, service_period_start: '2026-09-01', service_period_end: '2026-09-30' });
+    await db('invoice_charges').where({ tenant, item_id: fixture.generatedChargeId }).update({ unit_price: 10_000 });
+    const originalDiscount = await db('discounts').where({ tenant, discount_id: discountId }).first('scope');
+    await db('discounts').where({ tenant, discount_id: discountId }).update({ scope: 'line' });
+    // Only the consumer columns are needed here; the companion owns migration
+    // and writer tests for its complete ledger. This database is suite-local.
+    await db.schema.createTable('contract_recurring_unit_adjustments', (table) => {
+      table.uuid('tenant'); table.uuid('revision_id'); table.uuid('contract_line_id');
+    });
+    try {
+      await db('contract_recurring_unit_adjustments').insert([
+        { tenant, revision_id: revisionId, contract_line_id: contractLineId },
+        { tenant: uuidv4(), revision_id: revisionId, contract_line_id: uuidv4() },
+      ]);
+      await db('invoice_charges').insert({
+        tenant, item_id: trueUpId, invoice_id: fixture.invoiceId, service_id: serviceId,
+        client_contract_id: clientContractId, description: 'Ledger-only true-up',
+        quantity: 3, unit_price: 10_000, net_amount: 15_000, total_price: 15_000, tax_amount: 0,
+        tax_rate: 0, is_manual: false, is_discount: false, is_taxable: false,
+        adjustment_source_kind: 'contract_change', adjustment_source_id: revisionId,
+        adjustment_source_revision: 2, adjustment_scope: 'service',
+        adjustment_period_start: '2026-09-16', adjustment_period_end: '2026-10-01',
+      });
+      for (let attempt = 0; attempt < 2; attempt++) {
+        await db.transaction((trx) => reconcileAutomaticInvoiceAdjustments(trx, tenant, fixture.invoiceId));
+      }
+      const displayed = (await Invoice.getInvoiceCharges(db, tenant, fixture.invoiceId)).find((row) => row.item_id === trueUpId)!;
+      expect(displayed).toMatchObject({ contract_line_id: contractLineId, adjustment_source_kind: 'contract_change', adjustment_source_id: revisionId, adjustment_source_revision: 2, adjustment_period_start: '2026-09-16', adjustment_period_end: '2026-10-01' });
+      expect(Number(displayed.net_amount)).toBe(15_000);
+      const discounts = await db('invoice_charges').where({ tenant, invoice_id: fixture.invoiceId, adjustment_source_kind: 'discount' });
+      expect(discounts).toHaveLength(1);
+      expect(Number(discounts[0].net_amount)).toBe(-40_500);
+      const { updateInvoiceManualItems } = await import('../actions/invoiceModification');
+      const result = await updateInvoiceManualItems(fixture.invoiceId, {
+        newItems: [{ item_id: uuidv4(), service_id: serviceId, client_contract_id: clientContractId,
+          description: 'Overlapping manual seats', quantity: 3, rate: 5_000, is_discount: false,
+          manual_line_metadata: { partialPeriod: {
+            version: 1, source_kind: 'invoice_charge', source_item_id: fixture.generatedChargeId,
+            direction: 'increase', effective_date: '2026-09-16', units: 3,
+            source_period_start: '2026-09-01', source_period_end: '2026-10-01',
+          } },
+        }], updatedItems: [], removedItemIds: [],
+      } as any);
+      expect(result).toMatchObject({ success: false, code: 'SOURCE_NOT_ELIGIBLE', params: { overlapConfirmationRequired: 'true', overlapItemIds: trueUpId } });
+    } finally {
+      await db.schema.dropTable('contract_recurring_unit_adjustments');
+      await db('discounts').where({ tenant, discount_id: discountId }).update({ scope: originalDiscount.scope });
+    }
   });
 
   it('is idempotent across repeated draft refreshes', async () => {

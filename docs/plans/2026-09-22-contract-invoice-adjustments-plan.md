@@ -1,5 +1,39 @@
 # Contract invoice adjustments
 
+## Implement desk audit (2026-09-27)
+
+Audit baseline: `4ff933a279`. The consolidated A–F instructions remain the
+acceptance authority. This pass verifies existing behavior and repairs concrete
+gaps before rerunning the focused checks.
+
+- A/B: contract assignments, contract-wide bases, independent template copies,
+  and editable client-owned terms exist. The template panel only adds/removes
+  defaults: add in-place editing that preserves the template term identity,
+  other terms, and unrelated metadata. Existing client copies stay untouched.
+- B3: retain the documented catalog-backed positive standing charge and fixed
+  recurring discount/credit decision for tax and accounting classification.
+- C: source-derived dates, real quantity, service/tax attribution, empty units,
+  permanent-change navigation, and overlap confirmation exist. Close the server
+  gap where omitted partial-period line identity skips overlap checks: resolve
+  it from the billed source, reject ambiguous source lines, and persist it.
+- D: preserve `contract_change`, revision provenance, half-open adjustment
+  periods, inclusive detail ends, and existing source-per-invoice uniqueness.
+  Confirm the available companion plan/handoff without modifying its writer.
+- E/F: rerun evaluator, database, migration, wizard, build, lint and typecheck
+  checks. Add behavioral coverage for template edit/cancel and omitted-line
+  overlap rejection. Keep the customer walkthrough in the handoff; live smoke
+  and fixture reseeding remain for the separate smoke step and are not claimed
+  by these automated checks.
+
+The invoice read projection also omitted line IDs and adjustment provenance,
+making the permanent-change link and early overlap warning unreachable after
+the editor fetched charges. Return those fields and resolve line identity from
+canonical detail configuration. The companion writer at `558c78e26a` emits
+true-ups without detail rows; resolve those lines through its tenant-scoped
+`contract_recurring_unit_adjustments.revision_id` ledger instead. Share this
+read-only resolver between invoice reads, discount bases, and overlap checks.
+Do not create fake recurring details or copy the companion writer.
+
 ## Takeover repair (2026-09-27)
 
 Template-origin services must retain their source line boundaries when the client
