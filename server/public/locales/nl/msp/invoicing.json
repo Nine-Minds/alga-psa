@@ -429,7 +429,12 @@
       "effectiveDate": "Ingangsdatum",
       "sourceRate": "Tarief {{rate}}",
       "permanentChangeNudge": "Is dit een permanente wijziging? Leg deze dan vast in het contract.",
-      "overlapConfirm": "Een automatische contractaanpassing overlapt deze periode al. Deze afzonderlijke handmatige aanpassing toch toevoegen?"
+      "overlapConfirm": "Een automatische contractaanpassing overlapt deze periode al. Deze afzonderlijke handmatige aanpassing toch toevoegen?",
+      "invoiceDescription": {
+        "increase": "{{description}} — {{units}} extra {{unitLabel}}, {{period}} — {{calculation}}",
+        "decrease": "{{description}} — tegoed voor {{units}} minder {{unitLabel}}, {{period}} — {{calculation}}"
+      },
+      "sourceDescriptionFallback": "Serviceaanpassing"
     }
   },
   "quickInvoice": {

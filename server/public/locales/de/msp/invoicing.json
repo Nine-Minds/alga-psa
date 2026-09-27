@@ -429,7 +429,12 @@
       "effectiveDate": "Wirksam ab",
       "sourceRate": "Satz {{rate}}",
       "permanentChangeNudge": "Ist dies eine dauerhafte Änderung? Erfassen Sie sie stattdessen im Vertrag.",
-      "overlapConfirm": "Eine automatische Vertragsänderungsanpassung überschneidet diesen Zeitraum bereits. Diese separate manuelle Anpassung trotzdem hinzufügen?"
+      "overlapConfirm": "Eine automatische Vertragsänderungsanpassung überschneidet diesen Zeitraum bereits. Diese separate manuelle Anpassung trotzdem hinzufügen?",
+      "invoiceDescription": {
+        "increase": "{{description}} — zusätzlich {{units}} {{unitLabel}}, {{period}} — {{calculation}}",
+        "decrease": "{{description}} — Gutschrift für {{units}} weniger {{unitLabel}}, {{period}} — {{calculation}}"
+      },
+      "sourceDescriptionFallback": "Serviceanpassung"
     }
   },
   "quickInvoice": {

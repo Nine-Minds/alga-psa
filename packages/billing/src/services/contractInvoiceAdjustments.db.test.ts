@@ -7,6 +7,7 @@ import { validateContractLineWindow } from '../lib/billing/contractLineWindow';
 import { inspectInvoiceEditable } from './invoiceAdjustmentEditability';
 import { BillingEngine } from '../lib/billing/billingEngine';
 import Invoice from '../models/invoice';
+import { buildPartialPeriodInvoiceDescription } from '../lib/billing/partialPeriodInvoiceDescription';
 
 const actionContext = vi.hoisted(() => ({ db: null as Knex | null, tenant: null as string | null, userId: null as string | null }));
 
@@ -556,7 +557,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
     await db('invoice_charge_details').insert({
       tenant, item_detail_id: uuidv4(), item_id: fixture.generatedChargeId,
       config_id: sourceConfigId, service_id: serviceId, quantity: 1, rate: 10_000,
-      service_period_start: '2026-09-01', service_period_end: '2026-09-30',
+      service_period_start: '2026-08-01', service_period_end: '2026-08-31',
     });
     const { updateInvoiceManualItems } = await import('../actions/invoiceModification');
     const makeUiRow = (id: string, direction: 'increase' | 'decrease') => {
@@ -566,16 +567,24 @@ describe('contract invoice adjustments (DB-backed)', () => {
         invoice_id: fixture.invoiceId,
         tenant,
         service_id: serviceId,
-        description: `${direction} three seats`,
+        description: buildPartialPeriodInvoiceDescription({
+          sourceDescription: 'SMOKE Prod Users', direction, units: 3,
+          start: '2026-08-16', exclusiveEnd: '2026-09-01', unitPrice: 10_000,
+          coveredDays: 16, fullPeriodDays: 31, currencyCode: 'USD',
+          formatCurrency: (amount) => `$${amount.toFixed(2)}`,
+          describe: (kind, values) => kind === 'increase'
+            ? `${values.description} — additional ${values.units} users, ${values.period} — ${values.calculation}`
+            : `${values.description} — credit for ${values.units} fewer users, ${values.period} — ${values.calculation}`,
+        }),
         quantity: 3,
-        unit_price: 3_333 * sign,
-        rate: 3_333 * sign,
+        unit_price: 5_161 * sign,
+        rate: 5_161 * sign,
         is_manual: true,
         is_discount: false,
         is_taxable: false,
         client_contract_id: clientContractId,
-        adjustment_period_start: '2026-09-21',
-        adjustment_period_end: '2026-10-01',
+        adjustment_period_start: '2026-08-16',
+        adjustment_period_end: '2026-09-01',
         manual_line_metadata: {
           partialPeriod: {
             version: 1,
@@ -583,14 +592,14 @@ describe('contract invoice adjustments (DB-backed)', () => {
             source_item_id: fixture.generatedChargeId,
             contract_line_id: contractLineId,
             direction,
-            effective_date: '2026-09-21',
-            source_period_start: '2026-09-01',
-            source_period_end: '2026-10-01',
+            effective_date: '2026-08-16',
+            source_period_start: '2026-08-01',
+            source_period_end: '2026-09-01',
             units: 3,
             source_unit_price_minor: 10_000,
-            covered_days: 10,
-            full_period_days: 30,
-            resolved_amount_minor: 9_999 * sign,
+            covered_days: 16,
+            full_period_days: 31,
+            resolved_amount_minor: 15_483 * sign,
           },
           reason: 'seat change',
         },
@@ -603,9 +612,11 @@ describe('contract invoice adjustments (DB-backed)', () => {
     expect(increase).not.toHaveProperty('actionError');
     const persistedIncrease = await db('invoice_charges').where({ tenant, invoice_id: fixture.invoiceId, item_id: increaseId }).first();
     expect(Number(persistedIncrease.quantity)).toBe(3);
-    expect(Number(persistedIncrease.unit_price)).toBe(3_333);
-    expect(Number(persistedIncrease.net_amount)).toBe(9_999);
+    expect(Number(persistedIncrease.unit_price)).toBe(5_161);
+    expect(Number(persistedIncrease.net_amount)).toBe(15_483);
     expect(persistedIncrease.manual_line_metadata.partialPeriod.direction).toBe('increase');
+    expect(persistedIncrease.description).toBe('SMOKE Prod Users — additional 3 users, Aug 16–31, 2026 — 3 × $100.00 × 16/31');
+    expect(persistedIncrease.manual_line_metadata.reason).toBe('seat change');
 
     const decreaseId = uuidv4();
     const decrease = await updateInvoiceManualItems(fixture.invoiceId, {
@@ -613,24 +624,28 @@ describe('contract invoice adjustments (DB-backed)', () => {
     } as any);
     expect(decrease).not.toHaveProperty('actionError');
     const persistedDecrease = await db('invoice_charges').where({ tenant, invoice_id: fixture.invoiceId, item_id: decreaseId }).first();
-    expect(Number(persistedDecrease.unit_price)).toBe(-3_333);
-    expect(Number(persistedDecrease.net_amount)).toBe(-9_999);
+    expect(Number(persistedDecrease.unit_price)).toBe(-5_161);
+    expect(Number(persistedDecrease.net_amount)).toBe(-15_483);
     expect(persistedDecrease.is_manual_credit).toBe(true);
+    expect(persistedDecrease.description).toBe('SMOKE Prod Users — credit for 3 fewer users, Aug 16–31, 2026 — 3 × $100.00 × 16/31');
+    expect(persistedDecrease.manual_line_metadata.reason).toBe('seat change');
 
     const reloaded = await Invoice.getInvoiceCharges(db, tenant, fixture.invoiceId);
     const loadedIncrease = reloaded.find((row) => row.item_id === increaseId) as any;
     expect(reloaded.find((row) => row.item_id === fixture.generatedChargeId)?.contract_line_id).toBe(contractLineId);
     expect(reloaded.find((row) => row.item_id === fixture.generatedChargeId)?.client_contract_id).toBe(clientContractId);
     expect(loadedIncrease.manual_line_metadata.partialPeriod).toMatchObject({ direction: 'increase', units: 3 });
+    expect(loadedIncrease.description).toBe('SMOKE Prod Users — additional 3 users, Aug 16–31, 2026 — 3 × $100.00 × 16/31');
+    expect(loadedIncrease.manual_line_metadata.reason).toBe('seat change');
     const edited = await updateInvoiceManualItems(fixture.invoiceId, {
       newItems: [],
       updatedItems: [{
         item_id: increaseId, service_id: serviceId, client_contract_id: clientContractId,
-        description: 'Revised reason text', quantity: 2, rate: 3_333,
-        adjustment_period_start: '2026-09-21', adjustment_period_end: '2026-10-01',
+        description: 'Revised reason text', quantity: 2, rate: 5_161,
+        adjustment_period_start: '2026-08-16', adjustment_period_end: '2026-09-01',
         manual_line_metadata: {
           ...loadedIncrease.manual_line_metadata,
-          partialPeriod: { ...loadedIncrease.manual_line_metadata.partialPeriod, units: 2, resolved_amount_minor: 6_666 },
+          partialPeriod: { ...loadedIncrease.manual_line_metadata.partialPeriod, units: 2, resolved_amount_minor: 10_322 },
           reason: 'revised reason',
         },
       } as any],
@@ -639,7 +654,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
     expect(edited).not.toHaveProperty('actionError');
     const editedRow = await db('invoice_charges').where({ tenant, item_id: increaseId }).first();
     expect(Number(editedRow.quantity)).toBe(2);
-    expect(Number(editedRow.net_amount)).toBe(6_666);
+    expect(Number(editedRow.net_amount)).toBe(10_322);
     expect(editedRow.description).toBe('Revised reason text');
 
     const overlapItemId = uuidv4();
@@ -649,13 +664,13 @@ describe('contract invoice adjustments (DB-backed)', () => {
       unit_price: 1000, net_amount: 1000, total_price: 1000, tax_amount: 0,
       tax_rate: 0, is_manual: false, is_discount: false, is_taxable: false,
       adjustment_source_kind: 'contract_change', adjustment_source_id: uuidv4(),
-      adjustment_source_revision: 1, adjustment_scope: 'service', adjustment_period_start: '2026-09-21',
-      adjustment_period_end: '2026-10-01',
+      adjustment_source_revision: 1, adjustment_scope: 'service', adjustment_period_start: '2026-08-16',
+      adjustment_period_end: '2026-09-01',
     });
     await db('invoice_charge_details').insert({
       tenant, item_detail_id: uuidv4(), item_id: overlapItemId, config_id: sourceConfigId,
       service_id: serviceId, quantity: 1, rate: 1000,
-      service_period_start: '2026-09-01', service_period_end: '2026-09-30',
+      service_period_start: '2026-08-01', service_period_end: '2026-08-31',
     });
     // Exercise the real companion writer shape: no detail row, only a
     // canonical revision -> line ledger. The legacy detail-backed case above

@@ -36,6 +36,7 @@ import { ErrorBoundary } from 'react-error-boundary';
 import type { IService } from '@alga-psa/types';
 import { InvoiceViewModel, DiscountType, IInvoiceCharge, type ManualLineMetadata } from '@alga-psa/types';
 import { hasOverlappingContractChangeAdjustment, resolveSourceDerivedPartialPeriod } from '../../lib/billing/compute/contractInvoiceAdjustments';
+import { buildPartialPeriodInvoiceDescription } from '../../lib/billing/partialPeriodInvoiceDescription';
 import type { JSX } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { PlusIcon, MinusCircleIcon } from 'lucide-react';
@@ -704,13 +705,24 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
       // A decrease is the same proration reversed: it is a signed credit, not a
       // separate calculator. It persists as a negative non-discount rate, which
       // the manual writer already treats as a credit.
-      const proration = `${units} × ${formatCurrency(unitPrice / 100, currencyCode)} × ${calculation.coveredDays}/${calculation.fullPeriodDays}`;
-      const defaultDescription = partialDirection === 'decrease'
-        ? t('manualInvoices.partialPeriod.creditDescription', {
-          defaultValue: 'Credit: {{proration}}',
-          proration,
-        })
-        : proration;
+      const defaultDescription = buildPartialPeriodInvoiceDescription({
+        sourceDescription: source.description || source.service_name || t('manualInvoices.partialPeriod.sourceDescriptionFallback', { defaultValue: 'Service adjustment' }),
+        direction: partialDirection,
+        units,
+        start: partialEffectiveDate,
+        exclusiveEnd: periodEnd,
+        unitPrice,
+        coveredDays: calculation.coveredDays,
+        fullPeriodDays: calculation.fullPeriodDays,
+        currencyCode,
+        formatCurrency,
+        describe: (direction, values) => t(`manualInvoices.partialPeriod.invoiceDescription.${direction}`, {
+          ...values,
+          defaultValue: direction === 'increase'
+            ? '{{description}} — additional {{units}} {{unitLabel}}, {{period}} — {{calculation}}'
+            : '{{description}} — credit for {{units}} fewer {{unitLabel}}, {{period}} — {{calculation}}',
+        }),
+      });
       const newItem: EditableInvoiceItem = {
         ...baseDefaultItem,
         invoice_id: currentInvoiceData?.invoice_id || '',

@@ -146,4 +146,41 @@ describe('on-screen previews render in the recipient locale', () => {
       spy.mockRestore();
     }
   });
+
+  it('renders a persisted partial-period description in the shared invoice HTML/PDF template path', async () => {
+    const service = buildService('en', 'US');
+    const description = 'SMOKE Prod Users — additional 3 users, Aug 16–31, 2026 — 3 × $100.00 × 16/31';
+    (service as any).getInvoiceForRendering = vi.fn().mockResolvedValue({
+      invoice_number: 'INV-PARTIAL', invoice_date: '2026-09-01', due_date: '2026-09-15', currency_code: 'USD',
+      client: { name: 'Smoke Customer', address: '' },
+      invoice_charges: [{
+        item_id: 'partial-increase', description, quantity: 3, unit_price: 5161,
+        net_amount: 15483, total_price: 15483,
+        manual_line_metadata: { partialPeriod: { source_item_id: 'source-charge-1', covered_days: 16, full_period_days: 31 } },
+      }],
+      subtotal: 15483, tax: 0, total: 15483,
+    });
+    (service as any).enrichWithTenantClient = vi.fn(async (_knex: unknown, data: unknown) => data);
+
+    const preview = await service.renderInvoicePreview({
+      invoiceId: 'inv-partial',
+      templateAst: {
+        kind: 'invoice-template-ast', version: TEMPLATE_AST_VERSION,
+        bindings: { collections: { lineItems: { id: 'lineItems', kind: 'collection', path: 'items' } } },
+        layout: {
+          id: 'root', type: 'document', children: [{
+            id: 'line-items', type: 'dynamic-table',
+            repeat: { sourceBinding: { bindingId: 'lineItems' }, itemBinding: 'item' },
+            columns: [
+              { id: 'description', header: 'Description', value: { type: 'path', path: 'description' } },
+              { id: 'total', header: 'Amount', value: { type: 'path', path: 'total' }, format: 'currency' },
+            ],
+          }],
+        },
+      } as TemplateAst,
+    });
+
+    expect(preview.html).toContain(description);
+    expect(preview.html).toContain('154.83');
+  });
 });

@@ -429,7 +429,12 @@
         "invalid": "Enter a valid partial period."
       },
       "permanentChangeNudge": "Is this a permanent change? Record it on the contract instead.",
-      "overlapConfirm": "An automatic contract change adjustment already overlaps this period. Add this separate manual adjustment anyway?"
+      "overlapConfirm": "An automatic contract change adjustment already overlaps this period. Add this separate manual adjustment anyway?",
+      "invoiceDescription": {
+        "increase": "{{description}} — additional {{units}} {{unitLabel}}, {{period}} — {{calculation}}",
+        "decrease": "{{description}} — credit for {{units}} fewer {{unitLabel}}, {{period}} — {{calculation}}"
+      },
+      "sourceDescriptionFallback": "Service adjustment"
     }
   },
   "quickInvoice": {

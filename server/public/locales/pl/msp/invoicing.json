@@ -447,7 +447,12 @@
       "effectiveDate": "Data obowiązywania",
       "sourceRate": "Stawka {{rate}}",
       "permanentChangeNudge": "Czy to trwała zmiana? Zapisz ją zamiast tego w umowie.",
-      "overlapConfirm": "Automatyczna korekta umowy nakłada się już na ten okres. Czy mimo to dodać tę oddzielną korektę ręczną?"
+      "overlapConfirm": "Automatyczna korekta umowy nakłada się już na ten okres. Czy mimo to dodać tę oddzielną korektę ręczną?",
+      "invoiceDescription": {
+        "increase": "{{description}} — dodatkowe {{units}} {{unitLabel}}, {{period}} — {{calculation}}",
+        "decrease": "{{description}} — korekta za {{units}} mniej {{unitLabel}}, {{period}} — {{calculation}}"
+      },
+      "sourceDescriptionFallback": "Korekta usługi"
     }
   },
   "quickInvoice": {

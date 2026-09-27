@@ -92,9 +92,7 @@ const ContractDetailSwitcher: React.FC<ContractDetailSwitcherProps> = ({
           if (clientContract) {
             setResolvedContractId(clientContract.contract_id);
             if (!contractId) {
-              const params = new URLSearchParams(
-                typeof window === 'undefined' ? '' : window.location.search
-              );
+              const params = new URLSearchParams(searchParams?.toString() ?? '');
               params.set('tab', 'client-contracts');
               params.set('clientContractId', clientContractId);
               params.set('contractId', clientContract.contract_id);
@@ -149,7 +147,7 @@ const ContractDetailSwitcher: React.FC<ContractDetailSwitcherProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [clientContractId, contractId, router]);
+  }, [clientContractId, contractId, router, searchParams, t]);
 
   if (!contractId && !clientContractId) {
     return (

@@ -429,7 +429,12 @@
       "effectiveDate": "Data di decorrenza",
       "sourceRate": "Tariffa {{rate}}",
       "permanentChangeNudge": "È una modifica permanente? Registrala invece nel contratto.",
-      "overlapConfirm": "Un adeguamento automatico del contratto si sovrappone già a questo periodo. Aggiungere comunque questo adeguamento manuale separato?"
+      "overlapConfirm": "Un adeguamento automatico del contratto si sovrappone già a questo periodo. Aggiungere comunque questo adeguamento manuale separato?",
+      "invoiceDescription": {
+        "increase": "{{description}} — {{units}} {{unitLabel}} aggiuntivi, {{period}} — {{calculation}}",
+        "decrease": "{{description}} — credito per {{units}} {{unitLabel}} in meno, {{period}} — {{calculation}}"
+      },
+      "sourceDescriptionFallback": "Adeguamento del servizio"
     }
   },
   "quickInvoice": {

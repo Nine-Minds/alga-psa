@@ -429,7 +429,12 @@
       "effectiveDate": "Date d’effet",
       "sourceRate": "Tarif {{rate}}",
       "permanentChangeNudge": "S’agit-il d’un changement permanent ? Enregistrez-le plutôt dans le contrat.",
-      "overlapConfirm": "Un ajustement automatique de contrat chevauche déjà cette période. Ajouter quand même cet ajustement manuel distinct ?"
+      "overlapConfirm": "Un ajustement automatique de contrat chevauche déjà cette période. Ajouter quand même cet ajustement manuel distinct ?",
+      "invoiceDescription": {
+        "increase": "{{description}} — {{units}} {{unitLabel}} supplémentaires, {{period}} — {{calculation}}",
+        "decrease": "{{description}} — avoir pour {{units}} {{unitLabel}} en moins, {{period}} — {{calculation}}"
+      },
+      "sourceDescriptionFallback": "Ajustement de service"
     }
   },
   "quickInvoice": {
