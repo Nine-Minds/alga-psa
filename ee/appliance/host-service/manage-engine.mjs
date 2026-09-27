@@ -233,6 +233,7 @@ export async function applyAppUrl(deps) {
     dnsServers = '',
     kube,
     releaseSelectionFile,
+    setupInputsFile,
     valuesNamespace = 'alga-system',
     valuesConfigMapName = 'appliance-values-alga-core',
     temporalWorkerValuesConfigMapName = 'appliance-values-temporal-worker',
@@ -330,6 +331,25 @@ export async function applyAppUrl(deps) {
       writeSecureJsonFile(releaseSelectionFile, selection);
     } catch (error) {
       return { ok: false, status: 412, error: `Values applied but could not persist release selection: ${error instanceof Error ? error.message : String(error)}` };
+    }
+  }
+
+  // 3b. Keep setup-inputs.json in sync. The host cluster-DNS reconciler reads
+  //     the persisted setup inputs (never shell-evaluated) to decide the cluster
+  //     upstream resolvers, so a custom DNS selection made here MUST also land
+  //     there or the appliance would keep using the previous resolver.
+  if (setupInputsFile) {
+    const inputs = readJsonFile(setupInputsFile) || {};
+    const nextInputs = {
+      ...inputs,
+      appHostname: appUrl,
+      dnsMode,
+      dnsServers: dnsMode === 'custom' ? String(dnsServers || '').trim() : ''
+    };
+    try {
+      writeSecureJsonFile(setupInputsFile, nextInputs);
+    } catch (error) {
+      return { ok: false, status: 412, error: `Values applied but could not persist setup inputs: ${error instanceof Error ? error.message : String(error)}` };
     }
   }
 

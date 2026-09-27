@@ -33,6 +33,8 @@ type JobInvoiceRow = Record<string, any> & {
   invoice_id: string;
   invoice_number: string | null;
   client_id: string;
+  /** Which of the client's billing profiles this invoice bills, if segmented. */
+  billing_profile_id?: string | null;
 };
 
 async function getInvoiceRow(tenantId: string, invoiceId: string): Promise<JobInvoiceRow | undefined> {
@@ -142,6 +144,7 @@ export class InvoiceEmailHandler {
             knexOrTrx: knex,
             tenantId,
             clientId: invoice.client_id,
+            billingProfileId: invoice.billing_profile_id ?? null,
           });
 
           let recipientEmail = resolved.recipientEmail;
@@ -270,6 +273,7 @@ export class InvoiceEmailHandler {
               invoice_type: invoice.invoice_type,
               total_amount: invoice.total_amount,
               credit_applied: invoice.credit_applied,
+              payment_method: invoice.payment_method ?? null,
             });
 
             if (linkContext.paymentError) {

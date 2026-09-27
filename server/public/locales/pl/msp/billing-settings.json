@@ -165,6 +165,27 @@
         "loadStatuses": "Nie udało się załadować statusów zgłoszeń odnowienia",
         "save": "Nie udało się zapisać ustawień automatyzacji odnawiania"
       }
+    },
+    "quotes": {
+      "title": "Oferty",
+      "description": "Ustaw domyślny okres ważności nowych ofert.",
+      "fields": {
+        "validityDays": {
+          "label": "Domyślny okres ważności (dni)",
+          "help": "Nowe oferty są ważne przez tę liczbę dni."
+        }
+      },
+      "actions": {
+        "save": "Zapisz"
+      },
+      "toast": {
+        "updated": "Ustawienia ofert zostały zaktualizowane."
+      },
+      "errors": {
+        "load": "Nie udało się wczytać ustawień",
+        "save": "Nie udało się zapisać ustawień",
+        "range": "Wpisz liczbę całkowitą od 1 do 365."
+      }
     }
   },
   "quoting": {
@@ -1429,6 +1450,15 @@
       "actions": {
         "save": "Zapisz ustawienia",
         "saving": "Zapisywanie..."
+      },
+      "autopay": {
+        "label": "Zezwalaj na płatność automatyczną",
+        "description": "Zezwalaj profilom rozliczeniowym na autoryzowanie automatycznych płatności kartą.",
+        "chargeTiming": "Termin obciążenia",
+        "onFinalize": "Po zatwierdzeniu faktury",
+        "onDueDate": "W terminie płatności",
+        "retryDays": "Odstępy między ponownymi próbami (dni)",
+        "consentText": "Treść zgody na płatność automatyczną"
       }
     },
     "stripe": {

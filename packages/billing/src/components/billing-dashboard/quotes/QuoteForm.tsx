@@ -41,6 +41,7 @@ import { calculateDraftMonthlyRecurringNet, calculateDraftQuoteTotals, createDra
 import { QuoteTermsContent, TextEditor } from '@alga-psa/ui/editor';
 import type { PartialBlock } from '@blocknote/core';
 import { flattenBlockContentToPlainText } from '@alga-psa/formatting/blocknoteUtils';
+import { getQuoteValidityDays } from '../../../constants/billing';
 
 interface QuoteFormProps {
   quoteId?: string | null;
@@ -59,6 +60,14 @@ interface QuoteFormProps {
   };
   onCancel: () => void;
   onSaved: (quoteId: string) => void;
+  /**
+   * Notifies the owning list that a successful in-form workflow action changed
+   * this quote's persisted status (send, resend, approve). Awaited while the
+   * action remains busy so the parent snapshot is current before the buttons
+   * re-enable; a parent refresh failure never turns the successful mutation
+   * into a visible action error.
+   */
+  onQuoteStatusChanged?: () => void | Promise<void>;
 }
 
 interface QuoteFormState {
@@ -145,6 +154,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   initialContext,
   onCancel,
   onSaved,
+  onQuoteStatusChanged,
 }) => {
   const { t } = useTranslation('msp/quotes');
   const { formatCurrency: formatLocalizedCurrency, formatDate } = useFormatters();
@@ -174,15 +184,6 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
    */
   const [extraGroupLocationIds, setExtraGroupLocationIds] = useState<string[]>([]);
 
-  useEffect(() => {
-    getDefaultBillingSettings()
-      .then((settings) => {
-        const currency = settings.defaultCurrencyCode || 'USD';
-        setDefaultCurrency(currency);
-        setForm((prev) => prev.currency_code === 'USD' ? { ...prev, currency_code: currency } : prev);
-      })
-      .catch(() => {});
-  }, []);
   const [isTemplate, setIsTemplate] = useState(initialIsTemplate);
   const [clients, setClients] = useState<IClient[]>([]);
   const [contacts, setContacts] = useState<IContact[]>([]);
@@ -303,13 +304,23 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
     try {
       setIsLoading(true);
 
-      const [fetchedClients, fetchedContacts, fetchedTemplates, fetchedDocTemplates, approvalSettings] = await Promise.all([
+      const [fetchedClients, fetchedContacts, fetchedTemplates, fetchedDocTemplates, approvalSettings, billingSettingsResult] = await Promise.all([
         getAllClientsForBilling(false),
         getContactsForPicker('active'),
         listQuotes({ is_template: true, pageSize: 200 }),
         getQuoteDocumentTemplates(),
         getQuoteApprovalSettings(),
+        // Quote creation must remain available to users who cannot read billing settings.
+        // A rejected request and a returned permission/action error both use legacy defaults.
+        getDefaultBillingSettings().catch(() => null),
       ]);
+
+      const billingSettings = billingSettingsResult && !isReturnedActionError(billingSettingsResult)
+        ? billingSettingsResult
+        : null;
+      const validityDays = getQuoteValidityDays(billingSettings?.defaultQuoteValidityDays);
+      const currency = billingSettings?.defaultCurrencyCode || 'USD';
+      setDefaultCurrency(currency);
 
       setApprovalRequired(!isActionPermissionError(approvalSettings) && approvalSettings.approvalRequired === true);
       if (isActionPermissionError(fetchedContacts) || isActionMessageError(fetchedContacts)) {
@@ -351,7 +362,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
           po_number: quote.po_number || '',
           client_notes: quote.client_notes || '',
           terms_and_conditions: quote.terms_and_conditions || '',
-          currency_code: quote.currency_code || defaultCurrency,
+          currency_code: quote.currency_code || currency,
         });
         setTermsBlock(seedTermsBlocks(quote.terms_and_conditions_block, quote.terms_and_conditions));
         setTermsEditorKey((key) => key + 1);
@@ -361,14 +372,14 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
       } else {
         const today = new Date();
         const validUntil = new Date(today);
-        validUntil.setDate(validUntil.getDate() + 30);
+        validUntil.setDate(validUntil.getDate() + validityDays);
 
         setForm({
           ...EMPTY_FORM,
           client_id: initialContext?.clientId ?? '',
           contact_id: initialContext?.contactId ?? '',
           title: initialContext?.title ?? '',
-          currency_code: defaultCurrency,
+          currency_code: currency,
           quote_date: today.toISOString().slice(0, 10),
           valid_until: validUntil.toISOString().slice(0, 10),
         });
@@ -689,7 +700,11 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
 
   const quoteStatus = (quote?.status ?? 'draft') as QuoteStatus;
 
-  const runWorkflowAction = async (label: string, action: () => Promise<IQuote | { permissionError: string }>) => {
+  const runWorkflowAction = async (
+    label: string,
+    action: () => Promise<IQuote | { permissionError: string }>,
+    options?: { notifyStatusChanged?: boolean },
+  ) => {
     try {
       setIsWorking(true);
       setError(null);
@@ -699,6 +714,16 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
         throw new Error(getErrorMessage(result));
       }
       setQuote(result as IQuote);
+      if (options?.notifyStatusChanged) {
+        // Isolate a parent-refresh failure: the status mutation already
+        // succeeded, so a list refetch error must not render as a failed
+        // send/resend/approve. The callback owns its own error reporting.
+        try {
+          await onQuoteStatusChanged?.();
+        } catch (refreshError) {
+          console.error('Quote status change refresh failed:', refreshError);
+        }
+      }
       return result;
     } catch (actionError) {
       setError(
@@ -733,6 +758,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
         message: sendMessage.trim() || undefined,
         email_addresses: combined.length > 0 ? combined : undefined,
       }),
+      { notifyStatusChanged: true },
     );
     if (result) {
       setIsSendDialogOpen(false);
@@ -750,6 +776,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
     const result = await runWorkflowAction(
       t('quoteForm.errorActions.resendQuote', { defaultValue: 'resend quote' }),
       () => resendQuote(quote.quote_id),
+      { notifyStatusChanged: true },
     );
     if (result) {
       setNotice(t('quoteForm.notices.resent', { defaultValue: 'Quote resent.' }));
@@ -791,6 +818,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
     const result = await runWorkflowAction(
       t('quoteForm.errorActions.approveQuote', { defaultValue: 'approve quote' }),
       () => approveQuote(quote.quote_id, approvalComment),
+      { notifyStatusChanged: true },
     );
     if (result) {
       setApprovalDialogMode(null);
@@ -1462,6 +1490,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                   <div className="flex flex-col gap-1 text-sm font-medium">
                     <label htmlFor="quote-date">{t('quoteForm.essentials.quoteDate', { defaultValue: 'Quote date' })}</label>
                     <DatePicker
+                      id="quote-date"
                       value={form.quote_date ? new Date(form.quote_date + 'T00:00:00') : undefined}
                       onChange={(date) => { if (!isReadOnly) handleChange('quote_date', date ? date.toISOString().slice(0, 10) : ''); }}
                       className="w-full"
@@ -1474,6 +1503,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                   <div className="flex flex-col gap-1 text-sm font-medium">
                     <label htmlFor="quote-valid-until">{t('quoteForm.essentials.validUntil', { defaultValue: 'Valid until' })}</label>
                     <DatePicker
+                      id="quote-valid-until"
                       value={form.valid_until ? new Date(form.valid_until + 'T00:00:00') : undefined}
                       onChange={(date) => { if (!isReadOnly) handleChange('valid_until', date ? date.toISOString().slice(0, 10) : ''); }}
                       className="w-full"

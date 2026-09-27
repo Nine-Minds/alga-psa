@@ -110,7 +110,9 @@
       "hiding": "Bezig met verbergen...",
       "hide": "Verbergen",
       "dismiss": "Verberg {{title}}",
-      "restoring": "Bezig met herstellen..."
+      "restoring": "Bezig met herstellen...",
+      "hideSection": "Sectie verbergen",
+      "hidingSection": "Sectie wordt verborgen…"
     },
     "hidden": {
       "title": "Verborgen setupkaarten ({{count}})",
@@ -179,7 +181,14 @@
     },
     "errors": {
       "dismissFailed": "Onboardingstap kon niet worden verborgen.",
-      "restoreFailed": "Onboardingstap kon niet worden hersteld."
+      "restoreFailed": "Onboardingstap kon niet worden hersteld.",
+      "dismissSectionFailed": "De onboardingsectie kon niet worden verborgen.",
+      "restoreSectionFailed": "De onboardingsectie kon niet worden hersteld."
+    },
+    "preferences": {
+      "title": "Dashboardvoorkeuren",
+      "description": "De voltooide onboardingsectie is verborgen op uw dashboard.",
+      "restoreSection": "Onboardingsectie herstellen"
     }
   },
   "greeting": {

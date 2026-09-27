@@ -8,7 +8,7 @@ import { createPDFGenerationService, publishGeneratedDocumentsToClient } from '.
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { embedBrandLogo, SystemEmailProviderFactory } from '@alga-psa/email';
 import { EmailMessage, EmailAddress } from '@alga-psa/types';
-import { formatCurrency, dateValueToDate, isValidEmail, enqueueImmediateJob } from '@alga-psa/core';
+import { formatCurrency, isValidEmail, enqueueImmediateJob } from '@alga-psa/core';
 import { resolveEmailLocale, getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import Handlebars from 'handlebars';
 import fs from 'fs/promises';
@@ -19,6 +19,7 @@ import { getClientById } from '@alga-psa/shared/billingClients/clients';
 import { resolveInvoiceBillingRecipient } from '../services/invoiceBillingRecipientService';
 import { ensureInvoiceEmailLinks } from '../services/ensureInvoiceEmailLinks';
 import { getInvoiceEmailLinkContext } from './invoiceEmailLinkContext';
+import { formatInvoiceCalendarDate } from './invoiceCalendarDate';
 import type { Knex } from 'knex';
 
 interface InitialJobData {
@@ -210,12 +211,30 @@ export interface InvoiceEmailRecipientInfo {
 
   recipientEmail: string;
   recipientName: string;
-  recipientSource: 'billing_contact' | 'billing_email' | 'billing_location' | 'default_location' | 'client_email' | 'none';
+  recipientSource:
+    | 'profile_billing_contact'
+    | 'profile_billing_email'
+    | 'profile_location'
+    | 'billing_contact'
+    | 'billing_email'
+    | 'billing_location'
+    | 'default_location'
+    | 'client_email'
+    | 'none';
 
   totalAmount: string;
   currencyCode: string;
   dueDate: string | null;
   invoiceDate: string | null;
+
+  /**
+   * The profile this invoice bills, named so the operator can tell a right
+   * address from a surprising one before sending. Null means the invoice
+   * carries no profile and bills the client itself.
+   */
+  billingProfileName: string | null;
+  /** D6 — only a segmented client is told about profiles at all. */
+  clientHasMultipleBillingProfiles: boolean;
 
   companyName: string;
   fromEmail: string;
@@ -270,6 +289,7 @@ export const getInvoiceEmailRecipientAction = withAuth(async (
         knexOrTrx: knex,
         tenantId: tenant,
         clientId: invoice.client_id,
+        billingProfileId: invoice.billing_profile_id ?? null,
       });
 
       let recipientEmail = resolved.recipientEmail;
@@ -281,19 +301,11 @@ export const getInvoiceEmailRecipientAction = withAuth(async (
       const totalAmount = formatCurrency((invoice.total_amount - (invoice.credit_applied ?? 0)) / 100, amountLocale, currencyCode);
 
       const invoiceDate = invoice.invoice_date
-        ? dateValueToDate(invoice.invoice_date).toLocaleDateString(amountLocale, {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-          })
+        ? formatInvoiceCalendarDate(invoice.invoice_date, amountLocale)
         : null;
 
       const dueDate = invoice.due_date
-        ? dateValueToDate(invoice.due_date).toLocaleDateString(amountLocale, {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-          })
+        ? formatInvoiceCalendarDate(invoice.due_date, amountLocale)
         : null;
 
       recipients.push({
@@ -307,6 +319,8 @@ export const getInvoiceEmailRecipientAction = withAuth(async (
         currencyCode,
         dueDate,
         invoiceDate,
+        billingProfileName: invoice.billing_profile_name ?? null,
+        clientHasMultipleBillingProfiles: Boolean(invoice.client_has_multiple_billing_profiles),
         companyName,
         fromEmail,
       });
@@ -487,6 +501,7 @@ export const sendInvoiceEmailAction = withAuth(async (
         knexOrTrx: knex,
         tenantId: tenant,
         clientId: invoice.client_id,
+        billingProfileId: invoice.billing_profile_id ?? null,
       });
 
       let recipientEmail = resolved.recipientEmail;
@@ -524,19 +539,11 @@ export const sendInvoiceEmailAction = withAuth(async (
       const totalAmount = formatCurrency((invoice.total_amount - (invoice.credit_applied ?? 0)) / 100, amountLocale, currencyCode);
 
       const invoiceDate = invoice.invoice_date
-        ? dateValueToDate(invoice.invoice_date).toLocaleDateString(amountLocale, {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-          })
+        ? formatInvoiceCalendarDate(invoice.invoice_date, amountLocale)
         : 'N/A';
 
       const dueDate = invoice.due_date
-        ? dateValueToDate(invoice.due_date).toLocaleDateString(amountLocale, {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-          })
+        ? formatInvoiceCalendarDate(invoice.due_date, amountLocale)
         : 'N/A';
 
       const recipientLocale = await resolveEmailLocale(tenant, {
@@ -552,6 +559,7 @@ export const sendInvoiceEmailAction = withAuth(async (
         invoice_type: invoice.invoice_type,
         total_amount: invoice.total_amount,
         credit_applied: invoice.credit_applied,
+        payment_method: invoice.payment_method ?? null,
       });
 
       const emailTemplate = await getInvoiceEmailTemplate(knex, tenant, recipientLocale);

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Mail, User, Building, AlertCircle, CheckCircle, Loader2, FileText } from 'lucide-react';
+import { Mail, User, Building, AlertCircle, CheckCircle, Loader2, FileText, Layers } from 'lucide-react';
 import {
   getInvoiceEmailRecipientAction,
   InvoiceEmailRecipientInfo,
@@ -40,6 +40,12 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
 
   const getRecipientSourceLabel = (source: InvoiceEmailRecipientInfo['recipientSource']) => {
     switch (source) {
+      // A segmented client's invoice goes to the profile's own AP identity —
+      // saying so is the difference between a right address and a suspicious one.
+      case 'profile_billing_contact':
+      case 'profile_billing_email':
+      case 'profile_location':
+        return t('sendEmail.recipients.billingProfile', { defaultValue: 'Billing Profile' });
       case 'billing_contact':
         return t('sendEmail.recipients.billingContact', { defaultValue: 'Billing Contact' });
       case 'billing_email':
@@ -274,6 +280,28 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
                         <Building className="h-4 w-4 text-muted-foreground" />
                         <span>{recipient.clientName}</span>
                       </div>
+
+                      {/* Which profile this invoice bills. The address below is
+                          the profile's when it carries one, so naming the
+                          profile is what makes a surprising address legible.
+                          Hidden for an unsegmented client (D6). */}
+                      {recipient.clientHasMultipleBillingProfiles ? (
+                        <div
+                          className="flex items-center gap-2 text-sm text-muted-foreground mb-1"
+                          data-automation-id={`send-invoice-billing-profile-${recipient.invoiceId}`}
+                        >
+                          <Layers className="h-4 w-4 text-muted-foreground" />
+                          <span>
+                            {t('sendEmail.recipients.billingProfileNamed', {
+                              defaultValue: 'Billing profile: {{name}}',
+                              name: recipient.billingProfileName
+                                || t('sendEmail.recipients.billingProfileDefault', {
+                                  defaultValue: "the client's default profile",
+                                }),
+                            })}
+                          </span>
+                        </div>
+                      ) : null}
 
                       {/* Recipient */}
                       {recipient.recipientEmail ? (

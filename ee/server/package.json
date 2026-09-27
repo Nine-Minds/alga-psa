@@ -40,7 +40,8 @@
     "sharp": "^0.35.4",
     "tar-stream": "^3.1.7",
     "uuid": "^11.0.5",
-    "@alga-psa/workflow-inference": "*"
+    "@alga-psa/workflow-inference": "*",
+    "@typesafe-ai/sdk": "^0.6.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.40.0",

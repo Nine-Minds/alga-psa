@@ -108,6 +108,8 @@ const ITEM_FIELDS: Record<DesignerDocumentKind, DocumentItemField[]> = {
     { name: 'service_sku', valueType: 'string', description: 'Product SKU.' },
     { name: 'quantity_ordered', valueType: 'number', description: 'Quantity ordered.' },
     { name: 'quantity_fulfilled', valueType: 'number', description: 'Quantity fulfilled so far.' },
+    { name: 'allocated_serials', valueType: 'string', description: 'Serial numbers currently allocated to this line.' },
+    { name: 'allocated_serials_display', valueType: 'string', description: 'Comma-separated serial numbers currently allocated to this line.' },
     { name: 'unit_price', valueType: 'number', description: 'Unit price.' },
     { name: 'amount', valueType: 'number', description: 'Line amount (qty × unit price).' },
   ],

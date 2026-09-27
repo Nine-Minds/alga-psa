@@ -1,5 +1,5 @@
 import { cleanupCommentAttachmentDrafts } from './cleanupCommentAttachmentDrafts';
-import { dispatchCommentPublication } from '@shared/lib/ticketCommentAttachments';
+import { dispatchCommentPublication, resolveCommentAuthorDisplay } from '@shared/lib/ticketCommentAttachments';
 import { randomUUID } from 'node:crypto';
 import { getConnection } from 'server/src/lib/db/db';
 import { tenantDb } from '@alga-psa/db';
@@ -26,11 +26,13 @@ async function dispatchScheduledCommentNotification(knex: any, tenantId: string,
   }
   const eventId = comment.scheduled_publish_event_id;
   if (!eventId) throw new Error(`Scheduled comment ${commentId} is missing its durable event id`);
-  const author = comment.user_id ? await db.table('users').select('first_name', 'last_name').where({ user_id: comment.user_id }).first() : null;
+  // The schema requires a uuid actor and an author string; user-less comments
+  // reuse the ticket id as the sentinel actor and name the real sender.
+  const author = await resolveCommentAuthorDisplay(knex, tenantId, comment);
   await publishEvent({ eventType: 'TICKET_COMMENT_ADDED', payload: {
-    tenantId, occurredAt: new Date().toISOString(), ticketId: comment.ticket_id, commentId: comment.comment_id, userId: comment.user_id,
+    tenantId, occurredAt: new Date().toISOString(), ticketId: comment.ticket_id, commentId: comment.comment_id, userId: comment.user_id ?? comment.ticket_id,
     thread_id: comment.thread_id, parent_comment_id: comment.parent_comment_id ?? null, is_reply: Boolean(comment.parent_comment_id),
-    comment: { id: comment.comment_id, content: comment.note, author: author ? `${author.first_name} ${author.last_name}` : 'Unknown User', isInternal: comment.is_internal, authorType: comment.author_type, thread_id: comment.thread_id, parent_comment_id: comment.parent_comment_id ?? null, is_reply: Boolean(comment.parent_comment_id) },
+    comment: { id: comment.comment_id, content: comment.note, author, isInternal: comment.is_internal, authorType: comment.author_type, thread_id: comment.thread_id, parent_comment_id: comment.parent_comment_id ?? null, is_reply: Boolean(comment.parent_comment_id) },
   } }, { eventId, strict: true });
   await db.table('comments').where({ comment_id: commentId, scheduled_publish_event_id: eventId }).whereNull('scheduled_publish_dispatched_at')
     .update({ scheduled_publish_dispatched_at: knex.fn.now() });

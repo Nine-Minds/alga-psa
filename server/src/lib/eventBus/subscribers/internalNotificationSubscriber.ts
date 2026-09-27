@@ -2,7 +2,7 @@
 import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { getEventBus } from '../index';
 import {
-  EventType, BaseEvent, EventSchemas, TicketCreatedEvent, TicketUpdatedEvent, TicketClosedEvent, TicketAssignedEvent, TicketAdditionalAgentAssignedEvent, TicketCommentAddedEvent, TicketCommentUpdatedEvent, ProjectCreatedEvent, ProjectAssignedEvent, ProjectTaskAssignedEvent, ProjectTaskAdditionalAgentAssignedEvent, TaskCommentAddedEvent, TaskCommentUpdatedEvent, InvoiceGeneratedEvent, MessageSentEvent, UserMentionedInDocumentEvent, AppointmentRequestCreatedEvent, AppointmentRequestApprovedEvent, AppointmentRequestDeclinedEvent, AppointmentRequestCancelledEvent, ProjectMilestoneReadyEvent, ProjectBudgetThresholdReachedEvent, ProjectBudgetExceededEvent
+  EventType, BaseEvent, EventSchemas, TicketCreatedEvent, TicketUpdatedEvent, TicketClosedEvent, TicketAssignedEvent, TicketAdditionalAgentAssignedEvent, TicketCommentAddedEvent, TicketCommentUpdatedEvent, ProjectCreatedEvent, ProjectAssignedEvent, ProjectTaskAssignedEvent, ProjectTaskAdditionalAgentAssignedEvent, TaskCommentAddedEvent, TaskCommentUpdatedEvent, InvoiceGeneratedEvent, MessageSentEvent, UserMentionedInDocumentEvent, AppointmentRequestCreatedEvent, AppointmentRequestApprovedEvent, AppointmentRequestDeclinedEvent, AppointmentRequestCancelledEvent, CalendarShareGrantedEvent, ProjectMilestoneReadyEvent, ProjectBudgetThresholdReachedEvent, ProjectBudgetExceededEvent
 } from '@alga-psa/event-bus/events';
 import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/actions';
 import logger from '@alga-psa/core/logger';
@@ -1638,7 +1638,9 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
       .where('user_id', userId)
       .first();
 
-    const authorName = author ? `${author.first_name} ${author.last_name}` : 'Someone';
+    // No user row means a system/sentinel actor (inbound email); the payload
+    // already carries the real sender identity, so prefer it over 'Someone'.
+    const authorName = author ? `${author.first_name} ${author.last_name}` : (comment?.author || 'Someone');
 
     // Extract comment text preview from BlockNote content
     let commentPreview = '';
@@ -2961,6 +2963,64 @@ async function handleAppointmentRequestCancelled(event: AppointmentRequestCancel
 /**
  * Handle all internal notification events
  */
+const CALENDAR_ACCESS_LEVEL_LABELS: Record<string, Record<string, string>> = {
+  en: { free_busy: 'free/busy', read: 'view details', edit: 'edit', manage: 'manage' },
+  fr: { free_busy: 'disponibilité', read: 'voir les détails', edit: 'modification', manage: 'gestion' },
+  es: { free_busy: 'libre/ocupado', read: 'ver detalles', edit: 'edición', manage: 'administración' },
+  de: { free_busy: 'frei/gebucht', read: 'Details anzeigen', edit: 'bearbeiten', manage: 'verwalten' },
+  nl: { free_busy: 'vrij/bezet', read: 'details bekijken', edit: 'bewerken', manage: 'beheren' },
+  it: { free_busy: 'libero/occupato', read: 'visualizza dettagli', edit: 'modifica', manage: 'gestione' },
+  pl: { free_busy: 'wolny/zajęty', read: 'wyświetlanie szczegółów', edit: 'edycja', manage: 'zarządzanie' },
+  pt: { free_busy: 'livre/ocupado', read: 'ver detalhes', edit: 'edição', manage: 'gestão' },
+};
+
+/**
+ * Handle calendar share granted events: notify a user grantee that a
+ * colleague shared their personal calendar. Team grants are not notified.
+ */
+async function handleCalendarShareGranted(event: CalendarShareGrantedEvent): Promise<void> {
+  const { tenantId, calendarType, ownerUserId, granteeType, granteeId, accessLevel } = event.payload;
+  if (granteeType !== 'user' || calendarType !== 'personal' || !ownerUserId) {
+    return;
+  }
+
+  try {
+    const db = await getConnection(tenantId);
+    const owner = await tenantDb(db, tenantId).table('users')
+      .where({ user_id: ownerUserId })
+      .first('first_name', 'last_name', 'username');
+    const ownerName = owner
+      ? `${owner.first_name ?? ''} ${owner.last_name ?? ''}`.trim() || owner.username
+      : 'A colleague';
+    const locale = (await getTenantDefaultLocale(tenantId, 'internal')) || 'en';
+    const labels = CALENDAR_ACCESS_LEVEL_LABELS[locale.split('-')[0]] ?? CALENDAR_ACCESS_LEVEL_LABELS.en;
+
+    await createNotificationFromTemplateInternal(db, {
+      tenant: tenantId,
+      user_id: granteeId,
+      template_name: 'calendar-share-granted',
+      type: 'info',
+      category: 'appointments',
+      link: '/msp/schedule',
+      data: {
+        ownerName,
+        accessLevelLabel: labels[accessLevel] ?? accessLevel,
+      },
+      metadata: {
+        calendarId: event.payload.calendarId,
+        ownerUserId,
+        accessLevel,
+      },
+    });
+  } catch (error) {
+    logger.error('[InternalNotificationSubscriber] Error handling calendar share granted', {
+      error,
+      calendarId: event.payload.calendarId,
+      tenantId,
+    });
+  }
+}
+
 async function handleInternalNotificationEvent(event: BaseEvent): Promise<void> {
   const eventSchema = EventSchemas[event.eventType];
   if (!eventSchema) {
@@ -3187,6 +3247,9 @@ async function dispatchInternalNotificationHandlers(
     case 'APPOINTMENT_REQUEST_CANCELLED':
       await handleAppointmentRequestCancelled(validatedEvent as AppointmentRequestCancelledEvent);
       break;
+    case 'CALENDAR_SHARE_GRANTED':
+      await handleCalendarShareGranted(validatedEvent as CalendarShareGrantedEvent);
+      break;
     default:
       // Silently ignore other events
       break;
@@ -3204,6 +3267,7 @@ export const internalNotificationSubscriberTestHarness = {
   handleTicketCommentAdded,
   handleTransactionalOutboxDelivery,
   handleInternalNotificationEvent,
+  handleCalendarShareGranted,
 };
 
 /**
@@ -3236,7 +3300,8 @@ export async function registerInternalNotificationSubscriber(): Promise<void> {
       'APPOINTMENT_REQUEST_CREATED',
       'APPOINTMENT_REQUEST_APPROVED',
       'APPOINTMENT_REQUEST_DECLINED',
-      'APPOINTMENT_REQUEST_CANCELLED'
+      'APPOINTMENT_REQUEST_CANCELLED',
+      'CALENDAR_SHARE_GRANTED'
     ];
 
     // Use a dedicated channel for internal notifications
@@ -3282,7 +3347,8 @@ export async function unregisterInternalNotificationSubscriber(): Promise<void> 
       'APPOINTMENT_REQUEST_CREATED',
       'APPOINTMENT_REQUEST_APPROVED',
       'APPOINTMENT_REQUEST_DECLINED',
-      'APPOINTMENT_REQUEST_CANCELLED'
+      'APPOINTMENT_REQUEST_CANCELLED',
+      'CALENDAR_SHARE_GRANTED'
     ];
 
     const channel = 'internal-notifications';

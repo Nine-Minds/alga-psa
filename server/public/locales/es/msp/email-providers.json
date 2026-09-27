@@ -1032,7 +1032,12 @@
       "saving": "Guardando…",
       "startDelimiter": "Delimitador inicial",
       "update": "Actualizar regla",
-      "valuePlaceholder": "Valor"
+      "valuePlaceholder": "Valor",
+      "matchTargets": "Comparar el valor extraído con",
+      "matchClientName": "Nombre o alias del cliente",
+      "matchContactEmail": "Correo del contacto",
+      "matchAssetName": "Nombre del dispositivo (activo)",
+      "matchTargetRequired": "Seleccione al menos un criterio."
     },
     "header": {
       "description": "Haga coincidir el correo entrante por remitente o asunto para omitir ruido, asignar el cliente correcto o enrutar a un destino. Las reglas se ejecutan en orden; la primera coincidencia gana.",
@@ -1090,7 +1095,10 @@
       "running": "Probando…",
       "subject": "Asunto",
       "title": "Probar esta regla",
-      "to": "Para"
+      "to": "Para",
+      "contactEmail": "correo del contacto",
+      "deviceName": "nombre del dispositivo",
+      "ambiguous": "{{target}} coincide en {{count}} clientes; no se asignó"
     }
   },
   "errors": {

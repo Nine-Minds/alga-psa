@@ -263,7 +263,7 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
             </div>
           )}
 
-          <DataTable
+          <DataTable id="quotes-table"
             key={tableKey}
             data={filteredQuotes}
             columns={columns}
@@ -327,9 +327,12 @@ const QuotesTab: React.FC = () => {
     void loadData();
   }, []);
 
-  const loadData = async () => {
+  const loadData = async (options?: { background?: boolean }) => {
+    const isBackground = options?.background === true;
     try {
-      setIsLoading(true);
+      if (!isBackground) {
+        setIsLoading(true);
+      }
       const [quotesResult, templatesResult] = await Promise.all([
         listQuotes({ is_template: false, pageSize: 200 }),
         getQuoteDocumentTemplates(),
@@ -352,7 +355,9 @@ const QuotesTab: React.FC = () => {
           : t('quotesTab.errors.load', { defaultValue: 'Failed to load quotes' }),
       );
     } finally {
-      setIsLoading(false);
+      if (!isBackground) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -598,6 +603,7 @@ const QuotesTab: React.FC = () => {
             router.push(`/msp/billing?tab=quotes&quoteId=${savedQuoteId}&mode=edit`);
           }
         }}
+        onQuoteStatusChanged={() => loadData({ background: true })}
       />
     );
   }

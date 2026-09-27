@@ -169,6 +169,7 @@ export function useTicketRichTextUploadSession({
         sequence,
         mimeType: renamedFile.type,
       });
+      // LEVERAGE: pattern document-open-url — resolveDocumentViewUrl now routes non-previewable files to /download itself; this local branch re-derives that decision.
       const viewUrl = commentAttachments && !file.type.startsWith('image/')
         ? `/api/documents/download/${uploadedDocument.file_id}`
         : resolveDocumentViewUrl

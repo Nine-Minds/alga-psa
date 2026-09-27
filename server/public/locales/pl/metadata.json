@@ -41,7 +41,12 @@
           "title": "Szczegóły wyceny"
         }
       },
-      "title": "Rozliczenia"
+      "title": "Rozliczenia",
+      "paymentMethods": {
+        "setupComplete": {
+          "title": "Konfiguracja karty"
+        }
+      }
     },
     "clientSettings": {
       "description": "Zarządzaj ustawieniami i konfiguracją swojej firmy",
@@ -613,6 +618,11 @@
     },
     "tab": {
       "title": "Zespoły"
+    }
+  },
+  "paymentMethods": {
+    "setupComplete": {
+      "title": "Konfiguracja karty"
     }
   }
 }

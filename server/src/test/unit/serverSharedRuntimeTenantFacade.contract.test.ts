@@ -140,10 +140,19 @@ describe('server/shared runtime tenant facade roots', () => {
 
     const ticketCreator = read('shared/rmm/alerts/ticketCreator.ts');
     expect(ticketCreator).toContain("import { tenantDb } from '@alga-psa/db'");
-    expect(ticketCreator).toContain("db.table('asset_associations')");
+    expect(ticketCreator).toContain(
+      "import { associateAssetWithTicket } from '../../services/assets/assetTicketAssociation'"
+    );
     expect(ticketCreator).not.toMatch(
       directRootPattern(['tickets', 'comment_threads', 'comments', 'users', 'asset_associations', 'boards', 'priorities'])
     );
+
+    const assetTicketAssociation = read('shared/services/assets/assetTicketAssociation.ts');
+    expect(assetTicketAssociation).toContain("import { tenantDb } from '@alga-psa/db'");
+    expect(assetTicketAssociation).toContain('const db = tenantDb(trx, tenantId);');
+    expect(assetTicketAssociation).toContain("db.table('users')");
+    expect(assetTicketAssociation).toContain("db.table('asset_associations')");
+    expect(assetTicketAssociation).not.toMatch(directRootPattern(['users', 'asset_associations']));
   });
 
   it('routes shared client and ticket model tenant roots through tenantDb', () => {

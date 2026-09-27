@@ -110,7 +110,9 @@
       "hiding": "Masquage...",
       "hide": "Masquer",
       "dismiss": "Masquer {{title}}",
-      "restoring": "Restauration..."
+      "restoring": "Restauration...",
+      "hideSection": "Masquer la section",
+      "hidingSection": "Masquage de la section…"
     },
     "hidden": {
       "title": "Cartes de configuration masquées ({{count}})",
@@ -179,7 +181,14 @@
     },
     "errors": {
       "dismissFailed": "Impossible de masquer l'étape d'onboarding.",
-      "restoreFailed": "Impossible de restaurer l'étape d'onboarding."
+      "restoreFailed": "Impossible de restaurer l'étape d'onboarding.",
+      "dismissSectionFailed": "Impossible de masquer la section de démarrage.",
+      "restoreSectionFailed": "Impossible de restaurer la section de démarrage."
+    },
+    "preferences": {
+      "title": "Préférences du tableau de bord",
+      "description": "La section de démarrage terminée est masquée de votre tableau de bord.",
+      "restoreSection": "Restaurer la section de démarrage"
     }
   },
   "greeting": {

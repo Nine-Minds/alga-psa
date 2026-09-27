@@ -19,6 +19,7 @@ interface PaginationProps {
     itemLabel?: string;
     onItemsPerPageChange?: (itemsPerPage: number) => void;
     itemsPerPageOptions?: Array<{ value: string; label: string }>;
+    showItemsPerPage?: boolean;
 }
 
 /**
@@ -40,7 +41,8 @@ const Pagination = ({
     showTotalItems = false,
     itemLabel,
     onItemsPerPageChange,
-    itemsPerPageOptions
+    itemsPerPageOptions,
+    showItemsPerPage = true
 }: PaginationProps) => {
     const { t } = useTranslation('common');
 
@@ -172,12 +174,12 @@ const Pagination = ({
     const lastItemIndex = Math.min(currentPage * itemsPerPage, totalItems);
 
     // Don't render pagination if there's only one page AND no page size selector
-    if (totalPages <= 1 && !onItemsPerPageChange) {
+    if (totalPages <= 1 && (!onItemsPerPageChange || !showItemsPerPage)) {
         return null;
     }
 
     // If only one page but page size selector is available, show simplified version
-    if (totalPages <= 1 && onItemsPerPageChange) {
+    if (totalPages <= 1 && onItemsPerPageChange && showItemsPerPage) {
         return (
             <ReflectionContainer
                 id={id}
@@ -192,6 +194,7 @@ const Pagination = ({
                         })}
                     </p>
                     <CustomSelect
+                        id={`${id}-items-per-page`}
                         value={itemsPerPage.toString()}
                         onValueChange={(value) => onItemsPerPageChange(Number(value))}
                         options={resolvedItemsPerPageOptions}
@@ -245,6 +248,7 @@ const Pagination = ({
 
                     {onItemsPerPageChange && (
                         <CustomSelect
+                            id={`${id}-items-per-page`}
                             value={itemsPerPage.toString()}
                             onValueChange={(value) => onItemsPerPageChange(Number(value))}
                             options={resolvedItemsPerPageOptions}

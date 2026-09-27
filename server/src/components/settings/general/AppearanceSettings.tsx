@@ -20,7 +20,8 @@ import {
   updateTenantThemeAction,
 } from '@alga-psa/tenancy/actions/tenant-actions/tenantThemeActions';
 import { getTenantBrandingAction } from '@alga-psa/tenancy/actions/tenant-actions/tenantBrandingActions';
-import { deleteTenantLogo, uploadTenantLogo } from '@alga-psa/tenancy/actions/tenant-actions/tenantLogoActions';
+import { deleteTenantLogo, recropTenantLogo, uploadTenantLogo } from '@alga-psa/tenancy/actions/tenant-actions/tenantLogoActions';
+import type { LogoCropRect } from '@alga-psa/types';
 import { getCurrentUser } from '@alga-psa/user-composition/actions/userQueryActions';
 import {
   DEFAULT_THEME_PAIR_ID,
@@ -260,6 +261,19 @@ const AppearanceSettings = () => {
       }
       return result;
     };
+  // Re-cuts a square mark from the matching wide logo (light from wide, dark from wide-dark).
+  const handleLogoRecrop = (variant: EntityLogoVariant) =>
+    async (entityId: string, crop: LogoCropRect) => {
+      const result = await recropTenantLogo(entityId, variant, crop);
+      if (result?.success) {
+        router.refresh();
+      }
+      return result;
+    };
+  const markCropHelp = t('appearance.whiteLabel.cropHelp', {
+    defaultValue:
+      'Drag and zoom to choose the part shown in the collapsed side menu and every circular frame. Your wide logo is not changed.',
+  });
 
   const squareWarning = t('appearance.whiteLabel.warnings.expectSquare', {
     defaultValue:
@@ -490,7 +504,7 @@ const AppearanceSettings = () => {
                 <p className="mb-4 text-sm text-[rgb(var(--color-text-500))]">
                   {t('appearance.whiteLabel.logoHelp', {
                     defaultValue:
-                      'The square mark is used wherever the space is square — the collapsed side menu and circular frames. The optional wide logo replaces the mark and the name in the expanded side menu, so upload one that already contains your company name. The side menu follows its own background: dark-background variants on a dark menu, light ones on a light menu, falling back to whichever variant you uploaded.',
+                      'The square mark is used wherever the space is square — the collapsed side menu and circular frames. Drop a wide logo into a square slot and you pick which part becomes the mark; once a wide logo is uploaded you can also cut the mark straight from it. The optional wide logo replaces the mark and the name in the expanded side menu, so upload one that already contains your company name. The side menu follows its own background: dark-background variants on a dark menu, light ones on a light menu, falling back to whichever variant you uploaded.',
                   })}
                 </p>
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -503,8 +517,12 @@ const AppearanceSettings = () => {
                       entityId={tenantId}
                       entityName={clientName || 'AlgaPSA'}
                       imageUrl={logoUrl}
+                      wideImageUrl={logoWideUrl || null}
                       uploadAction={handleLogoUpload('default')}
                       deleteAction={handleLogoDelete('default')}
+                      recropAction={handleLogoRecrop('default')}
+                      cropWideToSquare
+                      cropHelpText={markCropHelp}
                       onImageChange={(next) => setLogoUrl(next || '')}
                       previewShape="square"
                       aspectHint={{ expects: 'square', warning: squareWarning }}
@@ -527,8 +545,12 @@ const AppearanceSettings = () => {
                       entityId={tenantId}
                       entityName={clientName || 'AlgaPSA'}
                       imageUrl={logoDarkUrl}
+                      wideImageUrl={logoWideDarkUrl || null}
                       uploadAction={handleLogoUpload('dark')}
                       deleteAction={handleLogoDelete('dark')}
+                      recropAction={handleLogoRecrop('dark')}
+                      cropWideToSquare
+                      cropHelpText={markCropHelp}
                       onImageChange={(next) => setLogoDarkUrl(next || '')}
                       previewShape="square"
                       aspectHint={{ expects: 'square', warning: squareWarning }}

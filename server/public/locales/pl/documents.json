@@ -77,7 +77,9 @@
       "pickedBy": "Pobrał: ____________________     Data: ____________",
       "preTaxTotals": "Podane sumy nie zawierają podatku. Należny podatek jest naliczany na fakturze.",
       "thankYouForOrder": "Dziękujemy za zamówienie."
-    }
+    },
+    "serialNumbers": "Numery seryjne",
+    "allocatedSerialsNote": "Przypisane numery seryjne; mogą ulec zmianie podczas realizacji."
   },
   "errors": {
     "permissions": {

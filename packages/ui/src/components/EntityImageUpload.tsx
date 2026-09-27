@@ -4,12 +4,14 @@ import * as React from 'react';
 import { useState, useRef, useTransition } from 'react';
 import { toast } from 'react-hot-toast';
 import { handleError } from '../lib/errorHandling';
-import { Pen, Trash2, Upload, Link } from 'lucide-react';
+import { Pen, Trash2, Upload, Link, Crop } from 'lucide-react';
+import type { LogoCropRect } from '@alga-psa/types';
 import LoadingIndicator from './LoadingIndicator';
 import { Button } from './Button';
 import UserAvatar from './UserAvatar';
 import ClientAvatar from './ClientAvatar';
 import { ConfirmationDialog } from './ConfirmationDialog';
+import { ImageCropDialog } from './ImageCropDialog';
 import { useTranslation } from '../lib/i18n/client';
 
 export type EntityType = 'user' | 'contact' | 'client' | 'tenant' | 'team';
@@ -26,11 +28,19 @@ interface EntityImageUploadProps {
   entityId: string;
   entityName: string;
   imageUrl: string | null;
-  onImageChange?: (newImageUrl: string | null) => void;
+  /**
+   * Uncropped wordmark the square image was cut from, when there is one. It
+   * fills 'auto' slots and is what "Adjust mark" re-crops from.
+   */
+  wideImageUrl?: string | null;
+  /** Second argument carries the wide URL whenever this component knows it. */
+  onImageChange?: (newImageUrl: string | null, wideImageUrl?: string | null) => void;
   uploadAction: (entityId: string, formData: FormData) => Promise<{
     success: boolean;
     message?: string;
     imageUrl?: string | null;
+    /** Present (possibly null) when the action also governs the wide variant. */
+    wideImageUrl?: string | null;
     error?: string;
   }>;
   deleteAction: (entityId: string) => Promise<{
@@ -47,9 +57,11 @@ interface EntityImageUploadProps {
    * How the current image is previewed. 'circle' is the cover-cropped avatar.
    * 'square' keeps the round frame the app renders logos in but contains the
    * image instead of cropping it; 'rect' is the landscape frame for wide
-   * wordmarks and favicons.
+   * wordmarks and favicons. 'auto' is the circle avatar until the image turns
+   * out to be a wide wordmark, which then renders contained at the avatar's
+   * height instead of being cropped to its middle.
    */
-  previewShape?: 'circle' | 'square' | 'rect';
+  previewShape?: 'circle' | 'square' | 'rect' | 'auto';
   /** File input `accept` filter; defaults to any image. */
   accept?: string;
   /**
@@ -58,6 +70,21 @@ interface EntityImageUploadProps {
    * namespace.
    */
   aspectHint?: { expects: 'square' | 'wide'; warning: string };
+  /**
+   * Wide uploads open the crop dialog so the square image shows a chosen zone
+   * of the wordmark rather than its middle. The upload then carries a `crop`
+   * form field with fractions of the source.
+   */
+  cropWideToSquare?: boolean;
+  /** Cuts a new square from `wideImageUrl` server-side; enables "Adjust mark". */
+  recropAction?: (entityId: string, crop: LogoCropRect) => Promise<{
+    success: boolean;
+    message?: string;
+    imageUrl?: string | null;
+    error?: string;
+  }>;
+  /** Where the chosen square ends up, for the crop dialog; the caller knows the slot. */
+  cropHelpText?: string;
   linkDocumentAsAvatar?: (args: {
     entityType: EntityType;
     entityId: string;
@@ -72,11 +99,23 @@ interface EntityImageUploadProps {
   }) => React.ReactNode;
 }
 
+// Width/height ratio from which an image counts as a wordmark rather than a mark.
+const WIDE_ASPECT_RATIO = 1.5;
+
+// Landscape frame for 'auto' wordmarks: the avatar's height, up to 4x as wide.
+const WIDE_FRAME_CLASS: Record<NonNullable<EntityImageUploadProps['size']>, string> = {
+  sm: 'h-8 max-w-32',
+  md: 'h-10 max-w-40',
+  lg: 'h-12 max-w-48',
+  xl: 'h-16 max-w-64',
+};
+
 const EntityImageUpload = ({
   entityType,
   entityId,
   entityName,
   imageUrl,
+  wideImageUrl = null,
   onImageChange,
   uploadAction,
   deleteAction,
@@ -88,6 +127,9 @@ const EntityImageUpload = ({
   previewShape = 'circle',
   accept = 'image/*',
   aspectHint,
+  cropWideToSquare = false,
+  recropAction,
+  cropHelpText,
   linkDocumentAsAvatar,
   renderDocumentSelector,
 }: EntityImageUploadProps) => {
@@ -97,11 +139,42 @@ const EntityImageUpload = ({
   const [isPendingUpload, startUploadTransition] = useTransition();
   const [isPendingDelete, startDeleteTransition] = useTransition();
   const [isPendingLink, startLinkTransition] = useTransition();
+  const [isPendingRecrop, startRecropTransition] = useTransition();
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(imageUrl);
+  const [currentWideUrl, setCurrentWideUrl] = useState<string | null>(wideImageUrl);
+  // What the crop dialog is cutting: a fresh upload (held until confirmed) or the stored wordmark.
+  const [cropRequest, setCropRequest] = useState<{ imageUrl: string; file?: File } | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDocumentSelectorOpen, setIsDocumentSelectorOpen] = useState(false);
+  const [isWideImage, setIsWideImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Use the preview URL if available, otherwise use the current image URL
+  const displayUrl = previewUrl || currentImageUrl;
+
+  // 'auto' needs the real dimensions; the avatar's own <img> is internal, so
+  // probe the same (cached) URL here. Undecodable images stay in the circle.
+  // A known wide variant needs no probe: it is rendered outright.
+  React.useEffect(() => {
+    if (previewShape !== 'auto' || !displayUrl || (currentWideUrl && !previewUrl)) {
+      setIsWideImage(false);
+      return;
+    }
+    let cancelled = false;
+    const probe = new Image();
+    probe.onload = () => {
+      if (cancelled) return;
+      setIsWideImage(probe.naturalHeight > 0 && probe.naturalWidth / probe.naturalHeight > WIDE_ASPECT_RATIO);
+    };
+    probe.onerror = () => {
+      if (!cancelled) setIsWideImage(false);
+    };
+    probe.src = displayUrl;
+    return () => {
+      cancelled = true;
+    };
+  }, [previewShape, displayUrl, previewUrl, currentWideUrl]);
 
   // Update local state when prop changes
   React.useEffect(() => {
@@ -109,6 +182,10 @@ const EntityImageUpload = ({
     // Clear any preview when the actual image changes
     setPreviewUrl(null);
   }, [imageUrl]);
+
+  React.useEffect(() => {
+    setCurrentWideUrl(wideImageUrl);
+  }, [wideImageUrl]);
 
   // Clean up object URLs when component unmounts or preview changes
   React.useEffect(() => {
@@ -131,46 +208,37 @@ const EntityImageUpload = ({
     return true;
   }, [canModify, entityType, userType, userEntityId, entityId]);
 
-  // A wordmark dropped into the square slot (or a square mark into the wide one)
-  // still uploads — the tenant just gets told which slot it belongs in.
-  const warnOnAspectMismatch = async (file: File) => {
-    if (!aspectHint || typeof createImageBitmap !== 'function') return;
+  // Width/height of a picked file, or null when the browser cannot decode it (SVGs).
+  const measureAspectRatio = async (file: File): Promise<number | null> => {
+    if (typeof createImageBitmap !== 'function') return null;
     try {
       const bitmap = await createImageBitmap(file);
       const ratio = bitmap.width / bitmap.height;
       bitmap.close?.();
-      const mismatched = aspectHint.expects === 'wide' ? ratio < 1.5 : ratio > 1.5;
-      if (mismatched) {
-        toast(aspectHint.warning, { icon: '⚠️' });
-      }
+      return ratio;
     } catch {
-      // SVGs (and anything the browser refuses to decode) simply skip the hint.
+      return null;
     }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Client-side validation
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please select an image file.');
-      e.target.value = '';
-      return;
+  // A wordmark dropped into the square slot (or a square mark into the wide one)
+  // still uploads — the tenant just gets told which slot it belongs in.
+  const warnOnAspectMismatch = (ratio: number | null) => {
+    if (!aspectHint || ratio === null) return;
+    const mismatched = aspectHint.expects === 'wide' ? ratio < WIDE_ASPECT_RATIO : ratio > WIDE_ASPECT_RATIO;
+    if (mismatched) {
+      toast(aspectHint.warning, { icon: '⚠️' });
     }
+  };
 
-    void warnOnAspectMismatch(file);
+  const timestamped = (url: string) => `${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}`;
 
-    // Check file size (2MB limit)
-    const maxSize = 2 * 1024 * 1024; // 2MB in bytes
-    if (file.size > maxSize) {
-      toast.error('Image size must be less than 2MB.');
-      e.target.value = '';
-      return;
-    }
-
+  const startUpload = (file: File, crop: LogoCropRect | null) => {
     const formData = new FormData();
     formData.append((entityType === 'client' || entityType === 'tenant') ? 'logo' : 'avatar', file);
+    if (crop) {
+      formData.append('crop', JSON.stringify(crop));
+    }
 
     // Create a local object URL for immediate display
     const localImageUrl = URL.createObjectURL(file);
@@ -180,37 +248,41 @@ const EntityImageUpload = ({
     startUploadTransition(async () => {
       try {
         const result = await uploadAction(entityId, formData);
-        
+
         if (result.success) {
           // Preview URL will be cleaned up in the useEffect
-          
+
           const serverImageUrl = result.imageUrl || null;
-          
+          // Only an action that owns the wide variant reports it; others leave it be.
+          const nextWideUrl = result.wideImageUrl === undefined
+            ? currentWideUrl
+            : (result.wideImageUrl ? timestamped(result.wideImageUrl) : null);
+
           if (serverImageUrl) {
-            const timestamp = Date.now();
-            const timestampedUrl = `${serverImageUrl}${serverImageUrl.includes('?') ? '&' : '?'}t=${timestamp}`;
-            
+            const timestampedUrl = timestamped(serverImageUrl);
+
             console.log(`EntityImageUpload: Setting image URL to: ${timestampedUrl}`);
-            
+
             // Clear the preview first
             setPreviewUrl(null);
-            
+
             if (onImageChange) {
-              onImageChange(null);
+              onImageChange(null, nextWideUrl);
             }
-            
+
             // Small delay to allow for transition effects
             setTimeout(() => {
               setCurrentImageUrl(timestampedUrl);
-              
+              setCurrentWideUrl(nextWideUrl);
+
               if (onImageChange) {
-                onImageChange(timestampedUrl);
+                onImageChange(timestampedUrl, nextWideUrl);
               }
             }, 50);
           } else {
             console.warn('Upload succeeded but no image URL was returned');
           }
-          
+
           setIsEditing(false);
           toast.success(result.message || `${entityType} image uploaded successfully.`);
         } else {
@@ -223,8 +295,77 @@ const EntityImageUpload = ({
         handleError(err, `Failed to upload ${entityType} image.`);
         URL.revokeObjectURL(localImageUrl);
         setCurrentImageUrl(imageUrl);
-        // Reset the file input
-        e.target.value = '';
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    });
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Client-side validation
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file.');
+      e.target.value = '';
+      return;
+    }
+
+    // Check file size (2MB limit)
+    const maxSize = 2 * 1024 * 1024; // 2MB in bytes
+    if (file.size > maxSize) {
+      toast.error('Image size must be less than 2MB.');
+      e.target.value = '';
+      return;
+    }
+
+    const ratio = await measureAspectRatio(file);
+
+    // A wordmark heading for a square slot: let the user pick the zone first.
+    // The upload waits in cropRequest until the dialog confirms or cancels.
+    if (cropWideToSquare && ratio !== null && ratio > WIDE_ASPECT_RATIO) {
+      setCropRequest({ imageUrl: URL.createObjectURL(file), file });
+      return;
+    }
+
+    warnOnAspectMismatch(ratio);
+    startUpload(file, null);
+  };
+
+  const closeCropDialog = () => {
+    if (cropRequest?.file) {
+      URL.revokeObjectURL(cropRequest.imageUrl);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+    setCropRequest(null);
+  };
+
+  const handleCropConfirm = (crop: LogoCropRect) => {
+    if (!cropRequest) return;
+    const { file, imageUrl: sourceUrl } = cropRequest;
+
+    if (file) {
+      URL.revokeObjectURL(sourceUrl);
+      setCropRequest(null);
+      startUpload(file, crop);
+      return;
+    }
+
+    if (!recropAction) return;
+    startRecropTransition(async () => {
+      try {
+        const result = await recropAction(entityId, crop);
+        if (!result.success || !result.imageUrl) {
+          throw new Error(result.error || result.message || `Failed to update ${entityType} image.`);
+        }
+        const timestampedUrl = timestamped(result.imageUrl);
+        setCurrentImageUrl(timestampedUrl);
+        setCropRequest(null);
+        setIsEditing(false);
+        toast.success(t('profile.imageUpload.recropSuccess', 'Mark updated.'));
+        onImageChange?.(timestampedUrl, currentWideUrl);
+      } catch (err: any) {
+        handleError(err, t('profile.imageUpload.recropError', 'Failed to update the mark.'));
       }
     });
   };
@@ -300,12 +441,26 @@ const EntityImageUpload = ({
   };
 
   const renderAvatar = () => {
-    // Use the preview URL if available, otherwise use the current image URL
-    const displayUrl = previewUrl || currentImageUrl;
+    // A wordmark in an 'auto' slot renders whole at the avatar's height: the
+    // stored wide variant when there is one, else an image that measured wide.
+    // Marks and initials fall through to the circle below.
+    const wideSrc = previewUrl
+      ? (isWideImage ? previewUrl : null)
+      : (currentWideUrl ?? (isWideImage ? displayUrl : null));
+    if (previewShape === 'auto' && wideSrc) {
+      return (
+        <img
+          src={wideSrc}
+          alt={entityName}
+          className={`${WIDE_FRAME_CLASS[size]} block w-auto shrink-0 rounded-md object-contain`}
+          data-automation-id={`${entityType}-image-wide-preview`}
+        />
+      );
+    }
 
     // Logo slots preview uncropped: the avatar frame covers-and-crops, which is
     // not what these images do where they are actually rendered.
-    if (previewShape !== 'circle') {
+    if (previewShape === 'square' || previewShape === 'rect') {
       const frame = previewShape === 'rect'
         ? 'h-20 w-56 rounded-md'
         : 'h-20 w-20 rounded-full';
@@ -426,6 +581,25 @@ const EntityImageUpload = ({
                 </Button>
               )}
 
+              {/* Adjust mark: re-cut the square from the stored wordmark */}
+              {recropAction && currentWideUrl && (
+                <Button
+                  id={`recrop-${entityType}-image-button`}
+                  type="button"
+                  variant="soft"
+                  size="sm"
+                  onClick={() => setCropRequest({ imageUrl: currentWideUrl })}
+                  disabled={isPendingUpload || isPendingDelete || isPendingLink || isPendingRecrop}
+                  className="w-fit"
+                  data-automation-id={`recrop-${entityType}-image-button`}
+                >
+                  <Crop className="mr-2 h-4 w-4" />
+                  {currentImageUrl
+                    ? t('profile.imageUpload.adjustMark', 'Adjust mark')
+                    : t('profile.imageUpload.cropFromWide', 'Crop from wide logo')}
+                </Button>
+              )}
+
               <input
                 type="file"
                 accept={accept}
@@ -501,6 +675,17 @@ const EntityImageUpload = ({
         confirmLabel={tCore('common.delete', 'Delete')}
         cancelLabel={tCore('common.cancel', 'Cancel')}
         isConfirming={isPendingDelete}
+      />
+
+      <ImageCropDialog
+        id={`${entityType}-image-crop-dialog`}
+        isOpen={cropRequest !== null}
+        imageUrl={cropRequest?.imageUrl ?? null}
+        imageName={entityName}
+        onClose={closeCropDialog}
+        onConfirm={handleCropConfirm}
+        isConfirming={isPendingRecrop}
+        helpText={cropHelpText}
       />
 
       {/* Document Selector Modal */}

@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+// Manual invoices read terms and payment method from the client's default
+// billing profile; these suites mock knex, so the identity is stubbed.
+vi.mock('@alga-psa/shared/billingClients/billingProfileSettings', async (importOriginal) =>
+  (await import('../../../../test-utils/billingProfileUnitStub')).billingProfileSettingsModuleStub(importOriginal as any));
+
 const mocks = vi.hoisted(() => {
   const insertedInvoices: Record<string, any>[] = [];
   const trx = vi.fn((tableName: string) => {

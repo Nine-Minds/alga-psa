@@ -307,7 +307,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           <img
             src={tenantWideLogoUrl}
             alt={brandDisplayName}
-            className="h-8 w-auto max-w-full object-contain object-left"
+            className="h-14 w-auto max-w-full object-contain object-left"
             onError={() => setFailedWideLogoUrl(tenantWideLogoUrl)}
             data-automation-id="sidebar-wide-logo"
           />
@@ -338,10 +338,12 @@ const Sidebar: React.FC<SidebarProps> = ({
         )}
       </a>
 
-      {/* Back to Main button - shown in settings and billing modes */}
+      {/* Back to Main button - shown in settings and billing modes. The logo
+          link above already pads its bottom, so only the button's own padding
+          separates the two. */}
       {isSubMode && (
         <div
-          className={`px-2 py-2 transition-all duration-200 ease-out ${
+          className={`px-2 pb-2 transition-all duration-200 ease-out ${
             isTransitioning
               ? transitionDirection === 'out'
                 ? 'opacity-0 translate-x-[-10px]'
