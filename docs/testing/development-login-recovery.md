@@ -115,7 +115,10 @@ The stale writer was updated and committed in that checkout as
 `27a235a2a2`. Startup now uses the guarded development credential initializer;
 well-formed existing hashes are retained unless explicit recovery is requested,
 and first-time writes use tenant-scoped compare-and-set. The competing-startup
-regression exercises two initializers against the same isolated store. The old
+regression exercises two initializers against the same isolated store. The
+startup-wiring regression invokes the production development setup path and
+asserts `initializeApp` still calls it, so reverting the startup call site to a
+direct password write fails the test. The old
 service process was stopped externally at 00:44:22 UTC (its card-service log
 records “stopped by request”); this agent did not stop or restart it. No dev
 server was started or woken during this work.
@@ -134,6 +137,21 @@ pre-existing missing checkout dependencies (`RemoteAccessButton.tsx` and
 passed with isolated output in this validation round. The successful repeated
 checks show stability over their interval but cannot prove future writer
 behavior or resolve the later database-authentication failure.
+
+Follow-up diagnosis found this checkout's private `DB_PORT=6472` routed the
+admin connection through PgBouncer. Its local-test PostgreSQL container publishes
+the direct port at 5472, so private ignored `server/.env.local` now sets
+`DB_HOST_ADMIN=127.0.0.1` and `DB_PORT_ADMIN=5472`; no database credential or
+service was changed. Secret-safe fingerprints showed this checkout's existing
+secret files match the mounted secret files used by the active PostgreSQL and
+PgBouncer containers. A read-only direct `SELECT 1` still receives PostgreSQL
+SQLSTATE `28P01` for both configured admin and application roles, while the
+PgBouncer route reports its cached upstream authentication error. Thus the
+endpoint misconfiguration is corrected, but the active database rejects its
+currently mounted credentials; the credential itself cannot be corrected here
+without changing shared database state. The post-build fresh-process check still
+fails before seeded-account lookup completes, so final authentication remains
+unverified.
 The remaining browser smoke sequence is: recover with `--recover`, run the
 fresh-process check, sign in through the browser, edit priorities for several
 minutes (hex Save, dialog Save, Enter commit, Cancel discard, reload and
