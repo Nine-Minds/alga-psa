@@ -1,3 +1,5 @@
+import { readdirSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -26,6 +28,11 @@ describe('WorkflowRuntimeV2TemporalWorker integration', () => {
   });
 
   it('executes authored runtime workflow tasks on workflow-runtime-v2 with workflow-worker as the poller', async () => {
+    // The lane's global setup caches the time-skipping server so its download
+    // never runs inside this test's timeout.
+    const cachedServers = readdirSync(tmpdir()).filter((file) => file.startsWith('temporal-test-server-sdk-typescript-'));
+    expect(cachedServers).not.toHaveLength(0);
+
     testEnv = await TestWorkflowEnvironment.createTimeSkipping();
     const runId = `run-${Date.now()}`;
 
