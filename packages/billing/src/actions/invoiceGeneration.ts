@@ -2506,6 +2506,12 @@ async function resolveRecurringSelectionBillingProfileId(
       if (!executionWindow.scheduleKey || !executionWindow.periodKey) {
         throw new Error('A client-cadence recurring selection must include its schedule and period keys.');
       }
+      // Non-contract time/usage keys identify source records, not persisted
+      // recurring obligations. Their eligibility and charge attribution are
+      // resolved by the billing engine; they supply no contract profile here.
+      if (isUnresolvedSelectorInput(selector)) {
+        continue;
+      }
       const db = tenantDb(knex, tenant);
       const query = db.table('recurring_service_periods as rsp');
       db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_line_id', 'rsp.obligation_id');

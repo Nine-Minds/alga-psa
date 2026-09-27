@@ -27,8 +27,8 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useFormatters: () => ({ formatCurrency: (value: number) => `$${value}`, formatDate: () => 'today' }),
 }));
 vi.mock('@alga-psa/ui/hooks', () => ({ useRangeSelection: () => ({}) }));
-vi.mock('../../src/components/invoices/useInvoiceSyncStatuses', () => ({ useInvoiceSyncStatuses: () => ({ statuses: {}, hidden: true }) }));
-vi.mock('../../src/components/invoices/InvoiceSyncBadge', () => ({ InvoiceSyncBadge: () => null }));
+vi.mock('../src/components/invoices/useInvoiceSyncStatuses', () => ({ useInvoiceSyncStatuses: () => ({ statuses: {}, hidden: true }) }));
+vi.mock('../src/components/invoices/InvoiceSyncBadge', () => ({ InvoiceSyncBadge: () => null }));
 vi.mock('@alga-psa/ui/components/LoadingIndicator', () => ({ default: () => <div>Loading</div> }));
 vi.mock('@alga-psa/ui/components/Card', () => ({ Card: ({ children }: React.PropsWithChildren) => <div>{children}</div> }));
 vi.mock('@alga-psa/ui/components/Button', () => ({ Button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>{children}</button> }));
