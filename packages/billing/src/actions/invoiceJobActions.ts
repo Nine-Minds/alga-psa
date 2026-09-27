@@ -6,8 +6,8 @@ import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { getInvoiceForRendering } from './invoiceQueries';
 import { createPDFGenerationService, publishGeneratedDocumentsToClient } from '../services/pdfGenerationService';
 import { StorageService } from '@alga-psa/storage/StorageService';
-import { StaticTemplateProcessor, TenantEmailService } from '@alga-psa/email';
-import { formatCurrency, dateValueToDate, isValidEmail, enqueueImmediateJob } from '@alga-psa/core';
+import { embedBrandLogo, StaticTemplateProcessor, TenantEmailService } from '@alga-psa/email';
+import { formatCurrency, isValidEmail, enqueueImmediateJob } from '@alga-psa/core';
 import { resolveEmailLocale, getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import Handlebars from 'handlebars';
 import { withAuth } from '@alga-psa/auth';
@@ -17,6 +17,7 @@ import { getClientById } from '@alga-psa/shared/billingClients/clients';
 import { resolveInvoiceBillingRecipient } from '../services/invoiceBillingRecipientService';
 import { ensureInvoiceEmailLinks } from '../services/ensureInvoiceEmailLinks';
 import { getInvoiceEmailLinkContext } from './invoiceEmailLinkContext';
+import { formatInvoiceCalendarDate } from './invoiceCalendarDate';
 import type { Knex } from 'knex';
 
 interface InitialJobData {
@@ -301,19 +302,11 @@ export const getInvoiceEmailRecipientAction = withAuth(async (
       const totalAmount = formatCurrency((invoice.total_amount - (invoice.credit_applied ?? 0)) / 100, amountLocale, currencyCode);
 
       const invoiceDate = invoice.invoice_date
-        ? dateValueToDate(invoice.invoice_date).toLocaleDateString(amountLocale, {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-          })
+        ? formatInvoiceCalendarDate(invoice.invoice_date, amountLocale)
         : null;
 
       const dueDate = invoice.due_date
-        ? dateValueToDate(invoice.due_date).toLocaleDateString(amountLocale, {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-          })
+        ? formatInvoiceCalendarDate(invoice.due_date, amountLocale)
         : null;
 
       recipients.push({
@@ -537,19 +530,11 @@ export const sendInvoiceEmailAction = withAuth(async (
       const totalAmount = formatCurrency((invoice.total_amount - (invoice.credit_applied ?? 0)) / 100, amountLocale, currencyCode);
 
       const invoiceDate = invoice.invoice_date
-        ? dateValueToDate(invoice.invoice_date).toLocaleDateString(amountLocale, {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-          })
+        ? formatInvoiceCalendarDate(invoice.invoice_date, amountLocale)
         : 'N/A';
 
       const dueDate = invoice.due_date
-        ? dateValueToDate(invoice.due_date).toLocaleDateString(amountLocale, {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-          })
+        ? formatInvoiceCalendarDate(invoice.due_date, amountLocale)
         : 'N/A';
 
       const recipientLocale = await resolveEmailLocale(tenant, {
@@ -565,6 +550,7 @@ export const sendInvoiceEmailAction = withAuth(async (
         invoice_type: invoice.invoice_type,
         total_amount: invoice.total_amount,
         credit_applied: invoice.credit_applied,
+        payment_method: invoice.payment_method ?? null,
       });
 
       const emailTemplate = await getInvoiceEmailTemplate(knex, tenant, recipientLocale);
@@ -605,21 +591,28 @@ export const sendInvoiceEmailAction = withAuth(async (
         portalUrl: linkContext.portalUrl,
       });
 
+      const branded = await embedBrandLogo(html, {
+        tenantId: tenant,
+        knex,
+        context: { action: 'sendInvoiceEmail', invoiceId },
+      });
+
       const result = await TenantEmailService.getInstance(tenant).sendEmail({
         tenantId: tenant,
         mailClass: 'billing',
         senderId,
         to: { email: recipientEmail, name: recipientName },
         subject,
-        html,
+        html: branded.html,
         text,
-        templateProcessor: new StaticTemplateProcessor(subject, html, text),
+        templateProcessor: new StaticTemplateProcessor(subject, branded.html, text),
         attachments: [
           {
             filename: `Invoice_${invoice.invoice_number}.pdf`,
             content: buffer,
             contentType: 'application/pdf',
           },
+          ...branded.attachments,
         ],
         entityType: 'invoice',
         entityId: invoiceId,

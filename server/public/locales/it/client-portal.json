@@ -426,6 +426,29 @@
         "expMonth": "Inserisci un mese valido (01-12)",
         "expYear": "Inserisci un anno valido (2024-2099)",
         "cvv": "Inserisci un CVV valido"
+      },
+      "methodUpdateError": "Impossibile aggiornare questo metodo di pagamento. Riprova.",
+      "cardSetup": {
+        "success": "Carta salvata in modo sicuro.",
+        "error": "Non è stato possibile salvare la carta. Riprova."
+      },
+      "autopay": {
+        "title": "Metodi di pagamento e pagamento automatico",
+        "loading": "Caricamento dei metodi di pagamento…",
+        "profileUnavailable": "I metodi di pagamento e le impostazioni del pagamento automatico non sono disponibili per questo profilo di fatturazione.",
+        "cardFallback": "Carta",
+        "enrolled": "Il pagamento automatico è attivo.",
+        "disable": "Disattiva il pagamento automatico",
+        "consent": "Autorizzo addebiti ricorrenti su questa carta per le fatture finalizzate.",
+        "enable": "Attiva il pagamento automatico",
+        "noCards": "Aggiungi una carta per attivare il pagamento automatico.",
+        "changeCard": "Usa questa carta per il pagamento automatico"
+      },
+      "publicCardSetup": {
+        "saved": "Carta salvata",
+        "failed": "Non è stato possibile salvare la tua carta",
+        "savedDescription": "La tua carta è pronta per i pagamenti futuri.",
+        "failedDescription": "Non è stato possibile verificare la configurazione. Chiedi un nuovo link al tuo fornitore di fatturazione."
       }
     }
   },
@@ -1011,5 +1034,11 @@
       "duplicate": "Esiste già un gruppo di visibilità con questi dati per questo cliente.",
       "invalidData": "Dati del gruppo di visibilità non validi. Verificare i dati del gruppo e le bacheche selezionate."
     }
+  },
+  "tabs": {
+    "paymentMethods": "Metodi di pagamento e pagamento automatico"
+  },
+  "invoice": {
+    "autopayWillCharge": "Verrà addebitato il {{date}} su {{brand}} •••• {{last4}}"
   }
 }

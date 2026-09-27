@@ -1726,7 +1726,20 @@
     "paymentTerms": "Conditions de paiement",
     "taxExempt": "Exonéré de taxe",
     "taxExemptInherited": "Hérité du client ({{value}})",
-    "regionNote": "La région fiscale ne se définit pas ici. Elle suit le lieu de livraison : le service, puis le site de la ligne de contrat, puis la valeur par défaut du client."
+    "regionNote": "La région fiscale ne se définit pas ici. Elle suit le lieu de livraison : le service, puis le site de la ligne de contrat, puis la valeur par défaut du client.",
+    "inheritFromClient": "Hériter du client ({{value}})",
+    "paymentMethod": "Mode de paiement",
+    "paymentMethodHint": "Les factures réglées par chèque ou virement bancaire ne comportent pas de lien « Payer maintenant » en ligne.",
+    "cardOnFileLabel": "Carte enregistrée",
+    "cardOnFileHint": "Le client gère les cartes enregistrées dans le portail client.",
+    "noCardOnFile": "Aucune carte enregistrée",
+    "cardType": {
+      "card": "Carte",
+      "bankAccount": "Compte bancaire"
+    },
+    "cardExpiry": ", expire le {{month}}/{{year}}",
+    "legacyPaymentTerms": "« {{value}} » n’est pas une condition de paiement reconnue et n’a jamais été appliquée. Elle sera supprimée lors de l’enregistrement.",
+    "cardOnFile": "{{type}} se terminant par {{last4}}{{expiry}}"
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Alertes de solde prépayé",
@@ -1879,7 +1892,9 @@
       "recordNotFound": "Cet enregistrement ou ce profil de facturation n’existe plus.",
       "otherClient": "Ce profil de facturation appartient à un autre client.",
       "archived": "Ce profil de facturation est archivé.",
-      "selectionNotThisClient": "L’un des profils de facturation sélectionnés n’appartient pas à ce client."
+      "selectionNotThisClient": "L’un des profils de facturation sélectionnés n’appartient pas à ce client.",
+      "invalidPaymentTerms": "Choisissez l’une des conditions de paiement proposées.",
+      "invalidPaymentMethod": "Choisissez l’un des modes de paiement proposés."
     },
     "clientMerge": {
       "blocked": "Cette fusion ne peut pas être effectuée.",
@@ -1897,6 +1912,24 @@
       "duplicateManager": "Un profil de facturation ne peut avoir qu'un seul responsable.",
       "notThisClient": "L'un des contacts sélectionnés n'appartient pas au client de ce profil de facturation."
     }
+  },
+  "clientAutopay": {
+    "setupLinkTitle": "Lien de configuration de la carte",
+    "setupLinkFallback": "Copiez ce lien pour le partager avec votre client.",
+    "unknownUser": "Utilisateur inconnu",
+    "changeCard": "Utiliser cette carte pour le prélèvement automatique",
+    "title": "Prélèvement automatique · {{profile}}",
+    "active": "Activé",
+    "authorization": "Autorisé par {{user}} le {{date}} ({{source}})",
+    "attestation": "Le client a autorisé des débits récurrents",
+    "enable": "Activer le prélèvement automatique",
+    "disable": "Désactiver le prélèvement automatique",
+    "copySetupLink": "Copier le lien de configuration",
+    "enabled": "Prélèvement automatique activé",
+    "disabled": "Prélèvement automatique désactivé",
+    "linkCopied": "Lien de configuration de la carte copié",
+    "recentAttempts": "Tentatives récentes",
+    "noAttempts": "Aucune tentative pour le moment"
   },
   "mergeClients": {
     "title": "Fusionner un client dans celui-ci",

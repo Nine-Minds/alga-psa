@@ -1446,6 +1446,15 @@
       "actions": {
         "save": "Salvar configurações",
         "saving": "Salvando..."
+      },
+      "autopay": {
+        "label": "Permitir pagamento automático",
+        "description": "Permite que os perfis de faturamento autorizem pagamentos automáticos com cartão.",
+        "chargeTiming": "Momento da cobrança",
+        "onFinalize": "Quando a fatura for finalizada",
+        "onDueDate": "Na data de vencimento",
+        "retryDays": "Intervalos de nova tentativa (dias)",
+        "consentText": "Texto de consentimento do pagamento automático"
       }
     },
     "stripe": {

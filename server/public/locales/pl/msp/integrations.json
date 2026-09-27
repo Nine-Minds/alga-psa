@@ -3716,7 +3716,8 @@
         "failedTitle": "Konfiguracja webhooka nie powiodła się",
         "failedBody": "Automatyczna konfiguracja webhooka nie powiodła się. Kliknij opcję ponowienia, aby spróbować ponownie.",
         "configuring": "Konfigurowanie...",
-        "retry": "Ponów konfigurację"
+        "retry": "Ponów konfigurację",
+        "eventsOutOfDate": "Zdarzenia webhooka są nieaktualne. Ponów konfigurację webhooka, aby je zaktualizować."
       },
       "disconnectDialog": {
         "title": "Odłącz Stripe",

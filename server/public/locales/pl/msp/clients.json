@@ -1778,7 +1778,20 @@
     "paymentTerms": "Warunki płatności",
     "taxExempt": "Zwolniony z podatku",
     "taxExemptInherited": "Dziedziczone od klienta ({{value}})",
-    "regionNote": "Regionu podatkowego nie ustawia się tutaj. Wynika on z miejsca wykonania — usługa, potem lokalizacja pozycji umowy, potem domyślna wartość klienta."
+    "regionNote": "Regionu podatkowego nie ustawia się tutaj. Wynika on z miejsca wykonania — usługa, potem lokalizacja pozycji umowy, potem domyślna wartość klienta.",
+    "inheritFromClient": "Dziedzicz po kliencie ({{value}})",
+    "paymentMethod": "Metoda płatności",
+    "paymentMethodHint": "Faktury płatne czekiem lub przelewem bankowym nie zawierają internetowego linku „Zapłać teraz”.",
+    "cardOnFileLabel": "Zapisana karta",
+    "cardOnFileHint": "Klient zarządza zapisanymi kartami w portalu klienta.",
+    "noCardOnFile": "Brak zapisanej karty",
+    "cardType": {
+      "card": "Karta",
+      "bankAccount": "Rachunek bankowy"
+    },
+    "cardExpiry": ", ważna do {{month}}/{{year}}",
+    "legacyPaymentTerms": "„{{value}}” nie jest rozpoznawanym warunkiem płatności i nigdy nie został zastosowany. Zapisanie spowoduje jego usunięcie.",
+    "cardOnFile": "{{type}} z końcówką {{last4}}{{expiry}}"
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Alerty salda przedpłaconego",
@@ -1931,7 +1944,9 @@
       "recordNotFound": "Ten rekord lub profil rozliczeniowy już nie istnieje.",
       "otherClient": "Ten profil rozliczeniowy należy do innego klienta.",
       "archived": "Ten profil rozliczeniowy jest zarchiwizowany.",
-      "selectionNotThisClient": "Jeden z wybranych profili rozliczeniowych nie należy do tego klienta."
+      "selectionNotThisClient": "Jeden z wybranych profili rozliczeniowych nie należy do tego klienta.",
+      "invalidPaymentTerms": "Wybierz jeden z wymienionych terminów płatności.",
+      "invalidPaymentMethod": "Wybierz jedną z wymienionych metod płatności."
     },
     "clientMerge": {
       "blocked": "Nie można ukończyć tego scalenia.",
@@ -1949,6 +1964,24 @@
       "duplicateManager": "Profil rozliczeniowy może mieć tylko jednego kierownika.",
       "notThisClient": "Jeden z wybranych kontaktów nie należy do klienta tego profilu rozliczeniowego."
     }
+  },
+  "clientAutopay": {
+    "setupLinkTitle": "Link do konfiguracji karty",
+    "setupLinkFallback": "Skopiuj ten link, aby udostępnić go klientowi.",
+    "unknownUser": "Nieznany użytkownik",
+    "changeCard": "Użyj tej karty do płatności automatycznej",
+    "title": "Płatność automatyczna · {{profile}}",
+    "active": "Włączona",
+    "authorization": "Autoryzowane przez {{user}} dnia {{date}} ({{source}})",
+    "attestation": "Klient autoryzował cykliczne obciążenia",
+    "enable": "Włącz płatność automatyczną",
+    "disable": "Wyłącz płatność automatyczną",
+    "copySetupLink": "Kopiuj link konfiguracji",
+    "enabled": "Płatność automatyczna włączona",
+    "disabled": "Płatność automatyczna wyłączona",
+    "linkCopied": "Skopiowano link do konfiguracji karty",
+    "recentAttempts": "Ostatnie próby",
+    "noAttempts": "Brak prób"
   },
   "mergeClients": {
     "title": "Scal klienta z tym klientem",

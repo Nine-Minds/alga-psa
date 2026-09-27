@@ -1446,6 +1446,15 @@
       "actions": {
         "save": "Einstellungen speichern",
         "saving": "Wird gespeichert..."
+      },
+      "autopay": {
+        "label": "Automatische Zahlung zulassen",
+        "description": "Abrechnungsprofilen erlauben, automatische Kartenzahlungen zu autorisieren.",
+        "chargeTiming": "Belastungszeitpunkt",
+        "onFinalize": "Bei Abschluss der Rechnung",
+        "onDueDate": "Am Fälligkeitsdatum",
+        "retryDays": "Wiederholungsintervalle (Tage)",
+        "consentText": "Einwilligungstext für die automatische Zahlung"
       }
     },
     "stripe": {

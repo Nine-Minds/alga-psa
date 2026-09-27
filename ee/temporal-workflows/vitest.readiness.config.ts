@@ -27,6 +27,7 @@ export default defineConfig({
       'src/workflows/__tests__/workflow-runtime-v2-simulator-contract.test.ts',
       'src/activities/__tests__/workflow-runtime-v2-activities.test.ts',
       'src/activities/__tests__/sla-activities.test.ts',
+      'src/activities/__tests__/autopay-activities.test.ts',
       'src/activities/__tests__/marketing-activities.test.ts',
       'src/activities/__tests__/maintenance-fanout-activities.test.ts',
       'src/activities/__tests__/tenant-suspension-activities.test.ts',

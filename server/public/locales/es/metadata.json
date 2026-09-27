@@ -26,6 +26,11 @@
         "detail": {
           "title": "Detalles de la cotización"
         }
+      },
+      "paymentMethods": {
+        "setupComplete": {
+          "title": "Configuración de tarjeta"
+        }
       }
     },
     "devices": {
@@ -613,6 +618,11 @@
     },
     "tab": {
       "title": "Equipos"
+    }
+  },
+  "paymentMethods": {
+    "setupComplete": {
+      "title": "Configuración de tarjeta"
     }
   }
 }

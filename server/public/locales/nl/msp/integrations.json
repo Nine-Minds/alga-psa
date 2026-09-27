@@ -3716,7 +3716,8 @@
         "failedTitle": "Webhook-configuratie mislukt",
         "failedBody": "Automatische webhook-configuratie mislukt. Klik op Opnieuw proberen om de configuratie opnieuw te proberen.",
         "configuring": "Configureren...",
-        "retry": "Configuratie opnieuw proberen"
+        "retry": "Configuratie opnieuw proberen",
+        "eventsOutOfDate": "De webhookgebeurtenissen zijn verouderd. Probeer de webhookconfiguratie opnieuw om ze bij te werken."
       },
       "disconnectDialog": {
         "title": "Stripe loskoppelen",

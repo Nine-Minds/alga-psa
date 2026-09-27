@@ -14,6 +14,7 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import logger from '@alga-psa/core/logger';
 import { tenantDb } from '@alga-psa/db';
 import Stripe from 'stripe';
+import { STRIPE_WEBHOOK_EVENTS, reconcileStripeWebhookEvents } from '../payments/stripeWebhookEvents';
 import * as fs from 'fs';
 import {
   IPaymentProviderConfig,
@@ -78,16 +79,6 @@ interface StripeCredentials {
 }
 
 /**
- * Events we subscribe to for invoice payment processing.
- * These are automatically configured when connecting Stripe.
- */
-const STRIPE_WEBHOOK_EVENTS: Stripe.WebhookEndpointCreateParams.EnabledEvent[] = [
-  'checkout.session.completed',
-  'payment_intent.succeeded',
-  'payment_intent.payment_failed',
-];
-
-/**
  * Payment provider configuration for display.
  */
 interface PaymentProviderDisplay {
@@ -101,6 +92,7 @@ interface PaymentProviderDisplay {
   has_webhook_secret: boolean;
   webhook_url?: string;
   webhook_events?: string[];
+  webhook_events_out_of_date?: boolean;
   webhook_status?: 'enabled' | 'disabled' | 'not_configured';
 }
 
@@ -126,6 +118,8 @@ export const getPaymentConfigAction = withAuth(async (user, { tenant }): Promise
 
     // Determine webhook status - verify the secret actually exists, not just the path
     const configuration = config.configuration as any;
+    const configuredWebhookEvents = Array.isArray(configuration?.webhook_events) ? [...configuration.webhook_events].sort() : [];
+    const requiredWebhookEvents = [...STRIPE_WEBHOOK_EVENTS].sort();
     let webhookStatus: 'enabled' | 'disabled' | 'not_configured' = 'not_configured';
     let hasWebhookSecret = false;
 
@@ -169,7 +163,8 @@ export const getPaymentConfigAction = withAuth(async (user, { tenant }): Promise
       publishable_key: configuration?.publishable_key,
       has_webhook_secret: hasWebhookSecret,
       webhook_url: webhookUrl,
-      webhook_events: STRIPE_WEBHOOK_EVENTS as string[],
+      webhook_events: ((configuration?.webhook_events as string[] | undefined) ?? STRIPE_WEBHOOK_EVENTS) as string[],
+      webhook_events_out_of_date: JSON.stringify(configuredWebhookEvents) !== JSON.stringify(requiredWebhookEvents),
       webhook_status: webhookStatus,
     };
 
@@ -379,6 +374,7 @@ export const connectStripeAction = withAuth(async (
       userId: user.user_id,
       webhookConfigured,
     });
+    if (webhookConfigured) await reconcileStripeWebhookEvents(tenant);
 
     return {
       success: true,
@@ -451,7 +447,6 @@ export const disconnectStripeAction = withAuth(async (user, { tenant }): Promise
         webhook_secret_vault_path: null,
         updated_at: knex.fn.now(),
       });
-
     // Delete the webhook secret from vault
     try {
       await secretProvider.deleteTenantSecret(tenant, 'stripe_payment_webhook_secret');
@@ -499,6 +494,9 @@ export const updatePaymentSettingsAction = withAuth(async (
       ...DEFAULT_PAYMENT_SETTINGS,
       ...currentSettings,
       ...settings,
+      ...(settings.autopayConsentText !== undefined && settings.autopayConsentText !== currentSettings.autopayConsentText
+        ? { autopayConsentTextVersion: String(Number(currentSettings.autopayConsentTextVersion ?? '0') + 1) }
+        : {}),
     };
 
     // Update config
@@ -508,6 +506,7 @@ export const updatePaymentSettingsAction = withAuth(async (
         settings: newSettings,
         updated_at: knex.fn.now(),
       });
+    if (newSettings.autopayEnabled && !currentSettings.autopayEnabled) await reconcileStripeWebhookEvents(tenant);
 
     logger.info('[PaymentActions] Payment settings updated', {
       tenantId: tenant,
@@ -726,6 +725,8 @@ export const retryStripeWebhookConfigurationAction = withAuth(async (user, { ten
         webhook_secret_vault_path: `tenant/${tenant}/stripe_payment_webhook_secret`,
         updated_at: knex.fn.now(),
       });
+
+    await reconcileStripeWebhookEvents(tenant);
 
     logger.info('[PaymentActions] Webhook configuration retry successful', {
       endpointId: webhookEndpointId,

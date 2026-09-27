@@ -608,6 +608,8 @@ export interface IBucketUsage extends TenantEntity {
 export interface PaymentMethod extends TenantEntity {
   payment_method_id: string;
   client_id: string;
+  /** The billing profile this saved method belongs to (never shared across profiles). */
+  billing_profile_id: string;
   type: 'credit_card' | 'bank_account';
   last4: string;
   exp_month?: string;

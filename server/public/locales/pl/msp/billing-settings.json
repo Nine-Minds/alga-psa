@@ -1448,6 +1448,15 @@
       "actions": {
         "save": "Zapisz ustawienia",
         "saving": "Zapisywanie..."
+      },
+      "autopay": {
+        "label": "Zezwalaj na płatność automatyczną",
+        "description": "Zezwalaj profilom rozliczeniowym na autoryzowanie automatycznych płatności kartą.",
+        "chargeTiming": "Termin obciążenia",
+        "onFinalize": "Po zatwierdzeniu faktury",
+        "onDueDate": "W terminie płatności",
+        "retryDays": "Odstępy między ponownymi próbami (dni)",
+        "consentText": "Treść zgody na płatność automatyczną"
       }
     },
     "stripe": {

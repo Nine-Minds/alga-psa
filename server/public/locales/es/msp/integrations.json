@@ -3716,7 +3716,8 @@
         "failedTitle": "No se pudo configurar el webhook",
         "failedBody": "No se pudo configurar automáticamente el webhook. Haga clic en Reintentar para volver a intentarlo.",
         "configuring": "Configurando...",
-        "retry": "Reintentar configuración"
+        "retry": "Reintentar configuración",
+        "eventsOutOfDate": "Los eventos del webhook están desactualizados. Vuelva a intentar la configuración del webhook para actualizarlos."
       },
       "disconnectDialog": {
         "title": "Desconectar Stripe",

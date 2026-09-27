@@ -19,6 +19,8 @@ export default {
       'src/workflows/__tests__/sla-ticket-workflow.test.ts',
       'src/workflows/__tests__/sla-ticket-workflow.integration.test.ts',
       'src/workflows/__tests__/managed-email-domain-workflow.test.ts',
+      'src/workflows/__tests__/invoice-autopay-workflow.test.ts',
+      'src/workflows/__tests__/autopay-reconcile-workflow.test.ts',
       'src/workflows/portal-domains/__tests__/registration.workflow.integration.test.ts',
     ],
     coverage: { provider: 'v8', enabled: false },
