@@ -38,10 +38,13 @@ describe('multiple outbound sender migration', () => {
     const knex: any = {
       schema: { createTable: vi.fn(async (_name: string, callback: (builder: any) => void) => callback(table)), dropTableIfExists: vi.fn() },
       fn: { now: vi.fn(() => 'now()') },
-      raw: vi.fn(async (sql: string) => {
+      raw: vi.fn(async (sql: string, bindings?: unknown[]) => {
         statements.push(sql);
         if (sql.includes('pg_extension')) return { rows: [{ extname: 'citus' }] };
         if (sql.includes('pg_proc')) return { rows: [{ exists: true }] };
+        if (sql.includes('pg_dist_partition')) {
+          return { rows: [{ is_distributed: bindings?.[0] === 'boards' }] };
+        }
         return { rows: [] };
       }),
     };
