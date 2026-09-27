@@ -61,6 +61,38 @@ assumptions remain for PR #3492 owner confirmation.
 Live smoke and reseeding `SMOKE-ADJ-1` remain outstanding for the authorized
 smoke step. The app server must remain stopped during this implementation step.
 
+### Draft Implementation live verification handoff
+
+Run this walkthrough on the current repair head after the app server is started
+for the separate smoke step. Capture screenshots and record the invoice IDs,
+discount source IDs, expected/actual totals, and reload results.
+
+1. Open the contract template used for Mountain Dental and author a 10%
+   contract-wide default discount. Create Mountain Dental's client contract and
+   a second client's contract from that template. On both Discounts tabs,
+   confirm each has one independently editable copied definition.
+2. Generate or refresh an eligible draft invoice for each client contract.
+   Confirm exactly one linked discount row per assignment and invoice, applied
+   to that contract's eligible charges only. Refresh again and confirm no
+   duplicate. Edit the template discount and refresh; confirm existing copies
+   remain unchanged. Edit one client copy and confirm only that client's next
+   refresh changes.
+3. In the invoice adjustment editor, edit and remove a manual one-time row,
+   then confirm generated rows remain read-only. Select a billed service for a
+   partial-period increase and decrease. Verify its service period, derived
+   units × prorated per-unit rate × covered/full days, tax and attribution.
+   Save and reload, follow “Is this a permanent change? Record it on the
+   contract instead”, and confirm it opens the selected contract Lines surface.
+   Confirm an overlapping fabricated/companion true-up requires confirmation.
+4. Verify the customer-facing preview and PDF, then portal and accounting
+   export where the environment permits. Record portal/export outcomes
+   separately; neither is established by automated tests. Reseed
+   `SMOKE-ADJ-1` through the calculator UI and retain the UI evidence.
+
+The app server remained stopped during implementation. This walkthrough,
+fixture reseeding, combined-branch companion verification, and any unavailable
+portal/export checks remain release evidence, not completed validation.
+
 Date: 2026-09-22
 Card: b97eda7b-0e3f-4b09-be80-6b57f934d8a5
 Companion: f6e7254b-0c74-468d-9dd6-822bdf659e15 (scheduled product quantity and price changes)

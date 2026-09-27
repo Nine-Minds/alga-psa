@@ -43,12 +43,14 @@ authorized smoke step. Automated coverage below is not live UI evidence.
 | `contractInvoiceAdjustments.db.test.ts` | 40 passed: calculator add/edit/reload, decimal quantities, $3,900 + $150 and one $405 discount, independent copies, scoped settlement/retry, tax, lifecycle, and same-method source lines |
 | `contractDiscountAssignmentsClientScopeMigration.integration.test.ts` | 5 passed: fresh creation, populated fanout, ownership, reruns, copy identities and cascades |
 | `contractInvoiceAdjustments.test.ts` | 28 passed |
+| Current-head rerun: `contractInvoiceAdjustments.test.ts`, `contractInvoiceAdjustments.db.test.ts`, `contractDiscountAssignmentsClientScopeMigration.integration.test.ts` | 28 + 40 + 5 passed, including fabricated companion overlap confirmation and migration copy idempotency |
+| Current-head wizard guards: `contractWizardActionErrors.test.ts`, `contractWizardResume.test.tsx`, `contractWizardBucketPools.submission.test.tsx` | 21 passed |
 | `contractLineAction.protectedHistory`, `contractLineWindow`, `contractWizardActionErrors`, `contractWizardResume`, `contractWizardBucketPools.submission` | 34 passed across 5 files |
 | `contractInvoiceManualCredit` and `billingInvoiceGeneration_discounts` | 11 passed, including tax overrides and quantity-derived credits |
-| Billing build | Passed (`npm run build --workspace=@alga-psa/billing`) |
-| Locale generation and validation | Passed; standing-term message translated in all eight supported locales and pseudo-locales regenerated |
+| Billing build | Passed on current head (`npm run build --workspace=@alga-psa/billing`) |
+| Locale generation and validation | Passed on current head (`npm run test:i18n`); 0 untranslated strings, forbidden terms, structural errors, or new unwired components; pseudo-locales regenerated |
 | Focused lint | 0 errors; existing warnings remain |
-| Billing typecheck | 11 diagnostics remain in unchanged `profitabilityReportActions.ts` and `packages/ui/src/editor/*`; none in changed files |
+| Billing typecheck | Rechecked with 8 GB heap: 11 diagnostics, all in unchanged `profitabilityReportActions.ts` (6) and `packages/ui/src/editor/*` (5); none in changed files. A default-heap run first exhausted memory. |
 | `git diff --check` | Passed |
 
 The same-method wizard test was run against the parent wizard as a negative

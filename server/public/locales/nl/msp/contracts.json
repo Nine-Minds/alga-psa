@@ -2577,7 +2577,7 @@
     },
     "sharedEditNotice": "Deze definitie wordt gedeeld. Wijzigingen gelden voor alle gekoppelde contracten bij de volgende geschikte conceptverversing.",
     "dialog": {
-      "contractAttachmentLineScopeLocked": "This discount is attached to this client contract. To make it line-scoped, detach it and create a line-scoped discount."
+      "contractAttachmentLineScopeLocked": "Deze korting is gekoppeld aan dit klantcontract. Koppel de korting los en maak een regelgebonden korting om deze tot één regel te beperken."
     }
   }
 }

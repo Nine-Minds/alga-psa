@@ -2583,7 +2583,7 @@
       "inactive": "Inactif"
     },
     "dialog": {
-      "contractAttachmentLineScopeLocked": "This discount is attached to this client contract. To make it line-scoped, detach it and create a line-scoped discount."
+      "contractAttachmentLineScopeLocked": "Cette remise est associée à ce contrat client. Pour la limiter à une ligne, dissociez-la et créez une remise propre à cette ligne."
     }
   }
 }
