@@ -285,6 +285,7 @@ export const ticketWithDetailsResponseSchema = ticketResponseSchema.extend({
   entered_by_name: z.string().optional(),
   assigned_to_name: z.string().optional(),
   location_name: z.string().optional(),
+  location_address: z.string().nullable().optional(),
   
   // Related objects
   client: z.object({

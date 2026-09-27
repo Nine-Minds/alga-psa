@@ -584,6 +584,7 @@ export function EmailTemplates() {
 
       <DataTable
         id="email-templates-table"
+        persistPageSize={false}
         data={flatList}
         columns={columns}
         pagination={true}

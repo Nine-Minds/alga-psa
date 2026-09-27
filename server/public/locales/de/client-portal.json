@@ -426,6 +426,29 @@
         "expMonth": "Bitte gib einen gültigen Monat ein (01-12)",
         "expYear": "Bitte gib ein gültiges Jahr ein (2024-2099)",
         "cvv": "Bitte gib eine gültige Prüfziffer (CVV) ein"
+      },
+      "methodUpdateError": "Diese Zahlungsmethode konnte nicht aktualisiert werden. Bitte versuchen Sie es erneut.",
+      "cardSetup": {
+        "success": "Karte sicher gespeichert.",
+        "error": "Die Karte konnte nicht gespeichert werden. Bitte versuchen Sie es erneut."
+      },
+      "autopay": {
+        "title": "Zahlungsmethoden & automatische Zahlung",
+        "loading": "Zahlungsmethoden werden geladen…",
+        "profileUnavailable": "Zahlungsmethoden und Einstellungen für die automatische Zahlung sind für dieses Abrechnungsprofil nicht verfügbar.",
+        "cardFallback": "Karte",
+        "enrolled": "Die automatische Zahlung ist aktiviert.",
+        "disable": "Automatische Zahlung deaktivieren",
+        "consent": "Ich autorisiere wiederkehrende Belastungen dieser Karte für abgeschlossene Rechnungen.",
+        "enable": "Automatische Zahlung aktivieren",
+        "noCards": "Fügen Sie eine Karte hinzu, um die automatische Zahlung zu aktivieren.",
+        "changeCard": "Diese Karte für die automatische Zahlung verwenden"
+      },
+      "publicCardSetup": {
+        "saved": "Karte gespeichert",
+        "failed": "Ihre Karte konnte nicht gespeichert werden",
+        "savedDescription": "Ihre Karte ist für zukünftige Zahlungen bereit.",
+        "failedDescription": "Die Einrichtung konnte nicht bestätigt werden. Bitte fordern Sie bei Ihrem Rechnungssteller einen neuen Link an."
       }
     }
   },
@@ -1011,5 +1034,11 @@
       "duplicate": "Eine Sichtbarkeitsgruppe mit diesen Angaben existiert für diesen Kunden bereits.",
       "invalidData": "Ungültige Daten für die Sichtbarkeitsgruppe. Bitte überprüfen Sie die Angaben und die ausgewählten Boards."
     }
+  },
+  "tabs": {
+    "paymentMethods": "Zahlungsmethoden & automatische Zahlung"
+  },
+  "invoice": {
+    "autopayWillCharge": "Wird am {{date}} von {{brand}} •••• {{last4}} abgebucht"
   }
 }

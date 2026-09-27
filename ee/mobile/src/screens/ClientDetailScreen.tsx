@@ -1,4 +1,6 @@
+import { formatPhoneForDisplay, formatPhoneLabel } from "../../../../packages/validation/src/lib/phone";
 import { Linking, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { buildMapsUrl, mapsQueryFromLines } from "../urls/mapsUrl";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { CommonActions } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
@@ -257,6 +259,7 @@ export function ClientDetailScreen({ navigation, route }: Props) {
   const logoUri = detail.logoUrl ? `${config.baseUrl}${detail.logoUrl}` : null;
   const notSet = t("detail.notSet", { defaultValue: "Not set" });
   const clientPhone = detail.phone_no?.trim() || null;
+  const formattedClientPhone = formatPhoneForDisplay(clientPhone);
 
   const detailRows: {
     icon: keyof typeof Feather.glyphMap;
@@ -268,9 +271,9 @@ export function ClientDetailScreen({ navigation, route }: Props) {
     {
       icon: "phone",
       label: t("detail.phone"),
-      value: detail.phone_no,
+      value: formatPhoneLabel(formattedClientPhone, t("detail.phoneExtension", { defaultValue: "ext." })),
       onPress: clientPhone
-        ? () => placeCall({ origin: { kind: "client", id: clientId }, phone: clientPhone, name: detail.client_name, contactId: null, clientId })
+        ? () => placeCall({ origin: { kind: "client", id: clientId }, phone: formattedClientPhone.e164 || clientPhone, name: detail.client_name, contactId: null, clientId })
         : undefined,
     },
     {
@@ -285,7 +288,12 @@ export function ClientDetailScreen({ navigation, route }: Props) {
       value: detail.url,
       onPress: detail.url ? () => void Linking.openURL(websiteUrl(detail.url ?? "")) : undefined,
     },
-    { icon: "map-pin", label: t("detail.address"), value: detail.address },
+    {
+      icon: "map-pin",
+      label: t("detail.address"),
+      value: detail.address,
+      onPress: detail.address ? () => void Linking.openURL(buildMapsUrl(mapsQueryFromLines(detail.address ?? ""))) : undefined,
+    },
     { icon: "briefcase", label: t("detail.clientType", { defaultValue: "Client type" }), value: detail.client_type },
     { icon: "layers", label: t("detail.industry", { defaultValue: "Industry" }), value: detail.properties?.industry },
     {
@@ -457,18 +465,30 @@ export function ClientDetailScreen({ navigation, route }: Props) {
                   {location.location_name || t("detail.locationFallback")}
                   {location.is_default ? ` • ${t("detail.defaultLocation")}` : ""}
                 </Text>
-                <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: 2 }}>
-                  {locationLine(location)}
-                </Text>
+                {locationLine(location) ? (
+                  <Pressable
+                    onPress={() => void Linking.openURL(buildMapsUrl(mapsQueryFromLines(locationLine(location))))}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("detail.openInMaps")}
+                    hitSlop={4}
+                  >
+                    <Text style={{ ...theme.typography.caption, color: theme.colors.primary, marginTop: 2 }}>
+                      {locationLine(location)}
+                    </Text>
+                  </Pressable>
+                ) : null}
                 {location.phone ? (
                   <Pressable
-                    onPress={() => void Linking.openURL(`tel:${location.phone}`)}
+                    onPress={() => {
+                      const formattedPhone = formatPhoneForDisplay(location.phone, location.phone_extension, location.country_code);
+                      return Linking.openURL(`tel:${formattedPhone.e164 || location.phone}`);
+                    }}
                     accessibilityRole="button"
                     accessibilityLabel={t("detail.phone")}
                     hitSlop={4}
                   >
                     <Text style={{ ...theme.typography.caption, color: theme.colors.primary, marginTop: theme.spacing.xs }}>
-                      {location.phone}
+                      {formatPhoneLabel(formatPhoneForDisplay(location.phone, location.phone_extension, location.country_code), t("detail.phoneExtension", { defaultValue: "ext." }))}
                     </Text>
                   </Pressable>
                 ) : null}

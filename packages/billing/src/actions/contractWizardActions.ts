@@ -147,6 +147,11 @@ export type ClientContractWizardSubmission = {
   contract_name: string;
   description?: string;
   client_id: string;
+  /**
+   * Billing profile this contract bills to (step 3 of the attribution chain).
+   * Omitted / null keeps the client-default fallback.
+   */
+  billing_profile_id?: string | null;
   start_date: string;
   renewal_mode?: 'none' | 'manual' | 'auto';
   notice_period_days?: number;
@@ -1513,6 +1518,7 @@ export const createClientContractFromWizard = withAuth(async (
       po_required: submission.po_required ?? false,
       po_number: submission.po_number ?? null,
       po_amount: submission.po_amount ?? null,
+      billing_profile_id: submission.billing_profile_id ?? null,
     });
 
     if (!isDraft) {
@@ -1885,6 +1891,7 @@ export const getContractTemplateSnapshotForClientWizard = withAuth(async (
 
 export type DraftContractWizardData = {
   client_id: string;
+  billing_profile_id?: string | null;
   contract_name: string;
   start_date: string;
   end_date?: string;
@@ -2172,6 +2179,7 @@ export const getDraftContractForResume = withAuth(async (
 
   return {
     client_id: clientContract.client_id,
+    billing_profile_id: clientContract.billing_profile_id ?? null,
     contract_name: contract.contract_name,
     start_date: startDate,
     end_date: normalizeDateOnly(clientContract.end_date) ?? undefined,

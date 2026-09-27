@@ -166,6 +166,8 @@ describe('CreateTicketFromAssetButton board-scoped statuses', () => {
             getAssetRmmData: vi.fn(),
             refreshAssetRmmData: vi.fn(),
             triggerRmmReboot: vi.fn(),
+            getAssetRemoteControlTypes: vi.fn(async () => []),
+            getAssetRemoteControlUrl: vi.fn(async () => null),
           },
         }}
       >

@@ -50,6 +50,7 @@ COPY packages/integrations/package.json ./packages/integrations/
 COPY packages/inventory/package.json ./packages/inventory/
 COPY packages/jobs/package.json ./packages/jobs/
 COPY packages/licensing/package.json ./packages/licensing/
+COPY packages/list-views/package.json ./packages/list-views/
 COPY packages/notifications/package.json ./packages/notifications/
 COPY packages/opportunities/package.json ./packages/opportunities/
 COPY packages/projects/package.json ./packages/projects/

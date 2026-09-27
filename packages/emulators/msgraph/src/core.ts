@@ -439,10 +439,25 @@ export class MsGraphCore implements EmulatorCore {
   rotateRefreshTokens = true;
   botConfig: BotConfig = { ...DEFAULT_BOT_CONFIG };
   private idCounter = 0;
+  /** Optional delegation policies keyed by mailbox and OAuth client (the emulator's delegate identity). */
+  private readonly mailboxFolderPermissions = new Map<string, { fullAccess: boolean; folders: Set<string> }>();
 
   constructor(readonly env: HostEnv) {}
 
+  setMailboxFolderPermissions(mailbox: string, delegate: string, permission: { fullAccess?: boolean; folders?: string[] }): void {
+    this.mailboxFolderPermissions.set(`${mailbox.toLowerCase()}|${delegate.toLowerCase()}`, {
+      fullAccess: Boolean(permission.fullAccess), folders: new Set((permission.folders || []).map((folder) => folder.toLowerCase())),
+    });
+  }
+
+  canAccessMailboxFolder(mailbox: string, delegate: string, folder: string, root = false): boolean | undefined {
+    const policy = this.mailboxFolderPermissions.get(`${mailbox.toLowerCase()}|${delegate.toLowerCase()}`);
+    if (!policy) return undefined;
+    return policy.fullAccess || (!root && (policy.folders.has(folder.toLowerCase()) || policy.folders.has('inbox') && folder.toLowerCase() === 'emulated-inbox-folder'));
+  }
+
   reset(): void {
+    this.mailboxFolderPermissions.clear();
     this.clients.clear();
     this.codes.clear();
     this.refreshTokens.clear();

@@ -165,6 +165,27 @@
         "loadStatuses": "Kan de status van het verlengingsticket niet laden",
         "save": "Kan de automatiseringsinstellingen voor verlenging niet opslaan"
       }
+    },
+    "quotes": {
+      "title": "Offertes",
+      "description": "Stel de standaardgeldigheidsduur voor nieuwe offertes in.",
+      "fields": {
+        "validityDays": {
+          "label": "Standaardgeldigheidsduur (dagen)",
+          "help": "Nieuwe offertes zijn dit aantal dagen geldig."
+        }
+      },
+      "actions": {
+        "save": "Opslaan"
+      },
+      "toast": {
+        "updated": "Offerte-instellingen zijn bijgewerkt."
+      },
+      "errors": {
+        "load": "Instellingen laden mislukt",
+        "save": "Instellingen opslaan mislukt",
+        "range": "Voer een geheel getal van 1 tot en met 365 in."
+      }
     }
   },
   "quoting": {
@@ -178,6 +199,8 @@
     }
   },
   "tax": {
+    "defaultRate": { "title": "Standaard belastingtarief", "tooltip": "Kies het tarief dat nieuwe klanten, producten en diensten overnemen.", "description": "Stel het tarief in voor nieuwe klanten en catalogusitems. Bestaande records blijven ongewijzigd.", "loading": "Standaardtarief laden...", "empty": "Maak een actief tarief voordat u een standaard kiest.", "invalid": "Het ingestelde standaardtarief is niet meer actief of geldig. Kies een ander tarief.", "field": { "label": "Standaard belastingtarief" }, "options": { "none": "Geen tenantstandaard" }, "help": "Zonder standaard blijven nieuwe catalogusitems onbelast en gebruiken klanten het oudste actieve tarief, indien aanwezig.", "actions": { "save": "Standaard opslaan", "saving": "Opslaan..." }, "toast": { "saved": "Standaardtarief opgeslagen." }, "errors": { "load": "Kan het standaardtarief niet laden.", "save": "Kan het standaardtarief niet opslaan." } },
+    "backfill": { "title": "Standaard toepassen op bestaande catalogusitems", "description": "Bekijk producten en diensten zonder belastingtarief.", "warning": "Dit wijzigt toekomstige belastbaarheid en herschrijft geen uitgegeven facturen.", "loading": "Voorbeeld laden...", "empty": "Geen geschikte producten of diensten gevonden.", "target": "Doeltarief: {{rate}}", "count": "{{count}} geschikte items", "dialog": { "title": "Standaardtarief toepassen" }, "actions": { "preview": "Bestaande items bekijken", "apply": "Selectie toepassen", "applying": "Toepassen..." }, "toast": { "applied": "Standaardtarief toegepast op geselecteerde items." }, "errors": { "preview": "Kan catalogusvoorbeeld niet laden.", "apply": "Kan het standaardtarief niet toepassen." } },
     "taxRegions": {
       "title": "Belastingregio's",
       "description": "Beheer belastingregio's en gerelateerde instellingen."
@@ -704,7 +727,8 @@
       "allServiceTypes": "Alle servicetypen",
       "serviceTypePlaceholder": "Filter op servicetype...",
       "allBillingMethods": "Alle factureringsmethoden",
-      "billingMethodPlaceholder": "Filteren op factureringsmethode..."
+      "billingMethodPlaceholder": "Filteren op factureringsmethode...",
+      "searchPlaceholder": "Zoek services op naam, SKU of beschrijving..."
     },
     "fields": {
       "serviceName": {
@@ -826,7 +850,9 @@
       "validateDelete": "Kan de verwijdering niet valideren. Probeer het opnieuw.",
       "delete": "Kan service niet verwijderen",
       "deactivate": "Kan de service niet deactiveren"
-    }
+    },
+    "emptySearch": "Geen services komen overeen met uw zoekopdracht.",
+    "clearFilters": "Filters wissen"
   },
   "products": {
     "title": "Producten",
@@ -956,7 +982,7 @@
       "taxRate": {
         "label": "Belastingtarief (optioneel)",
         "placeholder": "Selecteer belastingtarief (optioneel)",
-        "loading": "Belastingtarieven laden..."
+        "loading": "Belastingtarieven laden...", "inherit": "Tenantstandaard gebruiken", "inheritNamed": "Tenantstandaard gebruiken ({{rate}})", "nonTaxable": "Niet-belastbaar"
       },
       "sku": {
         "label": "SKU",
@@ -1050,7 +1076,7 @@
       "taxRate": {
         "label": "Belastingtarief",
         "placeholder": "Niet-belastbaar",
-        "loading": "Laden..."
+        "loading": "Laden...", "inherit": "Tenantstandaard gebruiken", "inheritNamed": "Tenantstandaard gebruiken ({{rate}})", "nonTaxable": "Niet-belastbaar"
       },
       "active": {
         "label": "Actief"
@@ -1425,6 +1451,15 @@
       "actions": {
         "save": "Instellingen opslaan",
         "saving": "Opslaan..."
+      },
+      "autopay": {
+        "label": "Automatische betaling toestaan",
+        "description": "Sta factuurprofielen toe automatische kaartbetalingen te machtigen.",
+        "chargeTiming": "Moment van afschrijving",
+        "onFinalize": "Wanneer de factuur definitief wordt",
+        "onDueDate": "Op de vervaldatum",
+        "retryDays": "Intervallen voor nieuwe pogingen (dagen)",
+        "consentText": "Toestemmingstekst voor automatische betaling"
       }
     },
     "stripe": {

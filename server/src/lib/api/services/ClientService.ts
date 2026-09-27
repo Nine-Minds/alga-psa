@@ -4,10 +4,10 @@
  */
 
 import { Knex } from 'knex';
+import { locationAddressSql } from './locationAddressSql';
 import { BaseService, ServiceContext, ListResult, tenantDb, withTransaction } from '@alga-psa/db';
 import { IClient, IClientLocation } from 'server/src/interfaces/client.interfaces';
 import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
-import { createDefaultTaxSettingsInternal } from '@alga-psa/billing/actions';
 import { availableCreditSubquerySql } from '@alga-psa/billing/lib/creditBalance';
 import { isEnterprise } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
@@ -27,10 +27,13 @@ import {
 } from '../schemas/client';
 import { ListOptions } from '../controllers/types';
 import { runWithTenant } from 'server/src/lib/db';
+import { analytics } from '../../analytics/posthog';
+import { AnalyticsEvents } from '../../analytics/events';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import {
   buildClientArchivedPayload,
   buildClientCreatedPayload,
+  buildClientMergedPayload,
   buildClientOwnerAssignedPayload,
   buildClientStatusChangedPayload,
   buildClientUpdatedPayload,
@@ -40,7 +43,33 @@ import {
   ensureDefaultContractForClientIfBillingConfigured,
 } from '@alga-psa/shared/billingClients/defaultContract';
 import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
+import { initializeClientDefaultTax } from '@alga-psa/shared/billingClients/defaultTaxRate';
+import { resolveProductCode } from '@alga-psa/types';
+import {
+  ClientMergeBlockedError,
+  executeClientMerge,
+  previewClientMerge,
+  type ClientMergePreview,
+  type ClientMergeResult,
+} from '@alga-psa/clients/lib/clientMergeEngine';
 import { mergeClientWebsiteUpdate } from '@alga-psa/clients/lib/clientWebsiteUpdate';
+
+export function normalizeLegacyClientTaxId<T extends { tax_id_number?: string; properties?: any }>(data: T): T {
+  const properties = data.properties && typeof data.properties === 'object' ? { ...data.properties } : data.properties;
+  // Canonical input wins whenever present; legacy input is accepted only as fallback.
+  const legacyTaxId = typeof properties?.tax_id === 'string' ? properties.tax_id.trim() : properties?.tax_id;
+  const taxIdNumber = data.tax_id_number ?? legacyTaxId;
+  if (properties && typeof properties === 'object') delete properties.tax_id;
+  return { ...data, ...(taxIdNumber === undefined ? {} : { tax_id_number: taxIdNumber }), ...(properties === undefined ? {} : { properties }) };
+}
+
+export function stripLegacyClientTaxId<T>(client: T): T {
+  const record = client as T & { properties?: any };
+  if (!record.properties || typeof record.properties !== 'object') return client;
+  const properties = { ...record.properties };
+  delete properties.tax_id;
+  return { ...record, properties };
+}
 
 function maybeUserActorFromContext(context: ServiceContext) {
   if (typeof context.userId !== 'string' || !context.userId) return undefined;
@@ -179,6 +208,28 @@ async function cleanupEntraReferencesBeforeClientDelete(
   }
 }
 
+// A client's phone, email and address are those of its default location (the
+// clients table has none of its own); the web actions derive them the same way.
+function joinDefaultLocation(db: ReturnType<typeof tenantDb>, query: Knex.QueryBuilder): void {
+  db.tenantJoinFirstMatching(query, 'client_locations', 'cl', 'c.client_id', 'client_id', {
+    type: 'left',
+    rootTenantColumn: 'c.tenant',
+    where: (q, alias) => q.where({
+      [`${alias}.is_default`]: true,
+      [`${alias}.is_active`]: true,
+    }),
+    orderBy: [
+      { column: 'updated_at', order: 'desc' },
+      { column: 'created_at', order: 'desc' },
+      { column: 'location_id', order: 'desc' },
+    ],
+  });
+}
+
+function defaultLocationContactColumns(trx: Knex): Array<string | Knex.Raw> {
+  return ['cl.phone as phone_no', 'cl.email as email', trx.raw(`${locationAddressSql('cl')} as address`)];
+}
+
 export class ClientService extends BaseService<IClient> {
   constructor() {
     super({
@@ -210,34 +261,10 @@ export class ClientService extends BaseService<IClient> {
       // Build base query with account manager and location joins
       let dataQuery = db.table('clients as c');
       db.tenantJoin(dataQuery, 'users as u', 'c.account_manager_id', 'u.user_id', { type: 'left' });
-      db.tenantJoinFirstMatching(dataQuery, 'client_locations', 'cl', 'c.client_id', 'client_id', {
-        type: 'left',
-        rootTenantColumn: 'c.tenant',
-        where: (query, alias) => query.where({
-          [`${alias}.is_default`]: true,
-          [`${alias}.is_active`]: true,
-        }),
-        orderBy: [
-          { column: 'updated_at', order: 'desc' },
-          { column: 'created_at', order: 'desc' },
-          { column: 'location_id', order: 'desc' },
-        ],
-      });
+      joinDefaultLocation(db, dataQuery);
 
       let countQuery = db.table('clients as c');
-      db.tenantJoinFirstMatching(countQuery, 'client_locations', 'cl', 'c.client_id', 'client_id', {
-        type: 'left',
-        rootTenantColumn: 'c.tenant',
-        where: (query, alias) => query.where({
-          [`${alias}.is_default`]: true,
-          [`${alias}.is_active`]: true,
-        }),
-        orderBy: [
-          { column: 'updated_at', order: 'desc' },
-          { column: 'created_at', order: 'desc' },
-          { column: 'location_id', order: 'desc' },
-        ],
-      });
+      joinDefaultLocation(db, countQuery);
 
       // Apply filters
       dataQuery = this.applyClientFilters(dataQuery, filters);
@@ -255,6 +282,7 @@ export class ClientService extends BaseService<IClient> {
       // Select fields
       dataQuery = dataQuery.select(
         'c.*',
+        ...defaultLocationContactColumns(trx),
         trx.raw(`${availableCreditSubquerySql('c')} as credit_balance`),
         trx.raw(`CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN CONCAT(u.first_name, ' ', u.last_name) ELSE NULL END as account_manager_full_name`)
       );
@@ -269,7 +297,7 @@ export class ClientService extends BaseService<IClient> {
       const clientsWithLogos = await Promise.all(
         (clients as IClient[]).map(async (client) => {
           const logoUrl = await getClientLogoUrl(client.client_id, context.tenant);
-          return withClientSinceDateString({ ...client, logoUrl });
+          return withClientSinceDateString(stripLegacyClientTaxId({ ...client, logoUrl }));
         })
       );
 
@@ -290,10 +318,12 @@ export class ClientService extends BaseService<IClient> {
       const db = tenantDb(trx, context.tenant);
       const clientQuery = db.table<IClient>('clients as c');
       db.tenantJoin(clientQuery, 'users as u', 'c.account_manager_id', 'u.user_id', { type: 'left' });
+      joinDefaultLocation(db, clientQuery);
 
       const client = await clientQuery
         .select(
           'c.*',
+          ...defaultLocationContactColumns(trx),
           trx.raw(`${availableCreditSubquerySql('c')} as credit_balance`),
           trx.raw(`CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN CONCAT(u.first_name, ' ', u.last_name) ELSE NULL END as account_manager_full_name`)
         )
@@ -308,7 +338,7 @@ export class ClientService extends BaseService<IClient> {
       const logoUrl = await getClientLogoUrl(id, context.tenant);
 
       return withClientSinceDateString({
-        ...client,
+        ...stripLegacyClientTaxId(client),
         logoUrl
       }) as unknown as IClient;
     });
@@ -317,6 +347,9 @@ export class ClientService extends BaseService<IClient> {
   /**
    * Create new client with default settings   */
   async create(data: Partial<IClient>, context: ServiceContext): Promise<IClient> {
+    const normalized = normalizeLegacyClientTaxId(data as any);
+    const taxIdNumber = normalized.tax_id_number;
+    const properties = normalized.properties;
     const { knex } = await this.getKnex();
     const client = await withTransaction(knex, async (trx) => {
       // Prepare client data
@@ -325,9 +358,9 @@ export class ClientService extends BaseService<IClient> {
         client_name: data.client_name,
         url: data.url || '',
         client_type: data.client_type,
-        tax_id_number: data.tax_id_number,
+        tax_id_number: taxIdNumber,
         notes: data.notes,
-        properties: data.properties,
+        properties,
         payment_terms: data.payment_terms,
         billing_cycle: data.billing_cycle,
         credit_limit: data.credit_limit,
@@ -363,6 +396,18 @@ export class ClientService extends BaseService<IClient> {
         clientId: client.client_id,
       });
 
+      // Tax initialization shares the client transaction: for PSA tenants an
+      // invalid/missing configuration must roll the client back rather than
+      // commit a client with no usable tax setup. AlgaDesk tenants have no tax
+      // rates (the product intentionally excludes billing) and keep the same
+      // exemption as the UI and shared client-writer paths.
+      const tenantProduct = await tenantDb(trx, context.tenant)
+        .table('tenants')
+        .first('product_code');
+      if (resolveProductCode(tenantProduct?.product_code).productCode !== 'algadesk') {
+        await initializeClientDefaultTax(trx, context.tenant, client.client_id);
+      }
+
       // Handle tags if provided
       if ((data as any).tags && (data as any).tags.length > 0) {
         try {
@@ -375,16 +420,6 @@ export class ClientService extends BaseService<IClient> {
 
       return client;
     });
-
-    // Try to create default tax settings for the client with tenant context (after transaction)
-    try {
-      await runWithTenant(context.tenant, async () => {
-        await createDefaultTaxSettingsInternal(client.client_id);
-      });
-    } catch (taxError) {
-      console.warn('Failed to create default tax settings:', taxError);
-      // Continue without tax settings - they can be added later
-    }
 
     const createdAt = (client as any).created_at ?? new Date().toISOString();
     const status =
@@ -407,7 +442,7 @@ export class ClientService extends BaseService<IClient> {
       idempotencyKey: `client_created:${client.client_id}`,
     });
 
-    return withClientSinceDateString(client as Record<string, any>) as IClient;
+    return withClientSinceDateString(stripLegacyClientTaxId(client) as Record<string, any>) as IClient;
   }
 
   async delete(id: string, context: ServiceContext): Promise<void> {
@@ -610,31 +645,36 @@ export class ClientService extends BaseService<IClient> {
       }
 
       // Prepare update data
-      const updateData: any = {
-        ...data,
-        updated_at: knex.raw('now()'),
-      };
-      if (data.properties !== undefined) {
-        updateData.properties = { ...(before.properties ?? {}), ...data.properties };
+      const normalized = normalizeLegacyClientTaxId(data as any);
+      // Keep SQL writes constrained to persisted clients columns; tags are stored separately.
+      // This list must stay aligned with clientBodySchema and the clients migrations.
+      const clientColumns = [
+        'client_name', 'url', 'client_type', 'tax_id_number', 'notes', 'properties',
+        'payment_terms', 'billing_cycle', 'credit_limit', 'default_currency_code',
+        'preferred_payment_method', 'auto_invoice', 'invoice_delivery_method', 'region_code',
+        'is_tax_exempt', 'tax_exemption_certificate', 'timezone', 'invoice_template_id', 'client_since',
+        'billing_contact_id', 'billing_email', 'account_manager_id', 'is_inactive',
+      ] as const;
+      const updateData: Record<string, unknown> = { updated_at: knex.raw('now()') };
+      for (const column of clientColumns) {
+        const value = (normalized as Record<string, unknown>)[column];
+        if (value !== undefined) updateData[column] = value;
+      }
+      if (normalized.properties !== undefined && normalized.properties !== null) {
+        updateData.properties = { ...(before.properties ?? {}), ...normalized.properties };
       }
 
       // API PATCH-style updates must preserve omitted properties and synchronize
       // website copies only when url or properties.website was explicitly sent.
-      Object.assign(updateData, mergeClientWebsiteUpdate(before.url, before.properties, data));
-      // The raw spread above would otherwise pass properties: null through and
-      // clear the column despite null meaning "no property update" here.
-      if (data.properties === null) {
+      const websiteUpdate = mergeClientWebsiteUpdate(before.url, before.properties, normalized);
+      for (const column of clientColumns) {
+        const value = (websiteUpdate as Record<string, unknown>)[column];
+        if (value !== undefined) updateData[column] = value;
+      }
+      // A null properties value means "no property update" here.
+      if (normalized.properties === null) {
         delete updateData.properties;
       }
-
-      // Remove undefined values + non-column fields
-      Object.keys(updateData).forEach((key) => {
-        if (updateData[key] === undefined) {
-          delete updateData[key];
-        }
-      });
-      delete updateData.tags;
-
       const updatedFieldKeys = Object.keys(updateData);
 
       // Update client
@@ -781,7 +821,7 @@ export class ClientService extends BaseService<IClient> {
       });
     }
 
-    return withClientSinceDateString(result.after as Record<string, any>) as IClient;
+    return withClientSinceDateString(stripLegacyClientTaxId(result.after as IClient) as Record<string, any>) as IClient;
   }
 
   /**
@@ -1036,6 +1076,212 @@ export class ClientService extends BaseService<IClient> {
     });
 
     return query;
+  }
+
+  /**
+   * Dry run of absorbing `sourceClientId` into `clientId` as a billing profile.
+   *
+   * Writes nothing. Everything the caller needs to make the per-row decisions
+   * the merge asks for — profiles, contacts, contracts, counts, blockers — comes
+   * back here, so an API client can present the same choices the wizard does
+   * instead of guessing and discovering the answer afterwards.
+   */
+  async previewMerge(
+    clientId: string,
+    sourceClientId: string,
+    context: ServiceContext
+  ): Promise<ClientMergePreview> {
+    const { knex } = await this.getKnex();
+    return withTransaction(knex, (trx) =>
+      previewClientMerge(trx, context.tenant, {
+        sourceClientId,
+        targetClientId: clientId,
+      })
+    );
+  }
+
+  async mergeClient(
+    clientId: string,
+    input: {
+      sourceClientId: string;
+      contactAssignments?: Array<{
+        contactNameId: string;
+        billingProfileId: string;
+        isManager?: boolean;
+        canViewProfileTickets?: boolean;
+      }>;
+      contractDecisions?: Array<{
+        clientContractId: string;
+        choice: 'original' | 'cutover';
+        cutoverDate?: string | null;
+      }>;
+      pinPortalGrants?: boolean;
+      externalRemapChoices?: Array<{ mappingId: string; apply: boolean }>;
+    },
+    context: ServiceContext
+  ): Promise<ClientMergeResult> {
+    const { knex } = await this.getKnex();
+    let result: ClientMergeResult;
+    try {
+      result = await withTransaction(knex, (trx) =>
+        executeClientMerge(trx, context.tenant, context.userId ?? null, {
+          sourceClientId: input.sourceClientId,
+          targetClientId: clientId,
+          contactAssignments: input.contactAssignments,
+          contractDecisions: input.contractDecisions,
+          pinPortalGrants: input.pinPortalGrants,
+          externalRemapChoices: input.externalRemapChoices,
+        })
+      );
+    } catch (error) {
+      // A refused merge is the caller asking for something impossible, not a
+      // server fault; the blockers carry the reason.
+      if (error instanceof ClientMergeBlockedError) {
+        throw new ValidationError(error.message, error.blockers);
+      }
+      throw error;
+    }
+
+    const mergedAt = new Date().toISOString();
+    await runWithTenant(context.tenant, async () => {
+      await publishWorkflowEvent({
+        eventType: 'CLIENT_MERGED',
+        payload: buildClientMergedPayload({
+          sourceClientId: result.sourceClientId,
+          targetClientId: result.targetClientId,
+          mergedByUserId: typeof context.userId === 'string' ? context.userId : undefined,
+          mergedAt,
+          strategy: 'merge_into_billing_profile',
+        }),
+        ctx: {
+          tenantId: context.tenant,
+          occurredAt: mergedAt,
+          actor: maybeUserActorFromContext(context),
+        },
+        idempotencyKey: `client_merged:${result.mergeId}`,
+      });
+    });
+
+    // Same telemetry the server action sends, so a merge driven through the API
+    // or the MCP is not invisible next to one driven from the UI.
+    analytics.capture(AnalyticsEvents.CLIENT_MERGED, {
+      merge_id: result.mergeId,
+      source_client_id: result.sourceClientId,
+      target_client_id: result.targetClientId,
+      moved_profile_count: result.movedProfileIds.length,
+      moved_counts: result.counts,
+      pinned_portal_grants: input.pinPortalGrants !== false,
+      contract_decision_count: input.contractDecisions?.length ?? 0,
+      via: 'api',
+    }, typeof context.userId === 'string' ? context.userId : undefined);
+
+    return result;
+  }
+
+  /**
+   * The contacts attached to a billing profile, with the manager label and the
+   * ticket-visibility grant.
+   */
+  async getBillingProfileContacts(
+    clientId: string,
+    billingProfileId: string,
+    context: ServiceContext
+  ): Promise<Array<{
+    contact_name_id: string;
+    full_name: string;
+    email: string | null;
+    is_manager: boolean;
+    can_view_profile_tickets: boolean;
+  }>> {
+    const { knex } = await this.getKnex();
+    return withTransaction(knex, async (trx) => {
+      await this.assertProfileBelongsToClient(trx, clientId, billingProfileId, context);
+
+      const db = tenantDb(trx, context.tenant);
+      const query = db.table('billing_profile_contacts as bpc');
+      db.tenantJoin(query, 'contacts as c', 'c.contact_name_id', 'bpc.contact_name_id');
+      const rows = await query
+        .where({ 'bpc.billing_profile_id': billingProfileId })
+        .orderBy('c.full_name', 'asc')
+        .select(
+          'bpc.contact_name_id',
+          'bpc.is_manager',
+          'bpc.can_view_profile_tickets',
+          'c.full_name',
+          'c.email'
+        );
+
+      return rows.map((row: any) => ({
+        contact_name_id: row.contact_name_id,
+        full_name: row.full_name ?? '',
+        email: row.email ?? null,
+        is_manager: Boolean(row.is_manager),
+        can_view_profile_tickets: Boolean(row.can_view_profile_tickets),
+      }));
+    });
+  }
+
+  /** Replaces the profile's contact list; omitting a contact removes it. */
+  async setBillingProfileContacts(
+    clientId: string,
+    billingProfileId: string,
+    contacts: Array<{
+      contact_name_id: string;
+      is_manager?: boolean;
+      can_view_profile_tickets?: boolean;
+    }>,
+    context: ServiceContext
+  ): Promise<void> {
+    const { knex } = await this.getKnex();
+    await withTransaction(knex, async (trx) => {
+      await this.assertProfileBelongsToClient(trx, clientId, billingProfileId, context);
+
+      const db = tenantDb(trx, context.tenant);
+      const requested = [...new Map(contacts.map((entry) => [entry.contact_name_id, entry])).values()];
+
+      if (requested.filter((entry) => entry.is_manager).length > 1) {
+        throw new ValidationError('A billing profile can only have one manager');
+      }
+
+      if (requested.length > 0) {
+        const owned = await db.table('contacts')
+          .where({ client_id: clientId })
+          .whereIn('contact_name_id', requested.map((entry) => entry.contact_name_id))
+          .select('contact_name_id');
+        if (owned.length !== requested.length) {
+          throw new ValidationError('One of the selected contacts does not belong to this client');
+        }
+      }
+
+      await db.table('billing_profile_contacts')
+        .where({ billing_profile_id: billingProfileId })
+        .del();
+      if (requested.length > 0) {
+        await db.table('billing_profile_contacts').insert(requested.map((entry) => ({
+          tenant: context.tenant,
+          billing_profile_id: billingProfileId,
+          contact_name_id: entry.contact_name_id,
+          is_manager: Boolean(entry.is_manager),
+          can_view_profile_tickets: Boolean(entry.can_view_profile_tickets),
+          created_by: context.userId,
+        })));
+      }
+    });
+  }
+
+  private async assertProfileBelongsToClient(
+    trx: Knex.Transaction,
+    clientId: string,
+    billingProfileId: string,
+    context: ServiceContext
+  ): Promise<void> {
+    const profile = await tenantDb(trx, context.tenant)
+      .table('client_billing_profiles')
+      .where({ billing_profile_id: billingProfileId })
+      .first('client_id');
+    if (!profile || profile.client_id !== clientId) {
+      throw new NotFoundError('Billing profile not found for this client');
+    }
   }
 
   /**

@@ -1,6 +1,6 @@
 import { TenantEntity } from ".";
 
-export type DocumentAssociationEntityType = 'user' | 'ticket' | 'client' | 'contact' | 'asset' | 'project_task' | 'contract' | 'tenant' | 'quote' | 'invoice' | 'sales_order' | 'document';
+export type DocumentAssociationEntityType = 'user' | 'ticket' | 'client' | 'contact' | 'asset' | 'project_task' | 'contract' | 'tenant' | 'quote' | 'invoice' | 'sales_order' | 'document' | 'opportunity';
 
 /** Logo slot for entity logos: light/dark mark, landscape wordmark, or favicon. */
 export type EntityLogoVariant = 'default' | 'dark' | 'wide' | 'wide-dark' | 'favicon';

@@ -118,6 +118,9 @@
       "renewalHandling": "Manejo de renovación"
     },
     "clientAssignment": {
+      "billingProfile": "Perfil de facturación",
+      "billingProfileLabel": "Perfil de facturación de la asignación",
+      "billingProfileNone": "Usar el perfil predeterminado del cliente",
       "clientContractId": "ID de contrato del cliente: {{id}}",
       "creditDrawdownOptOut": "Excluir del consumo de crédito",
       "empty": "Este contrato aún no está asignado a un cliente.",
@@ -399,7 +402,10 @@
       "selectClientFirst": "Seleccione primero un cliente",
       "startDateLabel": "Fecha de inicio *",
       "useTenantDefaultsDescription": "Aplicar la configuración de modo de renovación y período de aviso a nivel de organización.",
-      "useTenantDefaultsLabel": "Usar los valores predeterminados de renovación del inquilino"
+      "useTenantDefaultsLabel": "Usar los valores predeterminados de renovación del inquilino",
+      "billingProfileLabel": "Perfil de facturación",
+      "billingProfileNone": "Usar el perfil predeterminado del cliente",
+      "billingProfileHint": "Los cargos de este contrato se facturan a este perfil."
     },
     "po": {
       "amountLabel": "Importe de OC (opcional)",
@@ -1520,6 +1526,11 @@
       },
       "selectTemplateOptional": "Seleccione una plantilla (opcional)",
       "startFromTemplate": "Comenzar desde una plantilla"
+    },
+    "billingProfile": {
+      "label": "Perfil de facturación",
+      "none": "Usar el perfil predeterminado del cliente",
+      "hint": "Los cargos de este contrato se facturan a este perfil, salvo que una línea lo sustituya."
     }
   },
   "wizardFixed": {
@@ -1692,6 +1703,7 @@
     },
     "fields": {
       "client": "Cliente",
+      "billingProfile": "Perfil de facturación",
       "contractName": "Nombre del contrato",
       "billingFrequency": "Frecuencia de facturación",
       "currency": "Moneda",
@@ -1700,6 +1712,9 @@
       "renewalMode": "Modo de renovación",
       "noticePeriod": "Período de aviso",
       "renewalTerm": "Plazo de renovación"
+    },
+    "billingProfile": {
+      "clientDefault": "El perfil predeterminado del cliente"
     },
     "fallback": {
       "notSelected": "No seleccionado",

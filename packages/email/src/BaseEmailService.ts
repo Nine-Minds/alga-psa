@@ -12,6 +12,7 @@ import { publishWorkflowEvent, type WorkflowActor } from '@alga-psa/event-bus/pu
 import { embedBrandLogo } from './inlineBrandLogo';
 import { SupportedLocale } from './lib/localeConfig';
 import type { Knex } from 'knex';
+import type { OutboundMailClass, TenantEmailSettings } from '@alga-psa/types';
 
 const tenantScopedTable = (knex: Knex | Knex.Transaction, table: string, tenant: string) =>
   tenantDb(knex, tenant).table(table);
@@ -42,6 +43,7 @@ export interface EmailSendResult {
   retryCount?: number;   // current retry attempt (0 = first attempt)
   providerId?: string;
   providerType?: string;
+  sentAt?: Date;
   metadata?: Record<string, any>;
 }
 
@@ -62,6 +64,12 @@ export interface EmailTemplateContent {
 }
 
 export interface BaseEmailParams {
+  mailClass: OutboundMailClass;
+  /** Internal immutable settings snapshot used for call-scoped From resolution. */
+  resolvedTenantEmailSettings?: TenantEmailSettings | null;
+  boardId?: string;
+  boardName?: string;
+  senderId?: string;
   revalidateCommentOnRetry?: boolean;
   to: string | string[] | EmailAddress | EmailAddress[];
   from?: string | EmailAddress;
@@ -87,6 +95,8 @@ export interface BaseEmailParams {
   resolvedTenantCompanyName?: string | null;
   /** Internal provider snapshot used by TenantEmailService during cache refreshes. */
   resolvedEmailProvider?: IEmailProvider | null;
+  resolvedMicrosoftProviderId?: string;
+  allowUnverifiedSender?: boolean;
   /** Internal initialization error paired with resolvedEmailProvider. */
   resolvedProviderInitError?: string | null;
   /** Internal forced sender identity for a system-provider fallback. */
@@ -575,10 +585,8 @@ export abstract class BaseEmailService {
       const effectiveEntityType = params.entityType ?? (effectiveTicketId ? 'ticket' : undefined);
       const effectiveEntityId = params.entityId ?? effectiveTicketId;
 
-      // Every notification path lands here after its template is rendered, so
+      // Every tenant email path lands here after its template is rendered, so
       // this is where the branded header logo becomes an inline attachment.
-      // (The paths that render a tenant template and call a provider directly —
-      // invoice mail, project status updates — run the same pass themselves.)
       let attachments = params.attachments;
       if (params.tenantId && params.tenantId !== 'system') {
         const embedded = await embedBrandLogo(html, {
@@ -604,7 +612,8 @@ export abstract class BaseEmailService {
         html,
         text,
         attachments,
-        headers
+        headers,
+        microsoftProviderId: params.resolvedMicrosoftProviderId,
       };
 
       // Outbound email lifecycle workflow events (F071). Best-effort: publishing
@@ -734,6 +743,7 @@ export abstract class BaseEmailService {
         error: result.error,
         providerId: result.providerId,
         providerType: result.providerType,
+        sentAt: result.sentAt,
         metadata: result.metadata
       };
     } catch (error) {

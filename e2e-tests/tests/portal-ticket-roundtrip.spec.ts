@@ -121,6 +121,8 @@ test('portal ticket survives assignment, replies, resolution and reopening witho
     expect(commentResponse?.ok()).toBe(true);
     expect(await commentResponse!.finished()).toBeNull();
     await expect(portalPage.locator('[contenteditable="true"]').getByText(acknowledgment, { exact: true })).toHaveCount(0);
+    // The draft editor must close before the settled comment is treated as saved.
+    await expect(portalPage.locator('[contenteditable="true"]:visible')).toHaveCount(0);
     await expect(portalPage.getByText(acknowledgment, { exact: true })).toBeVisible();
     await portalPage.reload();
     await expect(portalPage.getByText(acknowledgment, { exact: true })).toBeVisible();

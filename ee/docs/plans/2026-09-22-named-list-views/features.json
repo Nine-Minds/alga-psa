@@ -1,0 +1,339 @@
+[
+  {
+    "id": "F001",
+    "description": "Migration creates tenant-distributed `list_views` table (tenant, view_id, list_key, name, owner_user_id, visibility check private|shared, settings jsonb, schema_version, timestamps) with composite PK and FKs to tenants/users.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#data-model"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Indexes: (tenant, list_key, visibility) and unique (tenant, list_key, owner_user_id, lower(name)).",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#data-model"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Register `list_views` in packages/db tenantTableMetadata.ts and server/migrations/utils/tenantDb.cjs.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#data-model"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Add `list_view:share` and `list_view:manage` MSP permissions to the permission catalog with default grants (share: Admin/Manager/Dispatcher; manage: Admin).",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#api--server-actions"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "`ListViewSettings` envelope and `ListViewAdapter` contract types in packages/types.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#data-model"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "List-key adapter registry that validates list_key and resolves the list's read permission and settings schema server-side.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#data-model"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "ListView model (tenantDb-scoped) with visibility-aware query: shared OR owned by session user.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#api--server-actions"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "`listListViews(listKey)` returns caller's private + all shared views with owner name, isOwner, canEdit, isMyDefault; gated on list read permission.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#api--server-actions"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "`getListView(viewId)` returns shared or owned views; private-of-other and missing both return the same not-found error.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#api--server-actions"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "`createListView` validates name (trimmed, 1-100, unique per owner/list) and settings via adapter schema; `shared` requires list_view:share.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#api--server-actions"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "`updateListView` patches name/visibility/settings; owner or list_view:manage (shared only); switching to shared requires list_view:share.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#api--server-actions"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "`deleteListView` deletes a view (owner or list_view:manage for shared) and clears any `listViews.default.<list_key>` preferences pointing at it.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#api--server-actions"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "`setMyDefaultListView(listKey, viewId|null)` stores the default in user_preferences for the session user only, requiring the view be visible to the caller.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#api--server-actions"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "User hard-delete path deletes the user's private views and reassigns their shared views to the acting admin.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#data-model"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "DataTable supports controlled `columnSizing`/`onColumnSizingChange`, keeping localStorage fallback when uncontrolled.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#engine-changes-lower-layers"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "DataTable supports controlled `columnVisibility` (hidden columns excluded before auto-fit).",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#engine-changes-lower-layers"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "DataTable supports controlled `columnOrder`.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#engine-changes-lower-layers"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "`useListViews` hook: loads views, resolves active view from `?view=` \u2192 user default \u2192 baseline on first load.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#engine-changes-lower-layers"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "`useListViews` apply: adapter.sanitize then adapter.apply, resets to page 1, writes `?view=<id>` to the URL; toast lists dropped stale references.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#engine-changes-lower-layers",
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "`useListViews` dirty tracking via adapter.differs, save-changes, save-as-new, discard (re-apply stored).",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#engine-changes-lower-layers"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Inaccessible or missing `?view=` id falls back to baseline with a toast and removes the param.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#users-and-primary-flows"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Adapter `migrate` is applied on read when stored schema_version is older than the adapter's current version.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#data-model"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "`ListViewPicker` trigger shows active view name or 'Default view' plus dirty dot.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Picker dropdown lists Default view, My views, Shared views (alphabetical, shared rows show owner), default star, and a search box when >8 views.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Picker row menu: Manage, Set/Clear my default, Copy link, Delete (items hidden when not permitted).",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Picker footer: Save changes to <name> (enabled only when dirty and editable), Save as new view\u2026, Discard changes.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Save/Manage dialog (custom Dialog, sticky footer) with Name and Private/Shared visibility; Shared disabled with hint when lacking list_view:share; inline duplicate-name error.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Delete confirmation dialog; deleting the active view reverts the list to baseline.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "All picker/dialog strings in `common` namespace `listViews.*` across all locale files incl. xx/yy; all interactive elements have kebab-case ids.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#ux--ui-notes"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Tickets adapter built on ticketViewSettings helpers, capturing filters incl. board scope (excluding searchQuery), sort, column visibility/order, density, page size, column sizing.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#relationship-to-ticket-board-defaults"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Tickets sanitize drops references to deleted boards, statuses, priorities, categories, tags, users, teams, clients, contacts.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#relationship-to-ticket-board-defaults"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Tickets: applying a view with board scope navigates to that board tab; baseline remains board/tenant default resolution.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#relationship-to-ticket-board-defaults"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Tickets: ListViewPicker rendered in TicketingDashboard toolbar beside TicketViewMenu; board/tenant default save/reset unchanged.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#relationship-to-ticket-board-defaults"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Tickets: `?view=` coexists with existing URL filter params (explicit filter params present = no user-default auto-apply).",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#relationship-to-ticket-board-defaults"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Projects: consolidate ProjectListFilters + sort + page size + columns into a typed live-state object consumable by the adapter.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#engine-changes-lower-layers"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "Projects adapter (capture/apply/sanitize/differs) and ListViewPicker on the Projects list.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#goals"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Clients: consolidate status/type/lifecycle/tag filters, search-excluded, sort, page size, columns into typed live state.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#engine-changes-lower-layers"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "Clients adapter and ListViewPicker on the Clients list (table mode).",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#goals"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "Contacts: consolidate status/tags filters, sort, page size, columns into typed live state.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#engine-changes-lower-layers"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "Contacts adapter and ListViewPicker on the Contacts list.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#goals"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "Assets: consolidate status/type/client/agent/RMM filters, sort, visibleColumnIds, page size into typed live state.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#engine-changes-lower-layers"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "Assets adapter and ListViewPicker on the Assets list.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#goals"
+    ]
+  }
+]

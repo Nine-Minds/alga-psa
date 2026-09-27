@@ -1,4 +1,7 @@
 {
+  "phone": {
+    "extension": "ext."
+  },
   "colorPicker": {
     "invalidHexBackground": "Invalid hex color (e.g., #FF0000)",
     "invalidHexText": "Invalid hex color (e.g., #FFFFFF)",
@@ -1619,5 +1622,75 @@
     "disabledByAdmin": "Disabled by administrator",
     "mixed": "Partially enabled",
     "empty": "No email notification categories available."
+  },
+  "listViews": {
+    "defaultView": "Default view",
+    "unsavedChanges": "This view has unsaved changes",
+    "searchPlaceholder": "Search views",
+    "noMatches": "No matching views",
+    "sections": {
+      "mine": "My views",
+      "mineEmpty": "No private views yet",
+      "shared": "Shared views",
+      "sharedEmpty": "No shared views yet"
+    },
+    "labels": {
+      "myDefault": "My default",
+      "sharedByYou": "Shared by you"
+    },
+    "visibility": {
+      "private": "Private",
+      "shared": "Shared"
+    },
+    "actions": {
+      "delete": "Delete",
+      "manage": "Manage",
+      "setDefault": "Set as my default",
+      "clearDefault": "Clear my default",
+      "copyLink": "Copy link",
+      "saveChanges": "Save changes",
+      "saveChangesTo": "Save changes to \"{{name}}\"",
+      "saveAsNew": "Save as new view…",
+      "discardChanges": "Discard changes"
+    },
+    "dialog": {
+      "createTitle": "Save as new view",
+      "manageTitle": "Manage view",
+      "nameLabel": "Name",
+      "nameInvalid": "Enter a name of 1 to {{max}} characters.",
+      "visibilityLabel": "Who can see it",
+      "privateHint": "Only you can see this view.",
+      "sharedHint": "Everyone who can open this list can see and apply it.",
+      "sharedDisabledHint": "You do not have permission to share views."
+    },
+    "deleteDialog": {
+      "title": "Delete view",
+      "message": "Delete \"{{name}}\"?",
+      "messageShared": "Delete \"{{name}}\"? It is shared, so it will disappear for everyone who uses it."
+    },
+    "toasts": {
+      "saved": "Saved \"{{name}}\"",
+      "updated": "Updated \"{{name}}\"",
+      "deleted": "View deleted",
+      "defaultSet": "Default view set",
+      "defaultCleared": "Default view cleared",
+      "linkCopied": "Link copied",
+      "droppedReferences": "Some items in \"{{name}}\" no longer exist and were skipped: {{fields}}"
+    },
+    "errors": {
+      "notFound": "This view is private or no longer exists.",
+      "unknownList": "Unknown list.",
+      "invalidName": "A view name must be between 1 and 100 characters.",
+      "duplicateName": "You already have a view named \"{{name}}\" on this list.",
+      "invalidSettings": "The view could not be saved: {{detail}}",
+      "invalidVisibility": "Visibility must be private or shared.",
+      "cannotShare": "You do not have permission to share views.",
+      "cannotEdit": "You do not have permission to change this view.",
+      "cannotReadList": "You do not have permission to view this list.",
+      "saveFailed": "The view could not be saved.",
+      "deleteFailed": "The view could not be deleted.",
+      "defaultFailed": "Your default view could not be changed.",
+      "copyFailed": "The link could not be copied."
+    }
   }
 }

@@ -4,6 +4,7 @@ import { createTenantKnex, tenantDb, withTransaction, normalizeIanaTimeZone } fr
 import { withAuth } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { normalizeHolidayRows } from '../utils/holidayUtils';
 import {
   IBusinessHoursSchedule,
   IBusinessHoursEntry,
@@ -67,7 +68,7 @@ export const getBusinessHoursScheduleById = withAuth(async (_user, { tenant }, s
     return {
       ...schedule,
       entries,
-      holidays
+      holidays: normalizeHolidayRows(holidays)
     };
   });
 });
@@ -373,7 +374,7 @@ export const getHolidays = withAuth(async (_user, { tenant }, scheduleId?: strin
 
     const holidays = await query.orderBy('holiday_date', 'asc');
 
-    return holidays;
+    return normalizeHolidayRows(holidays);
   });
 });
 
@@ -407,7 +408,7 @@ export const createHoliday = withAuth(async (_user, { tenant }, input: IHolidayI
       })
       .returning('*');
 
-    return holiday;
+    return normalizeHolidayRows<IHoliday>([holiday])[0];
   });
 });
 
@@ -450,7 +451,7 @@ export const updateHoliday = withAuth(async (
       throw new Error('Holiday not found');
     }
 
-    return holiday;
+    return normalizeHolidayRows<IHoliday>([holiday])[0];
   });
 });
 
@@ -517,7 +518,7 @@ export const bulkCreateHolidays = withAuth(async (_user, { tenant }, holidays: I
       .insert(holidayRecords)
       .returning('*');
 
-    return createdHolidays;
+    return normalizeHolidayRows(createdHolidays);
   });
 });
 
@@ -622,7 +623,7 @@ export const isWithinBusinessHours = withAuth(async (_user, { tenant }, schedule
     const scheduleWithEntries: IBusinessHoursScheduleWithEntries = {
       ...schedule,
       entries,
-      holidays
+      holidays: normalizeHolidayRows(holidays)
     };
 
     return calculatorIsWithinBusinessHours(scheduleWithEntries, datetime);
@@ -656,7 +657,7 @@ export const getNextBusinessHourStart = withAuth(async (_user, { tenant }, sched
     const scheduleWithEntries: IBusinessHoursScheduleWithEntries = {
       ...schedule,
       entries,
-      holidays
+      holidays: normalizeHolidayRows(holidays)
     };
 
     return calculatorGetNextBusinessHoursStart(scheduleWithEntries, datetime);

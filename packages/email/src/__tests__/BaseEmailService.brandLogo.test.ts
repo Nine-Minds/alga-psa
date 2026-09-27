@@ -55,6 +55,7 @@ describe('BaseEmailService brand logo embedding', () => {
     const { instance, sendEmail } = service();
 
     await instance.sendEmail({
+      mailClass: 'general',
       tenantId: 'tenant-1',
       to: 'customer@example.test',
       subject: 'Ticket updated',
@@ -76,6 +77,7 @@ describe('BaseEmailService brand logo embedding', () => {
     const { instance, sendEmail } = service();
 
     await expect(instance.sendEmail({
+      mailClass: 'general',
       tenantId: 'tenant-1',
       to: 'customer@example.test',
       subject: 'Ticket updated',
@@ -91,6 +93,7 @@ describe('BaseEmailService brand logo embedding', () => {
     const { instance } = service();
 
     await instance.sendEmail({
+      mailClass: 'general',
       to: 'customer@example.test',
       subject: 'Welcome',
       html: BRANDED_HTML,

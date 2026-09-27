@@ -558,7 +558,8 @@
       "dueDate": "Data de vencimento",
       "statusDisabledMultiBoard": "Os tickets selecionados estão em quadros diferentes",
       "statusResolvingBoards": "Verificando os quadros dos tickets selecionados…",
-      "more": "Mais"
+      "more": "Mais",
+      "bundleNeedsOne": "Selecione pelo menos 1 ticket para agrupar"
     },
     "moveDialogTitle": "Mover tickets selecionados",
     "moveDialogDescription": "Selecione um quadro de destino e status e confirme a movimentação dos tickets selecionados.",
@@ -663,7 +664,19 @@
       "propagationSummary": "{{masters}} ticket(s) selecionado(s) são mestres de pacote em modo de sincronização; esta alteração fechará/reabrirá {{children}} ticket(s) filho(s).",
       "masterSummary": "{{children}} ticket(s) filho(s)",
       "applyToChildren": "Aplicar aos filhos",
-      "mastersOnly": "Somente mestres"
+      "mastersOnly": "Somente mestres",
+      "membersLabel": "Tickets neste pacote",
+      "addTicketSearchPlaceholder": "Pesquisar tickets por número ou título",
+      "addTicketEmpty": "Pesquisar tickets para adicionar",
+      "badgeAdded": "Adicionado",
+      "badgeInBundle": "No pacote #{{number}}",
+      "badgeMaster": "Ticket principal do pacote",
+      "masterTag": "Principal",
+      "removeMember": "Remover",
+      "needMoreTickets": "Adicione pelo menos mais um ticket ao pacote.",
+      "unresolvedSelectedTickets_one": "Não foi possível carregar {{count}} ticket selecionado.",
+      "unresolvedSelectedTickets_other": "Não foi possível carregar {{count}} tickets selecionados.",
+      "badgeClosed": "Fechado"
     },
     "auth": {
       "moveRequired": "Você deve estar logado para mover tickets",
@@ -1074,7 +1087,21 @@
       "selectParentCategory": "Selecione a categoria pai",
       "parentHelpWithBoard": "Selecione um pai para criar uma subcategoria ou deixe em branco para o nível superior",
       "parentHelpWithoutBoard": "Selecione um quadro primeiro ou escolha uma categoria pai para herdar seu quadro",
-      "creating": "Criando..."
+      "creating": "Criando...",
+      "copyToBoard": "Copiar categorias para outro quadro",
+      "copyTitle": "Copiar categorias para outro quadro",
+      "copySourceLabel": "Selecionar quadro de origem",
+      "copyTargetLabel": "Selecionar quadro de destino",
+      "copySelected": "Copiar selecionadas",
+      "copySuccess": "{{created}} categorias copiadas; {{skipped}} existentes ignoradas.",
+      "copyFailed": "Falha ao copiar categorias",
+      "copyEmpty": "Não há categorias neste quadro.",
+      "copying": "Copiando…",
+      "copySourceBoard": "Selecionar quadro de origem",
+      "copyTargetBoard": "Selecionar quadro de destino",
+      "copyBoardTypeMismatch": "As categorias de tickets só podem ser copiadas entre quadros com o mesmo tipo de categoria.",
+      "copyConflicts_one": "{{count}} categoria ignorada tem uma categoria pai diferente no quadro de destino.",
+      "copyConflicts_other": "{{count}} categorias ignoradas têm uma categoria pai diferente no quadro de destino."
     },
     "display": {
       "responseStateTrackingTitle": "Acompanhamento do estado de resposta",
@@ -1454,7 +1481,11 @@
       "missingField": "Falta um campo obrigatório da lista de verificação.",
       "missingFieldNamed": "Falta um campo obrigatório da lista de verificação: {{field}}.",
       "referenceInvalid": "O ticket, o modelo de lista de verificação ou o filtro de regra selecionados não são mais válidos. Atualize a página e tente novamente.",
-      "invalidValue": "Um dos valores da lista de verificação é inválido. Atualize a página e tente novamente."
+      "invalidValue": "Um dos valores da lista de verificação é inválido. Atualize a página e tente novamente.",
+      "ruleCategoryBoardMismatch": "A categoria selecionada pertence a um quadro diferente do da regra.",
+      "ruleCategoryInvalid": "A categoria selecionada não é uma categoria de nível superior.",
+      "ruleSubcategoryInvalid": "A subcategoria selecionada não pertence à categoria selecionada.",
+      "ruleSubcategoryRequiresCategory": "Selecione uma categoria antes de escolher uma subcategoria."
     }
   },
   "ticketSection": {

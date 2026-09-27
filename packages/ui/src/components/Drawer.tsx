@@ -7,13 +7,15 @@ import { Theme } from '@radix-ui/themes';
 import { useRegisterUIComponent } from "../ui-reflection/useRegisterUIComponent";
 import { DrawerComponent, UIComponent, AutomationProps } from "../ui-reflection/types";
 import { withDataAutomationId } from "../ui-reflection/withDataAutomationId";
-import { InsideDialogContext, InsideDrawerContext, useInsideDialog } from './ModalityContext';
+import { InsideDialogContext, InsideDrawerContext, useInsideDialog, useInsideDrawer } from './ModalityContext';
 import { useRadixEscapeOwner } from '../keyboard-shortcuts';
 
 export interface DrawerProps {
   isOpen: boolean;
   onClose: () => void;
   children: React.ReactNode;
+  /** Action row pinned to the bottom of the panel, outside the scrollable body */
+  footer?: React.ReactNode;
   isInDrawer?: boolean;
   /** Unique identifier for UI reflection system */
   id?: string;
@@ -31,6 +33,7 @@ const Drawer = ({
   isOpen,
   onClose,
   children,
+  footer,
   isInDrawer = false,
   id,
   reflectionChildren,
@@ -98,7 +101,7 @@ const Drawer = ({
         )}
         <Dialog.Content
           ref={contentRef}
-          className={`fixed inset-y-0 right-0 ${widthClasses} bg-[rgb(var(--color-card))] shadow-lg focus:outline-none overflow-y-auto flex flex-col transform transition-all duration-300 ease-in-out will-change-transform data-[state=open]:translate-x-0 data-[state=closed]:translate-x-full data-[state=closed]:opacity-0 data-[state=open]:opacity-100 ${drawerVariant === 'document' ? 'ticket-document-drawer' : ''} ${isInDrawer ? 'z-[61]' : 'z-50'}`}
+          className={`fixed inset-y-0 right-0 ${widthClasses} bg-[rgb(var(--color-card))] shadow-lg focus:outline-none ${footer ? '' : 'overflow-y-auto'} flex flex-col transform transition-all duration-300 ease-in-out will-change-transform data-[state=open]:translate-x-0 data-[state=closed]:translate-x-full data-[state=closed]:opacity-0 data-[state=open]:opacity-100 ${drawerVariant === 'document' ? 'ticket-document-drawer' : ''} ${isInDrawer ? 'z-[61]' : 'z-50'}`}
           style={isInsideDialog ? { ...widthStyle, pointerEvents: 'auto' } : widthStyle}
           onOpenAutoFocus={(e) => {
             // Prevent Radix from auto-focusing the first tabbable child element.
@@ -122,12 +125,18 @@ const Drawer = ({
                   of overflowing it by the padding; auto-height content still
                   scrolls the panel as before. */}
               <Theme className="flex-1 min-h-0 flex flex-col">
-                <div className="p-6 flex-1 min-h-0">
+                <div className={`p-6 flex-1 min-h-0 ${footer ? 'overflow-y-auto' : ''}`}>
                   {children}
                 </div>
               </Theme>
             </InsideDrawerContext.Provider>
           </InsideDialogContext.Provider>
+          {/* Pinned footer — rendered outside the scrollable body */}
+          {footer && (
+            <div className="flex flex-shrink-0 justify-end gap-2 border-t border-[rgb(var(--color-border-100))] bg-[rgb(var(--color-card))] px-6 py-4">
+              {footer}
+            </div>
+          )}
           {!hideCloseButton && (
             <button
               className="absolute top-4 right-4 text-muted-foreground hover:text-[rgb(var(--color-text-600))]"
@@ -140,6 +149,29 @@ const Drawer = ({
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
+  );
+};
+
+export interface DrawerFooterProps {
+  children: React.ReactNode;
+  className?: string;
+}
+
+/**
+ * Trailing action row for drawer content. Inside a drawer it sticks to the
+ * bottom of the scroll container so Save stays reachable without scrolling;
+ * anywhere else (e.g. the same form rendered in a wizard) it renders as a
+ * plain trailing row.
+ */
+export const DrawerFooter = ({ children, className }: DrawerFooterProps): React.ReactElement => {
+  const insideDrawer = useInsideDrawer();
+
+  return (
+    <div
+      className={`mt-6 flex justify-end gap-2 ${insideDrawer ? 'sticky bottom-0 z-10 border-t border-[rgb(var(--color-border-100))] bg-[rgb(var(--color-card))] py-4' : ''} ${className || ''}`}
+    >
+      {children}
+    </div>
   );
 };
 

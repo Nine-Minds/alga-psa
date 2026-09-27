@@ -107,7 +107,9 @@
         "message": "Messaggio",
         "messageOptional": "Messaggio (facoltativo)",
         "messagePlaceholder": "Aggiungi una nota personale per il destinatario...",
-        "title": "Invia preventivo"
+        "title": "Invia preventivo",
+        "from": "Da",
+        "useDefault": "Usa mittente predefinito"
       }
     },
     "errors": {
@@ -212,7 +214,9 @@
         "description": "Il preventivo verrà inviato via email ai contatti di fatturazione del cliente e il suo stato cambierà in \"Inviato\".",
         "title": "Invia preventivo al cliente",
         "additionalEmails": "Destinatari aggiuntivi",
-        "message": "Messaggio"
+        "message": "Messaggio",
+        "from": "Da",
+        "useDefault": "Usa mittente predefinito"
       }
     },
     "errorActions": {
