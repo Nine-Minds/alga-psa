@@ -2643,6 +2643,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
         <TabsContent value="discounts">
           <ContractDiscounts
             contractId={contract.contract_id}
+            clientContractId={clientContractId ?? assignments[0]?.client_contract_id ?? null}
             isReadOnly={isSystemManagedDefault}
           />
         </TabsContent>

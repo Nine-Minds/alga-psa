@@ -6,6 +6,7 @@ import { computePartialPeriodAmount } from '../lib/billing/compute/contractInvoi
 import { validateContractLineWindow } from '../lib/billing/contractLineWindow';
 import { inspectInvoiceEditable } from './invoiceAdjustmentEditability';
 import { BillingEngine } from '../lib/billing/billingEngine';
+import Invoice from '../models/invoice';
 
 // Real-database coverage for contract invoice adjustments.
 //
@@ -353,20 +354,71 @@ afterAll(async () => {
 });
 
 describe('contract invoice adjustments (DB-backed)', () => {
+  const dateOnly = (value: unknown) => value instanceof Date
+    ? value.toISOString().slice(0, 10)
+    : String(value).slice(0, 10);
+
+  it('persists an ordinary freeform Add Charge and reloads a calculator adjustment with contract attribution and its adjustment period', async () => {
+    const fixture = await createDraftWithGeneratedChargeAndDiscount();
+    const ordinaryId = uuidv4();
+    const partialId = uuidv4();
+    const detailId = uuidv4();
+    const configId = uuidv4();
+    await db('contract_line_service_configuration').insert({
+      tenant, config_id: configId, contract_line_id: contractLineId, service_id: serviceId,
+      configuration_type: 'Fixed', quantity: 1,
+    });
+    await db('invoice_charge_details').insert({
+      tenant, item_detail_id: detailId, item_id: fixture.generatedChargeId,
+      config_id: configId, service_id: serviceId, quantity: 1, rate: 10_000,
+      service_period_start: '2026-09-01', service_period_end: '2026-10-01',
+    });
+    await db.transaction(async (trx) => {
+      await persistManualInvoiceCharges(trx, fixture.invoiceId, [{
+        item_id: ordinaryId, description: 'Unclassified one-off', quantity: 1, rate: 2500,
+      }], { client_id: clientId, region_code: null, default_currency_code: 'USD' }, { user: { id: userId } } as never, tenant);
+      await persistManualInvoiceCharges(trx, fixture.invoiceId, [{
+        item_id: partialId, service_id: serviceId, client_contract_id: clientContractId,
+        description: 'One added unit for ten days', quantity: 1, rate: 3333,
+        adjustment_period_start: '2026-09-21', adjustment_period_end: '2026-10-01',
+        manual_line_metadata: { partialPeriod: { units: 1, unitPrice: 10_000, coveredDays: 10, fullPeriodDays: 30, resolved_amount: 3333 } },
+      }], { client_id: clientId, region_code: null, default_currency_code: 'USD' }, { user: { id: userId } } as never, tenant);
+    });
+
+    const ordinary = await db('invoice_charges').where({ tenant, item_id: ordinaryId }).first();
+    const partial = await db('invoice_charges').where({ tenant, item_id: partialId }).first();
+    expect(Number(ordinary.net_amount)).toBe(2500);
+    expect(Number(partial.quantity)).toBe(1);
+    expect(Number(partial.unit_price)).toBe(3333);
+    expect(Number(partial.net_amount)).toBe(3333);
+    expect(partial.client_contract_id).toBe(clientContractId);
+    expect(dateOnly(partial.adjustment_period_start)).toBe('2026-09-21');
+    const reloaded = await Invoice.getInvoiceCharges(db, tenant, fixture.invoiceId);
+    const reloadedPartial = reloaded.find((row) => row.item_id === partialId) as any;
+    expect(reloadedPartial.client_contract_id).toBe(clientContractId);
+    expect(dateOnly(reloadedPartial.service_period_start)).toBe('2026-09-21');
+    expect(dateOnly(reloadedPartial.service_period_end)).toBe('2026-10-01');
+    expect(Number(reloadedPartial.net_amount)).toBe(3333);
+    await db.transaction(async (trx) => {
+      await persistManualInvoiceCharges(trx, fixture.invoiceId, [{
+        item_id: partialId, service_id: serviceId, client_contract_id: clientContractId,
+        description: 'One added unit for ten days', quantity: 1, rate: 3333,
+        adjustment_period_start: '2026-09-21', adjustment_period_end: '2026-10-01',
+        manual_line_metadata: { partialPeriod: { units: 1, unitPrice: 10_000, coveredDays: 10, fullPeriodDays: 30, resolved_amount: 3333 } },
+      }], { client_id: clientId, region_code: null, default_currency_code: 'USD' }, { user: { id: userId } } as never, tenant);
+    });
+    expect(await db('invoice_charges').where({ tenant, invoice_id: fixture.invoiceId, item_id: partialId })).toHaveLength(1);
+  });
+
   it('reconciles one shared definition per contract attachment, scopes manual charges, refreshes edits and detachments idempotently', async () => {
     const assignmentA = uuidv4();
     const assignmentB = uuidv4();
     const sharedDiscountId = uuidv4();
-    const secondContractId = uuidv4();
     const secondClientContractId = uuidv4();
     await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: false });
-    await db('contracts').insert({
-      tenant, contract_id: secondContractId, contract_name: 'Second managed contract',
-      billing_frequency: 'monthly', is_active: true,
-    });
     await db('client_contracts').insert({
       tenant, client_contract_id: secondClientContractId, client_id: clientId,
-      contract_id: secondContractId, start_date: '2026-01-01T00:00:00.000Z', is_active: true,
+      contract_id: contractId, start_date: '2026-01-01T00:00:00.000Z', is_active: true,
     });
     await db('discounts').insert({
       tenant, discount_id: sharedDiscountId, discount_name: 'Shared default',
@@ -374,8 +426,8 @@ describe('contract invoice adjustments (DB-backed)', () => {
       scope: 'contract', priority: 1,
     });
     await db('contract_discount_assignments').insert([
-      { tenant, assignment_id: assignmentA, contract_id: contractId, discount_id: sharedDiscountId },
-      { tenant, assignment_id: assignmentB, contract_id: secondContractId, discount_id: sharedDiscountId },
+      { tenant, assignment_id: assignmentA, client_contract_id: clientContractId, discount_id: sharedDiscountId },
+      { tenant, assignment_id: assignmentB, client_contract_id: secondClientContractId, discount_id: sharedDiscountId },
     ]);
     const fixture = await createDraftWithGeneratedChargeAndDiscount();
     const attributedManualId = uuidv4();
@@ -418,6 +470,10 @@ describe('contract invoice adjustments (DB-backed)', () => {
     const preservedManualCount = await db('invoice_charges').where({ tenant, invoice_id: fixture.invoiceId })
       .whereIn('item_id', [attributedManualId, unattributedManualId]).count('* as n').first();
     expect(Number(preservedManualCount?.n)).toBe(2);
+    await db('contract_discount_assignments').where({ tenant, discount_id: sharedDiscountId }).delete();
+    await db('discounts').where({ tenant, discount_id: sharedDiscountId }).delete();
+    await db('client_contracts').where({ tenant, client_contract_id: secondClientContractId }).delete();
+    await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: true });
   });
 
   it('re-applies the invoice-wide discount over generated + manual charges and preserves the manual line', async () => {

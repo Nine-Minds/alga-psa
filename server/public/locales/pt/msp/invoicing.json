@@ -427,7 +427,9 @@
       },
       "source": "Selecionar serviço faturado",
       "effectiveDate": "Data de início",
-      "sourceRate": "Tarifa {{rate}}"
+      "sourceRate": "Tarifa {{rate}}",
+      "permanentChangeNudge": "Esta é uma alteração permanente? Registre-a no contrato.",
+      "overlapConfirm": "Um ajuste automático do contrato já se sobrepõe a este período. Adicionar mesmo assim este ajuste manual separado?"
     }
   },
   "quickInvoice": {

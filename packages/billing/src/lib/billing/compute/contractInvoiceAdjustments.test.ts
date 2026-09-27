@@ -4,6 +4,7 @@ import {
   allocateByLargestRemainder,
   computePartialPeriodAmount,
   evaluateContractInvoiceAdjustments,
+  hasOverlappingContractChangeAdjustment,
   normalizeDiscountValue,
   resolveSourceDerivedPartialPeriod,
   storedDiscountValueToPolicyValue,
@@ -323,5 +324,26 @@ describe('allocateByLargestRemainder', () => {
 
     expect(allocations.get('recurring')).toBe(390_000);
     expect(allocations.get('manual')).toBe(15_000);
+  });
+});
+
+describe('hasOverlappingContractChangeAdjustment', () => {
+  const companion = {
+    adjustment_source_kind: 'contract_change',
+    contract_line_id: 'line-1',
+    adjustment_period_start: '2026-09-10',
+    adjustment_period_end: '2026-09-20',
+  };
+
+  it('detects an overlapping fabricated companion settlement but excludes touching half-open boundaries', () => {
+    expect(hasOverlappingContractChangeAdjustment({
+      contractLineId: 'line-1', effectiveDate: '2026-09-19', periodEnd: '2026-10-01', adjustments: [companion],
+    })).toBe(true);
+    expect(hasOverlappingContractChangeAdjustment({
+      contractLineId: 'line-1', effectiveDate: '2026-09-20', periodEnd: '2026-10-01', adjustments: [companion],
+    })).toBe(false);
+    expect(hasOverlappingContractChangeAdjustment({
+      contractLineId: 'line-1', effectiveDate: '2026-09-01', periodEnd: '2026-09-10', adjustments: [companion],
+    })).toBe(false);
   });
 });

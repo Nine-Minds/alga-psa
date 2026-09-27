@@ -137,6 +137,22 @@ function discountActionErrorFrom(error: unknown): ContractDiscountActionError | 
   return null;
 }
 
+async function resolveClientContractId(
+  db: ReturnType<typeof tenantDb>,
+  contractId: string,
+  requestedClientContractId?: string | null,
+): Promise<string> {
+  const query = db.table('client_contracts').where({ contract_id: contractId });
+  if (requestedClientContractId) query.andWhere({ client_contract_id: requestedClientContractId });
+  const rows = await query.select('client_contract_id');
+  if (rows.length !== 1) {
+    throw new Error(rows.length > 1
+      ? 'Select a specific client contract assignment before managing its discounts.'
+      : 'The selected client contract assignment is no longer available.');
+  }
+  return String(rows[0].client_contract_id);
+}
+
 /**
  * Lists the services attached to each line of a contract, for the discount
  * dialog's service-scope selector.
@@ -204,6 +220,7 @@ export const getContractDiscounts = withAuth(async (
   user,
   { tenant },
   contractId: string,
+  clientContractId?: string | null,
 ): Promise<ContractDiscountRecord[] | ContractDiscountActionError> => {
   try {
     const { knex } = await createTenantKnex();
@@ -217,6 +234,7 @@ export const getContractDiscounts = withAuth(async (
       }
 
       const db = tenantDb(trx, tenant);
+      const resolvedClientContractId = await resolveClientContractId(db, contractId, clientContractId);
       const query = db.table('discounts as d');
       db.tenantJoin(query, 'contract_line_discounts as cld', 'd.discount_id', 'cld.discount_id');
       db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_line_id', 'cld.contract_line_id', { type: 'left' });
@@ -245,7 +263,7 @@ export const getContractDiscounts = withAuth(async (
       const contractAssignments = db.table('contract_discount_assignments as a');
       db.tenantJoin(contractAssignments, 'discounts as d', 'd.discount_id', 'a.discount_id');
       db.tenantJoin(contractAssignments, 'service_catalog as svc', 'svc.service_id', 'd.scope_service_id', { type: 'left' });
-      const attachedRows = await contractAssignments.where('a.contract_id', contractId).orderBy('d.discount_name', 'asc').select(
+      const attachedRows = await contractAssignments.where('a.client_contract_id', resolvedClientContractId).orderBy('d.discount_name', 'asc').select(
         'd.discount_id', 'd.discount_name', 'd.discount_type', 'd.value', 'd.start_date', 'd.end_date',
         'd.scope', 'd.scope_service_id', 'd.applies_to_item_id', 'd.priority', 'd.is_active',
         'svc.service_name as scope_service_name', 'a.assignment_id',
@@ -299,13 +317,14 @@ export interface SharedDiscountOption {
   is_active: boolean;
 }
 
-export const getAvailableSharedDiscounts = withAuth(async (user, { tenant }, contractId: string) => {
+export const getAvailableSharedDiscounts = withAuth(async (user, { tenant }, contractId: string, clientContractId?: string | null) => {
   const { knex } = await createTenantKnex();
   if (!tenant) throw new Error('tenant context not found');
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     if (!await hasPermission(user, 'billing', 'read', trx)) throw new Error('Permission denied: Cannot read contract discounts');
     const db = tenantDb(trx, tenant);
-    const assignments = await db.table('contract_discount_assignments').where({ contract_id: contractId }).select('discount_id');
+    const resolvedClientContractId = await resolveClientContractId(db, contractId, clientContractId);
+    const assignments = await db.table('contract_discount_assignments').where({ client_contract_id: resolvedClientContractId }).select('discount_id');
     const lineQuery = db.table('contract_line_discounts as cld');
     db.tenantJoin(lineQuery, 'contract_lines as cl', 'cl.contract_line_id', 'cld.contract_line_id');
     const lineAssignments = await lineQuery.where('cl.contract_id', contractId).select('cld.discount_id');
@@ -321,13 +340,14 @@ export const getAvailableSharedDiscounts = withAuth(async (user, { tenant }, con
   });
 });
 
-export const attachSharedDiscountToContract = withAuth(async (user, { tenant }, contractId: string, discountId: string) => {
+export const attachSharedDiscountToContract = withAuth(async (user, { tenant }, contractId: string, discountId: string, clientContractId?: string | null) => {
   const { knex } = await createTenantKnex();
   if (!tenant) throw new Error('tenant context not found');
   try {
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       if (!await hasPermission(user, 'billing', 'update', trx)) throw new Error('Permission denied: Cannot attach contract discounts');
       const db = tenantDb(trx, tenant);
+      const resolvedClientContractId = await resolveClientContractId(db, contractId, clientContractId);
       const contract = await db.table('contracts').where({ contract_id: contractId }).first('contract_id', 'is_system_managed_default');
       const definition = await db.table('discounts').where({ discount_id: discountId }).first('discount_id');
       if (!contract || !definition) throw new Error('The selected contract or discount is no longer available.');
@@ -338,7 +358,7 @@ export const attachSharedDiscountToContract = withAuth(async (user, { tenant }, 
         throw new Error('This discount is already attached to the contract through a contract line.');
       }
       await db.table('contract_discount_assignments').insert({
-        tenant, assignment_id: trx.raw('gen_random_uuid()'), contract_id: contractId,
+        tenant, assignment_id: trx.raw('gen_random_uuid()'), client_contract_id: resolvedClientContractId,
         discount_id: discountId, created_at: trx.fn.now(),
       });
       return { success: true as const };
@@ -350,18 +370,19 @@ export const attachSharedDiscountToContract = withAuth(async (user, { tenant }, 
   }
 });
 
-export const detachContractDiscount = withAuth(async (user, { tenant }, contractId: string, assignmentId: string) => {
+export const detachContractDiscount = withAuth(async (user, { tenant }, contractId: string, assignmentId: string, clientContractId?: string | null) => {
   const { knex } = await createTenantKnex();
   if (!tenant) throw new Error('tenant context not found');
   try {
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       if (!await hasPermission(user, 'billing', 'update', trx)) throw new Error('Permission denied: Cannot detach contract discounts');
       const db = tenantDb(trx, tenant);
+      const resolvedClientContractId = await resolveClientContractId(db, contractId, clientContractId);
       const contract = await db.table('contracts').where({ contract_id: contractId }).first('contract_id', 'is_system_managed_default');
       if (!contract) throw new Error('The selected contract is no longer available.');
       if (contract.is_system_managed_default === true) throw new Error('System-managed default contracts are attribution-only; discount authoring is disabled.');
       const removed = await db.table('contract_discount_assignments')
-        .where({ contract_id: contractId, assignment_id: assignmentId }).delete();
+        .where({ client_contract_id: resolvedClientContractId, assignment_id: assignmentId }).delete();
       if (!removed) throw new Error('The discount assignment no longer exists on this contract.');
       return { success: true as const };
     });
@@ -377,6 +398,7 @@ export const createContractDiscount = withAuth(async (
   { tenant },
   contractId: string,
   input: ContractDiscountInput,
+  clientContractId?: string | null,
 ): Promise<ContractDiscountRecord | ContractDiscountActionError> => {
   try {
     const validationError = validateDiscountInput(input);
@@ -397,6 +419,7 @@ export const createContractDiscount = withAuth(async (
       await assertDiscountAuthorable(trx, tenant, contractId, input);
 
       const db = tenantDb(trx, tenant);
+      const resolvedClientContractId = await resolveClientContractId(db, contractId, clientContractId);
       const discountId = trx.raw('gen_random_uuid()');
       const now = trx.fn.now();
 
@@ -430,13 +453,13 @@ export const createContractDiscount = withAuth(async (
         await db.table('contract_discount_assignments').insert({
           tenant,
           assignment_id: trx.raw('gen_random_uuid()'),
-          contract_id: contractId,
+          client_contract_id: resolvedClientContractId,
           discount_id: newId,
           created_at: now,
         });
       }
 
-      const record = await getContractDiscountById(trx, tenant, contractId, newId);
+      const record = await getContractDiscountById(trx, tenant, contractId, newId, resolvedClientContractId);
       if (!record) {
         throw new Error('The discount was created but could not be read back.');
       }
@@ -456,6 +479,7 @@ export const updateContractDiscount = withAuth(async (
   contractId: string,
   discountId: string,
   input: ContractDiscountInput,
+  clientContractId?: string | null,
 ): Promise<ContractDiscountRecord | ContractDiscountActionError> => {
   try {
     const validationError = validateDiscountInput(input);
@@ -476,9 +500,10 @@ export const updateContractDiscount = withAuth(async (
       await assertDiscountAuthorable(trx, tenant, contractId, input);
 
       const db = tenantDb(trx, tenant);
+      const resolvedClientContractId = await resolveClientContractId(db, contractId, clientContractId);
       const existing = await db
         .table('contract_discount_assignments')
-        .where({ discount_id: discountId, contract_id: contractId })
+        .where({ discount_id: discountId, client_contract_id: resolvedClientContractId })
         .first('assignment_id');
       const existingLine = existing ? null : await db
         .table('discounts as d')
@@ -492,6 +517,9 @@ export const updateContractDiscount = withAuth(async (
         .first('d.discount_id');
       if (!existing && !existingLine) {
         throw new Error('The discount no longer exists for this contract.');
+      }
+      if (existing && input.contract_line_id) {
+        throw new Error('A client-contract discount cannot be changed to line scope in place. Detach it and create a line-scoped discount.');
       }
 
       await db.table('discounts').where({ discount_id: discountId }).update({
@@ -518,7 +546,7 @@ export const updateContractDiscount = withAuth(async (
         });
       }
 
-      const record = await getContractDiscountById(trx, tenant, contractId, discountId);
+      const record = await getContractDiscountById(trx, tenant, contractId, discountId, resolvedClientContractId);
       if (!record) {
         throw new Error('The discount was updated but could not be read back.');
       }
@@ -538,6 +566,7 @@ export const setContractDiscountActive = withAuth(async (
   contractId: string,
   discountId: string,
   isActive: boolean,
+  clientContractId?: string | null,
 ): Promise<ContractDiscountRecord | ContractDiscountActionError> => {
   try {
     const { knex } = await createTenantKnex();
@@ -551,7 +580,10 @@ export const setContractDiscountActive = withAuth(async (
       }
 
       const db = tenantDb(trx, tenant);
-      const existing = await db
+      const resolvedClientContractId = await resolveClientContractId(db, contractId, clientContractId);
+      const existingAssignment = await db.table('contract_discount_assignments')
+        .where({ client_contract_id: resolvedClientContractId, discount_id: discountId }).first('assignment_id');
+      const existingLine = await db
         .table('discounts as d')
         .join('contract_line_discounts as cld', function () {
           this.on('cld.discount_id', '=', 'd.discount_id').andOn('cld.tenant', '=', 'd.tenant');
@@ -561,7 +593,7 @@ export const setContractDiscountActive = withAuth(async (
         })
         .where({ 'd.discount_id': discountId, 'cl.contract_id': contractId })
         .first('d.discount_id');
-      if (!existing) {
+      if (!existingAssignment && !existingLine) {
         throw new Error('The discount no longer exists for this contract.');
       }
 
@@ -570,7 +602,7 @@ export const setContractDiscountActive = withAuth(async (
         updated_at: trx.fn.now(),
       });
 
-      const record = await getContractDiscountById(trx, tenant, contractId, discountId);
+      const record = await getContractDiscountById(trx, tenant, contractId, discountId, resolvedClientContractId);
       if (!record) {
         throw new Error('The discount was updated but could not be read back.');
       }
@@ -589,6 +621,7 @@ async function getContractDiscountById(
   tenant: string,
   contractId: string,
   discountId: string,
+  clientContractId?: string,
 ): Promise<ContractDiscountRecord | null> {
   const db = tenantDb(trx, tenant);
   const attached = await db.table('contract_discount_assignments as a')
@@ -598,7 +631,7 @@ async function getContractDiscountById(
     .leftJoin('service_catalog as svc', function () {
       this.on('svc.service_id', '=', 'd.scope_service_id').andOn('svc.tenant', '=', 'd.tenant');
     })
-    .where({ 'a.contract_id': contractId, 'a.discount_id': discountId })
+    .where({ ...(clientContractId ? { 'a.client_contract_id': clientContractId } : {}), 'a.discount_id': discountId })
     .first('d.*', 'svc.service_name as scope_service_name', 'a.assignment_id');
   if (attached) {
     const row = attached as Record<string, unknown>;

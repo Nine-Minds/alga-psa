@@ -501,6 +501,8 @@ interface ManualInvoiceItemInput extends NetAmountItem {
   client_contract_id?: string | null;
   service_period_start?: string | null;
   service_period_end?: string | null;
+  adjustment_period_start?: string | null;
+  adjustment_period_end?: string | null;
   /**
    * Explicit billing profile for this manual item — step 1 of the resolution
    * chain, and the only step a manual item can use, since it has no contract
@@ -978,7 +980,14 @@ export async function persistManualInvoiceCharges(
       throw new ManualInvoiceError('INVALID_QUANTITY', 'Quantity must be greater than 0');
     }
 
-    const netAmount = calculateNetAmount(requestItem, subtotal); // No applicable amount needed here
+    let netAmount = calculateNetAmount(requestItem, subtotal); // No applicable amount needed here
+    const partialPeriodMetadata = requestItem.manual_line_metadata?.partialPeriod as Record<string, unknown> | undefined;
+    if (partialPeriodMetadata && Number.isFinite(Number(partialPeriodMetadata.resolved_amount))) {
+      // The source-derived calculator keeps a real unit delta and the prorated
+      // unit rate, while this server-resolved cents value preserves the final
+      // rounded total where quantity × rounded unit rate would lose a cent.
+      netAmount = Number(partialPeriodMetadata.resolved_amount);
+    }
 
     // Detect manual credits (negative rate, not explicitly marked as discount)
     const isCredit = !requestItem.is_discount && requestItem.rate < 0;
@@ -1022,8 +1031,8 @@ export async function persistManualInvoiceCharges(
       applies_to_service_id: null,
       location_id: requestItem.location_id ?? null,
       client_contract_id: requestItem.client_contract_id ?? null,
-      service_period_start: requestItem.service_period_start ?? null,
-      service_period_end: requestItem.service_period_end ?? null,
+      adjustment_period_start: requestItem.adjustment_period_start ?? null,
+      adjustment_period_end: requestItem.adjustment_period_end ?? null,
       billing_profile_id: itemProfile.billingProfileId,
       billing_profile_source: itemProfile.source,
       so_line_id: requestItem.so_line_id ?? null,

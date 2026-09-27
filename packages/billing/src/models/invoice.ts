@@ -38,6 +38,8 @@ type InvoiceChargeDetailPeriodRow = {
 
 type InvoiceChargeDisplayRow = IInvoiceCharge & {
   name?: string | null;
+  adjustment_period_start?: string | Date | null;
+  adjustment_period_end?: string | Date | null;
 };
 
 type InvoiceTimeEntrySnapshotRow = {
@@ -189,6 +191,13 @@ function attachCanonicalRecurringDetailPeriods(
     const chargeDetailRows = detailRowsByItemId.get(charge.item_id);
     if (!chargeDetailRows || chargeDetailRows.length === 0) {
       // Historical flat invoices stay parent-only when canonical detail rows do not exist.
+      if (charge.adjustment_period_start || charge.adjustment_period_end) {
+        return {
+          ...charge,
+          service_period_start: normalizeRecurringDetailPeriodDate(charge.adjustment_period_start),
+          service_period_end: normalizeRecurringDetailPeriodDate(charge.adjustment_period_end),
+        };
+      }
       return charge;
     }
 
@@ -737,6 +746,9 @@ const Invoice = {
           'ic.tenant',
           'ic.billing_charge_type',
           'ic.service_id',
+          'ic.client_contract_id',
+          'ic.adjustment_period_start',
+          'ic.adjustment_period_end',
           'sc.item_kind as service_item_kind',
           'sc.sku as service_sku',
           'sc.service_name as service_name',

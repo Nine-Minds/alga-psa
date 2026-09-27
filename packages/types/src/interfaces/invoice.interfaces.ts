@@ -114,6 +114,9 @@ export interface IInvoiceCharge extends TenantEntity, NetAmountItem {
   service_id?: string;
   service_period_start?: ISO8601String | null;
   service_period_end?: ISO8601String | null;
+  /** Manual adjustment impact window; recurring coverage remains in detail rows. */
+  adjustment_period_start?: ISO8601String | null;
+  adjustment_period_end?: ISO8601String | null;
   billing_timing?: 'arrears' | 'advance' | null;
   /**
    * Canonical recurring detail periods linked to this charge.
@@ -180,7 +183,7 @@ export interface IInvoiceCharge extends TenantEntity, NetAmountItem {
   adjustment_reason?: string | null;
   /** Authoring facts for manually entered adjustment lines. */
   manual_line_metadata?: ManualLineMetadata | null;
-  client_contract_id?: string; // Reference to the client contract assignment
+  client_contract_id?: string | null; // Reference to the client contract assignment
   contract_name?: string; // Contract name
   is_bundle_header?: boolean; // Whether this item is a contract group header
   parent_item_id?: string; // Reference to the parent contract group header item

@@ -427,7 +427,9 @@
       },
       "source": "Abgerechnete Leistung auswählen",
       "effectiveDate": "Wirksam ab",
-      "sourceRate": "Satz {{rate}}"
+      "sourceRate": "Satz {{rate}}",
+      "permanentChangeNudge": "Ist dies eine dauerhafte Änderung? Erfassen Sie sie stattdessen im Vertrag.",
+      "overlapConfirm": "Eine automatische Vertragsänderungsanpassung überschneidet diesen Zeitraum bereits. Diese separate manuelle Anpassung trotzdem hinzufügen?"
     }
   },
   "quickInvoice": {

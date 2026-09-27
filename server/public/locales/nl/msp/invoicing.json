@@ -427,7 +427,9 @@
       },
       "source": "Gefactureerde service selecteren",
       "effectiveDate": "Ingangsdatum",
-      "sourceRate": "Tarief {{rate}}"
+      "sourceRate": "Tarief {{rate}}",
+      "permanentChangeNudge": "Is dit een permanente wijziging? Leg deze dan vast in het contract.",
+      "overlapConfirm": "Een automatische contractaanpassing overlapt deze periode al. Deze afzonderlijke handmatige aanpassing toch toevoegen?"
     }
   },
   "quickInvoice": {

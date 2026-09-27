@@ -39,6 +39,7 @@ const isReturnedActionError = (value: unknown) =>
 
 interface ContractDiscountsProps {
   contractId: string;
+  clientContractId: string | null;
   isReadOnly?: boolean;
 }
 
@@ -68,7 +69,7 @@ const emptyForm = (): DiscountFormState => ({
   is_active: true,
 });
 
-export function ContractDiscounts({ contractId, isReadOnly = false }: ContractDiscountsProps) {
+export function ContractDiscounts({ contractId, clientContractId, isReadOnly = false }: ContractDiscountsProps) {
   const { t } = useTranslation('msp/contracts');
   const [discounts, setDiscounts] = useState<ContractDiscountRecord[]>([]);
   const [lines, setLines] = useState<Array<{ contract_line_id: string; contract_line_name?: string | null }>>([]);
@@ -86,10 +87,10 @@ export function ContractDiscounts({ contractId, isReadOnly = false }: ContractDi
     setError(null);
     try {
       const [discountResult, lineResult, serviceResult, availableResult] = await Promise.all([
-        getContractDiscounts(contractId),
+        getContractDiscounts(contractId, clientContractId),
         getDetailedContractLines(contractId),
         getContractLineServiceOptions(contractId),
-        getAvailableSharedDiscounts(contractId),
+        getAvailableSharedDiscounts(contractId, clientContractId),
       ]);
       if (isReturnedActionError(discountResult)) {
         setError(getErrorMessage(discountResult));
@@ -110,7 +111,7 @@ export function ContractDiscounts({ contractId, isReadOnly = false }: ContractDi
     } finally {
       setIsLoading(false);
     }
-  }, [contractId, t]);
+  }, [contractId, clientContractId, t]);
 
   useEffect(() => {
     load();
@@ -128,7 +129,7 @@ export function ContractDiscounts({ contractId, isReadOnly = false }: ContractDi
     setBusyId(discount.discount_id);
     setError(null);
     try {
-      const result = await setContractDiscountActive(contractId, discount.discount_id, !discount.is_active);
+      const result = await setContractDiscountActive(contractId, discount.discount_id, !discount.is_active, clientContractId);
       if (isReturnedActionError(result)) {
         setError(getErrorMessage(result));
         return;
@@ -144,7 +145,7 @@ export function ContractDiscounts({ contractId, isReadOnly = false }: ContractDi
     setBusyId(selectedSharedDiscountId);
     setError(null);
     try {
-      const result = await attachSharedDiscountToContract(contractId, selectedSharedDiscountId);
+      const result = await attachSharedDiscountToContract(contractId, selectedSharedDiscountId, clientContractId);
       if (isReturnedActionError(result)) { setError(getErrorMessage(result)); return; }
       setSelectedSharedDiscountId('');
       await load();
@@ -158,7 +159,7 @@ export function ContractDiscounts({ contractId, isReadOnly = false }: ContractDi
     setBusyId(discount.assignment_id);
     setError(null);
     try {
-      const result = await detachContractDiscount(contractId, discount.assignment_id);
+      const result = await detachContractDiscount(contractId, discount.assignment_id, clientContractId);
       if (isReturnedActionError(result)) { setError(getErrorMessage(result)); return; }
       await load();
     } catch (err) { setError(getErrorMessage(err)); }
@@ -296,6 +297,7 @@ export function ContractDiscounts({ contractId, isReadOnly = false }: ContractDi
       {dialogOpen && (
         <ContractDiscountDialog
           contractId={contractId}
+          clientContractId={clientContractId}
           lines={lineOptions}
           serviceOptions={serviceOptions}
           editing={editing}
@@ -312,6 +314,7 @@ export function ContractDiscounts({ contractId, isReadOnly = false }: ContractDi
 
 interface ContractDiscountDialogProps {
   contractId: string;
+  clientContractId: string | null;
   lines: Array<{ value: string; label: string }>;
   serviceOptions: ContractLineServiceOption[];
   editing: ContractDiscountRecord | null;
@@ -321,6 +324,7 @@ interface ContractDiscountDialogProps {
 
 function ContractDiscountDialog({
   contractId,
+  clientContractId,
   lines,
   serviceOptions,
   editing,
@@ -347,7 +351,9 @@ function ContractDiscountDialog({
 
   const scopedServices = useMemo(
     () => serviceOptions
-      .filter((option) => option.contract_line_id === form.contract_line_id)
+      .filter((option) => form.contract_line_id
+        ? option.contract_line_id === form.contract_line_id
+        : true)
       .map((option) => ({
         value: option.service_id,
         label: option.service_name || option.service_id,
@@ -379,8 +385,8 @@ function ContractDiscountDialog({
     setIsSaving(true);
     try {
       const result = editing
-        ? await updateContractDiscount(contractId, editing.discount_id, input)
-        : await createContractDiscount(contractId, input);
+        ? await updateContractDiscount(contractId, editing.discount_id, input, clientContractId)
+        : await createContractDiscount(contractId, input, clientContractId);
       if (isReturnedActionError(result)) {
         setError(getErrorMessage(result));
         return;
@@ -510,6 +516,7 @@ function ContractDiscountDialog({
             <CustomSelect
               id="contract-discount-line"
               value={form.contract_line_id}
+              disabled={editing?.attachment_kind === 'contract'}
               onValueChange={(value) => setForm((current) => ({
                 ...current,
                 contract_line_id: value,
@@ -518,6 +525,9 @@ function ContractDiscountDialog({
               options={lines}
               placeholder={t('contractDiscounts.fields.linePlaceholder', { defaultValue: 'Optional: keep this discount line-scoped' })}
             />
+            {editing?.attachment_kind === 'contract' && <p className="text-xs text-muted-foreground">
+              {t('contractDiscounts.dialog.contractAttachmentLineScopeLocked', { defaultValue: 'This discount is attached to this client contract. To make it line-scoped, detach it and create a line-scoped attachment.' })}
+            </p>}
           </div>}
 
           <div className="grid grid-cols-2 gap-3">

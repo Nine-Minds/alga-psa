@@ -2559,6 +2559,9 @@
       "shared": "Gedeeld · dit contract",
       "line": "Regelgekoppeld"
     },
-    "sharedEditNotice": "Deze definitie wordt gedeeld. Wijzigingen gelden voor alle gekoppelde contracten bij de volgende geschikte conceptverversing."
+    "sharedEditNotice": "Deze definitie wordt gedeeld. Wijzigingen gelden voor alle gekoppelde contracten bij de volgende geschikte conceptverversing.",
+    "dialog": {
+      "contractAttachmentLineScopeLocked": "This discount is attached to this client contract. To make it line-scoped, detach it and create a line-scoped discount."
+    }
   }
 }

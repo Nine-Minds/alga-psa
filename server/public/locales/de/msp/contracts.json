@@ -2562,6 +2562,9 @@
     "sharedEditNotice": "Diese Definition wird gemeinsam genutzt. Änderungen gelten bei der nächsten geeigneten Aktualisierung des Entwurfs für alle verknüpften Verträge.",
     "fields": {
       "service": "Dienstleistung"
+    },
+    "dialog": {
+      "contractAttachmentLineScopeLocked": "This discount is attached to this client contract. To make it line-scoped, detach it and create a line-scoped discount."
     }
   }
 }

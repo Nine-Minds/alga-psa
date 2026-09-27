@@ -339,6 +339,8 @@ export interface ManualInvoiceUpdate {
   client_contract_id?: string | null;
   service_period_start?: string | null;
   service_period_end?: string | null;
+  adjustment_period_start?: string | null;
+  adjustment_period_end?: string | null;
   /** Service-level discount target (resolved to an item id on save). */
   applies_to_service_id?: string;
   /** Partial-period inputs and reason, kept alongside the resolved amount. */
@@ -1952,22 +1954,75 @@ async function updateManualInvoiceItemsInternal(
       const sourceId = typeof partial.source_item_id === 'string' ? partial.source_item_id : '';
       const source = sourceId ? await tenantScopedTable(trx, tenant, 'invoice_charges')
         .where({ item_id: sourceId, invoice_id: invoiceId })
-        .first('service_id', 'service_period_start', 'service_period_end') : null;
+        .first('service_id', 'client_contract_id', 'unit_price', 'is_taxable', 'tax_rate', 'tax_region', 'location_id', 'billing_profile_id', 'manual_line_metadata') : null;
       const dateOnly = (value: unknown) => value == null
         ? null
         : value instanceof Date ? value.toISOString().slice(0, 10) : String(value).slice(0, 10);
+      const sourcePeriods = source ? await tenantScopedTable(trx, tenant, 'invoice_charge_details')
+        .where({ item_id: sourceId, tenant })
+        .andWhere('service_id', source.service_id)
+        .whereNotNull('service_period_start').whereNotNull('service_period_end')
+        .select('service_period_start', 'service_period_end') : [];
+      const sourcePeriodKeys = [...new Set(sourcePeriods.map((period: any) => `${dateOnly(period.service_period_start)}:${dateOnly(period.service_period_end)}`))];
       const effective = dateOnly(partial.effective_date);
-      const sourceStart = dateOnly(source?.service_period_start);
-      const sourceEnd = dateOnly(source?.service_period_end);
+      const [sourceStart, sourceEnd] = sourcePeriodKeys.length === 1 ? sourcePeriodKeys[0].split(':') : [null, null];
+      const units = Number(partial.units);
+      const coveredDays = sourceStart && effective ? Temporal.PlainDate.from(effective).until(Temporal.PlainDate.from(sourceEnd!), { largestUnit: 'days' }).days : 0;
+      const fullPeriodDays = sourceStart && sourceEnd ? Temporal.PlainDate.from(sourceStart).until(Temporal.PlainDate.from(sourceEnd), { largestUnit: 'days' }).days : 0;
+      const expectedRate = source?.unit_price == null || !fullPeriodDays || !Number.isFinite(units)
+        ? null
+        : Math.round(Number(source.unit_price) * coveredDays / fullPeriodDays) * (partial.direction === 'decrease' ? -1 : 1);
+      const expectedAmount = source?.unit_price == null || !fullPeriodDays || !Number.isFinite(units)
+        ? null
+        : Math.round(units * Number(source.unit_price) * coveredDays / fullPeriodDays) * (partial.direction === 'decrease' ? -1 : 1);
       if (!source || !source.service_id || !sourceStart || !sourceEnd || source.service_id !== item.service_id
-        || dateOnly(source.service_period_start) !== dateOnly(partial.source_period_start)
-        || dateOnly(source.service_period_end) !== dateOnly(partial.source_period_end)
-        || dateOnly(item.service_period_start) !== effective
+        || sourcePeriodKeys.length !== 1
+        || dateOnly(partial.source_period_start) !== sourceStart
+        || dateOnly(partial.source_period_end) !== sourceEnd
         || !effective
         || effective < sourceStart
-        || effective >= sourceEnd) {
+        || effective >= sourceEnd
+        || !Number.isFinite(units) || units <= 0
+        || Number(item.quantity) !== units
+        || Math.abs(Number(item.rate)) !== Math.abs(expectedRate ?? NaN)
+        || !['increase', 'decrease'].includes(String(partial.direction))
+        || (item.client_contract_id ?? null) !== (source.client_contract_id ?? null)) {
         throw expectedInvoiceActionError('The partial-period source is no longer represented on this invoice or its service period changed. Reopen the calculator and choose a current billed service.');
       }
+      item.adjustment_period_start = effective;
+      item.adjustment_period_end = sourceEnd;
+      item.client_contract_id = source.client_contract_id;
+      item.location_id = source.location_id;
+      item.billing_profile_id = source.billing_profile_id;
+      item.rate = expectedRate;
+      item.is_taxable = source.is_taxable;
+      item.tax_region = source.tax_region;
+      let sourceMetadata = source.manual_line_metadata;
+      if (typeof sourceMetadata === 'string') {
+        try { sourceMetadata = JSON.parse(sourceMetadata); } catch { sourceMetadata = null; }
+      }
+      const storedTaxChoice = sourceMetadata && Object.prototype.hasOwnProperty.call(sourceMetadata, 'tax_rate_id')
+        ? sourceMetadata.tax_rate_id
+        : undefined;
+      let billedTaxRateId = storedTaxChoice;
+      if (billedTaxRateId === undefined && source.is_taxable && source.tax_region && source.tax_rate != null) {
+        const billedTaxRate = await tenantScopedTable(trx, tenant, 'tax_rates')
+          .where({ region_code: source.tax_region, tax_percentage: source.tax_rate })
+          .first('tax_rate_id');
+        billedTaxRateId = billedTaxRate?.tax_rate_id ?? null;
+      }
+      if (billedTaxRateId === undefined) billedTaxRateId = source.is_taxable ? item.tax_rate_id : null;
+      item.tax_rate_id = billedTaxRateId;
+      partial.resolved_amount = expectedAmount;
+      partial.units = units;
+      partial.unitPrice = Math.abs(Number(source.unit_price));
+      partial.coveredDays = coveredDays;
+      partial.fullPeriodDays = fullPeriodDays;
+      partial.effective_date = effective;
+      partial.source_period_start = sourceStart;
+      partial.source_period_end = sourceEnd;
+      item.manual_line_metadata = { ...metadata, partialPeriod: partial };
+      item.adjustment_reason = typeof metadata?.reason === 'string' ? metadata.reason : null;
     }
 
     // Attribution ids on an edit must belong to this invoice's client; the
@@ -2111,8 +2166,8 @@ async function updateManualInvoiceItemsInternal(
           location_id: item.location_id,
           billing_profile_id: item.billing_profile_id,
           client_contract_id: item.client_contract_id,
-          service_period_start: item.service_period_start,
-          service_period_end: item.service_period_end,
+          adjustment_period_start: item.adjustment_period_start,
+          adjustment_period_end: item.adjustment_period_end,
           is_taxable: hasExplicitTaxTreatment ? Boolean(explicitTaxRateId) : item.is_taxable,
           tax_region: resolvedTaxRegion,
           manual_line_metadata: item.manual_line_metadata !== undefined
@@ -2141,7 +2196,15 @@ async function updateManualInvoiceItemsInternal(
           .where({ item_id: item.item_id, invoice_id: invoiceId, is_manual: true })
           .first();
         if (!updatedRow || updatedRow.is_discount) continue;
-        const netAmount = Math.round(
+        let manualMetadata = updatedRow.manual_line_metadata;
+        if (typeof manualMetadata === 'string') {
+          try { manualMetadata = JSON.parse(manualMetadata); } catch { manualMetadata = null; }
+        }
+        const partialPeriod = manualMetadata?.partialPeriod;
+        const resolvedPartialAmount = partialPeriod && Number.isFinite(Number(partialPeriod.resolved_amount))
+          ? Number(partialPeriod.resolved_amount)
+          : null;
+        const netAmount = resolvedPartialAmount ?? Math.round(
           (Number(updatedRow.quantity) || 0) * (Number(updatedRow.unit_price) || 0),
         );
         if (
@@ -2239,7 +2302,7 @@ async function updateManualInvoiceItemsInternal(
           service_id: item.service_id || undefined,
           description: item.description,
           tax_region: item.tax_region || client.tax_region,
-          tax_rate_id: (item as any).tax_rate_id ?? null,
+          tax_rate_id: (item as any).tax_rate_id,
           location_id: (item as any).location_id ?? null,
           is_taxable: item.is_taxable !== false,
           applies_to_service_id: item.applies_to_service_id,
@@ -2248,8 +2311,8 @@ async function updateManualInvoiceItemsInternal(
           // through to the client default when unset (F033).
           billing_profile_id: item.billing_profile_id ?? null,
           client_contract_id: item.client_contract_id ?? null,
-          service_period_start: item.service_period_start ?? null,
-          service_period_end: item.service_period_end ?? null,
+          adjustment_period_start: item.adjustment_period_start ?? null,
+          adjustment_period_end: item.adjustment_period_end ?? null,
           manual_line_metadata: (item as any).manual_line_metadata ?? null,
           adjustment_source_kind: (item as any).adjustment_source_kind ?? 'manual_adjustment',
           adjustment_source_id: (item as any).adjustment_source_id ?? null,

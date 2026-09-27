@@ -23,6 +23,8 @@ export interface ManualInvoiceUpdate { // Add export
   client_contract_id?: string | null;
   service_period_start?: string | null;
   service_period_end?: string | null;
+  adjustment_period_start?: string | null;
+  adjustment_period_end?: string | null;
   applies_to_service_id?: string;
   manual_line_metadata?: Record<string, unknown> | null;
 }

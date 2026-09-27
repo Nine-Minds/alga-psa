@@ -159,6 +159,28 @@ export function resolveSourceDerivedPartialPeriod(input: {
   };
 }
 
+/** Half-open overlap check for a manual calculator window and companion true-up. */
+export function hasOverlappingContractChangeAdjustment(input: {
+  contractLineId: string;
+  effectiveDate: string;
+  periodEnd: string;
+  adjustments: Array<{
+    adjustment_source_kind?: string | null;
+    contract_line_id?: string | null;
+    adjustment_period_start?: string | null;
+    adjustment_period_end?: string | null;
+  }>;
+}): boolean {
+  return input.adjustments.some((row) => {
+    if (row.adjustment_source_kind !== 'contract_change'
+      || row.contract_line_id !== input.contractLineId
+      || !row.adjustment_period_start || !row.adjustment_period_end) return false;
+    const start = row.adjustment_period_start.slice(0, 10);
+    const end = row.adjustment_period_end.slice(0, 10);
+    return start < input.periodEnd && input.effectiveDate < end;
+  });
+}
+
 export function normalizeDiscountValue(policy: Pick<AutomaticDiscountPolicy, 'discount_type' | 'value' | 'valueUnit'>): number {
   if (policy.discount_type === 'fixed') {
     return Math.abs(toIntegerMinorUnits(policy.value));

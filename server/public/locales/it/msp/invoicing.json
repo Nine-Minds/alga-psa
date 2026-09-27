@@ -427,7 +427,9 @@
       },
       "source": "Seleziona servizio fatturato",
       "effectiveDate": "Data di decorrenza",
-      "sourceRate": "Tariffa {{rate}}"
+      "sourceRate": "Tariffa {{rate}}",
+      "permanentChangeNudge": "È una modifica permanente? Registrala invece nel contratto.",
+      "overlapConfirm": "Un adeguamento automatico del contratto si sovrappone già a questo periodo. Aggiungere comunque questo adeguamento manuale separato?"
     }
   },
   "quickInvoice": {

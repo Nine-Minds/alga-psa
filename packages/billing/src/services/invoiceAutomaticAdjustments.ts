@@ -314,7 +314,7 @@ async function loadApplicableDiscountRows(
   for (const row of invoiceContractIds) if (row.client_contract_id) representedClientContractIds.add(row.client_contract_id);
   const assignmentQuery = db.table('contract_discount_assignments as a');
   db.tenantJoin(assignmentQuery, 'discounts as d', 'd.discount_id', 'a.discount_id');
-  db.tenantJoin(assignmentQuery, 'client_contracts as cc', 'cc.contract_id', 'a.contract_id');
+  db.tenantJoin(assignmentQuery, 'client_contracts as cc', 'cc.client_contract_id', 'a.client_contract_id');
   const assignmentRows = representedClientContractIds.size === 0 ? [] : await assignmentQuery
     .where('cc.client_id', clientId)
     .whereIn('cc.client_contract_id', [...representedClientContractIds])

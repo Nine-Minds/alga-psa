@@ -427,7 +427,9 @@
         "units": "Units must be greater than zero.",
         "unitPrice": "Unit price must be a number.",
         "invalid": "Enter a valid partial period."
-      }
+      },
+      "permanentChangeNudge": "Is this a permanent change? Record it on the contract instead.",
+      "overlapConfirm": "An automatic contract change adjustment already overlaps this period. Add this separate manual adjustment anyway?"
     }
   },
   "quickInvoice": {
