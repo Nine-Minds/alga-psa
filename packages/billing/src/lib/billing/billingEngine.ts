@@ -6651,34 +6651,42 @@ export class BillingEngine {
     if (lineIds.length === 0) return [];
 
     const db = tenantDb(this.knex, this.tenant);
-    const adjustments = (await db
-      .table("contract_recurring_unit_adjustments")
-      .where({ tenant: this.tenant, status: "pending" })
-      .whereIn("contract_line_id", lineIds)
-      .whereNot("amount_cents", 0)
-      // The affected period must have begun by the end of this billing window.
-      // A pending adjustment whose affected invoice finalized first therefore
-      // carries forward onto the next eligible draft; a draft for an earlier
-      // window never pulls a future true-up forward.
-      .andWhere("adjustment_period_start", "<", billingPeriod.endDate)
-      .select(
-        "adjustment_id",
-        "contract_line_id",
-        "service_id",
-        "config_id",
-        "revision_id",
-        "revision_version",
-        "adjustment_period_start",
-        "adjustment_period_end",
-        "previous_quantity",
-        "new_quantity",
-        "quantity_delta",
-        "unit_rate_cents",
-        "covered_days",
-        "full_period_days",
-        "amount_cents",
-        "reason",
-      )) as Array<Record<string, unknown>>;
+    let adjustments: Array<Record<string, unknown>>;
+    try {
+      adjustments = (await db
+        .table("contract_recurring_unit_adjustments")
+        .where({ tenant: this.tenant, status: "pending" })
+        .whereIn("contract_line_id", lineIds)
+        .whereNot("amount_cents", 0)
+        // The affected period must have begun by the end of this billing window.
+        // A pending adjustment whose affected invoice finalized first therefore
+        // carries forward onto the next eligible draft; a draft for an earlier
+        // window never pulls a future true-up forward.
+        .andWhere("adjustment_period_start", "<", billingPeriod.endDate)
+        .select(
+          "adjustment_id",
+          "contract_line_id",
+          "service_id",
+          "config_id",
+          "revision_id",
+          "revision_version",
+          "adjustment_period_start",
+          "adjustment_period_end",
+          "previous_quantity",
+          "new_quantity",
+          "quantity_delta",
+          "unit_rate_cents",
+          "covered_days",
+          "full_period_days",
+          "amount_cents",
+          "reason",
+        )) as Array<Record<string, unknown>>;
+    } catch (error) {
+      // Additive migration: a schema that predates the ledger bills exactly as
+      // before rather than failing the whole invoice.
+      if ((error as { code?: string })?.code === "42P01") return [];
+      throw error;
+    }
     if (adjustments.length === 0) return [];
 
     const serviceIds = [...new Set(adjustments.map((row) => String(row.service_id)))];
