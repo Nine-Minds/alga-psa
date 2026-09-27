@@ -258,11 +258,12 @@ describe('client currency and billing-profile lifecycle integration', () => {
       .where({ client_id: created.client_id })
       .first();
     expect(persisted.url).toBe('');
+    // Legacy properties.tax_id input is consolidated into tax_id_number.
+    expect(persisted.tax_id_number).toBe('11-1111111');
     expect(persisted.properties).toEqual({
       website,
       industry: 'Testing',
       company_size: '1-10',
-      tax_id: '11-1111111',
     });
   });
 
