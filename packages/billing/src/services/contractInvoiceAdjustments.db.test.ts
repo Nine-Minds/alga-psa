@@ -72,7 +72,7 @@ let userId: string;
 let contractId: string;
 let contractLineId: string;
 let clientContractId: string;
-let discountId: string;
+let configuredDiscountId: string;
 let defaultBillingProfileId: string;
 let smokeLocationId: string;
 
@@ -80,7 +80,7 @@ async function seedContractDiscount(): Promise<void> {
   contractId = uuidv4();
   contractLineId = uuidv4();
   clientContractId = uuidv4();
-  discountId = uuidv4();
+  configuredDiscountId = uuidv4();
 
   await db('contracts').insert({
     tenant,
@@ -108,7 +108,7 @@ async function seedContractDiscount(): Promise<void> {
   });
   await db('discounts').insert({
     tenant,
-    discount_id: discountId,
+    discount_id: configuredDiscountId,
     discount_name: 'Loyalty 10%',
     discount_type: 'percentage',
     value: 0.1,
@@ -118,7 +118,7 @@ async function seedContractDiscount(): Promise<void> {
   });
   await db('contract_line_discounts').insert({
     tenant,
-    discount_id: discountId,
+    discount_id: configuredDiscountId,
     contract_line_id: contractLineId,
     client_id: clientId,
     client_contract_id: clientContractId,
@@ -191,7 +191,7 @@ async function createDraftWithGeneratedChargeAndDiscount(
     discount_type: 'percentage',
     discount_percentage: 10,
     adjustment_source_kind: 'discount',
-    adjustment_source_id: discountId,
+    adjustment_source_id: configuredDiscountId,
     adjustment_source_revision: 1,
     adjustment_scope: 'invoice',
     adjustment_base_amount: 390000,
@@ -466,6 +466,99 @@ describe('contract invoice adjustments (DB-backed)', () => {
     expect(reloaded.discount_type).toBe('percentage');
     expect(Number(reloaded.discount_percentage)).toBe(10);
     expect(reloaded.applies_to_item_id).toBe(fixture.generatedChargeId);
+  });
+
+  it('persists manual percentages from the full generated and previously saved charge base before invoice recalculation', async () => {
+    const fixture = await createDraftWithGeneratedChargeAndDiscount();
+    await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ is_active: false });
+    await db('invoice_charges').where({ tenant, item_id: fixture.automaticDiscountItemId }).delete();
+    const client = { client_id: clientId, region_code: null, default_currency_code: 'USD' };
+    const session = { user: { id: userId } } as never;
+    const manualId = uuidv4();
+    const discountIdForInvoice = uuidv4();
+    await db.transaction((trx) => persistManualInvoiceCharges(trx, fixture.invoiceId, [{
+      item_id: manualId, description: 'Separate manual charge', quantity: 1, rate: 15000, is_taxable: false,
+    }], client, session, tenant));
+    await db.transaction((trx) => persistManualInvoiceCharges(trx, fixture.invoiceId, [{
+      item_id: discountIdForInvoice, description: 'Invoice-wide 10% discount', quantity: 1, rate: 0,
+      is_discount: true, discount_type: 'percentage', discount_percentage: 10,
+    }], client, session, tenant));
+
+    const savedDiscount = await db('invoice_charges').where({ tenant, item_id: discountIdForInvoice }).first();
+    expect(Number(savedDiscount.net_amount)).toBe(-40500);
+    await db.transaction((trx) => persistManualInvoiceCharges(trx, fixture.invoiceId, [{
+      item_id: discountIdForInvoice, description: 'Invoice-wide 10% discount', quantity: 1, rate: 0,
+      is_discount: true, discount_type: 'percentage', discount_percentage: 10,
+    }], client, session, tenant));
+    expect(await db('invoice_charges').where({ tenant, invoice_id: fixture.invoiceId, item_id: discountIdForInvoice })).toHaveLength(1);
+
+    // A percentage discount in the same request as a new charge sees both that
+    // charge and existing generated/manual lines exactly once.
+    const sameSaveCharge = uuidv4();
+    const sameSaveDiscount = uuidv4();
+    await db.transaction((trx) => persistManualInvoiceCharges(trx, fixture.invoiceId, [
+      { item_id: sameSaveCharge, description: 'Same-save charge', quantity: 1, rate: 10000, is_taxable: false },
+      { item_id: sameSaveDiscount, description: 'Same-save 10%', quantity: 1, rate: 0, is_discount: true, discount_type: 'percentage', discount_percentage: 10 },
+    ], client, session, tenant));
+    expect(Number((await db('invoice_charges').where({ tenant, item_id: sameSaveDiscount }).first()).net_amount)).toBe(-41500);
+    await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ is_active: true });
+  });
+
+  it('applies a newly added invoice-wide manual percentage discount to generated and previously saved charges on first save', async () => {
+    const fixture = await createDraftWithGeneratedChargeAndDiscount();
+    // This scenario is specifically the operator-authored discount path; remove
+    // the fixture's configured automatic discount so the expected base is 390k.
+    await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ is_active: false });
+    await db('invoice_charges').where({ tenant, item_id: fixture.automaticDiscountItemId }).delete();
+    await db('invoices').where({ tenant, invoice_id: fixture.invoiceId }).update({ subtotal: 390000, total_amount: 390000 });
+    await db.transaction((trx) => updateInvoiceTotalsAndRecordTransaction(
+      trx, fixture.invoiceId, { client_id: clientId }, tenant, 'MANUAL-DISCOUNT-DRAFT',
+    ));
+
+    const { updateInvoiceManualItems } = await import('../actions/invoiceModification');
+    const manualChargeId = uuidv4();
+    const manualDiscountId = uuidv4();
+    const operationId = uuidv4();
+    expect(await updateInvoiceManualItems(fixture.invoiceId, {
+      newItems: [{ item_id: manualChargeId, description: 'Separate manual charge', quantity: 1, rate: 15000, is_taxable: false } as any],
+      updatedItems: [], removedItemIds: [],
+    }, { operationId: uuidv4(), expectedRevision: 0 })).toMatchObject({ invoice_id: fixture.invoiceId });
+
+    const discountSave = {
+      newItems: [{ item_id: manualDiscountId, description: 'Invoice-wide 10% discount', quantity: 1, rate: 0, is_discount: true, discount_type: 'percentage', discount_percentage: 10, is_taxable: false } as any],
+      updatedItems: [], removedItemIds: [],
+    };
+    expect(await updateInvoiceManualItems(fixture.invoiceId, discountSave, { operationId, expectedRevision: 1 }))
+      .toMatchObject({ invoice_id: fixture.invoiceId });
+
+    const assertFinancialState = async () => {
+      const rows = await db('invoice_charges').where({ tenant, invoice_id: fixture.invoiceId });
+      expect(rows.filter((row) => row.is_discount)).toHaveLength(1);
+      expect(Number(rows.find((row) => row.item_id === manualDiscountId)?.net_amount)).toBe(-40500);
+      const invoice = await db('invoices').where({ tenant, invoice_id: fixture.invoiceId }).first();
+      expect(Number(invoice.subtotal)).toBe(364500);
+      expect(Number(invoice.tax)).toBe(0);
+      expect(Number(invoice.total_amount)).toBe(364500);
+      expect(await sumChargeNet(fixture.invoiceId)).toEqual({ gross: 405000, discounts: -40500, net: 364500 });
+    };
+    await assertFinancialState();
+
+    // Replay the exact operation, then reload through the real projection and
+    // perform an ordinary repeat save. Neither path may duplicate the row or
+    // post the invoice total again.
+    expect(await updateInvoiceManualItems(fixture.invoiceId, discountSave, { operationId, expectedRevision: 1 }))
+      .toMatchObject({ invoice_id: fixture.invoiceId });
+    const reloaded = await Invoice.getFullInvoiceById(db, tenant, fixture.invoiceId);
+    expect(reloaded).toBeTruthy();
+    expect(await updateInvoiceManualItems(fixture.invoiceId, { newItems: [], updatedItems: [], removedItemIds: [] }))
+      .toMatchObject({ invoice_id: fixture.invoiceId });
+    await assertFinancialState();
+    const generated = await db('transactions').where({ tenant, invoice_id: fixture.invoiceId, type: 'invoice_generated' });
+    const adjustments = await db('transactions').where({ tenant, invoice_id: fixture.invoiceId, type: 'invoice_adjustment' });
+    expect(generated).toHaveLength(1);
+    expect(adjustments.map((row) => Number(row.amount))).toEqual([15000, -40500]);
+    expect(Number(generated[0].amount) + adjustments.reduce((sum, row) => sum + Number(row.amount), 0)).toBe(364500);
+    await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ is_active: true });
   });
 
   it('recalculates a draft repeatedly without creating financial transactions', async () => {
@@ -761,7 +854,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
     const sharedDiscountId = uuidv4();
     const secondClientContractId = uuidv4();
     await db('contract_discount_assignments').where({ tenant, client_contract_id: clientContractId }).delete();
-    await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: false });
+    await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ is_active: false });
     await db('client_contracts').insert({
       tenant, client_contract_id: secondClientContractId, client_id: clientId,
       contract_id: contractId, start_date: '2026-01-01T00:00:00.000Z', is_active: true,
@@ -819,7 +912,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
     await db('contract_discount_assignments').where({ tenant, discount_id: sharedDiscountId }).delete();
     await db('discounts').where({ tenant, discount_id: sharedDiscountId }).delete();
     await db('client_contracts').where({ tenant, client_contract_id: secondClientContractId }).delete();
-    await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: true });
+    await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ is_active: true });
   });
 
   it('re-applies the invoice-wide discount over generated + manual charges and preserves the manual line', async () => {
@@ -842,7 +935,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
     originalAssignments = await db('contract_discount_assignments').where({ tenant, client_contract_id: clientContractId });
     expect(authored).not.toHaveProperty('actionError');
     await db('contract_discount_assignments').where({ tenant, client_contract_id: clientContractId }).delete();
-    await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: false });
+    await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ is_active: false });
     const { cloneTemplateDefaultDiscounts } = await import('../lib/billing/utils/templateClone');
     await db.transaction((trx) => cloneTemplateDefaultDiscounts(trx, {
       tenant, templateId: acceptanceTemplateId, clientContractId, clientId,
@@ -925,7 +1018,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
       }
       await db('contract_templates').where({ tenant, template_id: acceptanceTemplateId }).delete();
       if (originalAssignments.length) await db('contract_discount_assignments').insert(originalAssignments);
-      await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: true });
+      await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ is_active: true });
     }
   });
 
@@ -997,8 +1090,8 @@ describe('contract invoice adjustments (DB-backed)', () => {
     await db('contract_line_service_configuration').insert({ tenant, config_id: configId, contract_line_id: contractLineId, service_id: serviceId, configuration_type: 'Fixed', quantity: 1 });
     await db('invoice_charge_details').insert({ tenant, item_detail_id: uuidv4(), item_id: fixture.generatedChargeId, config_id: configId, service_id: serviceId, quantity: 39, rate: 10_000, service_period_start: '2026-09-01', service_period_end: '2026-09-30' });
     await db('invoice_charges').where({ tenant, item_id: fixture.generatedChargeId }).update({ unit_price: 10_000 });
-    const originalDiscount = await db('discounts').where({ tenant, discount_id: discountId }).first('scope');
-    await db('discounts').where({ tenant, discount_id: discountId }).update({ scope: 'line' });
+    const originalDiscount = await db('discounts').where({ tenant, discount_id: configuredDiscountId }).first('scope');
+    await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ scope: 'line' });
     // Only the consumer columns are needed here; the companion owns migration
     // and writer tests for its complete ledger. This database is suite-local.
     await db.schema.createTable('contract_recurring_unit_adjustments', (table) => {
@@ -1041,7 +1134,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
       expect(result).toMatchObject({ success: false, code: 'SOURCE_NOT_ELIGIBLE', params: { overlapConfirmationRequired: 'true', overlapItemIds: trueUpId } });
     } finally {
       await db.schema.dropTable('contract_recurring_unit_adjustments');
-      await db('discounts').where({ tenant, discount_id: discountId }).update({ scope: originalDiscount.scope });
+      await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ scope: originalDiscount.scope });
     }
   });
 
@@ -1080,7 +1173,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
     let discounts = await automaticDiscountRows(fixture.invoiceId);
     expect(discounts).toHaveLength(1);
     expect(discounts[0].item_id).toBe(fixture.automaticDiscountItemId);
-    expect(discounts[0].adjustment_source_id).toBe(discountId);
+    expect(discounts[0].adjustment_source_id).toBe(configuredDiscountId);
     expect(Number(discounts[0].net_amount)).toBe(-40_500);
     expect(await sumChargeNet(fixture.invoiceId)).toEqual({
       gross: 405_000,
@@ -1199,7 +1292,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
     });
 
     await db('contract_discount_assignments').where({ tenant, client_contract_id: clientContractId }).delete();
-    await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: false });
+    await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ is_active: false });
     try {
       // First post-upgrade reconciliation has no desired settlement (the only
       // configured discount is inactive), yet it must still remove the stale
@@ -1242,7 +1335,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
         net: 385_000,
       });
     } finally {
-      await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: true });
+      await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ is_active: true });
     }
   });
 
@@ -1254,7 +1347,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
     });
 
     await db('contract_discount_assignments').where({ tenant, client_contract_id: clientContractId }).delete();
-    await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: false });
+    await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ is_active: false });
     try {
       await db.transaction(async (trx) => {
         await reconcileAutomaticInvoiceDiscounts(trx, tenant, fixture.invoiceId);
@@ -1270,7 +1363,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
       expect(manualRow).toBeTruthy();
       expect(Number(manualRow.net_amount)).toBe(15_000);
     } finally {
-      await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: true });
+      await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ is_active: true });
     }
   });
 
@@ -1613,7 +1706,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
     // The shared invoice-wide discount would mask the scoped one; disable it
     // for the duration of this fixture.
     await db('contract_discount_assignments').where({ tenant, client_contract_id: clientContractId }).delete();
-    await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: false });
+    await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ is_active: false });
     const scopedDiscountId = uuidv4();
     await db('discounts').insert({
       tenant,
@@ -1700,13 +1793,13 @@ describe('contract invoice adjustments (DB-backed)', () => {
       await db('contract_line_discounts').where({ tenant, discount_id: scopedDiscountId }).delete();
       await db('invoice_charges').where({ tenant, adjustment_source_id: scopedDiscountId }).delete();
       await db('discounts').where({ tenant, discount_id: scopedDiscountId }).delete();
-      await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: true });
+      await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ is_active: true });
     }
   });
 
   it('bills a configured fixed discount as its decimal currency value in USD and a non-USD currency', async () => {
     await db('contract_discount_assignments').where({ tenant, client_contract_id: clientContractId }).delete();
-    await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: false });
+    await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ is_active: false });
     const fixedDiscountId = uuidv4();
     // `discounts.value` is decimal(10,2): 50.00 means $50.00, not 50 minor units.
     await db('discounts').insert({
@@ -1787,13 +1880,13 @@ describe('contract invoice adjustments (DB-backed)', () => {
       ).delete();
       await db('invoices').where({ tenant, client_id: clientId }).where('invoice_number', 'like', 'ADJ-FIXED-%').delete();
       await db('discounts').where({ tenant, discount_id: fixedDiscountId }).delete();
-      await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: true });
+      await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ is_active: true });
     }
   });
 
   it('persists and applies a fractional percentage discount (12.5%) without rounding to two places', async () => {
     await db('contract_discount_assignments').where({ tenant, client_contract_id: clientContractId }).delete();
-    await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: false });
+    await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ is_active: false });
     const fractionalDiscountId = uuidv4();
     await db('discounts').insert({
       tenant,
@@ -1868,7 +1961,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
       await db('invoice_charges').where({ tenant, invoice_id: invoiceId }).delete();
       await db('invoices').where({ tenant, invoice_id: invoiceId }).delete();
       await db('discounts').where({ tenant, discount_id: fractionalDiscountId }).delete();
-      await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: true });
+      await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ is_active: true });
     }
   });
 
@@ -1959,7 +2052,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
     // Disable the represented-contract discount so the only candidate is the
     // unrelated one; the invoice already carries a charge from clientContractId.
     await db('contract_discount_assignments').where({ tenant, client_contract_id: clientContractId }).delete();
-    await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: false });
+    await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ is_active: false });
     try {
       const invoiceId = uuidv4();
       await db('invoices').insert({
@@ -2007,21 +2100,21 @@ describe('contract invoice adjustments (DB-backed)', () => {
       await db('client_contracts').where({ tenant, client_contract_id: otherClientContractId }).delete();
       await db('contract_lines').where({ tenant, contract_line_id: otherContractLineId }).delete();
       await db('contracts').where({ tenant, contract_id: otherContractId }).delete();
-      await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: true });
+      await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ is_active: true });
     }
   });
 
   it('uses a full invoice-date day when legacy charges have no detail periods', async () => {
     const fixture = await createDraftWithGeneratedChargeAndDiscount();
     try {
-      await db('discounts').where({ tenant, discount_id: discountId }).update({ start_date: '2026-09-01', end_date: null });
+      await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ start_date: '2026-09-01', end_date: null });
       const active = await db.transaction((trx) => reconcileAutomaticInvoiceAdjustments(trx, tenant, fixture.invoiceId));
       expect(active.automaticDiscountAmount).toBe(39_000);
-      await db('discounts').where({ tenant, discount_id: discountId }).update({ start_date: '2026-09-02' });
+      await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ start_date: '2026-09-02' });
       const future = await db.transaction((trx) => reconcileAutomaticInvoiceAdjustments(trx, tenant, fixture.invoiceId));
       expect(future.automaticDiscountAmount).toBe(0);
     } finally {
-      await db('discounts').where({ tenant, discount_id: discountId }).update({ start_date: '2026-01-01', end_date: null });
+      await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ start_date: '2026-01-01', end_date: null });
     }
   });
 
@@ -2281,7 +2374,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
   it('excludes line and assignment discounts beginning at an invoice window exclusive end', async () => {
     const fixture = await createDraftWithGeneratedChargeAndDiscount();
     await db('contract_discount_assignments').where({ tenant, client_contract_id: clientContractId }).delete();
-    await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: false });
+    await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ is_active: false });
     const configId = uuidv4();
     const assignmentDiscountId = uuidv4();
     const lineDiscountId = uuidv4();
@@ -2309,7 +2402,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
       await db('contract_line_discounts').where({ tenant, discount_id: lineDiscountId }).delete();
       await db('contract_discount_assignments').where({ tenant, assignment_id: assignmentId }).delete();
       await db('discounts').where({ tenant }).whereIn('discount_id', [assignmentDiscountId, lineDiscountId]).delete();
-      await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: true });
+      await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ is_active: true });
     }
   });
 
@@ -2324,7 +2417,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
     const configId = uuidv4();
     await db('client_contracts').insert({ tenant, client_contract_id: ownerB, client_id: clientId, contract_id: contractId, start_date: '2026-01-01', is_active: true });
     await db('contract_discount_assignments').where({ tenant, client_contract_id: clientContractId }).delete();
-    await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: false });
+    await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ is_active: false });
     await db('discounts').insert([
       { tenant, discount_id: discountA, discount_name: 'Owner A line 10%', discount_type: 'percentage', value: 0.1, start_date: '2026-01-01', is_active: true, scope: 'line' },
       { tenant, discount_id: discountB, discount_name: 'Owner B line 10%', discount_type: 'percentage', value: 0.1, start_date: '2026-01-01', is_active: true, scope: 'line' },
@@ -2376,14 +2469,14 @@ describe('contract invoice adjustments (DB-backed)', () => {
       await db('contract_line_discounts').where({ tenant }).whereIn('discount_id', [discountA, discountB]).delete();
       await db('discounts').where({ tenant }).whereIn('discount_id', [discountA, discountB]).delete();
       await db('client_contracts').where({ tenant, client_contract_id: ownerB }).delete();
-      await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: true });
+      await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ is_active: true });
     }
   });
 
   it('excludes a discount linked only to an unbilled sibling contract line (detail-backed invoice)', async () => {
     // The only candidate should be the sibling-line discount.
     await db('contract_discount_assignments').where({ tenant, client_contract_id: clientContractId }).delete();
-    await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: false });
+    await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ is_active: false });
 
     const siblingLineId = uuidv4();
     const siblingDiscountId = uuidv4();
@@ -2495,7 +2588,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
       await db('discounts').where({ tenant, discount_id: siblingDiscountId }).delete();
       await db('invoice_charges').where({ tenant, adjustment_source_id: siblingDiscountId }).delete();
       await db('contract_lines').where({ tenant, contract_line_id: siblingLineId }).delete();
-      await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: true });
+      await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ is_active: true });
     }
   });
 
@@ -2507,7 +2600,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
     // legacy whole-invoice recalculation would overwrite both rows with 60% of
     // the 490000 subtotal and wipe the manual line.
     await db('contract_discount_assignments').where({ tenant, client_contract_id: clientContractId }).delete();
-    await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: false });
+    await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ is_active: false });
     const firstDiscountId = uuidv4();
     const secondDiscountId = uuidv4();
     for (const [id, name, priority] of [
@@ -2620,7 +2713,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
         .whereIn('adjustment_source_id', [firstDiscountId, secondDiscountId])
         .delete();
       await db('discounts').whereIn('discount_id', [firstDiscountId, secondDiscountId]).delete();
-      await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: true });
+      await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ is_active: true });
     }
   });
 

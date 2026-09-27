@@ -1104,9 +1104,22 @@ export async function persistManualInvoiceCharges(
       applicableAmount = applicableItem.net_amount;
     }
 
+    // Resolve the base from the complete post-addition invoice state. The local
+    // `subtotal` only contains rows submitted in this request; a discount-only
+    // edit would therefore be saved as zero, and a mixed generated/manual
+    // invoice would omit generated charges. Non-discount rows were inserted in
+    // the first pass, so this includes persisted and current-request charges
+    // exactly once while excluding every discount row.
+    const eligibleInvoiceBase = await tenantScopedTable(tx, tenant, 'invoice_charges')
+      .where({ invoice_id: invoiceId })
+      .whereNot('is_discount', true)
+      .sum({ eligible_total: 'net_amount' })
+      .first();
+    const completeSubtotal = Number(eligibleInvoiceBase?.eligible_total ?? 0);
+
     const netAmount = calculateNetAmount(
       { ...requestItem, applies_to_item_id: applicableItemId },
-      subtotal, // Pass current subtotal for percentage discounts not tied to an item
+      completeSubtotal,
       applicableAmount
     );
 

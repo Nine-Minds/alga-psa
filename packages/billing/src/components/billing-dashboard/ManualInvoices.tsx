@@ -27,8 +27,9 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { Card } from '@alga-psa/ui/components/Card';
-import { LineItem, ServiceOption, EditableItem as LineItemEditableItem, resolveLineItemAmount } from './LineItem'; // Import EditableItem type from LineItem
+import { LineItem, ServiceOption, EditableItem as LineItemEditableItem } from './LineItem';
 import { resolveInitialManualTaxRateId } from './manualInvoiceTaxResolution';
+import { calculateManualInvoiceEditorTotal } from './manualInvoiceTotals';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import type { IClient } from '@alga-psa/types';
@@ -1172,23 +1173,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   };
 
   const calculateManualItemsTotal = () => {
-    const nonDiscountItems = items.filter(item => !item.isRemoved && !item.is_discount);
-    const discountItems = items.filter(item => !item.isRemoved && item.is_discount);
-    const subtotal = nonDiscountItems.reduce((sum, item) => sum + (item.quantity * item.rate), 0);
-    let total = subtotal;
-    for (const item of discountItems) {
-      if (item.discount_type === 'percentage' && item.discount_percentage !== undefined) {
-        const applicableAmount = item.applies_to_item_id
-          ? (nonDiscountItems.find(i => i.item_id === item.applies_to_item_id)?.quantity || 0) * (nonDiscountItems.find(i => i.item_id === item.applies_to_item_id)?.rate || 0)
-          : subtotal;
-        total -= (applicableAmount * item.discount_percentage) / 100;
-      } else if (item.discount_type === 'fixed') {
-        // Shared with the row summary; distinguishes an authored fixed discount
-        // (quantity-independent) from a quantity-derived operator credit.
-        total += resolveLineItemAmount(item);
-      }
-    }
-    return Math.round(total); // Return total in cents
+    return calculateManualInvoiceEditorTotal(items, currentInvoiceData?.invoice_charges ?? []);
   };
 
   const getButtonText = () => {
