@@ -6,7 +6,9 @@ export default {
   ...base,
   test: {
     ...base.test,
+    globalSetup: ['./src/test-utils/time-skipping-server.global-setup.ts'],
     include: [
+      'src/test-utils/time-skipping-server.test.ts',
       'src/__tests__/e2e/email-only.e2e.test.ts',
       'src/workflows/__tests__/production-index.engine.test.ts',
       'src/workflows/__tests__/email-definition.engine.test.ts',

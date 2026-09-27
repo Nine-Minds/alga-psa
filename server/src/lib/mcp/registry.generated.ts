@@ -10391,9 +10391,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "billing_address": {
                     "type": "string"
                   },
-                  "tax_id": {
-                    "type": "string"
-                  },
                   "notes": {
                     "type": "string"
                   },
@@ -10663,6 +10660,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "properties": {
           "type": "object",
+          "properties": {
+            "tax_id": {
+              "type": "string",
+              "description": "Deprecated legacy input. Send tax_id_number instead.",
+              "deprecated": true
+            }
+          },
           "additionalProperties": {}
         },
         "payment_terms": {
@@ -10844,9 +10848,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "type": "string"
                 },
                 "billing_address": {
-                  "type": "string"
-                },
-                "tax_id": {
                   "type": "string"
                 },
                 "notes": {
@@ -11147,9 +11148,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "billing_address": {
                   "type": "string"
                 },
-                "tax_id": {
-                  "type": "string"
-                },
                 "notes": {
                   "type": "string"
                 },
@@ -11384,6 +11382,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "properties": {
           "type": "object",
+          "properties": {
+            "tax_id": {
+              "type": "string",
+              "description": "Deprecated legacy input. Send tax_id_number instead.",
+              "deprecated": true
+            }
+          },
           "additionalProperties": {}
         },
         "payment_terms": {
@@ -11565,9 +11570,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "type": "string"
                 },
                 "billing_address": {
-                  "type": "string"
-                },
-                "tax_id": {
                   "type": "string"
                 },
                 "notes": {

@@ -554,7 +554,10 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Merge audit rows reference nothing but the tenant, so the position is
   // advisory — listed beside the clients they describe so the order reads.
   'client_merges',
-  'clients',    // Delete clients FIRST (after NULLing account_manager references)
+  // Tax ID consolidation audit rows store client_id without an FK, so the
+  // position is advisory as well.
+  'client_tax_id_migration_conflicts',
+  'clients',   // Delete clients FIRST (after NULLing account_manager references)
   'contacts',   // Delete contacts SECOND (after clients, before users that have NOT NULL contact_id)
   'contact_email_type_definitions', // contacts.primary_email_custom_type_id → this table (RESTRICT)
   'password_reset_tokens',     // password_reset_tokens.user_id → users with NO ACTION

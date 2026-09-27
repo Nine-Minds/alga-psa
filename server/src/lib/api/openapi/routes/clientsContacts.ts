@@ -61,7 +61,12 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
       client_type: zOpenApi.enum(['company', 'individual']).optional(),
       tax_id_number: zOpenApi.string().optional(),
       notes: zOpenApi.string().optional(),
-      properties: zOpenApi.record(zOpenApi.unknown()).optional(),
+      properties: zOpenApi.object({
+        tax_id: zOpenApi.string().optional().openapi({
+          deprecated: true,
+          description: 'Deprecated legacy input. Send tax_id_number instead.',
+        }),
+      }).catchall(zOpenApi.unknown()).optional(),
       payment_terms: zOpenApi.string().optional(),
       billing_cycle: zOpenApi.enum(['weekly', 'bi-weekly', 'monthly', 'quarterly', 'semi-annually', 'annually']),
       credit_limit: zOpenApi.number().min(0).optional(),

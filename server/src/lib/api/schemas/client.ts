@@ -55,7 +55,6 @@ const clientPropertiesSchema = z.object({
   status: z.string().optional(),
   type: z.string().optional(),
   billing_address: z.string().optional(),
-  tax_id: z.string().optional(),
   notes: z.string().optional(),
   payment_terms: z.string().optional(),
   website: clientUrlField,
@@ -64,6 +63,11 @@ const clientPropertiesSchema = z.object({
   last_contact_date: z.string().datetime().optional(),
   logo: z.string().optional(),
   defaultLocale: defaultLocaleSchema.optional()
+}).optional();
+
+// Accept legacy input separately; ClientService maps it to tax_id_number.
+const clientPropertiesInputSchema = clientPropertiesSchema.unwrap().extend({
+  tax_id: z.string().optional(),
 }).optional();
 
 // Create client schema
@@ -78,7 +82,7 @@ const clientBodySchema = z.object({
   client_type: z.enum(['company', 'individual']).optional(),
   tax_id_number: z.string().optional(),
   notes: z.string().optional(),
-  properties: clientPropertiesSchema,
+  properties: clientPropertiesInputSchema,
   payment_terms: z.string().optional(),
   billing_cycle: z.enum(['weekly', 'bi-weekly', 'monthly', 'quarterly', 'semi-annually', 'annually']),
   credit_limit: z.number().min(0).optional(),
