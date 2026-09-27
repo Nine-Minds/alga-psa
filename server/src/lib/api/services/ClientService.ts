@@ -296,7 +296,7 @@ export class ClientService extends BaseService<IClient> {
       const clientsWithLogos = await Promise.all(
         (clients as IClient[]).map(async (client) => {
           const logoUrl = await getClientLogoUrl(client.client_id, context.tenant);
-          return withClientSinceDateString(stripLegacyClientTaxId({ ...client, logoUrl }) as Record<string, any>);
+          return withClientSinceDateString(stripLegacyClientTaxId({ ...client, logoUrl }));
         })
       );
 
