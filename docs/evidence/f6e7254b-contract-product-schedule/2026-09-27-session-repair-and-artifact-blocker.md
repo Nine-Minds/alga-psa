@@ -5,6 +5,29 @@ newly created card-space panes and capture fresh UI evidence against the
 board-managed app on port 3029 at expected HEAD `0d6fa4fe90`.
 
 Captured: 2026-09-27T16:24Z–16:34Z by `agent:Draft Implementation`.
+Re-verified 2026-09-27T16:36Z–16:40Z: the prerequisite below is still unmet.
+
+## 0. External prerequisite (blocking live UI evidence)
+
+The required live UI evidence for HEAD `0d6fa4fe90` cannot be captured until the
+board owner restores the application code from `0d6fa4fe90` on the
+board-managed port. As of the re-verification:
+
+- nothing listens on `:3029` (`curl http://localhost:3029/api/health` → `000`),
+  and no `dev-server` card service is live;
+- the only live board app, `review-app` on `http://100.109.101.64:23029`
+  (health 200), still serves artifact
+  `d49a53301a664e8a170bc5423ea1fb6e28258e57+da39a3ee5e6b` — the parent of HEAD;
+- the running app redirects the browser to its canonical `APPLICATION_URL`
+  `http://localhost:3029`, which is dead.
+
+Under the current prohibition this run did not start, restart, or rebuild the
+server, did not change billing code, and did not create a second adjustment.
+**Live smoke is therefore reported as incomplete (external prerequisite), not
+complete.** Once :3029 serves `0d6fa4fe90`, capture: the Oct 16 `+3` preview
+(read-only effective-from `2026-11-01`, `$154.84`, true-up-included copy), saved
+history, the boundary-only no-mid-period copy, decrease and zero previews, and
+the retained `$3,900`/`$4,200` invoices.
 
 ## 1. Checkout and served artifact
 
