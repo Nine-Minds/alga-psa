@@ -159,9 +159,12 @@ describe('server/shared runtime tenant facade roots', () => {
     const clientModel = read('shared/models/clientModel.ts');
     expect(clientModel).toContain("import { tenantDb } from '@alga-psa/db'");
     expect(clientModel).toContain("tenantDb(trx, tenant).table('clients')");
-    expect(clientModel).toContain("db.table('tax_rates')");
-    expect(clientModel).toContain("db.table('client_tax_rates')");
-    expect(clientModel).toContain("db.table('client_tax_settings')");
+    expect(clientModel).toContain("initializeClientDefaultTax(trx, tenant, clientId)");
+    const defaultTaxRate = read('shared/billingClients/defaultTaxRate.ts');
+    expect(defaultTaxRate).toMatch(/db\s*\n\s*\.table<ITaxRate>\('tax_rates'\)/);
+    expect(defaultTaxRate).not.toMatch(directRootPattern(['tax_rates']));
+    expect(defaultTaxRate).toContain(".table('client_tax_rates')");
+    expect(defaultTaxRate).toContain(".table<IClientTaxSettings>('client_tax_settings')");
     expect(clientModel).not.toMatch(directRootPattern(['clients', 'tax_rates', 'client_tax_rates', 'client_tax_settings']));
 
     const ticketModel = read('shared/models/ticketModel.ts');

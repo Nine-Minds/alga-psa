@@ -512,7 +512,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // - clients.account_manager → users
 
   // Tax configuration (no dependencies on core entities)
-  'tax_components', 'tax_rates', 'tax_regions',
+  'tax_components',
 
   // Permissions and roles (must be deleted before users)
   'permissions', 'roles', 'teams',
@@ -664,7 +664,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // Tenant add-ons and settings last (before tenant itself)
   'tenant_addons',
-  'tenant_settings',
+  'tenant_settings', 'tax_rates', 'tax_regions',
 ];
 
 const TENANT_TABLES_DELETION_SET = new Set(TENANT_TABLES_DELETION_ORDER);
@@ -1644,6 +1644,24 @@ async function breakCircularDependencies(
   } catch (error) {
     // Ignore if table/column doesn't exist (older schemas without Opportunities).
     log.debug('Could not clear suggestion_id in opportunities (table or column may not exist)', {
+      error: error instanceof Error ? error.message : 'Unknown',
+    });
+  }
+
+  // Step 8: NULL out tenant_settings.default_tax_rate_id so tax_rates (deleted
+  // earlier in the order) is not blocked by the composite RESTRICT FK. The
+  // setting row itself is deleted later; clearing the reference first keeps the
+  // tenant from being left with orphaned tax rates.
+  try {
+    const result8 = await tenantScopedDb.table('tenant_settings')
+      .whereNotNull('default_tax_rate_id')
+      .update({ default_tax_rate_id: null });
+    if (result8 > 0) {
+      log.info('Cleared default_tax_rate_id references in tenant_settings', { count: result8 });
+    }
+  } catch (error) {
+    // Ignore if table/column doesn't exist (older schemas before the setting).
+    log.debug('Could not clear default_tax_rate_id in tenant_settings (table or column may not exist)', {
       error: error instanceof Error ? error.message : 'Unknown',
     });
   }

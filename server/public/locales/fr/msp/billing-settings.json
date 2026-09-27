@@ -199,6 +199,8 @@
     }
   },
   "tax": {
+    "defaultRate": { "title": "Taux d'imposition par défaut", "tooltip": "Choisissez le taux hérité par les nouveaux clients, produits et services.", "description": "Définissez le taux attribué aux nouveaux clients et articles du catalogue. Les enregistrements existants restent inchangés.", "loading": "Chargement du taux par défaut...", "empty": "Créez un taux actif avant de choisir une valeur par défaut.", "invalid": "Le taux configuré n'est plus actif ou valide. Choisissez-en un autre.", "field": { "label": "Taux d'imposition par défaut" }, "options": { "none": "Aucun taux par défaut du locataire" }, "help": "Sans taux par défaut, les nouveaux articles restent non imposables et les clients utilisent le plus ancien taux actif, s'il existe.", "actions": { "save": "Enregistrer le taux", "saving": "Enregistrement..." }, "toast": { "saved": "Taux par défaut enregistré." }, "errors": { "load": "Impossible de charger le taux par défaut.", "save": "Impossible d'enregistrer le taux par défaut." } },
+    "backfill": { "title": "Appliquer le taux par défaut au catalogue existant", "description": "Prévisualisez les produits et services sans taux d'imposition.", "warning": "Cela modifie l'imposition future sans réécrire les factures émises.", "loading": "Chargement de l'aperçu...", "empty": "Aucun produit ou service admissible.", "target": "Taux cible : {{rate}}", "count": "{{count}} articles admissibles", "dialog": { "title": "Appliquer le taux par défaut" }, "actions": { "preview": "Prévisualiser les articles", "apply": "Appliquer la sélection", "applying": "Application..." }, "toast": { "applied": "Taux par défaut appliqué aux articles sélectionnés." }, "errors": { "preview": "Impossible de prévisualiser le catalogue.", "apply": "Impossible d'appliquer le taux par défaut." } },
     "taxRegions": {
       "title": "Régions fiscales",
       "description": "Gérez les régions fiscales et les paramètres associés."
@@ -977,7 +979,7 @@
       "taxRate": {
         "label": "Taux d'imposition (facultatif)",
         "placeholder": "Sélectionnez le taux de taxe (facultatif)",
-        "loading": "Chargement des taux d'imposition..."
+        "loading": "Chargement des taux d'imposition...", "inherit": "Utiliser le taux par défaut", "inheritNamed": "Utiliser le taux par défaut ({{rate}})", "nonTaxable": "Non imposable"
       },
       "sku": {
         "label": "UGS",
@@ -1071,7 +1073,7 @@
       "taxRate": {
         "label": "Taux d'imposition",
         "placeholder": "Non imposable",
-        "loading": "Chargement..."
+        "loading": "Chargement...", "inherit": "Utiliser le taux par défaut", "inheritNamed": "Utiliser le taux par défaut ({{rate}})", "nonTaxable": "Non imposable"
       },
       "active": {
         "label": "Actif"

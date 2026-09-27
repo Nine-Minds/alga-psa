@@ -199,6 +199,8 @@
     }
   },
   "tax": {
+    "defaultRate": { "title": "Domyślna stawka podatku", "tooltip": "Wybierz stawkę dziedziczoną przez nowych klientów, produkty i usługi.", "description": "Ustaw stawkę dla nowych klientów i pozycji katalogu. Istniejące rekordy nie ulegną zmianie.", "loading": "Wczytywanie domyślnej stawki...", "empty": "Utwórz aktywną stawkę przed wyborem domyślnej.", "invalid": "Skonfigurowana stawka nie jest już aktywna lub prawidłowa. Wybierz inną.", "field": { "label": "Domyślna stawka podatku" }, "options": { "none": "Brak domyślnej stawki organizacji" }, "help": "Bez stawki domyślnej nowe pozycje katalogu pozostają nieopodatkowane, a klienci używają najstarszej aktywnej stawki, jeśli istnieje.", "actions": { "save": "Zapisz domyślną", "saving": "Zapisywanie..." }, "toast": { "saved": "Zapisano domyślną stawkę." }, "errors": { "load": "Nie udało się wczytać domyślnej stawki.", "save": "Nie udało się zapisać domyślnej stawki." } },
+    "backfill": { "title": "Zastosuj domyślną stawkę do istniejącego katalogu", "description": "Wyświetl produkty i usługi bez stawki podatku.", "warning": "Zmienia to przyszłe opodatkowanie i nie modyfikuje wystawionych faktur.", "loading": "Wczytywanie podglądu...", "empty": "Nie znaleziono odpowiednich produktów ani usług.", "target": "Stawka docelowa: {{rate}}", "count": "Liczba odpowiednich pozycji: {{count}}", "dialog": { "title": "Zastosuj domyślną stawkę" }, "actions": { "preview": "Wyświetl istniejące pozycje", "apply": "Zastosuj wybrane", "applying": "Stosowanie..." }, "toast": { "applied": "Zastosowano domyślną stawkę do wybranych pozycji." }, "errors": { "preview": "Nie udało się wyświetlić katalogu.", "apply": "Nie udało się zastosować domyślnej stawki." } },
     "taxRegions": {
       "title": "Regiony podatkowe",
       "description": "Zarządzaj regionami podatkowymi i powiązanymi ustawieniami."
@@ -979,7 +981,7 @@
       "taxRate": {
         "label": "Stawka podatku (opcjonalnie)",
         "placeholder": "Wybierz stawkę podatku (opcjonalnie)",
-        "loading": "Ładowanie stawek podatku..."
+        "loading": "Ładowanie stawek podatku...", "inherit": "Użyj domyślnej stawki", "inheritNamed": "Użyj domyślnej stawki ({{rate}})", "nonTaxable": "Nie podlega opodatkowaniu"
       },
       "sku": {
         "label": "SKU",
@@ -1073,7 +1075,7 @@
       "taxRate": {
         "label": "Stawka podatku",
         "placeholder": "Nie podlega opodatkowaniu",
-        "loading": "Załadunek..."
+        "loading": "Załadunek...", "inherit": "Użyj domyślnej stawki", "inheritNamed": "Użyj domyślnej stawki ({{rate}})", "nonTaxable": "Nie podlega opodatkowaniu"
       },
       "active": {
         "label": "Aktywny"
