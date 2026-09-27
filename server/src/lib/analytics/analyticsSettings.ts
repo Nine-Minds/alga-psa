@@ -99,12 +99,15 @@ async function saveAnalyticsSettings(tenant: string, analyticsSettings: Analytic
         .first();
 
       const currentSettings = existingSettings?.settings || {};
+      // Citus forbids STABLE database functions such as now() in a distributed
+      // table's ON CONFLICT merge. Bind one application timestamp instead.
+      const updatedAt = new Date().toISOString();
       const updatedSettings = {
         ...currentSettings,
         analytics: {
           ...currentSettings.analytics,
           ...analyticsSettings,
-          last_updated_at: new Date().toISOString()
+          last_updated_at: updatedAt
         }
       };
 
@@ -116,12 +119,12 @@ async function saveAnalyticsSettings(tenant: string, analyticsSettings: Analytic
         .insert({
           tenant,
           settings: JSON.stringify(updatedSettings),
-          updated_at: trx.fn.now()
+          updated_at: updatedAt
         })
         .onConflict('tenant')
         .merge({
           settings: JSON.stringify(updatedSettings),
-          updated_at: trx.fn.now()
+          updated_at: updatedAt
         });
     });
   } catch (error) {
