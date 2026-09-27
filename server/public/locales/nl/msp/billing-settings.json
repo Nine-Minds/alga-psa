@@ -1004,7 +1004,8 @@
       "billingMethodRequired": "Factureringsmethode is vereist",
       "skuRequiredForHardware": "SKU is vereist voor hardware",
       "licenseTermRequired": "Voor softwarelicenties is een licentietermijn vereist",
-      "selectedTypeNotFound": "Geselecteerd servicetype niet gevonden"
+      "selectedTypeNotFound": "Geselecteerd servicetype niet gevonden",
+      "unitOfMeasureRequired": "Maateenheid is vereist"
     },
     "errors": {
       "fetchCategories": "Kan categorieën niet ophalen",
@@ -1077,7 +1078,7 @@
         "label": "Actief"
       },
       "unitOfMeasure": {
-        "label": "Maateenheid *",
+        "label": "Maateenheid",
         "placeholder": "bijvoorbeeld elk, item, licentie"
       },
       "license": {

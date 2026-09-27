@@ -1004,7 +1004,8 @@
       "billingMethodRequired": "⟦Ɓīŀŀīƞɠ ḿḗŧħȯḓ īş řḗʠŭīřḗḓ⟧",
       "skuRequiredForHardware": "⟦ŞĶŬ īş řḗʠŭīřḗḓ ƒȯř Ħȧřḓẇȧřḗ⟧",
       "licenseTermRequired": "⟦Ŀīƈḗƞşḗ ŧḗřḿ īş řḗʠŭīřḗḓ ƒȯř Şȯƒŧẇȧřḗ Ŀīƈḗƞşḗş⟧",
-      "selectedTypeNotFound": "⟦Şḗŀḗƈŧḗḓ şḗřṽīƈḗ ŧẏƥḗ ƞȯŧ ƒȯŭƞḓ⟧"
+      "selectedTypeNotFound": "⟦Şḗŀḗƈŧḗḓ şḗřṽīƈḗ ŧẏƥḗ ƞȯŧ ƒȯŭƞḓ⟧",
+      "unitOfMeasureRequired": "⟦Ŭƞīŧ ȯƒ ḿḗȧşŭřḗ īş řḗʠŭīřḗḓ⟧"
     },
     "errors": {
       "fetchCategories": "⟦Ƒȧīŀḗḓ ŧȯ ƒḗŧƈħ ƈȧŧḗɠȯřīḗş⟧",

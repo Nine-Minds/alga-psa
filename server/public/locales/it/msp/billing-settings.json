@@ -1004,7 +1004,8 @@
       "billingMethodRequired": "Il metodo di fatturazione è obbligatorio",
       "skuRequiredForHardware": "Lo SKU è richiesto per l'hardware",
       "licenseTermRequired": "La durata della licenza è richiesta per le licenze software",
-      "selectedTypeNotFound": "Tipo di servizio selezionato non trovato"
+      "selectedTypeNotFound": "Tipo di servizio selezionato non trovato",
+      "unitOfMeasureRequired": "L'unità di misura è obbligatoria"
     },
     "errors": {
       "fetchCategories": "Impossibile recuperare le categorie",
@@ -1077,7 +1078,7 @@
         "label": "Attivo"
       },
       "unitOfMeasure": {
-        "label": "Unità di misura *",
+        "label": "Unità di misura",
         "placeholder": "ad esempio, ciascun articolo, licenza"
       },
       "license": {

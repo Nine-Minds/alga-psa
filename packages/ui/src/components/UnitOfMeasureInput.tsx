@@ -133,7 +133,12 @@ export function UnitOfMeasureInput({
 
   const handleSelect = (key: string) => {
     if (key === CUSTOM) { setIsCustom(true); setCustomLabel(''); return; }
-    if (key === '') { emit({ code: '', label: '' }); setIsCustom(false); return; }
+    if (key === '') {
+      if (!allowClear) return;
+      emit({ code: '', label: '' });
+      setIsCustom(false);
+      return;
+    }
     if (key.startsWith('custom:')) {
       const [, code, ...labelParts] = key.split(':');
       emit({ code, label: labelParts.join(':') });

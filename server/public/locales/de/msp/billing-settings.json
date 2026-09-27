@@ -1004,7 +1004,8 @@
       "billingMethodRequired": "Abrechnungsmethode ist erforderlich",
       "skuRequiredForHardware": "Für Hardware ist eine SKU erforderlich",
       "licenseTermRequired": "Für Softwarelizenzen ist eine Lizenzlaufzeit erforderlich",
-      "selectedTypeNotFound": "Ausgewählter Diensttyp nicht gefunden"
+      "selectedTypeNotFound": "Ausgewählter Diensttyp nicht gefunden",
+      "unitOfMeasureRequired": "Maßeinheit ist erforderlich"
     },
     "errors": {
       "fetchCategories": "Kategorien konnten nicht abgerufen werden",
@@ -1077,7 +1078,7 @@
         "label": "Aktiv"
       },
       "unitOfMeasure": {
-        "label": "Maßeinheit *",
+        "label": "Maßeinheit",
         "placeholder": "z. B. „jeder“, „Artikel“, „Lizenz“."
       },
       "license": {

@@ -9,8 +9,6 @@ import {
   type TenantUnitSelection,
 } from '@alga-psa/shared/billingClients/tenantUnitsOfMeasure';
 
-export type { TenantUnitSelection };
-
 export const listTenantUnitsOfMeasure = withAuth(async (user, { tenant }): Promise<TenantUnitSelection[]> => {
   if (!await hasPermission(user, 'service', 'read')) throw new Error('Permission denied: cannot list units of measure');
   const { knex } = await createTenantKnex();

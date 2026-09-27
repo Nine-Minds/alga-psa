@@ -1006,7 +1006,8 @@
       "billingMethodRequired": "Metoda rozliczeniowa jest wymagana",
       "skuRequiredForHardware": "W przypadku sprzętu wymagana jest jednostka SKU",
       "licenseTermRequired": "W przypadku Licencji na oprogramowanie wymagany jest okres licencyjny",
-      "selectedTypeNotFound": "Nie znaleziono wybranego typu usługi"
+      "selectedTypeNotFound": "Nie znaleziono wybranego typu usługi",
+      "unitOfMeasureRequired": "Jednostka miary jest wymagana"
     },
     "errors": {
       "fetchCategories": "Nie udało się pobrać kategorii",
@@ -1079,7 +1080,7 @@
         "label": "Aktywny"
       },
       "unitOfMeasure": {
-        "label": "Jednostka miary *",
+        "label": "Jednostka miary",
         "placeholder": "np. każdy przedmiot, licencja"
       },
       "license": {
