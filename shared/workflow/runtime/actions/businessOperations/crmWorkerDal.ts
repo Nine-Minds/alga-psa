@@ -13,7 +13,7 @@ import type {
   TaggedEntityType,
 } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
-import { resolveUnitOfMeasure } from '@alga-psa/shared/billingClients/unitOfMeasure';
+import { resolveUnitOfMeasure, withUnitCode } from '@alga-psa/shared/billingClients/unitOfMeasure';
 import { prepareQuoteTermsForDb } from '../../../../lib/quoteTerms';
 import { SharedNumberingService } from '../../../../services/numberingService';
 
@@ -1444,7 +1444,10 @@ export async function convertQuoteToDraftContract(
       usageConfigRows.map(({ configId, item }) => ({
         tenant,
         config_id: configId,
-        unit_of_measure: item.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label,
+        ...withUnitCode({
+          unit_of_measure: item.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label,
+          unit_code: item.unit_code ?? null,
+        }),
         enable_tiered_pricing: false,
         minimum_usage: 0,
         base_rate: item.unit_price,

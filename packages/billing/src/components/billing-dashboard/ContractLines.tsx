@@ -371,6 +371,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
         const service = initialServices.find(s => s.service_id === value);
         return (
           <UnitOfMeasureInput
+            id={`contract-line-service-unit-${value}`}
             value={{ code: service?.unit_code || '', label: service?.unit_of_measure || '' }}
             onChange={async (value: UnitSelection | string) => {
               if (service && typeof value !== 'string') await updateService(service.service_id, { unit_of_measure: value.label, unit_code: value.code });

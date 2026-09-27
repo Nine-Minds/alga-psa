@@ -1518,6 +1518,7 @@ const ServiceCatalogManager: React.FC = () => {
                     {t('serviceCatalog.fields.unitOfMeasure.label', { defaultValue: `Unit of Measure${editingService.billing_method === 'usage' ? ' *' : ''}` })}
                   </label>
                   <UnitOfMeasureInput
+                    id="unit-of-measure"
                     value={{ code: editingService.unit_code || '', label: editingService.unit_of_measure || '' }}
                     onChange={(value: UnitSelection | string) => { if (typeof value !== 'string') setEditingService({ ...editingService, unit_of_measure: value.label, unit_code: value.code }); }}
                     loadCustomUnits={listTenantUnitsOfMeasure}

@@ -1,6 +1,6 @@
 import type { IService } from '@/interfaces/billing.interfaces';
 import { normalizeGtin } from '@alga-psa/core';
-import { resolveUnitCodeForWrite } from './unitOfMeasureService';
+import { resolveCatalogUnitForCreate, resolveCatalogUnitForUpdate } from '@alga-psa/shared/billingClients/tenantUnitsOfMeasure';
 import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
 import { splitServicePricesByEffectiveDate } from '@alga-psa/billing/models/service';
 import { ListOptions } from '../controllers/types';
@@ -241,8 +241,7 @@ export class ProductCatalogService extends BaseService<IService> {
       cost_currency: costCurrency,
       item_kind: 'product',
       billing_method: 'usage',
-      unit_of_measure: unit_of_measure ?? 'Each',
-      unit_code: await resolveUnitCodeForWrite(knex, tenant, unit_of_measure, rawData.unit_code),
+      ...(await resolveCatalogUnitForCreate(knex, tenant, { unit_of_measure, unit_code: rest.unit_code, item_kind: 'product' })),
       tenant,
       default_rate: typeof rest.default_rate === 'string'
         ? parseFloat(rest.default_rate) || 0
@@ -291,6 +290,7 @@ export class ProductCatalogService extends BaseService<IService> {
     const { prices, billing_method: _billing_method, service_type_name: _, ...updateData } = data as any;
     const normalizedUpdateData = {
       ...updateData,
+      ...(await resolveCatalogUnitForUpdate(knex, tenant, updateData)),
       ...(updateData.barcode !== undefined
         ? { barcode: normalizeGtin(updateData.barcode ?? '') || null }
         : {}),

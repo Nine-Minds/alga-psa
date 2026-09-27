@@ -924,6 +924,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
                 })}
               </label>
               <UnitOfMeasureInput
+                id="quick-add-product-unit-of-measure"
                 value={{ code: formProduct.unit_code || 'C62', label: formProduct.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label }}
                 onChange={(value: UnitSelection | string) => {
                   if (typeof value !== 'string') setFormProduct({ ...formProduct, unit_of_measure: value.label, unit_code: value.code });

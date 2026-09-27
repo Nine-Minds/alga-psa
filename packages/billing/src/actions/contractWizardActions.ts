@@ -1,7 +1,7 @@
 'use server';
 
 
-import { resolveUnitOfMeasure } from '@alga-psa/shared/billingClients/unitOfMeasure';
+import { resolveUnitOfMeasure, withUnitCode } from '@alga-psa/shared/billingClients/unitOfMeasure';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -773,7 +773,7 @@ export const createContractTemplateFromWizard = withAuth(async (
         await tenantDb(trx, tenant).table('contract_template_line_service_usage_config').insert({
           tenant,
           config_id: configId,
-          unit_of_measure: service.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label,
+          ...withUnitCode({ unit_of_measure: service.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label }),
           enable_tiered_pricing: false,
           minimum_usage: 0,
           base_rate: normalizedUnitRate ?? null,

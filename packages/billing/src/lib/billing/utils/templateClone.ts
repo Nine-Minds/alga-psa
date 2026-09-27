@@ -1,5 +1,5 @@
 
-import { resolveUnitOfMeasure } from '@alga-psa/shared/billingClients/unitOfMeasure';
+import { resolveUnitOfMeasure, withUnitCode } from '@alga-psa/shared/billingClients/unitOfMeasure';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
@@ -357,13 +357,17 @@ async function cloneUsageConfig(
 ) {
   const usageConfig = await tenantDb(trx, tenant).table('contract_template_line_service_usage_config')
     .where('config_id', sourceConfigId)
-    .first('unit_of_measure', 'enable_tiered_pricing', 'minimum_usage', 'base_rate');
+    .first('unit_of_measure', 'unit_code', 'enable_tiered_pricing', 'minimum_usage', 'base_rate');
 
+  const clonedUnit = withUnitCode({
+    unit_of_measure: usageConfig?.unit_of_measure ?? resolveUnitOfMeasure({ fallback: 'C62' }).label,
+    unit_code: usageConfig?.unit_code ?? null,
+  });
   await tenantDb(trx, tenant).table('contract_line_service_usage_config')
     .insert({
       tenant,
       config_id: targetConfigId,
-      unit_of_measure: usageConfig?.unit_of_measure ?? resolveUnitOfMeasure({ fallback: 'C62' }).label,
+      ...clonedUnit,
       enable_tiered_pricing: Boolean(usageConfig?.enable_tiered_pricing),
       minimum_usage: usageConfig?.minimum_usage ?? 0,
       base_rate: normalizeNumeric(configuration.custom_rate ?? usageConfig?.base_rate),
@@ -372,7 +376,7 @@ async function cloneUsageConfig(
     })
     .onConflict(['tenant', 'config_id'])
     .merge({
-      unit_of_measure: usageConfig?.unit_of_measure ?? resolveUnitOfMeasure({ fallback: 'C62' }).label,
+      ...clonedUnit,
       enable_tiered_pricing: Boolean(usageConfig?.enable_tiered_pricing),
       minimum_usage: usageConfig?.minimum_usage ?? 0,
       base_rate: normalizeNumeric(configuration.custom_rate ?? usageConfig?.base_rate),

@@ -909,6 +909,7 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
             <div>
               <label className="mb-1 block text-sm font-medium">{t('kits.fields.unit', { defaultValue: 'Unit' })}</label>
               <UnitOfMeasureInput
+                id="kit-create-unit-of-measure"
                 value={{ code: createDraft.unit_code, label: createDraft.unit_of_measure }}
                 onChange={(value: UnitSelection) => setCreateDraft((prev) => ({ ...prev, unit_of_measure: value.label, unit_code: value.code }))}
                 serviceType="Product"

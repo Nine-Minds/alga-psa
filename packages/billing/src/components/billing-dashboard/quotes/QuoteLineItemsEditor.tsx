@@ -447,6 +447,7 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
             </div>
             {!isDiscount && (
               <UnitOfMeasureInput
+                id={`quote-line-item-unit-${item.local_id}`}
                 value={{ code: item.unit_code || '', label: item.unit_of_measure || '' }}
                 onChange={(value: UnitSelection) => updateItem(item.local_id, { unit_of_measure: value.label, unit_code: value.code })}
                 loadCustomUnits={listTenantUnitsOfMeasure}

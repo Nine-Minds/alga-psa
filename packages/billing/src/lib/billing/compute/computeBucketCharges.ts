@@ -12,7 +12,7 @@ import type {
   ChargeProfileAssignments,
 } from "./types";
 import { resolveChargeProfileFor } from "../billingProfileResolution";
-import { knownUnitCodeForLabel, resolveUnitOfMeasure } from "@alga-psa/shared/billingClients/unitOfMeasure";
+import { DEFAULT_UNIT_CODE, HOUR_UNIT_CODE, resolveUnitOfMeasure } from "@alga-psa/shared/billingClients/unitOfMeasure";
 
 /**
  * A persisted bucket_usage row, or its in-memory simulator equivalent.
@@ -457,14 +457,15 @@ export function computeBucketCharges(
       // to the pool-period truth (rather than each claiming the full pool).
       const hoursUsed = (state.consumedQuantity / 60) * portion.share;
       const overageHours = (state.overageQuantity / 60) * portion.share;
-      const catalogUnit = contributors[0]?.unit_of_measure;
-      const resolvedUnit = resolveUnitOfMeasure({
-        catalog: catalogUnit ? { code: contributors[0]?.unit_code ?? knownUnitCodeForLabel(catalogUnit) ?? 'C62', label: catalogUnit } : null,
-        config: config.unit_of_measure ? { code: config.unit_code ?? knownUnitCodeForLabel(config.unit_of_measure) ?? 'C62', label: config.unit_of_measure } : null,
-        fallback: isUsageBucket ? 'C62' : 'HUR',
-      });
-      const unitLabel = resolvedUnit.label;
-      const unitCode = resolvedUnit.code;
+      // Usage buckets meter in the service's unit — D4: the portion's catalog
+      // unit first, the usage-config unit second. Time buckets always meter hours.
+      const resolvedUnit = isUsageBucket
+        ? resolveUnitOfMeasure({
+            catalog: { code: portion.unitCode, label: portion.unitOfMeasure },
+            config: { code: config.unit_code, label: config.unit_of_measure },
+            fallback: DEFAULT_UNIT_CODE,
+          })
+        : resolveUnitOfMeasure({ fallback: HOUR_UNIT_CODE });
       charges.push({
         type: "bucket",
         service_catalog_id: portion.serviceId ?? null,
@@ -478,8 +479,8 @@ export function computeBucketCharges(
         quantity: isUsageBucket ? state.overageQuantity * portion.share : undefined,
         isUsageBucket,
         unitOfMeasure: portion.unitOfMeasure ?? null,
-        unit_code: unitCode,
-        unit_label: unitLabel,
+        unit_code: resolvedUnit.code,
+        unit_label: resolvedUnit.label,
         unitsUsed: isUsageBucket ? state.consumedQuantity * portion.share : undefined,
         includedUnits: isUsageBucket ? state.availableQuantity * portion.share : undefined,
         overageUnits: isUsageBucket ? state.overageQuantity * portion.share : undefined,
@@ -501,8 +502,7 @@ export function computeBucketCharges(
       });
 
       const displayDivisor = isUsageBucket ? 1 : 60;
-      const bucketUnit = resolvedUnit;
-      const baseUnit = bucketUnit.shortLabel;
+      const baseUnit = resolvedUnit.shortLabel;
       // When any multiplier ≠ 1 or an after-hours rule contributed, the consumed
       // minutes are weighted — name the unit so readers know the burn is weighted.
       const unit = config.isWeighted && !isUsageBucket ? `weighted ${baseUnit}` : baseUnit;

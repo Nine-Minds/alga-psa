@@ -650,12 +650,13 @@ if (createdService?.service_id) {
             {/* Unit of Measure */}
             {Boolean(serviceData.billing_method) && (
               <div>
-                <Label htmlFor="unitOfMeasure" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                <Label htmlFor="quick-add-service-unit-of-measure" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
                   {t('quickAddService.fields.unitOfMeasure.label', {
                     defaultValue: `Unit of Measure${serviceData.billing_method === 'usage' ? ' *' : ''}`
                   })}
                 </Label>
                 <UnitOfMeasureInput
+                  id="quick-add-service-unit-of-measure"
                   value={{ code: serviceData.unit_code, label: serviceData.unit_of_measure }}
                   onChange={(value: UnitSelection | string) => { if (typeof value !== 'string') setServiceData({ ...serviceData, unit_of_measure: value.label, unit_code: value.code }); }}
                   loadCustomUnits={listTenantUnitsOfMeasure}

@@ -6,7 +6,7 @@ import path from 'node:path';
 import type { Knex } from 'knex';
 import { randomUUID } from 'node:crypto';
 import { createTestDbConnection, wireLocalTestDbEnv } from '../../test-utils/dbConfig';
-import { registerTenantUnitForTenant } from '../../../packages/billing/src/actions/unitOfMeasureActions';
+import { registerTenantUnit } from '../../../shared/billingClients/tenantUnitsOfMeasure';
 
 const require = createRequire(import.meta.url);
 const MIGRATIONS_DIR = path.resolve(__dirname, '..');
@@ -39,6 +39,7 @@ beforeAll(async () => {
       { tenant, service_id: '${randomUUID()}', unit_of_measure: 'Hrs' },
       { tenant, service_id: '${randomUUID()}', unit_of_measure: 'GB' },
       { tenant, service_id: '${randomUUID()}', unit_of_measure: 'Widgets' },
+      { tenant, service_id: '${randomUUID()}', unit_of_measure: 'Seats' },
     ]);
     await knex('contract_line_service_usage_config').insert([
       { tenant, config_id: '${randomUUID()}', unit_of_measure: 'EA' },
@@ -73,10 +74,13 @@ describe('unit-of-measure normalization migration', () => {
       expect.objectContaining({ unit_of_measure: 'EA', unit_code: 'C62' }),
       expect.objectContaining({ unit_of_measure: 'Hrs', unit_code: 'HUR' }),
     ]));
+    expect(codeByLabel.get('Seats')).toBe('C62');
     expect(await db('tenant_units_of_measure').where({ tenant, label: 'Widgets', code: 'C62' }).first()).toBeTruthy();
-    const registered = await registerTenantUnitForTenant(db, tenant, 'Action registration unit');
+    // Vocabulary labels are not duplicated as tenant custom units.
+    expect(await db('tenant_units_of_measure').where({ tenant, label: 'Seats' }).first()).toBeUndefined();
+    const registered = await registerTenantUnit(db, tenant, 'Action registration unit');
     expect(registered).toEqual({ code: 'C62', label: 'Action registration unit' });
-    expect(await registerTenantUnitForTenant(db, tenant, ' action registration unit ')).toEqual(registered);
+    expect(await registerTenantUnit(db, tenant, ' action registration unit ')).toEqual(registered);
 
     await BACKFILL.down(db);
     await VOCABULARY.down(db);

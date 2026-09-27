@@ -193,7 +193,7 @@ export class ContractLineServiceConfigurationService {
         case 'Usage':
           await usageConfigModel.create({
             config_id: configId,
-            unit_of_measure: (typeConfig as IContractLineServiceUsageConfig)?.unit_of_measure ?? 'Unit',
+            unit_of_measure: (typeConfig as IContractLineServiceUsageConfig)?.unit_of_measure ?? resolveUnitOfMeasure({ fallback: 'C62' }).label,
             measurement_mode: (typeConfig as IContractLineServiceUsageConfig)?.measurement_mode ?? 'additive',
             enable_tiered_pricing: (typeConfig as IContractLineServiceUsageConfig)?.enable_tiered_pricing ?? false,
             minimum_usage: (typeConfig as IContractLineServiceUsageConfig)?.minimum_usage ?? 0,

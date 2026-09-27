@@ -12,7 +12,7 @@ import { Session } from 'next-auth';
 import type { ISO8601String, IRecurringDueSelectionInput, IUsageServicePeriodStatus } from '@alga-psa/types';
 import { getClientDefaultTaxRegionCode } from '@alga-psa/shared/billingClients';
 import { POST_DROP_RECURRING_OBLIGATION_TYPES } from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
-import { resolveUnitOfMeasure } from '@alga-psa/shared/billingClients/unitOfMeasure';
+import { DEFAULT_UNIT_CODE, HOUR_UNIT_CODE, resolveUnitOfMeasure } from '@alga-psa/shared/billingClients/unitOfMeasure';
 import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
 import { resolveChargeProfile } from '../lib/billing/billingProfileResolution';
 import { resolveInvoiceBillingRecipient } from './invoiceBillingRecipientService';
@@ -508,6 +508,18 @@ export async function validateClientBillingEmail(
   return { valid: true };
 }
 
+/** Unit snapshot for a manual line: its catalog service's unit, else what the caller sent, else Each. */
+function manualChargeUnit(
+  service: { unit_code?: string | null; unit_of_measure?: string | null } | null | undefined,
+  item: { unit_code?: string | null; unit_label?: string | null },
+): { unit_code: string; unit_label: string } {
+  const resolved = resolveUnitOfMeasure({
+    catalog: service ? { code: service.unit_code, label: service.unit_of_measure } : null,
+    config: { code: item.unit_code, label: item.unit_label },
+  });
+  return { unit_code: resolved.code, unit_label: resolved.label };
+}
+
 // Renamed interface for clarity within manual context
 interface ManualInvoiceItemInput extends NetAmountItem {
   unit_code?: string | null;
@@ -867,8 +879,7 @@ export async function persistManualInvoiceCharges(
       item_id: uuidv4(),
       invoice_id: invoiceId,
       service_id: requestItem.service_id || null,
-      unit_code: service?.unit_code ?? requestItem.unit_code ?? 'C62',
-      unit_label: service?.unit_of_measure ?? requestItem.unit_label ?? resolveUnitOfMeasure({ fallback: 'C62' }).label,
+      ...manualChargeUnit(service, requestItem),
       description: requestItem.description,
       quantity: requestItem.quantity,
       unit_price: Math.round(requestItem.rate), // Store the actual rate
@@ -974,8 +985,7 @@ export async function persistManualInvoiceCharges(
       item_id: uuidv4(),
       invoice_id: invoiceId,
       service_id: requestItem.service_id || null,
-      unit_code: service?.unit_code ?? requestItem.unit_code ?? 'C62',
-      unit_label: service?.unit_of_measure ?? requestItem.unit_label ?? resolveUnitOfMeasure({ fallback: 'C62' }).label,
+      ...manualChargeUnit(service, requestItem),
       description: requestItem.description,
       quantity: requestItem.quantity,
       // Unit price for percentage discount is tricky, maybe store percentage? Or keep 0?
@@ -1409,25 +1419,27 @@ export async function persistInvoiceCharges(
   let otherSubtotal = 0;
   const now = Temporal.Now.instant().toString();
 
-  // Resolve units once for all generated charges. These are tenant-scoped reads
-  // keyed by service/config ids, avoiding one catalog query per invoice line.
-  const serviceIds = [...new Set(billingCharges.map((charge) => charge.serviceId).filter((id): id is string => Boolean(id)))];
-  const configIds = [...new Set(billingCharges.map((charge) => charge.config_id).filter((id): id is string => Boolean(id)))];
-  const catalogRows = serviceIds.length
+  // Snapshot the resolved unit onto every generated charge (catalog first,
+  // usage config second — D4). Charges the engine already resolved (bucket
+  // overage) keep their unit. Batched reads avoid one catalog query per line.
+  type UnitRow = { unit_code: string | null; unit_of_measure: string | null };
+  const unresolved = billingCharges.filter((charge) => !charge.unit_code);
+  const serviceIds = [...new Set(unresolved.map((charge) => charge.serviceId).filter((id): id is string => Boolean(id)))];
+  const configIds = [...new Set(unresolved.map((charge) => charge.config_id).filter((id): id is string => Boolean(id)))];
+  const catalogRows: Array<UnitRow & { service_id: string }> = serviceIds.length
     ? await tenantScopedTable(tx, tenant, 'service_catalog').whereIn('service_id', serviceIds).select('service_id', 'unit_code', 'unit_of_measure')
     : [];
-  const configRows = configIds.length
+  const configRows: Array<UnitRow & { config_id: string }> = configIds.length
     ? await tenantScopedTable(tx, tenant, 'contract_line_service_usage_config').whereIn('config_id', configIds).select('config_id', 'unit_code', 'unit_of_measure')
     : [];
-  const catalogById = new Map<string, { service_id: string; unit_code: string | null; unit_of_measure: string | null }>(catalogRows.map((row: { service_id: string; unit_code: string | null; unit_of_measure: string | null }) => [row.service_id, row]));
-  const configById = new Map<string, { config_id: string; unit_code: string | null; unit_of_measure: string | null }>(configRows.map((row: { config_id: string; unit_code: string | null; unit_of_measure: string | null }) => [row.config_id, row]));
-  for (const charge of billingCharges) {
-    const catalog = charge.serviceId ? catalogById.get(charge.serviceId) : undefined;
-    const config = charge.config_id ? configById.get(charge.config_id) : undefined;
+  const catalogById = new Map(catalogRows.map((row) => [row.service_id, row]));
+  const configById = new Map(configRows.map((row) => [row.config_id, row]));
+  const unitSource = (row?: UnitRow) => (row ? { code: row.unit_code, label: row.unit_of_measure } : null);
+  for (const charge of unresolved) {
     const resolved = resolveUnitOfMeasure({
-      catalog: catalog?.unit_code ? { code: catalog.unit_code, label: catalog.unit_of_measure } : null,
-      config: config?.unit_code ? { code: config.unit_code, label: config.unit_of_measure } : null,
-      fallback: charge.type === 'time' ? 'HUR' : 'C62',
+      catalog: unitSource(charge.serviceId ? catalogById.get(charge.serviceId) : undefined),
+      config: unitSource(charge.config_id ? configById.get(charge.config_id) : undefined),
+      fallback: charge.type === 'time' ? HOUR_UNIT_CODE : DEFAULT_UNIT_CODE,
     });
     charge.unit_code = resolved.code;
     charge.unit_label = resolved.label;

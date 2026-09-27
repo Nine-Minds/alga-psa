@@ -5,16 +5,34 @@ const targets = [
   ['contract_line_preset_services', 'unit_of_measure'],
   ['quote_items', 'unit_of_measure'],
 ];
-// Keep this CASE in sync with knownUnitCodeForLabel in shared/billingClients/unitOfMeasure.ts.
-const known = `CASE lower(trim({label}))
-  WHEN 'each' THEN 'C62' WHEN 'ea' THEN 'C62' WHEN 'unit' THEN 'C62' WHEN 'each.' THEN 'C62'
-  WHEN 'hour' THEN 'HUR' WHEN 'hrs' THEN 'HUR' WHEN 'hr' THEN 'HUR'
-  WHEN 'day' THEN 'DAY' WHEN 'days' THEN 'DAY' WHEN 'week' THEN 'WEE' WHEN 'weeks' THEN 'WEE'
-  WHEN 'month' THEN 'MON' WHEN 'mon' THEN 'MON' WHEN 'year' THEN 'ANN' WHEN 'annum' THEN 'ANN'
-  WHEN 'hours' THEN 'HUR' WHEN 'minute' THEN 'MIN' WHEN 'min' THEN 'MIN'
-  WHEN 'gb' THEN 'E34' WHEN 'tb' THEN '4L' WHEN 'liter' THEN 'LTR' WHEN 'litre' THEN 'LTR'
-  WHEN 'kg' THEN 'KGM' WHEN 'kilogram' THEN 'KGM' WHEN 'meter' THEN 'MTR' WHEN 'metre' THEN 'MTR'
-  WHEN 'piece' THEN 'H87' WHEN 'pc' THEN 'H87' WHEN 'box' THEN 'BX' ELSE NULL END`;
+// Known free-text variants → Rec 20 code. Mirror of UNIT_LABEL_VARIANTS in
+// shared/billingClients/unitOfMeasure.ts (migrations cannot import TS);
+// shared/__tests__/billingClients/unitOfMeasure.test.ts asserts parity.
+const KNOWN_UNIT_LABELS = {
+  each: 'C62', ea: 'C62', 'each.': 'C62', unit: 'C62', units: 'C62', one: 'C62',
+  piece: 'H87', pieces: 'H87', pc: 'H87', pcs: 'H87',
+  box: 'BX', boxes: 'BX', bx: 'BX',
+  seat: 'C62', seats: 'C62',
+  license: 'C62', licenses: 'C62', licence: 'C62', licences: 'C62',
+  device: 'C62', devices: 'C62',
+  user: 'C62', users: 'C62',
+  kit: 'C62', kits: 'C62',
+  hour: 'HUR', hours: 'HUR', hr: 'HUR', hrs: 'HUR',
+  day: 'DAY', days: 'DAY',
+  week: 'WEE', weeks: 'WEE', wk: 'WEE', wks: 'WEE',
+  month: 'MON', months: 'MON', mon: 'MON', mo: 'MON', mos: 'MON',
+  year: 'ANN', years: 'ANN', yr: 'ANN', yrs: 'ANN', annum: 'ANN',
+  minute: 'MIN', minutes: 'MIN', min: 'MIN', mins: 'MIN',
+  gb: 'E34', gigabyte: 'E34', gigabytes: 'E34',
+  tb: '4L', terabyte: '4L', terabytes: '4L',
+  liter: 'LTR', liters: 'LTR', litre: 'LTR', litres: 'LTR',
+  kg: 'KGM', kilogram: 'KGM', kilograms: 'KGM',
+  meter: 'MTR', meters: 'MTR', metre: 'MTR', metres: 'MTR',
+};
+const quote = (value) => `'${value.replace(/'/g, "''")}'`;
+const known = `CASE lower(trim({label}))\n  ${Object.entries(KNOWN_UNIT_LABELS)
+  .map(([label, code]) => `WHEN ${quote(label)} THEN ${quote(code)}`)
+  .join('\n  ')}\n  ELSE NULL END`;
 const hasColumn = (knex, table, column) => knex.schema.hasColumn(table, column);
 
 exports.config = { transaction: false };
@@ -59,3 +77,6 @@ exports.down = async (knex) => {
     }
   }
 };
+
+// Exposed for the parity test only; knex ignores extra exports.
+exports.KNOWN_UNIT_LABELS = KNOWN_UNIT_LABELS;

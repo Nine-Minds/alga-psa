@@ -4,6 +4,8 @@ import React, { useEffect, useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { Button } from "@alga-psa/ui/components/Button";
 import { DatePicker } from "@alga-psa/ui/components/DatePicker";
+import { UnitOfMeasureInput } from "@alga-psa/ui/components/UnitOfMeasureInput";
+import { labelForUnitCode } from "@alga-psa/shared/billingClients/unitOfMeasure";
 import { dateFromString, dateToString } from "@alga-psa/ui/lib/dateInput";
 import { cn } from "@alga-psa/ui/lib/utils";
 import { useFormatters, useTranslation } from "@alga-psa/ui/lib/i18n/client";
@@ -242,7 +244,7 @@ function defaultConfiguration(
   if (type === "Usage") {
     return {
       configuration_type: "Usage",
-      unit_of_measure: "unit",
+      unit_of_measure: labelForUnitCode("C62"),
       enable_tiered_pricing: false,
       minimum_usage: null,
       base_rate: null,
@@ -1088,21 +1090,17 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
                                   "contractSimulator.scenario.fields.usageUnit",
                                   { defaultValue: "Usage unit" },
                                 )}
-                                <input
-                                  aria-label={t(
-                                    "contractSimulator.scenario.fields.usageUnit",
-                                    { defaultValue: "Usage unit" },
-                                  )}
-                                  className={fieldClass}
+                                <UnitOfMeasureInput
+                                  id={`scenario-usage-unit-${line.key}-${serviceIndex}`}
                                   value={config.unit_of_measure}
-                                  onChange={(event) =>
+                                  onChange={(unit: string) =>
                                     updateService((draft) => {
                                       if (
                                         draft.configuration
                                           .configuration_type === "Usage"
                                       )
                                         draft.configuration.unit_of_measure =
-                                          event.target.value;
+                                          unit;
                                     })
                                   }
                                 />

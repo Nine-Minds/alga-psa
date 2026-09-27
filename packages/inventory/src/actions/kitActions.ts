@@ -13,6 +13,17 @@ import {
   resolveKitPricePolicy,
 } from '../lib/kitPricing';
 import { kitActionErrorFrom, type KitActionError } from '../lib/kitActionErrors';
+import {
+  listTenantUnits,
+  registerTenantUnit,
+  resolveCatalogUnitForCreate,
+  resolveCatalogUnitForUpdate,
+  type TenantUnitSelection,
+} from '@alga-psa/shared/billingClients/tenantUnitsOfMeasure';
+import { unitOfMeasureVocabulary } from '@alga-psa/shared/billingClients/unitOfMeasure';
+
+/** Kits default to the "Kit" business label (Rec 20 C62). */
+const KIT_UNIT = unitOfMeasureVocabulary.find((unit) => unit.key === 'kit')!;
 
 /**
  * Kit (bundle) management — single-level bill of materials (F102).
@@ -251,25 +262,16 @@ export interface UpdateKitProductInput {
   kit_fixed_price?: number | null;
 }
 
-export const listKitTenantUnits = withAuth(async (user, { tenant }): Promise<Array<{ code: string; label: string }>> => {
+export const listKitTenantUnits = withAuth(async (user, { tenant }): Promise<TenantUnitSelection[]> => {
   await requireServicePerm(user, 'read');
   const { knex } = await createTenantKnex();
-  const rows = await knex('tenant_units_of_measure').where({ tenant }).select('code', 'label').orderBy('label');
-  return rows.map((row: { code: string; label: string }) => ({ code: row.code, label: row.label }));
+  return listTenantUnits(knex, tenant);
 });
 
-export const registerKitTenantUnit = withAuth(async (user, { tenant }, label: string): Promise<{ code: string; label: string }> => {
+export const registerKitTenantUnit = withAuth(async (user, { tenant }, label: string): Promise<TenantUnitSelection> => {
   await requireServicePerm(user, 'create');
-  const normalized = label.trim();
-  if (!normalized || normalized.length > 128) throw new Error('Unit label must contain 1 to 128 characters');
   const { knex } = await createTenantKnex();
-  const units = knex('tenant_units_of_measure').where({ tenant });
-  const existing = await units.whereRaw('lower(trim(label)) = lower(trim(?))', [normalized]).first('code', 'label');
-  if (existing) return { code: existing.code, label: existing.label };
-  await units.insert({ tenant, code: 'C62', label: normalized, kind: 'other' }).onConflict(['tenant', 'label']).ignore();
-  const created = await units.whereRaw('lower(trim(label)) = lower(trim(?))', [normalized]).first('code', 'label');
-  if (!created) throw new Error('Unit was not registered');
-  return { code: created.code, label: created.label };
+  return registerTenantUnit(knex, tenant, label);
 });
 
 interface KitBaseRow {
@@ -608,8 +610,11 @@ export const createKitProduct = withAuth(
             custom_service_type_id: input.custom_service_type_id,
             billing_method: 'usage',
             default_rate: catalogProjection,
-            unit_of_measure: normalizeOptionalText(input.unit_of_measure) ?? 'Kit',
-            unit_code: input.unit_code ?? 'C62',
+            ...(await resolveCatalogUnitForCreate(trx, tenant, {
+              unit_of_measure: normalizeOptionalText(input.unit_of_measure) ?? KIT_UNIT.label,
+              unit_code: input.unit_code,
+              item_kind: 'product',
+            })),
             category_id: null,
             tax_rate_id: null,
             description: input.description ?? '',
@@ -711,8 +716,12 @@ export const updateKitProduct = withAuth(
         if (input.custom_service_type_id !== undefined && input.custom_service_type_id) {
           serviceUpdate.custom_service_type_id = input.custom_service_type_id;
         }
-        if (input.unit_of_measure !== undefined) serviceUpdate.unit_of_measure = normalizeOptionalText(input.unit_of_measure) ?? 'Kit';
-        if (input.unit_code !== undefined) serviceUpdate.unit_code = input.unit_code;
+        Object.assign(serviceUpdate, await resolveCatalogUnitForUpdate(trx, tenant, {
+          unit_of_measure: input.unit_of_measure === undefined
+            ? undefined
+            : normalizeOptionalText(input.unit_of_measure) ?? KIT_UNIT.label,
+          unit_code: input.unit_code,
+        }));
         if (input.description !== undefined) serviceUpdate.description = input.description ?? '';
         serviceUpdate.default_rate = catalogProjection;
         if (input.cost !== undefined) serviceUpdate.cost = cost;

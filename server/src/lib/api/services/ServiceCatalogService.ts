@@ -1,7 +1,6 @@
 import type { IService } from '@/interfaces/billing.interfaces';
 import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
-import { resolveUnitCodeForWrite } from './unitOfMeasureService';
-import { labelForUnitCode } from '@alga-psa/shared/billingClients/unitOfMeasure';
+import { resolveCatalogUnitForCreate, resolveCatalogUnitForUpdate } from '@alga-psa/shared/billingClients/tenantUnitsOfMeasure';
 import { splitServicePricesByEffectiveDate } from '@alga-psa/billing/models/service';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { ListOptions } from '../controllers/types';
@@ -250,10 +249,7 @@ export class ServiceCatalogService extends BaseService<IService> {
     const serviceData = {
       category_id: serviceInput.category_id ?? null,
       ...serviceInput,
-      unit_of_measure: serviceInput.unit_of_measure ?? (serviceInput.unit_code ? labelForUnitCode(serviceInput.unit_code) : serviceInput.billing_method === 'hourly' ? 'Hour' : serviceInput.billing_method === 'fixed' ? 'Each' : undefined),
-      unit_code: serviceInput.unit_code ?? (serviceInput.unit_of_measure
-        ? await resolveUnitCodeForWrite(knex, tenant, serviceInput.unit_of_measure)
-        : serviceInput.billing_method === 'hourly' ? 'HUR' : serviceInput.billing_method === 'fixed' ? 'C62' : undefined),
+      ...(await resolveCatalogUnitForCreate(knex, tenant, serviceInput)),
       tenant,
       default_rate: typeof serviceInput.default_rate === 'string'
         ? parseFloat(serviceInput.default_rate) || 0
@@ -285,6 +281,7 @@ export class ServiceCatalogService extends BaseService<IService> {
       currency_code: _currency_code,
       ...updateData
     } = data as any;
+    Object.assign(updateData, await resolveCatalogUnitForUpdate(knex, tenant, updateData));
 
     const [updated] = await tenantDb(knex, tenant).table('service_catalog')
       .where('service_id', id)

@@ -150,6 +150,7 @@ export function ServiceUsageConfigForm({
                         </Tooltip>
                     </Label>
                     <UnitOfMeasureInput
+                        id={`usage-contract-line-unit-of-measure-${serviceId}`}
                         value={{ code: config.unit_code || '', label: unit }}
                         onChange={handleUnitOfMeasureChange}
                         loadCustomUnits={listTenantUnitsOfMeasure}

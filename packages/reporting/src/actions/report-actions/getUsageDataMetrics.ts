@@ -77,7 +77,7 @@ export const getUsageDataMetrics = withAuth(async (
       return rawResults.map(row => ({
         service_id: row.service_id,
         service_name: row.service_name,
-        unit_of_measure: resolveUnitOfMeasure({ catalog: row.unit_code ? { code: row.unit_code, label: row.unit_of_measure } : null, fallback: row.billing_method === 'hourly' ? 'HUR' : 'C62' }).label,
+        unit_of_measure: resolveUnitOfMeasure({ catalog: { code: row.unit_code, label: row.unit_of_measure }, fallback: row.billing_method === 'hourly' ? 'HUR' : 'C62' }).label,
         total_quantity: typeof row.total_quantity === 'string' ? parseFloat(row.total_quantity) : row.total_quantity,
       }));
     });

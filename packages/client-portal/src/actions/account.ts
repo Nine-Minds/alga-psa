@@ -695,7 +695,7 @@ export const getActiveServices = withAuth(async (user, { tenant }): Promise<Serv
 
     // Format quantity display
     const quantityDisplay = service.quantity ?
-      `${service.quantity} ${service.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label}` :
+      `${service.quantity} ${service.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).pluralLabel}` :
       'N/A';
 
     // Format bucket display using new fields
@@ -720,7 +720,7 @@ export const getActiveServices = withAuth(async (user, { tenant }): Promise<Serv
       } : undefined,
       quantity: service.quantity ? {
         amount: service.quantity.toString(),
-        unit: service.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label,
+        unit: service.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).pluralLabel,
         display: quantityDisplay
       } : undefined,
       // Update bucket object creation using new fields

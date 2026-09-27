@@ -136,6 +136,7 @@ export function ServiceConfigurationPanel({ serviceId, onUpdate }: ServiceConfig
                 })}
               </h3>
               <UnitOfMeasureInput
+                id={`service-config-unit-${service.service_id}`}
                 value={{ code: service.unit_code || '', label: service.unit_of_measure }}
                 onChange={async (value: UnitSelection | string) => {
                   if (typeof value === 'string') return;

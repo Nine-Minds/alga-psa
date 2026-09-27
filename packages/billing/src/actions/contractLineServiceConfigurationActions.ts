@@ -1,6 +1,7 @@
 'use server';
 
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { resolveUnitOfMeasure } from '@alga-psa/shared/billingClients/unitOfMeasure';
 import { withTransaction } from '@alga-psa/db';
 import { upsertBucketOverlayInTransaction } from './bucketOverlayActions';
 import { ContractLineServiceConfigurationService } from '../services/contractLineServiceConfigurationService';
@@ -392,7 +393,7 @@ export const upsertPlanServiceConfiguration = withAuth(async (
     const existing = await service.getConfigurationForService(payload.contractLineId, payload.serviceId);
 
     const usageConfig: Partial<IContractLineServiceUsageConfig> = {
-      unit_of_measure: payload.unit_of_measure ?? 'Unit',
+      unit_of_measure: payload.unit_of_measure ?? resolveUnitOfMeasure({ fallback: 'C62' }).label,
       enable_tiered_pricing: payload.enable_tiered_pricing ?? false,
       minimum_usage: payload.minimum_usage ?? undefined,
       base_rate: payload.base_rate ?? undefined
