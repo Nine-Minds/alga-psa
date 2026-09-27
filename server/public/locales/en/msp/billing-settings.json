@@ -758,7 +758,8 @@
       "allServiceTypes": "All Service Types",
       "serviceTypePlaceholder": "Filter by service type...",
       "allBillingMethods": "All Billing Methods",
-      "billingMethodPlaceholder": "Filter by billing method..."
+      "billingMethodPlaceholder": "Filter by billing method...",
+      "searchPlaceholder": "Search services by name, SKU, or description..."
     },
     "fields": {
       "serviceName": {
@@ -880,7 +881,9 @@
       "validateDelete": "Failed to validate deletion. Please try again.",
       "delete": "Failed to delete service",
       "deactivate": "Failed to deactivate service"
-    }
+    },
+    "emptySearch": "No services match your search.",
+    "clearFilters": "Clear filters"
   },
   "products": {
     "title": "Products",

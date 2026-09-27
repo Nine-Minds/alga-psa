@@ -727,7 +727,8 @@
       "allServiceTypes": "Todos los tipos de servicios",
       "serviceTypePlaceholder": "Filtrar por tipo de servicio...",
       "allBillingMethods": "Todos los métodos de facturación",
-      "billingMethodPlaceholder": "Filtrar por método de facturación..."
+      "billingMethodPlaceholder": "Filtrar por método de facturación...",
+      "searchPlaceholder": "Buscar servicios por nombre, SKU o descripción..."
     },
     "fields": {
       "serviceName": {
@@ -849,7 +850,9 @@
       "validateDelete": "No se pudo validar la eliminación. Por favor inténtalo de nuevo.",
       "delete": "No se pudo eliminar el servicio",
       "deactivate": "No se pudo desactivar el servicio"
-    }
+    },
+    "emptySearch": "Ningún servicio coincide con su búsqueda.",
+    "clearFilters": "Borrar filtros"
   },
   "products": {
     "title": "Productos",
