@@ -225,6 +225,23 @@ export class TenantEmailService extends BaseEmailService {
     );
     params.resolvedTenantEmailSettings = providerSnapshot.settings;
 
+    if (providerSnapshot.settings && params.mailClass === 'ticket' && params.boardId && !params.boardName?.trim()
+      && !params.fromName?.trim()
+      && !this.hasConfiguredOutboundDisplayName(params, providerSnapshot.settings)) {
+      try {
+        const board = await tenantDb(suspensionKnex, this.tenantId).table('boards')
+          .where({ board_id: params.boardId }).first('board_name');
+        if (typeof board?.board_name === 'string' && board.board_name.trim()) {
+          params.boardName = board.board_name;
+        }
+      } catch (error) {
+        logger.warn(`[${this.getServiceName()}] Could not load ticket board name for From display name`, {
+          boardId: params.boardId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
     if (params.senderId && !providerSnapshot.settings) {
       throw new Error(`Outbound sender ${params.senderId} cannot be resolved because tenant email settings are unavailable.`);
     }
@@ -304,6 +321,24 @@ export class TenantEmailService extends BaseEmailService {
       notificationSubtypeId: params.notificationSubtypeId,
       replyContext: params.replyContext,
     });
+  }
+
+  private hasConfiguredOutboundDisplayName(params: BaseEmailParams, settings: TenantEmailSettings): boolean {
+    const senders = settings.outboundSenders ?? [];
+    const routes = settings.outboundRoutes ?? [];
+    const selectedSender = params.senderId
+      ? senders.find((sender) => sender.sender_id === params.senderId)
+      : undefined;
+    if (selectedSender?.display_name?.trim()) return true;
+    const matchingRoutes = [
+      ...(params.boardId ? routes.filter((route) => route.route_type === 'board' && route.board_id === params.boardId) : []),
+      routes.filter((route) => route.route_type === 'mail_class' && route.mail_class === params.mailClass),
+      routes.filter((route) => route.route_type === 'default'),
+    ].flat();
+    const route = matchingRoutes.find((candidate) => candidate.sender_id || candidate.display_name);
+    if (route?.display_name?.trim()) return true;
+    const sender = route?.sender_id ? senders.find((item) => item.sender_id === route.sender_id) : undefined;
+    return Boolean(sender?.display_name?.trim());
   }
 
   /**

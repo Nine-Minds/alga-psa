@@ -2636,9 +2636,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     };
 
     const emailMetadata = ticket.email_metadata || {};
-    // Prefer the per-provider Sender Display Name when configured; otherwise
-    // fall back to the ticket's board name (existing behavior) and finally
-    // 'Support' so the From-name is always populated.
+    // TenantEmailService applies the board-name From fallback centrally.
     const activeWatcherEmails = extractActiveWatcherEmails(ticket.attributes);
 
     const sentEmails = new Set<string>();

@@ -50,6 +50,16 @@ describe('resolveOutboundSender', () => {
     expect(resolveOutboundSender({ tenantId: tenant, mailClass: 'ticket' }, nameOnly).from).toEqual({ email: 'support@example.test', name: 'Legacy Ticket Name' });
   });
 
+  it('uses a supplied board name when routed sender and routes have no display name', () => {
+    const noDisplayNames: TenantEmailSettings = {
+      ...settings,
+      outboundSenders: settings.outboundSenders?.map((sender) => ({ ...sender, display_name: null })),
+      outboundRoutes: settings.outboundRoutes?.map((route) => ({ ...route, display_name: null })),
+    };
+    expect(resolveOutboundSender({ tenantId: tenant, mailClass: 'ticket', boardId: 'board-1' }, noDisplayNames, null, 'General Support').from)
+      .toEqual({ email: 'support@example.test', name: 'General Support' });
+  });
+
   it('rejects a sender id that is not owned by the tenant', () => {
     expect(() => resolveOutboundSender({ tenantId: 'tenant-2', mailClass: 'billing', senderId: 'billing' }, settings)).toThrow(/does not belong to tenant/);
   });

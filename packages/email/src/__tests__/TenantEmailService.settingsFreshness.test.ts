@@ -8,6 +8,8 @@ const runtime = vi.hoisted(() => ({
   sender: null as Record<string, any> | null,
   logged: [] as Array<Record<string, any>>,
   senderUpdates: [] as Array<Record<string, any>>,
+  boardName: 'General Support' as string | null,
+  routeDisplayName: null as string | null,
 }));
 
 vi.mock('@alga-psa/core/logger', () => ({
@@ -48,6 +50,9 @@ vi.mock('@alga-psa/db', () => ({
       if (table === 'email_domains') {
         return { where: () => ({ first: vi.fn(async () => null) }) };
       }
+      if (table === 'boards') {
+        return { where: () => ({ first: vi.fn(async () => runtime.boardName ? { board_name: runtime.boardName } : undefined) }) };
+      }
       if (table === 'email_sender_addresses') {
         return {
           select: vi.fn(async () => runtime.sender ? [runtime.sender] : []),
@@ -77,12 +82,12 @@ vi.mock('../senderIdentity', () => ({
       name: provider?.config?.fromName?.trim() || companyName || 'AlgaPSA Notifications',
     };
   },
-  resolveOutboundSender: ({ from, fromName }: any, settings: Record<string, any>, companyName?: string | null) => ({
+  resolveOutboundSender: ({ from, fromName, mailClass }: any, settings: Record<string, any>, companyName?: string | null, boardName?: string | null) => ({
     sender: runtime.sender,
     microsoftProviderId: null,
     from: from ?? {
       email: settings.providerConfigs?.find((config: any) => config.isEnabled)?.config?.from || 'notifications@example.test',
-      name: fromName || settings.providerConfigs?.find((config: any) => config.isEnabled)?.config?.fromName || companyName || 'AlgaPSA Notifications',
+      name: fromName || runtime.routeDisplayName || settings.providerConfigs?.find((config: any) => config.isEnabled)?.config?.fromName || (mailClass === 'ticket' ? boardName || 'Support' : companyName || 'AlgaPSA Notifications'),
     },
   }),
   resolveTenantCompanyName: vi.fn(async () => runtime.companyName),
@@ -160,6 +165,8 @@ describe('TenantEmailService settings freshness', () => {
     runtime.sender = null;
     runtime.logged.length = 0;
     runtime.senderUpdates.length = 0;
+    runtime.boardName = 'General Support';
+    runtime.routeDisplayName = null;
     await TenantEmailService.invalidateTenantSettings('tenant-settings-freshness');
   });
 
@@ -205,6 +212,38 @@ describe('TenantEmailService settings freshness', () => {
         from: { email: 'new-notifications@example.test', name: 'New Notifications' },
       },
     ]);
+  });
+
+  it('uses the ticket board name for From when route and sender names are absent', async () => {
+    runtime.settingsRow = buildSettingsRow({ password: 'password', from: 'shared@example.test', fromName: '' });
+    const service = TenantEmailService.getInstance('tenant-settings-freshness');
+    await expect(service.sendEmail({
+      tenantId: 'tenant-settings-freshness', mailClass: 'ticket', boardId: 'board-1',
+      to: 'client@example.test', subject: 'Comment', html: '<p>Comment</p>',
+    })).resolves.toMatchObject({ success: true });
+    expect(runtime.sent.at(-1)?.message.from).toEqual({ email: 'shared@example.test', name: 'General Support' });
+  });
+
+  it('keeps a route display name ahead of the ticket board name', async () => {
+    runtime.settingsRow = buildSettingsRow({ password: 'password', from: 'shared@example.test', fromName: '' });
+    runtime.routeDisplayName = 'Ticket Desk';
+    const service = TenantEmailService.getInstance('tenant-settings-freshness');
+    await expect(service.sendEmail({
+      tenantId: 'tenant-settings-freshness', mailClass: 'ticket', boardId: 'board-1',
+      to: 'client@example.test', subject: 'Comment', html: '<p>Comment</p>',
+    })).resolves.toMatchObject({ success: true });
+    expect(runtime.sent.at(-1)?.message.from).toEqual({ email: 'shared@example.test', name: 'Ticket Desk' });
+  });
+
+  it('falls back to Support when the ticket board row is missing', async () => {
+    runtime.settingsRow = buildSettingsRow({ password: 'password', from: 'shared@example.test', fromName: '' });
+    runtime.boardName = null;
+    const service = TenantEmailService.getInstance('tenant-settings-freshness');
+    await expect(service.sendEmail({
+      tenantId: 'tenant-settings-freshness', mailClass: 'ticket', boardId: 'missing-board',
+      to: 'client@example.test', subject: 'Comment', html: '<p>Comment</p>',
+    })).resolves.toMatchObject({ success: true });
+    expect(runtime.sent.at(-1)?.message.from).toEqual({ email: 'shared@example.test', name: 'Support' });
   });
 
   it('refreshes configuration preflights after another process creates settings', async () => {

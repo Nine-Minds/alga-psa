@@ -68,6 +68,7 @@ export interface BaseEmailParams {
   /** Internal immutable settings snapshot used for call-scoped From resolution. */
   resolvedTenantEmailSettings?: TenantEmailSettings | null;
   boardId?: string;
+  boardName?: string;
   senderId?: string;
   revalidateCommentOnRetry?: boolean;
   to: string | string[] | EmailAddress | EmailAddress[];
