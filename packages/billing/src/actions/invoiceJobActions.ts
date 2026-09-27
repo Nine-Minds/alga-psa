@@ -6,7 +6,7 @@ import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { getInvoiceForRendering } from './invoiceQueries';
 import { createPDFGenerationService, publishGeneratedDocumentsToClient } from '../services/pdfGenerationService';
 import { StorageService } from '@alga-psa/storage/StorageService';
-import { embedBrandLogo, StaticTemplateProcessor, TenantEmailService } from '@alga-psa/email';
+import { StaticTemplateProcessor, TenantEmailService } from '@alga-psa/email';
 import { formatCurrency, isValidEmail, enqueueImmediateJob } from '@alga-psa/core';
 import { resolveEmailLocale, getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import Handlebars from 'handlebars';
@@ -591,28 +591,21 @@ export const sendInvoiceEmailAction = withAuth(async (
         portalUrl: linkContext.portalUrl,
       });
 
-      const branded = await embedBrandLogo(html, {
-        tenantId: tenant,
-        knex,
-        context: { action: 'sendInvoiceEmail', invoiceId },
-      });
-
       const result = await TenantEmailService.getInstance(tenant).sendEmail({
         tenantId: tenant,
         mailClass: 'billing',
         senderId,
         to: { email: recipientEmail, name: recipientName },
         subject,
-        html: branded.html,
+        html,
         text,
-        templateProcessor: new StaticTemplateProcessor(subject, branded.html, text),
+        templateProcessor: new StaticTemplateProcessor(subject, html, text),
         attachments: [
           {
             filename: `Invoice_${invoice.invoice_number}.pdf`,
             content: buffer,
             contentType: 'application/pdf',
           },
-          ...branded.attachments,
         ],
         entityType: 'invoice',
         entityId: invoiceId,

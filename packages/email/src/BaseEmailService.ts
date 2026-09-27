@@ -584,10 +584,8 @@ export abstract class BaseEmailService {
       const effectiveEntityType = params.entityType ?? (effectiveTicketId ? 'ticket' : undefined);
       const effectiveEntityId = params.entityId ?? effectiveTicketId;
 
-      // Every notification path lands here after its template is rendered, so
+      // Every tenant email path lands here after its template is rendered, so
       // this is where the branded header logo becomes an inline attachment.
-      // (The paths that render a tenant template and call a provider directly —
-      // invoice mail, project status updates — run the same pass themselves.)
       let attachments = params.attachments;
       if (params.tenantId && params.tenantId !== 'system') {
         const embedded = await embedBrandLogo(html, {
