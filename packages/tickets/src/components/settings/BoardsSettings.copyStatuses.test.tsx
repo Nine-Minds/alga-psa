@@ -5,6 +5,7 @@ import React from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import BoardsSettings from './BoardsSettings';
+import { toast } from 'react-hot-toast';
 
 const getAllBoardsMock = vi.fn();
 const createBoardMock = vi.fn();
@@ -733,6 +734,22 @@ describe('BoardsSettings ticket status copy flow', () => {
       routeType: 'board', boardId: 'board-source', senderId: null, displayName: 'Support desk',
     })));
     expect(clearEmailSenderRouteMock).not.toHaveBeenCalled();
+  });
+
+  it('shows a sender route error without showing a success toast', async () => {
+    setEmailSenderRouteMock.mockResolvedValue({ success: false, error: 'The SMTP sender needs confirmation.' });
+    getBoardTicketStatusesMock.mockResolvedValue([]);
+
+    renderBoardsSettings();
+    await waitFor(() => expect(document.querySelector('[id^="board-row-"]')).toBeTruthy());
+    fireEvent.click(document.getElementById('board-row-board-source') as HTMLElement);
+    await waitFor(() => expect(screen.getByDisplayValue('Support')).toBeInTheDocument());
+    expandSection('inbound');
+    fireEvent.change(document.getElementById('board-ticket-email-sender-name') as HTMLInputElement, { target: { value: 'Support desk' } });
+    fireEvent.click(screen.getByTestId('board-ticket-email-sender-save'));
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('The SMTP sender needs confirmation.'));
+    expect(toast.success).not.toHaveBeenCalledWith('Ticket sender saved');
   });
 
   it('keeps the editor open after saving changes to an existing board', async () => {

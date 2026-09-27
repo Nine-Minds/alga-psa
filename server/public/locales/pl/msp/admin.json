@@ -272,8 +272,7 @@
         "duplicateAddress": "Ten adres nadawcy już istnieje.",
         "saveFailed": "Nie można dodać nadawcy. Sprawdź adres i spróbuj ponownie.",
         "duplicateRoute": "Ta trasa nadawcy już istnieje.",
-        "saveRoutingFailed": "Nie można zapisać trasy nadawcy. Spróbuj ponownie.",
-        "actionFailed": "{{error}}"
+        "saveRoutingFailed": "Nie można zapisać trasy nadawcy. Spróbuj ponownie."
       }
     }
   },

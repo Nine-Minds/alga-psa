@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Plus, MoreVertical, HelpCircle, ChevronDown, ArrowLeft, AlertTriangle, CheckCircle2, Settings2, Users, ListChecks, Mail, Zap, Clock, Search, Inbox, Star, LayoutGrid, EyeOff } from "lucide-react";
-import { IBoard, ITeam, CategoryType, PriorityType, IPriority, IUser, DeletionValidationResult, DeletionDependency } from '@alga-psa/types';
+import { IBoard, ITeam, CategoryType, PriorityType, IPriority, IUser, DeletionValidationResult, DeletionDependency, isSenderActionFailure, type SenderActionFailure } from '@alga-psa/types';
 import {
   getAllBoards,
   getBoardListStats,
@@ -425,8 +425,8 @@ interface BoardsSettingsProps {
   /** Email sender actions are injected by the host to keep tickets independent of integrations. */
   listEmailSenders?: () => Promise<{ senders: BoardEmailSender[]; routes: BoardEmailSenderRoute[] }>;
   listSelectableSenders?: (input: { mailClass: 'ticket'; ignoreBoardRoute: true; boardName?: string }) => Promise<{ effectiveSenderAddress: string; effectiveSenderDisplayName: string }>;
-  setEmailSenderRoute?: (input: BoardEmailSenderRouteInput) => Promise<unknown>;
-  clearEmailSenderRoute?: (input: Pick<BoardEmailSenderRouteInput, 'routeType' | 'boardId'>) => Promise<unknown>;
+  setEmailSenderRoute?: (input: BoardEmailSenderRouteInput) => Promise<{ success: true } | SenderActionFailure>;
+  clearEmailSenderRoute?: (input: Pick<BoardEmailSenderRouteInput, 'routeType' | 'boardId'>) => Promise<{ success: true } | SenderActionFailure>;
 }
 
 const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, getSlaPolicies, listEmailSenders, listSelectableSenders, setEmailSenderRoute, clearEmailSenderRoute }) => {
@@ -581,10 +581,12 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
     if (!editingBoard?.board_id || !setEmailSenderRoute || !clearEmailSenderRoute) return;
     setTicketSenderSaving(true);
     try {
-      if (!ticketSenderId && !ticketSenderName.trim()) {
-        await clearEmailSenderRoute({ routeType: 'board', boardId: editingBoard.board_id });
-      } else {
-        await setEmailSenderRoute({ routeType: 'board', boardId: editingBoard.board_id, senderId: ticketSenderId || null, displayName: ticketSenderName });
+      const result = !ticketSenderId && !ticketSenderName.trim()
+        ? await clearEmailSenderRoute({ routeType: 'board', boardId: editingBoard.board_id })
+        : await setEmailSenderRoute({ routeType: 'board', boardId: editingBoard.board_id, senderId: ticketSenderId || null, displayName: ticketSenderName });
+      if (isSenderActionFailure(result)) {
+        toast.error(result.error);
+        return;
       }
       toast.success(t('ticketing.boards.emailSender.saved', 'Ticket sender saved'));
     } catch (error) {

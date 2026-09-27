@@ -5,9 +5,7 @@ import logger from '@alga-psa/core/logger';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { TenantEmailService } from '@alga-psa/email';
-import type { OutboundMailClass } from '@alga-psa/types';
-
-type SenderActionFailure = { success: false; error: string };
+import type { OutboundMailClass, SenderActionFailure } from '@alga-psa/types';
 
 function withTypedErrors<T extends (...args: any[]) => Promise<any>>(action: T) {
   return async (...args: Parameters<T>): Promise<Awaited<ReturnType<T>> | SenderActionFailure> => {

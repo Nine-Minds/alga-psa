@@ -272,8 +272,7 @@
         "duplicateAddress": "Este endereço de remetente já existe.",
         "saveFailed": "Não foi possível adicionar o remetente. Verifique o endereço e tente novamente.",
         "duplicateRoute": "Esta rota de remetente já existe.",
-        "saveRoutingFailed": "Não foi possível salvar a rota do remetente. Tente novamente.",
-        "actionFailed": "{{error}}"
+        "saveRoutingFailed": "Não foi possível salvar a rota do remetente. Tente novamente."
       }
     }
   },

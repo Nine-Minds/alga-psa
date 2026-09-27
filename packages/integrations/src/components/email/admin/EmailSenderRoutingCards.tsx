@@ -9,7 +9,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Dialog, DialogContent, DialogDescription } from '@alga-psa/ui/components/Dialog';
-import type { OutboundMailClass } from '@alga-psa/types';
+import { isSenderActionFailure, type OutboundMailClass } from '@alga-psa/types';
 import {
   clearEmailSenderRoute,
   listEmailSenders,
@@ -54,7 +54,7 @@ export function EmailSenderAddressesCard({
   microsoftMailboxes?: Array<{ providerId: string; mailbox: string; providerName: string }>;
 }) {
   const { t: translate } = useTranslation('msp/admin');
-  const t: Translate = (key, fallback) => translate(key, { defaultValue: fallback, error: fallback });
+  const t: Translate = (key, fallback) => translate(key, { defaultValue: fallback });
   const { senders, loadError, reload } = useContext(SenderStateContext);
   const [emailAddress, setEmailAddress] = useState('');
   const [localPart, setLocalPart] = useState('');
@@ -79,8 +79,8 @@ export function EmailSenderAddressesCard({
         displayName,
         microsoftProviderId: transport === 'microsoft' ? microsoftProviderId : null,
       });
-      if ('success' in result && !result.success) {
-        setDialogError(t('email.senderIdentities.errors.actionFailed', result.error));
+      if (isSenderActionFailure(result)) {
+        setDialogError(result.error);
         return false;
       }
       setEmailAddress('');
@@ -105,7 +105,7 @@ export function EmailSenderAddressesCard({
     try {
       const { verifyEmailSender } = await import('../../../actions/email-actions/emailSenderActions');
       const result = await verifyEmailSender(senderId);
-      if (result.success === false && 'error' in result) { setError(t('email.senderIdentities.errors.actionFailed', String(result.error))); return; }
+      if (isSenderActionFailure(result)) { setError(result.error); return; }
       await reload();
     } catch (reason) {
       const code = (reason as any)?.code ?? (reason as any)?.cause?.code;
@@ -125,7 +125,7 @@ export function EmailSenderAddressesCard({
     try {
       const { deleteEmailSender } = await import('../../../actions/email-actions/emailSenderActions');
       const result = await deleteEmailSender(senderId);
-      if (result.success === false && 'error' in result) { setError(t('email.senderIdentities.errors.actionFailed', String(result.error))); return; }
+      if (isSenderActionFailure(result)) { setError(result.error); return; }
       await reload();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : String(reason));
@@ -140,7 +140,7 @@ export function EmailSenderAddressesCard({
     try {
       const { updateEmailSender } = await import('../../../actions/email-actions/emailSenderActions');
       const result = await updateEmailSender({ senderId, emailAddress: editAddress, displayName: editDisplayName });
-      if (result.success === false && 'error' in result) { setError(t('email.senderIdentities.errors.actionFailed', String(result.error))); return; }
+      if (isSenderActionFailure(result)) { setError(result.error); return; }
       setEditingSenderId(null);
       await reload();
     } catch (reason) {
@@ -203,7 +203,7 @@ export function EmailSenderAddressesCard({
 
 export function EmailSenderRoutingCard({ transport = 'resend' }: { transport?: 'smtp' | 'resend' | 'microsoft' }) {
   const { t: translate } = useTranslation('msp/admin');
-  const t: Translate = (key, fallback) => translate(key, { defaultValue: fallback, error: fallback });
+  const t: Translate = (key, fallback) => translate(key, { defaultValue: fallback });
   const { senders, routes, loadError, reload } = useContext(SenderStateContext);
   const [busyRoute, setBusyRoute] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -218,7 +218,7 @@ export function EmailSenderRoutingCard({ transport = 'resend' }: { transport?: '
       const result = (senderId === '__default__' || !senderId) && !displayName.trim()
         ? await clearEmailSenderRoute(args as any)
         : await setEmailSenderRoute({ ...args, confirmUnverifiedSmtpSender } as any);
-      if (result.success === false && 'error' in result) { setError(t('email.senderIdentities.errors.actionFailed', String(result.error))); return; }
+      if (isSenderActionFailure(result)) { setError(result.error); return; }
       await reload();
     } catch (reason) {
       const code = (reason as any)?.code ?? (reason as any)?.cause?.code;
