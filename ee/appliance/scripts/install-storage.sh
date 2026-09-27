@@ -7,6 +7,8 @@ STORAGE_MANIFEST="$APPLIANCE_ROOT/manifests/local-path-storage.yaml"
 STORAGE_PATH="/var/mnt/alga-data/local-path-provisioner"
 K3S_CONFIG_DROP_IN="/etc/rancher/k3s/config.yaml.d/20-alga-local-storage.yaml"
 K3S_LOCAL_STORAGE_SKIP_FILE="/var/lib/rancher/k3s/server/manifests/local-storage.yaml.skip"
+DNS_RECONCILE_SCRIPT="${ALGA_APPLIANCE_DNS_RECONCILE_SCRIPT:-$APPLIANCE_ROOT/scripts/reconcile-k3s-dns.sh}"
+SKIP_DNS_RECONCILE="${ALGA_APPLIANCE_SKIP_DNS_RECONCILE:-false}"
 SMOKE_NAMESPACE="storage-smoke"
 LOCK_PATH="${ALGA_APPLIANCE_STORAGE_LOCK_PATH:-/var/lib/alga-appliance/storage-reconcile.lock}"
 LOCK_WAIT_ATTEMPTS="${ALGA_APPLIANCE_STORAGE_LOCK_ATTEMPTS:-150}"
@@ -248,6 +250,26 @@ verify_storage_controller_convergence() {
   verify_single_storage_controller
   sleep "$STORAGE_STABILITY_SECONDS"
   verify_single_storage_controller
+}
+
+# Existing installs receive the resolver configuration on their next reconcile
+# without reinstalling: the storage reconcile already runs during setup and
+# channel updates, so it is the natural host-preparation hook. The launcher
+# creates a privileged Job that runs the fixed DNS helper against host root.
+reconcile_k3s_dns() {
+  if [ "$SKIP_DNS_RECONCILE" = "true" ]; then
+    echo "Skipping DNS reconciliation (ALGA_APPLIANCE_SKIP_DNS_RECONCILE=true)."
+    return 0
+  fi
+  if [ ! -f "$DNS_RECONCILE_SCRIPT" ]; then
+    echo "DNS reconciliation launcher not found at $DNS_RECONCILE_SCRIPT; skipping." >&2
+    return 0
+  fi
+  if $DRY_RUN; then
+    echo "+ bash $DNS_RECONCILE_SCRIPT --kubeconfig $KUBECONFIG_PATH"
+    return 0
+  fi
+  bash "$DNS_RECONCILE_SCRIPT" --kubeconfig "$KUBECONFIG_PATH"
 }
 
 list_local_path_pvs() {
@@ -520,5 +542,6 @@ wait_for_rollout
 verify_storage_controller_convergence
 run_smoke_test
 verify_storage_controller_convergence
+reconcile_k3s_dns
 
 echo "Storage prerequisites are ready."
