@@ -456,6 +456,13 @@ export const CLIENT_KEYED_TABLES_LEFT_BEHIND: Array<{ table: string; reason: str
       'A quarantine table written once by migration 20260814090000 and read by nobody; it is not '
       + 'registered with the tenant facade and has no live write path to re-point.',
   },
+  {
+    table: 'client_tax_id_migration_conflicts',
+    reason:
+      'A durable audit written once by migration 20260923090000, recording the legacy tax ID that '
+      + 'was discarded for this specific client. It has no live write path, and re-stamping it would '
+      + 'misattribute the record (and collide with the target\'s own row on the per-client unique key).',
+  },
   // These columns are OAuth application identifiers (varchar/text, no foreign
   // key to `clients`). Re-stamping one would break the integration outright.
   { table: 'google_calendar_provider_config', reason: 'OAuth client id, not an Alga client.' },
