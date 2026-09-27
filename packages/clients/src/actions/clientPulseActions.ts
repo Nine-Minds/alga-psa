@@ -319,25 +319,36 @@ async function fetchNotes(
   trx: Knex.Transaction,
   tenant: string,
   notesDocumentId: string | null,
+  legacyNotes: string | null,
 ): Promise<ClientPulseNotes> {
   const empty: ClientPulseNotes = { hasNotes: false, previewLines: [], lastEditedAt: null };
-  if (!notesDocumentId) return empty;
+  const legacyPreview = (): ClientPulseNotes => {
+    const previewLines = (legacyNotes ?? '')
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .slice(0, NOTE_PREVIEW_LINE_LIMIT);
+    return previewLines.length
+      ? { hasNotes: true, previewLines, lastEditedAt: null }
+      : empty;
+  };
+  if (!notesDocumentId) return legacyPreview();
 
   const contentRow = await trx('document_block_content')
     .where({ tenant, document_id: notesDocumentId })
     .select('block_data', 'updated_at')
     .first();
-  if (!contentRow) return empty;
+  if (!contentRow) return legacyPreview();
 
   let blocks: unknown = contentRow.block_data;
   if (typeof blocks === 'string') {
     try {
       blocks = JSON.parse(blocks);
     } catch {
-      return empty;
+      return legacyPreview();
     }
   }
-  if (!Array.isArray(blocks)) return empty;
+  if (!Array.isArray(blocks)) return legacyPreview();
 
   const previewLines: string[] = [];
   let hasNotes = false;
@@ -351,7 +362,7 @@ async function fetchNotes(
 
   // A saved-but-blank doc reads as "no notes" — an empty preview with a
   // timestamp would imply content that isn't there (D6).
-  if (!hasNotes) return empty;
+  if (!hasNotes) return legacyPreview();
 
   return {
     hasNotes,
@@ -1017,6 +1028,7 @@ export const getClientPulse = withAuth(async (
         'c.account_manager_id',
         'c.is_inactive',
         'c.properties',
+        'c.notes',
         'c.notes_document_id',
         'u.first_name',
         'u.last_name',
@@ -1045,7 +1057,7 @@ export const getClientPulse = withAuth(async (
       fetchPeople(trx, tenant, clientId, defaultContactId),
       fetchLocations(trx, tenant, clientId),
       fetchRecord(trx, tenant, clientRow, defaultContactId),
-      fetchNotes(trx, tenant, clientRow.notes_document_id ?? null),
+      fetchNotes(trx, tenant, clientRow.notes_document_id ?? null, clientRow.notes ?? null),
       canReadTickets ? fetchService(trx, tenant, clientId, nowMs) : Promise.resolve(null),
       canReadBilling ? fetchMoney(trx, tenant, clientId, nowMs) : Promise.resolve(null),
       canReadInventory ? fetchInstallBase(trx, tenant, clientId, canReadAssets, nowMs) : Promise.resolve(null),
