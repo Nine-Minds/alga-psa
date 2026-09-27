@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { verifyDevelopmentLogin } from '../../../../scripts/developmentLoginVerification.mjs';
+import { describeDevelopmentLoginFailure, verifyDevelopmentLogin } from '../../../../scripts/developmentLoginVerification.mjs';
 
 describe('development login command verification', () => {
   it('re-reads the tenant-scoped row after recovery instead of checking the stale discovered hash', async () => {
@@ -44,5 +44,25 @@ describe('development login command verification', () => {
       tenantId: discoveredUser.tenant,
       requireTenantMatch: true,
     });
+  });
+});
+
+describe('development login failure reporting', () => {
+  it('distinguishes database-role authentication from account password drift without leaking driver details', () => {
+    const message = describeDevelopmentLoginFailure({
+      code: '28P01',
+      message: 'driver error containing private connection data',
+      detail: 'sensitive-driver-detail-sentinel',
+    }, 'seeded account lookup');
+
+    expect(message).toContain('SQLSTATE 28P01');
+    expect(message).toContain('--recover cannot repair database-role authentication');
+    expect(message).not.toContain('private connection data');
+    expect(message).not.toContain('sensitive-driver-detail-sentinel');
+  });
+
+  it('redacts unrecognized driver errors', () => {
+    expect(describeDevelopmentLoginFailure({ message: 'secret connection string' }, 'seeded account lookup'))
+      .toBe('Development credential check failed during seeded account lookup; inspect configuration privately.');
   });
 });

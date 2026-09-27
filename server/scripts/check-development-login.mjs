@@ -2,7 +2,7 @@
 // Add --recover to explicitly repair the seeded fixture using DEV_LOGIN_PASSWORD.
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { verifyDevelopmentLogin } from './developmentLoginVerification.mjs';
+import { describeDevelopmentLoginFailure, verifyDevelopmentLogin } from './developmentLoginVerification.mjs';
 
 const require = createRequire(import.meta.url);
 const serverDirectory = fileURLToPath(new URL('../', import.meta.url));
@@ -61,17 +61,7 @@ try {
   });
   report('Development credential authenticated against the configured database. No server was started.');
 } catch (error) {
-  // Only expose messages created here, never dependency errors containing config.
-  const known = [
-    'DEV_LOGIN_PASSWORD must be configured privately before running this check.',
-    'Active seeded internal user not found.',
-    'Seeded account discovery does not match the tenant-scoped authentication account.',
-    'Configured credential does not verify against the selected account hash under the effective secret; shared-database rotation or secret configuration drift is possible.',
-    'Stored credential verifies, but authenticateUser did not return the tenant-scoped seeded account.',
-  ];
-  report(known.includes(error?.message)
-    ? error.message
-    : `Development credential check failed during ${stage}; inspect configuration privately.`);
+  report(describeDevelopmentLoginFailure(error, stage));
   process.exitCode = 1;
 } finally {
   await closeDatabase?.();

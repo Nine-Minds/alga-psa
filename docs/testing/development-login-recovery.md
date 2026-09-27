@@ -159,3 +159,24 @@ database persistence), run the check again, sign out, then sign in with the
 identical configured password. Browser smoke remains deferred under the
 no-server-start constraint. This plain PostgreSQL database does not validate
 Citus distribution-column compatibility.
+
+
+### Takeover verification (2026-09-27)
+
+The direct PostgreSQL endpoint remains `127.0.0.1:5472`. A read-only comparison
+of this checkout, the PostgreSQL-owning `2518` checkout, the PgBouncer-owning
+`2516` checkout, and the mounted PostgreSQL secret found one distinct configured
+admin credential. That credential failed a direct connection with SQLSTATE
+`28P01`; using the mounted secret inside the container failed as well. No
+alternative valid credential was found in these configuration sources. This is
+separate from the development-account overwrite fixed in the `2576` checkout.
+Do not use `--recover` to address this connection failure: it cannot authenticate
+to PostgreSQL and therefore cannot reach the seeded account.
+
+The checker now reports database-role authentication failure explicitly while
+redacting driver messages and connection details. The startup-wiring and
+credential checks remain covered by focused tests. Completing fresh-process
+login validation requires the operator's existing valid private database
+credential source. No database role password, shared service, or priority color
+implementation was changed during takeover. Browser smoke remains deferred
+under the no-server-start restriction.

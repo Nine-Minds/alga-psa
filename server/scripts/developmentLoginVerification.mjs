@@ -32,3 +32,21 @@ export async function verifyDevelopmentLogin({
     throw new Error('Stored credential verifies, but authenticateUser did not return the tenant-scoped seeded account.');
   }
 }
+
+// Classify connection failures without exposing driver messages or connection config.
+export function describeDevelopmentLoginFailure(error, stage) {
+  if (error?.code === '28P01') {
+    return 'PostgreSQL rejected the database connection credential (SQLSTATE 28P01). Check the private database credential source; --recover cannot repair database-role authentication.';
+  }
+  // Only expose messages created here, never dependency errors containing config.
+  const known = [
+    'DEV_LOGIN_PASSWORD must be configured privately before running this check.',
+    'Active seeded internal user not found.',
+    'Seeded account discovery does not match the tenant-scoped authentication account.',
+    'Configured credential does not verify against the selected account hash under the effective secret; shared-database rotation or secret configuration drift is possible.',
+    'Stored credential verifies, but authenticateUser did not return the tenant-scoped seeded account.',
+  ];
+  return known.includes(error?.message)
+    ? error.message
+    : `Development credential check failed during ${stage}; inspect configuration privately.`;
+}
