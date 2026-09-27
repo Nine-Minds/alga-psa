@@ -4,6 +4,9 @@ import React from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+const toastMock = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
+vi.mock('react-hot-toast', () => ({ toast: toastMock }));
+
 const actions = vi.hoisted(() => ({
   addQuoteItem: vi.fn(),
   approveQuote: vi.fn(),
@@ -283,6 +286,45 @@ describe('QuoteForm template instantiation', () => {
 
   afterEach(() => {
     cleanup();
+  });
+
+  it('confirms invoice conversion and keeps a link to the saved invoice after reloading', async () => {
+    const acceptedQuote = { ...editQuote, status: 'accepted', quote_items: [template.quote_items[1]] };
+    const convertedQuote = { ...acceptedQuote, converted_invoice_id: 'invoice-1' };
+    actions.getQuote.mockResolvedValue(acceptedQuote);
+    actions.getQuoteConversionPreview.mockResolvedValue({
+      contract_items: [], invoice_items: [template.quote_items[1]], sales_order_items: [], excluded_items: [],
+    });
+    actions.convertQuoteToInvoice.mockResolvedValue({
+      quote: convertedQuote, invoice: { invoice_id: 'invoice-1', invoice_number: 'INV-193' },
+    });
+    const view = renderForm({ quoteId: 'quote-1' });
+    fireEvent.click((await screen.findAllByText('Convert to…'))[0]);
+    fireEvent.click(await screen.findByText('Create Draft Invoice'));
+    await waitFor(() => expect(toastMock.success).toHaveBeenCalled());
+    expect(screen.getByRole('link', { name: 'Open Converted Invoice' }).getAttribute('href'))
+      .toBe('/msp/billing?tab=invoicing&subtab=drafts&invoiceId=invoice-1');
+    expect(screen.queryByText('Convert to…')).toBeNull();
+
+    view.unmount();
+    actions.getQuote.mockResolvedValue(convertedQuote);
+    renderForm({ quoteId: 'quote-1' });
+    await screen.findByRole('link', { name: 'Open Converted Invoice' });
+    expect(screen.queryByText('Convert to…')).toBeNull();
+  });
+
+  it('shows conversion errors while retaining the conversion dialog for retry', async () => {
+    actions.getQuote.mockResolvedValue({ ...editQuote, status: 'accepted', quote_items: [template.quote_items[1]] });
+    actions.getQuoteConversionPreview.mockResolvedValue({
+      contract_items: [], invoice_items: [template.quote_items[1]], sales_order_items: [], excluded_items: [],
+    });
+    actions.convertQuoteToInvoice.mockRejectedValue(new Error('Invoice creation failed'));
+    renderForm({ quoteId: 'quote-1' });
+    fireEvent.click((await screen.findAllByText('Convert to…'))[0]);
+    fireEvent.click(await screen.findByText('Create Draft Invoice'));
+    await waitFor(() => expect(toastMock.error).toHaveBeenCalledWith('Invoice creation failed'));
+    expect(screen.getByText('Create Draft Invoice').hasAttribute('disabled')).toBe(false);
+    expect(screen.queryByRole('link', { name: 'Open Converted Invoice' })).toBeNull();
   });
 
   it('T002: deep link prefills terms, notes, description, PO number, currency and line items', async () => {
