@@ -1,0 +1,731 @@
+{
+  "capturedAt": "2026-09-27T17:40:33.821Z",
+  "database": "server",
+  "postgresPort": 5472,
+  "invoice": {
+    "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+    "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+    "invoice_number": "SMOKE-ADJ-1",
+    "invoice_date": "2026-09-01T00:00:00.000Z",
+    "due_date": "2026-09-30T00:00:00.000Z",
+    "total_amount": "371400",
+    "status": "draft",
+    "template_id": null,
+    "custom_fields": null,
+    "created_at": "2026-09-23T04:53:24.847Z",
+    "updated_at": "2026-09-27T00:00:00.000Z",
+    "billing_period_start": null,
+    "billing_period_end": null,
+    "subtotal": 370500,
+    "tax": 900,
+    "finalized_at": null,
+    "credit_applied": null,
+    "billing_cycle_id": null,
+    "is_manual": false,
+    "is_prepayment": false,
+    "client_id": "d0000000-0000-4000-8000-000000000001",
+    "currency_code": "USD",
+    "exchange_rate_basis_points": null,
+    "tax_source": "internal",
+    "po_number": null,
+    "client_contract_id": "d5b323df-5741-483d-b403-909f65a44f0a",
+    "invoice_type": "standard",
+    "project_id": null,
+    "credit_expiration_date": null,
+    "billing_profile_id": null,
+    "prepayment_description": null,
+    "draft_adjustment_revision": 63
+  },
+  "charges": [
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "item_id": "1fb48137-0bb3-4e80-a496-eca9c6831372",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "service_id": null,
+      "description": "3 × $100.00 × 15/30",
+      "quantity": "1.00",
+      "unit_price": "15000",
+      "total_price": "15900",
+      "tax_region": "US-FL",
+      "tax_rate": "6.00",
+      "tax_amount": "900",
+      "net_amount": "15000",
+      "is_manual": true,
+      "created_by": "acdb0685-dc81-423e-9f95-0ced9eee3e0d",
+      "updated_by": null,
+      "created_at": "2026-09-23T04:59:14.395Z",
+      "updated_at": "2026-09-27T00:00:00.000Z",
+      "is_discount": false,
+      "discount_type": null,
+      "applies_to_item_id": null,
+      "discount_percentage": null,
+      "is_taxable": true,
+      "applies_to_service_id": null,
+      "client_contract_id": null,
+      "external_tax_amount": null,
+      "external_tax_code": null,
+      "external_tax_rate": null,
+      "location_id": null,
+      "so_line_id": null,
+      "billing_profile_id": null,
+      "billing_profile_source": "client_default",
+      "billing_charge_type": null,
+      "adjustment_source_kind": "manual_adjustment",
+      "adjustment_source_id": null,
+      "adjustment_source_revision": null,
+      "adjustment_scope": null,
+      "adjustment_base_amount": null,
+      "adjustment_reason": null,
+      "manual_line_metadata": null,
+      "adjustment_period_start": null,
+      "adjustment_period_end": null,
+      "is_manual_credit": false
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "item_id": "340cff0e-10e9-438b-a972-472b19946be2",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "service_id": "f075c46d-7a54-423e-809e-6a79c28dba1c",
+      "description": "Review-catalog",
+      "quantity": "1.00",
+      "unit_price": "10000",
+      "total_price": "10000",
+      "tax_region": null,
+      "tax_rate": "0.00",
+      "tax_amount": "0",
+      "net_amount": "10000",
+      "is_manual": true,
+      "created_by": "acdb0685-dc81-423e-9f95-0ced9eee3e0d",
+      "updated_by": null,
+      "created_at": "2026-09-27T13:15:40.463Z",
+      "updated_at": null,
+      "is_discount": false,
+      "discount_type": null,
+      "applies_to_item_id": null,
+      "discount_percentage": null,
+      "is_taxable": false,
+      "applies_to_service_id": null,
+      "client_contract_id": null,
+      "external_tax_amount": null,
+      "external_tax_code": null,
+      "external_tax_rate": null,
+      "location_id": null,
+      "so_line_id": null,
+      "billing_profile_id": "ddf20f87-972f-48ad-a62e-7e1ac430b3bb",
+      "billing_profile_source": "client_default",
+      "billing_charge_type": null,
+      "adjustment_source_kind": "manual_adjustment",
+      "adjustment_source_id": null,
+      "adjustment_source_revision": null,
+      "adjustment_scope": null,
+      "adjustment_base_amount": null,
+      "adjustment_reason": null,
+      "manual_line_metadata": null,
+      "adjustment_period_start": null,
+      "adjustment_period_end": null,
+      "is_manual_credit": false
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "item_id": "34f88b18-1d2e-49c3-a337-0d38796612b7",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "service_id": null,
+      "description": "Smoke 10% (all eligible)",
+      "quantity": "1.00",
+      "unit_price": "0",
+      "total_price": "-41500",
+      "tax_region": null,
+      "tax_rate": "0.00",
+      "tax_amount": "0",
+      "net_amount": "-41500",
+      "is_manual": false,
+      "created_by": null,
+      "updated_by": null,
+      "created_at": "2026-09-24T06:55:55.557Z",
+      "updated_at": "2026-09-27T13:15:40.469Z",
+      "is_discount": true,
+      "discount_type": "percentage",
+      "applies_to_item_id": null,
+      "discount_percentage": "10.0000",
+      "is_taxable": false,
+      "applies_to_service_id": null,
+      "client_contract_id": null,
+      "external_tax_amount": null,
+      "external_tax_code": null,
+      "external_tax_rate": null,
+      "location_id": null,
+      "so_line_id": null,
+      "billing_profile_id": "ddf20f87-972f-48ad-a62e-7e1ac430b3bb",
+      "billing_profile_source": "client_default",
+      "billing_charge_type": null,
+      "adjustment_source_kind": "discount",
+      "adjustment_source_id": "5a1e0000-0000-4000-8000-0000000000a3",
+      "adjustment_source_revision": 1,
+      "adjustment_scope": "invoice",
+      "adjustment_base_amount": "415000",
+      "adjustment_reason": "Automatic discount: Smoke 10% (all eligible) (invoice scope, base 415000, period 2026-09-01 to 2026-09-01)",
+      "manual_line_metadata": null,
+      "adjustment_period_start": "2026-09-01T04:00:00.000Z",
+      "adjustment_period_end": "2026-09-01T04:00:00.000Z",
+      "is_manual_credit": false
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "item_id": "5a1e0000-0000-4000-8000-0000000000a2",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "service_id": "eea664f8-6928-4bed-86b1-b83855f2d81c",
+      "description": "Managed services recurring charge",
+      "quantity": "1.00",
+      "unit_price": "390000",
+      "total_price": "390000",
+      "tax_region": null,
+      "tax_rate": "0.00",
+      "tax_amount": "0",
+      "net_amount": "390000",
+      "is_manual": false,
+      "created_by": null,
+      "updated_by": null,
+      "created_at": "2026-09-23T04:53:24.847Z",
+      "updated_at": null,
+      "is_discount": false,
+      "discount_type": null,
+      "applies_to_item_id": null,
+      "discount_percentage": null,
+      "is_taxable": false,
+      "applies_to_service_id": null,
+      "client_contract_id": "d5b323df-5741-483d-b403-909f65a44f0a",
+      "external_tax_amount": null,
+      "external_tax_code": null,
+      "external_tax_rate": null,
+      "location_id": null,
+      "so_line_id": null,
+      "billing_profile_id": null,
+      "billing_profile_source": null,
+      "billing_charge_type": null,
+      "adjustment_source_kind": null,
+      "adjustment_source_id": null,
+      "adjustment_source_revision": null,
+      "adjustment_scope": null,
+      "adjustment_base_amount": null,
+      "adjustment_reason": null,
+      "manual_line_metadata": null,
+      "adjustment_period_start": null,
+      "adjustment_period_end": null,
+      "is_manual_credit": false
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "item_id": "86e96b67-e1ad-4d45-a6e7-5cf6c622d0fe",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "service_id": null,
+      "description": "Smoke three-seat credit 20260924",
+      "quantity": "3.00",
+      "unit_price": "-1000",
+      "total_price": "-3000",
+      "tax_region": null,
+      "tax_rate": "0.00",
+      "tax_amount": "0",
+      "net_amount": "-3000",
+      "is_manual": true,
+      "created_by": "acdb0685-dc81-423e-9f95-0ced9eee3e0d",
+      "updated_by": null,
+      "created_at": "2026-09-24T04:13:17.338Z",
+      "updated_at": "2026-09-27T00:00:00.000Z",
+      "is_discount": true,
+      "discount_type": "fixed",
+      "applies_to_item_id": null,
+      "discount_percentage": null,
+      "is_taxable": false,
+      "applies_to_service_id": null,
+      "client_contract_id": null,
+      "external_tax_amount": null,
+      "external_tax_code": null,
+      "external_tax_rate": null,
+      "location_id": null,
+      "so_line_id": null,
+      "billing_profile_id": "ddf20f87-972f-48ad-a62e-7e1ac430b3bb",
+      "billing_profile_source": "client_default",
+      "billing_charge_type": null,
+      "adjustment_source_kind": "manual_adjustment",
+      "adjustment_source_id": null,
+      "adjustment_source_revision": null,
+      "adjustment_scope": null,
+      "adjustment_base_amount": null,
+      "adjustment_reason": null,
+      "manual_line_metadata": null,
+      "adjustment_period_start": null,
+      "adjustment_period_end": null,
+      "is_manual_credit": true
+    }
+  ],
+  "operations": [
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "aceebd2f-3438-475e-b9fe-7670ca30c21c",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 1,
+      "created_at": "2026-09-23T05:40:38.582Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "6064a384-4fec-4e1b-988b-c219aca229af",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 2,
+      "created_at": "2026-09-23T05:42:23.003Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "1e299439-6e13-448b-9385-c7a1ef2ed4fb",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 3,
+      "created_at": "2026-09-23T15:16:02.996Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "1ca1bc18-6f86-4d68-9808-0e75a9b5c70a",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 4,
+      "created_at": "2026-09-23T15:16:43.442Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "561bac52-25ea-447e-aa9d-95eaf0f6374d",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 5,
+      "created_at": "2026-09-23T15:20:42.913Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "b7a6b74f-99dc-4c99-8450-e9265d72e72d",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 6,
+      "created_at": "2026-09-24T04:10:42.891Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "eb724cf4-f92a-4ebb-bb3c-ea214b1c9e47",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 7,
+      "created_at": "2026-09-24T04:12:32.571Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "d32e51a6-12fb-4f8c-bb19-fb0557b05a98",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 8,
+      "created_at": "2026-09-24T04:12:48.546Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "b6e7edcb-37a1-429c-a65f-346c46df2c58",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 9,
+      "created_at": "2026-09-24T04:13:17.335Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "30013f57-c744-41af-8952-59f905f8ad14",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 10,
+      "created_at": "2026-09-24T04:45:22.585Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "5ccc43b1-0638-4fe6-99c5-78454ef9d3c9",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 11,
+      "created_at": "2026-09-24T04:45:50.921Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "685e548b-a048-4b49-b2b4-e98771dfdfa0",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 12,
+      "created_at": "2026-09-24T04:45:53.610Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "4fe1663f-d23e-4f3b-b976-32e06f5c3d3c",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 13,
+      "created_at": "2026-09-24T04:46:31.120Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "a5c4c9e4-b938-46a7-80df-d717b93f9a23",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 14,
+      "created_at": "2026-09-24T04:46:58.576Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "4640d72a-a382-41fc-bb75-a1bfb14dd36d",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 15,
+      "created_at": "2026-09-24T06:54:16.163Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "a0e33c62-ce96-45b8-9900-af440f915496",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 16,
+      "created_at": "2026-09-24T06:54:30.209Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "8d4d6eec-54ad-4a75-af76-048f0e74a849",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 17,
+      "created_at": "2026-09-24T06:54:32.905Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "bad72920-aa6a-499b-b82e-be60487a8c31",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 18,
+      "created_at": "2026-09-24T06:54:50.606Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "adaab16b-da53-4a9b-b621-79187fcf8857",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 19,
+      "created_at": "2026-09-24T06:55:02.668Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "bbd58f89-5e68-4a49-b929-ec1c120ce93f",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 20,
+      "created_at": "2026-09-24T06:55:49.898Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "45156566-acca-4cbb-bfaf-32ed0ff85ac4",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 21,
+      "created_at": "2026-09-24T06:55:55.547Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "45503c3f-5000-4370-8d91-b6e676f4ea4e",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 22,
+      "created_at": "2026-09-24T19:18:15.632Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "b1418f9e-5d80-454e-8ed5-c18a00f35a46",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 23,
+      "created_at": "2026-09-24T19:18:53.844Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "463090a0-fb8e-4f8b-84db-9b47a089cf3b",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 24,
+      "created_at": "2026-09-24T19:20:48.070Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "9b8070c7-cf84-47aa-8ed6-c6827a0ea954",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 25,
+      "created_at": "2026-09-24T19:33:20.800Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "4a0dedc4-7d44-490f-9f56-964356d6816f",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 26,
+      "created_at": "2026-09-24T19:33:26.792Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "3314ef87-ebfd-450a-938f-bb703ca89205",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 27,
+      "created_at": "2026-09-24T19:33:50.017Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "f24b07a4-2de9-402a-b7fd-a8e947c4c098",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 28,
+      "created_at": "2026-09-24T19:34:33.200Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "95b9c1d1-f123-4028-a057-7db298ca77ea",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 29,
+      "created_at": "2026-09-24T19:35:11.240Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "260f1ae0-4ff1-4af0-a395-63b5f56cdba4",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 30,
+      "created_at": "2026-09-24T19:36:02.130Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "ebd7edda-4158-485a-a22e-59fd78a9e7af",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 31,
+      "created_at": "2026-09-24T19:39:25.375Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "11911226-1d97-42a4-afbd-68e0779c6c3a",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 32,
+      "created_at": "2026-09-24T19:39:43.322Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "9b108e55-6f78-49b1-9ee9-5b602691ba38",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 33,
+      "created_at": "2026-09-24T19:39:55.096Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "a6db0b48-46e1-4d35-ab3a-644932a623b9",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 34,
+      "created_at": "2026-09-24T19:40:10.990Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "4a502516-b0f6-4edf-a589-cff36d07437a",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 35,
+      "created_at": "2026-09-24T19:40:28.335Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "4624d6c9-c094-4710-a5c5-e725a17434d1",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 36,
+      "created_at": "2026-09-24T19:41:20.036Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "c6ed48d2-624a-4c99-a57d-0f8d1bbc037b",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 37,
+      "created_at": "2026-09-24T21:13:29.285Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "e8c3dcef-6e65-4640-9f1c-d1a005dff856",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 38,
+      "created_at": "2026-09-24T21:17:40.175Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "14f0b6c7-8f43-4680-9426-4a70fd2bad68",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 39,
+      "created_at": "2026-09-24T21:44:48.543Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "e888962e-640f-4b5d-aeb7-66d63805fc35",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 40,
+      "created_at": "2026-09-24T21:46:42.761Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "b6d58042-8445-498b-a971-72e3fa9f6281",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 41,
+      "created_at": "2026-09-27T00:42:08.122Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "06dbb686-d372-4c2c-b903-45151189c5ec",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 42,
+      "created_at": "2026-09-27T00:42:12.001Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "fb3fe9ea-b109-49c8-87ac-30a0685b4279",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 43,
+      "created_at": "2026-09-27T00:42:14.283Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "9eb24e30-5152-4162-b5e7-90c6228658b3",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 44,
+      "created_at": "2026-09-27T00:42:18.711Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "0c7d7abf-b540-4202-a759-ddbb71ca773b",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 45,
+      "created_at": "2026-09-27T00:42:21.084Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "c9e08136-c3d9-4cf1-acbe-601114a5c615",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 46,
+      "created_at": "2026-09-27T00:42:40.285Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "1dad8554-9a49-4a20-b4ff-e62ee2b5b2a4",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 47,
+      "created_at": "2026-09-27T00:43:38.940Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "3b9ca130-3687-4f56-a34d-c03715978d75",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 48,
+      "created_at": "2026-09-27T00:43:55.417Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "916ad8e5-5f00-460e-b1d3-a4dc617ddaa3",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 49,
+      "created_at": "2026-09-27T00:44:00.662Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "a4e9050d-51e0-4301-a2b6-493680dc6dd4",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 50,
+      "created_at": "2026-09-27T00:44:12.714Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "71049254-0a28-4f28-9521-18faecadc12d",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 51,
+      "created_at": "2026-09-27T00:44:16.502Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "5ec7401c-959a-46b6-90a7-9e22ca04819a",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 52,
+      "created_at": "2026-09-27T00:44:20.298Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "aad7aaaf-818d-4717-81a8-eb154a499a8f",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 53,
+      "created_at": "2026-09-27T00:44:24.050Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "0e3eda79-ed25-4264-888d-f4e94423aec3",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 54,
+      "created_at": "2026-09-27T00:45:05.760Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "5d3b812b-2b53-470f-a24c-6b151297a4df",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 55,
+      "created_at": "2026-09-27T00:45:09.579Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "4db6ddfe-c1ca-41e4-ab86-6cd739b01425",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 56,
+      "created_at": "2026-09-27T13:05:43.434Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "467dd80c-4fdf-4ee6-b007-6d2e13ccb8fc",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 57,
+      "created_at": "2026-09-27T13:10:15.923Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "704b1425-e6a1-437d-baea-e93eccdb1a5c",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 58,
+      "created_at": "2026-09-27T13:11:25.391Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "3c00e841-7dbd-4b35-b0e0-7ad69901192b",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 59,
+      "created_at": "2026-09-27T13:12:25.303Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "eecca675-27e2-4555-a249-16fecc116cf1",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 60,
+      "created_at": "2026-09-27T13:12:35.588Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "5f864d76-e0ad-45c7-ba0a-42c9f0d0f708",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 61,
+      "created_at": "2026-09-27T13:13:44.035Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "242cec55-e26b-4fda-83a1-1ce840a27aa0",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 62,
+      "created_at": "2026-09-27T13:14:46.315Z"
+    },
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "operation_id": "f2f51aa3-b42f-438e-8535-b1eef687cadc",
+      "invoice_id": "5a1e0000-0000-4000-8000-0000000000a1",
+      "resulting_revision": 63,
+      "created_at": "2026-09-27T13:15:40.458Z"
+    }
+  ],
+  "contractLineDiscounts": [
+    {
+      "discount_id": "5a1e0000-0000-4000-8000-0000000000a3",
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "client_id": null,
+      "contract_line_id": "010e4bb1-ddf1-4c5e-90d1-3338e207ed27",
+      "client_contract_id": "d5b323df-5741-483d-b403-909f65a44f0a"
+    }
+  ],
+  "discounts": [
+    {
+      "discount_id": "5a1e0000-0000-4000-8000-0000000000a3",
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "discount_name": "Smoke 10% (all eligible)",
+      "discount_type": "percentage",
+      "value": "0.1000",
+      "start_date": "2020-01-01T00:00:00.000Z",
+      "end_date": null,
+      "is_active": true,
+      "created_at": "2026-09-23T04:53:24.847Z",
+      "updated_at": "2026-09-27T00:43:59.025Z",
+      "scope": "invoice",
+      "scope_service_id": null,
+      "applies_to_item_id": null,
+      "priority": null
+    }
+  ]
+}
