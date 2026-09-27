@@ -1,5 +1,7 @@
 # Current-head smoke and repair evidence — 2026-09-27
 
+The [takeover verification](../takeover/README.md) supersedes this round’s draft-posting assumption and adds posted-ledger and live template-copy evidence.
+
 Application branch: `feature/contract-invoices-automatic-adjustments-and-disc`
 Commit at smoke start: `dd44662150b1a9d76332dfb7a9d167dc76f5227d`
 Browser: supervised `dev-server`, `http://localhost:3185`

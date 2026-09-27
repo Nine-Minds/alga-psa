@@ -36,7 +36,24 @@ beforeEach(() => {
   actions.get.mockResolvedValue({ template_metadata: { default_discounts: terms, usage_notes: 'Preserve these notes' } });
   actions.update.mockResolvedValue({});
 });
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
+
+it('adds a template discount when the browser has no secure-context randomUUID API', async () => {
+  vi.stubGlobal('crypto', { getRandomValues: globalThis.crypto.getRandomValues.bind(globalThis.crypto) });
+  const saved = vi.fn();
+  render(<TemplateDefaultDiscountsPanel templateId="template" definitions={terms} lines={[]} onSaved={saved} />);
+  fireEvent.change(screen.getByLabelText('Discount name'), { target: { value: 'New default' } });
+  fireEvent.change(screen.getByLabelText('Value'), { target: { value: '12.5' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Add default discount' }));
+  await waitFor(() => expect(saved).toHaveBeenCalledOnce());
+  const persisted = actions.update.mock.calls[0][1].template_metadata.default_discounts;
+  expect(persisted.slice(0, 2)).toEqual(terms);
+  expect(persisted[2]).toMatchObject({ discount_name: 'New default', value: 12.5, scope: 'contract' });
+  expect(persisted[2].template_discount_key).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+});
 
 it('edits a template term in place, preserving identity, priority, peers and unrelated metadata', async () => {
   const saved = vi.fn();

@@ -1,0 +1,54 @@
+[
+  [],
+  [],
+  [],
+  [],
+  [],
+  [],
+  [],
+  [],
+  [],
+  [],
+  [],
+  [],
+  [],
+  [],
+  [],
+  [],
+  [],
+  [],
+  [],
+  [],
+  [
+    {
+      "owned_invoices": "0"
+    }
+  ],
+  [
+    {
+      "owned_transactions": "0"
+    }
+  ],
+  [
+    {
+      "owned_contracts": "0"
+    }
+  ],
+  [
+    {
+      "owned_templates": "0"
+    }
+  ],
+  [
+    {
+      "invoice_number": "SMOKE-ADJ-1",
+      "total_amount": "371400",
+      "draft_adjustment_revision": 63
+    },
+    {
+      "invoice_number": "INV-000039",
+      "total_amount": "390000",
+      "draft_adjustment_revision": 0
+    }
+  ]
+]

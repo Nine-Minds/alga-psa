@@ -2525,7 +2525,7 @@
   },
   "contractDiscounts": {
     "title": "Descuentos",
-    "description": "Los descuentos configurados se aplican automáticamente en cada factura borrador elegible de este cliente.",
+    "description": "Cada contrato de cliente tiene una copia editable propia. Los descuentos del contrato se aplican a los cargos elegibles de sus líneas facturadas.",
     "loading": "Cargando descuentos…",
     "empty": "Este contrato aún no tiene descuentos configurados.",
     "actions.add": "Añadir descuento",
@@ -2572,10 +2572,10 @@
       "toggleActive": "Cambiar estado del descuento"
     },
     "attachment": {
-      "shared": "Compartido · este contrato",
+      "shared": "Vinculación al contrato",
       "line": "Vinculación a línea"
     },
-    "sharedEditNotice": "Esta definición es compartida. Los cambios se aplicarán a todos los contratos vinculados al actualizar el próximo borrador elegible.",
+    "sharedEditNotice": "Los cambios solo afectan a este contrato de cliente. Editar la plantilla no modifica las copias de contratos existentes.",
     "dialog": {
       "contractAttachmentLineScopeLocked": "Este descuento está asociado a este contrato de cliente. Para limitarlo a una línea, desvincúlelo y cree un descuento específico para esa línea."
     }

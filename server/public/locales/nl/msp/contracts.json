@@ -2525,7 +2525,7 @@
   },
   "contractDiscounts": {
     "title": "Kortingen",
-    "description": "Geconfigureerde kortingen worden automatisch toegepast op elke in aanmerking komende conceptfactuur van deze klant.",
+    "description": "Elk klantcontract heeft een eigen bewerkbare kopie. Contractbrede kortingen gelden voor de in aanmerking komende kosten van de gefactureerde contractregels.",
     "loading": "Kortingen laden…",
     "empty": "Er zijn nog geen kortingen geconfigureerd voor dit contract.",
     "actions.add": "Korting toevoegen",
@@ -2572,10 +2572,10 @@
       "toggleActive": "Kortingsstatus wijzigen"
     },
     "attachment": {
-      "shared": "Gedeeld · dit contract",
+      "shared": "Contractkoppeling",
       "line": "Regelgekoppeld"
     },
-    "sharedEditNotice": "Deze definitie wordt gedeeld. Wijzigingen gelden voor alle gekoppelde contracten bij de volgende geschikte conceptverversing.",
+    "sharedEditNotice": "Wijzigingen gelden alleen voor dit klantcontract. Het bewerken van de sjabloon verandert bestaande contractkopieën niet.",
     "dialog": {
       "contractAttachmentLineScopeLocked": "Deze korting is gekoppeld aan dit klantcontract. Koppel de korting los en maak een regelgebonden korting om deze tot één regel te beperken."
     }

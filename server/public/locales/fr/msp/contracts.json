@@ -2525,7 +2525,7 @@
   },
   "contractDiscounts": {
     "title": "Remises",
-    "description": "Les remises configurées sont appliquées automatiquement sur chaque facture brouillon éligible de ce client.",
+    "description": "Chaque contrat client possède sa propre copie modifiable. Les remises du contrat s’appliquent aux frais éligibles de ses lignes facturées.",
     "loading": "Chargement des remises…",
     "empty": "Aucune remise n'est encore configurée pour ce contrat.",
     "actions.add": "Ajouter une remise",
@@ -2572,10 +2572,10 @@
       "toggleActive": "Modifier le statut de la remise"
     },
     "attachment": {
-      "shared": "Partagée · ce contrat",
+      "shared": "Association au contrat",
       "line": "Association à une ligne"
     },
-    "sharedEditNotice": "Cette définition est partagée. Les modifications s’appliqueront à tous les contrats associés lors de leur prochaine actualisation de brouillon admissible.",
+    "sharedEditNotice": "Les modifications ne concernent que ce contrat client. Modifier le modèle ne change pas les copies des contrats existants.",
     "columns": {
       "dates": "Périodes"
     },

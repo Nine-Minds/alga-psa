@@ -1,5 +1,9 @@
 # Contract invoice adjustments
 
+## Ledger and live verification repair (2026-09-27)
+
+Generation already posts invoice principal before finalization. Draft recalculation must reconcile the sum of completed invoice generation/adjustment postings with the new total using only a signed delta; payment and credit transactions are not part of that base. Repeated saves are no-ops in the ledger, and imported/unposted drafts remain unposted. Lock the invoice inside recalculation and serialize adjustment balance reads on the client. Behavioral verification includes posted USD/EUR drafts and concurrent recalculation. Live evidence for posted-invoice edits and independent template copies is in `docs/evidence/contract-invoice-adjustments-repair-2026-09-27/takeover/README.md`. Portal, export artifacts and combined-companion acceptance retain their documented integration limits.
+
 ## Implement desk audit (2026-09-27)
 
 Audit baseline: `4ff933a279`. The consolidated A–F instructions remain the

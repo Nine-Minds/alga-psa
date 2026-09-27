@@ -2525,7 +2525,7 @@
   },
   "contractDiscounts": {
     "title": "Discounts",
-    "description": "Contract-wide discounts are independent of contract lines. Shared definition edits apply to every attached contract on its next eligible draft refresh.",
+    "description": "Each client contract owns an editable copy. Contract-wide discounts apply to eligible charges across its represented lines.",
     "loading": "Loading discounts…",
     "empty": "No discounts are configured for this contract yet.",
     "actions.add": "Add Discount",
@@ -2544,7 +2544,7 @@
     "columns.status": "Status",
     "status.active": "Active",
     "status.inactive": "Inactive",
-    "attachment.shared": "Shared · this contract",
+    "attachment.shared": "Contract attachment",
     "attachment.line": "Line attachment",
     "scopes.invoice": "All eligible charges",
     "scopes.contract": "This contract",
@@ -2569,7 +2569,7 @@
     "fields.active": "Active",
     "dialog.createTitle": "Add discount",
     "dialog.editTitle": "Edit discount",
-    "sharedEditNotice": "This definition is shared. Changes affect every attached contract on its next eligible draft refresh.",
+    "sharedEditNotice": "Changes affect only this client contract. Editing the template does not change existing contract copies.",
     "errors.loadFailed": "Failed to load discounts.",
     "errors.saveFailed": "Failed to save the discount.",
     "dialog": {

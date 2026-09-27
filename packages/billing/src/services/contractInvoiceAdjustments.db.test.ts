@@ -59,6 +59,7 @@ const {
   persistManualInvoiceCharges,
   reconcileAutomaticInvoiceDiscounts,
   reconcileAutomaticInvoiceAdjustments,
+  updateInvoiceTotalsAndRecordTransaction,
 } = await import('./invoiceService');
 
 let db: Knex;
@@ -480,6 +481,68 @@ describe('contract invoice adjustments (DB-backed)', () => {
     expect(Number(invoice.subtotal)).toBe(351_000);
     expect(Number(invoice.tax)).toBe(0);
     expect(Number(invoice.total_amount)).toBe(351_000);
+  });
+
+  it.each(['USD', 'EUR'])('reconciles a posted %s draft with signed deltas, preserving payments and no-op saves', async (currency) => {
+    const fixture = await createDraftWithGeneratedChargeAndDiscount(currency);
+    // Exercise the same posting function used by contract invoice generation.
+    await db.transaction(async (trx) => {
+      await updateInvoiceTotalsAndRecordTransaction(
+        trx, fixture.invoiceId, { client_id: clientId }, tenant, 'POSTED-DRAFT',
+      );
+    });
+    const originalPosting = await db('transactions')
+      .where({ tenant, invoice_id: fixture.invoiceId, type: 'invoice_generated' }).first();
+    const paymentId = uuidv4();
+    await db('transactions').insert({
+      tenant, transaction_id: paymentId, client_id: clientId, invoice_id: fixture.invoiceId,
+      type: 'payment', status: 'completed', amount: -1000,
+      balance_after: Number(originalPosting.balance_after) - 1000,
+      created_at: db.raw('clock_timestamp()'), currency_code: currency,
+    });
+    const payment = await db('transactions').where({ tenant, transaction_id: paymentId }).first();
+    const { updateInvoiceManualItems } = await import('../actions/invoiceModification');
+    const manualId = uuidv4();
+    const operationId = uuidv4();
+    const add = { newItems: [{ item_id: manualId, description: 'One-time addition', quantity: 1, rate: 15000, is_taxable: false } as any], updatedItems: [], removedItemIds: [] };
+    expect(await updateInvoiceManualItems(fixture.invoiceId, add, { operationId, expectedRevision: 0 })).toMatchObject({ invoice_id: fixture.invoiceId });
+    expect(await updateInvoiceManualItems(fixture.invoiceId, add, { operationId, expectedRevision: 0 })).toMatchObject({ invoice_id: fixture.invoiceId });
+    expect(await updateInvoiceManualItems(fixture.invoiceId, { newItems: [], updatedItems: [], removedItemIds: [] })).toMatchObject({ invoice_id: fixture.invoiceId });
+
+    const adjustments = () => db('transactions')
+      .where({ tenant, invoice_id: fixture.invoiceId, type: 'invoice_adjustment' }).orderBy('created_at');
+    let rows = await adjustments();
+    expect(rows.map((row) => Number(row.amount))).toEqual([13500]);
+    expect(Number(rows[0].balance_after)).toBe(Number(payment.balance_after) + 13500);
+    expect(rows[0].currency_code).toBe(currency);
+    expect(Number((await db('invoices').where({ tenant, invoice_id: fixture.invoiceId }).first()).total_amount)).toBe(364500);
+
+    expect(await updateInvoiceManualItems(fixture.invoiceId, { newItems: [], updatedItems: [], removedItemIds: [manualId] })).toMatchObject({ invoice_id: fixture.invoiceId });
+    expect(await updateInvoiceManualItems(fixture.invoiceId, { newItems: [], updatedItems: [], removedItemIds: [] })).toMatchObject({ invoice_id: fixture.invoiceId });
+    rows = await adjustments();
+    expect(rows.map((row) => Number(row.amount))).toEqual([13500, -13500]);
+    expect(Number(rows[1].balance_after)).toBe(Number(payment.balance_after));
+    expect(await db('transactions').where({ tenant, transaction_id: originalPosting.transaction_id }).first()).toEqual(originalPosting);
+    expect(await db('transactions').where({ tenant, transaction_id: paymentId }).first()).toEqual(payment);
+    const invoice = await db('invoices').where({ tenant, invoice_id: fixture.invoiceId }).first();
+    expect(Number(originalPosting.amount) + rows.reduce((sum, row) => sum + Number(row.amount), 0)).toBe(Number(invoice.total_amount));
+  });
+
+  it('serializes concurrent recalculation of a posted draft into one adjustment', async () => {
+    const fixture = await createDraftWithGeneratedChargeAndDiscount();
+    await db.transaction((trx) => updateInvoiceTotalsAndRecordTransaction(
+      trx, fixture.invoiceId, { client_id: clientId }, tenant, 'CONCURRENT-DRAFT',
+    ));
+    await insertManualPartialPeriodCharge(fixture);
+    await db.transaction((trx) => reconcileAutomaticInvoiceAdjustments(trx, tenant, fixture.invoiceId));
+    await Promise.all([0, 1].map(() => db.transaction((trx) =>
+      new BillingEngine().recalculateInvoice(fixture.invoiceId, trx, tenant),
+    )));
+    const adjustments = await db('transactions')
+      .where({ tenant, invoice_id: fixture.invoiceId, type: 'invoice_adjustment' });
+    expect(adjustments).toHaveLength(1);
+    expect(Number(adjustments[0].amount)).toBe(13500);
+    expect(Number((await db('invoices').where({ tenant, invoice_id: fixture.invoiceId }).first()).total_amount)).toBe(364500);
   });
 
   it('saves UI-shaped calculator metadata through updateInvoiceManualItems for increases, decreases, reload and edits', async () => {

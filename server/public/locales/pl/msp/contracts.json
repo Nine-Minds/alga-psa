@@ -2529,7 +2529,7 @@
   },
   "contractDiscounts": {
     "title": "Rabaty",
-    "description": "Skonfigurowane rabaty są automatycznie stosowane do każdej kwalifikującej się faktury roboczej tego klienta.",
+    "description": "Każda umowa z klientem ma własną edytowalną kopię. Rabaty obejmujące całą umowę dotyczą kwalifikujących się opłat z jej zafakturowanych pozycji.",
     "loading": "Ładowanie rabatów…",
     "empty": "Dla tego kontraktu nie skonfigurowano jeszcze żadnych rabatów.",
     "actions.add": "Dodaj rabat",
@@ -2576,10 +2576,10 @@
       "toggleActive": "Zmień status rabatu"
     },
     "attachment": {
-      "shared": "Wspólny · ta umowa",
+      "shared": "Przypisanie do umowy",
       "line": "Przypisanie do pozycji"
     },
-    "sharedEditNotice": "Ta definicja jest współdzielona. Zmiany zostaną zastosowane do wszystkich przypisanych umów przy następnym odświeżeniu kwalifikującego się projektu faktury.",
+    "sharedEditNotice": "Zmiany dotyczą tylko tej umowy z klientem. Edycja szablonu nie zmienia kopii istniejących umów.",
     "dialog": {
       "contractAttachmentLineScopeLocked": "Ten rabat jest przypisany do tej umowy z klientem. Aby ograniczyć go do pozycji, odłącz go i utwórz rabat dla tej pozycji."
     }

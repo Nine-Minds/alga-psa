@@ -208,7 +208,7 @@ export function ContractDiscounts({ contractId, clientContractId, isReadOnly = f
             <tbody>
               {discounts.map((discount) => (
                 <tr key={discount.discount_id} className="border-b border-[rgb(var(--color-border-100))]">
-                  <td className="py-2 pr-4 font-medium">{discount.discount_name}<div className="text-xs font-normal text-muted-foreground">{discount.attachment_kind === 'contract' ? t('contractDiscounts.attachment.shared', { defaultValue: 'Shared · this contract' }) : t('contractDiscounts.attachment.line', { defaultValue: 'Line attachment' })}</div></td>
+                  <td className="py-2 pr-4 font-medium">{discount.discount_name}<div className="text-xs font-normal text-muted-foreground">{discount.attachment_kind === 'contract' ? t('contractDiscounts.attachment.shared', { defaultValue: 'Contract attachment' }) : t('contractDiscounts.attachment.line', { defaultValue: 'Line attachment' })}</div></td>
                   <td className="py-2 pr-4">{formatValue(discount)}</td>
                   <td className="py-2 pr-4">
                     {t(`contractDiscounts.scopes.${discount.scope}`, {

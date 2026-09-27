@@ -2525,7 +2525,7 @@
   },
   "contractDiscounts": {
     "title": "Sconti",
-    "description": "Gli sconti configurati vengono applicati automaticamente a ogni bozza di fattura idonea per questo cliente.",
+    "description": "Ogni contratto cliente dispone di una propria copia modificabile. Gli sconti del contratto si applicano agli addebiti idonei delle sue voci fatturate.",
     "loading": "Caricamento sconti…",
     "empty": "Nessuno sconto è ancora configurato per questo contratto.",
     "actions.add": "Aggiungi sconto",
@@ -2572,10 +2572,10 @@
       "toggleActive": "Modifica lo stato dello sconto"
     },
     "attachment": {
-      "shared": "Condiviso · questo contratto",
+      "shared": "Associazione al contratto",
       "line": "Collegamento alla voce"
     },
-    "sharedEditNotice": "Questa definizione è condivisa. Le modifiche si applicano a tutti i contratti collegati al prossimo aggiornamento idoneo della bozza.",
+    "sharedEditNotice": "Le modifiche riguardano solo questo contratto cliente. Modificare il modello non cambia le copie dei contratti esistenti.",
     "dialog": {
       "contractAttachmentLineScopeLocked": "Questo sconto è associato a questo contratto cliente. Per limitarlo a una riga, scollegalo e crea uno sconto specifico per quella riga."
     }

@@ -2525,7 +2525,7 @@
   },
   "contractDiscounts": {
     "title": "Rabatte",
-    "description": "Konfigurierte Rabatte werden automatisch auf jede berechtigte Entwurfsrechnung dieses Kunden angewendet.",
+    "description": "Jeder Kundenvertrag besitzt eine eigene bearbeitbare Kopie. Vertragsweite Rabatte gelten für die berechtigten Gebühren seiner abgerechneten Vertragszeilen.",
     "loading": "Rabatte werden geladen…",
     "empty": "Für diesen Vertrag sind noch keine Rabatte konfiguriert.",
     "actions.add": "Rabatt hinzufügen",
@@ -2572,10 +2572,10 @@
       "toggleActive": "Rabattstatus ändern"
     },
     "attachment": {
-      "shared": "Geteilt · dieser Vertrag",
+      "shared": "Vertragszuordnung",
       "line": "Zeilenverknüpfung"
     },
-    "sharedEditNotice": "Diese Definition wird gemeinsam genutzt. Änderungen gelten bei der nächsten geeigneten Aktualisierung des Entwurfs für alle verknüpften Verträge.",
+    "sharedEditNotice": "Änderungen wirken sich nur auf diesen Kundenvertrag aus. Änderungen an der Vorlage ändern keine bestehenden Vertragskopien.",
     "fields": {
       "service": "Dienstleistung"
     },

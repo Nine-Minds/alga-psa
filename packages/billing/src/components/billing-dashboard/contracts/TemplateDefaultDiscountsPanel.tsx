@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -107,7 +108,7 @@ export default function TemplateDefaultDiscountsPanel({
     const previous = editingIndex === null ? undefined : definitions[editingIndex];
     const definition = {
       ...previous,
-      template_discount_key: previous?.template_discount_key ?? crypto.randomUUID(),
+      template_discount_key: previous?.template_discount_key ?? uuidv4(),
       discount_name: name.trim(), discount_type: kind, value: numericValue,
       start_date: startDate, end_date: endDate || null, scope, is_active: previous?.is_active ?? true,
       contract_line_id: scope === 'line' ? lineId : null,

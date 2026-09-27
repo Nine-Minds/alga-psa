@@ -2167,6 +2167,62 @@ export async function calculateAndDistributeTax(
 }
 
 
+/**
+ * Reconcile an already-posted invoice after editing its draft charges. Generation
+ * posts the principal before finalization; subsequent saves post only the delta.
+ * Payments/credits are separate ledger activity and must not enter that base.
+ * The caller holds the invoice lock and updates its totals in this transaction.
+ */
+export async function reconcileInvoiceAdjustmentTransaction(
+  tx: Knex.Transaction,
+  tenant: string,
+  invoice: {
+    invoice_id: string;
+    client_id: string;
+    invoice_number: string;
+    currency_code?: string | null;
+    billing_profile_id?: string | null;
+  },
+  totalAmount: number,
+): Promise<void> {
+  // Serialize this client's adjustment balance reads, including edits to two
+  // different invoices. Lock order matches the writers: invoice, then client.
+  await tenantScopedTable(tx, tenant, 'clients')
+    .where({ client_id: invoice.client_id })
+    .forUpdate()
+    .first('client_id');
+
+  const postings = await tenantScopedTable(tx, tenant, 'transactions')
+    .where({ invoice_id: invoice.invoice_id, client_id: invoice.client_id, status: 'completed' })
+    .whereIn('type', ['invoice_generated', 'invoice_adjustment'])
+    .select<{ type: string; amount: unknown }[]>('type', 'amount');
+  // Imported/unposted drafts do not acquire a financial posting just by editing.
+  if (!postings.some((posting) => posting.type === 'invoice_generated')) return;
+
+  const postedAmount = postings.reduce((sum, posting) => sum + Number(posting.amount), 0);
+  const delta = Math.round(totalAmount) - postedAmount;
+  if (delta === 0) return;
+
+  const lastTransaction = await tenantScopedTable(tx, tenant, 'transactions')
+    .where({ client_id: invoice.client_id })
+    .orderBy('created_at', 'desc')
+    .first('balance_after');
+  await tenantScopedTable(tx, tenant, 'transactions').insert({
+    tenant,
+    transaction_id: uuidv4(),
+    client_id: invoice.client_id,
+    invoice_id: invoice.invoice_id,
+    billing_profile_id: invoice.billing_profile_id ?? null,
+    currency_code: invoice.currency_code ?? 'USD',
+    type: 'invoice_adjustment',
+    status: 'completed',
+    amount: delta,
+    balance_after: Number(lastTransaction?.balance_after ?? 0) + delta,
+    description: `Adjusted invoice ${invoice.invoice_number}`,
+    created_at: tx.raw('clock_timestamp()'),
+  });
+}
+
 export async function updateInvoiceTotalsAndRecordTransaction(
   tx: Knex.Transaction,
   invoiceId: string,

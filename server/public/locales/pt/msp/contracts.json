@@ -2525,7 +2525,7 @@
   },
   "contractDiscounts": {
     "title": "Descontos",
-    "description": "Os descontos configurados são aplicados automaticamente em cada rascunho de fatura elegível deste cliente.",
+    "description": "Cada contrato de cliente tem uma cópia editável própria. Os descontos do contrato aplicam-se aos encargos elegíveis das suas linhas faturadas.",
     "loading": "Carregando descontos…",
     "empty": "Ainda não há descontos configurados para este contrato.",
     "actions.add": "Adicionar desconto",
@@ -2572,10 +2572,10 @@
       "toggleActive": "Alterar estado do desconto"
     },
     "attachment": {
-      "shared": "Partilhado · este contrato",
+      "shared": "Associação ao contrato",
       "line": "Associação à linha"
     },
-    "sharedEditNotice": "Esta definição é partilhada. As alterações aplicam-se a todos os contratos associados na próxima atualização elegível do rascunho.",
+    "sharedEditNotice": "As alterações afetam apenas este contrato de cliente. Editar o modelo não altera as cópias dos contratos existentes.",
     "dialog": {
       "contractAttachmentLineScopeLocked": "Este desconto está associado a este contrato do cliente. Para limitá-lo a uma linha, desvincule-o e crie um desconto específico para essa linha."
     }

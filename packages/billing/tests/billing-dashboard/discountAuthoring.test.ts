@@ -42,8 +42,10 @@ describe('validateDiscountInput', () => {
     expect(validateDiscountInput({ ...base, end_date: '2026-12-31' })).toBeNull();
   });
 
-  it('requires a contract line and a service for service scope', () => {
-    expect(validateDiscountInput({ ...base, contract_line_id: '' })).toMatch(/contract line/);
+  it('requires a line only for line scope and a service for service scope', () => {
+    expect(validateDiscountInput({ ...base, scope: 'line', contract_line_id: '' })).toMatch(/contract line/);
+    expect(validateDiscountInput({ ...base, scope: 'contract', contract_line_id: '' })).toBeNull();
+    expect(validateDiscountInput({ ...base, scope: 'service', contract_line_id: '', scope_service_id: 'svc-1' })).toBeNull();
     expect(validateDiscountInput({ ...base, scope: 'service', scope_service_id: null })).toMatch(/Select the service/);
   });
 
