@@ -7,6 +7,7 @@ export default defineConfig({
   ...base,
   test: {
     ...base.test,
+    globalSetup: [],
     include: [
       'src/__tests__/marketing-worker-registration.test.ts',
       'src/__tests__/worker-registration.test.ts',

@@ -45,6 +45,7 @@ export function isAdditionalWorkspaceTest(file, lane) {
     if (file === 'ee/temporal-workflows/src/workflows/__tests__/production-index.engine.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/workflows/__tests__/email-definition.engine.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/test-utils/test-connection.test.ts') return true;
+    if (file === 'ee/temporal-workflows/src/test-utils/time-skipping-server.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/workflows/__tests__/generic-job-workflow.engine.test.ts') return true;
     return file === 'ee/temporal-workflows/src/workflows/__tests__/sla-ticket-workflow.integration.test.ts'
       || file === 'ee/temporal-workflows/src/workflows/portal-domains/__tests__/registration.workflow.integration.test.ts'
