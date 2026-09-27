@@ -178,6 +178,8 @@
     }
   },
   "tax": {
+    "defaultRate": { "title": "Aliquota fiscale predefinita", "tooltip": "Scegli l'aliquota ereditata da nuovi clienti, prodotti e servizi.", "description": "Imposta l'aliquota assegnata a nuovi clienti e voci di catalogo. I record esistenti non cambiano.", "loading": "Caricamento aliquota predefinita...", "empty": "Crea un'aliquota attiva prima di scegliere quella predefinita.", "invalid": "L'aliquota configurata non è più attiva o valida. Scegline un'altra.", "field": { "label": "Aliquota fiscale predefinita" }, "options": { "none": "Nessun valore predefinito del tenant" }, "help": "Se non impostata, le nuove voci restano non imponibili e i clienti usano l'aliquota attiva meno recente, se presente.", "actions": { "save": "Salva predefinita", "saving": "Salvataggio..." }, "toast": { "saved": "Aliquota predefinita salvata." }, "errors": { "load": "Impossibile caricare l'aliquota predefinita.", "save": "Impossibile salvare l'aliquota predefinita." } },
+    "backfill": { "title": "Applica l'aliquota predefinita al catalogo esistente", "description": "Visualizza prodotti e servizi senza aliquota fiscale.", "warning": "Questo modifica l'imponibilità futura e non riscrive le fatture emesse.", "loading": "Caricamento anteprima...", "empty": "Nessun prodotto o servizio idoneo.", "target": "Aliquota di destinazione: {{rate}}", "count": "{{count}} voci idonee", "dialog": { "title": "Applica aliquota predefinita" }, "actions": { "preview": "Visualizza voci esistenti", "apply": "Applica selezionate", "applying": "Applicazione..." }, "toast": { "applied": "Aliquota predefinita applicata alle voci selezionate." }, "errors": { "preview": "Impossibile visualizzare il catalogo.", "apply": "Impossibile applicare l'aliquota predefinita." } },
     "taxRegions": {
       "title": "Regioni fiscali",
       "description": "Gestisci le regioni fiscali e le relative impostazioni."
@@ -956,7 +958,7 @@
       "taxRate": {
         "label": "Aliquota fiscale (facoltativa)",
         "placeholder": "Seleziona aliquota fiscale (facoltativo)",
-        "loading": "Caricamento aliquote fiscali..."
+        "loading": "Caricamento aliquote fiscali...", "inherit": "Usa predefinita del tenant", "inheritNamed": "Usa predefinita del tenant ({{rate}})", "nonTaxable": "Non imponibile"
       },
       "sku": {
         "label": "SKU",
@@ -1050,7 +1052,7 @@
       "taxRate": {
         "label": "Aliquota fiscale",
         "placeholder": "Non imponibile",
-        "loading": "Caricamento..."
+        "loading": "Caricamento...", "inherit": "Usa predefinita del tenant", "inheritNamed": "Usa predefinita del tenant ({{rate}})", "nonTaxable": "Non imponibile"
       },
       "active": {
         "label": "Attivo"

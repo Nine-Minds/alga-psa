@@ -30,6 +30,33 @@ import {
 export type DeleteTaxRateResult = DeletionValidationResult & { success: boolean; deleted?: boolean };
 type TaxRateActionError = ActionMessageError | ActionPermissionError;
 
+class TenantDefaultTaxRateDeleteError extends Error {
+  constructor() {
+    super('This tax rate is the tenant default. Choose a different default in Billing Settings before deleting it.');
+    this.name = 'TenantDefaultTaxRateDeleteError';
+  }
+}
+
+function tenantDefaultDeleteResult(): DeleteTaxRateResult {
+  return {
+    success: false,
+    canDelete: false,
+    code: 'IS_DEFAULT',
+    message: 'This tax rate is the tenant default. Choose a different default in Billing Settings before deleting it.',
+    dependencies: [{
+      type: 'tenant_default_tax_rate',
+      count: 1,
+      label: 'Tenant default tax rate',
+      description: 'New clients, products, and services inherit this rate.',
+    }],
+    alternatives: [{
+      action: 'replace_default',
+      label: 'Choose a replacement default',
+      description: 'Set another rate as the tenant default in Billing Settings → Tax Rates, then delete this one.',
+    }],
+  };
+}
+
 function taxRateActionErrorFrom(error: unknown): TaxRateActionError | null {
   if (error instanceof ProductAccessError) {
     return permissionError('Permission denied: Billing tax rates are not available for this tenant.', 'msp/billing-settings:errors.taxRate.notAvailableForTenant');
@@ -320,34 +347,6 @@ export const deleteTaxRate = withAuth(async (user, { tenant }, taxRateId: string
     }
     const { knex } = await createTenantKnex();
 
-    // A configured tenant default cannot be deleted until it is cleared or
-    // replaced: deleting it would leave new clients/catalog items with no
-    // usable default.
-    const configuredDefaultId = await readConfiguredDefaultTaxRateId(knex, tenant);
-    if (configuredDefaultId === taxRateId) {
-      return {
-        success: false,
-        canDelete: false,
-        code: 'IS_DEFAULT',
-        message: 'This tax rate is the tenant default. Choose a different default in Billing Settings before deleting it.',
-        dependencies: [
-          {
-            type: 'tenant_default_tax_rate',
-            count: 1,
-            label: 'Tenant default tax rate',
-            description: 'New clients, products, and services inherit this rate.',
-          },
-        ],
-        alternatives: [
-          {
-            action: 'replace_default',
-            label: 'Choose a replacement default',
-            description: 'Set another rate as the tenant default in Billing Settings → Tax Rates, then delete this one.',
-          },
-        ],
-      };
-    }
-
     const result = await deleteEntityWithValidation('tax_rate', taxRateId, knex, tenant, async (trx, tenantId) => {
       // Fail-fast tenant guard: confirm the tax rate belongs to this tenant before touching
       // child tables scoped through tax_rates.
@@ -357,6 +356,14 @@ export const deleteTaxRate = withAuth(async (user, { tenant }, taxRateId: string
         .first('tax_rate_id');
       if (!exists) {
         throw new Error('Tax rate not found or already deleted.');
+      }
+
+      // Check the tenant default inside the deletion transaction. Besides
+      // keeping this check atomic with the delete, this ensures established
+      // deleteEntityWithValidation errors still reach the normal mapper.
+      const configuredDefaultId = await readConfiguredDefaultTaxRateId(trx, tenantId);
+      if (configuredDefaultId === taxRateId) {
+        throw new TenantDefaultTaxRateDeleteError();
       }
 
       await db.parentScopedTable('composite_tax_mappings')
@@ -386,6 +393,10 @@ export const deleteTaxRate = withAuth(async (user, { tenant }, taxRateId: string
     };
   } catch (error: any) {
     console.error('Error processing tax rate deletion:', error);
+
+    if (error instanceof TenantDefaultTaxRateDeleteError) {
+      return tenantDefaultDeleteResult();
+    }
 
     // Never echo error.message to the client: raw Postgres/Knex failures here
     // carry the interpolated SQL statement, which DeleteEntityDialog renders

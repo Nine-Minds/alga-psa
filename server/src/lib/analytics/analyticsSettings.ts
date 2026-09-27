@@ -108,26 +108,21 @@ async function saveAnalyticsSettings(tenant: string, analyticsSettings: Analytic
         }
       };
 
-      // Check if tenant settings already exist
-      const existingRecord = await tenantSettings()
-        .first();
-
-      if (existingRecord) {
-        // Update existing settings
-        await tenantSettings()
-          .update({
-            settings: JSON.stringify(updatedSettings),
-            updated_at: trx.fn.now()
-          });
-      } else {
-        // Insert new settings
-        await tenantSettings()
-          .insert({
-            tenant,
-            settings: JSON.stringify(updatedSettings),
-            updated_at: trx.fn.now()
-          });
-      }
+      // The default-tax setting can create tenant_settings before analytics is
+      // initialized. Use one atomic upsert so a concurrent initializer (or a
+      // row that appears after the read above) cannot abort the caller's
+      // transaction with a duplicate primary key.
+      await tenantSettings()
+        .insert({
+          tenant,
+          settings: JSON.stringify(updatedSettings),
+          updated_at: trx.fn.now()
+        })
+        .onConflict('tenant')
+        .merge({
+          settings: JSON.stringify(updatedSettings),
+          updated_at: trx.fn.now()
+        });
     });
   } catch (error) {
     console.error('Error saving analytics settings:', error);

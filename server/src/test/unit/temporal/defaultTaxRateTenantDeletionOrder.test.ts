@@ -10,13 +10,13 @@ function readRepoFile(relativePathFromRepoRoot: string): string {
 describe('tenant default tax rate tenant deletion ordering', () => {
   const source = readRepoFile('ee/temporal-workflows/src/activities/tenant-deletion-activities.ts');
 
-  it('deletes tax_rates before tenant_settings, so the RESTRICT FK must be cleared first', () => {
-    const taxRatesIndex = source.indexOf("'tax_components', 'tax_rates', 'tax_regions'");
-    const tenantSettingsIndex = source.indexOf("\n  'tenant_settings',\n];");
+  it('deletes tenant_settings before tax_rates for the restrictive default-rate FK', () => {
+    const tenantSettingsIndex = source.indexOf("'tenant_settings', 'tax_rates', 'tax_regions'");
+    const taxRatesIndex = source.indexOf("'tax_rates'", tenantSettingsIndex);
 
     expect(taxRatesIndex).toBeGreaterThan(-1);
     expect(tenantSettingsIndex).toBeGreaterThan(-1);
-    expect(taxRatesIndex).toBeLessThan(tenantSettingsIndex);
+    expect(tenantSettingsIndex).toBeLessThan(taxRatesIndex);
   });
 
   it('clears tenant_settings.default_tax_rate_id before the table order runs', () => {

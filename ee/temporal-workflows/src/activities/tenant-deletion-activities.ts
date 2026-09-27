@@ -500,7 +500,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // - clients.account_manager → users
 
   // Tax configuration (no dependencies on core entities)
-  'tax_components', 'tax_rates', 'tax_regions',
+  'tax_components',
 
   // Permissions and roles (must be deleted before users)
   'permissions', 'roles', 'teams',
@@ -643,7 +643,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // Tenant add-ons and settings last (before tenant itself)
   'tenant_addons',
-  'tenant_settings',
+  'tenant_settings', 'tax_rates', 'tax_regions',
 ];
 
 const TENANT_TABLES_DELETION_SET = new Set(TENANT_TABLES_DELETION_ORDER);

@@ -178,6 +178,8 @@
     }
   },
   "tax": {
+    "defaultRate": { "title": "Standaard belastingtarief", "tooltip": "Kies het tarief dat nieuwe klanten, producten en diensten overnemen.", "description": "Stel het tarief in voor nieuwe klanten en catalogusitems. Bestaande records blijven ongewijzigd.", "loading": "Standaardtarief laden...", "empty": "Maak een actief tarief voordat u een standaard kiest.", "invalid": "Het ingestelde standaardtarief is niet meer actief of geldig. Kies een ander tarief.", "field": { "label": "Standaard belastingtarief" }, "options": { "none": "Geen tenantstandaard" }, "help": "Zonder standaard blijven nieuwe catalogusitems onbelast en gebruiken klanten het oudste actieve tarief, indien aanwezig.", "actions": { "save": "Standaard opslaan", "saving": "Opslaan..." }, "toast": { "saved": "Standaardtarief opgeslagen." }, "errors": { "load": "Kan het standaardtarief niet laden.", "save": "Kan het standaardtarief niet opslaan." } },
+    "backfill": { "title": "Standaard toepassen op bestaande catalogusitems", "description": "Bekijk producten en diensten zonder belastingtarief.", "warning": "Dit wijzigt toekomstige belastbaarheid en herschrijft geen uitgegeven facturen.", "loading": "Voorbeeld laden...", "empty": "Geen geschikte producten of diensten gevonden.", "target": "Doeltarief: {{rate}}", "count": "{{count}} geschikte items", "dialog": { "title": "Standaardtarief toepassen" }, "actions": { "preview": "Bestaande items bekijken", "apply": "Selectie toepassen", "applying": "Toepassen..." }, "toast": { "applied": "Standaardtarief toegepast op geselecteerde items." }, "errors": { "preview": "Kan catalogusvoorbeeld niet laden.", "apply": "Kan het standaardtarief niet toepassen." } },
     "taxRegions": {
       "title": "Belastingregio's",
       "description": "Beheer belastingregio's en gerelateerde instellingen."
@@ -956,7 +958,7 @@
       "taxRate": {
         "label": "Belastingtarief (optioneel)",
         "placeholder": "Selecteer belastingtarief (optioneel)",
-        "loading": "Belastingtarieven laden..."
+        "loading": "Belastingtarieven laden...", "inherit": "Tenantstandaard gebruiken", "inheritNamed": "Tenantstandaard gebruiken ({{rate}})", "nonTaxable": "Niet-belastbaar"
       },
       "sku": {
         "label": "SKU",
@@ -1050,7 +1052,7 @@
       "taxRate": {
         "label": "Belastingtarief",
         "placeholder": "Niet-belastbaar",
-        "loading": "Laden..."
+        "loading": "Laden...", "inherit": "Tenantstandaard gebruiken", "inheritNamed": "Tenantstandaard gebruiken ({{rate}})", "nonTaxable": "Niet-belastbaar"
       },
       "active": {
         "label": "Actief"

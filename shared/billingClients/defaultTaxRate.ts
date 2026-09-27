@@ -18,7 +18,9 @@ import { ensureClientDefaultBillingProfile } from './billingProfiles';
  *    open). An invalid configured default throws an actionable error; it never
  *    falls back to an unrelated rate.
  *  - unset for clients: legacy fallback to the oldest eligible active rate
- *    (deterministic id tie-break). No active rate is still a setup error.
+ *    (deterministic id tie-break). Client initialization leaves the association
+ *    unset when no active rate exists; the resolver itself still reports that
+ *    condition to callers that require a rate.
  *  - unset for catalog: NULL (billing reads NULL as non-taxable).
  *
  * ## Lock order (single documented policy)
@@ -498,12 +500,16 @@ export async function initializeClientDefaultTax(
     .where({ client_id: clientId, billing_profile_id: billingProfileId })
     .first();
   if (!existingSettings) {
-    await db.table<IClientTaxSettings>('client_tax_settings').insert({
-      client_id: clientId,
-      billing_profile_id: billingProfileId,
-      is_reverse_charge_applicable: false,
-      tenant,
-    });
+    await db
+      .table<IClientTaxSettings>('client_tax_settings')
+      .insert({
+        client_id: clientId,
+        billing_profile_id: billingProfileId,
+        is_reverse_charge_applicable: false,
+        tenant,
+      })
+      .onConflict(['tenant', 'client_id', 'billing_profile_id'])
+      .ignore();
   }
 
   const readSettings = () =>
@@ -525,7 +531,20 @@ export async function initializeClientDefaultTax(
   }
 
   const date = options.date ?? currentAssignmentDate();
-  const resolved = await resolveClientDefaultTaxRate(conn, tenant, date, { lock: true });
+  let resolved: ResolvedDefaultTaxRate;
+  try {
+    resolved = await resolveClientDefaultTaxRate(conn, tenant, date, { lock: true });
+  } catch (error) {
+    // A tenant-wide default is optional. Fresh installations and tenants that
+    // have not configured tax yet must still be able to create clients. Keep
+    // the profile-keyed settings row, but do not fabricate a zero-rate or a
+    // client/rate association. A configured-but-invalid default remains a hard
+    // failure via InvalidDefaultTaxRateError above.
+    if (error instanceof NoActiveTaxRateError) {
+      return (await readSettings()) as IClientTaxSettings;
+    }
+    throw error;
+  }
 
   // Look the association up by the resolved rate, not the oldest row: an older
   // association for a different rate must not be promoted, and an existing
