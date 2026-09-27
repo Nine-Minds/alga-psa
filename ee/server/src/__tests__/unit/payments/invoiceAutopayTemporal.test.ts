@@ -1,14 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
 
 const { start, signal, describeStatus } = vi.hoisted(() => ({ start: vi.fn(), signal: vi.fn(), describeStatus: vi.fn() }));
-vi.mock('../../lib/temporal/client', () => ({
+vi.mock('../../../lib/temporal/client', () => ({
   getTemporalClient: vi.fn(async () => ({ workflow: {
     start,
     getHandle: vi.fn(() => ({ signal, describe: describeStatus })),
   } })),
 }));
 
-import { signalInvoiceAutopay, startInvoiceAutopay } from '../../lib/temporal/invoiceAutopay';
+import { signalInvoiceAutopay, startInvoiceAutopay } from '../../../lib/temporal/invoiceAutopay';
 
 describe('invoice auto-pay Temporal client helpers', () => {
   it('starts with the stable id and treats duplicate starts as success', async () => {
