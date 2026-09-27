@@ -14,6 +14,7 @@ vi.mock('@alga-psa/auth', () => ({
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: vi.fn(async () => true) }));
 
 import { hasContractLineProtectedHistory, updateContractLine } from '@alga-psa/billing/actions/contractLineAction';
+import { hardDeleteInvoice } from '@alga-psa/billing/actions/invoiceModification';
 
 describe('contract-line protected history database relationships', () => {
   let context: TestContext;
@@ -68,6 +69,10 @@ describe('contract-line protected history database relationships', () => {
 
   async function updateLine(lineId: string, update: Record<string, unknown>) {
     return runWithTenant(context.tenantId, () => updateContractLine(lineId, update as any));
+  }
+
+  async function cancelDraftInvoice(invoiceId: string) {
+    return runWithTenant(context.tenantId, () => hardDeleteInvoice(invoiceId));
   }
 
   async function seedClaim(tenant: string, lineId: string, start: string, end: string) {
@@ -242,5 +247,90 @@ describe('contract-line protected history database relationships', () => {
     const rejectedEndClear = await updateLine(endLineId, { end_date: null });
     expect(rejectedEndClear).toMatchObject({ messageKey: 'msp/contracts:contractLines.errors.protectedEndDate', messageParams: { boundary: '2026-07-01' } });
     expect((await persistedLine(endLineId)).end_date).toBeNull();
+  });
+
+  it('keeps a cancelled recurring claim locked and protects its period after invoice linkage is released', async () => {
+    const now = context.db.fn.now();
+    const contractId = await context.createEntity('contracts', {
+      contract_name: `Cancelled claim ${randomUUID().slice(0, 8)}`, status: 'draft', is_template: false,
+      is_active: true, billing_frequency: 'monthly', currency_code: 'USD', owner_client_id: context.clientId,
+      created_at: now, updated_at: now,
+    }, 'contract_id');
+    const lineId = await createLine(contractId);
+    await createAssignment(contractId, '2026-01-01', '2027-12-31');
+    const serviceId = await createTestService(context, { service_name: `Cancelled claim ${randomUUID().slice(0, 8)}` });
+    const configId = randomUUID();
+    await context.db('contract_line_service_configuration').insert({
+      config_id: configId, tenant: context.tenantId, contract_line_id: lineId, service_id: serviceId,
+      configuration_type: 'Fixed', created_at: now, updated_at: now,
+    });
+
+    const invoiceId = await context.createEntity('invoices', {
+      invoice_number: `CANCEL-CLAIM-${randomUUID().slice(0, 8)}`, invoice_date: '2026-07-01', due_date: '2026-08-01',
+      status: 'draft', client_id: context.clientId, currency_code: 'USD', is_manual: false,
+      total_amount: 10000, subtotal: 10000, tax: 0, created_at: now, updated_at: now,
+    }, 'invoice_id');
+    const itemId = randomUUID();
+    const detailId = randomUUID();
+    const claimId = randomUUID();
+    await context.db('invoice_charges').insert({
+      item_id: itemId, tenant: context.tenantId, invoice_id: invoiceId,
+      description: 'Recurring service period', quantity: 1, unit_price: 10000,
+      total_price: 10000, net_amount: 10000, tax_amount: 0, tax_rate: 0,
+      is_manual: false, is_discount: false, is_taxable: false,
+    });
+    await context.db('invoice_charge_details').insert({
+      item_detail_id: detailId, item_id: itemId, tenant: context.tenantId, service_id: serviceId,
+      config_id: configId, quantity: 1, rate: 10000,
+      service_period_start: '2026-06-01', service_period_end: '2026-07-01', created_at: now, updated_at: now,
+    });
+    await context.db('recurring_service_periods').insert({
+      record_id: claimId, tenant: context.tenantId,
+      schedule_key: `schedule:${context.tenantId}:contract_line:${lineId}:contract:arrears`,
+      period_key: `period:2026-06-01:2026-07-01`, revision: 1,
+      obligation_id: lineId, obligation_type: 'contract_line', charge_family: 'fixed',
+      cadence_owner: 'contract', due_position: 'arrears', lifecycle_state: 'billed',
+      service_period_start: '2026-06-01', service_period_end: '2026-07-01',
+      invoice_window_start: '2026-06-01', invoice_window_end: '2026-07-01',
+      activity_window_start: null, activity_window_end: null, timing_metadata: null,
+      provenance_kind: 'generated', source_rule_version: 'test', reason_code: null, source_run_key: 'test',
+      supersedes_record_id: null, invoice_id: invoiceId, invoice_charge_id: itemId,
+      invoice_charge_detail_id: detailId, invoice_linked_at: now,
+    });
+
+    await expect(cancelDraftInvoice(invoiceId)).resolves.toMatchObject({ success: true });
+    expect(await context.db('invoices').where({ invoice_id: invoiceId }).first()).toBeUndefined();
+    const releasedClaim = await context.db('recurring_service_periods').where({ record_id: claimId }).first();
+    expect(releasedClaim).toMatchObject({
+      lifecycle_state: 'locked', invoice_id: null, invoice_charge_id: null,
+      invoice_charge_detail_id: null, invoice_linked_at: null,
+    });
+
+    const beforeRejectedBounds = await persistedLine(lineId);
+    await expect(updateLine(lineId, { start_date: '2026-06-02' })).resolves.toMatchObject({
+      messageKey: 'msp/contracts:contractLines.errors.protectedStartDate',
+      messageParams: { boundary: '2026-06-01' },
+    });
+    await expect(updateLine(lineId, { end_date: '2026-06-30' })).resolves.toMatchObject({
+      messageKey: 'msp/contracts:contractLines.errors.protectedEndDate',
+      messageParams: { boundary: '2026-07-01' },
+    });
+    expect(await persistedLine(lineId)).toMatchObject({
+      start_date: beforeRejectedBounds.start_date,
+      end_date: beforeRejectedBounds.end_date,
+      invoice_line_description: beforeRejectedBounds.invoice_line_description,
+    });
+
+    const safeEdit = await updateLine(lineId, {
+      invoice_line_description: 'Corrected after cancellation', end_date: '2027-01-01',
+    });
+    expect(safeEdit).toMatchObject({ invoice_line_description: 'Corrected after cancellation' });
+    expect(dateOnly(safeEdit.end_date as Date | string)).toBe('2027-01-01');
+    const persistedSafeEdit = await persistedLine(lineId);
+    expect(persistedSafeEdit.invoice_line_description).toBe('Corrected after cancellation');
+    expect(dateOnly(persistedSafeEdit.end_date)).toBe('2027-01-01');
+    await expect(updateLine(lineId, { end_date: null })).resolves.toMatchObject({ end_date: null });
+    expect((await persistedLine(lineId)).end_date).toBeNull();
+    expect((await context.db('recurring_service_periods').where({ record_id: claimId }).first()).lifecycle_state).toBe('locked');
   });
 });
