@@ -855,7 +855,7 @@
       },
       "removeDomain": {
         "title": "Remove Managed Domain",
-        "messageWithClear": "Remove {{domain}}? This will also clear the saved ticketing From address because this domain is currently active for outbound email.",
+        "messageWithClear": "Remove {{domain}}? This will also clear the active outbound domain setting.",
         "message": "Remove {{domain}}?",
         "fallbackDomain": "this domain",
         "confirm": "Remove Domain"
