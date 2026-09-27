@@ -165,6 +165,16 @@ export function Microsoft365DiagnosticsDialog({
 
         {report && (
           <div className="space-y-4">
+            {report.diagnosticSource === 'oauth_callback' && (
+              <Alert>
+                <AlertDescription>
+                  {t('microsoft365.states.callbackDiagnosticsCaptured', {
+                    defaultValue: 'Callback-time diagnostics captured at {{timestamp}}.',
+                    timestamp: report.diagnosticCreatedAt ? new Date(report.diagnosticCreatedAt).toLocaleString() : report.createdAt,
+                  })}
+                </AlertDescription>
+              </Alert>
+            )}
             <div className="flex items-center justify-between gap-3">
               <div className="text-sm">
                 {t('microsoft365.labels.overall', { defaultValue: 'Overall:' })}{' '}

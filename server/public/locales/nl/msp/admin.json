@@ -253,7 +253,8 @@
     },
     "states": {
       "running": "Diagnostiek wordt uitgevoerd...",
-      "diagnosticsFailed": "Diagnostiek mislukt"
+      "diagnosticsFailed": "Diagnostiek mislukt",
+      "callbackDiagnosticsCaptured": "Callbackdiagnose vastgelegd op {{timestamp}}."
     },
     "statuses": {
       "pass": "Geslaagd",

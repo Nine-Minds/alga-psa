@@ -157,6 +157,7 @@ async function upsertContactLink(
       contact_name_id: contactNameId,
     })
     .update({
+      ...(user.mailboxKind === 'shared' ? { contact_kind: 'shared_mailbox' } : {}),
       entra_object_id: user.entraObjectId,
       entra_sync_source: 'entra_sync',
       last_entra_sync_at: now,
@@ -254,7 +255,7 @@ export async function linkExistingMatchedContact(
   const fieldsUpdated = await runWithTenant(tenantId, async () => {
     const { knex } = await createTenantKnex();
     return knex.transaction(async (trx) => {
-      return upsertContactLink(
+      const changed = await upsertContactLink(
         trx,
         tenantId,
         clientId,
@@ -262,6 +263,7 @@ export async function linkExistingMatchedContact(
         user,
         fieldSyncConfig
       );
+      return changed;
     });
   });
 
@@ -274,6 +276,18 @@ export async function linkExistingMatchedContact(
       entraObjectId: user.entraObjectId,
     },
   };
+}
+
+/** Reactivate only contacts this filter previously deactivated. Dry runs report the change without writing. */
+export async function reactivateExcludedEntraContact(tenantId: string, contactNameId: string, dryRun: boolean): Promise<boolean> {
+  return runWithTenant(tenantId, async () => {
+    const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenantId);
+    const query = db.table('contacts').where({ contact_name_id: contactNameId, entra_sync_status_reason: 'excluded_by_filter' });
+    if (dryRun) return Boolean(await query.first('contact_name_id'));
+    const changed = await query.update({ is_inactive: false, entra_account_enabled: true, entra_sync_status: 'active', entra_sync_status_reason: null, updated_at: knex.fn.now() });
+    return Number(changed) > 0;
+  });
 }
 
 export async function createContactForEntraUser(
@@ -317,6 +331,7 @@ export async function createContactForEntraUser(
           phone_numbers: buildEntraContactPhoneNumbers(user),
           role: user.jobTitle || undefined,
           is_inactive: false,
+          ...(user.mailboxKind === 'shared' ? { contact_kind: 'shared_mailbox' } : {}),
         },
         tenantId,
         trx

@@ -146,20 +146,22 @@ record rather than something to rediscover:
 | Where | What | Why it stays |
 |---|---|---|
 | `ee/extensions/softwareone-ext/.../StatementsList.tsx` | 2 × `<input type="date">` period filter | Sandboxed extension |
-| `ee/extensions/nineminds-reporting/src/iframe/main.tsx` | 2 × `datetime-local`, share link window | Sandboxed extension |
+| `nm-extensions/packages/control-panel/src/iframe/main.tsx` (private repo) | 2 × `datetime-local`, share link window | Sandboxed extension |
 | `packages/reporting/.../DeferredRevenueReport.tsx` | 1 × `<input type="month">` | No month variant |
 
 **The two extensions** are separate bundles with their own dependency closures and their own build
-pipelines — `softwareone-ext` builds through its own Vite lib config against `@alga/ui-kit`,
-`nineminds-reporting` builds its UI the same way against `@alga-psa/ui-kit` and its backend into a
-WASM component via `jco`. Neither has `@alga-psa/ui` in its graph, and neither renders inside the
-host's React tree: they run in an iframe, without the host's i18n provider or token scope. Migrating
-them is not a call-site swap — it means either vendoring the family into each extension bundle or
-promoting it across the `ui-kit` boundary as a supported, versioned surface. That is its own card,
-with its own API-stability question, and it should be answered deliberately rather than smuggled in
-here. (One piece of debris was cleared: `StatementsList` carried an unused
-`import { DatePicker } from 'server/src/components/ui/DatePicker'` — a path that does not exist and
-a component it never rendered.)
+pipelines — `softwareone-ext` builds through its own Vite lib config against `@alga/ui-kit`, and the
+NineMinds control panel (formerly `ee/extensions/nineminds-reporting`, since moved out of alga-psa
+into the private nm-extensions repo as `packages/control-panel` under the same registry name
+`com.alga.ninemindsreporting`) builds its UI the same way against `@alga-psa/ui-kit` and its
+backend into a WASM component via `jco`. Neither has `@alga-psa/ui` in its graph, and neither
+renders inside the host's React tree: they run in an iframe, without the host's i18n provider or
+token scope. Migrating them is not a call-site swap — it means either vendoring the family into
+each extension bundle or promoting it across the `ui-kit` boundary as a supported, versioned
+surface. That is its own card, with its own API-stability question, and it should be answered
+deliberately rather than smuggled in here. (One piece of debris was cleared: `StatementsList`
+carried an unused `import { DatePicker } from 'server/src/components/ui/DatePicker'` — a path that
+does not exist and a component it never rendered.)
 
 **The deferred-revenue filter** picks a *month*, and holds `yyyy-MM`. The family picks days and
 minutes; it has no month variant, and inventing one to absorb a single filter would add a fourth

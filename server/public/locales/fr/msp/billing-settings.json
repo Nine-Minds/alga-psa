@@ -165,6 +165,27 @@
         "loadStatuses": "Échec du chargement des statuts des tickets de renouvellement",
         "save": "Échec de l'enregistrement des paramètres d'automatisation du renouvellement"
       }
+    },
+    "quotes": {
+      "title": "Devis",
+      "description": "Définissez la durée de validité par défaut des nouveaux devis.",
+      "fields": {
+        "validityDays": {
+          "label": "Durée de validité par défaut (jours)",
+          "help": "Les nouveaux devis sont valides pendant ce nombre de jours."
+        }
+      },
+      "actions": {
+        "save": "Enregistrer"
+      },
+      "toast": {
+        "updated": "Les paramètres de devis ont été mis à jour."
+      },
+      "errors": {
+        "load": "Échec du chargement des paramètres",
+        "save": "Échec de l’enregistrement des paramètres",
+        "range": "Saisissez un nombre entier de 1 à 365."
+      }
     }
   },
   "quoting": {

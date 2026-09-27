@@ -162,7 +162,7 @@ async function resolveVisibleTicket(
       't.client_id': visibility.clientId
     })
     .modify((queryBuilder: Knex.QueryBuilder) => {
-      applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id' });
+      applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id' });
     })
     .first();
 
@@ -265,7 +265,7 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
         't.client_id': visibility.clientId
       });
 
-      applyTicketVisibilityFilter(query, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id' });
+      applyTicketVisibilityFilter(query, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id' });
 
     // Filter by status
     if (parsedStatusFilter.kind === 'all') {
@@ -350,7 +350,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
           't.client_id': visibility.clientId
         })
         .modify((ticketQuery: Knex.QueryBuilder) => {
-          applyTicketVisibilityFilter(ticketQuery, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id' });
+          applyTicketVisibilityFilter(ticketQuery, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id' });
         })
         .first();
 
@@ -1196,7 +1196,7 @@ export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticket
           client_id: visibility.clientId
         })
         .modify((queryBuilder: Knex.QueryBuilder) => {
-          applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id' });
+          applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id', billingProfileColumn: 'tickets.billing_profile_id' });
         })
         .first();
 
@@ -1331,6 +1331,28 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
         throw expectedClientTicketActionError('No default status configured for tickets');
       }
 
+      // A contact associated with exactly one billing profile is working on
+      // behalf of that segment, so the ticket is attributed to it. Two or more
+      // associations is genuinely ambiguous — the model's location → client
+      // default chain answers it instead of this guessing.
+      const contactProfileQuery = tenantDb(trx, tenant).table('billing_profile_contacts as bpc');
+      tenantDb(trx, tenant).tenantJoin(
+        contactProfileQuery,
+        'client_billing_profiles as p',
+        'p.billing_profile_id',
+        'bpc.billing_profile_id',
+      );
+      const contactProfiles = await contactProfileQuery
+        .where({
+          'bpc.contact_name_id': visibility.contactId,
+          'p.client_id': visibility.clientId,
+          'p.is_active': true,
+        })
+        .select('bpc.billing_profile_id');
+      const contactBillingProfileId = contactProfiles.length === 1
+        ? (contactProfiles[0].billing_profile_id as string)
+        : undefined;
+
       // Convert to TicketModel input format
       const createTicketInput: CreateTicketInput = {
         title: validatedData.title,
@@ -1338,6 +1360,7 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
         priority_id: validatedData.priority_id,
         client_id: visibility.clientId,
         contact_id: visibility.contactId, // Maps to contact_name_id in database
+        billing_profile_id: contactBillingProfileId,
         entered_by: userId,
         source: 'client_portal',
         ticket_origin: TICKET_ORIGINS.CLIENT_PORTAL,

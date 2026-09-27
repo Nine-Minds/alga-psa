@@ -11,7 +11,9 @@ const handleIneligibleClientPortalLifecycleMock = vi.fn();
 const publishWorkflowManagedPortalProvisioningEventMock = vi.fn();
 const previewLinkedContactChangeMock = vi.fn();
 const markDisabledEntraUsersInactiveMock = vi.fn();
+const markExcludedEntraUsersInactiveMock = vi.fn();
 const selectLinkedEntraIdentitiesMock = vi.fn();
+const reactivateExcludedEntraContactMock = vi.fn();
 
 /**
  * The engine consults the portal-provisioning hooks on every non-dry-run
@@ -40,10 +42,12 @@ vi.mock('@ee/lib/integrations/entra/sync/contactReconciler', () => ({
   linkExistingMatchedContact: linkExistingMatchedContactMock,
   createContactForEntraUser: createContactForEntraUserMock,
   previewLinkedContactChange: previewLinkedContactChangeMock,
+  reactivateExcludedEntraContact: reactivateExcludedEntraContactMock,
 }));
 
 vi.mock('@ee/lib/integrations/entra/sync/disableHandler', () => ({
   markDisabledEntraUsersInactive: markDisabledEntraUsersInactiveMock,
+  markExcludedEntraUsersInactive: markExcludedEntraUsersInactiveMock,
   selectLinkedEntraIdentities: selectLinkedEntraIdentitiesMock,
 }));
 
@@ -629,6 +633,32 @@ describe('executeEntraSync dry-run behavior', () => {
 
     expect(publishWorkflowManagedPortalProvisioningEventMock).toHaveBeenCalledTimes(1);
     expect(handleEligibleClientPortalProvisioningMock).not.toHaveBeenCalled();
+    expect(handleIneligibleClientPortalLifecycleMock).not.toHaveBeenCalled();
+  });
+
+  it('never provisions or queues portal access for a shared mailbox, even when eligible', async () => {
+    findContactMatchesByEmailMock.mockReset();
+    linkExistingMatchedContactMock.mockReset();
+    resetPortalProvisioningMocks();
+    findContactMatchesByEmailMock.mockResolvedValueOnce([{
+      contactNameId: 'shared-contact', clientId: 'client-shared', email: 'shared@example.com',
+      fullName: 'Shared Mailbox', isInactive: false,
+    }]);
+    linkExistingMatchedContactMock.mockResolvedValue({ contactNameId: 'shared-contact' });
+    evaluateClientPortalProvisioningEligibilityMock.mockReturnValue({ eligible: true, reason: 'eligible' });
+
+    const { executeEntraSync } = await import('@ee/lib/integrations/entra/sync/syncEngine');
+    await executeEntraSync({
+      tenantId: 'tenant-shared', clientId: 'client-shared', managedTenantId: 'managed-shared',
+      dryRun: false,
+      users: [{ ...buildUser('shared'), mailboxKind: 'shared' }],
+      portalEntitlement: { provisioningMode: 'built_in', groupId: 'entitled', membershipMode: 'transitive' },
+    });
+
+    expect(linkExistingMatchedContactMock).toHaveBeenCalledOnce();
+    expect(evaluateClientPortalProvisioningEligibilityMock).toHaveBeenCalledOnce();
+    expect(handleEligibleClientPortalProvisioningMock).not.toHaveBeenCalled();
+    expect(publishWorkflowManagedPortalProvisioningEventMock).not.toHaveBeenCalled();
     expect(handleIneligibleClientPortalLifecycleMock).not.toHaveBeenCalled();
   });
 });

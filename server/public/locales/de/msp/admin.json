@@ -253,7 +253,8 @@
     },
     "states": {
       "running": "Diagnose wird ausgeführt...",
-      "diagnosticsFailed": "Diagnose fehlgeschlagen"
+      "diagnosticsFailed": "Diagnose fehlgeschlagen",
+      "callbackDiagnosticsCaptured": "Callback-Diagnose erfasst am {{timestamp}}."
     },
     "statuses": {
       "pass": "Bestanden",

@@ -317,14 +317,16 @@
       "client": "Client",
       "invoiceNumber": "Invoice Number",
       "invoiceNumberOptional": "Invoice Number (Optional)",
-      "sourceSalesOrder": "Source sales order (optional)"
+      "sourceSalesOrder": "Source sales order (optional)",
+      "billingProfile": "Billing Profile"
     },
     "placeholders": {
       "selectClient": "Select a client",
       "invoiceNumberOptional": "Leave blank to auto-generate",
       "sourceSalesOrder": "Select a fulfilled or manually billable sales order",
       "searchSalesOrders": "Search sales orders...",
-      "noInvoiceableSalesOrders": "No invoiceable sales orders found."
+      "noInvoiceableSalesOrders": "No invoiceable sales orders found.",
+      "selectBillingProfile": "Select a billing profile"
     },
     "automatedItems": {
       "title": "Automated Line Items",
@@ -346,7 +348,8 @@
       "clearSalesOrderSource": "Clear sales order source"
     },
     "labels": {
-      "total": "Total"
+      "total": "Total",
+      "defaultBillingProfile": "{{name}} (default)"
     },
     "prepayment": {
       "label": "This is a prepayment invoice (creates credit)",
@@ -384,7 +387,8 @@
       "USAGE_CALCULATION_ERROR": "Usage for {{services}} in the service period {{periodStart}} to {{periodEnd}} is recorded but could not be priced. Fix the service pricing (catalog price in the contract currency, a custom rate, or rate tiers), then try again. Do not record replacement usage.",
       "SOURCE_ALREADY_BILLED": "Some selected items are no longer billable (already invoiced, not approved, or removed). Refresh and try again.",
       "SOURCE_NOT_ELIGIBLE": "A selected item is not one of this ticket's billable items, or it is no longer eligible. Refresh and try again.",
-      "SOURCE_CURRENCY_MISMATCH": "Some selected products are priced in a different currency than this client invoices in, so they cannot be added. Invoice them separately in their own currency."
+      "SOURCE_CURRENCY_MISMATCH": "Some selected products are priced in a different currency than this client invoices in, so they cannot be added. Invoice them separately in their own currency.",
+      "BILLING_PROFILE_NOT_FOUND": "The selected billing profile is not available for this client. Refresh and try again."
     },
     "warnings": {
       "noBillingEmail": "This client has no billing email. Set a billing contact, a client billing email, or an email on the billing or default location before generating the invoice."
@@ -395,6 +399,9 @@
     },
     "salesOrderContext": {
       "summary": "{{quantity}} item(s) ready to invoice from {{lineCount}} line(s). This draft will be linked back to the sales order."
+    },
+    "hints": {
+      "billingProfile": "The invoice and its lines are billed to this profile."
     }
   },
   "quickInvoice": {
@@ -725,7 +732,9 @@
     "title": "Invoice Preview",
     "templatePlaceholder": "Select invoice template...",
     "labels": {
-      "standard": " (Standard)"
+      "standard": " (Standard)",
+      "billingProfile": "Billing profile: {{name}}",
+      "billingProfileDefault": "the client's default profile"
     },
     "actions": {
       "finalizeInvoice": "Finalize Invoice",
@@ -980,7 +989,10 @@
       "billingEmail": "Billing Email",
       "clientEmail": "Client Email",
       "noEmailFound": "No Email Found",
-      "notConfigured": "No email address is configured for this client."
+      "notConfigured": "No email address is configured for this client.",
+      "billingProfile": "Billing Profile",
+      "billingProfileNamed": "Billing profile: {{name}}",
+      "billingProfileDefault": "the client's default profile"
     },
     "fields": {
       "due": "Due",
@@ -2055,6 +2067,13 @@
     "errors": {
       "invoiceNumberRequired": "Invoice number is required.",
       "invoiceDateRequired": "Invoice date is required."
+    },
+    "labels": {
+      "billingProfile": "Billing Profile",
+      "billingProfileDefault": "The client's default profile"
+    },
+    "hints": {
+      "billingProfile": "The invoice, its lines and its emailed copy follow this profile."
     }
   },
   "documentTemplates": {
@@ -2165,7 +2184,8 @@
       "referenceMissing": "The selected invoice, client, contract, or billing record no longer exists. Please refresh and try again.",
       "duplicate": "A conflicting invoice already exists. Please refresh and try again.",
       "missingField": "Missing required invoice field.",
-      "missingFieldNamed": "Missing required invoice field: {{field}}."
+      "missingFieldNamed": "Missing required invoice field: {{field}}.",
+      "billingProfileUnavailable": "The selected billing profile is not available for this client."
     },
     "billingCycle": {
       "notFoundRefresh": "Billing cycle not found. It may have been updated or deleted. Please refresh and try again.",

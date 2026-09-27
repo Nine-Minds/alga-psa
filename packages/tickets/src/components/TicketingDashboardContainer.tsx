@@ -6,7 +6,6 @@ import TicketingDashboard from './TicketingDashboard';
 import { fetchTicketsWithPagination } from '../actions/optimizedTicketActions';
 import { toast } from 'react-hot-toast';
 import {
-  getErrorMessage,
   handleError,
   isActionMessageError,
   isActionPermissionError,
@@ -32,6 +31,10 @@ import {
 import { shouldWriteTicketListUrl, TICKET_LIST_PATHNAME } from '../lib/ticketListUrlSync';
 import { normalizeAssignedToIds } from '../lib/ticketFilterUtils';
 import {
+  DEFAULT_TICKET_LIST_SORT_KEY,
+  isTicketListSortKey,
+} from '../lib/ticketListSort';
+import {
   buildBoardArrivalFilters,
   resolveTicketViewSettings,
   sanitizeStoredTicketView,
@@ -40,6 +43,13 @@ import {
   type TicketViewSettings,
 } from '../lib/ticketViewSettings';
 import type { TicketFilterChangeOptions } from '../lib/ticketFilterChange';
+import { LIST_VIEW_URL_PARAM } from '@alga-psa/list-views';
+import { useListViews } from '@alga-psa/list-views/hooks';
+import { ListViewPicker } from '@alga-psa/list-views/components';
+import {
+  createTicketListViewAdapter,
+  type TicketListLiveState,
+} from '../lib/ticketListViewAdapter';
 
 const TICKETS_PAGE_SIZE_SETTING = 'tickets_list_page_size';
 
@@ -51,18 +61,6 @@ const ALLOWED_RESPONSE_STATES = new Set(['all', 'awaiting_client', 'awaiting_int
 const ALLOWED_SLA_STATUS_FILTERS = new Set(['all', 'has_sla', 'no_sla', 'on_track', 'breached', 'paused']);
 const ALLOWED_BOARD_FILTER_STATES = new Set(['active', 'inactive', 'all']);
 const ALLOWED_BUNDLE_VIEWS = new Set(['bundled', 'individual']);
-const ALLOWED_SORT_KEYS = new Set([
-  'ticket_number',
-  'title',
-  'status_name',
-  'priority_name',
-  'board_name',
-  'category_name',
-  'client_name',
-  'entered_at',
-  'entered_by_name',
-  'due_date'
-]);
 
 function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
   return isActionMessageError(value) || isActionPermissionError(value);
@@ -90,7 +88,7 @@ function parseTicketListStateFromSearch(search: string, allowSlaStatusFilter = t
 
   const sortByRaw = params.get('sortBy') || 'entered_at';
   const sortDirectionRaw = (params.get('sortDirection') || 'desc').toLowerCase();
-  const sortBy = ALLOWED_SORT_KEYS.has(sortByRaw) ? sortByRaw : 'entered_at';
+  const sortBy = isTicketListSortKey(sortByRaw) ? sortByRaw : DEFAULT_TICKET_LIST_SORT_KEY;
   const sortDirection: 'asc' | 'desc' = sortDirectionRaw === 'asc' ? 'asc' : 'desc';
 
   const dueDateFilterRaw = params.get('dueDateFilter');
@@ -316,6 +314,7 @@ export default function TicketingDashboardContainer({
     page?: number,
     pageSize?: number,
     historyMode: 'replace' | 'push' = 'replace',
+    namedViewId?: string | null,
   ) => {
     // The list is no longer the page being described: writing here would replace
     // the history entry the router just pushed for the ticket detail and bounce
@@ -397,6 +396,17 @@ export default function TicketingDashboardContainer({
     if (filters.bundleView && filters.bundleView !== 'bundled') {
       params.set('bundleView', filters.bundleView);
     }
+    // The applied named view is carried through every filter rewrite so the
+    // address bar keeps naming the view being refined. An apply passes the view
+    // it just put on screen (or null for "Default view") so the filters and the
+    // view are a single write; a plain edit passes nothing and reads the live
+    // view back out of the address bar.
+    const activeNamedView = namedViewId === undefined
+      ? new URLSearchParams(window.location.search).get(LIST_VIEW_URL_PARAM)
+      : namedViewId;
+    if (activeNamedView) {
+      params.set(LIST_VIEW_URL_PARAM, activeNamedView);
+    }
 
     // Update URL without triggering a server-side re-render. Board-tab moves
     // push so back/forward walks the tabs; every other filter edit replaces, so
@@ -467,7 +477,9 @@ export default function TicketingDashboardContainer({
       }
 
       if (isReturnedActionError(result)) {
-        handleError(getErrorMessage(result), t('errors.fetchTickets', 'Failed to fetch tickets'));
+        // Pass the payload through unflattened: handleError prefers a returned
+        // user-safe actionError over the fallback, but only for that channel.
+        handleError(result, t('errors.fetchTickets', 'Failed to fetch tickets'));
         setTickets([]);
         setTotalCount(0);
         return;
@@ -938,6 +950,109 @@ export default function TicketingDashboardContainer({
     setJustSavedViews(current => ({ ...current, [boardId ?? TENANT_VIEW_KEY]: saved }));
   }, []);
 
+  // ── Named list views ────────────────────────────────────────────────────────
+  //
+  // A named view sits above the board/tenant default: it is a full snapshot
+  // (board scope included) that replaces the baseline group by group. The
+  // generic hook owns loading, resolution (?view= → my default → baseline),
+  // dirty state and persistence; this screen only says what its live state is
+  // and how to put a new one on screen.
+  const [columnSizing, setColumnSizing] = useState<Record<string, number> | undefined>(undefined);
+
+  const listViewLive = useMemo<TicketListLiveState>(() => ({
+    filters: { ...activeFilters, sortBy, sortDirection },
+    presentation: viewPresentation,
+    pageSize,
+    columnSizing,
+  }), [activeFilters, sortBy, sortDirection, viewPresentation, pageSize, columnSizing]);
+
+  const listViewKnownIds = useMemo(() => ({
+    boardIds: new Set(effectiveOptions.boardOptions.map(board => board.board_id).filter((id): id is string => Boolean(id))),
+    statusIds: new Set<string>(knownFilterIds.statusIds as string[]),
+    priorityIds: new Set<string>(knownFilterIds.priorityIds as string[]),
+    categoryIds: new Set<string>(knownFilterIds.categoryIds as string[]),
+    clientIds: new Set<string>(knownFilterIds.clientIds as string[]),
+    userIds: new Set<string>(knownFilterIds.userIds as string[]),
+    teamIds: initialTeams ? new Set(initialTeams.map(team => team.team_id)) : undefined,
+    tags: effectiveOptions.tags ? new Set(effectiveOptions.tags.map(tag => tag.tag_text)) : undefined,
+  }), [effectiveOptions.boardOptions, effectiveOptions.tags, knownFilterIds, initialTeams]);
+
+  const ticketListViewAdapter = useMemo(() => createTicketListViewAdapter({
+    neutralFilters: neutralListFilters,
+    resolveBaselineForBoard: resolveViewForBoard,
+    // "Default view" returns to what arriving at the current board gives you:
+    // the board/tenant default, keeping the board scope the user is on.
+    baseline: (live) => {
+      const boardSelection: Partial<ITicketListFilters> = {
+        boardId: live.filters.boardId,
+        boardIds: live.filters.boardIds,
+        excludeBoardIds: live.filters.excludeBoardIds,
+        boardFilterState: live.filters.boardFilterState,
+      };
+      const boardId = live.filters.boardIds?.length === 1
+        ? live.filters.boardIds[0]
+        : live.filters.boardId ?? null;
+      const resolved = resolveViewForBoard(boardId);
+      const filters = buildBoardArrivalFilters({
+        baseline: neutralListFilters(),
+        boardSelection,
+        viewFilters: validateCapturedFilters(resolved.filters, knownFilterIds, [TICKET_STATUS_FILTER_OPEN, 'all']),
+      });
+      return {
+        filters: {
+          ...filters,
+          sortBy: filters.sortBy ?? 'entered_at',
+          sortDirection: filters.sortDirection ?? 'desc',
+        },
+        presentation: resolved,
+        pageSize: live.pageSize,
+        columnSizing: undefined,
+      };
+    },
+    known: listViewKnownIds,
+  }), [neutralListFilters, resolveViewForBoard, knownFilterIds, listViewKnownIds]);
+
+  const handleListViewApply = useCallback((next: TicketListLiveState, meta: { viewId: string | null }) => {
+    if (filterFetchTimeoutRef.current) {
+      clearTimeout(filterFetchTimeoutRef.current);
+      filterFetchTimeoutRef.current = null;
+    }
+    const nextSortBy = next.filters.sortBy ?? 'entered_at';
+    const nextSortDirection = next.filters.sortDirection ?? 'desc';
+    setActiveFilters(next.filters);
+    activeFiltersRef.current = next.filters;
+    setSortBy(nextSortBy);
+    setSortDirection(nextSortDirection);
+    setViewPresentation(next.presentation);
+    setColumnSizing(next.columnSizing);
+    setCurrentPage(1);
+    if (next.pageSize !== pageSize) {
+      setPageSize(next.pageSize);
+      // The remembered page size would otherwise pull the list straight back.
+      setStoredPageSize(next.pageSize);
+    }
+    // One write, router-authoritative: the applied filters and the view id go
+    // into the address bar together. The hook's own `?view=` write is disabled
+    // (ownsUrl below) so there is never a second, competing history write for
+    // the server action to race.
+    updateURLWithFilters(next.filters, 1, next.pageSize, 'replace', meta.viewId);
+    void fetchTicketsRef.current(next.filters, 1, next.pageSize, {
+      sortBy: nextSortBy,
+      sortDirection: nextSortDirection,
+    });
+  }, [pageSize, setStoredPageSize, updateURLWithFilters]);
+
+  const listViews = useListViews({
+    adapter: ticketListViewAdapter,
+    live: listViewLive,
+    onApply: handleListViewApply,
+    // A link that names filters wins over the user's personal default.
+    urlHasExplicitState: entryUrlHasFilterOpinion.current,
+    // Tickets mirror their filters into the URL; they write filters + view as a
+    // single history entry rather than letting the hook append a second one.
+    ownsUrl: true,
+  });
+
   const mappedAndFilteredBoards = effectiveOptions.boardOptions.map(board => ({
     ...board,
     board_id: board.board_id || '',
@@ -987,6 +1102,9 @@ export default function TicketingDashboardContainer({
         savedViewSettings={savedViewForActiveTab}
         hasStoredDefaultView={hasStoredDefaultForActiveTab}
         onSavedViewChanged={handleSavedViewChanged}
+        listViewPicker={<ListViewPicker id="tickets-view-picker" controller={listViews} />}
+        columnSizing={columnSizing}
+        onColumnSizingChange={setColumnSizing}
       />
   );
 }

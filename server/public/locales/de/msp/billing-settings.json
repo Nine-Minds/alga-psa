@@ -165,6 +165,27 @@
         "loadStatuses": "Der Status des Verlängerungstickets konnte nicht geladen werden",
         "save": "Die Einstellungen für die Verlängerungsautomatisierung konnten nicht gespeichert werden"
       }
+    },
+    "quotes": {
+      "title": "Angebote",
+      "description": "Legen Sie die standardmäßige Gültigkeitsdauer für neue Angebote fest.",
+      "fields": {
+        "validityDays": {
+          "label": "Standardgültigkeitsdauer (Tage)",
+          "help": "Neue Angebote sind für diese Anzahl von Tagen gültig."
+        }
+      },
+      "actions": {
+        "save": "Speichern"
+      },
+      "toast": {
+        "updated": "Angebotseinstellungen wurden aktualisiert."
+      },
+      "errors": {
+        "load": "Einstellungen konnten nicht geladen werden",
+        "save": "Einstellungen konnten nicht gespeichert werden",
+        "range": "Geben Sie eine ganze Zahl von 1 bis 365 ein."
+      }
     }
   },
   "quoting": {

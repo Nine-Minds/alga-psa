@@ -1032,7 +1032,12 @@
       "saving": "Salvando…",
       "startDelimiter": "Iniciar delimitador",
       "update": "Atualizar regra",
-      "valuePlaceholder": "Valor"
+      "valuePlaceholder": "Valor",
+      "matchTargets": "Comparar valor extraído com",
+      "matchClientName": "Nome ou alias do cliente",
+      "matchContactEmail": "E-mail do contato",
+      "matchAssetName": "Nome do dispositivo (ativo)",
+      "matchTargetRequired": "Selecione pelo menos um destino."
     },
     "header": {
       "description": "Combine e-mails recebidos por remetente ou assunto para evitar ruídos, atribuir o cliente certo ou direcionar para um destino. As regras são executadas em ordem; a primeira partida vence.",
@@ -1090,7 +1095,10 @@
       "running": "Testando…",
       "subject": "Assunto",
       "title": "Teste esta regra",
-      "to": "Para"
+      "to": "Para",
+      "contactEmail": "e-mail do contato",
+      "deviceName": "nome do dispositivo",
+      "ambiguous": "{{target}} corresponde a {{count}} clientes — não atribuído"
     }
   },
   "errors": {

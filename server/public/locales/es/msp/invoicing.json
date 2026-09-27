@@ -317,14 +317,16 @@
       "client": "Cliente",
       "invoiceNumber": "Número de factura",
       "invoiceNumberOptional": "Número de factura (opcional)",
-      "sourceSalesOrder": "Orden de venta de origen (opcional)"
+      "sourceSalesOrder": "Orden de venta de origen (opcional)",
+      "billingProfile": "Perfil de facturación"
     },
     "placeholders": {
       "selectClient": "Seleccione un cliente",
       "invoiceNumberOptional": "Déjelo en blanco para generar automáticamente",
       "sourceSalesOrder": "Seleccione una orden de venta cumplida o facturable manualmente",
       "searchSalesOrders": "Buscar órdenes de venta...",
-      "noInvoiceableSalesOrders": "No se encontraron órdenes de venta facturables."
+      "noInvoiceableSalesOrders": "No se encontraron órdenes de venta facturables.",
+      "selectBillingProfile": "Seleccione un perfil de facturación"
     },
     "automatedItems": {
       "title": "Líneas de pedido automatizadas",
@@ -346,7 +348,8 @@
       "clearSalesOrderSource": "Quitar la orden de venta de origen"
     },
     "labels": {
-      "total": "Total"
+      "total": "Total",
+      "defaultBillingProfile": "{{name}} (predeterminado)"
     },
     "prepayment": {
       "label": "Esta es una factura de prepago (crea crédito)",
@@ -384,7 +387,8 @@
       "USAGE_CALCULATION_ERROR": "El uso de {{services}} en el período de servicio del {{periodStart}} al {{periodEnd}} está registrado pero no se pudo tarificar. Corrija los precios del servicio (precio de catálogo en la moneda del contrato, una tarifa personalizada o tramos de tarifas) e inténtelo de nuevo. No registre uso de reemplazo.",
       "SOURCE_ALREADY_BILLED": "Algunos elementos seleccionados ya no son facturables (ya facturados, no aprobados o eliminados). Actualiza e inténtalo de nuevo.",
       "SOURCE_NOT_ELIGIBLE": "Uno de los elementos seleccionados no pertenece a este ticket o ya no es elegible. Actualiza e inténtalo de nuevo.",
-      "SOURCE_CURRENCY_MISMATCH": "Algunos productos seleccionados tienen un precio en una moneda distinta a la de facturación de este cliente, por lo que no se pueden añadir. Factúralos por separado en su propia moneda."
+      "SOURCE_CURRENCY_MISMATCH": "Algunos productos seleccionados tienen un precio en una moneda distinta a la de facturación de este cliente, por lo que no se pueden añadir. Factúralos por separado en su propia moneda.",
+      "BILLING_PROFILE_NOT_FOUND": "El perfil de facturación seleccionado no está disponible para este cliente. Actualice la página e inténtelo de nuevo."
     },
     "warnings": {
       "noBillingEmail": "Este cliente no tiene correo electrónico de facturación. Añada un contacto de facturación, un correo electrónico de facturación del cliente o una dirección de correo en la ubicación de facturación o predeterminada antes de generar la factura."
@@ -395,6 +399,9 @@
     },
     "salesOrderContext": {
       "summary": "{{quantity}} artículo(s) de {{lineCount}} línea(s) listo(s) para facturar. Este borrador se vinculará a la orden de venta."
+    },
+    "hints": {
+      "billingProfile": "La factura y sus líneas se facturan a este perfil."
     }
   },
   "quickInvoice": {
@@ -725,7 +732,9 @@
     "title": "Vista previa de factura",
     "templatePlaceholder": "Seleccionar plantilla de factura...",
     "labels": {
-      "standard": "(Estándar)"
+      "standard": "(Estándar)",
+      "billingProfile": "Perfil de facturación: {{name}}",
+      "billingProfileDefault": "el perfil predeterminado del cliente"
     },
     "actions": {
       "finalizeInvoice": "Finalizar factura",
@@ -980,7 +989,10 @@
       "billingEmail": "Correo electrónico de facturación",
       "clientEmail": "Correo electrónico de la empresa",
       "noEmailFound": "No se encontró ningún correo electrónico",
-      "notConfigured": "No hay ninguna dirección de correo electrónico configurada para este cliente."
+      "notConfigured": "No hay ninguna dirección de correo electrónico configurada para este cliente.",
+      "billingProfile": "Perfil de facturación",
+      "billingProfileNamed": "Perfil de facturación: {{name}}",
+      "billingProfileDefault": "el perfil predeterminado del cliente"
     },
     "fields": {
       "due": "Vencimiento",
@@ -2055,6 +2067,13 @@
     "errors": {
       "invoiceNumberRequired": "El número de factura es obligatorio.",
       "invoiceDateRequired": "La fecha de la factura es obligatoria."
+    },
+    "labels": {
+      "billingProfile": "Perfil de facturación",
+      "billingProfileDefault": "El perfil predeterminado del cliente"
+    },
+    "hints": {
+      "billingProfile": "La factura, sus líneas y la copia enviada por correo siguen este perfil."
     }
   },
   "documentTemplates": {
@@ -2165,7 +2184,8 @@
       "referenceMissing": "La factura, cliente, contrato o registro de facturación seleccionado ya no existe. Actualice la página e inténtelo de nuevo.",
       "duplicate": "Ya existe una factura en conflicto. Actualice la página e inténtelo de nuevo.",
       "missingField": "Falta un campo obligatorio de la factura.",
-      "missingFieldNamed": "Falta un campo obligatorio de la factura: {{field}}."
+      "missingFieldNamed": "Falta un campo obligatorio de la factura: {{field}}.",
+      "billingProfileUnavailable": "El perfil de facturación seleccionado no está disponible para este cliente."
     },
     "billingCycle": {
       "notFoundRefresh": "No se encontró el ciclo de facturación. Es posible que se haya actualizado o eliminado. Actualice la página e inténtelo de nuevo.",

@@ -119,6 +119,22 @@ function buildInvoiceDetailServicePeriodSubquery(
   return db.tenantWhereColumn(subquery, 'ic.tenant', `${outerInvoiceAlias}.tenant`);
 }
 
+/**
+ * How many billing profiles the invoice's client holds — the D6 invisibility
+ * rule, resolved in the listing query so a single-profile client's invoice
+ * carries no profile UI at all.
+ */
+function buildClientBillingProfileCountSubquery(
+  db: ReturnType<typeof tenantDb>,
+  outerInvoiceAlias: string,
+): Knex.QueryBuilder {
+  const subquery = db.subquery('client_billing_profiles as cbp')
+    .whereRaw('?? = ??', ['cbp.client_id', `${outerInvoiceAlias}.client_id`])
+    .count('cbp.billing_profile_id');
+
+  return db.tenantWhereColumn(subquery, 'cbp.tenant', `${outerInvoiceAlias}.tenant`);
+}
+
 async function enrichInvoiceWithProjectRenderingData(
   knex: Knex | Knex.Transaction,
   tenant: string,
@@ -234,6 +250,12 @@ async function getBasicInvoiceViewModel(invoice: IInvoice, client: any): Promise
       logo: client.logo || '',
       address: client.address || ''
     },
+    // Present only on the listings that select them; a listing that does not
+    // ask leaves every profile surface hidden, as it was before profiles.
+    billing_profile_id: (invoice as any).billing_profile_id ?? null,
+    billing_profile_name: (invoice as any).billing_profile_name ?? null,
+    client_has_multiple_billing_profiles:
+      Number((invoice as any).client_billing_profile_count ?? 0) > 1,
     contact: {
       name: '',  // Contact info not stored in invoice
       address: ''
@@ -445,6 +467,15 @@ export const fetchInvoicesPaginated = withAuth(async (
           }
         }
       );
+      // Which profile each invoice bills, by name — the listing is where an
+      // operator looks to confirm the pick they made when generating it.
+      db.tenantJoin(
+        invoicesQuery,
+        'client_billing_profiles',
+        'invoices.billing_profile_id',
+        'client_billing_profiles.billing_profile_id',
+        { type: 'left' }
+      );
       const invoices = await invoicesQuery
         .whereIn('invoices.invoice_id', ids)
         .select(
@@ -453,6 +484,11 @@ export const fetchInvoicesPaginated = withAuth(async (
           'invoices.invoice_number',
           'invoices.po_number',
           'invoices.client_contract_id',
+          'invoices.billing_profile_id',
+          'client_billing_profiles.name as billing_profile_name',
+          {
+            client_billing_profile_count: buildClientBillingProfileCountSubquery(db, 'invoices'),
+          },
           'invoices.invoice_date',
           'invoices.due_date',
           'invoices.status',

@@ -165,6 +165,27 @@
         "loadStatuses": "Impossibile caricare gli stati dei ticket di rinnovo",
         "save": "Impossibile salvare le impostazioni di automazione del rinnovo"
       }
+    },
+    "quotes": {
+      "title": "Preventivi",
+      "description": "Imposta il periodo di validità predefinito per i nuovi preventivi.",
+      "fields": {
+        "validityDays": {
+          "label": "Periodo di validità predefinito (giorni)",
+          "help": "I nuovi preventivi sono validi per questo numero di giorni."
+        }
+      },
+      "actions": {
+        "save": "Salva"
+      },
+      "toast": {
+        "updated": "Impostazioni dei preventivi aggiornate."
+      },
+      "errors": {
+        "load": "Impossibile caricare le impostazioni",
+        "save": "Impossibile salvare le impostazioni",
+        "range": "Inserisci un numero intero da 1 a 365."
+      }
     }
   },
   "quoting": {

@@ -1,0 +1,152 @@
+[
+  {
+    "id": "T001",
+    "description": "DB integration: create private + shared views as user A; listListViews as user B returns only the shared view; getListView(B, A's private id) returns not-found identical to a random id.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F007",
+      "F008",
+      "F009",
+      "F010"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "DB integration: createListView with visibility=shared without list_view:share is rejected; with permission succeeds.",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F010"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "DB integration: duplicate name (case-insensitive) for same owner+list is rejected; same name for different owner or different list succeeds.",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F010"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "DB integration: updateListView by non-owner on a shared view fails without list_view:manage and succeeds with it; non-owner can never update a private view.",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "DB integration: deleteListView clears user_preferences defaults pointing at it for all users; setMyDefaultListView rejects a view not visible to the caller.",
+    "implemented": true,
+    "featureIds": [
+      "F012",
+      "F013"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "DB integration: settings failing adapter schema (unknown key / bad sort direction) and unknown list_key are rejected.",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F006",
+      "F010"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "DB integration: hard-deleting a user removes their private views and reassigns shared views to the acting admin.",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Unit: DataTable honors controlled columnSizing/columnVisibility/columnOrder and falls back to localStorage sizing when uncontrolled.",
+    "implemented": true,
+    "featureIds": [
+      "F015",
+      "F016",
+      "F017"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Unit: useListViews resolution order (?view= \u2192 user default \u2192 baseline), dirty detection, discard, inaccessible-id fallback, and migrate on older schema_version.",
+    "implemented": true,
+    "featureIds": [
+      "F018",
+      "F019",
+      "F020",
+      "F021",
+      "F022"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Unit: tickets adapter capture\u2192apply round-trip preserves board scope, filters, sort, columns, density, page size; excludes searchQuery; sanitize drops deleted refs and reports them.",
+    "implemented": true,
+    "featureIds": [
+      "F030",
+      "F031"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Unit: projects, clients, contacts, assets adapters capture\u2192apply round-trip and differs() detection.",
+    "implemented": true,
+    "featureIds": [
+      "F036",
+      "F038",
+      "F040",
+      "F042"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "UI (component): ListViewPicker renders sections/owner/star, footer enablement by dirty+canEdit, Shared option disabled without share permission, delete confirmation.",
+    "implemented": true,
+    "featureIds": [
+      "F023",
+      "F024",
+      "F025",
+      "F026",
+      "F027",
+      "F028"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "E2E Tickets: save private view with filters+hidden column on a board, reload with ?view= restores it incl. board tab; modify \u2192 dirty dot \u2192 save changes; set as default and reopen /msp/tickets applies it; board default save/reset still works.",
+    "implemented": false,
+    "featureIds": [
+      "F019",
+      "F020",
+      "F032",
+      "F033",
+      "F034"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "E2E Assets (representative non-ticket list): user A saves shared view; user B sees it under Shared views and applies it; user B cannot edit it.",
+    "implemented": false,
+    "featureIds": [
+      "F041",
+      "F042",
+      "F011"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Translation validation passes (validate-translations.cjs) with new listViews.* keys in all locales.",
+    "implemented": true,
+    "featureIds": [
+      "F029"
+    ]
+  }
+]

@@ -566,7 +566,8 @@
       "dueDate": "Due Date",
       "statusDisabledMultiBoard": "Selected tickets are on different boards",
       "statusResolvingBoards": "Checking the boards of selected tickets…",
-      "more": "More"
+      "more": "More",
+      "bundleNeedsOne": "Select at least 1 ticket to bundle"
     },
     "moveDialogTitle": "Move Selected Tickets",
     "moveDialogDescription": "Select a destination board and status, then confirm moving the selected tickets.",
@@ -671,7 +672,19 @@
       "propagationSummary": "{{masters}} selected ticket(s) are sync-mode bundle masters; this change will close/reopen {{children}} child ticket(s).",
       "masterSummary": "{{children}} child ticket(s)",
       "applyToChildren": "Apply to children",
-      "mastersOnly": "Masters only"
+      "mastersOnly": "Masters only",
+      "membersLabel": "Tickets in this bundle",
+      "addTicketSearchPlaceholder": "Search tickets by number or title",
+      "addTicketEmpty": "Search for tickets to add",
+      "badgeAdded": "Added",
+      "badgeInBundle": "In bundle #{{number}}",
+      "badgeMaster": "Bundle master",
+      "masterTag": "Master",
+      "removeMember": "Remove",
+      "needMoreTickets": "Add at least one more ticket to bundle.",
+      "unresolvedSelectedTickets_one": "Could not load {{count}} selected ticket.",
+      "unresolvedSelectedTickets_other": "Could not load {{count}} selected tickets.",
+      "badgeClosed": "Closed"
     },
     "auth": {
       "moveRequired": "You must be logged in to move tickets",
@@ -1023,6 +1036,13 @@
       "filterByBoard": "Filter by board",
       "addCategory": "Add Category",
       "importStandardCategories": "Import from Standard Categories",
+      "copyToBoard": "Copy categories to another board",
+      "copyTitle": "Copy categories to another board",
+      "copySourceBoard": "Select source board",
+      "copyTargetBoard": "Select target board",
+      "copySelected": "Copy selected",
+      "copySuccess": "Copied {{created}} categories; skipped {{skipped}} already present.",
+      "copyFailed": "Failed to copy categories",
       "editCategory": "Edit Category",
       "categoryName": "Category Name *",
       "enterCategoryName": "Enter category name",
@@ -1082,7 +1102,14 @@
       "selectParentCategory": "Select parent category",
       "parentHelpWithBoard": "Select a parent to create a subcategory, or leave empty for top-level",
       "parentHelpWithoutBoard": "Select a board first, or pick a parent category to inherit its board",
-      "creating": "Creating..."
+      "creating": "Creating...",
+      "copySourceLabel": "Source board",
+      "copyTargetLabel": "Target board",
+      "copyEmpty": "No categories on this board.",
+      "copying": "Copying…",
+      "copyBoardTypeMismatch": "Ticket categories can only be copied between boards with the same category type.",
+      "copyConflicts_one": "{{count}} skipped category has a different parent on the target board.",
+      "copyConflicts_other": "{{count}} skipped categories have a different parent on the target board."
     },
     "display": {
       "responseStateTrackingTitle": "Response State Tracking",
@@ -1462,7 +1489,11 @@
       "missingField": "Missing required checklist field.",
       "missingFieldNamed": "Missing required checklist field: {{field}}.",
       "referenceInvalid": "The selected ticket, checklist template, or rule filter is no longer valid. Please refresh and try again.",
-      "invalidValue": "One of the checklist values is invalid. Please refresh and try again."
+      "invalidValue": "One of the checklist values is invalid. Please refresh and try again.",
+      "ruleCategoryBoardMismatch": "The selected category belongs to a different board than the rule.",
+      "ruleCategoryInvalid": "The selected category is not a top-level category.",
+      "ruleSubcategoryInvalid": "The selected subcategory does not belong to the selected category.",
+      "ruleSubcategoryRequiresCategory": "Select a category before choosing a subcategory."
     }
   },
   "ticketSection": {

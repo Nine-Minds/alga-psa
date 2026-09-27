@@ -601,6 +601,7 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
                 onEmail={handleEmail}
                 onUnfinalize={handleUnfinalize}
                 isFinalized={true}
+                invoiceSummary={selectedInvoice}
                 creditApplied={selectedInvoice?.credit_applied || 0}
                 clientId={selectedInvoice?.client_id ?? null}
                 invoiceTotal={selectedInvoice?.total_amount ?? 0}

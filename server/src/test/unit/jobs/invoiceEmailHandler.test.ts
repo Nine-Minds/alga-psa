@@ -358,9 +358,34 @@ describe('InvoiceEmailHandler', () => {
         knexOrTrx: expect.anything(),
         tenantId: TENANT,
         clientId: 'client-1',
+        // An invoice with no profile asks the resolver nothing extra.
+        billingProfileId: null,
       });
       expect(mocks.sendInvoiceEmail.mock.calls[0][0].recipientEmail).toBe('contact@acme.test');
       expect(mocks.sendInvoiceEmail.mock.calls[0][0].contact).toEqual({ name: 'Jane Contact', address: '1 Main St' });
+    });
+
+    it('resolves the recipient against the billing profile the invoice bills', async () => {
+      // A segmented client's invoice is addressed by its profile, not by the
+      // parent it was merged under — the resolver has to be told which one.
+      mocks.dbRows.invoice = buildInvoice({ billing_profile_id: 'profile-merged' });
+      mocks.resolveInvoiceBillingRecipient.mockResolvedValue({
+        clientId: 'client-1',
+        clientName: 'Acme Corp',
+        recipientEmail: 'ap@site.test',
+        recipientName: 'Site AP',
+        recipientSource: 'profile_billing_email',
+      });
+
+      await InvoiceEmailHandler.handle('pg-1', buildJobData());
+
+      expect(mocks.resolveInvoiceBillingRecipient).toHaveBeenCalledWith({
+        knexOrTrx: expect.anything(),
+        tenantId: TENANT,
+        clientId: 'client-1',
+        billingProfileId: 'profile-merged',
+      });
+      expect(mocks.sendInvoiceEmail.mock.calls[0][0].recipientEmail).toBe('ap@site.test');
     });
 
     it('should pass through the billing_email fallback from the shared resolver', async () => {
