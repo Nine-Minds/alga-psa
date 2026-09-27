@@ -24,9 +24,31 @@ describe('multiple outbound sender migration', () => {
     expect(senderBackfill).toContain("THEN 'unverified' ELSE 'verified' END");
     expect(routeBackfill).toContain("'mail_class', 'ticket'");
     expect(routeBackfill).toContain('nullif(trim(tes.ticketing_from_name), \'\')');
-    expect(routeBackfill).toContain('WHERE nullif(trim(tes.ticketing_from_email), \'\') IS NOT NULL');
+    expect(routeBackfill).toContain("WHERE (nullif(trim(tes.ticketing_from_email), '') IS NOT NULL");
     expect(routeBackfill).toContain('OR nullif(trim(tes.ticketing_from_name), \'\') IS NOT NULL');
     expect(statements.join('\n')).toContain('ON DELETE RESTRICT');
+    expect(statements.join('\n')).toContain('email_sender_addresses_microsoft_provider_fk');
+    expect(statements.join('\n')).toContain('email_sender_addresses_microsoft_provider_fk');
+  });
+
+  it('skips only the Microsoft provider FK when Citus is active', async () => {
+    const statements: string[] = [];
+    let table: any;
+    table = new Proxy({}, { get: () => (..._args: unknown[]) => table });
+    const knex: any = {
+      schema: { createTable: vi.fn(async (_name: string, callback: (builder: any) => void) => callback(table)), dropTableIfExists: vi.fn() },
+      fn: { now: vi.fn(() => 'now()') },
+      raw: vi.fn(async (sql: string) => {
+        statements.push(sql);
+        if (sql.includes('pg_extension')) return { rows: [{ extname: 'citus' }] };
+        if (sql.includes('pg_proc')) return { rows: [{ exists: true }] };
+        return { rows: [] };
+      }),
+    };
+
+    await migration.up(knex);
     expect(statements.join('\n')).toContain("create_distributed_table('email_sender_addresses', 'tenant')");
+    expect(statements.join('\n')).not.toContain('email_sender_addresses_microsoft_provider_fk');
+    expect(statements.join('\n')).toContain('email_sender_routes_board_fk');
   });
 });

@@ -1,3 +1,5 @@
+const { canCreateDistributedTable } = require('./utils/citusDistribution.cjs');
+
 exports.up = async function up(knex) {
   await knex.schema.createTable('email_sender_addresses', (table) => {
     table.uuid('tenant').notNullable();
@@ -42,7 +44,11 @@ exports.up = async function up(knex) {
   await knex.raw("ALTER TABLE email_sender_routes ADD CONSTRAINT email_sender_routes_value_check CHECK (sender_id IS NOT NULL OR display_name IS NOT NULL)");
 
   await knex.raw('ALTER TABLE email_sender_addresses ADD CONSTRAINT email_sender_addresses_tenant_fk FOREIGN KEY (tenant) REFERENCES tenants(tenant) ON DELETE CASCADE');
-  await knex.raw('ALTER TABLE email_sender_addresses ADD CONSTRAINT email_sender_addresses_microsoft_provider_fk FOREIGN KEY (microsoft_provider_id, tenant) REFERENCES email_providers(id, tenant) ON DELETE RESTRICT');
+  // email_providers is not distributed/reference on Citus, so that FK is
+  // unsupported there. createEmailSender validates the provider in tenant scope.
+  if (!(await canCreateDistributedTable(knex))) {
+    await knex.raw('ALTER TABLE email_sender_addresses ADD CONSTRAINT email_sender_addresses_microsoft_provider_fk FOREIGN KEY (microsoft_provider_id, tenant) REFERENCES email_providers(id, tenant) ON DELETE RESTRICT');
+  }
   await knex.raw('ALTER TABLE email_sender_routes ADD CONSTRAINT email_sender_routes_tenant_fk FOREIGN KEY (tenant) REFERENCES tenants(tenant) ON DELETE CASCADE');
   await knex.raw('ALTER TABLE email_sender_routes ADD CONSTRAINT email_sender_routes_board_fk FOREIGN KEY (tenant, board_id) REFERENCES boards(tenant, board_id) ON DELETE CASCADE');
   await knex.raw('ALTER TABLE email_sender_routes ADD CONSTRAINT email_sender_routes_sender_fk FOREIGN KEY (tenant, sender_id) REFERENCES email_sender_addresses(tenant, sender_id) ON DELETE RESTRICT');
