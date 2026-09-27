@@ -28,33 +28,44 @@ then exited with V8 heap out-of-memory at approximately 4 GB (exit 134) while
 loading the invoice tab. I concluded that dead supervised service and recreated
 it through `workflow-ensure-service` with the same worktree cwd and port and
 `NODE_OPTIONS=--max-old-space-size=8192`. After that change the Invoicing tab,
-Drafts tab, and read-only `SMOKE-ADJ-1` adjustment card loaded. The fresh
-selected-draft screenshot is `existing-drifted-draft-view.png`; ten consecutive
-post-adjustment health checks are in `health-checks-after-heap.txt`.
+Drafts tab, and read-only `SMOKE-ADJ-1` adjustment card loaded. The selected
+draft screenshot is `existing-drifted-draft-view.png`; ten consecutive health
+checks from that process are in `health-checks-after-heap.txt`. The 8 GB process
+then also hit V8 heap out-of-memory (exit 134) during read-only invoice search.
+No higher limit or further command replacement was attempted. I recreated the
+same 8 GB command once through `workflow-ensure-service`; its first health check
+returned 200. The endpoint is currently responding, but the second 8 GB OOM
+means long-lived stability is not established.
 
 ## Fixture safety and smoke result
 
 Before any data operation, I captured the existing `SMOKE-ADJ-1` fixture in
 `fixture-before.json`. A direct query afterward still reported its original
 state: draft, subtotal 370500, tax 900, total 371400, adjustment revision 63,
-and five charge rows. No invoice or fixture rows were changed.
+and five charge rows. Those source invoice and charge rows stayed unchanged.
 
 The Invoicing tab was initially blank because the original supervised Node
 process exhausted its 4 GB heap. The one justified saved-command adjustment to
 8 GB resolved that transition. `/msp/invoices` is not an implemented route; the
-operator flow is `/msp/billing?tab=invoicing&subtab=drafts`. The pre-existing
-`SMOKE-ADJ-1` detail and adjustments card are visible, but this fixture was
-already drifted and no separately owned fixture was established. I therefore
-made no editor changes and did not press Save. The login used the development
-credential supplied by the supervised service; no credentials are included.
+operator flow is `/msp/billing?tab=invoicing&subtab=drafts`. The pre-existing `SMOKE-ADJ-1` detail and adjustments card were visible, but
+that fixture was already drifted and remained read-only. I created a separate
+owned copy, `SMOKE-ADJ-REPAIR-20260927` (`5a1e0000-0000-4000-8000-202609270001`),
+from the preserved source snapshot. The app exhausted its heap before returning
+that invoice in search, so no UI mutation occurred. The exact controlled copy
+and cleanup SQL are preserved in `controlled-fixture-create.sql` and
+`controlled-fixture-cleanup.sql`. I deleted only the copied
+invoice and its five copied charge rows; `controlled-fixture-cleanup.txt`
+records zero owned operations and zero remaining copy rows, and confirms the
+source invoice stayed unchanged. The login used the development credential
+supplied by the supervised service; no credentials are included.
 
 Consequently, current-head UI evidence does **not** prove add/edit/repeat-save/
 remove, generated-line protection, discounts or tax, template-copy behavior,
 lifecycle restrictions, preview/PDF parity, portal output, accounting export,
 or combined companion acceptance. No PDF was downloaded, no invoice was sent,
 and no external accounting system was contacted. Portal/export and companion
-remain outstanding rather than passed. The pre-smoke snapshot was retained and
-there is no cleanup to perform because no fixture mutation occurred.
+remain outstanding rather than passed. The pre-smoke snapshot was retained. The separately owned cloned fixture was
+cleaned up and verified absent; see the SQL and cleanup evidence files.
 
 ## Reproduction
 
