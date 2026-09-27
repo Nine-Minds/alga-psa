@@ -832,14 +832,14 @@
       "empty": "⟦Ƞȯ ƀȯȧřḓş ƒȯŭƞḓ.⟧",
       "searchPlaceholder": "⟦Şḗȧřƈħ ƀȯȧřḓş…⟧",
       "emailSender": {
-        "useDefault": "[Üsë tïckët dëfåült]",
-        "duplicateRoute": "[Thïs sëndër røütë ålrëådy ëxïsts.]",
-        "saveFailed": "[Cøüld nøt såvë tïckët sëndër. Try ågåïn.]",
         "label": "⟦Ȯŭŧƀȯŭƞḓ şḗƞḓḗř⟧",
         "inboundWarning": "⟦Ŧħīş şḗƞḓḗř īş ŭşḗḓ ƒȯř ȯŭŧƀȯŭƞḓ ŧīƈķḗŧ ḗḿȧīŀ. Īƞƀȯŭƞḓ ḿȧīŀ şḗŧŧīƞɠş ȧřḗ ŭƞƈħȧƞɠḗḓ.⟧",
         "displayName": "⟦Ḓīşƥŀȧẏ ƞȧḿḗ⟧",
         "save": "⟦Şȧṽḗ şḗƞḓḗř⟧",
-        "saved": "⟦Şḗƞḓḗř şȧṽḗḓ⟧"
+        "saved": "⟦Şḗƞḓḗř şȧṽḗḓ⟧",
+        "useDefault": "⟦Ŭşḗ ŧīƈķḗŧ ḓḗƒȧŭŀŧ⟧",
+        "duplicateRoute": "⟦Ŧħȧŧ şḗƞḓḗř řȯŭŧḗ ȧŀřḗȧḓẏ ḗẋīşŧş.⟧",
+        "saveFailed": "⟦Ƈȯŭŀḓ ƞȯŧ şȧṽḗ şḗƞḓḗř řȯŭŧīƞɠ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧"
       }
     },
     "priorities": {

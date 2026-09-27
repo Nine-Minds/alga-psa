@@ -10,6 +10,8 @@ import { JobStatus } from 'server/src/types/job';
 import { getInvoiceEmailLinkContext } from '@alga-psa/billing/actions/invoiceEmailLinkContext';
 import { fetchTenantParty } from '@alga-psa/billing/lib/adapters/tenantPartyAdapter';
 import logger from '@alga-psa/core/logger';
+import { formatCurrency } from '@alga-psa/core/lib/formatters';
+import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 
 /**
  * Gets the tenant company name for email templates.
@@ -289,8 +291,11 @@ export class InvoiceEmailHandler {
             const companyName = await getTenantCompanyName(tenantId);
 
             const currencyCode = invoice.currencyCode || 'USD';
-            const amount = new Intl.NumberFormat('en-US', { style: 'currency', currency: currencyCode }).format(
-              ((invoice.total_amount || 0) - (invoice.credit_applied || 0)) / 100
+            const amountLocale = await getTenantDefaultLocale(tenantId, 'client').catch(() => 'en');
+            const amount = formatCurrency(
+              ((invoice.total_amount || 0) - (invoice.credit_applied || 0)) / 100,
+              amountLocale,
+              currencyCode,
             );
             const subject = `Invoice ${invoice.invoice_number} from ${companyName}`;
             const html = `<p>Dear ${client.client_name},</p><p>Please find attached your invoice ${invoice.invoice_number} for ${amount}.</p>${linkContext.paymentUrl ? `<p><a href="${linkContext.paymentUrl}">Pay invoice</a></p>` : ''}${linkContext.portalUrl ? `<p><a href="${linkContext.portalUrl}">View invoice in the client portal</a></p>` : ''}<p>Thank you for your business!</p><p>Best regards,<br>${companyName}</p>`;

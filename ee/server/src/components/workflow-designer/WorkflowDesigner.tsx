@@ -61,7 +61,7 @@ import { getAvailableStatuses, getTicketFieldOptions } from '@alga-psa/integrati
 import { getTicketById, getTicketsForList } from '@alga-psa/tickets/actions/ticketActions';
 import { getProjectsWithPhases } from '@alga-psa/projects/actions/projectActions';
 import { getProjectTaskData } from '@alga-psa/projects/actions/projectTaskActions';
-import { listSelectableSenders } from '@alga-psa/integrations/emailSenderActions';
+import { listSelectableSenders } from '@alga-psa/email/senderActions';
 import WorkflowSchedules from './WorkflowSchedules';
 import { MappingPanel, type ActionInputField } from './mapping';
 import { ExpressionEditor, type ExpressionEditorHandle, type ExpressionContext, type JsonSchema as ExprJsonSchema } from './expression-editor';

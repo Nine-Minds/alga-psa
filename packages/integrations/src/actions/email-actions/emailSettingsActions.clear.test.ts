@@ -52,12 +52,13 @@ describe('updateEmailSettings clear behavior', () => {
     invalidateTenantSettingsMock.mockResolvedValue(undefined);
   });
 
-  it('persists null when clearing the ticketing From address', async () => {
+  it('updates tenant email settings without persisting sender identities', async () => {
     const updateMock = vi.fn(async () => 1);
     const firstMock = vi.fn(async () => ({ tenant: 'tenant-123' }));
     const whereMock = vi.fn(() => ({
       first: firstMock,
       update: updateMock,
+      whereNotNull: vi.fn(() => ({ update: updateMock })),
       select: vi.fn(async () => []),
     }));
 
@@ -66,13 +67,13 @@ describe('updateEmailSettings clear behavior', () => {
       insert: vi.fn(async () => 1),
       select: vi.fn(async () => []),
     })) as any;
+    knexMock.transaction = async (callback: (trx: any) => Promise<unknown>) => callback(knexMock);
 
     createTenantKnexMock.mockResolvedValue({ knex: knexMock, tenant: 'tenant-123' });
     getTenantEmailSettingsMock
       .mockResolvedValueOnce({
         tenantId: 'tenant-123',
         defaultFromDomain: 'acme.com',
-        ticketingFromEmail: 'support@acme.com',
         customDomains: [],
         emailProvider: 'resend',
         providerConfigs: [],
@@ -83,7 +84,6 @@ describe('updateEmailSettings clear behavior', () => {
       .mockResolvedValueOnce({
         tenantId: 'tenant-123',
         defaultFromDomain: 'acme.com',
-        ticketingFromEmail: null,
         customDomains: [],
         emailProvider: 'resend',
         providerConfigs: [],
@@ -103,12 +103,13 @@ describe('updateEmailSettings clear behavior', () => {
     expect(updated.defaultFromDomain).toBe('acme.com');
   });
 
-  it('persists the normalized ticketing sender display name', async () => {
+  it('does not persist sender identities in tenant email settings', async () => {
     const updateMock = vi.fn(async () => 1);
     const firstMock = vi.fn(async () => ({ tenant: 'tenant-123' }));
     const whereMock = vi.fn(() => ({
       first: firstMock,
       update: updateMock,
+      whereNotNull: vi.fn(() => ({ update: updateMock })),
       select: vi.fn(async () => []),
     }));
 
@@ -117,14 +118,13 @@ describe('updateEmailSettings clear behavior', () => {
       insert: vi.fn(async () => 1),
       select: vi.fn(async () => []),
     })) as any;
+    knexMock.transaction = async (callback: (trx: any) => Promise<unknown>) => callback(knexMock);
 
     createTenantKnexMock.mockResolvedValue({ knex: knexMock, tenant: 'tenant-123' });
     getTenantEmailSettingsMock
       .mockResolvedValueOnce({
         tenantId: 'tenant-123',
         defaultFromDomain: 'acme.com',
-        ticketingFromEmail: 'support@acme.com',
-        ticketingFromName: null,
         customDomains: [],
         emailProvider: 'resend',
         providerConfigs: [],
@@ -135,8 +135,6 @@ describe('updateEmailSettings clear behavior', () => {
       .mockResolvedValueOnce({
         tenantId: 'tenant-123',
         defaultFromDomain: 'acme.com',
-        ticketingFromEmail: 'support@acme.com',
-        ticketingFromName: 'Support Team',
         customDomains: [],
         emailProvider: 'resend',
         providerConfigs: [],

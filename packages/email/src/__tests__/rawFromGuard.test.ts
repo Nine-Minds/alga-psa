@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const REPOSITORY_ROOT = resolve(process.cwd(), '../..');
+const REPOSITORY_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../../..');
 const RAW_FROM_ALLOWLIST = [
   'packages/email/src/sendCancellationRequestEmail.ts',
   'ee/server/src/app/api/billing/complete-reactivation/route.ts',

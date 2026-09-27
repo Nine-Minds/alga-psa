@@ -172,6 +172,7 @@ describe('email settings provider invariants', () => {
     const whereMock = vi.fn(() => ({
       first: vi.fn(async () => ({ tenant: 'tenant-123' })),
       update: updateMock,
+      whereNotNull: vi.fn(() => ({ update: updateMock })),
       select: vi.fn(async () => []),
     }));
     const knexMock = vi.fn(() => ({
@@ -179,6 +180,7 @@ describe('email settings provider invariants', () => {
       insert: vi.fn(async () => 1),
       select: vi.fn(async () => []),
     })) as any;
+    knexMock.transaction = async (callback: (trx: any) => Promise<unknown>) => callback(knexMock);
     createTenantKnexMock.mockResolvedValue({ knex: knexMock });
     getTenantEmailSettingsMock
       .mockResolvedValueOnce(existingSettings)
@@ -198,7 +200,7 @@ describe('email settings provider invariants', () => {
       })),
     });
 
-    expect(updateMock).toHaveBeenCalledOnce();
+    expect(updateMock).toHaveBeenCalledWith(expect.objectContaining({ provider_configs: expect.any(String) }));
     expect(invalidateTenantSettingsMock).toHaveBeenCalledWith('tenant-123');
     const persistedPayload = updateMock.mock.calls[0]?.[0];
     expect(persistedPayload).toBeDefined();
@@ -225,6 +227,7 @@ describe('email settings provider invariants', () => {
     const knexMock = vi.fn((table: string) => {
       const query: any = {
         where: vi.fn(() => query),
+        whereNotNull: vi.fn(() => query),
         select: vi.fn(async () => table === 'email_sender_addresses' ? [
           { sender_id: 'sender-1', email_address: 'support@unverified.example', verification_status: 'unverified' },
         ] : []),
@@ -233,6 +236,7 @@ describe('email settings provider invariants', () => {
       };
       return query;
     }) as any;
+    knexMock.transaction = async (callback: (trx: any) => Promise<unknown>) => callback(knexMock);
     createTenantKnexMock.mockResolvedValue({ knex: knexMock });
 
     const { updateEmailSettings } = await import('./emailSettingsActions');
@@ -265,6 +269,7 @@ describe('email settings provider invariants', () => {
     const knexMock = vi.fn((table: string) => {
       const builder: any = {
         where: vi.fn(() => builder),
+        whereNotNull: vi.fn(() => builder),
         select: vi.fn(async () => []),
         first: vi.fn(async () => table === 'email_providers'
           ? {
@@ -280,6 +285,7 @@ describe('email settings provider invariants', () => {
       };
       return builder;
     }) as any;
+    knexMock.transaction = async (callback: (trx: any) => Promise<unknown>) => callback(knexMock);
     createTenantKnexMock.mockResolvedValue({ knex: knexMock });
     getTenantEmailSettingsMock
       .mockResolvedValueOnce(existingSettings)
