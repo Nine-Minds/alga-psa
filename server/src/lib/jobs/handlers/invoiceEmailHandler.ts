@@ -273,6 +273,7 @@ export class InvoiceEmailHandler {
               invoice_type: invoice.invoice_type,
               total_amount: invoice.total_amount,
               credit_applied: invoice.credit_applied,
+              payment_method: invoice.payment_method ?? null,
             });
 
             if (linkContext.paymentError) {

@@ -11,6 +11,15 @@ import {
   resolveEffectiveBillingIdentity,
   type EffectiveBillingIdentity,
 } from '@alga-psa/shared/billingClients/billingProfileSettings';
+import { listPaymentMethods } from '@alga-psa/shared/billingClients/billingProfilePayments';
+import {
+  isPaymentTerms,
+  isPreferredPaymentMethod,
+  normalizePaymentTerms,
+  normalizePreferredPaymentMethod,
+  type PaymentTerms,
+  type PreferredPaymentMethod,
+} from '@alga-psa/shared/billingClients/paymentPreferences';
 import {
   actionError,
   permissionError,
@@ -570,7 +579,10 @@ export interface ClientBillingProfileSettingsInput {
   invoice_delivery_method?: string | null;
   invoice_template_id?: string | null;
   billing_cycle?: string | null;
+  /** One of PAYMENT_TERMS; null inherits the client's terms. */
   payment_terms?: string | null;
+  /** One of PREFERRED_PAYMENT_METHODS; null inherits the client's method. */
+  preferred_payment_method?: string | null;
 }
 
 const SETTINGS_FIELDS: Array<keyof ClientBillingProfileSettingsInput> = [
@@ -588,7 +600,14 @@ const SETTINGS_FIELDS: Array<keyof ClientBillingProfileSettingsInput> = [
   'invoice_template_id',
   'billing_cycle',
   'payment_terms',
+  'preferred_payment_method',
 ];
+
+/** The client-level values a profile falls back to for its select fields. */
+export interface ClientBillingProfileInheritedValues {
+  paymentTerms: PaymentTerms | null;
+  preferredPaymentMethod: PreferredPaymentMethod | null;
+}
 
 /** The profile's stored settings alongside the values actually in force. */
 export const getClientBillingProfileSettings = withAuth(async (
@@ -596,7 +615,11 @@ export const getClientBillingProfileSettings = withAuth(async (
   { tenant },
   input: { clientId: string; billingProfileId: string },
 ): Promise<
-  | { stored: ClientBillingProfileSettingsInput; effective: EffectiveBillingIdentity }
+  | {
+      stored: ClientBillingProfileSettingsInput;
+      effective: EffectiveBillingIdentity;
+      clientValues: ClientBillingProfileInheritedValues;
+    }
   | ClientBillingProfileActionError
 > => {
   try {
@@ -610,6 +633,10 @@ export const getClientBillingProfileSettings = withAuth(async (
       if (!row) {
         return actionError('That billing profile does not belong to this client.', 'msp/clients:errors.billingProfile.notThisClient');
       }
+      const client = await tenantDb(trx, tenant)
+        .table('clients')
+        .where({ client_id: input.clientId })
+        .first('payment_terms', 'preferred_payment_method');
       return {
         stored: row as ClientBillingProfileSettingsInput,
         // Showing both is the point: an admin needs to see what this profile
@@ -620,6 +647,12 @@ export const getClientBillingProfileSettings = withAuth(async (
           input.clientId,
           input.billingProfileId,
         ),
+        // What "inherit" would resolve to, even while the profile overrides it,
+        // so the inherit option can name the value it falls back to.
+        clientValues: {
+          paymentTerms: normalizePaymentTerms(client?.payment_terms),
+          preferredPaymentMethod: normalizePreferredPaymentMethod(client?.preferred_payment_method),
+        },
       };
     });
   } catch (error) {
@@ -663,6 +696,25 @@ export const updateClientBillingProfileSettings = withAuth(async (
         return { success: true as const };
       }
 
+      // Both drive billing behaviour (due date, whether an invoice offers
+      // online payment), so only known keys are accepted. Null still clears
+      // the field back to inheriting.
+      if (update.payment_terms != null && !isPaymentTerms(update.payment_terms)) {
+        return actionError(
+          'Choose one of the listed payment terms.',
+          'msp/clients:errors.billingProfile.invalidPaymentTerms',
+        );
+      }
+      if (
+        update.preferred_payment_method != null &&
+        !isPreferredPaymentMethod(update.preferred_payment_method)
+      ) {
+        return actionError(
+          'Choose one of the listed payment methods.',
+          'msp/clients:errors.billingProfile.invalidPaymentMethod',
+        );
+      }
+
       // bills_separately is the phase-2 gate and is never nullable.
       if ('bills_separately' in update) {
         update.bills_separately = Boolean(update.bills_separately);
@@ -676,6 +728,58 @@ export const updateClientBillingProfileSettings = withAuth(async (
         .where({ billing_profile_id: input.billingProfileId })
         .update(update);
       return { success: true as const };
+    });
+  } catch (error) {
+    const expected = billingProfileActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+});
+
+/** The saved card a billing profile would be charged with, for display only. */
+export interface ClientBillingProfileCardOnFile {
+  payment_method_id: string;
+  type: string;
+  last4: string | null;
+  exp_month: string | null;
+  exp_year: string | null;
+}
+
+/**
+ * The profile's default saved card, or null when it has none (F008).
+ *
+ * Cards are managed in the client portal; the MSP only sees which one is on
+ * file. Only the profile's own default counts — a sibling profile's card is
+ * never shown here, because it would never be charged for this profile.
+ */
+export const getClientBillingProfileCardOnFile = withAuth(async (
+  user,
+  { tenant },
+  input: { clientId: string; billingProfileId: string },
+): Promise<ClientBillingProfileCardOnFile | null | ClientBillingProfileActionError> => {
+  try {
+    await assertCanRead(user);
+    const { knex } = await createTenantKnex();
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const profile = await tenantDb(trx, tenant)
+        .table('client_billing_profiles')
+        .where({ billing_profile_id: input.billingProfileId, client_id: input.clientId })
+        .first('billing_profile_id');
+      if (!profile) {
+        return actionError('That billing profile does not belong to this client.', 'msp/clients:errors.billingProfile.notThisClient');
+      }
+      const methods = await listPaymentMethods(trx, tenant, input.clientId, input.billingProfileId);
+      const card = methods.find((method) => method.is_default);
+      if (!card) {
+        return null;
+      }
+      return {
+        payment_method_id: card.payment_method_id,
+        type: card.type,
+        last4: card.last4,
+        exp_month: card.exp_month,
+        exp_year: card.exp_year,
+      };
     });
   } catch (error) {
     const expected = billingProfileActionErrorFrom(error);

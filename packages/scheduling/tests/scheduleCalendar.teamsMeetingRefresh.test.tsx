@@ -612,11 +612,15 @@ describe('ScheduleCalendar refreshes its events after a Teams meeting is created
     expect(savedData.recurrence_pattern).toBeNull();
   });
 
-  it('feeds the entry popup assignee options from the gated getShareableUsers action', async () => {
+  it('loads gated assignee options after the entry popup opens and preserves the draft', async () => {
     const tech = { user_id: 'tech-1', first_name: 'Tess', last_name: 'Tech', user_type: 'internal', is_inactive: false };
     const alice = { user_id: 'alice', first_name: 'Alice', last_name: 'Adams', user_type: 'internal', is_inactive: false };
     serverEvents = [baseEntry({ entry_id: 'entry-assignees' })];
-    getShareableUsers.mockResolvedValue({ success: true, data: [tech, alice] });
+    let resolveUsers!: (result: { success: true; data: typeof tech[] }) => void;
+    const usersResponse = new Promise<{ success: true; data: typeof tech[] }>((resolve) => {
+      resolveUsers = resolve;
+    });
+    getShareableUsers.mockReturnValue(usersResponse);
 
     render(<ScheduleCalendar />);
     await screen.findByTestId('calendar-event-entry-assignees');
@@ -627,9 +631,30 @@ describe('ScheduleCalendar refreshes its events after a Teams meeting is created
     // The stored assignee is passed to the gated action so an inactive or
     // out-of-scope assignee can still resolve to a name.
     expect(getShareableUsers).toHaveBeenCalledWith(['tech-1']);
+    // The picker mounts before its options arrive. Keep the request pending
+    // explicitly so this coverage cannot depend on React/microtask timing.
+    expect(screen.queryByTestId('user-option-alice')).not.toBeInTheDocument();
+    fireEvent.change(notesField(), { target: { value: 'Draft while assignees load' } });
+
+    await act(async () => {
+      resolveUsers({ success: true, data: [tech, alice] });
+      await usersResponse;
+    });
+
     // Alice is not in useUsers() (which only has tech-1); her presence proves the
     // popup is fed the gated list, not the getAllUsers-derived technicians.
-    expect(screen.getByTestId('user-option-alice')).toBeInTheDocument();
+    expect(await screen.findByTestId('user-option-alice')).toBeInTheDocument();
     expect(screen.getByTestId('user-picker-value')).toHaveTextContent('Tess Tech');
+    expect(notesField().value).toBe('Draft while assignees load');
+
+    clickSave();
+    await waitFor(() => expect(updateScheduleEntry).toHaveBeenCalledTimes(1));
+    expect(updateScheduleEntry.mock.calls[0]).toEqual([
+      'entry-assignees',
+      expect.objectContaining({
+        assigned_user_ids: ['tech-1'],
+        notes: 'Draft while assignees load',
+      }),
+    ]);
   });
 });

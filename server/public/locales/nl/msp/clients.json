@@ -1726,7 +1726,20 @@
     "paymentTerms": "Betalingsvoorwaarden",
     "taxExempt": "Btw-vrijgesteld",
     "taxExemptInherited": "Geërfd van de klant ({{value}})",
-    "regionNote": "De belastingregio wordt hier niet ingesteld. Die volgt de plaats van levering — de dienst, dan de locatie van de contractregel, dan de standaard van de klant."
+    "regionNote": "De belastingregio wordt hier niet ingesteld. Die volgt de plaats van levering — de dienst, dan de locatie van de contractregel, dan de standaard van de klant.",
+    "inheritFromClient": "Overnemen van klant ({{value}})",
+    "paymentMethod": "Betaalmethode",
+    "paymentMethodHint": "Facturen voor cheques of bankoverschrijvingen bevatten geen online link ‘Nu betalen’.",
+    "cardOnFileLabel": "Opgeslagen kaart",
+    "cardOnFileHint": "De klant beheert opgeslagen kaarten in het klantenportaal.",
+    "noCardOnFile": "Geen kaart opgeslagen",
+    "cardType": {
+      "card": "Kaart",
+      "bankAccount": "Bankrekening"
+    },
+    "cardExpiry": ", geldig tot {{month}}/{{year}}",
+    "legacyPaymentTerms": "‘{{value}}’ is geen erkende betalingsvoorwaarde en is nooit toegepast. Bij het opslaan wordt deze verwijderd.",
+    "cardOnFile": "{{type}} eindigend op {{last4}}{{expiry}}"
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Prepaid-saldo-meldingen",
@@ -1879,7 +1892,9 @@
       "recordNotFound": "Dat record of facturatieprofiel bestaat niet meer.",
       "otherClient": "Dat facturatieprofiel hoort bij een andere klant.",
       "archived": "Dat facturatieprofiel is gearchiveerd.",
-      "selectionNotThisClient": "Een van de geselecteerde facturatieprofielen hoort niet bij deze klant."
+      "selectionNotThisClient": "Een van de geselecteerde facturatieprofielen hoort niet bij deze klant.",
+      "invalidPaymentTerms": "Kies een van de vermelde betalingstermijnen.",
+      "invalidPaymentMethod": "Kies een van de vermelde betaalmethoden."
     },
     "clientMerge": {
       "blocked": "Deze samenvoeging kan niet worden voltooid.",

@@ -15,7 +15,8 @@ import { getAnalyticsAsync } from '../lib/authHelpers';
 
 import { tenantDb } from '@alga-psa/db';
 import { getInitialInvoiceTaxSource } from './taxSourceActions';
-import { getDueDate } from './billingAndTax';
+import { resolveEffectiveBillingIdentity } from '@alga-psa/shared/billingClients/billingProfileSettings';
+import { dueDateForPaymentTerms } from '../lib/billing/invoiceDueDate';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import logger from '@alga-psa/core/logger';
 import {
@@ -189,11 +190,6 @@ export const generateManualInvoice = withAuth(async (
     }
 
     const currentDate = Temporal.Now.plainDateISO().toString();
-    const dueDate = await getDueDate(clientId, currentDate);
-    if (isActionMessageError(dueDate) || isActionPermissionError(dueDate)) {
-      throw new Error(getErrorMessage(dueDate));
-    }
-
     // Which profile this invoice bills (F095). The pick is validated against the
     // client so a profile that moved in with a merged client can never be billed
     // under the wrong customer. No pick leaves the invoice unattributed and its
@@ -213,6 +209,11 @@ export const generateManualInvoice = withAuth(async (
       }
     }
 
+    // Resolve preferences only after validating the selected profile. An omitted
+    // selection inherits the client's default profile.
+    const billingIdentity = await resolveEffectiveBillingIdentity(knex, tenant, clientId, billingProfileId);
+    const dueDate = dueDateForPaymentTerms(currentDate, billingIdentity.paymentTerms);
+
     const invoiceNumber = request.invoiceNumber?.trim() || await generateInvoiceNumber();
     const invoiceId = uuidv4();
     const taxSource = await getInitialInvoiceTaxSource(clientId);
@@ -227,6 +228,7 @@ export const generateManualInvoice = withAuth(async (
       billing_profile_id: billingProfileId,
       invoice_date: currentDate,
       due_date: dueDate,
+      payment_method: billingIdentity.preferredPaymentMethod,
       invoice_number: invoiceNumber,
       status: 'draft',
       currency_code: currencyCode,
