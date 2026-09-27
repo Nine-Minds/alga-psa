@@ -195,7 +195,7 @@ const deleteEmailSenderAction = withAuth(async (user, { tenant }, senderId: stri
   const deleted = await db.table('email_sender_addresses').where({ sender_id: senderId }).del();
   if (!deleted) throw new Error('Sender address was not found.');
   await TenantEmailService.invalidateTenantSettings(tenant);
-  return { success: true };
+  return { success: true as const };
 });
 
 const setEmailSenderRouteAction = withAuth(async (user, { tenant }, input: RouteInput) => {
@@ -233,14 +233,14 @@ const setEmailSenderRouteAction = withAuth(async (user, { tenant }, input: Route
     throw error;
   }
   await TenantEmailService.invalidateTenantSettings(tenant);
-  return { success: true };
+  return { success: true as const };
 });
 
 const clearEmailSenderRouteAction = withAuth(async (user, { tenant }, input: RouteInput) => {
   const { db } = await authorize(user, tenant, 'update');
   await db.table('email_sender_routes').where(routePredicate(input)).del();
   await TenantEmailService.invalidateTenantSettings(tenant);
-  return { success: true };
+  return { success: true as const };
 });
 
 const verifyEmailSenderAction = withAuth(async (user, { tenant }, senderId: string) => {
