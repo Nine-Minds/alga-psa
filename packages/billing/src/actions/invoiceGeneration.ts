@@ -10,7 +10,6 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
 import { BillingEngine, UnresolvedCatalogPricingError } from '../lib/billing/billingEngine';
 import { reconcileWindowAttribution } from '../lib/billing/contractLineAttributionWriter';
-import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
 import { listUnmaterializedClientCadenceWindowLineIds } from '../lib/billing/clientCadenceWindowMaterialization';
 import {
   getCycleBillingProfileId,
@@ -54,7 +53,11 @@ import { v4 as uuidv4 } from 'uuid';
 import { auditLog } from '@alga-psa/db';
 import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
 import { calculateAndDistributeTax, claimRecurringServicePeriodsForSelectionInputs, getClientDetails, persistInvoiceCharges, updateInvoiceTotalsAndRecordTransaction, validateClientBillingEmail } from '../services/invoiceService';
-import { reconcileContractChangeAdjustmentsForInvoice } from '../lib/billing/reconcileContractChangeAdjustments';
+import { reconcileAutomaticInvoiceAdjustments } from '../lib/billing/reconcileAutomaticInvoiceDiscounts';
+import {
+  reconcileContractChangeAdjustmentsForInvoice,
+  releaseOrphanedContractAdjustments,
+} from '../lib/billing/reconcileContractChangeAdjustments';
 
 
 
@@ -3855,6 +3858,9 @@ export async function createInvoiceFromBillingResultImpl(
       tenant,
       userId,
     );
+    // A deleted owner draft releases its settlement back to pending so this
+    // invoice can claim it instead of stranding the true-up.
+    await releaseOrphanedContractAdjustments({ trx, tenant });
     const reconciledAdjustments = await reconcileContractChangeAdjustmentsForInvoice({
       trx,
       tenant,
@@ -3934,41 +3940,17 @@ export async function createInvoiceFromBillingResultImpl(
       }
     }
 
-    // Process discounts (if any) - This might need adjustment if persistInvoiceCharges handles them
-    // For now, assume discounts are separate and need processing here.
-    let discountSubtotalAdjustment = 0;
-    // An invoice-level discount is not attributable to one segment — it applies
-    // across the whole invoice — so it takes the client default, which is what
-    // the chain's terminal step means (F029).
-    const discountBillingProfileId = billingResult.discounts.length > 0
-      ? await getClientDefaultBillingProfileId(trx, tenant, client.client_id)
-      : null;
-    for (const discount of billingResult.discounts) {
-      const netAmount = Math.round(-(discount.amount || 0));
-      const discountItem = {
-        item_id: uuidv4(),
-        invoice_id: newInvoice!.invoice_id,
-        description: discount.discount_name,
-        quantity: 1,
-        unit_price: netAmount,
-        net_amount: netAmount,
-        tax_amount: 0,
-        tax_rate: 0,
-        total_price: netAmount,
-        is_taxable: false,
-        is_discount: true,
-        is_manual: false,
-        billing_profile_id: discountBillingProfileId,
-        billing_profile_source: 'client_default' as const,
-        tenant,
-        created_by: userId
-      };
-      await tenantDb(trx, tenant).table('invoice_charges').insert(discountItem);
-      discountSubtotalAdjustment += netAmount; // Add negative amount
-    }
+    // Reconcile automatic discounts against the actual persisted (and
+    // reconciled) charge rows through the shared evaluator, with provenance, so
+    // a cancelled/edited true-up cannot leave a stale discount amount behind.
+    const discountMagnitude = await reconcileAutomaticInvoiceAdjustments({
+      trx,
+      tenant,
+      invoiceId: newInvoice!.invoice_id,
+    });
 
-    // Use the subtotal returned by persistInvoiceCharges + discount adjustment
-    const subtotal = calculatedSubtotal + discountSubtotalAdjustment;
+    // Use the subtotal from persisted charges minus the reconciled discounts.
+    const subtotal = calculatedSubtotal - discountMagnitude;
 
     // Leverage the shared tax helper so automated invoices mirror manual invoices
     const calculatedTax = await calculateAndDistributeTax(

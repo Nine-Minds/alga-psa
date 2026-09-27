@@ -1,3 +1,9 @@
+import { BillingEngine } from '@alga-psa/billing/lib/billing/billingEngine';
+import {
+  reconcileContractChangeAdjustmentsForInvoice,
+  resolveContractChangeAdjustmentTargets,
+  releaseOrphanedContractAdjustments,
+} from '@alga-psa/billing/lib/billing/reconcileContractChangeAdjustments';
 import { getAvailableRecurringDueWork } from '@alga-psa/billing/actions/billingAndTax';
 import { repairMissingRecurringServicePeriods, repairAllRecurringServicePeriodsForTenant } from '@alga-psa/billing/actions/recurringServicePeriodActions';
 import { createCustomContractLine } from '@alga-psa/billing/actions/contractLinePresetActions';
@@ -49,6 +55,7 @@ import {
   ensureClientPlanBundlesTable,
   updateCatalogPrice,
   unwrapInvoiceResult,
+  materializeRecurringServicePeriods,
 } from '../../../../../test-utils/billingTestHelpers';
 
 process.env.DB_PORT = process.env.DB_PORT === '6432' ? '5432' : process.env.DB_PORT;
@@ -1483,7 +1490,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       const preview = await previewInvoice(februaryCycle);
       expect(preview.success, JSON.stringify(preview)).toBe(true);
       if (!preview.success) throw new Error('unreachable');
-      expect(preview.data.subtotal).toBe(120000); // 10 × $120 catalog, never 0
+      expect(preview.data!.subtotal).toBe(120000); // 10 × $120 catalog, never 0
 
       const february = unwrapInvoiceResult(await generateInvoice(februaryCycle));
       expect(february.subtotal).toBe(120000);
@@ -1889,7 +1896,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       const preview = await previewInvoice(februaryCycle);
       expect(preview.success, JSON.stringify(preview)).toBe(true);
       if (!preview.success) throw new Error('unreachable');
-      expect(preview.data.subtotal).toBe(378000);
+      expect(preview.data!.subtotal).toBe(378000);
       expect(preview.data.tax).toBe(42000);
       expect(preview.data.total).toBe(420000);
       expect(preview.data.items.find(item => item.total < 0)?.total).toBe(-42000);
@@ -1949,6 +1956,223 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         value instanceof Date
           ? value.toISOString().slice(0, 10)
           : String(value ?? '').slice(0, 10);
+
+      async function cloneDraftBase(invoiceId: string) {
+        const source = await context.db('invoices').where({ tenant: context.tenantId, invoice_id: invoiceId }).first();
+        const id = uuidv4();
+        await context.db('invoices').insert({ ...source, invoice_id: id, invoice_number: `COPY-${id}`, billing_cycle_id: null,
+          created_at: '2099-01-03T00:00:00Z' });
+        const charges = await context.db('invoice_charges').where({ tenant: context.tenantId, invoice_id: invoiceId, is_discount: false })
+          .whereNull('adjustment_source_kind');
+        for (const charge of charges) {
+          const itemId = uuidv4();
+          await context.db('invoice_charges').insert({ ...charge, item_id: itemId, invoice_id: id });
+          const details = await context.db('invoice_charge_details').where({ tenant: context.tenantId, item_id: charge.item_id });
+          for (const detail of details) {
+            await context.db('invoice_charge_details').insert({ ...detail, item_id: itemId, item_detail_id: uuidv4() });
+          }
+        }
+        return id;
+      }
+
+      it.each(['client', 'currency', 'line', 'assignment', 'future'] as const)(
+        'does not settle a tenant ledger row with an ineligible %s', async mismatch => {
+          const setup = await setupProductLine();
+          const revision = expectScheduled(await scheduleProduct(setup, setup.users, {
+            quantity: 23, allow_mid_period: true, mid_period_effective_date: '2023-01-16', effective_period_start: '2023-02-01',
+          }));
+          const ledger = await context.db('contract_recurring_unit_adjustments').where({ tenant: context.tenantId, revision_id: revision.revision_id }).first();
+          const invalid = { ...ledger, adjustment_id: uuidv4(), revision_id: uuidv4() };
+          if (mismatch === 'client') invalid.client_id = uuidv4();
+          if (mismatch === 'currency') invalid.currency_code = 'EUR';
+          if (mismatch === 'line') invalid.contract_line_id = uuidv4();
+          if (mismatch === 'assignment') invalid.client_contract_id = uuidv4();
+          if (mismatch === 'future') {
+            invalid.adjustment_period_start = '2024-01-01';
+            invalid.adjustment_period_end = '2024-02-01';
+            invalid.mid_period_effective_date = '2024-01-16';
+          }
+          // Exercise the supplied-row selector, including its synthetic preview candidate.
+          const selected = await resolveContractChangeAdjustmentTargets({
+            conn: context.db, tenant: context.tenantId, clientId: context.clientId, currencyCode: 'USD',
+            window: { start: '2023-02-01', end: '2023-03-01' }, lineIds: [setup.contractLineId],
+            clientContractIds: [ledger.client_contract_id], adjustments: [ledger, invalid],
+          });
+          expect(selected.adjustments.map(row => row.adjustment_id)).toEqual([ledger.adjustment_id]);
+          // The persistence caller reads the entire tenant ledger. Keep both
+          // rows present so this proves it scopes supplied rows too.
+          await context.db('contract_recurring_unit_adjustments').insert(invalid);
+          const invoice = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+          expect(invoice.subtotal).toBe(405484);
+          const rows = await context.db('invoice_charges').where({ tenant: context.tenantId, invoice_id: invoice.invoice_id, adjustment_source_kind: 'contract_change' });
+          expect(rows).toHaveLength(1);
+          expect(rows[0].adjustment_source_id).toBe(revision.revision_id);
+        },
+      );
+
+      it('selects one invoice identity for equal windows and counts only its persisted settlement', async () => {
+        const setup = await setupProductLine();
+        expectScheduled(await scheduleProduct(setup, setup.users, {
+          quantity: 23, allow_mid_period: true, mid_period_effective_date: '2023-01-16', effective_period_start: '2023-02-01',
+        }));
+        const owner = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+        const otherId = await cloneDraftBase(owner.invoice_id);
+        await context.db.transaction(async trx => {
+          const other = await reconcileContractChangeAdjustmentsForInvoice({ trx, tenant: context.tenantId, invoiceId: otherId });
+          expect(other.amountCents).toBe(0);
+          const first = await reconcileContractChangeAdjustmentsForInvoice({ trx, tenant: context.tenantId, invoiceId: owner.invoice_id });
+          expect(first.amountCents).toBe(15484);
+          const retried = await reconcileContractChangeAdjustmentsForInvoice({ trx, tenant: context.tenantId, invoiceId: otherId });
+          expect(retried.amountCents).toBe(0);
+        });
+        const rows = await context.db('invoice_charges').where({ tenant: context.tenantId, adjustment_source_kind: 'contract_change' });
+        expect(rows).toHaveLength(1);
+        expect(rows[0].invoice_id).toBe(owner.invoice_id);
+      });
+
+      it('serializes competing invoice claims on independent database connections', async () => {
+        const setup = await setupProductLine();
+        expectScheduled(await scheduleProduct(setup, setup.users, {
+          quantity: 23, allow_mid_period: true, mid_period_effective_date: '2023-01-16', effective_period_start: '2023-02-01',
+        }));
+        const owner = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+        const otherId = await cloneDraftBase(owner.invoice_id);
+        await context.db('invoice_charges').where({ tenant: context.tenantId, adjustment_source_kind: 'contract_change' }).delete();
+        await context.db('contract_recurring_unit_adjustments').where({ tenant: context.tenantId }).update({
+          status: 'pending', settled_invoice_id: null, settled_charge_id: null, settled_at: null,
+        });
+        const connection = context.db.client.config.connection;
+        await context.transaction!.commit();
+        const pool = knexFactory({ client: 'pg', connection, pool: { min: 0, max: 4 } });
+        try {
+          const results = await Promise.all([owner.invoice_id, otherId].map(invoiceId =>
+            pool.transaction(trx => reconcileContractChangeAdjustmentsForInvoice({ trx, tenant: context.tenantId, invoiceId })),
+          ));
+          expect(results.map(result => result.amountCents)).toEqual([15484, 0]);
+          const rows = await pool('invoice_charges').where({ tenant: context.tenantId, adjustment_source_kind: 'contract_change' });
+          expect(rows).toHaveLength(1);
+          expect(Number(rows[0].net_amount)).toBe(results.reduce((sum, result) => sum + result.amountCents, 0));
+          expect(rows[0].invoice_id).toBe(owner.invoice_id);
+        } finally {
+          await pool.destroy();
+        }
+      });
+
+      it('releases a draft settlement after its currency changes and carries it to an eligible invoice', async () => {
+        const setup = await setupProductLine();
+        expectScheduled(await scheduleProduct(setup, setup.users, {
+          quantity: 23, allow_mid_period: true, mid_period_effective_date: '2023-01-16', effective_period_start: '2023-02-01',
+        }));
+        const owner = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+        const nextId = await cloneDraftBase(owner.invoice_id);
+        await context.db('invoices').where({ tenant: context.tenantId, invoice_id: owner.invoice_id }).update({ currency_code: 'EUR' });
+        await context.db.transaction(async trx => {
+          expect((await reconcileContractChangeAdjustmentsForInvoice({ trx, tenant: context.tenantId, invoiceId: owner.invoice_id })).amountCents).toBe(0);
+          expect((await reconcileContractChangeAdjustmentsForInvoice({ trx, tenant: context.tenantId, invoiceId: nextId })).amountCents).toBe(15484);
+        });
+        const rows = await context.db('invoice_charges').where({ tenant: context.tenantId, adjustment_source_kind: 'contract_change' });
+        expect(rows).toHaveLength(1);
+        expect(rows[0].invoice_id).toBe(nextId);
+        expect(dateOnly(rows[0].adjustment_period_end)).toBe('2023-02-01');
+      });
+
+      it.each(['percentage', 'fixed'] as const)('keeps %s discount parity for older coverage and cancellation', async discountType => {
+        const setup = await setupProductLine();
+        const discountId = uuidv4();
+        await context.db('discounts').insert({ tenant: context.tenantId, discount_id: discountId,
+          discount_name: 'January only', discount_type: discountType, value: discountType === 'percentage' ? 0.1 : 400000,
+          start_date: '2023-01-01', end_date: '2023-02-01', is_active: true });
+        await context.db('contract_line_discounts').insert({ tenant: context.tenantId, discount_id: discountId, contract_line_id: setup.contractLineId });
+        const first = expectScheduled(await scheduleProduct(setup, setup.users, {
+          quantity: 23, allow_mid_period: true, mid_period_effective_date: '2023-01-16', effective_period_start: '2023-02-01',
+        }));
+        const preview = await previewInvoice(setup.billingCycleId);
+        expect(preview.success).toBe(true);
+        const invoice = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+        const expected = discountType === 'percentage' ? 364936 : 5484;
+        expect(Number(invoice.subtotal)).toBe(expected);
+        if (preview.success) expect(Number(preview.data!.subtotal)).toBe(expected);
+        expectScheduled(await scheduleProduct(setup, setup.users, {
+          quantity: 23, effective_period_start: '2023-02-01', expected_version: first.version,
+        }));
+        await new BillingEngine().recalculateInvoice(invoice.invoice_id);
+        await new BillingEngine().recalculateInvoice(invoice.invoice_id);
+        const refreshed = await context.db('invoices').where({ tenant: context.tenantId, invoice_id: invoice.invoice_id }).first();
+        expect(Number(refreshed.subtotal)).toBe(discountType === 'percentage' ? 351000 : 0);
+        const rows = await context.db('invoice_charges').where({ tenant: context.tenantId, invoice_id: invoice.invoice_id, is_discount: true });
+        expect(rows).toHaveLength(1);
+        expect(Number(rows[0].net_amount)).toBe(discountType === 'percentage' ? -39000 : -390000);
+      });
+
+      it('bills an in-advance mid-period event once and starts the new quantity at the next boundary', async () => {
+        const setup = await setupProductLine();
+        await context.db('contract_lines').where({ tenant: context.tenantId, contract_line_id: setup.contractLineId })
+          .update({ billing_timing: 'advance' });
+        const januaryCycle = await setupInvoiceCycle(2023, 1, 1);
+        await materializeRecurringServicePeriods(context, setup.contractLineId);
+        expectScheduled(await scheduleProduct(setup, setup.users, {
+          quantity: 23, allow_mid_period: true, mid_period_effective_date: '2023-01-16', effective_period_start: '2023-02-01',
+        }));
+        const january = unwrapInvoiceResult<any>(await generateInvoice(januaryCycle));
+        expect(Number(january.subtotal)).toBe(405484);
+        const february = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+        expect(Number(february.subtotal)).toBe(420000);
+        const adjustments = await context.db('invoice_charges').where({ tenant: context.tenantId, adjustment_source_kind: 'contract_change' });
+        expect(adjustments).toHaveLength(1);
+        expect(adjustments[0].invoice_id).toBe(january.invoice_id);
+      });
+
+      it('carries a pending adjustment past a finalized invoice with its original discount coverage', async () => {
+        const setup = await setupProductLine();
+        const revision = expectScheduled(await scheduleProduct(setup, setup.users, {
+          quantity: 23, allow_mid_period: true, mid_period_effective_date: '2023-01-16', effective_period_start: '2023-02-01',
+        }));
+        const january = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+        // Model the original invoice finalizing before the valid pending event
+        // is materialized: keep its base charges and release its unbilled event.
+        await context.db('invoice_charges').where({ tenant: context.tenantId, invoice_id: january.invoice_id, adjustment_source_kind: 'contract_change' }).delete();
+        await context.db('contract_recurring_unit_adjustments').where({ tenant: context.tenantId, revision_id: revision.revision_id }).update({
+          status: 'pending', settled_invoice_id: null, settled_charge_id: null, settled_at: null,
+        });
+        await context.db('invoices').where({ tenant: context.tenantId, invoice_id: january.invoice_id })
+          .update({ status: 'sent', finalized_at: new Date().toISOString(), subtotal: 390000 });
+        const before = await context.db('invoices').where({ tenant: context.tenantId, invoice_id: january.invoice_id }).first();
+        const discountId = uuidv4();
+        await context.db('discounts').insert({ tenant: context.tenantId, discount_id: discountId,
+          discount_name: 'January event discount', discount_type: 'percentage', value: 0.1,
+          start_date: '2023-01-01', end_date: '2023-02-01', is_active: true });
+        await context.db('contract_line_discounts').insert({ tenant: context.tenantId, discount_id: discountId, contract_line_id: setup.contractLineId });
+        const cycle = await setupInvoiceCycle(2023, 3, 1);
+        const preview = await previewInvoice(cycle);
+        expect(preview.success).toBe(true);
+        const february = unwrapInvoiceResult<any>(await generateInvoice(cycle));
+        expect(Number(february.subtotal)).toBe(435484 - 43548);
+        if (preview.success) expect(Number(preview.data!.subtotal)).toBe(Number(february.subtotal));
+        const row = await context.db('invoice_charges').where({ tenant: context.tenantId, invoice_id: february.invoice_id, adjustment_source_kind: 'contract_change' }).first();
+        expect(dateOnly(row.adjustment_period_start)).toBe('2023-01-01');
+        expect(dateOnly(row.adjustment_period_end)).toBe('2023-02-01');
+        expect(await context.db('invoices').where({ tenant: context.tenantId, invoice_id: january.invoice_id }).first()).toEqual(before);
+      });
+
+      it('keeps legacy generation and draft refresh working without the additive ledger', async () => {
+        const setup = await setupProductLine();
+        const discountId = uuidv4();
+        await context.db('discounts').insert({ tenant: context.tenantId, discount_id: discountId,
+          discount_name: 'Legacy discount', discount_type: 'percentage', value: 0.1,
+          start_date: '2022-01-01', end_date: null, is_active: true });
+        await context.db('contract_line_discounts').insert({ tenant: context.tenantId, discount_id: discountId, contract_line_id: setup.contractLineId });
+        await context.db.schema.renameTable('contract_recurring_unit_adjustments', 'test_hidden_contract_adjustments');
+        await context.db.schema.alterTable('invoice_charges', table => table.renameColumn('adjustment_source_kind', 'test_hidden_source_kind'));
+        try {
+          const invoice = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+          expect(invoice.subtotal).toBe(351000);
+          await new BillingEngine().recalculateInvoice(invoice.invoice_id);
+          await context.db.transaction(trx => releaseOrphanedContractAdjustments({ trx, tenant: context.tenantId }));
+        } finally {
+          await context.db.schema.alterTable('invoice_charges', table => table.renameColumn('test_hidden_source_kind', 'adjustment_source_kind'));
+          await context.db.schema.renameTable('test_hidden_contract_adjustments', 'contract_recurring_unit_adjustments');
+        }
+      });
 
       it('records one prorated charge, bills the new standing quantity next period, and persists source provenance', async () => {
         const setup = await setupProductLine();
@@ -2393,7 +2617,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       const preview = await previewInvoice(februaryCycle);
       expect(preview.success, JSON.stringify(preview)).toBe(true);
       if (!preview.success) throw new Error('unreachable');
-      expect(preview.data.subtotal).toBe(420000);
+      expect(preview.data!.subtotal).toBe(420000);
       const reviewed = preview.expectedRecurringPricingSources ?? [];
       expect(reviewed.length).toBeGreaterThan(0);
       expect(reviewed.find((source) => source.serviceId === setup.users.serviceId)).toMatchObject({

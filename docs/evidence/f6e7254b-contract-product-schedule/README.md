@@ -589,3 +589,60 @@ the round-1 behavior.
   reconcile-before-tax behavior.
 - Added a no-connection guard to the pending-adjustment lookup so pure unit
   fixtures without a knex instance are unaffected.
+
+## Takeover settlement repair — 2026-09-27
+
+Review [the mid-period walkthrough](review-guide.md) first. This repair finishes
+the interrupted draft reconciliation work on top of `0924925af4`.
+
+- Every supplied ledger row is checked for client, currency, assignment,
+  represented line and affected-period eligibility. Reconciliation targets an
+  invoice ID, so equal-window drafts cannot share a settlement. Database locks
+  serialize competing claims; totals include only successfully persisted rows.
+- An editable owner that loses its eligibility releases its adjustment. Deleted
+  owners release orphaned settlements; finalized owners remain untouched.
+- `resolveInvoiceDiscounts` shares policy selection between preview and
+  persistence using service coverage. The shared evaluator handles the reconciled
+  positive base once. Automatic percentage rows bypass the manual percentage
+  recalculator before tax, preserving correct discounts on invoices with credits.
+- True-ups retain the service tax region and contract-line billing profile.
+  Their compute coverage has an inclusive end; adjustment provenance remains
+  half-open. The companion plan already records this convention.
+- Predating-schema generation and recalculation continue to work without the
+  adjustment ledger or source-kind column. A behavioral compatibility case
+  verifies an unchanged contract with its percentage discount.
+
+### Verification
+
+Commands ran from the indicated directory against this repair:
+
+| Directory | Command | Result |
+| --- | --- | --- |
+| `server` | `TEST_DB_NAME=test_db_pcs_sched REQUIRE_DB=1 npx vitest run src/test/infrastructure/billing/invoices/contractQuantityUsageSemantics.test.ts` | 118 passed |
+| `server` | `npx vitest run src/test/unit/billing --exclude '**/taxRateCaps.db.test.ts'` | 170 files, 897 passed |
+| `packages/billing` | `npx vitest run` | 313 files, 1,557 passed |
+| repository root | `NODE_OPTIONS=--max-old-space-size=6144 npm run typecheck --workspace=@alga-psa/billing` | Passed |
+| repository root | `npm run build --workspace=@alga-psa/billing` | Passed |
+| repository root | ESLint on the seven changed billing implementation files | 0 errors, 173 warnings |
+| repository root | `git diff --check` | Passed |
+
+The infrastructure suite adds 13 cases: five eligibility mismatches; two drafts
+with equal windows; claims through independent PostgreSQL connections; currency
+reassignment; percentage/fixed discount preview and cancellation parity;
+in-advance billing; finalized-period carry-forward; and schema compatibility.
+Existing tests retain the $3,900 → $4,200 example, decreases, zero, rate overrides,
+non-USD, first/last-day changes, history, locked periods and stale-preview refusal.
+The server unit run excludes the separately configured `taxRateCaps.db` suite;
+it is not a claim that every server test was run.
+
+### Remaining live validation
+
+`curl --max-time 5 http://100.109.101.64:23029/api/health` failed to connect
+(HTTP status `000`). The app server was not started. No changed-artifact live UI
+smoke passed during this takeover. The durable HTML review guide and the committed
+walkthrough now lead with the mid-period +3-seat flow. Earlier screenshots retain
+their original artifact attribution. Deploy the repair to the review app and
+capture that flow before marking live acceptance complete.
+
+Companion branch adoption and combined-branch settlement/tax validation remain
+separate integration work. This takeover did not change or publish that worktree.

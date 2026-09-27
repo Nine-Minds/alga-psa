@@ -550,6 +550,9 @@ export async function recalculatePercentageDiscountInvoiceCharges(
   const percentageDiscountItems = invoiceItems.filter(
     (item) =>
       item.is_discount === true &&
+      // Source-linked automatic discounts were already resolved once by the
+      // shared evaluator; this legacy recalculator owns manual rows only.
+      (item as ManualInvoiceItem & { adjustment_source_kind?: string }).adjustment_source_kind !== 'discount' &&
       item.discount_type === 'percentage' &&
       item.discount_percentage != null,
   );

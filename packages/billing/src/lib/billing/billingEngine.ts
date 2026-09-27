@@ -1,3 +1,4 @@
+import { resolveInvoiceDiscounts } from './resolveInvoiceDiscounts';
 import { applyProjectCapAdjustments } from './domain/projectCapAdjustments';
 import { resolveUsageMeasurementRevision } from './usageMeasurementTransitions';
 import { Knex } from "knex";
@@ -99,7 +100,6 @@ import { TaxService } from "../../services/taxService";
 import {
   resolveFixedPlanLevelBaseRate,
   hasUnitPricedFixedMembers,
-  filterApplicableDiscounts,
   buildChargeComputeTaxContext,
   buildTimeEntryWorkItemSnapshot,
   type ChargeComputeClient,
@@ -150,14 +150,17 @@ import {
 } from "../../models/projectBillingModelUtils";
 import { isProjectMaterialEligible } from "@alga-psa/inventory/lib";
 import { joinEffectiveServicePrice } from "./pricing/joinEffectiveServicePrice";
-import { reconcileContractChangeAdjustmentsForInvoice } from "./reconcileContractChangeAdjustments";
+import {
+  contractAdjustmentDateOnly,
+  reconcileContractChangeAdjustmentsForInvoice,
+  releaseOrphanedContractAdjustments,
+  resolveContractChangeChargesForWindow,
+  type ContractChangeLedgerRow,
+} from "./reconcileContractChangeAdjustments";
+import { reconcileAutomaticInvoiceAdjustments } from "./reconcileAutomaticInvoiceDiscounts";
 // Workflow imports removed as event emission is moved back to the calling action
 
-type DiscountQueryRow = IDiscount & {
-  contract_line_id?: string | null;
-  start_date: ISO8601String;
-  end_date?: ISO8601String | null;
-};
+
 
 type ResolvedRecurringChargeTiming = {
   servicePeriodRecordId: string | null;
@@ -6654,100 +6657,40 @@ export class BillingEngine {
     if (lineIds.length === 0) return [];
 
     const db = tenantDb(this.knex, this.tenant);
-    let rawAdjustments: Array<Record<string, unknown>>;
+    let adjustments: ContractChangeLedgerRow[];
     try {
-      rawAdjustments = (await db
-        .table("contract_recurring_unit_adjustments")
-        .where({ tenant: this.tenant })
-        .whereIn("status", ["pending", "settled"])
-        .whereIn("contract_line_id", lineIds)
-        .andWhere("amount_cents", "!=", 0)
-        // The affected period must have begun by the end of this billing window.
-        // A pending adjustment whose affected invoice finalized first therefore
-        // carries forward onto the next eligible draft; a draft for an earlier
-        // window never pulls a future true-up forward.
-        .andWhere("adjustment_period_start", "<", billingPeriod.endDate)
-        .select(
-          "adjustment_id",
-          "contract_line_id",
-          "service_id",
-          "config_id",
-          "client_id",
-          "client_contract_id",
-          "currency_code",
-          "status",
-          "settled_invoice_id",
-          "revision_id",
-          "revision_version",
-          "adjustment_period_start",
-          "adjustment_period_end",
-          "previous_quantity",
-          "new_quantity",
-          "quantity_delta",
-          "unit_rate_cents",
-          "covered_days",
-          "full_period_days",
-          "amount_cents",
-          "reason",
-        )) as Array<Record<string, unknown>>;
+      // One authoritative target selector, shared with reconciliation: an
+      // adjustment is priced here only when this billing window is its target,
+      // never when an earlier editable draft already owns it.
+      adjustments = await resolveContractChangeChargesForWindow({
+        conn: this.knex,
+        tenant: this.tenant,
+        clientId,
+        currencyCode: billingCurrency,
+        window: {
+          start: contractAdjustmentDateOnly(billingPeriod.startDate),
+          end: contractAdjustmentDateOnly(billingPeriod.endDate),
+        },
+        lineIds,
+        clientContractIds: [
+          ...new Set(
+            clientContractLines
+              .map((line) => line.client_contract_id)
+              .filter((id): id is string => Boolean(id)),
+          ),
+        ],
+      });
     } catch (error) {
       // Additive migration: a schema that predates the ledger bills exactly as
       // before rather than failing the whole invoice.
       if ((error as { code?: string })?.code === "42P01") return [];
       throw error;
     }
-    if (rawAdjustments.length === 0) return [];
+    if (adjustments.length === 0) return [];
 
     const lineById = new Map(
       clientContractLines.map((line) => [line.client_contract_line_id, line]),
     );
-
-    // Explicit client / contract-assignment / currency / included-line
-    // eligibility. A draft-settled row still shows; a finalized settlement is
-    // already billed and is excluded until a new revision creates a new ledger
-    // row.
-    const settledInvoiceIds = [
-      ...new Set(
-        rawAdjustments
-          .map((row) => (row.settled_invoice_id == null ? null : String(row.settled_invoice_id)))
-          .filter((id): id is string => Boolean(id)),
-      ),
-    ];
-    const settledInvoices = settledInvoiceIds.length
-      ? ((await db
-          .table("invoices")
-          .where({ tenant: this.tenant })
-          .whereIn("invoice_id", settledInvoiceIds)
-          .select("invoice_id", "status", "finalized_at")) as Array<{
-          invoice_id: string;
-          status: string | null;
-          finalized_at: string | Date | null;
-        }>)
-      : [];
-    const editableSettledIds = new Set(
-      settledInvoices
-        .filter((row) => !row.finalized_at && row.status === "draft")
-        .map((row) => row.invoice_id),
-    );
-
-    const adjustments = rawAdjustments.filter((row) => {
-      if (row.status === "settled") {
-        const settledId = row.settled_invoice_id == null ? null : String(row.settled_invoice_id);
-        if (!settledId || !editableSettledIds.has(settledId)) return false;
-      }
-      if (row.client_id != null && String(row.client_id) !== clientId) return false;
-      if (row.currency_code != null && billingCurrency && String(row.currency_code) !== billingCurrency) {
-        return false;
-      }
-      if (row.client_contract_id != null) {
-        const line = lineById.get(String(row.contract_line_id));
-        const lineAssignment = line?.client_contract_id ?? null;
-        if (lineAssignment && lineAssignment !== String(row.client_contract_id)) return false;
-      }
-      return true;
-    });
-    if (adjustments.length === 0) return [];
-
     const serviceIds = [...new Set(adjustments.map((row) => String(row.service_id)))];
     const services = (await db
       .table("service_catalog")
@@ -6804,9 +6747,14 @@ export class BillingEngine {
         }
       }
 
+      const profile = line
+        ? resolveChargeProfile(await this.loadChargeProfileAssignments(clientId, line))
+        : null;
       charges.push({
         type: "fixed",
         serviceId,
+        billing_profile_id: profile?.billingProfileId,
+        billing_profile_source: profile?.source,
         config_id: String(row.config_id),
         client_contract_line_id: contractLineId,
         serviceName: `Mid-period quantity change: ${service?.service_name ?? "recurring item"}`,
@@ -6820,7 +6768,7 @@ export class BillingEngine {
         client_contract_id: line?.client_contract_id || undefined,
         contract_name: line?.contract_name || undefined,
         servicePeriodStart: normalizeRecurringBoundary(row.adjustment_period_start),
-        servicePeriodEnd: normalizeRecurringBoundary(row.adjustment_period_end),
+        servicePeriodEnd: Temporal.PlainDate.from(normalizeRecurringBoundary(row.adjustment_period_end)).subtract({ days: 1 }).toString(),
         billingTiming: line?.billing_timing ?? "arrears",
         contractChangeAdjustment: {
           adjustmentId: String(row.adjustment_id),
@@ -7232,173 +7180,7 @@ export class BillingEngine {
       throw new Error("tenant context not found");
     }
 
-    const db = tenantDb(this.knex, this.tenant);
-    const client = await db
-      .table("clients")
-      .where({
-        client_id: clientId,
-        tenant: this.tenant,
-      })
-      .first();
-    if (!client) {
-      throw new Error(`Client ${clientId} not found in tenant ${this.tenant}`);
-    }
-
-    const discountWindowsByContractLine =
-      this.buildDiscountEvaluationWindowsByContractLine(charges);
-    const { start: candidateStart, endInclusive: candidateEnd } =
-      this.getDiscountCandidateQueryBounds(
-        billingPeriod,
-        discountWindowsByContractLine,
-      );
-
-    // Query discounts via client_contracts -> contracts -> contract_lines
-    // instead of the deprecated client_contract_lines table
-    const discountRowsQuery = db.table("discounts");
-    db.tenantJoin(
-      discountRowsQuery,
-      "contract_line_discounts",
-      "discounts.discount_id",
-      "contract_line_discounts.discount_id",
-    );
-    db.tenantJoin(
-      discountRowsQuery,
-      "contract_lines as cl",
-      "cl.contract_line_id",
-      "contract_line_discounts.contract_line_id",
-    );
-    db.tenantJoin(
-      discountRowsQuery,
-      "contracts as c",
-      "c.contract_id",
-      "cl.contract_id",
-    );
-    db.tenantJoin(
-      discountRowsQuery,
-      "client_contracts as cc",
-      "cc.contract_id",
-      "c.contract_id",
-    );
-
-    const discountRows = (await discountRowsQuery
-      .where({
-        "cc.client_id": clientId,
-        "cc.tenant": client.tenant,
-        "discounts.is_active": true,
-      })
-      .andWhere("discounts.start_date", "<=", candidateEnd)
-      .andWhere(function (this: Knex.QueryBuilder) {
-        this.whereNull("discounts.end_date").orWhere(
-          "discounts.end_date",
-          ">",
-          candidateStart,
-        );
-      })
-      .select(
-        "discounts.*",
-        "contract_line_discounts.contract_line_id",
-      )) as DiscountQueryRow[];
-
-    return filterApplicableDiscounts(discountRows, billingPeriod, charges);
-  }
-
-  private buildDiscountEvaluationWindowsByContractLine(
-    charges: IBillingCharge[],
-  ): Map<string, Array<{ start: ISO8601String; endInclusive: ISO8601String }>> {
-    const windowsByContractLine = new Map<
-      string,
-      Array<{ start: ISO8601String; endInclusive: ISO8601String }>
-    >();
-
-    for (const charge of charges) {
-      if (
-        !charge.client_contract_line_id ||
-        !charge.servicePeriodStart ||
-        !charge.servicePeriodEnd
-      ) {
-        continue;
-      }
-
-      const contractLineId = charge.client_contract_line_id;
-      const window = {
-        start: toISODate(toPlainDate(charge.servicePeriodStart)),
-        endInclusive: toISODate(toPlainDate(charge.servicePeriodEnd)),
-      };
-      const existingWindows = windowsByContractLine.get(contractLineId) ?? [];
-      const alreadyPresent = existingWindows.some(
-        (existingWindow) =>
-          existingWindow.start === window.start &&
-          existingWindow.endInclusive === window.endInclusive,
-      );
-
-      if (!alreadyPresent) {
-        existingWindows.push(window);
-        windowsByContractLine.set(contractLineId, existingWindows);
-      }
-    }
-
-    return windowsByContractLine;
-  }
-
-  private getDiscountCandidateQueryBounds(
-    billingPeriod: IBillingPeriod,
-    discountWindowsByContractLine: Map<
-      string,
-      Array<{ start: ISO8601String; endInclusive: ISO8601String }>
-    >,
-  ): { start: ISO8601String; endInclusive: ISO8601String } {
-    const invoiceWindow = {
-      start: toISODate(toPlainDate(billingPeriod.startDate)),
-      endInclusive: toISODate(toPlainDate(billingPeriod.endDate)),
-    };
-
-    const candidateWindows = [
-      invoiceWindow,
-      ...Array.from(discountWindowsByContractLine.values()).flat(),
-    ];
-
-    return candidateWindows.reduce(
-      (bounds, window) => ({
-        start: window.start < bounds.start ? window.start : bounds.start,
-        endInclusive:
-          window.endInclusive > bounds.endInclusive
-            ? window.endInclusive
-            : bounds.endInclusive,
-      }),
-      invoiceWindow,
-    );
-  }
-
-  private discountMatchesEvaluationWindow(
-    discount: DiscountQueryRow,
-    billingPeriod: IBillingPeriod,
-    discountWindowsByContractLine: Map<
-      string,
-      Array<{ start: ISO8601String; endInclusive: ISO8601String }>
-    >,
-  ): boolean {
-    const invoiceWindow = {
-      start: toISODate(toPlainDate(billingPeriod.startDate)),
-      endInclusive: toISODate(toPlainDate(billingPeriod.endDate)),
-    };
-    const contractLineWindows = discount.contract_line_id
-      ? discountWindowsByContractLine.get(discount.contract_line_id)
-      : undefined;
-    const evaluationWindows =
-      contractLineWindows && contractLineWindows.length > 0
-        ? contractLineWindows
-        : [invoiceWindow];
-
-    const discountStart = toISODate(toPlainDate(discount.start_date));
-    const discountEndExclusive = discount.end_date
-      ? toISODate(toPlainDate(discount.end_date))
-      : null;
-
-    return evaluationWindows.some(
-      (window) =>
-        discountStart <= window.endInclusive &&
-        (discountEndExclusive == null || discountEndExclusive > window.start),
-    );
+    return resolveInvoiceDiscounts(this.knex, this.tenant, clientId, billingPeriod, charges);
   }
 
   private async fetchAdjustments(clientId: string): Promise<IAdjustment[]> {
@@ -7498,8 +7280,11 @@ export class BillingEngine {
     // truth after invoice creation; this path should only update tax and totals.
     const recalculate = async (trx: Knex.Transaction) => {
       // Draft reconciliation: converge any pending/edited/cancelled mid-period
-      // true-up onto this editable draft before tax is recomputed.
+      // true-up onto this editable draft, then re-derive automatic discounts
+      // from the reconciled rows through the shared evaluator, before tax.
+      await releaseOrphanedContractAdjustments({ trx, tenant });
       await reconcileContractChangeAdjustmentsForInvoice({ trx, tenant, invoiceId });
+      await reconcileAutomaticInvoiceAdjustments({ trx, tenant, invoiceId });
       // Step 1: Recalculate and distribute tax across all items using the service function
       console.log(
         `[recalculateInvoice] Calling calculateAndDistributeTax for invoice ${invoiceId}`,

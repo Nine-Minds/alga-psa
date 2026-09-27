@@ -32,6 +32,9 @@ export interface DiscountsAndAdjustmentsComputeResult {
   explanations: ChargeExplanation[];
 }
 
+export type DiscountEvaluationCharge = Pick<IBillingCharge,
+  'client_contract_line_id' | 'servicePeriodStart' | 'servicePeriodEnd'>;
+
 interface EvaluationWindow {
   start: string;
   endInclusive: string;
@@ -47,7 +50,7 @@ function dateOnly(value: ISO8601String | Date): string {
 }
 
 export function buildDiscountEvaluationWindowsByContractLine(
-  charges: IBillingCharge[],
+  charges: DiscountEvaluationCharge[],
 ): Map<string, EvaluationWindow[]> {
   const windowsByLine = new Map<string, EvaluationWindow[]>();
   for (const charge of charges) {
@@ -80,7 +83,7 @@ export function buildDiscountEvaluationWindowsByContractLine(
 export function filterApplicableDiscounts(
   candidates: DiscountComputeCandidate[],
   billingPeriod: IBillingPeriod,
-  charges: IBillingCharge[],
+  charges: DiscountEvaluationCharge[],
 ): IDiscount[] {
   const windowsByLine = buildDiscountEvaluationWindowsByContractLine(charges);
   const invoiceWindow: EvaluationWindow = {

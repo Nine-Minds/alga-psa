@@ -191,3 +191,17 @@ No implementation or PR accompanies this plan. No bulk conversion of legacy prod
 - **Zero-period consumption:** confirm how existing generation records an all-zero obligation and whether the companion displays a zero informational line or omits it. Either presentation must preserve history and prevent repeated pending generation. Confirm fixed-discount behavior when eligible subtotal is zero.
 - **MRR compatibility:** current valuation is unit/bundle oriented and may already understate legacy products. This plan preserves untouched legacy values; whether to correct historical legacy MRR independently needs a separate decision, not an incidental migration change.
 - **Date/currency source integrity:** prove inclusive legacy invoice-detail ends versus exclusive recurring ends and catalog-price effective identity. Retroactive catalog edits and contract currency changes must not mutate protected invoice outcomes.
+
+### Settlement repair (2026-09-27)
+
+Preview and persistence use the same contract-discount selection over covered
+service periods. A carry-forward adjustment retains its original coverage;
+invoice-header dates do not replace those dates. Source-linked automatic
+percentage discounts bypass the manual percentage recalculator before tax.
+
+The settlement target is an invoice identity, including when two drafts share a
+window. Client, assignment, currency, represented line and affected-period
+eligibility apply to every ledger row. Only a successfully materialized charge
+contributes to invoice totals. Removing a line or changing the currency of an
+editable owner releases its settlement for a later eligible draft; finalized
+settlements remain immutable.

@@ -79,7 +79,7 @@ describe('BillingEngine recalculation recurring detail preservation', () => {
         transactionType: 'invoice_adjustment',
       })
     );
-    expect(queriedTables).toEqual(['invoices', 'clients', 'trx:invoices']);
+    expect(queriedTables).toEqual(['invoices', 'clients']);
     expect(queriedTables).not.toContain('invoice_charge_details');
     expect(queriedTables).not.toContain('trx:invoice_charge_details');
   });
@@ -123,7 +123,7 @@ describe('BillingEngine recalculation recurring detail preservation', () => {
     expect(knex).not.toHaveBeenCalled();
     expect(knex.transaction).not.toHaveBeenCalled();
     expect((engine as any).initKnex).not.toHaveBeenCalled();
-    expect(queriedTables).toEqual(['trx:invoices', 'trx:clients', 'trx:invoices']);
+    expect(queriedTables).toEqual(['trx:invoices', 'trx:clients']);
     expect(calculateAndDistributeTax).toHaveBeenLastCalledWith(
       trx,
       'invoice-1',
@@ -133,3 +133,15 @@ describe('BillingEngine recalculation recurring detail preservation', () => {
     );
   });
 });
+
+// These fixtures characterize orchestration with no pending contract events.
+// Database settlement and discount lifecycle are covered by the invoice integration suite.
+vi.mock('@alga-psa/billing/lib/billing/reconcileContractChangeAdjustments', async importOriginal => ({
+  ...(await importOriginal<typeof import('@alga-psa/billing/lib/billing/reconcileContractChangeAdjustments')>()),
+  resolveContractChangeChargesForWindow: vi.fn(async () => []),
+  releaseOrphanedContractAdjustments: vi.fn(async () => undefined),
+  reconcileContractChangeAdjustmentsForInvoice: vi.fn(async () => ({ changed: false, settledInvoiceId: null, amountCents: 0 })),
+}));
+vi.mock('@alga-psa/billing/lib/billing/reconcileAutomaticInvoiceDiscounts', () => ({
+  reconcileAutomaticInvoiceAdjustments: vi.fn(async () => 0),
+}));

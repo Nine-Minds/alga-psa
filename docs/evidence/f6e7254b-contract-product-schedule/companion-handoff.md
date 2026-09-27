@@ -126,3 +126,15 @@ with its pure evaluator, not its settlement persistence, tax or combined build.
 The companion's adoption and combined-branch validation remain integration work.
 This ownership and field mapping define this branch's handoff; they do not claim
 agreement from a companion agent or authorize changes to its worktree.
+
+## Settlement repair integration notes (2026-09-27)
+
+`resolveInvoiceDiscounts` selects policies for both engine preview and draft
+reconciliation using `filterApplicableDiscounts` and actual charge coverage.
+Source-linked automatic discounts must bypass the manual percentage-row
+recalculator; otherwise credits change the discount base a second time.
+
+True-up charge coverage uses an inclusive end, like recurring detail coverage.
+For the January adjustment `[2023-01-01, 2023-02-01)`, its discount-evaluation
+coverage ends on `2023-01-31`. Persisted adjustment provenance retains
+`adjustment_period_end = 2023-02-01`. No second proration occurs in settlement.
