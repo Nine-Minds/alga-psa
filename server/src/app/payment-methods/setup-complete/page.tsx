@@ -2,6 +2,12 @@ import { completeSavedPaymentMethodSetup, inspectSavedPaymentMethodSetup, resolv
 import { verifyAndCompletePublicSetup } from '@alga-psa/billing/services';
 import { Card } from '@alga-psa/ui/components/Card';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
+import type { Metadata } from 'next';
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+  return { title: t('paymentMethods.setupComplete.title', { defaultValue: 'Card Setup' }) };
+}
 
 export default async function PublicCardSetupCompletePage({ searchParams }: { searchParams: Promise<{ tenantContext?: string; session_id?: string }> }) {
   const { tenantContext, session_id: sessionId } = await searchParams;

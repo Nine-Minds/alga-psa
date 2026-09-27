@@ -762,6 +762,8 @@ export class PaymentService {
       amount: event.amount,
       provider: event.provider, // Provider is already 'stripe'
       referenceNumber: event.paymentIntentId,
+      // A PaymentIntent settles once; auto-pay lands it from both the charge path and the webhook.
+      dedupeByReference: true,
       // The settling Checkout Session id so the terminal-status cleanup never
       // retires the very session whose completion settled the invoice.
       externalLinkId: event.externalLinkId,

@@ -1,5 +1,7 @@
 'use client';
 
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal invoices intentionally read the billing feature's auto-pay context for each invoice row. */
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';

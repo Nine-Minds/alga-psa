@@ -56,6 +56,15 @@ export interface ExternalPaymentInput {
    * settling session's own link is never retired alongside stale links.
    */
   externalLinkId?: string;
+  /**
+   * Treat an existing payment with the same provider + reference on this invoice
+   * as the same settlement and return it instead of inserting again. Only for
+   * references that identify exactly one settlement (a Stripe PaymentIntent id,
+   * which both the auto-pay charge path and its webhook land). Accounting-sync
+   * appliers must leave this off: they key idempotency on their sync ledger, and
+   * a replaced allocation legitimately re-applies under the reversed one's reference.
+   */
+  dedupeByReference?: boolean;
 }
 
 export interface ExternalPaymentResult {
@@ -189,9 +198,11 @@ export async function recordExternalPayment(
       .first();
 
     const payments = tenantDb(trx, tenantId).table('invoice_payments');
-    const existing = await payments
-      .where({ invoice_id: input.invoiceId, payment_method: input.provider, reference_number: input.referenceNumber })
-      .first<{ payment_id: string }>();
+    const existing = input.dedupeByReference
+      ? await tenantDb(trx, tenantId).table('invoice_payments')
+        .where({ invoice_id: input.invoiceId, payment_method: input.provider, reference_number: input.referenceNumber })
+        .first<{ payment_id: string }>()
+      : undefined;
     if (existing) {
       const paid = await sumPayments(trx, tenantId, input.invoiceId);
       return { paymentId: existing.payment_id, newStatus: invoice.status, totalPaid: paid, alreadyRecorded: true };

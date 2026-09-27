@@ -1,18 +1,50 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 import { createTestDbConnection } from '@main-test-utils/dbConfig';
 
-const tenantId = 'dd8cb218-d46d-47f3-be27-8aa50aad5fce';
-const billingProfileId = 'd5fbf9da-552f-4164-8796-70fa93e46ba0';
-const attemptId = 'c3beca66-599a-4b71-814c-3bf174622bd5';
+// AutopayService reads through @alga-psa/db's connection; point it at the
+// fixture transaction so every seeded row is rolled back after the test.
+const connection = vi.hoisted(() => ({ current: null as unknown }));
+vi.mock('@alga-psa/db', async () => {
+  const actual = await vi.importActual<typeof import('@alga-psa/db')>('@alga-psa/db');
+  return { ...actual, getConnection: vi.fn(async () => connection.current) };
+});
+
+import { AutopayService } from '../../lib/payments/AutopayService';
+
 let db: Knex;
 
-const contextQuery = (trx: Knex.Transaction) => trx('invoice_autopay_attempts as aa')
-  .join('payment_methods as pm', function () { this.on('pm.payment_method_id', '=', 'aa.payment_method_id').andOn('pm.tenant', '=', 'aa.tenant'); })
-  .join('billing_profile_autopay as bpa', function () { this.on('bpa.tenant', '=', 'aa.tenant').andOn('bpa.billing_profile_id', '=', 'aa.billing_profile_id'); })
-  .where('bpa.is_enabled', true).whereRaw('bpa.payment_method_id = aa.payment_method_id')
-  .where('pm.status', 'active').where('pm.is_deleted', false).where('aa.attempt_id', attemptId)
-  .where(function () { this.where('aa.status', 'processing').orWhere(function () { this.where('aa.status', 'scheduled').whereRaw('aa.scheduled_for >= now()'); }); });
+async function seedFixture(trx: Knex.Transaction) {
+  const tenant = randomUUID();
+  const clientId = randomUUID();
+  const billingProfileId = randomUUID();
+  const invoiceId = randomUUID();
+  const enrolledCardId = randomUUID();
+  const otherCardId = randomUUID();
+
+  await trx('tenants').insert({ tenant, client_name: 'Autopay Context Tenant', email: `autopay-${tenant}@example.test` });
+  await trx('clients').insert({ tenant, client_id: clientId, client_name: 'Autopay Context Client' });
+  await trx('client_billing_profiles').insert({ tenant, billing_profile_id: billingProfileId, client_id: clientId, name: 'Default', is_default: true });
+  await trx('invoices').insert({
+    tenant, invoice_id: invoiceId, client_id: clientId, billing_profile_id: billingProfileId,
+    invoice_number: `AUTOPAY-${invoiceId.slice(0, 8)}`, invoice_date: trx.fn.now(), due_date: trx.raw("now() + interval '30 days'"),
+    total_amount: 12000, status: 'sent',
+  });
+  const card = (paymentMethodId: string, last4: string) => ({
+    tenant, payment_method_id: paymentMethodId, client_id: clientId, billing_profile_id: billingProfileId, type: 'credit_card',
+    last4, brand: 'visa', provider_type: 'stripe', external_payment_method_id: `pm_${last4}`, external_customer_id: 'cus_autopay', status: 'active',
+  });
+  await trx('payment_methods').insert([card(enrolledCardId, '4242'), card(otherCardId, '1881')]);
+  await trx('billing_profile_autopay').insert({ tenant, billing_profile_id: billingProfileId, client_id: clientId, is_enabled: true, payment_method_id: enrolledCardId });
+  await trx('invoice_autopay_attempts').insert({
+    tenant, invoice_id: invoiceId, billing_profile_id: billingProfileId, payment_method_id: enrolledCardId, attempt_number: 1,
+    scheduled_for: trx.raw("now() + interval '1 day'"), status: 'scheduled', amount: 12000, currency: 'USD', provider_type: 'stripe',
+    idempotency_key: `autopay-${invoiceId}-1`,
+  });
+
+  return { tenant, billingProfileId, invoiceId, enrolledCardId, otherCardId };
+}
 
 describe('invoice auto-pay context enrollment and card filters (DB integration)', () => {
   beforeAll(async () => {
@@ -24,24 +56,35 @@ describe('invoice auto-pay context enrollment and card filters (DB integration)'
   afterAll(async () => { await db?.destroy().catch(() => undefined); });
 
   it('returns only enabled enrollments with their active, non-deleted matching method', async () => {
-    await db.transaction(async (trx) => {
-      await trx('invoice_autopay_attempts').where({ tenant: tenantId, attempt_id: attemptId }).update({ status: 'scheduled', scheduled_for: trx.raw("now() + interval '1 day'") });
-      await trx('billing_profile_autopay').where({ tenant: tenantId, billing_profile_id: billingProfileId }).update({ is_enabled: true, payment_method_id: '47c4262c-c171-4954-bd6a-635716e4063c' });
-      await trx('payment_methods').where({ tenant: tenantId, payment_method_id: '47c4262c-c171-4954-bd6a-635716e4063c' }).update({ status: 'active', is_deleted: false });
-      expect(await contextQuery(trx)).toHaveLength(1);
+    const trx = await db.transaction();
+    connection.current = trx;
+    try {
+      const { tenant, billingProfileId, invoiceId, enrolledCardId, otherCardId } = await seedFixture(trx);
+      const contexts = () => AutopayService.create(tenant).then((service) => service.getInvoiceAutopayContexts([invoiceId]));
+      const enrollment = () => trx('billing_profile_autopay').where({ tenant, billing_profile_id: billingProfileId });
+      const enrolledCard = () => trx('payment_methods').where({ tenant, payment_method_id: enrolledCardId });
 
-      await trx('billing_profile_autopay').where({ tenant: tenantId, billing_profile_id: billingProfileId }).update({ is_enabled: false });
-      expect(await contextQuery(trx)).toHaveLength(0);
-      await trx('billing_profile_autopay').where({ tenant: tenantId, billing_profile_id: billingProfileId }).update({ is_enabled: true, payment_method_id: '1cb1d41c-d315-467c-a296-4a2dee6b315c' });
-      expect(await contextQuery(trx)).toHaveLength(0);
-      await trx('billing_profile_autopay').where({ tenant: tenantId, billing_profile_id: billingProfileId }).update({ payment_method_id: '47c4262c-c171-4954-bd6a-635716e4063c' });
-      await trx('payment_methods').where({ tenant: tenantId, payment_method_id: '47c4262c-c171-4954-bd6a-635716e4063c' }).update({ is_deleted: true });
-      expect(await contextQuery(trx)).toHaveLength(0);
-      await trx('payment_methods').where({ tenant: tenantId, payment_method_id: '47c4262c-c171-4954-bd6a-635716e4063c' }).update({ is_deleted: false, status: 'detached' });
-      expect(await contextQuery(trx)).toHaveLength(0);
-      throw new Error('ROLLBACK_AUTOPAY_CONTEXT_FIXTURE');
-    }).catch((error) => {
-      if (!(error instanceof Error) || error.message !== 'ROLLBACK_AUTOPAY_CONTEXT_FIXTURE') throw error;
-    });
+      expect(await contexts()).toEqual({ [invoiceId]: expect.objectContaining({ status: 'scheduled', brand: 'visa', last4: '4242' }) });
+
+      await enrollment().update({ is_enabled: false });
+      expect(await contexts()).toEqual({});
+
+      // Re-enrolled on a different card: the pending attempt's card no longer matches.
+      await enrollment().update({ is_enabled: true, payment_method_id: otherCardId });
+      expect(await contexts()).toEqual({});
+
+      await enrollment().update({ payment_method_id: enrolledCardId });
+      await enrolledCard().update({ is_deleted: true });
+      expect(await contexts()).toEqual({});
+
+      await enrolledCard().update({ is_deleted: false, status: 'detached' });
+      expect(await contexts()).toEqual({});
+
+      await enrolledCard().update({ status: 'active' });
+      expect(await contexts()).toEqual({ [invoiceId]: expect.objectContaining({ last4: '4242' }) });
+    } finally {
+      await trx.rollback();
+      connection.current = null;
+    }
   });
 });

@@ -16,6 +16,11 @@ exports.up = async function up(knex) {
     END IF;
   END $$`);
   await knex.raw('CREATE UNIQUE INDEX IF NOT EXISTS payment_methods_external_id_unique ON payment_methods (tenant, provider_type, external_payment_method_id) WHERE external_payment_method_id IS NOT NULL');
+
+  // Saved methods become an FK target for the tenant-distributed auto-pay
+  // tables, so on Citus payment_methods must be distributed on tenant too.
+  const { ensureTenantDistribution } = require('./utils/citusDistribution.cjs');
+  await ensureTenantDistribution(knex, 'payment_methods');
 };
 
 exports.down = async function down(knex) {
@@ -25,3 +30,6 @@ exports.down = async function down(knex) {
     if (await knex.schema.hasColumn('payment_methods', name)) await knex.schema.alterTable('payment_methods', (t) => t.dropColumn(name));
   }
 };
+
+// create_distributed_table cannot run inside a transaction on Citus.
+exports.config = { transaction: false };

@@ -1,5 +1,12 @@
 import { redirect } from 'next/navigation';
 import { completeClientPortalCardSetup } from '@alga-psa/client-portal/actions';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
+import type { Metadata } from 'next';
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+  return { title: t('clientPortal.billing.paymentMethods.setupComplete.title', { defaultValue: 'Card Setup' }) };
+}
 
 export default async function PaymentMethodSetupCompletePage({
   searchParams,

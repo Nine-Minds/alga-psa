@@ -1,5 +1,7 @@
 'use server';
 
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal account actions intentionally compose the billing feature's auto-pay services for self-service saved cards and enrollment. */
+
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/db';

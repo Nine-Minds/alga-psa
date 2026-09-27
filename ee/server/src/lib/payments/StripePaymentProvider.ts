@@ -17,6 +17,7 @@ import { tenantDb } from '@alga-psa/db';
 import { getConnection } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { resolvePaymentBillingProfileId } from '@alga-psa/shared/billingClients/billingProfilePayments';
 import { buildAutopayPaymentIntentRequest, mapStripeAutopayError } from './stripeAutopayParams';
 import {
   PaymentProvider,
@@ -284,11 +285,9 @@ export class StripePaymentProvider implements PaymentProvider {
   async getOrCreateCustomer(clientId: string, email: string, name: string, requestedBillingProfileId?: string): Promise<string> {
     const stripe = await this.getStripe();
     const knex = await getConnection();
-    const profile = requestedBillingProfileId
-      ? await tenantDb(knex, this.tenantId).table('client_billing_profiles').where({ billing_profile_id: requestedBillingProfileId, client_id: clientId }).first()
-      : await tenantDb(knex, this.tenantId).table('client_billing_profiles').where({ client_id: clientId, is_default: true }).first();
-    if (!profile) throw new Error(`Default billing profile not found for client ${clientId}`);
-    const billingProfileId = (profile as any).billing_profile_id as string;
+    // Clients created before any profile was authored have no profile row yet;
+    // the shared resolver provisions their default instead of failing the link.
+    const billingProfileId = await resolvePaymentBillingProfileId(knex, this.tenantId, clientId, requestedBillingProfileId);
 
     // Check if we already have a mapping
     const existingMapping = await tenantDb(knex, this.tenantId).table<IClientPaymentCustomer>('client_payment_customers')

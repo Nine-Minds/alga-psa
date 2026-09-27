@@ -26,6 +26,11 @@
         "detail": {
           "title": "Détails du devis"
         }
+      },
+      "paymentMethods": {
+        "setupComplete": {
+          "title": "Configuration de la carte"
+        }
       }
     },
     "dashboard": {
@@ -613,6 +618,11 @@
     },
     "tab": {
       "title": "Équipes"
+    }
+  },
+  "paymentMethods": {
+    "setupComplete": {
+      "title": "Configuration de la carte"
     }
   }
 }
