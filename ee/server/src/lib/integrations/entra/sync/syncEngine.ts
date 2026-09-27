@@ -169,15 +169,14 @@ export async function executeEntraSync(
           user,
           input.fieldSyncConfig
         );
-        if (outcome.fieldsWouldChange) {
-          counters.increment('updated');
-        }
-        if (await reactivateExcludedEntraContact(input.tenantId, candidates[0].contactNameId, true)) counters.increment('updated');
-        if (userWithEntitlement.mailboxKind === 'shared' && await reactivateDisabledSharedMailboxContact(input.tenantId, candidates[0].contactNameId, true)) counters.increment('updated');
+        const wouldReactivateExcluded = await reactivateExcludedEntraContact(input.tenantId, candidates[0].contactNameId, true);
+        const wouldRecoverSharedMailbox = userWithEntitlement.mailboxKind === 'shared'
+          && await reactivateDisabledSharedMailboxContact(input.tenantId, candidates[0].contactNameId, true);
+        if (outcome.fieldsWouldChange || wouldReactivateExcluded || wouldRecoverSharedMailbox) counters.increment('updated');
         preview?.push(
           describeUser(
             user,
-            outcome.alreadyLinked && !outcome.fieldsWouldChange ? 'no_change' : 'link'
+            outcome.alreadyLinked && !outcome.fieldsWouldChange && !wouldReactivateExcluded && !wouldRecoverSharedMailbox ? 'no_change' : 'link'
           )
         );
       } else {
@@ -190,15 +189,8 @@ export async function executeEntraSync(
         );
         // `updated` counts contacts whose values the field-sync rules actually
         // changed. A link that overwrote nothing is a link and nothing more.
-        if (linkedContact.fieldsUpdated) {
-          counters.increment('updated');
-        }
-        if (await reactivateExcludedEntraContact(input.tenantId, linkedContact.contactNameId, false)) {
-          counters.increment('updated');
-        }
-        if (userWithEntitlement.mailboxKind === 'shared' && await reactivateDisabledSharedMailboxContact(input.tenantId, linkedContact.contactNameId, false)) {
-          counters.increment('updated');
-        }
+        const reactivatedExcluded = await reactivateExcludedEntraContact(input.tenantId, linkedContact.contactNameId, false);
+        if (linkedContact.fieldsUpdated || linkedContact.recovered || reactivatedExcluded) counters.increment('updated');
         const eligibility = evaluateClientPortalProvisioningEligibility(
           userWithEntitlement,
           input.portalEntitlement
@@ -262,12 +254,9 @@ export async function executeEntraSync(
       preview?.push(describeUser(user, 'create'));
     } else {
       const createdContact = await createContactForEntraUser(input.tenantId, input.clientId, userWithEntitlement);
-      if (createdContact.action === 'linked' && await reactivateExcludedEntraContact(input.tenantId, createdContact.contactNameId, false)) {
-        counters.increment('updated');
-      }
-      if (createdContact.action === 'linked' && userWithEntitlement.mailboxKind === 'shared' && await reactivateDisabledSharedMailboxContact(input.tenantId, createdContact.contactNameId, false)) {
-        counters.increment('updated');
-      }
+      const reactivatedExcluded = createdContact.action === 'linked'
+        && await reactivateExcludedEntraContact(input.tenantId, createdContact.contactNameId, false);
+      if (createdContact.action === 'linked' && (createdContact.recovered || reactivatedExcluded)) counters.increment('updated');
       const eligibility = evaluateClientPortalProvisioningEligibility(
         userWithEntitlement,
         input.portalEntitlement

@@ -109,8 +109,9 @@ export async function selectLinkedEntraIdentities<T extends EntraIdentityRef>(
 
     const linked: Array<LinkedEntraIdentity<T>> = [];
     for (const identity of identities) {
-      const links = await db.table('entra_contact_links as link')
-        .join('contacts as contact', 'contact.contact_name_id', 'link.contact_name_id')
+      const query = db.table('entra_contact_links as link');
+      db.tenantJoin(query, 'contacts as contact', 'link.contact_name_id', 'contact.contact_name_id');
+      const links = await query
         .where({
           'link.entra_tenant_id': identity.entraTenantId,
           'link.entra_object_id': identity.entraObjectId,
@@ -138,8 +139,9 @@ export async function excludeSharedMailboxEntraIdentities<T extends EntraIdentit
     const db = tenantDb(knex, tenantId);
     const safe: T[] = [];
     for (const identity of identities) {
-      const shared = await db.table('entra_contact_links as link')
-        .join('contacts as contact', 'contact.contact_name_id', 'link.contact_name_id')
+      const query = db.table('entra_contact_links as link');
+      db.tenantJoin(query, 'contacts as contact', 'link.contact_name_id', 'contact.contact_name_id');
+      const shared = await query
         .where({ 'link.entra_tenant_id': identity.entraTenantId, 'link.entra_object_id': identity.entraObjectId })
         .where({ 'contact.contact_kind': 'shared_mailbox' })
         .first('contact.contact_name_id');

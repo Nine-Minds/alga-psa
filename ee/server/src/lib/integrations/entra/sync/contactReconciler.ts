@@ -14,6 +14,7 @@ export interface EntraLinkedContactResult {
   action: 'linked';
   /** True when the enabled field-sync rules actually changed a contact value. */
   fieldsUpdated: boolean;
+  recovered: boolean;
   contactNameId: string;
   linkIdentity: {
     entraTenantId: string;
@@ -25,6 +26,7 @@ export interface EntraCreatedContactResult {
   action: 'created' | 'linked';
   /** Present so the result unions narrow cleanly on `action`; creation never counts as an update. */
   fieldsUpdated?: boolean;
+  recovered?: boolean;
   contactNameId: string;
   linkIdentity: {
     entraTenantId: string;
@@ -252,9 +254,12 @@ export async function linkExistingMatchedContact(
   user: EntraSyncUser,
   fieldSyncConfig?: Record<string, unknown>
 ): Promise<EntraLinkedContactResult> {
-  const fieldsUpdated = await runWithTenant(tenantId, async () => {
+  const result = await runWithTenant(tenantId, async () => {
     const { knex } = await createTenantKnex();
     return knex.transaction(async (trx) => {
+      const recovered = user.mailboxKind === 'shared'
+        ? await reactivateDisabledSharedMailboxContactInTransaction(trx, tenantId, matchedContact.contactNameId)
+        : false;
       const changed = await upsertContactLink(
         trx,
         tenantId,
@@ -263,13 +268,14 @@ export async function linkExistingMatchedContact(
         user,
         fieldSyncConfig
       );
-      return changed;
+      return { fieldsUpdated: changed, recovered };
     });
   });
 
   return {
     action: 'linked',
-    fieldsUpdated,
+    fieldsUpdated: result.fieldsUpdated,
+    recovered: result.recovered,
     contactNameId: matchedContact.contactNameId,
     linkIdentity: {
       entraTenantId: user.entraTenantId,
@@ -298,23 +304,46 @@ export async function reactivateDisabledSharedMailboxContact(
 ): Promise<boolean> {
   return runWithTenant(tenantId, async () => {
     const { knex } = await createTenantKnex();
-    const db = tenantDb(knex, tenantId);
-    const query = db.table('contacts').where({
-      contact_name_id: contactNameId,
-      is_inactive: true,
-      contact_kind: 'shared_mailbox',
-      entra_sync_status_reason: 'disabled_upstream',
-    });
-    if (dryRun) return Boolean(await query.first('contact_name_id'));
-    const changed = await query.update({
-      is_inactive: false,
-      entra_account_enabled: false,
-      entra_sync_status: 'active',
-      entra_sync_status_reason: null,
-      updated_at: knex.fn.now(),
-    });
-    return Number(changed) > 0;
+    if (dryRun) {
+      const db = tenantDb(knex, tenantId);
+      return Boolean(await db.table('contacts').where({
+        contact_name_id: contactNameId,
+        is_inactive: true,
+        contact_kind: 'shared_mailbox',
+        entra_sync_status_reason: 'disabled_upstream',
+      }).first('contact_name_id'));
+    }
+    return knex.transaction((trx) => reactivateDisabledSharedMailboxContactInTransaction(trx, tenantId, contactNameId));
   });
+}
+
+async function reactivateDisabledSharedMailboxContactInTransaction(
+  trx: Knex.Transaction,
+  tenantId: string,
+  contactNameId: string
+): Promise<boolean> {
+  const db = tenantDb(trx, tenantId);
+  const query = db.table('contacts').where({
+    contact_name_id: contactNameId,
+    is_inactive: true,
+    contact_kind: 'shared_mailbox',
+    entra_sync_status_reason: 'disabled_upstream',
+  });
+  const eligible = await query.first('contact_name_id');
+  if (!eligible) return false;
+  const changed = await db.table('contacts').where({
+    contact_name_id: contactNameId,
+    is_inactive: true,
+    contact_kind: 'shared_mailbox',
+    entra_sync_status_reason: 'disabled_upstream',
+  }).update({
+    is_inactive: false,
+    entra_account_enabled: false,
+    entra_sync_status: 'active',
+    entra_sync_status_reason: null,
+    updated_at: trx.fn.now(),
+  });
+  return Number(changed) > 0;
 }
 
 export async function createContactForEntraUser(
@@ -334,8 +363,11 @@ export async function createContactForEntraUser(
     return knex.transaction(async (trx) => {
       const linkedContactId = await findExistingLinkedContactId(trx, tenantId, user);
       if (linkedContactId) {
+        const recovered = user.mailboxKind === 'shared'
+          ? await reactivateDisabledSharedMailboxContactInTransaction(trx, tenantId, linkedContactId)
+          : false;
         await upsertContactLink(trx, tenantId, clientId, linkedContactId, user, {});
-        return { contactNameId: linkedContactId, action: 'linked' as const };
+        return { contactNameId: linkedContactId, action: 'linked' as const, recovered };
       }
 
       const existingClientContactId = await findExistingClientContactByEmail(
@@ -345,8 +377,11 @@ export async function createContactForEntraUser(
         normalizedEmail
       );
       if (existingClientContactId) {
+        const recovered = user.mailboxKind === 'shared'
+          ? await reactivateDisabledSharedMailboxContactInTransaction(trx, tenantId, existingClientContactId)
+          : false;
         await upsertContactLink(trx, tenantId, clientId, existingClientContactId, user, {});
-        return { contactNameId: existingClientContactId, action: 'linked' as const };
+        return { contactNameId: existingClientContactId, action: 'linked' as const, recovered };
       }
 
       let createdContactNameId: string | null = null;
@@ -372,6 +407,7 @@ export async function createContactForEntraUser(
 
   return {
     action: createdContact.action,
+    ...(createdContact.action === 'linked' ? { recovered: createdContact.recovered } : {}),
     contactNameId: createdContact.contactNameId,
     linkIdentity: {
       entraTenantId: user.entraTenantId,
