@@ -5379,7 +5379,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets",
     "displayName": "Create asset",
     "summary": "Create asset",
-    "description": "Creates an asset for the authenticated tenant. The request body is validated with createAssetWithExtensionSchema; client_id, asset_type, asset_tag, name, and status are required. AssetService.create writes assets.tenant from the request context, inserts the asset, optionally upserts asset-type-specific extension_data, publishes an ASSET_CREATED event, and returns getWithDetails with HATEOAS links.",
+    "description": "Creates an asset for the authenticated tenant. The request body is validated with createAssetWithExtensionSchema; client_id, asset_type, asset_tag, name, and status are required. Custom attributes are checked against the registered type schema and required fields must be present. Unknown asset_type slugs and invalid/missing required attributes return 400. AssetService.create writes the attributes map, optionally upserts extension_data, publishes ASSET_CREATED, and returns getWithDetails.",
     "tags": [
       "Assets"
     ],
@@ -5395,7 +5395,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "asset_type": {
           "type": "string",
-          "description": "Asset type. Determines the optional extension data table."
+          "description": "Must be a built-in slug or registered custom slug; unknown slugs return 400."
         },
         "asset_tag": {
           "type": "string",
@@ -5439,6 +5439,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string",
           "format": "date-time",
           "description": "Optional warranty end date/time."
+        },
+        "attributes": {
+          "$ref": "#/components/schemas/AssetAttributes"
         },
         "extension_data": {
           "$ref": "#/components/schemas/AssetExtensionData"
@@ -5547,7 +5550,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/bulk-update",
     "displayName": "Bulk update assets",
     "summary": "Bulk update assets",
-    "description": "Updates up to 50 assets in the authenticated tenant. Each array item supplies an asset_id and partial update data validated with updateAssetSchema. The controller calls AssetService.update for every item, tenant-scoping each update by asset_id and context.tenant and publishing ASSET_UPDATED events.",
+    "description": "Updates up to 50 assets in the authenticated tenant. Each item is validated and written independently; custom attributes are validated against that asset type and merged into its stored map. Unknown types and invalid attributes return 400. Earlier items may remain committed if a later item fails.",
     "tags": [
       "Assets"
     ],
@@ -6127,7 +6130,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/{id}",
     "displayName": "Update asset",
     "summary": "Update asset",
-    "description": "Partially updates base asset fields for the authenticated tenant. The request body is validated with updateAssetSchema, where all fields are optional. AssetService.update scopes the update by asset_id and context.tenant, writes updated_at, publishes ASSET_UPDATED, and returns the refreshed base asset with joined client_name and warranty_status. This REST path does not update extension data, create asset history records, or wrap the update in a transaction. Missing assets currently lead to a 500 when the controller tries to add links to a null result rather than a clean 404.",
+    "description": "Partially updates base asset fields for the authenticated tenant. Custom attributes are validated against the next asset type when asset_type changes, then merged into the stored map so omitted keys remain. Required custom fields cannot be blanked. Unknown asset_type slugs and invalid attributes return 400.",
     "tags": [
       "Assets"
     ],
@@ -6155,7 +6158,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "asset_type": {
           "type": "string",
-          "description": "Asset type to store in assets.asset_type."
+          "description": "Must be a built-in slug or registered custom slug; unknown slugs return 400."
         },
         "asset_tag": {
           "type": "string",
@@ -6199,6 +6202,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string",
           "format": "date-time",
           "description": "Warranty end date/time."
+        },
+        "attributes": {
+          "$ref": "#/components/schemas/AssetAttributes"
         }
       }
     },
@@ -7675,6 +7681,319 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "number"
         }
       }
+    }
+  },
+  {
+    "id": "get-_api_v1_integrations_rmm",
+    "method": "get",
+    "path": "/api/v1/integrations/rmm",
+    "displayName": "List RMM integrations",
+    "summary": "List RMM integrations",
+    "description": "Status of every configured RMM integration, including whether a recurring device sync is scheduled, its cadence, and when it last ran.",
+    "tags": [
+      "RMM Integrations"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "array",
+      "items": {
+        "$ref": "#/components/schemas/RmmIntegrationStatus"
+      }
+    }
+  },
+  {
+    "id": "get-_api_v1_integrations_rmm_provider",
+    "method": "get",
+    "path": "/api/v1/integrations/rmm/{provider}",
+    "displayName": "Get an RMM integration",
+    "summary": "Get an RMM integration",
+    "description": "Status of a single RMM integration.",
+    "tags": [
+      "RMM Integrations"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "provider",
+        "in": "path",
+        "required": true,
+        "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or huntress. Scheduled device sync is available for the first four; huntress exposes no device listing.",
+        "schema": {
+          "type": "string",
+          "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or huntress. Scheduled device sync is available for the first four; huntress exposes no device listing."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "description": "RMM provider slug."
+        },
+        "integrationId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Whether the integration is connected and enabled."
+        },
+        "syncStatus": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Last sync outcome: 'completed', 'error', 'syncing', or 'pending'."
+        },
+        "syncError": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Failure detail from the last run, when it failed."
+        },
+        "connectedAt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "lastSyncAt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "description": "Any sync, scheduled or manual. A manual full sync advances this too."
+        },
+        "lastIncrementalSyncAt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "description": "Only the recurring device sync writes this. Use it, not lastSyncAt, to answer whether the schedule is actually running: an integration can show a recent lastSyncAt from one manual sync while nothing recurring has ever run."
+        },
+        "deviceCount": {
+          "type": "integer",
+          "description": "Assets currently attributed to this provider."
+        },
+        "deviceSyncEnabled": {
+          "type": "boolean",
+          "description": "Whether a recurring device sync is scheduled."
+        },
+        "deviceSyncIntervalMinutes": {
+          "type": "integer",
+          "description": "Cadence in minutes, 15 to 1440. Meaningful only when deviceSyncEnabled is true."
+        }
+      },
+      "required": [
+        "provider",
+        "integrationId",
+        "isActive",
+        "syncStatus",
+        "syncError",
+        "connectedAt",
+        "lastSyncAt",
+        "lastIncrementalSyncAt",
+        "deviceCount",
+        "deviceSyncEnabled",
+        "deviceSyncIntervalMinutes"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_integrations_rmm_provider_devicesync",
+    "method": "put",
+    "path": "/api/v1/integrations/rmm/{provider}/device-sync",
+    "displayName": "Configure the scheduled device sync",
+    "summary": "Configure the scheduled device sync",
+    "description": "Turns the recurring device sync on or off and sets its cadence. Writes desired state only — the scheduler reconciles the actual schedule within a few minutes, so a change is not instantaneous. Returns the integration status after the write.",
+    "tags": [
+      "RMM Integrations"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "provider",
+        "in": "path",
+        "required": true,
+        "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or huntress. Scheduled device sync is available for the first four; huntress exposes no device listing.",
+        "schema": {
+          "type": "string",
+          "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or huntress. Scheduled device sync is available for the first four; huntress exposes no device listing."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Turn the recurring device sync on or off."
+        },
+        "intervalMinutes": {
+          "type": "integer",
+          "minimum": 15,
+          "maximum": 1440,
+          "description": "Cadence in minutes. Defaults to 60. Values outside 15 to 1440 are rejected rather than clamped, so the stored cadence is always the one requested. Every run spends provider API quota, and on some providers an incremental run still reads the whole device list."
+        }
+      },
+      "required": [
+        "enabled"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "description": "RMM provider slug."
+        },
+        "integrationId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Whether the integration is connected and enabled."
+        },
+        "syncStatus": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Last sync outcome: 'completed', 'error', 'syncing', or 'pending'."
+        },
+        "syncError": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Failure detail from the last run, when it failed."
+        },
+        "connectedAt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "lastSyncAt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "description": "Any sync, scheduled or manual. A manual full sync advances this too."
+        },
+        "lastIncrementalSyncAt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "description": "Only the recurring device sync writes this. Use it, not lastSyncAt, to answer whether the schedule is actually running: an integration can show a recent lastSyncAt from one manual sync while nothing recurring has ever run."
+        },
+        "deviceCount": {
+          "type": "integer",
+          "description": "Assets currently attributed to this provider."
+        },
+        "deviceSyncEnabled": {
+          "type": "boolean",
+          "description": "Whether a recurring device sync is scheduled."
+        },
+        "deviceSyncIntervalMinutes": {
+          "type": "integer",
+          "description": "Cadence in minutes, 15 to 1440. Meaningful only when deviceSyncEnabled is true."
+        }
+      },
+      "required": [
+        "provider",
+        "integrationId",
+        "isActive",
+        "syncStatus",
+        "syncError",
+        "connectedAt",
+        "lastSyncAt",
+        "lastIncrementalSyncAt",
+        "deviceCount",
+        "deviceSyncEnabled",
+        "deviceSyncIntervalMinutes"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_integrations_rmm_provider_sync",
+    "method": "post",
+    "path": "/api/v1/integrations/rmm/{provider}/sync",
+    "displayName": "Run a device sync now",
+    "summary": "Run a device sync now",
+    "description": "Runs a device sync immediately, through the same code path as the scheduled job. Synchronous: the response is sent when the sync finishes, which on a large estate can take minutes. A provider failure returns an error and leaves the sync cursor untouched, so the unread window is retried rather than skipped.",
+    "tags": [
+      "RMM Integrations"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "provider",
+        "in": "path",
+        "required": true,
+        "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or huntress. Scheduled device sync is available for the first four; huntress exposes no device listing.",
+        "schema": {
+          "type": "string",
+          "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or huntress. Scheduled device sync is available for the first four; huntress exposes no device listing."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "syncType": {
+          "type": "string",
+          "enum": [
+            "full",
+            "incremental"
+          ],
+          "description": "Defaults to incremental, which resumes from the same cursor the schedule uses. 'full' re-reads every device regardless of when it was last seen."
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string"
+        },
+        "syncType": {
+          "type": "string",
+          "enum": [
+            "full",
+            "incremental"
+          ]
+        },
+        "devicesProcessed": {
+          "type": "integer"
+        },
+        "startedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "finishedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "provider",
+        "syncType",
+        "devicesProcessed",
+        "startedAt",
+        "finishedAt"
+      ]
     }
   },
   {
@@ -10072,9 +10391,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "billing_address": {
                     "type": "string"
                   },
-                  "tax_id": {
-                    "type": "string"
-                  },
                   "notes": {
                     "type": "string"
                   },
@@ -10082,8 +10398,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "type": "string"
                   },
                   "website": {
-                    "type": "string",
-                    "format": "uri"
+                    "type": "string"
                   },
                   "parent_client_id": {
                     "type": "string",
@@ -10345,6 +10660,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "properties": {
           "type": "object",
+          "properties": {
+            "tax_id": {
+              "type": "string",
+              "description": "Deprecated legacy input. Send tax_id_number instead.",
+              "deprecated": true
+            }
+          },
           "additionalProperties": {}
         },
         "payment_terms": {
@@ -10528,9 +10850,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "billing_address": {
                   "type": "string"
                 },
-                "tax_id": {
-                  "type": "string"
-                },
                 "notes": {
                   "type": "string"
                 },
@@ -10538,8 +10857,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "type": "string"
                 },
                 "website": {
-                  "type": "string",
-                  "format": "uri"
+                  "type": "string"
                 },
                 "parent_client_id": {
                   "type": "string",
@@ -10830,9 +11148,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "billing_address": {
                   "type": "string"
                 },
-                "tax_id": {
-                  "type": "string"
-                },
                 "notes": {
                   "type": "string"
                 },
@@ -10840,8 +11155,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "type": "string"
                 },
                 "website": {
-                  "type": "string",
-                  "format": "uri"
+                  "type": "string"
                 },
                 "parent_client_id": {
                   "type": "string",
@@ -11068,6 +11382,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "properties": {
           "type": "object",
+          "properties": {
+            "tax_id": {
+              "type": "string",
+              "description": "Deprecated legacy input. Send tax_id_number instead.",
+              "deprecated": true
+            }
+          },
           "additionalProperties": {}
         },
         "payment_terms": {
@@ -11251,9 +11572,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "billing_address": {
                   "type": "string"
                 },
-                "tax_id": {
-                  "type": "string"
-                },
                 "notes": {
                   "type": "string"
                 },
@@ -11261,8 +11579,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "type": "string"
                 },
                 "website": {
-                  "type": "string",
-                  "format": "uri"
+                  "type": "string"
                 },
                 "parent_client_id": {
                   "type": "string",
@@ -11715,7 +12032,19 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "null"
                 ]
               },
+              "phone_extension": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
               "fax": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "fax_extension": {
                 "type": [
                   "string",
                   "null"
@@ -11970,7 +12299,19 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "null"
               ]
             },
+            "phone_extension": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "fax": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "fax_extension": {
               "type": [
                 "string",
                 "null"
@@ -12037,6 +12378,467 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       },
       "required": [
         "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_clients_id_merge_preview",
+    "method": "post",
+    "path": "/api/v1/clients/{id}/merge/preview",
+    "displayName": "Preview a client merge",
+    "summary": "Preview a client merge",
+    "description": "Dry run of absorbing source_client_id into this client as a billing profile. Writes nothing; returns the profiles that would move, per-entity row counts, the contacts and contracts needing a decision, the portal users whose billing-segment access would widen, the accounting mappings that would need re-pointing, and any blockers.",
+    "tags": [
+      "Clients"
+    ],
+    "rbacResource": "client",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "source_client_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "The client that would be absorbed."
+        }
+      },
+      "required": [
+        "source_client_id"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/ClientMergePreviewResource"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_clients_id_merge",
+    "method": "post",
+    "path": "/api/v1/clients/{id}/merge",
+    "displayName": "Merge a client into this one",
+    "summary": "Merge a client into this one",
+    "description": "Absorbs source_client_id into this client as a billing profile. The source's billing profiles are re-parented keeping their ids, so invoices, billing cycles, payment methods, credits and tax settings follow them; tickets, contacts, projects, assets, contracts, locations and portal visibility groups move to this client. The source client is archived with a forwarding marker. Irreversible. Requires client update and delete.",
+    "tags": [
+      "Clients"
+    ],
+    "rbacResource": "client",
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "source_client_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "contact_assignments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "contact_name_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "billing_profile_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "is_manager": {
+                "type": "boolean"
+              },
+              "can_view_profile_tickets": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "contact_name_id",
+              "billing_profile_id"
+            ]
+          }
+        },
+        "contract_decisions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "client_contract_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "choice": {
+                "type": "string",
+                "enum": [
+                  "original",
+                  "cutover"
+                ]
+              },
+              "cutover_date": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "client_contract_id",
+              "choice"
+            ]
+          }
+        },
+        "pin_portal_grants": {
+          "type": "boolean",
+          "description": "Defaults to true: records the billing segments unrestricted portal users have today."
+        },
+        "external_remap_choices": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "mapping_id": {
+                "type": "string"
+              },
+              "apply": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "mapping_id",
+              "apply"
+            ]
+          }
+        }
+      },
+      "required": [
+        "source_client_id"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/ClientMergeResource"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_clients_id_billingprofiles_profileid_contacts",
+    "method": "get",
+    "path": "/api/v1/clients/{id}/billing-profiles/{profileId}/contacts",
+    "displayName": "List billing profile contacts",
+    "summary": "List billing profile contacts",
+    "description": "Returns the contacts attached to a billing profile, with the manager designation and the separate grant that lets a contact see every ticket attributed to the profile in the client portal.",
+    "tags": [
+      "Clients"
+    ],
+    "rbacResource": "client",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "profileId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/BillingProfileContactResource"
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_clients_id_billingprofiles_profileid_contacts",
+    "method": "put",
+    "path": "/api/v1/clients/{id}/billing-profiles/{profileId}/contacts",
+    "displayName": "Replace billing profile contacts",
+    "summary": "Replace billing profile contacts",
+    "description": "Replaces the profile's contact list. At most one contact may be the manager. can_view_profile_tickets is a separate opt-in and defaults to false, so naming a manager never widens what they can read.",
+    "tags": [
+      "Clients"
+    ],
+    "rbacResource": "client",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "profileId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "contacts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "contact_name_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "is_manager": {
+                "type": "boolean"
+              },
+              "can_view_profile_tickets": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "contact_name_id"
+            ]
+          },
+          "description": "Replaces the profile's contact list; omitting a contact removes it."
+        }
+      },
+      "required": [
+        "contacts"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/BillingProfileContactResource"
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_clients_id_notes",
+    "method": "get",
+    "path": "/api/v1/clients/{id}/notes",
+    "displayName": "Get client notes",
+    "summary": "Get client notes",
+    "description": "Returns the BlockNote content of the client notes document (the rich-text notes shown on the client page), or null fields when no notes exist.",
+    "tags": [
+      "Clients"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "document": {
+              "description": "The linked notes document row, or null when the client has no notes."
+            },
+            "blockData": {
+              "description": "BlockNote block array for the notes body, or null."
+            },
+            "lastUpdated": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "ISO timestamp of the last notes update, or null."
+            }
+          },
+          "required": [
+            "lastUpdated"
+          ]
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_clients_id_notes",
+    "method": "put",
+    "path": "/api/v1/clients/{id}/notes",
+    "displayName": "Update client notes",
+    "summary": "Update client notes",
+    "description": "Creates or replaces the BlockNote notes document linked to the client. Send the full block array; partial updates are not merged. Returns the document id.",
+    "tags": [
+      "Clients"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "blockData": {
+          "description": "Full BlockNote block array (or its JSON string). Replaces the existing notes document."
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "document_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "document_id"
+          ]
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_clients_id_notes",
+    "method": "delete",
+    "path": "/api/v1/clients/{id}/notes",
+    "displayName": "Delete client notes",
+    "summary": "Delete client notes",
+    "description": "Unlinks the notes document from the client. Pass delete_document=true to also hard-delete the document and its block content.",
+    "tags": [
+      "Clients"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "delete_document",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "message"
       ]
     }
   },
@@ -15557,7 +16359,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/email/oauth/initiate",
     "displayName": "Initiate email OAuth flow",
     "summary": "Initiate email OAuth flow",
-    "description": "Starts the OAuth 2.0 authorization flow for a Google or Microsoft email provider. Requires a valid Auth.js session cookie. The handler builds secure OAuth state containing tenant, user, providerId, redirect URI, timestamp, and nonce, resolves the provider client ID from configured secrets, and returns the authorization URL for the browser to visit.",
+    "description": "Starts the OAuth 2.0 authorization flow for a Google email provider. Requires a valid Auth.js session cookie. The handler builds secure OAuth state containing tenant, user, providerId, redirect URI, timestamp, and nonce, resolves the provider client ID from configured secrets, and returns the authorization URL for the browser to visit. Microsoft mailbox OAuth is not served by this unsigned route: it must be initiated from the mailbox form with an explicit application selection so the callback receives a signed state token.",
     "tags": [
       "Email"
     ],
@@ -15762,7 +16564,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/email/webhooks/microsoft",
     "displayName": "Receive Microsoft Graph email webhook",
     "summary": "Receive Microsoft Graph email webhook",
-    "description": "Receives Microsoft Graph change notifications for monitored mailboxes. Standard session and API-key middleware are bypassed. The handler supports validation token echo, parses Microsoft notification batches, resolves provider and tenant by matching notification subscriptionId to microsoft_email_provider_config.webhook_subscription_id, validates clientState against the stored webhook_verification_token when configured, extracts message IDs, and enqueues pointer-only jobs into the unified inbound email queue. The tenantId in the Microsoft payload is informational and is not trusted for tenant resolution.",
+    "description": "Receives Microsoft Graph change notifications for monitored mailboxes. Standard session and API-key middleware are bypassed. The handler supports validation token echo, parses Microsoft notification batches, resolves provider and tenant by matching notification subscriptionId to microsoft_email_provider_config.webhook_subscription_id, requires a timing-safe clientState match against the stored webhook_verification_token, extracts message IDs, and enqueues pointer-only jobs into the unified inbound email queue. The tenantId in the Microsoft payload is informational and is not trusted for tenant resolution.",
     "tags": [
       "Email"
     ],
@@ -15879,12 +16681,384 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
+    "id": "get-_api_v1_email_templates",
+    "method": "get",
+    "path": "/api/v1/email/templates",
+    "displayName": "List email templates",
+    "summary": "List email templates",
+    "description": "Returns every notification email template available to the tenant, with the system default and the tenant override merged into one row per name and language. Use is_customized to tell which templates the tenant has edited.",
+    "tags": [
+      "Email Templates",
+      "Notifications"
+    ],
+    "rbacResource": "settings",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "name",
+        "in": "query",
+        "required": false,
+        "description": "Filter to a single template name.",
+        "schema": {
+          "type": "string",
+          "description": "Filter to a single template name."
+        }
+      },
+      {
+        "name": "language",
+        "in": "query",
+        "required": false,
+        "description": "Filter to one language code.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "en",
+            "fr",
+            "es",
+            "de",
+            "nl",
+            "it",
+            "pl",
+            "pt",
+            "xx",
+            "yy"
+          ],
+          "description": "Filter to one language code."
+        }
+      },
+      {
+        "name": "category",
+        "in": "query",
+        "required": false,
+        "description": "Filter by notification category name.",
+        "schema": {
+          "type": "string",
+          "description": "Filter by notification category name."
+        }
+      },
+      {
+        "name": "customized",
+        "in": "query",
+        "required": false,
+        "description": "Filter to templates the tenant has customized (true) or not (false).",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ],
+          "description": "Filter to templates the tenant has customized (true) or not (false)."
+        }
+      },
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/EmailTemplateSummary"
+          }
+        },
+        "pagination": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer"
+            },
+            "limit": {
+              "type": "integer"
+            },
+            "total": {
+              "type": "integer"
+            },
+            "totalPages": {
+              "type": "integer"
+            },
+            "hasNext": {
+              "type": "boolean"
+            },
+            "hasPrev": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "page",
+            "limit",
+            "total",
+            "totalPages",
+            "hasNext",
+            "hasPrev"
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data",
+        "pagination"
+      ]
+    },
+    "examples": [
+      {
+        "name": "Find the templates this tenant has customized",
+        "request": {
+          "query": {
+            "language": "en",
+            "customized": "true"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "get-_api_v1_email_templates_name",
+    "method": "get",
+    "path": "/api/v1/email/templates/{name}",
+    "displayName": "Get email template",
+    "summary": "Get email template",
+    "description": "Returns one email template: the read-only system default, the tenant override when there is one, and the effective content that would be sent.",
+    "tags": [
+      "Email Templates",
+      "Notifications"
+    ],
+    "rbacResource": "settings",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "name",
+        "in": "path",
+        "required": true,
+        "description": "Kebab-case template name, such as ticket-created or invoice-email.",
+        "schema": {
+          "type": "string",
+          "description": "Kebab-case template name, such as ticket-created or invoice-email."
+        }
+      },
+      {
+        "name": "language",
+        "in": "query",
+        "required": false,
+        "description": "Language code to read. Defaults to the first language the template exists in.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "en",
+            "fr",
+            "es",
+            "de",
+            "nl",
+            "it",
+            "pl",
+            "pt",
+            "xx",
+            "yy"
+          ],
+          "description": "Language code to read. Defaults to the first language the template exists in."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/EmailTemplateDetail"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    },
+    "examples": [
+      {
+        "name": "Read a template before editing it",
+        "request": {
+          "query": {
+            "language": "en"
+          },
+          "params": {
+            "name": "ticket-created"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "put-_api_v1_email_templates_name",
+    "method": "put",
+    "path": "/api/v1/email/templates/{name}",
+    "displayName": "Update email template",
+    "summary": "Update email template",
+    "description": "Writes the tenant override for one template and language. The first write clones the system default, then applies only the fields provided, so anything left out keeps the standard content. System templates are never modified, and other languages of the same template are untouched. Read the template first so existing customizations are not overwritten by accident.",
+    "tags": [
+      "Email Templates",
+      "Notifications"
+    ],
+    "rbacResource": "settings",
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "name",
+        "in": "path",
+        "required": true,
+        "description": "Kebab-case template name, such as ticket-created or invoice-email.",
+        "schema": {
+          "type": "string",
+          "description": "Kebab-case template name, such as ticket-created or invoice-email."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "language_code": {
+          "type": "string",
+          "enum": [
+            "en",
+            "fr",
+            "es",
+            "de",
+            "nl",
+            "it",
+            "pl",
+            "pt",
+            "xx",
+            "yy"
+          ],
+          "description": "Language of the template being edited."
+        },
+        "subject": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 998,
+          "description": "New subject line. Supports {{variable}} placeholders."
+        },
+        "html_content": {
+          "type": "string",
+          "minLength": 1,
+          "description": "New HTML body. Supports {{variable}} placeholders."
+        },
+        "text_content": {
+          "type": "string",
+          "minLength": 1,
+          "description": "New plain-text body."
+        }
+      },
+      "required": [
+        "language_code"
+      ],
+      "description": "Fields to write onto the tenant override. At least one of subject, html_content or text_content is required."
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/EmailTemplateDetail"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    },
+    "examples": [
+      {
+        "name": "Reword the subject of the ticket-created email",
+        "request": {
+          "body": {
+            "language_code": "en",
+            "subject": "New ticket {{ticket.ticketNumber}}: {{ticket.title}}"
+          },
+          "params": {
+            "name": "ticket-created"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "delete-_api_v1_email_templates_name",
+    "method": "delete",
+    "path": "/api/v1/email/templates/{name}",
+    "displayName": "Reset email template",
+    "summary": "Reset email template",
+    "description": "Discards the tenant override for one template and language, so the standard template is sent again. Any hand-written customization for that language is lost.",
+    "tags": [
+      "Email Templates",
+      "Notifications"
+    ],
+    "rbacResource": "settings",
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "name",
+        "in": "path",
+        "required": true,
+        "description": "Kebab-case template name, such as ticket-created or invoice-email.",
+        "schema": {
+          "type": "string",
+          "description": "Kebab-case template name, such as ticket-created or invoice-email."
+        }
+      },
+      {
+        "name": "language",
+        "in": "query",
+        "required": true,
+        "description": "Language code whose tenant override is removed.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "en",
+            "fr",
+            "es",
+            "de",
+            "nl",
+            "it",
+            "pl",
+            "pt",
+            "xx",
+            "yy"
+          ],
+          "description": "Language code whose tenant override is removed."
+        }
+      }
+    ]
+  },
+  {
     "id": "get-_api_ext_extensionid_path",
     "method": "get",
     "path": "/api/ext/{extensionId}/{path}",
     "displayName": "Forward GET request to extension runner",
     "summary": "Forward GET request to extension runner",
-    "description": "Tenant-scoped extension gateway endpoint that forwards GET requests to an installed extension runner. The gateway resolves the tenant from x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID in development; verifies the extension is installed and enabled for that tenant; forwards selected headers and all query parameters to RUNNER_BASE_URL /v1/execute; and relays the runner response. GET requests do not read a body and do not generate an idempotency key. The gateway currently has a placeholder access check and does not enforce per-extension RBAC beyond tenant install resolution.",
+    "description": "Tenant-scoped extension gateway endpoint that forwards GET requests to an installed extension runner. The gateway requires an authenticated session and derives the tenant from that session, then forwards selected headers and all query parameters to RUNNER_BASE_URL /v1/execute and relays the runner response. The gateway fails closed unless the caller has an authenticated session principal whose tenant matches the resolved tenant. It requires an active tenant-owned install (is_enabled true and status enabled), a declared endpoint on the installed version that matches the effective method and path, the extension:read permission for GET/HEAD requests or the extension:write permission for POST/PUT/PATCH/DELETE requests for MSP users, or an explicit client-portal opt-in with a resolvable client for client users, an available rate-limit budget for the tenant and extension, and a durable execution audit record. Header-only tenant resolution and DEV_TENANT_ID never authorize execution. Runner and install internals are never returned to callers. Tenant-selection headers are not accepted as authentication and a header that disagrees with the session tenant fails closed. GET requests do not read a body and do not generate an idempotency key.",
     "tags": [
       "Extension Gateway"
     ],
@@ -15930,26 +17104,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "schema": {
           "type": "string",
           "description": "Optional idempotency key for non-GET methods. The gateway falls back to x-request-id when absent and forwards the key to the runner."
-        }
-      },
-      {
-        "name": "x-alga-tenant",
-        "in": "header",
-        "required": false,
-        "description": "Internal tenant header used for tenant resolution before session fallback.",
-        "schema": {
-          "type": "string",
-          "description": "Internal tenant header used for tenant resolution before session fallback."
-        }
-      },
-      {
-        "name": "x-tenant-id",
-        "in": "header",
-        "required": false,
-        "description": "Legacy tenant header accepted for tenant resolution before session fallback.",
-        "schema": {
-          "type": "string",
-          "description": "Legacy tenant header accepted for tenant resolution before session fallback."
         }
       }
     ],
@@ -15965,7 +17119,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/ext/{extensionId}/{path}",
     "displayName": "Forward POST request to extension runner",
     "summary": "Forward POST request to extension runner",
-    "description": "Tenant-scoped extension gateway endpoint that forwards POST requests to an installed extension runner. The gateway resolves the tenant from x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID in development; verifies the extension is installed and enabled for that tenant; forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute; and relays the runner response. For POST requests the body is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. An x-idempotency-key header is forwarded when supplied, otherwise the generated x-request-id is used as the non-GET idempotency fallback. The gateway currently has a placeholder access check and does not enforce per-extension RBAC beyond tenant install resolution.",
+    "description": "Tenant-scoped extension gateway endpoint that forwards POST requests to an installed extension runner. The gateway requires an authenticated session and derives the tenant from that session, then forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute and relays the runner response. The gateway fails closed unless the caller has an authenticated session principal whose tenant matches the resolved tenant. It requires an active tenant-owned install (is_enabled true and status enabled), a declared endpoint on the installed version that matches the effective method and path, the extension:read permission for GET/HEAD requests or the extension:write permission for POST/PUT/PATCH/DELETE requests for MSP users, or an explicit client-portal opt-in with a resolvable client for client users, an available rate-limit budget for the tenant and extension, and a durable execution audit record. Header-only tenant resolution and DEV_TENANT_ID never authorize execution. Runner and install internals are never returned to callers. Tenant-selection headers are not accepted as authentication and a header that disagrees with the session tenant fails closed. For POST requests the body is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. An x-idempotency-key header is forwarded when supplied, otherwise the generated x-request-id is used as the non-GET idempotency fallback.",
     "tags": [
       "Extension Gateway"
     ],
@@ -16011,26 +17165,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "schema": {
           "type": "string",
           "description": "Optional idempotency key for non-GET methods. The gateway falls back to x-request-id when absent and forwards the key to the runner."
-        }
-      },
-      {
-        "name": "x-alga-tenant",
-        "in": "header",
-        "required": false,
-        "description": "Internal tenant header used for tenant resolution before session fallback.",
-        "schema": {
-          "type": "string",
-          "description": "Internal tenant header used for tenant resolution before session fallback."
-        }
-      },
-      {
-        "name": "x-tenant-id",
-        "in": "header",
-        "required": false,
-        "description": "Legacy tenant header accepted for tenant resolution before session fallback.",
-        "schema": {
-          "type": "string",
-          "description": "Legacy tenant header accepted for tenant resolution before session fallback."
         }
       }
     ],
@@ -16051,7 +17185,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/ext/{extensionId}/{path}",
     "displayName": "Forward PUT request to extension runner",
     "summary": "Forward PUT request to extension runner",
-    "description": "Tenant-scoped extension gateway endpoint that forwards PUT requests to an installed extension runner. The gateway resolves the tenant from x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID in development; verifies the extension is installed and enabled for that tenant; forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute; and relays the runner response. For PUT requests the body is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. Clients should provide x-idempotency-key for safe retries; otherwise the gateway falls back to a generated request ID. The gateway currently has a placeholder access check and does not enforce per-extension RBAC beyond tenant install resolution.",
+    "description": "Tenant-scoped extension gateway endpoint that forwards PUT requests to an installed extension runner. The gateway requires an authenticated session and derives the tenant from that session, then forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute and relays the runner response. The gateway fails closed unless the caller has an authenticated session principal whose tenant matches the resolved tenant. It requires an active tenant-owned install (is_enabled true and status enabled), a declared endpoint on the installed version that matches the effective method and path, the extension:read permission for GET/HEAD requests or the extension:write permission for POST/PUT/PATCH/DELETE requests for MSP users, or an explicit client-portal opt-in with a resolvable client for client users, an available rate-limit budget for the tenant and extension, and a durable execution audit record. Header-only tenant resolution and DEV_TENANT_ID never authorize execution. Runner and install internals are never returned to callers. Tenant-selection headers are not accepted as authentication and a header that disagrees with the session tenant fails closed. For PUT requests the body is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. Clients should provide x-idempotency-key for safe retries; otherwise the gateway falls back to a generated request ID.",
     "tags": [
       "Extension Gateway"
     ],
@@ -16097,26 +17231,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "schema": {
           "type": "string",
           "description": "Optional idempotency key for non-GET methods. The gateway falls back to x-request-id when absent and forwards the key to the runner."
-        }
-      },
-      {
-        "name": "x-alga-tenant",
-        "in": "header",
-        "required": false,
-        "description": "Internal tenant header used for tenant resolution before session fallback.",
-        "schema": {
-          "type": "string",
-          "description": "Internal tenant header used for tenant resolution before session fallback."
-        }
-      },
-      {
-        "name": "x-tenant-id",
-        "in": "header",
-        "required": false,
-        "description": "Legacy tenant header accepted for tenant resolution before session fallback.",
-        "schema": {
-          "type": "string",
-          "description": "Legacy tenant header accepted for tenant resolution before session fallback."
         }
       }
     ],
@@ -16137,7 +17251,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/ext/{extensionId}/{path}",
     "displayName": "Forward PATCH request to extension runner",
     "summary": "Forward PATCH request to extension runner",
-    "description": "Tenant-scoped extension gateway endpoint that forwards PATCH requests to an installed extension runner. The gateway resolves the tenant from x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID in development; verifies the extension is installed and enabled for that tenant; forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute; and relays the runner response. For PATCH requests the body is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. Clients should provide x-idempotency-key for safe retries; otherwise the gateway falls back to a generated request ID. The gateway does not interpret PATCH semantics; partial-update behavior is extension-defined.",
+    "description": "Tenant-scoped extension gateway endpoint that forwards PATCH requests to an installed extension runner. The gateway requires an authenticated session and derives the tenant from that session, then forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute and relays the runner response. The gateway fails closed unless the caller has an authenticated session principal whose tenant matches the resolved tenant. It requires an active tenant-owned install (is_enabled true and status enabled), a declared endpoint on the installed version that matches the effective method and path, the extension:read permission for GET/HEAD requests or the extension:write permission for POST/PUT/PATCH/DELETE requests for MSP users, or an explicit client-portal opt-in with a resolvable client for client users, an available rate-limit budget for the tenant and extension, and a durable execution audit record. Header-only tenant resolution and DEV_TENANT_ID never authorize execution. Runner and install internals are never returned to callers. Tenant-selection headers are not accepted as authentication and a header that disagrees with the session tenant fails closed. For PATCH requests the body is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. Clients should provide x-idempotency-key for safe retries; otherwise the gateway falls back to a generated request ID. The gateway does not interpret PATCH semantics; partial-update behavior is extension-defined.",
     "tags": [
       "Extension Gateway"
     ],
@@ -16183,26 +17297,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "schema": {
           "type": "string",
           "description": "Optional idempotency key for non-GET methods. The gateway falls back to x-request-id when absent and forwards the key to the runner."
-        }
-      },
-      {
-        "name": "x-alga-tenant",
-        "in": "header",
-        "required": false,
-        "description": "Internal tenant header used for tenant resolution before session fallback.",
-        "schema": {
-          "type": "string",
-          "description": "Internal tenant header used for tenant resolution before session fallback."
-        }
-      },
-      {
-        "name": "x-tenant-id",
-        "in": "header",
-        "required": false,
-        "description": "Legacy tenant header accepted for tenant resolution before session fallback.",
-        "schema": {
-          "type": "string",
-          "description": "Legacy tenant header accepted for tenant resolution before session fallback."
         }
       }
     ],
@@ -16223,7 +17317,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/ext/{extensionId}/{path}",
     "displayName": "Forward DELETE request to extension runner",
     "summary": "Forward DELETE request to extension runner",
-    "description": "Tenant-scoped extension gateway endpoint that forwards DELETE requests to an installed extension runner. The gateway resolves the tenant from x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID in development; verifies the extension is installed and enabled for that tenant; forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute; and relays the runner response. For DELETE requests the body, if present, is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. The gateway currently has a placeholder access check and does not enforce per-extension RBAC beyond tenant install resolution.",
+    "description": "Tenant-scoped extension gateway endpoint that forwards DELETE requests to an installed extension runner. The gateway requires an authenticated session and derives the tenant from that session, then forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute and relays the runner response. The gateway fails closed unless the caller has an authenticated session principal whose tenant matches the resolved tenant. It requires an active tenant-owned install (is_enabled true and status enabled), a declared endpoint on the installed version that matches the effective method and path, the extension:read permission for GET/HEAD requests or the extension:write permission for POST/PUT/PATCH/DELETE requests for MSP users, or an explicit client-portal opt-in with a resolvable client for client users, an available rate-limit budget for the tenant and extension, and a durable execution audit record. Header-only tenant resolution and DEV_TENANT_ID never authorize execution. Runner and install internals are never returned to callers. Tenant-selection headers are not accepted as authentication and a header that disagrees with the session tenant fails closed. For DELETE requests the body, if present, is limited to 10 MB, base64-encoded, and forwarded as http.body_b64.",
     "tags": [
       "Extension Gateway"
     ],
@@ -16269,26 +17363,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "schema": {
           "type": "string",
           "description": "Optional idempotency key for non-GET methods. The gateway falls back to x-request-id when absent and forwards the key to the runner."
-        }
-      },
-      {
-        "name": "x-alga-tenant",
-        "in": "header",
-        "required": false,
-        "description": "Internal tenant header used for tenant resolution before session fallback.",
-        "schema": {
-          "type": "string",
-          "description": "Internal tenant header used for tenant resolution before session fallback."
-        }
-      },
-      {
-        "name": "x-tenant-id",
-        "in": "header",
-        "required": false,
-        "description": "Legacy tenant header accepted for tenant resolution before session fallback.",
-        "schema": {
-          "type": "string",
-          "description": "Legacy tenant header accepted for tenant resolution before session fallback."
         }
       }
     ],
@@ -18970,9 +20044,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "get-_api_v1_financial_tax_rates",
     "method": "get",
     "path": "/api/v1/financial/tax/rates",
-    "displayName": "List financial tax rates (transaction list wiring)",
-    "summary": "List financial tax rates (transaction list wiring)",
-    "description": "Route file currently maps to ApiFinancialController.list(), so the response is the generic financial transaction list rather than a tax-rate list.",
+    "displayName": "List tax rates",
+    "summary": "List tax rates",
+    "description": "Returns tenant-scoped tax rates. cap_amount is a safe integer in currency_code minor units, or null for no cap; zero is intentional. A null currency applies to all invoice currencies, including unresolved legacy caps. Caps apply per rate contribution and per period segment, not to component-based composite calculations. Requires financial:read, billing:read and PSA product access. This route exposes GET only; no tax-rate mutation endpoints are added.",
     "tags": [
       "Financial"
     ],
@@ -18999,7 +20073,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "in": "query",
         "required": false,
         "schema": {
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "created_at",
+            "updated_at",
+            "region_code",
+            "tax_percentage",
+            "start_date",
+            "end_date",
+            "cap_amount",
+            "currency_code"
+          ],
+          "default": "created_at"
         }
       },
       {
@@ -19011,7 +20096,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "enum": [
             "asc",
             "desc"
-          ]
+          ],
+          "default": "desc"
         }
       },
       {
@@ -19027,7 +20113,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "in": "query",
         "required": false,
         "schema": {
-          "type": "string"
+          "type": "string",
+          "format": "date-time"
         }
       },
       {
@@ -19035,7 +20122,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "in": "query",
         "required": false,
         "schema": {
-          "type": "string"
+          "type": "string",
+          "format": "date-time"
         }
       },
       {
@@ -19043,7 +20131,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "in": "query",
         "required": false,
         "schema": {
-          "type": "string"
+          "type": "string",
+          "format": "date-time"
         }
       },
       {
@@ -19051,29 +20140,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "in": "query",
         "required": false,
         "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "client_id",
-        "in": "query",
-        "required": false,
-        "schema": {
           "type": "string",
-          "format": "uuid"
+          "format": "date-time"
         }
       },
       {
-        "name": "invoice_id",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      },
-      {
-        "name": "type",
+        "name": "is_active",
         "in": "query",
         "required": false,
         "schema": {
@@ -19081,7 +20153,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "status",
+        "name": "region_code",
         "in": "query",
         "required": false,
         "schema": {
@@ -19089,116 +20161,20 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "amount_min",
+        "name": "effective_date",
         "in": "query",
         "required": false,
         "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "amount_max",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "include_expired",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            }
           ]
-        }
-      },
-      {
-        "name": "expiring_soon",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      {
-        "name": "has_remaining",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      {
-        "name": "has_expiration",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      {
-        "name": "date_from",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "date_to",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "group_by",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "day",
-            "week",
-            "month"
-          ]
-        }
-      },
-      {
-        "name": "include_projections",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      {
-        "name": "as_of_date",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
         }
       }
     ],
@@ -19209,23 +20185,108 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "array",
           "items": {
             "type": "object",
-            "additionalProperties": {}
+            "properties": {
+              "tax_rate_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "region_code": {
+                "type": "string"
+              },
+              "tax_percentage": {
+                "type": "number"
+              },
+              "description": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "start_date": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                ]
+              },
+              "end_date": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "cap_amount": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 9007199254740991,
+                "description": "Tax cap in currency_code minor units; null is uncapped, zero charges zero on supported calculation paths."
+              },
+              "currency_code": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "created_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updated_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "tenant": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "is_active": {
+                "type": "boolean"
+              },
+              "is_composite": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "tax_rate_id",
+              "region_code",
+              "tax_percentage",
+              "cap_amount",
+              "currency_code",
+              "tenant"
+            ]
           }
         },
         "pagination": {
           "type": "object",
           "properties": {
             "page": {
-              "type": "integer"
+              "type": "number"
             },
             "limit": {
-              "type": "integer"
+              "type": "number"
             },
             "total": {
-              "type": "integer"
+              "type": "number"
             },
             "totalPages": {
-              "type": "integer"
+              "type": "number"
             },
             "hasNext": {
               "type": "boolean"
@@ -19245,7 +20306,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "meta": {
           "type": "object",
-          "additionalProperties": {}
+          "properties": {}
         }
       },
       "required": [
@@ -23857,7 +24918,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/accounting-exports/xero-csv/client-export",
     "displayName": "Export clients as Xero Contacts CSV",
     "summary": "Export clients as Xero Contacts CSV",
-    "description": "Generates a Xero Contacts import CSV from the tenant clients (optionally limited to clientIds). Returns a CSV file. Requires billing:manage.",
+    "description": "Generates a Xero Contacts import CSV from the tenant clients (optionally limited to clientIds). Returns a CSV file. Requires accounting_integrations:exports_execute.",
     "tags": [
       "Accounting Exports"
     ],
@@ -23908,7 +24969,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/accounting-exports/xero-csv/client-import",
     "displayName": "Import Xero Contacts CSV",
     "summary": "Import Xero Contacts CSV",
-    "description": "Ingests a Xero Contacts CSV and matches/creates/updates clients. Accepts multipart file, JSON csvContent, or raw CSV. Supports preview mode and createNew/updateExisting/matchBy options. Requires billing:manage.",
+    "description": "Ingests a Xero Contacts CSV and matches/creates/updates clients. Accepts multipart file, JSON csvContent, or raw CSV. Supports preview mode and createNew/updateExisting/matchBy options. Requires accounting_integrations:exports_execute.",
     "tags": [
       "Accounting Exports"
     ],
@@ -23993,7 +25054,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/accounting-exports/xero-csv/tax-import",
     "displayName": "Import Xero invoice tax CSV",
     "summary": "Import Xero invoice tax CSV",
-    "description": "Ingests a Xero Invoice Details Report CSV, extracts per-invoice tax amounts, and updates the matching Alga invoices. Accepts multipart file, JSON csvContent, or raw CSV; supports preview mode. Requires billing:manage.",
+    "description": "Ingests a Xero Invoice Details Report CSV, extracts per-invoice tax amounts, and updates the matching Alga invoices. Accepts multipart file, JSON csvContent, or raw CSV; supports preview mode. Requires accounting_integrations:exports_execute.",
     "tags": [
       "Accounting Exports"
     ],
@@ -24046,7 +25107,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/accounting-exports/{batchId}/download",
     "displayName": "Download an accounting export batch",
     "summary": "Download an accounting export batch",
-    "description": "Regenerates and returns the export file (CSV/IIF) for a stored export batch using its registered adapter (xero_csv, quickbooks_desktop). Requires billing_settings:update.",
+    "description": "Regenerates and returns the export file (CSV/IIF) for a stored export batch using its registered adapter (xero_csv, quickbooks_desktop). Requires accounting_integrations:exports_execute.",
     "tags": [
       "Accounting Exports"
     ],
@@ -33338,6 +34399,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "enable_live_ticket_timer": {
           "type": "boolean"
+        },
+        "client_portal_visible": {
+          "type": "boolean"
         }
       },
       "description": "Payload for updating a board. All fields are optional."
@@ -33646,6 +34710,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "icon": {
           "type": "string",
           "maxLength": 50
+        },
+        "portal_selectable": {
+          "type": "boolean"
         }
       },
       "description": "Payload for updating a status. All fields are optional."
@@ -44635,30 +45702,112 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "put-_api_v1_tickets_id",
     "method": "put",
     "path": "/api/v1/tickets/{id}",
-    "displayName": "Update ticket",
-    "summary": "Update ticket",
-    "description": "Updates ticket UUID.",
+    "displayName": "Update Ticket",
+    "summary": "Update a ticket with optional silent-notification controls",
+    "description": "Updates one or more ticket fields. Set suppressContactNotifications=true to avoid customer email and portal notifications for this operation. Set suppressInternalNotifications=true as well to also avoid agent and watcher notifications; internal suppression requires customer suppression. Silent updates still create normal audit, workflow, and webhook records.",
     "tags": [
       "Work Management v1"
     ],
-    "approvalRequired": false,
+    "rbacResource": "ticket",
+    "approvalRequired": true,
     "parameters": [
       {
         "name": "id",
         "in": "path",
         "required": true,
-        "description": "UUID path identifier from underlying resource tables.",
+        "description": "Ticket identifier.",
         "schema": {
           "type": "string",
-          "format": "uuid",
-          "description": "UUID path identifier from underlying resource tables."
+          "format": "uuid"
         }
       }
     ],
     "requestBodySchema": {
       "type": "object",
-      "additionalProperties": {},
-      "description": "Controller/service-specific payload; see source route/controller for exact required shape."
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "board_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "client_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "location_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "contact_name_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "status_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "category_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "subcategory_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "assigned_to": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "priority_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "attributes": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": true
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "override_close_rules": {
+          "type": "boolean"
+        },
+        "override_close_rules_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "suppressContactNotifications": {
+          "type": "boolean",
+          "description": "Suppress customer-facing email and portal notifications for this update."
+        },
+        "suppressInternalNotifications": {
+          "type": "boolean",
+          "description": "Also suppress agent and watcher email, in-app, and push notifications. Requires suppressContactNotifications=true."
+        }
+      },
+      "minProperties": 1
     },
     "responseBodySchema": {
       "type": "object",
@@ -44686,7 +45835,23 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "required": [
         "data"
       ]
-    }
+    },
+    "examples": [
+      {
+        "name": "Silently change ticket priority for everyone",
+        "request": {
+          "params": {
+            "id": "11111111-1111-1111-1111-111111111111"
+          },
+          "body": {
+            "priority_id": "44444444-4444-4444-4444-444444444444",
+            "suppressContactNotifications": true,
+            "suppressInternalNotifications": true
+          }
+        },
+        "notes": "The priority change remains visible in ticket history and webhooks, but no customer, agent, or watcher notification is sent."
+      }
+    ]
   },
   {
     "id": "delete-_api_v1_tickets_id",
@@ -44746,7 +45911,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets/{id}/assignment",
     "displayName": "Update ticket assignment",
     "summary": "Update ticket assignment",
-    "description": "Updates ticket assignment target.",
+    "description": "Updates the primary ticket assignment, with optional per-operation notification suppression.",
     "tags": [
       "Work Management v1"
     ],
@@ -44766,8 +45931,23 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     ],
     "requestBodySchema": {
       "type": "object",
-      "additionalProperties": {},
-      "description": "Controller/service-specific payload; see source route/controller for exact required shape."
+      "properties": {
+        "assigned_to": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "suppressContactNotifications": {
+          "type": "boolean",
+          "description": "When true, suppresses customer-facing email and portal notifications for this operation."
+        },
+        "suppressInternalNotifications": {
+          "type": "boolean",
+          "description": "When true, also suppresses agent and watcher notifications. Requires suppressContactNotifications=true."
+        }
+      }
     },
     "responseBodySchema": {
       "type": "object",
@@ -44949,7 +46129,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets/{id}/comments",
     "displayName": "Add Ticket Comment",
     "summary": "Add a comment to a ticket",
-    "description": "Adds a client or internal comment to the specified ticket.",
+    "description": "Adds a client or internal comment to the specified ticket. Silent flags suppress the comment notification without hiding the comment from ticket history, workflows, or webhooks.",
     "tags": [
       "Work Management v1"
     ],
@@ -44979,10 +46159,32 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "description": "When true, records the comment as internal only.",
           "default": false
         },
+        "is_resolution": {
+          "type": "boolean",
+          "description": "When true, marks the comment as a resolution.",
+          "default": false
+        },
+        "parent_comment_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Optional parent comment for a threaded reply."
+        },
         "time_spent": {
           "type": "number",
           "description": "Optional time (in minutes) to log with the comment.",
           "minimum": 0
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "suppressContactNotifications": {
+          "type": "boolean",
+          "description": "Suppress customer-facing notification delivery for this comment."
+        },
+        "suppressInternalNotifications": {
+          "type": "boolean",
+          "description": "Also suppress agent and watcher notifications for this comment. Requires suppressContactNotifications=true."
         }
       },
       "required": [
@@ -45023,7 +46225,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets/{id}/status",
     "displayName": "Update ticket status",
     "summary": "Update ticket status",
-    "description": "Updates status for ticket UUID.",
+    "description": "Updates ticket status, with optional per-operation notification suppression.",
     "tags": [
       "Work Management v1"
     ],
@@ -45043,8 +46245,44 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     ],
     "requestBodySchema": {
       "type": "object",
-      "additionalProperties": {},
-      "description": "Controller/service-specific payload; see source route/controller for exact required shape."
+      "properties": {
+        "status_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "closed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "closed_by": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "override_close_rules": {
+          "type": "boolean"
+        },
+        "override_close_rules_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "propagateToChildren": {
+          "type": "boolean",
+          "description": "Sync-mode bundle masters only. When a status change would close or reopen child tickets, true propagates to the affected children and false changes the master only. Omit to receive 409 with the affected children."
+        },
+        "suppressContactNotifications": {
+          "type": "boolean",
+          "description": "When true, suppresses customer-facing email and portal notifications for this operation."
+        },
+        "suppressInternalNotifications": {
+          "type": "boolean",
+          "description": "When true, also suppresses agent and watcher notifications. Requires suppressContactNotifications=true."
+        }
+      },
+      "required": [
+        "status_id"
+      ]
     },
     "responseBodySchema": {
       "type": "object",
@@ -45195,7 +46433,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets/{id}/bundle",
     "displayName": "Create ticket bundle",
     "summary": "Create ticket bundle",
-    "description": "Bundles the given child tickets under ticket {id} as the master, with a sync mode of link_only or sync_updates.",
+    "description": "Bundles the given child tickets under ticket {id} as the master, with a sync mode of link_only or sync_updates. When the master is closed, on_closed_master selects the consequence: keep_closed (link only, the default), apply_resolution (close each child with the master's resolution), or reopen_master. Omitting it while the master is closed returns 409 naming the allowed choices; supplying it while the master is open returns 400.",
     "tags": [
       "Work Management v1"
     ],
@@ -45304,7 +46542,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets/{id}/bundle/children",
     "displayName": "Add bundle children",
     "summary": "Add bundle children",
-    "description": "Adds child tickets to the existing bundle mastered by {id}.",
+    "description": "Adds child tickets to the existing bundle mastered by {id}. When the master is closed, on_closed_master selects the consequence: keep_closed (link only, the default), apply_resolution (close each child with the master's resolution), or reopen_master. Omitting it while the master is closed returns 409 naming the allowed choices; supplying it while the master is open returns 400.",
     "tags": [
       "Work Management v1"
     ],
@@ -48930,6 +50168,69 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
+    "id": "delete-_api_v1_tickets_id_comments_commentid_schedule",
+    "method": "delete",
+    "path": "/api/v1/tickets/{id}/comments/{commentId}/schedule",
+    "displayName": "Cancel a scheduled comment",
+    "summary": "Cancel a scheduled comment",
+    "description": "Cancels a comment that was created with scheduled_publish_at and has not published yet. The row is retained with publish_state=canceled (soft-deleted) and its publication job is removed. Returns 400 for comments that are not scheduled.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Ticket UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket UUID."
+        }
+      },
+      {
+        "name": "commentId",
+        "in": "path",
+        "required": true,
+        "description": "Comment UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Comment UUID."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
     "id": "get-_api_v1_tickets_id_documents",
     "method": "get",
     "path": "/api/v1/tickets/{id}/documents",
@@ -49002,6 +50303,705 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string",
           "format": "uuid",
           "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_tickets_id_checklist",
+    "method": "get",
+    "path": "/api/v1/tickets/{id}/checklist",
+    "displayName": "List ticket checklist items",
+    "summary": "List ticket checklist items",
+    "description": "Returns ticket checklist items in display order, including required state and completion attribution.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_tickets_id_checklist",
+    "method": "post",
+    "path": "/api/v1/tickets/{id}/checklist",
+    "displayName": "Add a ticket checklist item",
+    "summary": "Add a ticket checklist item",
+    "description": "Adds a manual checklist item to the end of the ticket checklist.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "item_name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Checklist item name."
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "is_required": {
+          "type": "boolean",
+          "description": "Whether the item gates ticket closure. Defaults to true."
+        }
+      },
+      "required": [
+        "item_name"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "patch-_api_v1_tickets_id_checklist_itemid",
+    "method": "patch",
+    "path": "/api/v1/tickets/{id}/checklist/{itemId}",
+    "displayName": "Set ticket checklist item completion",
+    "summary": "Set ticket checklist item completion",
+    "description": "Completes or uncompletes an item. Completion records the authenticated user and time; uncompletion clears the current signoff while preserving it in ticket audit history.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Ticket UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket UUID."
+        }
+      },
+      {
+        "name": "itemId",
+        "in": "path",
+        "required": true,
+        "description": "Ticket checklist item UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket checklist item UUID."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "completed": {
+          "type": "boolean",
+          "description": "True to complete the item; false to remove its completion signoff."
+        }
+      },
+      "required": [
+        "completed"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_tickets_id_externallinks",
+    "method": "get",
+    "path": "/api/v1/tickets/{id}/external-links",
+    "displayName": "List Ticket External Links",
+    "summary": "List external links for a ticket",
+    "description": "Returns structured references from the ticket to records in external systems (Discord, Slack, GitHub, Jira, email, custom systems). Each entry carries the registry key, external id, realm, relationship (origin/mirror/reference), actor, and a resolved display object with a readable label and link-out href. The origin link, when present, is how the ticket arrived in Alga.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "ticket",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_tickets_id_externallinks",
+    "method": "post",
+    "path": "/api/v1/tickets/{id}/external-links",
+    "displayName": "Add Ticket External Link",
+    "summary": "Add an external link to a ticket",
+    "description": "Creates an external-system reference for a ticket. Defaults to a ticket-level link; set entity_type to 'comment' with a comment_id to attach the reference to one of the ticket's comments. Only one origin link per entity is permitted; a duplicate external record is rejected. Provide an http(s) url when the system has no URL template. Use GET /api/v1/tickets/by-external-link to find an existing ticket for the same external record before creating one.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "ticket",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "entity_type": {
+          "type": "string",
+          "enum": [
+            "ticket",
+            "comment"
+          ],
+          "description": "Defaults to 'ticket'."
+        },
+        "comment_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Required when entity_type is 'comment'."
+        },
+        "system": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Built-in system key or custom:<slug>."
+        },
+        "external_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "external_parent_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "realm": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "url": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uri",
+          "description": "Optional explicit link-out; must be http(s)."
+        },
+        "relationship": {
+          "type": "string",
+          "enum": [
+            "origin",
+            "mirror",
+            "reference"
+          ]
+        },
+        "actor": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "handle": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "display_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "url": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uri"
+            }
+          }
+        },
+        "external_status": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "external_updated_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "metadata": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "system",
+        "external_id"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "patch-_api_v1_tickets_id_externallinks_linkid",
+    "method": "patch",
+    "path": "/api/v1/tickets/{id}/external-links/{linkId}",
+    "displayName": "Update Ticket External Link",
+    "summary": "Update a ticket external link",
+    "description": "Updates mutable fields on an existing link belonging to the ticket: relationship, url, actor, external_status, external_updated_at, last_synced_at, and metadata. system and external_id are immutable.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "ticket",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Ticket UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket UUID."
+        }
+      },
+      {
+        "name": "linkId",
+        "in": "path",
+        "required": true,
+        "description": "External link UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "External link UUID."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "relationship": {
+          "type": "string",
+          "enum": [
+            "origin",
+            "mirror",
+            "reference"
+          ]
+        },
+        "url": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uri"
+        },
+        "actor": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "handle": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "display_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "url": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uri"
+            }
+          }
+        },
+        "external_status": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "external_updated_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "last_synced_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "metadata": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {}
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_tickets_id_externallinks_linkid",
+    "method": "delete",
+    "path": "/api/v1/tickets/{id}/external-links/{linkId}",
+    "displayName": "Remove Ticket External Link",
+    "summary": "Remove an external link from a ticket",
+    "description": "Deletes a link belonging to the ticket and records a ticket activity entry. Any inbound integration that relies on the link for deduplication should stop using it after removal.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "ticket",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Ticket UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket UUID."
+        }
+      },
+      {
+        "name": "linkId",
+        "in": "path",
+        "required": true,
+        "description": "External link UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "External link UUID."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_tickets_byexternallink",
+    "method": "get",
+    "path": "/api/v1/tickets/by-external-link",
+    "displayName": "Find Ticket By External Link",
+    "summary": "Find a ticket by its external record",
+    "description": "Returns the ticket and matching link for a system/external_id pair, with an optional external_parent_id for comment-level records. Returns 404 when no ticket carries the external record. Use this as the dedupe check before creating a ticket from an external source.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "ticket",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "system",
+        "in": "query",
+        "required": true,
+        "description": "Registry key of the external system.",
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Registry key of the external system."
+        }
+      },
+      {
+        "name": "external_id",
+        "in": "query",
+        "required": true,
+        "description": "External record identifier.",
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "description": "External record identifier."
+        }
+      },
+      {
+        "name": "external_parent_id",
+        "in": "query",
+        "required": false,
+        "description": "Ticket-level external id, for comment-level records.",
+        "schema": {
+          "type": "string",
+          "description": "Ticket-level external id, for comment-level records."
         }
       }
     ],
@@ -49160,6 +51160,132 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
+    "id": "get-_api_v1_tickets_id_documents_documentid_thumbnail",
+    "method": "get",
+    "path": "/api/v1/tickets/{id}/documents/{documentId}/thumbnail",
+    "displayName": "Get a ticket document thumbnail image",
+    "summary": "Get a ticket document thumbnail image",
+    "description": "Serves the cached 200x200 cover-cropped JPEG thumbnail for an image, PDF, or video document attached to a ticket. Generated on first request for older uploads. Responds with an ETag and long-lived Cache-Control; honors If-None-Match with 304. Returns 404 for document types that have no thumbnail.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Ticket UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket UUID."
+        }
+      },
+      {
+        "name": "documentId",
+        "in": "path",
+        "required": true,
+        "description": "Document UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Document UUID."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_tickets_id_documents_documentid_preview",
+    "method": "get",
+    "path": "/api/v1/tickets/{id}/documents/{documentId}/preview",
+    "displayName": "Get a ticket document preview image",
+    "summary": "Get a ticket document preview image",
+    "description": "Serves the cached 800x600 fit-inside JPEG preview for an image, PDF, or video document attached to a ticket. Generated on first request for older uploads. Responds with an ETag and long-lived Cache-Control; honors If-None-Match with 304. Returns 404 for document types that have no preview.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Ticket UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket UUID."
+        }
+      },
+      {
+        "name": "documentId",
+        "in": "path",
+        "required": true,
+        "description": "Document UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Document UUID."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
     "id": "get-_api_v1_tickets_id_agents",
     "method": "get",
     "path": "/api/v1/tickets/{id}/agents",
@@ -49217,7 +51343,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets/{id}/agents",
     "displayName": "Add a ticket additional agent",
     "summary": "Add a ticket additional agent",
-    "description": "Adds a user as an additional agent on the ticket and publishes TICKET_ADDITIONAL_AGENT_ASSIGNED so notifications fire as they do in the UI. A ticket with no primary agent promotes the user to primary instead (TICKET_ASSIGNED). Returns the updated agent list; a duplicate returns 409.",
+    "description": "Adds a user as an additional agent on the ticket and publishes TICKET_ADDITIONAL_AGENT_ASSIGNED so notifications fire as they do in the UI unless suppressed. A ticket with no primary agent promotes the user to primary instead (TICKET_ASSIGNED). Returns the updated agent list; a duplicate returns 409.",
     "tags": [
       "Work Management v1"
     ],
@@ -49247,6 +51373,14 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string",
           "maxLength": 50,
           "description": "Resource role recorded on the assignment; defaults to support."
+        },
+        "suppressContactNotifications": {
+          "type": "boolean",
+          "description": "When true, suppresses customer-facing email and portal notifications for this operation."
+        },
+        "suppressInternalNotifications": {
+          "type": "boolean",
+          "description": "When true, also suppresses agent and watcher notifications. Requires suppressContactNotifications=true."
         }
       },
       "required": [
@@ -49323,7 +51457,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets/{id}/team",
     "displayName": "Assign a team to a ticket",
     "summary": "Assign a team to a ticket",
-    "description": "Sets assigned_team_id, resolves the primary agent (the existing assignee, else the team lead) and records the team's active members as team_member additional agents. Returns the updated ticket. A team without a lead is rejected with 400.",
+    "description": "Sets assigned_team_id, resolves the primary agent (the existing assignee, else the team lead) and records the team's active members as team_member additional agents. Optional suppression flags silence the assignment notification. Returns the updated ticket. A team without a lead is rejected with 400.",
     "tags": [
       "Work Management v1"
     ],
@@ -49350,10 +51484,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "description": "Team to assign to the ticket."
         },
         "suppressContactNotifications": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "When true, suppresses customer-facing email and portal notifications for this operation."
         },
         "suppressInternalNotifications": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "When true, also suppresses agent and watcher notifications. Requires suppressContactNotifications=true."
         }
       },
       "required": [
@@ -51852,14 +53988,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           ],
           "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
         },
-        "next_action": {
-          "type": "string",
-          "minLength": 1
-        },
-        "next_action_due": {
-          "type": "string",
-          "format": "date-time"
-        },
         "generator_key": {
           "type": [
             "string",
@@ -51991,6 +54119,142 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "user_name"
             ]
           }
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_opportunities_id_steps",
+    "method": "get",
+    "path": "/api/v1/opportunities/{id}/steps",
+    "displayName": "List opportunity steps",
+    "summary": "List opportunity steps",
+    "description": "Lists the current opportunity plan, including done, current, and planned steps.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Opportunity UUID from opportunities.opportunity_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opportunity UUID from opportunities.opportunity_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_opportunities_id_steps_stepid_complete",
+    "method": "post",
+    "path": "/api/v1/opportunities/{id}/steps/{stepId}/complete",
+    "displayName": "Complete opportunity step",
+    "summary": "Complete opportunity step",
+    "description": "Completes a current step and promotes an existing planned successor or creates a replacement action.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Opportunity UUID from opportunities.opportunity_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opportunity UUID from opportunities.opportunity_id."
+        }
+      },
+      {
+        "name": "stepId",
+        "in": "path",
+        "required": true,
+        "description": "Step UUID from opportunity_steps.step_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Step UUID from opportunity_steps.step_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "next_step_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "next_action": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "next_action_due": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "checkpoint": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "qualified",
+            "assessment",
+            "proposed",
+            "verbal",
+            "won"
+          ]
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -52681,6 +54945,585 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "data": {
           "type": "object",
           "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_opportunities_forecast",
+    "method": "get",
+    "path": "/api/v1/opportunities/forecast",
+    "displayName": "Get forecast band",
+    "summary": "Get forecast band",
+    "description": "Returns floor and ceiling MRR/NRR with per-deal composition for a period. Requires opportunity management: Community Edition answers 403 `ENTERPRISE_EDITION_REQUIRED`, and plans below Pro answer 403 `TIER_ACCESS_DENIED`.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "start",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
+      },
+      {
+        "name": "end",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_opportunities_calibration",
+    "method": "get",
+    "path": "/api/v1/opportunities/calibration",
+    "displayName": "Get seller calibration",
+    "summary": "Get seller calibration",
+    "description": "Returns declared-confidence outcomes and new-logo agreement attach rate per seller. Requires opportunity management: Community Edition answers 403 `ENTERPRISE_EDITION_REQUIRED`, and plans below Pro answer 403 `TIER_ACCESS_DENIED`.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_opportunities_meetingsessions",
+    "method": "post",
+    "path": "/api/v1/opportunities/meeting-sessions",
+    "displayName": "Start meeting session",
+    "summary": "Start meeting session",
+    "description": "Starts or resumes the caller’s same-day pipeline meeting session. Requires opportunity management: Community Edition answers 403 `ENTERPRISE_EDITION_REQUIRED`, and plans below Pro answer 403 `TIER_ACCESS_DENIED`.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_opportunities_meetingsessions_active",
+    "method": "get",
+    "path": "/api/v1/opportunities/meeting-sessions/active",
+    "displayName": "Get active meeting session",
+    "summary": "Get active meeting session",
+    "description": "Returns the caller’s resumable same-day meeting session and reviews. Requires opportunity management: Community Edition answers 403 `ENTERPRISE_EDITION_REQUIRED`, and plans below Pro answer 403 `TIER_ACCESS_DENIED`.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_opportunities_meetingsessions_sessionid_reviews",
+    "method": "post",
+    "path": "/api/v1/opportunities/meeting-sessions/{sessionId}/reviews",
+    "displayName": "Mark deal reviewed",
+    "summary": "Mark deal reviewed",
+    "description": "Creates or updates the review marker for a deal in a meeting session. Requires opportunity management: Community Edition answers 403 `ENTERPRISE_EDITION_REQUIRED`, and plans below Pro answer 403 `TIER_ACCESS_DENIED`.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "sessionId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "opportunity_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 4000
+        }
+      },
+      "required": [
+        "opportunity_id"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_opportunities_id_commitments",
+    "method": "get",
+    "path": "/api/v1/opportunities/{id}/commitments",
+    "displayName": "List commitments",
+    "summary": "List commitments",
+    "description": "Lists the promises recorded for an opportunity. Requires opportunity management: Community Edition answers 403 `ENTERPRISE_EDITION_REQUIRED`, and plans below Pro answer 403 `TIER_ACCESS_DENIED`.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Opportunity UUID from opportunities.opportunity_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opportunity UUID from opportunities.opportunity_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_opportunities_id_commitments",
+    "method": "post",
+    "path": "/api/v1/opportunities/{id}/commitments",
+    "displayName": "Create commitment",
+    "summary": "Create commitment",
+    "description": "Records an unresolved promise on an opportunity. Requires opportunity management: Community Edition answers 403 `ENTERPRISE_EDITION_REQUIRED`, and plans below Pro answer 403 `TIER_ACCESS_DENIED`.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Opportunity UUID from opportunities.opportunity_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opportunity UUID from opportunities.opportunity_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        }
+      },
+      "required": [
+        "description"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_opportunities_id_commitments_commitmentid",
+    "method": "put",
+    "path": "/api/v1/opportunities/{id}/commitments/{commitmentId}",
+    "displayName": "Update commitment",
+    "summary": "Update commitment",
+    "description": "Edits or resolves a commitment to a downstream artifact or explicit decline. Requires opportunity management: Community Edition answers 403 `ENTERPRISE_EDITION_REQUIRED`, and plans below Pro answer 403 `TIER_ACCESS_DENIED`.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "commitmentId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "resolution_status": {
+          "type": "string",
+          "enum": [
+            "open",
+            "quote_line",
+            "agreement_line",
+            "project_task",
+            "declined"
+          ]
+        },
+        "resolution_ref_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_opportunities_id_commitments_commitmentid",
+    "method": "delete",
+    "path": "/api/v1/opportunities/{id}/commitments/{commitmentId}",
+    "displayName": "Delete commitment",
+    "summary": "Delete commitment",
+    "description": "Deletes a commitment. Requires opportunity management: Community Edition answers 403 `ENTERPRISE_EDITION_REQUIRED`, and plans below Pro answer 403 `TIER_ACCESS_DENIED`.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "commitmentId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ]
+  },
+  {
+    "id": "get-_api_v1_opportunities_qbr_clientid",
+    "method": "get",
+    "path": "/api/v1/opportunities/qbr/{clientId}",
+    "displayName": "Get QBR trigger pack",
+    "summary": "Get QBR trigger pack",
+    "description": "Assembles renewal, aging/EOL asset, ticket-trend, and whitespace triggers for an account. Requires opportunity management: Community Edition answers 403 `ENTERPRISE_EDITION_REQUIRED`, and plans below Pro answer 403 `TIER_ACCESS_DENIED`.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "clientId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_opportunities_qbr_clientid_opportunities",
+    "method": "post",
+    "path": "/api/v1/opportunities/qbr/{clientId}/opportunities",
+    "displayName": "Create QBR opportunities",
+    "summary": "Create QBR opportunities",
+    "description": "Batch-creates typed opportunities from current QBR trigger keys. Requires opportunity management: Community Edition answers 403 `ENTERPRISE_EDITION_REQUIRED`, and plans below Pro answer 403 `TIER_ACCESS_DENIED`.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "clientId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "trigger_keys": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "maxItems": 100
+        }
+      },
+      "required": [
+        "trigger_keys"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_opportunities_qbr_yield",
+    "method": "get",
+    "path": "/api/v1/opportunities/qbr/yield",
+    "displayName": "Get QBR yield",
+    "summary": "Get QBR yield",
+    "description": "Returns fired, created, and won trigger counts by account and account manager. Requires opportunity management: Community Edition answers 403 `ENTERPRISE_EDITION_REQUIRED`, and plans below Pro answer 403 `TIER_ACCESS_DENIED`.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_opportunities_rollups",
+    "method": "get",
+    "path": "/api/v1/opportunities/rollups",
+    "displayName": "Get seller rollups",
+    "summary": "Get seller rollups",
+    "description": "Returns period pipeline, outcomes, and attach rate by seller. Requires opportunity management: Community Edition answers 403 `ENTERPRISE_EDITION_REQUIRED`, and plans below Pro answer 403 `TIER_ACCESS_DENIED`.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "start",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
+      },
+      {
+        "name": "end",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
         },
         "meta": {
           "type": "object",
@@ -54314,6 +57157,29 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
+        "name": "status_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "is_closed",
+        "in": "query",
+        "required": false,
+        "description": "Filter by status closure; 'false' also matches interactions with no status.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ],
+          "description": "Filter by status closure; 'false' also matches interactions with no status."
+        }
+      },
+      {
         "name": "date_from",
         "in": "query",
         "required": false,
@@ -54599,6 +57465,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/interactions",
     "displayName": "Create an interaction",
     "summary": "Create an interaction",
+    "description": "Optionally creates a linked AlgaPSA calendar entry in the same transaction. Set create_schedule_entry and start_time; end_time defaults to start_time plus duration (or 30 minutes). schedule_assigned_user_ids defaults to the API key owner; booking other users requires user_schedule:update. This does not create a Teams meeting.",
     "tags": [
       "Interactions v1"
     ],
@@ -54653,6 +57520,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "interaction_date": {
           "type": "string",
           "format": "date-time"
+        },
+        "create_schedule_entry": {
+          "type": "boolean",
+          "description": "Also book an AlgaPSA calendar entry. Requires start_time; defaults to false."
+        },
+        "schedule_assigned_user_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "description": "Calendar assignees; omitted or empty defaults to the API key owner. Assigning others requires user_schedule:update."
         }
       },
       "required": [
@@ -55085,6 +57964,314 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "is_status_closed",
             "visibility"
           ]
+        },
+        "meta": {
+          "type": "object",
+          "properties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_interactions_id",
+    "method": "put",
+    "path": "/api/v1/interactions/{id}",
+    "displayName": "Update an interaction status or notes",
+    "summary": "Update an interaction status or notes",
+    "description": "Closes/reopens an interaction (status_id must be an interaction status) or replaces its notes. Title and timing are not editable here because they also re-sync the linked calendar entry.",
+    "tags": [
+      "Interactions v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "status_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 10000
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "tenant": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "interaction_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "icon": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "contact_name_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "contact_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "client_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "client_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "user_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "user_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "ticket_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "project_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "opportunity_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "title": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "notes": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "interaction_date": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            "start_time": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "end_time": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "duration": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "status_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "status_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "is_status_closed": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "visibility": {
+              "type": "string",
+              "enum": [
+                "internal",
+                "client_visible"
+              ]
+            }
+          },
+          "required": [
+            "tenant",
+            "interaction_id",
+            "type_id",
+            "type_name",
+            "icon",
+            "contact_name_id",
+            "contact_name",
+            "client_id",
+            "client_name",
+            "user_id",
+            "user_name",
+            "ticket_id",
+            "project_id",
+            "opportunity_id",
+            "title",
+            "notes",
+            "interaction_date",
+            "start_time",
+            "end_time",
+            "duration",
+            "status_id",
+            "status_name",
+            "is_status_closed",
+            "visibility"
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "properties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_interactionstatuses",
+    "method": "get",
+    "path": "/api/v1/interaction-statuses",
+    "displayName": "List interaction statuses",
+    "summary": "List interaction statuses",
+    "description": "Tenant statuses of type interaction, in display order.",
+    "tags": [
+      "Interactions v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "status_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              },
+              "is_closed": {
+                "type": "boolean"
+              },
+              "is_default": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "order_number": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "status_id",
+              "name",
+              "is_closed",
+              "is_default",
+              "order_number"
+            ]
+          }
         },
         "meta": {
           "type": "object",
@@ -55659,6 +58846,35 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
+    "id": "post-_api_v1_inventory_counts_sessionid_cancel",
+    "method": "post",
+    "path": "/api/v1/inventory/counts/{sessionId}/cancel",
+    "displayName": "Cancel a cycle count session",
+    "summary": "Cancel a cycle count session",
+    "description": "Cancels an in-progress cycle count and returns the cancelled session. Quantities already recorded against the session stay on it but are never applied to stock levels, since only approval posts them. Cancelling an already-cancelled session returns it unchanged; an approved session cannot be cancelled.",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "sessionId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
     "id": "get-_api_v1_inventory_purchaseorders",
     "method": "get",
     "path": "/api/v1/inventory/purchase-orders",
@@ -55947,7 +59163,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/mobile/me/capabilities",
     "displayName": "Get current mobile feature capabilities",
     "summary": "Get current mobile feature capabilities",
-    "description": "Returns tenant-product and RBAC-derived mobile feature availability for the authenticated API-key user.",
+    "description": "Returns tenant-product and RBAC-derived mobile feature availability, plus the country-derived date format, for the authenticated API-key user.",
     "tags": [
       "Mobile v1"
     ],
@@ -55967,16 +59183,95 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 },
                 "opportunities": {
                   "type": "boolean"
+                },
+                "opportunitiesCreate": {
+                  "type": "boolean"
                 }
               },
               "required": [
                 "inventory",
-                "opportunities"
+                "opportunities",
+                "opportunitiesCreate"
               ]
+            },
+            "formatting": {
+              "type": "object",
+              "properties": {
+                "country": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "order": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "day",
+                      "month",
+                      "year"
+                    ]
+                  }
+                },
+                "separator": {
+                  "type": "string"
+                },
+                "hour12": {
+                  "type": "boolean"
+                },
+                "datePattern": {
+                  "type": "string"
+                },
+                "dateTimePattern": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "country",
+                "order",
+                "separator",
+                "hour12",
+                "datePattern",
+                "dateTimePattern"
+              ]
+            },
+            "theme": {
+              "type": "object",
+              "properties": {
+                "pairId": {
+                  "type": "string",
+                  "description": "Tenant theme pair id, e.g. 'forest' or 'custom'."
+                },
+                "label": {
+                  "type": "string",
+                  "description": "English pair name; 'Custom' for a tenant-authored pair."
+                },
+                "light": {
+                  "$ref": "#/components/schemas/MobileThemeSeedTokensV1"
+                },
+                "dark": {
+                  "$ref": "#/components/schemas/MobileThemeSeedTokensV1"
+                },
+                "version": {
+                  "type": "string",
+                  "description": "Stable hash of pairId plus both token sets."
+                }
+              },
+              "required": [
+                "pairId",
+                "label",
+                "light",
+                "dark",
+                "version"
+              ],
+              "description": "Tenant theme pair the mobile app renders; always present, defaults to Alga."
             }
           },
           "required": [
-            "features"
+            "features",
+            "formatting",
+            "theme"
           ]
         }
       },
