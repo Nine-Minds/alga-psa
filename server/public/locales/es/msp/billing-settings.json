@@ -849,7 +849,7 @@
       "delete": "No se pudo eliminar el servicio",
       "deactivate": "No se pudo desactivar el servicio"
     },
-    "emptySearch": "Ningún servicio coincide con tu búsqueda.",
+    "emptySearch": "Ningún servicio coincide con su búsqueda.",
     "clearFilters": "Borrar filtros"
   },
   "products": {
