@@ -10,7 +10,8 @@ async function markIdentityInactive(
   tenantId: string,
   identity: EntraIdentityRef,
   reason: string,
-  accountEnabled = false
+  accountEnabled = false,
+  protectSharedMailboxes = false
 ): Promise<number> {
   return runWithTenant(tenantId, async () => {
     const { knex } = await createTenantKnex();
@@ -29,7 +30,14 @@ async function markIdentityInactive(
         return 0;
       }
 
-      const contactIds = links.map((row: any) => String(row.contact_name_id));
+      const linkedContactIds = links.map((row: any) => String(row.contact_name_id));
+      let contactIds = linkedContactIds;
+      if (protectSharedMailboxes) {
+        const contacts = await db.table('contacts').whereIn('contact_name_id', linkedContactIds)
+          .whereRaw('contact_kind IS DISTINCT FROM ?', ['shared_mailbox']).select(['contact_name_id']);
+        contactIds = contacts.map((row: any) => String(row.contact_name_id));
+      }
+      if (contactIds.length === 0) return 0;
       await db.table('contacts')
         .whereIn('contact_name_id', contactIds)
         .update({
@@ -41,12 +49,12 @@ async function markIdentityInactive(
           updated_at: now,
         });
 
-      await db.table('entra_contact_links')
-        .where({
+      const linkUpdateQuery = db.table('entra_contact_links').where({
           entra_tenant_id: identity.entraTenantId,
           entra_object_id: identity.entraObjectId,
-        })
-        .update({
+        });
+      if (protectSharedMailboxes) linkUpdateQuery.whereIn('contact_name_id', contactIds);
+      await linkUpdateQuery.update({
           is_active: false,
           link_status: 'inactive',
           last_synced_at: now,
@@ -101,12 +109,14 @@ export async function selectLinkedEntraIdentities<T extends EntraIdentityRef>(
 
     const linked: Array<LinkedEntraIdentity<T>> = [];
     for (const identity of identities) {
-      const links = await db.table('entra_contact_links')
+      const links = await db.table('entra_contact_links as link')
+        .join('contacts as contact', 'contact.contact_name_id', 'link.contact_name_id')
         .where({
-          entra_tenant_id: identity.entraTenantId,
-          entra_object_id: identity.entraObjectId,
+          'link.entra_tenant_id': identity.entraTenantId,
+          'link.entra_object_id': identity.entraObjectId,
         })
-        .select(['contact_name_id']);
+        .whereRaw('contact.contact_kind IS DISTINCT FROM ?', ['shared_mailbox'])
+        .select('link.contact_name_id');
 
       if (links.length > 0) {
         linked.push({ identity, linkedContactCount: links.length });
@@ -114,6 +124,28 @@ export async function selectLinkedEntraIdentities<T extends EntraIdentityRef>(
     }
 
     return linked;
+  });
+}
+
+/** Remove identities whose linked contact is a previously classified shared mailbox. */
+export async function excludeSharedMailboxEntraIdentities<T extends EntraIdentityRef>(
+  tenantId: string,
+  identities: T[]
+): Promise<T[]> {
+  if (identities.length === 0) return [];
+  return runWithTenant(tenantId, async () => {
+    const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenantId);
+    const safe: T[] = [];
+    for (const identity of identities) {
+      const shared = await db.table('entra_contact_links as link')
+        .join('contacts as contact', 'contact.contact_name_id', 'link.contact_name_id')
+        .where({ 'link.entra_tenant_id': identity.entraTenantId, 'link.entra_object_id': identity.entraObjectId })
+        .where({ 'contact.contact_kind': 'shared_mailbox' })
+        .first('contact.contact_name_id');
+      if (!shared) safe.push(identity);
+    }
+    return safe;
   });
 }
 
@@ -151,7 +183,7 @@ export async function markDisabledEntraUsersInactive(
 ): Promise<number> {
   let updated = 0;
   for (const identity of identities) {
-    updated += await markIdentityInactive(tenantId, identity, 'disabled_upstream');
+    updated += await markIdentityInactive(tenantId, identity, 'disabled_upstream', false, true);
   }
   return updated;
 }

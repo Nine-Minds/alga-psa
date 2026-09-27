@@ -8,6 +8,7 @@ import {
   previewLinkedContactChange,
   queueAmbiguousContactMatch,
   reactivateExcludedEntraContact,
+  reactivateDisabledSharedMailboxContact,
 } from './contactReconciler';
 import {
   evaluateClientPortalProvisioningEligibility,
@@ -172,6 +173,7 @@ export async function executeEntraSync(
           counters.increment('updated');
         }
         if (await reactivateExcludedEntraContact(input.tenantId, candidates[0].contactNameId, true)) counters.increment('updated');
+        if (userWithEntitlement.mailboxKind === 'shared' && await reactivateDisabledSharedMailboxContact(input.tenantId, candidates[0].contactNameId, true)) counters.increment('updated');
         preview?.push(
           describeUser(
             user,
@@ -192,6 +194,9 @@ export async function executeEntraSync(
           counters.increment('updated');
         }
         if (await reactivateExcludedEntraContact(input.tenantId, linkedContact.contactNameId, false)) {
+          counters.increment('updated');
+        }
+        if (userWithEntitlement.mailboxKind === 'shared' && await reactivateDisabledSharedMailboxContact(input.tenantId, linkedContact.contactNameId, false)) {
           counters.increment('updated');
         }
         const eligibility = evaluateClientPortalProvisioningEligibility(
@@ -258,6 +263,9 @@ export async function executeEntraSync(
     } else {
       const createdContact = await createContactForEntraUser(input.tenantId, input.clientId, userWithEntitlement);
       if (createdContact.action === 'linked' && await reactivateExcludedEntraContact(input.tenantId, createdContact.contactNameId, false)) {
+        counters.increment('updated');
+      }
+      if (createdContact.action === 'linked' && userWithEntitlement.mailboxKind === 'shared' && await reactivateDisabledSharedMailboxContact(input.tenantId, createdContact.contactNameId, false)) {
         counters.increment('updated');
       }
       const eligibility = evaluateClientPortalProvisioningEligibility(

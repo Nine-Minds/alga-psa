@@ -290,6 +290,33 @@ export async function reactivateExcludedEntraContact(tenantId: string, contactNa
   });
 }
 
+/** Reactivate only a previously imported shared mailbox disabled upstream. */
+export async function reactivateDisabledSharedMailboxContact(
+  tenantId: string,
+  contactNameId: string,
+  dryRun: boolean
+): Promise<boolean> {
+  return runWithTenant(tenantId, async () => {
+    const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenantId);
+    const query = db.table('contacts').where({
+      contact_name_id: contactNameId,
+      is_inactive: true,
+      contact_kind: 'shared_mailbox',
+      entra_sync_status_reason: 'disabled_upstream',
+    });
+    if (dryRun) return Boolean(await query.first('contact_name_id'));
+    const changed = await query.update({
+      is_inactive: false,
+      entra_account_enabled: false,
+      entra_sync_status: 'active',
+      entra_sync_status_reason: null,
+      updated_at: knex.fn.now(),
+    });
+    return Number(changed) > 0;
+  });
+}
+
 export async function createContactForEntraUser(
   tenantId: string,
   clientId: string,
