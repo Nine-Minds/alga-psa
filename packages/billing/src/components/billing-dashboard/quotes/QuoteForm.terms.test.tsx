@@ -116,7 +116,7 @@ vi.mock('@alga-psa/ui/components/TextArea', () => ({
   TextArea: (props: any) => <textarea {...props} />,
 }));
 vi.mock('@alga-psa/ui/components/DatePicker', () => ({
-  DatePicker: (props: any) => <input data-testid={props.id} />,
+  DatePicker: (props: any) => <input id={props.id} type="date" value={props.value ? props.value.toISOString().slice(0, 10) : ''} onChange={(event) => props.onChange?.(event.target.value ? new Date(`${event.target.value}T00:00:00`) : undefined)} />,
 }));
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
   default: ({ id, value, onValueChange, options, placeholder }: any) => (
@@ -201,6 +201,53 @@ describe('QuoteForm terms authoring', () => {
     cleanup();
   });
 
+  it('seeds new quote validity from settings and falls back to 30 days for invalid settings', async () => {
+    const expectedDate = (days: number) => {
+      const date = new Date();
+      date.setDate(date.getDate() + days);
+      return date.toISOString().slice(0, 10);
+    };
+
+    actionMocks.getDefaultBillingSettings.mockResolvedValueOnce({ defaultQuoteValidityDays: 15, defaultCurrencyCode: 'USD' });
+    const configured = render(<QuoteForm quoteId={null} onCancel={vi.fn()} onSaved={vi.fn()} />);
+    await waitFor(() => expect((document.getElementById('quote-valid-until') as HTMLInputElement).value).toBe(expectedDate(15)));
+    configured.unmount();
+
+    actionMocks.getDefaultBillingSettings.mockResolvedValueOnce({ defaultQuoteValidityDays: 366, defaultCurrencyCode: 'USD' });
+    render(<QuoteForm quoteId={null} onCancel={vi.fn()} onSaved={vi.fn()} />);
+    await waitFor(() => expect((document.getElementById('quote-valid-until') as HTMLInputElement).value).toBe(expectedDate(30)));
+  });
+
+  it('keeps the stored validity date when editing a quote', async () => {
+    actionMocks.getQuote.mockResolvedValueOnce({ ...RICH_TEMPLATE, quote_date: '2026-09-01', valid_until: '2026-10-17' });
+    render(<QuoteForm quoteId="quote-1" onCancel={vi.fn()} onSaved={vi.fn()} />);
+    await waitFor(() => expect((document.getElementById('quote-valid-until') as HTMLInputElement).value).toBe('2026-10-17'));
+  });
+
+  it('keeps quote creation available when billing settings rejects', async () => {
+    actionMocks.getDefaultBillingSettings.mockRejectedValueOnce(new Error('Billing settings unavailable'));
+    render(<QuoteForm quoteId={null} onCancel={vi.fn()} onSaved={vi.fn()} />);
+    const expectedDate = new Date();
+    expectedDate.setDate(expectedDate.getDate() + 30);
+    await waitFor(() => {
+      expect(document.getElementById('quote-valid-until')).toBeTruthy();
+      expect((document.getElementById('quote-valid-until') as HTMLInputElement).value)
+        .toBe(expectedDate.toISOString().slice(0, 10));
+    });
+  });
+
+  it('falls back to 30 days when billing settings returns a permission error', async () => {
+    actionMocks.getDefaultBillingSettings.mockResolvedValueOnce({
+      permissionError: 'Permission denied',
+      messageKey: 'msp/billing-settings:errors.permissions.readSettings',
+    });
+    render(<QuoteForm quoteId={null} onCancel={vi.fn()} onSaved={vi.fn()} />);
+    const expectedDate = new Date();
+    expectedDate.setDate(expectedDate.getDate() + 30);
+    await waitFor(() => expect((document.getElementById('quote-valid-until') as HTMLInputElement).value)
+      .toBe(expectedDate.toISOString().slice(0, 10)));
+  });
+
   it('T019/T020: selecting a rich template after mount shows its terms, and edits save instead of being clobbered', async () => {
     render(
       <QuoteForm
@@ -252,5 +299,22 @@ describe('QuoteForm terms authoring', () => {
 
     await waitFor(() => expect(editorMounts.length).toBeGreaterThan(0));
     expect(editorMounts[editorMounts.length - 1].initialContent).toEqual(RICH_TEMPLATE_BLOCK);
+  });
+
+  it('seeds new quote validity from tenant setting and falls back to 30 days', async () => {
+    actionMocks.getDefaultBillingSettings.mockResolvedValue({ defaultCurrencyCode: 'USD', defaultQuoteValidityDays: 15 });
+    const { unmount } = render(<QuoteForm quoteId={null} onCancel={vi.fn()} onSaved={vi.fn()} />);
+    await waitFor(() => expect(document.querySelectorAll('input[type="date"]')[1]?.getAttribute('value')).toBeTruthy());
+    const expected = (days: number) => {
+      const date = new Date(`${(document.querySelectorAll('input[type="date"]')[0] as HTMLInputElement).value}T00:00:00`);
+      date.setDate(date.getDate() + days);
+      return date.toISOString().slice(0, 10);
+    };
+    await waitFor(() => expect((document.querySelectorAll('input[type="date"]')[1] as HTMLInputElement).value).toBe(expected(15)));
+    unmount();
+
+    actionMocks.getDefaultBillingSettings.mockResolvedValue({ defaultCurrencyCode: 'USD' });
+    render(<QuoteForm quoteId={null} onCancel={vi.fn()} onSaved={vi.fn()} />);
+    await waitFor(() => expect((document.querySelectorAll('input[type="date"]')[1] as HTMLInputElement).value).toBe(expected(30)));
   });
 });

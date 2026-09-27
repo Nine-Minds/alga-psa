@@ -42,6 +42,8 @@ export const clientFormSchema = z.object({
   zip: z.string().optional(),
   country: z.string().optional(),
   notes: z.string().optional(),
+  // Calendar date the relationship began; null keeps the created_at fallback.
+  client_since: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'client_since must be a YYYY-MM-DD date').optional().nullable(),
   properties: z.record(z.any()).optional(),
   parent_client_id: z.string().uuid().optional().nullable(),
   contract_line_id: z.string().uuid().optional().nullable()
@@ -69,7 +71,21 @@ export const clientSchema = z.object({
   properties: z.record(z.any()).nullable(),
   parent_client_id: z.string().uuid().nullable(),
   contract_line_id: z.string().uuid().nullable(),
-  is_default: z.boolean().nullable()
+  is_default: z.boolean().nullable(),
+  // Additional allowlisted account columns written by the questionnaire answer
+  // mapping engine. Optional/nullable so existing callers are unaffected; Zod
+  // would otherwise strip these keys before the UPDATE.
+  tax_id_number: z.string().nullable().optional(),
+  payment_terms: z.string().nullable().optional(),
+  billing_cycle: z.string().nullable().optional(),
+  credit_limit: z.number().nullable().optional(),
+  preferred_payment_method: z.string().nullable().optional(),
+  auto_invoice: z.boolean().nullable().optional(),
+  invoice_delivery_method: z.string().nullable().optional(),
+  is_tax_exempt: z.boolean().nullable().optional(),
+  tax_exemption_certificate: z.string().nullable().optional(),
+  timezone: z.string().nullable().optional(),
+  billing_email: z.string().nullable().optional()
 });
 
 // Client update schema
@@ -117,7 +133,7 @@ export function cleanNullableFields(data: Record<string, any>): Record<string, a
   const cleaned = { ...data };
   const nullableFields = [
     'url', 'phone_no', 'email', 'address', 'address_2', 
-    'city', 'state', 'zip', 'country', 'notes', 
+    'city', 'state', 'zip', 'country', 'notes', 'client_since',
     'parent_client_id', 'contract_line_id'
   ];
   
@@ -286,6 +302,7 @@ export class ClientModel {
       tenant,
       url: clientData.url || null,
       notes: clientData.notes || null,
+      client_since: clientData.client_since || null,
       is_inactive: false,
       created_at: now.toISOString(),
       updated_at: now.toISOString(),

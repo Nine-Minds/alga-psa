@@ -17,7 +17,8 @@ import { handleIneligibleClientPortalLifecycle } from '@ee/lib/integrations/entr
 import { publishWorkflowManagedPortalProvisioningEvent } from '@ee/lib/integrations/entra/sync/workflowManagedProvisioning';
 import { provisionEntraClientForMapping } from '@ee/lib/integrations/entra/sync/clientProvisioningService';
 import { projectCompletedSyncUserCount } from '@ee/lib/integrations/entra/sync/completedSyncUserCountService';
-import { filterEntraUsersForTenant } from '@ee/lib/integrations/entra/settingsService';
+import { filterEntraUsersForManagedTenant } from '@ee/lib/integrations/entra/settingsService';
+import { DEACTIVATABLE_EXCLUSION_REASONS } from '@ee/lib/integrations/entra/sync/userFilterPipeline';
 import { decideEntraRunNotifications } from '@ee/lib/integrations/entra/notifications/entraSyncNotificationRules';
 import {
   deliverEntraNotifications,
@@ -343,22 +344,15 @@ export async function syncTenantUsersActivity(
     // PK and must not be passed here.
     managedTenantId: input.mapping.entraTenantId,
   });
-  const filteredUsers = await filterEntraUsersForTenant(input.tenantId, users);
+  const filteredUsers = await filterEntraUsersForManagedTenant({ tenant: input.tenantId, managedTenantId: input.mapping.managedTenantId, entraTenantId: input.mapping.entraTenantId, adapter, users });
   const portalEntitlementGroupId = input.mapping.clientPortalEntitlementGroupId || null;
   const portalEntitlementMode = input.mapping.clientPortalEntitlementMembershipMode || 'transitive';
-  const membershipCheckConcurrency = 8;
   const usersWithEntitlement = portalEntitlementGroupId
     ? await mapWithConcurrency(
         filteredUsers.included,
-        membershipCheckConcurrency,
+        8,
         async (user) => {
-          const isMember = await adapter.isUserInSecurityGroup({
-            tenant: input.tenantId,
-            managedTenantId: input.mapping.entraTenantId,
-            userEntraObjectId: user.entraObjectId,
-            groupId: portalEntitlementGroupId,
-            membershipMode: portalEntitlementMode,
-          });
+          const isMember = await filteredUsers.groupMembershipResolver.isMember(portalEntitlementGroupId, user.entraObjectId, portalEntitlementMode);
           return {
             ...user,
             clientPortalEntitlement: {
@@ -408,6 +402,11 @@ export async function syncTenantUsersActivity(
       email: entry.user.email,
       userPrincipalName: entry.user.userPrincipalName,
     }));
+  const excludedIdentities = filteredUsers.deactivateExcludedContacts
+    ? filteredUsers.excluded.filter((entry) => DEACTIVATABLE_EXCLUSION_REASONS.includes(entry.reason as typeof DEACTIVATABLE_EXCLUSION_REASONS[number])).map((entry) => ({
+        reason: entry.reason, entraTenantId: entry.user.entraTenantId, entraObjectId: entry.user.entraObjectId, displayName: entry.user.displayName, email: entry.user.email, userPrincipalName: entry.user.userPrincipalName,
+      }))
+    : [];
 
   // Inactivation goes through executeEntraSync rather than beside it, so the
   // dry-run guard covers every write this activity can cause.
@@ -419,6 +418,10 @@ export async function syncTenantUsersActivity(
     fieldSyncConfig: fieldSyncConfig.fieldSyncConfig,
     dryRun: Boolean(input.dryRun),
     disabledIdentities,
+    excludedIdentities,
+    deactivateExcludedContacts: Boolean(filteredUsers.deactivateExcludedContacts),
+    enabledSourceUserCount: users.filter((user) => user.accountEnabled && user.mailboxKind !== 'shared').length,
+    entraTenantId: input.mapping.entraTenantId,
     portalEntitlement: {
       provisioningMode: input.mapping.clientPortalEntraProvisioningMode || 'disabled',
       groupId: input.mapping.clientPortalEntitlementGroupId || null,
@@ -513,6 +516,7 @@ export async function syncTenantUsersActivity(
     updated: syncResult.counters.updated,
     ambiguous: syncResult.counters.ambiguous,
     inactivated: syncResult.counters.inactivated + portalDisabledCount,
+    warnings: syncResult.warnings || [],
     skipped: syncResult.counters.skipped,
     errorMessage: null,
   };

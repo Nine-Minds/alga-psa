@@ -23,7 +23,7 @@ export const readinessRequirements = [
 
 // Consumes the independently verified per-workflow verdicts, downloaded from
 // this parent run. It cannot replace those raw-report verifiers or protections.
-export function evaluateProductionReadiness({ revision, changed, jobs, artifacts, quarantine, now }) {
+export function evaluateProductionReadiness({ revision, changed, jobs, artifacts, inputErrors, quarantine, now }) {
   const failures = [], results = [];
   const quarantined = resolveQuarantine({ registry: quarantine ?? { schemaVersion: 1, entries: [] },
     requirements: readinessRequirements, now: now ?? new Date().toISOString().slice(0, 10) });
@@ -32,7 +32,9 @@ export function evaluateProductionReadiness({ revision, changed, jobs, artifacts
   const selection = selectIntegration(changed);
   if (jobs?.selection?.result !== 'success') failures.push('Readiness selection did not succeed');
   for (const requirement of readinessRequirements) {
-    const problems = [];
+    // Inputs the caller could not read belong to their requirement, not to the
+    // gate as a whole, so a valid quarantine covers them like any other problem.
+    const problems = [...(inputErrors?.[requirement.artifact] ?? [])];
     const verdict = artifacts?.[requirement.artifact];
     if (requirement.conditionalWorkflow && !selection.shouldRun && jobs?.[requirement.job]?.result === 'skipped') {
       results.push({ id: requirement.artifact, status: 'not-applicable', reason: selection.reason, failures: [] });

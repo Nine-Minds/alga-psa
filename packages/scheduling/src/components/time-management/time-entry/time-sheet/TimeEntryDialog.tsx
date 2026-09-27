@@ -11,6 +11,7 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
+import { DrawerFooter } from '@alga-psa/ui/components/Drawer';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { deleteTimeEntry, fetchTimeEntriesForTimeSheet } from '../../../../actions/timeEntryActions';
@@ -388,7 +389,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
         </div>
       ) : null}
 
-      {inDrawer && <div className="mt-4">{footerActions}</div>}
+      {inDrawer && <DrawerFooter>{footerActions}</DrawerFooter>}
     </div>
   );
 

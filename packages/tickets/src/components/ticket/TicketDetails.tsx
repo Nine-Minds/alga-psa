@@ -504,8 +504,17 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             .catch((err) => console.error('Failed to load auto-close state:', err));
         return () => { cancelled = true; };
         // Re-check the pending auto-close whenever the status changes — a
-        // status move usually cancels or reschedules it.
-    }, [ticket.ticket_id, ticket.status_id]);
+        // status move usually cancels or reschedules it. Board, category,
+        // subcategory and priority are the checklist auto-apply matchers, so a
+        // save that changes them can attach template items server-side.
+    }, [
+        ticket.ticket_id,
+        ticket.status_id,
+        ticket.board_id,
+        ticket.category_id,
+        ticket.subcategory_id,
+        ticket.priority_id,
+    ]);
 
     const checklistSummary = useMemo(
         () => summarizeChecklist(checklistItems ?? []),

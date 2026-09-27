@@ -9,7 +9,8 @@ export interface EntraIdentityRef {
 async function markIdentityInactive(
   tenantId: string,
   identity: EntraIdentityRef,
-  reason: string
+  reason: string,
+  accountEnabled = false
 ): Promise<number> {
   return runWithTenant(tenantId, async () => {
     const { knex } = await createTenantKnex();
@@ -33,7 +34,7 @@ async function markIdentityInactive(
         .whereIn('contact_name_id', contactIds)
         .update({
           is_inactive: true,
-          entra_account_enabled: false,
+          entra_account_enabled: accountEnabled,
           entra_sync_status: 'inactive',
           entra_sync_status_reason: reason,
           last_entra_sync_at: now,
@@ -116,6 +117,34 @@ export async function selectLinkedEntraIdentities<T extends EntraIdentityRef>(
   });
 }
 
+/** Contacts an exclusion can actually deactivate; keep preview aligned with the write guard. */
+export async function selectDeactivatableExcludedEntraIdentities<T extends EntraIdentityRef>(
+  tenantId: string,
+  identities: T[]
+): Promise<Array<LinkedEntraIdentity<T>>> {
+  if (identities.length === 0) return [];
+
+  return runWithTenant(tenantId, async () => {
+    const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenantId);
+    const eligible: Array<LinkedEntraIdentity<T>> = [];
+    for (const identity of identities) {
+      const links = await db.table('entra_contact_links as link')
+        .join('contacts as contact', 'contact.contact_name_id', 'link.contact_name_id')
+        .where({
+          'link.entra_tenant_id': identity.entraTenantId,
+          'link.entra_object_id': identity.entraObjectId,
+          'link.is_active': true,
+          'contact.is_inactive': false,
+        })
+        .whereNull('contact.entra_sync_status_reason')
+        .select('link.contact_name_id');
+      if (links.length > 0) eligible.push({ identity, linkedContactCount: links.length });
+    }
+    return eligible;
+  });
+}
+
 export async function markDisabledEntraUsersInactive(
   tenantId: string,
   identities: EntraIdentityRef[]
@@ -123,6 +152,48 @@ export async function markDisabledEntraUsersInactive(
   let updated = 0;
   for (const identity of identities) {
     updated += await markIdentityInactive(tenantId, identity, 'disabled_upstream');
+  }
+  return updated;
+}
+
+export async function markExcludedEntraUsersInactive(tenantId: string, identities: EntraIdentityRef[]): Promise<number> {
+  let updated = 0;
+  for (const identity of identities) {
+    updated += await runWithTenant(tenantId, async () => {
+      const { knex } = await createTenantKnex();
+      return knex.transaction(async (trx) => {
+        const db = tenantDb(trx, tenantId);
+        const activeLinks = await db.table('entra_contact_links')
+          .where({ entra_tenant_id: identity.entraTenantId, entra_object_id: identity.entraObjectId, is_active: true })
+          .select(['contact_name_id']);
+        if (activeLinks.length === 0) return 0;
+
+        const contactIds = activeLinks.map((row: any) => String(row.contact_name_id));
+        const eligibleContacts = await db.table('contacts')
+          .whereIn('contact_name_id', contactIds)
+          .where({ is_inactive: false })
+          .whereNull('entra_sync_status_reason')
+          .select(['contact_name_id']);
+        const eligibleIds = eligibleContacts.map((row: any) => String(row.contact_name_id));
+        if (eligibleIds.length === 0) return 0;
+
+        const now = trx.fn.now();
+        await db.table('contacts').whereIn('contact_name_id', eligibleIds).where({ is_inactive: false })
+          .whereNull('entra_sync_status_reason').update({
+            is_inactive: true,
+            entra_account_enabled: true,
+            entra_sync_status: 'inactive',
+            entra_sync_status_reason: 'excluded_by_filter',
+            last_entra_sync_at: now,
+            updated_at: now,
+          });
+        await db.table('entra_contact_links')
+          .where({ entra_tenant_id: identity.entraTenantId, entra_object_id: identity.entraObjectId, is_active: true })
+          .whereIn('contact_name_id', eligibleIds)
+          .update({ is_active: false, link_status: 'inactive', last_synced_at: now, updated_at: now });
+        return eligibleIds.length;
+      });
+    });
   }
   return updated;
 }

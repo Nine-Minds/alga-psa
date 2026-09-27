@@ -646,7 +646,19 @@
       "propagationSummary": "{{masters}} geselecteerde ticket(s) zijn masters in synchronisatiemodus; deze wijziging sluit/heropent {{children}} kindticket(s).",
       "masterSummary": "{{children}} kindticket(s)",
       "applyToChildren": "Toepassen op kinderen",
-      "mastersOnly": "Alleen masters"
+      "mastersOnly": "Alleen masters",
+      "membersLabel": "Tickets in deze bundel",
+      "addTicketSearchPlaceholder": "Zoek tickets op nummer of titel",
+      "addTicketEmpty": "Zoek tickets om toe te voegen",
+      "badgeAdded": "Toegevoegd",
+      "badgeInBundle": "In bundel #{{number}}",
+      "badgeMaster": "Bundelhoofdticket",
+      "masterTag": "Hoofdticket",
+      "removeMember": "Verwijderen",
+      "needMoreTickets": "Voeg minstens één ticket toe aan de bundel.",
+      "unresolvedSelectedTickets_one": "Kon {{count}} geselecteerd ticket niet laden.",
+      "unresolvedSelectedTickets_other": "Kon {{count}} geselecteerde tickets niet laden.",
+      "badgeClosed": "Gesloten"
     },
     "auth": {
       "moveRequired": "U moet zijn ingelogd om tickets te verplaatsen",
@@ -672,7 +684,8 @@
       "dueDate": "Vervaldatum",
       "statusDisabledMultiBoard": "Geselecteerde tickets staan op verschillende borden",
       "statusResolvingBoards": "Borden van geselecteerde tickets controleren…",
-      "more": "Meer"
+      "more": "Meer",
+      "bundleNeedsOne": "Selecteer minstens 1 ticket om te bundelen"
     },
     "assign": {
       "dialogTitle": "Geselecteerde tickets toewijzen",
@@ -1074,7 +1087,21 @@
       "selectParentCategory": "Selecteer bovenliggende categorie",
       "parentHelpWithBoard": "Selecteer een bovenliggende categorie om een subcategorie te maken, of laat leeg voor het hoogste niveau",
       "parentHelpWithoutBoard": "Selecteer eerst een bord of kies een bovenliggende categorie om het bord daarvan over te nemen",
-      "creating": "Bezig met aanmaken..."
+      "creating": "Bezig met aanmaken...",
+      "copyToBoard": "Categorieën naar een ander bord kopiëren",
+      "copyTitle": "Categorieën naar een ander bord kopiëren",
+      "copySourceLabel": "Selecteer bronbord",
+      "copyTargetLabel": "Selecteer doelbord",
+      "copySelected": "Geselecteerde kopiëren",
+      "copySuccess": "{{created}} categorieën gekopieerd; {{skipped}} bestaande categorieën overgeslagen.",
+      "copyFailed": "Categorieën kopiëren mislukt",
+      "copyEmpty": "Geen categorieën op dit bord.",
+      "copying": "Kopiëren…",
+      "copySourceBoard": "Selecteer bronbord",
+      "copyTargetBoard": "Selecteer doelbord",
+      "copyBoardTypeMismatch": "Ticketcategorieën kunnen alleen worden gekopieerd tussen borden met hetzelfde categorietype.",
+      "copyConflicts_one": "{{count}} overgeslagen categorie heeft een andere bovenliggende categorie op het doelbord.",
+      "copyConflicts_other": "{{count}} overgeslagen categorieën hebben een andere bovenliggende categorie op het doelbord."
     },
     "display": {
       "responseStateTrackingTitle": "Reactiestatusbewaking",
@@ -1454,7 +1481,11 @@
       "missingField": "Er ontbreekt een verplicht checklistveld.",
       "missingFieldNamed": "Er ontbreekt een verplicht checklistveld: {{field}}.",
       "referenceInvalid": "Het geselecteerde ticket, de checklistsjabloon of het regelfilter is niet langer geldig. Vernieuw de pagina en probeer het opnieuw.",
-      "invalidValue": "Een van de checklistwaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw."
+      "invalidValue": "Een van de checklistwaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "ruleCategoryBoardMismatch": "De geselecteerde categorie hoort bij een ander bord dan de regel.",
+      "ruleCategoryInvalid": "De geselecteerde categorie is geen categorie op het hoogste niveau.",
+      "ruleSubcategoryInvalid": "De geselecteerde subcategorie hoort niet bij de geselecteerde categorie.",
+      "ruleSubcategoryRequiresCategory": "Selecteer een categorie voordat u een subcategorie kiest."
     }
   },
   "ticketSection": {

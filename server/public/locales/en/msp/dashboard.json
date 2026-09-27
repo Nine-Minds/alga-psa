@@ -141,7 +141,9 @@
       "hiding": "Hiding...",
       "hide": "Hide",
       "dismiss": "Dismiss {{title}}",
-      "restoring": "Restoring..."
+      "restoring": "Restoring...",
+      "hideSection": "Hide section",
+      "hidingSection": "Hiding section…"
     },
     "hidden": {
       "title": "Hidden setup cards ({{count}})",
@@ -210,7 +212,14 @@
     },
     "errors": {
       "dismissFailed": "Failed to dismiss onboarding step.",
-      "restoreFailed": "Failed to restore onboarding step."
+      "restoreFailed": "Failed to restore onboarding step.",
+      "dismissSectionFailed": "Failed to hide the onboarding section.",
+      "restoreSectionFailed": "Failed to restore the onboarding section."
+    },
+    "preferences": {
+      "title": "Dashboard preferences",
+      "description": "The completed onboarding section is hidden from your dashboard.",
+      "restoreSection": "Restore onboarding section"
     }
   },
   "mspDashboard": "MSP Dashboard"

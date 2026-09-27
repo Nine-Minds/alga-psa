@@ -165,6 +165,27 @@
         "loadStatuses": "Failed to load renewal ticket statuses",
         "save": "Failed to save renewal automation settings"
       }
+    },
+    "quotes": {
+      "title": "Quotes",
+      "description": "Set the default validity period for new quotes.",
+      "fields": {
+        "validityDays": {
+          "label": "Default validity period (days)",
+          "help": "New quotes are valid for this many days."
+        }
+      },
+      "actions": {
+        "save": "Save"
+      },
+      "toast": {
+        "updated": "Quote settings have been updated."
+      },
+      "errors": {
+        "load": "Failed to load settings",
+        "save": "Failed to save settings",
+        "range": "Enter a whole number from 1 to 365."
+      }
     }
   },
   "quoting": {

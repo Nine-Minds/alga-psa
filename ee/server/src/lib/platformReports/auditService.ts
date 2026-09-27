@@ -52,7 +52,22 @@ export type ApplianceEventType =
   | 'appliance.resend'
   | 'appliance.revoke'
   | 'appliance.suspend'
-  | 'appliance.resign';
+  | 'appliance.resign'
+  // Phase 2 operator actions (one audit row per workflow: pending → running → completed|failed)
+  | 'appliance.create'
+  | 'appliance.update'
+  | 'appliance.reissue_install_code'
+  | 'appliance.reissue_activation_code'
+  | 'appliance.airgap_key'
+  | 'appliance.extend_pro'
+  | 'appliance.entitlement'
+  | 'appliance.status'
+  | 'appliance.revoke_appliance'
+  | 'appliance.billing_pause'
+  | 'appliance.billing_resume'
+  | 'appliance.billing.view'
+  | 'appliance.audit.view'
+  | 'appliance.lifecycle.webhook';
 
 // General events
 export type GeneralEventType = 'extension.access';
@@ -162,6 +177,8 @@ export class ExtensionAuditService {
       workflowId?: string;
       errorMessage?: string;
       details?: Record<string, unknown>;
+      /** Merge `details` into the stored JSON instead of replacing it (keeps the original request). */
+      mergeDetails?: boolean;
     }
   ): Promise<void> {
     try {
@@ -171,7 +188,11 @@ export class ExtensionAuditService {
       if (updates.status) updateData.status = updates.status;
       if (updates.workflowId) updateData.workflow_id = updates.workflowId;
       if (updates.errorMessage) updateData.error_message = updates.errorMessage;
-      if (updates.details) updateData.details = JSON.stringify(updates.details);
+      if (updates.details) {
+        updateData.details = updates.mergeDetails
+          ? knex.raw("COALESCE(details, '{}'::jsonb) || ?::jsonb", [JSON.stringify(updates.details)])
+          : JSON.stringify(updates.details);
+      }
 
       await this.auditLogs(knex)
         .where({ log_id: logId })

@@ -566,7 +566,8 @@
       "dueDate": "⟦Ḓŭḗ Ḓȧŧḗ⟧",
       "statusDisabledMultiBoard": "⟦Şḗŀḗƈŧḗḓ ŧīƈķḗŧş ȧřḗ ȯƞ ḓīƒƒḗřḗƞŧ ƀȯȧřḓş⟧",
       "statusResolvingBoards": "⟦Ƈħḗƈķīƞɠ ŧħḗ ƀȯȧřḓş ȯƒ şḗŀḗƈŧḗḓ ŧīƈķḗŧş…⟧",
-      "more": "⟦Ḿȯřḗ⟧"
+      "more": "⟦Ḿȯřḗ⟧",
+      "bundleNeedsOne": "⟦Şḗŀḗƈŧ ȧŧ ŀḗȧşŧ 1 ŧīƈķḗŧ ŧȯ ƀŭƞḓŀḗ⟧"
     },
     "moveDialogTitle": "⟦Ḿȯṽḗ Şḗŀḗƈŧḗḓ Ŧīƈķḗŧş⟧",
     "moveDialogDescription": "⟦Şḗŀḗƈŧ ȧ ḓḗşŧīƞȧŧīȯƞ ƀȯȧřḓ ȧƞḓ şŧȧŧŭş, ŧħḗƞ ƈȯƞƒīřḿ ḿȯṽīƞɠ ŧħḗ şḗŀḗƈŧḗḓ ŧīƈķḗŧş.⟧",
@@ -671,7 +672,19 @@
       "propagationSummary": "⟦{{masters}} şḗŀḗƈŧḗḓ ŧīƈķḗŧ(ş) ȧřḗ şẏƞƈ-ḿȯḓḗ ƀŭƞḓŀḗ ḿȧşŧḗřş; ŧħīş ƈħȧƞɠḗ ẇīŀŀ ƈŀȯşḗ/řḗȯƥḗƞ {{children}} ƈħīŀḓ ŧīƈķḗŧ(ş).⟧",
       "masterSummary": "⟦{{children}} ƈħīŀḓ ŧīƈķḗŧ(ş)⟧",
       "applyToChildren": "⟦Ȧƥƥŀẏ ŧȯ ƈħīŀḓřḗƞ⟧",
-      "mastersOnly": "⟦Ḿȧşŧḗřş ȯƞŀẏ⟧"
+      "mastersOnly": "⟦Ḿȧşŧḗřş ȯƞŀẏ⟧",
+      "membersLabel": "⟦Ŧīƈķḗŧş īƞ ŧħīş ƀŭƞḓŀḗ⟧",
+      "addTicketSearchPlaceholder": "⟦Şḗȧřƈħ ŧīƈķḗŧş ƀẏ ƞŭḿƀḗř ȯř ŧīŧŀḗ⟧",
+      "addTicketEmpty": "⟦Şḗȧřƈħ ƒȯř ŧīƈķḗŧş ŧȯ ȧḓḓ⟧",
+      "badgeAdded": "⟦Ȧḓḓḗḓ⟧",
+      "badgeInBundle": "⟦Īƞ ƀŭƞḓŀḗ #{{number}}⟧",
+      "badgeMaster": "⟦Ɓŭƞḓŀḗ ḿȧşŧḗř⟧",
+      "masterTag": "⟦Ḿȧşŧḗř⟧",
+      "removeMember": "⟦Řḗḿȯṽḗ⟧",
+      "needMoreTickets": "⟦Ȧḓḓ ȧŧ ŀḗȧşŧ ȯƞḗ ḿȯřḗ ŧīƈķḗŧ ŧȯ ƀŭƞḓŀḗ.⟧",
+      "unresolvedSelectedTickets_one": "⟦Ƈȯŭŀḓ ƞȯŧ ŀȯȧḓ {{count}} şḗŀḗƈŧḗḓ ŧīƈķḗŧ.⟧",
+      "unresolvedSelectedTickets_other": "⟦Ƈȯŭŀḓ ƞȯŧ ŀȯȧḓ {{count}} şḗŀḗƈŧḗḓ ŧīƈķḗŧş.⟧",
+      "badgeClosed": "⟦Ƈŀȯşḗḓ⟧"
     },
     "auth": {
       "moveRequired": "⟦Ẏȯŭ ḿŭşŧ ƀḗ ŀȯɠɠḗḓ īƞ ŧȯ ḿȯṽḗ ŧīƈķḗŧş⟧",
@@ -1023,6 +1036,13 @@
       "filterByBoard": "⟦Ƒīŀŧḗř ƀẏ ƀȯȧřḓ⟧",
       "addCategory": "⟦Ȧḓḓ Ƈȧŧḗɠȯřẏ⟧",
       "importStandardCategories": "⟦Īḿƥȯřŧ ƒřȯḿ Şŧȧƞḓȧřḓ Ƈȧŧḗɠȯřīḗş⟧",
+      "copyToBoard": "⟦Ƈȯƥẏ ƈȧŧḗɠȯřīḗş ŧȯ ȧƞȯŧħḗř ƀȯȧřḓ⟧",
+      "copyTitle": "⟦Ƈȯƥẏ ƈȧŧḗɠȯřīḗş ŧȯ ȧƞȯŧħḗř ƀȯȧřḓ⟧",
+      "copySourceBoard": "⟦Şḗŀḗƈŧ şȯŭřƈḗ ƀȯȧřḓ⟧",
+      "copyTargetBoard": "⟦Şḗŀḗƈŧ ŧȧřɠḗŧ ƀȯȧřḓ⟧",
+      "copySelected": "⟦Ƈȯƥẏ şḗŀḗƈŧḗḓ⟧",
+      "copySuccess": "⟦Ƈȯƥīḗḓ {{created}} ƈȧŧḗɠȯřīḗş; şķīƥƥḗḓ {{skipped}} ȧŀřḗȧḓẏ ƥřḗşḗƞŧ.⟧",
+      "copyFailed": "⟦Ƒȧīŀḗḓ ŧȯ ƈȯƥẏ ƈȧŧḗɠȯřīḗş⟧",
       "editCategory": "⟦Ḗḓīŧ Ƈȧŧḗɠȯřẏ⟧",
       "categoryName": "⟦Ƈȧŧḗɠȯřẏ Ƞȧḿḗ *⟧",
       "enterCategoryName": "⟦Ḗƞŧḗř ƈȧŧḗɠȯřẏ ƞȧḿḗ⟧",
@@ -1082,7 +1102,14 @@
       "selectParentCategory": "⟦Şḗŀḗƈŧ ƥȧřḗƞŧ ƈȧŧḗɠȯřẏ⟧",
       "parentHelpWithBoard": "⟦Şḗŀḗƈŧ ȧ ƥȧřḗƞŧ ŧȯ ƈřḗȧŧḗ ȧ şŭƀƈȧŧḗɠȯřẏ, ȯř ŀḗȧṽḗ ḗḿƥŧẏ ƒȯř ŧȯƥ-ŀḗṽḗŀ⟧",
       "parentHelpWithoutBoard": "⟦Şḗŀḗƈŧ ȧ ƀȯȧřḓ ƒīřşŧ, ȯř ƥīƈķ ȧ ƥȧřḗƞŧ ƈȧŧḗɠȯřẏ ŧȯ īƞħḗřīŧ īŧş ƀȯȧřḓ⟧",
-      "creating": "⟦Ƈřḗȧŧīƞɠ...⟧"
+      "creating": "⟦Ƈřḗȧŧīƞɠ...⟧",
+      "copySourceLabel": "⟦Şȯŭřƈḗ ƀȯȧřḓ⟧",
+      "copyTargetLabel": "⟦Ŧȧřɠḗŧ ƀȯȧřḓ⟧",
+      "copyEmpty": "⟦Ƞȯ ƈȧŧḗɠȯřīḗş ȯƞ ŧħīş ƀȯȧřḓ.⟧",
+      "copying": "⟦Ƈȯƥẏīƞɠ…⟧",
+      "copyBoardTypeMismatch": "⟦Ŧīƈķḗŧ ƈȧŧḗɠȯřīḗş ƈȧƞ ȯƞŀẏ ƀḗ ƈȯƥīḗḓ ƀḗŧẇḗḗƞ ƀȯȧřḓş ẇīŧħ ŧħḗ şȧḿḗ ƈȧŧḗɠȯřẏ ŧẏƥḗ.⟧",
+      "copyConflicts_one": "⟦{{count}} şķīƥƥḗḓ ƈȧŧḗɠȯřẏ ħȧş ȧ ḓīƒƒḗřḗƞŧ ƥȧřḗƞŧ ȯƞ ŧħḗ ŧȧřɠḗŧ ƀȯȧřḓ.⟧",
+      "copyConflicts_other": "⟦{{count}} şķīƥƥḗḓ ƈȧŧḗɠȯřīḗş ħȧṽḗ ȧ ḓīƒƒḗřḗƞŧ ƥȧřḗƞŧ ȯƞ ŧħḗ ŧȧřɠḗŧ ƀȯȧřḓ.⟧"
     },
     "display": {
       "responseStateTrackingTitle": "⟦Řḗşƥȯƞşḗ Şŧȧŧḗ Ŧřȧƈķīƞɠ⟧",
@@ -1462,7 +1489,11 @@
       "missingField": "⟦Ḿīşşīƞɠ řḗʠŭīřḗḓ ƈħḗƈķŀīşŧ ƒīḗŀḓ.⟧",
       "missingFieldNamed": "⟦Ḿīşşīƞɠ řḗʠŭīřḗḓ ƈħḗƈķŀīşŧ ƒīḗŀḓ: {{field}}.⟧",
       "referenceInvalid": "⟦Ŧħḗ şḗŀḗƈŧḗḓ ŧīƈķḗŧ, ƈħḗƈķŀīşŧ ŧḗḿƥŀȧŧḗ, ȯř řŭŀḗ ƒīŀŧḗř īş ƞȯ ŀȯƞɠḗř ṽȧŀīḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ.⟧",
-      "invalidValue": "⟦Ȯƞḗ ȯƒ ŧħḗ ƈħḗƈķŀīşŧ ṽȧŀŭḗş īş īƞṽȧŀīḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ.⟧"
+      "invalidValue": "⟦Ȯƞḗ ȯƒ ŧħḗ ƈħḗƈķŀīşŧ ṽȧŀŭḗş īş īƞṽȧŀīḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ.⟧",
+      "ruleCategoryBoardMismatch": "⟦Ŧħḗ şḗŀḗƈŧḗḓ ƈȧŧḗɠȯřẏ ƀḗŀȯƞɠş ŧȯ ȧ ḓīƒƒḗřḗƞŧ ƀȯȧřḓ ŧħȧƞ ŧħḗ řŭŀḗ.⟧",
+      "ruleCategoryInvalid": "⟦Ŧħḗ şḗŀḗƈŧḗḓ ƈȧŧḗɠȯřẏ īş ƞȯŧ ȧ ŧȯƥ-ŀḗṽḗŀ ƈȧŧḗɠȯřẏ.⟧",
+      "ruleSubcategoryInvalid": "⟦Ŧħḗ şḗŀḗƈŧḗḓ şŭƀƈȧŧḗɠȯřẏ ḓȯḗş ƞȯŧ ƀḗŀȯƞɠ ŧȯ ŧħḗ şḗŀḗƈŧḗḓ ƈȧŧḗɠȯřẏ.⟧",
+      "ruleSubcategoryRequiresCategory": "⟦Şḗŀḗƈŧ ȧ ƈȧŧḗɠȯřẏ ƀḗƒȯřḗ ƈħȯȯşīƞɠ ȧ şŭƀƈȧŧḗɠȯřẏ.⟧"
     }
   },
   "ticketSection": {

@@ -1313,7 +1313,7 @@
     },
     "domain": {
       "title": "Aangepast domein",
-      "description": "Configureer een hostnaam met huisstijl voor uw klantenportaal. We voorzien automatisch in TLS-certificaten zodra DNS is geverifieerd.",
+      "description": "Configureer een hostnaam met huisstijl voor uw klantenportaal.",
       "currentStatus": "Huidige status",
       "noDomainConfigured": "Geen aangepast domein geconfigureerd",
       "defaultStatusMessage": "Nog geen aangepast domein geregistreerd.",
@@ -1355,7 +1355,8 @@
         "step3": "Verkrijg en onderhoud het TLS-certificaat voor het domein op uw proxy.",
         "step4": "Sla het domein hier op — het wordt onmiddellijk geactiveerd. Configureer eerst DNS en uw proxy, omdat portallinks meteen naar dit domein overschakelen.",
         "docLinkText": "Handleiding voor reverse proxy instellen en probleemoplossing",
-        "neverSeenWarning": "Er hebben nog geen verzoeken {{domain}} bereikt. Controleer of uw reverse proxy de oorspronkelijke Host-header doorstuurt."
+        "neverSeenWarning": "Er hebben nog geen verzoeken {{domain}} bereikt. Controleer of uw reverse proxy de oorspronkelijke Host-header doorstuurt.",
+        "tlsNote": "TLS eindigt op uw reverse proxy, die het certificaat beheert."
       },
       "badges": {
         "pending_dns": "DNS in behandeling",
@@ -1380,7 +1381,8 @@
         "refreshFailed": "Kan domeinstatus niet vernieuwen.",
         "retryFailed": "Opnieuw proberen mislukt.",
         "disableFailed": "Kan aangepast domein niet uitschakelen."
-      }
+      },
+      "hostedTlsNote": "We voorzien automatisch in TLS-certificaten zodra DNS is geverifieerd."
     },
     "yourCompanyName": "Naam van uw bedrijf",
     "brandingPreviewMode": "Branding-voorbeeldthemamodus",
@@ -2179,6 +2181,18 @@
       "comingSoon": "Toewijzingssjablonen en geplande imports komen hier. Sla kolomtoewijzingen op, deel ze met het team en configureer terugkerende taken."
     },
     "migration": {
+      "customFields": {
+        "required": "verplicht",
+        "title": "Velden voor {{name}}",
+        "mapping": "Koppeling van aangepaste velden",
+        "description": "Koppel bewaarde CSV-kolommen aan velden van dit assettype.",
+        "empty": "Er zijn geen aangepaste kolommen bewaard voor dit assettype.",
+        "samples_one": "{{sample}} · {{count}} gegevensrij",
+        "samples_other": "{{sample}} · {{count}} gegevensrijen",
+        "noSample": "Geen voorbeeld",
+        "missingRequired": "Niet-gekoppelde verplichte velden: {{fields}}",
+        "duplicate": "Een aangepast veld is meerdere keren gekoppeld. Kies een uniek doel voor elke bron."
+      },
       "actions": {
         "back": "Terug naar migraties",
         "upload": "Pakket uploaden"
@@ -3055,7 +3069,7 @@
     "assetTypes": {
       "tab": "Assets",
       "title": "Assettypen",
-      "description": "Beheer de assettypen die beschikbaar zijn in uw assetmodule. Aangepaste typen hebben een veldschema dat hun aanmaak-/bewerkformulieren bepaalt.",
+      "description": "Aangepaste typen gebruiken een veldschema voor hun formulieren; ingebouwde typen ondersteunen ook extra velden.",
       "loading": "Assettypen laden...",
       "table": {
         "name": "Naam",
@@ -3083,7 +3097,7 @@
         "namePlaceholder": "bijv. Firewall",
         "displayOrderLabel": "Weergavevolgorde",
         "iconLabel": "Pictogram",
-        "builtinSchemaHint": "Ingebouwde typen gebruiken vaste formulieren die door AlgaPSA worden beheerd; hun veldschema kan daarom niet worden bewerkt. U kunt het type nog wel hernoemen of het pictogram wijzigen."
+        "builtinSchemaHint": "Het standaard ingebouwde formulier blijft ongewijzigd. Deze extra velden worden per tenant gedefinieerd."
       },
       "deleteDialog": {
         "title": "Assettype verwijderen",
@@ -3141,7 +3155,8 @@
           "invalidOptions": "Opties mogen niet leeg zijn.",
           "invalidField": "Dit veld is ongeldig."
         }
-      }
+      },
+      "additionalFields": "Extra velden"
     }
   },
   "mcpServer": {

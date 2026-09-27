@@ -335,14 +335,16 @@
       "client": "Klient",
       "invoiceNumber": "Numer faktury",
       "invoiceNumberOptional": "Numer faktury (opcjonalnie)",
-      "sourceSalesOrder": "Źródłowe zamówienie sprzedaży (opcjonalnie)"
+      "sourceSalesOrder": "Źródłowe zamówienie sprzedaży (opcjonalnie)",
+      "billingProfile": "Profil rozliczeniowy"
     },
     "placeholders": {
       "selectClient": "Wybierz klienta",
       "invoiceNumberOptional": "Pozostaw puste, aby wygenerować automatycznie",
       "sourceSalesOrder": "Wybierz zrealizowane lub ręcznie rozliczane zamówienie sprzedaży",
       "searchSalesOrders": "Szukaj zamówień sprzedaży...",
-      "noInvoiceableSalesOrders": "Nie znaleziono zamówień sprzedaży do zafakturowania."
+      "noInvoiceableSalesOrders": "Nie znaleziono zamówień sprzedaży do zafakturowania.",
+      "selectBillingProfile": "Wybierz profil rozliczeniowy"
     },
     "automatedItems": {
       "title": "Automatyczne elementy zamówienia",
@@ -364,7 +366,8 @@
       "clearSalesOrderSource": "Wyczyść źródłowe zamówienie sprzedaży"
     },
     "labels": {
-      "total": "Razem"
+      "total": "Razem",
+      "defaultBillingProfile": "{{name}} (domyślny)"
     },
     "prepayment": {
       "label": "To jest faktura z przedpłatą (tworzy kredyt)",
@@ -402,7 +405,8 @@
       "USAGE_CALCULATION_ERROR": "Użycie dla {{services}} w okresie rozliczeniowym od {{periodStart}} do {{periodEnd}} zostało zarejestrowane, ale nie udało się go wycenić. Popraw ceny usługi (cena katalogowa w walucie umowy, stawka indywidualna lub progi stawek) i spróbuj ponownie. Nie rejestruj użycia zastępczego.",
       "SOURCE_ALREADY_BILLED": "Niektóre wybrane pozycje nie są już rozliczalne (już rozliczone, niezatwierdzone lub usunięte). Odśwież i spróbuj ponownie.",
       "SOURCE_NOT_ELIGIBLE": "Wybrana pozycja nie należy do tego zgłoszenia lub nie jest już kwalifikowalna. Odśwież i spróbuj ponownie.",
-      "SOURCE_CURRENCY_MISMATCH": "Niektóre wybrane produkty są wycenione w innej walucie niż waluta fakturowania tego klienta, więc nie można ich dodać. Rozlicz je osobno w ich własnej walucie."
+      "SOURCE_CURRENCY_MISMATCH": "Niektóre wybrane produkty są wycenione w innej walucie niż waluta fakturowania tego klienta, więc nie można ich dodać. Rozlicz je osobno w ich własnej walucie.",
+      "BILLING_PROFILE_NOT_FOUND": "Wybrany profil rozliczeniowy nie jest dostępny dla tego klienta. Odśwież stronę i spróbuj ponownie."
     },
     "warnings": {
       "noBillingEmail": "Ten klient nie ma adresu e-mail do rozliczeń. Ustaw kontakt ds. rozliczeń, adres e-mail do rozliczeń klienta lub adres e-mail w lokalizacji rozliczeniowej albo domyślnej przed wygenerowaniem faktury."
@@ -413,6 +417,9 @@
     },
     "salesOrderContext": {
       "summary": "Z {{lineCount}} pozycji zamówienia można zafakturować {{quantity}} elementów. Ta wersja robocza zostanie powiązana z zamówieniem sprzedaży."
+    },
+    "hints": {
+      "billingProfile": "Faktura i jej pozycje są rozliczane w tym profilu."
     }
   },
   "quickInvoice": {
@@ -751,7 +758,9 @@
     "title": "Podgląd faktury",
     "templatePlaceholder": "Wybierz szablon faktury...",
     "labels": {
-      "standard": "(Standardowa)"
+      "standard": "(Standardowa)",
+      "billingProfile": "Profil rozliczeniowy: {{name}}",
+      "billingProfileDefault": "domyślny profil klienta"
     },
     "actions": {
       "finalizeInvoice": "Sfinalizuj fakturę",
@@ -1022,7 +1031,10 @@
       "billingEmail": "E-mail rozliczeniowy",
       "clientEmail": "E-mail klienta",
       "noEmailFound": "Nie znaleziono adresu e-mail",
-      "notConfigured": "Dla tego klienta nie skonfigurowano żadnego adresu e-mail."
+      "notConfigured": "Dla tego klienta nie skonfigurowano żadnego adresu e-mail.",
+      "billingProfile": "Profil rozliczeniowy",
+      "billingProfileNamed": "Profil rozliczeniowy: {{name}}",
+      "billingProfileDefault": "domyślny profil klienta"
     },
     "fields": {
       "due": "Termin",
@@ -2105,6 +2117,13 @@
     "errors": {
       "invoiceNumberRequired": "Numer faktury jest wymagany.",
       "invoiceDateRequired": "Data faktury jest wymagana."
+    },
+    "labels": {
+      "billingProfile": "Profil rozliczeniowy",
+      "billingProfileDefault": "Domyślny profil klienta"
+    },
+    "hints": {
+      "billingProfile": "Faktura, jej pozycje i kopia wysyłana e-mailem podążają za tym profilem."
     }
   },
   "documentTemplates": {
@@ -2215,7 +2234,8 @@
       "referenceMissing": "Wybrana faktura, klient, umowa lub zapis rozliczeniowy już nie istnieje. Odśwież stronę i spróbuj ponownie.",
       "duplicate": "Istnieje już sprzeczna faktura. Odśwież stronę i spróbuj ponownie.",
       "missingField": "Brakuje wymaganego pola faktury.",
-      "missingFieldNamed": "Brakuje wymaganego pola faktury: {{field}}."
+      "missingFieldNamed": "Brakuje wymaganego pola faktury: {{field}}.",
+      "billingProfileUnavailable": "Wybrany profil rozliczeniowy nie jest dostępny dla tego klienta."
     },
     "billingCycle": {
       "notFoundRefresh": "Nie znaleziono cyklu rozliczeniowego. Mógł zostać zaktualizowany lub usunięty. Odśwież stronę i spróbuj ponownie.",

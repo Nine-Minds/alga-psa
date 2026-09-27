@@ -18,7 +18,7 @@ import {
   BentoTileEmpty,
 } from '@alga-psa/ui/components/bento';
 import TicketDocumentsSection from './../TicketDocumentsSection';
-import { documentViewUrl } from '../../../lib/documentViewUrl';
+import { documentViewUrl, type DocumentViewUrlResolverInput } from '../../../lib/documentViewUrl';
 
 const MAX_ROWS = 5;
 
@@ -28,7 +28,7 @@ interface DocumentsTileProps {
   documents: IDocument[];
   onDocumentCreated: () => Promise<void>;
   /** Host resolver (e.g. client portal) for file-backed documents; file-less documents always open in the documents viewer. */
-  resolveDocumentViewUrl?: (document: { document_id?: string; file_id?: string }) => string;
+  resolveDocumentViewUrl?: (document: DocumentViewUrlResolverInput) => string;
   forceUploadToRoot?: boolean;
   allowDocumentSharing?: boolean;
   allowLinkExistingDocuments?: boolean;

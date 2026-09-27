@@ -61,6 +61,13 @@ interface InvoicePreviewPanelProps {
   readOnly?: boolean;
   creditApplied?: number;
   draftInvoiceSummary?: DbInvoiceViewModel | null;
+  /**
+   * Listing row for the selected invoice. A finalized invoice can no longer be
+   * re-pointed, so the profile it bills is stated here rather than edited —
+   * without it a finalized invoice gives no hint why it was addressed the way
+   * it was.
+   */
+  invoiceSummary?: DbInvoiceViewModel | null;
   /** Client owning the invoice; enables the manual Apply Credit action. */
   clientId?: string | null;
   /** Invoice total in minor units; caps the manual credit application. */
@@ -85,6 +92,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   readOnly = false,
   creditApplied = 0,
   draftInvoiceSummary = null,
+  invoiceSummary = null,
   clientId = null,
   invoiceTotal = 0,
   onCreditApplied
@@ -348,6 +356,8 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
         invoice_number: updated.invoiceNumber,
         invoice_date: updated.invoiceDate,
         due_date: updated.dueDate,
+        billing_profile_id: updated.billingProfileId,
+        billing_profile_name: updated.billingProfileName,
       };
     });
 
@@ -420,6 +430,19 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
               )}
             </div>
           </div>
+          {/* A finalized invoice states the profile it bills; the draft card
+              above already lets a draft's pick be corrected (D6). */}
+          {isFinalized && invoiceSummary?.client_has_multiple_billing_profiles ? (
+            <p id="invoice-preview-billing-profile" className="mb-2 text-sm text-[rgb(var(--color-text-600))]">
+              {t('invoicePreview.labels.billingProfile', {
+                defaultValue: 'Billing profile: {{name}}',
+                name: invoiceSummary.billing_profile_name
+                  || t('invoicePreview.labels.billingProfileDefault', {
+                    defaultValue: "the client's default profile",
+                  }),
+              })}
+            </p>
+          ) : null}
           <CustomSelect
             options={templates.map((template) => ({
               value: template.template_id,

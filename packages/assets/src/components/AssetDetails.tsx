@@ -6,6 +6,7 @@ import type { Asset, AssetMaintenanceReport, AssetRelationship, NetworkDeviceAss
 import { getAssetMaintenanceReport } from '../actions/assetActions';
 import { unwrapAssetActionResult } from '../actions/assetActionErrors';
 import { Button } from '@alga-psa/ui/components/Button';
+import { PhoneText } from '@alga-psa/ui/components/PhoneText';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import Link from 'next/link';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
@@ -456,7 +457,7 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
                     <Text as="div" size="2" weight="medium">
                       {t('assetDetails.fields.phoneNumber', { defaultValue: 'Phone Number' })}
                     </Text>
-                    <Text as="div" size="2">{asset.mobile_device.phone_number}</Text>
+                    <Text as="div" size="2"><PhoneText value={asset.mobile_device.phone_number} /></Text>
                   </div>
                 </Flex>
               </Card>

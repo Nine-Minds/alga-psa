@@ -97,6 +97,7 @@ import {
   TICKET_STATUS_FILTER_OPEN,
 } from '../lib/ticketStatusFilter';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
+import { resolveTicketListSortSpec } from './ticketListSortSql';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import { scheduleJobAt as scheduleBackgroundJobAt } from '@alga-psa/core';
 import { authorizeAndRedactDocuments } from '@shared/lib/documentAuthorization';
@@ -1758,21 +1759,8 @@ function applyTicketListSort(
   query: Knex.QueryBuilder,
   validatedFilters: ITicketListFilters
 ): Knex.QueryBuilder {
-    const sortBy = validatedFilters.sortBy ?? 'entered_at';
     const sortDirection: 'asc' | 'desc' = validatedFilters.sortDirection ?? 'desc';
-    const sortColumnMap: Record<string, { column?: string; rawExpression?: string }> = {
-      ticket_number: { column: 't.ticket_number' },
-      title: { column: 't.title' },
-      status_name: { column: 's.name' },
-      priority_name: { column: 'p.priority_name' },
-      board_name: { column: 'c.board_name' },
-      category_name: { column: 'cat.category_name' },
-      client_name: { column: 'comp.client_name' },
-      entered_at: { column: 't.entered_at' },
-      entered_by_name: { rawExpression: "COALESCE(CONCAT(u.first_name, ' ', u.last_name), '')" },
-      due_date: { column: 't.due_date' }
-    };
-    const selectedSort = sortColumnMap[sortBy] || sortColumnMap.entered_at;
+    const selectedSort = resolveTicketListSortSpec(validatedFilters.sortBy);
 
     return query
       .modify(queryBuilder => {
@@ -1792,21 +1780,8 @@ function applyTicketListSort(
  * Mirrors applyTicketListSort but returns a string instead of modifying a query.
  */
 function getTicketListSortOrderByClause(validatedFilters: ITicketListFilters): string {
-    const sortBy = validatedFilters.sortBy ?? 'entered_at';
     const sortDirection: 'asc' | 'desc' = validatedFilters.sortDirection ?? 'desc';
-    const sortColumnMap: Record<string, { column?: string; rawExpression?: string }> = {
-      ticket_number: { column: 't.ticket_number' },
-      title: { column: 't.title' },
-      status_name: { column: 's.name' },
-      priority_name: { column: 'p.priority_name' },
-      board_name: { column: 'c.board_name' },
-      category_name: { column: 'cat.category_name' },
-      client_name: { column: 'comp.client_name' },
-      entered_at: { column: 't.entered_at' },
-      entered_by_name: { rawExpression: "COALESCE(CONCAT(u.first_name, ' ', u.last_name), '')" },
-      due_date: { column: 't.due_date' }
-    };
-    const selectedSort = sortColumnMap[sortBy] || sortColumnMap.entered_at;
+    const selectedSort = resolveTicketListSortSpec(validatedFilters.sortBy);
 
     let primarySort: string;
     if (selectedSort.rawExpression) {

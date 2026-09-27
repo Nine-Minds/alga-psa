@@ -317,14 +317,16 @@
       "client": "Klant",
       "invoiceNumber": "Factuurnummer",
       "invoiceNumberOptional": "Factuurnummer (optioneel)",
-      "sourceSalesOrder": "Bronverkooporder (optioneel)"
+      "sourceSalesOrder": "Bronverkooporder (optioneel)",
+      "billingProfile": "Facturatieprofiel"
     },
     "placeholders": {
       "selectClient": "Selecteer een klant",
       "invoiceNumberOptional": "Laat dit leeg om automatisch te genereren",
       "sourceSalesOrder": "Selecteer een afgehandelde of handmatig factureerbare verkooporder",
       "searchSalesOrders": "Verkooporders zoeken...",
-      "noInvoiceableSalesOrders": "Geen factureerbare verkooporders gevonden."
+      "noInvoiceableSalesOrders": "Geen factureerbare verkooporders gevonden.",
+      "selectBillingProfile": "Selecteer een facturatieprofiel"
     },
     "automatedItems": {
       "title": "Geautomatiseerde regelitems",
@@ -346,7 +348,8 @@
       "clearSalesOrderSource": "Bronverkooporder wissen"
     },
     "labels": {
-      "total": "Totaal"
+      "total": "Totaal",
+      "defaultBillingProfile": "{{name}} (standaard)"
     },
     "prepayment": {
       "label": "Dit is een vooruitbetalingsfactuur (creëert krediet)",
@@ -384,7 +387,8 @@
       "USAGE_CALCULATION_ERROR": "Het verbruik voor {{services}} in de serviceperiode {{periodStart}} tot {{periodEnd}} is geregistreerd maar kon niet worden geprijsd. Corrigeer de serviceprijzen (catalogusprijs in de contractvaluta, een aangepast tarief of tariefschijven) en probeer het opnieuw. Registreer geen vervangend verbruik.",
       "SOURCE_ALREADY_BILLED": "Sommige geselecteerde items zijn niet meer factureerbaar (al gefactureerd, niet goedgekeurd of verwijderd). Vernieuw en probeer opnieuw.",
       "SOURCE_NOT_ELIGIBLE": "Een geselecteerd item hoort niet bij dit ticket of is niet langer in aanmerking komend. Vernieuw en probeer opnieuw.",
-      "SOURCE_CURRENCY_MISMATCH": "Sommige geselecteerde producten zijn geprijsd in een andere valuta dan de factuurvaluta van deze klant en kunnen niet worden toegevoegd. Factureer ze apart in hun eigen valuta."
+      "SOURCE_CURRENCY_MISMATCH": "Sommige geselecteerde producten zijn geprijsd in een andere valuta dan de factuurvaluta van deze klant en kunnen niet worden toegevoegd. Factureer ze apart in hun eigen valuta.",
+      "BILLING_PROFILE_NOT_FOUND": "Het geselecteerde facturatieprofiel is niet beschikbaar voor deze klant. Vernieuw de pagina en probeer het opnieuw."
     },
     "warnings": {
       "noBillingEmail": "Deze klant heeft geen facturatie-e-mailadres. Stel een contactpersoon voor facturering, een facturatie-e-mailadres van de klant of een e-mailadres op de facturatielocatie of standaardlocatie in voordat u de factuur genereert."
@@ -395,6 +399,9 @@
     },
     "salesOrderContext": {
       "summary": "{{quantity}} artikelen uit {{lineCount}} regels gereed voor facturering. Dit concept wordt aan de verkooporder gekoppeld."
+    },
+    "hints": {
+      "billingProfile": "De factuur en de factuurregels worden aan dit profiel toegerekend."
     }
   },
   "quickInvoice": {
@@ -725,7 +732,9 @@
     "title": "Factuurvoorbeeld",
     "templatePlaceholder": "Factuursjabloon selecteren...",
     "labels": {
-      "standard": "(Standaard)"
+      "standard": "(Standaard)",
+      "billingProfile": "Factureringsprofiel: {{name}}",
+      "billingProfileDefault": "het standaardprofiel van de klant"
     },
     "actions": {
       "finalizeInvoice": "Factuur finaliseren",
@@ -980,7 +989,10 @@
       "billingEmail": "Facturerings-e-mailadres",
       "clientEmail": "Klant-e-mail",
       "noEmailFound": "Geen e-mailadres gevonden",
-      "notConfigured": "Er is geen e-mailadres geconfigureerd voor deze client."
+      "notConfigured": "Er is geen e-mailadres geconfigureerd voor deze client.",
+      "billingProfile": "Factureringsprofiel",
+      "billingProfileNamed": "Factureringsprofiel: {{name}}",
+      "billingProfileDefault": "het standaardprofiel van de klant"
     },
     "fields": {
       "due": "Vervaldatum",
@@ -2055,6 +2067,13 @@
     "errors": {
       "invoiceNumberRequired": "Het factuurnummer is verplicht.",
       "invoiceDateRequired": "De factuurdatum is verplicht."
+    },
+    "labels": {
+      "billingProfile": "Factureringsprofiel",
+      "billingProfileDefault": "Het standaardprofiel van de klant"
+    },
+    "hints": {
+      "billingProfile": "De factuur, de regels en de gemailde kopie volgen dit profiel."
     }
   },
   "documentTemplates": {
@@ -2165,7 +2184,8 @@
       "referenceMissing": "De geselecteerde factuur, klant, het contract of de factuurregistratie bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
       "duplicate": "Er bestaat al een conflicterende factuur. Vernieuw de pagina en probeer het opnieuw.",
       "missingField": "Er ontbreekt een verplicht factuurveld.",
-      "missingFieldNamed": "Er ontbreekt een verplicht factuurveld: {{field}}."
+      "missingFieldNamed": "Er ontbreekt een verplicht factuurveld: {{field}}.",
+      "billingProfileUnavailable": "Het geselecteerde factureringsprofiel is niet beschikbaar voor deze klant."
     },
     "billingCycle": {
       "notFoundRefresh": "Factuurcyclus niet gevonden. Mogelijk is deze bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",

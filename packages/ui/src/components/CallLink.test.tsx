@@ -28,8 +28,14 @@ describe('T045/T046 click-to-call', () => {
 
   it('renders a tel: link and no Teams link by default', () => {
     render(<CallLink id="contact-phone-1" phoneNumber="+15551234567" />);
-    expect(screen.getByText('+15551234567').getAttribute('href')).toBe('tel:+15551234567');
+    expect(screen.getByText('+1 555 123 4567').getAttribute('href')).toBe('tel:+15551234567');
     expect(document.getElementById('contact-phone-1-teams')).toBeNull();
+    cleanup();
+  });
+
+  it('formats an extension while preserving the click-to-call E.164 target', () => {
+    render(<CallLink id="contact-phone-ext" phoneNumber="+13202521658" extension="42" />);
+    expect(screen.getByText('+1 320 252 1658 ext. 42').getAttribute('href')).toBe('tel:+13202521658;ext=42');
     cleanup();
   });
 
