@@ -970,7 +970,7 @@
         }
       },
       "unitOfMeasure": {
-        "label": "Unité de mesure *",
+        "label": "Unité de mesure",
         "placeholder": "Par exemple, Go, appel API, utilisateur",
         "help": "L'unité mesurable pour la facturation (par exemple, Go, appel API, utilisateur)"
       },

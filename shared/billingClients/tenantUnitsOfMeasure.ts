@@ -32,6 +32,22 @@ async function findTenantUnit(knex: Knex | Knex.Transaction, tenant: string, lab
   return units(knex, tenant).whereRaw('lower(trim(label)) = lower(trim(?))', [label]).first('code', 'label');
 }
 
+/** Resolve a quote snapshot label against tenant units before system labels. */
+export async function resolveTenantUnitCodeForLabel(
+  knex: Knex | Knex.Transaction,
+  tenant: string,
+  label: string | null | undefined,
+  explicitCode?: string | null,
+): Promise<string | null> {
+  const normalized = label?.trim();
+  if (!normalized) return explicitCode ?? null;
+  const custom = await findTenantUnit(knex, tenant, normalized);
+  if (custom) return custom.code;
+  const known = knownUnitCodeForLabel(normalized);
+  if (known) return known;
+  return resolveUnitCodeForWrite(knex, tenant, normalized, explicitCode);
+}
+
 /** Register (idempotently, case-insensitively) a custom label; returns the stored unit. */
 export async function registerTenantUnit(
   knex: Knex | Knex.Transaction,

@@ -1136,6 +1136,7 @@ export async function convertQuoteToDraftInvoice(
 
     const isDiscount = source.is_discount === true;
     const taxAmount = isDiscount ? 0 : Number(source.tax_amount ?? 0);
+    const unit = resolveUnitOfMeasure({ catalog: { code: source.unit_code, label: source.unit_of_measure }, fallback: 'C62' });
 
     return {
       tenant,
@@ -1145,6 +1146,8 @@ export async function convertQuoteToDraftInvoice(
       service_item_kind: source.service_item_kind ?? null,
       service_sku: source.service_sku ?? null,
       service_name: source.service_name ?? null,
+      unit_code: unit.code,
+      unit_label: unit.label,
       description: source.description,
       quantity: isDiscount ? 1 : source.quantity,
       unit_price: isDiscount ? -Math.abs(netAmount) : source.unit_price,

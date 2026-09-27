@@ -585,6 +585,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
             quantity: item.quantity,
             unit_price: item.unit_price,
             unit_of_measure: item.unit_of_measure ?? null,
+            unit_code: item.unit_code ?? null,
             phase: item.phase ?? null,
             is_optional: item.is_optional,
             is_selected: item.is_selected,

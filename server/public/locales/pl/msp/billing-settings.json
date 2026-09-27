@@ -972,7 +972,7 @@
         }
       },
       "unitOfMeasure": {
-        "label": "Jednostka miary *",
+        "label": "Jednostka miary",
         "placeholder": "np. GB, wywołanie API, użytkownik",
         "help": "Mierzalna jednostka rozliczeniowa (np. GB, wywołanie API, użytkownik)"
       },

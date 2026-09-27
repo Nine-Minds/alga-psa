@@ -970,7 +970,7 @@
         }
       },
       "unitOfMeasure": {
-        "label": "Unità di misura *",
+        "label": "Unità di misura",
         "placeholder": "ad esempio GB, chiamata API, utente",
         "help": "L'unità misurabile per la fatturazione (ad esempio GB, chiamata API, utente)"
       },

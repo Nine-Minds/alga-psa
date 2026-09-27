@@ -1487,7 +1487,7 @@ export async function persistInvoiceCharges(
         : charge.type === 'license'
           ? `License: ${charge.serviceName}`
           : charge.type === 'hour_block'
-            ? `Prepaid hour block (${charge.serviceName}) — ${(charge as IHourBlockCharge).hoursUsed.toFixed(1)} hrs consumed, ${(charge as IHourBlockCharge).hoursRemaining.toFixed(1)} hrs remaining`
+            ? `Prepaid hour block (${charge.serviceName}) — ${(charge as IHourBlockCharge).hoursUsed.toFixed(1)} ${resolveUnitOfMeasure({ fallback: 'HUR' }).shortLabel} consumed, ${(charge as IHourBlockCharge).hoursRemaining.toFixed(1)} ${resolveUnitOfMeasure({ fallback: 'HUR' }).shortLabel} remaining`
             : charge.serviceName;
     const invoiceItem = {
       item_id: uuidv4(),

@@ -970,7 +970,7 @@
         }
       },
       "unitOfMeasure": {
-        "label": "Maateenheid *",
+        "label": "Maateenheid",
         "placeholder": "bijvoorbeeld GB, API-oproep, gebruiker",
         "help": "De meetbare eenheid voor facturering (bijvoorbeeld GB, API-oproep, gebruiker)"
       },

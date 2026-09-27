@@ -970,7 +970,7 @@
         }
       },
       "unitOfMeasure": {
-        "label": "Maßeinheit *",
+        "label": "Maßeinheit",
         "placeholder": "z. B. GB, API-Aufruf, Benutzer",
         "help": "Die messbare Einheit für die Abrechnung (z. B. GB, API-Aufruf, Benutzer)"
       },

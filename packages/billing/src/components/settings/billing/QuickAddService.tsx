@@ -652,8 +652,8 @@ if (createdService?.service_id) {
               <div>
                 <Label htmlFor="quick-add-service-unit-of-measure" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
                   {t('quickAddService.fields.unitOfMeasure.label', {
-                    defaultValue: `Unit of Measure${serviceData.billing_method === 'usage' ? ' *' : ''}`
-                  })}
+                    defaultValue: 'Unit of Measure'
+                  })}{serviceData.billing_method === 'usage' ? ' *' : ''}
                 </Label>
                 <UnitOfMeasureInput
                   id="quick-add-service-unit-of-measure"
