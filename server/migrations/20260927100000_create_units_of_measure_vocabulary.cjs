@@ -1,29 +1,25 @@
 // Exact seed projection of shared/billingClients/unitOfMeasure.ts.
 const units = [
-  ['each', 'C62', 'billing.units.each', 'count'], ['piece', 'H87', 'billing.units.piece', 'count'],
-  ['box', 'BX', 'billing.units.box', 'count'], ['seat', 'C62', 'billing.units.seat', 'count'],
-  ['license', 'C62', 'billing.units.license', 'count'], ['device', 'C62', 'billing.units.device', 'count'],
-  ['user', 'C62', 'billing.units.user', 'count'], ['kit', 'C62', 'billing.units.kit', 'count'],
-  ['hour', 'HUR', 'billing.units.hour', 'time'], ['day', 'DAY', 'billing.units.day', 'time'],
-  ['week', 'WEE', 'billing.units.week', 'time'], ['month', 'MON', 'billing.units.month', 'time'],
-  ['year', 'ANN', 'billing.units.year', 'time'], ['minute', 'MIN', 'billing.units.minute', 'time'],
-  ['gigabyte', 'E34', 'billing.units.gigabyte', 'volume'], ['terabyte', '4L', 'billing.units.terabyte', 'volume'],
-  ['liter', 'LTR', 'billing.units.liter', 'volume'], ['kilogram', 'KGM', 'billing.units.kilogram', 'mass'],
-  ['meter', 'MTR', 'billing.units.meter', 'length'],
+  ['each', 'C62', 'unitOfMeasure.labels.each', 'count'], ['piece', 'H87', 'unitOfMeasure.labels.piece', 'count'],
+  ['box', 'BX', 'unitOfMeasure.labels.box', 'count'], ['seat', 'C62', 'unitOfMeasure.labels.seat', 'count'],
+  ['license', 'C62', 'unitOfMeasure.labels.license', 'count'], ['device', 'C62', 'unitOfMeasure.labels.device', 'count'],
+  ['user', 'C62', 'unitOfMeasure.labels.user', 'count'], ['kit', 'C62', 'unitOfMeasure.labels.kit', 'count'],
+  ['hour', 'HUR', 'unitOfMeasure.labels.hour', 'time'], ['day', 'DAY', 'unitOfMeasure.labels.day', 'time'],
+  ['week', 'WEE', 'unitOfMeasure.labels.week', 'time'], ['month', 'MON', 'unitOfMeasure.labels.month', 'time'],
+  ['year', 'ANN', 'unitOfMeasure.labels.year', 'time'], ['minute', 'MIN', 'unitOfMeasure.labels.minute', 'time'],
+  ['gigabyte', 'E34', 'unitOfMeasure.labels.gigabyte', 'volume'], ['terabyte', '4L', 'unitOfMeasure.labels.terabyte', 'volume'],
+  ['liter', 'LTR', 'unitOfMeasure.labels.liter', 'volume'], ['kilogram', 'KGM', 'unitOfMeasure.labels.kilogram', 'mass'],
+  ['meter', 'MTR', 'unitOfMeasure.labels.meter', 'length'],
 ];
 
 exports.config = { transaction: false };
 
 exports.up = async (knex) => {
-  await knex.raw(`CREATE TABLE IF NOT EXISTS uom_migration_owned_objects (
-    migration text NOT NULL, object_name text NOT NULL, PRIMARY KEY (migration, object_name)
-  )`);
   if (!(await knex.schema.hasTable('units_of_measure'))) {
     await knex.raw(`CREATE TABLE units_of_measure (
       unit_key text PRIMARY KEY, code text NOT NULL, label_key text NOT NULL, kind text NOT NULL,
       is_system boolean NOT NULL DEFAULT true
     )`);
-    await knex('uom_migration_owned_objects').insert({ migration: '20260927100000', object_name: 'units_of_measure' }).onConflict().ignore();
   }
   await knex.raw('CREATE INDEX IF NOT EXISTS units_of_measure_code_idx ON units_of_measure(code)');
   if (!(await knex.schema.hasTable('tenant_units_of_measure'))) {
@@ -32,7 +28,6 @@ exports.up = async (knex) => {
       kind text NOT NULL DEFAULT 'other', is_system boolean NOT NULL DEFAULT false,
       PRIMARY KEY (tenant, unit_id), UNIQUE (tenant, label)
     )`);
-    await knex('uom_migration_owned_objects').insert({ migration: '20260927100000', object_name: 'tenant_units_of_measure' }).onConflict().ignore();
   }
   await knex.raw("COMMENT ON TABLE tenant_units_of_measure IS 'Tenant custom units use (tenant, unit_id) as the Citus-safe key; unit_id is a stable surrogate for future conversion-table references, with tenant/label uniqueness.'");
   const citus = await knex.raw("SELECT EXISTS(SELECT 1 FROM pg_extension WHERE extname='citus') AS enabled");
@@ -48,13 +43,6 @@ exports.up = async (knex) => {
 };
 
 exports.down = async (knex) => {
-  if (await knex.schema.hasTable('uom_migration_owned_objects')) {
-    const owned = await knex('uom_migration_owned_objects').where({ migration: '20260927100000' }).pluck('object_name');
-    for (const table of ['tenant_units_of_measure', 'units_of_measure']) {
-      if (owned.includes(table) && await knex.schema.hasTable(table)) await knex.schema.dropTable(table);
-    }
-    await knex('uom_migration_owned_objects').where({ migration: '20260927100000' }).del();
-    const remaining = await knex('uom_migration_owned_objects').count('* as count').first();
-    if (Number(remaining?.count ?? 0) === 0) await knex.schema.dropTable('uom_migration_owned_objects');
-  }
+  if (await knex.schema.hasTable('tenant_units_of_measure')) await knex.schema.dropTable('tenant_units_of_measure');
+  if (await knex.schema.hasTable('units_of_measure')) await knex.schema.dropTable('units_of_measure');
 };

@@ -502,9 +502,7 @@ export function computeBucketCharges(
 
       const displayDivisor = isUsageBucket ? 1 : 60;
       const bucketUnit = resolvedUnit;
-      const baseUnit = catalogUnit || config.unit_of_measure
-        ? (bucketUnit.code === 'HUR' ? 'hrs' : bucketUnit.label)
-        : (isUsageBucket ? 'units' : 'hrs');
+      const baseUnit = bucketUnit.shortLabel;
       // When any multiplier ≠ 1 or an after-hours rule contributed, the consumed
       // minutes are weighted — name the unit so readers know the burn is weighted.
       const unit = config.isWeighted && !isUsageBucket ? `weighted ${baseUnit}` : baseUnit;

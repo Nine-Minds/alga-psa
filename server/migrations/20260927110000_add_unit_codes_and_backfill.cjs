@@ -21,7 +21,6 @@ exports.config = { transaction: false };
 async function addOwnedColumn(knex, table, column) {
   if (await hasColumn(knex, table, column)) return false;
   await knex.raw(`ALTER TABLE ${table} ADD COLUMN ${column} text NULL`);
-  await knex('uom_migration_owned_objects').insert({ migration: '20260927110000', object_name: `${table}.${column}` }).onConflict().ignore();
   return true;
 }
 exports.up = async (knex) => {
@@ -52,13 +51,11 @@ exports.up = async (knex) => {
 };
 
 exports.down = async (knex) => {
-  if (!(await knex.schema.hasTable('uom_migration_owned_objects'))) return;
-  const owned = await knex('uom_migration_owned_objects').where({ migration: '20260927110000' }).pluck('object_name');
-  for (const entry of owned) {
-    const [table, column] = String(entry).split('.');
-    if (table && column && await knex.schema.hasTable(table) && await hasColumn(knex, table, column)) {
-      await knex.raw(`ALTER TABLE ${table} DROP COLUMN ${column}`);
+  for (const [table] of [...targets, ['invoice_charges', 'unit_label']]) {
+    if (!(await knex.schema.hasTable(table))) continue;
+    if (await hasColumn(knex, table, 'unit_code')) await knex.raw(`ALTER TABLE ${table} DROP COLUMN unit_code`);
+    if (table === 'invoice_charges' && await hasColumn(knex, table, 'unit_label')) {
+      await knex.raw('ALTER TABLE invoice_charges DROP COLUMN unit_label');
     }
   }
-  await knex('uom_migration_owned_objects').where({ migration: '20260927110000' }).del();
 };

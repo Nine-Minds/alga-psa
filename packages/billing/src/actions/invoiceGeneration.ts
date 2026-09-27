@@ -240,7 +240,8 @@ function getChargeUnitPrice(charge: IBillingCharge): number {
  * "Prepaid hour block (Svc) — 4.0 hrs consumed, 12.5 hrs remaining".
  */
 function formatHourBlockChargeDescription(charge: IHourBlockCharge): string {
-  return `Prepaid hour block (${charge.serviceName}) — ${charge.hoursUsed.toFixed(1)} hrs consumed, ${charge.hoursRemaining.toFixed(1)} hrs remaining`;
+  const hourShortLabel = resolveUnitOfMeasure({ fallback: 'HUR' }).shortLabel;
+  return `Prepaid hour block (${charge.serviceName}) — ${charge.hoursUsed.toFixed(1)} ${hourShortLabel} consumed, ${charge.hoursRemaining.toFixed(1)} ${hourShortLabel} remaining`;
 }
 
 function normalizePreviewRecurringDetailPeriods(
@@ -2357,6 +2358,7 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
       let description = charge.serviceName;
       if (isBucketCharge(charge)) {
         const currencySymbol = getCurrencySymbol(billingResult.currency_code || 'USD');
+        const hourShortLabel = resolveUnitOfMeasure({ fallback: 'HUR' }).shortLabel;
         if (charge.isUsageBucket) {
           const unitLabel = charge.unitOfMeasure?.trim() || resolveUnitOfMeasure({ fallback: 'C62' }).pluralLabel;
           const unitsUsed = charge.unitsUsed ?? charge.hoursUsed;
@@ -2370,9 +2372,9 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
         } else {
           const hoursIncluded = charge.hoursUsed - charge.overageHours;
           if (charge.overageHours > 0) {
-            description = `${charge.serviceName} - ${charge.hoursUsed.toFixed(2)} hrs used (${hoursIncluded.toFixed(2)} hrs included + ${charge.overageHours.toFixed(2)} hrs overage @ ${currencySymbol}${(charge.overageRate / 100).toFixed(2)}/hr)`;
+            description = `${charge.serviceName} - ${charge.hoursUsed.toFixed(2)} ${hourShortLabel} used (${hoursIncluded.toFixed(2)} ${hourShortLabel} included + ${charge.overageHours.toFixed(2)} ${hourShortLabel} overage @ ${currencySymbol}${(charge.overageRate / 100).toFixed(2)}/${hourShortLabel})`;
           } else {
-            description = `${charge.serviceName} - ${charge.hoursUsed.toFixed(2)} hrs used (within ${hoursIncluded.toFixed(2)} hrs included)`;
+            description = `${charge.serviceName} - ${charge.hoursUsed.toFixed(2)} ${hourShortLabel} used (within ${hoursIncluded.toFixed(2)} ${hourShortLabel} included)`;
           }
         }
       }

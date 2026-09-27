@@ -1278,6 +1278,8 @@ async function persistFixedInvoiceCharges(
       invoice_id: invoiceId,
       service_id: null,
       description: planInfo.invoice_line_description || planInfo.contract_line_name || 'Fixed Plan Charge',
+      unit_code: planEntry.details[0]?.unit_code ?? null,
+      unit_label: planEntry.details[0]?.unit_label ?? null,
       quantity: 1,
       unit_price: planNetTotal,
       net_amount: planNetTotal,
