@@ -68,11 +68,20 @@ prorated again. Editing a pending revision version reconciles the same
 
 The companion still owns the invoice-side manual partial-period calculator, its
 link to the contract scheduler, and its overlap warning. This branch adds no
-invoice-side contract-quantity writer. When the companion's
-`evaluateContractInvoiceAdjustments` is merged, it can consume these
-source-linked rows directly (its `is_eligible` rule already excludes negative
-credit lines from the positive discount base) instead of this branch's existing
-discount pipeline.
+invoice-side contract-quantity writer.
+
+Round-2 note: this branch now ships `evaluateContractInvoiceAdjustments` itself
+(`packages/billing/src/lib/billing/compute/contractInvoiceAdjustments.ts`) and
+runs the engine's discount evaluation through it, so the credit-base rule is
+already enforced here. On merge, reconcile the two copies into one rather than
+double-evaluating. The true-up is reconciled transactionally by
+`packages/billing/src/lib/billing/reconcileContractChangeAdjustments.ts`, which
+claims only the earliest eligible editable draft, enforces
+client/assignment/currency/included-line eligibility, refreshes edited versions,
+removes cancelled settlements, and never resets a finalized settlement. The
+reviewed-source stale check now binds the true-up's identity, version,
+effective date, amount and rate, so a post-preview edit or cancellation fails
+generation.
 
 Under the default (no opt-in), a 20-to-23 change at $100 still changes the next
 full-period gross subtotal from $3,900 to $4,200 without a credit or separate

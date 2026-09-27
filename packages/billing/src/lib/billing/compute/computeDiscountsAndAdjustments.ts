@@ -7,6 +7,11 @@ import type {
   IDiscount,
   ISO8601String,
 } from "@alga-psa/types";
+import {
+  evaluateContractInvoiceAdjustments,
+  type AutomaticDiscountPolicy,
+  type InvoiceAdjustmentCharge,
+} from "./contractInvoiceAdjustments";
 
 export interface DiscountComputeCandidate extends IDiscount {
   contract_line_id?: string | null;
@@ -134,15 +139,65 @@ export function computeDiscountsAndAdjustments(
     billingPeriod,
     billingResult.charges,
   );
-  let discountTotal = 0;
-  const discounts = applicableDiscounts.map((discount) => {
-    const amount =
-      discount.discount_type === "percentage"
-        ? billingResult.totalAmount * discount.value
-        : discount.value;
-    discountTotal += amount;
-    return { ...discount, amount };
+
+  // One evaluator for every charge, including a mid-period true-up. Negative
+  // credit lines are excluded from the positive base (the evaluator's rule),
+  // while still reducing the final amount.
+  const chargeKey = (charge: IBillingCharge, index: number): string =>
+    [
+      charge.client_contract_line_id ?? charge.client_contract_id ?? "line",
+      charge.serviceId ?? charge.type,
+      charge.config_id ?? "",
+      index,
+    ].join(":");
+  const adjustmentCharges: InvoiceAdjustmentCharge[] = billingResult.charges.map(
+    (charge, index) => ({
+      item_id: chargeKey(charge, index),
+      service_id: charge.serviceId ?? null,
+      client_contract_id: charge.client_contract_id ?? null,
+      description: charge.serviceName,
+      quantity: Number(charge.quantity ?? 1) || 0,
+      unit_price: Number(charge.rate ?? 0) || 0,
+      net_amount: Number(charge.total ?? 0) || 0,
+      is_discount: false,
+      is_manual: false,
+      is_taxable: Boolean(charge.is_taxable),
+    }),
+  );
+  const policies: AutomaticDiscountPolicy[] = applicableDiscounts.map(
+    (discount, index) => ({
+      discount_id: discount.discount_id,
+      discount_name: discount.discount_name,
+      discount_type: discount.discount_type,
+      // Percentage discounts are stored as fractions; fixed discounts are
+      // stored in minor units in this engine.
+      value: Number(discount.value) || 0,
+      valueUnit: "fraction",
+      scope: "invoice",
+      // Preserve the candidate order the engine has always applied. The
+      // evaluator's documented order is (priority asc, discount_id); an explicit
+      // index keeps legacy behavior when no configured priority exists.
+      priority: index,
+    }),
+  );
+  const evaluated = evaluateContractInvoiceAdjustments({
+    charges: adjustmentCharges,
+    automaticDiscounts: policies,
   });
+  const originalValueById = new Map(
+    applicableDiscounts.map((discount) => [discount.discount_id, discount.value]),
+  );
+  const discounts = evaluated.discounts.map((discount) => ({
+    discount_id: discount.discount_id,
+    discount_name: discount.discount_name,
+    discount_type: discount.discount_type,
+    value:
+      originalValueById.get(discount.discount_id) ??
+      (discount.discount_type === "percentage" ? discount.value / 100 : discount.value),
+    tenant: billingResult.tenant,
+    amount: discount.amount,
+  }));
+  const discountTotal = evaluated.automaticDiscountAmount;
   const adjustmentTotal = adjustments.reduce(
     (sum, adjustment) => sum + adjustment.amount,
     0,
@@ -166,7 +221,7 @@ export function computeDiscountsAndAdjustments(
       ],
       steps: [
         discount.discount_type === "percentage"
-          ? `${formatCents(billingResult.totalAmount, currencyCode)} × ${discount.value * 100}% = −${formatCents(discount.amount ?? 0, currencyCode)}`
+          ? `${formatCents(evaluated.grossAmount, currencyCode)} × ${discount.value * 100}% = −${formatCents(discount.amount ?? 0, currencyCode)}`
           : `Fixed discount = −${formatCents(discount.amount ?? 0, currencyCode)}`,
       ],
       markers: [],

@@ -162,6 +162,19 @@ one automatic prorated charge or credit for the partial period.
   the contract scheduler and its overlap warning; this card emits no invoice-side
   contract quantity writer.
 
+Implementation notes (2026-09-27, round 2): the automatic evaluation of
+discounts now runs through the shared `evaluateContractInvoiceAdjustments`
+(added to this branch), with negative credit lines excluded from the positive
+base; the true-up lifecycle is owned by a transactional reconciliation service
+that claims only the earliest eligible editable draft, enforces
+client/assignment/currency/included-line eligibility, refreshes edited versions,
+removes cancelled settlements, releases deleted drafts, and never resets a
+finalized settlement; `bindRecurringPricingSources` binds the true-up's
+identity/version/date/amount/rate into the reviewed source set for
+preview-to-generation stale protection; and the proration rounding/day-count
+arithmetic is a single shared primitive used by both the recurring compute and
+the true-up.
+
 The baseline policy description below is retained for the record; where it says
 no mid-period true-up is emitted, the opt-in amendment above supersedes it.
 

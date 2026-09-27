@@ -4,7 +4,30 @@ import {
   daysBetweenOnly,
   formatRecurringUnitMidPeriodReason,
   inclusiveEndToExclusiveEnd,
+  isValidDateOnly,
 } from '../recurringUnitMidPeriodAdjustment';
+import {
+  prorateRecurringCoverageByDays,
+  prorateRecurringCoverageByRatio,
+} from '../coverageProration';
+
+describe('shared coverage primitive', () => {
+  it('uses the recurring ceiling rounding and is reusable by the true-up', () => {
+    expect(prorateRecurringCoverageByRatio(390000, 0.5)).toBe(195000);
+    expect(prorateRecurringCoverageByRatio(30000, 16 / 31)).toBe(15484);
+    expect(prorateRecurringCoverageByDays(30000, 16, 31)).toBe(15484);
+    // The same primitive drives a credit with the sign preserved.
+    expect(prorateRecurringCoverageByDays(-30000, 16, 31)).toBe(-15484);
+  });
+
+  it('rejects impossible calendar dates instead of rolling them', () => {
+    expect(isValidDateOnly('2026-02-30')).toBe(false);
+    expect(isValidDateOnly('2026-13-01')).toBe(false);
+    expect(isValidDateOnly('2024-02-29')).toBe(true);
+    expect(isValidDateOnly('2023-02-29')).toBe(false);
+    expect(() => daysBetweenOnly('2023-02-29', '2023-03-01')).toThrow();
+  });
+});
 
 describe('inclusive to half-open conversion', () => {
   it('maps an inclusive last covered day to the following exclusive end', () => {

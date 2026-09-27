@@ -23,6 +23,7 @@ import {
   computeRecurringUnitMidPeriodAdjustment,
   daysBetweenOnly,
   formatRecurringUnitMidPeriodReason,
+  isValidDateOnly,
 } from '@alga-psa/shared/billingClients/recurringUnitMidPeriodAdjustment';
 
 /**
@@ -262,6 +263,62 @@ export async function resolveMidPeriodServicePeriod(params: {
 }
 
 /**
+ * Resolve the canonical next boundary and the standing values for a chosen
+ * mid-period date. The scheduler UI uses this to display the true boundary (not
+ * the date the operator picked) and to look up the exact revision version at
+ * that boundary, so server and UI agree on where the standing quantity starts.
+ */
+export async function resolveRecurringUnitMidPeriodContext(params: {
+  trx: Knex.Transaction;
+  tenant: string;
+  contractLineId: string;
+  serviceId: string;
+  configId: string;
+  kind: RecurringUnitKind;
+  midDate: string;
+}): Promise<
+  | {
+      periodStart: string;
+      periodEnd: string;
+      previousQuantity: number;
+      unitRateCents: number | null;
+      pricePolicy: RecurringPricePolicy;
+      currencyCode: string;
+    }
+  | { error: string }
+> {
+  const period = await resolveMidPeriodServicePeriod({
+    trx: params.trx,
+    tenant: params.tenant,
+    contractLineId: params.contractLineId,
+    midDate: params.midDate,
+  });
+  if (!period) {
+    return {
+      error:
+        'That date is not inside an unbilled service period for this contract. Choose a date within an upcoming unbilled period, or a service-period boundary.',
+    };
+  }
+  const display = await resolveRecurringUnitDisplayPricing({
+    trx: params.trx,
+    tenant: params.tenant,
+    contractLineId: params.contractLineId,
+    serviceId: params.serviceId,
+    configId: params.configId,
+    kind: params.kind,
+    boundary: period.start,
+  });
+  return {
+    periodStart: period.start,
+    periodEnd: period.end,
+    previousQuantity: display.quantity,
+    unitRateCents: display.resolvedUnitRateCents,
+    pricePolicy: display.pricePolicy,
+    currencyCode: display.currencyCode,
+  };
+}
+
+/**
  * Cancel a pending mid-period true-up for a canonical revision. Used when an
  * operator returns to boundary-only scheduling, edits the change to a zero
  * delta, or otherwise removes the partial-period effect.
@@ -271,11 +328,44 @@ export async function cancelRecurringUnitAdjustmentForRevision(
   tenant: string,
   revisionId: string,
   userId: string | null,
-): Promise<void> {
-  await tenantScopedTable(trx, tenant, 'contract_recurring_unit_adjustments')
+): Promise<string | null> {
+  const existing = await tenantScopedTable(trx, tenant, 'contract_recurring_unit_adjustments')
     .where({ tenant, revision_id: revisionId })
-    .where('status', 'pending')
-    .update({ status: 'cancelled', updated_at: trx.fn.now(), settled_invoice_id: null });
+    .first<{ adjustment_id: string; status: string; settled_invoice_id: string | null } | undefined>(
+      'adjustment_id',
+      'status',
+      'settled_invoice_id',
+    );
+  if (!existing) return null;
+  if (existing.status === 'settled' && existing.settled_invoice_id) {
+    const settledInvoice = await tenantScopedTable(trx, tenant, 'invoices')
+      .where({ tenant, invoice_id: existing.settled_invoice_id })
+      .first<{ status: string | null; finalized_at: string | Date | null } | undefined>(
+        'status',
+        'finalized_at',
+      );
+    if (settledInvoice && (settledInvoice.finalized_at || settledInvoice.status !== 'draft')) {
+      // A finalized/paid/exported settlement is permanent; never reset it.
+      return null;
+    }
+    // Settled on an editable draft: mark cancelled but keep the invoice link so
+    // reconciliation can remove the row from that draft.
+    await tenantScopedTable(trx, tenant, 'contract_recurring_unit_adjustments')
+      .where({ tenant, adjustment_id: existing.adjustment_id })
+      .update({ status: 'cancelled', updated_at: trx.fn.now(), updated_by: userId });
+    return existing.settled_invoice_id;
+  }
+  await tenantScopedTable(trx, tenant, 'contract_recurring_unit_adjustments')
+    .where({ tenant, adjustment_id: existing.adjustment_id })
+    .update({
+      status: 'cancelled',
+      updated_at: trx.fn.now(),
+      updated_by: userId,
+      settled_invoice_id: null,
+      settled_charge_id: null,
+      settled_at: null,
+    });
+  return null;
 }
 
 /**
@@ -304,7 +394,7 @@ export async function upsertRecurringUnitAdjustment(params: {
   amountCents: number;
   pricePolicy: RecurringPricePolicy;
   reason: string;
-}): Promise<void> {
+}): Promise<string | null> {
   const {
     trx, tenant, userId, revisionId, revisionVersion, contractLineId, serviceId, configId,
     midPeriodEffectiveDate, adjustmentPeriodStart, adjustmentPeriodEnd,
@@ -313,8 +403,7 @@ export async function upsertRecurringUnitAdjustment(params: {
   } = params;
 
   if (amountCents === 0) {
-    await cancelRecurringUnitAdjustmentForRevision(trx, tenant, revisionId, userId);
-    return;
+    return cancelRecurringUnitAdjustmentForRevision(trx, tenant, revisionId, userId);
   }
 
   const line = await tenantScopedTable(trx, tenant, 'contract_lines')
@@ -361,26 +450,63 @@ export async function upsertRecurringUnitAdjustment(params: {
     amount_cents: amountCents,
     price_policy: pricePolicy,
     reason,
-    status: 'pending' as const,
-    settled_invoice_id: null,
-    settled_charge_id: null,
-    settled_at: null,
     updated_at: trx.fn.now(),
   };
 
   const existing = await tenantScopedTable(trx, tenant, 'contract_recurring_unit_adjustments')
     .where({ tenant, revision_id: revisionId })
-    .first<{ adjustment_id: string } | undefined>('adjustment_id');
-  if (existing) {
+    .first<{ adjustment_id: string; status: string; settled_invoice_id: string | null } | undefined>(
+      'adjustment_id',
+      'status',
+      'settled_invoice_id',
+    );
+  if (!existing) {
+    await tenantScopedTable(trx, tenant, 'contract_recurring_unit_adjustments').insert({
+      ...values,
+      status: 'pending',
+      created_by: userId,
+    });
+    return null;
+  }
+
+  if (existing.status === 'settled' && existing.settled_invoice_id) {
+    const settledInvoice = await tenantScopedTable(trx, tenant, 'invoices')
+      .where({ tenant, invoice_id: existing.settled_invoice_id })
+      .first<{ status: string | null; finalized_at: string | Date | null } | undefined>(
+        'status',
+        'finalized_at',
+      );
+    if (settledInvoice && (settledInvoice.finalized_at || settledInvoice.status !== 'draft')) {
+      // Never reset or replace a finalized/paid/exported settlement.
+      return null;
+    }
+    // Editable draft: update the source values in place, keep it settled there
+    // so reconciliation refreshes that draft's row rather than duplicating.
     await tenantScopedTable(trx, tenant, 'contract_recurring_unit_adjustments')
       .where({ tenant, adjustment_id: existing.adjustment_id })
-      .update({ ...values, updated_by: userId });
-    return;
+      .update({
+        ...values,
+        revision_version: revisionVersion,
+        status: 'settled',
+        settled_invoice_id: existing.settled_invoice_id,
+        updated_by: userId,
+      });
+    return existing.settled_invoice_id;
   }
-  await tenantScopedTable(trx, tenant, 'contract_recurring_unit_adjustments').insert({
-    ...values,
-    created_by: userId,
-  });
+
+  // Pending or cancelled row: (re)activate as pending.
+  await tenantScopedTable(trx, tenant, 'contract_recurring_unit_adjustments')
+    .where({ tenant, adjustment_id: existing.adjustment_id })
+    .update({
+      ...values,
+      revision_version: revisionVersion,
+      status: 'pending',
+      settled_invoice_id: null,
+      settled_charge_id: null,
+      settled_at: null,
+      updated_by: userId,
+    });
+  return null;
 }
 
 export interface IScheduleRecurringUnitRevisionParams {
@@ -415,7 +541,16 @@ export interface IScheduleRecurringUnitRevisionParams {
 }
 
 export type ScheduleRecurringUnitRevisionResult =
-  | { ok: true; revision: IContractLineUnitPricingRevision }
+  | {
+      ok: true;
+      revision: IContractLineUnitPricingRevision;
+      /**
+       * Editable draft whose materialized true-up changed, if any. Callers
+       * outside the transaction recalculate that draft's tax/totals so an
+       * edited or cancelled adjustment is reflected.
+       */
+      settledInvoiceId?: string | null;
+    }
   | { ok: false; error: string };
 
 export interface IScheduleSeatRevisionParams {
@@ -701,8 +836,8 @@ export async function scheduleRecurringUnitRevisionInTransaction(
   } else if (unitRateCents !== null && unitRateCents !== undefined) {
     return { ok: false, error: 'Catalog inheritance stores no unit rate; omit the override amount or choose explicit pricing.' };
   }
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(effectivePeriodStart)) {
-    return { ok: false, error: 'Effective date must be a calendar date (YYYY-MM-DD) at a service-period boundary.' };
+  if (!isValidDateOnly(effectivePeriodStart)) {
+    return { ok: false, error: 'Effective date must be a valid calendar date (YYYY-MM-DD) at a service-period boundary.' };
   }
 
   await lockTenantBilling(trx, tenant);
@@ -761,8 +896,8 @@ export async function scheduleRecurringUnitRevisionInTransaction(
 
   if (allowMidPeriod) {
     const requestedMidDate = String(midPeriodEffectiveDate ?? effectivePeriodStart);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(requestedMidDate)) {
-      return { ok: false, error: 'The mid-period effective date must be a calendar date (YYYY-MM-DD).' };
+    if (!isValidDateOnly(requestedMidDate)) {
+      return { ok: false, error: 'The mid-period effective date must be a valid calendar date (YYYY-MM-DD).' };
     }
     const period = await resolveMidPeriodServicePeriod({
       trx, tenant, contractLineId, midDate: requestedMidDate,
@@ -772,6 +907,16 @@ export async function scheduleRecurringUnitRevisionInTransaction(
         ok: false,
         error:
           'That date is not inside an unbilled service period for this contract. Choose a date within an upcoming unbilled period, or a service-period boundary.',
+      };
+    }
+    // The standing quantity must begin at the containing period's next
+    // boundary. Reject a client-supplied boundary that disagrees (the UI
+    // resolves the boundary from the change date) rather than silently
+    // replacing it and reporting a different standing start than reviewed.
+    if (effectivePeriodStart !== period.end) {
+      return {
+        ok: false,
+        error: `The standing quantity must change at the next service-period boundary, ${period.end}. Reload the mid-period date so the scheduler can re-resolve it.`,
       };
     }
     const current = await resolveEffectiveRecurringUnitPricingInTransaction({
@@ -847,9 +992,10 @@ export async function scheduleRecurringUnitRevisionInTransaction(
   // boundary-only save cancels any pending mid-period adjustment on the same
   // canonical revision, so returning to boundary scheduling reconciles rather
   // than leaving a duplicate billable version.
+  let settledInvoiceId: string | null = null;
   const reconcileAdjustment = async (revision: IContractLineUnitPricingRevision): Promise<void> => {
     if (pendingAdjustment && storedMidDate) {
-      await upsertRecurringUnitAdjustment({
+      settledInvoiceId = await upsertRecurringUnitAdjustment({
         trx, tenant, userId,
         revisionId: String(revision.revision_id),
         revisionVersion: Number(revision.version ?? 1),
@@ -874,7 +1020,9 @@ export async function scheduleRecurringUnitRevisionInTransaction(
         }),
       });
     } else {
-      await cancelRecurringUnitAdjustmentForRevision(trx, tenant, String(revision.revision_id), userId);
+      settledInvoiceId = await cancelRecurringUnitAdjustmentForRevision(
+        trx, tenant, String(revision.revision_id), userId,
+      );
     }
   };
 
@@ -961,7 +1109,7 @@ export async function scheduleRecurringUnitRevisionInTransaction(
       .returning('*');
     const revision = updated as unknown as IContractLineUnitPricingRevision;
     await reconcileAdjustment(revision);
-    return { ok: true, revision };
+    return { ok: true, revision, settledInvoiceId };
   }
 
   // A caller that expected to replace (a version number) but finds no row — or
@@ -992,7 +1140,7 @@ export async function scheduleRecurringUnitRevisionInTransaction(
     .returning('*');
   const revision = inserted as unknown as IContractLineUnitPricingRevision;
   await reconcileAdjustment(revision);
-  return { ok: true, revision };
+  return { ok: true, revision, settledInvoiceId };
 }
 
 /** Backwards-compatible seat wrapper: unit-priced Fixed service, explicit rate. */

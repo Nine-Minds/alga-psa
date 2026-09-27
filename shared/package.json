@@ -9,6 +9,7 @@
     "./billingClients/resolveFixedLineRate": "./dist/billingClients/resolveFixedLineRate.js",
     "./billingClients/recurringUnitPricing": "./dist/billingClients/recurringUnitPricing.js",
     "./billingClients/recurringUnitMidPeriodAdjustment": "./dist/billingClients/recurringUnitMidPeriodAdjustment.js",
+    "./billingClients/coverageProration": "./dist/billingClients/coverageProration.js",
     "./types": "./dist/types/index.js",
     "./core": "./dist/core/index.js",
     "./core/logger.js": "./dist/core/logger.js",

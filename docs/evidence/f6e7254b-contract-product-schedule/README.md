@@ -515,3 +515,64 @@ and its recorded artifact revision
 UI smoke is claimed. The dev server was deliberately not started. The
 mid-period walkthrough is recorded in the review guide for the next available
 deployment of this branch.
+
+## 2026-09-27 round 2: shared evaluator, draft lifecycle, and review fixes
+
+The review round reported seven blockers; all were addressed while preserving
+the round-1 behavior.
+
+1. **Shared evaluator.** Added
+   `packages/billing/src/lib/billing/compute/contractInvoiceAdjustments.ts`
+   (`evaluateContractInvoiceAdjustments`) and made
+   `computeDiscountsAndAdjustments` delegate to it, so the recurring engine
+   evaluates every charge (including a mid-period true-up) exactly once. The
+   documented credit-base disagreement is resolved: negative credit lines are
+   excluded from the positive discount base while still reducing the final
+   amount. Fixed/percentage discounts, service scope and priority order are
+   covered by `contractInvoiceAdjustments.test.ts` and the integration credit
+   case. Companion migration compatibility was verified column-by-column:
+   `20260927120000_contract_recurring_mid_period_adjustments` adds the same
+   `invoice_charges` provenance columns, CHECK constraints and unique/period
+   indexes with the same names/types/predicates as the companion's
+   `20260923000000` + `20260923010000`, idempotently, so either order is a
+   no-op for the other.
+2. **Draft lifecycle.** Added
+   `packages/billing/src/lib/billing/reconcileContractChangeAdjustments.ts`.
+   Reconciliation now targets an editable draft transactionally (claiming only
+   the earliest eligible draft, enforcing client, contract assignment, currency
+   and included-line eligibility), refreshes edited versions, removes cancelled
+   settlements, releases adjustments whose invoice was deleted, and never
+   resets or moves a finalized/paid/exported settlement. It runs on generation,
+   on `BillingEngine.recalculateInvoice` (existing-draft refresh), and after a
+   scheduler edit/cancellation via `recalculateInvoice`. `loadPendingContractChangeCharges`
+   now additionally reads draft-settled rows and enforces the same eligibility.
+3. **Boundary agreement.** The server rejects a mid-period
+   `effective_period_start` that is not the containing period's next boundary;
+   the new `resolveRecurringUnitMidPeriod` action returns the true boundary,
+   previous quantity and effective rate, and the panel submits and displays that
+   boundary and looks up its exact revision version.
+   `previewRecurringRevisionInvoiceImpact` resolves the invoice window from the
+   period containing the change date, so standing charges and the true-up are
+   never combined from the wrong period.
+4. **Adjustment stale protection.** `bindRecurringPricingSources` now encodes
+   the true-up's identity/version/effective date/amount/rate into the reviewed
+   source set, so editing the revision or cancelling the true-up after preview
+   fails generation with `RECURRING_PRICING_STALE`. Regression test added.
+5. **One proration implementation.** Extracted
+   `shared/billingClients/coverageProration.ts` (validated calendar dates,
+   inclusive→half-open conversion, and the recurring coverage rounding) and used
+   it from both `computeRecurringQuantityCharges` and the true-up; the true-up
+   is a thin wrapper over the shared primitive.
+6. **Coverage.** The mid-period suite grew from 6 to 14 cases: decrease + full
+   stop credit, first-day and last-day proration, non-USD currency, discounted
+   taxable credit (credit not discounted, tax on the positive base), draft
+   protection after settlement, cancellation reconciliation, finalized
+   settlement preservation, regeneration idempotency across all invoices, and
+   the stale-review refusal. A panel interaction test drives the opt-in,
+   resolution, preview and save payloads.
+7. **Validation.** `packages/billing` full suite 313 files / 1557 tests pass;
+   `contractQuantityUsageSemantics.test.ts` 105/105; shared 37; db 19; billing,
+   types and shared typechecks pass; changed-file ESLint 0 errors. The in-advance
+   timing and competing-second-draft cases are covered only indirectly (the
+   sequential next-invoice assertion); live changed-artifact UI smoke remains
+   incomplete because the review deployment is unavailable.

@@ -3,12 +3,13 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 
-const actions = vi.hoisted(() => ({ read: vi.fn(), save: vi.fn(), preview: vi.fn(), revisions: vi.fn(), history: vi.fn() }));
+const actions = vi.hoisted(() => ({ read: vi.fn(), save: vi.fn(), preview: vi.fn(), revisions: vi.fn(), history: vi.fn(), resolve: vi.fn() }));
 vi.mock('@alga-psa/billing/actions/contractLineUnitPricingActions', () => ({
   getEffectiveRecurringUnitPricing: actions.read,
   scheduleRecurringUnitPricingRevision: actions.save,
   listRecurringUnitPricingRevisions: actions.revisions,
   listRecurringUnitPricingRevisionHistory: actions.history,
+  resolveRecurringUnitMidPeriod: actions.resolve,
 }));
 vi.mock('@alga-psa/billing/actions/contractLineSemanticsActions', () => ({ getNextContractServiceBoundary: async () => '2027-01-01' }));
 vi.mock('@alga-psa/billing/actions/invoiceGeneration', () => ({ previewRecurringRevisionInvoiceImpact: actions.preview }));
@@ -34,6 +35,8 @@ beforeEach(() => {
   actions.save.mockResolvedValue({ revision_id: 'revision', version: 1 });
   actions.revisions.mockResolvedValue([]);
   actions.history.mockResolvedValue([]);
+  actions.resolve.mockResolvedValue({ periodStart: '2027-01-01', periodEnd: '2027-02-01',
+    previousQuantity: 20, unitRateCents: 12000, pricePolicy: 'override', currencyCode: 'USD' });
 });
 async function mount() {
   render(<RecurringUnitSchedulePanel contractLineId="line" serviceId="service" configId="config" currencyCode="USD" />);
@@ -88,6 +91,32 @@ describe('Recurring unit schedule panel', () => {
     expect(screen.getByText('System')).toBeTruthy();
     expect(screen.getByText('Unknown user').getAttribute('title')).toBe(departed);
     expect(screen.queryByText(replacer)).toBeNull();
+  });
+  it('opts into a mid-period true-up, shows the proration, and submits the resolved boundary', async () => {
+    await mount();
+    fireEvent.change(document.querySelector('#recurring-quantity-config')!, { target: { value: '23' } });
+    fireEvent.click(document.querySelector('#recurring-mid-period-config')!);
+    // The toggle defaults to the covered start; choose a date inside the period.
+    fireEvent.change(document.querySelector('#recurring-mid-period-date-config')!, { target: { value: '2027-01-16' } });
+    await waitFor(() => expect(actions.resolve).toHaveBeenCalledWith(expect.objectContaining({ mid_period_date: '2027-01-16' })));
+    // 3 x $120 x 16/31 -> the displayed math names the charge and the standing boundary.
+    await screen.findByText(/From 2027-02-01 the standing quantity is 23/);
+    expect(screen.getByText(/3 units × \$120\.00/)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Preview invoice impact' }));
+    await waitFor(() => expect(actions.preview).toHaveBeenCalledWith(expect.objectContaining({
+      allow_mid_period: true,
+      mid_period_effective_date: '2027-01-16',
+      effective_period_start: '2027-02-01',
+    })));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Schedule change' }));
+    await waitFor(() => expect(actions.save).toHaveBeenCalledWith(expect.objectContaining({
+      quantity: 23,
+      allow_mid_period: true,
+      mid_period_effective_date: '2027-01-16',
+      effective_period_start: '2027-02-01',
+    })));
   });
   it('shows preview errors without inventing a total', async () => {
     actions.preview.mockResolvedValue({ success: false, error: 'Prepare service periods in Billing.' });

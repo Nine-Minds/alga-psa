@@ -53,7 +53,8 @@ import { ITaxCalculationResult } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { auditLog } from '@alga-psa/db';
 import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
-import { calculateAndDistributeTax, claimRecurringServicePeriodsForSelectionInputs, getClientDetails, persistContractChangeAdjustmentCharges, persistInvoiceCharges, updateInvoiceTotalsAndRecordTransaction, validateClientBillingEmail } from '../services/invoiceService';
+import { calculateAndDistributeTax, claimRecurringServicePeriodsForSelectionInputs, getClientDetails, persistInvoiceCharges, updateInvoiceTotalsAndRecordTransaction, validateClientBillingEmail } from '../services/invoiceService';
+import { reconcileContractChangeAdjustmentsForInvoice } from '../lib/billing/reconcileContractChangeAdjustments';
 
 
 
@@ -2204,13 +2205,22 @@ export const previewRecurringRevisionInvoiceImpact = withAuth(async (
       const kind = config && resolveRecurringUnitKind({ configurationType: config.configuration_type,
         pricingBasis: config.pricing_basis, itemKind: config.item_kind });
       if (!kind) throw new Error('This item does not support recurring quantity changes.');
+      // Resolve the invoice window from the period the true-up actually lands
+      // on: for a mid-period change that is the period containing the change
+      // date, not the next standing boundary. Boundary-only previews keep the
+      // selected period.
+      const windowAnchor =
+        input.allow_mid_period && input.mid_period_effective_date
+          ? String(input.mid_period_effective_date)
+          : String(input.effective_period_start);
       const period = await db.table('recurring_service_periods as rsp')
         .join('contract_lines as cl', function () {
-          this.on('cl.contract_line_id', 'rsp.obligation_id').andOn('cl.tenant', 'rsp.tenant');
+          this.on('cl.contract_line_id', '=', 'rsp.obligation_id').andOn('cl.tenant', '=', 'rsp.tenant');
         }).join('contracts as ct', function () {
-          this.on('ct.contract_id', 'cl.contract_id').andOn('ct.tenant', 'cl.tenant');
-        }).where({ 'rsp.obligation_id': input.contract_line_id,
-          'rsp.service_period_start': input.effective_period_start })
+          this.on('ct.contract_id', '=', 'cl.contract_id').andOn('ct.tenant', '=', 'cl.tenant');
+        }).where({ 'rsp.obligation_id': input.contract_line_id })
+        .where('rsp.service_period_start', '<=', windowAnchor)
+        .andWhere('rsp.service_period_end', '>', windowAnchor)
         .whereNotIn('rsp.lifecycle_state', ['archived', 'superseded'])
         .first('rsp.invoice_window_start', 'rsp.invoice_window_end', 'ct.owner_client_id');
       if (!period) throw new Error('No service period is available for this boundary. Prepare service periods in Billing, then retry the preview.');
@@ -3816,10 +3826,10 @@ export async function createInvoiceFromBillingResultImpl(
     );
     persistedCapDeltas = capDeltas;
     const projectScheduleCharges = scopedCharges.filter(isProjectScheduleCharge);
-    // One-time mid-period true-ups persist as source-linked adjustment rows, not
-    // as ordinary fixed charges, so they keep their revision provenance and
-    // reconcile in place on regeneration.
-    const contractChangeCharges = scopedCharges.filter((charge) => Boolean(charge.contractChangeAdjustment));
+    // One-time mid-period true-ups are owned by the reconcile ledger, not by the
+    // engine's supplemental charge, so they keep their revision provenance and
+    // reconcile in place on regeneration. Exclude them from ordinary
+    // persistence and materialise them from the ledger instead.
     const standardCharges = scopedCharges.filter(
       (charge) => !isProjectScheduleCharge(charge) && !charge.contractChangeAdjustment,
     );
@@ -3845,14 +3855,13 @@ export async function createInvoiceFromBillingResultImpl(
       tenant,
       userId,
     );
-    const contractChangeSubtotal = await persistContractChangeAdjustmentCharges(
+    const reconciledAdjustments = await reconcileContractChangeAdjustmentsForInvoice({
       trx,
-      newInvoice!.invoice_id,
-      contractChangeCharges,
       tenant,
-      userId,
-    );
-    const calculatedSubtotal = standardSubtotal + projectScheduleSubtotal + contractChangeSubtotal;
+      invoiceId: newInvoice!.invoice_id,
+    });
+    const calculatedSubtotal =
+      standardSubtotal + projectScheduleSubtotal + reconciledAdjustments.amountCents;
 
     // Recurring windows must end this transaction fully claimed: every
     // fulfilled recurring service period is linked to this invoice (including

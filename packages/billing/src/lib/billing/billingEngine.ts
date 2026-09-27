@@ -150,6 +150,7 @@ import {
 } from "../../models/projectBillingModelUtils";
 import { isProjectMaterialEligible } from "@alga-psa/inventory/lib";
 import { joinEffectiveServicePrice } from "./pricing/joinEffectiveServicePrice";
+import { reconcileContractChangeAdjustmentsForInvoice } from "./reconcileContractChangeAdjustments";
 // Workflow imports removed as event emission is moved back to the calling action
 
 type DiscountQueryRow = IDiscount & {
@@ -6651,11 +6652,12 @@ export class BillingEngine {
     if (lineIds.length === 0) return [];
 
     const db = tenantDb(this.knex, this.tenant);
-    let adjustments: Array<Record<string, unknown>>;
+    let rawAdjustments: Array<Record<string, unknown>>;
     try {
-      adjustments = (await db
+      rawAdjustments = (await db
         .table("contract_recurring_unit_adjustments")
-        .where({ tenant: this.tenant, status: "pending" })
+        .where({ tenant: this.tenant })
+        .whereIn("status", ["pending", "settled"])
         .whereIn("contract_line_id", lineIds)
         .whereNot("amount_cents", 0)
         // The affected period must have begun by the end of this billing window.
@@ -6668,6 +6670,11 @@ export class BillingEngine {
           "contract_line_id",
           "service_id",
           "config_id",
+          "client_id",
+          "client_contract_id",
+          "currency_code",
+          "status",
+          "settled_invoice_id",
           "revision_id",
           "revision_version",
           "adjustment_period_start",
@@ -6687,6 +6694,56 @@ export class BillingEngine {
       if ((error as { code?: string })?.code === "42P01") return [];
       throw error;
     }
+    if (rawAdjustments.length === 0) return [];
+
+    const lineById = new Map(
+      clientContractLines.map((line) => [line.client_contract_line_id, line]),
+    );
+
+    // Explicit client / contract-assignment / currency / included-line
+    // eligibility. A draft-settled row still shows; a finalized settlement is
+    // already billed and is excluded until a new revision creates a new ledger
+    // row.
+    const settledInvoiceIds = [
+      ...new Set(
+        rawAdjustments
+          .map((row) => (row.settled_invoice_id == null ? null : String(row.settled_invoice_id)))
+          .filter((id): id is string => Boolean(id)),
+      ),
+    ];
+    const settledInvoices = settledInvoiceIds.length
+      ? ((await db
+          .table("invoices")
+          .where({ tenant: this.tenant })
+          .whereIn("invoice_id", settledInvoiceIds)
+          .select("invoice_id", "status", "finalized_at")) as Array<{
+          invoice_id: string;
+          status: string | null;
+          finalized_at: string | Date | null;
+        }>)
+      : [];
+    const editableSettledIds = new Set(
+      settledInvoices
+        .filter((row) => !row.finalized_at && row.status === "draft")
+        .map((row) => row.invoice_id),
+    );
+
+    const adjustments = rawAdjustments.filter((row) => {
+      if (row.status === "settled") {
+        const settledId = row.settled_invoice_id == null ? null : String(row.settled_invoice_id);
+        if (!settledId || !editableSettledIds.has(settledId)) return false;
+      }
+      if (row.client_id != null && String(row.client_id) !== clientId) return false;
+      if (row.currency_code != null && billingCurrency && String(row.currency_code) !== billingCurrency) {
+        return false;
+      }
+      if (row.client_contract_id != null) {
+        const line = lineById.get(String(row.contract_line_id));
+        const lineAssignment = line?.client_contract_id ?? null;
+        if (lineAssignment && lineAssignment !== String(row.client_contract_id)) return false;
+      }
+      return true;
+    });
     if (adjustments.length === 0) return [];
 
     const serviceIds = [...new Set(adjustments.map((row) => String(row.service_id)))];
@@ -6700,9 +6757,6 @@ export class BillingEngine {
       tax_rate_id: string | null;
     }>;
     const serviceById = new Map(services.map((service) => [service.service_id, service]));
-    const lineById = new Map(
-      clientContractLines.map((line) => [line.client_contract_line_id, line]),
-    );
 
     const charges: IBillingCharge[] = [];
     for (const row of adjustments) {
@@ -7441,6 +7495,9 @@ export class BillingEngine {
     // invoice_charge_details rows remain the persisted source of service-period
     // truth after invoice creation; this path should only update tax and totals.
     const recalculate = async (trx: Knex.Transaction) => {
+      // Draft reconciliation: converge any pending/edited/cancelled mid-period
+      // true-up onto this editable draft before tax is recomputed.
+      await reconcileContractChangeAdjustmentsForInvoice({ trx, tenant, invoiceId });
       // Step 1: Recalculate and distribute tax across all items using the service function
       console.log(
         `[recalculateInvoice] Calling calculateAndDistributeTax for invoice ${invoiceId}`,

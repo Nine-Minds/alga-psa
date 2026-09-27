@@ -21,6 +21,7 @@ import {
   listRecurringUnitPricingHistory,
   listRecurringUnitPricingRevisions as listRecurringUnitPricingRevisionsInTransaction,
   resolveRecurringUnitDisplayPricing,
+  resolveRecurringUnitMidPeriodContext,
   scheduleRecurringUnitRevisionInTransaction,
   type IRecurringUnitPricingRevisionListRow,
 } from '../lib/billing/seatRevisions';
@@ -147,6 +148,7 @@ async function scheduleRecurringUnitPricingRevisionImpl(
     if (!kind) {
       return actionError('The selected item is not a recurring product or unit-priced service on this contract line.');
     }
+    let settledInvoiceId: string | null = null;
     const result = await knex.transaction(async (trx) => {
       const scheduled = await scheduleRecurringUnitRevisionInTransaction({
         trx,
@@ -170,8 +172,27 @@ async function scheduleRecurringUnitPricingRevisionImpl(
       if (scheduled.ok === false) {
         return actionError(scheduled.error);
       }
+      settledInvoiceId = scheduled.settledInvoiceId ?? null;
       return scheduled.revision;
     });
+
+    // An edited or cancelled mid-period true-up on an editable draft must
+    // refresh that draft's tax and totals. Finalized drafts are never touched
+    // (the scheduler already refused to reset them).
+    if (settledInvoiceId) {
+      try {
+        // Loaded on demand so the action's import graph never drags the
+        // server-only billing engine (and its storage/tax dependencies) into
+        // client or jsdom test bundles.
+        const { BillingEngine } = await import('../lib/billing/billingEngine');
+        await new BillingEngine().recalculateInvoice(settledInvoiceId);
+      } catch (error) {
+        console.error(
+          `Failed to recalculate draft ${settledInvoiceId} after a mid-period adjustment change:`,
+          error,
+        );
+      }
+    }
 
     revalidatePath('/msp/billing');
     return result;
@@ -211,6 +232,49 @@ async function getEffectiveRecurringUnitPricingImpl(
   } catch (error) {
     return toActionError(error);
   }
+}
+
+async function resolveRecurringUnitMidPeriodImpl(
+  user: AuthUser,
+  tenant: string,
+  input: { contract_line_id: string; service_id: string; config_id: string; mid_period_date: string },
+): Promise<ResolvedRecurringUnitMidPeriod | UnitPricingActionError> {
+  if (!(await hasPermission(user, 'billing', 'read'))) {
+    return permissionError('Permission denied: billing read required');
+  }
+  try {
+    const { knex } = await createTenantKnex();
+    const kind = await detectRecurringUnitKind(knex, tenant, {
+      contract_line_id: input.contract_line_id,
+      service_id: input.service_id,
+      config_id: input.config_id,
+    });
+    if (!kind) {
+      return actionError('The selected item is not a recurring product or unit-priced service on this contract line.');
+    }
+    const resolved = await resolveRecurringUnitMidPeriodContext({
+      trx: knex as unknown as Knex.Transaction,
+      tenant,
+      contractLineId: input.contract_line_id,
+      serviceId: input.service_id,
+      configId: input.config_id,
+      kind,
+      midDate: String(input.mid_period_date),
+    });
+    if ('error' in resolved) return actionError(resolved.error);
+    return resolved;
+  } catch (error) {
+    return toActionError(error);
+  }
+}
+
+export interface ResolvedRecurringUnitMidPeriod {
+  periodStart: string;
+  periodEnd: string;
+  previousQuantity: number;
+  unitRateCents: number | null;
+  pricePolicy: 'override' | 'catalog';
+  currencyCode: string;
 }
 
 async function listRecurringUnitPricingRevisionHistoryImpl(
@@ -312,6 +376,19 @@ export const getEffectiveRecurringUnitPricing = withAuth(
     { tenant },
     input: { contract_line_id: string; service_id: string; config_id: string; service_period_start: string },
   ) => getEffectiveRecurringUnitPricingImpl(user, tenant, input),
+);
+
+/**
+ * Resolve the canonical next boundary and standing values for a chosen
+ * mid-period date, so the scheduler displays and submits the real boundary
+ * rather than the date the operator picked.
+ */
+export const resolveRecurringUnitMidPeriod = withAuth(
+  async (
+    user,
+    { tenant },
+    input: { contract_line_id: string; service_id: string; config_id: string; mid_period_date: string },
+  ) => resolveRecurringUnitMidPeriodImpl(user, tenant, input),
 );
 
 /**

@@ -18,7 +18,9 @@ import {
   getEffectiveRecurringUnitPricing,
   listRecurringUnitPricingRevisionHistory,
   listRecurringUnitPricingRevisions,
+  resolveRecurringUnitMidPeriod,
   scheduleRecurringUnitPricingRevision,
+  type ResolvedRecurringUnitMidPeriod,
 } from '@alga-psa/billing/actions/contractLineUnitPricingActions';
 import { previewRecurringRevisionInvoiceImpact, type RecurringRevisionInvoiceImpact } from '@alga-psa/billing/actions/invoiceGeneration';
 import { getNextContractServiceBoundary } from '@alga-psa/billing/actions/contractLineSemanticsActions';
@@ -92,7 +94,7 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
   const [previewing, setPreviewing] = useState(false);
   const [midPeriod, setMidPeriod] = useState(false);
   const [midPeriodDate, setMidPeriodDate] = useState('');
-  const [midPeriodAffected, setMidPeriodAffected] = useState<EffectiveRecurringUnitPricingReadResult | null>(null);
+  const [midPeriodContext, setMidPeriodContext] = useState<ResolvedRecurringUnitMidPeriod | null>(null);
   const [midPeriodError, setMidPeriodError] = useState<string | null>(null);
   const impactRequest = useRef(0);
   useEffect(() => {
@@ -110,10 +112,10 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
         contract_line_id: contractLineId, service_id: serviceId, config_id: configId,
         quantity: Number(quantityInput), price_policy: pricePolicy,
         unit_rate_cents: pricePolicy === 'override' ? Math.round(Number(rateInput) * 100) : null,
-        effective_period_start: boundary,
+        effective_period_start: standingBoundary,
         allow_mid_period: midPeriod,
         mid_period_effective_date: midPeriod ? midPeriodDate : null,
-        expected_version: boundaryRevision?.version ?? null,
+        expected_version: standingRevision?.version ?? null,
       });
       if (request === impactRequest.current) setImpact(result);
     } catch (error) {
@@ -234,30 +236,30 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
   // shown without changing the form's boundary/revision values.
   useEffect(() => {
     if (!midPeriod || !/^\d{4}-\d{2}-\d{2}$/.test(midPeriodDate)) {
-      setMidPeriodAffected(null);
+      setMidPeriodContext(null);
       setMidPeriodError(null);
       return;
     }
     let cancelled = false;
     void (async () => {
       try {
-        const result = await getEffectiveRecurringUnitPricing({
+        const result = await resolveRecurringUnitMidPeriod({
           contract_line_id: contractLineId,
           service_id: serviceId,
           config_id: configId,
-          service_period_start: midPeriodDate,
+          mid_period_date: midPeriodDate,
         });
         if (cancelled) return;
         if (isReturnedActionError(result)) {
-          setMidPeriodAffected(null);
+          setMidPeriodContext(null);
           setMidPeriodError(getErrorMessage(result));
           return;
         }
-        setMidPeriodAffected(result);
+        setMidPeriodContext(result);
         setMidPeriodError(null);
       } catch (error) {
         if (!cancelled) {
-          setMidPeriodAffected(null);
+          setMidPeriodContext(null);
           setMidPeriodError(getErrorMessage(error));
         }
       }
@@ -298,6 +300,12 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
   // brand-new future boundary would be rejected as stale.
   const boundaryRevision =
     revisions.find((revision) => revision.effective_period_start === boundary) ?? null;
+  // With the mid-period opt-in, the standing quantity begins at the resolved
+  // next boundary (not the picked date), and the compare-and-set token is the
+  // revision stored at that boundary.
+  const standingBoundary = midPeriod && midPeriodContext ? midPeriodContext.periodEnd : boundary;
+  const standingRevision =
+    revisions.find((revision) => revision.effective_period_start === standingBoundary) ?? null;
 
   const handleSave = async () => {
     setSaveError(null);
@@ -324,10 +332,10 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
       }
       unitRateCents = Math.round(dollars * 100);
     }
-    if (midPeriod && !/^\d{4}-\d{2}-\d{2}$/.test(midPeriodDate)) {
+    if (midPeriod && (!midPeriodContext || !/^\d{4}-\d{2}-\d{2}$/.test(midPeriodDate))) {
       setSaveError(
         t('contractLines.recurringSchedule.midPeriodDateRequired', {
-          defaultValue: 'Choose the date the quantity changes for the one-time mid-period true-up.',
+          defaultValue: 'Choose a date inside an upcoming unbilled period for the one-time mid-period true-up.',
         }),
       );
       return;
@@ -341,10 +349,10 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
         quantity,
         price_policy: pricePolicy,
         unit_rate_cents: pricePolicy === 'override' ? unitRateCents : null,
-        effective_period_start: boundary,
+        effective_period_start: standingBoundary,
         allow_mid_period: midPeriod,
         mid_period_effective_date: midPeriod ? midPeriodDate : null,
-        expected_version: boundaryRevision ? boundaryRevision.version : null,
+        expected_version: standingRevision ? standingRevision.version : null,
       });
       if (isReturnedActionError(result)) {
         setSaveError(getErrorMessage(result));
@@ -354,10 +362,10 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
         t('contractLines.recurringSchedule.saved', {
           defaultValue: 'Scheduled: {{quantity}} effective {{date}}.',
           quantity,
-          date: boundary,
+          date: standingBoundary,
         }),
       );
-      await load(boundary);
+      await load(standingBoundary);
       onScheduled?.();
     } catch (error) {
       setSaveError(getErrorMessage(error));
@@ -405,20 +413,19 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
   // mid-period date and is billed at its own standing quantity plus one
   // prorated charge/credit for the partial period.
   const priceChangedForMidPeriod =
-    !!effective &&
-    (pricePolicy !== effective.pricePolicy ||
+    !!midPeriodContext &&
+    (pricePolicy !== midPeriodContext.pricePolicy ||
       (pricePolicy === 'override' &&
         proposedRateCents !== null &&
-        currentResolvedRateCents !== null &&
-        proposedRateCents !== currentResolvedRateCents));
+        midPeriodContext.unitRateCents !== null &&
+        proposedRateCents !== midPeriodContext.unitRateCents));
   const midPeriodStandingDelta =
-    midPeriodAffected && Number.isInteger(proposedQuantity)
-      ? proposedQuantity - midPeriodAffected.quantity
+    midPeriodContext && Number.isInteger(proposedQuantity)
+      ? proposedQuantity - midPeriodContext.previousQuantity
       : null;
-  const affectedStart = midPeriodAffected?.coveredStart ?? null;
-  const affectedEnd = midPeriodAffected?.coveredEnd ?? null;
-  const affectedRateCents =
-    midPeriodAffected?.resolvedUnitRateCents ?? midPeriodAffected?.unitRateCents ?? null;
+  const affectedStart = midPeriodContext?.periodStart ?? null;
+  const affectedEnd = midPeriodContext?.periodEnd ?? null;
+  const affectedRateCents = midPeriodContext?.unitRateCents ?? null;
   let midPeriodCoveredDays: number | null = null;
   let midPeriodFullDays: number | null = null;
   let midPeriodAmountCents: number | null = null;
@@ -695,7 +702,7 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
                 rate: formatRate(affectedRateCents),
                 covered: midPeriodCoveredDays,
                 full: midPeriodFullDays,
-                amount: formatCurrency(Math.abs(midPeriodAmountCents ?? 0) / 100, midPeriodAffected?.currencyCode ?? currencyCode),
+                amount: formatCurrency(Math.abs(midPeriodAmountCents ?? 0) / 100, midPeriodContext?.currencyCode ?? currencyCode),
                 effect:
                   (midPeriodAmountCents ?? 0) < 0
                     ? t('contractLines.recurringSchedule.credit', { defaultValue: 'credit' })
@@ -706,7 +713,7 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
               {t('contractLines.recurringSchedule.midPeriodStanding', {
                 defaultValue:
                   'From {{boundary}} the standing quantity is {{quantity}}. The true-up lands on the next eligible editable draft (with applicable discounts and tax).',
-                boundary,
+                boundary: standingBoundary,
                 quantity: proposedQuantity,
               })}
             </p>
@@ -787,7 +794,11 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
             end: impact.windowEnd,
           })}</p>
           <p>{t('contractLines.recurringSchedule.invoiceTotals', { defaultValue: 'Subtotal after discounts: {{subtotal}}. Tax: {{tax}}. Total: {{before}} → {{after}}.', subtotal: formatCurrency(impact.after.subtotal / 100, impact.after.currencyCode), tax: formatCurrency(impact.after.tax / 100, impact.after.currencyCode), before: formatCurrency(impact.before.total / 100, impact.before.currencyCode), after: formatCurrency(impact.after.total / 100, impact.after.currencyCode) })}</p>
-          {impact.after.items.filter(item => item.total < 0).map(item => <p key={item.id}>{item.description}: {formatCurrency(item.total / 100, impact.after.currencyCode)}</p>)}
+          {/* Show the resolved true-up (charge or credit) and any other credit
+              lines so the operator sees exactly what the totals include. */}
+          {impact.after.items
+            .filter(item => item.total < 0 || /mid-period quantity change/i.test(item.description))
+            .map(item => <p key={item.id} className={item.total > 0 ? 'font-medium' : undefined}>{item.description}: {formatCurrency(item.total / 100, impact.after.currencyCode)}</p>)}
         </div>}
       </div>
 

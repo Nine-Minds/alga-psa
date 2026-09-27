@@ -12,6 +12,7 @@ import type {
   ChargeProfileAssignments,
 } from "./types";
 import { resolveChargeProfileFor } from "../billingProfileResolution";
+import { prorateRecurringCoverageByRatio } from "@alga-psa/shared/billingClients/coverageProration";
 
 /**
  * Effective pricing selected from a scheduled revision for the covered service
@@ -244,7 +245,9 @@ export function computeRecurringQuantityCharges(
     const coverageRatio = shouldProrate
       ? Math.max(0, Math.min(timing.coverageRatio, 1))
       : 1;
-    const proratedTotal = Math.ceil(Math.ceil(originalTotal) * coverageRatio);
+    // Single shared coverage primitive, so the mid-period true-up and this
+    // recurring charge round identically.
+    const proratedTotal = prorateRecurringCoverageByRatio(originalTotal, coverageRatio);
     const rate =
       quantity === 0
         ? 0
@@ -256,7 +259,7 @@ export function computeRecurringQuantityCharges(
       quantity === 0
         ? 0
         : shouldProrate
-          ? Math.ceil(Math.ceil(originalTaxAmount) * coverageRatio)
+          ? prorateRecurringCoverageByRatio(originalTaxAmount, coverageRatio)
           : originalTaxAmount;
 
     const charge: IProductCharge | ILicenseCharge = {

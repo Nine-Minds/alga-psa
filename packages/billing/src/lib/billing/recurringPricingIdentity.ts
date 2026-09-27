@@ -6,6 +6,10 @@ import type {
 
 export type { IExpectedRecurringPricingSource } from '@alga-psa/types';
 
+/** Synthetic service-id prefix that separates a true-up source key from the
+ * recurring charge priced on the same line/period. */
+export const CONTRACT_CHANGE_SOURCE_PREFIX = 'contract-change:';
+
 export function recurringPricingSourceKey(params: {
   clientContractLineId?: string | null;
   configId?: string | null;
@@ -26,6 +30,16 @@ export function recurringPricingSourceKey(params: {
  * Bind the recurring pricing provenance emitted by the billing engine onto the
  * obligation key the caller reviews. Only charges priced by a scheduled
  * revision carry provenance; untouched/legacy charges contribute nothing.
+ *
+ * A one-time mid-period true-up carries no `recurringPricingSource`, so its
+ * identity is encoded into the same reviewed-source contract: `revisionId` is
+ * the adjustment id, `version` the source revision version which also appears
+ * as `catalogPriceId`, `unitRateCents` the effective rate, `quantity` the
+ * signed amount, `effectivePeriodStart`/`catalogEffectiveDate` the affected
+ * period start, and `serviceId` is prefixed so the key cannot collide with the
+ * recurring charge on the same period. Editing the revision, moving the date,
+ * changing the amount/rate, cancelling, or introducing an unreviewed true-up
+ * therefore all fail the existing preview-to-generation comparison.
  */
 export function bindRecurringPricingSources(
   charges: IBillingCharge[],
@@ -33,6 +47,25 @@ export function bindRecurringPricingSources(
   const bound: IExpectedRecurringPricingSource[] = [];
   for (const charge of charges) {
     const source = charge.recurringPricingSource;
+    const adjustment = charge.contractChangeAdjustment;
+    if (adjustment) {
+      bound.push({
+        revisionId: adjustment.adjustmentId,
+        version: adjustment.revisionVersion,
+        pricePolicy: 'override',
+        unitRateCents: adjustment.unitRateCents,
+        effectivePeriodStart: adjustment.periodStart,
+        catalogPriceId: adjustment.revisionId,
+        catalogEffectiveDate: adjustment.periodStart,
+        clientContractLineId: charge.client_contract_line_id ?? null,
+        configId: charge.config_id ?? null,
+        serviceId: `${CONTRACT_CHANGE_SOURCE_PREFIX}${charge.serviceId ?? adjustment.revisionId}`,
+        servicePeriodStart: adjustment.periodStart,
+        servicePeriodEnd: adjustment.periodEnd,
+        quantity: adjustment.amountCents,
+      });
+      continue;
+    }
     if (!source || !charge.serviceId) continue;
     bound.push({
       ...source,

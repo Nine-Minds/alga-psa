@@ -2034,25 +2034,63 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         expect(january.subtotal).toBe(390000 + 25807);
       });
 
-      it('records a credit for a mid-period decrease and a zero stop', async () => {
+      it('records a credit for a mid-period decrease and stops the item with a larger credit', async () => {
         const setup = await setupProductLine();
-        expectScheduled(await scheduleProduct(setup, setup.users, {
+        const decrease = expectScheduled(await scheduleProduct(setup, setup.users, {
           quantity: 10,
           allow_mid_period: true,
           mid_period_effective_date: '2023-01-16',
           effective_period_start: '2023-02-01',
         }));
+        // Replacing the pending version with a full stop reconciles the same
+        // source rather than leaving two billable versions.
+        expectScheduled(await scheduleProduct(setup, setup.users, {
+          quantity: 0,
+          allow_mid_period: true,
+          mid_period_effective_date: '2023-01-16',
+          effective_period_start: '2023-02-01',
+          expected_version: decrease.version,
+        }));
         const january = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
-        // 10 x $100 x 16/31 = 51612.9 -> 51613 credit
-        expect(january.subtotal).toBe(390000 - 51613);
-        const credit = await context.db('invoice_charges')
+        // 20 x $100 x 16/31 = 103225.8 -> 103226 credit for the stopped item.
+        expect(january.subtotal).toBe(390000 - 103226);
+        const credits = await context.db('invoice_charges')
           .where({
             tenant: context.tenantId,
             invoice_id: january.invoice_id,
             adjustment_source_kind: 'contract_change',
-          })
-          .first();
-        expect(Number(credit.net_amount)).toBe(-51613);
+          });
+        expect(credits).toHaveLength(1);
+        expect(Number(credits[0].net_amount)).toBe(-103226);
+        // Zero remains zero: February bills only Endpoints + Locations.
+        const february = unwrapInvoiceResult<any>(await generateInvoice(await setupInvoiceCycle(2023, 3, 1)));
+        expect(february.subtotal).toBe(190000);
+      });
+
+      it('prorates a first-day change over the whole period', async () => {
+        const setup = await setupProductLine();
+        expectScheduled(await scheduleProduct(setup, setup.users, {
+          quantity: 23,
+          allow_mid_period: true,
+          mid_period_effective_date: '2023-01-01',
+          effective_period_start: '2023-02-01',
+        }));
+        const january = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+        // 3 x $100 x 31/31 = +$300
+        expect(january.subtotal).toBe(390000 + 30000);
+      });
+
+      it('prorates a last-day change over a single day', async () => {
+        const setup = await setupProductLine();
+        expectScheduled(await scheduleProduct(setup, setup.users, {
+          quantity: 23,
+          allow_mid_period: true,
+          mid_period_effective_date: '2023-01-31',
+          effective_period_start: '2023-02-01',
+        }));
+        const january = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+        // 3 x $100 x 1/31 = 9.677 -> +$9.68
+        expect(january.subtotal).toBe(390000 + 968);
       });
 
       it('rejects a mid-period date that is not inside an eligible unbilled period', async () => {
@@ -2066,7 +2104,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         expect('actionError' in result || 'permissionError' in result).toBe(true);
       });
 
-      it('does not duplicate the true-up when the same window is generated twice', async () => {
+      it('does not duplicate the true-up when the same window is regenerated and leaves other invoices alone', async () => {
         const setup = await setupProductLine();
         expectScheduled(await scheduleProduct(setup, setup.users, {
           quantity: 23,
@@ -2075,7 +2113,40 @@ describe('Contract quantity & usage semantics — period totals and recurring se
           effective_period_start: '2023-02-01',
         }));
         const january = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
-        await generateInvoice(setup.billingCycleId).catch(() => null);
+        await generateInvoice(setup.billingCycleId);
+        const invoices = await context.db('invoices')
+          .where({ tenant: context.tenantId, client_id: context.clientId })
+          .orderBy('invoice_date', 'asc');
+        const adjustmentRows = await context.db('invoice_charges')
+          .where({ tenant: context.tenantId, adjustment_source_kind: 'contract_change' });
+        expect(adjustmentRows).toHaveLength(1);
+        expect(String(adjustmentRows[0].invoice_id)).toBe(january.invoice_id);
+        // No extra invoice or adjustment row appeared.
+        expect(invoices.length).toBe(1);
+      });
+
+      it('protects a settled mid-period change from a later same-period edit', async () => {
+        const setup = await setupProductLine();
+        const first = expectScheduled(await scheduleProduct(setup, setup.users, {
+          quantity: 23,
+          allow_mid_period: true,
+          mid_period_effective_date: '2023-01-16',
+          effective_period_start: '2023-02-01',
+        }));
+        const january = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+        expect(january.subtotal).toBe(405484);
+
+        // Once the affected period is billed, a second mid-period edit inside it
+        // is refused and the settled adjustment is left untouched.
+        const retried = await scheduleProduct(setup, setup.users, {
+          quantity: 25,
+          allow_mid_period: true,
+          mid_period_effective_date: '2023-01-20',
+          effective_period_start: '2023-02-01',
+          expected_version: first.version,
+        });
+        expect('actionError' in retried || 'permissionError' in retried).toBe(true);
+
         const adjustments = await context.db('invoice_charges')
           .where({
             tenant: context.tenantId,
@@ -2083,6 +2154,155 @@ describe('Contract quantity & usage semantics — period totals and recurring se
             adjustment_source_kind: 'contract_change',
           });
         expect(adjustments).toHaveLength(1);
+        expect(Number(adjustments[0].net_amount)).toBe(15484);
+        const ledger = await context.db('contract_recurring_unit_adjustments')
+          .where({ tenant: context.tenantId, revision_id: first.revision_id })
+          .first();
+        expect(ledger.status).toBe('settled');
+      });
+
+      it('removes the draft adjustment when the mid-period change is cancelled', async () => {
+        const setup = await setupProductLine();
+        const first = expectScheduled(await scheduleProduct(setup, setup.users, {
+          quantity: 23,
+          allow_mid_period: true,
+          mid_period_effective_date: '2023-01-16',
+          effective_period_start: '2023-02-01',
+        }));
+        const january = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+        expect(january.subtotal).toBe(405484);
+
+        // Return to boundary-only at the same boundary: reconcile removes the
+        // true-up row instead of leaving stale billable money on the draft.
+        expectScheduled(await scheduleProduct(setup, setup.users, {
+          quantity: 23,
+          allow_mid_period: false,
+          effective_period_start: '2023-02-01',
+          expected_version: first.version,
+        }));
+        const adjustments = await context.db('invoice_charges')
+          .where({
+            tenant: context.tenantId,
+            invoice_id: january.invoice_id,
+            adjustment_source_kind: 'contract_change',
+          });
+        expect(adjustments).toHaveLength(0);
+        const januaryAfter = await context.db('invoices')
+          .where({ tenant: context.tenantId, invoice_id: january.invoice_id })
+          .first();
+        expect(Number(januaryAfter.subtotal)).toBe(390000);
+        const ledger = await context.db('contract_recurring_unit_adjustments')
+          .where({ tenant: context.tenantId, revision_id: first.revision_id })
+          .first();
+        expect(ledger.status).toBe('cancelled');
+      });
+
+      it('never resets a finalized settlement', async () => {
+        const setup = await setupProductLine();
+        const first = expectScheduled(await scheduleProduct(setup, setup.users, {
+          quantity: 23,
+          allow_mid_period: true,
+          mid_period_effective_date: '2023-01-16',
+          effective_period_start: '2023-02-01',
+        }));
+        const january = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+        await context.db('invoices')
+          .where({ tenant: context.tenantId, invoice_id: january.invoice_id })
+          .update({ status: 'sent', finalized_at: new Date().toISOString() });
+
+        // A later boundary-only edit must not delete or move the finalized
+        // settlement.
+        expectScheduled(await scheduleProduct(setup, setup.users, {
+          quantity: 24,
+          allow_mid_period: false,
+          effective_period_start: '2023-02-01',
+          expected_version: first.version,
+        }));
+        const adjustment = await context.db('invoice_charges')
+          .where({
+            tenant: context.tenantId,
+            invoice_id: january.invoice_id,
+            adjustment_source_kind: 'contract_change',
+          })
+          .first();
+        expect(adjustment).toBeTruthy();
+        expect(Number(adjustment.net_amount)).toBe(15484);
+        const ledger = await context.db('contract_recurring_unit_adjustments')
+          .where({ tenant: context.tenantId, revision_id: first.revision_id })
+          .first();
+        expect(ledger.status).toBe('settled');
+        expect(String(ledger.settled_invoice_id)).toBe(january.invoice_id);
+      });
+
+      it('bills a mid-period true-up in a non-USD contract currency', async () => {
+        const setup = await setupProductLine();
+        await context.db('contracts')
+          .where({ tenant: context.tenantId, contract_id: setup.contractId })
+          .update({ currency_code: 'EUR' });
+        for (const [member, rate] of [
+          [setup.users, 9000],
+          [setup.endpoints, 5000],
+          [setup.locations, 20000],
+        ] as const) {
+          await updateCatalogPrice(context, member.serviceId, {
+            rateCents: rate,
+            currency: 'EUR',
+            effectiveDate: '2023-01-01',
+          });
+        }
+        expectScheduled(await scheduleProduct(setup, setup.users, {
+          quantity: 23,
+          allow_mid_period: true,
+          mid_period_effective_date: '2023-01-16',
+          effective_period_start: '2023-02-01',
+        }));
+        const january = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+        // 20x9000 + 30x5000 + 2x20000 = 370000 base; true-up 3 x 9000 x 16/31 = 13936
+        expect(january.subtotal).toBe(370000 + 13936);
+        const adjustment = await context.db('invoice_charges')
+          .where({
+            tenant: context.tenantId,
+            invoice_id: january.invoice_id,
+            adjustment_source_kind: 'contract_change',
+          })
+          .first();
+        expect(Number(adjustment.net_amount)).toBe(13936);
+        expect(Number(adjustment.unit_price)).toBe(9000);
+      });
+
+      it('does not discount a credit and keeps tax on the positive base', async () => {
+        const setup = await setupProductLine();
+        const discountId = uuidv4();
+        await context.db('discounts').insert({
+          tenant: context.tenantId,
+          discount_id: discountId,
+          discount_name: 'Ten percent contract',
+          discount_type: 'percentage',
+          value: 0.1,
+          start_date: '2022-01-01',
+          end_date: null,
+          is_active: true,
+        });
+        await context.db('contract_line_discounts').insert({
+          tenant: context.tenantId,
+          discount_id: discountId,
+          contract_line_id: setup.contractLineId,
+        });
+        expectScheduled(await scheduleProduct(setup, setup.users, {
+          quantity: 10,
+          allow_mid_period: true,
+          mid_period_effective_date: '2023-01-16',
+          effective_period_start: '2023-02-01',
+        }));
+        const january = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+        // Positive gross 390000, credit -51613, discount 10% of the positive
+        // base only (39000); tax stays on the positive base too.
+        expect(january.subtotal).toBe(390000 - 51613 - 39000);
+        expect(Number(january.tax)).toBe(39000);
+        const discounts = await context.db('invoice_charges')
+          .where({ tenant: context.tenantId, invoice_id: january.invoice_id, is_discount: true });
+        expect(discounts).toHaveLength(1);
+        expect(Number(discounts[0].total_price ?? discounts[0].net_amount)).toBe(-39000);
       });
 
       it('applies a contract percentage discount to the positive mid-period true-up exactly once', async () => {
@@ -2119,6 +2339,43 @@ describe('Contract quantity & usage semantics — period totals and recurring se
           .where({ tenant: context.tenantId, invoice_id: january.invoice_id, adjustment_source_kind: 'contract_change' })
           .first();
         expect(Number(adjustment.net_amount)).toBe(15484);
+      });
+
+      it('rejects generation when the reviewed mid-period true-up changed or was cancelled', async () => {
+        const setup = await setupProductLine();
+        const first = expectScheduled(await scheduleProduct(setup, setup.users, {
+          quantity: 23,
+          allow_mid_period: true,
+          mid_period_effective_date: '2023-01-16',
+          effective_period_start: '2023-02-01',
+        }));
+        // The reviewed source set must now include the true-up so a later
+        // revision edit cannot change the current-period adjustment unnoticed.
+        const preview = await previewInvoice(setup.billingCycleId);
+        expect(preview.success, JSON.stringify(preview)).toBe(true);
+        if (!preview.success) throw new Error('unreachable');
+        const reviewed = preview.expectedRecurringPricingSources ?? [];
+        expect(reviewed.some((source) => source.serviceId?.startsWith('contract-change:'))).toBe(true);
+
+        // Move the mid-period date; the amount changes behind the reviewed preview.
+        expectScheduled(await scheduleProduct(setup, setup.users, {
+          quantity: 23,
+          allow_mid_period: true,
+          mid_period_effective_date: '2023-01-20',
+          effective_period_start: '2023-02-01',
+          expected_version: first.version,
+        }));
+        const refused = await generateInvoice(setup.billingCycleId, {
+          expectedRecurringPricingSources: reviewed,
+        } as any).catch((error) => error);
+        const isRefused =
+          refused instanceof Error ||
+          'actionError' in Object(refused) ||
+          'code' in Object(refused ?? {});
+        expect(isRefused, JSON.stringify(refused)).toBe(true);
+        expect((refused as { messageKey?: string }).messageKey).toBe(
+          RECURRING_PRICING_STALE_MESSAGE_KEY,
+        );
       });
     });
 
