@@ -78,10 +78,14 @@ test('Microsoft mailbox OAuth receives a ticket, sends a UI reply through Graph 
 
     // Add a named outbound identity tied to the connected Graph mailbox. The
     // identity is mailbox-verified and can be routed independently from inbound.
-    await page.locator('#email-sender-address').fill(mailbox);
-    await page.locator('#email-sender-mailbox').click();
+    await page.locator('#email-sender-add-open').click();
+    const addSenderDialog = page.locator('#email-sender-add-dialog');
+    await expect(addSenderDialog).toBeVisible();
+    await addSenderDialog.locator('#email-sender-address').fill(mailbox);
+    await addSenderDialog.locator('#email-sender-mailbox').click();
     await page.getByRole('option', { name: mailbox, exact: true }).click();
-    await page.locator('#email-sender-add').click();
+    await addSenderDialog.locator('#email-sender-add').click();
+    await expect(addSenderDialog).toBeHidden();
     await expect.poll(async () => database('email_sender_addresses').where({ ...scope, email_address: mailbox }).first())
       .toMatchObject({ verification_status: 'verified', microsoft_provider_id: provider.id });
 
