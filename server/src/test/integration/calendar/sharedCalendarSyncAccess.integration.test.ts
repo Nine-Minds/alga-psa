@@ -325,4 +325,69 @@ describe('shared-calendar provider sync access', () => {
     expect(adapters.get(otherProviderId).createEvent).toHaveBeenCalledTimes(1);
     expect(await scoped('calendar_event_mappings').where({ schedule_entry_id: entryId })).toHaveLength(2);
   });
+
+  function providerNotFound(context: string) {
+    // Shape of BaseCalendarAdapter.handleError for a Graph 404.
+    return Object.assign(new Error(`Error in ${context}: Request failed with status code 404 (code: ErrorItemNotFound)`), {
+      status: 404,
+      code: 'ErrorItemNotFound',
+    });
+  }
+
+  it('recreates a copy that vanished from the provider before archive once the calendar is restored', async () => {
+    const entryId = await seedGroupEntry([member]);
+    const externalId = await seedProviderAndMapping(entryId, member, 'vanished-before-archive');
+    const adapter = {
+      connect: vi.fn(async () => {}),
+      deleteEvent: vi.fn(async () => { throw providerNotFound('deleteEvent'); }),
+      updateEvent: vi.fn(async () => { throw providerNotFound('updateEvent'); }),
+      createEvent: vi.fn(async () => ({ id: 'recreated-copy', updated: '2026-08-05T00:00:00.000Z' })),
+    };
+    (service as any).createAdapter = async () => adapter;
+
+    await tenantDb(fixture.trx!, tenant).table('calendars').where({ calendar_id: groupCalendarId }).update({ is_archived: true });
+    await service.removeProviderCopy(entryId, providerId);
+    expect(adapter.deleteEvent).toHaveBeenCalledWith(externalId);
+    expect(await scoped('calendar_event_mappings').where({ schedule_entry_id: entryId })).toHaveLength(0);
+
+    await tenantDb(fixture.trx!, tenant).table('calendars').where({ calendar_id: groupCalendarId }).update({ is_archived: false });
+    expect(await service.syncScheduleEntryToExternal(entryId, providerId)).toMatchObject({ success: true, externalEventId: 'recreated-copy' });
+    expect(adapter.updateEvent).not.toHaveBeenCalled();
+    const mappings = await scoped('calendar_event_mappings').where({ schedule_entry_id: entryId });
+    expect(mappings).toHaveLength(1);
+    expect(mappings[0]).toMatchObject({ external_event_id: 'recreated-copy', sync_status: 'synced' });
+  });
+
+  it('replaces a stale mapping with a fresh provider copy when the mapped event no longer exists', async () => {
+    const entryId = await seedGroupEntry([member]);
+    const staleExternalId = await seedProviderAndMapping(entryId, member, 'stale-mapping');
+    const adapter = {
+      connect: vi.fn(async () => {}),
+      updateEvent: vi.fn(async () => { throw providerNotFound('updateEvent'); }),
+      createEvent: vi.fn(async () => ({ id: 'fresh-copy', updated: '2026-08-05T00:00:00.000Z' })),
+    };
+    (service as any).createAdapter = async () => adapter;
+
+    expect(await service.syncScheduleEntryToExternal(entryId, providerId, true)).toMatchObject({ success: true, externalEventId: 'fresh-copy' });
+    expect(adapter.updateEvent).toHaveBeenCalledWith(staleExternalId, expect.anything());
+    expect(adapter.createEvent).toHaveBeenCalledTimes(1);
+    const mappings = await scoped('calendar_event_mappings').where({ schedule_entry_id: entryId });
+    expect(mappings).toHaveLength(1);
+    expect(mappings[0]).toMatchObject({ external_event_id: 'fresh-copy', sync_status: 'synced' });
+  });
+
+  it('keeps the mapping when removing an archived copy fails for a reason other than the event being gone', async () => {
+    const entryId = await seedGroupEntry([member]);
+    await seedProviderAndMapping(entryId, member, 'archive-transient-failure');
+    const adapter = {
+      connect: vi.fn(async () => {}),
+      deleteEvent: vi.fn(async () => {
+        throw Object.assign(new Error('Error in deleteEvent: Request failed with status code 503'), { status: 503, code: 503 });
+      }),
+    };
+    (service as any).createAdapter = async () => adapter;
+
+    await expect(service.removeProviderCopy(entryId, providerId)).rejects.toThrow('503');
+    expect(await scoped('calendar_event_mappings').where({ schedule_entry_id: entryId })).toHaveLength(1);
+  });
 });

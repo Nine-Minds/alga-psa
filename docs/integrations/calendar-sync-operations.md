@@ -34,6 +34,7 @@ This runbook covers the day-to-day operational tasks for the Google and Microsof
 - An inbound provider edit is applied to Alga only when that provider's user has edit access to the entry. Otherwise Alga stays authoritative and its current version is pushed back to that provider.
 - An inbound provider delete removes the whole Alga entry only when the provider's user has delete-equivalent edit access and is the sole assignee. Otherwise only that user's assignment and provider mapping are removed.
 - Archiving a group calendar removes its assignees' external copies and mappings; restoring the calendar recreates those copies. Webhook changes are ignored while the group calendar is archived.
+- A mapped copy that no longer exists on the provider (for example, deleted while a notification was missed) is treated as already removed: archiving drops its mapping, and the next outbound sync of the entry creates a fresh copy instead of recording a sync error.
 
 ## Deleting A Provider
 1. Select **Delete** in the provider card.
