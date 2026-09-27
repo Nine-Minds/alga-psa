@@ -11,6 +11,11 @@ const nav = vi.hoisted(() => ({
   contract: vi.fn(),
 }));
 const router = { replace: (...args: unknown[]) => nav.replace(...args) };
+const deferred = <T,>(): { promise: Promise<T>; resolve: (value: T) => void } => {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((done) => { resolve = done; });
+  return { promise, resolve };
+};
 
 vi.mock('next/navigation', () => ({
   useRouter: () => router,
@@ -53,5 +58,44 @@ describe('ContractDetailSwitcher assignment deep links', () => {
     expect(await screen.findByText('Contract not found')).toBeInTheDocument();
     expect(nav.contract).not.toHaveBeenCalled();
     expect(screen.queryByTestId('contract-detail')).not.toBeInTheDocument();
+  });
+
+  it('completes a deferred lookup after query-only changes and redirects with the latest Lines focus', async () => {
+    const pending = deferred<{ client_contract_id: string; contract_id: string }>();
+    nav.assignment.mockReturnValue(pending.promise);
+    const { rerender } = render(<ContractDetailSwitcher />);
+    expect(screen.getByText('Loading contract...')).toBeInTheDocument();
+
+    nav.params = new URLSearchParams('tab=client-contracts&clientContractId=assignment-42&contractView=lines&contractLineId=line-9&tracking=latest');
+    rerender(<ContractDetailSwitcher />);
+    pending.resolve({ client_contract_id: 'assignment-42', contract_id: 'canonical-contract-7' });
+
+    await waitFor(() => expect(screen.getByTestId('contract-detail')).toHaveAttribute('data-contract-id', 'canonical-contract-7'));
+    expect(nav.replace).toHaveBeenCalledWith(
+      '/msp/billing?tab=client-contracts&clientContractId=assignment-42&contractView=lines&contractLineId=line-9&tracking=latest&contractId=canonical-contract-7',
+      { scroll: false },
+    );
+    expect(screen.queryByText('Loading contract...')).not.toBeInTheDocument();
+  });
+
+  it('ignores a deferred response from an assignment identity that is no longer selected', async () => {
+    const oldResponse = deferred<{ client_contract_id: string; contract_id: string }>();
+    const selectedResponse = deferred<{ client_contract_id: string; contract_id: string }>();
+    nav.assignment.mockImplementation((id: string) => id === 'assignment-old' ? oldResponse.promise : selectedResponse.promise);
+    nav.params = new URLSearchParams('tab=client-contracts&clientContractId=assignment-old&contractView=lines&contractLineId=line-old');
+    const { rerender } = render(<ContractDetailSwitcher />);
+    nav.params = new URLSearchParams('tab=client-contracts&clientContractId=assignment-current&contractView=lines&contractLineId=line-current');
+    rerender(<ContractDetailSwitcher />);
+
+    selectedResponse.resolve({ client_contract_id: 'assignment-current', contract_id: 'contract-current' });
+    await waitFor(() => expect(screen.getByTestId('contract-detail')).toHaveAttribute('data-contract-id', 'contract-current'));
+    oldResponse.resolve({ client_contract_id: 'assignment-old', contract_id: 'contract-old' });
+    await waitFor(() => expect(screen.getByTestId('contract-detail')).toHaveAttribute('data-assignment-id', 'assignment-current'));
+
+    expect(nav.replace).toHaveBeenCalledTimes(1);
+    expect(nav.replace).toHaveBeenCalledWith(
+      '/msp/billing?tab=client-contracts&clientContractId=assignment-current&contractView=lines&contractLineId=line-current&contractId=contract-current',
+      { scroll: false },
+    );
   });
 });
