@@ -367,4 +367,55 @@ describe('Schedule entry creation triggers calendar sync', () => {
     await publish(false);
     expect(shared.syncCalls).toContainEqual({ entryId, providerId });
   });
+
+  it('fans an accepted provider edit out to other assignees and skips the source provider', async () => {
+    const entryId = uuidv4();
+    const otherUserId = uuidv4();
+    const otherProviderId = uuidv4();
+    await tenantTable(db, tenantId, 'users').insert({
+      tenant: tenantId,
+      user_id: otherUserId,
+      username: 'auto-sync-other',
+      hashed_password: 'irrelevant',
+      email: 'auto-sync-other@example.com',
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
+    await tenantTable(db, tenantId, 'calendar_providers').insert({
+      id: otherProviderId,
+      tenant: tenantId,
+      user_id: otherUserId,
+      provider_type: 'microsoft',
+      provider_name: 'Other Assignee Provider',
+      calendar_id: 'primary',
+      is_active: true,
+      sync_direction: 'bidirectional',
+      status: 'connected',
+      vendor_config: JSON.stringify({}),
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
+
+    try {
+      const handlers = eventHandlers.get('SCHEDULE_ENTRY_UPDATED');
+      await Promise.all(Array.from(handlers ?? []).map(handler => handler({
+        payload: {
+          tenantId,
+          entryId,
+          userId,
+          changes: {
+            before: { assignedUserIds: [userId, otherUserId] },
+            after: { assignedUserIds: [userId, otherUserId] },
+            sourceCalendarProviderId: providerId,
+          },
+        },
+      })));
+
+      expect(shared.syncCalls).toEqual([{ entryId, providerId: otherProviderId }]);
+      expect(shared.deleteCalls).toEqual([]);
+    } finally {
+      await tenantTable(db, tenantId, 'calendar_providers').where({ id: otherProviderId }).del();
+      await tenantTable(db, tenantId, 'users').where({ user_id: otherUserId }).del();
+    }
+  });
 });

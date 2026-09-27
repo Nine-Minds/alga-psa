@@ -31,6 +31,39 @@ function isProviderEventGone(error: any): boolean {
     || error?.code === 'ErrorItemNotFound';
 }
 
+/**
+ * Providers round-trip notes differently (Outlook returns HTML bodies), so
+ * compare notes as whitespace-collapsed text.
+ */
+function comparableNotes(notes: string | null | undefined): string {
+  return (notes ?? '')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+const timeOf = (value: Date | string | null | undefined): number | null =>
+  value ? new Date(value).getTime() : null;
+
+/**
+ * True when an inbound provider edit changed something that syncs to other
+ * assignees' copies. Echoes of Alga's own pushes compare equal, which keeps
+ * fan-out from bouncing between assignees' calendars.
+ */
+function changesSyncedFields(before: IScheduleEntry, after: IScheduleEntry): boolean {
+  const sortedIds = (ids: string[] | undefined) => [...(ids ?? [])].sort().join(',');
+  return before.title !== after.title
+    || comparableNotes(before.notes) !== comparableNotes(after.notes)
+    || timeOf(before.scheduled_start) !== timeOf(after.scheduled_start)
+    || timeOf(before.scheduled_end) !== timeOf(after.scheduled_end)
+    || !!before.is_all_day !== !!after.is_all_day
+    || (before.status ?? null) !== (after.status ?? null)
+    || !!before.is_private !== !!after.is_private
+    || sortedIds(before.assigned_user_ids) !== sortedIds(after.assigned_user_ids)
+    || JSON.stringify(before.recurrence_pattern ?? null) !== JSON.stringify(after.recurrence_pattern ?? null);
+}
+
 export class CalendarSyncService {
   private providerService: CalendarProviderService;
 
@@ -287,6 +320,8 @@ export class CalendarSyncService {
       }
 
       let rePushEntryId: string | null = null;
+      // Assigned inside the transaction callback; the cast keeps TS from narrowing it to null.
+      let acceptedEdit = null as { before: IScheduleEntry; after: IScheduleEntry } | null;
       const result = await withTransaction(knex, async (trx) => {
         if (existingMapping) {
           // Update existing schedule entry
@@ -387,6 +422,9 @@ export class CalendarSyncService {
               success: false,
               error: 'Failed to update schedule entry'
             };
+          }
+          if (changesSyncedFields(existingEntry, updatedEntry)) {
+            acceptedEdit = { before: existingEntry, after: updatedEntry };
           }
 
           // Update mapping
@@ -548,6 +586,9 @@ export class CalendarSyncService {
       if (rePushEntryId) {
         const pushed = await this.syncScheduleEntryToExternal(rePushEntryId, provider.id, true, tenant);
         if (!pushed.success) return pushed;
+      }
+      if (acceptedEdit) {
+        await this.publishInboundEdit(tenant, provider, acceptedEdit.before, acceptedEdit.after);
       }
       return result;
     } catch (error: any) {
@@ -908,6 +949,40 @@ export class CalendarSyncService {
       console.warn('[CalendarSyncService] Failed to update provider status to error', {
         providerId,
         error: statusError instanceof Error ? statusError.message : statusError
+      });
+    }
+  }
+
+  /**
+   * Announce an accepted provider edit like any other schedule update, so the
+   * other assignees' copies (and search, workflows) pick it up. The source
+   * provider already holds this version and is skipped by the sync subscriber.
+   */
+  private async publishInboundEdit(
+    tenant: string,
+    provider: CalendarProviderConfig,
+    before: IScheduleEntry,
+    after: IScheduleEntry
+  ): Promise<void> {
+    try {
+      await publishEvent({
+        eventType: 'SCHEDULE_ENTRY_UPDATED',
+        payload: {
+          tenantId: tenant,
+          userId: provider.user_id,
+          entryId: after.entry_id,
+          changes: {
+            before: { assignedUserIds: before.assigned_user_ids ?? [] },
+            after: { assignedUserIds: after.assigned_user_ids ?? [] },
+            sourceCalendarProviderId: provider.id,
+          },
+        },
+      });
+    } catch (error) {
+      console.warn('[CalendarSyncService] Failed to publish inbound edit', {
+        providerId: provider.id,
+        entryId: after.entry_id,
+        error: error instanceof Error ? error.message : error
       });
     }
   }

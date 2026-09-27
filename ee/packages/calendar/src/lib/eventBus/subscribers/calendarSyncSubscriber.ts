@@ -211,6 +211,11 @@ async function handleScheduleEntryUpdated(event: ScheduleEntryUpdatedEvent): Pro
           continue;
         }
 
+        // An edit made in this provider's calendar already holds the new version there.
+        if (userIsAssigned && provider.id === changes?.sourceCalendarProviderId) {
+          continue;
+        }
+
         try {
           if (changes?.calendarArchived === true) {
             await syncService.removeProviderCopy(entryId, provider.id);

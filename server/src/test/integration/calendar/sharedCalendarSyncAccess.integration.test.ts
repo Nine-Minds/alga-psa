@@ -13,6 +13,13 @@ const fixture = vi.hoisted(() => ({
   canViewAll: false,
   providers: new Map<string, any>(),
   forceReadOnly: false,
+  published: [] as Array<{ eventType: string; payload: any }>,
+}));
+
+vi.mock('@alga-psa/ee-calendar/lib/eventBus/publishers', () => ({
+  publishEvent: async (event: { eventType: string; payload: any }) => {
+    fixture.published.push(event);
+  },
 }));
 
 vi.mock('@alga-psa/db', async (importOriginal) => ({
@@ -156,6 +163,7 @@ describe('shared-calendar provider sync access', () => {
     fixture.trx = await db.transaction();
     fixture.canViewAll = false;
     fixture.forceReadOnly = false;
+    fixture.published.length = 0;
   });
 
   afterEach(async () => {
@@ -244,6 +252,7 @@ describe('shared-calendar provider sync access', () => {
     const row = await scoped('schedule_entries').where({ entry_id: entryId }).first();
     expect(row.title).toBe('Alga title');
     expect(adapter.updateEvent).toHaveBeenCalledTimes(1);
+    expect(fixture.published).toEqual([]);
     const mapping = await scoped('calendar_event_mappings').where({ schedule_entry_id: entryId, calendar_provider_id: providerId }).first();
     expect(new Date(mapping.external_last_modified).toISOString()).toBe(pushedEvent.updated);
 
@@ -280,6 +289,47 @@ describe('shared-calendar provider sync access', () => {
     const row = await scoped('schedule_entries').where({ entry_id: entryId }).first();
     expect(row.title).toBe('Updated title');
     expect(row.notes).toBe('Updated notes');
+    // Announced so the other assignee's copy is updated; the source provider is named so it is skipped.
+    expect(fixture.published).toEqual([{
+      eventType: 'SCHEDULE_ENTRY_UPDATED',
+      payload: expect.objectContaining({
+        tenantId: tenant,
+        userId: member,
+        entryId,
+        changes: expect.objectContaining({
+          sourceCalendarProviderId: providerId,
+          after: { assignedUserIds: expect.arrayContaining([member, otherAssignee]) },
+        }),
+      }),
+    }]);
+  });
+
+  it('does not announce a provider echo of the version Alga already holds', async () => {
+    const entryId = await seedGroupEntry([member, otherAssignee]);
+    await scoped('calendar_shares').insert({ tenant, calendar_id: groupCalendarId, grantee_type: 'user', grantee_id: member, access_level: 'edit', created_by: otherAssignee });
+    const externalId = await seedProviderAndMapping(entryId, member, 'editable-echo');
+    // Same content as the entry, but Outlook-style HTML notes and a newer provider timestamp
+    // (the notification raced ahead of the mapping update for Alga's own push).
+    const echoedEvent = {
+      id: externalId,
+      title: 'Alga title',
+      description: '<html><head></head><body><p>Alga notes</p></body></html>',
+      status: 'confirmed',
+      updated: '2026-08-06T00:00:00.000Z',
+      start: { dateTime: '2026-09-01T10:00:00Z' },
+      end: { dateTime: '2026-09-01T11:00:00Z' },
+    };
+    const adapter = {
+      connect: vi.fn(async () => {}),
+      getEvent: vi.fn(async () => echoedEvent),
+      updateEvent: vi.fn(async () => echoedEvent),
+      createEvent: vi.fn(async () => echoedEvent),
+      deleteEvent: vi.fn(async () => {}),
+    };
+    (service as any).createAdapter = async () => adapter;
+
+    expect(await service.syncExternalEventToSchedule(externalId, providerId)).toMatchObject({ success: true });
+    expect(fixture.published).toEqual([]);
   });
 
   it('removes archived copies, ignores mapped-entry webhooks, and recreates copies after restore', async () => {
