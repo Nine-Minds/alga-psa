@@ -121,13 +121,19 @@ records “stopped by request”); this agent did not stop or restart it. No dev
 server was started or woken during this work.
 
 Fresh-process authentication passed at 00:53:29 UTC after the isolated
-competing-initializer test and again at 01:04:41 UTC after validation, an
-11-minute-12-second observation interval. The writer checkout's server
-typecheck passed. Its production build was attempted with isolated output but
-failed on pre-existing missing checkout dependencies (`RemoteAccessButton.tsx`
-and `@alga-psa/list-views`); output was removed. This work order's production
-build passed with isolated output in this validation round. Repeated checks
-show stability over this interval but cannot prove future writer behavior.
+competing-initializer test and again at 01:04:41 UTC after production build, an
+11-minute-12-second observation interval. After the later typecheck, the check
+failed during seeded-account lookup. A secret-safe direct diagnostic identified
+a PostgreSQL password-authentication failure before account lookup completed;
+the helper intentionally sanitized the error. Therefore this later failure is
+not evidence of a changed hash or missing account, and authentication could not
+be verified after the final validation. The writer checkout's server typecheck
+passed. Its production build was attempted with isolated output but failed on
+pre-existing missing checkout dependencies (`RemoteAccessButton.tsx` and
+`@alga-psa/list-views`); output was removed. This work order's production build
+passed with isolated output in this validation round. The successful repeated
+checks show stability over their interval but cannot prove future writer
+behavior or resolve the later database-authentication failure.
 The remaining browser smoke sequence is: recover with `--recover`, run the
 fresh-process check, sign in through the browser, edit priorities for several
 minutes (hex Save, dialog Save, Enter commit, Cancel discard, reload and
