@@ -1,0 +1,28 @@
+{
+  "steps": [
+    {
+      "name": "Draft Implementation",
+      "services": [
+        {
+          "name": "dev-server",
+          "readiness": {
+            "port": 3185,
+            "path": "/api/health"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Smoke Test",
+      "services": [
+        {
+          "name": "dev-server",
+          "readiness": {
+            "port": 3185,
+            "path": "/api/health"
+          }
+        }
+      ]
+    }
+  ]
+}
