@@ -23,8 +23,14 @@ from the worktree. No dependency artifacts were committed.
 
 Ten consecutive health requests returned HTTP 200; see `health-checks.txt`.
 The browser loaded the authenticated `/msp/billing` page (Quotes content and
-Invoicing navigation visible); see `billing-page.png`. The app also logged
-`[dev-server] ready on http://0.0.0.0:3185`.
+Invoicing navigation visible); see `billing-page.png`. The original saved command
+then exited with V8 heap out-of-memory at approximately 4 GB (exit 134) while
+loading the invoice tab. I concluded that dead supervised service and recreated
+it through `workflow-ensure-service` with the same worktree cwd and port and
+`NODE_OPTIONS=--max-old-space-size=8192`. After that change the Invoicing tab,
+Drafts tab, and read-only `SMOKE-ADJ-1` adjustment card loaded. The fresh
+selected-draft screenshot is `existing-drifted-draft-view.png`; ten consecutive
+post-adjustment health checks are in `health-checks-after-heap.txt`.
 
 ## Fixture safety and smoke result
 
@@ -33,14 +39,14 @@ Before any data operation, I captured the existing `SMOKE-ADJ-1` fixture in
 state: draft, subtotal 370500, tax 900, total 371400, adjustment revision 63,
 and five charge rows. No invoice or fixture rows were changed.
 
-The operator smoke could not proceed to the draft editor. The invoice navigation
-URL `/msp/billing?tab=invoicing` intermittently remained blank while the
-supervised Next process exited; `/msp/invoices` is not an implemented route.
-The service has restarted through its saved supervisor definition and is
-currently healthy, but the draft-list transition is not reliable enough for
-mutation, preview, or output acceptance. The login/browser environment also
-required the saved local dev credential, which was available from the service
-record; no credentials are included here.
+The Invoicing tab was initially blank because the original supervised Node
+process exhausted its 4 GB heap. The one justified saved-command adjustment to
+8 GB resolved that transition. `/msp/invoices` is not an implemented route; the
+operator flow is `/msp/billing?tab=invoicing&subtab=drafts`. The pre-existing
+`SMOKE-ADJ-1` detail and adjustments card are visible, but this fixture was
+already drifted and no separately owned fixture was established. I therefore
+made no editor changes and did not press Save. The login used the development
+credential supplied by the supervised service; no credentials are included.
 
 Consequently, current-head UI evidence does **not** prove add/edit/repeat-save/
 remove, generated-line protection, discounts or tax, template-copy behavior,
@@ -55,7 +61,7 @@ there is no cleanup to perform because no fixture mutation occurred.
 From the repository root, after the active card step declares `dev-server`:
 
 ```sh
-alga-dev workflow-ensure-service --projectId=b97eda7b-0e3f-4b09-be80-6b57f934d8a5 --name=dev-server
+alga-dev workflow-ensure-service --projectId=b97eda7b-0e3f-4b09-be80-6b57f934d8a5 --name=dev-server --command='NODE_OPTIONS=--max-old-space-size=8192 HOST=0.0.0.0 PORT=3185 npm run dev' --cwd='/home/robert/alga-copies/feature-contract-invoices-automatic-adjustments-and-disc/server'
 for n in 1 2 3 4 5 6 7 8 9 10; do curl -sS -o /tmp/health.json -w '%{http_code}\n' http://localhost:3185/api/health; sleep 2; done
 ```
 
