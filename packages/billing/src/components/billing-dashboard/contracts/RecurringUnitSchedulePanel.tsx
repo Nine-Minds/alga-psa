@@ -544,8 +544,8 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
           <Input
             id={`recurring-effective-${configId}`}
             type="date"
-            value={boundary}
-            disabled={disabled || saving || loading}
+            value={standingBoundary}
+            disabled={disabled || saving || loading || (midPeriod && !!midPeriodContext)}
             onChange={(event) => handleBoundaryChange(event.target.value)}
             className="mt-1"
           />
@@ -765,7 +765,7 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
               {t('contractLines.recurringSchedule.invoiceImpact', {
                 defaultValue:
                   'From {{date}} the recurring subtotal for this item changes by {{delta}} to {{total}} (before discounts and tax). Earlier billed periods are unchanged.',
-                date: boundary,
+                date: standingBoundary,
                 delta: formatCurrency(deltaCents / 100, effective.currencyCode ?? currencyCode),
                 total: formatCurrency((proposedSubtotalCents ?? 0) / 100, effective.currencyCode ?? currencyCode),
               })}
@@ -786,13 +786,19 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
         </Button>
         {impact?.success === false && <Alert variant="destructive" className="mt-2"><AlertDescription>{impact.error}</AlertDescription></Alert>}
         {impact?.success && <div className="mt-2 text-sm">
-          <p>{t('contractLines.recurringSchedule.invoiceWindow', {
-            defaultValue: midPeriod
-              ? 'Estimated client invoice for {{start}} to {{end}}. Includes other items in this billing window and the one-time mid-period true-up.'
-              : 'Estimated client invoice for {{start}} to {{end}}. Includes other items in this billing window; no mid-period adjustment.',
-            start: impact.windowStart,
-            end: impact.windowEnd,
-          })}</p>
+          <p>{midPeriod
+            ? t('contractLines.recurringSchedule.invoiceWindowMidPeriod', {
+                defaultValue:
+                  'Estimated client invoice for {{start}} to {{end}}. Includes other items in this billing window and the one-time mid-period true-up.',
+                start: impact.windowStart,
+                end: impact.windowEnd,
+              })
+            : t('contractLines.recurringSchedule.invoiceWindowBoundaryOnly', {
+                defaultValue:
+                  'Estimated client invoice for {{start}} to {{end}}. Includes other items in this billing window; no mid-period adjustment.',
+                start: impact.windowStart,
+                end: impact.windowEnd,
+              })}</p>
           <p>{t('contractLines.recurringSchedule.invoiceTotals', { defaultValue: 'Subtotal after discounts: {{subtotal}}. Tax: {{tax}}. Total: {{before}} → {{after}}.', subtotal: formatCurrency(impact.after.subtotal / 100, impact.after.currencyCode), tax: formatCurrency(impact.after.tax / 100, impact.after.currencyCode), before: formatCurrency(impact.before.total / 100, impact.before.currencyCode), after: formatCurrency(impact.after.total / 100, impact.after.currencyCode) })}</p>
           {/* Show the resolved true-up (charge or credit) and any other credit
               lines so the operator sees exactly what the totals include. */}
