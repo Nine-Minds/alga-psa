@@ -725,7 +725,8 @@
       "allServiceTypes": "Alle Servicetypen",
       "serviceTypePlaceholder": "Nach Servicetyp filtern...",
       "allBillingMethods": "Alle Abrechnungsmethoden",
-      "billingMethodPlaceholder": "Nach Abrechnungsmethode filtern..."
+      "billingMethodPlaceholder": "Nach Abrechnungsmethode filtern...",
+      "searchPlaceholder": "Dienste nach Name, SKU oder Beschreibung suchen..."
     },
     "fields": {
       "serviceName": {
@@ -847,7 +848,9 @@
       "validateDelete": "Der Löschvorgang konnte nicht bestätigt werden. Bitte versuchen Sie es erneut.",
       "delete": "Der Dienst konnte nicht gelöscht werden",
       "deactivate": "Der Dienst konnte nicht deaktiviert werden"
-    }
+    },
+    "emptySearch": "Keine Dienste entsprechen Ihrer Suche.",
+    "clearFilters": "Filter zurücksetzen"
   },
   "products": {
     "title": "Produkte",

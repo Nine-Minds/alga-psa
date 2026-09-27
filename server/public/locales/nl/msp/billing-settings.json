@@ -725,7 +725,8 @@
       "allServiceTypes": "Alle servicetypen",
       "serviceTypePlaceholder": "Filter op servicetype...",
       "allBillingMethods": "Alle factureringsmethoden",
-      "billingMethodPlaceholder": "Filteren op factureringsmethode..."
+      "billingMethodPlaceholder": "Filteren op factureringsmethode...",
+      "searchPlaceholder": "Zoek services op naam, SKU of beschrijving..."
     },
     "fields": {
       "serviceName": {
@@ -847,7 +848,9 @@
       "validateDelete": "Kan de verwijdering niet valideren. Probeer het opnieuw.",
       "delete": "Kan service niet verwijderen",
       "deactivate": "Kan de service niet deactiveren"
-    }
+    },
+    "emptySearch": "Geen services komen overeen met je zoekopdracht.",
+    "clearFilters": "Filters wissen"
   },
   "products": {
     "title": "Producten",
