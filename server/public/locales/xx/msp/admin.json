@@ -272,7 +272,8 @@
         "duplicateAddress": "[Thïs sëndër åddrëss ålrëådy ëxïsts.]",
         "saveFailed": "[Cøüld nøt ådd sëndër. Chëck åddrëss.]",
         "duplicateRoute": "[Thïs sëndër røütë ålrëådy ëxïsts.]",
-        "saveRoutingFailed": "[Cøüld nøt såvë sëndër røütïng. Try ågåïn.]"
+        "saveRoutingFailed": "[Cøüld nøt såvë sëndër røütïng. Try ågåïn.]",
+        "actionFailed": "{{error}}"
       }
     }
   },

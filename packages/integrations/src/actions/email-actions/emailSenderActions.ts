@@ -7,6 +7,18 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { TenantEmailService } from '@alga-psa/email';
 import type { OutboundMailClass } from '@alga-psa/types';
 
+type SenderActionFailure = { success: false; error: string };
+
+function withTypedErrors<T extends (...args: any[]) => Promise<any>>(action: T) {
+  return async (...args: Parameters<T>): Promise<Awaited<ReturnType<T>> | SenderActionFailure> => {
+    try {
+      return await action(...args);
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  };
+}
+
 type RouteInput = {
   routeType: 'default' | 'mail_class' | 'board';
   mailClass?: OutboundMailClass;
@@ -87,7 +99,7 @@ export const listSelectableSenders = withAuth(async (_user, { tenant }, input: {
   };
 });
 
-export const createEmailSender = withAuth(async (user, { tenant }, input: { emailAddress: string; displayName?: string | null; microsoftProviderId?: string | null }) => {
+const createEmailSenderAction = withAuth(async (user, { tenant }, input: { emailAddress: string; displayName?: string | null; microsoftProviderId?: string | null }) => {
   const { knex, db } = await authorize(user, tenant, 'update');
   const emailAddress = input.emailAddress.trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailAddress)) throw new Error('Enter a valid sender email address.');
@@ -132,7 +144,7 @@ export const createEmailSender = withAuth(async (user, { tenant }, input: { emai
   return sender;
 });
 
-export const updateEmailSender = withAuth(async (user, { tenant }, input: { senderId: string; displayName?: string | null; emailAddress?: string }) => {
+const updateEmailSenderAction = withAuth(async (user, { tenant }, input: { senderId: string; displayName?: string | null; emailAddress?: string }) => {
   const { knex, db } = await authorize(user, tenant, 'update');
   const update: Record<string, unknown> = { updated_at: new Date() };
   if (input.displayName !== undefined) update.display_name = input.displayName?.trim() || null;
@@ -167,7 +179,7 @@ export const updateEmailSender = withAuth(async (user, { tenant }, input: { send
   return sender;
 });
 
-export const deleteEmailSender = withAuth(async (user, { tenant }, senderId: string) => {
+const deleteEmailSenderAction = withAuth(async (user, { tenant }, senderId: string) => {
   const { db } = await authorize(user, tenant, 'update');
   const routes = await db.tenantJoin(
     db.table('email_sender_routes as routes'),
@@ -188,7 +200,7 @@ export const deleteEmailSender = withAuth(async (user, { tenant }, senderId: str
   return { success: true };
 });
 
-export const setEmailSenderRoute = withAuth(async (user, { tenant }, input: RouteInput) => {
+const setEmailSenderRouteAction = withAuth(async (user, { tenant }, input: RouteInput) => {
   const { knex, db } = await authorize(user, tenant, 'update');
   if (!input.senderId && !input.displayName?.trim()) throw new Error('Choose a sender or provide a display name.');
   if (input.senderId) {
@@ -226,14 +238,14 @@ export const setEmailSenderRoute = withAuth(async (user, { tenant }, input: Rout
   return { success: true };
 });
 
-export const clearEmailSenderRoute = withAuth(async (user, { tenant }, input: RouteInput) => {
+const clearEmailSenderRouteAction = withAuth(async (user, { tenant }, input: RouteInput) => {
   const { db } = await authorize(user, tenant, 'update');
   await db.table('email_sender_routes').where(routePredicate(input)).del();
   await TenantEmailService.invalidateTenantSettings(tenant);
   return { success: true };
 });
 
-export const verifyEmailSender = withAuth(async (user, { tenant }, senderId: string) => {
+const verifyEmailSenderAction = withAuth(async (user, { tenant }, senderId: string) => {
   const { db } = await authorize(user, tenant, 'update');
   const sender = await db.table('email_sender_addresses').where({ sender_id: senderId }).first();
   if (!sender) throw new Error('Sender address was not found.');
@@ -260,3 +272,10 @@ export const verifyEmailSender = withAuth(async (user, { tenant }, senderId: str
     throw error;
   }
 });
+
+export const createEmailSender = withTypedErrors(createEmailSenderAction);
+export const updateEmailSender = withTypedErrors(updateEmailSenderAction);
+export const deleteEmailSender = withTypedErrors(deleteEmailSenderAction);
+export const setEmailSenderRoute = withTypedErrors(setEmailSenderRouteAction);
+export const clearEmailSenderRoute = withTypedErrors(clearEmailSenderRouteAction);
+export const verifyEmailSender = withTypedErrors(verifyEmailSenderAction);

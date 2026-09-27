@@ -272,7 +272,8 @@
         "duplicateAddress": "Cette adresse d’expéditeur existe déjà.",
         "saveFailed": "Impossible d’ajouter l’expéditeur. Vérifiez l’adresse et réessayez.",
         "duplicateRoute": "Cette route d’expéditeur existe déjà.",
-        "saveRoutingFailed": "Impossible d’enregistrer la route d’expéditeur. Réessayez."
+        "saveRoutingFailed": "Impossible d’enregistrer la route d’expéditeur. Réessayez.",
+        "actionFailed": "{{error}}"
       }
     }
   },

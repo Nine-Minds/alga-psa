@@ -272,7 +272,8 @@
         "duplicateAddress": "Questo indirizzo mittente esiste già.",
         "saveFailed": "Impossibile aggiungere il mittente. Controlla l’indirizzo e riprova.",
         "duplicateRoute": "Questa regola mittente esiste già.",
-        "saveRoutingFailed": "Impossibile salvare la regola mittente. Riprova."
+        "saveRoutingFailed": "Impossibile salvare la regola mittente. Riprova.",
+        "actionFailed": "{{error}}"
       }
     }
   },

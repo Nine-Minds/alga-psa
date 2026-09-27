@@ -272,7 +272,8 @@
         "duplicateAddress": "Dit afzenderadres bestaat al.",
         "saveFailed": "Afzender toevoegen mislukt. Controleer het adres en probeer het opnieuw.",
         "duplicateRoute": "Deze afzenderroute bestaat al.",
-        "saveRoutingFailed": "Afzenderroute opslaan is mislukt. Probeer het opnieuw."
+        "saveRoutingFailed": "Afzenderroute opslaan is mislukt. Probeer het opnieuw.",
+        "actionFailed": "{{error}}"
       }
     }
   },

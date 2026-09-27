@@ -78,11 +78,11 @@ describe('email sender actions', () => {
   it('maps and logs sender and route unique violations on the server', async () => {
     state.verifiedDomain = true;
     state.insertError = Object.assign(new Error('sensitive SQL details'), { code: '23505' });
-    await expect(createEmailSender({ emailAddress: 'support@verified.example' })).rejects.toThrow('This sender address already exists.');
+    await expect(createEmailSender({ emailAddress: 'support@verified.example' })).resolves.toMatchObject({ success: false, error: 'This sender address already exists.' });
     expect(loggerMock.error).toHaveBeenCalledWith(expect.stringContaining('Duplicate sender address'), state.insertError);
 
     state.insertError = Object.assign(new Error('sensitive SQL details'), { code: '23505' });
-    await expect(setEmailSenderRoute({ routeType: 'mail_class', mailClass: 'ticket', senderId: 'sender-1' })).rejects.toThrow('That sender route already exists.');
+    await expect(setEmailSenderRoute({ routeType: 'mail_class', mailClass: 'ticket', senderId: 'sender-1' })).resolves.toMatchObject({ success: false, error: 'That sender route already exists.' });
     expect(loggerMock.error).toHaveBeenCalledWith(expect.stringContaining('Duplicate sender route'), state.insertError);
   });
 
@@ -96,14 +96,14 @@ describe('email sender actions', () => {
     state.verifiedDomain = true;
     await expect(createEmailSender({ emailAddress: 'support@verified.example' })).resolves.toMatchObject({ tenant: 'tenant-1', verification_status: 'verified' });
     state.insertedSender = null;
-    await expect(createEmailSender({ emailAddress: 'support@unverified.example' })).rejects.toThrow(/not verified/);
+    await expect(createEmailSender({ emailAddress: 'support@unverified.example' })).resolves.toMatchObject({ success: false, error: expect.stringMatching(/not verified/) });
   });
 
   it('creates SMTP identities and requires explicit confirmation to route an unverified address', async () => {
     state.provider = 'smtp';
     await expect(createEmailSender({ emailAddress: 'relay@example.test' })).resolves.toMatchObject({ verification_status: 'unverified' });
     state.sender.verification_status = 'unverified';
-    await expect(setEmailSenderRoute({ routeType: 'mail_class', mailClass: 'ticket', senderId: 'sender-1' })).rejects.toThrow(/explicitly confirm/);
+    await expect(setEmailSenderRoute({ routeType: 'mail_class', mailClass: 'ticket', senderId: 'sender-1' })).resolves.toMatchObject({ success: false, error: expect.stringMatching(/explicitly confirm/) });
     await expect(setEmailSenderRoute({ routeType: 'mail_class', mailClass: 'ticket', senderId: 'sender-1', confirmUnverifiedSmtpSender: true })).resolves.toMatchObject({ success: true });
     expect(state.insertedRoute).toMatchObject({ tenant: 'tenant-1', route_type: 'mail_class', mail_class: 'ticket' });
   });
@@ -117,7 +117,7 @@ describe('email sender actions', () => {
 
   it('blocks deletion while routed and allows deleting an unused sender', async () => {
     state.routes.push({ route_type: 'mail_class', mail_class: 'ticket', sender_id: 'sender-1' });
-    await expect(deleteEmailSender('sender-1')).rejects.toThrow(/ticket/);
+    await expect(deleteEmailSender('sender-1')).resolves.toMatchObject({ success: false, error: expect.stringMatching(/ticket/) });
     state.routes.splice(0);
     await expect(deleteEmailSender('sender-1')).resolves.toMatchObject({ success: true });
   });
@@ -132,7 +132,7 @@ describe('email sender actions', () => {
       () => clearEmailSenderRoute({ routeType: 'default' }),
       () => verifyEmailSender('sender-1'),
     ];
-    for (const write of writes) await expect(write()).rejects.toThrow(/permission/i);
+    for (const write of writes) await expect(write()).resolves.toMatchObject({ success: false, error: expect.stringMatching(/permission/i) });
     expect(hasPermissionMock).toHaveBeenCalledTimes(writes.length);
     expect(hasPermissionMock).toHaveBeenCalledWith(expect.anything(), 'settings', 'update', expect.anything());
   });

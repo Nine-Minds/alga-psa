@@ -272,7 +272,8 @@
         "duplicateAddress": "Diese Absenderadresse ist bereits vorhanden.",
         "saveFailed": "Absender konnte nicht hinzugefügt werden. Prüfen Sie die Adresse und versuchen Sie es erneut.",
         "duplicateRoute": "Diese Absenderroute ist bereits vorhanden.",
-        "saveRoutingFailed": "Absenderzuordnung konnte nicht gespeichert werden. Bitte versuchen Sie es erneut."
+        "saveRoutingFailed": "Absenderzuordnung konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.",
+        "actionFailed": "{{error}}"
       }
     }
   },

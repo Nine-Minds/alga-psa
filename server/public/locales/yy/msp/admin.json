@@ -272,7 +272,8 @@
         "duplicateAddress": "⟦This sender address already exists.⟧",
         "saveFailed": "⟦Could not add sender. Check address and try again.⟧",
         "duplicateRoute": "⟦That sender route already exists.⟧",
-        "saveRoutingFailed": "⟦Could not save sender routing. Please try again.⟧"
+        "saveRoutingFailed": "⟦Could not save sender routing. Please try again.⟧",
+        "actionFailed": "{{error}}"
       }
     }
   },
