@@ -643,30 +643,35 @@ export class ClientService extends BaseService<IClient> {
 
       // Prepare update data
       const normalized = normalizeLegacyClientTaxId(data as any);
-      const updateData: any = {
-        ...normalized,
-        updated_at: knex.raw('now()'),
-      };
-      if (normalized.properties !== undefined) {
+      // Keep SQL writes constrained to persisted clients columns; tags are stored separately.
+      // This list must stay aligned with clientBodySchema and the clients migrations.
+      const clientColumns = [
+        'client_name', 'url', 'client_type', 'tax_id_number', 'notes', 'properties',
+        'payment_terms', 'billing_cycle', 'credit_limit', 'default_currency_code',
+        'preferred_payment_method', 'auto_invoice', 'invoice_delivery_method', 'region_code',
+        'is_tax_exempt', 'tax_exemption_certificate', 'timezone', 'invoice_template_id', 'client_since',
+        'billing_contact_id', 'billing_email', 'account_manager_id', 'is_inactive',
+      ] as const;
+      const updateData: Record<string, unknown> = { updated_at: knex.raw('now()') };
+      for (const column of clientColumns) {
+        const value = (normalized as Record<string, unknown>)[column];
+        if (value !== undefined) updateData[column] = value;
+      }
+      if (normalized.properties !== undefined && normalized.properties !== null) {
         updateData.properties = { ...(before.properties ?? {}), ...normalized.properties };
       }
 
       // API PATCH-style updates must preserve omitted properties and synchronize
       // website copies only when url or properties.website was explicitly sent.
-      Object.assign(updateData, mergeClientWebsiteUpdate(before.url, before.properties, normalized));
-      // The raw spread above would otherwise pass properties: null through and
-      // clear the column despite null meaning "no property update" here.
+      const websiteUpdate = mergeClientWebsiteUpdate(before.url, before.properties, normalized);
+      for (const column of clientColumns) {
+        const value = (websiteUpdate as Record<string, unknown>)[column];
+        if (value !== undefined) updateData[column] = value;
+      }
+      // A null properties value means "no property update" here.
       if (normalized.properties === null) {
         delete updateData.properties;
       }
-
-      // Remove undefined values + non-column fields
-      Object.keys(updateData).forEach((key) => {
-        if (updateData[key] === undefined) {
-          delete updateData[key];
-        }
-      });
-      delete updateData.tags;
       const updatedFieldKeys = Object.keys(updateData);
 
       // Update client
