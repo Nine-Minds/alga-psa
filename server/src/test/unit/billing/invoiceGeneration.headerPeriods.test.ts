@@ -23,7 +23,7 @@ const mocks = vi.hoisted(() => {
   // (outside withTransaction), so the mocked connection must be callable.
   // A recurring (non-project) invoice finds no schedule rows, so `select`
   // resolves to an empty array.
-  const createQueryBuilder = () => {
+  const createQueryBuilder = (tableName: string) => {
     const builder: any = {
       join: vi.fn(() => builder),
       leftJoin: vi.fn(() => builder),
@@ -31,7 +31,11 @@ const mocks = vi.hoisted(() => {
       andWhere: vi.fn(() => builder),
       orderBy: vi.fn(() => builder),
       select: vi.fn(async () => []),
-      first: vi.fn(async () => undefined),
+      first: vi.fn(async () => tableName === 'client_billing_cycles'
+        ? { client_id: 'client-1', billing_profile_id: null }
+        : tableName === 'client_billing_profiles'
+          ? { billing_profile_id: 'unit-test-default-billing-profile' }
+          : undefined),
       update: vi.fn(async () => 1),
       insert: vi.fn(async () => []),
       delete: vi.fn(async () => 0),
@@ -39,7 +43,7 @@ const mocks = vi.hoisted(() => {
     };
     return builder;
   };
-  const knexStub = vi.fn((_tableName: string) => createQueryBuilder());
+  const knexStub = vi.fn((_tableName: string) => createQueryBuilder(_tableName));
   const createTenantKnex = vi.fn(async () => ({ knex: knexStub }));
   const withTransaction = vi.fn(async (_knex: unknown, callback: (trx: any) => Promise<unknown>) => {
     const trx = ((tableName: string) => {

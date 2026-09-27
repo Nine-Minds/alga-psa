@@ -190,12 +190,6 @@ export const generateManualInvoice = withAuth(async (
     }
 
     const currentDate = Temporal.Now.plainDateISO().toString();
-    // A manual invoice bills the client as a whole, i.e. its default billing
-    // profile: terms and payment method come from there, inheriting the
-    // client's values unless the default profile overrides them.
-    const billingIdentity = await resolveEffectiveBillingIdentity(knex, tenant, clientId, null);
-    const dueDate = dueDateForPaymentTerms(currentDate, billingIdentity.paymentTerms);
-
     // Which profile this invoice bills (F095). The pick is validated against the
     // client so a profile that moved in with a merged client can never be billed
     // under the wrong customer. No pick leaves the invoice unattributed and its
@@ -214,6 +208,11 @@ export const generateManualInvoice = withAuth(async (
         );
       }
     }
+
+    // Resolve preferences only after validating the selected profile. An omitted
+    // selection inherits the client's default profile.
+    const billingIdentity = await resolveEffectiveBillingIdentity(knex, tenant, clientId, billingProfileId);
+    const dueDate = dueDateForPaymentTerms(currentDate, billingIdentity.paymentTerms);
 
     const invoiceNumber = request.invoiceNumber?.trim() || await generateInvoiceNumber();
     const invoiceId = uuidv4();
