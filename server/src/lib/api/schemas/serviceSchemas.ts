@@ -26,14 +26,19 @@ const serviceShape = {
   custom_service_type_id: uuidSchema,
   billing_method: billingMethodSchema,
   default_rate: defaultRateSchema,
-  unit_of_measure: z.string().min(1).max(128),
+  unit_of_measure: z.string().trim().min(1).max(128).optional(),
+  unit_code: z.string().regex(/^(C62|HUR|DAY|WEE|MON|ANN|E34|4L|KGM|MTR|LTR|MIN|SET)$/).optional(),
   category_id: nullableUuidSchema.optional(),
   tax_rate_id: nullableUuidSchema.optional(),
   description: descriptionSchema.optional(),
   is_active: z.boolean().optional()
 } as const;
 
-export const createServiceSchema = z.object(serviceShape);
+export const createServiceSchema = z.object(serviceShape).superRefine((data, ctx) => {
+  if (data.billing_method === 'usage' && !data.unit_of_measure && !data.unit_code) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['unit_of_measure'], message: 'Usage services require a unit of measure' });
+  }
+});
 
 export const updateServiceSchema = z.object(serviceShape)
   .partial()

@@ -53,6 +53,7 @@ import { ISO8601String } from '@alga-psa/types';
 import { TaxService } from '../services/taxService';
 import { ITaxCalculationResult } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
+import { resolveUnitOfMeasure } from '@alga-psa/shared/billingClients/unitOfMeasure';
 import { auditLog } from '@alga-psa/db';
 import { getClientDocumentLogoUrl } from '@alga-psa/formatting/avatarUtils';
 import { calculateAndDistributeTax, claimRecurringServicePeriodsForSelectionInputs, getClientDetails, persistInvoiceCharges, updateInvoiceTotalsAndRecordTransaction, validateClientBillingEmail } from '../services/invoiceService';
@@ -497,10 +498,20 @@ async function persistProjectScheduleCharges(
     if (charge.total !== 0 || (charge.tax_amount || 0) !== 0) {
       exportServiceIds ??= await ensureProjectScheduleExportServices(trx, tenant);
       itemId = uuidv4();
+      const catalogUnit = charge.serviceId
+        ? await tenantDb(trx, tenant).table('service_catalog').where('service_id', charge.serviceId).first('unit_code', 'unit_of_measure')
+        : null;
+      const unit = resolveUnitOfMeasure({
+        catalogUnitCode: catalogUnit?.unit_code,
+        label: catalogUnit?.unit_of_measure ?? (charge as any).unitOfMeasure ?? null,
+        fallback: charge.type === 'time' ? 'HUR' : 'C62',
+      });
       await tenantDb(trx, tenant).table('invoice_charges').insert({
         item_id: itemId,
         invoice_id: invoiceId,
         service_id: charge.serviceId ?? exportServiceIds[charge.type as 'project_milestone' | 'project_deposit'],
+        unit_code: unit.code,
+        unit_label: unit.label,
         description: charge.serviceName,
         quantity: charge.quantity ?? 1,
         unit_price: charge.rate,

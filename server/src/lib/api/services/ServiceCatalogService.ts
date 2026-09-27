@@ -1,5 +1,6 @@
 import type { IService } from '@/interfaces/billing.interfaces';
 import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
+import { codeForUnitLabel } from '@alga-psa/shared/billingClients/unitOfMeasure';
 import { splitServicePricesByEffectiveDate } from '@alga-psa/billing/models/service';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { ListOptions } from '../controllers/types';
@@ -248,6 +249,10 @@ export class ServiceCatalogService extends BaseService<IService> {
     const serviceData = {
       category_id: serviceInput.category_id ?? null,
       ...serviceInput,
+      unit_of_measure: serviceInput.unit_of_measure ?? (serviceInput.billing_method === 'hourly' ? 'Hour' : serviceInput.billing_method === 'fixed' ? 'Each' : undefined),
+      unit_code: serviceInput.unit_code ?? (serviceInput.unit_of_measure
+        ? codeForUnitLabel(serviceInput.unit_of_measure)
+        : serviceInput.billing_method === 'hourly' ? 'HUR' : serviceInput.billing_method === 'fixed' ? 'C62' : undefined),
       tenant,
       default_rate: typeof serviceInput.default_rate === 'string'
         ? parseFloat(serviceInput.default_rate) || 0

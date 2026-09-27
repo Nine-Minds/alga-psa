@@ -12,6 +12,7 @@ import type {
   ChargeProfileAssignments,
 } from "./types";
 import { resolveChargeProfileFor } from "../billingProfileResolution";
+import { resolveUnitOfMeasure } from "@alga-psa/shared/billingClients/unitOfMeasure";
 
 /**
  * A persisted bucket_usage row, or its in-memory simulator equivalent.
@@ -483,10 +484,13 @@ export function computeBucketCharges(
       });
 
       const displayDivisor = isUsageBucket ? 1 : 60;
-      const baseUnit = isUsageBucket ? config.unit_of_measure || "units" : "hrs";
+      const baseUnit = resolveUnitOfMeasure({
+        label: config.unit_of_measure,
+        fallback: isUsageBucket ? 'C62' : 'HUR',
+      }).label;
       // When any multiplier ≠ 1 or an after-hours rule contributed, the consumed
       // minutes are weighted — name the unit so readers know the burn is weighted.
-      const unit = config.isWeighted && !isUsageBucket ? "weighted hrs" : baseUnit;
+      const unit = config.isWeighted && !isUsageBucket ? `weighted ${baseUnit.toLowerCase()}s` : baseUnit;
       // Share-scaled display values keep the printed equation true for the
       // portion: used − (included + rollover) = overage.
       const used = (state.consumedQuantity / displayDivisor) * portion.share;

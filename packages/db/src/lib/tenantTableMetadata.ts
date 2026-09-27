@@ -400,6 +400,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   quote_document_templates: { scope: 'tenant' },
   quotes: { scope: 'tenant' },
   quote_items: { scope: 'tenant' },
+  tenant_units_of_measure: { scope: 'tenant' },
   recurring_service_periods: { scope: 'tenant' },
   resources: { scope: 'tenant' },
   user_work_schedules: { scope: 'tenant' },

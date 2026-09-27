@@ -10,6 +10,7 @@ import type {
   QuoteConversionPreviewItem,
 } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
+import { resolveUnitOfMeasure } from '@alga-psa/shared/billingClients/unitOfMeasure';
 import { v4 as uuidv4 } from 'uuid';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import { allocateQuoteDiscounts } from './quoteDiscountAllocation';
@@ -797,7 +798,8 @@ export async function convertQuoteToDraftContract(
       usageConfigRows.map(({ configId, item }) => ({
         tenant,
         config_id: configId,
-        unit_of_measure: item.unit_of_measure || 'unit',
+        unit_of_measure: item.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label,
+        unit_code: (item as any).unit_code || resolveUnitOfMeasure({ fallback: 'C62' }).code,
         enable_tiered_pricing: false,
         minimum_usage: 0,
         base_rate: item.unit_price,

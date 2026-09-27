@@ -41,6 +41,7 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
+import { UnitOfMeasureInput } from '@alga-psa/ui/components/UnitOfMeasureInput';
 
 const LICENSE_TERM_OPTION_VALUES = ['monthly', 'annual', 'perpetual'] as const;
 const BILLING_METHOD_OPTION_VALUES = ['usage'] as const;
@@ -105,7 +106,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
     item_kind: 'product',
     is_active: true,
     billing_method: 'usage',
-    unit_of_measure: '',
+    unit_of_measure: 'Each',
     cost_currency: defaultCurrency,
     is_license: false,
     license_term: 'monthly',
@@ -457,12 +458,6 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
     if (!formProduct.custom_service_type_id) {
       setError(t('quickAddProduct.validation.serviceTypeRequired', {
         defaultValue: 'Service type is required'
-      }));
-      return;
-    }
-    if (!formProduct.unit_of_measure?.trim()) {
-      setError(t('quickAddProduct.validation.unitOfMeasureRequired', {
-        defaultValue: 'Unit of measure is required'
       }));
       return;
     }
@@ -924,10 +919,10 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
                   defaultValue: 'Unit of Measure *'
                 })}
               </label>
-              <Input
-                id="quick-add-product-unit-of-measure"
-                value={formProduct.unit_of_measure || ''}
-                onChange={(e) => setFormProduct({ ...formProduct, unit_of_measure: e.target.value })}
+              <UnitOfMeasureInput
+                value={formProduct.unit_of_measure || 'Each'}
+                onChange={(value) => setFormProduct({ ...formProduct, unit_of_measure: value })}
+                serviceType="Product"
                 placeholder={t('quickAddProduct.fields.unitOfMeasure.placeholder', {
                   defaultValue: 'e.g., each, item, license'
                 })}
