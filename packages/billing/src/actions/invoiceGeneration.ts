@@ -498,12 +498,8 @@ async function persistProjectScheduleCharges(
     if (charge.total !== 0 || (charge.tax_amount || 0) !== 0) {
       exportServiceIds ??= await ensureProjectScheduleExportServices(trx, tenant);
       itemId = uuidv4();
-      const catalogUnit = charge.serviceId
-        ? await tenantDb(trx, tenant).table('service_catalog').where('service_id', charge.serviceId).first('unit_code', 'unit_of_measure')
-        : null;
       const unit = resolveUnitOfMeasure({
-        catalogUnitCode: catalogUnit?.unit_code,
-        label: catalogUnit?.unit_of_measure ?? (charge as any).unitOfMeasure ?? null,
+        catalog: charge.unit_code ? { code: charge.unit_code, label: charge.unit_label } : null,
         fallback: charge.type === 'time' ? 'HUR' : 'C62',
       });
       await tenantDb(trx, tenant).table('invoice_charges').insert({
@@ -2362,7 +2358,7 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
       if (isBucketCharge(charge)) {
         const currencySymbol = getCurrencySymbol(billingResult.currency_code || 'USD');
         if (charge.isUsageBucket) {
-          const unitLabel = charge.unitOfMeasure?.trim() || 'units';
+          const unitLabel = charge.unitOfMeasure?.trim() || resolveUnitOfMeasure({ fallback: 'C62' }).pluralLabel;
           const unitsUsed = charge.unitsUsed ?? charge.hoursUsed;
           const overageUnits = charge.overageUnits ?? charge.quantity ?? 0;
           const unitsIncluded = charge.includedUnits ?? Math.max(0, unitsUsed - overageUnits);

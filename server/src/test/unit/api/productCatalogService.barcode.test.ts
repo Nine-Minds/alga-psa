@@ -144,6 +144,23 @@ describe('ProductCatalogService barcode behavior', () => {
     expect(result.barcode).toBe('0036000291452');
   });
 
+  it('defaults product units to Each/C62 when omitted', async () => {
+    let inserted: Record<string, unknown> | undefined;
+    mocks.tenantDb.mockReturnValue({ table: vi.fn(() => ({
+      insert: vi.fn((data: Record<string, unknown>) => {
+        inserted = data;
+        return { returning: vi.fn(async () => [{ ...data, service_id: 'product-default-unit' }]) };
+      }),
+    })) });
+    const service = new ProductCatalogService();
+    vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: {} });
+    vi.spyOn(service, 'getById').mockImplementation(async () => ({ ...(inserted as any), service_id: 'product-default-unit' }));
+
+    const result = await service.create({ service_name: 'Defaulted product', cost_currency: 'USD' }, context);
+    expect(inserted).toMatchObject({ unit_of_measure: 'Each', unit_code: 'C62' });
+    expect(result).toMatchObject({ unit_of_measure: 'Each', unit_code: 'C62' });
+  });
+
   it('updates and returns a product with a normalized barcode', async () => {
     let updated: Record<string, unknown> | undefined;
     const query: any = {

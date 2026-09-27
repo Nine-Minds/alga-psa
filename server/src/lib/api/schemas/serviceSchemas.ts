@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { uuidSchema } from './common';
+import { isUnitOfMeasureCode } from '@alga-psa/shared/billingClients/unitOfMeasure';
 
 const billingMethodSchema = z.enum(['fixed', 'hourly', 'usage']);
 
@@ -27,7 +28,7 @@ const serviceShape = {
   billing_method: billingMethodSchema,
   default_rate: defaultRateSchema,
   unit_of_measure: z.string().trim().min(1).max(128).optional(),
-  unit_code: z.string().regex(/^(C62|HUR|DAY|WEE|MON|ANN|E34|4L|KGM|MTR|LTR|MIN|SET)$/).optional(),
+  unit_code: z.string().refine(isUnitOfMeasureCode, 'Unknown unit of measure code').optional(),
   category_id: nullableUuidSchema.optional(),
   tax_rate_id: nullableUuidSchema.optional(),
   description: descriptionSchema.optional(),

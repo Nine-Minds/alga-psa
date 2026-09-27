@@ -1,3 +1,5 @@
+
+import { resolveUnitOfMeasure } from '@alga-psa/shared/billingClients/unitOfMeasure';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
@@ -361,7 +363,7 @@ async function cloneUsageConfig(
     .insert({
       tenant,
       config_id: targetConfigId,
-      unit_of_measure: usageConfig?.unit_of_measure ?? 'unit',
+      unit_of_measure: usageConfig?.unit_of_measure ?? resolveUnitOfMeasure({ fallback: 'C62' }).label,
       enable_tiered_pricing: Boolean(usageConfig?.enable_tiered_pricing),
       minimum_usage: usageConfig?.minimum_usage ?? 0,
       base_rate: normalizeNumeric(configuration.custom_rate ?? usageConfig?.base_rate),
@@ -370,7 +372,7 @@ async function cloneUsageConfig(
     })
     .onConflict(['tenant', 'config_id'])
     .merge({
-      unit_of_measure: usageConfig?.unit_of_measure ?? 'unit',
+      unit_of_measure: usageConfig?.unit_of_measure ?? resolveUnitOfMeasure({ fallback: 'C62' }).label,
       enable_tiered_pricing: Boolean(usageConfig?.enable_tiered_pricing),
       minimum_usage: usageConfig?.minimum_usage ?? 0,
       base_rate: normalizeNumeric(configuration.custom_rate ?? usageConfig?.base_rate),

@@ -7,6 +7,7 @@ import { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { getCurrencySymbol } from '@alga-psa/core';
+import { resolveUnitOfMeasure } from '@alga-psa/shared/billingClients/unitOfMeasure';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { actionError, type ActionMessageError } from '@alga-psa/ui/lib/errorHandling';
 import {
@@ -694,7 +695,7 @@ export const getActiveServices = withAuth(async (user, { tenant }): Promise<Serv
 
     // Format quantity display
     const quantityDisplay = service.quantity ?
-      `${service.quantity} ${service.unit_of_measure || 'units'}` :
+      `${service.quantity} ${service.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label}` :
       'N/A';
 
     // Format bucket display using new fields
@@ -719,7 +720,7 @@ export const getActiveServices = withAuth(async (user, { tenant }): Promise<Serv
       } : undefined,
       quantity: service.quantity ? {
         amount: service.quantity.toString(),
-        unit: service.unit_of_measure || 'units',
+        unit: service.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label,
         display: quantityDisplay
       } : undefined,
       // Update bucket object creation using new fields

@@ -1,5 +1,7 @@
 'use client';
 
+
+import { resolveUnitOfMeasure } from '@alga-psa/shared/billingClients/unitOfMeasure';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -41,7 +43,8 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
-import { UnitOfMeasureInput } from '@alga-psa/ui/components/UnitOfMeasureInput';
+import { UnitOfMeasureInput, type UnitSelection } from '@alga-psa/ui/components/UnitOfMeasureInput';
+import { listTenantUnitsOfMeasure, registerTenantUnitOfMeasure } from '@alga-psa/billing/actions/unitOfMeasureActions';
 
 const LICENSE_TERM_OPTION_VALUES = ['monthly', 'annual', 'perpetual'] as const;
 const BILLING_METHOD_OPTION_VALUES = ['usage'] as const;
@@ -107,6 +110,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
     is_active: true,
     billing_method: 'usage',
     unit_of_measure: 'Each',
+    unit_code: 'C62',
     cost_currency: defaultCurrency,
     is_license: false,
     license_term: 'monthly',
@@ -916,12 +920,16 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
             <div>
               <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
                 {t('quickAddProduct.fields.unitOfMeasure.label', {
-                  defaultValue: 'Unit of Measure *'
+                  defaultValue: 'Unit of Measure'
                 })}
               </label>
               <UnitOfMeasureInput
-                value={formProduct.unit_of_measure || 'Each'}
-                onChange={(value) => setFormProduct({ ...formProduct, unit_of_measure: value })}
+                value={{ code: formProduct.unit_code || 'C62', label: formProduct.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label }}
+                onChange={(value: UnitSelection | string) => {
+                  if (typeof value !== 'string') setFormProduct({ ...formProduct, unit_of_measure: value.label, unit_code: value.code });
+                }}
+                loadCustomUnits={listTenantUnitsOfMeasure}
+                registerCustomUnit={registerTenantUnitOfMeasure}
                 serviceType="Product"
                 placeholder={t('quickAddProduct.fields.unitOfMeasure.placeholder', {
                   defaultValue: 'e.g., each, item, license'

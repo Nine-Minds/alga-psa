@@ -10413,6 +10413,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   },
                   "logo": {
                     "type": "string"
+                  },
+                  "defaultLocale": {
+                    "type": "string"
                   }
                 }
               },
@@ -10503,6 +10506,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "format": "uuid"
               },
               "account_manager_full_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "client_since": {
                 "type": [
                   "string",
                   "null"
@@ -10872,6 +10881,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 },
                 "logo": {
                   "type": "string"
+                },
+                "defaultLocale": {
+                  "type": "string"
                 }
               }
             },
@@ -10962,6 +10974,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "format": "uuid"
             },
             "account_manager_full_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "client_since": {
               "type": [
                 "string",
                 "null"
@@ -11170,6 +11188,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 },
                 "logo": {
                   "type": "string"
+                },
+                "defaultLocale": {
+                  "type": "string"
                 }
               }
             },
@@ -11265,6 +11286,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "null"
               ]
             },
+            "client_since": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "logoUrl": {
               "type": [
                 "string",
@@ -11329,7 +11356,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/clients/{id}",
     "displayName": "Update client",
     "summary": "Update client",
-    "description": "Inherited ApiBaseController update route for one client_id.",
+    "description": "Updates client fields for one client_id. email, phone_no, and address are location fields and must be managed through /api/v1/clients/{id}/locations.",
     "tags": [
       "Clients"
     ],
@@ -11353,19 +11380,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "minLength": 1,
           "maxLength": 255
         },
-        "phone_no": {
-          "type": "string"
-        },
-        "email": {
-          "type": "string",
-          "format": "email"
-        },
         "url": {
           "type": "string",
           "format": "uri"
-        },
-        "address": {
-          "type": "string"
         },
         "client_type": {
           "type": "string",
@@ -11465,11 +11482,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "type": "string"
           }
         }
-      },
-      "required": [
-        "client_name",
-        "billing_cycle"
-      ]
+      }
     },
     "responseBodySchema": {
       "type": "object",
@@ -11594,6 +11607,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 },
                 "logo": {
                   "type": "string"
+                },
+                "defaultLocale": {
+                  "type": "string"
                 }
               }
             },
@@ -11684,6 +11700,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "format": "uuid"
             },
             "account_manager_full_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "client_since": {
               "type": [
                 "string",
                 "null"
@@ -36062,6 +36084,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "minLength": 1,
           "maxLength": 128
         },
+        "unit_code": {
+          "type": "string"
+        },
         "category_id": {
           "anyOf": [
             {
@@ -36103,14 +36128,16 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "type": "null"
             }
           ]
+        },
+        "is_active": {
+          "type": "boolean"
         }
       },
       "required": [
         "service_name",
         "custom_service_type_id",
         "billing_method",
-        "default_rate",
-        "unit_of_measure"
+        "default_rate"
       ]
     },
     "responseBodySchema": {
@@ -36224,6 +36251,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "minLength": 1,
           "maxLength": 128
         },
+        "unit_code": {
+          "type": "string"
+        },
         "category_id": {
           "anyOf": [
             {
@@ -36265,6 +36295,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "type": "null"
             }
           ]
+        },
+        "is_active": {
+          "type": "boolean"
         }
       }
     },
@@ -36538,6 +36571,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "minLength": 1,
           "maxLength": 128
         },
+        "unit_code": {
+          "type": "string"
+        },
         "category_id": {
           "anyOf": [
             {
@@ -36739,8 +36775,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       },
       "required": [
         "service_name",
-        "custom_service_type_id",
-        "unit_of_measure"
+        "custom_service_type_id"
       ]
     },
     "responseBodySchema": {
@@ -36858,6 +36893,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string",
           "minLength": 1,
           "maxLength": 128
+        },
+        "unit_code": {
+          "type": "string"
         },
         "category_id": {
           "anyOf": [

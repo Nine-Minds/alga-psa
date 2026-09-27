@@ -12,7 +12,7 @@ import type {
   ChargeProfileAssignments,
 } from "./types";
 import { resolveChargeProfileFor } from "../billingProfileResolution";
-import { resolveUnitOfMeasure } from "@alga-psa/shared/billingClients/unitOfMeasure";
+import { knownUnitCodeForLabel, resolveUnitOfMeasure } from "@alga-psa/shared/billingClients/unitOfMeasure";
 
 /**
  * A persisted bucket_usage row, or its in-memory simulator equivalent.
@@ -38,6 +38,7 @@ export interface BucketServiceComputeConfig {
   service_name: string;
   tax_rate_id?: string | null;
   unit_of_measure?: string | null;
+  unit_code?: string | null;
   billing_method?: string | null;
   /** Minutes for time buckets; generic units for usage buckets. */
   total_minutes?: number | string | null;
@@ -64,6 +65,7 @@ export interface BucketServiceContribution {
   service_name?: string;
   tax_rate_id?: string | null;
   unit_of_measure?: string | null;
+  unit_code?: string | null;
   billing_method?: string | null;
   weightedMinutes: number;
 }
@@ -232,6 +234,7 @@ interface OveragePortion {
   serviceName: string;
   taxRateId: string | null;
   unitOfMeasure: string | null;
+  unitCode?: string | null;
   billingMethod: string | null;
   /** Fraction of the pool overage this portion carries (0..1). */
   share: number;
@@ -278,6 +281,7 @@ function apportionOverage(
     serviceName: contributor.service_name ?? "",
     taxRateId: contributor.tax_rate_id ?? null,
     unitOfMeasure: contributor.unit_of_measure ?? null,
+    unitCode: contributor.unit_code ?? null,
     billingMethod: contributor.billing_method ?? null,
     share: exactShares[index],
     totalCents: portionCents[index],
@@ -371,6 +375,7 @@ export function computeBucketCharges(
                 serviceName: contributors[0].service_name || config.service_name,
                 taxRateId: contributors[0].tax_rate_id ?? null,
                 unitOfMeasure: contributors[0].unit_of_measure ?? null,
+                unitCode: contributors[0].unit_code ?? null,
                 billingMethod: contributors[0].billing_method ?? null,
                 share: 1,
                 totalCents: total,
@@ -383,6 +388,7 @@ export function computeBucketCharges(
                   serviceName: config.service_name,
                   taxRateId: null,
                   unitOfMeasure: null,
+                  unitCode: null,
                   billingMethod: null,
                   share: 1,
                   totalCents: total,
@@ -394,6 +400,7 @@ export function computeBucketCharges(
                   serviceName: config.service_name,
                   taxRateId: config.tax_rate_id ?? null,
                   unitOfMeasure: config.unit_of_measure ?? null,
+                  unitCode: config.unit_code ?? null,
                   billingMethod: config.billing_method ?? null,
                   share: 1,
                   totalCents: total,
@@ -450,6 +457,14 @@ export function computeBucketCharges(
       // to the pool-period truth (rather than each claiming the full pool).
       const hoursUsed = (state.consumedQuantity / 60) * portion.share;
       const overageHours = (state.overageQuantity / 60) * portion.share;
+      const catalogUnit = contributors[0]?.unit_of_measure;
+      const resolvedUnit = resolveUnitOfMeasure({
+        catalog: catalogUnit ? { code: contributors[0]?.unit_code ?? knownUnitCodeForLabel(catalogUnit) ?? 'C62', label: catalogUnit } : null,
+        config: config.unit_of_measure ? { code: config.unit_code ?? knownUnitCodeForLabel(config.unit_of_measure) ?? 'C62', label: config.unit_of_measure } : null,
+        fallback: isUsageBucket ? 'C62' : 'HUR',
+      });
+      const unitLabel = resolvedUnit.label;
+      const unitCode = resolvedUnit.code;
       charges.push({
         type: "bucket",
         service_catalog_id: portion.serviceId ?? null,
@@ -463,6 +478,8 @@ export function computeBucketCharges(
         quantity: isUsageBucket ? state.overageQuantity * portion.share : undefined,
         isUsageBucket,
         unitOfMeasure: portion.unitOfMeasure ?? null,
+        unit_code: unitCode,
+        unit_label: unitLabel,
         unitsUsed: isUsageBucket ? state.consumedQuantity * portion.share : undefined,
         includedUnits: isUsageBucket ? state.availableQuantity * portion.share : undefined,
         overageUnits: isUsageBucket ? state.overageQuantity * portion.share : undefined,
@@ -484,13 +501,13 @@ export function computeBucketCharges(
       });
 
       const displayDivisor = isUsageBucket ? 1 : 60;
-      const baseUnit = resolveUnitOfMeasure({
-        label: config.unit_of_measure,
-        fallback: isUsageBucket ? 'C62' : 'HUR',
-      }).label;
+      const bucketUnit = resolvedUnit;
+      const baseUnit = catalogUnit || config.unit_of_measure
+        ? (bucketUnit.code === 'HUR' ? 'hrs' : bucketUnit.label)
+        : (isUsageBucket ? 'units' : 'hrs');
       // When any multiplier ≠ 1 or an after-hours rule contributed, the consumed
       // minutes are weighted — name the unit so readers know the burn is weighted.
-      const unit = config.isWeighted && !isUsageBucket ? `weighted ${baseUnit.toLowerCase()}s` : baseUnit;
+      const unit = config.isWeighted && !isUsageBucket ? `weighted ${baseUnit}` : baseUnit;
       // Share-scaled display values keep the printed equation true for the
       // portion: used − (included + rollover) = overage.
       const used = (state.consumedQuantity / displayDivisor) * portion.share;

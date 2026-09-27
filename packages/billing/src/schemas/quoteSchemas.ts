@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isUnitOfMeasureCode } from '@alga-psa/shared/billingClients/unitOfMeasure';
 import type { QuoteStatus } from '@alga-psa/types';
 
 export const quoteStatusSchema = z.enum([
@@ -91,6 +92,7 @@ const createQuoteItemBaseSchema = z.object({
   quantity: z.number().int().positive(),
   unit_price: z.number().int().min(0).optional(),
   unit_of_measure: z.string().trim().optional().nullable(),
+  unit_code: z.string().refine(isUnitOfMeasureCode, 'Unknown unit of measure code').optional().nullable(),
   display_order: z.number().int().min(0).optional(),
   phase: z.string().trim().optional().nullable(),
   is_optional: z.boolean().default(false),

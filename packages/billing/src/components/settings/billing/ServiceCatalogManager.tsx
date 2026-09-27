@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import { UnitOfMeasureInput, type UnitSelection } from '@alga-psa/ui/components/UnitOfMeasureInput';
+import { listTenantUnitsOfMeasure, registerTenantUnitOfMeasure } from '@alga-psa/billing/actions/unitOfMeasureActions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import CurrencyPicker from '@alga-psa/ui/components/CurrencyPicker';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
@@ -1508,23 +1510,23 @@ const ServiceCatalogManager: React.FC = () => {
               </p>
             </div>
 
-            {/* Unit of Measure for usage-based services */}
-            {editingService?.billing_method === 'usage' && (
+            {/* Catalog unit */}
+            {editingService && (
               <>
                 <div>
                   <label htmlFor="unit-of-measure" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
-                    {t('serviceCatalog.fields.unitOfMeasure.label', { defaultValue: 'Unit of Measure *' })}
+                    {t('serviceCatalog.fields.unitOfMeasure.label', { defaultValue: `Unit of Measure${editingService.billing_method === 'usage' ? ' *' : ''}` })}
                   </label>
-                  <Input
-                    id="unit-of-measure"
-                    type="text"
-                    value={editingService?.unit_of_measure || ''}
-                    onChange={(e) => setEditingService({ ...editingService!, unit_of_measure: e.target.value })}
+                  <UnitOfMeasureInput
+                    value={{ code: editingService.unit_code || '', label: editingService.unit_of_measure || '' }}
+                    onChange={(value: UnitSelection | string) => { if (typeof value !== 'string') setEditingService({ ...editingService, unit_of_measure: value.label, unit_code: value.code }); }}
+                    loadCustomUnits={listTenantUnitsOfMeasure}
+                    registerCustomUnit={registerTenantUnitOfMeasure}
+                    required={editingService.billing_method === 'usage'}
+                    serviceType={editingService.billing_method}
                     placeholder={t('serviceCatalog.fields.unitOfMeasure.placeholder', {
                       defaultValue: 'e.g., GB, API call, user'
                     })}
-                    required
-                    className="w-full"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
                     {t('serviceCatalog.fields.unitOfMeasure.help', {

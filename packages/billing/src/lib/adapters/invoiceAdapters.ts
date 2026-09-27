@@ -610,6 +610,8 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
 
         return {
           id: String(item.item_id ?? ''),
+          unit_code: item.unit_code ?? null,
+          unit_label: item.unit_label ?? null,
           description: String(item.description ?? ''),
           quantity: toFiniteNumber(item.quantity),
           unitPrice: toMinorUnits(item.unit_price),

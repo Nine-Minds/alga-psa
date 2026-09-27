@@ -1,6 +1,6 @@
 import type { IService } from '@/interfaces/billing.interfaces';
 import { normalizeGtin } from '@alga-psa/core';
-import { codeForUnitLabel } from '@alga-psa/shared/billingClients/unitOfMeasure';
+import { resolveUnitCodeForWrite } from './unitOfMeasureService';
 import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
 import { splitServicePricesByEffectiveDate } from '@alga-psa/billing/models/service';
 import { ListOptions } from '../controllers/types';
@@ -242,7 +242,7 @@ export class ProductCatalogService extends BaseService<IService> {
       item_kind: 'product',
       billing_method: 'usage',
       unit_of_measure: unit_of_measure ?? 'Each',
-      unit_code: rawData.unit_code ?? codeForUnitLabel(unit_of_measure),
+      unit_code: await resolveUnitCodeForWrite(knex, tenant, unit_of_measure, rawData.unit_code),
       tenant,
       default_rate: typeof rest.default_rate === 'string'
         ? parseFloat(rest.default_rate) || 0

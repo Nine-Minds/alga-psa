@@ -8189,6 +8189,9 @@
                   },
                   "logo": {
                     "type": "string"
+                  },
+                  "defaultLocale": {
+                    "type": "string"
                   }
                 }
               },
@@ -8279,6 +8282,12 @@
                 "format": "uuid"
               },
               "account_manager_full_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "client_since": {
                 "type": [
                   "string",
                   "null"
@@ -8466,6 +8475,9 @@
                     },
                     "logo": {
                       "type": "string"
+                    },
+                    "defaultLocale": {
+                      "type": "string"
                     }
                   }
                 },
@@ -8556,6 +8568,12 @@
                   "format": "uuid"
                 },
                 "account_manager_full_name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "client_since": {
                   "type": [
                     "string",
                     "null"
@@ -17775,6 +17793,12 @@
           "unit_of_measure": {
             "type": "string"
           },
+          "unit_code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "category_id": {
             "type": [
               "string",
@@ -18018,6 +18042,12 @@
           },
           "unit_of_measure": {
             "type": "string"
+          },
+          "unit_code": {
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "category_id": {
             "type": [
@@ -42702,7 +42732,7 @@
       },
       "put": {
         "summary": "Update client",
-        "description": "Inherited ApiBaseController update route for one client_id.",
+        "description": "Updates client fields for one client_id. email, phone_no, and address are location fields and must be managed through /api/v1/clients/{id}/locations.",
         "tags": [
           "Clients"
         ],
@@ -42736,7 +42766,116 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ClientBody"
+                "type": "object",
+                "properties": {
+                  "client_name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "url": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "client_type": {
+                    "type": "string",
+                    "enum": [
+                      "company",
+                      "individual"
+                    ]
+                  },
+                  "tax_id_number": {
+                    "type": "string"
+                  },
+                  "notes": {
+                    "type": "string"
+                  },
+                  "properties": {
+                    "type": "object",
+                    "properties": {
+                      "tax_id": {
+                        "type": "string",
+                        "description": "Deprecated legacy input. Send tax_id_number instead.",
+                        "deprecated": true
+                      }
+                    },
+                    "additionalProperties": {}
+                  },
+                  "payment_terms": {
+                    "type": "string"
+                  },
+                  "billing_cycle": {
+                    "type": "string",
+                    "enum": [
+                      "weekly",
+                      "bi-weekly",
+                      "monthly",
+                      "quarterly",
+                      "semi-annually",
+                      "annually"
+                    ]
+                  },
+                  "credit_limit": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "default_currency_code": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 3
+                  },
+                  "preferred_payment_method": {
+                    "type": "string"
+                  },
+                  "auto_invoice": {
+                    "type": "boolean"
+                  },
+                  "invoice_delivery_method": {
+                    "type": "string",
+                    "enum": [
+                      "email",
+                      "mail",
+                      "portal"
+                    ]
+                  },
+                  "region_code": {
+                    "type": "string"
+                  },
+                  "is_tax_exempt": {
+                    "type": "boolean"
+                  },
+                  "tax_exemption_certificate": {
+                    "type": "string"
+                  },
+                  "timezone": {
+                    "type": "string"
+                  },
+                  "invoice_template_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "billing_contact_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "billing_email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "account_manager_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "is_inactive": {
+                    "type": "boolean"
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
               }
             }
           }
@@ -78213,6 +78352,9 @@
                     "minLength": 1,
                     "maxLength": 128
                   },
+                  "unit_code": {
+                    "type": "string"
+                  },
                   "category_id": {
                     "anyOf": [
                       {
@@ -78254,14 +78396,16 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "is_active": {
+                    "type": "boolean"
                   }
                 },
                 "required": [
                   "service_name",
                   "custom_service_type_id",
                   "billing_method",
-                  "default_rate",
-                  "unit_of_measure"
+                  "default_rate"
                 ]
               },
               "description": "Service creation payload."
@@ -78462,6 +78606,9 @@
                     "minLength": 1,
                     "maxLength": 128
                   },
+                  "unit_code": {
+                    "type": "string"
+                  },
                   "category_id": {
                     "anyOf": [
                       {
@@ -78503,6 +78650,9 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "is_active": {
+                    "type": "boolean"
                   }
                 }
               },
@@ -78873,6 +79023,9 @@
                     "minLength": 1,
                     "maxLength": 128
                   },
+                  "unit_code": {
+                    "type": "string"
+                  },
                   "category_id": {
                     "anyOf": [
                       {
@@ -79074,8 +79227,7 @@
                 },
                 "required": [
                   "service_name",
-                  "custom_service_type_id",
-                  "unit_of_measure"
+                  "custom_service_type_id"
                 ]
               },
               "description": "Product creation payload."
@@ -79290,6 +79442,9 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 128
+                  },
+                  "unit_code": {
+                    "type": "string"
                   },
                   "category_id": {
                     "anyOf": [

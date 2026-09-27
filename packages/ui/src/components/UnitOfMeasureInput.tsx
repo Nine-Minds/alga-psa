@@ -1,219 +1,115 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useId, useMemo, useState } from 'react';
 import CustomSelect from './CustomSelect';
 import { Input } from './Input';
+import { Button } from './Button';
+import { useTranslation } from '../lib/i18n/client';
+import { unitOfMeasureVocabulary } from '@alga-psa/shared/billingClients/unitOfMeasure';
 
+export interface UnitSelection { code: string; label: string }
 interface UnitOfMeasureInputProps {
-  value: string;
-  onChange: (value: string) => void;
+  value: UnitSelection | string | null;
+  onChange: ((value: UnitSelection) => void) | ((value: string) => void);
   placeholder?: string;
   className?: string;
   required?: boolean;
   disabled?: boolean;
+  serviceType?: string;
   serviceId?: string;
   onSaveComplete?: () => void;
-  serviceType?: string;
-  onPersistUnitChange?: (args: { serviceId: string; unitOfMeasure: string }) => Promise<void>;
+  customUnits?: UnitSelection[];
+  loadCustomUnits?: () => Promise<UnitSelection[]>;
+  registerCustomUnit?: (label: string) => Promise<UnitSelection>;
 }
 
-// Define unit presets based on service type
-const getUnitPresets = (serviceType?: string) => {
-  const commonUnits = [
-    { value: 'Hour', label: 'Hour' },
-    { value: 'Unit', label: 'Unit' },
-    { value: 'Item', label: 'Item' },
-  ];
-
-  const typeSpecificUnits: Record<string, Array<{ value: string; label: string }>> = {
-    'Time': [
-      { value: 'Hour', label: 'Hour' },
-      { value: 'Day', label: 'Day' },
-      { value: 'Week', label: 'Week' },
-    ],
-    'Usage': [
-      { value: 'GB', label: 'GB' },
-      { value: 'TB', label: 'TB' },
-      { value: 'API Call', label: 'API Call' },
-      { value: 'User', label: 'User' },
-      { value: 'Device', label: 'Device' },
-      { value: 'License', label: 'License' },
-    ],
-    'Fixed': [
-      { value: 'Month', label: 'Month' },
-      { value: 'Quarter', label: 'Quarter' },
-      { value: 'Year', label: 'Year' },
-      { value: 'Project', label: 'Project' },
-    ],
-    'Product': [
-      { value: 'Piece', label: 'Piece' },
-      { value: 'Box', label: 'Box' },
-      { value: 'Package', label: 'Package' },
-    ],
-    'License': [
-      { value: 'Seat', label: 'Seat' },
-      { value: 'Instance', label: 'Instance' },
-      { value: 'Installation', label: 'Installation' },
-    ],
-    'Hourly': [
-      { value: 'Hour', label: 'Hour' },
-    ],
-  };
-
-  // Get type-specific units or empty array if type doesn't exist
-  const specificUnits = serviceType ? (typeSpecificUnits[serviceType] || []) : [];
-  
-  // Combine common units with type-specific units, removing duplicates
-  const uniqueUnits = [...specificUnits];
-  
-  // Add common units only if they don't already exist in specificUnits
-  commonUnits.forEach(unit => {
-    if (!uniqueUnits.some(u => u.value === unit.value)) {
-      uniqueUnits.push(unit);
-    }
-  });
-  
-  // Always add custom option at the end with a unique value
-  return [...uniqueUnits, { value: 'custom', label: 'Custom...' }];
-};
+const GROUP_ORDER = ['time', 'count', 'volume', 'mass', 'length', 'other'] as const;
+const CUSTOM = '__custom_unit__';
 
 export function UnitOfMeasureInput({
-  value,
-  onChange,
-  placeholder = "Unit of Measure (e.g., hours, items, GB)",
-  className = "",
-  required = false,
-  disabled = false,
-  serviceId,
+  value, onChange, placeholder, className = '', required = false, disabled = false,
+  customUnits = [], loadCustomUnits, registerCustomUnit,
   onSaveComplete,
-  serviceType,
-  onPersistUnitChange,
 }: UnitOfMeasureInputProps) {
-  const [selectedUnit, setSelectedUnit] = useState('');
-  const [customUnit, setCustomUnit] = useState('');
+  const { t } = useTranslation();
+  const id = useId();
+  const [customLabel, setCustomLabel] = useState('');
+  const [isCustom, setIsCustom] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  // Add a ref to track if we're in custom mode to prevent useEffect from overriding it
-  const isInCustomMode = React.useRef(false);
-  
-  const standardUnits = getUnitPresets(serviceType);
-
+  const [remoteUnits, setRemoteUnits] = useState<UnitSelection[]>([]);
+  const unitValue: UnitSelection = typeof value === 'string'
+    ? { code: 'C62', label: value }
+    : value ?? { code: '', label: '' };
+  const emit = (unit: UnitSelection) => {
+    if (typeof value === 'string') (onChange as (value: string) => void)(unit.label);
+    else (onChange as (value: UnitSelection) => void)(unit);
+  };
+  const allCustom = [...customUnits, ...remoteUnits];
   useEffect(() => {
-    // Skip this effect if we're in custom mode and just selected it
-    if (isInCustomMode.current) {
+    if (loadCustomUnits) void loadCustomUnits().then(setRemoteUnits).catch(() => setRemoteUnits([]));
+  }, [loadCustomUnits]);
+
+  const options = useMemo(() => {
+    const result: Array<{ value: string; label: string | React.ReactElement; disabled?: boolean; textValue?: string }> = [];
+    for (const kind of GROUP_ORDER) {
+      const grouped = unitOfMeasureVocabulary.filter((unit) => unit.kind === kind);
+      if (!grouped.length) continue;
+      result.push({ value: `group-${kind}`, label: t(`unitOfMeasure.groups.${kind}`, { defaultValue: kind }), disabled: true });
+      for (const unit of grouped) {
+        const label = t(unit.labelKey, { defaultValue: unit.label });
+        result.push({ value: unit.key, label, textValue: label });
+      }
+    }
+    if (allCustom.length) {
+      result.push({ value: 'group-custom', label: t('unitOfMeasure.groups.custom', { defaultValue: 'Custom' }), disabled: true });
+      for (const unit of allCustom) result.push({ value: `custom:${unit.code}:${unit.label}`, label: unit.label });
+    }
+    result.push({ value: CUSTOM, label: t('unitOfMeasure.customOption', { defaultValue: 'Custom…' }) });
+    return result;
+  }, [allCustom, t]);
+
+  const selectedValue = useMemo(() => {
+    const unit = unitOfMeasureVocabulary.find((candidate) => candidate.code === unitValue.code && candidate.label.toLowerCase() === unitValue.label.toLowerCase());
+    if (unit) return unit.key;
+    const custom = allCustom.find((candidate) => candidate.code === unitValue.code && candidate.label === unitValue.label);
+    return custom ? `custom:${custom.code}:${custom.label}` : '';
+  }, [allCustom, unitValue.code, unitValue.label]);
+
+  const handleSelect = (key: string) => {
+    if (key === CUSTOM) { setIsCustom(true); setCustomLabel(''); return; }
+    if (key.startsWith('custom:')) {
+      const [, code, ...labelParts] = key.split(':');
+      emit({ code, label: labelParts.join(':') });
+      setIsCustom(false);
       return;
     }
-    
-    // If the current value matches a standard unit, select that unit
-    if (standardUnits.some(unit => unit.value === value)) {
-      setSelectedUnit(value);
-      setCustomUnit('');
-    }
-    // If we have a value but it's not in standard units, it's a custom value
-    else if (value) {
-      setSelectedUnit('custom');
-      setCustomUnit(value);
-    }
-    // If no value is provided, reset both states
-    else {
-      setSelectedUnit('');
-      setCustomUnit('');
-    }
-  }, [value, standardUnits]);
-
-  const handleUnitChange = async (newValue: string) => {
-    // When "Custom..." is selected
-    if (newValue === 'custom') {
-      // Set the flag to prevent useEffect from changing the selection
-      isInCustomMode.current = true;
-      setSelectedUnit('custom'); // Set the dropdown to show "Custom..."
-      
-      // Don't call onChange yet - we'll wait for the user to input a custom value
-      // Don't reset customUnit if it already has a value (in case user is switching back to custom)
-      if (!customUnit) {
-        setCustomUnit('');
-      }
-    } else {
-      // For standard units
-      isInCustomMode.current = false;
-      setSelectedUnit(newValue);
-      onChange(newValue);
-      setCustomUnit('');
-      
-      // If serviceId is provided, persist the change
-      if (serviceId) {
-        await persistUnitChange(newValue);
-      }
-    }
+    const unit = unitOfMeasureVocabulary.find((candidate) => candidate.key === key);
+    if (unit) { emit({ code: unit.code, label: unit.label }); setIsCustom(false); }
   };
 
-  const handleCustomUnitChange = (newValue: string) => {
-    setCustomUnit(newValue);
-    
-    // Reset the custom mode flag when the user types something
-    isInCustomMode.current = false;
-    
-    // Always call onChange with the new value
-    // This ensures the parent component always has the current value
-    onChange(newValue);
-  };
-
-  const handleCustomUnitBlur = async () => {
-    if (serviceId && customUnit) {
-      await persistUnitChange(customUnit);
-    }
-  };
-
-  const persistUnitChange = async (unitValue: string) => {
-    if (!serviceId) return;
-    if (!onPersistUnitChange) return;
-    
+  const saveCustom = async () => {
+    const label = customLabel.trim();
+    if (!label || !registerCustomUnit) return;
+    setIsSaving(true);
     try {
-      setIsSaving(true);
-      setError(null);
-      
-      await onPersistUnitChange({ serviceId, unitOfMeasure: unitValue });
-      
-      if (onSaveComplete) {
-        onSaveComplete();
-      }
-    } catch (err) {
-      console.error('Error updating unit of measure:', err);
-      setError('Failed to save unit of measure');
-    } finally {
-      setIsSaving(false);
-    }
+      const registered = await registerCustomUnit(label);
+      setRemoteUnits((current) => [...current.filter((unit) => unit.label.toLowerCase() !== label.toLowerCase()), registered]);
+      emit(registered);
+      setIsCustom(false);
+      onSaveComplete?.();
+    } finally { setIsSaving(false); }
   };
 
-  return (
-    <div className={`flex flex-col space-y-2 ${className}`}>
-      <CustomSelect
-        id="unit-of-measure-select"
-        options={standardUnits}
-        onValueChange={handleUnitChange}
-        value={selectedUnit}
-        placeholder={placeholder}
-        className="w-full"
-        disabled={disabled || isSaving}
-        required={required}
-      />
-      
-      {/* Show the custom input field when selectedUnit is 'custom' */}
-      {selectedUnit === 'custom' && (
-        <Input
-          id="custom-unit-input"
-          type="text"
-          value={customUnit}
-          onChange={(e) => handleCustomUnitChange(e.target.value)}
-          onBlur={handleCustomUnitBlur}
-          placeholder="Enter custom unit"
-          required={required}
-          disabled={disabled || isSaving}
-        />
-      )}
-      
-      {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
-      {isSaving && <p className="text-gray-500 text-sm mt-1">Saving...</p>}
-    </div>
-  );
+  return <div className={`flex flex-col gap-2 ${className}`}>
+    <CustomSelect id={`unit-of-measure-${id}`} options={options} value={selectedValue} onValueChange={handleSelect}
+      placeholder={placeholder ?? t('unitOfMeasure.selectPlaceholder', { defaultValue: 'Select a unit' })}
+      disabled={disabled || isSaving} required={required} />
+    {isCustom && <div className="flex gap-2">
+      <Input id={`unit-of-measure-custom-${id}`} value={customLabel} onChange={(event) => setCustomLabel(event.target.value)}
+        placeholder={t('unitOfMeasure.customPlaceholder', { defaultValue: 'Name this unit' })} disabled={disabled || isSaving} />
+      <Button id={`unit-of-measure-register-${id}`} type="button" onClick={saveCustom} disabled={!customLabel.trim() || !registerCustomUnit || isSaving}>
+        {t('unitOfMeasure.register', { defaultValue: 'Add' })}
+      </Button>
+    </div>}
+  </div>;
 }

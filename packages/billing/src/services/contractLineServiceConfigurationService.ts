@@ -1,3 +1,5 @@
+
+import { resolveUnitOfMeasure } from '@alga-psa/shared/billingClients/unitOfMeasure';
 import { resolveUsageMeasurementRevision, setUsageMeasurementModeInTransaction } from '../lib/billing/usageMeasurementTransitions';
 import { lockTenantBilling } from '../lib/billing/billingMutationLock';
 import { resolveNextUnbilledSeatBoundary, resolveEffectiveSeatPricing, scheduleSeatRevisionInTransaction } from '../lib/billing/seatRevisions';
@@ -665,7 +667,7 @@ export class ContractLineServiceConfigurationService {
       }
 
       const usagePayload = {
-        unit_of_measure: usageConfigData.unit_of_measure ?? 'unit',
+        unit_of_measure: usageConfigData.unit_of_measure ?? resolveUnitOfMeasure({ fallback: 'C62' }).label,
         enable_tiered_pricing: usageConfigData.enable_tiered_pricing ?? false,
         minimum_usage: usageConfigData.minimum_usage ?? 0,
         base_rate: normalizedUnitRate,

@@ -1692,5 +1692,41 @@
       "defaultFailed": "Uw standaardweergave kon niet worden gewijzigd.",
       "copyFailed": "De link kon niet worden gekopieerd."
     }
+  },
+  "unitOfMeasure": {
+    "labels": {
+      "each": "Stuk",
+      "piece": "Artikel",
+      "box": "Doos",
+      "seat": "Seat",
+      "license": "Licentie",
+      "device": "Apparaat",
+      "user": "Gebruiker",
+      "kit": "Kit",
+      "hour": "Uur",
+      "day": "Dag",
+      "week": "Week",
+      "month": "Maand",
+      "year": "Jaar",
+      "minute": "Minuut",
+      "gigabyte": "Gigabyte",
+      "terabyte": "Terabyte",
+      "liter": "Liter",
+      "kilogram": "Kilogram",
+      "meter": "Meter"
+    },
+    "groups": {
+      "time": "Time",
+      "count": "Count",
+      "volume": "Volume",
+      "mass": "Mass",
+      "length": "Length",
+      "other": "Other",
+      "custom": "Custom"
+    },
+    "customOption": "Custom…",
+    "customPlaceholder": "Name this unit",
+    "register": "Add",
+    "selectPlaceholder": "Select a unit"
   }
 }

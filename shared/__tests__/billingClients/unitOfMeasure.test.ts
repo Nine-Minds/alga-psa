@@ -3,8 +3,8 @@ import { defaultUnitCodeForKind, resolveUnitOfMeasure } from '../../billingClien
 
 describe('unit of measure resolution', () => {
   it('prefers catalog over config and defaults to C62', () => {
-    expect(resolveUnitOfMeasure({ catalogUnitCode: 'HUR', configUnitCode: 'DAY' }).code).toBe('HUR');
-    expect(resolveUnitOfMeasure({ configUnitCode: 'DAY' }).code).toBe('DAY');
+    expect(resolveUnitOfMeasure({ catalog: { code: 'HUR', label: 'Hour' }, config: { code: 'DAY', label: 'Day' } }).code).toBe('HUR');
+    expect(resolveUnitOfMeasure({ config: { code: 'DAY', label: 'Day' } }).code).toBe('DAY');
     expect(resolveUnitOfMeasure({}).code).toBe('C62');
   });
 

@@ -1,5 +1,7 @@
 'use client';
 
+
+import { resolveUnitOfMeasure } from '@alga-psa/shared/billingClients/unitOfMeasure';
 import React, { useState, useEffect } from 'react';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -95,7 +97,7 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
       // Only prefill when a price exists in the contract's currency. Legacy default_rate is
       // untagged and likely USD — don't paste it into a non-USD contract.
       unit_rate: currencyRate,
-      unit_of_measure: item.unit_of_measure || next[index].unit_of_measure || 'unit',
+      unit_of_measure: item.unit_of_measure || next[index].unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label,
     };
     updateData({ usage_services: next });
     setLegacyDefaultRates((prev) => ({
@@ -250,7 +252,7 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
                   <Input
                     id={`unit-measure-${index}`}
                     type="text"
-                    value={service.unit_of_measure ?? 'unit'}
+                    value={service.unit_of_measure ?? resolveUnitOfMeasure({ fallback: 'C62' }).label}
                     onChange={(event) => handleUnitChange(index, event.target.value)}
                     placeholder={t('wizardUsage.labels.unitOfMeasurePlaceholder', {
                       defaultValue: 'e.g., GB, API call, user',

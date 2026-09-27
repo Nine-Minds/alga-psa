@@ -31,6 +31,8 @@ export interface WasmInvoiceLocationGroup {
 
 export interface WasmInvoiceLineItem {
   id: string;
+  unit_code?: string | null;
+  unit_label?: string | null;
   description: string;
   quantity: number;
   unitPrice: number;

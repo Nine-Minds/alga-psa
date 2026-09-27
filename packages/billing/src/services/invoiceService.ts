@@ -12,6 +12,7 @@ import { Session } from 'next-auth';
 import type { ISO8601String, IRecurringDueSelectionInput, IUsageServicePeriodStatus } from '@alga-psa/types';
 import { getClientDefaultTaxRegionCode } from '@alga-psa/shared/billingClients';
 import { POST_DROP_RECURRING_OBLIGATION_TYPES } from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
+import { resolveUnitOfMeasure } from '@alga-psa/shared/billingClients/unitOfMeasure';
 import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
 import { resolveChargeProfile } from '../lib/billing/billingProfileResolution';
 import { resolveInvoiceBillingRecipient } from './invoiceBillingRecipientService';
@@ -509,6 +510,8 @@ export async function validateClientBillingEmail(
 
 // Renamed interface for clarity within manual context
 interface ManualInvoiceItemInput extends NetAmountItem {
+  unit_code?: string | null;
+  unit_label?: string | null;
   service_id?: string; // Optional for manual items
   description: string;
   is_taxable?: boolean; // Still needed for purely manual items without a service
@@ -864,6 +867,8 @@ export async function persistManualInvoiceCharges(
       item_id: uuidv4(),
       invoice_id: invoiceId,
       service_id: requestItem.service_id || null,
+      unit_code: service?.unit_code ?? requestItem.unit_code ?? 'C62',
+      unit_label: service?.unit_of_measure ?? requestItem.unit_label ?? resolveUnitOfMeasure({ fallback: 'C62' }).label,
       description: requestItem.description,
       quantity: requestItem.quantity,
       unit_price: Math.round(requestItem.rate), // Store the actual rate
@@ -969,6 +974,8 @@ export async function persistManualInvoiceCharges(
       item_id: uuidv4(),
       invoice_id: invoiceId,
       service_id: requestItem.service_id || null,
+      unit_code: service?.unit_code ?? requestItem.unit_code ?? 'C62',
+      unit_label: service?.unit_of_measure ?? requestItem.unit_label ?? resolveUnitOfMeasure({ fallback: 'C62' }).label,
       description: requestItem.description,
       quantity: requestItem.quantity,
       // Unit price for percentage discount is tricky, maybe store percentage? Or keep 0?
@@ -1090,6 +1097,8 @@ async function persistFixedInvoiceCharges(
                   invoice_id: invoiceId,
                   service_id: null,
                   description: `Fixed Plan: ${charge.serviceName}`,
+                  unit_code: charge.unit_code,
+                  unit_label: charge.unit_label,
                   quantity: 1,
                   // base_rate is already in cents from billingEngine, no conversion needed
                   unit_price: Math.round(charge.base_rate),
@@ -1128,6 +1137,8 @@ async function persistFixedInvoiceCharges(
         // contract_line_id: charge.planId ?? null, // Removed - planId not part of IFixedPriceCharge
         // client_contract_line_id could be added here if needed for the DB schema, but invoice_charges doesn't have it.
         description: charge.serviceName, // Use the name from the charge
+        unit_code: charge.unit_code,
+        unit_label: charge.unit_label,
         quantity: charge.quantity,
         unit_price: charge.rate, // The custom rate
         net_amount: netAmount,
@@ -1396,6 +1407,30 @@ export async function persistInvoiceCharges(
   let otherSubtotal = 0;
   const now = Temporal.Now.instant().toString();
 
+  // Resolve units once for all generated charges. These are tenant-scoped reads
+  // keyed by service/config ids, avoiding one catalog query per invoice line.
+  const serviceIds = [...new Set(billingCharges.map((charge) => charge.serviceId).filter((id): id is string => Boolean(id)))];
+  const configIds = [...new Set(billingCharges.map((charge) => charge.config_id).filter((id): id is string => Boolean(id)))];
+  const catalogRows = serviceIds.length
+    ? await tenantScopedTable(tx, tenant, 'service_catalog').whereIn('service_id', serviceIds).select('service_id', 'unit_code', 'unit_of_measure')
+    : [];
+  const configRows = configIds.length
+    ? await tenantScopedTable(tx, tenant, 'contract_line_service_usage_config').whereIn('config_id', configIds).select('config_id', 'unit_code', 'unit_of_measure')
+    : [];
+  const catalogById = new Map<string, { service_id: string; unit_code: string | null; unit_of_measure: string | null }>(catalogRows.map((row: { service_id: string; unit_code: string | null; unit_of_measure: string | null }) => [row.service_id, row]));
+  const configById = new Map<string, { config_id: string; unit_code: string | null; unit_of_measure: string | null }>(configRows.map((row: { config_id: string; unit_code: string | null; unit_of_measure: string | null }) => [row.config_id, row]));
+  for (const charge of billingCharges) {
+    const catalog = charge.serviceId ? catalogById.get(charge.serviceId) : undefined;
+    const config = charge.config_id ? configById.get(charge.config_id) : undefined;
+    const resolved = resolveUnitOfMeasure({
+      catalog: catalog?.unit_code ? { code: catalog.unit_code, label: catalog.unit_of_measure } : null,
+      config: config?.unit_code ? { code: config.unit_code, label: config.unit_of_measure } : null,
+      fallback: charge.type === 'time' ? 'HUR' : 'C62',
+    });
+    charge.unit_code = resolved.code;
+    charge.unit_label = resolved.label;
+  }
+
   // One line period may produce fixed charges, multiple hourly/usage items,
   // and bucket overage. Persist every detail, but claim the period once across
   // all charge families on this invoice. A prior invoice still fails the DB
@@ -1450,6 +1485,8 @@ export async function persistInvoiceCharges(
       // Use client_contract_line_id if the schema requires it
       // client_contract_line_id: charge.client_contract_line_id ?? null,
       description,
+      unit_code: charge.unit_code,
+      unit_label: charge.unit_label,
       billing_charge_type: charge.type,
       quantity:
         charge.type === 'hour_block'

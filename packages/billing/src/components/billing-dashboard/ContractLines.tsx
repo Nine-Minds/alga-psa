@@ -15,11 +15,13 @@ import {
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ContractLineDialog } from './ContractLineDialog';
-import { UnitOfMeasureInput } from '@alga-psa/ui/components/UnitOfMeasureInput';
+import { UnitOfMeasureInput, type UnitSelection } from '@alga-psa/ui/components/UnitOfMeasureInput';
 import { getContractLines, getContractLineById, updateContractLine, deleteContractLine } from '@alga-psa/billing/actions/contractLineAction';
 import { getContractLineServices, addServiceToContractLine, updateContractLineService, removeServiceFromContractLine } from '@alga-psa/billing/actions/contractLineServiceActions';
 // Import new action and type
 import { getServiceTypesForSelection } from '@alga-psa/billing/actions/serviceActions';
+import { updateService } from '@alga-psa/billing/actions/serviceActions';
+import { listTenantUnitsOfMeasure, registerTenantUnitOfMeasure } from '@alga-psa/billing/actions/unitOfMeasureActions';
 import { DeletionValidationResult, IContractLine, IContractLineService, IService } from '@alga-psa/types';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { toast } from 'react-hot-toast';
@@ -369,15 +371,12 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
         const service = initialServices.find(s => s.service_id === value);
         return (
           <UnitOfMeasureInput
-            value={service?.unit_of_measure || ''}
-            onChange={(value: string) => {
-              if (service) {
-                // Update the service's unit of measure in the database
-                // This would typically update the service itself, not the plan-service relationship
-                console.log('Updating unit of measure for service:', service.service_id, 'to', value);
-                // In Phase 2, implement actual service update here
-              }
+            value={{ code: service?.unit_code || '', label: service?.unit_of_measure || '' }}
+            onChange={async (value: UnitSelection | string) => {
+              if (service && typeof value !== 'string') await updateService(service.service_id, { unit_of_measure: value.label, unit_code: value.code });
             }}
+            loadCustomUnits={listTenantUnitsOfMeasure}
+            registerCustomUnit={registerTenantUnitOfMeasure}
           />
         );
       },

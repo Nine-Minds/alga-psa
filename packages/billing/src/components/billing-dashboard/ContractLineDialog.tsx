@@ -1,5 +1,7 @@
 'use client'
 
+
+import { resolveUnitOfMeasure } from '@alga-psa/shared/billingClients/unitOfMeasure';
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -948,7 +950,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
         service_id: item.service_id,
         service_name: item.service_name || '',
         unit_rate: item.default_rate || undefined,
-        unit_of_measure: item.unit_of_measure || 'unit'
+        unit_of_measure: item.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label
       };
       setUsageServices(newServices);
 

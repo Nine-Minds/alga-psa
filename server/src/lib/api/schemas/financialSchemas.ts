@@ -836,6 +836,7 @@ export const serviceBaseSchema = z.object({
   default_rate: z.number(),
   category_id: uuidSchema.nullable().optional(),
   unit_of_measure: z.string(),
+  unit_code: z.string().nullable().optional(),
   item_kind: z.enum(['service', 'product']).optional(),
   is_active: z.boolean().optional(),
   sku: z.string().nullable().optional(),

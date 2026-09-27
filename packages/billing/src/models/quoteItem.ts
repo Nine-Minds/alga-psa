@@ -42,6 +42,7 @@ type QuoteItemServiceLookupRow = {
   sku?: string | null;
   default_rate?: number | string | null;
   unit_of_measure?: string | null;
+  unit_code?: string | null;
   billing_method?: IQuoteItem['billing_method'];
   item_kind?: IQuoteItem['service_item_kind'];
   cost?: number | string | null;
@@ -165,6 +166,7 @@ const QuoteItem = {
           'sku',
           'default_rate',
           'unit_of_measure',
+          'unit_code',
           'billing_method',
           'item_kind',
           'cost',
@@ -216,6 +218,7 @@ const QuoteItem = {
         service_sku: resolvedItem.service_sku ?? service.sku ?? null,
         unit_price: resolvedUnitPrice,
         unit_of_measure: resolvedItem.unit_of_measure ?? service.unit_of_measure ?? null,
+        unit_code: resolvedItem.unit_code ?? service.unit_code ?? null,
         billing_method: resolvedItem.billing_method ?? service.billing_method ?? null,
         service_item_kind: resolvedItemKind,
         description: resolvedItem.description || service.service_name,
@@ -306,7 +309,7 @@ const QuoteItem = {
       if (updateData.service_id) {
         const service = await quoteTable<QuoteItemServiceLookupRow>(knexOrTrx, tenant, 'service_catalog')
           .where({ service_id: updateData.service_id })
-          .select('service_name', 'description', 'sku', 'unit_of_measure', 'billing_method', 'item_kind')
+          .select('service_name', 'description', 'sku', 'unit_of_measure', 'unit_code', 'billing_method', 'item_kind')
           .first();
 
         if (!service) {
@@ -318,6 +321,7 @@ const QuoteItem = {
           service_name: service.service_name,
           service_sku: service.sku ?? null,
           unit_of_measure: service.unit_of_measure ?? null,
+          unit_code: service.unit_code ?? null,
           billing_method: service.billing_method ?? null,
           service_item_kind: service.item_kind ?? 'service',
           catalog_description: normalizeCatalogDescription(service.description),

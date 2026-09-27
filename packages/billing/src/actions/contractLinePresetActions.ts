@@ -1,3 +1,5 @@
+
+import { resolveUnitOfMeasure } from '@alga-psa/shared/billingClients/unitOfMeasure';
 // server/src/lib/actions/contractLinePresetActions.ts
 'use server'
 import { v4 as uuidv4 } from 'uuid';
@@ -549,7 +551,7 @@ export const copyPresetToContractLine = withAuth(async (
                         };
                     } else if (configurationType === 'Usage') {
                         typeConfig = {
-                            unit_of_measure: presetService.unit_of_measure || 'unit',
+                            unit_of_measure: presetService.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label,
                             base_rate: baseConfig.custom_rate,
                             enable_tiered_pricing: false,
                             minimum_usage: undefined
@@ -811,7 +813,7 @@ export const createCustomContractLine = withAuth(async (
                     };
                 } else if (input.contract_line_type === 'Usage') {
                     typeConfig = {
-                        unit_of_measure: serviceConfig.unit_of_measure || 'unit',
+                        unit_of_measure: serviceConfig.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label,
                         base_rate: serviceConfig.custom_rate,
                         measurement_mode: serviceConfig.measurement_mode ?? 'additive',
                         enable_tiered_pricing: serviceConfig.enable_tiered_pricing ?? false,

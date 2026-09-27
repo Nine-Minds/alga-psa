@@ -799,7 +799,7 @@ export async function convertQuoteToDraftContract(
         tenant,
         config_id: configId,
         unit_of_measure: item.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label,
-        unit_code: (item as any).unit_code || resolveUnitOfMeasure({ fallback: 'C62' }).code,
+        unit_code: item.unit_code || resolveUnitOfMeasure({ fallback: 'C62' }).code,
         enable_tiered_pricing: false,
         minimum_usage: 0,
         base_rate: item.unit_price,

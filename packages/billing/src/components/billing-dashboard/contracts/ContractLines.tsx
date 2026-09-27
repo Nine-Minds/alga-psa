@@ -1,5 +1,7 @@
 'use client';
 
+
+import { resolveUnitOfMeasure } from '@alga-psa/shared/billingClients/unitOfMeasure';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Card, Box } from '@radix-ui/themes';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -851,7 +853,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                 minimum_usage: editData.minimum_usage ?? 0,
                 enable_tiered_pricing: editData.enable_tiered_pricing ?? false,
                 unit_of_measure:
-                  editData.unit_of_measure || addition.selection.service.unit_of_measure || 'unit',
+                  editData.unit_of_measure || addition.selection.service.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label,
               }
             : { base_rate: editData.base_rate ?? addition.selection.customRate };
 

@@ -2,11 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@alga-psa/ui/components/Card';
-import { UnitOfMeasureInput } from '@alga-psa/ui/components/UnitOfMeasureInput';
+import { UnitOfMeasureInput, type UnitSelection } from '@alga-psa/ui/components/UnitOfMeasureInput';
 import { ServiceTaxSettings } from './ServiceTaxSettings';
 import { ServiceRateTiers } from './ServiceRateTiers';
 import { IService } from '@alga-psa/types';
-import { getServiceById } from '@alga-psa/billing/actions/serviceActions';
+import { getServiceById, updateService } from '@alga-psa/billing/actions/serviceActions';
+import { listTenantUnitsOfMeasure, registerTenantUnitOfMeasure } from '@alga-psa/billing/actions/unitOfMeasureActions';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getErrorMessage,
@@ -135,9 +136,14 @@ export function ServiceConfigurationPanel({ serviceId, onUpdate }: ServiceConfig
                 })}
               </h3>
               <UnitOfMeasureInput
-                value={service.unit_of_measure}
-                onChange={() => {}} // Handled internally by the component
-                serviceId={service.service_id}
+                value={{ code: service.unit_code || '', label: service.unit_of_measure }}
+                onChange={async (value: UnitSelection | string) => {
+                  if (typeof value === 'string') return;
+                  const result = await updateService(service.service_id, { unit_of_measure: value.label, unit_code: value.code });
+                  if (!isActionMessageError(result) && !isActionPermissionError(result)) await handleServiceUpdate();
+                }}
+                loadCustomUnits={listTenantUnitsOfMeasure}
+                registerCustomUnit={registerTenantUnitOfMeasure}
                 onSaveComplete={handleServiceUpdate}
                 serviceType={service.service_type_name}
                 required

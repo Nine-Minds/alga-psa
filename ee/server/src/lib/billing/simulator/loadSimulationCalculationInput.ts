@@ -1,3 +1,5 @@
+
+import { resolveUnitOfMeasure } from '@alga-psa/shared/billingClients/unitOfMeasure';
 /**
  * EE contract simulation orchestrator: prices a ContractScenario over its
  * horizon through the shared pure billing compute layer.
@@ -1098,7 +1100,7 @@ export function buildSimulatedPeriod(
             ? "adjustment"
             : unit?.includes("month")
               ? unit
-              : `${formatHours(canonicalLine.quantity)} ${unit ?? "units"}`;
+              : `${formatHours(canonicalLine.quantity)} ${unit ?? resolveUnitOfMeasure({ fallback: 'C62' }).pluralLabel}`;
       const adjustmentIndex =
         canonicalLine.chargeFamily === "adjustment"
           ? Number(canonicalLine.lineKey.split(":")[1])

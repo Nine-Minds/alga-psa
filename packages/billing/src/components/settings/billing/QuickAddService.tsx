@@ -3,6 +3,8 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog'
 import { Button } from '@alga-psa/ui/components/Button'
 import { Input } from '@alga-psa/ui/components/Input'
+import { UnitOfMeasureInput, type UnitSelection } from '@alga-psa/ui/components/UnitOfMeasureInput'
+import { listTenantUnitsOfMeasure, registerTenantUnitOfMeasure } from '@alga-psa/billing/actions/unitOfMeasureActions'
 import { Label } from '@alga-psa/ui/components/Label'
 import CustomSelect from '@alga-psa/ui/components/CustomSelect'
 import CurrencyPicker from '@alga-psa/ui/components/CurrencyPicker'
@@ -42,6 +44,7 @@ interface ServiceFormData {
   default_rate: number;
   currency_code: string; // Currency of the default_rate (ISO 4217 code)
   unit_of_measure: string;
+  unit_code: string;
   tax_rate_id?: string | null;
   description?: string | null;
   category_id?: string | null; // Added category field
@@ -141,6 +144,7 @@ export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceType
     default_rate: 0,
     currency_code: defaultCurrency,
     unit_of_measure: '',
+    unit_code: '',
     // is_taxable and region_code removed
     tax_rate_id: null, // Added
     description: '',
@@ -249,6 +253,9 @@ export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceType
           defaultValue: 'Billing method is required'
         }))
       }
+      if (serviceData.billing_method === 'usage' && !serviceData.unit_of_measure.trim()) {
+        errors.push(t('quickAddService.validation.unitOfMeasureRequired', { defaultValue: 'Usage services require a unit.' }));
+      }
       
       if (errors.length > 0) {
         setValidationErrors(errors)
@@ -296,7 +303,8 @@ const baseData = {
   billing_method: serviceData.billing_method as 'fixed' | 'hourly' | 'usage', // Cast to remove empty string type
   default_rate: primaryPrice.rate,
   currency_code: primaryPrice.currency_code, // Include currency code
-  unit_of_measure: serviceData.unit_of_measure,
+    unit_of_measure: serviceData.unit_of_measure,
+    unit_code: serviceData.unit_code || (serviceData.billing_method === 'hourly' ? 'HUR' : serviceData.billing_method === 'fixed' ? 'C62' : undefined),
   // is_taxable and region_code removed
   tax_rate_id: serviceData.tax_rate_id || null, // Added tax_rate_id
   category_id: serviceData.category_id || null, // Use selected category_id from form
@@ -344,6 +352,7 @@ if (createdService?.service_id) {
         default_rate: 0,
         currency_code: defaultCurrency,
         unit_of_measure: '',
+        unit_code: '',
         description: '',
         // is_taxable and region_code removed
         tax_rate_id: null, // Added
@@ -493,7 +502,7 @@ if (createdService?.service_id) {
               <CustomSelect
                 options={billingMethodOptions}
                 value={serviceData.billing_method}
-                onValueChange={(value) => setServiceData({ ...serviceData, billing_method: value as 'fixed' | 'hourly' | 'usage' | '' })}
+                onValueChange={(value) => setServiceData({ ...serviceData, billing_method: value as 'fixed' | 'hourly' | 'usage' | '', ...(value === 'hourly' ? { unit_of_measure: 'Hour', unit_code: 'HUR' } : value === 'fixed' ? { unit_of_measure: 'Each', unit_code: 'C62' } : {}) })}
                 placeholder={t('quickAddService.fields.billingMethod.placeholder', {
                   defaultValue: 'Select billing method...'
                 })}
@@ -638,27 +647,24 @@ if (createdService?.service_id) {
               </p>
             </div>
 
-            {/* Unit of Measure for usage-based services */}
-            {serviceData.billing_method === 'usage' && (
+            {/* Unit of Measure */}
+            {Boolean(serviceData.billing_method) && (
               <div>
                 <Label htmlFor="unitOfMeasure" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
                   {t('quickAddService.fields.unitOfMeasure.label', {
-                    defaultValue: 'Unit of Measure *'
+                    defaultValue: `Unit of Measure${serviceData.billing_method === 'usage' ? ' *' : ''}`
                   })}
                 </Label>
-                <Input
-                  id="unitOfMeasure"
-                  type="text"
-                  value={serviceData.unit_of_measure}
-                  onChange={(e) => {
-                    console.log('[QuickAddService] Unit of Measure onChange called with:', e.target.value);
-                    setServiceData({ ...serviceData, unit_of_measure: e.target.value });
-                  }}
+                <UnitOfMeasureInput
+                  value={{ code: serviceData.unit_code, label: serviceData.unit_of_measure }}
+                  onChange={(value: UnitSelection | string) => { if (typeof value !== 'string') setServiceData({ ...serviceData, unit_of_measure: value.label, unit_code: value.code }); }}
+                  loadCustomUnits={listTenantUnitsOfMeasure}
+                  registerCustomUnit={registerTenantUnitOfMeasure}
+                  required={serviceData.billing_method === 'usage'}
+                  serviceType={serviceData.billing_method}
                   placeholder={t('quickAddService.fields.unitOfMeasure.placeholder', {
                     defaultValue: 'e.g., GB, API call, user'
                   })}
-                  required
-                  className={`${hasAttemptedSubmit && !serviceData.unit_of_measure ? 'border-red-500' : ''}`}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
                   {t('quickAddService.fields.unitOfMeasure.help', {
