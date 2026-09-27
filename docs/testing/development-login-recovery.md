@@ -111,17 +111,27 @@ restart after the successful check, the invalidation mechanism is the stale
 writer replacing the shared hash. Fingerprints and their HMAC key remain in
 mode-0600 files under `/tmp` and are not committed.
 
-The stale writer is outside this branch. Any dev service using that checkout
-must be updated before another initialization against the shared database; a
-successful recovery/check cannot make that old code safe. The observed service
-was left running because this implementation task forbids restarting it. The
-credential gate passed in separate fresh processes immediately after the second
-recovery and after validation, but repeated checks only describe those
-observation points and do not prove the external writer is fixed. The remaining
-browser smoke sequence is: recover with `--recover`, run the fresh-process
-check, sign in through the browser, edit priorities for several minutes (hex
-Save, dialog Save, Enter commit, Cancel discard, reload and database
-persistence), run the check again, sign out, then sign in with the identical
-configured password. Browser smoke was not run during this mitigation because
-the task prohibits starting or waking the server. This plain PostgreSQL database
-does not validate Citus distribution-column compatibility.
+The stale writer was updated and committed in that checkout as
+`27a235a2a2`. Startup now uses the guarded development credential initializer;
+well-formed existing hashes are retained unless explicit recovery is requested,
+and first-time writes use tenant-scoped compare-and-set. The competing-startup
+regression exercises two initializers against the same isolated store. The old
+service process was stopped externally at 00:44:22 UTC (its card-service log
+records “stopped by request”); this agent did not stop or restart it. No dev
+server was started or woken during this work.
+
+Fresh-process authentication passed at 00:53:29 UTC after the isolated
+competing-initializer test and again at 01:04:41 UTC after validation, an
+11-minute-12-second observation interval. The writer checkout's server
+typecheck passed. Its production build was attempted with isolated output but
+failed on pre-existing missing checkout dependencies (`RemoteAccessButton.tsx`
+and `@alga-psa/list-views`); output was removed. This work order's production
+build passed with isolated output in this validation round. Repeated checks
+show stability over this interval but cannot prove future writer behavior.
+The remaining browser smoke sequence is: recover with `--recover`, run the
+fresh-process check, sign in through the browser, edit priorities for several
+minutes (hex Save, dialog Save, Enter commit, Cancel discard, reload and
+database persistence), run the check again, sign out, then sign in with the
+identical configured password. Browser smoke remains deferred under the
+no-server-start constraint. This plain PostgreSQL database does not validate
+Citus distribution-column compatibility.
