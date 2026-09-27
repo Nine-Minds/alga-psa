@@ -212,6 +212,12 @@ export type AdjustmentScope = 'invoice' | 'contract' | 'service' | 'item';
 export interface ManualLineMetadata {
   /** Partial-period calculator inputs (contracted, not resolved). */
   partialPeriod?: {
+    source_kind?: 'invoice_charge';
+    source_item_id?: string;
+    effective_date?: string;
+    source_period_start?: string;
+    source_period_end?: string;
+    resolved_amount?: number;
     units: number;
     unitPrice: number;
     coveredDays: number;

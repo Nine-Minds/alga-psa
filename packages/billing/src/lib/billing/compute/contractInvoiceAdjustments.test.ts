@@ -5,6 +5,7 @@ import {
   computePartialPeriodAmount,
   evaluateContractInvoiceAdjustments,
   normalizeDiscountValue,
+  resolveSourceDerivedPartialPeriod,
   storedDiscountValueToPolicyValue,
   type AutomaticDiscountPolicy,
   type InvoiceAdjustmentCharge,
@@ -57,6 +58,34 @@ describe('computePartialPeriodAmount', () => {
     expect(
       computePartialPeriodAmount({ units: 3, unitPrice: -10_000, coveredDays: 15, fullPeriodDays: 30 }),
     ).toBe(-15_000);
+  });
+});
+
+describe('resolveSourceDerivedPartialPeriod', () => {
+  const source = {
+    units: 2,
+    unitPrice: 10_000,
+    servicePeriodStart: '2026-09-01',
+    servicePeriodEnd: '2026-10-01',
+  };
+
+  it('uses half-open date boundaries and persists real prorated quantity/rate for increases and credits', () => {
+    expect(resolveSourceDerivedPartialPeriod({ ...source, effectiveDate: '2026-09-16', direction: 'increase' })).toEqual({
+      quantity: 1,
+      unitPrice: 10_000,
+      amount: 10_000,
+      coveredDays: 15,
+      fullPeriodDays: 30,
+    });
+    expect(resolveSourceDerivedPartialPeriod({ ...source, effectiveDate: '2026-09-16', direction: 'decrease' })).toEqual({
+      quantity: 1,
+      unitPrice: -10_000,
+      amount: -10_000,
+      coveredDays: 15,
+      fullPeriodDays: 30,
+    });
+    expect(() => resolveSourceDerivedPartialPeriod({ ...source, effectiveDate: '2026-10-01', direction: 'increase' }))
+      .toThrow('Effective date must fall inside the selected service period.');
   });
 });
 

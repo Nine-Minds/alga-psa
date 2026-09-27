@@ -386,7 +386,8 @@
       "USAGE_CALCULATION_ERROR": "L'utilizzo di {{services}} nel periodo di servizio dal {{periodStart}} al {{periodEnd}} è registrato ma non è stato possibile prezzarlo. Correggi i prezzi del servizio (prezzo di listino nella valuta del contratto, una tariffa personalizzata o scaglioni tariffari) e riprova. Non registrare utilizzo sostitutivo.",
       "SOURCE_ALREADY_BILLED": "Alcuni elementi selezionati non sono più fatturabili (già fatturati, non approvati o rimossi). Aggiorna e riprova.",
       "SOURCE_NOT_ELIGIBLE": "Un elemento selezionato non appartiene a questo ticket o non è più idoneo. Aggiorna e riprova.",
-      "SOURCE_CURRENCY_MISMATCH": "Alcuni prodotti selezionati sono prezzati in una valuta diversa da quella di fatturazione di questo cliente e non possono essere aggiunti. Fatturali separatamente nella loro valuta."
+      "SOURCE_CURRENCY_MISMATCH": "Alcuni prodotti selezionati sono prezzati in una valuta diversa da quella di fatturazione di questo cliente e non possono essere aggiunti. Fatturali separatamente nella loro valuta.",
+      "CLIENT_CONTRACT_NOT_FOUND": "Il contratto selezionato non appartiene al cliente di questa fattura."
     },
     "warnings": {
       "noBillingEmail": "Questo cliente non ha un indirizzo e-mail di fatturazione. Imposta un contatto per la fatturazione, un indirizzo e-mail di fatturazione del cliente o un indirizzo e-mail nella sede di fatturazione o predefinita prima di generare la fattura."
@@ -421,8 +422,12 @@
       "errors": {
         "units": "Le unità devono essere maggiori di zero.",
         "unitPrice": "Il prezzo unitario deve essere un numero.",
-        "invalid": "Inserisci un periodo parziale valido."
-      }
+        "invalid": "Inserisci un periodo parziale valido.",
+        "source": "Scegli un servizio fatturato con un periodo di servizio non ambiguo."
+      },
+      "source": "Seleziona servizio fatturato",
+      "effectiveDate": "Data di decorrenza",
+      "sourceRate": "Tariffa {{rate}}"
     }
   },
   "quickInvoice": {

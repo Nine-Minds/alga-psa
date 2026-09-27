@@ -2548,6 +2548,17 @@
     "dialog.createTitle": "Aggiungi sconto",
     "dialog.editTitle": "Modifica sconto",
     "errors.loadFailed": "Impossibile caricare gli sconti.",
-    "errors.saveFailed": "Impossibile salvare lo sconto."
+    "errors.saveFailed": "Impossibile salvare lo sconto.",
+    "actions": {
+      "attach": "Collega",
+      "pickShared": "Collega sconto esistente",
+      "detach": "Scollega da questo contratto",
+      "toggleActive": "Modifica lo stato dello sconto"
+    },
+    "attachment": {
+      "shared": "Condiviso · questo contratto",
+      "line": "Collegamento alla voce"
+    },
+    "sharedEditNotice": "Questa definizione è condivisa. Le modifiche si applicano a tutti i contratti collegati al prossimo aggiornamento idoneo della bozza."
   }
 }

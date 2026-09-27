@@ -152,17 +152,21 @@ export function buildAutomaticDiscountPolicies(
 ): AutomaticDiscountPolicy[] {
   const policies = new Map<string, AutomaticDiscountPolicy>();
   for (const row of discountRows) {
-    if (policies.has(row.discount_id)) continue;
-    const scope = resolveDiscountScope(row);
-    policies.set(row.discount_id, {
-      discount_id: row.discount_id,
+    const sourceId = String(row.source_identity ?? row.discount_id);
+    if (policies.has(sourceId)) continue;
+    const scope = row.assignment_scope === 'contract' ? 'contract' : resolveDiscountScope(row);
+    policies.set(sourceId, {
+      // Assignment identity is distinct from the shared definition identity:
+      // one definition can settle once for each represented client contract.
+      discount_id: sourceId,
       discount_name: row.discount_name,
       discount_type: row.discount_type,
       value: storedDiscountValueToPolicyValue(row.discount_type, row.value),
       scope,
-      applies_to_service_id: scope === 'service' ? (row.scope_service_id ?? null) : null,
+      applies_to_service_id: row.scope === 'service' ? (row.scope_service_id ?? null) : null,
       applies_to_item_id: scope === 'item' ? (row.applies_to_item_id ?? null) : null,
-      client_contract_id: scope === 'contract' ? (row.client_contract_id ?? null) : null,
+      client_contract_id: row.assignment_client_contract_id
+        ?? (row.scope != null ? row.client_contract_id ?? null : null),
       priority: row.priority ?? null,
     });
   }
@@ -263,25 +267,25 @@ async function loadRepresentedContractLineIds(
 async function loadApplicableDiscountRows(
   conn: Knex | Knex.Transaction,
   tenant: string,
+  invoiceId: string,
   clientId: string,
   window: AdjustmentWindow,
   representedContractLineIds: string[],
 ): Promise<Array<Record<string, any>>> {
-  if (representedContractLineIds.length === 0) {
-    // No contract line is represented on the invoice, so no contract-linked
-    // discount is eligible. Invoice-scope discounts still require a contract
-    // link as their eligibility trigger under the existing configuration model.
-    return [];
-  }
-
   const db = tenantDb(conn, tenant);
-  const query = db.table('discounts');
-  db.tenantJoin(query, 'contract_line_discounts as cld', 'discounts.discount_id', 'cld.discount_id');
-  db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_line_id', 'cld.contract_line_id');
-  db.tenantJoin(query, 'contracts as c', 'c.contract_id', 'cl.contract_id');
-  db.tenantJoin(query, 'client_contracts as cc', 'cc.contract_id', 'c.contract_id');
-
-  return query
+  const lineRows = representedContractLineIds.length === 0 ? [] : await db.table('discounts')
+    .join('contract_line_discounts as cld', function () {
+      this.on('discounts.discount_id', '=', 'cld.discount_id').andOn('discounts.tenant', '=', 'cld.tenant');
+    })
+    .join('contract_lines as cl', function () {
+      this.on('cl.contract_line_id', '=', 'cld.contract_line_id').andOn('cl.tenant', '=', 'cld.tenant');
+    })
+    .join('contracts as c', function () {
+      this.on('c.contract_id', '=', 'cl.contract_id').andOn('c.tenant', '=', 'cl.tenant');
+    })
+    .join('client_contracts as cc', function () {
+      this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
+    })
     .where({
       'cc.client_id': clientId,
       'cc.tenant': tenant,
@@ -296,13 +300,39 @@ async function loadApplicableDiscountRows(
     .andWhere(function (this: Knex.QueryBuilder) {
       this.whereNull('discounts.end_date').orWhere('discounts.end_date', '>', window.start);
     })
-    // Deterministic row order: a discount linked to several contract lines is
-    // de-duplicated below by the first row, so the join order must not decide
-    // which contract assignment a contract-scoped discount resolves against.
-    .orderBy('discounts.discount_id', 'asc')
-    .orderBy('cc.client_contract_id', 'asc')
-    .orderBy('cld.contract_line_id', 'asc')
-    .select('discounts.*', 'cld.contract_line_id', 'cc.client_contract_id');
+    .select('discounts.*', 'cc.client_contract_id');
+
+  // Contract assignments are eligible from billed charges attributed to that
+  // client-contract, independent of contract lines/details. Their stable
+  // assignment UUID is the settlement source key, allowing one shared
+  // definition to settle separately for two contracts on a consolidated bill.
+  const representedClientContractIds = new Set<string>();
+  const invoiceContractIds = await tenantScopedTable<{ client_contract_id: string | null }>(conn, tenant, 'invoice_charges')
+    .where({ tenant, invoice_id: invoiceId })
+    .whereNotNull('client_contract_id')
+    .select('client_contract_id');
+  for (const row of invoiceContractIds) if (row.client_contract_id) representedClientContractIds.add(row.client_contract_id);
+  const assignmentQuery = db.table('contract_discount_assignments as a');
+  db.tenantJoin(assignmentQuery, 'discounts as d', 'd.discount_id', 'a.discount_id');
+  db.tenantJoin(assignmentQuery, 'client_contracts as cc', 'cc.contract_id', 'a.contract_id');
+  const assignmentRows = representedClientContractIds.size === 0 ? [] : await assignmentQuery
+    .where('cc.client_id', clientId)
+    .whereIn('cc.client_contract_id', [...representedClientContractIds])
+    .where('d.is_active', true)
+    .where('d.start_date', '<=', window.end)
+    .andWhere(function (this: Knex.QueryBuilder) {
+      this.whereNull('d.end_date').orWhere('d.end_date', '>', window.start);
+    })
+    .select(
+      'd.discount_id', 'd.discount_name', 'd.discount_type', 'd.value', 'd.start_date', 'd.end_date',
+      'd.scope', 'd.scope_service_id', 'd.applies_to_item_id', 'd.priority',
+      'a.assignment_id as source_identity', 'cc.client_contract_id as assignment_client_contract_id',
+    );
+  return [...lineRows, ...assignmentRows.map((row: Record<string, unknown>) => ({
+    ...row,
+    source_identity: row.source_identity,
+    assignment_scope: 'contract',
+  }))];
 }
 
 interface DesiredSettlementRow {
@@ -318,6 +348,7 @@ interface DesiredSettlementRow {
   scope?: DiscountScope;
   baseAmount?: number | null;
   metadata?: Record<string, unknown> | null;
+  clientContractId?: string | null;
 }
 
 interface LegacyAutomaticDiscountRow {
@@ -423,6 +454,7 @@ async function applySettlementRows(
       adjustment_reason: row.reason,
       adjustment_period_start: row.periodStart,
       adjustment_period_end: row.periodEnd,
+      client_contract_id: row.clientContractId ?? null,
       manual_line_metadata: row.metadata ? JSON.stringify(row.metadata) : null,
       updated_at: now,
     };
@@ -502,6 +534,7 @@ export async function reconcileAutomaticInvoiceDiscounts(
   const discountRows = await loadApplicableDiscountRows(
     tx,
     tenant,
+    invoiceId,
     invoice.client_id,
     window,
     representedContractLineIds,
@@ -527,6 +560,7 @@ export async function reconcileAutomaticInvoiceDiscounts(
     discountValue: discount.value,
     scope: discount.scope,
     baseAmount: discount.base_amount,
+    clientContractId: policies.find((policy) => policy.discount_id === discount.discount_id)?.client_contract_id ?? null,
   }));
 
   const applied = await applySettlementRows(tx, tenant, invoiceId, 'discount', desired);

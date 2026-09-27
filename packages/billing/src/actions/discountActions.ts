@@ -59,6 +59,8 @@ export interface ContractDiscountRecord {
   applies_to_item_id: string | null;
   priority: number | null;
   is_active: boolean;
+  assignment_id?: string | null;
+  attachment_kind?: 'contract' | 'line';
 }
 
 async function assertDiscountAuthorable(
@@ -82,6 +84,15 @@ async function assertDiscountAuthorable(
 
   // The link line must belong to this contract; a foreign line would silently
   // make the discount ineligible or, worse, leak another contract's scoping.
+  if (!input.contract_line_id) {
+    if (input.scope === 'service' && input.scope_service_id) {
+      const serviceQuery = db.table('contract_line_services as cls');
+      db.tenantJoin(serviceQuery, 'contract_lines as cl', 'cl.contract_line_id', 'cls.contract_line_id');
+      const service = await serviceQuery.where({ 'cl.contract_id': contractId, 'cls.service_id': input.scope_service_id }).first('cls.service_id');
+      if (!service) throw new Error('The selected service is not part of this contract.');
+    }
+    return;
+  }
   const line = await db
     .table('contract_lines')
     .where({ contract_line_id: input.contract_line_id, contract_id: contractId })
@@ -102,6 +113,9 @@ async function assertDiscountAuthorable(
 }
 
 function discountActionErrorFrom(error: unknown): ContractDiscountActionError | null {
+  if (typeof error === 'object' && error !== null && 'code' in error && (error as { code?: string }).code === '23505') {
+    return actionError('This discount is already attached to this contract.');
+  }
   if (error instanceof Error && error.message.startsWith('Permission denied:')) {
     return permissionError(error.message);
   }
@@ -113,6 +127,7 @@ function discountActionErrorFrom(error: unknown): ContractDiscountActionError | 
       message.includes('not part of this contract line') ||
       message.includes('does not belong to this contract') ||
       message.includes('no longer available') ||
+      message.includes('already attached') ||
       message.includes('attribution-only') ||
       message.includes('supported discount scope')
     ) {
@@ -227,7 +242,23 @@ export const getContractDiscounts = withAuth(async (
           'svc.service_name as scope_service_name',
         );
 
-      return (rows as Array<Record<string, unknown>>).map((row): ContractDiscountRecord => {
+      const contractAssignments = db.table('contract_discount_assignments as a');
+      db.tenantJoin(contractAssignments, 'discounts as d', 'd.discount_id', 'a.discount_id');
+      db.tenantJoin(contractAssignments, 'service_catalog as svc', 'svc.service_id', 'd.scope_service_id', { type: 'left' });
+      const attachedRows = await contractAssignments.where('a.contract_id', contractId).orderBy('d.discount_name', 'asc').select(
+        'd.discount_id', 'd.discount_name', 'd.discount_type', 'd.value', 'd.start_date', 'd.end_date',
+        'd.scope', 'd.scope_service_id', 'd.applies_to_item_id', 'd.priority', 'd.is_active',
+        'svc.service_name as scope_service_name', 'a.assignment_id',
+      );
+
+      const mergedRows: Array<Record<string, unknown>> = [
+        ...(rows as Array<Record<string, unknown>>).map((row) => ({ ...row, attachment_kind: 'line' as const })),
+        ...(attachedRows as Array<Record<string, unknown>>).map((row) => ({
+          ...row, contract_line_id: null, contract_line_name: null,
+          assignment_id: row.assignment_id, attachment_kind: 'contract' as const,
+        })),
+      ];
+      return mergedRows.map((row): ContractDiscountRecord => {
         const discountType = row.discount_type === 'fixed' ? 'fixed' : 'percentage';
         const storedValue = Number(row.value) || 0;
         const scope = (row.scope as ContractDiscountScope | null) ?? 'invoice';
@@ -247,11 +278,94 @@ export const getContractDiscounts = withAuth(async (
           applies_to_item_id: row.applies_to_item_id ? String(row.applies_to_item_id) : null,
           priority: row.priority == null ? null : Number(row.priority),
           is_active: Boolean(row.is_active),
+          assignment_id: row.assignment_id ? String(row.assignment_id) : null,
+          attachment_kind: row.attachment_kind as 'contract' | 'line' | undefined,
         };
       });
     });
   } catch (error) {
     console.error('Error fetching contract discounts:', error);
+    const expected = discountActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+});
+
+export interface SharedDiscountOption {
+  discount_id: string;
+  discount_name: string;
+  discount_type: 'percentage' | 'fixed';
+  value: number;
+  is_active: boolean;
+}
+
+export const getAvailableSharedDiscounts = withAuth(async (user, { tenant }, contractId: string) => {
+  const { knex } = await createTenantKnex();
+  if (!tenant) throw new Error('tenant context not found');
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    if (!await hasPermission(user, 'billing', 'read', trx)) throw new Error('Permission denied: Cannot read contract discounts');
+    const db = tenantDb(trx, tenant);
+    const assignments = await db.table('contract_discount_assignments').where({ contract_id: contractId }).select('discount_id');
+    const lineQuery = db.table('contract_line_discounts as cld');
+    db.tenantJoin(lineQuery, 'contract_lines as cl', 'cl.contract_line_id', 'cld.contract_line_id');
+    const lineAssignments = await lineQuery.where('cl.contract_id', contractId).select('cld.discount_id');
+    const excluded = [...assignments, ...lineAssignments].map((row: { discount_id: string }) => row.discount_id);
+    const rows = await db.table('discounts').whereNotIn('discount_id', excluded).orderBy('discount_name').select('discount_id', 'discount_name', 'discount_type', 'value', 'is_active');
+    return (rows as Array<Record<string, unknown>>).map((row): SharedDiscountOption => ({
+      discount_id: String(row.discount_id),
+      discount_name: String(row.discount_name),
+      discount_type: row.discount_type === 'fixed' ? 'fixed' : 'percentage',
+      value: toDisplayDiscountValue(row.discount_type === 'fixed' ? 'fixed' : 'percentage', Number(row.value) || 0),
+      is_active: Boolean(row.is_active),
+    }));
+  });
+});
+
+export const attachSharedDiscountToContract = withAuth(async (user, { tenant }, contractId: string, discountId: string) => {
+  const { knex } = await createTenantKnex();
+  if (!tenant) throw new Error('tenant context not found');
+  try {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(user, 'billing', 'update', trx)) throw new Error('Permission denied: Cannot attach contract discounts');
+      const db = tenantDb(trx, tenant);
+      const contract = await db.table('contracts').where({ contract_id: contractId }).first('contract_id', 'is_system_managed_default');
+      const definition = await db.table('discounts').where({ discount_id: discountId }).first('discount_id');
+      if (!contract || !definition) throw new Error('The selected contract or discount is no longer available.');
+      if (contract.is_system_managed_default === true) throw new Error('System-managed default contracts are attribution-only; discount authoring is disabled.');
+      const lineQuery = db.table('contract_line_discounts as cld');
+      db.tenantJoin(lineQuery, 'contract_lines as cl', 'cl.contract_line_id', 'cld.contract_line_id');
+      if (await lineQuery.where({ 'cl.contract_id': contractId, 'cld.discount_id': discountId }).first('cld.discount_id')) {
+        throw new Error('This discount is already attached to the contract through a contract line.');
+      }
+      await db.table('contract_discount_assignments').insert({
+        tenant, assignment_id: trx.raw('gen_random_uuid()'), contract_id: contractId,
+        discount_id: discountId, created_at: trx.fn.now(),
+      });
+      return { success: true as const };
+    });
+  } catch (error) {
+    const expected = discountActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+});
+
+export const detachContractDiscount = withAuth(async (user, { tenant }, contractId: string, assignmentId: string) => {
+  const { knex } = await createTenantKnex();
+  if (!tenant) throw new Error('tenant context not found');
+  try {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(user, 'billing', 'update', trx)) throw new Error('Permission denied: Cannot detach contract discounts');
+      const db = tenantDb(trx, tenant);
+      const contract = await db.table('contracts').where({ contract_id: contractId }).first('contract_id', 'is_system_managed_default');
+      if (!contract) throw new Error('The selected contract is no longer available.');
+      if (contract.is_system_managed_default === true) throw new Error('System-managed default contracts are attribution-only; discount authoring is disabled.');
+      const removed = await db.table('contract_discount_assignments')
+        .where({ contract_id: contractId, assignment_id: assignmentId }).delete();
+      if (!removed) throw new Error('The discount assignment no longer exists on this contract.');
+      return { success: true as const };
+    });
+  } catch (error) {
     const expected = discountActionErrorFrom(error);
     if (expected) return expected;
     throw error;
@@ -304,11 +418,23 @@ export const createContractDiscount = withAuth(async (
       }).returning('discount_id');
 
       const newId = String((inserted[0] as { discount_id: string }).discount_id);
-      await db.table('contract_line_discounts').insert({
-        discount_id: newId,
-        tenant,
-        contract_line_id: input.contract_line_id,
-      });
+      if (input.contract_line_id) {
+        await db.table('contract_line_discounts').insert({
+          discount_id: newId,
+          tenant,
+          contract_line_id: input.contract_line_id,
+        });
+      } else {
+        const contract = await db.table('contracts').where({ contract_id: contractId }).first('contract_id');
+        if (!contract) throw new Error('The selected contract is no longer available.');
+        await db.table('contract_discount_assignments').insert({
+          tenant,
+          assignment_id: trx.raw('gen_random_uuid()'),
+          contract_id: contractId,
+          discount_id: newId,
+          created_at: now,
+        });
+      }
 
       const record = await getContractDiscountById(trx, tenant, contractId, newId);
       if (!record) {
@@ -351,6 +477,10 @@ export const updateContractDiscount = withAuth(async (
 
       const db = tenantDb(trx, tenant);
       const existing = await db
+        .table('contract_discount_assignments')
+        .where({ discount_id: discountId, contract_id: contractId })
+        .first('assignment_id');
+      const existingLine = existing ? null : await db
         .table('discounts as d')
         .join('contract_line_discounts as cld', function () {
           this.on('cld.discount_id', '=', 'd.discount_id').andOn('cld.tenant', '=', 'd.tenant');
@@ -360,7 +490,7 @@ export const updateContractDiscount = withAuth(async (
         })
         .where({ 'd.discount_id': discountId, 'cl.contract_id': contractId })
         .first('d.discount_id');
-      if (!existing) {
+      if (!existing && !existingLine) {
         throw new Error('The discount no longer exists for this contract.');
       }
 
@@ -378,15 +508,15 @@ export const updateContractDiscount = withAuth(async (
         updated_at: trx.fn.now(),
       });
 
-      // A discount links to exactly one contract line. Re-point the link by
-      // replacing the association row rather than mutating its (tenant,
-      // discount_id) primary key.
-      await db.table('contract_line_discounts').where({ discount_id: discountId }).delete();
-      await db.table('contract_line_discounts').insert({
-        discount_id: discountId,
-        tenant,
-        contract_line_id: input.contract_line_id,
-      });
+      if (!existing) {
+        // Preserve legacy line-scoped authoring. Contract assignments remain
+        // independent of the line association and shared definition edits do
+        // not detach other contracts.
+        await db.table('contract_line_discounts').where({ discount_id: discountId }).delete();
+        if (input.contract_line_id) await db.table('contract_line_discounts').insert({
+          discount_id: discountId, tenant, contract_line_id: input.contract_line_id,
+        });
+      }
 
       const record = await getContractDiscountById(trx, tenant, contractId, discountId);
       if (!record) {
@@ -461,6 +591,32 @@ async function getContractDiscountById(
   discountId: string,
 ): Promise<ContractDiscountRecord | null> {
   const db = tenantDb(trx, tenant);
+  const attached = await db.table('contract_discount_assignments as a')
+    .join('discounts as d', function () {
+      this.on('d.discount_id', '=', 'a.discount_id').andOn('d.tenant', '=', 'a.tenant');
+    })
+    .leftJoin('service_catalog as svc', function () {
+      this.on('svc.service_id', '=', 'd.scope_service_id').andOn('svc.tenant', '=', 'd.tenant');
+    })
+    .where({ 'a.contract_id': contractId, 'a.discount_id': discountId })
+    .first('d.*', 'svc.service_name as scope_service_name', 'a.assignment_id');
+  if (attached) {
+    const row = attached as Record<string, unknown>;
+    const type = row.discount_type === 'fixed' ? 'fixed' : 'percentage';
+    const stored = Number(row.value) || 0;
+    return {
+      discount_id: String(row.discount_id), discount_name: String(row.discount_name), discount_type: type,
+      value: toDisplayDiscountValue(type, stored), stored_value: stored,
+      start_date: toDateOnly(row.start_date), end_date: toDateOnly(row.end_date),
+      contract_line_id: null, contract_line_name: null,
+      scope: (row.scope as ContractDiscountScope | null) ?? 'invoice',
+      scope_service_id: row.scope_service_id ? String(row.scope_service_id) : null,
+      scope_service_name: row.scope_service_name ? String(row.scope_service_name) : null,
+      applies_to_item_id: row.applies_to_item_id ? String(row.applies_to_item_id) : null,
+      priority: row.priority == null ? null : Number(row.priority), is_active: Boolean(row.is_active),
+      assignment_id: String(row.assignment_id), attachment_kind: 'contract',
+    };
+  }
   const query = db.table('discounts as d');
   db.tenantJoin(query, 'contract_line_discounts as cld', 'd.discount_id', 'cld.discount_id');
   db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_line_id', 'cld.contract_line_id', { type: 'left' });

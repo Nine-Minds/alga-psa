@@ -2548,6 +2548,17 @@
     "dialog.createTitle": "Adicionar desconto",
     "dialog.editTitle": "Editar desconto",
     "errors.loadFailed": "Falha ao carregar os descontos.",
-    "errors.saveFailed": "Falha ao salvar o desconto."
+    "errors.saveFailed": "Falha ao salvar o desconto.",
+    "actions": {
+      "attach": "Associar",
+      "pickShared": "Associar desconto existente",
+      "detach": "Desassociar deste contrato",
+      "toggleActive": "Alterar estado do desconto"
+    },
+    "attachment": {
+      "shared": "Partilhado · este contrato",
+      "line": "Associação à linha"
+    },
+    "sharedEditNotice": "Esta definição é partilhada. As alterações aplicam-se a todos os contratos associados na próxima atualização elegível do rascunho."
   }
 }

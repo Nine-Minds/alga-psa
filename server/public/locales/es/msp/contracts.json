@@ -2548,6 +2548,17 @@
     "dialog.createTitle": "Añadir descuento",
     "dialog.editTitle": "Editar descuento",
     "errors.loadFailed": "No se pudieron cargar los descuentos.",
-    "errors.saveFailed": "No se pudo guardar el descuento."
+    "errors.saveFailed": "No se pudo guardar el descuento.",
+    "actions": {
+      "attach": "Vincular",
+      "pickShared": "Vincular descuento existente",
+      "detach": "Desvincular de este contrato",
+      "toggleActive": "Cambiar estado del descuento"
+    },
+    "attachment": {
+      "shared": "Compartido · este contrato",
+      "line": "Vinculación a línea"
+    },
+    "sharedEditNotice": "Esta definición es compartida. Los cambios se aplicarán a todos los contratos vinculados al actualizar el próximo borrador elegible."
   }
 }

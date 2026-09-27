@@ -10,7 +10,7 @@ import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
-import { AlertCircle, Plus, Pencil, Power } from 'lucide-react';
+import { AlertCircle, Plus, Pencil, Power, Unlink } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getErrorMessage,
@@ -21,12 +21,16 @@ import {
   createContractDiscount,
   getContractDiscounts,
   getContractLineServiceOptions,
+  getAvailableSharedDiscounts,
+  attachSharedDiscountToContract,
+  detachContractDiscount,
   setContractDiscountActive,
   updateContractDiscount,
   type ContractDiscountInput,
   type ContractDiscountRecord,
   type ContractDiscountScope,
   type ContractLineServiceOption,
+  type SharedDiscountOption,
 } from '@alga-psa/billing/actions/discountActions';
 import { getDetailedContractLines } from '@alga-psa/billing/actions/contractActions';
 
@@ -58,7 +62,7 @@ const emptyForm = (): DiscountFormState => ({
   start_date: new Date().toISOString().slice(0, 10),
   end_date: '',
   contract_line_id: '',
-  scope: 'invoice',
+  scope: 'contract',
   scope_service_id: '',
   priority: '',
   is_active: true,
@@ -74,15 +78,18 @@ export function ContractDiscounts({ contractId, isReadOnly = false }: ContractDi
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<ContractDiscountRecord | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [availableDiscounts, setAvailableDiscounts] = useState<SharedDiscountOption[]>([]);
+  const [selectedSharedDiscountId, setSelectedSharedDiscountId] = useState('');
 
   const load = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const [discountResult, lineResult, serviceResult] = await Promise.all([
+      const [discountResult, lineResult, serviceResult, availableResult] = await Promise.all([
         getContractDiscounts(contractId),
         getDetailedContractLines(contractId),
         getContractLineServiceOptions(contractId),
+        getAvailableSharedDiscounts(contractId),
       ]);
       if (isReturnedActionError(discountResult)) {
         setError(getErrorMessage(discountResult));
@@ -96,6 +103,7 @@ export function ContractDiscounts({ contractId, isReadOnly = false }: ContractDi
         }))
         : []);
       setServiceOptions(isReturnedActionError(serviceResult) ? [] : serviceResult);
+      setAvailableDiscounts(isReturnedActionError(availableResult) ? [] : availableResult);
     } catch (err) {
       console.error('Failed to load contract discounts:', err);
       setError(t('contractDiscounts.errors.loadFailed', { defaultValue: 'Failed to load discounts.' }));
@@ -131,6 +139,32 @@ export function ContractDiscounts({ contractId, isReadOnly = false }: ContractDi
     }
   };
 
+  const handleAttachShared = async () => {
+    if (!selectedSharedDiscountId) return;
+    setBusyId(selectedSharedDiscountId);
+    setError(null);
+    try {
+      const result = await attachSharedDiscountToContract(contractId, selectedSharedDiscountId);
+      if (isReturnedActionError(result)) { setError(getErrorMessage(result)); return; }
+      setSelectedSharedDiscountId('');
+      await load();
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally { setBusyId(null); }
+  };
+
+  const handleDetach = async (discount: ContractDiscountRecord) => {
+    if (!discount.assignment_id) return;
+    setBusyId(discount.assignment_id);
+    setError(null);
+    try {
+      const result = await detachContractDiscount(contractId, discount.assignment_id);
+      if (isReturnedActionError(result)) { setError(getErrorMessage(result)); return; }
+      await load();
+    } catch (err) { setError(getErrorMessage(err)); }
+    finally { setBusyId(null); }
+  };
+
   const formatValue = (discount: ContractDiscountRecord) => discount.discount_type === 'percentage'
     ? `${discount.value}%`
     : discount.value.toFixed(2);
@@ -144,11 +178,24 @@ export function ContractDiscounts({ contractId, isReadOnly = false }: ContractDi
           </h3>
           <p className="text-sm text-muted-foreground">
             {t('contractDiscounts.description', {
-              defaultValue: 'Configured discounts are applied automatically on each eligible draft invoice for this client.',
+              defaultValue: 'Contract-wide discounts are independent of contract lines. Shared definition edits apply to every attached contract on its next eligible draft refresh.',
             })}
           </p>
         </div>
         {!isReadOnly && (
+          <div className="flex gap-2 items-center">
+            {availableDiscounts.length > 0 && <>
+              <CustomSelect
+                id="attach-shared-contract-discount"
+                value={selectedSharedDiscountId}
+                onValueChange={setSelectedSharedDiscountId}
+                options={availableDiscounts.map((discount) => ({ value: discount.discount_id, label: discount.discount_name }))}
+                placeholder={t('contractDiscounts.actions.pickShared', { defaultValue: 'Attach existing discount' })}
+              />
+              <Button id="attach-shared-contract-discount-button" type="button" variant="secondary" disabled={!selectedSharedDiscountId || busyId !== null} onClick={handleAttachShared}>
+                {t('contractDiscounts.actions.attach', { defaultValue: 'Attach' })}
+              </Button>
+            </>}
           <Button
             id="add-contract-discount-button"
             type="button"
@@ -157,6 +204,7 @@ export function ContractDiscounts({ contractId, isReadOnly = false }: ContractDi
             <Plus className="h-4 w-4 mr-2" />
             {t('contractDiscounts.actions.add', { defaultValue: 'Add Discount' })}
           </Button>
+          </div>
         )}
       </div>
 
@@ -192,7 +240,7 @@ export function ContractDiscounts({ contractId, isReadOnly = false }: ContractDi
             <tbody>
               {discounts.map((discount) => (
                 <tr key={discount.discount_id} className="border-b border-[rgb(var(--color-border-100))]">
-                  <td className="py-2 pr-4 font-medium">{discount.discount_name}</td>
+                  <td className="py-2 pr-4 font-medium">{discount.discount_name}<div className="text-xs font-normal text-muted-foreground">{discount.attachment_kind === 'contract' ? t('contractDiscounts.attachment.shared', { defaultValue: 'Shared · this contract' }) : t('contractDiscounts.attachment.line', { defaultValue: 'Line attachment' })}</div></td>
                   <td className="py-2 pr-4">{formatValue(discount)}</td>
                   <td className="py-2 pr-4">
                     {t(`contractDiscounts.scopes.${discount.scope}`, {
@@ -228,10 +276,13 @@ export function ContractDiscounts({ contractId, isReadOnly = false }: ContractDi
                         type="button"
                         variant="ghost"
                         size="sm"
-                        disabled={busyId === discount.discount_id}
-                        onClick={() => handleToggleActive(discount)}
+                        disabled={busyId === (discount.assignment_id ?? discount.discount_id)}
+                        aria-label={discount.assignment_id
+                          ? t('contractDiscounts.actions.detach', { defaultValue: 'Detach from this contract' })
+                          : t('contractDiscounts.actions.toggleActive', { defaultValue: 'Change discount status' })}
+                        onClick={() => discount.assignment_id ? handleDetach(discount) : handleToggleActive(discount)}
                       >
-                        <Power className="h-4 w-4" />
+                        {discount.assignment_id ? <Unlink className="h-4 w-4" /> : <Power className="h-4 w-4" />}
                       </Button>
                     </td>
                   )}
@@ -284,13 +335,13 @@ function ContractDiscountDialog({
       value: String(editing.value),
       start_date: editing.start_date ?? new Date().toISOString().slice(0, 10),
       end_date: editing.end_date ?? '',
-      contract_line_id: editing.contract_line_id ?? lines[0]?.value ?? '',
+      contract_line_id: editing.contract_line_id ?? '',
       scope: editing.scope,
       scope_service_id: editing.scope_service_id ?? '',
       priority: editing.priority == null ? '' : String(editing.priority),
       is_active: editing.is_active,
     }
-    : { ...emptyForm(), contract_line_id: lines[0]?.value ?? '' });
+    : emptyForm());
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -373,6 +424,7 @@ function ContractDiscountDialog({
     >
       <DialogContent>
         <form id="contract-discount-form" onSubmit={handleSubmit} className="space-y-4">
+          {editing?.assignment_id && <p className="text-sm text-muted-foreground">{t('contractDiscounts.sharedEditNotice', { defaultValue: 'This definition is shared. Changes affect every attached contract on its next eligible draft refresh.' })}</p>}
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
@@ -451,7 +503,7 @@ function ContractDiscountDialog({
             </div>
           </div>
 
-          <div>
+          {lines.length > 0 && <div>
             <Label htmlFor="contract-discount-line">
               {t('contractDiscounts.fields.line', { defaultValue: 'Contract line' })}
             </Label>
@@ -464,9 +516,9 @@ function ContractDiscountDialog({
                 scope_service_id: '',
               }))}
               options={lines}
-              placeholder={t('contractDiscounts.fields.linePlaceholder', { defaultValue: 'Select a contract line' })}
+              placeholder={t('contractDiscounts.fields.linePlaceholder', { defaultValue: 'Optional: keep this discount line-scoped' })}
             />
-          </div>
+          </div>}
 
           <div className="grid grid-cols-2 gap-3">
             <div>

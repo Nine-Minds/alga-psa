@@ -2552,6 +2552,17 @@
     "dialog.createTitle": "Dodaj rabat",
     "dialog.editTitle": "Edytuj rabat",
     "errors.loadFailed": "Nie udało się załadować rabatów.",
-    "errors.saveFailed": "Nie udało się zapisać rabatu."
+    "errors.saveFailed": "Nie udało się zapisać rabatu.",
+    "actions": {
+      "attach": "Dołącz",
+      "pickShared": "Dołącz istniejący rabat",
+      "detach": "Odłącz od tej umowy",
+      "toggleActive": "Zmień status rabatu"
+    },
+    "attachment": {
+      "shared": "Wspólny · ta umowa",
+      "line": "Przypisanie do pozycji"
+    },
+    "sharedEditNotice": "Ta definicja jest współdzielona. Zmiany zostaną zastosowane do wszystkich przypisanych umów przy następnym odświeżeniu kwalifikującego się projektu faktury."
   }
 }

@@ -498,6 +498,9 @@ interface ManualInvoiceItemInput extends NetAmountItem {
   applies_to_service_id?: string;
   discount_percentage?: number;
   location_id?: string | null;
+  client_contract_id?: string | null;
+  service_period_start?: string | null;
+  service_period_end?: string | null;
   /**
    * Explicit billing profile for this manual item — step 1 of the resolution
    * chain, and the only step a manual item can use, since it has no contract
@@ -801,6 +804,7 @@ export async function validateManualChargeAttribution(
     location_id?: string | null;
     billing_profile_id?: string | null;
     tax_rate_id?: string | null;
+    client_contract_id?: string | null;
   }>,
 ): Promise<void> {
   const locationIds = [...new Set(
@@ -854,6 +858,14 @@ export async function validateManualChargeAttribution(
       .map((item) => item.tax_rate_id)
       .filter((value): value is string => Boolean(value)),
   )];
+  const contractIds = [...new Set(items.map((item) => item.client_contract_id).filter((value): value is string => Boolean(value)))];
+  if (contractIds.length > 0) {
+    const owned = await tenantScopedTable(tx, tenant, 'client_contracts')
+      .where({ tenant, client_id: clientId }).whereIn('client_contract_id', contractIds).pluck('client_contract_id');
+    const ownedSet = new Set(owned as string[]);
+    const foreign = contractIds.find((id) => !ownedSet.has(id));
+    if (foreign) throw new ManualInvoiceError('CLIENT_CONTRACT_NOT_FOUND', "The selected contract does not belong to this invoice's client.", { clientContractId: foreign });
+  }
   if (taxRateIds.length > 0) {
     const owned = await tenantScopedTable(tx, tenant, 'tax_rates')
       .where({ tenant })
@@ -1009,6 +1021,9 @@ export async function persistManualInvoiceCharges(
       applies_to_item_id: null, // Manual non-discounts don't apply to others
       applies_to_service_id: null,
       location_id: requestItem.location_id ?? null,
+      client_contract_id: requestItem.client_contract_id ?? null,
+      service_period_start: requestItem.service_period_start ?? null,
+      service_period_end: requestItem.service_period_end ?? null,
       billing_profile_id: itemProfile.billingProfileId,
       billing_profile_source: itemProfile.source,
       so_line_id: requestItem.so_line_id ?? null,

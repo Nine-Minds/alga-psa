@@ -159,3 +159,47 @@ Automated tests for each item above. Live UI smoke on the dev server: create a d
 ## Deliberate exclusions
 
 No arbitrary rewriting of generated recurring charges, retrospective mutation of paid/exported history, general promotion engine, inferred discounts, implicit contract quantity updates from manual lines, legacy unscoped adjustment-table activation, duplicate companion scheduling implementation, system-wide currency migration, or broad tax-policy rewrite. Immediate standalone settlement is available only through an explicitly selected supported adjustment/credit workflow. Board advancement, approval and release are outside this implementation plan.
+
+## Repair brief (2026-09-27): reusable recurring contract discounts and source-derived partial-period adjustments
+
+### Original customer ask
+
+An operator can define a standing discount independently of contract lines, attach the reusable definition to a client contract, and have that contract's discount applied to every applicable invoice the contract produces. One tenant-level default definition can be attached to multiple client contracts. This standing-term workflow is the lead customer journey; the manual invoice adjustment editor remains supported as a secondary workflow.
+
+### Decisions
+
+1. **Independent contract attachment and eligibility.** Add a tenant-scoped attachment from a client contract to an existing tenant-level `discounts` definition. It is independent of `contract_line_id`, permits contracts with zero lines, and defaults to contract-wide eligibility over the contract's eligible billed charges. Keep existing line-scoped and service-scoped attachment semantics. Contract-wide eligibility must not make a line-scoped discount apply to an unbilled sibling line. Contract attribution isolates bases on consolidated invoices; manual additions only participate when explicitly attributable under supported policy.
+2. **Shared definitions and lifecycle.** `discounts` remains the reusable tenant-level definition/catalog. A contract may attach/detach a definition without disabling it for other contracts. Prevent duplicate contract attachments and validate same-tenant references. Editing a shared definition affects attached contracts on their next eligible editable-draft refresh; source-linked settlements remain distinct per attachment/contract and refresh is idempotent. Protected invoices are never rewritten.
+3. **Standing positive charges.** Do not add a parallel recurring-adjustment engine. Use existing catalog-backed contract lines for a standing positive charge because `contract_lines.service_id` is required by recurring charge computation and supplies tax/accounting classification and export mapping. Existing authoring path: client contract → Lines → Add line / custom contract line, selecting a catalog service. Keep the catalog service requirement rather than weakening accounting readiness.
+4. **Standing fixed credits.** Represent a recurring fixed credit as a contract-level fixed discount in the existing discount evaluator and settlement/provenance pipeline. Preserve the evaluator's fixed-value conversion boundary and credit/tax policies; do not encode it as a negative contract-line rate.
+5. **Partial-period workflow.** For a one-time partial-period change, choose a generated charge, contract line, or service represented on the invoice. Derive its unit rate and classification from that source; use its effective date and service-period date conventions to prorate a real quantity/rate row. Preserve manual one-time identity and do not modify standing coverage quantities. Freeform Add Charge remains for genuinely serviceless one-offs.
+6. **Timing boundary.** Coordinate through existing effective-period/source interfaces with companion card `f6e7254b-0c74-468d-9dd6-822bdf659e15`; its documented baseline is next-period-only. This repair adds no automatic mid-period true-up and does not gate existing manual adjustments on companion delivery.
+
+### Repair acceptance focus
+
+First demonstrate one reusable tenant discount attached to two client contracts, one correctly attributed source-linked settlement on each next editable invoice, correct contract-wide eligible bases, idempotent repeated refresh, and shared-definition edit propagation on refresh. Then demonstrate source-derived partial-period increases and decreases with service classification, date boundaries, tax treatment and persisted quantity/rate semantics. Keep billed/locked line date/text history protections from `000632a422` and `b57e335267` intact, including periods protected after cancellation.
+
+### Joint agreement recorded 2026-09-27 (product card `f6e7254b`)
+
+The product card now owns permanent recurring quantity changes and their one
+automatic mid-period true-up. That card records the source-linked
+`contract_change` settlement itself (`adjustment_source_kind`,
+`adjustment_source_id` = canonical revision id, `adjustment_source_revision` =
+revision version, `adjustment_scope = service`, `adjustment_base_amount`,
+`adjustment_reason`, half-open `adjustment_period_start/end`) and materializes
+it on the next eligible editable draft before this card's shared discount/tax
+pipeline runs. The amount is already resolved
+(`sign(delta) × ceil(ceil(|delta| × rate) × covered/full)`); it must not be
+prorated again.
+
+This card keeps the invoice-side manual partial-period calculator, its link to
+the contract scheduler, and its overlap warning, and adds no invoice-side
+contract-quantity writer. Its `evaluateContractInvoiceAdjustments` consumes the
+same source-linked rows; its eligible-base rule already excludes negative
+credit lines, so a mid-period decrease is never discounted and a mid-period
+increase is discounted once. No mid-period price policy is emitted by either
+card.
+
+Decision 6 above is amended accordingly: the product card emits the automatic
+mid-period true-up; this card consumes it and continues to gate only its own
+manual adjustments.

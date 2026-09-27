@@ -359,6 +359,7 @@
       "helpText": "Leave blank for no expiration or to use default expiration period"
     },
     "errors": {
+      "CLIENT_CONTRACT_NOT_FOUND": "The selected contract does not belong to this invoice's client.",
       "selectClient": "Please select a client",
       "invoiceNumberUnique": "This invoice number is already in use.",
       "noTaxRateConfigured": "No tax rate configured for the region.",
@@ -404,11 +405,14 @@
     },
     "partialPeriod": {
       "title": "Partial-period charge",
-      "help": "Resolved as units × period unit price × covered days / full-period days. The inputs are kept with the line so it stays intelligible.",
+      "help": "Choose a billed service. Its rate, service period, tax treatment and contract attribution are used to calculate a one-time adjustment.",
       "direction": "Direction",
       "increase": "Increase",
       "decrease": "Decrease (credit)",
       "units": "Units",
+      "source": "Select billed service",
+      "effectiveDate": "Effective date",
+      "sourceRate": "Rate {{rate}}",
       "unitPrice": "Unit price",
       "coveredDays": "Covered days",
       "fullPeriodDays": "Full-period days",
@@ -419,6 +423,7 @@
       "addCharge": "Add charge",
       "creditDescription": "Credit: {{proration}}",
       "errors": {
+        "source": "Choose a billed service with an unambiguous service period.",
         "units": "Units must be greater than zero.",
         "unitPrice": "Unit price must be a number.",
         "invalid": "Enter a valid partial period."

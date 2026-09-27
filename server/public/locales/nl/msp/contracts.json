@@ -2548,6 +2548,17 @@
     "dialog.createTitle": "Korting toevoegen",
     "dialog.editTitle": "Korting bewerken",
     "errors.loadFailed": "Kortingen laden mislukt.",
-    "errors.saveFailed": "Korting opslaan mislukt."
+    "errors.saveFailed": "Korting opslaan mislukt.",
+    "actions": {
+      "attach": "Koppelen",
+      "pickShared": "Bestaande korting koppelen",
+      "detach": "Loskoppelen van dit contract",
+      "toggleActive": "Kortingsstatus wijzigen"
+    },
+    "attachment": {
+      "shared": "Gedeeld · dit contract",
+      "line": "Regelgekoppeld"
+    },
+    "sharedEditNotice": "Deze definitie wordt gedeeld. Wijzigingen gelden voor alle gekoppelde contracten bij de volgende geschikte conceptverversing."
   }
 }

@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { Temporal } from '@js-temporal/polyfill';
 import {
   generateManualInvoice,
   getClientBillingEmailStatus,
@@ -34,7 +35,7 @@ import type { IClient } from '@alga-psa/types';
 import { ErrorBoundary } from 'react-error-boundary';
 import type { IService } from '@alga-psa/types';
 import { InvoiceViewModel, DiscountType, IInvoiceCharge, type ManualLineMetadata } from '@alga-psa/types';
-import { computePartialPeriodAmount } from '../../lib/billing/compute/contractInvoiceAdjustments';
+import { resolveSourceDerivedPartialPeriod } from '../../lib/billing/compute/contractInvoiceAdjustments';
 import type { JSX } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { PlusIcon, MinusCircleIcon } from 'lucide-react';
@@ -322,10 +323,9 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   const pendingOperationIdRef = useRef<string>(uuidv4());
   const [partialPeriodOpen, setPartialPeriodOpen] = useState(false);
   const [partialDirection, setPartialDirection] = useState<'increase' | 'decrease'>('increase');
-  const [partialUnits, setPartialUnits] = useState('3');
-  const [partialUnitPrice, setPartialUnitPrice] = useState('100');
-  const [partialCoveredDays, setPartialCoveredDays] = useState('15');
-  const [partialFullDays, setPartialFullDays] = useState('30');
+  const [partialUnits, setPartialUnits] = useState('');
+  const [partialSourceId, setPartialSourceId] = useState('');
+  const [partialEffectiveDate, setPartialEffectiveDate] = useState('');
   const [partialDescription, setPartialDescription] = useState('');
   const [partialReason, setPartialReason] = useState('');
   const [partialError, setPartialError] = useState<string | null>(null);
@@ -631,10 +631,9 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
 
   const resetPartialPeriodForm = () => {
     setPartialDirection('increase');
-    setPartialUnits('3');
-    setPartialUnitPrice('100');
-    setPartialCoveredDays('15');
-    setPartialFullDays('30');
+    setPartialUnits('');
+    setPartialSourceId('');
+    setPartialEffectiveDate('');
     setPartialDescription('');
     setPartialReason('');
     setPartialError(null);
@@ -642,26 +641,40 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
 
   const handleAddPartialPeriodCharge = () => {
     const units = Number(partialUnits);
-    const unitPriceMajor = Number(partialUnitPrice);
-    const coveredDays = Number(partialCoveredDays);
-    const fullPeriodDays = Number(partialFullDays);
-
+    const source = currentInvoiceData?.invoice_charges.find((item) => item.item_id === partialSourceId);
+    if (!source?.service_id || !source.service_period_start || !source.service_period_end) {
+      setPartialError(t('manualInvoices.partialPeriod.errors.source', { defaultValue: 'Choose a billed service with an unambiguous service period.' }));
+      return;
+    }
     if (!Number.isFinite(units) || units <= 0) {
       setPartialError(t('manualInvoices.partialPeriod.errors.units', { defaultValue: 'Units must be greater than zero.' }));
       return;
     }
-    if (!Number.isFinite(unitPriceMajor)) {
-      setPartialError(t('manualInvoices.partialPeriod.errors.unitPrice', { defaultValue: 'Unit price must be a number.' }));
-      return;
-    }
     try {
-      const unitPrice = Math.round(unitPriceMajor * 100);
-      const magnitude = computePartialPeriodAmount({ units, unitPrice, coveredDays, fullPeriodDays });
+      if (!partialEffectiveDate) throw new Error('Choose an effective date.');
+      const unitPrice = Math.abs(Number(source.unit_price));
+      const calculation = resolveSourceDerivedPartialPeriod({
+        units,
+        unitPrice,
+        effectiveDate: partialEffectiveDate,
+        servicePeriodStart: String(source.service_period_start),
+        servicePeriodEnd: String(source.service_period_end),
+        direction: partialDirection,
+      });
+      const periodStart = String(source.service_period_start).slice(0, 10);
+      const periodEnd = String(source.service_period_end).slice(0, 10);
+      const sourceMetadata = source.manual_line_metadata as ManualLineMetadata | null | undefined;
+      const hasStoredTaxChoice = Boolean(sourceMetadata && Object.prototype.hasOwnProperty.call(sourceMetadata, 'tax_rate_id'));
+      const sourceServiceTaxRateId = services.find((service) => service.service_id === source.service_id)?.tax_rate_id ?? null;
+      const inheritedTaxRateId = hasStoredTaxChoice
+        ? (sourceMetadata?.tax_rate_id as string | null)
+        : source.is_taxable === false
+          ? null
+          : sourceServiceTaxRateId ?? taxRateByRegion.get(source.tax_region ?? '') ?? undefined;
       // A decrease is the same proration reversed: it is a signed credit, not a
       // separate calculator. It persists as a negative non-discount rate, which
       // the manual writer already treats as a credit.
-      const resolvedAmount = partialDirection === 'decrease' ? -magnitude : magnitude;
-      const proration = `${units} × ${formatCurrency(unitPriceMajor, currencyCode)} × ${coveredDays}/${fullPeriodDays}`;
+      const proration = `${units} × ${formatCurrency(unitPrice / 100, currencyCode)} × ${calculation.coveredDays}/${calculation.fullPeriodDays}`;
       const defaultDescription = partialDirection === 'decrease'
         ? t('manualInvoices.partialPeriod.creditDescription', {
           defaultValue: 'Credit: {{proration}}',
@@ -672,14 +685,23 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
         ...baseDefaultItem,
         invoice_id: currentInvoiceData?.invoice_id || '',
         item_id: uuidv4(),
+        service_id: source.service_id,
+        client_contract_id: source.client_contract_id,
+        contract_line_id: source.contract_line_id,
+        location_id: source.location_id ?? null,
+        billing_profile_id: source.billing_profile_id ?? null,
         is_discount: false,
-        rate: resolvedAmount,
-        quantity: 1,
+        rate: calculation.unitPrice,
+        quantity: calculation.quantity,
         description: partialDescription.trim() || defaultDescription,
         isExisting: false,
-        is_taxable: true,
+        is_taxable: source.is_taxable ?? false,
+        tax_rate_id: inheritedTaxRateId,
+        tax_region: source.tax_region,
+        service_period_start: partialEffectiveDate,
+        service_period_end: String(source.service_period_end).slice(0, 10),
         manual_line_metadata: {
-          partialPeriod: { units, unitPrice, coveredDays, fullPeriodDays },
+          partialPeriod: { source_kind: 'invoice_charge', source_item_id: source.item_id, effective_date: partialEffectiveDate, source_period_start: periodStart, source_period_end: periodEnd, units, unitPrice, coveredDays: calculation.coveredDays, fullPeriodDays: calculation.fullPeriodDays, resolved_amount: calculation.amount },
           direction: partialDirection,
           reason: partialReason.trim() || undefined,
         },
@@ -869,7 +891,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           net_amount: 0, // Calculated backend
           is_manual: true,
           is_taxable: resolvePayloadTaxable(item), // Include is_taxable property
-          tax_rate_id: item.tax_rate_id ?? null,
+          tax_rate_id: item.tax_rate_id,
           is_discount: item.is_discount,
           discount_type: item.discount_type,
           discount_percentage: item.discount_percentage,
@@ -884,6 +906,8 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           manual_line_metadata: withTaxTreatmentMetadata(item),
           location_id: item.location_id ?? null,
           billing_profile_id: item.billing_profile_id ?? null,
+          service_period_start: item.service_period_start ?? null,
+          service_period_end: item.service_period_end ?? null,
           // Omit audit fields
         });
 
@@ -903,6 +927,9 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           manual_line_metadata: withTaxTreatmentMetadata(item),
           location_id: item.location_id ?? null,
           billing_profile_id: item.billing_profile_id ?? null,
+          client_contract_id: item.client_contract_id ?? null,
+          service_period_start: item.service_period_start ?? null,
+          service_period_end: item.service_period_end ?? null,
         });
 
         const updateResult = await updateInvoiceManualItems(currentInvoiceData.invoice_id, {
@@ -1123,18 +1150,27 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
 
   const partialPeriodPreview = (() => {
     try {
-      const unitPrice = Math.round(Number(partialUnitPrice) * 100);
-      const magnitude = computePartialPeriodAmount({
+      const source = currentInvoiceData?.invoice_charges.find((item) => item.item_id === partialSourceId);
+      if (!source?.service_id || !source.service_period_start || !source.service_period_end || !partialEffectiveDate) return null;
+      if (!Number.isFinite(Number(partialUnits)) || Number(partialUnits) <= 0) return null;
+      const calculation = resolveSourceDerivedPartialPeriod({
         units: Number(partialUnits),
-        unitPrice,
-        coveredDays: Number(partialCoveredDays),
-        fullPeriodDays: Number(partialFullDays),
+        unitPrice: Math.abs(Number(source.unit_price)),
+        effectiveDate: partialEffectiveDate,
+        servicePeriodStart: String(source.service_period_start),
+        servicePeriodEnd: String(source.service_period_end),
+        direction: partialDirection,
       });
-      return partialDirection === 'decrease' ? -magnitude : magnitude;
+      return calculation.amount;
     } catch {
       return null;
     }
   })();
+
+  const partialPeriodSources = (currentInvoiceData?.invoice_charges ?? [])
+    .filter((item) => !item.is_discount && item.service_id && item.service_period_start && item.service_period_end)
+    .map((item) => ({ value: item.item_id, label: `${item.description} · ${item.service_period_start} – ${item.service_period_end}` }));
+  const partialPeriodSource = currentInvoiceData?.invoice_charges.find((item) => item.item_id === partialSourceId);
 
   const serviceOptions: ServiceOption[] = services
     .filter((service) => service.is_active !== false)
@@ -1567,7 +1603,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                     </div>
                     <p className="text-xs text-muted-foreground">
                       {t('manualInvoices.partialPeriod.help', {
-                        defaultValue: 'Resolved as units × period unit price × covered days / full-period days. The inputs are kept with the line so it stays intelligible.',
+                        defaultValue: 'Choose a billed service. Its rate, service period, tax treatment and contract attribution are used to calculate a one-time adjustment.',
                       })}
                     </p>
                     {partialError && (
@@ -1595,49 +1631,33 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                         {t('manualInvoices.partialPeriod.decrease', { defaultValue: 'Decrease (credit)' })}
                       </Button>
                     </div>
-                    <div className="grid gap-3 sm:grid-cols-4">
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <SearchableSelect
+                        id="partial-period-source-select"
+                        value={partialSourceId}
+                        onChange={(value) => setPartialSourceId(value)}
+                        options={partialPeriodSources}
+                        placeholder={t('manualInvoices.partialPeriod.source', { defaultValue: 'Select billed service' })}
+                      />
                       <Input
                         id="partial-period-units-input"
                         label={t('manualInvoices.partialPeriod.units', { defaultValue: 'Units' })}
                         type="number"
                         min="0"
+                        required
                         step="0.01"
                         value={partialUnits}
                         onChange={(event) => setPartialUnits(event.target.value)}
                       />
-                      <Input
-                        id="partial-period-unit-price-input"
-                        label={t('manualInvoices.partialPeriod.unitPrice', { defaultValue: 'Unit price' })}
-                        type="number"
-                        step="0.01"
-                        value={partialUnitPrice}
-                        onChange={(event) => setPartialUnitPrice(event.target.value)}
-                      />
-                      <Input
-                        id="partial-period-covered-days-input"
-                        label={t('manualInvoices.partialPeriod.coveredDays', { defaultValue: 'Covered days' })}
-                        type="number"
-                        min="0"
-                        step="1"
-                        value={partialCoveredDays}
-                        onChange={(event) => setPartialCoveredDays(event.target.value)}
-                      />
-                      <Input
-                        id="partial-period-full-days-input"
-                        label={t('manualInvoices.partialPeriod.fullPeriodDays', { defaultValue: 'Full-period days' })}
-                        type="number"
-                        min="1"
-                        step="1"
-                        value={partialFullDays}
-                        onChange={(event) => setPartialFullDays(event.target.value)}
-                      />
+                      <Input id="partial-period-effective-date" label={t('manualInvoices.partialPeriod.effectiveDate', { defaultValue: 'Effective date' })} type="date" value={partialEffectiveDate} onChange={(event) => setPartialEffectiveDate(event.target.value)} required />
                     </div>
+                    {partialPeriodSource && <p className="text-xs text-muted-foreground">{partialPeriodSource.description}: {partialPeriodSource.service_period_start} – {partialPeriodSource.service_period_end} · {t('manualInvoices.partialPeriod.sourceRate', { defaultValue: 'Rate {{rate}}', rate: formatCurrency(Number(partialPeriodSource.unit_price) / 100, currencyCode) })} · {partialEffectiveDate && partialPeriodPreview !== null ? `${partialUnits} × ${formatCurrency(Math.abs(Number(partialPeriodSource.unit_price)) / 100, currencyCode)} × ${Temporal.PlainDate.from(partialEffectiveDate).until(Temporal.PlainDate.from(String(partialPeriodSource.service_period_end).slice(0, 10)), { largestUnit: 'days' }).days}/${Temporal.PlainDate.from(String(partialPeriodSource.service_period_start).slice(0, 10)).until(Temporal.PlainDate.from(String(partialPeriodSource.service_period_end).slice(0, 10)), { largestUnit: 'days' }).days}` : ''}</p>}
                     <Input
                       id="partial-period-description-input"
                       label={t('manualInvoices.partialPeriod.description', { defaultValue: 'Description (optional)' })}
                       value={partialDescription}
                       onChange={(event) => setPartialDescription(event.target.value)}
-                      placeholder={`${partialUnits} × ${partialUnitPrice} × ${partialCoveredDays}/${partialFullDays}`}
+                      placeholder={partialPeriodSource?.description ?? ''}
                     />
                     <Input
                       id="partial-period-reason-input"

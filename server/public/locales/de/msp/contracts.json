@@ -2548,6 +2548,20 @@
     "dialog.createTitle": "Rabatt hinzufügen",
     "dialog.editTitle": "Rabatt bearbeiten",
     "errors.loadFailed": "Rabatte konnten nicht geladen werden.",
-    "errors.saveFailed": "Der Rabatt konnte nicht gespeichert werden."
+    "errors.saveFailed": "Der Rabatt konnte nicht gespeichert werden.",
+    "actions": {
+      "attach": "Anhängen",
+      "pickShared": "Vorhandenen Rabatt anhängen",
+      "detach": "Von diesem Vertrag lösen",
+      "toggleActive": "Rabattstatus ändern"
+    },
+    "attachment": {
+      "shared": "Geteilt · dieser Vertrag",
+      "line": "Zeilenverknüpfung"
+    },
+    "sharedEditNotice": "Diese Definition wird gemeinsam genutzt. Änderungen gelten bei der nächsten geeigneten Aktualisierung des Entwurfs für alle verknüpften Verträge.",
+    "fields": {
+      "service": "Dienstleistung"
+    }
   }
 }

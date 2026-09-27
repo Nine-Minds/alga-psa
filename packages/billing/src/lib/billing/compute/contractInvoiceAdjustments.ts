@@ -12,6 +12,8 @@
  * resolved amounts are rounded, once.
  */
 
+import { Temporal } from '@js-temporal/polyfill';
+
 export type AdjustmentSourceKind = 'discount' | 'contract_change';
 export type DiscountScope = 'invoice' | 'contract' | 'service' | 'item';
 
@@ -122,6 +124,41 @@ export function computePartialPeriodAmount(input: PartialPeriodInput): number {
   return toIntegerMinorUnits((units * unitPrice * coveredDays) / fullPeriodDays);
 }
 
+export function resolveSourceDerivedPartialPeriod(input: {
+  units: number;
+  unitPrice: number;
+  effectiveDate: string;
+  servicePeriodStart: string;
+  servicePeriodEnd: string;
+  direction: 'increase' | 'decrease';
+}): { quantity: number; unitPrice: number; amount: number; coveredDays: number; fullPeriodDays: number } {
+  const start = Temporal.PlainDate.from(input.servicePeriodStart.slice(0, 10));
+  const end = Temporal.PlainDate.from(input.servicePeriodEnd.slice(0, 10));
+  const effective = Temporal.PlainDate.from(input.effectiveDate);
+  if (Temporal.PlainDate.compare(end, start) <= 0) throw new Error('The source service period is invalid.');
+  if (Temporal.PlainDate.compare(effective, start) < 0 || Temporal.PlainDate.compare(effective, end) >= 0) {
+    throw new Error('Effective date must fall inside the selected service period.');
+  }
+  if (!Number.isFinite(input.units) || input.units <= 0) throw new Error('Unit change must be greater than zero.');
+  if (!Number.isFinite(input.unitPrice) || input.unitPrice < 0) throw new Error('The source rate must be a non-negative amount.');
+  const fullPeriodDays = start.until(end, { largestUnit: 'days' }).days;
+  const coveredDays = effective.until(end, { largestUnit: 'days' }).days;
+  const magnitude = computePartialPeriodAmount({
+    units: input.units,
+    unitPrice: input.unitPrice,
+    coveredDays,
+    fullPeriodDays,
+  });
+  const sign = input.direction === 'decrease' ? -1 : 1;
+  return {
+    quantity: input.units * (coveredDays / fullPeriodDays),
+    unitPrice: sign * input.unitPrice,
+    amount: sign * magnitude,
+    coveredDays,
+    fullPeriodDays,
+  };
+}
+
 export function normalizeDiscountValue(policy: Pick<AutomaticDiscountPolicy, 'discount_type' | 'value' | 'valueUnit'>): number {
   if (policy.discount_type === 'fixed') {
     return Math.abs(toIntegerMinorUnits(policy.value));
@@ -163,14 +200,20 @@ function chargesInScope(
 ): InvoiceAdjustmentCharge[] {
   switch (policy.scope) {
     case 'invoice':
-      return eligible;
+      return eligible.filter(
+        (charge) => !policy.client_contract_id || charge.client_contract_id === policy.client_contract_id,
+      );
     case 'contract':
       return eligible.filter(
-        (charge) => Boolean(policy.client_contract_id) && charge.client_contract_id === policy.client_contract_id,
+        (charge) => Boolean(policy.client_contract_id)
+          && charge.client_contract_id === policy.client_contract_id
+          && (!policy.applies_to_service_id || charge.service_id === policy.applies_to_service_id),
       );
     case 'service':
       return eligible.filter(
-        (charge) => Boolean(policy.applies_to_service_id) && charge.service_id === policy.applies_to_service_id,
+        (charge) => Boolean(policy.applies_to_service_id)
+          && charge.service_id === policy.applies_to_service_id
+          && (!policy.client_contract_id || charge.client_contract_id === policy.client_contract_id),
       );
     case 'item':
       return eligible.filter(

@@ -20,6 +20,9 @@ export interface ManualInvoiceUpdate { // Add export
   tax_rate_id?: string | null;
   location_id?: string | null;
   billing_profile_id?: string | null;
+  client_contract_id?: string | null;
+  service_period_start?: string | null;
+  service_period_end?: string | null;
   applies_to_service_id?: string;
   manual_line_metadata?: Record<string, unknown> | null;
 }

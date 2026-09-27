@@ -18,7 +18,7 @@ export interface DiscountAuthoringInput {
   value: number;
   start_date: string;
   end_date?: string | null;
-  contract_line_id: string;
+  contract_line_id?: string | null;
   scope: DiscountAuthoringScope;
   scope_service_id?: string | null;
   applies_to_item_id?: string | null;
@@ -50,7 +50,6 @@ export function validateDiscountInput(input: DiscountAuthoringInput): string | n
     }
     if (input.end_date <= input.start_date) return 'End date must be after the start date.';
   }
-  if (!input.contract_line_id) return 'Select the contract line this discount applies to.';
   const validScopes: DiscountAuthoringScope[] = ['invoice', 'contract', 'service', 'item'];
   if (!validScopes.includes(input.scope)) return 'Choose a supported discount scope.';
   if (input.scope === 'item') {

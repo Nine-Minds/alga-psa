@@ -353,6 +353,73 @@ afterAll(async () => {
 });
 
 describe('contract invoice adjustments (DB-backed)', () => {
+  it('reconciles one shared definition per contract attachment, scopes manual charges, refreshes edits and detachments idempotently', async () => {
+    const assignmentA = uuidv4();
+    const assignmentB = uuidv4();
+    const sharedDiscountId = uuidv4();
+    const secondContractId = uuidv4();
+    const secondClientContractId = uuidv4();
+    await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: false });
+    await db('contracts').insert({
+      tenant, contract_id: secondContractId, contract_name: 'Second managed contract',
+      billing_frequency: 'monthly', is_active: true,
+    });
+    await db('client_contracts').insert({
+      tenant, client_contract_id: secondClientContractId, client_id: clientId,
+      contract_id: secondContractId, start_date: '2026-01-01T00:00:00.000Z', is_active: true,
+    });
+    await db('discounts').insert({
+      tenant, discount_id: sharedDiscountId, discount_name: 'Shared default',
+      discount_type: 'percentage', value: 0.1, start_date: '2026-01-01T00:00:00.000Z', is_active: true,
+      scope: 'contract', priority: 1,
+    });
+    await db('contract_discount_assignments').insert([
+      { tenant, assignment_id: assignmentA, contract_id: contractId, discount_id: sharedDiscountId },
+      { tenant, assignment_id: assignmentB, contract_id: secondContractId, discount_id: sharedDiscountId },
+    ]);
+    const fixture = await createDraftWithGeneratedChargeAndDiscount();
+    const attributedManualId = uuidv4();
+    const otherContractChargeId = uuidv4();
+    const unattributedManualId = uuidv4();
+    await db('invoice_charges').insert([
+      { tenant, item_id: attributedManualId, invoice_id: fixture.invoiceId, service_id: serviceId, description: 'Attributed manual charge', quantity: 1, unit_price: 10000, net_amount: 10000, total_price: 10000, tax_amount: 0, tax_rate: 0, is_manual: true, is_discount: false, is_taxable: false, client_contract_id: clientContractId, adjustment_source_kind: 'manual_adjustment' },
+      { tenant, item_id: otherContractChargeId, invoice_id: fixture.invoiceId, service_id: serviceId, description: 'Second contract charge', quantity: 1, unit_price: 200000, net_amount: 200000, total_price: 200000, tax_amount: 0, tax_rate: 0, is_manual: false, is_discount: false, is_taxable: false, client_contract_id: secondClientContractId },
+      { tenant, item_id: unattributedManualId, invoice_id: fixture.invoiceId, service_id: serviceId, description: 'Unattributed manual charge', quantity: 1, unit_price: 50000, net_amount: 50000, total_price: 50000, tax_amount: 0, tax_rate: 0, is_manual: true, is_discount: false, is_taxable: false, client_contract_id: null, adjustment_source_kind: 'manual_adjustment' },
+    ]);
+
+    await db.transaction(async (trx) => {
+      await reconcileAutomaticInvoiceDiscounts(trx, tenant, fixture.invoiceId);
+    });
+    let settlements = await db('invoice_charges').where({ tenant, invoice_id: fixture.invoiceId, adjustment_source_kind: 'discount' });
+    expect(settlements.map((row) => [row.adjustment_source_id, Number(row.adjustment_base_amount), Number(row.net_amount)]).sort())
+      .toEqual([[assignmentA, 400000, -40000], [assignmentB, 200000, -20000]].sort());
+    const initialIds = new Map(settlements.map((row) => [row.adjustment_source_id, row.item_id]));
+
+    await db.transaction(async (trx) => {
+      await reconcileAutomaticInvoiceDiscounts(trx, tenant, fixture.invoiceId);
+      await reconcileAutomaticInvoiceDiscounts(trx, tenant, fixture.invoiceId);
+    });
+    settlements = await db('invoice_charges').where({ tenant, invoice_id: fixture.invoiceId, adjustment_source_kind: 'discount' });
+    expect(settlements).toHaveLength(2);
+    expect(new Map(settlements.map((row) => [row.adjustment_source_id, row.item_id]))).toEqual(initialIds);
+
+    await db('discounts').where({ tenant, discount_id: sharedDiscountId }).update({ value: 0.2 });
+    await db.transaction(async (trx) => { await reconcileAutomaticInvoiceDiscounts(trx, tenant, fixture.invoiceId); });
+    settlements = await db('invoice_charges').where({ tenant, invoice_id: fixture.invoiceId, adjustment_source_kind: 'discount' });
+    expect(settlements.map((row) => [row.adjustment_source_id, Number(row.net_amount)]).sort())
+      .toEqual([[assignmentA, -80000], [assignmentB, -40000]].sort());
+    expect(new Map(settlements.map((row) => [row.adjustment_source_id, row.item_id]))).toEqual(initialIds);
+
+    await db('contract_discount_assignments').where({ tenant, assignment_id: assignmentB }).delete();
+    await db.transaction(async (trx) => { await reconcileAutomaticInvoiceDiscounts(trx, tenant, fixture.invoiceId); });
+    settlements = await db('invoice_charges').where({ tenant, invoice_id: fixture.invoiceId, adjustment_source_kind: 'discount' });
+    expect(settlements).toHaveLength(1);
+    expect(settlements[0].adjustment_source_id).toBe(assignmentA);
+    const preservedManualCount = await db('invoice_charges').where({ tenant, invoice_id: fixture.invoiceId })
+      .whereIn('item_id', [attributedManualId, unattributedManualId]).count('* as n').first();
+    expect(Number(preservedManualCount?.n)).toBe(2);
+  });
+
   it('re-applies the invoice-wide discount over generated + manual charges and preserves the manual line', async () => {
     const fixture = await createDraftWithGeneratedChargeAndDiscount();
     const manual = await insertManualPartialPeriodCharge({

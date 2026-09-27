@@ -330,7 +330,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'contract_line_service_fixed_config', 'contract_line_service_configuration',
   'contract_line_service_defaults', 'contract_pricing_schedules',
   'service_catalog_mode_defaults',
-  'service_rate_tiers', 'service_prices', 'contract_line_discounts', 'discounts',
+  'service_rate_tiers', 'service_prices', 'contract_line_discounts', 'contract_discount_assignments', 'discounts',
   'client_billing_cycles', 'client_billing_settings',
   'contract_line_services', 'contract_lines', 'contracts',
 

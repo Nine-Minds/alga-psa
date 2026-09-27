@@ -1,5 +1,59 @@
 # Contract invoice adjustments — UI smoke evidence
 
+## Draft Implementation review order — reusable contract discounts first
+
+The screenshots and smoke notes below are historical evidence from earlier
+revisions. They do not prove that this branch currently serves the UI. The
+app server was intentionally left stopped for this repair; fresh current-head
+browser, preview, and PDF evidence remains outstanding for the smoke step.
+
+Lead walkthrough:
+
+1. Define one reusable tenant discount (for example, a 10% default) from the
+   Mountain Dental contract's **Discounts** tab. Leave the contract-line field
+   empty so the attachment is independent of lines.
+2. Attach the same definition to Mountain Dental and a second client contract.
+   Confirm the second contract can select the existing definition from the
+   shared list. Editing the definition should state that all attached contracts
+   pick up the change on their next eligible draft refresh.
+3. Generate or refresh each contract's next editable invoice. On a consolidated
+   invoice, each attachment must use only positive eligible charges attributed
+   to its own client contract. Confirm one linked settlement per assignment,
+   with the expected eligible base and amount.
+4. Refresh each draft again. Confirm the source-linked settlement identity is
+   unchanged and no duplicate row appears. Detach from one contract, refresh,
+   and confirm that contract's automatic settlement is removed while the other
+   contract's attachment remains active.
+5. Edit the shared definition and refresh both eligible drafts. Confirm the new
+   amount on both drafts and confirm protected invoices remain unchanged.
+
+Then demonstrate the invoice editor: source-derived partial-period increase
+and decrease, manual line preservation through refresh, manual credits, tax
+handling, blocked invoice states and their supported next action. Re-seed
+`SMOKE-ADJ-1` through the repaired calculator so its partial-period row has a
+service reference; capture persisted totals, preview, and a downloaded PDF at
+the current head. Inspect accounting classification, without sending a live
+export. Do not use the historical screenshots below as current-head evidence.
+
+Fixture status: the historical `SMOKE-ADJ-1` database row still contains the
+old quantity-one partial-period representation documented later in this file.
+Re-seeding it requires the subsequent live-smoke step against the repaired
+UI; no server was started and no database fixture was changed during this
+implementation step.
+
+## Draft Implementation checks (2026-09-27)
+
+- `NODE_OPTIONS=--max-old-space-size=8192 npm run typecheck --workspace=@alga-psa/billing` — passed.
+- From `packages/billing`: `npx vitest run src/lib/billing/compute/contractInvoiceAdjustments.test.ts src/lib/billing/compute/invoiceAutomaticAdjustments.test.ts src/components/billing-dashboard/LineItem.test.tsx` — 3 files, 35 tests passed.
+- `npm run test:i18n` — passed; all supported locales and regenerated pseudo-locales pass translation validation, locale audits, untranslated-UI checks, and 32 tooling tests.
+- `npm run build --workspace=@alga-psa/billing` — passed (`tsup`).
+- `npx eslint packages/billing/src/actions/discountActions.ts packages/billing/src/actions/invoiceActions.ts packages/billing/src/actions/invoiceModification.ts packages/billing/src/services/invoiceService.ts packages/billing/src/services/invoiceAutomaticAdjustments.ts packages/billing/src/lib/billing/compute/contractInvoiceAdjustments.ts packages/billing/src/lib/billing/discountAuthoring.ts packages/billing/src/components/billing-dashboard/ManualInvoices.tsx packages/billing/src/components/billing-dashboard/contracts/ContractDiscounts.tsx packages/billing/src/lib/billing/compute/contractInvoiceAdjustments.test.ts packages/billing/src/lib/billing/compute/invoiceAutomaticAdjustments.test.ts packages/billing/src/services/contractInvoiceAdjustments.db.test.ts packages/types/src/interfaces/invoice.interfaces.ts server/migrations/20260927010000_add_contract_discount_assignments.cjs packages/db/src/lib/tenantTableMetadata.ts ee/temporal-workflows/src/activities/tenant-deletion-activities.ts` — 0 errors, 131 warnings.
+- `node --check server/migrations/20260927010000_add_contract_discount_assignments.cjs` and `git diff --check` — passed.
+- `cd server && npx knex migrate:status --knexfile knexfile.cjs --env migration` — could not inspect migration/schema state: PostgreSQL refused `127.0.0.1:5432` (`ECONNREFUSED`). The migration was not applied.
+- `ss -ltnp 2>/dev/null | rg ':(3185|3000|3001|3002)\b' || true` — no matching current-head endpoint was listening.
+- DB-backed assignment test was added to `packages/billing/src/services/contractInvoiceAdjustments.db.test.ts`, but could not run without the database. No development migration was applied.
+- No reachable current-head app endpoint was listening on ports 3000/3001/3002/3185. Fresh UI smoke, fixture reseed, preview, downloaded PDF, and accounting classification inspection remain outstanding. The app was not started and no live export was sent.
+
 Card: `b97eda7b-0e3f-4b09-be80-6b57f934d8a5`
 Run at: 2026-09-23, worktree dev server on `http://localhost:3185` (compose project `alga-psa-local-test`, database `server` on Postgres 5472).
 

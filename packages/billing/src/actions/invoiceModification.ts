@@ -336,6 +336,9 @@ export interface ManualInvoiceUpdate {
   location_id?: string | null;
   /** Explicit billing profile for the manual line. */
   billing_profile_id?: string | null;
+  client_contract_id?: string | null;
+  service_period_start?: string | null;
+  service_period_end?: string | null;
   /** Service-level discount target (resolved to an item id on save). */
   applies_to_service_id?: string;
   /** Partial-period inputs and reason, kept alongside the resolved amount. */
@@ -1933,6 +1936,40 @@ async function updateManualInvoiceItemsInternal(
       throw expectedInvoiceActionError('Client not found');
     }
 
+    // A partial-period row must remain grounded in a charge on this invoice.
+    // Validate the client-supplied source identity again under the invoice lock
+    // so stale or forged service/period data cannot be persisted.
+    const partialRows = [
+      ...(changes.newItems ?? []),
+      ...(changes.updatedItems ?? []),
+    ] as Array<Record<string, unknown>>;
+    for (const item of partialRows) {
+      const metadata = item.manual_line_metadata as Record<string, unknown> | null | undefined;
+      const partial = metadata?.partialPeriod as Record<string, unknown> | undefined;
+      // Historical partial-period rows predate source links; keep those
+      // editable. New calculator rows opt into strict source validation.
+      if (!partial || partial.source_kind !== 'invoice_charge') continue;
+      const sourceId = typeof partial.source_item_id === 'string' ? partial.source_item_id : '';
+      const source = sourceId ? await tenantScopedTable(trx, tenant, 'invoice_charges')
+        .where({ item_id: sourceId, invoice_id: invoiceId })
+        .first('service_id', 'service_period_start', 'service_period_end') : null;
+      const dateOnly = (value: unknown) => value == null
+        ? null
+        : value instanceof Date ? value.toISOString().slice(0, 10) : String(value).slice(0, 10);
+      const effective = dateOnly(partial.effective_date);
+      const sourceStart = dateOnly(source?.service_period_start);
+      const sourceEnd = dateOnly(source?.service_period_end);
+      if (!source || !source.service_id || !sourceStart || !sourceEnd || source.service_id !== item.service_id
+        || dateOnly(source.service_period_start) !== dateOnly(partial.source_period_start)
+        || dateOnly(source.service_period_end) !== dateOnly(partial.source_period_end)
+        || dateOnly(item.service_period_start) !== effective
+        || !effective
+        || effective < sourceStart
+        || effective >= sourceEnd) {
+        throw expectedInvoiceActionError('The partial-period source is no longer represented on this invoice or its service period changed. Reopen the calculator and choose a current billed service.');
+      }
+    }
+
     // Attribution ids on an edit must belong to this invoice's client; the
     // editor's selects are not an authorization boundary.
     await validateManualChargeAttribution(
@@ -2073,6 +2110,9 @@ async function updateManualInvoiceItemsInternal(
           applies_to_service_id: item.applies_to_service_id,
           location_id: item.location_id,
           billing_profile_id: item.billing_profile_id,
+          client_contract_id: item.client_contract_id,
+          service_period_start: item.service_period_start,
+          service_period_end: item.service_period_end,
           is_taxable: hasExplicitTaxTreatment ? Boolean(explicitTaxRateId) : item.is_taxable,
           tax_region: resolvedTaxRegion,
           manual_line_metadata: item.manual_line_metadata !== undefined
@@ -2207,6 +2247,9 @@ async function updateManualInvoiceItemsInternal(
           // Step 1 of the resolution chain; persistManualInvoiceCharges falls
           // through to the client default when unset (F033).
           billing_profile_id: item.billing_profile_id ?? null,
+          client_contract_id: item.client_contract_id ?? null,
+          service_period_start: item.service_period_start ?? null,
+          service_period_end: item.service_period_end ?? null,
           manual_line_metadata: (item as any).manual_line_metadata ?? null,
           adjustment_source_kind: (item as any).adjustment_source_kind ?? 'manual_adjustment',
           adjustment_source_id: (item as any).adjustment_source_id ?? null,

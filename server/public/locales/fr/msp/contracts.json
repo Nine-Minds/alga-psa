@@ -534,7 +534,7 @@
       "rate": "Tarif",
       "services": "Services",
       "type": "Type",
-      "dates": "Dates"
+      "dates": "Périodes"
     },
     "configuration": {
       "description": "Paramètres qui s'appliquent à cette ligne de contrat",
@@ -2548,6 +2548,23 @@
     "dialog.createTitle": "Ajouter une remise",
     "dialog.editTitle": "Modifier la remise",
     "errors.loadFailed": "Échec du chargement des remises.",
-    "errors.saveFailed": "Échec de l'enregistrement de la remise."
+    "errors.saveFailed": "Échec de l'enregistrement de la remise.",
+    "actions": {
+      "attach": "Associer",
+      "pickShared": "Associer une remise existante",
+      "detach": "Dissocier de ce contrat",
+      "toggleActive": "Modifier le statut de la remise"
+    },
+    "attachment": {
+      "shared": "Partagée · ce contrat",
+      "line": "Association à une ligne"
+    },
+    "sharedEditNotice": "Cette définition est partagée. Les modifications s’appliqueront à tous les contrats associés lors de leur prochaine actualisation de brouillon admissible.",
+    "columns": {
+      "dates": "Périodes"
+    },
+    "status": {
+      "inactive": "Inactif"
+    }
   }
 }
