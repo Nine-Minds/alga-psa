@@ -106,7 +106,7 @@ describe('comment attachment delivery over isolated SMTP', () => {
     const event = { id: randomUUID(), eventType: 'TICKET_COMMENT_ADDED', payload: { tenantId: tenant, ticketId: ticket, actorUserId: actor,
       comment: { id: comment, content: row.note, author: 'Agent', isInternal: false } } } as any;
     const send = mode === 'direct'
-      ? () => dbModule.runWithTenant(tenant, () => sendEventEmail({ tenantId: tenant, to: recipient, subject: 'Attachment smoke', template: 'ticket-comment-added', locale: 'en',
+      ? () => dbModule.runWithTenant(tenant, () => sendEventEmail({ mailClass: 'ticket', tenantId: tenant, to: recipient, subject: 'Attachment smoke', template: 'ticket-comment-added', locale: 'en',
         context: { ticket: { id: 'SMTP-1', title: 'Comment attachment SMTP smoke' }, comment: { content: row.note, author: 'Agent' } },
         replyContext: { ticketId: ticket, commentId: comment } }))
       : () => ticketEmailSubscriberTestHarness.handleTicketCommentAdded(event);

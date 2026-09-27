@@ -54,6 +54,10 @@ export {
  * Synced from cli/cleanup-tenant.nu
  */
 const TENANT_TABLES_DELETION_ORDER: string[] = [
+  // Outbound sender routes reference sender addresses and boards; addresses
+  // also reference email providers. Delete the route rows first, then senders,
+  // before any of those parent tables.
+  'email_sender_routes', 'email_sender_addresses',
   // === LEVEL 0: Sessions (CRITICAL - must be deleted before users/tenants) ===
   'sessions',
 

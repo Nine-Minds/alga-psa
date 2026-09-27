@@ -748,7 +748,7 @@
       "domainRemovalScheduledWithClear": "Rimozione del dominio pianificata e indirizzo mittente per ticketing cancellato",
       "removeDomainFailed": "Impossibile rimuovere il dominio",
       "testOutboundFailed": "Test dell'e-mail in uscita non riuscito",
-      "senderIdentitiesUpdated": "Identità dei mittenti aggiornate."
+      "senderSettingsUpdated": "Identità dei mittenti aggiornate."
     },
     "tabs": {
       "inboundEmail": "Email in entrata",
@@ -842,39 +842,6 @@
         "description": "I messaggi vengono inviati dalla casella selezionata tramite Microsoft Graph e salvati in Posta inviata.",
         "loadFailed": "Impossibile caricare le caselle Microsoft 365.",
         "saved": "Casella di invio aggiornata."
-      },
-      "senderIdentities": {
-        "ticket": {
-          "title": "Identità email dei ticket",
-          "description": "Le risposte alle email dei ticket devono tornare a questo indirizzo affinché possano essere associate e aggiunte al ticket. Usa una casella di posta connessa e monitorata.",
-          "connectedInboxLabel": "Casella di posta connessa",
-          "connectedInboxHelp": "Una casella di posta connessa mantiene le risposte dei clienti nella conversazione del ticket.",
-          "customAddressOption": "Usa un altro indirizzo",
-          "addressLabel": "Indirizzo mittente",
-          "addressPlaceholder": "support@example.com",
-          "addressHelp": "Questo indirizzo controlla l’instradamento delle risposte solo per le email dei ticket.",
-          "microsoftAddressHelp": "Microsoft 365 richiede che per le email dei ticket venga usata la casella di posta mittente selezionata ({{mailbox}}).",
-          "nameLabel": "Nome visualizzato del mittente",
-          "namePlaceholder": "Assistenza",
-          "nameHelp": "Lascia vuoto per usare il nome della casella di posta connessa o della bacheca dei ticket."
-        },
-        "notification": {
-          "title": "Identità per tutte le altre email",
-          "description": "Inviti al portale personalizzato, reimpostazioni della password, fatture, aggiornamenti dei progetti e notifiche generali, indipendentemente dall’instradamento dei ticket.",
-          "addressLabel": "Indirizzo mittente",
-          "addressPlaceholder": "notifications@example.com",
-          "smtpAddressHelp": "Impostato dall'Indirizzo mittente nella configurazione SMTP qui sopra. Tutte le email non relative ai ticket vengono inviate da questo indirizzo.",
-          "lockedAddressHelp": "Questo indirizzo è determinato dal dominio gestito attivo o dalla casella di posta Microsoft 365 selezionata.",
-          "nameLabel": "Nome visualizzato del mittente",
-          "namePlaceholder": "Nome della tua azienda",
-          "nameHelp": "Lascia vuoto per usare automaticamente {{company}}.",
-          "companyFallback": "l’azienda del tuo tenant"
-        },
-        "warningTitle": "Controlla l’instradamento delle risposte",
-        "errorTitle": "Correggi l’identità dei ticket",
-        "clearButton": "Cancella l’identità dei ticket",
-        "savingButton": "Salvataggio...",
-        "saveButton": "Salva identità dei mittenti"
       }
     },
     "inbound": {

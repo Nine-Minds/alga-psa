@@ -5,6 +5,10 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PartialBlock } from '@blocknote/core';
 
+vi.mock('@alga-psa/email/senderActions', () => ({
+  listSelectableSenders: vi.fn(async () => ({ senders: [], effectiveSenderId: null, effectiveSenderAddress: 'provider@example.test', effectiveSenderDisplayName: 'Provider', allowOverride: false })),
+}));
+
 const editorMounts: Array<{ initialContent: unknown; mountedAt: number }> = [];
 let editorMountSeq = 0;
 let latestOnChange: ((blocks: PartialBlock[]) => void) | null = null;

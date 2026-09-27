@@ -5,6 +5,10 @@ import smtpSink from '../../../emulators/smtp-sink/src/index';
 
 const mocks = vi.hoisted(() => ({
   invoiceById: new Map<string, any>(),
+  sender: {
+    sender_id: 'sender-billing', tenant: 'tenant-test', email_address: 'accounts@billing-profile.test',
+    display_name: 'Accounts', verification_status: 'verified',
+  },
   createTenantKnex: vi.fn(async () => ({ knex: {} })),
   generateAndStore: vi.fn(async ({ invoiceId }: { invoiceId: string }) => ({ file_id: `file-${invoiceId}` })),
   downloadFile: vi.fn(async () => ({ buffer: Buffer.from('%PDF-test') })),
@@ -23,11 +27,27 @@ vi.mock('@alga-psa/auth', () => ({
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: vi.fn(async () => true) }));
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: mocks.createTenantKnex,
+  getConnection: vi.fn(async () => ({})),
+  isTenantSuspended: vi.fn(async () => false),
   tenantDb: () => ({
-    table: () => {
+    tenantJoin: () => undefined,
+    table: (tableName: string) => {
       const query: any = {
         where: () => query,
-        first: async () => ({
+        whereNull: () => query,
+        tenantJoin: () => query,
+        select: () => query,
+        then: (resolve: (value: any) => unknown) => Promise.resolve(
+          tableName === 'email_sender_addresses' ? [mocks.sender]
+            : tableName === 'email_sender_routes' ? [{ tenant: 'tenant-test', route_type: 'mail_class', mail_class: 'billing', sender_id: mocks.sender.sender_id }]
+            : [],
+        ).then(resolve),
+        first: async () => tableName === 'tenant_companies as tc' ? undefined
+          : tableName === 'tenants' ? ({ client_name: 'Test MSP' })
+          : tableName === 'tenant_email_settings' ? ({
+          email_provider: 'smtp',
+          provider_configs: [{ providerId: 'smtp-provider', providerType: 'smtp', isEnabled: true, config: { host: '127.0.0.1', port: Number(process.env.EMAIL_PORT), secure: false, from: process.env.EMAIL_FROM } }],
+        }) : ({
           subject: 'Invoice {{invoice.number}}',
           html_content: '<p>{{invoice.invoiceDate}} / {{invoice.dueDate}}</p>',
           text_content: '{{invoice.invoiceDate}} / {{invoice.dueDate}}',
@@ -37,7 +57,7 @@ vi.mock('@alga-psa/db', () => ({
     },
   }),
 }));
-vi.mock('@alga-psa/core/logger', () => ({ default: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
+vi.mock('@alga-psa/core/logger', () => ({ default: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 vi.mock('@alga-psa/storage/StorageService', () => ({ StorageService: { downloadFile: mocks.downloadFile } }));
 vi.mock('@alga-psa/notifications/notifications/emailLocaleResolver', () => ({
   resolveEmailLocale: vi.fn(async () => 'en-US'),
@@ -110,7 +130,7 @@ function invoice(invoiceId: string, paymentMethod: 'check' | 'bank_transfer') {
 
 async function capturedEmails() {
   const response = await fetch(`${controlUrl}/control/smtp-sink/state/emails`);
-  const body = await response.json() as { result: Array<{ to: string[]; subject: string; html: string; text: string }> };
+  const body = await response.json() as { result: Array<{ from: string; to: string[]; subject: string; html: string; text: string }> };
   return body.result;
 }
 
@@ -183,6 +203,7 @@ describe('invoice email calendar dates and real SMTP delivery', () => {
       })));
     }
     for (const email of emails) {
+      expect(email.from).toBe('"Accounts" <accounts@billing-profile.test>');
       expect(email.to).toContain('billing@example.test');
       expect(email.html).toContain('October 10, 2026 / October 10, 2026');
       expect(email.text).toContain('October 10, 2026 / October 10, 2026');

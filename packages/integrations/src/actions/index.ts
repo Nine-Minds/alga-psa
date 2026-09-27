@@ -91,6 +91,16 @@ export type {
   MicrosoftOutboundMailboxOption,
 } from './email-actions/emailSettingsActions';
 export {
+  listEmailSenders,
+  listSelectableSenders,
+  createEmailSender,
+  updateEmailSender,
+  deleteEmailSender,
+  verifyEmailSender,
+  setEmailSenderRoute,
+  clearEmailSenderRoute,
+} from './email-actions/emailSenderActions';
+export {
   getInboundTicketDefaults,
   createInboundTicketDefaults,
   updateInboundTicketDefaults,

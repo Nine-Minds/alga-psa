@@ -9,7 +9,8 @@
       "edit": "Editar",
       "delete": "Eliminar",
       "deleting": "Eliminando…",
-      "verify": "Verificar"
+      "verify": "Verificar",
+      "cancel": "Cancelar"
     },
     "states": {
       "active": "Activo",
@@ -226,7 +227,53 @@
         "companyFallback": "la empresa de su inquilino"
       },
       "warningTitle": "Revise el enrutamiento de respuestas",
-      "errorTitle": "Corrija la identidad de tickets"
+      "errorTitle": "Corrija la identidad de tickets",
+      "addresses": {
+        "title": "Direcciones de remitente",
+        "description": "Cree direcciones con nombre para sus correos salientes."
+      },
+      "routing": {
+        "title": "Enrutamiento de remitentes",
+        "description": "Elige qué remitente se usa para cada tipo de correo.",
+        "default": "Predeterminado (todo el resto del correo)",
+        "useDefault": "Usar predeterminado",
+        "sender": "Remitente",
+        "displayName": "Nombre mostrado",
+        "boardSummary": "Los remitentes de tickets por tablero se administran en la configuración de cada tablero.",
+        "ticket": "Correo de tickets",
+        "project": "Correo de proyectos",
+        "billing": "Correo de facturación",
+        "sales": "Correo de ventas",
+        "scheduling": "Correo de programación",
+        "survey": "Correo de encuestas",
+        "account": "Correo de cuentas",
+        "general": "Correo general",
+        "noneProviderFrom": "Ninguno (usar remitente del proveedor)",
+        "confirmSmtp": "Confirmo que el servidor SMTP acepta esta dirección del remitente.",
+        "inboundReplyWarning": "Las respuestas entrantes seguirán llegando al buzón configurado; cambiar esta dirección no cambia el enrutamiento de respuestas.",
+        "unknownBoard": "Tablero desconocido"
+      },
+      "actions": {
+        "add": "Añadir remitente",
+        "verify": "Verificar",
+        "delete": "Eliminar"
+      },
+      "fields": {
+        "address": "Dirección de correo",
+        "localPart": "Nombre de dirección",
+        "domain": "Dominio verificado",
+        "sendThrough": "Enviar mediante",
+        "displayName": "Nombre mostrado",
+        "displayNamePlaceholder": "Equipo de soporte"
+      },
+      "smtpHelp": "Su servidor SMTP debe permitir esta dirección.",
+      "microsoftHelp": "El buzón conectado necesita permiso Send As de Exchange para esta dirección.",
+      "errors": {
+        "duplicateAddress": "Esta dirección de remitente ya existe.",
+        "saveFailed": "No se pudo añadir el remitente. Compruebe la dirección e inténtelo de nuevo.",
+        "duplicateRoute": "Esta ruta de remitente ya existe.",
+        "saveRoutingFailed": "No se pudo guardar la ruta del remitente. Inténtelo de nuevo."
+      }
     }
   },
   "microsoft365": {

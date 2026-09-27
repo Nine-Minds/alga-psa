@@ -29,6 +29,7 @@ export * from './lib/telemetry';
 export * from './lib/tenancy';
 export * from './lib/onboardingWizard';
 export * from './lib/knowledgeBase';
+export * from './lib/senderActionResult';
 export * from './search';
 export * from './deletion';
 export * from './constants/index';
@@ -45,6 +46,9 @@ export type {
   DnsRecord,
   DnsLookupResult,
   TenantEmailSettings,
+  OutboundMailClass,
+  OutboundEmailSender,
+  OutboundEmailRoute,
   IEmailProvider,
   IEmailProviderManager
 } from './lib/email';

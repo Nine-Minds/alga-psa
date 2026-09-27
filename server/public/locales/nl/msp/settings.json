@@ -830,7 +830,17 @@
         }
       },
       "empty": "Geen borden gevonden.",
-      "searchPlaceholder": "Borden zoeken…"
+      "searchPlaceholder": "Borden zoeken…",
+      "emailSender": {
+        "useDefault": "Ticketstandaard gebruiken",
+        "duplicateRoute": "Deze afzenderroute bestaat al.",
+        "saveFailed": "Ticketafzender opslaan is mislukt. Probeer het opnieuw.",
+        "label": "Afzender voor uitgaande e-mail",
+        "inboundWarning": "Deze afzender wordt gebruikt voor uitgaande ticket-e-mail. De instellingen voor inkomende e-mail blijven ongewijzigd.",
+        "displayName": "Weergavenaam",
+        "save": "Afzender opslaan",
+        "saved": "Afzender opgeslagen"
+      }
     },
     "priorities": {
       "title": {
@@ -3476,5 +3486,8 @@
       "nothingToRetry": "Er is geen mislukte registratie van een aangepast domein om opnieuw te proberen.",
       "retryOnlyAfterFailure": "Opnieuw proberen is alleen mogelijk na een mislukte registratie."
     }
+  },
+  "common": {
+    "saving": "Opslaan…"
   }
 }

@@ -10,6 +10,24 @@ test.use({ emulatorProviders: ['smtp-sink'] });
 const INLINE_PNG_BASE64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=';
 
+async function seedTicketOutboundSender(database: any, tenantId: string, emailAddress: string): Promise<void> {
+  const senderId = randomUUID();
+  await database('email_sender_addresses').insert({
+    tenant: tenantId,
+    sender_id: senderId,
+    email_address: emailAddress.toLowerCase(),
+    display_name: 'Support',
+    verification_status: 'verified',
+    verified_at: new Date(),
+  });
+  await database('email_sender_routes').insert({
+    tenant: tenantId,
+    route_type: 'mail_class',
+    mail_class: 'ticket',
+    sender_id: senderId,
+  });
+}
+
 // A tiny but structurally valid PCM WAV, so a real voicemail-style audio
 // attachment travels the same MIME path a phone system would produce.
 function buildWavBytes(): Buffer {
@@ -102,6 +120,7 @@ test('built email service ingests MIME, preserves inline quotations, threads rep
       config: { host: 'algasim', port: 4040, secure: false, from: mailbox,
         username: '', password: '', requireTLS: false } }]),
   });
+  await seedTicketOutboundSender(database, tenant.tenantId, mailbox);
 
   await signIn(page, { email: tenant.admin.email, password: credentials.password });
   await page.goto('/msp/settings/integrations?category=communication');
@@ -393,6 +412,7 @@ test('durable enforce resolves inline cid images in the stored description, comm
       config: { host: 'algasim', port: 4040, secure: false, from: mailbox,
         username: '', password: '', requireTLS: false } }]),
   });
+  await seedTicketOutboundSender(database, tenant.tenantId, mailbox);
   await signIn(page, { email: tenant.admin.email, password: credentials.password });
   await page.goto('/msp/settings/integrations?category=communication');
   await page.locator('#add-provider-btn').click();

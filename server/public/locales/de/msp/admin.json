@@ -9,7 +9,8 @@
       "edit": "Bearbeiten",
       "delete": "Löschen",
       "deleting": "Wird gelöscht…",
-      "verify": "Überprüfen"
+      "verify": "Überprüfen",
+      "cancel": "Abbrechen"
     },
     "states": {
       "active": "Aktiv",
@@ -226,7 +227,53 @@
         "companyFallback": "Ihr Mandantenunternehmen"
       },
       "warningTitle": "Antwort-Routing prüfen",
-      "errorTitle": "Absenderidentität für Tickets korrigieren"
+      "errorTitle": "Absenderidentität für Tickets korrigieren",
+      "addresses": {
+        "title": "Absenderadressen",
+        "description": "Erstelle benannte Adressen für ausgehende E-Mails."
+      },
+      "routing": {
+        "title": "Absenderzuordnung",
+        "description": "Wählen Sie den Absender für jede E-Mail-Klasse.",
+        "default": "Standard (alle übrigen E-Mails)",
+        "useDefault": "Standard verwenden",
+        "sender": "Absender",
+        "displayName": "Anzeigename",
+        "boardSummary": "Ticketabsender pro Board werden in den Einstellungen des jeweiligen Boards verwaltet.",
+        "ticket": "Ticket-E-Mail",
+        "project": "Projekt-E-Mail",
+        "billing": "Abrechnung-E-Mail",
+        "sales": "Vertriebs-E-Mail",
+        "scheduling": "Terminplanungs-E-Mail",
+        "survey": "Umfrage-E-Mail",
+        "account": "Konto-E-Mail",
+        "general": "Allgemeine E-Mail",
+        "noneProviderFrom": "Keine (Provider-Absender verwenden)",
+        "confirmSmtp": "Ich bestätige, dass das SMTP-Relay diese Absenderadresse akzeptiert.",
+        "inboundReplyWarning": "Eingehende Antworten gehen weiterhin an das konfigurierte Postfach; eine Änderung dieser Absenderadresse ändert nicht die Antwortzustellung.",
+        "unknownBoard": "Unbekanntes Board"
+      },
+      "actions": {
+        "add": "Absender hinzufügen",
+        "verify": "Verifizieren",
+        "delete": "Löschen"
+      },
+      "fields": {
+        "address": "E-Mail-Adresse",
+        "localPart": "Adressname",
+        "domain": "Verifizierte Domain",
+        "sendThrough": "Senden über",
+        "displayName": "Anzeigename",
+        "displayNamePlaceholder": "Supportteam"
+      },
+      "smtpHelp": "Ihr SMTP-Relay muss diese Adresse erlauben.",
+      "microsoftHelp": "Das verbundene Postfach benötigt die Exchange-Berechtigung „Send As“ für diese Adresse.",
+      "errors": {
+        "duplicateAddress": "Diese Absenderadresse ist bereits vorhanden.",
+        "saveFailed": "Absender konnte nicht hinzugefügt werden. Prüfen Sie die Adresse und versuchen Sie es erneut.",
+        "duplicateRoute": "Diese Absenderroute ist bereits vorhanden.",
+        "saveRoutingFailed": "Absenderzuordnung konnte nicht gespeichert werden. Bitte versuchen Sie es erneut."
+      }
     }
   },
   "microsoft365": {

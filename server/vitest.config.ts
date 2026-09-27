@@ -289,6 +289,7 @@ export default defineConfig({
       { find: /^@alga-psa\/surveys$/, replacement: path.resolve(__dirname, '../packages/surveys/src/index.ts') },
       { find: /^@alga-psa\/surveys\/(.*)$/, replacement: path.resolve(__dirname, '../packages/surveys/src/$1') },
       { find: /^@alga-psa\/integrations$/, replacement: path.resolve(__dirname, '../packages/integrations/src/index.ts') },
+      { find: /^@alga-psa\/integrations\/emailSenderActions$/, replacement: path.resolve(__dirname, '../packages/integrations/src/actions/email-actions/emailSenderActions.ts') },
       { find: /^@alga-psa\/integrations\/(.*)$/, replacement: path.resolve(__dirname, '../packages/integrations/src/$1') },
       { find: /^@alga-psa\/client-portal$/, replacement: path.resolve(__dirname, '../packages/client-portal/src/index.ts') },
       { find: /^@alga-psa\/client-portal\/(.*)$/, replacement: path.resolve(__dirname, '../packages/client-portal/src/$1') },

@@ -9,7 +9,8 @@
       "edit": "Edytuj",
       "delete": "Usuń",
       "deleting": "Usuwanie…",
-      "verify": "Zweryfikuj"
+      "verify": "Zweryfikuj",
+      "cancel": "Anuluj"
     },
     "states": {
       "active": "Aktywny",
@@ -226,7 +227,53 @@
         "companyFallback": "Twoja organizacja"
       },
       "warningTitle": "Sprawdź routing odpowiedzi",
-      "errorTitle": "Popraw tożsamość nadawcy zgłoszeń"
+      "errorTitle": "Popraw tożsamość nadawcy zgłoszeń",
+      "addresses": {
+        "title": "Adresy nadawców",
+        "description": "Twórz nazwane adresy do wysyłania poczty."
+      },
+      "routing": {
+        "title": "Reguły nadawców",
+        "description": "Wybierz nadawcę dla każdej klasy wiadomości.",
+        "default": "Domyślnie (pozostałe wiadomości)",
+        "useDefault": "Użyj domyślnego",
+        "sender": "Nadawca",
+        "displayName": "Nazwa wyświetlana",
+        "boardSummary": "Nadawców wiadomości zgłoszeń dla tablicy ustawisz w ustawieniach tej tablicy.",
+        "ticket": "E-mail zgłoszenia",
+        "project": "E-mail projektu",
+        "billing": "E-mail rozliczeniowy",
+        "sales": "E-mail sprzedażowy",
+        "scheduling": "E-mail harmonogramu",
+        "survey": "E-mail ankiety",
+        "account": "E-mail konta",
+        "general": "E-mail ogólny",
+        "noneProviderFrom": "Brak (użyj adresu nadawcy dostawcy)",
+        "confirmSmtp": "Potwierdzam, że serwer SMTP akceptuje ten adres nadawcy.",
+        "inboundReplyWarning": "Odpowiedzi przychodzące nadal trafiają do skonfigurowanej skrzynki; zmiana tego adresu nie zmienia kierowania odpowiedzi.",
+        "unknownBoard": "Nieznana tablica"
+      },
+      "actions": {
+        "add": "Dodaj nadawcę",
+        "verify": "Zweryfikuj",
+        "delete": "Usuń"
+      },
+      "fields": {
+        "address": "Adres e-mail",
+        "localPart": "Nazwa adresu",
+        "domain": "Zweryfikowana domena",
+        "sendThrough": "Wysyłaj przez",
+        "displayName": "Nazwa wyświetlana",
+        "displayNamePlaceholder": "Zespół pomocy"
+      },
+      "smtpHelp": "Twój serwer SMTP musi zezwalać na ten adres.",
+      "microsoftHelp": "Połączona skrzynka musi mieć uprawnienie Exchange Send As dla tego adresu.",
+      "errors": {
+        "duplicateAddress": "Ten adres nadawcy już istnieje.",
+        "saveFailed": "Nie można dodać nadawcy. Sprawdź adres i spróbuj ponownie.",
+        "duplicateRoute": "Ta trasa nadawcy już istnieje.",
+        "saveRoutingFailed": "Nie można zapisać trasy nadawcy. Spróbuj ponownie."
+      }
     }
   },
   "microsoft365": {
