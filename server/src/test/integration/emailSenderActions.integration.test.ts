@@ -8,7 +8,7 @@ vi.mock('@alga-psa/auth', () => ({
 }));
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: async () => true }));
 
-import { clearEmailSenderRoute, createEmailSender, deleteEmailSender, listEmailSenders, setEmailSenderRoute } from '@alga-psa/integrations/actions';
+let senderActions: typeof import('@alga-psa/integrations/actions');
 
 describe('email sender actions persistence', () => {
   let db: Knex;
@@ -20,6 +20,9 @@ describe('email sender actions persistence', () => {
     originalServerDatabaseName = process.env.DB_NAME_SERVER;
     process.env.DB_NAME_SERVER = 'email_sender_actions_test';
     db = await createTestDbConnection({ databaseName: 'email_sender_actions_test', runSeeds: true });
+    // Load the actions after selecting the isolated database. The db package
+    // captures DB_NAME_SERVER when its connection module is imported.
+    senderActions = await import('@alga-psa/integrations/actions');
     const tenant = await db('tenants').first('tenant');
     if (!tenant?.tenant) throw new Error('No tenant found in isolated integration DB');
     tenantId = tenant.tenant;
@@ -38,35 +41,35 @@ describe('email sender actions persistence', () => {
 
   it('creates senders and persists, upserts, lists, and clears class and board routes', async () => {
     const address = `sender-${Date.now()}@example.test`;
-    const created = await createEmailSender({ emailAddress: address });
+    const created = await senderActions.createEmailSender({ emailAddress: address });
     expect(created).toMatchObject({ tenant: tenantId, sender_id: expect.any(String), email_address: address });
     if (!('sender_id' in created)) throw new Error(`Could not create sender: ${'error' in created ? created.error : 'unknown error'}`);
     senderId = created.sender_id;
     expect(created.tenant).toBe(tenantId);
     expect(await db('email_sender_addresses').where({ tenant: tenantId, sender_id: senderId }).first()).toMatchObject({ email_address: address });
-    expect((await listEmailSenders()).senders.some((sender: any) => sender.sender_id === senderId)).toBe(true);
+    expect((await senderActions.listEmailSenders()).senders.some((sender: any) => sender.sender_id === senderId)).toBe(true);
 
-    await expect(setEmailSenderRoute({ routeType: 'mail_class', mailClass: 'billing', senderId, confirmUnverifiedSmtpSender: true })).resolves.toMatchObject({ success: true });
+    await expect(senderActions.setEmailSenderRoute({ routeType: 'mail_class', mailClass: 'billing', senderId, confirmUnverifiedSmtpSender: true })).resolves.toMatchObject({ success: true });
     let classRoute = await db('email_sender_routes').where({ tenant: tenantId, route_type: 'mail_class', mail_class: 'billing' }).first();
     expect(classRoute).toMatchObject({ sender_id: senderId });
-    await expect(setEmailSenderRoute({ routeType: 'mail_class', mailClass: 'billing', displayName: 'Billing team' })).resolves.toMatchObject({ success: true });
+    await expect(senderActions.setEmailSenderRoute({ routeType: 'mail_class', mailClass: 'billing', displayName: 'Billing team' })).resolves.toMatchObject({ success: true });
     const classRoutes = await db('email_sender_routes').where({ tenant: tenantId, route_type: 'mail_class', mail_class: 'billing' });
     expect(classRoutes).toHaveLength(1);
     expect(classRoutes[0]).toMatchObject({ sender_id: null, display_name: 'Billing team' });
 
-    await expect(setEmailSenderRoute({ routeType: 'board', boardId, senderId, confirmUnverifiedSmtpSender: true })).resolves.toMatchObject({ success: true });
+    await expect(senderActions.setEmailSenderRoute({ routeType: 'board', boardId, senderId, confirmUnverifiedSmtpSender: true })).resolves.toMatchObject({ success: true });
     expect(await db('email_sender_routes').where({ tenant: tenantId, route_type: 'board', board_id: boardId }).first()).toMatchObject({ sender_id: senderId });
     const board = await db('boards').where({ tenant: tenantId, board_id: boardId }).first('board_name');
-    expect((await listEmailSenders()).routes).toContainEqual(expect.objectContaining({ board_id: boardId, board_name: board.board_name }));
-    await expect(deleteEmailSender(senderId)).resolves.toMatchObject({
+    expect((await senderActions.listEmailSenders()).routes).toContainEqual(expect.objectContaining({ board_id: boardId, board_name: board.board_name }));
+    await expect(senderActions.deleteEmailSender(senderId)).resolves.toMatchObject({
       success: false,
       error: expect.stringContaining(`board "${board.board_name}"`),
     });
-    await expect(setEmailSenderRoute({ routeType: 'board', boardId, displayName: 'Board team' })).resolves.toMatchObject({ success: true });
+    await expect(senderActions.setEmailSenderRoute({ routeType: 'board', boardId, displayName: 'Board team' })).resolves.toMatchObject({ success: true });
     expect(await db('email_sender_routes').where({ tenant: tenantId, route_type: 'board', board_id: boardId })).toHaveLength(1);
-    await expect(clearEmailSenderRoute({ routeType: 'mail_class', mailClass: 'billing' })).resolves.toMatchObject({ success: true });
+    await expect(senderActions.clearEmailSenderRoute({ routeType: 'mail_class', mailClass: 'billing' })).resolves.toMatchObject({ success: true });
     expect(await db('email_sender_routes').where({ tenant: tenantId, route_type: 'mail_class', mail_class: 'billing' })).toHaveLength(0);
-    await expect(clearEmailSenderRoute({ routeType: 'board', boardId })).resolves.toMatchObject({ success: true });
+    await expect(senderActions.clearEmailSenderRoute({ routeType: 'board', boardId })).resolves.toMatchObject({ success: true });
     expect(await db('email_sender_routes').where({ tenant: tenantId, route_type: 'board', board_id: boardId })).toHaveLength(0);
     await db('email_sender_addresses').where({ tenant: tenantId, sender_id: senderId }).del();
   });
