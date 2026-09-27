@@ -15,7 +15,7 @@
 import { Temporal } from '@js-temporal/polyfill';
 
 export type AdjustmentSourceKind = 'discount' | 'contract_change';
-export type DiscountScope = 'invoice' | 'contract' | 'service' | 'item';
+export type DiscountScope = 'invoice' | 'contract' | 'line' | 'service' | 'item';
 
 /** The subset of an `invoice_charges` row the evaluator needs. */
 export interface InvoiceAdjustmentCharge {
@@ -30,6 +30,7 @@ export interface InvoiceAdjustmentCharge {
   is_manual?: boolean;
   is_taxable?: boolean;
   adjustment_source_kind?: AdjustmentSourceKind | null;
+  contract_line_ids?: string[];
 }
 
 export interface AutomaticDiscountPolicy {
@@ -47,6 +48,7 @@ export interface AutomaticDiscountPolicy {
   applies_to_service_id?: string | null;
   applies_to_item_id?: string | null;
   client_contract_id?: string | null;
+  contract_line_id?: string | null;
   priority?: number | null;
 }
 
@@ -143,16 +145,15 @@ export function resolveSourceDerivedPartialPeriod(input: {
   if (!Number.isFinite(input.unitPrice) || input.unitPrice < 0) throw new Error('The source rate must be a non-negative amount.');
   const fullPeriodDays = start.until(end, { largestUnit: 'days' }).days;
   const coveredDays = effective.until(end, { largestUnit: 'days' }).days;
-  const magnitude = computePartialPeriodAmount({
-    units: input.units,
-    unitPrice: input.unitPrice,
-    coveredDays,
-    fullPeriodDays,
-  });
+  // invoice_charges stores unit_price in integer minor units and quantity at
+  // 0.01 precision. Round the prorated unit rate first, then round the product
+  // once; every displayed/persisted/reloaded representation uses this same rule.
+  const roundedUnitRate = Math.round(input.unitPrice * coveredDays / fullPeriodDays);
+  const magnitude = Math.round(input.units * roundedUnitRate);
   const sign = input.direction === 'decrease' ? -1 : 1;
   return {
-    quantity: input.units * (coveredDays / fullPeriodDays),
-    unitPrice: sign * input.unitPrice,
+    quantity: input.units,
+    unitPrice: sign * roundedUnitRate,
     amount: sign * magnitude,
     coveredDays,
     fullPeriodDays,
@@ -230,6 +231,12 @@ function chargesInScope(
         (charge) => Boolean(policy.client_contract_id)
           && charge.client_contract_id === policy.client_contract_id
           && (!policy.applies_to_service_id || charge.service_id === policy.applies_to_service_id),
+      );
+    case 'line':
+      return eligible.filter(
+        (charge) => Boolean(policy.contract_line_id)
+          && charge.contract_line_ids?.includes(policy.contract_line_id)
+          && (!policy.client_contract_id || charge.client_contract_id === policy.client_contract_id),
       );
     case 'service':
       return eligible.filter(

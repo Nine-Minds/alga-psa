@@ -8,16 +8,9 @@ exports.up = async function up(knex) {
     await knex.schema.alterTable('contract_discount_assignments', (table) => {
       table.uuid('client_contract_id').nullable();
     });
-    // Preserve an existing contract-level attachment for each concrete client assignment.
-    await knex.raw(`
-      INSERT INTO contract_discount_assignments (tenant, assignment_id, contract_id, discount_id, created_at, client_contract_id)
-      SELECT a.tenant, gen_random_uuid(), a.contract_id, a.discount_id, a.created_at, cc.client_contract_id
-      FROM contract_discount_assignments a
-      JOIN client_contracts cc ON cc.tenant = a.tenant AND cc.contract_id = a.contract_id
-      WHERE a.client_contract_id IS NULL
-      ON CONFLICT DO NOTHING
-    `);
-    await knex.raw(`DELETE FROM contract_discount_assignments WHERE client_contract_id IS NULL`);
+    // The old key permits only one row per contract/discount. Remove it before
+    // expanding each attachment to concrete client-contract assignments; doing
+    // the inserts first silently conflicts with the source row and then loses it.
     const oldUnique = await knex.raw(`
       SELECT c.conname FROM pg_constraint c
       WHERE c.conrelid = 'contract_discount_assignments'::regclass AND c.contype = 'u'
@@ -30,8 +23,53 @@ exports.up = async function up(knex) {
     if (oldUnique.rows?.[0]?.conname) {
       await knex.raw('ALTER TABLE contract_discount_assignments DROP CONSTRAINT ??', [oldUnique.rows[0].conname]);
     }
+    // Additional client-contract copies temporarily have no legacy contract
+    // key. Make it nullable before inserting them; it is dropped after the
+    // expansion below.
+    await knex.schema.alterTable('contract_discount_assignments', (table) => {
+      table.uuid('contract_id').nullable().alter();
+    });
     const oldIndex = await knex.raw(`SELECT indexname FROM pg_indexes WHERE schemaname = current_schema() AND tablename = 'contract_discount_assignments' AND indexname LIKE '%assignments_contract%' LIMIT 1`);
     if (oldIndex.rows?.[0]?.indexname) await knex.raw('DROP INDEX ??', [oldIndex.rows[0].indexname]);
+
+    // Reuse the original assignment UUID for the first client contract so any
+    // settlement keyed by it remains attributable. Additional client contracts
+    // get distinct UUIDs and therefore independent settlement identities.
+    const { rows: oldAssignments } = await knex.raw(`
+      SELECT tenant, assignment_id, contract_id, discount_id, created_at
+      FROM contract_discount_assignments
+      WHERE client_contract_id IS NULL
+      ORDER BY tenant, contract_id, discount_id, assignment_id
+    `);
+    for (const assignment of oldAssignments) {
+      const { rows: clients } = await knex.raw(`
+        SELECT client_contract_id
+        FROM client_contracts
+        WHERE tenant = ? AND contract_id = ?
+        ORDER BY client_contract_id
+      `, [assignment.tenant, assignment.contract_id]);
+      if (clients.length === 0) {
+        // The old foreign key normally cascades this case. Retain no dangling
+        // attachment when upgrading databases where that FK was absent.
+        await knex('contract_discount_assignments')
+          .where({ tenant: assignment.tenant, assignment_id: assignment.assignment_id })
+          .delete();
+        continue;
+      }
+      await knex('contract_discount_assignments')
+        .where({ tenant: assignment.tenant, assignment_id: assignment.assignment_id })
+        .update({ client_contract_id: clients[0].client_contract_id });
+      for (const client of clients.slice(1)) {
+        await knex('contract_discount_assignments').insert({
+          tenant: assignment.tenant,
+          assignment_id: knex.raw('gen_random_uuid()'),
+          contract_id: null,
+          discount_id: assignment.discount_id,
+          created_at: assignment.created_at,
+          client_contract_id: client.client_contract_id,
+        });
+      }
+    }
     await knex.schema.alterTable('contract_discount_assignments', (table) => {
       table.dropForeign(['tenant', 'contract_id']);
       table.dropColumn('contract_id');

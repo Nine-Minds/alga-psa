@@ -214,21 +214,31 @@ export type AdjustmentScope = 'invoice' | 'contract' | 'service' | 'item';
  */
 export interface ManualLineMetadata {
   /** Partial-period calculator inputs (contracted, not resolved). */
-  partialPeriod?: {
-    source_kind?: 'invoice_charge';
-    source_item_id?: string;
-    effective_date?: string;
-    source_period_start?: string;
-    source_period_end?: string;
-    resolved_amount?: number;
-    units: number;
-    unitPrice: number;
-    coveredDays: number;
-    fullPeriodDays: number;
-  };
+  partialPeriod?: ManualPartialPeriodMetadata;
   /** Optional freeform note explaining the adjustment. */
   reason?: string;
+  /** Source true-up rows operator explicitly chose to overlap. */
+  confirmed_overlap_item_ids?: string[];
   [key: string]: unknown;
+}
+
+export interface ManualPartialPeriodMetadata {
+    version: 1;
+    source_kind: 'invoice_charge';
+    source_item_id: string;
+    direction: 'increase' | 'decrease';
+    effective_date: string;
+    source_period_start: string;
+    source_period_end: string;
+    /** Unit delta retained at invoice_charges.quantity precision (0.01). */
+    units: number;
+    /** Original source rate in integer currency minor units per unit. */
+    source_unit_price_minor: number;
+    /** Date-derived coverage inputs. */
+    covered_days: number;
+    full_period_days: number;
+    /** Server-validated row amount (minor units), equals rounded quantity × stored rate. */
+    resolved_amount_minor?: number;
 }
 
 /**

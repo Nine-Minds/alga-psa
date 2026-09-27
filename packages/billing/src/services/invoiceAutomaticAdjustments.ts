@@ -86,7 +86,13 @@ export async function loadInvoiceServiceWindow(
     .first();
 
   const detailStart = toDateOnly(row?.start);
-  const detailEnd = toDateOnly(row?.end);
+  const detailEndInclusive = toDateOnly(row?.end);
+  // invoice_charge_details stores service-period ends inclusively. The shared
+  // adjustment/discount evaluator uses half-open windows, so normalize exactly
+  // once here (including companion contract_change detail rows).
+  const detailEnd = detailEndInclusive
+    ? Temporal.PlainDate.from(detailEndInclusive).add({ days: 1 }).toString()
+    : null;
   if (detailStart && detailEnd) {
     return { start: detailStart, end: detailEnd };
   }
@@ -303,9 +309,8 @@ async function loadApplicableDiscountRows(
     .select('discounts.*', 'cc.client_contract_id');
 
   // Contract assignments are eligible from billed charges attributed to that
-  // client-contract, independent of contract lines/details. Their stable
-  // assignment UUID is the settlement source key, allowing one shared
-  // definition to settle separately for two contracts on a consolidated bill.
+  // client-contract, independent of contract lines/details. Their assignment
+  // UUID is the settlement source key for this independent client-contract copy.
   const representedClientContractIds = new Set<string>();
   const invoiceContractIds = await tenantScopedTable<{ client_contract_id: string | null }>(conn, tenant, 'invoice_charges')
     .where({ tenant, invoice_id: invoiceId })
@@ -331,7 +336,7 @@ async function loadApplicableDiscountRows(
   return [...lineRows, ...assignmentRows.map((row: Record<string, unknown>) => ({
     ...row,
     source_identity: row.source_identity,
-    assignment_scope: 'contract',
+    assignment_scope: row.scope === 'service' ? 'service' : 'contract',
   }))];
 }
 

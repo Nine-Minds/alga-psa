@@ -980,13 +980,11 @@ export async function persistManualInvoiceCharges(
       throw new ManualInvoiceError('INVALID_QUANTITY', 'Quantity must be greater than 0');
     }
 
-    let netAmount = calculateNetAmount(requestItem, subtotal); // No applicable amount needed here
+    const netAmount = calculateNetAmount(requestItem, subtotal); // No applicable amount needed here
     const partialPeriodMetadata = requestItem.manual_line_metadata?.partialPeriod as Record<string, unknown> | undefined;
-    if (partialPeriodMetadata && Number.isFinite(Number(partialPeriodMetadata.resolved_amount))) {
-      // The source-derived calculator keeps a real unit delta and the prorated
-      // unit rate, while this server-resolved cents value preserves the final
-      // rounded total where quantity × rounded unit rate would lose a cent.
-      netAmount = Number(partialPeriodMetadata.resolved_amount);
+    if (partialPeriodMetadata && Number.isFinite(Number(partialPeriodMetadata.resolved_amount_minor))
+      && Number(partialPeriodMetadata.resolved_amount_minor) !== netAmount) {
+      throw new ManualInvoiceError('SOURCE_NOT_ELIGIBLE', 'Partial-period amount must equal the saved quantity multiplied by its prorated unit rate.');
     }
 
     // Detect manual credits (negative rate, not explicitly marked as discount)

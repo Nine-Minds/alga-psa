@@ -8,6 +8,8 @@ import { inspectInvoiceEditable } from './invoiceAdjustmentEditability';
 import { BillingEngine } from '../lib/billing/billingEngine';
 import Invoice from '../models/invoice';
 
+const actionContext = vi.hoisted(() => ({ db: null as Knex | null, tenant: null as string | null, userId: null as string | null }));
+
 // Real-database coverage for contract invoice adjustments.
 //
 // The evaluator is unit-tested; these assertions prove the persisted behaviour:
@@ -28,6 +30,22 @@ vi.mock('../lib/authHelpers', () => ({
   getSessionAsync: vi.fn(),
   getAnalyticsAsync: vi.fn(),
 }));
+vi.mock('@alga-psa/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/db')>();
+  return {
+    ...actual,
+    createTenantKnex: async () => ({ knex: actionContext.db, tenant: actionContext.tenant }),
+  };
+});
+vi.mock('@alga-psa/auth', () => ({
+  withAuth: (handler: (...args: any[]) => unknown) => (...args: unknown[]) => handler(
+    { user_id: actionContext.userId },
+    { tenant: actionContext.tenant },
+    ...args,
+  ),
+  getSession: async () => ({ user: { id: actionContext.userId } }),
+}));
+vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: async () => true }));
 
 const {
   persistManualInvoiceCharges,
@@ -313,6 +331,9 @@ beforeAll(async () => {
   foreignClientId = foreignClient.client_id;
   serviceId = service.service_id;
   userId = user.user_id;
+  actionContext.db = db;
+  actionContext.tenant = tenant;
+  actionContext.userId = userId;
 
   const existingProfile = await db('client_billing_profiles')
     .where({ tenant, client_id: clientId, is_default: true })
@@ -350,6 +371,9 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  actionContext.db = null;
+  actionContext.tenant = null;
+  actionContext.userId = null;
   await db?.destroy().catch(() => undefined);
 });
 
@@ -371,7 +395,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
     await db('invoice_charge_details').insert({
       tenant, item_detail_id: detailId, item_id: fixture.generatedChargeId,
       config_id: configId, service_id: serviceId, quantity: 1, rate: 10_000,
-      service_period_start: '2026-09-01', service_period_end: '2026-10-01',
+      service_period_start: '2026-09-01', service_period_end: '2026-09-30',
     });
     await db.transaction(async (trx) => {
       await persistManualInvoiceCharges(trx, fixture.invoiceId, [{
@@ -408,6 +432,101 @@ describe('contract invoice adjustments (DB-backed)', () => {
       }], { client_id: clientId, region_code: null, default_currency_code: 'USD' }, { user: { id: userId } } as never, tenant);
     });
     expect(await db('invoice_charges').where({ tenant, invoice_id: fixture.invoiceId, item_id: partialId })).toHaveLength(1);
+  });
+
+  it('saves UI-shaped calculator metadata through updateInvoiceManualItems for increases, decreases, reload and edits', async () => {
+    const fixture = await createDraftWithGeneratedChargeAndDiscount();
+    await db('invoice_charges').where({ tenant, item_id: fixture.generatedChargeId }).update({ unit_price: 10_000 });
+    const sourceConfigId = uuidv4();
+    await db('contract_line_service_configuration').insert({
+      tenant, config_id: sourceConfigId, contract_line_id: contractLineId, service_id: serviceId,
+      configuration_type: 'Fixed', quantity: 1,
+    });
+    await db('invoice_charge_details').insert({
+      tenant, item_detail_id: uuidv4(), item_id: fixture.generatedChargeId,
+      config_id: sourceConfigId, service_id: serviceId, quantity: 1, rate: 10_000,
+      service_period_start: '2026-09-01', service_period_end: '2026-09-30',
+    });
+    const { updateInvoiceManualItems } = await import('../actions/invoiceModification');
+    const makeUiRow = (id: string, direction: 'increase' | 'decrease') => {
+      const sign = direction === 'decrease' ? -1 : 1;
+      return {
+        item_id: id,
+        invoice_id: fixture.invoiceId,
+        tenant,
+        service_id: serviceId,
+        description: `${direction} three seats`,
+        quantity: 3,
+        unit_price: 3_333 * sign,
+        rate: 3_333 * sign,
+        is_manual: true,
+        is_discount: false,
+        is_taxable: false,
+        client_contract_id: clientContractId,
+        adjustment_period_start: '2026-09-21',
+        adjustment_period_end: '2026-10-01',
+        manual_line_metadata: {
+          partialPeriod: {
+            version: 1,
+            source_kind: 'invoice_charge',
+            source_item_id: fixture.generatedChargeId,
+            direction,
+            effective_date: '2026-09-21',
+            source_period_start: '2026-09-01',
+            source_period_end: '2026-10-01',
+            units: 3,
+            source_unit_price_minor: 10_000,
+            covered_days: 10,
+            full_period_days: 30,
+            resolved_amount_minor: 9_999 * sign,
+          },
+          reason: 'seat change',
+        },
+      };
+    };
+    const increaseId = uuidv4();
+    const increase = await updateInvoiceManualItems(fixture.invoiceId, {
+      newItems: [makeUiRow(increaseId, 'increase') as any], updatedItems: [], removedItemIds: [],
+    } as any);
+    expect(increase).not.toHaveProperty('actionError');
+    const persistedIncrease = await db('invoice_charges').where({ tenant, invoice_id: fixture.invoiceId, item_id: increaseId }).first();
+    expect(Number(persistedIncrease.quantity)).toBe(3);
+    expect(Number(persistedIncrease.unit_price)).toBe(3_333);
+    expect(Number(persistedIncrease.net_amount)).toBe(9_999);
+    expect(persistedIncrease.manual_line_metadata.partialPeriod.direction).toBe('increase');
+
+    const decreaseId = uuidv4();
+    const decrease = await updateInvoiceManualItems(fixture.invoiceId, {
+      newItems: [makeUiRow(decreaseId, 'decrease') as any], updatedItems: [], removedItemIds: [],
+    } as any);
+    expect(decrease).not.toHaveProperty('actionError');
+    const persistedDecrease = await db('invoice_charges').where({ tenant, invoice_id: fixture.invoiceId, item_id: decreaseId }).first();
+    expect(Number(persistedDecrease.unit_price)).toBe(-3_333);
+    expect(Number(persistedDecrease.net_amount)).toBe(-9_999);
+    expect(persistedDecrease.is_manual_credit).toBe(true);
+
+    const reloaded = await Invoice.getInvoiceCharges(db, tenant, fixture.invoiceId);
+    const loadedIncrease = reloaded.find((row) => row.item_id === increaseId) as any;
+    expect(loadedIncrease.manual_line_metadata.partialPeriod).toMatchObject({ direction: 'increase', units: 3 });
+    const edited = await updateInvoiceManualItems(fixture.invoiceId, {
+      newItems: [],
+      updatedItems: [{
+        item_id: increaseId, service_id: serviceId, client_contract_id: clientContractId,
+        description: 'Revised reason text', quantity: 2, rate: 3_333,
+        adjustment_period_start: '2026-09-21', adjustment_period_end: '2026-10-01',
+        manual_line_metadata: {
+          ...loadedIncrease.manual_line_metadata,
+          partialPeriod: { ...loadedIncrease.manual_line_metadata.partialPeriod, units: 2, resolved_amount_minor: 6_666 },
+          reason: 'revised reason',
+        },
+      } as any],
+      removedItemIds: [],
+    } as any);
+    expect(edited).not.toHaveProperty('actionError');
+    const editedRow = await db('invoice_charges').where({ tenant, item_id: increaseId }).first();
+    expect(Number(editedRow.quantity)).toBe(2);
+    expect(Number(editedRow.net_amount)).toBe(6_666);
+    expect(editedRow.description).toBe('Revised reason text');
   });
 
   it('reconciles one shared definition per contract attachment, scopes manual charges, refreshes edits and detachments idempotently', async () => {

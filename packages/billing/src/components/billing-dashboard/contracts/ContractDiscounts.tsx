@@ -21,8 +21,6 @@ import {
   createContractDiscount,
   getContractDiscounts,
   getContractLineServiceOptions,
-  getAvailableSharedDiscounts,
-  attachSharedDiscountToContract,
   detachContractDiscount,
   setContractDiscountActive,
   updateContractDiscount,
@@ -30,7 +28,6 @@ import {
   type ContractDiscountRecord,
   type ContractDiscountScope,
   type ContractLineServiceOption,
-  type SharedDiscountOption,
 } from '@alga-psa/billing/actions/discountActions';
 import { getDetailedContractLines } from '@alga-psa/billing/actions/contractActions';
 
@@ -79,18 +76,15 @@ export function ContractDiscounts({ contractId, clientContractId, isReadOnly = f
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<ContractDiscountRecord | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [availableDiscounts, setAvailableDiscounts] = useState<SharedDiscountOption[]>([]);
-  const [selectedSharedDiscountId, setSelectedSharedDiscountId] = useState('');
 
   const load = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const [discountResult, lineResult, serviceResult, availableResult] = await Promise.all([
+      const [discountResult, lineResult, serviceResult] = await Promise.all([
         getContractDiscounts(contractId, clientContractId),
         getDetailedContractLines(contractId),
         getContractLineServiceOptions(contractId),
-        getAvailableSharedDiscounts(contractId, clientContractId),
       ]);
       if (isReturnedActionError(discountResult)) {
         setError(getErrorMessage(discountResult));
@@ -104,7 +98,6 @@ export function ContractDiscounts({ contractId, clientContractId, isReadOnly = f
         }))
         : []);
       setServiceOptions(isReturnedActionError(serviceResult) ? [] : serviceResult);
-      setAvailableDiscounts(isReturnedActionError(availableResult) ? [] : availableResult);
     } catch (err) {
       console.error('Failed to load contract discounts:', err);
       setError(t('contractDiscounts.errors.loadFailed', { defaultValue: 'Failed to load discounts.' }));
@@ -140,20 +133,6 @@ export function ContractDiscounts({ contractId, clientContractId, isReadOnly = f
     }
   };
 
-  const handleAttachShared = async () => {
-    if (!selectedSharedDiscountId) return;
-    setBusyId(selectedSharedDiscountId);
-    setError(null);
-    try {
-      const result = await attachSharedDiscountToContract(contractId, selectedSharedDiscountId, clientContractId);
-      if (isReturnedActionError(result)) { setError(getErrorMessage(result)); return; }
-      setSelectedSharedDiscountId('');
-      await load();
-    } catch (err) {
-      setError(getErrorMessage(err));
-    } finally { setBusyId(null); }
-  };
-
   const handleDetach = async (discount: ContractDiscountRecord) => {
     if (!discount.assignment_id) return;
     setBusyId(discount.assignment_id);
@@ -179,24 +158,12 @@ export function ContractDiscounts({ contractId, clientContractId, isReadOnly = f
           </h3>
           <p className="text-sm text-muted-foreground">
             {t('contractDiscounts.description', {
-              defaultValue: 'Contract-wide discounts are independent of contract lines. Shared definition edits apply to every attached contract on its next eligible draft refresh.',
+              defaultValue: 'Each client contract owns an editable copy. Contract-wide discounts apply to eligible charges across its represented lines.',
             })}
           </p>
         </div>
         {!isReadOnly && (
           <div className="flex gap-2 items-center">
-            {availableDiscounts.length > 0 && <>
-              <CustomSelect
-                id="attach-shared-contract-discount"
-                value={selectedSharedDiscountId}
-                onValueChange={setSelectedSharedDiscountId}
-                options={availableDiscounts.map((discount) => ({ value: discount.discount_id, label: discount.discount_name }))}
-                placeholder={t('contractDiscounts.actions.pickShared', { defaultValue: 'Attach existing discount' })}
-              />
-              <Button id="attach-shared-contract-discount-button" type="button" variant="secondary" disabled={!selectedSharedDiscountId || busyId !== null} onClick={handleAttachShared}>
-                {t('contractDiscounts.actions.attach', { defaultValue: 'Attach' })}
-              </Button>
-            </>}
           <Button
             id="add-contract-discount-button"
             type="button"
@@ -430,7 +397,6 @@ function ContractDiscountDialog({
     >
       <DialogContent>
         <form id="contract-discount-form" onSubmit={handleSubmit} className="space-y-4">
-          {editing?.assignment_id && <p className="text-sm text-muted-foreground">{t('contractDiscounts.sharedEditNotice', { defaultValue: 'This definition is shared. Changes affect every attached contract on its next eligible draft refresh.' })}</p>}
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />

@@ -116,13 +116,17 @@ interface EditableInvoiceItem extends Omit<IInvoiceCharge, 'tenant' | 'created_a
 }
 
 const singleCanonicalPeriod = (item: IInvoiceCharge): { start: string; end: string } | null => {
+  const dateOnly = (value: unknown) => value instanceof Date
+    ? value.toISOString().slice(0, 10)
+    : String(value).slice(0, 10);
   const periods = (item.recurring_detail_periods ?? [])
     .filter((period) => period.service_period_start && period.service_period_end)
-    .map((period) => `${String(period.service_period_start).slice(0, 10)}:${String(period.service_period_end).slice(0, 10)}`);
+    .map((period) => `${dateOnly(period.service_period_start)}:${dateOnly(period.service_period_end)}`);
   const unique = [...new Set(periods)];
   if (unique.length !== 1) return null;
-  const [start, end] = unique[0].split(':');
-  return start && end ? { start, end } : null;
+  const [start, inclusiveEnd] = unique[0].split(':');
+  if (!start || !inclusiveEnd) return null;
+  return { start, end: Temporal.PlainDate.from(inclusiveEnd).add({ days: 1 }).toString() };
 };
 
 // An untouched default row (no service, description, amount or adjustment
@@ -717,10 +721,10 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
         location_id: source.location_id ?? null,
         billing_profile_id: source.billing_profile_id ?? null,
         is_discount: false,
-        // Keep the true unit delta at two-decimal quantity precision and prorate
-        // the stored unit rate in cents. This preserves the calculated cents
-        // through quantity × rate recalculation (e.g. $100 × 10/30 = $33.33).
-        rate: Math.round(unitPrice * calculation.coveredDays / calculation.fullPeriodDays) * (partialDirection === 'decrease' ? -1 : 1),
+        // The evaluator rounds the prorated per-unit minor-unit rate first,
+        // then rounds quantity × stored rate. This keeps row display, totals,
+        // reload and export consistent even for fractional-cent proration.
+        rate: calculation.unitPrice,
         quantity: units,
         description: partialDescription.trim() || defaultDescription,
         isExisting: false,
@@ -730,9 +734,9 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
         adjustment_period_start: partialEffectiveDate,
         adjustment_period_end: sourcePeriod.end,
         manual_line_metadata: {
-          partialPeriod: { source_kind: 'invoice_charge', source_item_id: source.item_id, effective_date: partialEffectiveDate, source_period_start: periodStart, source_period_end: periodEnd, units, unitPrice, coveredDays: calculation.coveredDays, fullPeriodDays: calculation.fullPeriodDays, resolved_amount: calculation.amount },
-          direction: partialDirection,
+          partialPeriod: { version: 1, source_kind: 'invoice_charge', source_item_id: source.item_id, direction: partialDirection, effective_date: partialEffectiveDate, source_period_start: periodStart, source_period_end: periodEnd, units, source_unit_price_minor: unitPrice, covered_days: calculation.coveredDays, full_period_days: calculation.fullPeriodDays, resolved_amount_minor: calculation.amount },
           reason: partialReason.trim() || undefined,
+          ...(overlap ? { confirmed_overlap_item_ids: currentInvoiceData?.invoice_charges.filter((row) => row.adjustment_source_kind === 'contract_change' && row.contract_line_id === source.contract_line_id).map((row) => row.item_id) } : {}),
         },
       };
       const newItems = [...items, newItem];
@@ -883,6 +887,15 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           item: EditableInvoiceItem,
         ): ManualLineMetadata | null => {
           const next: Record<string, unknown> = { ...(item.manual_line_metadata ?? {}) };
+          const partial = next.partialPeriod as ManualLineMetadata['partialPeriod'] | undefined;
+          if (partial) {
+            next.partialPeriod = {
+              ...partial,
+              units: Number(item.quantity),
+              direction: Number(item.rate) < 0 ? 'decrease' : 'increase',
+              resolved_amount_minor: Math.round(Number(item.quantity) * Number(item.rate)),
+            };
+          }
           if (item.tax_rate_id) {
             next.tax_rate_id = item.tax_rate_id;
           } else {
@@ -1181,7 +1194,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   const selectedClientData = clientOptions.find(c => c.client_id === (currentInvoiceData?.client_id || selectedClient));
   const currencyCode = currentInvoiceData?.currencyCode || selectedClientData?.default_currency_code || 'USD';
 
-  const partialPeriodPreview = (() => {
+  const partialPeriodCalculation = (() => {
     try {
       const source = currentInvoiceData?.invoice_charges.find((item) => item.item_id === partialSourceId);
       const sourcePeriod = source ? singleCanonicalPeriod(source) : null;
@@ -1195,11 +1208,12 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
         servicePeriodEnd: sourcePeriod.end,
         direction: partialDirection,
       });
-      return calculation.amount;
+      return calculation;
     } catch {
       return null;
     }
   })();
+  const partialPeriodPreview = partialPeriodCalculation?.amount ?? null;
 
   const partialPeriodSources = (currentInvoiceData?.invoice_charges ?? [])
     .filter((item) => !item.is_discount && item.service_id && singleCanonicalPeriod(item))
@@ -1685,7 +1699,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                       />
                       <Input id="partial-period-effective-date" label={t('manualInvoices.partialPeriod.effectiveDate', { defaultValue: 'Effective date' })} type="date" value={partialEffectiveDate} onChange={(event) => setPartialEffectiveDate(event.target.value)} required />
                     </div>
-                    {partialPeriodSource && <div className="space-y-1"><p className="text-xs text-muted-foreground">{partialPeriodSource.description}: {partialPeriodSource.service_period_start} – {partialPeriodSource.service_period_end} · {t('manualInvoices.partialPeriod.sourceRate', { defaultValue: 'Rate {{rate}}', rate: formatCurrency(Number(partialPeriodSource.unit_price) / 100, currencyCode) })} · {partialEffectiveDate && partialPeriodPreview !== null ? `${partialUnits} × ${formatCurrency(Math.abs(Number(partialPeriodSource.unit_price)) / 100, currencyCode)} × ${Temporal.PlainDate.from(partialEffectiveDate).until(Temporal.PlainDate.from(String(partialPeriodSource.service_period_end).slice(0, 10)), { largestUnit: 'days' }).days}/${Temporal.PlainDate.from(String(partialPeriodSource.service_period_start).slice(0, 10)).until(Temporal.PlainDate.from(String(partialPeriodSource.service_period_end).slice(0, 10)), { largestUnit: 'days' }).days} = ${formatCurrency((partialPeriodPreview ?? 0) / 100, currencyCode)}` : ''}</p>{partialPeriodSource.contract_line_id && partialPeriodSource.client_contract_id && <a className="text-xs text-primary-600 underline" href={`/msp/billing?tab=client-contracts&clientContractId=${encodeURIComponent(partialPeriodSource.client_contract_id)}&contractView=lines`}>{t('manualInvoices.partialPeriod.permanentChangeNudge', { defaultValue: 'Is this a permanent change? Record it on the contract instead.' })}</a>}</div>}
+                    {partialPeriodSource && <div className="space-y-1"><p className="text-xs text-muted-foreground">{partialPeriodSource.description}: {partialPeriodSource.service_period_start} – {partialPeriodSource.service_period_end} · {t('manualInvoices.partialPeriod.sourceRate', { defaultValue: 'Rate {{rate}}', rate: formatCurrency(Number(partialPeriodSource.unit_price) / 100, currencyCode) })} · {partialEffectiveDate && partialPeriodPreview !== null ? `${partialUnits} × ${formatCurrency(Math.abs(partialPeriodCalculation?.unitPrice ?? 0) / 100, currencyCode)} = ${formatCurrency((partialPeriodPreview ?? 0) / 100, currencyCode)} (${formatCurrency(Math.abs(Number(partialPeriodSource.unit_price)) / 100, currencyCode)} × ${partialPeriodCalculation?.coveredDays ?? 0}/${partialPeriodCalculation?.fullPeriodDays ?? 0}, rounded per unit)` : ''}</p>{partialPeriodSource.contract_line_id && partialPeriodSource.client_contract_id && <a className="text-xs text-primary-600 underline" href={`/msp/billing?tab=client-contracts&clientContractId=${encodeURIComponent(partialPeriodSource.client_contract_id)}&contractView=lines`}>{t('manualInvoices.partialPeriod.permanentChangeNudge', { defaultValue: 'Is this a permanent change? Record it on the contract instead.' })}</a>}</div>}
                     <Input
                       id="partial-period-description-input"
                       label={t('manualInvoices.partialPeriod.description', { defaultValue: 'Description (optional)' })}

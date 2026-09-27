@@ -1,34 +1,31 @@
 # Contract invoice adjustments repair evidence (2026-09-27)
 
-## Implemented and verified in this worktree
+## Completed in this repair pass
 
-- Contract discount assignments now identify the client-contract assignment, so settlement attribution can distinguish two contracts for one client and avoid applying a contract-wide discount to another contract's charges on a consolidated invoice.
-- Manual partial-period calculator changes derive source terms, validate their persistence against the invoice's detail-row period, use `adjustment_period_start/end`, preserve the true unit delta, and record resolved cents in metadata. The display includes the date-derived calculation and permanent-change link.
-- The calculator confirms before adding a manual adjustment when a source-linked companion `contract_change` row overlaps the selected line and half-open period. The boundary helper has a fabricated-row unit test.
-- Fixed positive recurring charges remain catalog-backed contract lines; fixed recurring credits use the existing discount pipeline.
+- Corrected migration ordering so the legacy unique constraint is removed before expanding assignments; the original assignment UUID is retained for the first client assignment, and added assignments get new settlement identities. Added populated-schema migration coverage for one and multiple client contracts and reruns.
+- Added migration handling that creates independent discount rows where old client assignments share a definition. Removed shared-definition attachment controls and messages from the client-contract Discounts tab. Contract assignment policies preserve service scope while contract scope applies to all attributed charges of that client contract.
+- Standardized calculator metadata with direction nested under `partialPeriod`; the action-level DB test invokes `updateInvoiceManualItems` with UI-shaped increase/decrease rows, then reloads and edits. Server validation derives source service periods from `invoice_charge_details`, normalizes inclusive detail ends to half-open dates, checks the source rate and quantity, persists a rounded per-unit rate and product amount, and rejects unresolved source tax rates. The displayed equation shows the same per-unit rounding rule used for settlement.
+- Added the companion interface and non-reproration/retry expectations to the plan and [companion handoff](../f6e7254b-contract-product-schedule/companion-handoff.md).
 
-## Commands and results
+## Verification
 
-- `npm run test --workspace=@alga-psa/billing -- src/lib/billing/compute/contractInvoiceAdjustments.test.ts` — passed, 26 tests.
-- `set -a; source .env.localtest; set +a; node scripts/run-workspace-db-tests.mjs contractInvoiceAdjustments.db.test.ts` — passed, 31 DB-backed tests. The DB endpoint was verified as Postgres `127.0.0.1:5472`; the suite recreated only `test_database`.
-- `node scripts/generate-pseudo-locales.cjs` — generated 102 pseudo-locale files.
-- `node scripts/validate-translations.cjs` — passed, 9 locales checked, no errors or warnings.
-- Focused ESLint over changed billing files — exit 0, warnings only.
-- Billing package typecheck — failed with 11 errors in untouched `profitabilityReportActions.ts` and `packages/ui/src/editor/*`; no diagnostics referenced the modified billing files.
-- `git diff --check` — passed.
+- `npm exec -- vitest run migrations/__tests__/contractDiscountAssignmentsClientScopeMigration.integration.test.ts` from `server/` — passed, 1 migration integration test. It reconstructs populated old-schema tables, verifies one and two assignment fanout, preserves original settlement identity, and reruns safely.
+- `set -a; source .env.localtest; set +a; node scripts/run-workspace-db-tests.mjs packages/billing/src/services/contractInvoiceAdjustments.db.test.ts` — passed, 32 DB-backed tests. This test lane uses Postgres `127.0.0.1:5472` and its dedicated `test_database`; the server was not started.
+- `npm run test --workspace=@alga-psa/billing -- src/lib/billing/compute/contractInvoiceAdjustments.test.ts` — passed, 27 tests.
+- Focused ESLint across touched billing/types files — exit 0, 0 errors, 107 warnings.
+- `git diff --check` — passed at last check.
+- `NODE_OPTIONS=--max-old-space-size=6144 npm run typecheck --workspace=@alga-psa/billing` — completed with type errors in `src/actions/profitabilityReportActions.ts` and `packages/ui/src/editor/*`; no diagnostics reported in the modified files. These are not yet substantiated against the parent revision, so they are not classified as pre-existing for acceptance.
 
-## Still required before acceptance
+## Outstanding implementation and acceptance
 
-- Add template default-discount authoring to the mounted `ContractTemplateDetail` surface and copy independent definitions into each client contract through the template clone workflow. This is not implemented in this worktree yet.
-- Integrate the companion `contract_change` settlement/reconciliation interface. The requested companion handoff file was absent from this checkout; this work adds the manual overlap confirmation only and does not add or change the companion writer.
-- Add DB-backed tests for independent template copies, their isolation, the full fixed/fractional/tax/currency matrix, companion settlement idempotency, and billed/locked history after cancellation.
-- Run the live acceptance walkthrough only when allowed and an endpoint serving this revision is available. Do not interpret the DB suite or historical evidence as live verification.
+- **Not complete:** template default-discount authoring is not yet mounted, and the template-to-independent-client-contract copy through `templateClone.ts` is not implemented. The required two-contract template isolation and exactly-one-settlement flow is therefore not proven.
+- **Not complete:** overlap detection is presently only the client-side pre-save check against currently loaded invoice rows. It does not recheck under the save transaction or confirm a newly arriving overlap. The permanent-change link opens the Lines tab, but does not select/highlight the intended line.
+- Companion `contract_change` source reconciliation is not yet covered end-to-end by fabricated DB rows or repeated regeneration tests. The new handoff records the supplied interface; the companion implementation itself was not modified.
+- The exact `$3,900 + $150` discount example, two-contract isolation, fixed-credit/tax/currency/stacking matrix, billed/locked history after cancellation, and required parent-revision typecheck comparison remain to be verified.
+- **Live acceptance outstanding by instruction:** keep the app server stopped. Current-revision live smoke and `SMOKE-ADJ-1` reseeding must occur in the authorized smoke step, not be inferred from automated tests or historical screenshots.
 
-## Live walkthrough outline
+## Reviewer walkthrough order
 
-1. Author default discount terms on a template; create two client contracts from that template and confirm each Discounts tab owns an editable independent copy.
-2. Refresh each eligible draft invoice and verify exactly one source-linked settlement per contract, contract-wide bases across represented lines, consolidated-invoice isolation, and the $3,900 + $150 example ($405 discount, $3,645 before tax).
-3. Edit the template and one client contract; refresh both invoices and verify the other existing copy remains unchanged.
-4. On an editable draft, use Add Charge, Add Discount and manual edit/remove, then reopen/reload and compare preview, PDF, portal and export amounts.
-5. Re-seed `SMOKE-ADJ-1` through the source-derived calculator; check service, quantity, dates, reason, tax and reload. Follow the permanent-change link and verify the selected contract line. Test an overlapping companion row and both half-open date boundaries.
-6. Verify billed, locked, cancelled, finalized and exported lifecycle blocks, including billed/locked line text/date protections after cancellation.
+1. Template authoring → independent client-contract discount copies → one correct invoice settlement per contract (this must be implemented before acceptance).
+2. Calculator source selection → derived dates/equation → save/reload/edit, then newly arriving overlap confirmation and selected-line permanent-change navigation.
+3. Invoice editing, tax/PDF/portal/export, lifecycle blocks, and billed/locked date/text history protections.

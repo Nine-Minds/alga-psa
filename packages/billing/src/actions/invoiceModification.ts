@@ -5,6 +5,7 @@ import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { Session } from 'next-auth';
 import { Temporal } from '@js-temporal/polyfill';
+import { resolveSourceDerivedPartialPeriod } from '../lib/billing/compute/contractInvoiceAdjustments';
 import { createTenantKnex } from '@alga-psa/db';
 import { toISODate } from '@alga-psa/core';
 // import { auditLog } from '@alga-psa/db';
@@ -12,7 +13,7 @@ import { applyCreditToInvoice, resolveCreditExpirationDate, resolveCreditDrawdow
 import { getAvailableCredit } from '../lib/creditBalance';
 import { reverseCreditApplicationsForInvoice } from '../lib/creditReversal';
 import { clearPrepaidReplenishmentForInvoice } from '../lib/prepaidAutoReplenishment';
-import { IInvoiceCharge, InvoiceViewModel, DiscountType } from '@alga-psa/types';
+import { IInvoiceCharge, InvoiceViewModel, DiscountType, type ManualPartialPeriodMetadata } from '@alga-psa/types';
 import { BillingEngine } from '../lib/billing/billingEngine';
 import ProjectBillingCapUsage from '../models/projectBillingCapUsage';
 import ProjectBillingScheduleEntry from '../models/projectBillingScheduleEntry';
@@ -1947,7 +1948,7 @@ async function updateManualInvoiceItemsInternal(
     ] as Array<Record<string, unknown>>;
     for (const item of partialRows) {
       const metadata = item.manual_line_metadata as Record<string, unknown> | null | undefined;
-      const partial = metadata?.partialPeriod as Record<string, unknown> | undefined;
+      const partial = metadata?.partialPeriod as ManualPartialPeriodMetadata | undefined;
       // Historical partial-period rows predate source links; keep those
       // editable. New calculator rows opt into strict source validation.
       if (!partial || partial.source_kind !== 'invoice_charge') continue;
@@ -1963,29 +1964,42 @@ async function updateManualInvoiceItemsInternal(
         .andWhere('service_id', source.service_id)
         .whereNotNull('service_period_start').whereNotNull('service_period_end')
         .select('service_period_start', 'service_period_end') : [];
-      const sourcePeriodKeys = [...new Set(sourcePeriods.map((period: any) => `${dateOnly(period.service_period_start)}:${dateOnly(period.service_period_end)}`))];
+      const sourcePeriodKeys = [...new Set(sourcePeriods.map((period: any) => {
+        const periodStart = dateOnly(period.service_period_start);
+        const inclusiveEnd = dateOnly(period.service_period_end);
+        const periodEnd = inclusiveEnd ? Temporal.PlainDate.from(inclusiveEnd).add({ days: 1 }).toString() : null;
+        return `${periodStart}:${periodEnd}`;
+      }))];
       const effective = dateOnly(partial.effective_date);
       const [sourceStart, sourceEnd] = sourcePeriodKeys.length === 1 ? sourcePeriodKeys[0].split(':') : [null, null];
       const units = Number(partial.units);
-      const coveredDays = sourceStart && effective ? Temporal.PlainDate.from(effective).until(Temporal.PlainDate.from(sourceEnd!), { largestUnit: 'days' }).days : 0;
-      const fullPeriodDays = sourceStart && sourceEnd ? Temporal.PlainDate.from(sourceStart).until(Temporal.PlainDate.from(sourceEnd), { largestUnit: 'days' }).days : 0;
-      const expectedRate = source?.unit_price == null || !fullPeriodDays || !Number.isFinite(units)
-        ? null
-        : Math.round(Number(source.unit_price) * coveredDays / fullPeriodDays) * (partial.direction === 'decrease' ? -1 : 1);
-      const expectedAmount = source?.unit_price == null || !fullPeriodDays || !Number.isFinite(units)
-        ? null
-        : Math.round(units * Number(source.unit_price) * coveredDays / fullPeriodDays) * (partial.direction === 'decrease' ? -1 : 1);
+      let calculation: ReturnType<typeof resolveSourceDerivedPartialPeriod> | null = null;
+      if (source?.unit_price != null && sourceStart && sourceEnd && effective
+        && (partial.direction === 'increase' || partial.direction === 'decrease')) {
+        calculation = resolveSourceDerivedPartialPeriod({
+          units,
+          unitPrice: Math.abs(Number(source.unit_price)),
+          effectiveDate: effective,
+          servicePeriodStart: sourceStart,
+          servicePeriodEnd: sourceEnd,
+          direction: partial.direction,
+        });
+      }
       if (!source || !source.service_id || !sourceStart || !sourceEnd || source.service_id !== item.service_id
         || sourcePeriodKeys.length !== 1
+        || partial.version !== 1
+        || partial.source_kind !== 'invoice_charge'
+        || partial.source_item_id !== sourceId
         || dateOnly(partial.source_period_start) !== sourceStart
         || dateOnly(partial.source_period_end) !== sourceEnd
         || !effective
         || effective < sourceStart
         || effective >= sourceEnd
         || !Number.isFinite(units) || units <= 0
+        || Math.round(units * 100) !== units * 100
         || Number(item.quantity) !== units
-        || Math.abs(Number(item.rate)) !== Math.abs(expectedRate ?? NaN)
-        || !['increase', 'decrease'].includes(String(partial.direction))
+        || !calculation
+        || Number(item.rate) !== calculation.unitPrice
         || (item.client_contract_id ?? null) !== (source.client_contract_id ?? null)) {
         throw expectedInvoiceActionError('The partial-period source is no longer represented on this invoice or its service period changed. Reopen the calculator and choose a current billed service.');
       }
@@ -1994,7 +2008,7 @@ async function updateManualInvoiceItemsInternal(
       item.client_contract_id = source.client_contract_id;
       item.location_id = source.location_id;
       item.billing_profile_id = source.billing_profile_id;
-      item.rate = expectedRate;
+      item.rate = calculation.unitPrice;
       item.is_taxable = source.is_taxable;
       item.tax_region = source.tax_region;
       let sourceMetadata = source.manual_line_metadata;
@@ -2009,15 +2023,25 @@ async function updateManualInvoiceItemsInternal(
         const billedTaxRate = await tenantScopedTable(trx, tenant, 'tax_rates')
           .where({ region_code: source.tax_region, tax_percentage: source.tax_rate })
           .first('tax_rate_id');
-        billedTaxRateId = billedTaxRate?.tax_rate_id ?? null;
+        billedTaxRateId = billedTaxRate?.tax_rate_id;
       }
       if (billedTaxRateId === undefined) billedTaxRateId = source.is_taxable ? item.tax_rate_id : null;
+      if (source.is_taxable && !billedTaxRateId) {
+        throw expectedInvoiceActionError('The selected taxable charge no longer has a resolvable tax rate. Choose a current billed charge or resolve its tax configuration first.');
+      }
+      if (source.is_taxable && billedTaxRateId) {
+        const taxRate = await tenantScopedTable(trx, tenant, 'tax_rates')
+          .where({ tax_rate_id: billedTaxRateId }).first('tax_rate_id');
+        if (!taxRate) {
+          throw expectedInvoiceActionError('The selected taxable charge tax rate is no longer available. Choose a current billed charge or resolve its tax configuration first.');
+        }
+      }
       item.tax_rate_id = billedTaxRateId;
-      partial.resolved_amount = expectedAmount;
+      partial.resolved_amount_minor = calculation.amount;
       partial.units = units;
-      partial.unitPrice = Math.abs(Number(source.unit_price));
-      partial.coveredDays = coveredDays;
-      partial.fullPeriodDays = fullPeriodDays;
+      partial.source_unit_price_minor = Math.abs(Number(source.unit_price));
+      partial.covered_days = calculation.coveredDays;
+      partial.full_period_days = calculation.fullPeriodDays;
       partial.effective_date = effective;
       partial.source_period_start = sourceStart;
       partial.source_period_end = sourceEnd;
@@ -2200,11 +2224,7 @@ async function updateManualInvoiceItemsInternal(
         if (typeof manualMetadata === 'string') {
           try { manualMetadata = JSON.parse(manualMetadata); } catch { manualMetadata = null; }
         }
-        const partialPeriod = manualMetadata?.partialPeriod;
-        const resolvedPartialAmount = partialPeriod && Number.isFinite(Number(partialPeriod.resolved_amount))
-          ? Number(partialPeriod.resolved_amount)
-          : null;
-        const netAmount = resolvedPartialAmount ?? Math.round(
+        const netAmount = Math.round(
           (Number(updatedRow.quantity) || 0) * (Number(updatedRow.unit_price) || 0),
         );
         if (

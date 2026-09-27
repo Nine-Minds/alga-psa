@@ -70,23 +70,30 @@ describe('resolveSourceDerivedPartialPeriod', () => {
     servicePeriodEnd: '2026-10-01',
   };
 
-  it('uses half-open date boundaries and persists real prorated quantity/rate for increases and credits', () => {
+  it('uses half-open dates, keeps the unit delta, and rounds prorated unit rate before total for increases and credits', () => {
     expect(resolveSourceDerivedPartialPeriod({ ...source, effectiveDate: '2026-09-16', direction: 'increase' })).toEqual({
-      quantity: 1,
-      unitPrice: 10_000,
+      quantity: 2,
+      unitPrice: 5_000,
       amount: 10_000,
       coveredDays: 15,
       fullPeriodDays: 30,
     });
     expect(resolveSourceDerivedPartialPeriod({ ...source, effectiveDate: '2026-09-16', direction: 'decrease' })).toEqual({
-      quantity: 1,
-      unitPrice: -10_000,
+      quantity: 2,
+      unitPrice: -5_000,
       amount: -10_000,
       coveredDays: 15,
       fullPeriodDays: 30,
     });
     expect(() => resolveSourceDerivedPartialPeriod({ ...source, effectiveDate: '2026-10-01', direction: 'increase' }))
       .toThrow('Effective date must fall inside the selected service period.');
+  });
+
+  it('settles a three-unit fractional-cent calculation from the stored two-decimal quantity and rounded unit rate', () => {
+    expect(resolveSourceDerivedPartialPeriod({
+      units: 3, unitPrice: 10_000, effectiveDate: '2026-09-21',
+      servicePeriodStart: '2026-09-01', servicePeriodEnd: '2026-10-01', direction: 'increase',
+    })).toEqual({ quantity: 3, unitPrice: 3_333, amount: 9_999, coveredDays: 10, fullPeriodDays: 30 });
   });
 });
 
