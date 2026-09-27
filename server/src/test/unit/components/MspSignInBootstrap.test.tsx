@@ -7,8 +7,11 @@ import { renderToString } from 'react-dom/server';
 import i18next from 'i18next';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import MspSignIn from '@alga-psa/auth/components/MspSignIn';
-import { I18nWrapper } from './I18nWrapper';
-import { ThemeBridge } from '../../../../../server/src/components/providers/ThemeBridge';
+import { I18nWrapper } from '@alga-psa/tenancy/components/i18n/I18nWrapper';
+import { ThemeBridge } from '../../../components/providers/ThemeBridge';
+
+// Exercise the real bootstrap lifecycle instead of the server suite's default i18n stub.
+vi.unmock('@alga-psa/ui/lib/i18n/client');
 
 const signInState = vi.hoisted(() => ({ error: 'AccessDenied', alertRenders: 0 }));
 
@@ -34,7 +37,7 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/auth/msp/signin',
   useSearchParams: () => new URLSearchParams({ error: signInState.error }),
 }));
-vi.mock('../../actions', () => ({ getHierarchicalLocaleAction: vi.fn() }));
+vi.mock('@alga-psa/tenancy/actions', () => ({ getHierarchicalLocaleAction: vi.fn() }));
 vi.mock('next/image', () => ({
   default: ({ priority, ...props }: React.ImgHTMLAttributes<HTMLImageElement> & { priority?: boolean }) => <img {...props} />,
 }));
@@ -101,6 +104,7 @@ vi.mock('@radix-ui/themes', () => ({
 }));
 vi.mock('next-themes', () => ({ useTheme: () => ({ resolvedTheme: undefined }) }));
 
+// This application-level composition belongs in server: tenancy must not depend on ThemeBridge.
 function SignInTree() {
   return (
     <React.StrictMode>
