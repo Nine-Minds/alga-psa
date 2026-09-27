@@ -22,7 +22,10 @@ export function calculateManualInvoiceEditorTotal(
   const active = editableItems.filter((item) => !item.isRemoved);
   const charges = active.filter((item) => !item.is_discount);
   const discounts = active.filter((item) => item.is_discount);
-  const manualSubtotal = charges.reduce((sum, item) => sum + item.quantity * item.rate, 0);
+  const manualSubtotal = charges.reduce(
+    (sum, item) => sum + Math.round(item.quantity * item.rate),
+    0,
+  );
   const generatedSubtotal = invoiceItems
     .filter((item) => !item.is_manual && !item.is_discount)
     .reduce((sum, item) => sum + Number(item.net_amount ?? item.total_price ?? 0), 0);
@@ -33,14 +36,15 @@ export function calculateManualInvoiceEditorTotal(
       let base = manualSubtotal + generatedSubtotal;
       if (discount.applies_to_item_id) {
         const target = charges.find((item) => item.item_id === discount.applies_to_item_id)
-          ?? invoiceItems.find((item) => item.item_id === discount.applies_to_item_id && !item.is_discount);
+          ?? invoiceItems.find((item) => item.item_id === discount.applies_to_item_id
+            && !item.is_manual && !item.is_discount);
         base = target
           ? target.is_manual
-            ? Number(target.quantity || 0) * Number(target.unit_price ?? target.rate ?? 0)
+            ? Math.round(Number(target.quantity || 0) * Number(target.unit_price ?? target.rate ?? 0))
             : Number(target.net_amount ?? target.total_price ?? 0)
           : 0;
       }
-      total -= (base * discount.discount_percentage) / 100;
+      total -= Math.round((base * discount.discount_percentage) / 100);
     } else if (discount.discount_type === 'fixed') {
       const rate = Number(discount.unit_price ?? discount.rate ?? 0);
       total += discount.is_manual_credit
