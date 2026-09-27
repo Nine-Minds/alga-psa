@@ -5466,6 +5466,13 @@ it('UOM snapshot: generated fixed charge stores the catalog code and matching la
   expect(invoice).toBeTruthy();
   const charge = await tenantTable(db, tenantId, 'invoice_charges').where({ invoice_id: invoice!.invoice_id }).first();
   expect(charge).toMatchObject({ unit_code: 'H87', unit_label: 'Piece' });
+
+  // The snapshot must survive the shared loader that feeds previews, PDFs and the REST API.
+  const { mapDbInvoiceToWasmViewModel } = await import('@alga-psa/billing/lib/adapters/invoiceAdapters');
+  const viewModel = mapDbInvoiceToWasmViewModel(await Invoice.getFullInvoiceById(db, tenantId, invoice!.invoice_id));
+  expect(viewModel?.items).toEqual([
+    expect.objectContaining({ unit_code: 'H87', unit_label: 'Piece' }),
+  ]);
 }, HOOK_TIMEOUT);
 
 });
