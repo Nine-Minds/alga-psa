@@ -2421,6 +2421,59 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         expect(ledger.status).toBe('cancelled');
       });
 
+      it('rolls back a scheduled edit and reports failure when draft recalculation fails', async () => {
+        const setup = await setupProductLine();
+        const first = expectScheduled(await scheduleProduct(setup, setup.users, {
+          quantity: 23,
+          allow_mid_period: true,
+          mid_period_effective_date: '2023-01-16',
+          effective_period_start: '2023-02-01',
+        }));
+        const january = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+        expect(Number(january.subtotal)).toBe(405484);
+
+        const recalculate = vi.spyOn(BillingEngine.prototype, 'recalculateInvoice')
+          .mockImplementationOnce(async (invoiceId, trx) => {
+            if (!trx) throw new Error('Draft recalculation must share the revision transaction');
+            await trx('invoices').where({ tenant: context.tenantId, invoice_id: invoiceId })
+              .update({ subtotal: 0 });
+            throw new Error('forced draft recalculation failure after partial invoice write');
+          });
+        const errorLog = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+        let result: Awaited<ReturnType<typeof scheduleProduct>>;
+        try {
+          result = await scheduleProduct(setup, setup.users, {
+            quantity: 23,
+            allow_mid_period: false,
+            effective_period_start: '2023-02-01',
+            expected_version: first.version,
+          });
+        } finally {
+          recalculate.mockRestore();
+          errorLog.mockRestore();
+        }
+
+        expect(result).toMatchObject({
+          actionError: expect.stringContaining('contract change was not saved'),
+        });
+        const revision = await context.db('contract_line_unit_pricing_revisions')
+          .where({ tenant: context.tenantId, revision_id: first.revision_id }).first();
+        expect(Number(revision.version)).toBe(first.version);
+        expect(Number(revision.quantity)).toBe(23);
+        expect(dateOnly(revision.mid_period_effective_date)).toBe('2023-01-16');
+        const ledger = await context.db('contract_recurring_unit_adjustments')
+          .where({ tenant: context.tenantId, revision_id: first.revision_id }).first();
+        expect(Number(ledger.revision_version)).toBe(first.version);
+        expect(Number(ledger.amount_cents)).toBe(15484);
+        const invoice = await context.db('invoices')
+          .where({ tenant: context.tenantId, invoice_id: january.invoice_id }).first();
+        expect(Number(invoice.subtotal)).toBe(405484);
+        const adjustment = await context.db('invoice_charges')
+          .where({ tenant: context.tenantId, invoice_id: january.invoice_id,
+            adjustment_source_kind: 'contract_change' }).first();
+        expect(Number(adjustment.net_amount)).toBe(15484);
+      });
+
       it('never resets a finalized settlement', async () => {
         const setup = await setupProductLine();
         const first = expectScheduled(await scheduleProduct(setup, setup.users, {

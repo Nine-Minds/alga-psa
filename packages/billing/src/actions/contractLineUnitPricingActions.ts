@@ -33,6 +33,12 @@ import {
 type UnitPricingActionError = ActionMessageError | ActionPermissionError;
 type AuthUser = IUserWithRoles;
 
+class DraftRecalculationError extends Error {
+  constructor() {
+    super('The contract change was not saved because its draft invoice could not be recalculated. Refresh the invoice and try again.');
+  }
+}
+
 /**
  * Server boundary for scheduling recurring quantity/price changes on
  * unit-priced Fixed services and catalog products.
@@ -148,7 +154,6 @@ async function scheduleRecurringUnitPricingRevisionImpl(
     if (!kind) {
       return actionError('The selected item is not a recurring product or unit-priced service on this contract line.');
     }
-    let settledInvoiceId: string | null = null;
     const result = await knex.transaction(async (trx) => {
       const scheduled = await scheduleRecurringUnitRevisionInTransaction({
         trx,
@@ -172,31 +177,24 @@ async function scheduleRecurringUnitPricingRevisionImpl(
       if (scheduled.ok === false) {
         return actionError(scheduled.error);
       }
-      settledInvoiceId = scheduled.settledInvoiceId ?? null;
+      if (scheduled.settledInvoiceId) {
+        try {
+          // Keep the revision, ledger, draft charge, discounts, tax and totals
+          // in one transaction. A failure rolls them all back.
+          const { BillingEngine } = await import('../lib/billing/billingEngine');
+          await new BillingEngine().recalculateInvoice(scheduled.settledInvoiceId, trx, tenant);
+        } catch (error) {
+          console.error(`Failed to recalculate draft ${scheduled.settledInvoiceId} after a mid-period adjustment change:`, error);
+          throw new DraftRecalculationError();
+        }
+      }
       return scheduled.revision;
     });
-
-    // An edited or cancelled mid-period true-up on an editable draft must
-    // refresh that draft's tax and totals. Finalized drafts are never touched
-    // (the scheduler already refused to reset them).
-    if (settledInvoiceId) {
-      try {
-        // Loaded on demand so the action's import graph never drags the
-        // server-only billing engine (and its storage/tax dependencies) into
-        // client or jsdom test bundles.
-        const { BillingEngine } = await import('../lib/billing/billingEngine');
-        await new BillingEngine().recalculateInvoice(settledInvoiceId);
-      } catch (error) {
-        console.error(
-          `Failed to recalculate draft ${settledInvoiceId} after a mid-period adjustment change:`,
-          error,
-        );
-      }
-    }
 
     revalidatePath('/msp/billing');
     return result;
   } catch (error) {
+    if (error instanceof DraftRecalculationError) return actionError(error.message);
     return toActionError(error);
   }
 }
