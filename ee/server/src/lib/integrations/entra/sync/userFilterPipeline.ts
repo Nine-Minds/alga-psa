@@ -20,7 +20,7 @@ export interface EntraUserFilterOptions {
   deactivateExcludedContacts?: boolean;
   importSharedMailboxes?: boolean;
   mailboxDetectionWarning?: string;
-  sharedMailboxIds?: Set<string>;
+  sharedMailboxIds?: Set<string> | null;
   groupMembershipResolver?: { isMember(groupId: string, userId: string, membershipMode?: 'direct' | 'transitive'): Promise<boolean> };
 }
 
@@ -44,6 +44,7 @@ export interface EntraUserFilterResult {
   unknownFieldCounts: { userType: number; assignedLicenseCount: number };
   groupMembershipResolver: NonNullable<EntraUserFilterOptions['groupMembershipResolver']>;
   warnings: string[];
+  sharedMailboxIds?: Set<string> | null;
 }
 
 const EMPTY_GROUP_MEMBERSHIP_RESOLVER = { isMember: async () => false };
@@ -160,6 +161,7 @@ export function filterEntraUsers(
     unknownFieldCounts,
     groupMembershipResolver: options.groupMembershipResolver ?? EMPTY_GROUP_MEMBERSHIP_RESOLVER,
     warnings: options.mailboxDetectionWarning ? [options.mailboxDetectionWarning] : [],
+    sharedMailboxIds: options.sharedMailboxIds,
   };
 }
 

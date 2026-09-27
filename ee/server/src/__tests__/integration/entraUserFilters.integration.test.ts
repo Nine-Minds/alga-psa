@@ -19,7 +19,7 @@ vi.mock('../../app/api/integrations/entra/_guards', () => ({
 import { ContactModel } from '@alga-psa/shared/models/contactModel';
 import { filterEntraUsersForManagedTenant } from '@ee/lib/integrations/entra/settingsService';
 import { executeEntraSync } from '@ee/lib/integrations/entra/sync/syncEngine';
-import { markExcludedEntraUsersInactive } from '@ee/lib/integrations/entra/sync/disableHandler';
+import { excludeSharedMailboxEntraIdentities, markDisabledEntraUsersInactive, markExcludedEntraUsersInactive, selectLinkedEntraIdentities } from '@ee/lib/integrations/entra/sync/disableHandler';
 import filterMigration from '../../../migrations/20260923120000_entra_managed_tenant_user_filters.cjs';
 import contactKindMigration from '../../../../../server/migrations/20260924120000_add_contact_kind.cjs';
 
@@ -175,6 +175,89 @@ describe('Entra user filter PostgreSQL integration', () => {
     expect(brake.warnings).toContain('Excluded contacts were left active because the filter excludes every enabled user and linked contacts exist.');
     expect((await state.trx('contacts').where({ tenant: state.tenant, contact_name_id: filteredContact.contact_name_id }).first()).is_inactive).toBe(false);
     await state.trx.rollback();
+  });
+
+  it('protects known shared mailboxes during a CIPP 403 outage and narrowly recovers them afterward', async () => {
+    const mailbox = buildUser('outage-shared', { accountEnabled: false, mailboxKind: null });
+    const person = buildUser('outage-person', { accountEnabled: false, mailboxKind: null });
+    const sharedContact = await ContactModel.createContact({ full_name: 'Outage shared', email: mailbox.email, client_id: clientId }, state.tenant, state.trx);
+    const personContact = await ContactModel.createContact({ full_name: 'Outage person', email: person.email, client_id: clientId }, state.tenant, state.trx);
+    const alreadyDisabledPerson = await ContactModel.createContact({ full_name: 'Previously disabled person', email: 'disabled-person@example.test', client_id: clientId, is_inactive: true }, state.tenant, state.trx);
+    await state.trx('contacts').where({ tenant: state.tenant, contact_name_id: sharedContact.contact_name_id }).update({ contact_kind: 'shared_mailbox' });
+    await state.trx('contacts').where({ tenant: state.tenant, contact_name_id: alreadyDisabledPerson.contact_name_id }).update({ entra_sync_status: 'inactive', entra_sync_status_reason: 'disabled_upstream' });
+    for (const [contact, objectId] of [[sharedContact, mailbox.entraObjectId], [personContact, person.entraObjectId]] as const) {
+      await state.trx('entra_contact_links').insert({ tenant: state.tenant, contact_name_id: contact.contact_name_id, client_id: clientId, entra_tenant_id: entraTenantId, entra_object_id: objectId, link_status: 'active', is_active: true });
+    }
+
+    const outageAdapter = { listSharedMailboxIds: async () => null } as any;
+    const unavailable = await filterEntraUsersForManagedTenant({ tenant: state.tenant, managedTenantId, entraTenantId, adapter: outageAdapter, users: [mailbox, person], configOverride: { version: 1, importSharedMailboxes: true, memberUsersOnly: false, licensedUsersOnly: false, includeGroupIds: [], excludeGroupIds: [], exclusionPatterns: [], deactivateExcludedContacts: false } as any });
+    expect(unavailable.sharedMailboxIds).toBeNull();
+    expect(unavailable.warnings.join(' ')).toMatch(/unavailable/i);
+    const disabledCandidates = unavailable.excluded.filter((entry) => entry.reason === 'account_disabled').map(({ user }) => ({ entraTenantId, entraObjectId: user.entraObjectId }));
+    const protectedCandidates = await excludeSharedMailboxEntraIdentities(state.tenant, disabledCandidates);
+    expect(protectedCandidates.map((entry) => entry.entraObjectId)).toEqual([person.entraObjectId]);
+
+    const preview = await executeEntraSync({ tenantId: state.tenant, clientId, managedTenantId, users: [], disabledIdentities: disabledCandidates, dryRun: true });
+    expect(preview.preview?.filter((entry) => entry.reason === 'disabled_upstream').map((entry) => entry.entraObjectId)).toEqual([person.entraObjectId]);
+    await markDisabledEntraUsersInactive(state.tenant, disabledCandidates);
+    expect((await state.trx('contacts').where({ tenant: state.tenant, contact_name_id: sharedContact.contact_name_id }).first()).is_inactive).toBe(false);
+    expect((await state.trx('contacts').where({ tenant: state.tenant, contact_name_id: personContact.contact_name_id }).first()).entra_sync_status_reason).toBe('disabled_upstream');
+
+    // Model the previously affected state from an earlier run so recovery has
+    // the exact strict eligibility tuple to evaluate.
+    await state.trx('contacts').where({ tenant: state.tenant, contact_name_id: sharedContact.contact_name_id }).update({ is_inactive: true, entra_sync_status: 'inactive', entra_sync_status_reason: 'disabled_upstream' });
+    const recoveredAdapter = { listSharedMailboxIds: async () => new Set([mailbox.entraObjectId]) } as any;
+    const recovered = await filterEntraUsersForManagedTenant({ tenant: state.tenant, managedTenantId, entraTenantId, adapter: recoveredAdapter, users: [mailbox], configOverride: { version: 1, importSharedMailboxes: true, memberUsersOnly: false, licensedUsersOnly: false, includeGroupIds: [], excludeGroupIds: [], exclusionPatterns: [], deactivateExcludedContacts: false } as any });
+    const recoveryPreview = await executeEntraSync({ tenantId: state.tenant, clientId, managedTenantId, users: recovered.included, fieldSyncConfig: { displayName: true }, dryRun: true });
+    expect(recoveryPreview.preview?.find((entry) => entry.entraObjectId === mailbox.entraObjectId)?.bucket).toBe('link');
+    expect(recoveryPreview.counters.updated).toBe(1);
+    expect((await state.trx('contacts').where({ tenant: state.tenant, contact_name_id: sharedContact.contact_name_id }).first()).is_inactive).toBe(true);
+    const recoveryResult = await executeEntraSync({ tenantId: state.tenant, clientId, managedTenantId, users: recovered.included, fieldSyncConfig: { displayName: true } });
+    expect(recoveryResult.counters.updated).toBe(1);
+    expect(await state.trx('contacts').where({ tenant: state.tenant, contact_name_id: sharedContact.contact_name_id }).first()).toMatchObject({ is_inactive: false, contact_kind: 'shared_mailbox', entra_sync_status: 'active', entra_sync_status_reason: null });
+    expect((await state.trx('contacts').where({ tenant: state.tenant, contact_name_id: alreadyDisabledPerson.contact_name_id }).first()).is_inactive).toBe(true);
+
+    await state.trx('contacts').where({ tenant: state.tenant, contact_name_id: sharedContact.contact_name_id }).update({ is_inactive: true, entra_sync_status: 'inactive', entra_sync_status_reason: 'disabled_upstream' });
+    const noImport = await filterEntraUsersForManagedTenant({ tenant: state.tenant, managedTenantId, entraTenantId, adapter: recoveredAdapter, users: [mailbox], configOverride: { version: 1, importSharedMailboxes: false, memberUsersOnly: false, licensedUsersOnly: false, includeGroupIds: [], excludeGroupIds: [], exclusionPatterns: [], deactivateExcludedContacts: false } as any });
+    expect(noImport.included).toHaveLength(0);
+    await executeEntraSync({ tenantId: state.tenant, clientId, managedTenantId, users: noImport.included });
+    expect((await state.trx('contacts').where({ tenant: state.tenant, contact_name_id: sharedContact.contact_name_id }).first()).is_inactive).toBe(true);
+  });
+
+  it('keeps pre-reconciliation person and legacy-null contacts inactive on both real linking paths', async () => {
+    await state.trx.raw('ALTER TABLE contacts ALTER COLUMN contact_kind DROP NOT NULL');
+    const personMailbox = buildUser('disabled-person-shared', { accountEnabled: false, mailboxKind: 'shared' });
+    const personContact = await ContactModel.createContact({ full_name: 'Person stays inactive', email: personMailbox.email, client_id: clientId, is_inactive: true }, state.tenant, state.trx);
+    await state.trx('contacts').where({ tenant: state.tenant, contact_name_id: personContact.contact_name_id }).update({ contact_kind: 'person', entra_sync_status: 'inactive', entra_sync_status_reason: 'disabled_upstream' });
+    const personDryRun = await executeEntraSync({ tenantId: state.tenant, clientId, managedTenantId, users: [personMailbox], dryRun: true });
+    expect(personDryRun.counters.updated).toBe(0);
+    await executeEntraSync({ tenantId: state.tenant, clientId, managedTenantId, users: [personMailbox] });
+    expect(await state.trx('contacts').where({ tenant: state.tenant, contact_name_id: personContact.contact_name_id }).first()).toMatchObject({ is_inactive: true, entra_sync_status_reason: 'disabled_upstream', contact_kind: 'shared_mailbox' });
+
+    const legacyMailbox = buildUser('disabled-legacy-shared', { accountEnabled: false, mailboxKind: 'shared' });
+    const legacyContact = await ContactModel.createContact({ full_name: 'Legacy stays inactive', email: 'legacy-old-address@example.test', client_id: clientId, is_inactive: true }, state.tenant, state.trx);
+    await state.trx('contacts').where({ tenant: state.tenant, contact_name_id: legacyContact.contact_name_id }).update({ contact_kind: null, entra_sync_status: 'inactive', entra_sync_status_reason: 'disabled_upstream' });
+    await state.trx('entra_contact_links').insert({ tenant: state.tenant, contact_name_id: legacyContact.contact_name_id, client_id: clientId, entra_tenant_id: entraTenantId, entra_object_id: legacyMailbox.entraObjectId, link_status: 'inactive', is_active: false });
+    await executeEntraSync({ tenantId: state.tenant, clientId, managedTenantId, users: [legacyMailbox] });
+    expect(await state.trx('contacts').where({ tenant: state.tenant, contact_name_id: legacyContact.contact_name_id }).first()).toMatchObject({ is_inactive: true, entra_sync_status_reason: 'disabled_upstream', contact_kind: 'shared_mailbox' });
+  });
+
+  it('scopes both contact joins by tenant when contact IDs collide', async () => {
+    const foreignTenant = randomUUID();
+    const foreignClient = randomUUID();
+    await state.trx('tenants').insert({ tenant: foreignTenant, client_name: `Foreign ${foreignTenant}`, email: `${foreignTenant}@example.test` });
+    await state.trx('clients').insert({ tenant: foreignTenant, client_id: foreignClient, client_name: 'Foreign client' });
+
+    const localPerson = await ContactModel.createContact({ full_name: 'Local person', email: 'join-local-person@example.test', client_id: clientId }, state.tenant, state.trx);
+    await state.trx('contacts').insert({ tenant: foreignTenant, contact_name_id: localPerson.contact_name_id, full_name: 'Foreign shared', email: 'join-foreign-shared@example.test', client_id: foreignClient, contact_kind: 'shared_mailbox' });
+    await state.trx('entra_contact_links').insert({ tenant: state.tenant, contact_name_id: localPerson.contact_name_id, client_id: clientId, entra_tenant_id: entraTenantId, entra_object_id: 'tenant-join-person', link_status: 'active', is_active: true });
+    expect((await excludeSharedMailboxEntraIdentities(state.tenant, [{ entraTenantId, entraObjectId: 'tenant-join-person' }])).map((entry) => entry.entraObjectId)).toEqual(['tenant-join-person']);
+
+    const localShared = await ContactModel.createContact({ full_name: 'Local shared', email: 'join-local-shared@example.test', client_id: clientId }, state.tenant, state.trx);
+    await state.trx('contacts').where({ tenant: state.tenant, contact_name_id: localShared.contact_name_id }).update({ contact_kind: 'shared_mailbox' });
+    await state.trx('contacts').insert({ tenant: foreignTenant, contact_name_id: localShared.contact_name_id, full_name: 'Foreign person', email: 'join-foreign-person@example.test', client_id: foreignClient, contact_kind: 'person' });
+    await state.trx('entra_contact_links').insert({ tenant: state.tenant, contact_name_id: localShared.contact_name_id, client_id: clientId, entra_tenant_id: entraTenantId, entra_object_id: 'tenant-join-shared', link_status: 'active', is_active: true });
+    expect(await selectLinkedEntraIdentities(state.tenant, [{ entraTenantId, entraObjectId: 'tenant-join-shared' }])).toEqual([]);
   });
 });
 

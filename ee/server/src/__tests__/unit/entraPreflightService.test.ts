@@ -7,6 +7,7 @@ const getEntraProviderAdapterMock = vi.fn();
 const getActiveEntraPartnerConnectionMock = vi.fn();
 const filterEntraUsersForManagedTenantMock = vi.fn();
 const executeEntraSyncMock = vi.fn();
+const excludeSharedMailboxEntraIdentitiesMock = vi.fn();
 
 vi.mock('@/lib/db', () => ({
   createTenantKnex: createTenantKnexMock,
@@ -27,6 +28,10 @@ vi.mock('@ee/lib/integrations/entra/settingsService', () => ({
 
 vi.mock('@ee/lib/integrations/entra/sync/syncEngine', () => ({
   executeEntraSync: executeEntraSyncMock,
+}));
+
+vi.mock('@ee/lib/integrations/entra/sync/disableHandler', () => ({
+  excludeSharedMailboxEntraIdentities: excludeSharedMailboxEntraIdentitiesMock,
 }));
 
 function buildKnexDouble() {
@@ -79,6 +84,7 @@ describe('runEntraPreflight', () => {
     getActiveEntraPartnerConnectionMock.mockReset();
     filterEntraUsersForManagedTenantMock.mockReset();
     executeEntraSyncMock.mockReset();
+    excludeSharedMailboxEntraIdentitiesMock.mockReset();
 
     runWithTenantMock.mockImplementation(async (_tenant: string, fn: () => Promise<unknown>) => fn());
     getActiveEntraPartnerConnectionMock.mockResolvedValue({ connection_type: 'direct' });
@@ -176,5 +182,34 @@ describe('runEntraPreflight', () => {
       runEntraPreflight({ tenantId: 'tenant-1', managedTenantId: 'missing' })
     ).rejects.toThrow('No confirmed mapping matches the requested preflight scope.');
     expect(executeEntraSyncMock).not.toHaveBeenCalled();
+  });
+
+  it('filters stored shared mailboxes from disabled identities when detection is unavailable', async () => {
+    const { knexMock } = buildKnexDouble();
+    createTenantKnexMock.mockResolvedValue({ knex: knexMock });
+    getEntraProviderAdapterMock.mockReturnValue({ listUsersForTenant: vi.fn(async () => []) });
+    filterEntraUsersForManagedTenantMock.mockResolvedValue({
+      included: [],
+      excluded: [
+        { reason: 'account_disabled', user: { entraTenantId: 'entra-1', entraObjectId: 'shared-id' } },
+        { reason: 'account_disabled', user: { entraTenantId: 'entra-1', entraObjectId: 'person-id' } },
+      ],
+      sharedMailboxIds: null,
+      warnings: ['Shared mailbox detection is unavailable.'],
+      deactivateExcludedContacts: false,
+      unknownFieldCounts: { userType: 0, assignedLicenseCount: 0 },
+    });
+    excludeSharedMailboxEntraIdentitiesMock.mockImplementation(async (_tenant: string, refs: Array<{ entraObjectId: string }>) => refs.filter((ref) => ref.entraObjectId !== 'shared-id'));
+    executeEntraSyncMock.mockResolvedValue({ dryRun: true, counters: { created: 0, linked: 0, updated: 0, ambiguous: 0, inactivated: 0 }, preview: [] });
+
+    const { runEntraPreflight } = await import('@ee/lib/integrations/entra/sync/preflightService');
+    const result = await runEntraPreflight({ tenantId: 'tenant-1', managedTenantId: 'managed-1', userId: 'user-1' });
+
+    expect(excludeSharedMailboxEntraIdentitiesMock).toHaveBeenCalledWith('tenant-1', expect.arrayContaining([
+      expect.objectContaining({ entraObjectId: 'shared-id' }),
+      expect.objectContaining({ entraObjectId: 'person-id' }),
+    ]));
+    expect(executeEntraSyncMock).toHaveBeenCalledWith(expect.objectContaining({ disabledIdentities: [expect.objectContaining({ entraObjectId: 'person-id' })] }));
+    expect(result.warnings).toContain('Shared mailbox detection is unavailable.');
   });
 });
