@@ -78,10 +78,50 @@ unset for normal service boots.
 The private `DEV_LOGIN_PASSWORD` remains configured for the next Next.js boot.
 Port `3927` had no listener during this implementation step.
 
-The credential gate passed in separate fresh processes immediately after
-recovery and after validation. Rerun it immediately before browser smoke because
-the database is shared. Then validate sign-in and session survival after reload,
-sign-in input and Google SSO label hydration, and
-priority hex Save followed by dialog Save and reload/database persistence. Also
-confirm Enter commits the picker draft while Cancel discards it. This plain
-PostgreSQL database does not validate Citus distribution-column compatibility.
+An investigation on 2026-09-26 identified a live shared-database writer in the
+`feature-alga-2026-0002576-multiple-outbound-from-address-2` worktree. Its
+development initializer generates a new Glinda password and updates the row on
+every app initialization, without checking the existing hash. This is a
+demonstrated hash writer; it does not explain every possible secret or account
+configuration mismatch. The current initializer in this checkout retains a
+well-formed hash unless explicit recovery is requested, and a focused regression
+test protects that behavior when the effective secret differs.
+
+On 2026-09-27, a documented recovery and fresh-process check passed at about
+00:00 UTC. The stale writer service restarted at about 00:04 UTC. Secret-safe
+HMAC snapshots at 00:15:30 and 00:25:19 UTC showed
+the configured password, effective and environment auth-secret values, database
+identity, selected user, tenant, and stored hash were all stable across that
+9m49s interval. The fresh-process check failed at both the initial investigation
+and the pre-recovery check, excluding password, auth-secret, account, or database
+configuration drift over that measured interval. A second explicit recovery then changed
+the stored-hash fingerprint while the other fingerprints remained stable, and
+the post-recovery fresh-process authentication check passed at 00:25:27 UTC.
+Fresh checks at 00:28:50 and 00:30:49 UTC also passed. HMACs from 00:25:27 to
+00:30:49 showed stable password, secret, database, account, tenant, and hash
+fingerprints. The old writer process PID remained unchanged during this interval,
+so the five-minute stable period does not prove its next initialization is safe.
+An independent HMAC snapshot loaded through the stale worktree's own environment
+at 00:32:21 UTC matched this checkout's effective secret, database, user, tenant,
+and current stored hash; each checkout's effective secret also matched its
+environment value. This confirms both checkouts select the same shared account
+and database with aligned auth secrets at the comparison point. Together with
+the stale source's unconditional random-password write on initialization and its
+restart after the successful check, the invalidation mechanism is the stale
+writer replacing the shared hash. Fingerprints and their HMAC key remain in
+mode-0600 files under `/tmp` and are not committed.
+
+The stale writer is outside this branch. Any dev service using that checkout
+must be updated before another initialization against the shared database; a
+successful recovery/check cannot make that old code safe. The observed service
+was left running because this implementation task forbids restarting it. The
+credential gate passed in separate fresh processes immediately after the second
+recovery and after validation, but repeated checks only describe those
+observation points and do not prove the external writer is fixed. The remaining
+browser smoke sequence is: recover with `--recover`, run the fresh-process
+check, sign in through the browser, edit priorities for several minutes (hex
+Save, dialog Save, Enter commit, Cancel discard, reload and database
+persistence), run the check again, sign out, then sign in with the identical
+configured password. Browser smoke was not run during this mitigation because
+the task prohibits starting or waking the server. This plain PostgreSQL database
+does not validate Citus distribution-column compatibility.

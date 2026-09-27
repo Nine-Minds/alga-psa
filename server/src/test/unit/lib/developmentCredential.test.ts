@@ -105,4 +105,32 @@ describe('development credential initialization', () => {
     process.env.NEXTAUTH_SECRET = changedSecret;
     expect(await verifyPassword(password, storedHash)).toBe(false);
   });
+
+  it('retains a well-formed shared hash when this stack has a different effective secret', async () => {
+    const credentialSecret = `credential-secret-${crypto.randomUUID()}`;
+    process.env.nextauth_secret = credentialSecret;
+    process.env.NEXTAUTH_SECRET = credentialSecret;
+    const configuredPassword = generateSecurePassword();
+    const storedHash = await hashPassword(configuredPassword);
+
+    process.env.nextauth_secret = `drifted-secret-${crypto.randomUUID()}`;
+    process.env.NEXTAUTH_SECRET = process.env.nextauth_secret;
+    const updatePasswordIfUnchanged = vi.fn(async () => true);
+    const log = vi.fn();
+
+    await initializeDevelopmentCredential({
+      user: { ...user, hashed_password: storedHash },
+      configuredPassword,
+      generatePassword: vi.fn(generateSecurePassword),
+      hashPassword,
+      verifyPassword,
+      updatePasswordIfUnchanged,
+      readCurrentHash: async () => storedHash,
+      log,
+    });
+
+    expect(updatePasswordIfUnchanged).not.toHaveBeenCalled();
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('retained'));
+    expect(await verifyPassword(configuredPassword, storedHash)).toBe(false);
+  });
 });
