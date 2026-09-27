@@ -70,6 +70,7 @@ function requestUpgrade(port: number, path: string, origin?: string): Promise<Up
       method: 'GET',
       headers: {
         Host: `127.0.0.1:${port}`,
+        Origin: `http://127.0.0.1:${port}`,
         Connection: 'Upgrade',
         Upgrade: 'websocket',
         'Sec-WebSocket-Key': 'dGhlIHNhbXBsZSBub25jZQ==',

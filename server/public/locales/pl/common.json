@@ -1,4 +1,7 @@
 {
+  "phone": {
+    "extension": "wew."
+  },
   "colorPicker": {
     "invalidHexBackground": "Nieprawidłowy kolor szesnastkowy (np. #FF0000)",
     "invalidHexText": "Nieprawidłowy kolor szesnastkowy (np. #FFFFFF)",

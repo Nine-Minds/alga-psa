@@ -55,7 +55,6 @@ const clientPropertiesSchema = z.object({
   status: z.string().optional(),
   type: z.string().optional(),
   billing_address: z.string().optional(),
-  tax_id: z.string().optional(),
   notes: z.string().optional(),
   payment_terms: z.string().optional(),
   website: clientUrlField,
@@ -66,8 +65,15 @@ const clientPropertiesSchema = z.object({
   defaultLocale: defaultLocaleSchema.optional()
 }).optional();
 
+// Accept legacy input separately; ClientService maps it to tax_id_number.
+const clientPropertiesInputSchema = clientPropertiesSchema.unwrap().extend({
+  tax_id: z.string().optional(),
+}).optional();
+
 // Create client schema
-export const createClientSchema = z.object({
+const clientContactFields = ['email', 'phone_no', 'address'] as const;
+
+const clientBodySchema = z.object({
   client_name: clientNameField,
   phone_no: clientPhoneField,
   email: clientEmailField,
@@ -76,7 +82,7 @@ export const createClientSchema = z.object({
   client_type: z.enum(['company', 'individual']).optional(),
   tax_id_number: z.string().optional(),
   notes: z.string().optional(),
-  properties: clientPropertiesSchema,
+  properties: clientPropertiesInputSchema,
   payment_terms: z.string().optional(),
   billing_cycle: z.enum(['weekly', 'bi-weekly', 'monthly', 'quarterly', 'semi-annually', 'annually']),
   credit_limit: z.number().min(0).optional(),
@@ -98,8 +104,16 @@ export const createClientSchema = z.object({
   tags: z.array(z.string()).optional()
 });
 
-// Update client schema (all fields optional)
-export const updateClientSchema = createUpdateSchema(createClientSchema);
+function rejectClientLocationFields(data: Record<string, unknown>, ctx: z.RefinementCtx): void {
+  for (const field of clientContactFields) {
+    if (Object.prototype.hasOwnProperty.call(data, field)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: [field], message: `Use the client locations endpoint to set ${field}` });
+    }
+  }
+}
+
+export const createClientSchema = clientBodySchema;
+export const updateClientSchema = createUpdateSchema(clientBodySchema).superRefine(rejectClientLocationFields);
 
 // Client filter schema
 export const clientFilterSchema = baseFilterSchema.extend({

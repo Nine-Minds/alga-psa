@@ -253,7 +253,8 @@
     },
     "states": {
       "running": "Exécution des diagnostics...",
-      "diagnosticsFailed": "Échec des diagnostics"
+      "diagnosticsFailed": "Échec des diagnostics",
+      "callbackDiagnosticsCaptured": "Diagnostics du rappel capturés le {{timestamp}}."
     },
     "statuses": {
       "pass": "Réussi",

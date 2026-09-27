@@ -54,6 +54,8 @@ const TENANT_TABLE_METADATA = {
   calendar_event_mappings: { scope: 'tenant' },
   calendar_provider_health: { scope: 'tenant' },
   calendar_providers: { scope: 'tenant' },
+  calendar_shares: { scope: 'tenant' },
+  calendars: { scope: 'tenant' },
   // Confirmed tenant column in server/migrations/20251104120005_create_calendar_vendor_config_tables.cjs.
   google_calendar_provider_config: { scope: 'tenant' },
   microsoft_calendar_provider_config: { scope: 'tenant' },
@@ -72,6 +74,7 @@ const TENANT_TABLE_METADATA = {
   client_payment_customers: { scope: 'tenant' },
   client_plan_bundles: { scope: 'tenant' },
   client_tax_rates: { scope: 'tenant' },
+  client_tax_id_migration_conflicts: { scope: 'tenant' },
   client_tax_settings: { scope: 'tenant' },
   categories: { scope: 'tenant' },
   checklist_template_apply_rules: { scope: 'tenant' },
@@ -235,6 +238,8 @@ const TENANT_TABLE_METADATA = {
   invoice_items: { scope: 'tenant' },
   invoice_line_items: { scope: 'tenant' },
   invoice_payment_links: { scope: 'tenant' },
+  billing_profile_autopay: { scope: 'tenant' },
+  invoice_autopay_attempts: { scope: 'tenant' },
   invoice_payments: { scope: 'tenant' },
   // System invoice template catalog; created without a tenant column.
   standard_invoice_templates: { scope: 'global' },

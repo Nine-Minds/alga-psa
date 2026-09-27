@@ -31,6 +31,7 @@ export * from './appliance-emails';
 export * from './product-upgrade-activities';
 export * from './trial-payment-reminder-activities';
 export * from './threecx-call-control-activities';
+export * from './autopay-activities';
 // Exclude generateTemporaryPassword and sendWelcomeEmail to avoid duplicates with email-activities
 export {
   getTenant,

@@ -55,3 +55,44 @@ test('T008 fresh-install smoke harness validates offline overlay assets and live
   assert.match(script, /alga-control-plane-reapply/);
   assert.match(script, /ready_to_log_in/);
 });
+
+test('stage-host-artifacts stages a supplied prebuilt control-plane archive without building the image', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-stage-prebuilt-'));
+  const imageArchive = path.join(tmp, 'alga-appliance-control-plane.tar');
+  const k3sBinary = path.join(tmp, 'k3s');
+  const dockerCalls = path.join(tmp, 'docker-calls.log');
+  const fakeDocker = path.join(tmp, 'docker');
+  fs.writeFileSync(imageArchive, 'prebuilt image archive');
+  fs.writeFileSync(k3sBinary, '#!/bin/sh\necho fake k3s\n', { mode: 0o755 });
+  fs.writeFileSync(fakeDocker, `#!/bin/sh\necho "$*" >> "${dockerCalls}"\nexit 97\n`, { mode: 0o755 });
+
+  const stageEnv = {
+    ...process.env,
+    DOCKER_BIN: fakeDocker,
+    ALGA_APPLIANCE_STATUS_UI_SKIP_BUILD: '1',
+    ALGA_APPLIANCE_STATUS_UI_ALLOW_MISSING_DIST: '1'
+  };
+  delete stageEnv.ALGA_APPLIANCE_CONTROL_PLANE_BUILD_IMAGE;
+  const stage = (overlayRoot, extraArgs = []) => spawnSync(stageScript, [
+    '--repo-root', repoRoot,
+    '--overlay-root', overlayRoot,
+    '--control-plane-image-archive', imageArchive,
+    '--k3s-binary', k3sBinary,
+    ...extraArgs
+  ], { cwd: repoRoot, encoding: 'utf8', env: stageEnv });
+
+  const overlayRoot = path.join(tmp, 'overlay');
+  const result = stage(overlayRoot);
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.equal(fs.existsSync(dockerCalls), false, 'docker must not be invoked when a prebuilt archive is supplied');
+  const stagedImages = path.join(overlayRoot, 'opt', 'alga-appliance', 'control-plane', 'images');
+  assert.equal(
+    fs.readFileSync(path.join(stagedImages, 'alga-appliance-control-plane.tar'), 'utf8'),
+    'prebuilt image archive'
+  );
+
+  // An explicit build request still builds alongside the supplied archive.
+  const explicit = stage(path.join(tmp, 'overlay-explicit'), ['--build-control-plane-image']);
+  assert.notEqual(explicit.status, 0);
+  assert.match(fs.readFileSync(dockerCalls, 'utf8'), /^build /m);
+});

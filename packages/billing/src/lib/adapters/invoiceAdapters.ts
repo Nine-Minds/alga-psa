@@ -17,6 +17,7 @@ import type {
 } from '@alga-psa/types';
 import { Temporal } from '@js-temporal/polyfill';
 import { displayAddressField, displayCountry } from '@alga-psa/core';
+import { paymentMethodDisplayLabel } from '@alga-psa/shared/billingClients/paymentPreferences';
 // toPlainDate is likely not needed here as we format to string for Wasm
 
 // Helper function to convert DateValue (Date or ISO string or Temporal) to ISO string for Wasm
@@ -644,6 +645,7 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
           address: String(dbData.client?.address ?? 'N/A'),
         },
         poNumber: (dbData as any).po_number ?? null,
+        paymentMethod: paymentMethodDisplayLabel((dbData as any).payment_method),
         ...((dbData as any).project_name
           ? {
               projectName: String((dbData as any).project_name),

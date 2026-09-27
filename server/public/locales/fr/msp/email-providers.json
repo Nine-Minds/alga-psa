@@ -1032,7 +1032,12 @@
       "saving": "Enregistrement…",
       "startDelimiter": "Délimiteur de début",
       "update": "Mettre à jour la règle",
-      "valuePlaceholder": "Valeur"
+      "valuePlaceholder": "Valeur",
+      "matchTargets": "Comparer la valeur extraite à",
+      "matchClientName": "Nom ou alias du client",
+      "matchContactEmail": "E-mail du contact",
+      "matchAssetName": "Nom de l’appareil (actif)",
+      "matchTargetRequired": "Sélectionnez au moins une cible."
     },
     "header": {
       "description": "Faites correspondre les e-mails entrants par expéditeur ou objet pour ignorer le bruit, attribuer le bon client ou acheminer vers une destination. Les règles s'exécutent dans l'ordre ; la première correspondance l'emporte.",
@@ -1090,7 +1095,10 @@
       "running": "Test en cours…",
       "subject": "Objet",
       "title": "Tester cette règle",
-      "to": "À"
+      "to": "À",
+      "contactEmail": "e-mail du contact",
+      "deviceName": "nom de l’appareil",
+      "ambiguous": "{{target}} correspond à {{count}} clients — aucune attribution"
     }
   },
   "errors": {

@@ -40,6 +40,82 @@ export interface IScheduleEntry extends TenantEntity {
   is_private?: boolean;
   /** Explicit date-only semantics; absent values are timed, never inferred. */
   is_all_day?: boolean;
+  /** Group calendar this entry is placed on; null/absent for personal entries. */
+  calendar_id?: string | null;
+  /**
+   * Server-computed visibility for the requesting viewer. `busy` entries are
+   * masked (no title, notes, work item or assignees beyond the calendar owner).
+   */
+  access?: 'full' | 'busy';
+  /** Server-computed: whether the requesting viewer may move/edit/delete this entry. */
+  can_edit?: boolean;
+}
+
+export type CalendarType = 'personal' | 'group';
+
+/** Ordered lowest → highest. `manage` is valid on group calendars only. */
+export type CalendarAccessLevel = 'free_busy' | 'read' | 'edit' | 'manage';
+
+export type CalendarGranteeType = 'user' | 'team';
+
+export interface ICalendar extends TenantEntity {
+  calendar_id: string;
+  calendar_type: CalendarType;
+  owner_user_id: string | null;
+  name: string | null;
+  description: string | null;
+  color: string | null;
+  is_archived: boolean;
+  created_by: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface ICalendarShare extends TenantEntity {
+  share_id: string;
+  calendar_id: string;
+  grantee_type: CalendarGranteeType;
+  grantee_id: string;
+  access_level: CalendarAccessLevel;
+  created_by: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+/** A share as edited in the UI (no ids/timestamps). */
+export interface ICalendarShareInput {
+  grantee_type: CalendarGranteeType;
+  grantee_id: string;
+  access_level: CalendarAccessLevel;
+}
+
+/** A share enriched with the grantee's display name for listing. */
+export interface ICalendarShareView extends ICalendarShareInput {
+  grantee_name: string;
+}
+
+/** A calendar the viewer can see, as listed in the schedule sidebar. */
+export interface IVisibleCalendar {
+  /** For personal calendars this is the owner's user id; for group calendars the calendar_id. */
+  key: string;
+  calendar_type: CalendarType;
+  calendar_id: string | null;
+  owner_user_id: string | null;
+  name: string;
+  description?: string | null;
+  color: string;
+  access_level: CalendarAccessLevel;
+  is_archived?: boolean;
+}
+
+/** What the requesting viewer may see and do on the schedule, computed server-side. */
+export interface IScheduleViewerCapabilities {
+  viewerUserId: string;
+  /** True for `user_schedule:update` holders: every internal user's calendar is visible and editable. */
+  canViewAll: boolean;
+  me: IVisibleCalendar;
+  people: IVisibleCalendar[];
+  groups: IVisibleCalendar[];
 }
 
 export interface IResource extends TenantEntity {

@@ -672,6 +672,7 @@ const Invoice = {
       invoice_number: invoice.invoice_number,
       client_id: invoice.client_id,
       po_number: invoice.po_number ?? null,
+      payment_method: invoice.payment_method ?? null,
       client_contract_id: invoice.client_contract_id ?? null,
       client: {
         // Bill-to, not the client's own name: a profile that carries its own

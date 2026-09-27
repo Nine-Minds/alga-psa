@@ -5,6 +5,8 @@ import { Temporal } from '@js-temporal/polyfill';
 import { createTenantKnex, tenantDb, resolveEffectiveTimeZone } from '@alga-psa/db';
 import { ISO8601String } from '@alga-psa/types';
 import { toPlainDate, toISODate } from '@alga-psa/core';
+import { paymentTermDays } from '@alga-psa/shared/billingClients/paymentPreferences';
+import { resolveInvoiceDueDate } from '../lib/billing/invoiceDueDate';
 import { withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
@@ -2105,45 +2107,30 @@ export const getAvailableRecurringDueWork = withAuth(async (
 });
 
 export async function getPaymentTermDays(paymentTerms: string): Promise<number> {
-    switch (paymentTerms) {
-        case 'net_30':
-            return 30;
-        case 'net_15':
-            return 15;
-        case 'due_on_receipt':
-            return 0;
-        default:
-            return 30; // Default to 30 days if unknown payment term
-    }
+    return paymentTermDays(paymentTerms);
 }
 
+/**
+ * Due date for an invoice dated `invoiceDate`, from the effective payment terms
+ * of `billingProfileId` — or of the client's default profile when no profile
+ * is given. Either way the profile inherits the client's terms unless it
+ * overrides them.
+ */
 export const getDueDate = withAuth(async (
     user,
     { tenant },
     clientId: string,
-    invoiceDate: ISO8601String
+    invoiceDate: ISO8601String,
+    billingProfileId?: string | null
 ): Promise<ISO8601String | ActionPermissionError> => {
     if (!await hasPermission(user as any, 'billing', 'read')) {
         return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
     }
 
     const { knex } = await createTenantKnex();
-    const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await tenantDb(trx, tenant).table('clients')
-            .where({
-                client_id: clientId,
-                tenant
-            })
-            .select('payment_terms')
-            .first();
-    });
-
-    const paymentTerms = client?.payment_terms || 'net_30';
-    const days = await getPaymentTermDays(paymentTerms);
-
-    const plainInvoiceDate = toPlainDate(invoiceDate);
-    const dueDate = plainInvoiceDate.add({ days });
-    return toISODate(dueDate);
+    return withTransaction(knex, async (trx: Knex.Transaction) =>
+        resolveInvoiceDueDate(trx, tenant, clientId, invoiceDate, billingProfileId)
+    );
 });
 
 

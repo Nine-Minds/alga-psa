@@ -61,7 +61,12 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
       client_type: zOpenApi.enum(['company', 'individual']).optional(),
       tax_id_number: zOpenApi.string().optional(),
       notes: zOpenApi.string().optional(),
-      properties: zOpenApi.record(zOpenApi.unknown()).optional(),
+      properties: zOpenApi.object({
+        tax_id: zOpenApi.string().optional().openapi({
+          deprecated: true,
+          description: 'Deprecated legacy input. Send tax_id_number instead.',
+        }),
+      }).catchall(zOpenApi.unknown()).optional(),
       payment_terms: zOpenApi.string().optional(),
       billing_cycle: zOpenApi.enum(['weekly', 'bi-weekly', 'monthly', 'quarterly', 'semi-annually', 'annually']),
       credit_limit: zOpenApi.number().min(0).optional(),
@@ -81,6 +86,8 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
       tags: zOpenApi.array(zOpenApi.string()).optional(),
     }),
   );
+
+  const ClientUpdateBody = ClientBody.omit({ email: true, phone_no: true, address: true });
 
   const ClientLocationBody = registry.registerSchema(
     'ClientLocationBody',
@@ -404,10 +411,10 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     method: 'put',
     path: '/api/v1/clients/{id}',
     summary: 'Update client',
-    description: 'Inherited ApiBaseController update route for one client_id.',
+    description: 'Updates client fields for one client_id. email, phone_no, and address are location fields and must be managed through /api/v1/clients/{id}/locations.',
     tags: [clientTag],
     security: [{ ApiKeyAuth: [] }],
-    request: { params: ClientIdParam, body: { schema: ClientBody.partial() } },
+    request: { params: ClientIdParam, body: { schema: ClientUpdateBody.partial() } },
     responses: {
       200: { description: 'Client updated.', schema: ClientEnvelope },
       400: { description: 'Invalid client id or request payload.', schema: ApiError },

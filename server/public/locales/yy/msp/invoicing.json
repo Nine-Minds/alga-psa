@@ -496,7 +496,8 @@
       "finalizedDate": "〖Ƒīƞȧŀīẑḗḓ Ḓȧŧḗ ······〗",
       "status": "〖Şŧȧŧŭş ···〗",
       "actions": "〖Ȧƈŧīȯƞş ···〗",
-      "quickbooks": "〖ɊŭīƈķƁȯȯķş ····〗"
+      "quickbooks": "〖ɊŭīƈķƁȯȯķş ····〗",
+      "autopay": "〖Ȧŭŧȯ-ƥȧẏ ····〗"
     },
     "actions": {
       "downloadPdfs": "〖Ḓȯẇƞŀȯȧḓ ƤḒƑş ······〗",
@@ -528,6 +529,9 @@
         "selectedCount": "〖{{count}} şḗŀḗƈŧḗḓ ········〗",
         "clear": "〖Ƈŀḗȧř ··〗"
       }
+    },
+    "autopay": {
+      "scheduled": "〖Ȧŭŧȯ-ƥȧẏ {{status}} ········〗"
     }
   },
   "recurringServicePeriods": {

@@ -1,4 +1,7 @@
 {
+  "phone": {
+    "extension": "toestel"
+  },
   "colorPicker": {
     "invalidHexBackground": "Ongeldige hexadecimale kleur (bijv. #FF0000)",
     "invalidHexText": "Ongeldige hexadecimale kleur (bijv. #FFFFFF)",

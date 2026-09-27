@@ -5,6 +5,7 @@ import {
   AMP_TABLE_COLUMNS,
   type AmpEntityType,
   type AmpRecord,
+  type AmpCustomFieldValueRecord,
 } from '@alga-psa/migration-spec';
 import { normalizeBooleanFlag, normalizeDateOnly, normalizeTimestamp } from './values';
 
@@ -46,6 +47,7 @@ export interface EntityRowsInput {
 
 export interface BuiltEntityRows {
   entityRows: Partial<Record<AmpEntityType, AmpRecord[]>>;
+  customFieldValues: AmpCustomFieldValueRecord[];
   rowCounts: Record<string, number>;
 }
 
@@ -145,6 +147,8 @@ export function buildEntityRows(
 ): BuiltEntityRows {
   const built = new Map<AmpEntityType, BuiltRecord[]>();
   const idsByEntity = new Map<AmpEntityType, Set<string>>();
+  const customFieldValues: AmpCustomFieldValueRecord[] = [];
+  let customFieldId = 0;
 
   for (const input of inputs) {
     validateMapping(input);
@@ -158,13 +162,13 @@ export function buildEntityRows(
     // Name every header that did not map, once per file, so the operator can
     // see a dropped client column before apply instead of after.
     for (const header of input.headers) {
-      if (mapping[header]) {
+      if (Object.prototype.hasOwnProperty.call(mapping, header)) {
         continue;
       }
       diagnostics.push({
         severity: 'info',
         code: 'CSV_UNMAPPED_COLUMN',
-        message: `${label}: column "${header}" was not recognized and was preserved in extension_json.`,
+        message: `${label}: column "${header}" was preserved as a custom field value and can be mapped to an asset-type field during configuration.`,
         entityType,
       });
     }
@@ -185,7 +189,7 @@ export function buildEntityRows(
 
       const values = new Map<string, string>();
       for (const header of input.headers) {
-        const raw = row[header];
+        const raw = Object.prototype.hasOwnProperty.call(row, header) ? row[header] : undefined;
         if (typeof raw !== 'string') {
           continue;
         }
@@ -200,12 +204,12 @@ export function buildEntityRows(
       }
 
       const record: Record<string, unknown> = {};
-      const leftover: Record<string, string> = {};
+      const leftover = new Map<string, string>();
       let carriedClientName: string | undefined;
       for (const [header, value] of values) {
-        const target = mapping[header];
+        const target = Object.prototype.hasOwnProperty.call(mapping, header) ? mapping[header] : undefined;
         if (!target) {
-          leftover[header] = value;
+          leftover.set(header, value);
           continue;
         }
         if (target === FULL_NAME_COLUMN) {
@@ -271,7 +275,7 @@ export function buildEntityRows(
       }
 
       if (carriedClientName !== undefined) {
-        leftover[AMP_CONTACT_CLIENT_NAME_EXTENSION_KEY] = carriedClientName;
+        leftover.set(AMP_CONTACT_CLIENT_NAME_EXTENSION_KEY, carriedClientName);
       }
 
       let sourceRecordId = record.source_record_id;
@@ -305,9 +309,24 @@ export function buildEntityRows(
       record.package_record_id = packageRecordId;
       record.external_identifier_namespace = namespace;
 
-      const leftoverKeys = Object.keys(leftover);
-      if (leftoverKeys.length > 0) {
-        const json = JSON.stringify(leftover);
+      for (const [header, value] of leftover) {
+        if (header === AMP_CONTACT_CLIENT_NAME_EXTENSION_KEY) continue;
+        const valueJson = JSON.stringify(value);
+        if (Buffer.byteLength(valueJson, 'utf8') > AMP_LIMITS.extensionJsonBytes) {
+          warn('CSV_CUSTOM_FIELD_TOO_LARGE', `unmapped column "${header}" exceeds the ${AMP_LIMITS.extensionJsonBytes}-byte custom field value limit and was dropped.`);
+          continue;
+        }
+        customFieldValues.push({
+          package_record_id: `cfv-${++customFieldId}`,
+          entity_type: entityType,
+          entity_package_record_id: packageRecordId,
+          field_name: header,
+          value_json: valueJson,
+        });
+      }
+      const extensionValues = new Map([...leftover].filter(([key]) => key === AMP_CONTACT_CLIENT_NAME_EXTENSION_KEY));
+      if (extensionValues.size > 0) {
+        const json = JSON.stringify(Object.fromEntries(extensionValues));
         const bytes = Buffer.byteLength(json, 'utf8');
         if (bytes > AMP_LIMITS.extensionJsonBytes) {
           warn(
@@ -342,7 +361,7 @@ export function buildEntityRows(
     entityRows[entityType] = records.map((built) => built.record as AmpRecord);
     rowCounts[entityType] = records.length;
   }
-  return { entityRows, rowCounts };
+  return { entityRows, customFieldValues, rowCounts };
 }
 
 function validateMapping(input: EntityRowsInput): void {

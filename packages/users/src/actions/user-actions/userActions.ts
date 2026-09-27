@@ -799,6 +799,8 @@ export const deleteUser = withAuth(async (
         ['authorization_bundle_assignments', 'created_by'],
         ['authorization_bundle_assignments', 'updated_by'],
         ['authorization_bundle_rules', 'created_by'],
+        ['calendars', 'created_by'],
+        ['calendar_shares', 'created_by'],
       ];
       for (const [table, column] of nullColumns) {
         await tenantScopedTable(table)
@@ -868,6 +870,21 @@ export const deleteUser = withAuth(async (
       for (const table of deleteByUserId) {
         await tenantScopedTable(table).where({ user_id: userId }).del();
       }
+
+      // Shared calendars: shares held by the user (polymorphic grantee, no FK),
+      // then the user's personal calendar and its shares.
+      await tenantScopedTable('calendar_shares')
+        .where({ grantee_type: 'user', grantee_id: userId })
+        .del();
+      const personalCalendarIds = tenantScopedTable('calendars')
+        .select('calendar_id')
+        .where({ calendar_type: 'personal', owner_user_id: userId });
+      await tenantScopedTable('calendar_shares')
+        .whereIn('calendar_id', personalCalendarIds)
+        .del();
+      await tenantScopedTable('calendars')
+        .where({ calendar_type: 'personal', owner_user_id: userId })
+        .del();
 
       // import_jobs uses created_by, not user_id
       await tenantScopedTable('import_jobs').where({ created_by: userId }).del();
@@ -1597,6 +1614,7 @@ export const registerClientUser = withAuth(async (
           client_id: 'contacts.client_id',
           tenant: 'contacts.tenant',
           is_inactive: 'contacts.is_inactive',
+          contact_kind: 'contacts.contact_kind',
           full_name: 'contacts.full_name',
         })
         .first();
@@ -1607,6 +1625,10 @@ export const registerClientUser = withAuth(async (
 
       if (contact.is_inactive) {
         return { success: false, code: 'CONTACT_INACTIVE', error: 'Contact is inactive' };
+      }
+
+      if (contact.contact_kind === 'shared_mailbox') {
+        return { success: false, code: 'REGISTRATION_FAILED', error: 'Shared mailbox contacts cannot have a client portal user.' };
       }
 
       // Check if a client user with this email already exists. Internal users

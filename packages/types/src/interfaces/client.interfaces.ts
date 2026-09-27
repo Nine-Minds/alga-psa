@@ -46,7 +46,6 @@ export interface IClient extends TenantEntity, ITaggable {
     status?: string;
     type?: string;
     billing_address?: string;
-    tax_id?: string;
     notes?: string;
     payment_terms?: string;
     website?: string;
@@ -126,6 +125,8 @@ export interface IClientLocation extends TenantEntity {
 export interface IClientWithLocation extends IClient {
   location_email?: string;
   location_phone?: string;
+  location_phone_extension?: string | null;
+  location_country_code?: string | null;
   location_address?: string;
 }
 

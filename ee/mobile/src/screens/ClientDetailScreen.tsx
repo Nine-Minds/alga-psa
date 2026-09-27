@@ -1,3 +1,4 @@
+import { formatPhoneForDisplay, formatPhoneLabel } from "../../../../packages/validation/src/lib/phone";
 import { Linking, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { buildMapsUrl, mapsQueryFromLines } from "../urls/mapsUrl";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -258,6 +259,7 @@ export function ClientDetailScreen({ navigation, route }: Props) {
   const logoUri = detail.logoUrl ? `${config.baseUrl}${detail.logoUrl}` : null;
   const notSet = t("detail.notSet", { defaultValue: "Not set" });
   const clientPhone = detail.phone_no?.trim() || null;
+  const formattedClientPhone = formatPhoneForDisplay(clientPhone);
 
   const detailRows: {
     icon: keyof typeof Feather.glyphMap;
@@ -269,9 +271,9 @@ export function ClientDetailScreen({ navigation, route }: Props) {
     {
       icon: "phone",
       label: t("detail.phone"),
-      value: detail.phone_no,
+      value: formatPhoneLabel(formattedClientPhone, t("detail.phoneExtension", { defaultValue: "ext." })),
       onPress: clientPhone
-        ? () => placeCall({ origin: { kind: "client", id: clientId }, phone: clientPhone, name: detail.client_name, contactId: null, clientId })
+        ? () => placeCall({ origin: { kind: "client", id: clientId }, phone: formattedClientPhone.e164 || clientPhone, name: detail.client_name, contactId: null, clientId })
         : undefined,
     },
     {
@@ -477,13 +479,16 @@ export function ClientDetailScreen({ navigation, route }: Props) {
                 ) : null}
                 {location.phone ? (
                   <Pressable
-                    onPress={() => void Linking.openURL(`tel:${location.phone}`)}
+                    onPress={() => {
+                      const formattedPhone = formatPhoneForDisplay(location.phone, location.phone_extension, location.country_code);
+                      return Linking.openURL(`tel:${formattedPhone.e164 || location.phone}`);
+                    }}
                     accessibilityRole="button"
                     accessibilityLabel={t("detail.phone")}
                     hitSlop={4}
                   >
                     <Text style={{ ...theme.typography.caption, color: theme.colors.primary, marginTop: theme.spacing.xs }}>
-                      {location.phone}
+                      {formatPhoneLabel(formatPhoneForDisplay(location.phone, location.phone_extension, location.country_code), t("detail.phoneExtension", { defaultValue: "ext." }))}
                     </Text>
                   </Pressable>
                 ) : null}

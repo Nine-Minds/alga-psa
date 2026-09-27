@@ -42,6 +42,12 @@ interface UserAndTeamPickerProps {
   placeholder?: string;
   userTypeFilter?: string | string[] | null;
   modal?: boolean;
+  /**
+   * Hide the built-in "Not assigned" option. Pickers that only add a recipient
+   * (e.g. calendar sharing) must not offer a clear-to-none choice. Defaults to
+   * false so every existing consumer keeps today's behavior.
+   */
+  hideNotAssignedOption?: boolean;
 }
 
 interface OptionButtonProps {
@@ -93,6 +99,7 @@ const UserAndTeamPicker = ({
   placeholder,
   userTypeFilter = 'internal',
   modal = true,
+  hideNotAssignedOption = false,
   'data-automation-id': dataAutomationId,
   'data-automation-type': dataAutomationType = 'user-and-team-picker'
 }: UserAndTeamPickerProps & AutomationProps) => {
@@ -431,15 +438,21 @@ const UserAndTeamPicker = ({
             e.stopPropagation();
           }}
         >
-          <OptionButton
-            id={`${pickerId}-option-unassigned`}
-            label={notAssignedLabel}
-            onClick={() => handleSelectUser('unassigned')}
-            className="relative flex items-center px-3 py-2 text-sm rounded text-gray-900 cursor-pointer hover:bg-[rgb(var(--color-primary-500)/0.08)] focus:bg-[rgb(var(--color-primary-500)/0.08)]"
-            parentId={pickerId}
-          >
-            {notAssignedLabel}
-          </OptionButton>
+          {/* LEVERAGE: friction user-and-team-picker-clear-option — the clear
+              choice is baked into every instance; a consumer that only adds
+              recipients (calendar sharing) opts out via hideNotAssignedOption
+              instead of wrapping or forking this shared picker. */}
+          {!hideNotAssignedOption && (
+            <OptionButton
+              id={`${pickerId}-option-unassigned`}
+              label={notAssignedLabel}
+              onClick={() => handleSelectUser('unassigned')}
+              className="relative flex items-center px-3 py-2 text-sm rounded text-gray-900 cursor-pointer hover:bg-[rgb(var(--color-primary-500)/0.08)] focus:bg-[rgb(var(--color-primary-500)/0.08)]"
+              parentId={pickerId}
+            >
+              {notAssignedLabel}
+            </OptionButton>
+          )}
 
           {filteredUsers.map((user): React.JSX.Element => {
             const userName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || t('pickers.unnamedUser', 'Unnamed User');

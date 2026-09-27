@@ -152,6 +152,19 @@ export function useListViews<TLive, F = Record<string, unknown>>({
   const urlHasExplicitStateRef = useRef(urlHasExplicitState);
   const ownsUrlRef = useRef(ownsUrl);
   ownsUrlRef.current = ownsUrl;
+  /**
+   * Views load through server actions that can settle after the list has been
+   * left. A late result must not apply a view, toast, or rewrite the address bar
+   * of whatever screen is showing now, nor update state of an unmounted hook.
+   */
+  const mountedRef = useRef(false);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const reportFailure = useCallback((result: unknown, fallbackKey: string, fallback: string) => {
     const message = isFailure(result) ? getErrorMessage(result) : null;
@@ -159,22 +172,18 @@ export function useListViews<TLive, F = Record<string, unknown>>({
   }, [t]);
 
   const refresh = useCallback(async (): Promise<ListViewCollection<F> | null> => {
+    let loaded: ListViewCollection<F> | null = null;
     try {
       const result = (await listListViews(adapterRef.current.listKey)) as ActionResult<ListViewCollection<F>>;
-      if (isFailure(result)) {
-        // No access to views on this list: the picker simply has nothing to show.
-        setCollection({ views: [], defaultViewId: null, canShare: false });
-        return null;
-      }
-      setCollection(result);
-      return result;
+      // No access to views on this list: the picker simply has nothing to show.
+      loaded = isFailure(result) ? null : result;
     } catch (error) {
       console.error('[listViews] failed to load views', error);
-      setCollection({ views: [], defaultViewId: null, canShare: false });
-      return null;
-    } finally {
-      setIsLoading(false);
     }
+    if (!mountedRef.current) return null;
+    setCollection(loaded ?? { views: [], defaultViewId: null, canShare: false });
+    setIsLoading(false);
+    return loaded;
   }, []);
 
   useEffect(() => {
@@ -223,6 +232,7 @@ export function useListViews<TLive, F = Record<string, unknown>>({
       }
       void (async () => {
         const result = (await getListView(requested)) as ActionResult<ListViewSummary<F>>;
+        if (!mountedRef.current) return;
         if (!isFailure(result) && result.list_key === adapterRef.current.listKey) {
           applySummary(result);
           return;

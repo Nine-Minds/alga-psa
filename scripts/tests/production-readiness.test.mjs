@@ -397,3 +397,48 @@ test('quarantining one requirement cannot hide a failure of the job it shares', 
   assert.ok(!result.failures.some(failure => failure.startsWith(QUARANTINABLE)),
     'the quarantined requirement must not appear in the top-level failures');
 });
+
+test('CLI attributes a quarantined lane that produced no inputs to its quarantine instead of vetoing', async t => {
+  // The quarantined Teams lane runs after a development server that must come
+  // up first; when it does not, the gate step is skipped and no artifact is
+  // uploaded. That is the quarantined lane failing, so it must be reported as
+  // quarantined-failing, and the same absence must still veto once unquarantined.
+  const { mkdtempSync, cpSync, mkdirSync, writeFileSync, readFileSync, rmSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const path = await import('node:path');
+  const { execFileSync, spawnSync } = await import('node:child_process');
+  const checkout = registry => {
+    const root = mkdtempSync(path.join(tmpdir(), 'production-readiness-quarantine-'));
+    t.after(() => rmSync(root, { recursive: true, force: true }));
+    const write = (file, value) => {
+      mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
+      writeFileSync(path.join(root, file), typeof value === 'string' ? value : JSON.stringify(value));
+    };
+    cpSync(new URL('../lib', import.meta.url), path.join(root, 'scripts/lib'), { recursive: true });
+    cpSync(new URL('../verify-production-readiness.mjs', import.meta.url), path.join(root, 'scripts/verify-production-readiness.mjs'));
+    write('scripts/lib/quarantine.json', registry);
+    write('.gitignore', 'test-results/\n');
+    const git = args => execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+    git(['init', '-q']); git(['add', '.']);
+    git(['-c', 'user.name=Readiness fixture', '-c', 'user.email=readiness@example.test', 'commit', '--no-gpg-sign', '-qm', 'Fixture']);
+    const child = spawnSync(process.execPath, ['scripts/verify-production-readiness.mjs'], {
+      cwd: root, encoding: 'utf8', timeout: 10000,
+      env: { ...process.env, GITHUB_SHA: git(['rev-parse', 'HEAD']), TIER1_BASE_SHA: '', READINESS_JOBS: JSON.stringify(fixture().jobs) },
+    });
+    return { child, output: JSON.parse(readFileSync(path.join(root, 'test-results/production-readiness/aggregate.json'), 'utf8')) };
+  };
+  const ownTopLevel = failures => failures.filter(failure => failure.startsWith(QUARANTINABLE));
+
+  const quarantined = checkout(entry({ expires: '2999-12-31' }));
+  const reported = resultFor(quarantined.output, QUARANTINABLE);
+  assert.equal(reported.status, 'quarantined-failing');
+  assert.ok(reported.failures.some(failure => /ENOENT.*teams-development-execution/.test(failure)),
+    'the missing inputs stay visible on the quarantined requirement');
+  assert.deepEqual(ownTopLevel(quarantined.output.failures), [], quarantined.child.stderr);
+
+  const enforced = checkout({ schemaVersion: 1, entries: [] });
+  assert.equal(resultFor(enforced.output, QUARANTINABLE).status, 'failed');
+  assert.ok(ownTopLevel(enforced.output.failures).some(failure => /ENOENT/.test(failure)),
+    'an unquarantined lane with no inputs still vetoes readiness');
+  assert.equal(enforced.output.status, 'failed');
+});

@@ -1726,7 +1726,20 @@
     "paymentTerms": "Zahlungsbedingungen",
     "taxExempt": "Steuerbefreit",
     "taxExemptInherited": "Wird vom Kunden geerbt ({{value}})",
-    "regionNote": "Die Steuerregion wird hier nicht gesetzt. Sie richtet sich nach dem Leistungsort – Leistung, dann Standort der Vertragsposition, dann Kundenstandard."
+    "regionNote": "Die Steuerregion wird hier nicht gesetzt. Sie richtet sich nach dem Leistungsort – Leistung, dann Standort der Vertragsposition, dann Kundenstandard.",
+    "inheritFromClient": "Vom Kunden übernehmen ({{value}})",
+    "paymentMethod": "Zahlungsmethode",
+    "paymentMethodHint": "Rechnungen für Scheck oder Banküberweisung enthalten keinen Online-Link „Jetzt bezahlen“.",
+    "cardOnFileLabel": "Hinterlegte Karte",
+    "cardOnFileHint": "Hinterlegte Karten werden vom Kunden im Kundenportal verwaltet.",
+    "noCardOnFile": "Keine Karte hinterlegt",
+    "cardType": {
+      "card": "Karte",
+      "bankAccount": "Bankkonto"
+    },
+    "cardExpiry": ", gültig bis {{month}}/{{year}}",
+    "legacyPaymentTerms": "„{{value}}“ ist keine anerkannte Zahlungsbedingung und wurde nie angewendet. Beim Speichern wird sie gelöscht.",
+    "cardOnFile": "{{type}} mit Endziffern {{last4}}{{expiry}}"
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Prepaid-Saldo-Warnungen",
@@ -1879,7 +1892,9 @@
       "recordNotFound": "Dieser Datensatz oder dieses Abrechnungsprofil existiert nicht mehr.",
       "otherClient": "Dieses Abrechnungsprofil gehört zu einem anderen Kunden.",
       "archived": "Dieses Abrechnungsprofil ist archiviert.",
-      "selectionNotThisClient": "Eines der ausgewählten Abrechnungsprofile gehört nicht zu diesem Kunden."
+      "selectionNotThisClient": "Eines der ausgewählten Abrechnungsprofile gehört nicht zu diesem Kunden.",
+      "invalidPaymentTerms": "Wählen Sie eine der aufgeführten Zahlungsbedingungen.",
+      "invalidPaymentMethod": "Wählen Sie eine der aufgeführten Zahlungsmethoden."
     },
     "clientMerge": {
       "blocked": "Diese Zusammenführung kann nicht abgeschlossen werden.",
@@ -1897,6 +1912,24 @@
       "duplicateManager": "Ein Abrechnungsprofil kann nur eine Leitung haben.",
       "notThisClient": "Einer der ausgewählten Kontakte gehört nicht zum Kunden dieses Abrechnungsprofils."
     }
+  },
+  "clientAutopay": {
+    "setupLinkTitle": "Link zur Karteneinrichtung",
+    "setupLinkFallback": "Kopieren Sie diesen Link, um ihn mit Ihrem Kunden zu teilen.",
+    "unknownUser": "Unbekannter Benutzer",
+    "changeCard": "Diese Karte für die automatische Zahlung verwenden",
+    "title": "Automatische Zahlung · {{profile}}",
+    "active": "Aktiviert",
+    "authorization": "Autorisiert von {{user}} am {{date}} ({{source}})",
+    "attestation": "Der Kunde hat wiederkehrende Belastungen autorisiert",
+    "enable": "Automatische Zahlung aktivieren",
+    "disable": "Automatische Zahlung deaktivieren",
+    "copySetupLink": "Einrichtungslink kopieren",
+    "enabled": "Automatische Zahlung aktiviert",
+    "disabled": "Automatische Zahlung deaktiviert",
+    "linkCopied": "Link zur Karteneinrichtung kopiert",
+    "recentAttempts": "Letzte Versuche",
+    "noAttempts": "Noch keine Versuche"
   },
   "mergeClients": {
     "title": "Einen Kunden in diesen Kunden zusammenführen",

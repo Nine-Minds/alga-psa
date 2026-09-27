@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import type { SalesOrderDocumentParty, SalesOrderViewModel } from '@alga-psa/types';
+import { tenantDb } from '@alga-psa/db';
 
 import { fetchTenantParty } from './tenantPartyAdapter';
 import { displayAddressField, displayCountry } from '@alga-psa/core';
@@ -19,6 +20,22 @@ export {
   type SalesOrderRowForDocument,
   type ServiceNameRecord,
 } from './salesOrderViewModel';
+
+/** Group already FIFO-ordered allocated stock rows by sales-order line. */
+export function groupAllocatedSerialsByLine(
+  units: Array<{ allocated_so_line_id: unknown; serial_number: unknown }>,
+): Map<string, string[]> {
+  const grouped = new Map<string, string[]>();
+  for (const unit of units) {
+    const lineId = String(unit.allocated_so_line_id);
+    const serial = asTrimmedString(unit.serial_number);
+    if (!serial) continue;
+    const serials = grouped.get(lineId) ?? [];
+    serials.push(serial);
+    grouped.set(lineId, serials);
+  }
+  return grouped;
+}
 
 // LEVERAGE: pattern party-adapter — buildAddress / fetchCustomerParty mirror quoteAdapters' private
 // helpers; converge into a shared party adapter when the generic document spine (Phase 2) lands.
@@ -135,5 +152,21 @@ export async function mapDbSalesOrderToViewModel(
     fetchServiceNames(knexOrTrx, tenant, serviceIds),
   ]);
 
-  return assembleSalesOrderViewModel({ so, lines, servicesById, customer, tenantParty });
+  const lineIds = lines.map((line) => line.so_line_id);
+  const allocatedSerialsByLine = new Map<string, string[]>();
+  if (lineIds.length > 0) {
+    // LEVERAGE: pattern fifo-unit-order — allocation, fulfillment candidates, and this pick list share FIFO ordering.
+    const allocatedUnits = await tenantDb(knexOrTrx, tenant).table('stock_units')
+      .where({ status: 'allocated' })
+      .whereIn('allocated_so_line_id', lineIds)
+      .orderByRaw('received_at ASC NULLS LAST, unit_id ASC')
+      .select('allocated_so_line_id', 'serial_number');
+    for (const [lineId, serials] of groupAllocatedSerialsByLine(
+      allocatedUnits as Array<{ allocated_so_line_id: unknown; serial_number: unknown }>,
+    )) {
+      allocatedSerialsByLine.set(lineId, serials);
+    }
+  }
+
+  return assembleSalesOrderViewModel({ so, lines, servicesById, customer, tenantParty, allocatedSerialsByLine });
 }

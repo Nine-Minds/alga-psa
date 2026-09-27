@@ -1726,7 +1726,20 @@
     "paymentTerms": "Termini di pagamento",
     "taxExempt": "Esente da imposta",
     "taxExemptInherited": "Ereditato dal cliente ({{value}})",
-    "regionNote": "La regione fiscale non si imposta qui. Segue il luogo di erogazione: il servizio, poi la sede della riga di contratto, poi il valore predefinito del cliente."
+    "regionNote": "La regione fiscale non si imposta qui. Segue il luogo di erogazione: il servizio, poi la sede della riga di contratto, poi il valore predefinito del cliente.",
+    "inheritFromClient": "Eredita dal cliente ({{value}})",
+    "paymentMethod": "Metodo di pagamento",
+    "paymentMethodHint": "Le fatture con pagamento tramite assegno o bonifico bancario non includono un link online «Paga ora».",
+    "cardOnFileLabel": "Carta salvata",
+    "cardOnFileHint": "Le carte salvate sono gestite dal cliente nel portale clienti.",
+    "noCardOnFile": "Nessuna carta salvata",
+    "cardType": {
+      "card": "Carta",
+      "bankAccount": "Conto bancario"
+    },
+    "cardExpiry": ", scade {{month}}/{{year}}",
+    "legacyPaymentTerms": "«{{value}}» non è una condizione di pagamento riconosciuta e non è mai stata applicata. Verrà rimossa al salvataggio.",
+    "cardOnFile": "{{type}} con ultime cifre {{last4}}{{expiry}}"
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Avvisi saldo prepagato",
@@ -1879,7 +1892,9 @@
       "recordNotFound": "Questo record o profilo di fatturazione non esiste più.",
       "otherClient": "Questo profilo di fatturazione appartiene a un altro cliente.",
       "archived": "Questo profilo di fatturazione è archiviato.",
-      "selectionNotThisClient": "Uno dei profili di fatturazione selezionati non appartiene a questo cliente."
+      "selectionNotThisClient": "Uno dei profili di fatturazione selezionati non appartiene a questo cliente.",
+      "invalidPaymentTerms": "Scegli uno dei termini di pagamento elencati.",
+      "invalidPaymentMethod": "Scegli uno dei metodi di pagamento elencati."
     },
     "clientMerge": {
       "blocked": "Non è possibile completare questa unione.",
@@ -1897,6 +1912,24 @@
       "duplicateManager": "Un profilo di fatturazione può avere un solo responsabile.",
       "notThisClient": "Uno dei contatti selezionati non appartiene al cliente di questo profilo di fatturazione."
     }
+  },
+  "clientAutopay": {
+    "setupLinkTitle": "Link di configurazione della carta",
+    "setupLinkFallback": "Copia questo link per condividerlo con il tuo cliente.",
+    "unknownUser": "Utente sconosciuto",
+    "changeCard": "Usa questa carta per il pagamento automatico",
+    "title": "Pagamento automatico · {{profile}}",
+    "active": "Attivo",
+    "authorization": "Autorizzato da {{user}} il {{date}} ({{source}})",
+    "attestation": "Il cliente ha autorizzato addebiti ricorrenti",
+    "enable": "Attiva il pagamento automatico",
+    "disable": "Disattiva il pagamento automatico",
+    "copySetupLink": "Copia link di configurazione",
+    "enabled": "Pagamento automatico attivato",
+    "disabled": "Pagamento automatico disattivato",
+    "linkCopied": "Link di configurazione della carta copiato",
+    "recentAttempts": "Tentativi recenti",
+    "noAttempts": "Ancora nessun tentativo"
   },
   "mergeClients": {
     "title": "Unisci un cliente a questo",

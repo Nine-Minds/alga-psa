@@ -125,7 +125,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Invoice details
   'invoice_charges', 'invoice_annotations', 'invoice_time_entries', 'invoice_usage_records',
   'invoice_charge_details', 'invoice_charge_fixed_details', 'invoice_items',
-  'invoice_payment_links', 'invoice_payments', 'invoice_template_assignments',
+  'invoice_autopay_attempts', 'billing_profile_autopay', 'invoice_payment_links', 'invoice_payments', 'invoice_template_assignments',
 
   // Prepaid hour blocks. The three child tables FK to hour_blocks, so they go
   // first; hour_blocks itself FKs to time_entries, service_catalog, invoices and
@@ -358,6 +358,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // Entra integration (dependent rows first, then parents)
   'entra_contact_reconciliation_queue', 'entra_contact_links',
+  'entra_managed_tenant_user_filters',
   'entra_client_tenant_mappings', 'entra_sync_run_tenants',
   'entra_sync_runs', 'entra_managed_tenants',
   'entra_partner_connections', 'entra_sync_settings',
@@ -421,6 +422,10 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // Schedule entries
   'schedule_entries',
+
+  // Shared calendars (schedule_entries.calendar_id → calendars; shares → calendars;
+  // calendars.owner_user_id → users, so this block precedes users)
+  'calendar_shares', 'calendars',
 
   // Service catalog
   'service_catalog', 'service_types', 'service_categories',
@@ -549,7 +554,10 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Merge audit rows reference nothing but the tenant, so the position is
   // advisory — listed beside the clients they describe so the order reads.
   'client_merges',
-  'clients',    // Delete clients FIRST (after NULLing account_manager references)
+  // Tax ID consolidation audit rows store client_id without an FK, so the
+  // position is advisory as well.
+  'client_tax_id_migration_conflicts',
+  'clients',   // Delete clients FIRST (after NULLing account_manager references)
   'contacts',   // Delete contacts SECOND (after clients, before users that have NOT NULL contact_id)
   'contact_email_type_definitions', // contacts.primary_email_custom_type_id → this table (RESTRICT)
   'password_reset_tokens',     // password_reset_tokens.user_id → users with NO ACTION

@@ -16,5 +16,12 @@
       "beta": "7a042bfa3beb0eeb435e7ee273fb9c23fdcbd259f335628477c3f8cf27340b49"
     }
   },
-  "suppressions": []
+  "suppressions": [
+    {
+      "version": "v1.0",
+      "method": "GET",
+      "pathTemplate": "/groups/{id}/{id}/microsoft.graph.user",
+      "reason": "The adapter selects members or transitiveMembers as a single path segment before appending the Graph user cast. This is a valid Graph collection cast; the endpoint guard parser cannot resolve the conditional path segment."
+    }
+  ]
 }

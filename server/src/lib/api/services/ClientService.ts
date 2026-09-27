@@ -53,6 +53,23 @@ import {
 } from '@alga-psa/clients/lib/clientMergeEngine';
 import { mergeClientWebsiteUpdate } from '@alga-psa/clients/lib/clientWebsiteUpdate';
 
+export function normalizeLegacyClientTaxId<T extends { tax_id_number?: string; properties?: any }>(data: T): T {
+  const properties = data.properties && typeof data.properties === 'object' ? { ...data.properties } : data.properties;
+  // Canonical input wins whenever present; legacy input is accepted only as fallback.
+  const legacyTaxId = typeof properties?.tax_id === 'string' ? properties.tax_id.trim() : properties?.tax_id;
+  const taxIdNumber = data.tax_id_number ?? legacyTaxId;
+  if (properties && typeof properties === 'object') delete properties.tax_id;
+  return { ...data, ...(taxIdNumber === undefined ? {} : { tax_id_number: taxIdNumber }), ...(properties === undefined ? {} : { properties }) };
+}
+
+export function stripLegacyClientTaxId<T>(client: T): T {
+  const record = client as T & { properties?: any };
+  if (!record.properties || typeof record.properties !== 'object') return client;
+  const properties = { ...record.properties };
+  delete properties.tax_id;
+  return { ...record, properties };
+}
+
 function maybeUserActorFromContext(context: ServiceContext) {
   if (typeof context.userId !== 'string' || !context.userId) return undefined;
   return { actorType: 'USER' as const, actorUserId: context.userId };
@@ -279,7 +296,7 @@ export class ClientService extends BaseService<IClient> {
       const clientsWithLogos = await Promise.all(
         (clients as IClient[]).map(async (client) => {
           const logoUrl = await getClientLogoUrl(client.client_id, context.tenant);
-          return withClientSinceDateString({ ...client, logoUrl });
+          return withClientSinceDateString(stripLegacyClientTaxId({ ...client, logoUrl }));
         })
       );
 
@@ -320,7 +337,7 @@ export class ClientService extends BaseService<IClient> {
       const logoUrl = await getClientLogoUrl(id, context.tenant);
 
       return withClientSinceDateString({
-        ...client,
+        ...stripLegacyClientTaxId(client),
         logoUrl
       }) as unknown as IClient;
     });
@@ -329,6 +346,9 @@ export class ClientService extends BaseService<IClient> {
   /**
    * Create new client with default settings   */
   async create(data: Partial<IClient>, context: ServiceContext): Promise<IClient> {
+    const normalized = normalizeLegacyClientTaxId(data as any);
+    const taxIdNumber = normalized.tax_id_number;
+    const properties = normalized.properties;
     const { knex } = await this.getKnex();
     const client = await withTransaction(knex, async (trx) => {
       // Prepare client data
@@ -337,9 +357,9 @@ export class ClientService extends BaseService<IClient> {
         client_name: data.client_name,
         url: data.url || '',
         client_type: data.client_type,
-        tax_id_number: data.tax_id_number,
+        tax_id_number: taxIdNumber,
         notes: data.notes,
-        properties: data.properties,
+        properties,
         payment_terms: data.payment_terms,
         billing_cycle: data.billing_cycle,
         credit_limit: data.credit_limit,
@@ -419,7 +439,7 @@ export class ClientService extends BaseService<IClient> {
       idempotencyKey: `client_created:${client.client_id}`,
     });
 
-    return withClientSinceDateString(client as Record<string, any>) as IClient;
+    return withClientSinceDateString(stripLegacyClientTaxId(client) as Record<string, any>) as IClient;
   }
 
   async delete(id: string, context: ServiceContext): Promise<void> {
@@ -622,31 +642,36 @@ export class ClientService extends BaseService<IClient> {
       }
 
       // Prepare update data
-      const updateData: any = {
-        ...data,
-        updated_at: knex.raw('now()'),
-      };
-      if (data.properties !== undefined) {
-        updateData.properties = { ...(before.properties ?? {}), ...data.properties };
+      const normalized = normalizeLegacyClientTaxId(data as any);
+      // Keep SQL writes constrained to persisted clients columns; tags are stored separately.
+      // This list must stay aligned with clientBodySchema and the clients migrations.
+      const clientColumns = [
+        'client_name', 'url', 'client_type', 'tax_id_number', 'notes', 'properties',
+        'payment_terms', 'billing_cycle', 'credit_limit', 'default_currency_code',
+        'preferred_payment_method', 'auto_invoice', 'invoice_delivery_method', 'region_code',
+        'is_tax_exempt', 'tax_exemption_certificate', 'timezone', 'invoice_template_id', 'client_since',
+        'billing_contact_id', 'billing_email', 'account_manager_id', 'is_inactive',
+      ] as const;
+      const updateData: Record<string, unknown> = { updated_at: knex.raw('now()') };
+      for (const column of clientColumns) {
+        const value = (normalized as Record<string, unknown>)[column];
+        if (value !== undefined) updateData[column] = value;
+      }
+      if (normalized.properties !== undefined && normalized.properties !== null) {
+        updateData.properties = { ...(before.properties ?? {}), ...normalized.properties };
       }
 
       // API PATCH-style updates must preserve omitted properties and synchronize
       // website copies only when url or properties.website was explicitly sent.
-      Object.assign(updateData, mergeClientWebsiteUpdate(before.url, before.properties, data));
-      // The raw spread above would otherwise pass properties: null through and
-      // clear the column despite null meaning "no property update" here.
-      if (data.properties === null) {
+      const websiteUpdate = mergeClientWebsiteUpdate(before.url, before.properties, normalized);
+      for (const column of clientColumns) {
+        const value = (websiteUpdate as Record<string, unknown>)[column];
+        if (value !== undefined) updateData[column] = value;
+      }
+      // A null properties value means "no property update" here.
+      if (normalized.properties === null) {
         delete updateData.properties;
       }
-
-      // Remove undefined values + non-column fields
-      Object.keys(updateData).forEach((key) => {
-        if (updateData[key] === undefined) {
-          delete updateData[key];
-        }
-      });
-      delete updateData.tags;
-
       const updatedFieldKeys = Object.keys(updateData);
 
       // Update client
@@ -793,7 +818,7 @@ export class ClientService extends BaseService<IClient> {
       });
     }
 
-    return withClientSinceDateString(result.after as Record<string, any>) as IClient;
+    return withClientSinceDateString(stripLegacyClientTaxId(result.after as IClient) as Record<string, any>) as IClient;
   }
 
   /**

@@ -233,6 +233,75 @@ describe('useListViews', () => {
   });
 });
 
+describe('useListViews after the list is left', () => {
+  function deferred<T>() {
+    let resolve!: (value: T) => void;
+    const promise = new Promise<T>((settle) => {
+      resolve = settle;
+    });
+    return { promise, resolve };
+  }
+
+  const flush = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setUrl('');
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('does not update React state when the view list arrives after unmount', async () => {
+    const pending = deferred<ListViewCollection<Filters>>();
+    actions.listListViews.mockReturnValue(pending.promise);
+    const rejections: unknown[] = [];
+    const onRejection = (reason: unknown) => rejections.push(reason);
+    process.on('unhandledRejection', onRejection);
+
+    try {
+      const { unmount } = renderListViews();
+      unmount();
+
+      // A torn-down DOM environment (a finished test file) has no
+      // `window`; a state update from the late load would throw inside React.
+      vi.stubGlobal('window', undefined);
+      pending.resolve(collection({ defaultViewId: VIEW_A }));
+      await flush();
+      vi.unstubAllGlobals();
+      await flush();
+    } finally {
+      vi.unstubAllGlobals();
+      process.off('unhandledRejection', onRejection);
+    }
+
+    expect(rejections).toEqual([]);
+  });
+
+  it.each(['found', 'missing'] as const)('does not apply, toast, or rewrite the URL when a %s ?view= lookup settles after unmount', async (outcome) => {
+    const pending = deferred<ListViewSummary<Filters> | { actionError: string }>();
+    actions.listListViews.mockResolvedValue(collection());
+    actions.getListView.mockReturnValue(pending.promise);
+    setUrl('?view=33333333-3333-4333-8333-333333333333');
+
+    const { unmount, onApply } = renderListViews();
+    await waitFor(() => expect(actions.getListView).toHaveBeenCalled());
+    unmount();
+
+    // The user has moved on to another screen whose URL is its own.
+    window.history.replaceState(null, '', '/msp/tickets?view=55555555-5555-4555-8555-555555555555');
+    pending.resolve(outcome === 'found'
+      ? view('33333333-3333-4333-8333-333333333333', { filters: { status: 'inactive' } })
+      : { actionError: 'This view is private or no longer exists.' });
+    await flush();
+
+    expect(onApply).not.toHaveBeenCalled();
+    expect(toastMock.error).not.toHaveBeenCalled();
+    expect(window.location.search).toBe('?view=55555555-5555-4555-8555-555555555555');
+  });
+});
+
 /**
  * In the app router, Next's HistoryUpdater keeps a non-null `history.state`
  * (carrying `__NA`) and re-canonicalises the URL, so a `replaceState` that

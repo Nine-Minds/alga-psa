@@ -1,4 +1,8 @@
+import { Temporal } from '@js-temporal/polyfill';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+vi.mock('@alga-psa/shared/billingClients/billingProfiles', async (importOriginal) =>
+  (await import('../../../../test-utils/billingProfileUnitStub')).billingProfilesModuleStub(importOriginal as any));
 
 /**
  * A manual invoice can be raised against any of the client's billing profiles —
@@ -10,15 +14,28 @@ const mocks = vi.hoisted(() => {
   const warn = vi.fn();
   const error = vi.fn();
   const hasPermission = vi.fn(async () => true);
-  const insert = vi.fn(async () => undefined);
-  const profileRow = vi.fn(() => ({ client_id: 'client-1', is_active: true }));
+  const insert = vi.fn(async (_invoice: Record<string, unknown>) => undefined);
+  const profileRow = vi.fn<() => Record<string, unknown>>(() => ({ client_id: 'client-1', is_active: true, payment_terms: 'net_15', preferred_payment_method: 'check' }));
 
   const makeBuilder = (table: string) => {
     const builder: any = {
-      where: vi.fn(() => builder),
+      where: vi.fn((criteria: any) => {
+        if (criteria?.billing_profile_id) builder.profileId = criteria.billing_profile_id;
+        return builder;
+      }),
       andWhere: vi.fn(() => builder),
       select: vi.fn(() => builder),
-      first: vi.fn(async () => (table === 'client_billing_profiles' ? profileRow() : undefined)),
+      first: vi.fn(async () => {
+        if (table === 'client_billing_profiles') {
+          return builder.profileId === 'unit-test-default-billing-profile'
+            ? { client_id: 'client-1', is_active: true }
+            : profileRow();
+        }
+        if (table === 'clients') {
+          return { client_id: 'client-1', payment_terms: 'net_30', preferred_payment_method: 'credit_card' };
+        }
+        return undefined;
+      }),
       insert,
     };
     return builder;
@@ -137,12 +154,13 @@ describe('generateManualInvoice billing profile selection', () => {
     vi.clearAllMocks();
     mocks.hasPermission.mockResolvedValue(true);
     mocks.validateClientBillingEmail.mockResolvedValue({ valid: true });
-    mocks.profileRow.mockReturnValue({ client_id: 'client-1', is_active: true });
+    mocks.profileRow.mockReturnValue({ client_id: 'client-1', is_active: true, payment_terms: 'net_15', preferred_payment_method: 'check' });
   });
 
   it('bills the selected profile and attributes every line to it', async () => {
     const result = await generateManualInvoice({ ...request, billingProfileId: 'profile-merged' });
 
+    expect(mocks.error).not.toHaveBeenCalled();
     expect(result.success).toBe(true);
     expect(mocks.insert).toHaveBeenCalledWith(
       expect.objectContaining({ billing_profile_id: 'profile-merged' }),
@@ -157,6 +175,17 @@ describe('generateManualInvoice billing profile selection', () => {
     );
   });
 
+  it('snapshots the selected profile payment method and dates its payment terms', async () => {
+    const result = await generateManualInvoice({ ...request, billingProfileId: 'profile-merged' });
+
+    expect(result.success).toBe(true);
+    const invoice = mocks.insert.mock.calls[0][0] as any;
+    expect(invoice.payment_method).toBe('check');
+    expect(invoice.due_date).toBe(
+      Temporal.PlainDate.from(invoice.invoice_date).add({ days: 15 }).toString(),
+    );
+  });
+
   it('keeps a per-line profile override ahead of the invoice profile', async () => {
     const result = await generateManualInvoice({
       ...request,
@@ -164,6 +193,7 @@ describe('generateManualInvoice billing profile selection', () => {
       items: [{ ...request.items[0], billing_profile_id: 'profile-line' }],
     });
 
+    expect(mocks.error).not.toHaveBeenCalled();
     expect(result.success).toBe(true);
     expect(mocks.persistManualInvoiceCharges).toHaveBeenCalledWith(
       expect.anything(),
@@ -200,9 +230,14 @@ describe('generateManualInvoice billing profile selection', () => {
   it('leaves an unpicked invoice attributed exactly as before', async () => {
     const result = await generateManualInvoice(request);
 
+    expect(mocks.error).not.toHaveBeenCalled();
     expect(result.success).toBe(true);
     expect(mocks.insert).toHaveBeenCalledWith(
-      expect.objectContaining({ billing_profile_id: null }),
+      expect.objectContaining({ billing_profile_id: null, payment_method: 'credit_card' }),
+    );
+    const invoice = mocks.insert.mock.calls[0][0] as any;
+    expect(invoice.due_date).toBe(
+      Temporal.PlainDate.from(invoice.invoice_date).add({ days: 30 }).toString(),
     );
     // Untouched items: charge attribution still falls through to the client default.
     expect(mocks.persistManualInvoiceCharges).toHaveBeenCalledWith(

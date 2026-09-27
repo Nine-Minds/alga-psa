@@ -1726,7 +1726,20 @@
     "paymentTerms": "Condiciones de pago",
     "taxExempt": "Exento de impuestos",
     "taxExemptInherited": "Heredado del cliente ({{value}})",
-    "regionNote": "La región fiscal no se define aquí. Sigue el lugar de entrega: el servicio, luego la ubicación de la línea de contrato y luego el valor por defecto del cliente."
+    "regionNote": "La región fiscal no se define aquí. Sigue el lugar de entrega: el servicio, luego la ubicación de la línea de contrato y luego el valor por defecto del cliente.",
+    "inheritFromClient": "Heredar del cliente ({{value}})",
+    "paymentMethod": "Método de pago",
+    "paymentMethodHint": "Las facturas con pago por cheque o transferencia bancaria no incluyen un enlace «Pagar ahora» en línea.",
+    "cardOnFileLabel": "Tarjeta guardada",
+    "cardOnFileHint": "El cliente gestiona las tarjetas guardadas en el portal del cliente.",
+    "noCardOnFile": "No hay ninguna tarjeta guardada",
+    "cardType": {
+      "card": "Tarjeta",
+      "bankAccount": "Cuenta bancaria"
+    },
+    "cardExpiry": ", caduca {{month}}/{{year}}",
+    "legacyPaymentTerms": "«{{value}}» no es una condición de pago reconocida y nunca se ha aplicado. Se elimina al guardar.",
+    "cardOnFile": "{{type}} terminada en {{last4}}{{expiry}}"
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Alertas de saldo prepagado",
@@ -1879,7 +1892,9 @@
       "recordNotFound": "Ese registro o perfil de facturación ya no existe.",
       "otherClient": "Ese perfil de facturación pertenece a otro cliente.",
       "archived": "Ese perfil de facturación está archivado.",
-      "selectionNotThisClient": "Uno de los perfiles de facturación seleccionados no pertenece a este cliente."
+      "selectionNotThisClient": "Uno de los perfiles de facturación seleccionados no pertenece a este cliente.",
+      "invalidPaymentTerms": "Elija uno de los plazos de pago de la lista.",
+      "invalidPaymentMethod": "Elija uno de los métodos de pago de la lista."
     },
     "clientMerge": {
       "blocked": "Esta fusión no se puede completar.",
@@ -1897,6 +1912,24 @@
       "duplicateManager": "Un perfil de facturación solo puede tener un responsable.",
       "notThisClient": "Uno de los contactos seleccionados no pertenece al cliente de este perfil de facturación."
     }
+  },
+  "clientAutopay": {
+    "setupLinkTitle": "Enlace de configuración de tarjeta",
+    "setupLinkFallback": "Copie este enlace para compartirlo con su cliente.",
+    "unknownUser": "Usuario desconocido",
+    "changeCard": "Usar esta tarjeta para el pago automático",
+    "title": "Pago automático · {{profile}}",
+    "active": "Activado",
+    "authorization": "Autorizado por {{user}} el {{date}} ({{source}})",
+    "attestation": "El cliente ha autorizado cargos recurrentes",
+    "enable": "Activar el pago automático",
+    "disable": "Desactivar el pago automático",
+    "copySetupLink": "Copiar enlace de configuración",
+    "enabled": "Pago automático activado",
+    "disabled": "Pago automático desactivado",
+    "linkCopied": "Enlace de configuración de tarjeta copiado",
+    "recentAttempts": "Intentos recientes",
+    "noAttempts": "Todavía no hay intentos"
   },
   "mergeClients": {
     "title": "Fusionar un cliente en este",

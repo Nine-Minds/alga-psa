@@ -35,6 +35,7 @@
     "title": "Kontakte",
     "description": "Hauptseite zur Kontaktverwaltung mit Suche, Filtern, Listenansicht und Sammelaktionen",
     "heading": "Kontakte",
+    "sharedMailbox": "Freigegebenes Postfach",
     "addContact": "+ Kontakt hinzufügen",
     "actions": "Aktionen",
     "searchPlaceholder": "Kontakte, Notizen und Interaktionen suchen",
