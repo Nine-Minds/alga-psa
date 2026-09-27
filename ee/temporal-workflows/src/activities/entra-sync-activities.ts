@@ -19,6 +19,7 @@ import { provisionEntraClientForMapping } from '@ee/lib/integrations/entra/sync/
 import { projectCompletedSyncUserCount } from '@ee/lib/integrations/entra/sync/completedSyncUserCountService';
 import { filterEntraUsersForManagedTenant } from '@ee/lib/integrations/entra/settingsService';
 import { DEACTIVATABLE_EXCLUSION_REASONS } from '@ee/lib/integrations/entra/sync/userFilterPipeline';
+import { excludeSharedMailboxEntraIdentities } from '@ee/lib/integrations/entra/sync/disableHandler';
 import { decideEntraRunNotifications } from '@ee/lib/integrations/entra/notifications/entraSyncNotificationRules';
 import {
   deliverEntraNotifications,
@@ -393,7 +394,7 @@ export async function syncTenantUsersActivity(
     return { fieldSyncConfig, deactivateOnEntitlementRemoval };
   });
 
-  const disabledIdentities = filteredUsers.excluded
+  const disabledCandidates = filteredUsers.excluded
     .filter((entry) => entry.reason === 'account_disabled')
     .map((entry) => ({
       entraTenantId: entry.user.entraTenantId,
@@ -402,6 +403,9 @@ export async function syncTenantUsersActivity(
       email: entry.user.email,
       userPrincipalName: entry.user.userPrincipalName,
     }));
+  const disabledIdentities = filteredUsers.sharedMailboxIds === null
+    ? await excludeSharedMailboxEntraIdentities(input.tenantId, disabledCandidates)
+    : disabledCandidates;
   const excludedIdentities = filteredUsers.deactivateExcludedContacts
     ? filteredUsers.excluded.filter((entry) => DEACTIVATABLE_EXCLUSION_REASONS.includes(entry.reason as typeof DEACTIVATABLE_EXCLUSION_REASONS[number])).map((entry) => ({
         reason: entry.reason, entraTenantId: entry.user.entraTenantId, entraObjectId: entry.user.entraObjectId, displayName: entry.user.displayName, email: entry.user.email, userPrincipalName: entry.user.userPrincipalName,

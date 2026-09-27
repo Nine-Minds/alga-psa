@@ -14,6 +14,7 @@ const markDisabledEntraUsersInactiveMock = vi.fn();
 const markExcludedEntraUsersInactiveMock = vi.fn();
 const selectLinkedEntraIdentitiesMock = vi.fn();
 const reactivateExcludedEntraContactMock = vi.fn();
+const reactivateDisabledSharedMailboxContactMock = vi.fn().mockResolvedValue(false);
 
 /**
  * The engine consults the portal-provisioning hooks on every non-dry-run
@@ -43,6 +44,7 @@ vi.mock('@ee/lib/integrations/entra/sync/contactReconciler', () => ({
   createContactForEntraUser: createContactForEntraUserMock,
   previewLinkedContactChange: previewLinkedContactChangeMock,
   reactivateExcludedEntraContact: reactivateExcludedEntraContactMock,
+  reactivateDisabledSharedMailboxContact: reactivateDisabledSharedMailboxContactMock,
 }));
 
 vi.mock('@ee/lib/integrations/entra/sync/disableHandler', () => ({
@@ -87,6 +89,8 @@ describe('executeEntraSync dry-run behavior', () => {
     createContactForEntraUserMock.mockReset();
     resetPortalProvisioningMocks();
     previewLinkedContactChangeMock.mockReset();
+    reactivateDisabledSharedMailboxContactMock.mockReset();
+    reactivateDisabledSharedMailboxContactMock.mockResolvedValue(false);
     previewLinkedContactChangeMock.mockResolvedValue({ alreadyLinked: false, fieldsWouldChange: false });
 
     findContactMatchesByEmailMock

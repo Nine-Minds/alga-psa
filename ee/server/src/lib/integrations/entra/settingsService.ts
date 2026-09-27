@@ -63,7 +63,7 @@ export async function resolveEntraUserFilterPolicy(input: {
     const ids = await resolver.members(groupId);
     for (const id of ids) excludeMemberIds.add(id);
   }
-  return { customExclusionPatterns: effective.exclusionPatterns, memberUsersOnly: effective.memberUsersOnly, licensedUsersOnly: effective.licensedUsersOnly, importSharedMailboxes: effective.importSharedMailboxes, sharedMailboxIds: sharedMailboxIds ?? undefined, mailboxDetectionWarning: sharedMailboxIds === null ? 'Shared mailbox detection is unavailable for this connection; no users were classified as shared mailboxes.' : undefined, includeGroupIds: effective.includeGroupIds, excludeGroupIds: effective.excludeGroupIds, includeMemberIds, excludeMemberIds, deactivateExcludedContacts: effective.deactivateExcludedContacts, groupMembershipResolver: resolver };
+  return { customExclusionPatterns: effective.exclusionPatterns, memberUsersOnly: effective.memberUsersOnly, licensedUsersOnly: effective.licensedUsersOnly, importSharedMailboxes: effective.importSharedMailboxes, sharedMailboxIds, mailboxDetectionWarning: sharedMailboxIds === null ? 'Shared mailbox detection is unavailable for this connection; no users were classified as shared mailboxes.' : undefined, includeGroupIds: effective.includeGroupIds, excludeGroupIds: effective.excludeGroupIds, includeMemberIds, excludeMemberIds, deactivateExcludedContacts: effective.deactivateExcludedContacts, groupMembershipResolver: resolver };
 }
 
 export async function filterEntraUsersForManagedTenant(input: Parameters<typeof resolveEntraUserFilterPolicy>[0]): Promise<EntraUserFilterResult> {

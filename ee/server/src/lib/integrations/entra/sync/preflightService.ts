@@ -6,6 +6,7 @@ import { getActiveEntraPartnerConnection } from '../connectionRepository';
 import { filterEntraUsersForManagedTenant } from '../settingsService';
 import type { EntraUserFilterConfig } from './userFilterConfig';
 import { DEACTIVATABLE_EXCLUSION_REASONS } from './userFilterPipeline';
+import { excludeSharedMailboxEntraIdentities } from './disableHandler';
 import {
   executeEntraSync,
   type EntraSyncPreviewBucket,
@@ -207,7 +208,7 @@ export async function runEntraPreflight(params: {
         : {};
     });
 
-  const disabledIdentities = filtered.excluded
+  const disabledCandidates = filtered.excluded
     .filter((entry) => entry.reason === 'account_disabled')
     .map((entry) => ({
       entraTenantId: entry.user.entraTenantId,
@@ -216,6 +217,9 @@ export async function runEntraPreflight(params: {
       email: entry.user.email,
       userPrincipalName: entry.user.userPrincipalName,
     }));
+  const disabledIdentities = filtered.sharedMailboxIds === null
+    ? await excludeSharedMailboxEntraIdentities(params.tenantId, disabledCandidates)
+    : disabledCandidates;
   const excludedIdentities = filtered.deactivateExcludedContacts ? filtered.excluded
     .filter((entry) => DEACTIVATABLE_EXCLUSION_REASONS.includes(entry.reason as typeof DEACTIVATABLE_EXCLUSION_REASONS[number]))
     .map(({ user, reason }) => ({ reason, entraTenantId: user.entraTenantId, entraObjectId: user.entraObjectId, displayName: user.displayName, email: user.email, userPrincipalName: user.userPrincipalName })) : [];
