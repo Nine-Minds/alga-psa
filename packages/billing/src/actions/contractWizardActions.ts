@@ -20,6 +20,7 @@ import {
   resolveRecurringAuthoringPolicy,
 } from '@shared/billingClients/recurringAuthoringPolicy';
 import { createClientContractAssignment } from '@alga-psa/shared/billingClients';
+import { cloneTemplateDefaultDiscounts } from '../lib/billing/utils/templateClone';
 
 
 import ContractLine from '../models/contractLine';
@@ -1484,7 +1485,7 @@ export const createClientContractFromWizard = withAuth(async (
       }
     }
 
-    await createClientContractAssignment(trx, tenant, {
+    const createdAssignment = await createClientContractAssignment(trx, tenant, {
       client_id: submission.client_id,
       contract_id: contractId,
       start_date: startDate,
@@ -1512,6 +1513,30 @@ export const createClientContractFromWizard = withAuth(async (
       po_number: submission.po_number ?? null,
       po_amount: submission.po_amount ?? null,
     });
+    if (submission.template_id) {
+      const lineIdMap: Record<string, string> = {};
+      // The wizard groups source template services into the newly created
+      // contract lines. Service and contract discounts need no line mapping;
+      // line-scoped defaults are resolved below by matching their source line
+      // services against the created line service configurations.
+      const sourceTemplateLines = await tenantDb(trx, tenant).table('contract_template_lines')
+        .where({ template_id: submission.template_id }).select('template_line_id');
+      for (const sourceLine of sourceTemplateLines) {
+        const sourceServices = await tenantDb(trx, tenant).table('contract_template_line_services')
+          .where({ template_line_id: sourceLine.template_line_id }).pluck('service_id');
+        const matching = await tenantDb(trx, tenant).table('contract_line_services')
+          .whereIn('service_id', sourceServices).whereIn('contract_line_id', createdContractLineIds)
+          .select('contract_line_id').first();
+        if (matching) lineIdMap[String(sourceLine.template_line_id)] = String(matching.contract_line_id);
+      }
+      await cloneTemplateDefaultDiscounts(trx, {
+        tenant,
+        templateId: submission.template_id,
+        clientContractId: createdAssignment.client_contract_id,
+        clientId: submission.client_id,
+        lineIdMap,
+      });
+    }
 
     if (!isDraft) {
       await syncRecurringServicePeriodsForContract(trx, {

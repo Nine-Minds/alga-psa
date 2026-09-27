@@ -189,6 +189,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   });
   const contractId = (searchParams?.get('contractId') ?? resolvedContractId ?? null) as string | null;
   const clientContractId = searchParams?.get('clientContractId') ?? resolvedClientContractId ?? null;
+  const focusedContractLineId = searchParams?.get('contractLineId') ?? null;
   const tenant = useTenant()!;
   const { getDocumentsByContractId, renderDocuments } = useDocumentsCrossFeature();
 
@@ -2627,6 +2628,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
           <ContractLines
             contract={contract}
             clientId={primaryAssignment?.client_id ?? contract.owner_client_id ?? null}
+            focusContractLineId={focusedContractLineId}
             onContractLinesChanged={handleContractLinesChanged}
             isReadOnly={isSystemManagedDefault}
           />

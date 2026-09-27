@@ -9,7 +9,7 @@ import { isValidDateOnly } from './dateOnly';
 
 export { toDateOnly } from './dateOnly';
 
-export type DiscountAuthoringScope = 'invoice' | 'contract' | 'service' | 'item';
+export type DiscountAuthoringScope = 'invoice' | 'contract' | 'line' | 'service' | 'item';
 
 export interface DiscountAuthoringInput {
   discount_name: string;
@@ -50,13 +50,14 @@ export function validateDiscountInput(input: DiscountAuthoringInput): string | n
     }
     if (input.end_date <= input.start_date) return 'End date must be after the start date.';
   }
-  const validScopes: DiscountAuthoringScope[] = ['invoice', 'contract', 'service', 'item'];
+  const validScopes: DiscountAuthoringScope[] = ['invoice', 'contract', 'line', 'service', 'item'];
   if (!validScopes.includes(input.scope)) return 'Choose a supported discount scope.';
   if (input.scope === 'item') {
     // Item scope targets a single invoice charge row, whose id is generated per
     // invoice; it cannot be authored against a stable contract configuration.
-    return 'Item-scoped discounts cannot be authored here; choose invoice, contract or service scope.';
+    return 'Item-scoped discounts cannot be authored here; choose invoice, contract, line or service scope.';
   }
+  if (input.scope === 'line' && !input.contract_line_id) return 'Select the contract line this discount applies to.';
   if (input.scope === 'service' && !input.scope_service_id) {
     return 'Select the service this discount applies to.';
   }

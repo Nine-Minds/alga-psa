@@ -9,6 +9,9 @@ const require = createRequire(import.meta.url);
 const migration = require(path.resolve(__dirname, '../20260927020000_scope_contract_discount_assignments_to_client_contracts.cjs')) as {
   up: (knex: Knex | Knex.Transaction) => Promise<void>;
 };
+const isolateDefinitionsMigration = require(path.resolve(__dirname, '../20260927030000_isolate_contract_discount_definitions.cjs')) as {
+  up: (knex: Knex | Knex.Transaction) => Promise<void>;
+};
 
 let db: Knex;
 
@@ -81,13 +84,42 @@ describe('contract discount assignment client-scope migration', () => {
       const firstPass = await trx('contract_discount_assignments').where({ tenant: realTenant }).orderBy('client_contract_id');
       expect(firstPass).toHaveLength(3);
       expect(firstPass.find((row) => row.client_contract_id === clientContracts[0])?.assignment_id).toBe(oneAssignment);
-      expect(firstPass.find((row) => row.client_contract_id === clientContracts[1])?.assignment_id).toBe(multiAssignment);
+      expect(firstPass.find((row) => row.client_contract_id === [...clientContracts].sort()[0])?.assignment_id).toBe(multiAssignment);
       expect(firstPass.map((row) => row.discount_id)).toEqual(expect.arrayContaining([oneDiscount, multiDiscount, multiDiscount]));
       expect(new Set(firstPass.map((row) => row.assignment_id)).size).toBe(3);
       await migration.up(trx);
       const rerun = await trx('contract_discount_assignments').where({ tenant: realTenant }).orderBy('client_contract_id');
       expect(rerun.map((row) => [row.assignment_id, row.discount_id, row.client_contract_id]))
         .toEqual(firstPass.map((row) => [row.assignment_id, row.discount_id, row.client_contract_id]));
+      throw rollback;
+    })).rejects.toBe(rollback);
+  });
+
+  it('splits already-shared discount definitions and keeps assignment settlement UUIDs', async () => {
+    const rollback = new Error('rollback shared-definition fixture');
+    await expect(db.transaction(async (trx) => {
+      const tenantWithClient = await trx('tenants as t').join('clients as c', 'c.tenant', 't.tenant').first('t.tenant', 'c.client_id');
+      const tenant = String(tenantWithClient.tenant);
+      const clientId = String(tenantWithClient.client_id);
+      const contractId = randomUUID();
+      const clientContractIds = [randomUUID(), randomUUID()];
+      const discountId = randomUUID();
+      const assignmentIds = [randomUUID(), randomUUID()];
+      await trx('contracts').insert({ tenant, contract_id: contractId, contract_name: 'Shared definition fixture', billing_frequency: 'monthly', is_active: true });
+      await trx('client_contracts').insert(clientContractIds.map((clientContractId) => ({ tenant, client_contract_id: clientContractId, client_id: clientId, contract_id: contractId, start_date: '2026-01-01', is_active: true })));
+      await trx('discounts').insert({ tenant, discount_id: discountId, discount_name: 'Shared old definition', discount_type: 'percentage', value: 0.125, start_date: '2026-01-01', is_active: true, scope: 'contract' });
+      await trx('contract_discount_assignments').insert(clientContractIds.map((clientContractId, index) => ({ tenant, client_contract_id: clientContractId, assignment_id: assignmentIds[index], discount_id: discountId, created_at: '2026-02-01' })));
+      await isolateDefinitionsMigration.up(trx);
+      const assignments = await trx('contract_discount_assignments').where({ tenant }).whereIn('assignment_id', assignmentIds).orderBy('assignment_id');
+      expect(assignments).toHaveLength(2);
+      expect(new Set(assignments.map((row) => row.discount_id)).size).toBe(2);
+      expect(assignments.map((row) => row.assignment_id).sort()).toEqual([...assignmentIds].sort());
+      const definitions = await trx('discounts').whereIn('discount_id', assignments.map((row) => row.discount_id)).where({ tenant });
+      expect(definitions).toHaveLength(2);
+      expect(definitions.every((row) => row.discount_name === 'Shared old definition' && Number(row.value) === 0.125)).toBe(true);
+      await isolateDefinitionsMigration.up(trx);
+      const rerun = await trx('contract_discount_assignments').where({ tenant }).whereIn('assignment_id', assignmentIds).orderBy('assignment_id');
+      expect(rerun.map((row) => row.discount_id)).toEqual(assignments.map((row) => row.discount_id));
       throw rollback;
     })).rejects.toBe(rollback);
   });

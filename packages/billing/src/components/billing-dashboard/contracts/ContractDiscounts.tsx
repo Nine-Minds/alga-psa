@@ -508,6 +508,7 @@ function ContractDiscountDialog({
                 options={[
                   { value: 'invoice', label: t('contractDiscounts.scopes.invoice', { defaultValue: 'All eligible charges' }) },
                   { value: 'contract', label: t('contractDiscounts.scopes.contract', { defaultValue: 'This contract' }) },
+                  { value: 'line', label: t('contractDiscounts.scopes.line', { defaultValue: 'A contract line' }) },
                   { value: 'service', label: t('contractDiscounts.scopes.service', { defaultValue: 'A service' }) },
                 ]}
               />
@@ -538,6 +539,13 @@ function ContractDiscountDialog({
                 options={scopedServices}
                 placeholder={t('contractDiscounts.fields.servicePlaceholder', { defaultValue: 'Select a service' })}
               />
+            </div>
+          )}
+
+          {form.scope === 'line' && (
+            <div>
+              <Label htmlFor="contract-discount-line">{t('contractDiscounts.fields.line', { defaultValue: 'Contract line' })}</Label>
+              <CustomSelect id="contract-discount-line" value={form.contract_line_id} onValueChange={(value) => update('contract_line_id', value)} options={lineOptions} placeholder={t('contractDiscounts.fields.linePlaceholder', { defaultValue: 'Select a contract line' })} />
             </div>
           )}
 

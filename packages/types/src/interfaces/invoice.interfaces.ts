@@ -225,7 +225,8 @@ export interface ManualLineMetadata {
 export interface ManualPartialPeriodMetadata {
     version: 1;
     source_kind: 'invoice_charge';
-    source_item_id: string;
+  source_item_id: string;
+  contract_line_id?: string | null;
     direction: 'increase' | 'decrease';
     effective_date: string;
     source_period_start: string;

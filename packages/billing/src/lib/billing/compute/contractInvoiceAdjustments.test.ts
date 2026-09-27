@@ -213,7 +213,8 @@ describe('evaluateContractInvoiceAdjustments', () => {
   it('scopes a contract discount to its contract assignment', () => {
     const result = evaluateContractInvoiceAdjustments({
       charges: [
-        charge({ item_id: 'a', client_contract_id: 'contract-1', net_amount: 100_000 }),
+        charge({ item_id: 'a', service_id: 'svc-a', contract_line_ids: ['line-a'], client_contract_id: 'contract-1', net_amount: 100_000 }),
+        charge({ item_id: 'a2', service_id: 'svc-b', contract_line_ids: ['line-b'], client_contract_id: 'contract-1', net_amount: 50_000 }),
         charge({ item_id: 'b', client_contract_id: 'contract-2', net_amount: 80_000 }),
       ],
       automaticDiscounts: [
@@ -226,9 +227,26 @@ describe('evaluateContractInvoiceAdjustments', () => {
       ],
     });
 
-    expect(result.discounts[0].base_amount).toBe(100_000);
-    expect(result.discounts[0].amount).toBe(25_000);
-    expect(result.netAmount).toBe(155_000);
+    expect(result.discounts[0].base_amount).toBe(150_000);
+    expect(result.discounts[0].amount).toBe(37_500);
+    expect(result.netAmount).toBe(192_500);
+  });
+
+  it('keeps explicit line and service discounts within their selected contract line and service', () => {
+    const charges = [
+      charge({ item_id: 'line-a-svc-a', service_id: 'svc-a', contract_line_ids: ['line-a'], client_contract_id: 'contract-1', net_amount: 10_000 }),
+      charge({ item_id: 'line-a-svc-b', service_id: 'svc-b', contract_line_ids: ['line-a'], client_contract_id: 'contract-1', net_amount: 20_000 }),
+      charge({ item_id: 'line-b-svc-a', service_id: 'svc-a', contract_line_ids: ['line-b'], client_contract_id: 'contract-1', net_amount: 30_000 }),
+    ];
+    const result = evaluateContractInvoiceAdjustments({
+      charges,
+      automaticDiscounts: [
+        invoiceDiscount({ discount_id: 'line-only', scope: 'line', contract_line_id: 'line-a', client_contract_id: 'contract-1', value: 0.1 }),
+        invoiceDiscount({ discount_id: 'service-only', scope: 'service', applies_to_service_id: 'svc-a', client_contract_id: 'contract-1', value: 0.1 }),
+      ],
+    });
+    expect(result.discounts.find((discount) => discount.discount_id === 'line-only')?.base_amount).toBe(30_000);
+    expect(result.discounts.find((discount) => discount.discount_id === 'service-only')?.base_amount).toBe(40_000);
   });
 
   it('caps stacked discounts against remaining eligible value', () => {

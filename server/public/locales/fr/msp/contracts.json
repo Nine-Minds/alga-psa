@@ -1244,6 +1244,21 @@
       "hypothetical": "Profil client hypothétique",
       "open": "Simuler",
       "title": "Simulation du modèle"
+    },
+    "discounts": {
+      "title": "Remises contractuelles par défaut",
+      "help": "Chaque contrat client reçoit une copie modifiable indépendante. Les remises globales s’appliquent aux lignes admissibles.",
+      "invalid": "Saisissez un nom, une valeur positive et une date de début.",
+      "remove": "Supprimer",
+      "name": "Nom de la remise",
+      "percentage": "Pourcentage",
+      "fixed": "Montant fixe",
+      "value": "Valeur",
+      "startDate": "Commence le",
+      "endDate": "Se termine le (facultatif)",
+      "add": "Ajouter une remise par défaut",
+      "chooseLine": "Choisir une ligne de modèle",
+      "chooseService": "Choisir un service"
     }
   },
   "quickStart": {

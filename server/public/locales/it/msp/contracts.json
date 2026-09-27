@@ -1244,6 +1244,21 @@
       "hypothetical": "Profilo cliente ipotetico",
       "open": "Simula",
       "title": "Simulazione del modello"
+    },
+    "discounts": {
+      "title": "Sconti predefiniti del contratto",
+      "help": "Ogni contratto cliente riceve una copia modificabile indipendente. Gli sconti globali si applicano alle righe idonee.",
+      "invalid": "Inserisci un nome, un valore positivo e una data di inizio.",
+      "remove": "Rimuovi",
+      "name": "Nome dello sconto",
+      "percentage": "Percentuale",
+      "fixed": "Importo fisso",
+      "value": "Valore",
+      "startDate": "Inizia il",
+      "endDate": "Termina il (facoltativo)",
+      "add": "Aggiungi sconto predefinito",
+      "chooseLine": "Scegli una riga del modello",
+      "chooseService": "Scegli un servizio"
     }
   },
   "quickStart": {

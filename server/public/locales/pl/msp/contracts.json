@@ -1244,6 +1244,21 @@
       "hypothetical": "Hipotetyczny profil klienta",
       "open": "Symuluj",
       "title": "Symulacja szablonu"
+    },
+    "discounts": {
+      "title": "Domyślne rabaty umowy",
+      "help": "Każda umowa klienta otrzymuje niezależną kopię do edycji. Rabaty dla całej umowy obejmują kwalifikujące się pozycje.",
+      "invalid": "Podaj nazwę, dodatnią wartość i datę rozpoczęcia.",
+      "remove": "Usuń",
+      "name": "Nazwa rabatu",
+      "percentage": "Procent",
+      "fixed": "Kwota stała",
+      "value": "Wartość",
+      "startDate": "Rozpoczęcie",
+      "endDate": "Koniec (opcjonalnie)",
+      "add": "Dodaj domyślny rabat",
+      "chooseLine": "Wybierz pozycję szablonu",
+      "chooseService": "Wybierz usługę"
     }
   },
   "quickStart": {

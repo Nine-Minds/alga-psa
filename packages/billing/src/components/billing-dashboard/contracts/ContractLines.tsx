@@ -69,6 +69,7 @@ interface ContractLinesProps {
   clientId?: string | null;
   onContractLinesChanged?: () => void;
   isReadOnly?: boolean;
+  focusContractLineId?: string | null;
 }
 
 interface DetailedContractLineMapping {
@@ -153,7 +154,7 @@ const DRAFT_SERVICE_CONFIG_PREFIX = 'draft-service-config:';
 
 const loadBillingProfiles = (clientId: string) => getClientBillingProfilesForBilling(clientId);
 
-const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null, onContractLinesChanged, isReadOnly = false }) => {
+const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null, onContractLinesChanged, isReadOnly = false, focusContractLineId = null }) => {
   const { t } = useTranslation('msp/contracts');
 
   const handleAssignLineBillingProfile = async (
@@ -202,6 +203,11 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedLines, setExpandedLines] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    if (!focusContractLineId || !contractLines.some((line) => line.contract_line_id === focusContractLineId)) return;
+    setExpandedLines((current) => ({ ...current, [focusContractLineId]: true }));
+    requestAnimationFrame(() => document.getElementById(`contract-line-card-${focusContractLineId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+  }, [contractLines, focusContractLineId]);
   const [lineServices, setLineServices] = useState<Record<string, ServiceConfiguration[]>>({});
   const [loadingServices, setLoadingServices] = useState<Record<string, boolean>>({});
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -1168,7 +1174,8 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
               return (
                 <div
                   key={line.contract_line_id}
-                  className="border rounded-lg overflow-hidden bg-card"
+                  id={`contract-line-card-${line.contract_line_id}`}
+                  className={`border rounded-lg overflow-hidden bg-card ${focusContractLineId === line.contract_line_id ? 'ring-2 ring-primary-500' : ''}`}
                 >
                   {/* Header */}
                   <div className="flex items-center gap-3 p-4 bg-muted border-b">

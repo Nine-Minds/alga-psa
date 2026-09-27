@@ -470,6 +470,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
             version: 1,
             source_kind: 'invoice_charge',
             source_item_id: fixture.generatedChargeId,
+            contract_line_id: contractLineId,
             direction,
             effective_date: '2026-09-21',
             source_period_start: '2026-09-01',
@@ -527,6 +528,35 @@ describe('contract invoice adjustments (DB-backed)', () => {
     expect(Number(editedRow.quantity)).toBe(2);
     expect(Number(editedRow.net_amount)).toBe(6_666);
     expect(editedRow.description).toBe('Revised reason text');
+
+    const overlapItemId = uuidv4();
+    await db('invoice_charges').insert({
+      tenant, item_id: overlapItemId, invoice_id: fixture.invoiceId, service_id: serviceId,
+      client_contract_id: clientContractId, description: 'Companion true-up', quantity: 1,
+      unit_price: 1000, net_amount: 1000, total_price: 1000, tax_amount: 0,
+      tax_rate: 0, is_manual: false, is_discount: false, is_taxable: false,
+      adjustment_source_kind: 'contract_change', adjustment_source_id: uuidv4(),
+      adjustment_source_revision: 1, adjustment_scope: 'service', adjustment_period_start: '2026-09-21',
+      adjustment_period_end: '2026-10-01',
+    });
+    await db('invoice_charge_details').insert({
+      tenant, item_detail_id: uuidv4(), item_id: overlapItemId, config_id: sourceConfigId,
+      service_id: serviceId, quantity: 1, rate: 1000,
+      service_period_start: '2026-09-01', service_period_end: '2026-09-30',
+    });
+    const overlapCalculatorId = uuidv4();
+    const overlapCandidate = makeUiRow(overlapCalculatorId, 'increase') as any;
+    const overlapResult = await updateInvoiceManualItems(fixture.invoiceId, {
+      newItems: [overlapCandidate], updatedItems: [], removedItemIds: [],
+    } as any);
+    expect(overlapResult).toMatchObject({ success: false, code: 'SOURCE_NOT_ELIGIBLE' });
+    expect((overlapResult as any).params).toMatchObject({ overlapConfirmationRequired: 'true', overlapItemIds: overlapItemId });
+    const confirmedResult = await updateInvoiceManualItems(fixture.invoiceId, {
+      newItems: [{ ...overlapCandidate, manual_line_metadata: { ...overlapCandidate.manual_line_metadata, confirmed_overlap_item_ids: [overlapItemId] } }],
+      updatedItems: [], removedItemIds: [],
+    } as any);
+    expect(confirmedResult).not.toHaveProperty('actionError');
+    expect(await db('invoice_charges').where({ tenant, invoice_id: fixture.invoiceId, item_id: overlapCalculatorId })).toHaveLength(1);
   });
 
   it('reconciles one shared definition per contract attachment, scopes manual charges, refreshes edits and detachments idempotently', async () => {
@@ -668,6 +698,40 @@ describe('contract invoice adjustments (DB-backed)', () => {
     expect(totals.gross).toBe(405_000);
     expect(totals.discounts).toBe(-40_500);
     expect(totals.net).toBe(364_500);
+  });
+
+  it('includes an already-prorated companion true-up in discount reconciliation without rewriting it', async () => {
+    const fixture = await createDraftWithGeneratedChargeAndDiscount();
+    const trueUpId = uuidv4();
+    const revisionId = uuidv4();
+    const configId = uuidv4();
+    await db('contract_line_service_configuration').insert({
+      tenant, config_id: configId, contract_line_id: contractLineId, service_id: serviceId,
+      configuration_type: 'Fixed', quantity: 1,
+    });
+    await db('invoice_charges').insert({
+      tenant, item_id: trueUpId, invoice_id: fixture.invoiceId, service_id: serviceId,
+      client_contract_id: clientContractId, description: 'Companion mid-period increase',
+      quantity: 1, unit_price: 15_000, net_amount: 15_000, total_price: 15_000, tax_amount: 0,
+      tax_rate: 0, is_manual: false, is_discount: false, is_taxable: false,
+      adjustment_source_kind: 'contract_change', adjustment_source_id: revisionId,
+      adjustment_source_revision: 1, adjustment_scope: 'service', adjustment_base_amount: 15_000,
+      adjustment_reason: 'seat increase', adjustment_period_start: '2026-09-21', adjustment_period_end: '2026-10-01',
+    });
+    await db('invoice_charge_details').insert({
+      tenant, item_detail_id: uuidv4(), item_id: trueUpId, config_id: configId, service_id: serviceId,
+      quantity: 1, rate: 15_000, service_period_start: '2026-09-01', service_period_end: '2026-09-30',
+    });
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      await db.transaction((trx) => reconcileAutomaticInvoiceAdjustments(trx, tenant, fixture.invoiceId));
+    }
+    const trueUp = await db('invoice_charges').where({ tenant, invoice_id: fixture.invoiceId, item_id: trueUpId }).first();
+    expect(Number(trueUp.net_amount)).toBe(15_000);
+    expect(new Date(trueUp.adjustment_period_start).toISOString().slice(0, 10)).toBe('2026-09-21');
+    expect(new Date(trueUp.adjustment_period_end).toISOString().slice(0, 10)).toBe('2026-10-01');
+    const discountRows = await db('invoice_charges').where({ tenant, invoice_id: fixture.invoiceId, adjustment_source_kind: 'discount' });
+    expect(discountRows).toHaveLength(1);
+    expect(Number(discountRows[0].net_amount)).toBe(-40_500);
   });
 
   it('is idempotent across repeated draft refreshes', async () => {
@@ -1624,6 +1688,76 @@ describe('contract invoice adjustments (DB-backed)', () => {
       await db('contracts').where({ tenant, contract_id: otherContractId }).delete();
       await db('discounts').where({ tenant, discount_id: discountId }).update({ is_active: true });
     }
+  });
+
+  it('copies template default discounts into independent client-contract definitions', async () => {
+    const templateId = uuidv4();
+    const isolatedContractId = uuidv4();
+    const isolatedLineId = uuidv4();
+    const firstClientContractId = uuidv4();
+    const secondClientContractId = uuidv4();
+    await db('contracts').insert({
+      tenant, contract_id: isolatedContractId, contract_name: `Template copy contract ${templateId.slice(0, 6)}`,
+      billing_frequency: 'monthly', is_active: true,
+    });
+    await db('contract_lines').insert({
+      tenant, contract_line_id: isolatedLineId, contract_id: isolatedContractId,
+      contract_line_name: 'Template copy line', billing_frequency: 'monthly', contract_line_type: 'fixed', is_active: true,
+    });
+    await db('contract_templates').insert({
+      tenant, template_id: templateId, template_name: `Discount template ${templateId.slice(0, 8)}`,
+      default_billing_frequency: 'monthly', template_status: 'published',
+      template_metadata: { default_discounts: [{
+        discount_name: 'Template 10 percent', discount_type: 'percentage', value: 10,
+        start_date: '2026-01-01', scope: 'contract', is_active: true,
+      }, {
+        discount_name: 'Template service credit', discount_type: 'fixed', value: 25.5,
+        start_date: '2026-01-01', scope: 'service', scope_service_id: serviceId, is_active: true,
+      }, {
+        discount_name: 'Template line discount', discount_type: 'fixed', value: 5,
+        start_date: '2026-01-01', scope: 'line', contract_line_id: isolatedLineId, is_active: true,
+      }] },
+    });
+    await db('client_contracts').insert([
+      { tenant, client_contract_id: firstClientContractId, client_id: clientId, contract_id: isolatedContractId, start_date: '2026-01-01', is_active: true },
+      { tenant, client_contract_id: secondClientContractId, client_id: clientId, contract_id: isolatedContractId, start_date: '2026-01-01', is_active: true },
+    ]);
+    const { cloneTemplateDefaultDiscounts } = await import('../lib/billing/utils/templateClone');
+    await db.transaction(async (trx) => {
+      for (const targetId of [firstClientContractId, secondClientContractId]) {
+        await cloneTemplateDefaultDiscounts(trx, {
+          tenant, templateId, clientContractId: targetId, clientId,
+          lineIdMap: { [isolatedLineId]: isolatedLineId },
+        });
+      }
+    });
+    const firstAssignments = await db('contract_discount_assignments').where({ tenant, client_contract_id: firstClientContractId }).orderBy('discount_id');
+    const secondAssignments = await db('contract_discount_assignments').where({ tenant, client_contract_id: secondClientContractId }).orderBy('discount_id');
+    expect(firstAssignments).toHaveLength(2);
+    expect(secondAssignments).toHaveLength(2);
+    expect(firstAssignments.map((row) => row.discount_id)).not.toEqual(secondAssignments.map((row) => row.discount_id));
+    const firstDefinitions = await db('discounts').whereIn('discount_id', firstAssignments.map((row) => row.discount_id)).where({ tenant }).orderBy('discount_name');
+    const secondDefinitions = await db('discounts').whereIn('discount_id', secondAssignments.map((row) => row.discount_id)).where({ tenant }).orderBy('discount_name');
+    expect(firstDefinitions.map((row) => [row.discount_name, Number(row.value)])).toEqual(secondDefinitions.map((row) => [row.discount_name, Number(row.value)]));
+    await db('discounts').where({ tenant, discount_id: firstAssignments[0].discount_id }).update({ is_active: false, discount_name: 'Edited one copy' });
+    expect((await db('discounts').where({ tenant, discount_id: secondAssignments[0].discount_id }).first()).is_active).toBe(true);
+    await db('contract_templates').where({ tenant, template_id: templateId }).update({
+      template_metadata: { default_discounts: [{ discount_name: 'Edited template', discount_type: 'percentage', value: 5, start_date: '2026-01-01', scope: 'contract' }] },
+    });
+    expect((await db('discounts').where({ tenant, discount_id: secondAssignments[0].discount_id }).first()).discount_name).not.toBe('Edited template');
+    const lineDiscounts = await db('contract_line_discounts as cld').where({ 'cld.tenant': tenant }).whereIn('cld.discount_id', function () {
+      this.select('discount_id').from('discounts').where({ tenant, discount_name: 'Template line discount' });
+    });
+    expect(lineDiscounts).toHaveLength(2);
+    const allDiscountIds = [...firstAssignments, ...secondAssignments].map((row) => row.discount_id);
+    await db('contract_line_discounts').where({ tenant }).whereIn('discount_id', allDiscountIds).delete();
+    await db('contract_discount_assignments').where({ tenant }).whereIn('assignment_id', [...firstAssignments, ...secondAssignments].map((row) => row.assignment_id)).delete();
+    await db('discounts').where({ tenant }).whereIn('discount_id', allDiscountIds).delete();
+    await db('client_contracts').where({ tenant, client_contract_id: secondClientContractId }).delete();
+    await db('client_contracts').where({ tenant, client_contract_id: firstClientContractId }).delete();
+    await db('contract_templates').where({ tenant, template_id: templateId }).delete();
+    await db('contract_lines').where({ tenant, contract_line_id: isolatedLineId }).delete();
+    await db('contracts').where({ tenant, contract_id: isolatedContractId }).delete();
   });
 
   it('excludes a discount linked only to an unbilled sibling contract line (detail-backed invoice)', async () => {

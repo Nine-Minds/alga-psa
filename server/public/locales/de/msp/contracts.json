@@ -1244,6 +1244,21 @@
       "hypothetical": "Hypothetisches Kundenprofil",
       "open": "Simulieren",
       "title": "Vorlagensimulation"
+    },
+    "discounts": {
+      "title": "Standardvertragsrabatte",
+      "help": "Jeder Kundenvertrag erhält eine unabhängig bearbeitbare Kopie. Vertragsweite Rabatte gelten für alle berechtigten Positionen.",
+      "invalid": "Name, positiven Wert und Startdatum eingeben.",
+      "remove": "Entfernen",
+      "name": "Rabattname",
+      "percentage": "Prozentsatz",
+      "fixed": "Festbetrag",
+      "value": "Wert",
+      "startDate": "Beginn",
+      "endDate": "Ende (optional)",
+      "add": "Standardrabatt hinzufügen",
+      "chooseLine": "Vorlagenposition auswählen",
+      "chooseService": "Dienst auswählen"
     }
   },
   "quickStart": {

@@ -1244,6 +1244,21 @@
       "hypothetical": "Perfil de cliente hipotético",
       "open": "Simular",
       "title": "Simulación de plantilla"
+    },
+    "discounts": {
+      "title": "Descuentos de contrato predeterminados",
+      "help": "Cada contrato de cliente recibe una copia editable independiente. Los descuentos globales se aplican a sus líneas aptas.",
+      "invalid": "Introduce un nombre, un valor positivo y una fecha de inicio.",
+      "remove": "Eliminar",
+      "name": "Nombre del descuento",
+      "percentage": "Porcentaje",
+      "fixed": "Importe fijo",
+      "value": "Valor",
+      "startDate": "Comienza el",
+      "endDate": "Finaliza (opcional)",
+      "add": "Añadir descuento predeterminado",
+      "chooseLine": "Elige una línea de plantilla",
+      "chooseService": "Elige un servicio"
     }
   },
   "quickStart": {

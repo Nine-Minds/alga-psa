@@ -1244,6 +1244,21 @@
       "hypothetical": "Hypothetical client profile",
       "open": "Simulate",
       "title": "Template simulation"
+    },
+    "discounts": {
+      "title": "Default contract discounts",
+      "help": "Each client contract receives an independent editable copy. Contract-wide discounts apply across its eligible lines.",
+      "invalid": "Enter a name, positive value, and start date.",
+      "remove": "Remove",
+      "name": "Discount name",
+      "percentage": "Percentage",
+      "fixed": "Fixed amount",
+      "value": "Value",
+      "startDate": "Starts on",
+      "endDate": "Ends on (optional)",
+      "add": "Add default discount",
+      "chooseLine": "Choose a template line",
+      "chooseService": "Choose a service"
     }
   },
   "quickStart": {

@@ -1244,6 +1244,21 @@
       "hypothetical": "Hypothetisch klantprofiel",
       "open": "Simuleren",
       "title": "Sjabloonsimulatie"
+    },
+    "discounts": {
+      "title": "Standaardcontractkortingen",
+      "help": "Elk klantcontract krijgt een onafhankelijke bewerkbare kopie. Contractbrede kortingen gelden voor alle geschikte regels.",
+      "invalid": "Voer een naam, positieve waarde en begindatum in.",
+      "remove": "Verwijderen",
+      "name": "Kortingsnaam",
+      "percentage": "Percentage",
+      "fixed": "Vast bedrag",
+      "value": "Waarde",
+      "startDate": "Begint op",
+      "endDate": "Eindigt op (optioneel)",
+      "add": "Standaardkorting toevoegen",
+      "chooseLine": "Kies een sjabloonregel",
+      "chooseService": "Kies een service"
     }
   },
   "quickStart": {

@@ -1970,6 +1970,13 @@ async function updateManualInvoiceItemsInternal(
         const periodEnd = inclusiveEnd ? Temporal.PlainDate.from(inclusiveEnd).add({ days: 1 }).toString() : null;
         return `${periodStart}:${periodEnd}`;
       }))];
+      const sourceLineRows = source ? await tenantScopedTable(trx, tenant, 'invoice_charge_details as detail')
+        .join('contract_line_service_configuration as config', function () {
+          this.on('config.tenant', '=', 'detail.tenant').andOn('config.config_id', '=', 'detail.config_id');
+        })
+        .where({ 'detail.item_id': sourceId, 'detail.tenant': tenant })
+        .select('config.contract_line_id') : [];
+      const sourceLineIds = new Set(sourceLineRows.map((row: { contract_line_id: string }) => row.contract_line_id));
       const effective = dateOnly(partial.effective_date);
       const [sourceStart, sourceEnd] = sourcePeriodKeys.length === 1 ? sourcePeriodKeys[0].split(':') : [null, null];
       const units = Number(partial.units);
@@ -1990,6 +1997,7 @@ async function updateManualInvoiceItemsInternal(
         || partial.version !== 1
         || partial.source_kind !== 'invoice_charge'
         || partial.source_item_id !== sourceId
+        || (partial.contract_line_id != null && !sourceLineIds.has(partial.contract_line_id))
         || dateOnly(partial.source_period_start) !== sourceStart
         || dateOnly(partial.source_period_end) !== sourceEnd
         || !effective
@@ -2003,9 +2011,40 @@ async function updateManualInvoiceItemsInternal(
         || (item.client_contract_id ?? null) !== (source.client_contract_id ?? null)) {
         throw expectedInvoiceActionError('The partial-period source is no longer represented on this invoice or its service period changed. Reopen the calculator and choose a current billed service.');
       }
+      if (partial.contract_line_id) {
+        const companionOverlaps = await tenantScopedTable(trx, tenant, 'invoice_charges as charge')
+          .join('invoice_charge_details as detail', function () {
+            this.on('detail.tenant', '=', 'charge.tenant').andOn('detail.item_id', '=', 'charge.item_id');
+          })
+          .join('contract_line_service_configuration as config', function () {
+            this.on('config.tenant', '=', 'detail.tenant').andOn('config.config_id', '=', 'detail.config_id');
+          })
+          .where({
+            'charge.invoice_id': invoiceId,
+            'charge.adjustment_source_kind': 'contract_change',
+            'config.contract_line_id': partial.contract_line_id,
+          })
+          .whereNotNull('charge.adjustment_period_start').whereNotNull('charge.adjustment_period_end')
+          .andWhere('charge.adjustment_period_start', '<', sourceEnd)
+          .andWhere('charge.adjustment_period_end', '>', effective)
+          .select('charge.item_id');
+        const overlapIds = companionOverlaps.map((row: { item_id: string }) => row.item_id);
+        const confirmedIds = new Set(Array.isArray(metadata?.confirmed_overlap_item_ids)
+          ? metadata.confirmed_overlap_item_ids.filter((value: unknown): value is string => typeof value === 'string')
+          : []);
+        const unconfirmedIds = overlapIds.filter((overlapId: string) => !confirmedIds.has(overlapId));
+        if (unconfirmedIds.length > 0) {
+          throw new ManualInvoiceError(
+            'SOURCE_NOT_ELIGIBLE',
+            'A companion contract-change adjustment now overlaps this partial-period change. Confirm to save both adjustments.',
+            { overlapConfirmationRequired: 'true', overlapItemIds: unconfirmedIds.join(',') },
+          );
+        }
+      }
       item.adjustment_period_start = effective;
       item.adjustment_period_end = sourceEnd;
       item.client_contract_id = source.client_contract_id;
+      if (partial.contract_line_id) item.manual_line_metadata = { ...metadata, partialPeriod: { ...partial, contract_line_id: partial.contract_line_id } };
       item.location_id = source.location_id;
       item.billing_profile_id = source.billing_profile_id;
       item.rate = calculation.unitPrice;

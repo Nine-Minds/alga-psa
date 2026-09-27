@@ -1244,6 +1244,21 @@
       "hypothetical": "Perfil de cliente hipotético",
       "open": "Simular",
       "title": "Simulação do modelo"
+    },
+    "discounts": {
+      "title": "Descontos padrão do contrato",
+      "help": "Cada contrato de cliente recebe uma cópia editável independente. Descontos gerais aplicam-se às linhas elegíveis.",
+      "invalid": "Informe um nome, valor positivo e data de início.",
+      "remove": "Remover",
+      "name": "Nome do desconto",
+      "percentage": "Percentual",
+      "fixed": "Valor fixo",
+      "value": "Valor",
+      "startDate": "Começa em",
+      "endDate": "Termina em (opcional)",
+      "add": "Adicionar desconto padrão",
+      "chooseLine": "Escolha uma linha do modelo",
+      "chooseService": "Escolha um serviço"
     }
   },
   "quickStart": {

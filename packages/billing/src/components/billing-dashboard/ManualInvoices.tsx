@@ -734,7 +734,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
         adjustment_period_start: partialEffectiveDate,
         adjustment_period_end: sourcePeriod.end,
         manual_line_metadata: {
-          partialPeriod: { version: 1, source_kind: 'invoice_charge', source_item_id: source.item_id, direction: partialDirection, effective_date: partialEffectiveDate, source_period_start: periodStart, source_period_end: periodEnd, units, source_unit_price_minor: unitPrice, covered_days: calculation.coveredDays, full_period_days: calculation.fullPeriodDays, resolved_amount_minor: calculation.amount },
+          partialPeriod: { version: 1, source_kind: 'invoice_charge', source_item_id: source.item_id, contract_line_id: source.contract_line_id ?? null, direction: partialDirection, effective_date: partialEffectiveDate, source_period_start: periodStart, source_period_end: periodEnd, units, source_unit_price_minor: unitPrice, covered_days: calculation.coveredDays, full_period_days: calculation.fullPeriodDays, resolved_amount_minor: calculation.amount },
           reason: partialReason.trim() || undefined,
           ...(overlap ? { confirmed_overlap_item_ids: currentInvoiceData?.invoice_charges.filter((row) => row.adjustment_source_kind === 'contract_change' && row.contract_line_id === source.contract_line_id).map((row) => row.item_id) } : {}),
         },
@@ -974,15 +974,45 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           adjustment_period_end: item.adjustment_period_end ?? item.service_period_end ?? null,
         });
 
-        const updateResult = await updateInvoiceManualItems(currentInvoiceData.invoice_id, {
+        const changes = {
           invoice_number: currentInvoiceData.invoice_number,
           newItems: newItemsToSave.map(mapToNewItemSaveFormat),
           updatedItems: updatedItemsToSave.map(mapToUpdateSaveFormat),
-          removedItemIds
-        }, {
+          removedItemIds,
+        };
+        const submission = {
           operationId: pendingOperationIdRef.current,
           expectedRevision: currentInvoiceData.draft_adjustment_revision,
-        });
+        };
+        let updateResult = await updateInvoiceManualItems(currentInvoiceData.invoice_id, changes, submission);
+        if (isManualInvoiceFailure(updateResult)
+          && updateResult.params?.overlapConfirmationRequired === 'true'
+          && updateResult.params.overlapItemIds) {
+          const overlapIds = updateResult.params.overlapItemIds.split(',').filter(Boolean);
+          if (!window.confirm(t('manualInvoices.partialPeriod.overlapConfirm', {
+            defaultValue: 'A companion contract-change adjustment now overlaps this partial-period change. Save both adjustments?',
+          }))) {
+            setError(translateManualInvoiceError(updateResult));
+            return;
+          }
+          const confirmItem = (item: any) => {
+            const metadata = item.manual_line_metadata;
+            const partial = metadata?.partialPeriod;
+            if (partial?.source_kind !== 'invoice_charge') return item;
+            return {
+              ...item,
+              manual_line_metadata: {
+                ...metadata,
+                confirmed_overlap_item_ids: [...new Set([...(metadata.confirmed_overlap_item_ids ?? []), ...overlapIds])],
+              },
+            };
+          };
+          updateResult = await updateInvoiceManualItems(currentInvoiceData.invoice_id, {
+            ...changes,
+            newItems: changes.newItems.map(confirmItem),
+            updatedItems: changes.updatedItems.map(confirmItem),
+          }, submission);
+        }
 
         if (isManualInvoiceFailure(updateResult)) {
           setError(translateManualInvoiceError(updateResult));
@@ -1699,7 +1729,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                       />
                       <Input id="partial-period-effective-date" label={t('manualInvoices.partialPeriod.effectiveDate', { defaultValue: 'Effective date' })} type="date" value={partialEffectiveDate} onChange={(event) => setPartialEffectiveDate(event.target.value)} required />
                     </div>
-                    {partialPeriodSource && <div className="space-y-1"><p className="text-xs text-muted-foreground">{partialPeriodSource.description}: {partialPeriodSource.service_period_start} – {partialPeriodSource.service_period_end} · {t('manualInvoices.partialPeriod.sourceRate', { defaultValue: 'Rate {{rate}}', rate: formatCurrency(Number(partialPeriodSource.unit_price) / 100, currencyCode) })} · {partialEffectiveDate && partialPeriodPreview !== null ? `${partialUnits} × ${formatCurrency(Math.abs(partialPeriodCalculation?.unitPrice ?? 0) / 100, currencyCode)} = ${formatCurrency((partialPeriodPreview ?? 0) / 100, currencyCode)} (${formatCurrency(Math.abs(Number(partialPeriodSource.unit_price)) / 100, currencyCode)} × ${partialPeriodCalculation?.coveredDays ?? 0}/${partialPeriodCalculation?.fullPeriodDays ?? 0}, rounded per unit)` : ''}</p>{partialPeriodSource.contract_line_id && partialPeriodSource.client_contract_id && <a className="text-xs text-primary-600 underline" href={`/msp/billing?tab=client-contracts&clientContractId=${encodeURIComponent(partialPeriodSource.client_contract_id)}&contractView=lines`}>{t('manualInvoices.partialPeriod.permanentChangeNudge', { defaultValue: 'Is this a permanent change? Record it on the contract instead.' })}</a>}</div>}
+                    {partialPeriodSource && <div className="space-y-1"><p className="text-xs text-muted-foreground">{partialPeriodSource.description}: {partialPeriodSource.service_period_start} – {partialPeriodSource.service_period_end} · {t('manualInvoices.partialPeriod.sourceRate', { defaultValue: 'Rate {{rate}}', rate: formatCurrency(Number(partialPeriodSource.unit_price) / 100, currencyCode) })} · {partialEffectiveDate && partialPeriodPreview !== null ? `${partialUnits} × ${formatCurrency(Math.abs(partialPeriodCalculation?.unitPrice ?? 0) / 100, currencyCode)} = ${formatCurrency((partialPeriodPreview ?? 0) / 100, currencyCode)} (${formatCurrency(Math.abs(Number(partialPeriodSource.unit_price)) / 100, currencyCode)} × ${partialPeriodCalculation?.coveredDays ?? 0}/${partialPeriodCalculation?.fullPeriodDays ?? 0}, rounded per unit)` : ''}</p>{partialPeriodSource.contract_line_id && partialPeriodSource.client_contract_id && <a className="text-xs text-primary-600 underline" href={`/msp/billing?tab=client-contracts&clientContractId=${encodeURIComponent(partialPeriodSource.client_contract_id)}&contractView=lines&contractLineId=${encodeURIComponent(partialPeriodSource.contract_line_id)}`}>{t('manualInvoices.partialPeriod.permanentChangeNudge', { defaultValue: 'Is this a permanent change? Record it on the contract instead.' })}</a>}</div>}
                     <Input
                       id="partial-period-description-input"
                       label={t('manualInvoices.partialPeriod.description', { defaultValue: 'Description (optional)' })}

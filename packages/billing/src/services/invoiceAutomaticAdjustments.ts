@@ -45,6 +45,8 @@ interface StoredChargeRow {
   is_manual: boolean;
   is_taxable: boolean | null;
   adjustment_source_kind: string | null;
+  contract_line_ids?: string[];
+  manual_line_metadata?: unknown;
 }
 
 export interface AdjustmentWindow {
@@ -113,6 +115,7 @@ function toAdjustmentCharges(rows: StoredChargeRow[]): InvoiceAdjustmentCharge[]
     is_manual: Boolean(charge.is_manual),
     is_taxable: Boolean(charge.is_taxable),
     adjustment_source_kind: charge.adjustment_source_kind as InvoiceAdjustmentCharge['adjustment_source_kind'],
+    contract_line_ids: charge.contract_line_ids,
   }));
 }
 
@@ -121,7 +124,7 @@ async function loadInvoiceCharges(
   tenant: string,
   invoiceId: string,
 ): Promise<StoredChargeRow[]> {
-  return tenantScopedTable<StoredChargeRow>(conn, tenant, 'invoice_charges')
+  const rows = await tenantScopedTable<StoredChargeRow>(conn, tenant, 'invoice_charges')
     .where({ invoice_id: invoiceId, tenant })
     .select(
       'item_id',
@@ -135,12 +138,36 @@ async function loadInvoiceCharges(
       'is_manual',
       'is_taxable',
       'adjustment_source_kind',
+      'manual_line_metadata',
     );
+  if (rows.length === 0) return rows;
+  const details = await tenantScopedTable<{ item_id: string; contract_line_id: string }>(conn, tenant, 'invoice_charge_details as detail')
+    .join('contract_line_service_configuration as config', function () {
+      this.on('config.tenant', '=', 'detail.tenant').andOn('config.config_id', '=', 'detail.config_id');
+    })
+    .where('detail.tenant', tenant)
+    .whereIn('detail.item_id', rows.map((row) => row.item_id))
+    .select('detail.item_id', 'config.contract_line_id');
+  const lineIdsByCharge = new Map<string, Set<string>>();
+  for (const detail of details) {
+    const ids = lineIdsByCharge.get(detail.item_id) ?? new Set<string>();
+    ids.add(detail.contract_line_id);
+    lineIdsByCharge.set(detail.item_id, ids);
+  }
+  return rows.map((row) => {
+    const lineIds = lineIdsByCharge.get(row.item_id) ?? new Set<string>();
+    const metadata = typeof row.manual_line_metadata === 'string'
+      ? (() => { try { return JSON.parse(row.manual_line_metadata as string); } catch { return {}; } })()
+      : row.manual_line_metadata;
+    const partial = metadata && typeof metadata === 'object' ? (metadata as any).partialPeriod : null;
+    if (typeof partial?.contract_line_id === 'string') lineIds.add(partial.contract_line_id);
+    return { ...row, contract_line_ids: [...lineIds] };
+  });
 }
 
 function resolveDiscountScope(row: Record<string, unknown>): DiscountScope {
   const scope = row.scope;
-  if (scope === 'contract' || scope === 'service' || scope === 'item' || scope === 'invoice') {
+  if (scope === 'contract' || scope === 'line' || scope === 'service' || scope === 'item' || scope === 'invoice') {
     return scope;
   }
   // Legacy unversioned discounts keep their invoice-wide base. The contract-line
@@ -170,6 +197,7 @@ export function buildAutomaticDiscountPolicies(
       value: storedDiscountValueToPolicyValue(row.discount_type, row.value),
       scope,
       applies_to_service_id: row.scope === 'service' ? (row.scope_service_id ?? null) : null,
+      contract_line_id: scope === 'line' ? (row.contract_line_id ?? null) : null,
       applies_to_item_id: scope === 'item' ? (row.applies_to_item_id ?? null) : null,
       client_contract_id: row.assignment_client_contract_id
         ?? (row.scope != null ? row.client_contract_id ?? null : null),
@@ -306,7 +334,7 @@ async function loadApplicableDiscountRows(
     .andWhere(function (this: Knex.QueryBuilder) {
       this.whereNull('discounts.end_date').orWhere('discounts.end_date', '>', window.start);
     })
-    .select('discounts.*', 'cc.client_contract_id');
+    .select('discounts.*', 'cc.client_contract_id', 'cld.contract_line_id');
 
   // Contract assignments are eligible from billed charges attributed to that
   // client-contract, independent of contract lines/details. Their assignment
