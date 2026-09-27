@@ -443,6 +443,45 @@ describe('contract invoice adjustments (DB-backed)', () => {
     expect(await db('invoice_charges').where({ tenant, invoice_id: fixture.invoiceId, item_id: partialId })).toHaveLength(1);
   });
 
+  it('reloads manual percentage discount type, value, and target for repeat saves', async () => {
+    const fixture = await createDraftWithGeneratedChargeAndDiscount();
+    const discountItemId = uuidv4();
+    await db.transaction(async (trx) => {
+      await persistManualInvoiceCharges(trx, fixture.invoiceId, [{
+        item_id: discountItemId,
+        description: 'Round-trip 10 percent discount',
+        quantity: 1,
+        rate: 0,
+        is_discount: true,
+        discount_type: 'percentage',
+        discount_percentage: 10,
+        applies_to_item_id: fixture.generatedChargeId,
+      }], { client_id: clientId, region_code: null, default_currency_code: 'USD' }, { user: { id: userId } } as never, tenant);
+    });
+
+    const reloaded = (await Invoice.getInvoiceCharges(db, tenant, fixture.invoiceId))
+      .find((row) => row.item_id === discountItemId) as any;
+    expect(reloaded.discount_type).toBe('percentage');
+    expect(Number(reloaded.discount_percentage)).toBe(10);
+    expect(reloaded.applies_to_item_id).toBe(fixture.generatedChargeId);
+  });
+
+  it('recalculates a draft repeatedly without creating financial transactions', async () => {
+    const fixture = await createDraftWithGeneratedChargeAndDiscount();
+
+    for (let pass = 0; pass < 2; pass += 1) {
+      await db.transaction(async (trx) => {
+        await new BillingEngine().recalculateInvoice(fixture.invoiceId, trx, tenant);
+      });
+    }
+
+    expect(await db('transactions').where({ tenant, invoice_id: fixture.invoiceId })).toHaveLength(0);
+    const invoice = await db('invoices').where({ tenant, invoice_id: fixture.invoiceId }).first();
+    expect(Number(invoice.subtotal)).toBe(351_000);
+    expect(Number(invoice.tax)).toBe(0);
+    expect(Number(invoice.total_amount)).toBe(351_000);
+  });
+
   it('saves UI-shaped calculator metadata through updateInvoiceManualItems for increases, decreases, reload and edits', async () => {
     const fixture = await createDraftWithGeneratedChargeAndDiscount();
     await db('invoice_charges').where({ tenant, item_id: fixture.generatedChargeId }).update({ unit_price: 10_000 });

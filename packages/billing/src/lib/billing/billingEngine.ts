@@ -88,7 +88,6 @@ import {
 // Import necessary functions from invoiceService
 import {
   calculateAndDistributeTax,
-  updateInvoiceTotalsAndRecordTransaction,
   getClientDetails,
 } from "../../services/invoiceService";
 import { v4 as uuidv4 } from "uuid";
@@ -7120,25 +7119,29 @@ export class BillingEngine {
         `[recalculateInvoice] Finished calculateAndDistributeTax for invoice ${invoiceId}`,
       );
 
-      // Step 2: Update invoice totals and record the transaction using the service function
-      console.log(
-        `[recalculateInvoice] Calling updateInvoiceTotalsAndRecordTransaction for invoice ${invoiceId}`,
+      // A draft recalculation updates its projection only. Drafts are not
+      // financial settlements: recording an invoice_adjustment transaction on
+      // every save duplicates the invoice balance, including on no-op saves.
+      const finalItems = await tenantDb(trx, tenant)
+        .table("invoice_charges")
+        .where({ invoice_id: invoiceId })
+        .select("net_amount", "tax_amount");
+      const subtotal = finalItems.reduce(
+        (sum: number, item: { net_amount: unknown }) => sum + Number(item.net_amount ?? 0),
+        0,
       );
-      await updateInvoiceTotalsAndRecordTransaction(
-        trx,
-        invoiceId,
-        client, // Pass client object
-        tenant, // Pass tenant
-        invoice.invoice_number, // Pass invoice number
-        undefined,
-        {
-          transactionType: "invoice_adjustment",
-          description: `Adjusted invoice ${invoice.invoice_number}`,
-        },
+      const tax = finalItems.reduce(
+        (sum: number, item: { tax_amount: unknown }) => sum + Number(item.tax_amount ?? 0),
+        0,
       );
-      console.log(
-        `[recalculateInvoice] Finished updateInvoiceTotalsAndRecordTransaction for invoice ${invoiceId}`,
-      );
+      await tenantDb(trx, tenant)
+        .table("invoices")
+        .where({ invoice_id: invoiceId })
+        .update({
+          subtotal: Math.round(subtotal),
+          tax: Math.round(tax),
+          total_amount: Math.round(subtotal + tax),
+        });
 
       // Note: The original logic for processing discount items and updating their net_amount
       // based on percentages is removed. It's assumed that calculateAndDistributeTax

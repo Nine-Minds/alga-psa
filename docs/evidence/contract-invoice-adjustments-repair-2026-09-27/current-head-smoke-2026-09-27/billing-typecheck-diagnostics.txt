@@ -1,0 +1,13 @@
+Command: NODE_OPTIONS=--max-old-space-size=8192 npx nx run @alga-psa/billing:typecheck
+Result: exit 1; 11 diagnostics after avoiding the initial 4 GiB OOM.
+../ui/src/editor/AiResponseBlock.tsx(53,3)
+../ui/src/editor/MentionSuggestion.tsx(133,3)
+../ui/src/editor/TextEditor.tsx(259,20)
+../ui/src/editor/TextEditor.tsx(399,17)
+../ui/src/editor/TextEditor.tsx(419,15)
+src/actions/profitabilityReportActions.ts(1072,29)
+src/actions/profitabilityReportActions.ts(363,29)
+src/actions/profitabilityReportActions.ts(677,29)
+src/actions/profitabilityReportActions.ts(832,29)
+src/actions/profitabilityReportActions.ts(912,29)
+src/actions/profitabilityReportActions.ts(999,29)
