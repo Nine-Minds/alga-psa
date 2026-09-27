@@ -545,7 +545,7 @@ function ContractDiscountDialog({
           {form.scope === 'line' && (
             <div>
               <Label htmlFor="contract-discount-line">{t('contractDiscounts.fields.line', { defaultValue: 'Contract line' })}</Label>
-              <CustomSelect id="contract-discount-line" value={form.contract_line_id} onValueChange={(value) => update('contract_line_id', value)} options={lineOptions} placeholder={t('contractDiscounts.fields.linePlaceholder', { defaultValue: 'Select a contract line' })} />
+              <CustomSelect id="contract-discount-line" value={form.contract_line_id} onValueChange={(value) => update('contract_line_id', value)} options={lines} placeholder={t('contractDiscounts.fields.linePlaceholder', { defaultValue: 'Select a contract line' })} />
             </div>
           )}
 

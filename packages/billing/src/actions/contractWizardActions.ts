@@ -112,6 +112,7 @@ type TemplateOption = {
 type ClientFixedServiceInput = {
   service_id: string;
   service_name?: string;
+  source_template_line_id?: string;
   quantity: number;
   bucket_overlay?: BucketOverlayInput | null;
 };
@@ -119,6 +120,7 @@ type ClientFixedServiceInput = {
 type ClientProductServiceInput = {
   service_id: string;
   service_name?: string;
+  source_template_line_id?: string;
   quantity: number;
   /** Optional per-unit override in cents (contract currency). */
   custom_rate?: number;
@@ -127,6 +129,7 @@ type ClientProductServiceInput = {
 type ClientHourlyServiceInput = {
   service_id: string;
   service_name?: string;
+  source_template_line_id?: string;
   hourly_rate?: number;
   bucket_overlay?: BucketOverlayInput | null;
 };
@@ -134,6 +137,7 @@ type ClientHourlyServiceInput = {
 type ClientUsageServiceInput = {
   service_id: string;
   service_name?: string;
+  source_template_line_id?: string;
   unit_rate?: number;
   unit_of_measure?: string;
   bucket_overlay?: BucketOverlayInput | null;
@@ -1174,6 +1178,15 @@ export const createClientContractFromWizard = withAuth(async (
     }
 
     const createdContractLineIds: string[] = [];
+    const sourceTemplateLineMap: Record<string, string> = {};
+    const mapSourceTemplateLine = (sourceLineId: string | undefined, targetLineId: string) => {
+      if (!sourceLineId) return;
+      const existing = sourceTemplateLineMap[sourceLineId];
+      if (existing && existing !== targetLineId) {
+        throw new Error(`Template line ${sourceLineId} was split across multiple client contract lines; line discount scope cannot be mapped safely.`);
+      }
+      sourceTemplateLineMap[sourceLineId] = targetLineId;
+    };
     let primaryContractLineId: string | undefined;
     let hourlyPlanId: string | undefined;
     let usagePlanId: string | undefined;
@@ -1219,6 +1232,7 @@ export const createClientContractFromWizard = withAuth(async (
       let allocated = 0;
 
       for (const [index, service] of filteredFixedServices.entries()) {
+        mapSourceTemplateLine(service.source_template_line_id, planId);
         const quantity = service.quantity ?? 1;
 
         await tenantDb(trx, tenant).table('contract_line_services').insert({
@@ -1306,6 +1320,7 @@ export const createClientContractFromWizard = withAuth(async (
       }
 
       for (const product of filteredProductServices as any[]) {
+        mapSourceTemplateLine(product.source_template_line_id, productsLineId);
         const quantity = product.quantity ?? 1;
         const customRate = product.custom_rate !== undefined ? Math.round(Number(product.custom_rate) || 0) : undefined;
 
@@ -1363,6 +1378,7 @@ export const createClientContractFromWizard = withAuth(async (
       }
 
       for (const service of filteredHourlyServices) {
+        mapSourceTemplateLine(service.source_template_line_id, hourlyPlanId);
         const normalizedHourlyRate =
           firstPositiveRateInCents(
             service.hourly_rate,
@@ -1418,6 +1434,7 @@ export const createClientContractFromWizard = withAuth(async (
       }
 
       for (const service of filteredUsageServices) {
+        mapSourceTemplateLine(service.source_template_line_id, usagePlanId);
         const normalizedUnitRate =
           firstPositiveRateInCents(
             service.unit_rate,
@@ -1514,27 +1531,12 @@ export const createClientContractFromWizard = withAuth(async (
       po_amount: submission.po_amount ?? null,
     });
     if (submission.template_id) {
-      const lineIdMap: Record<string, string> = {};
-      // The wizard groups source template services into the newly created
-      // contract lines. Service and contract discounts need no line mapping;
-      // line-scoped defaults are resolved below by matching their source line
-      // services against the created line service configurations.
-      const sourceTemplateLines = await tenantDb(trx, tenant).table('contract_template_lines')
-        .where({ template_id: submission.template_id }).select('template_line_id');
-      for (const sourceLine of sourceTemplateLines) {
-        const sourceServices = await tenantDb(trx, tenant).table('contract_template_line_services')
-          .where({ template_line_id: sourceLine.template_line_id }).pluck('service_id');
-        const matching = await tenantDb(trx, tenant).table('contract_line_services')
-          .whereIn('service_id', sourceServices).whereIn('contract_line_id', createdContractLineIds)
-          .select('contract_line_id').first();
-        if (matching) lineIdMap[String(sourceLine.template_line_id)] = String(matching.contract_line_id);
-      }
       await cloneTemplateDefaultDiscounts(trx, {
         tenant,
         templateId: submission.template_id,
         clientContractId: createdAssignment.client_contract_id,
         clientId: submission.client_id,
-        lineIdMap,
+        lineIdMap: sourceTemplateLineMap,
       });
     }
 
@@ -1781,6 +1783,7 @@ export const getContractTemplateSnapshotForClientWizard = withAuth(async (
           service_id: service.service_id,
           service_name: service.service_name,
           quantity,
+          source_template_line_id: line.contract_line_id,
         };
 
         if (service.item_kind === 'product') {
@@ -1838,6 +1841,7 @@ export const getContractTemplateSnapshotForClientWizard = withAuth(async (
         hourlyServices?.push({
           service_id: service.service_id,
           service_name: service.service_name,
+          source_template_line_id: line.contract_line_id,
           hourly_rate: hourlyRateCents,
           bucket_overlay:
             bucketConfig && isBucketConfig(bucketConfig)
@@ -1864,6 +1868,7 @@ export const getContractTemplateSnapshotForClientWizard = withAuth(async (
         usageServices?.push({
           service_id: service.service_id,
           service_name: service.service_name,
+          source_template_line_id: line.contract_line_id,
           unit_rate: unitRateCents,
           unit_of_measure:
             usageConfig?.unit_of_measure ||

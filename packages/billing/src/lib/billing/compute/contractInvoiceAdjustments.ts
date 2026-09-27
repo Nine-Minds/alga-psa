@@ -146,15 +146,17 @@ export function resolveSourceDerivedPartialPeriod(input: {
   const fullPeriodDays = start.until(end, { largestUnit: 'days' }).days;
   const coveredDays = effective.until(end, { largestUnit: 'days' }).days;
   // invoice_charges stores unit_price in integer minor units and quantity at
-  // 0.01 precision. Round the prorated unit rate first, then round the product
-  // once; every displayed/persisted/reloaded representation uses this same rule.
+  // 0.01 precision. Round the magnitude of the per-unit rate first, apply the
+  // sign, then use the same JavaScript Math.round(signed product) rule as the
+  // invoice totals writer. In particular, negative half cents round toward
+  // positive infinity, consistently in preview, save, reload, and export.
   const roundedUnitRate = Math.round(input.unitPrice * coveredDays / fullPeriodDays);
-  const magnitude = Math.round(input.units * roundedUnitRate);
   const sign = input.direction === 'decrease' ? -1 : 1;
+  const signedRate = sign * roundedUnitRate;
   return {
     quantity: input.units,
-    unitPrice: sign * roundedUnitRate,
-    amount: sign * magnitude,
+    unitPrice: signedRate,
+    amount: Math.round(input.units * signedRate),
     coveredDays,
     fullPeriodDays,
   };
@@ -234,7 +236,7 @@ function chargesInScope(
       );
     case 'line':
       return eligible.filter(
-        (charge) => Boolean(policy.contract_line_id)
+        (charge) => typeof policy.contract_line_id === 'string'
           && charge.contract_line_ids?.includes(policy.contract_line_id)
           && (!policy.client_contract_id || charge.client_contract_id === policy.client_contract_id),
       );

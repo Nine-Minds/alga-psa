@@ -1,5 +1,40 @@
 # Contract invoice adjustments
 
+## Round 3 repair record (2026-09-27)
+
+Original customer request: provide a contract-level discount/adjustment authored
+on the contract or template and settled on each applicable invoice, with a
+source-derived one-time partial-period calculator for exceptions. The mounted
+template flow creates independent client-contract discount copies; manual
+invoice-side edits remain available.
+
+Decisions reaffirmed in this repair: discount/service windows and companion
+true-up periods use half-open `[start, end)` dates; invoice detail dates are
+inclusive and normalized by adding one day. Calculator amounts use the rounded
+minor-unit per-unit rate multiplied by the decimal quantity, rounded once with
+JavaScript `Math.round` on the signed product. Negative half cents therefore
+round toward positive infinity (for example, `1.5 × -3333 = -4999`). The same
+calculated value is written to the manual row and recalculated totals.
+
+Round 3 findings: added per-template-term copy identity so line-only templates
+and client contracts with unrelated terms can safely retry; serialized copy
+attempts on the target client-contract row. Line-scoped copied definitions now
+carry client-contract ownership. Legacy line terms are split to independent
+definitions per existing client-contract in migration
+`20260927060000_scope_line_discounts_to_client_contracts.cjs`. Both line and
+assignment discount eligibility queries now enforce half-open overlap.
+
+Companion implementation inspection was read-only. The supplied contract remains
+`contract_change` + canonical revision ID/version, service scope, half-open
+adjustment fields, inclusive detail period ends normalized at the boundary, and
+already-prorated signed amounts. No companion quantity/history writer is
+implemented here. This checkout has no companion implementation files to inspect;
+the available branch contains only the durable supplied handoff, so code-level
+assumptions remain for PR #3492 owner confirmation.
+
+Live smoke and reseeding `SMOKE-ADJ-1` remain outstanding for the authorized
+smoke step. The app server must remain stopped during this implementation step.
+
 Date: 2026-09-22
 Card: b97eda7b-0e3f-4b09-be80-6b57f934d8a5
 Companion: f6e7254b-0c74-468d-9dd6-822bdf659e15 (scheduled product quantity and price changes)

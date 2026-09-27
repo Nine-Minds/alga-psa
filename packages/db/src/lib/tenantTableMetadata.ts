@@ -110,6 +110,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   comment_threads: { scope: 'tenant' },
   contracts: { scope: 'tenant' },
   contract_discount_assignments: { scope: 'tenant' },
+  contract_template_discount_copies: { scope: 'tenant' },
   contract_pricing_schedules: { scope: 'tenant' },
   contract_lines: { scope: 'tenant' },
   contract_line_buckets: { scope: 'tenant' },

@@ -12,6 +12,9 @@ const migration = require(path.resolve(__dirname, '../20260927020000_scope_contr
 const isolateDefinitionsMigration = require(path.resolve(__dirname, '../20260927030000_isolate_contract_discount_definitions.cjs')) as {
   up: (knex: Knex | Knex.Transaction) => Promise<void>;
 };
+const lineOwnershipMigration = require(path.resolve(__dirname, '../20260927060000_scope_line_discounts_to_client_contracts.cjs')) as {
+  up: (knex: Knex | Knex.Transaction) => Promise<void>;
+};
 
 let db: Knex;
 
@@ -23,6 +26,33 @@ beforeAll(async () => {
 afterAll(async () => { await db?.destroy().catch(() => undefined); });
 
 describe('contract discount assignment client-scope migration', () => {
+  it('splits legacy line definitions per client-contract and safely reruns', async () => {
+    const rollback = new Error('rollback line ownership fixture');
+    await expect(db.transaction(async (trx) => {
+      const tenantWithClient = await trx('tenants as t').join('clients as c', 'c.tenant', 't.tenant').first('t.tenant', 'c.client_id');
+      const tenant = String(tenantWithClient.tenant);
+      const clientId = String(tenantWithClient.client_id);
+      const contractId = randomUUID();
+      const lineId = randomUUID();
+      const owners = [randomUUID(), randomUUID()];
+      const discountId = randomUUID();
+      await trx('contracts').insert({ tenant, contract_id: contractId, contract_name: 'Legacy line terms', billing_frequency: 'monthly', is_active: true });
+      await trx('contract_lines').insert({ tenant, contract_line_id: lineId, contract_id: contractId, contract_line_name: 'Line', billing_frequency: 'monthly', contract_line_type: 'fixed', is_active: true });
+      await trx('client_contracts').insert(owners.map((clientContractId) => ({ tenant, client_contract_id: clientContractId, client_id: clientId, contract_id: contractId, start_date: '2026-01-01', is_active: true })));
+      await trx('discounts').insert({ tenant, discount_id: discountId, discount_name: 'Legacy 10%', discount_type: 'percentage', value: 0.1, start_date: '2026-01-01', is_active: true, scope: 'line' });
+      await trx('contract_line_discounts').insert({ tenant, discount_id: discountId, contract_line_id: lineId, client_id: clientId, client_contract_id: null });
+      await lineOwnershipMigration.up(trx);
+      const first = await trx('contract_line_discounts').where({ tenant, contract_line_id: lineId }).orderBy('client_contract_id');
+      expect(first).toHaveLength(2);
+      expect(new Set(first.map((row) => row.discount_id)).size).toBe(2);
+      expect(first.map((row) => row.client_contract_id).sort()).toEqual([...owners].sort());
+      await lineOwnershipMigration.up(trx);
+      const rerun = await trx('contract_line_discounts').where({ tenant, contract_line_id: lineId }).orderBy('client_contract_id');
+      expect(rerun.map((row) => [row.discount_id, row.client_contract_id])).toEqual(first.map((row) => [row.discount_id, row.client_contract_id]));
+      throw rollback;
+    })).rejects.toBe(rollback);
+  });
+
   it('expands populated legacy rows to one and multiple client assignments, preserves the original settlement identity, and reruns safely', async () => {
     const rollback = new Error('rollback migration fixture');
     await expect(db.transaction(async (trx) => {

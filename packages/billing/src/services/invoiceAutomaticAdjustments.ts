@@ -124,7 +124,7 @@ async function loadInvoiceCharges(
   tenant: string,
   invoiceId: string,
 ): Promise<StoredChargeRow[]> {
-  const rows = await tenantScopedTable<StoredChargeRow>(conn, tenant, 'invoice_charges')
+  const rows: StoredChargeRow[] = await tenantScopedTable<StoredChargeRow>(conn, tenant, 'invoice_charges')
     .where({ invoice_id: invoiceId, tenant })
     .select(
       'item_id',
@@ -141,7 +141,7 @@ async function loadInvoiceCharges(
       'manual_line_metadata',
     );
   if (rows.length === 0) return rows;
-  const details = await tenantScopedTable<{ item_id: string; contract_line_id: string }>(conn, tenant, 'invoice_charge_details as detail')
+  const details: Array<{ item_id: string; contract_line_id: string }> = await tenantScopedTable<{ item_id: string; contract_line_id: string }>(conn, tenant, 'invoice_charge_details as detail')
     .join('contract_line_service_configuration as config', function () {
       this.on('config.tenant', '=', 'detail.tenant').andOn('config.config_id', '=', 'detail.config_id');
     })
@@ -307,6 +307,9 @@ async function loadApplicableDiscountRows(
   representedContractLineIds: string[],
 ): Promise<Array<Record<string, any>>> {
   const db = tenantDb(conn, tenant);
+  const invoiceClientContractIds: Array<{ client_contract_id: string | null }> = await tenantScopedTable<{ client_contract_id: string | null }>(conn, tenant, 'invoice_charges')
+    .where({ tenant, invoice_id: invoiceId }).whereNotNull('client_contract_id').select('client_contract_id');
+  const representedClientContractIds: string[] = [...new Set(invoiceClientContractIds.map((row: { client_contract_id: string | null }) => row.client_contract_id).filter((id: string | null): id is string => Boolean(id)))];
   const lineRows = representedContractLineIds.length === 0 ? [] : await db.table('discounts')
     .join('contract_line_discounts as cld', function () {
       this.on('discounts.discount_id', '=', 'cld.discount_id').andOn('discounts.tenant', '=', 'cld.tenant');
@@ -314,11 +317,8 @@ async function loadApplicableDiscountRows(
     .join('contract_lines as cl', function () {
       this.on('cl.contract_line_id', '=', 'cld.contract_line_id').andOn('cl.tenant', '=', 'cld.tenant');
     })
-    .join('contracts as c', function () {
-      this.on('c.contract_id', '=', 'cl.contract_id').andOn('c.tenant', '=', 'cl.tenant');
-    })
     .join('client_contracts as cc', function () {
-      this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
+      this.on('cc.client_contract_id', '=', 'cld.client_contract_id').andOn('cc.tenant', '=', 'cld.tenant');
     })
     .where({
       'cc.client_id': clientId,
@@ -328,9 +328,10 @@ async function loadApplicableDiscountRows(
     // Eligibility is line-level: a discount linked to a line of a represented
     // contract that has no charge on this invoice must not apply.
     .whereIn('cld.contract_line_id', representedContractLineIds)
-    // Invoice-period eligibility (not "today"): half-open on the discount end,
-    // inclusive on the window end, matching the billing engine.
-    .andWhere('discounts.start_date', '<=', window.end)
+    .whereIn('cc.client_contract_id', representedClientContractIds)
+    // Both windows are half-open: [discount start, end) intersects
+    // [invoice start, end) only when start < window.end and end > window.start.
+    .andWhere('discounts.start_date', '<', window.end)
     .andWhere(function (this: Knex.QueryBuilder) {
       this.whereNull('discounts.end_date').orWhere('discounts.end_date', '>', window.start);
     })
@@ -339,20 +340,14 @@ async function loadApplicableDiscountRows(
   // Contract assignments are eligible from billed charges attributed to that
   // client-contract, independent of contract lines/details. Their assignment
   // UUID is the settlement source key for this independent client-contract copy.
-  const representedClientContractIds = new Set<string>();
-  const invoiceContractIds = await tenantScopedTable<{ client_contract_id: string | null }>(conn, tenant, 'invoice_charges')
-    .where({ tenant, invoice_id: invoiceId })
-    .whereNotNull('client_contract_id')
-    .select('client_contract_id');
-  for (const row of invoiceContractIds) if (row.client_contract_id) representedClientContractIds.add(row.client_contract_id);
   const assignmentQuery = db.table('contract_discount_assignments as a');
   db.tenantJoin(assignmentQuery, 'discounts as d', 'd.discount_id', 'a.discount_id');
   db.tenantJoin(assignmentQuery, 'client_contracts as cc', 'cc.client_contract_id', 'a.client_contract_id');
-  const assignmentRows = representedClientContractIds.size === 0 ? [] : await assignmentQuery
+  const assignmentRows = representedClientContractIds.length === 0 ? [] : await assignmentQuery
     .where('cc.client_id', clientId)
-    .whereIn('cc.client_contract_id', [...representedClientContractIds])
+    .whereIn('cc.client_contract_id', representedClientContractIds)
     .where('d.is_active', true)
-    .where('d.start_date', '<=', window.end)
+    .where('d.start_date', '<', window.end)
     .andWhere(function (this: Knex.QueryBuilder) {
       this.whereNull('d.end_date').orWhere('d.end_date', '>', window.start);
     })

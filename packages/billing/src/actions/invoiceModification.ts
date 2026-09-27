@@ -2004,7 +2004,10 @@ async function updateManualInvoiceItemsInternal(
         || effective < sourceStart
         || effective >= sourceEnd
         || !Number.isFinite(units) || units <= 0
-        || Math.round(units * 100) !== units * 100
+        // NUMERIC(10,2) is decimal storage; tolerate binary representation
+        // noise such as 1.1 * 100 === 110.00000000000001, while rejecting
+        // values which actually carry more than two decimal places.
+        || Number(units.toFixed(2)) !== units
         || Number(item.quantity) !== units
         || !calculation
         || Number(item.rate) !== calculation.unitPrice

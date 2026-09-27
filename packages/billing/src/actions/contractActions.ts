@@ -1,6 +1,8 @@
 // @alga-psa/billing/actions.ts
 'use server'
 
+import { randomUUID } from 'node:crypto';
+
 import { resolveEffectiveSeatPricing } from '../lib/billing/seatRevisions';
 import { resolveUsageMeasurementRevision } from '../lib/billing/usageMeasurementTransitions';
 
@@ -18,6 +20,7 @@ import {
 } from '@alga-psa/types';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { deriveClientContractStatus } from '@alga-psa/shared/billingClients';
+import { validateDiscountInput, type DiscountAuthoringInput } from '../lib/billing/discountAuthoring';
 import { getContractMonthlyFixedValuesByContract } from '@alga-psa/shared/billingClients/contractMonthlyValue';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
@@ -146,6 +149,71 @@ const assertNoSystemManagedIdentityMutation = (
     );
   }
 };
+
+async function validateTemplateDefaultDiscounts(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  templateId: string,
+  templateMetadata: unknown,
+): Promise<void> {
+  const metadata = typeof templateMetadata === 'object' && templateMetadata !== null
+    ? templateMetadata as Record<string, unknown> : {};
+  const definitions = metadata.default_discounts ?? [];
+  if (!Array.isArray(definitions)) throw new ContractActionDomainError('Default discounts must be a list.');
+  const db = tenantDb(trx, tenant);
+  const lines = await db.table('contract_template_lines').where({ template_id: templateId }).select('template_line_id');
+  const lineIds = new Set(lines.map((line: { template_line_id: string }) => String(line.template_line_id)));
+  const serviceRows = lineIds.size ? await db.table('contract_template_line_services')
+    .whereIn('template_line_id', [...lineIds]).select('service_id') : [];
+  const serviceIds = new Set(serviceRows.map((row: { service_id: string }) => String(row.service_id)));
+  const sourceKeys = new Set<string>();
+  for (const [index, raw] of definitions.entries()) {
+    if (!raw || typeof raw !== 'object') throw new ContractActionDomainError(`Default discount ${index + 1} is invalid.`);
+    const term = raw as Record<string, unknown>;
+    const name = typeof term.discount_name === 'string' ? term.discount_name.trim() : '';
+    const type = term.discount_type;
+    const value = Number(term.value);
+    const scope = term.scope ?? 'contract';
+    if (typeof term.template_discount_key === 'string') {
+      if (!term.template_discount_key.trim() || term.template_discount_key.length > 200 || sourceKeys.has(term.template_discount_key)) {
+        throw new ContractActionDomainError(`Default discount ${index + 1} has a duplicate or invalid template identity. Remove and re-add that term.`);
+      }
+      sourceKeys.add(term.template_discount_key);
+    }
+    if (typeof term.is_active !== 'undefined' && typeof term.is_active !== 'boolean') {
+      throw new ContractActionDomainError(`Default discount “${name || index + 1}” needs an active/inactive value.`);
+    }
+    if (term.priority != null && (typeof term.priority !== 'number' || !Number.isInteger(term.priority))) {
+      throw new ContractActionDomainError(`Default discount “${name || index + 1}” priority must be a whole number.`);
+    }
+    const normalizedType = type === 'fixed' || type === 'percentage' ? type : null;
+    const normalizedScope = scope === 'contract' || scope === 'line' || scope === 'service' ? scope : null;
+    if (!normalizedType || !normalizedScope) throw new ContractActionDomainError(`Default discount ${index + 1} has an unsupported type or scope.`);
+    const validatedInput: DiscountAuthoringInput = {
+      discount_name: name,
+      discount_type: normalizedType,
+      value,
+      start_date: typeof term.start_date === 'string' ? term.start_date : '',
+      end_date: typeof term.end_date === 'string' ? term.end_date : null,
+      scope: normalizedScope,
+      contract_line_id: typeof term.contract_line_id === 'string' ? term.contract_line_id : null,
+      scope_service_id: typeof term.scope_service_id === 'string' ? term.scope_service_id : null,
+      priority: typeof term.priority === 'number' ? term.priority : null,
+      is_active: typeof term.is_active === 'boolean' ? term.is_active : true,
+    };
+    const validationError = validateDiscountInput(validatedInput);
+    if (validationError) throw new ContractActionDomainError(`Default discount ${index + 1}: ${validationError}`);
+    if (value <= 0 || (normalizedType === 'fixed' && Number(value.toFixed(2)) !== value)) {
+      throw new ContractActionDomainError(`Default discount “${name}” must be positive; fixed amounts must use no more than two decimal places.`);
+    }
+    if (scope === 'line' && (typeof term.contract_line_id !== 'string' || !lineIds.has(term.contract_line_id))) {
+      throw new ContractActionDomainError(`Choose a line from this template for default discount “${name}”.`);
+    }
+    if (scope === 'service' && (typeof term.scope_service_id !== 'string' || !serviceIds.has(term.scope_service_id))) {
+      throw new ContractActionDomainError(`Choose a service used by this template for default discount “${name}”.`);
+    }
+  }
+}
 
 
 
@@ -562,7 +630,18 @@ export const updateContract = withAuth(async (
         templateUpdates.template_status = updateData.status as IContractTemplate['template_status'];
       }
       if (updateData.template_metadata !== undefined) {
-        templateUpdates.template_metadata = updateData.template_metadata ?? null;
+        await validateTemplateDefaultDiscounts(knex, tenant, contractId, updateData.template_metadata);
+        const metadata = updateData.template_metadata && typeof updateData.template_metadata === 'object'
+          ? updateData.template_metadata as Record<string, unknown> : null;
+        const terms = Array.isArray(metadata?.default_discounts) ? metadata.default_discounts : null;
+        templateUpdates.template_metadata = metadata && terms
+          ? { ...metadata, default_discounts: terms.map((term) => ({
+              ...(term as Record<string, unknown>),
+              template_discount_key: typeof (term as Record<string, unknown>).template_discount_key === 'string'
+                ? (term as Record<string, unknown>).template_discount_key
+                : randomUUID(),
+            })) }
+          : updateData.template_metadata ?? null;
       }
 
       if (Object.keys(templateUpdates).length === 0) {

@@ -253,6 +253,7 @@ export const getContractDiscounts = withAuth(async (
 
       const rows = await query
         .where('cl.contract_id', contractId)
+        .where('cld.client_contract_id', resolvedClientContractId)
         .orderBy('d.discount_name', 'asc')
         .select(
           'd.discount_id',
@@ -396,6 +397,7 @@ export const createContractDiscount = withAuth(async (
           discount_id: newId,
           tenant,
           contract_line_id: input.contract_line_id,
+          client_contract_id: resolvedClientContractId,
         });
       } else {
         const contract = await db.table('contracts').where({ contract_id: contractId }).first('contract_id');
@@ -465,6 +467,7 @@ export const updateContractDiscount = withAuth(async (
           this.on('cl.contract_line_id', '=', 'cld.contract_line_id').andOn('cl.tenant', '=', 'cld.tenant');
         })
         .where({ 'd.discount_id': discountId, 'cl.contract_id': contractId })
+        .andWhere('cld.client_contract_id', resolvedClientContractId)
         .first('d.discount_id');
       if (!existing && !existingLine) {
         throw new Error('The discount no longer exists for this contract.');
@@ -490,9 +493,9 @@ export const updateContractDiscount = withAuth(async (
       if (!existing) {
         // Preserve legacy line-scoped authoring. Client-contract definitions
         // have already been isolated and cannot be attached to another client.
-        await db.table('contract_line_discounts').where({ discount_id: discountId }).delete();
+        await db.table('contract_line_discounts').where({ discount_id: discountId, client_contract_id: resolvedClientContractId }).delete();
         if (input.contract_line_id) await db.table('contract_line_discounts').insert({
-          discount_id: discountId, tenant, contract_line_id: input.contract_line_id,
+          discount_id: discountId, tenant, contract_line_id: input.contract_line_id, client_contract_id: resolvedClientContractId,
         });
       }
 
@@ -543,6 +546,7 @@ export const setContractDiscountActive = withAuth(async (
           this.on('cl.contract_line_id', '=', 'cld.contract_line_id').andOn('cl.tenant', '=', 'cld.tenant');
         })
         .where({ 'd.discount_id': discountId, 'cl.contract_id': contractId })
+        .andWhere('cld.client_contract_id', resolvedClientContractId)
         .first('d.discount_id');
       if (!existingAssignment && !existingLine) {
         throw new Error('The discount no longer exists for this contract.');
@@ -607,7 +611,7 @@ async function getContractDiscountById(
   db.tenantJoin(query, 'service_catalog as svc', 'svc.service_id', 'd.scope_service_id', { type: 'left' });
 
   const row = await query
-    .where({ 'd.discount_id': discountId, 'cl.contract_id': contractId })
+    .where({ 'd.discount_id': discountId, 'cl.contract_id': contractId, ...(clientContractId ? { 'cld.client_contract_id': clientContractId } : {}) })
     .first(
       'd.discount_id',
       'd.discount_name',

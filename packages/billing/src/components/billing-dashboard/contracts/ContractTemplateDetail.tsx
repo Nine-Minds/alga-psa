@@ -2140,7 +2140,7 @@ function TemplateDefaultDiscountsPanel({
     return () => { active = false; };
   }, [lines]);
 
-  const save = async (nextDefinitions: Array<Record<string, unknown>>) => {
+  const save = async (nextDefinitions: Array<Record<string, unknown>>): Promise<boolean> => {
     setSaving(true);
     setError(null);
     try {
@@ -2154,8 +2154,10 @@ function TemplateDefaultDiscountsPanel({
       });
       if (isReturnedActionError(result)) throw new Error(getErrorMessage(result));
       onSaved();
+      return true;
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : String(saveError));
+      return false;
     } finally {
       setSaving(false);
     }
@@ -2167,13 +2169,16 @@ function TemplateDefaultDiscountsPanel({
       setError(t('templateDetail.discounts.invalid', { defaultValue: 'Enter a name, positive value, and start date.' }));
       return;
     }
-    await save([...definitions, {
+    const saved = await save([...definitions, {
+      template_discount_key: crypto.randomUUID(),
       discount_name: name.trim(), discount_type: kind, value: numericValue,
       start_date: startDate, end_date: endDate || null, scope, is_active: true,
       contract_line_id: scope === 'line' ? lineId : null,
       scope_service_id: scope === 'service' ? serviceId : null,
     }]);
-    setName(''); setValue(''); setEndDate(''); setScope('contract'); setLineId(''); setServiceId('');
+    if (saved) {
+      setName(''); setValue(''); setEndDate(''); setScope('contract'); setLineId(''); setServiceId('');
+    }
   };
 
   return (
