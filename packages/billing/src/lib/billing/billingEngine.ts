@@ -1978,6 +1978,20 @@ export class BillingEngine {
       }
     }
 
+    // One-time mid-period recurring-unit true-ups. They join the supplemental
+    // charges so the shared discount pipeline sees them in the eligible base
+    // exactly once (the amount is already resolved; it is never prorated again).
+    if (!options.projectTarget) {
+      const contractChangeCharges = await this.loadPendingContractChangeCharges(
+        clientId,
+        billingPeriod,
+        client,
+        billingCurrency,
+        clientContractLines,
+      );
+      totalCharges = totalCharges.concat(contractChangeCharges);
+    }
+
     // Resolve discount rows without pricing the obligations. Service-period
     // facts are enough for the existing effective-window query.
     const obligationWindows: IBillingCharge[] = contractObligations.flatMap(
@@ -6605,6 +6619,164 @@ export class BillingEngine {
     );
 
     return Promise.all(chargesPromises);
+  }
+
+  /**
+   * Pending one-time mid-period quantity true-ups for contracts on this
+   * invoice, shaped as supplemental charges so the shared discount pipeline
+   * resolves applicable fixed/percentage discounts once and preview ==
+   * generation. Each charge carries its companion provenance contract so
+   * generation can persist a source-linked row and reconcile (never duplicate)
+   * on regeneration. Credits stay out of any positive discount base because the
+   * compute pipeline only discounts positive eligible lines.
+   */
+  private async loadPendingContractChangeCharges(
+    clientId: string,
+    billingPeriod: IBillingPeriod,
+    client: IClient | undefined,
+    billingCurrency: string,
+    clientContractLines: IClientContractLine[],
+  ): Promise<IBillingCharge[]> {
+    await this.initKnex();
+    if (!this.tenant) {
+      throw new Error("tenant context not found");
+    }
+    const lineIds = [
+      ...new Set(
+        clientContractLines
+          .map((line) => line.client_contract_line_id)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    ];
+    if (lineIds.length === 0) return [];
+
+    const db = tenantDb(this.knex, this.tenant);
+    const adjustments = (await db
+      .table("contract_recurring_unit_adjustments")
+      .where({ tenant: this.tenant, status: "pending" })
+      .whereIn("contract_line_id", lineIds)
+      .whereNot("amount_cents", 0)
+      // The affected period must have begun by the end of this billing window.
+      // A pending adjustment whose affected invoice finalized first therefore
+      // carries forward onto the next eligible draft; a draft for an earlier
+      // window never pulls a future true-up forward.
+      .andWhere("adjustment_period_start", "<", billingPeriod.endDate)
+      .select(
+        "adjustment_id",
+        "contract_line_id",
+        "service_id",
+        "config_id",
+        "revision_id",
+        "revision_version",
+        "adjustment_period_start",
+        "adjustment_period_end",
+        "previous_quantity",
+        "new_quantity",
+        "quantity_delta",
+        "unit_rate_cents",
+        "covered_days",
+        "full_period_days",
+        "amount_cents",
+        "reason",
+      )) as Array<Record<string, unknown>>;
+    if (adjustments.length === 0) return [];
+
+    const serviceIds = [...new Set(adjustments.map((row) => String(row.service_id)))];
+    const services = (await db
+      .table("service_catalog")
+      .where({ tenant: this.tenant })
+      .whereIn("service_id", serviceIds)
+      .select("service_id", "service_name", "tax_rate_id")) as Array<{
+      service_id: string;
+      service_name: string | null;
+      tax_rate_id: string | null;
+    }>;
+    const serviceById = new Map(services.map((service) => [service.service_id, service]));
+    const lineById = new Map(
+      clientContractLines.map((line) => [line.client_contract_line_id, line]),
+    );
+
+    const charges: IBillingCharge[] = [];
+    for (const row of adjustments) {
+      const serviceId = String(row.service_id);
+      const contractLineId = String(row.contract_line_id);
+      const line = lineById.get(contractLineId);
+      const service = serviceById.get(serviceId);
+      const total = Number(row.amount_cents);
+
+      const { taxRegion: serviceTaxRegion, isTaxable } =
+        await this.getTaxInfoFromService({
+          service_id: serviceId,
+          tax_rate_id: service?.tax_rate_id ?? null,
+        });
+      const effectiveTaxRegion =
+        serviceTaxRegion ??
+        (client ? await this.getClientDefaultTaxRegionCode(client.client_id) : undefined) ??
+        undefined;
+
+      let taxAmount = 0;
+      let taxRate = 0;
+      // Credits are not taxed, mirroring how the engine treats other credit
+      // lines; a positive true-up is taxed through the same tax service as a
+      // recurring charge so preview and generation agree.
+      if (!client?.is_tax_exempt && isTaxable && effectiveTaxRegion && total > 0) {
+        try {
+          const taxServiceInstance = new TaxService();
+          const taxResult = await taxServiceInstance.calculateTax(
+            client!.client_id,
+            total,
+            billingPeriod.endDate,
+            effectiveTaxRegion,
+            true,
+            billingCurrency || "USD",
+          );
+          taxRate = taxResult.taxRate;
+          taxAmount = taxResult.taxAmount;
+        } catch (error) {
+          console.error(
+            `Error calculating tax for mid-period adjustment ${String(row.adjustment_id)}:`,
+            error,
+          );
+        }
+      }
+
+      charges.push({
+        type: "fixed",
+        serviceId,
+        config_id: String(row.config_id),
+        client_contract_line_id: contractLineId,
+        serviceName: `Mid-period quantity change: ${service?.service_name ?? "recurring item"}`,
+        quantity: Math.abs(Number(row.quantity_delta)),
+        rate: Number(row.unit_rate_cents),
+        total,
+        tax_amount: taxAmount,
+        tax_rate: taxRate,
+        tax_region: effectiveTaxRegion,
+        is_taxable: Boolean(isTaxable),
+        client_contract_id: line?.client_contract_id || undefined,
+        contract_name: line?.contract_name || undefined,
+        servicePeriodStart: normalizeRecurringBoundary(row.adjustment_period_start),
+        servicePeriodEnd: normalizeRecurringBoundary(row.adjustment_period_end),
+        billingTiming: line?.billing_timing ?? "arrears",
+        contractChangeAdjustment: {
+          adjustmentId: String(row.adjustment_id),
+          sourceKind: "contract_change",
+          revisionId: String(row.revision_id),
+          revisionVersion: Number(row.revision_version),
+          periodStart: normalizeRecurringBoundary(row.adjustment_period_start),
+          periodEnd: normalizeRecurringBoundary(row.adjustment_period_end),
+          amountCents: total,
+          reason: String(row.reason),
+          newQuantity: Number(row.new_quantity),
+          previousQuantity: Number(row.previous_quantity),
+          quantityDelta: Number(row.quantity_delta),
+          unitRateCents: Number(row.unit_rate_cents),
+          coveredDays: Number(row.covered_days),
+          fullPeriodDays: Number(row.full_period_days),
+        },
+      });
+    }
+    return charges;
   }
 
   private async loadBucketObligation(

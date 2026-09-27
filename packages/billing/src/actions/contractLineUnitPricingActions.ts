@@ -160,6 +160,8 @@ async function scheduleRecurringUnitPricingRevisionImpl(
         pricePolicy,
         unitRateCents: pricePolicy === 'override' ? Number(input.unit_rate_cents) : null,
         effectivePeriodStart: effective,
+        allowMidPeriod: Boolean(input.allow_mid_period),
+        midPeriodEffectiveDate: input.mid_period_effective_date ?? null,
         // Preserve the caller's explicit expectation: `null` means "I saw no
         // revision at this boundary", `undefined` (omitted) means a legacy
         // unconditional writer, a number is a compare-and-set token.

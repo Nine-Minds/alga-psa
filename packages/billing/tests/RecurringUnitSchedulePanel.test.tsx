@@ -3,12 +3,12 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 
-const actions = vi.hoisted(() => ({ read: vi.fn(), save: vi.fn(), preview: vi.fn() }));
+const actions = vi.hoisted(() => ({ read: vi.fn(), save: vi.fn(), preview: vi.fn(), revisions: vi.fn(), history: vi.fn() }));
 vi.mock('@alga-psa/billing/actions/contractLineUnitPricingActions', () => ({
   getEffectiveRecurringUnitPricing: actions.read,
   scheduleRecurringUnitPricingRevision: actions.save,
-  listRecurringUnitPricingRevisions: async () => [],
-  listRecurringUnitPricingRevisionHistory: async () => [],
+  listRecurringUnitPricingRevisions: actions.revisions,
+  listRecurringUnitPricingRevisionHistory: actions.history,
 }));
 vi.mock('@alga-psa/billing/actions/contractLineSemanticsActions', () => ({ getNextContractServiceBoundary: async () => '2027-01-01' }));
 vi.mock('@alga-psa/billing/actions/invoiceGeneration', () => ({ previewRecurringRevisionInvoiceImpact: actions.preview }));
@@ -32,6 +32,8 @@ beforeEach(() => {
     resolvedUnitRateCents: 12000, catalogUnitRateCents: 10000, baselineQuantity: 20,
     baselineUnitRateCents: 10000, currencyCode: 'USD', coveredStart: '2027-01-01', coveredEnd: '2027-02-01' });
   actions.save.mockResolvedValue({ revision_id: 'revision', version: 1 });
+  actions.revisions.mockResolvedValue([]);
+  actions.history.mockResolvedValue([]);
 });
 async function mount() {
   render(<RecurringUnitSchedulePanel contractLineId="line" serviceId="service" configId="config" currencyCode="USD" />);
@@ -68,6 +70,24 @@ describe('Recurring unit schedule panel', () => {
     expect(screen.getByText(/Contract discount: -?\$-?100.00/)).toBeTruthy();
     fireEvent.change(document.querySelector('#recurring-quantity-config')!, { target: { value: '23' } });
     expect(screen.queryByText(/Subtotal after discounts/)).toBeNull();
+  });
+  it('names audit actors instead of showing raw user ids', async () => {
+    const replacer = '11111111-1111-4111-8111-111111111111';
+    const departed = '22222222-2222-4222-8222-222222222222';
+    actions.revisions.mockResolvedValue([{ revision_id: 'r1', quantity: 30, unit_rate_cents: 12000, price_policy: 'override',
+      version: 2, effective_period_start: '2027-02-01', created_by: departed, updated_by: replacer,
+      created_by_name: null, updated_by_name: 'Glinda Good', created_at: null, updated_at: null }]);
+    actions.history.mockResolvedValue([
+      { history_id: 'h1', revision_id: 'r1', quantity: 25, unit_rate_cents: 11000, price_policy: 'override',
+        effective_period_start: '2027-02-01', version: 1, superseded_by: 'system', superseded_by_name: null },
+      { history_id: 'h2', revision_id: 'r1', quantity: 20, unit_rate_cents: 10000, price_policy: 'override',
+        effective_period_start: '2027-02-01', version: 1, superseded_by: departed, superseded_by_name: null },
+    ]);
+    await mount();
+    await screen.findByText('Glinda Good');
+    expect(screen.getByText('System')).toBeTruthy();
+    expect(screen.getByText('Unknown user').getAttribute('title')).toBe(departed);
+    expect(screen.queryByText(replacer)).toBeNull();
   });
   it('shows preview errors without inventing a total', async () => {
     actions.preview.mockResolvedValue({ success: false, error: 'Prepare service periods in Billing.' });

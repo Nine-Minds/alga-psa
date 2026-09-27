@@ -77,6 +77,13 @@ export interface IContractLineUnitPricingRevision extends TenantEntity {
   /** Optimistic-concurrency token; increments on each replacement. */
   version: number;
   effective_period_start: ISO8601String;
+  /**
+   * The true mid-period quantity-change date when the operator explicitly opted
+   * in. Null on the default boundary-only path and on legacy rows. When set,
+   * `effective_period_start` is the next canonical boundary (where the standing
+   * quantity begins) and a one-time prorated true-up covers the partial period.
+   */
+  mid_period_effective_date?: ISO8601String | null;
   created_by?: string | null;
   updated_by?: string | null;
   created_at: ISO8601String | Date;
@@ -93,7 +100,19 @@ export interface IContractLineUnitPricingRevisionInput {
   price_policy?: ContractLineUnitPricePolicy;
   /** When supplied, the stored version must match or the write is rejected. */
   expected_version?: number | null;
+  /**
+   * Canonical boundary where the standing quantity/price begins. On the
+   * mid-period path this is the next boundary after `mid_period_effective_date`.
+   */
   effective_period_start: ISO8601String;
+  /**
+   * Explicit opt-in to a quantity-only change effective inside an eligible
+   * unbilled service period. When true, `mid_period_effective_date` supplies the
+   * true date and `effective_period_start` must be the period's next boundary.
+   * Boundary-only scheduling remains the default.
+   */
+  allow_mid_period?: boolean;
+  mid_period_effective_date?: ISO8601String | null;
   /**
    * Recurring-unit kind. When omitted the server resolves it from the
    * configuration (unit-priced Fixed service vs catalog product).
@@ -111,9 +130,13 @@ export interface IContractLineUnitPricingRevisionHistoryEntry extends TenantEnti
   unit_rate_cents: number | null;
   price_policy: ContractLineUnitPricePolicy;
   effective_period_start: ISO8601String;
+  /** True mid-period date when the superseded edit opted in; null otherwise. */
+  mid_period_effective_date?: ISO8601String | null;
   version: number;
   /** Actor who performed the replacement. */
   superseded_by: string;
+  /** Display name for `superseded_by`; null for 'system' or an unresolvable user. */
+  superseded_by_name?: string | null;
   recorded_by?: string | null;
   /** Author of the superseded values, when known and different from the replacer. */
   original_created_by?: string | null;

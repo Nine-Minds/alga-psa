@@ -73,6 +73,8 @@ export interface RecurringUnitRevisionRow {
   price_policy?: string | null;
   version?: number | string | null;
   effective_period_start: string | Date;
+  /** True mid-period date for an opt-in quantity change; null on the boundary path. */
+  mid_period_effective_date?: string | Date | null;
   created_by?: string | null;
   updated_by?: string | null;
   created_at?: string | Date | null;

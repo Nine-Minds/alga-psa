@@ -110,6 +110,61 @@ For a whole-contract 10% discount, the example's $3,900/$4,200 gross subtotals b
 
 Use existing `packages/billing/src/lib/billing/compute/compute.test.ts` recurring quantity cases as a starting point, extend shared resolver tests, and add migrated-schema DB integration coverage near `server/src/test/infrastructure/billing/invoices/contractQuantityUsageSemantics.test.ts`. Confirm test path and fixture conventions before implementation. UI evidence must record the actual tested build and scenario; this design session does not claim any implementation tests or UI smoke have run.
 
+## Approved amendment (2026-09-27): opt-in mid-period quantity true-up
+
+Boundary-only scheduling remains the default and is unchanged: the shared
+earliest-unbilled boundary selection, explicit boundary edits and the billed /
+locked guards continue to apply. An operator may explicitly opt in — per change,
+in the scheduler UI — to a **quantity-only** change effective inside an eligible
+unbilled service period. The opt-in records the permanent change once and emits
+one automatic prorated charge or credit for the partial period.
+
+- **Storage and cancellation.** `contract_line_unit_pricing_revisions` gains a
+  nullable `mid_period_effective_date`. On the boundary path it is null; on the
+  mid-period path the canonical `effective_period_start` remains the next
+  canonical boundary (the standing quantity begins there) and
+  `mid_period_effective_date` records the true date. The compare-and-set,
+  version, tenant isolation and append-only superseded-edit history are
+  preserved; the superseded edit records the mid-period date it replaced. Saving
+  boundary-only at the same canonical boundary cancels the pending true-up, as
+  does editing to a zero delta or cancelling the revision.
+- **Adjustment ownership and storage.** This card owns the permanent change and
+  its automatic true-up. The true-up is held in a new durable ledger,
+  `contract_recurring_unit_adjustments` (tenant-scoped, registered in
+  `tenantTableMetadata`), keyed one-per-canonical-revision so editing a pending
+  version reconciles in place. It carries the companion provenance contract:
+  `adjustment_source_kind = 'contract_change'`, revision id plus version as
+  source identity, `adjustment_period_start/end`, and `adjustment_reason`.
+- **Amount.** `quantity delta × effective unit rate × covered days / full-period
+  days`, rounded once with the engine's existing coverage-proration convention
+  (`Math.ceil`). Increases are charges, decreases are credits. The September 16
+  change from 10 to 13 seats at $100/month is `[September 16, October 1)`,
+  `3 × $100 × 15/30 = $150`.
+- **Date conventions.** Detail rows keep the legacy inclusive end;
+  canonical periods and companion adjustment periods are half-open. An inclusive
+  end maps to the following date as the exclusive end before any day count.
+- **Rate selection.** A mid-period change may not change the unit price: the
+  effective rate for the true-up is the rate in force for the affected period
+  (override, or the currency/period catalog price for catalog policy). No new
+  mid-period price policy is introduced; a price change is scheduled at a
+  boundary.
+- **Invoice eligibility and lifecycle.** The true-up is materialized on the next
+  eligible editable draft for the same client, contract, currency and line, and
+  never on a finalized, paid or exported invoice. If the affected period's
+  invoice finalized first, the pending adjustment carries forward with its
+  original period. Regeneration and retries reconcile the source-linked
+  `invoice_charges` row (unique on tenant, invoice, source kind and source id)
+  rather than duplicating it.
+- **Discounts and tax.** The resolved true-up joins the invoice charges before
+  the shared discount and tax pipeline, so applicable fixed and percentage
+  discounts and tax apply exactly once; the amount is never prorated again. The
+  companion owns the invoice-side manual partial-period calculator, its link to
+  the contract scheduler and its overlap warning; this card emits no invoice-side
+  contract quantity writer.
+
+The baseline policy description below is retained for the record; where it says
+no mid-period true-up is emitted, the opt-in amendment above supersedes it.
+
 ## Deliberate exclusions
 
 No implementation or PR accompanies this plan. No bulk conversion of legacy products, rewriting issued invoices, retroactive catalog repricing, product-only revision engine, usage/time semantics changes, one-time/project-product scheduling, generalized subscription cancellation, fractional recurring counts, currency conversion or automatic mid-period true-ups. No new discount rules or tax policy. An existing bundle allocation is not made unit-priced merely because its catalog classification changes.

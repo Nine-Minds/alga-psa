@@ -53,7 +53,7 @@ import { ITaxCalculationResult } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { auditLog } from '@alga-psa/db';
 import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
-import { calculateAndDistributeTax, claimRecurringServicePeriodsForSelectionInputs, getClientDetails, persistInvoiceCharges, updateInvoiceTotalsAndRecordTransaction, validateClientBillingEmail } from '../services/invoiceService';
+import { calculateAndDistributeTax, claimRecurringServicePeriodsForSelectionInputs, getClientDetails, persistContractChangeAdjustmentCharges, persistInvoiceCharges, updateInvoiceTotalsAndRecordTransaction, validateClientBillingEmail } from '../services/invoiceService';
 
 
 
@@ -2225,6 +2225,8 @@ export const previewRecurringRevisionInvoiceImpact = withAuth(async (
         contractLineId: input.contract_line_id, serviceId: input.service_id, configId: input.config_id,
         quantity: input.quantity, pricePolicy: input.price_policy ?? 'override',
         unitRateCents: input.unit_rate_cents, effectivePeriodStart: input.effective_period_start,
+        allowMidPeriod: Boolean(input.allow_mid_period),
+        midPeriodEffectiveDate: input.mid_period_effective_date ?? null,
         expectedVersion: input.expected_version,
       });
       if (!scheduled.ok) throw new Error(scheduled.error);
@@ -3814,7 +3816,13 @@ export async function createInvoiceFromBillingResultImpl(
     );
     persistedCapDeltas = capDeltas;
     const projectScheduleCharges = scopedCharges.filter(isProjectScheduleCharge);
-    const standardCharges = scopedCharges.filter((charge) => !isProjectScheduleCharge(charge));
+    // One-time mid-period true-ups persist as source-linked adjustment rows, not
+    // as ordinary fixed charges, so they keep their revision provenance and
+    // reconcile in place on regeneration.
+    const contractChangeCharges = scopedCharges.filter((charge) => Boolean(charge.contractChangeAdjustment));
+    const standardCharges = scopedCharges.filter(
+      (charge) => !isProjectScheduleCharge(charge) && !charge.contractChangeAdjustment,
+    );
     const standardSubtotal = await persistInvoiceCharges(
       trx,
       newInvoice!.invoice_id,
@@ -3837,7 +3845,14 @@ export async function createInvoiceFromBillingResultImpl(
       tenant,
       userId,
     );
-    const calculatedSubtotal = standardSubtotal + projectScheduleSubtotal;
+    const contractChangeSubtotal = await persistContractChangeAdjustmentCharges(
+      trx,
+      newInvoice!.invoice_id,
+      contractChangeCharges,
+      tenant,
+      userId,
+    );
+    const calculatedSubtotal = standardSubtotal + projectScheduleSubtotal + contractChangeSubtotal;
 
     // Recurring windows must end this transaction fully claimed: every
     // fulfilled recurring service period is linked to this invoice (including

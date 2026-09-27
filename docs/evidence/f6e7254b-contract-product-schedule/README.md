@@ -453,3 +453,65 @@ drift was not reset. No new migration was required for the takeover changes.
 
 Companion adoption and combined-branch validation remain as described in
 `companion-handoff.md`. No push, PR, companion worktree mutation or merge was made.
+
+## 2026-09-27 repair: opt-in mid-period quantity true-up
+
+Boundary-only scheduling remains the default. An explicit per-change opt-in now
+records a quantity-only change inside an eligible unbilled period, stores the
+true date on the canonical revision (`mid_period_effective_date`), and derives
+one automatic prorated true-up. The signed amount
+(`sign(delta) × ceil(ceil(|delta| × rate) × covered/full)`) lands once on the
+next eligible editable draft as a source-linked `contract_change`
+`invoice_charges` row, before the shared discount and tax pipeline, and the new
+standing quantity bills from the next canonical boundary. A durable ledger
+(`contract_recurring_unit_adjustments`) makes regeneration and pending-version
+edits reconcile instead of duplicating; finalized/paid/exported invoices are
+never reopened, and a pending adjustment carries forward with its original
+period.
+
+### Delivered in this repair
+
+- Migration `20260927120000_contract_recurring_mid_period_adjustments.cjs`:
+  additive `mid_period_effective_date` on revisions and history, the companion
+  adjustment-provenance columns on `invoice_charges` (idempotent, shared names),
+  and the new tenant-scoped ledger registered in `tenantTableMetadata`. Citus
+  distribution and `transaction: false` follow existing conventions.
+- Shared pure module
+  `shared/billingClients/recurringUnitMidPeriodAdjustment.ts` (date conventions,
+  amount, reason) with 9 unit tests.
+- Scheduler and action extensions (`seatRevisions.ts`,
+  `contractLineUnitPricingActions.ts`) preserving compare-and-set,
+  `rejectBilledSeatBoundary`, locked-period protection, tenant isolation and
+  append-only history; mid-period is quantity-only and never changes the unit
+  price.
+- Engine + generation integration (`billingEngine.ts` supplemental charge,
+  `invoiceService.persistContractChangeAdjustmentCharges`, generation wiring) so
+  preview and generation resolve the same source and the adjustment participates
+  in discounts/tax exactly once.
+- Scheduler UI opt-in with the affected period, unit delta, rate, proration math,
+  charge/credit, and before/after totals; the boundary-only note is replaced
+  when the option is selected.
+
+### Checks (2026-09-27)
+
+- `cd server && TEST_DB_NAME=test_db_pcs_sched REQUIRE_DB=1 npx vitest run src/test/infrastructure/billing/invoices/contractQuantityUsageSemantics.test.ts`
+  — **97 passed**, including **6 new mid-period cases** (increase with
+  provenance/standing next period, pending-version reconciliation, decrease
+  credit, invalid date rejection, repeated-generation idempotency, and a 10%
+  contract discount applied once).
+- `cd shared && npx vitest run billingClients/__tests__/` — **19 passed**.
+- `cd packages/billing && npx vitest run tests/RecurringUnitSchedulePanel.test.tsx src/lib/billing/compute/compute.test.ts src/lib/billing/recurringPricingIdentity.test.ts`
+  — **61 passed**.
+- `cd packages/db && npx vitest run src/lib/tenantDb.test.ts` — **19 passed**.
+- `packages/billing`, `packages/types`, `shared` and `packages/db` typechecks
+  pass; `packages/db` and `shared` builds were rebuilt so the runtime exports
+  include the new module and metadata.
+
+### Live UI smoke: not run
+
+The review app at `http://100.109.101.64:23029` was unreachable during this run,
+and its recorded artifact revision
+`50ce6d41f78a2ee4186779b5d05b447c7845a5ef` predates this repair. No changed-code
+UI smoke is claimed. The dev server was deliberately not started. The
+mid-period walkthrough is recorded in the review guide for the next available
+deployment of this branch.

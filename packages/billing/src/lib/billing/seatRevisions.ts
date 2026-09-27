@@ -19,6 +19,11 @@ import {
   selectEffectiveServicePrice,
   type ServicePriceRateRow,
 } from '@alga-psa/shared/billingClients/resolveFixedLineRate';
+import {
+  computeRecurringUnitMidPeriodAdjustment,
+  daysBetweenOnly,
+  formatRecurringUnitMidPeriodReason,
+} from '@alga-psa/shared/billingClients/recurringUnitMidPeriodAdjustment';
 
 /**
  * Transactional core of prospective recurring-seat (unit pricing) revisions.
@@ -227,6 +232,157 @@ export async function validateProspectivePricingBoundary(trx: Knex.Transaction, 
   return rejectBilledSeatBoundary({trx, tenant, contractLineId: lineId, effectivePeriodStart: boundary});
 }
 
+/**
+ * The single canonical, not-yet-billed service period that strictly contains
+ * `midDate` (`start <= midDate < end`), or null when no such period exists. A
+ * mid-period quantity change is only allowed inside an eligible unbilled
+ * period; billed/locked/superseded periods are never eligible.
+ */
+export async function resolveMidPeriodServicePeriod(params: {
+  trx: Knex.Transaction;
+  tenant: string;
+  contractLineId: string;
+  midDate: string;
+}): Promise<{ start: string; end: string } | null> {
+  const period = await tenantScopedTable(params.trx, params.tenant, 'recurring_service_periods')
+    .where({ tenant: params.tenant, obligation_id: params.contractLineId })
+    .whereNotIn('lifecycle_state', ['billed', 'locked', 'superseded', 'archived'])
+    .where('service_period_start', '<=', params.midDate)
+    .andWhere('service_period_end', '>', params.midDate)
+    .orderBy('service_period_start', 'asc')
+    .first<{ service_period_start: unknown; service_period_end: unknown }>(
+      'service_period_start',
+      'service_period_end',
+    );
+  if (!period) return null;
+  return {
+    start: toBoundaryDay(period.service_period_start),
+    end: toBoundaryDay(period.service_period_end),
+  };
+}
+
+/**
+ * Cancel a pending mid-period true-up for a canonical revision. Used when an
+ * operator returns to boundary-only scheduling, edits the change to a zero
+ * delta, or otherwise removes the partial-period effect.
+ */
+export async function cancelRecurringUnitAdjustmentForRevision(
+  trx: Knex.Transaction,
+  tenant: string,
+  revisionId: string,
+  userId: string | null,
+): Promise<void> {
+  await tenantScopedTable(trx, tenant, 'contract_recurring_unit_adjustments')
+    .where({ tenant, revision_id: revisionId })
+    .where('status', 'pending')
+    .update({ status: 'cancelled', updated_at: trx.fn.now(), settled_invoice_id: null });
+}
+
+/**
+ * Upsert the durable, source-linked true-up for a canonical revision. Keyed by
+ * `(tenant, revision_id)` so editing a pending version reconciles the existing
+ * adjustment in place instead of leaving duplicate billable versions. A zero
+ * amount cancels the pending adjustment.
+ */
+export async function upsertRecurringUnitAdjustment(params: {
+  trx: Knex.Transaction;
+  tenant: string;
+  userId: string | null;
+  revisionId: string;
+  revisionVersion: number;
+  contractLineId: string;
+  serviceId: string;
+  configId: string;
+  midPeriodEffectiveDate: string;
+  adjustmentPeriodStart: string;
+  adjustmentPeriodEnd: string;
+  previousQuantity: number;
+  newQuantity: number;
+  unitRateCents: number;
+  coveredDays: number;
+  fullPeriodDays: number;
+  amountCents: number;
+  pricePolicy: RecurringPricePolicy;
+  reason: string;
+}): Promise<void> {
+  const {
+    trx, tenant, userId, revisionId, revisionVersion, contractLineId, serviceId, configId,
+    midPeriodEffectiveDate, adjustmentPeriodStart, adjustmentPeriodEnd,
+    previousQuantity, newQuantity, unitRateCents, coveredDays, fullPeriodDays,
+    amountCents, pricePolicy, reason,
+  } = params;
+
+  if (amountCents === 0) {
+    await cancelRecurringUnitAdjustmentForRevision(trx, tenant, revisionId, userId);
+    return;
+  }
+
+  const line = await tenantScopedTable(trx, tenant, 'contract_lines')
+    .where({ tenant, contract_line_id: contractLineId })
+    .first<{ contract_id: string | null } | undefined>('contract_id');
+  const contract = line?.contract_id
+    ? await tenantScopedTable(trx, tenant, 'contracts')
+        .where({ tenant, contract_id: line.contract_id })
+        .first<{ currency_code: string | null; owner_client_id: string | null } | undefined>(
+          'currency_code',
+          'owner_client_id',
+        )
+    : undefined;
+  const assignment = line?.contract_id
+    ? await tenantScopedTable(trx, tenant, 'client_contracts')
+        .where({ tenant, contract_id: line.contract_id, is_active: true })
+        .orderBy('start_date', 'asc')
+        .first<{ client_contract_id: string; client_id: string } | undefined>(
+          'client_contract_id',
+          'client_id',
+        )
+    : undefined;
+
+  const values = {
+    tenant,
+    contract_line_id: contractLineId,
+    service_id: serviceId,
+    config_id: configId,
+    contract_id: line?.contract_id ?? null,
+    client_contract_id: assignment?.client_contract_id ?? null,
+    client_id: assignment?.client_id ?? contract?.owner_client_id ?? null,
+    currency_code: (contract?.currency_code && String(contract.currency_code).trim()) || 'USD',
+    revision_id: revisionId,
+    revision_version: revisionVersion,
+    adjustment_period_start: adjustmentPeriodStart,
+    adjustment_period_end: adjustmentPeriodEnd,
+    mid_period_effective_date: midPeriodEffectiveDate,
+    previous_quantity: previousQuantity,
+    new_quantity: newQuantity,
+    quantity_delta: newQuantity - previousQuantity,
+    unit_rate_cents: Math.round(unitRateCents),
+    covered_days: coveredDays,
+    full_period_days: fullPeriodDays,
+    amount_cents: amountCents,
+    price_policy: pricePolicy,
+    reason,
+    status: 'pending' as const,
+    settled_invoice_id: null,
+    settled_charge_id: null,
+    settled_at: null,
+    updated_at: trx.fn.now(),
+  };
+
+  const existing = await tenantScopedTable(trx, tenant, 'contract_recurring_unit_adjustments')
+    .where({ tenant, revision_id: revisionId })
+    .first<{ adjustment_id: string } | undefined>('adjustment_id');
+  if (existing) {
+    await tenantScopedTable(trx, tenant, 'contract_recurring_unit_adjustments')
+      .where({ tenant, adjustment_id: existing.adjustment_id })
+      .update({ ...values, updated_by: userId });
+    return;
+  }
+  await tenantScopedTable(trx, tenant, 'contract_recurring_unit_adjustments').insert({
+    ...values,
+    created_by: userId,
+  });
+}
+
 export interface IScheduleRecurringUnitRevisionParams {
   trx: Knex.Transaction;
   tenant: string;
@@ -240,6 +396,13 @@ export interface IScheduleRecurringUnitRevisionParams {
   /** Required and >= 0 for `override`; must be null/omitted for `catalog`. */
   unitRateCents: number | null;
   effectivePeriodStart: string;
+  /**
+   * Explicit opt-in to a quantity-only mid-period change. When true,
+   * `effectivePeriodStart` must be the affected period's next canonical
+   * boundary and `midPeriodEffectiveDate` the true in-period date.
+   */
+  allowMidPeriod?: boolean;
+  midPeriodEffectiveDate?: string | null;
   /**
    * Optimistic-concurrency expectation for the target boundary:
    *  - `undefined`: internal/legacy unconditional upsert (configuration service);
@@ -514,6 +677,8 @@ export async function scheduleRecurringUnitRevisionInTransaction(
     pricePolicy,
     unitRateCents,
     effectivePeriodStart,
+    allowMidPeriod,
+    midPeriodEffectiveDate,
     expectedVersion,
   } = params;
 
@@ -576,19 +741,142 @@ export async function scheduleRecurringUnitRevisionInTransaction(
     return { ok: false, error: 'The selected contract line is not a Fixed line.' };
   }
 
-  const boundaryConflict = await validateProspectivePricingBoundary(trx, tenant, contractLineId, effectivePeriodStart);
+  // Boundary-only is the default. An explicit opt-in may make a *quantity-only*
+  // change inside an eligible unbilled period: the canonical revision keeps the
+  // next boundary as its effective date (the standing quantity begins there) and
+  // `mid_period_effective_date` records the true date so one prorated true-up
+  // can be derived. No new mid-period price policy is introduced here.
+  let canonicalBoundary = effectivePeriodStart;
+  let storedMidDate: string | null = null;
+  let pendingAdjustment: {
+    midDate: string;
+    periodStart: string;
+    periodEnd: string;
+    previousQuantity: number;
+    unitRateCents: number;
+    coveredDays: number;
+    fullPeriodDays: number;
+    amountCents: number;
+  } | null = null;
+
+  if (allowMidPeriod) {
+    const requestedMidDate = String(midPeriodEffectiveDate ?? effectivePeriodStart);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(requestedMidDate)) {
+      return { ok: false, error: 'The mid-period effective date must be a calendar date (YYYY-MM-DD).' };
+    }
+    const period = await resolveMidPeriodServicePeriod({
+      trx, tenant, contractLineId, midDate: requestedMidDate,
+    });
+    if (!period) {
+      return {
+        ok: false,
+        error:
+          'That date is not inside an unbilled service period for this contract. Choose a date within an upcoming unbilled period, or a service-period boundary.',
+      };
+    }
+    const current = await resolveEffectiveRecurringUnitPricingInTransaction({
+      trx, tenant, contractLineId, serviceId, configId, kind, boundary: period.start,
+    });
+    if (pricePolicy !== current.pricePolicy) {
+      return {
+        ok: false,
+        error:
+          'A mid-period change may only change quantity. Schedule a price change at a service-period boundary instead.',
+      };
+    }
+    let currentRate = current.unitRateCents;
+    if (current.pricePolicy === 'catalog') {
+      const display = await resolveRecurringUnitDisplayPricing({
+        trx, tenant, contractLineId, serviceId, configId, kind, boundary: period.start,
+      });
+      currentRate = display.resolvedUnitRateCents;
+      if (currentRate === null) {
+        return {
+          ok: false,
+          error: `No ${display.currencyCode} catalog price covers ${period.start}. Add a currency price or choose an explicit unit price override at a boundary.`,
+        };
+      }
+    }
+    if (currentRate === null || !Number.isFinite(currentRate) || currentRate < 0) {
+      return { ok: false, error: 'The effective unit rate for the affected period could not be resolved.' };
+    }
+    if (pricePolicy === 'override' && Number(unitRateCents) !== Number(currentRate)) {
+      return {
+        ok: false,
+        error:
+          'A mid-period change may only change quantity, not the unit price. Schedule the price change at a service-period boundary instead.',
+      };
+    }
+    const fullPeriodDays = daysBetweenOnly(period.start, period.end);
+    const coveredDays = daysBetweenOnly(requestedMidDate, period.end);
+    const adjustment = computeRecurringUnitMidPeriodAdjustment({
+      quantityDelta: quantity - current.quantity,
+      unitRateCents: Number(currentRate),
+      coveredDays,
+      fullPeriodDays,
+    });
+    canonicalBoundary = period.end;
+    storedMidDate = requestedMidDate;
+    pendingAdjustment = {
+      midDate: requestedMidDate,
+      periodStart: period.start,
+      periodEnd: period.end,
+      previousQuantity: current.quantity,
+      unitRateCents: Number(currentRate),
+      coveredDays,
+      fullPeriodDays,
+      amountCents: adjustment.amountCents,
+    };
+  }
+
+  const boundaryConflict = await validateProspectivePricingBoundary(trx, tenant, contractLineId, canonicalBoundary);
   if (boundaryConflict) {
     return { ok: false, error: boundaryConflict };
   }
 
   if (kind === 'product' && pricePolicy === 'catalog' && quantity > 0) {
     const pricing = await resolveRecurringUnitDisplayPricing({
-      trx, tenant, contractLineId, serviceId, configId, kind, boundary: effectivePeriodStart,
+      trx, tenant, contractLineId, serviceId, configId, kind, boundary: canonicalBoundary,
     });
     if (pricing.catalogUnitRateCents === null) {
       return { ok: false, error: `No ${pricing.currencyCode} catalog price covers this boundary. Add a currency price or choose an explicit unit price override.` };
     }
   }
+
+  // Reconcile the durable true-up when the revision is finally known. A
+  // boundary-only save cancels any pending mid-period adjustment on the same
+  // canonical revision, so returning to boundary scheduling reconciles rather
+  // than leaving a duplicate billable version.
+  const reconcileAdjustment = async (revision: IContractLineUnitPricingRevision): Promise<void> => {
+    if (pendingAdjustment && storedMidDate) {
+      await upsertRecurringUnitAdjustment({
+        trx, tenant, userId,
+        revisionId: String(revision.revision_id),
+        revisionVersion: Number(revision.version ?? 1),
+        contractLineId, serviceId, configId,
+        midPeriodEffectiveDate: storedMidDate,
+        adjustmentPeriodStart: pendingAdjustment.periodStart,
+        adjustmentPeriodEnd: pendingAdjustment.periodEnd,
+        previousQuantity: pendingAdjustment.previousQuantity,
+        newQuantity: quantity,
+        unitRateCents: pendingAdjustment.unitRateCents,
+        coveredDays: pendingAdjustment.coveredDays,
+        fullPeriodDays: pendingAdjustment.fullPeriodDays,
+        amountCents: pendingAdjustment.amountCents,
+        pricePolicy,
+        reason: formatRecurringUnitMidPeriodReason({
+          previousQuantity: pendingAdjustment.previousQuantity,
+          newQuantity: quantity,
+          coveredDays: pendingAdjustment.coveredDays,
+          fullPeriodDays: pendingAdjustment.fullPeriodDays,
+          periodStart: pendingAdjustment.periodStart,
+          periodEndExclusive: pendingAdjustment.periodEnd,
+        }),
+      });
+    } else {
+      await cancelRecurringUnitAdjustmentForRevision(trx, tenant, String(revision.revision_id), userId);
+    }
+  };
 
   const existing = await tenantScopedTable(trx, tenant, 'contract_line_unit_pricing_revisions')
     .where({
@@ -596,7 +884,7 @@ export async function scheduleRecurringUnitRevisionInTransaction(
       contract_line_id: contractLineId,
       service_id: serviceId,
       config_id: configId,
-      effective_period_start: effectivePeriodStart,
+      effective_period_start: canonicalBoundary,
     })
     .first<{
       revision_id: string;
@@ -604,11 +892,12 @@ export async function scheduleRecurringUnitRevisionInTransaction(
       unit_rate_cents: number | string | null;
       price_policy: string | null;
       version: number | string | null;
+      mid_period_effective_date: string | Date | null;
       created_by: string | null;
       created_at: string | Date | null;
       updated_by: string | null;
       updated_at: string | Date | null;
-    }>('revision_id', 'quantity', 'unit_rate_cents', 'price_policy', 'version', 'created_by', 'created_at', 'updated_by', 'updated_at');
+    }>('revision_id', 'quantity', 'unit_rate_cents', 'price_policy', 'version', 'mid_period_effective_date', 'created_by', 'created_at', 'updated_by', 'updated_at');
 
   if (existing) {
     const storedVersion = Number(existing.version ?? 1);
@@ -643,7 +932,11 @@ export async function scheduleRecurringUnitRevisionInTransaction(
       quantity: Number(existing.quantity),
       unit_rate_cents: existing.unit_rate_cents === null ? null : Number(existing.unit_rate_cents),
       price_policy: existing.price_policy === 'catalog' ? 'catalog' : 'override',
-      effective_period_start: effectivePeriodStart,
+      effective_period_start: canonicalBoundary,
+      mid_period_effective_date:
+        existing.mid_period_effective_date == null
+          ? null
+          : toBoundaryDay(existing.mid_period_effective_date),
       version: storedVersion,
       superseded_by: userId ?? 'system',
       recorded_by: userId,
@@ -658,6 +951,7 @@ export async function scheduleRecurringUnitRevisionInTransaction(
         quantity,
         unit_rate_cents: pricePolicy === 'override' ? unitRateCents : null,
         price_policy: pricePolicy,
+        mid_period_effective_date: storedMidDate,
         version: storedVersion + 1,
         updated_by: userId,
         updated_at: trx.fn.now(),
@@ -665,7 +959,9 @@ export async function scheduleRecurringUnitRevisionInTransaction(
         // replacement attribution lives on `updated_by` and in history.
       })
       .returning('*');
-    return { ok: true, revision: updated as unknown as IContractLineUnitPricingRevision };
+    const revision = updated as unknown as IContractLineUnitPricingRevision;
+    await reconcileAdjustment(revision);
+    return { ok: true, revision };
   }
 
   // A caller that expected to replace (a version number) but finds no row — or
@@ -688,12 +984,15 @@ export async function scheduleRecurringUnitRevisionInTransaction(
       unit_rate_cents: pricePolicy === 'override' ? unitRateCents : null,
       price_policy: pricePolicy,
       version: 1,
-      effective_period_start: effectivePeriodStart,
+      effective_period_start: canonicalBoundary,
+      mid_period_effective_date: storedMidDate,
       created_by: userId,
       updated_by: userId,
     })
     .returning('*');
-  return { ok: true, revision: inserted as unknown as IContractLineUnitPricingRevision };
+  const revision = inserted as unknown as IContractLineUnitPricingRevision;
+  await reconcileAdjustment(revision);
+  return { ok: true, revision };
 }
 
 /** Backwards-compatible seat wrapper: unit-priced Fixed service, explicit rate. */
@@ -715,10 +1014,49 @@ export interface IRecurringUnitPricingRevisionListRow {
   price_policy: RecurringPricePolicy;
   version: number;
   effective_period_start: string;
+  /** True mid-period date when this revision opted in; null on the boundary path. */
+  mid_period_effective_date: string | null;
   created_by: string | null;
   updated_by: string | null;
+  /** Display names for the actor columns; null when the user no longer resolves. */
+  created_by_name: string | null;
+  updated_by_name: string | null;
   created_at: string | Date | null;
   updated_at: string | Date | null;
+}
+
+const USER_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// LEVERAGE: pattern user-display-name — user-id → "First Last" (email/username
+// fallback) is re-derived per feature (ticket activity, assets, inventory,
+// ProjectService); a shared tenant-scoped batch resolver belongs in @alga-psa/db.
+/**
+ * Resolve audit actor ids to display names in one tenant-scoped query.
+ * Non-UUID actors (e.g. the literal 'system') are skipped, not queried.
+ */
+async function loadUserDisplayNames(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  ids: Array<string | null | undefined>,
+): Promise<Map<string, string>> {
+  const userIds = [...new Set(ids.filter((id): id is string => !!id && USER_ID_PATTERN.test(id)))];
+  const names = new Map<string, string>();
+  if (userIds.length === 0) return names;
+  const rows = (await tenantScopedTable(conn, tenant, 'users')
+    .where({ tenant })
+    .whereIn('user_id', userIds)
+    .select('user_id', 'first_name', 'last_name', 'email')) as Array<{
+    user_id: string;
+    first_name: string | null;
+    last_name: string | null;
+    email: string | null;
+  }>;
+  for (const row of rows) {
+    const full = [row.first_name, row.last_name].map((part) => (part ?? '').trim()).filter(Boolean).join(' ');
+    const name = full || row.email?.trim();
+    if (name) names.set(String(row.user_id), name);
+  }
+  return names;
 }
 
 /**
@@ -738,6 +1076,11 @@ export async function listRecurringUnitPricingRevisions(params: {
     serviceId: params.serviceId,
     configId: params.configId,
   });
+  const names = await loadUserDisplayNames(
+    params.trx,
+    params.tenant,
+    rows.flatMap((row) => [row.created_by, row.updated_by].map((id) => (id == null ? null : String(id)))),
+  );
   return rows.map((row) => ({
     revision_id: String(row.revision_id),
     quantity: Number(row.quantity),
@@ -748,8 +1091,14 @@ export async function listRecurringUnitPricingRevisions(params: {
     price_policy: row.price_policy === 'catalog' ? 'catalog' : 'override',
     version: Number(row.version ?? 1),
     effective_period_start: normalizeRecurringBoundary(row.effective_period_start),
+    mid_period_effective_date:
+      row.mid_period_effective_date == null
+        ? null
+        : normalizeRecurringBoundary(row.mid_period_effective_date),
     created_by: row.created_by == null ? null : String(row.created_by),
     updated_by: row.updated_by == null ? null : String(row.updated_by),
+    created_by_name: row.created_by == null ? null : names.get(String(row.created_by)) ?? null,
+    updated_by_name: row.updated_by == null ? null : names.get(String(row.updated_by)) ?? null,
     created_at: (row.created_at as string | Date | null) ?? null,
     updated_at: (row.updated_at as string | Date | null) ?? null,
   }));
@@ -762,9 +1111,13 @@ export interface IRecurringUnitPricingHistoryRow {
   unit_rate_cents: number | null;
   price_policy: RecurringPricePolicy;
   effective_period_start: string;
+  /** True mid-period date when the superseded edit opted in; null otherwise. */
+  mid_period_effective_date: string | null;
   version: number;
   /** Actor who performed the replacement (the superseding writer). */
   superseded_by: string;
+  /** Display name for `superseded_by`; null for 'system' or an unresolvable user. */
+  superseded_by_name: string | null;
   recorded_by: string | null;
   /** Author of the superseded revision values (may differ from `superseded_by`). */
   original_created_by: string | null;
@@ -792,6 +1145,11 @@ export async function listRecurringUnitPricingHistory(params: {
       config_id: params.configId,
     })
     .orderBy('created_at', 'desc')) as Array<Record<string, unknown>>;
+  const names = await loadUserDisplayNames(
+    params.trx,
+    params.tenant,
+    rows.map((row) => (row.superseded_by == null ? null : String(row.superseded_by))),
+  );
   return rows.map((row) => ({
     history_id: String(row.history_id),
     revision_id: String(row.revision_id),
@@ -799,8 +1157,13 @@ export async function listRecurringUnitPricingHistory(params: {
     unit_rate_cents: row.unit_rate_cents === null || row.unit_rate_cents === undefined ? null : Number(row.unit_rate_cents),
     price_policy: row.price_policy === 'catalog' ? 'catalog' : 'override',
     effective_period_start: normalizeRecurringBoundary(row.effective_period_start),
+    mid_period_effective_date:
+      row.mid_period_effective_date == null
+        ? null
+        : normalizeRecurringBoundary(row.mid_period_effective_date),
     version: Number(row.version ?? 1),
     superseded_by: String(row.superseded_by ?? ''),
+    superseded_by_name: row.superseded_by == null ? null : names.get(String(row.superseded_by)) ?? null,
     recorded_by: row.recorded_by == null ? null : String(row.recorded_by),
     original_created_by:
       row.original_created_by == null ? null : String(row.original_created_by),

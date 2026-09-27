@@ -34,10 +34,49 @@ previous quantity from its boundary onward; it is not an incremental adjustment.
 For partial contract coverage, the engine's existing coverage calculation resolves
 the charge amount before discounts. Settlement must not prorate that amount again.
 
-No automatic `contract_change` adjustment is emitted under this branch's policy.
-Mid-period changes are rejected. A 20-to-23 change at $100 therefore changes the
-next full-period gross subtotal from $3,900 to $4,200 without a credit or a separate
-$300 true-up line. Stopping uses a zero revision and retains provenance/history.
+## Amendment (2026-09-27): opt-in mid-period quantity true-up
+
+Boundary-only changes remain the default. With an explicit per-change opt-in,
+this branch now records a quantity-only change inside an eligible unbilled
+period and emits exactly one automatic `contract_change` adjustment. The
+canonical revision keeps the next boundary as `effective_period_start` (the new
+standing quantity begins there) and stores `mid_period_effective_date`; a durable
+ledger (`contract_recurring_unit_adjustments`) holds the signed true-up and is
+materialized as a source-linked `invoice_charges` row on the next eligible
+editable draft.
+
+Agreed source identity for the companion evaluator:
+
+| Information | Value |
+| --- | --- |
+| `adjustment_source_kind` | `contract_change` |
+| `adjustment_source_id` | the canonical revision id |
+| `adjustment_source_revision` | the revision version at settlement |
+| `adjustment_scope` | `service` |
+| `adjustment_base_amount` | `abs(quantity delta) × unit rate` (minor units) |
+| `adjustment_reason` | direction, quantities and `covered/full` days |
+| `adjustment_period_start` / `_end` | affected canonical period, half-open |
+
+Amount convention: `sign(delta) × ceil(ceil(|delta| × unit rate) × covered/full)`,
+the engine's existing coverage-proration rounding. Increases are charges;
+decreases are credits. A mid-period change may not change the unit price: the
+rate is the one in force for the affected period (override or currency/period
+catalog). The resolved amount joins the invoice's charges before the shared
+discount and tax pipeline, so it is discounted and taxed once and is never
+prorated again. Editing a pending revision version reconciles the same
+`invoice_charges` row; a repeated generation cannot insert a second settlement.
+
+The companion still owns the invoice-side manual partial-period calculator, its
+link to the contract scheduler, and its overlap warning. This branch adds no
+invoice-side contract-quantity writer. When the companion's
+`evaluateContractInvoiceAdjustments` is merged, it can consume these
+source-linked rows directly (its `is_eligible` rule already excludes negative
+credit lines from the positive discount base) instead of this branch's existing
+discount pipeline.
+
+Under the default (no opt-in), a 20-to-23 change at $100 still changes the next
+full-period gross subtotal from $3,900 to $4,200 without a credit or separate
+true-up line. Stopping uses a zero revision and retains provenance/history.
 
 ## Integration requirements
 
