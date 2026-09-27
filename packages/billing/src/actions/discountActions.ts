@@ -129,6 +129,7 @@ function discountActionErrorFrom(error: unknown): ContractDiscountActionError | 
       message.includes('no longer available') ||
       message.includes('already attached') ||
       message.includes('attribution-only') ||
+      message.includes('independently owned') ||
       message.includes('supported discount scope')
     ) {
       return actionError(message);
@@ -151,6 +152,16 @@ async function resolveClientContractId(
       : 'The selected client contract assignment is no longer available.');
   }
   return String(rows[0].client_contract_id);
+}
+
+async function assertOwnedContractDiscountDefinition(
+  db: ReturnType<typeof tenantDb>, tenant: string, discountId: string, clientContractId: string,
+): Promise<void> {
+  const assignments = await db.table('contract_discount_assignments')
+    .where({ tenant, discount_id: discountId }).select('client_contract_id');
+  if (assignments.length !== 1 || String(assignments[0].client_contract_id) !== clientContractId) {
+    throw new Error('This discount definition is not independently owned by the selected client contract. Refresh the contract discounts before editing.');
+  }
 }
 
 /**
@@ -309,67 +320,6 @@ export const getContractDiscounts = withAuth(async (
   }
 });
 
-export interface SharedDiscountOption {
-  discount_id: string;
-  discount_name: string;
-  discount_type: 'percentage' | 'fixed';
-  value: number;
-  is_active: boolean;
-}
-
-export const getAvailableSharedDiscounts = withAuth(async (user, { tenant }, contractId: string, clientContractId?: string | null) => {
-  const { knex } = await createTenantKnex();
-  if (!tenant) throw new Error('tenant context not found');
-  return withTransaction(knex, async (trx: Knex.Transaction) => {
-    if (!await hasPermission(user, 'billing', 'read', trx)) throw new Error('Permission denied: Cannot read contract discounts');
-    const db = tenantDb(trx, tenant);
-    const resolvedClientContractId = await resolveClientContractId(db, contractId, clientContractId);
-    const assignments = await db.table('contract_discount_assignments').where({ client_contract_id: resolvedClientContractId }).select('discount_id');
-    const lineQuery = db.table('contract_line_discounts as cld');
-    db.tenantJoin(lineQuery, 'contract_lines as cl', 'cl.contract_line_id', 'cld.contract_line_id');
-    const lineAssignments = await lineQuery.where('cl.contract_id', contractId).select('cld.discount_id');
-    const excluded = [...assignments, ...lineAssignments].map((row: { discount_id: string }) => row.discount_id);
-    const rows = await db.table('discounts').whereNotIn('discount_id', excluded).orderBy('discount_name').select('discount_id', 'discount_name', 'discount_type', 'value', 'is_active');
-    return (rows as Array<Record<string, unknown>>).map((row): SharedDiscountOption => ({
-      discount_id: String(row.discount_id),
-      discount_name: String(row.discount_name),
-      discount_type: row.discount_type === 'fixed' ? 'fixed' : 'percentage',
-      value: toDisplayDiscountValue(row.discount_type === 'fixed' ? 'fixed' : 'percentage', Number(row.value) || 0),
-      is_active: Boolean(row.is_active),
-    }));
-  });
-});
-
-export const attachSharedDiscountToContract = withAuth(async (user, { tenant }, contractId: string, discountId: string, clientContractId?: string | null) => {
-  const { knex } = await createTenantKnex();
-  if (!tenant) throw new Error('tenant context not found');
-  try {
-    return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      if (!await hasPermission(user, 'billing', 'update', trx)) throw new Error('Permission denied: Cannot attach contract discounts');
-      const db = tenantDb(trx, tenant);
-      const resolvedClientContractId = await resolveClientContractId(db, contractId, clientContractId);
-      const contract = await db.table('contracts').where({ contract_id: contractId }).first('contract_id', 'is_system_managed_default');
-      const definition = await db.table('discounts').where({ discount_id: discountId }).first('discount_id');
-      if (!contract || !definition) throw new Error('The selected contract or discount is no longer available.');
-      if (contract.is_system_managed_default === true) throw new Error('System-managed default contracts are attribution-only; discount authoring is disabled.');
-      const lineQuery = db.table('contract_line_discounts as cld');
-      db.tenantJoin(lineQuery, 'contract_lines as cl', 'cl.contract_line_id', 'cld.contract_line_id');
-      if (await lineQuery.where({ 'cl.contract_id': contractId, 'cld.discount_id': discountId }).first('cld.discount_id')) {
-        throw new Error('This discount is already attached to the contract through a contract line.');
-      }
-      await db.table('contract_discount_assignments').insert({
-        tenant, assignment_id: trx.raw('gen_random_uuid()'), client_contract_id: resolvedClientContractId,
-        discount_id: discountId, created_at: trx.fn.now(),
-      });
-      return { success: true as const };
-    });
-  } catch (error) {
-    const expected = discountActionErrorFrom(error);
-    if (expected) return expected;
-    throw error;
-  }
-});
-
 export const detachContractDiscount = withAuth(async (user, { tenant }, contractId: string, assignmentId: string, clientContractId?: string | null) => {
   const { knex } = await createTenantKnex();
   if (!tenant) throw new Error('tenant context not found');
@@ -505,6 +455,7 @@ export const updateContractDiscount = withAuth(async (
         .table('contract_discount_assignments')
         .where({ discount_id: discountId, client_contract_id: resolvedClientContractId })
         .first('assignment_id');
+      if (existing) await assertOwnedContractDiscountDefinition(db, tenant, discountId, resolvedClientContractId);
       const existingLine = existing ? null : await db
         .table('discounts as d')
         .join('contract_line_discounts as cld', function () {
@@ -537,9 +488,8 @@ export const updateContractDiscount = withAuth(async (
       });
 
       if (!existing) {
-        // Preserve legacy line-scoped authoring. Contract assignments remain
-        // independent of the line association and shared definition edits do
-        // not detach other contracts.
+        // Preserve legacy line-scoped authoring. Client-contract definitions
+        // have already been isolated and cannot be attached to another client.
         await db.table('contract_line_discounts').where({ discount_id: discountId }).delete();
         if (input.contract_line_id) await db.table('contract_line_discounts').insert({
           discount_id: discountId, tenant, contract_line_id: input.contract_line_id,
@@ -583,6 +533,7 @@ export const setContractDiscountActive = withAuth(async (
       const resolvedClientContractId = await resolveClientContractId(db, contractId, clientContractId);
       const existingAssignment = await db.table('contract_discount_assignments')
         .where({ client_contract_id: resolvedClientContractId, discount_id: discountId }).first('assignment_id');
+      if (existingAssignment) await assertOwnedContractDiscountDefinition(db, tenant, discountId, resolvedClientContractId);
       const existingLine = await db
         .table('discounts as d')
         .join('contract_line_discounts as cld', function () {
