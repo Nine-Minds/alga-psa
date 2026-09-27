@@ -11,12 +11,42 @@ const require = createRequire(import.meta.url);
 const TARGET_MIGRATION = '20260923090000_consolidate_client_tax_id.cjs';
 const MIGRATIONS_DIR = path.resolve(__dirname, '..');
 const MIGRATION = require(path.join(MIGRATIONS_DIR, TARGET_MIGRATION));
+// The pre-migration schema lives in a scratch database. The suite runs
+// singleFork and later files reuse the shared suite database as bootstrapped,
+// so rebuilding that one unseeded at an older schema breaks whatever runs next.
+const SCRATCH_DB = 'test_db_client_tax_id_migration';
+const SHARED_DB = process.env.DB_NAME_SERVER || process.env.TEST_DB_NAME || 'test_database';
 
 let db: Knex;
 let tenantA: string;
 const createdTenants: string[] = [];
 let idsA: Record<string, string>;
 let preMigrationDir: string;
+let sharedBefore: SharedDbState;
+
+type SharedDbState = { exists: boolean; migrations?: number; latest?: string; tenants?: number };
+
+async function sharedDbState(): Promise<SharedDbState> {
+  const shared = await createTestDbConnection({ databaseName: SHARED_DB, recreate: false });
+  try {
+    await shared.raw('SELECT 1');
+  } catch (error) {
+    await shared.destroy().catch(() => undefined);
+    if ((error as { code?: string }).code === '3D000') return { exists: false };
+    throw error;
+  }
+  try {
+    const history = await shared.schema.hasTable('knex_migrations')
+      ? await shared('knex_migrations').count('* as count').max('name as latest').first()
+      : undefined;
+    const tenants = await shared.schema.hasTable('tenants')
+      ? Number((await shared('tenants').count('* as count').first())?.count ?? 0)
+      : undefined;
+    return { exists: true, migrations: history ? Number(history.count) : undefined, latest: history?.latest, tenants };
+  } finally {
+    await shared.destroy().catch(() => undefined);
+  }
+}
 
 async function addTenant(tenant: string) {
   await db('tenants').insert({
@@ -62,7 +92,8 @@ beforeAll(async () => {
   for (const file of fs.readdirSync(MIGRATIONS_DIR).filter((name) => name < TARGET_MIGRATION && name.endsWith('.cjs'))) {
     fs.writeFileSync(path.join(preMigrationDir, file), `module.exports = require(${JSON.stringify(path.join(MIGRATIONS_DIR, file))});\n`);
   }
-  db = await createTestDbConnection({ migrationsDir: preMigrationDir, runSeeds: false });
+  sharedBefore = await sharedDbState();
+  db = await createTestDbConnection({ databaseName: SCRATCH_DB, migrationsDir: preMigrationDir, runSeeds: false });
   fs.writeFileSync(path.join(preMigrationDir, TARGET_MIGRATION), `module.exports = require(${JSON.stringify(path.join(MIGRATIONS_DIR, TARGET_MIGRATION))});\n`);
   tenantA = randomUUID();
   createdTenants.push(tenantA);
@@ -88,6 +119,12 @@ afterAll(async () => {
 });
 
 describe('client Tax ID consolidation migration', () => {
+  it('runs against a scratch database and leaves the shared suite database untouched', async () => {
+    expect(SCRATCH_DB).not.toBe(SHARED_DB);
+    expect((await db.raw('SELECT current_database() AS name')).rows[0].name).toBe(SCRATCH_DB);
+    expect(await sharedDbState()).toEqual(sharedBefore);
+  });
+
   it('records conflicts before removing the key, backfills eligible values, and leaves non-conflicts unaudited', async () => {
     const conflict = await db('clients').where({ tenant: tenantA, client_id: idsA.conflict }).first();
     expect(conflict.tax_id_number).toBe('CANONICAL');
