@@ -2,7 +2,7 @@ import { readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, inject, it } from 'vitest';
 import { TestWorkflowEnvironment } from '@temporalio/testing';
 import { WORKFLOW_RUNTIME_V2_TEMPORAL_TASK_QUEUE } from '@alga-psa/workflows/lib/workflowRuntimeV2TemporalContract';
 import { WorkflowRuntimeV2TemporalWorker } from './WorkflowRuntimeV2TemporalWorker.js';
@@ -28,8 +28,10 @@ describe('WorkflowRuntimeV2TemporalWorker integration', () => {
   });
 
   it('executes authored runtime workflow tasks on workflow-runtime-v2 with workflow-worker as the poller', async () => {
-    // The lane's global setup caches the time-skipping server so its download
-    // never runs inside this test's timeout.
+    // Every runner of this file (the workspace-runtime lane and the package's
+    // own vitest config) caches the time-skipping server in a global setup, so
+    // its download never runs inside this test's timeout.
+    expect(inject('temporalTimeSkippingServerProvisioned')).toBe(true);
     const cachedServers = readdirSync(tmpdir()).filter((file) => file.startsWith('temporal-test-server-sdk-typescript-'));
     expect(cachedServers).not.toHaveLength(0);
 
