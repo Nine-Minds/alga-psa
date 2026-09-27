@@ -32,7 +32,8 @@ export async function initializeScheduledJobs(): Promise<void> {
     // Set up expired credits job for each tenant
     for (const tenantRecord of tenants) {
       const tenantId = tenantRecord.tenant;
-      
+
+
       // Schedule daily job to process expired credits (runs at 1:00 AM)
       try {
         const cron = '0 1 * * *';

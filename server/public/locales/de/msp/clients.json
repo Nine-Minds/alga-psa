@@ -1898,6 +1898,24 @@
       "notThisClient": "Einer der ausgewählten Kontakte gehört nicht zum Kunden dieses Abrechnungsprofils."
     }
   },
+  "clientAutopay": {
+    "setupLinkTitle": "Link zur Karteneinrichtung",
+    "setupLinkFallback": "Kopieren Sie diesen Link, um ihn mit Ihrem Kunden zu teilen.",
+    "unknownUser": "Unbekannter Benutzer",
+    "changeCard": "Diese Karte für die automatische Zahlung verwenden",
+    "title": "Automatische Zahlung · {{profile}}",
+    "active": "Aktiviert",
+    "authorization": "Autorisiert von {{user}} am {{date}} ({{source}})",
+    "attestation": "Der Kunde hat wiederkehrende Belastungen autorisiert",
+    "enable": "Automatische Zahlung aktivieren",
+    "disable": "Automatische Zahlung deaktivieren",
+    "copySetupLink": "Einrichtungslink kopieren",
+    "enabled": "Automatische Zahlung aktiviert",
+    "disabled": "Automatische Zahlung deaktiviert",
+    "linkCopied": "Link zur Karteneinrichtung kopiert",
+    "recentAttempts": "Letzte Versuche",
+    "noAttempts": "Noch keine Versuche"
+  },
   "mergeClients": {
     "title": "Einen Kunden in diesen Kunden zusammenführen",
     "description": "Der gewählte Kunde wird zu einem Abrechnungsprofil des Zielkunden. Seine Rechnungen, Abrechnungszyklen, Zahlungsmethoden und Guthaben bleiben diesem Profil zugeordnet; seine Tickets, Kontakte, Assets und Verträge wechseln mit. Dieser Vorgang lässt sich nicht rückgängig machen.",

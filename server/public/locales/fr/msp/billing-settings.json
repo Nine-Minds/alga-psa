@@ -1446,6 +1446,15 @@
       "actions": {
         "save": "Enregistrer les paramètres",
         "saving": "Enregistrement..."
+      },
+      "autopay": {
+        "label": "Autoriser le prélèvement automatique",
+        "description": "Permettre aux profils de facturation d’autoriser des paiements automatiques par carte.",
+        "chargeTiming": "Moment du débit",
+        "onFinalize": "À la finalisation de la facture",
+        "onDueDate": "À la date d’échéance",
+        "retryDays": "Intervalles de nouvelle tentative (jours)",
+        "consentText": "Texte de consentement au prélèvement automatique"
       }
     },
     "stripe": {

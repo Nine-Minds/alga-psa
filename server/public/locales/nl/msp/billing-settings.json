@@ -1446,6 +1446,15 @@
       "actions": {
         "save": "Instellingen opslaan",
         "saving": "Opslaan..."
+      },
+      "autopay": {
+        "label": "Automatische betaling toestaan",
+        "description": "Sta factuurprofielen toe automatische kaartbetalingen te machtigen.",
+        "chargeTiming": "Moment van afschrijving",
+        "onFinalize": "Wanneer de factuur definitief wordt",
+        "onDueDate": "Op de vervaldatum",
+        "retryDays": "Intervallen voor nieuwe pogingen (dagen)",
+        "consentText": "Toestemmingstekst voor automatische betaling"
       }
     },
     "stripe": {

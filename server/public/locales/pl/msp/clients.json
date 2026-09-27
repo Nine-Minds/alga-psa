@@ -1950,6 +1950,24 @@
       "notThisClient": "Jeden z wybranych kontaktów nie należy do klienta tego profilu rozliczeniowego."
     }
   },
+  "clientAutopay": {
+    "setupLinkTitle": "Link do konfiguracji karty",
+    "setupLinkFallback": "Skopiuj ten link, aby udostępnić go klientowi.",
+    "unknownUser": "Nieznany użytkownik",
+    "changeCard": "Użyj tej karty do płatności automatycznej",
+    "title": "Płatność automatyczna · {{profile}}",
+    "active": "Włączona",
+    "authorization": "Autoryzowane przez {{user}} dnia {{date}} ({{source}})",
+    "attestation": "Klient autoryzował cykliczne obciążenia",
+    "enable": "Włącz płatność automatyczną",
+    "disable": "Wyłącz płatność automatyczną",
+    "copySetupLink": "Kopiuj link konfiguracji",
+    "enabled": "Płatność automatyczna włączona",
+    "disabled": "Płatność automatyczna wyłączona",
+    "linkCopied": "Skopiowano link do konfiguracji karty",
+    "recentAttempts": "Ostatnie próby",
+    "noAttempts": "Brak prób"
+  },
   "mergeClients": {
     "title": "Scal klienta z tym klientem",
     "description": "Wybrany klient stanie się profilem rozliczeniowym klienta docelowego. Jego faktury, cykle rozliczeniowe, metody płatności i środki pozostaną powiązane z tym profilem; zgłoszenia, kontakty, zasoby i umowy zostaną przeniesione. Operacji nie można cofnąć.",

@@ -50,6 +50,7 @@ function corsPreflightResponse(origin: string | null): NextResponse {
 // =============================================================================
 const protectedPrefix = '/msp';
 const clientPortalPrefix = '/client-portal';
+const publicPagePaths = new Set(['/payment-methods/setup-complete']);
 
 export interface ClientPortalThemeRequestContext {
   isClientPortal: boolean;
@@ -430,6 +431,11 @@ const _middleware = auth((request) => {
 
   // Skip auth pages to prevent redirect loops
   const isAuthPage = pathname.startsWith('/auth/');
+
+  // Public Stripe Checkout return page verifies its opaque session context itself.
+  if (publicPagePaths.has(pathname)) {
+    return applyCorsHeaders(response, origin);
+  }
 
   // Redirect vanity domains to canonical for client portal signin (before auth check)
   if (pathname === '/auth/client-portal/signin') {

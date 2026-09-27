@@ -1306,6 +1306,24 @@
     "loadErrorTitle": "⟦Ƞȯŧḗş ƒȧīŀḗḓ ŧȯ ŀȯȧḓ⟧",
     "loadErrorDescription": "⟦Ƈȯŭŀḓ ƞȯŧ ŀȯȧḓ ƞȯŧḗş. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧"
   },
+  "clientAutopay": {
+    "setupLinkTitle": "⟦Ƈȧřḓ şḗŧŭƥ ŀīƞķ⟧",
+    "setupLinkFallback": "⟦Ƈȯƥẏ ŧħīş ŀīƞķ ŧȯ şħȧřḗ īŧ ẇīŧħ ẏȯŭř ƈŀīḗƞŧ.⟧",
+    "unknownUser": "⟦Ŭƞķƞȯẇƞ ŭşḗř⟧",
+    "changeCard": "⟦Ŭşḗ ŧħīş ƈȧřḓ ƒȯř ȧŭŧȯ-ƥȧẏ⟧",
+    "title": "⟦Ȧŭŧȯ-ƥȧẏ · {{profile}}⟧",
+    "active": "⟦Ḗƞȧƀŀḗḓ⟧",
+    "authorization": "⟦Ȧŭŧħȯřīẑḗḓ ƀẏ {{user}} ȯƞ {{date}} ({{source}})⟧",
+    "attestation": "⟦Ƈŀīḗƞŧ ħȧş ȧŭŧħȯřīẑḗḓ řḗƈŭřřīƞɠ ƈħȧřɠḗş⟧",
+    "enable": "⟦Ḗƞȧƀŀḗ ȧŭŧȯ-ƥȧẏ⟧",
+    "disable": "⟦Ḓīşȧƀŀḗ ȧŭŧȯ-ƥȧẏ⟧",
+    "copySetupLink": "⟦Ƈȯƥẏ şḗŧŭƥ ŀīƞķ⟧",
+    "enabled": "⟦Ȧŭŧȯ-ƥȧẏ ḗƞȧƀŀḗḓ⟧",
+    "disabled": "⟦Ȧŭŧȯ-ƥȧẏ ḓīşȧƀŀḗḓ⟧",
+    "linkCopied": "⟦Ƈȧřḓ şḗŧŭƥ ŀīƞķ ƈȯƥīḗḓ⟧",
+    "recentAttempts": "⟦Řḗƈḗƞŧ ȧŧŧḗḿƥŧş⟧",
+    "noAttempts": "⟦Ƞȯ ȧŧŧḗḿƥŧş ẏḗŧ⟧"
+  },
   "actions": {
     "cancel": "⟦Ƈȧƞƈḗŀ⟧",
     "delete": "⟦Ḓḗŀḗŧḗ⟧",

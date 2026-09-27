@@ -1898,6 +1898,24 @@
       "notThisClient": "Een van de geselecteerde contactpersonen hoort niet bij de klant van dit facturatieprofiel."
     }
   },
+  "clientAutopay": {
+    "setupLinkTitle": "Link voor kaartinstelling",
+    "setupLinkFallback": "Kopieer deze link om met uw klant te delen.",
+    "unknownUser": "Onbekende gebruiker",
+    "changeCard": "Deze kaart gebruiken voor automatische betaling",
+    "title": "Automatische betaling · {{profile}}",
+    "active": "Ingeschakeld",
+    "authorization": "Gemachtigd door {{user}} op {{date}} ({{source}})",
+    "attestation": "De klant heeft terugkerende afschrijvingen gemachtigd",
+    "enable": "Automatische betaling inschakelen",
+    "disable": "Automatische betaling uitschakelen",
+    "copySetupLink": "Instellingslink kopiëren",
+    "enabled": "Automatische betaling ingeschakeld",
+    "disabled": "Automatische betaling uitgeschakeld",
+    "linkCopied": "Link voor kaartinstelling gekopieerd",
+    "recentAttempts": "Recente pogingen",
+    "noAttempts": "Nog geen pogingen"
+  },
   "mergeClients": {
     "title": "Een klant in deze klant samenvoegen",
     "description": "De gekozen klant wordt een facturatieprofiel van de doelklant. Zijn facturen, facturatiecycli, betaalmethoden en tegoeden blijven aan dat profiel gekoppeld; zijn tickets, contactpersonen, assets en contracten gaan mee over. Dit kan niet ongedaan worden gemaakt.",

@@ -23,6 +23,7 @@ import {
   type ClientBillingProfile,
 } from '../../actions/clientBillingProfileActions';
 import { ClientBillingProfileSettings } from './ClientBillingProfileSettings';
+import { ClientAutopaySettings } from './ClientAutopaySettings';
 import MergeClientsDialog from './MergeClientsDialog';
 
 /**
@@ -308,6 +309,7 @@ const ClientBillingProfiles: React.FC<ClientBillingProfilesProps> = ({ clientId 
                       />
                     </div>
                   )}
+                  <ClientAutopaySettings clientId={clientId} billingProfileId={profile.billing_profile_id} profileName={profile.name} />
                 </li>
               );
             })}

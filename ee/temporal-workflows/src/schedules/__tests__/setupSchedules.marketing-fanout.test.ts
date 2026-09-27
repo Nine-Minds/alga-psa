@@ -103,6 +103,14 @@ describe('setupSchedules marketing fan-out cutover', () => {
 
     await setupSchedules();
 
+    const autopaySchedule = scheduleCreateMock.mock.calls
+      .map(([input]) => input)
+      .find(({ scheduleId }) => scheduleId === 'autopay-reconcile');
+    expect(autopaySchedule).toEqual(expect.objectContaining({
+      scheduleId: 'autopay-reconcile',
+      spec: { cronExpressions: ['0 * * * *'] },
+      action: expect.objectContaining({ workflowType: 'autopayReconcileWorkflow', args: [], taskQueue: 'tenant-workflows' }),
+    }));
     const marketingCreates = scheduleCreateMock.mock.calls
       .map(([input]) => input)
       .filter(({ scheduleId }) => scheduleId.startsWith('marketing-fanout:'));

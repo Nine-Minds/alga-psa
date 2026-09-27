@@ -1446,6 +1446,15 @@
       "actions": {
         "save": "Save Settings",
         "saving": "Saving..."
+      },
+      "autopay": {
+        "label": "Allow auto-pay",
+        "description": "Allow billing profiles to authorize automatic card payments.",
+        "chargeTiming": "Charge timing",
+        "onFinalize": "When invoice is finalized",
+        "onDueDate": "On due date",
+        "retryDays": "Retry intervals (days)",
+        "consentText": "Auto-pay consent text"
       }
     },
     "stripe": {

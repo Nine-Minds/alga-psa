@@ -1446,6 +1446,15 @@
       "actions": {
         "save": "Guardar configuración",
         "saving": "Guardando..."
+      },
+      "autopay": {
+        "label": "Permitir el pago automático",
+        "description": "Permite que los perfiles de facturación autoricen pagos automáticos con tarjeta.",
+        "chargeTiming": "Momento del cargo",
+        "onFinalize": "Al finalizar la factura",
+        "onDueDate": "En la fecha de vencimiento",
+        "retryDays": "Intervalos de reintento (días)",
+        "consentText": "Texto de consentimiento del pago automático"
       }
     },
     "stripe": {

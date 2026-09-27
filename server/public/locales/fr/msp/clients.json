@@ -1898,6 +1898,24 @@
       "notThisClient": "L'un des contacts sélectionnés n'appartient pas au client de ce profil de facturation."
     }
   },
+  "clientAutopay": {
+    "setupLinkTitle": "Lien de configuration de la carte",
+    "setupLinkFallback": "Copiez ce lien pour le partager avec votre client.",
+    "unknownUser": "Utilisateur inconnu",
+    "changeCard": "Utiliser cette carte pour le prélèvement automatique",
+    "title": "Prélèvement automatique · {{profile}}",
+    "active": "Activé",
+    "authorization": "Autorisé par {{user}} le {{date}} ({{source}})",
+    "attestation": "Le client a autorisé des débits récurrents",
+    "enable": "Activer le prélèvement automatique",
+    "disable": "Désactiver le prélèvement automatique",
+    "copySetupLink": "Copier le lien de configuration",
+    "enabled": "Prélèvement automatique activé",
+    "disabled": "Prélèvement automatique désactivé",
+    "linkCopied": "Lien de configuration de la carte copié",
+    "recentAttempts": "Tentatives récentes",
+    "noAttempts": "Aucune tentative pour le moment"
+  },
   "mergeClients": {
     "title": "Fusionner un client dans celui-ci",
     "description": "Le client choisi devient un profil de facturation du client de destination. Ses factures, cycles de facturation, moyens de paiement et avoirs restent rattachés à ce profil ; ses tickets, contacts, actifs et contrats sont transférés. Cette opération est irréversible.",

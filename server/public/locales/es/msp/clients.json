@@ -1898,6 +1898,24 @@
       "notThisClient": "Uno de los contactos seleccionados no pertenece al cliente de este perfil de facturación."
     }
   },
+  "clientAutopay": {
+    "setupLinkTitle": "Enlace de configuración de tarjeta",
+    "setupLinkFallback": "Copie este enlace para compartirlo con su cliente.",
+    "unknownUser": "Usuario desconocido",
+    "changeCard": "Usar esta tarjeta para el pago automático",
+    "title": "Pago automático · {{profile}}",
+    "active": "Activado",
+    "authorization": "Autorizado por {{user}} el {{date}} ({{source}})",
+    "attestation": "El cliente ha autorizado cargos recurrentes",
+    "enable": "Activar el pago automático",
+    "disable": "Desactivar el pago automático",
+    "copySetupLink": "Copiar enlace de configuración",
+    "enabled": "Pago automático activado",
+    "disabled": "Pago automático desactivado",
+    "linkCopied": "Enlace de configuración de tarjeta copiado",
+    "recentAttempts": "Intentos recientes",
+    "noAttempts": "Todavía no hay intentos"
+  },
   "mergeClients": {
     "title": "Fusionar un cliente en este",
     "description": "El cliente que elija pasa a ser un perfil de facturación del cliente de destino. Sus facturas, ciclos de facturación, métodos de pago y créditos siguen vinculados a ese perfil; sus tickets, contactos, activos y contratos se trasladan. Esta acción no se puede deshacer.",

@@ -1898,6 +1898,24 @@
       "notThisClient": "Um dos contatos selecionados não pertence ao cliente deste perfil de faturamento."
     }
   },
+  "clientAutopay": {
+    "setupLinkTitle": "Link de configuração do cartão",
+    "setupLinkFallback": "Copie este link para compartilhá-lo com o seu cliente.",
+    "unknownUser": "Usuário desconhecido",
+    "changeCard": "Usar este cartão para o pagamento automático",
+    "title": "Pagamento automático · {{profile}}",
+    "active": "Ativado",
+    "authorization": "Autorizado por {{user}} em {{date}} ({{source}})",
+    "attestation": "O cliente autorizou cobranças recorrentes",
+    "enable": "Ativar o pagamento automático",
+    "disable": "Desativar o pagamento automático",
+    "copySetupLink": "Copiar link de configuração",
+    "enabled": "Pagamento automático ativado",
+    "disabled": "Pagamento automático desativado",
+    "linkCopied": "Link de configuração do cartão copiado",
+    "recentAttempts": "Tentativas recentes",
+    "noAttempts": "Nenhuma tentativa ainda"
+  },
   "mergeClients": {
     "title": "Mesclar um cliente neste",
     "description": "O cliente escolhido passa a ser um perfil de faturamento do cliente de destino. Suas faturas, ciclos de faturamento, formas de pagamento e créditos continuam vinculados a esse perfil; seus chamados, contatos, ativos e contratos são transferidos. Esta ação não pode ser desfeita.",
