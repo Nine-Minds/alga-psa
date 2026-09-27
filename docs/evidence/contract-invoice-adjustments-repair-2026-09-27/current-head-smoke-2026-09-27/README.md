@@ -9,7 +9,8 @@ its `services` list even though the active mitigation needs a supervised smoke
 session. The workflow supervisor therefore stopped the saved service with
 `Draft Implementation does not use it`. I temporarily added the existing
 `dev-server` service to this step through `alga-dev workflow-update-template`;
-I did not advance or complete the card. Startup used only
+that temporary permission remains active to support the still-outstanding smoke
+session. I did not advance or complete the card. Startup used only
 `alga-dev workflow-ensure-service`, with the saved command
 `HOST=0.0.0.0 PORT=3185 npm run dev` and the worktree `server` cwd.
 
