@@ -5,7 +5,7 @@ import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 
-vi.mock('@alga-psa/integrations/actions', () => ({
+vi.mock('@alga-psa/email/senderActions', () => ({
   listSelectableSenders: vi.fn(async () => ({ senders: [], effectiveSenderId: null, effectiveSenderAddress: 'provider@example.test', effectiveSenderDisplayName: 'Provider', allowOverride: false })),
 }));
 

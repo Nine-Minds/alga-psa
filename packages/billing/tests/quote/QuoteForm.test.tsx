@@ -5,7 +5,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const senderActions = vi.hoisted(() => ({ list: vi.fn(async () => ({ senders: [], effectiveSenderId: null, effectiveSenderAddress: 'provider@example.test', allowOverride: false })) }));
-vi.mock('@alga-psa/integrations/actions', () => ({ listSelectableSenders: senderActions.list }));
+vi.mock('@alga-psa/email/senderActions', () => ({ listSelectableSenders: senderActions.list }));
 
 const actions = vi.hoisted(() => ({
   addQuoteItem: vi.fn(),

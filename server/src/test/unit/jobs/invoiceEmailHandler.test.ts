@@ -371,7 +371,7 @@ describe('InvoiceEmailHandler', () => {
         clientId: 'client-1',
         billingProfileId: 'profile-merged',
       });
-      expect(mocks.sendInvoiceEmail.mock.calls[0][0].recipientEmail).toBe('ap@site.test');
+      expect(mocks.sendInvoiceEmail.mock.calls[0][0].to).toEqual({ email: 'ap@site.test', name: 'Site AP' });
     });
 
     it('should pass through the billing_email fallback from the shared resolver', async () => {

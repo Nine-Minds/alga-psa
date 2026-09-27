@@ -14,8 +14,11 @@ describe('email sender actions persistence', () => {
   let db: Knex;
   let boardId: string;
   let senderId: string;
+  let originalServerDatabaseName: string | undefined;
 
   beforeAll(async () => {
+    originalServerDatabaseName = process.env.DB_NAME_SERVER;
+    process.env.DB_NAME_SERVER = 'email_sender_actions_test';
     db = await createTestDbConnection({ databaseName: 'email_sender_actions_test', runSeeds: true });
     const tenant = await db('tenants').first('tenant');
     if (!tenant?.tenant) throw new Error('No tenant found in isolated integration DB');
@@ -27,7 +30,11 @@ describe('email sender actions persistence', () => {
     await db('tenant_email_settings').insert({ tenant: tenantId, email_provider: 'smtp', default_from_domain: 'example.test' });
   }, 120_000);
 
-  afterAll(async () => { await db?.destroy(); });
+  afterAll(async () => {
+    await db?.destroy();
+    if (originalServerDatabaseName === undefined) delete process.env.DB_NAME_SERVER;
+    else process.env.DB_NAME_SERVER = originalServerDatabaseName;
+  });
 
   it('creates senders and persists, upserts, lists, and clears class and board routes', async () => {
     const address = `sender-${Date.now()}@example.test`;

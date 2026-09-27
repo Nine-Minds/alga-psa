@@ -1322,13 +1322,13 @@ describe('ticket email subscriber reply markers', () => {
   });
 });
 
-describe('ticket email subscriber from-address (display-name decoupling)', () => {
+describe('ticket email subscriber sender routing context', () => {
   beforeEach(async () => {
     eventHandlers.clear();
     await registerTicketEmailSubscriber();
   });
 
-  it('applies the configured ticketing display name onto the default sender address even without a custom From address', async () => {
+  it('passes ticket routing context when a legacy display name is configured without a custom From address', async () => {
     seedTemplate('ticket-comment-added', 'New Comment {{ticket.title}}', '<p>{{comment.content}}</p>');
 
     const tenantId = randomUUID();
@@ -1336,9 +1336,8 @@ describe('ticket email subscriber from-address (display-name decoupling)', () =>
     const commentId = randomUUID();
     const authorId = randomUUID();
 
-    // Case: a display name is configured but NO custom ticketing From address.
-    // The name must still be applied, layered onto the tenant's default sender
-    // address (regression for "from-NAME ignored when no From address is set").
+    // Case: a legacy display name is configured without a custom From address.
+    // The sender service resolves the effective From using the ticket route.
     getTenantEmailSettingsMock.mockResolvedValue({
       tenantId,
       defaultFromDomain: 'acme.com',
@@ -1383,10 +1382,7 @@ describe('ticket email subscriber from-address (display-name decoupling)', () =>
     });
 
     expect(sendEmailMock).toHaveBeenCalled();
-    expect(getDefaultFromAddressMock).toHaveBeenCalled();
-    const fromValues = sendEmailMock.mock.calls.map((call) => call[0].from);
-    // The display name wins over the board-name fallback and rides on the default address.
-    expect(fromValues).toContainEqual({ email: 'notifications@acme.com', name: 'Acme Helpdesk' });
+    expect(sendEmailMock).toHaveBeenCalledWith(expect.objectContaining({ mailClass: 'ticket' }));
   });
 
   it('defers entirely to default resolution when neither a ticketing From address nor a display name is configured', async () => {

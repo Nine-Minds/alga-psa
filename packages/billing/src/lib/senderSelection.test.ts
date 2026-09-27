@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { buildSenderOptions, DEFAULT_SENDER_SELECTION, senderIdForSend } from './senderSelection';
+import { buildSenderOptions, DEFAULT_SENDER_SELECTION, senderIdForSend } from '@alga-psa/email/senderSelection';
 
 describe('sender selection', () => {
   it('uses a stable default option with the resolved provider address instead of selecting the first saved sender', () => {

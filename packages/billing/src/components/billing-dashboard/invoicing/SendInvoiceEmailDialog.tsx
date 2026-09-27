@@ -4,8 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { buildSenderOptions, DEFAULT_SENDER_SELECTION, senderIdForSend } from '../../../lib/senderSelection';
-import { listSelectableSenders } from '@alga-psa/integrations/actions';
+import { buildSenderOptions, DEFAULT_SENDER_SELECTION, senderIdForSend } from '@alga-psa/email/senderSelection';
+import { listSelectableSenders } from '@alga-psa/email/senderActions';
 import { Mail, User, Building, AlertCircle, CheckCircle, Loader2, FileText, Layers } from 'lucide-react';
 import {
   getInvoiceEmailRecipientAction,

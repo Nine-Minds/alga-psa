@@ -5,11 +5,7 @@ export interface SelectableSender {
   email_address: string;
 }
 
-export function buildSenderOptions(
-  senders: SelectableSender[],
-  effectiveAddress: string,
-  useDefaultLabel: string,
-): Array<{ value: string; label: string }> {
+export function buildSenderOptions(senders: SelectableSender[], effectiveAddress: string, useDefaultLabel: string) {
   return [
     { value: DEFAULT_SENDER_SELECTION, label: `${useDefaultLabel} (${effectiveAddress})` },
     ...senders.map((sender) => ({ value: sender.sender_id, label: sender.email_address })),

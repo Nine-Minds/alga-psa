@@ -26,7 +26,7 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
 }));
 
 import { EmailSenderAddressesCard, EmailSenderCardsProvider, EmailSenderRoutingCard } from './EmailSenderRoutingCards';
-import enAdmin from '../../../../../../server/public/locales/en/msp/admin.json';
+const enAdmin = { common: { actions: { cancel: 'Cancel' } }, email: { senderIdentities: { routing: { default: 'Default (all other mail)' } } } };
 
 const renderCards = (addresses: React.ReactNode, routing: React.ReactNode) => render(
   <EmailSenderCardsProvider><>{addresses}{routing}</></EmailSenderCardsProvider>,

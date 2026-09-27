@@ -24,23 +24,25 @@ vi.mock('@alga-psa/db', () => {
     transaction: async (callback: (trx: unknown) => unknown) => callback(knex),
   };
   const tenantDb = () => ({
+    tenantJoin: (builder: unknown) => builder,
     table: (name: string) => {
       let conditions: Record<string, unknown> = {};
-      const rows = () => name === 'email_sender_routes' ? state.routes
+      const rows = () => name.startsWith('email_sender_routes') ? state.routes
         : name === 'email_sender_addresses' ? [state.sender, state.insertedSender].filter(Boolean)
           : name === 'email_domains' ? (state.verifiedDomain ? [{ domain_name: 'verified.example', status: 'verified' }] : [])
             : name === 'email_providers' ? [{ id: 'mailbox-1', provider_type: 'microsoft', mailbox: 'shared@example.test', status: 'connected', is_active: true }]
               : [];
-      const matches = (row: any) => Object.entries(conditions).every(([key, value]) => row?.[key] === value);
+      const matches = (row: any) => Object.entries(conditions).every(([key, value]) => row?.[key.split('.').pop()!] === value);
       const query: any = {
-        where: (next: Record<string, unknown>) => { conditions = next; return query; },
-        select: async () => rows().filter(matches),
+        where: (next: Record<string, unknown> | string, value?: unknown) => { conditions = typeof next === 'string' ? { [next]: value } : next; return query; },
+        select: () => query,
         orderBy: () => query,
         first: async () => rows().find(matches) ?? null,
         insert: (row: any) => { if (state.insertError) throw state.insertError; if (name === 'email_sender_routes') { state.insertedRoute = row; state.routes.push(row); } else { state.insertedSender = { sender_id: 'new-sender', verification_status: 'unverified', ...row }; } return query; },
         returning: async () => [state.insertedSender],
         update: (row: any) => { state.sender = { ...state.sender, ...row }; return query; },
         del: async () => { state.sender = null; return 1; },
+        then: (resolve: (value: unknown[]) => unknown, reject: (reason: unknown) => unknown) => Promise.resolve(rows().filter(matches)).then(resolve, reject),
       };
       return query;
     },

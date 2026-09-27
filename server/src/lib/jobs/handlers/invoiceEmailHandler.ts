@@ -135,7 +135,7 @@ export class InvoiceEmailHandler {
             throw new Error(`Client not found for Invoice #${invoice.invoice_number}`);
           }
 
-          const knex = await getConnection();
+          const knex = await getConnection(tenantId);
 
           // Resolve the billing recipient with the shared precedence used by
           // the direct MSP send action and Stripe customer creation.

@@ -11,8 +11,8 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import ClientNameCell from '@alga-psa/ui/components/ClientNameCell';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { buildSenderOptions, DEFAULT_SENDER_SELECTION, senderIdForSend } from '../../../lib/senderSelection';
-import { listSelectableSenders } from '@alga-psa/integrations/actions';
+import { buildSenderOptions, DEFAULT_SENDER_SELECTION, senderIdForSend } from '@alga-psa/email/senderSelection';
+import { listSelectableSenders } from '@alga-psa/email/senderActions';
 import {
   DropdownMenu,
   DropdownMenuContent,

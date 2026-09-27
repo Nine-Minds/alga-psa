@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   send: vi.fn(),
 }));
 
-vi.mock('@alga-psa/integrations/actions', () => ({ listSelectableSenders: mocks.senders }));
+vi.mock('@alga-psa/email/senderActions', () => ({ listSelectableSenders: mocks.senders }));
 vi.mock('@alga-psa/billing/actions/invoiceJobActions', () => ({
   getInvoiceEmailRecipientAction: mocks.recipients,
   sendInvoiceEmailAction: mocks.send,
