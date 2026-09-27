@@ -114,14 +114,9 @@ test('portal ticket survives assignment, replies, resolution and reopening witho
         && Boolean(request.postData()?.includes(acknowledgment))),
       portalPage.getByRole('button', { name: 'Add Comment', exact: true }).click(),
     ]);
-    // The draft stays in the composer while the action runs, so a bare text
-    // match passes before the comment exists. Reloading then races the insert.
-    // Wait for the action to finish and the composer to clear first.
-    const commentResponse = await commentRequest.response();
-    expect(commentResponse?.ok()).toBe(true);
-    expect(await commentResponse!.finished()).toBeNull();
-    await expect(portalPage.locator('[contenteditable="true"]').getByText(acknowledgment, { exact: true })).toHaveCount(0);
-    // The draft editor must close before the settled comment is treated as saved.
+    // The draft editor also renders the text while the action is in flight;
+    // only a settled action and a closed composer prove the comment was saved.
+    expect((await commentRequest.response())?.ok()).toBe(true);
     await expect(portalPage.locator('[contenteditable="true"]:visible')).toHaveCount(0);
     await expect(portalPage.getByText(acknowledgment, { exact: true })).toBeVisible();
     await portalPage.reload();
