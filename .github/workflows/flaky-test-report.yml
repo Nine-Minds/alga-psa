@@ -1,0 +1,44 @@
+name: Flaky test report
+
+# Retry-only passes are invisible in a green run: the browser lane retries once
+# and the unit shards now retry once too. This reads the per-run flaky-tests-*
+# artifacts of the last week and publishes the list, without quarantining or
+# gating anything.
+on:
+  schedule:
+    - cron: '0 7 * * 1'
+  workflow_dispatch:
+    inputs:
+      window_days:
+        description: Days of production-regression runs to aggregate
+        type: string
+        required: false
+        default: '7'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  report:
+    name: Aggregate flaky tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Aggregate per-run flaky-test artifacts
+        run: node scripts/collect-flaky-tests.mjs test-results/flaky-tests
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          FLAKY_WINDOW_DAYS: ${{ inputs.window_days || '7' }}
+      - name: Preserve flaky test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flaky-test-report-${{ github.run_id }}
+          path: test-results/flaky-tests/
+          if-no-files-found: error
+          retention-days: 30
