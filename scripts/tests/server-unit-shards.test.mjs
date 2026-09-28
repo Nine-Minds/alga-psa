@@ -58,7 +58,8 @@ test('server unit shards partition, reunite and verify as one full-selection bun
   git('-c', 'user.name=Test fixture', '-c', 'user.email=fixture@example.invalid', '-c', 'commit.gpgsign=false',
     '-c', 'core.hooksPath=/dev/null', 'commit', '-m', 'Create isolated shard fixture');
   const revision = git('rev-parse', 'HEAD');
-  const env = { ...process.env, CI: '1', GITHUB_SHA: revision, SKIP_DB_TESTS: '1', DB_USER_ADMIN: '', DB_PASSWORD_ADMIN: '',
+  const env = { ...process.env, CI: '1', GITHUB_SHA: revision, GITHUB_RUN_ID: '', GITHUB_RUN_ATTEMPT: '',
+    SKIP_DB_TESTS: '1', DB_USER_ADMIN: '', DB_PASSWORD_ADMIN: '',
     SERVER_UNIT_SHARD_TOTAL: '2', SERVER_UNIT_WORKERS: '2' };
   const node = (args, extra = {}, timeout = 60000) => spawnSync(process.execPath, args, { cwd: root, encoding: 'utf8', timeout, env: { ...env, ...extra } });
   const shards = path.join(root, 'test-results/server-unit-shards');
