@@ -1229,6 +1229,7 @@
         "followThemeActive": "As cores abaixo ficam salvas, mas não são aplicadas enquanto o portal seguir o tema da organização."
       },
       "cropHelp": "Arraste e amplie para escolher a parte mostrada no painel lateral do portal e em todas as molduras circulares. O seu logotipo largo não é alterado.",
+      "cropHelpFromSquare": "Arraste e amplie para escolher a parte mostrada no painel lateral do portal e em todas as molduras circulares. Apenas a marca é alterada, então você pode ajustá-la novamente depois.",
       "heroGradient": {
         "primaryShades": "Cor primária para tom primário",
         "primarySecondary": "Cor primária para cor secundária"

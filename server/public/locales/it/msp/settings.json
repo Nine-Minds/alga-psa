@@ -1229,6 +1229,7 @@
         "followThemeActive": "I colori qui sotto vengono conservati ma non applicati finché il portale segue il tema dell’organizzazione."
       },
       "cropHelp": "Trascina e ingrandisci per scegliere la parte mostrata nel pannello laterale del portale e in tutte le cornici circolari. Il tuo logo largo non viene modificato.",
+      "cropHelpFromSquare": "Trascina e ingrandisci per scegliere la parte mostrata nel pannello laterale del portale e in tutte le cornici circolari. Viene modificato solo il marchio, quindi puoi regolarlo di nuovo in seguito.",
       "heroGradient": {
         "primaryShades": "Dal colore primario a una tonalità primaria",
         "primarySecondary": "Dal colore primario al colore secondario"

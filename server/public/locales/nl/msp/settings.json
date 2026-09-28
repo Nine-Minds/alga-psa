@@ -1229,6 +1229,7 @@
         "followThemeActive": "De kleuren hieronder blijven bewaard maar worden niet toegepast zolang het portaal het organisatiethema volgt."
       },
       "cropHelp": "Sleep en zoom om het deel te kiezen dat in het zijpaneel van het portaal en in elke ronde omlijsting wordt getoond. Uw brede logo verandert niet.",
+      "cropHelpFromSquare": "Sleep en zoom om het deel te kiezen dat in het zijpaneel van het portaal en in elke ronde omlijsting wordt getoond. Alleen het merkteken wordt gewijzigd, dus u kunt het later opnieuw aanpassen.",
       "heroGradient": {
         "primaryShades": "Primaire kleur naar primaire tint",
         "primarySecondary": "Primaire kleur naar secundaire kleur"

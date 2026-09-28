@@ -1229,6 +1229,7 @@
         "followThemeActive": "Les couleurs ci-dessous sont conservées mais ne sont pas appliquées tant que le portail suit le thème de l’organisation."
       },
       "cropHelp": "Faites glisser et zoomez pour choisir la partie affichée dans le panneau latéral du portail et dans tous les cadres ronds. Votre logo large n'est pas modifié.",
+      "cropHelpFromSquare": "Faites glisser et zoomez pour choisir la partie affichée dans le panneau latéral du portail et dans tous les cadres ronds. Seule la marque carrée est modifiée, vous pouvez donc l’ajuster à nouveau plus tard.",
       "heroGradient": {
         "primaryShades": "Couleur principale vers une nuance principale",
         "primarySecondary": "Couleur principale vers couleur secondaire"

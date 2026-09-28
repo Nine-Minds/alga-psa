@@ -1229,6 +1229,7 @@
         "followThemeActive": "Los colores de abajo se conservan, pero no se aplican mientras el portal siga el tema de la organización."
       },
       "cropHelp": "Arrastre y haga zoom para elegir la parte que se muestra en el panel lateral del portal y en todos los marcos circulares. Su logotipo ancho no cambia.",
+      "cropHelpFromSquare": "Arrastre y haga zoom para elegir la parte que se muestra en el panel lateral del portal y en todos los marcos circulares. Solo se modifica la marca, por lo que puede volver a ajustarla más adelante.",
       "heroGradient": {
         "primaryShades": "Color primario a tono primario",
         "primarySecondary": "Color primario a color secundario"

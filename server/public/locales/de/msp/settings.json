@@ -1229,6 +1229,7 @@
         "followThemeActive": "Die Farben unten bleiben gespeichert, werden aber nicht angewendet, solange das Portal dem Organisationsdesign folgt."
       },
       "cropHelp": "Ziehen und zoomen Sie, um den Ausschnitt zu wählen, der im Seitenbereich des Portals und in allen runden Rahmen erscheint. Ihr breites Logo bleibt unverändert.",
+      "cropHelpFromSquare": "Ziehen und zoomen Sie, um den Ausschnitt zu wählen, der im Seitenbereich des Portals und in allen runden Rahmen erscheint. Nur das Zeichen wird geändert, sodass Sie es später erneut anpassen können.",
       "heroGradient": {
         "primaryShades": "Primärfarbe zu Primärfarbton",
         "primarySecondary": "Primärfarbe zu Sekundärfarbe"

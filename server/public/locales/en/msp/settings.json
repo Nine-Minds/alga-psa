@@ -1229,6 +1229,7 @@
         "followThemeActive": "The colors below are kept but not applied while the portal follows the organization theme."
       },
       "cropHelp": "Drag and zoom to choose the part shown in the portal side panel and every circular frame. Your wide logo is not changed.",
+      "cropHelpFromSquare": "Drag and zoom to choose the part shown in the portal side panel and every circular frame. Only the mark is changed, so you can adjust it again later.",
       "heroGradient": {
         "primaryShades": "Primary color to primary shade",
         "primarySecondary": "Primary color to secondary color"

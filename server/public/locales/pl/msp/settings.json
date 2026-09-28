@@ -1235,6 +1235,7 @@
         "followThemeActive": "Kolory poniżej pozostają zapisane, ale nie są stosowane, dopóki portal podąża za motywem organizacji."
       },
       "cropHelp": "Przeciągaj i powiększaj, aby wybrać część widoczną w panelu bocznym portalu i w każdej okrągłej ramce. Szerokie logo pozostaje bez zmian.",
+      "cropHelpFromSquare": "Przeciągaj i powiększaj, aby wybrać część widoczną w panelu bocznym portalu i w każdej okrągłej ramce. Zmienia się tylko znak, więc możesz go później ponownie dostosować.",
       "heroGradient": {
         "primaryShades": "Kolor główny do odcienia głównego",
         "primarySecondary": "Kolor główny do koloru dodatkowego"
