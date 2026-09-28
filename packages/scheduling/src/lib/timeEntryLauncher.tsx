@@ -5,10 +5,15 @@ import { toast } from 'react-hot-toast';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { useFormatters, translate } from '@alga-psa/ui/lib/i18n/client';
-import { getCurrentTimePeriod, getTimeEntryUserTimeZone } from '../actions/timePeriodsActions';
+import { getTimeEntryUserTimeZone } from '../actions/timePeriodsActions';
 import { fetchTimePeriods, getTimeEntryById } from '../actions/timeEntryActions';
 import { fetchTimeSheet } from '../actions/timeSheetActions';
-import { isEditableSheetStatus, dateOnlyToLocalDate, periodLastInclusiveDay } from './timeEntryPeriodSelection';
+import {
+  isEditableSheetStatus,
+  dateOnlyToLocalDate,
+  periodLastInclusiveDay,
+  resolveEntryDefaults,
+} from './timeEntryPeriodSelection';
 import { createTimeEntrySaveHandler } from './timeEntrySaveAdapter';
 import type {
   IExtendedWorkItem,
@@ -17,7 +22,7 @@ import type {
   TimeEntryWorkItemContext,
 } from '@alga-psa/types';
 import TimeEntryDialog from '../components/time-management/time-entry/time-sheet/TimeEntryDialog';
-import TimeEntryPeriodLauncher from '../components/time-management/time-entry/time-sheet/TimeEntryPeriodLauncher';
+import NewWorkItemTimeEntry from '../components/time-management/time-entry/time-sheet/NewWorkItemTimeEntry';
 import type { OpenDrawerFn } from '@alga-psa/ui/context';
 
 interface LaunchTimeEntryParams {
@@ -183,16 +188,11 @@ export async function launchTimeEntryForWorkItem({ openDrawer, closeDrawer, cont
       return;
     }
 
-    const [currentTimePeriod, periods, userTimeZone] = await Promise.all([
-      getCurrentTimePeriod(),
+    const [periods, userTimeZone] = await Promise.all([
       fetchTimePeriods(user.user_id),
       getTimeEntryUserTimeZone(),
     ]);
 
-    if (isActionMessageError(currentTimePeriod) || isActionPermissionError(currentTimePeriod)) {
-      launchBlockedToast(getErrorMessage(currentTimePeriod));
-      return;
-    }
     if (isActionMessageError(periods) || isActionPermissionError(periods)) {
       launchBlockedToast(getErrorMessage(periods));
       return;
@@ -212,16 +212,27 @@ export async function launchTimeEntryForWorkItem({ openDrawer, closeDrawer, cont
       return;
     }
 
+    const timeZone = typeof userTimeZone === 'string' ? userTimeZone : 'UTC';
+    const defaults = resolveEntryDefaults({ context, periods, timeZone });
+    if (!defaults) {
+      launchBlockedToast(
+        launchMessage(
+          'noEditablePeriods',
+          'Every time sheet is submitted or approved, so there is no day to add time to. Ask an approver to reopen a sheet, or an administrator to add a time period.',
+        ),
+      );
+      return;
+    }
+
     openDrawer(
-      <TimeEntryPeriodLauncher
+      <NewWorkItemTimeEntry
         closeDrawer={closeDrawer}
         onComplete={onComplete}
         workItem={buildWorkItem(context)}
-        context={context}
         userId={user.user_id}
-        userTimeZone={typeof userTimeZone === 'string' ? userTimeZone : 'UTC'}
+        userTimeZone={timeZone}
         periods={periods}
-        currentPeriodId={currentTimePeriod ? currentTimePeriod.period_id : null}
+        defaults={defaults}
       />,
       undefined,
       undefined,

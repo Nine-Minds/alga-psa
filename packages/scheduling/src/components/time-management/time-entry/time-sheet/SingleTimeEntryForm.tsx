@@ -4,6 +4,7 @@ import { memo } from 'react';
 import TimeEntryEditForm from './TimeEntryEditForm';
 import { ITimeEntryWithNew, TimeInputs, Service } from './types';
 import { ITimePeriodView, TaxRegion } from '@alga-psa/types';
+import type { CatalogPeriod } from '../../../../lib/timeEntryPeriodSelection';
 
 interface SingleTimeEntryFormProps {
   id: string;
@@ -19,6 +20,7 @@ interface SingleTimeEntryFormProps {
   onUpdateEntry: (index: number, entry: ITimeEntryWithNew) => void;
   onUpdateTimeInputs: (inputs: TimeInputs) => void;
   timePeriod?: ITimePeriodView;
+  periodCatalog?: readonly CatalogPeriod[];
   date?: Date;
   workTimeZone?: string;
   isNewEntry?: boolean;
@@ -38,6 +40,7 @@ const SingleTimeEntryForm = memo(function SingleTimeEntryForm({
   onUpdateEntry,
   onUpdateTimeInputs,
   timePeriod,
+  periodCatalog,
   date,
   workTimeZone,
   isNewEntry = false
@@ -59,6 +62,7 @@ const SingleTimeEntryForm = memo(function SingleTimeEntryForm({
         onUpdateTimeInputs={onUpdateTimeInputs}
         lastNoteInputRef={lastNoteInputRef}
         timePeriod={timePeriod}
+        periodCatalog={periodCatalog}
         date={date}
         workTimeZone={workTimeZone}
         isNewEntry={isNewEntry}

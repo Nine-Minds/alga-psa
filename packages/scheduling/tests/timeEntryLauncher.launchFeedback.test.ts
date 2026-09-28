@@ -1,14 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { launchTimeEntryForWorkItem } from '../src/lib/timeEntryLauncher';
 
-// Launcher-level behavioral coverage: which stage opens (blocked toast, period
-// picker, or the anchored existing-entry dialog) and the copy shown when the
-// period catalog or a sheet lookup fails. Rendered picker behavior lives in
-// timeEntryPeriodLauncher.test.tsx.
+// Launcher-level behavioral coverage: which stage opens (blocked toast, the
+// new-entry form, or the anchored existing-entry dialog) and the copy shown when
+// the period catalog or a sheet lookup fails. Rendered new-entry behavior lives
+// in newWorkItemTimeEntry.test.tsx.
 
 const {
   getCurrentUser,
-  getCurrentTimePeriod,
   getTimeEntryUserTimeZone,
   fetchTimePeriods,
   fetchOrCreateTimeSheet,
@@ -17,7 +16,6 @@ const {
   toastError,
 } = vi.hoisted(() => ({
   getCurrentUser: vi.fn(),
-  getCurrentTimePeriod: vi.fn(),
   getTimeEntryUserTimeZone: vi.fn(),
   fetchTimePeriods: vi.fn(),
   fetchOrCreateTimeSheet: vi.fn(),
@@ -30,7 +28,6 @@ vi.mock('@alga-psa/users/actions', () => ({ getCurrentUser }));
 vi.mock('@alga-psa/user-composition/actions', () => ({ getCurrentUser }));
 
 vi.mock('../src/actions/timePeriodsActions', () => ({
-  getCurrentTimePeriod,
   getTimeEntryUserTimeZone,
 }));
 
@@ -56,7 +53,7 @@ vi.mock('../src/components/time-management/time-entry/time-sheet/TimeEntryDialog
   default: () => null,
 }));
 
-vi.mock('../src/components/time-management/time-entry/time-sheet/TimeEntryPeriodLauncher', () => ({
+vi.mock('../src/components/time-management/time-entry/time-sheet/NewWorkItemTimeEntry', () => ({
   default: () => null,
 }));
 
@@ -78,7 +75,6 @@ const periods = [
 beforeEach(() => {
   toastError.mockClear();
   getCurrentUser.mockResolvedValue({ user_id: 'user-1' });
-  getCurrentTimePeriod.mockResolvedValue({ period_id: 'period-current', start_date: '2026-09-01', end_date: '2026-09-08' });
   getTimeEntryUserTimeZone.mockResolvedValue('America/New_York');
   fetchTimePeriods.mockResolvedValue(periods);
   fetchOrCreateTimeSheet.mockResolvedValue({ id: 'sheet-1' });
@@ -123,29 +119,59 @@ describe('launchTimeEntryForWorkItem launch feedback', () => {
     expect(toastError).toHaveBeenCalledWith('Unable to list periods.', { id: 'time-entry-launch-blocked', duration: 10000 });
   });
 
-  it('opens the period picker with the current period preselected for a new entry', async () => {
+  it('opens the new-entry form directly with the catalog and today’s defaults, creating no sheet', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-03T15:00:00Z'));
+    try {
+      const openDrawer = vi.fn();
+
+      await launchTimeEntryForWorkItem({ openDrawer, closeDrawer: vi.fn(), context: baseContext });
+
+      expect(openDrawer).toHaveBeenCalledTimes(1);
+      const props = openedProps(openDrawer);
+      expect(props.periods).toEqual(periods);
+      expect(props.userTimeZone).toBe('America/New_York');
+      expect(props.defaults.moved).toEqual({ kind: 'none' });
+      // 08:00 in New York on Sep 3.
+      expect(props.defaults.defaultStartTime.toISOString()).toBe('2026-09-03T12:00:00.000Z');
+      expect(fetchOrCreateTimeSheet).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('moves the default to the nearest editable day when no period covers today', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-08-20T15:00:00Z'));
+    try {
+      const openDrawer = vi.fn();
+
+      await launchTimeEntryForWorkItem({ openDrawer, closeDrawer: vi.fn(), context: baseContext });
+
+      expect(openedProps(openDrawer).defaults.moved).toEqual({
+        kind: 'today',
+        date: '2026-08-07',
+        todayStatus: null,
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('blocks with an explanation when every sheet is submitted or approved', async () => {
+    fetchTimePeriods.mockResolvedValueOnce(periods.map((p) => ({ ...p, timeSheetStatus: 'SUBMITTED' })));
     const openDrawer = vi.fn();
 
     await launchTimeEntryForWorkItem({ openDrawer, closeDrawer: vi.fn(), context: baseContext });
 
-    expect(openDrawer).toHaveBeenCalledTimes(1);
-    const props = openedProps(openDrawer);
-    expect(props.currentPeriodId).toBe('period-current');
-    expect(props.periods).toEqual(periods);
-    expect(props.userTimeZone).toBe('America/New_York');
+    expect(openDrawer).not.toHaveBeenCalled();
+    expect(toastError).toHaveBeenCalledWith(
+      'Every time sheet is submitted or approved, so there is no day to add time to. Ask an approver to reopen a sheet, or an administrator to add a time period.',
+      { id: 'time-entry-launch-blocked', duration: 10000 },
+    );
   });
 
-  it('opens the picker with no preselection when no period covers today but others exist', async () => {
-    getCurrentTimePeriod.mockResolvedValueOnce(null);
-    const openDrawer = vi.fn();
-
-    await launchTimeEntryForWorkItem({ openDrawer, closeDrawer: vi.fn(), context: baseContext });
-
-    expect(openDrawer).toHaveBeenCalledTimes(1);
-    expect(openedProps(openDrawer).currentPeriodId).toBeNull();
-  });
-
-  it('anchors an existing entry to its saved sheet period and status without offering a picker', async () => {
+  it('anchors an existing entry to its saved sheet period and status without the new-entry catalog', async () => {
     getTimeEntryById.mockResolvedValueOnce({
       entry_id: 'entry-1',
       time_sheet_id: 'sheet-old',

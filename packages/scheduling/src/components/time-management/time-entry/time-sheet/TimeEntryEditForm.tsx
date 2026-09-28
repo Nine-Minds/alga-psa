@@ -1,7 +1,7 @@
 'use client';
 
 import { memo, useCallback, useEffect, useMemo, useState, useRef } from 'react';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getEligibleContractLinesForUI, getClientIdForWorkItem } from '../../../../lib/contractLineDisambiguation';
 import { BillingAttributionInspector } from '@alga-psa/ui/components/BillingAttributionInspector';
 import { getSchedulingClientById } from '../../../../actions/clientInteractionLookupActions';
@@ -21,9 +21,13 @@ import { calculateDuration, clampDurationToSameDay, clampDurationToZonedSameDay,
 import {
   dateOnlyToLocalDate,
   dateToPlainDate,
+  editableDateRange,
   formatZonedTime,
   formatZonedTimeSeconds,
   instantAtZonedTime,
+  isEditableWorkDate,
+  periodForWorkDate,
+  periodLastInclusiveDay,
   workDateInTimeZone,
 } from '../../../../lib/timeEntryPeriodSelection';
 import { ISO8601String } from '@alga-psa/types';
@@ -47,6 +51,13 @@ interface EligiblePlanUI {
 // that `new Date(str)`/`parseISO` introduce for date-only values.
 // LEVERAGE: pattern date-only-local-parse — 4th site (also TimeSheet.tsx, IntervalSection.tsx,
 // timeSheetOperations.ts). Candidate for a shared scheduling date util.
+const SHEET_STATUS_FALLBACKS: Record<string, string> = {
+  DRAFT: 'Draft',
+  SUBMITTED: 'Submitted',
+  APPROVED: 'Approved',
+  CHANGES_REQUESTED: 'Changes Requested',
+};
+
 const parseDateOnlyLocal = (value: string): Date => {
   const [year, month, day] = value.slice(0, 10).split('-').map(Number);
   return new Date(year, month - 1, day);
@@ -87,6 +98,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
   onUpdateTimeInputs,
   lastNoteInputRef,
   timePeriod,
+  periodCatalog,
   date,
   workTimeZone,
   isNewEntry = false,
@@ -94,6 +106,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
   disableSave = false
 }: TimeEntryFormProps) {
   const { t } = useTranslation('msp/time-entry');
+  const { formatDate } = useFormatters();
   // When a subject timezone is supplied, the date field, bounds, and time
   // pickers all operate on that user's calendar day so they line up with the
   // work_date the server derives. Without it, keep browser-local behavior.
@@ -179,13 +192,47 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
   // [start_date, end_date), so the last selectable day is end_date - 1. This mirrors the
   // backend guard in saveTimeEntry (work_date >= start && work_date < end), so any date the
   // picker allows will also pass server-side validation.
+  // With a period catalog, the field instead spans every editable period and
+  // rules out the days in between that sit on locked or uncovered sheets.
   const periodBounds = useMemo(() => {
+    if (periodCatalog) {
+      const range = editableDateRange(periodCatalog);
+      if (!range) return undefined;
+      return { minDate: parseDateOnlyLocal(range.firstDay), maxDate: parseDateOnlyLocal(range.lastDay) };
+    }
     if (!timePeriod?.start_date || !timePeriod?.end_date) return undefined;
     const minDate = parseDateOnlyLocal(timePeriod.start_date);
     const maxDate = parseDateOnlyLocal(timePeriod.end_date);
     maxDate.setDate(maxDate.getDate() - 1);
     return { minDate, maxDate };
-  }, [timePeriod?.start_date, timePeriod?.end_date]);
+  }, [periodCatalog, timePeriod?.start_date, timePeriod?.end_date]);
+
+  const isDateDisabled = useMemo(
+    () =>
+      periodCatalog
+        ? (day: Date) => !isEditableWorkDate(periodCatalog, dateToPlainDate(day))
+        : undefined,
+    [periodCatalog],
+  );
+
+  // Which sheet the chosen day lands on. selectedDate is a local-midnight
+  // marker for the subject calendar day, so its plain date is the work date.
+  const sheetForSelectedDate = useMemo(() => {
+    if (!periodCatalog) return null;
+    const period = periodForWorkDate(periodCatalog, dateToPlainDate(selectedDate));
+    if (!period) return null;
+    const range = `${formatDate(dateOnlyToLocalDate(period.start_date), { dateStyle: 'medium' })} – ${formatDate(
+      dateOnlyToLocalDate(periodLastInclusiveDay(period.end_date)),
+      { dateStyle: 'medium' },
+    )}`;
+    const statusKey = period.timeSheetStatus ?? 'UNKNOWN';
+    return {
+      range,
+      status: t(`workItemEntry.sheetStatus.${statusKey}`, {
+        defaultValue: SHEET_STATUS_FALLBACKS[statusKey] ?? 'Unknown',
+      }),
+    };
+  }, [periodCatalog, selectedDate, formatDate, t]);
 
   const validateTimes = useCallback(() => {
     if (!entry?.start_time || !entry?.end_time) return false;
@@ -618,8 +665,8 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
 
       {/*
         Date field — shown for both new and existing entries so a saved entry can be moved to a
-        different day. Bounded to the current time period (when known) so the entry stays in the
-        same time sheet; see periodBounds above.
+        different day. Bounded to the entry's time period (when known) so it stays in the same time
+        sheet, or, with a period catalog, to the days on editable sheets; see periodBounds above.
       */}
       <div className="space-y-1.5">
         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -683,7 +730,17 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
           placeholder={t('timeEntryForm.placeholders.selectDate', { defaultValue: 'Select date' })}
           disabled={!isEditable}
           clearable={false}
+          isDateDisabled={isDateDisabled}
         />
+        {sheetForSelectedDate && (
+          <p id={`${id}-sheet-hint`} className="text-xs text-[rgb(var(--color-text-500))]">
+            {t('workItemEntry.sheetHint', {
+              range: sheetForSelectedDate.range,
+              status: sheetForSelectedDate.status,
+              defaultValue: 'Time sheet: {{range}} · {{status}}',
+            })}
+          </p>
+        )}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">

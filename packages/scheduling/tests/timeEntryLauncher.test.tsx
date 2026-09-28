@@ -3,13 +3,12 @@ import { launchTimeEntryForWorkItem } from '../src/lib/timeEntryLauncher';
 
 // Launcher construction coverage: the work item handed to whichever stage opens
 // keeps ticket/project/interaction context, and existing entries route to their
-// saved sheet instead of the period picker. Behavioral feedback lives in
-// timeEntryLauncher.launchFeedback.test.ts; rendered picker behavior lives in
-// timeEntryPeriodLauncher.test.tsx.
+// saved sheet instead of the new-entry form. Behavioral feedback lives in
+// timeEntryLauncher.launchFeedback.test.ts; rendered new-entry behavior lives in
+// newWorkItemTimeEntry.test.tsx.
 
 const {
   getCurrentUser,
-  getCurrentTimePeriod,
   getTimeEntryUserTimeZone,
   fetchTimePeriods,
   fetchOrCreateTimeSheet,
@@ -17,7 +16,6 @@ const {
   fetchTimeSheet,
 } = vi.hoisted(() => ({
   getCurrentUser: vi.fn(),
-  getCurrentTimePeriod: vi.fn(),
   getTimeEntryUserTimeZone: vi.fn(),
   fetchTimePeriods: vi.fn(),
   fetchOrCreateTimeSheet: vi.fn(),
@@ -29,7 +27,6 @@ vi.mock('@alga-psa/users/actions', () => ({ getCurrentUser }));
 vi.mock('@alga-psa/user-composition/actions', () => ({ getCurrentUser }));
 
 vi.mock('../src/actions/timePeriodsActions', () => ({
-  getCurrentTimePeriod,
   getTimeEntryUserTimeZone,
 }));
 
@@ -54,7 +51,7 @@ vi.mock('../src/components/time-management/time-entry/time-sheet/TimeEntryDialog
   default: () => null,
 }));
 
-vi.mock('../src/components/time-management/time-entry/time-sheet/TimeEntryPeriodLauncher', () => ({
+vi.mock('../src/components/time-management/time-entry/time-sheet/NewWorkItemTimeEntry', () => ({
   default: () => null,
 }));
 
@@ -68,7 +65,6 @@ const periods = [
 
 beforeEach(() => {
   getCurrentUser.mockResolvedValue({ user_id: 'user-1' });
-  getCurrentTimePeriod.mockResolvedValue({ period_id: 'period-1', start_date: '2026-09-01', end_date: '2026-09-08' });
   getTimeEntryUserTimeZone.mockResolvedValue('America/New_York');
   fetchTimePeriods.mockResolvedValue(periods);
   fetchOrCreateTimeSheet.mockResolvedValue({ id: 'sheet-1' });

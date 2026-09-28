@@ -1,7 +1,7 @@
 [
   {
     "id": "T001",
-    "description": "Rendered launcher: current period preselected; choose prior DRAFT and CHANGES_REQUESTED periods; assert Continue resolves only selected sheet and mounts matching ID/bounds. Browsing creates no sheets.",
+    "description": "Rendered new-entry: opens the form directly against the catalog with no sheet created; defaults and moved-default notices; Save resolves the sheet from the work date in the subject timezone and saves once.",
     "implemented": true,
     "featureIds": [
       "F001",
@@ -13,7 +13,7 @@
   },
   {
     "id": "T002",
-    "description": "Rendered launcher: SUBMITTED/APPROVED/unknown statuses block Continue; a sheet becoming locked during resolution remains at selection; failed requests, double Continue, and cancellation cannot advance stale state.",
+    "description": "Rendered new-entry: a sheet locked after opening, a day no period covers, and a returned server lock each reject with a readable reason and never save or complete.",
     "implemented": true,
     "featureIds": [
       "F002",
@@ -23,7 +23,7 @@
   },
   {
     "id": "T003",
-    "description": "Launcher feedback: no current period with historical options permits explicit selection; empty catalog and returned auth/permission errors provide actionable feedback without opening an editable form.",
+    "description": "Launcher feedback: form opens with today's defaults and no sheet; nearest-editable default when today is uncovered; empty catalog and all-locked catalog block with actionable toasts; returned errors propagate.",
     "implemented": true,
     "featureIds": [
       "F001",
@@ -72,7 +72,7 @@
   },
   {
     "id": "T008",
-    "description": "Manual smoke: ticket Add time -> current default -> prior period -> dated entry -> Save -> verify prior timesheet and ticket refresh. Exercise locked/no-current states, keyboard control, light/dark themes, localized date/year/status, and Cancel/relaunch to change period.",
+    "description": "Manual smoke: ticket Add time -> form opens on today -> calendar shows locked/uncovered days disabled -> pick Aug 11 -> sheet line updates -> Save -> verify sheet, ticket, and that no sheet was created for the untouched current week; stale lock at Save shows its reason.",
     "notes": "Builder reported prior-period persistence, ticket refresh, locked/no-current states, keyboard selection, light/dark themes, and Cancel/relaunch on port 3518. Current-period default is covered by automated tests, but was not browser-smoked because the dev data had no period covering today. Browser smoke was not repeated during takeover.",
     "implemented": true,
     "featureIds": [

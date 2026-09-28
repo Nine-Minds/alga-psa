@@ -264,7 +264,10 @@ describe('TimeEntryDialog save lifecycle (real dialog)', () => {
     expect(onComplete).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
     expect(mocks.toast.success).not.toHaveBeenCalled();
-    expect(mocks.toast.error).toHaveBeenCalled();
+    // The rejection already says what to do, so it is shown instead of the generic copy.
+    expect(mocks.toast.error).toHaveBeenCalledWith(
+      'This time sheet is locked. Choose a draft sheet or a sheet with changes requested.',
+    );
   });
 
   it('a thrown save exception keeps values and never closes, completes, or toasts success', async () => {
@@ -284,7 +287,8 @@ describe('TimeEntryDialog save lifecycle (real dialog)', () => {
     expect(onComplete).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
     expect(mocks.toast.success).not.toHaveBeenCalled();
-    expect(mocks.toast.error).toHaveBeenCalled();
+    // An unexpected failure keeps the generic copy rather than leaking internals.
+    expect(mocks.toast.error).toHaveBeenCalledWith('Failed to save time entry. Please try again.');
   });
 
   it('a successful save through the adapter closes once, completes once, and passes the timezone-sensitive start time', async () => {

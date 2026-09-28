@@ -1,7 +1,7 @@
 [
   {
     "id": "F001",
-    "description": "Load existing user periods with sheet status and preselect the server-resolved current period.",
+    "description": "Load the user's periods with sheet status and open the entry form directly, defaulting to today in the subject timezone.",
     "implemented": true,
     "prdRefs": [
       "User flow and layout"
@@ -9,7 +9,7 @@
   },
   {
     "id": "F002",
-    "description": "Show localized date ranges and status, with locked selections explained and Continue disabled.",
+    "description": "Bound the date field to the editable periods and disable days on locked or uncovered sheets (click, typed, and Today paths).",
     "implemented": true,
     "prdRefs": [
       "User flow and layout"
@@ -17,7 +17,7 @@
   },
   {
     "id": "F003",
-    "description": "Resolve or create only the selected sheet on Continue and recheck its actual editability.",
+    "description": "Resolve or create the sheet from the entry's work date only at Save and recheck its actual editability.",
     "implemented": true,
     "prdRefs": [
       "User flow and layout"
@@ -25,7 +25,7 @@
   },
   {
     "id": "F004",
-    "description": "Prevent repeated Continue and ignore pending responses after cancellation; retain picker on resolution errors.",
+    "description": "Name the sheet the chosen day lands on under the date field and follow every date change.",
     "implemented": true,
     "prdRefs": [
       "Empty and error states"
@@ -33,7 +33,7 @@
   },
   {
     "id": "F005",
-    "description": "Allow explicit historical selection without a current period; show actionable feedback for an empty catalog.",
+    "description": "Move the default to the nearest editable day with an explanation when today cannot take time; block with actionable feedback when no period exists or none accept time.",
     "implemented": true,
     "prdRefs": [
       "Empty and error states"
@@ -81,7 +81,7 @@
   },
   {
     "id": "F011",
-    "description": "Provide accessible period selection, theme-aware presentation, and translated labels on shared launcher surfaces.",
+    "description": "Accessible, theme-aware, translated date-first entry on shared launcher surfaces, including the shared date field's per-day rule.",
     "implemented": true,
     "prdRefs": [
       "User flow and layout"
@@ -89,7 +89,7 @@
   },
   {
     "id": "F012",
-    "description": "Keep period selection separate from entry editing and show selected-period context in the editor.",
+    "description": "Show save rejections (locked sheet, no period, server lock) with their own reason while keeping typed values.",
     "implemented": true,
     "prdRefs": [
       "User flow and layout"

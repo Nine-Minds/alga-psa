@@ -66,75 +66,140 @@ export function isWithinPeriod(
   return workDate >= start && workDate < end;
 }
 
-export type DefaultTimeSource = 'none' | 'context' | 'timer';
+/** A period the subject user could file time against, with that user's sheet status. */
+export type CatalogPeriod = Pick<ITimePeriodView, 'period_id' | 'start_date' | 'end_date'> & {
+  timeSheetStatus?: string | null;
+};
 
-export interface ResolvedEntryDefaults {
-  /** Explicit defaults to hand the provider; always present so ad-hoc/schedule rows cannot override the period choice. */
-  defaultStartTime: Date;
-  defaultEndTime: Date;
-  /** Base date used when no explicit defaults applied; always inside the period. */
-  date: Date;
-  /** Where the supplied timestamps came from, if any. */
-  source: DefaultTimeSource;
-  /** True when supplied timestamps existed but were dropped because they fell outside the period. */
-  adjusted: boolean;
-  suppliedStartTime?: Date;
-  suppliedEndTime?: Date;
+/** The period covering a calendar date (half-open [start_date, end_date)), if any. */
+export function periodForWorkDate<P extends CatalogPeriod>(periods: readonly P[], workDate: string): P | null {
+  const day = workDate.slice(0, 10);
+  return (
+    periods.find((period) => day >= period.start_date.slice(0, 10) && day < period.end_date.slice(0, 10)) ?? null
+  );
+}
+
+/** True when a calendar date falls in a period whose sheet still accepts time. */
+export function isEditableWorkDate(periods: readonly CatalogPeriod[], workDate: string): boolean {
+  const period = periodForWorkDate(periods, workDate);
+  return Boolean(period && isEditableSheetStatus(period.timeSheetStatus));
+}
+
+/** First and last calendar days across the editable periods, or null when none accept time. */
+export function editableDateRange(
+  periods: readonly CatalogPeriod[],
+): { firstDay: string; lastDay: string } | null {
+  const editable = periods.filter((period) => isEditableSheetStatus(period.timeSheetStatus));
+  if (!editable.length) {
+    return null;
+  }
+  const firstDay = editable.map((period) => period.start_date.slice(0, 10)).sort()[0];
+  const lastDay = editable
+    .map((period) => periodLastInclusiveDay(period.end_date))
+    .sort()
+    .reverse()[0];
+  return { firstDay, lastDay };
 }
 
 /**
- * Rebase a new entry's timestamps onto the selected period. Supplied
- * context/timer timestamps are kept only when BOTH endpoints land inside the
- * period; otherwise the entry starts on the period's first day at 08:00–09:00
- * in the subject user's timezone. Clear the pair together so the provider can
- * never fall back to an out-of-period date.
+ * The editable day nearest `today`: today itself, else the latest editable day
+ * before it, else the earliest one after it. Null when nothing accepts time.
+ */
+export function nearestEditableWorkDate(periods: readonly CatalogPeriod[], today: string): string | null {
+  if (isEditableWorkDate(periods, today)) {
+    return today;
+  }
+  const editable = periods.filter((period) => isEditableSheetStatus(period.timeSheetStatus));
+  const lastDays = editable.map((period) => periodLastInclusiveDay(period.end_date));
+  const before = lastDays.filter((day) => day < today).sort().reverse()[0];
+  if (before) {
+    return before;
+  }
+  const after = editable
+    .map((period) => period.start_date.slice(0, 10))
+    .filter((day) => day > today)
+    .sort()[0];
+  return after ?? null;
+}
+
+export type DefaultTimeSource = 'none' | 'context' | 'timer';
+
+/** Why the default date is not simply the supplied times or today. */
+export type DefaultDateMove =
+  | { kind: 'none' }
+  /** Supplied context/timer times fell on a day that cannot take time. */
+  | { kind: 'supplied'; date: string }
+  /** Today's sheet is locked (status given) or no period covers today (status null). */
+  | { kind: 'today'; date: string; todayStatus: string | null };
+
+export interface ResolvedEntryDefaults {
+  /** Explicit defaults to hand the provider, so ad-hoc/schedule rows cannot land on a locked day. */
+  defaultStartTime: Date;
+  defaultEndTime: Date;
+  /** Base date for the form; always on an editable day. */
+  date: Date;
+  /** Where the supplied timestamps came from, if any. */
+  source: DefaultTimeSource;
+  /** Set when the default had to move off the supplied times or off today. */
+  moved: DefaultDateMove;
+}
+
+/**
+ * Defaults for a new entry against the subject user's period catalog.
+ * Supplied context/timer timestamps are kept only when BOTH endpoints fall on
+ * the same editable period. Otherwise the entry starts at 08:00–09:00 in the
+ * subject timezone on today, or on the nearest editable day when today cannot
+ * take time. Returns null when no period accepts time at all.
  */
 export function resolveEntryDefaults(params: {
   context: Pick<TimeEntryWorkItemContext, 'startTime' | 'endTime' | 'elapsedTime'>;
-  period: Pick<ITimePeriodView, 'start_date' | 'end_date'>;
+  periods: readonly CatalogPeriod[];
   timeZone: string | null | undefined;
-}): ResolvedEntryDefaults {
-  const { context, period, timeZone } = params;
+  now?: Date;
+}): ResolvedEntryDefaults | null {
+  const { context, periods, timeZone } = params;
+  const now = params.now ?? new Date();
 
   let suppliedStartTime: Date | undefined = context.startTime;
   let suppliedEndTime: Date | undefined = context.endTime;
   let source: DefaultTimeSource = suppliedStartTime || suppliedEndTime ? 'context' : 'none';
 
   if (!suppliedStartTime && !suppliedEndTime && context.elapsedTime && context.elapsedTime > 0) {
-    const end = new Date();
-    const start = new Date(end.getTime() - context.elapsedTime * 1000);
-    suppliedStartTime = start;
-    suppliedEndTime = end;
+    suppliedEndTime = now;
+    suppliedStartTime = new Date(now.getTime() - context.elapsedTime * 1000);
     source = 'timer';
   }
 
-  if (
-    suppliedStartTime &&
-    suppliedEndTime &&
-    isWithinPeriod(suppliedStartTime, period, timeZone) &&
-    isWithinPeriod(suppliedEndTime, period, timeZone)
-  ) {
-    return {
-      defaultStartTime: suppliedStartTime,
-      defaultEndTime: suppliedEndTime,
-      date: suppliedStartTime,
-      source,
-      adjusted: false,
-    };
+  if (suppliedStartTime && suppliedEndTime) {
+    const startPeriod = periodForWorkDate(periods, workDateInTimeZone(suppliedStartTime, timeZone));
+    const endPeriod = periodForWorkDate(periods, workDateInTimeZone(suppliedEndTime, timeZone));
+    if (startPeriod && startPeriod === endPeriod && isEditableSheetStatus(startPeriod.timeSheetStatus)) {
+      return {
+        defaultStartTime: suppliedStartTime,
+        defaultEndTime: suppliedEndTime,
+        date: suppliedStartTime,
+        source,
+        moved: { kind: 'none' },
+      };
+    }
   }
 
-  const periodFirstDayStart = instantAtZonedTime(period.start_date, '08:00', timeZone);
-  const periodFirstDayEnd = new Date(periodFirstDayStart.getTime() + 60 * 60 * 1000);
+  const today = workDateInTimeZone(now, timeZone);
+  const day = nearestEditableWorkDate(periods, today);
+  if (!day) {
+    return null;
+  }
 
-  return {
-    defaultStartTime: periodFirstDayStart,
-    defaultEndTime: periodFirstDayEnd,
-    date: periodFirstDayStart,
-    source,
-    adjusted: source !== 'none',
-    suppliedStartTime,
-    suppliedEndTime,
-  };
+  const defaultStartTime = instantAtZonedTime(day, '08:00', timeZone);
+  const defaultEndTime = new Date(defaultStartTime.getTime() + 60 * 60 * 1000);
+  let moved: DefaultDateMove = { kind: 'none' };
+  if (source !== 'none') {
+    moved = { kind: 'supplied', date: day };
+  } else if (day !== today) {
+    moved = { kind: 'today', date: day, todayStatus: periodForWorkDate(periods, today)?.timeSheetStatus ?? null };
+  }
+
+  return { defaultStartTime, defaultEndTime, date: defaultStartTime, source, moved };
 }
 
 /** The last day a period covers, derived from the exclusive `end_date`. */

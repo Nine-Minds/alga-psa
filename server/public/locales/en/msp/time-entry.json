@@ -508,24 +508,24 @@
       "missingFieldNamed": "Missing required time period setting field: {{field}}."
     }
   },
-  "periodPicker": {
-    "title": "Add New Time Entry for {{name}}",
-    "label": "Time period",
-    "placeholder": "Choose a time period",
-    "current": "Current",
-    "continue": "Continue",
-    "continueLoading": "Loading…",
-    "cancel": "Cancel",
-    "status": {
+  "workItemEntry": {
+    "sheetStatus": {
       "DRAFT": "Draft",
       "SUBMITTED": "Submitted",
       "APPROVED": "Approved",
       "CHANGES_REQUESTED": "Changes Requested",
       "UNKNOWN": "Unknown"
     },
-    "locked": "This time sheet is {{status}}. Choose a draft sheet or a sheet with changes requested.",
-    "statusChanged": "This time sheet is now {{status}}. Choose a draft sheet or a sheet with changes requested.",
-    "outsidePeriod": "The supplied start and end times are outside this period, so the entry starts on {{date}} at 08:00."
+    "sheetHint": "Time sheet: {{range}} · {{status}}",
+    "defaultMoved": {
+      "supplied": "The timer’s times fall on a day that can’t take new time, so the entry starts on {{date}} at 08:00.",
+      "todayLocked": "Today’s time sheet is {{status}}, so the entry starts on {{date}}, the nearest day that can take time.",
+      "todayUncovered": "No time period covers today, so the entry starts on {{date}}, the nearest day that can take time."
+    },
+    "save": {
+      "noPeriod": "No time period covers {{date}}. Pick a day inside a time period.",
+      "sheetLocked": "The time sheet for {{date}} is {{status}}. Pick a day on a draft sheet or one with changes requested."
+    }
   },
   "launch": {
     "noUser": "Unable to load current user for time entry.",
@@ -533,6 +533,7 @@
     "entryMissingSheet": "This time entry is not attached to a time sheet, so it can’t be edited here.",
     "entryMissingPeriod": "The time sheet for this entry is missing its period and can’t be opened.",
     "noPeriods": "No time periods are set up yet, so time can’t be entered. Ask an administrator to create time periods under Settings → Time Entry.",
+    "noEditablePeriods": "Every time sheet is submitted or approved, so there is no day to add time to. Ask an approver to reopen a sheet, or an administrator to add a time period.",
     "prepareFailed": "An error occurred while preparing the time entry. Please try again."
   }
 }

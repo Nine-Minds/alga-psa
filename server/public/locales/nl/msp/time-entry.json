@@ -508,24 +508,24 @@
       "missingFieldNamed": "Er ontbreekt een verplicht veld van de periode-instelling: {{field}}."
     }
   },
-  "periodPicker": {
-    "title": "Nieuwe tijdregistratie voor {{name}} toevoegen",
-    "label": "Tijdsperiode",
-    "placeholder": "Kies een tijdsperiode",
-    "current": "Huidig",
-    "continue": "Doorgaan",
-    "continueLoading": "Laden…",
-    "cancel": "Annuleren",
-    "status": {
+  "workItemEntry": {
+    "sheetStatus": {
       "DRAFT": "Concept",
       "SUBMITTED": "Ingediend",
       "APPROVED": "Goedgekeurd",
       "CHANGES_REQUESTED": "Wijzigingen aangevraagd",
       "UNKNOWN": "Onbekend"
     },
-    "locked": "Deze urenstaat is {{status}}. Kies een conceptstaat of een staat met aangevraagde wijzigingen.",
-    "statusChanged": "Deze urenstaat is nu {{status}}. Kies een conceptstaat of een staat met aangevraagde wijzigingen.",
-    "outsidePeriod": "De opgegeven begin- en eindtijden vallen buiten deze periode, dus de registratie begint op {{date}} om 08:00."
+    "sheetHint": "Urenstaat: {{range}} · {{status}}",
+    "defaultMoved": {
+      "supplied": "De tijden van de timer vallen op een dag die geen nieuwe tijd meer accepteert, dus de registratie begint op {{date}} om 08:00.",
+      "todayLocked": "De urenstaat van vandaag heeft de status ‘{{status}}’, dus de registratie begint op {{date}}, de dichtstbijzijnde dag die tijd accepteert.",
+      "todayUncovered": "Geen periode omvat vandaag, dus de registratie begint op {{date}}, de dichtstbijzijnde dag die tijd accepteert."
+    },
+    "save": {
+      "noPeriod": "Geen periode omvat {{date}}. Kies een dag binnen een periode.",
+      "sheetLocked": "De urenstaat voor {{date}} heeft de status ‘{{status}}’. Kies een dag op een conceptstaat of een staat met aangevraagde wijzigingen."
+    }
   },
   "launch": {
     "noUser": "Kan de huidige gebruiker voor tijdregistratie niet laden.",
@@ -533,6 +533,7 @@
     "entryMissingSheet": "Deze tijdregistratie is niet aan een urenstaat gekoppeld en kan hier niet worden bewerkt.",
     "entryMissingPeriod": "De urenstaat van deze registratie mist de periode en kan niet worden geopend.",
     "noPeriods": "Er zijn nog geen tijdsperioden ingesteld, dus er kan geen tijd worden geregistreerd. Vraag een beheerder om tijdsperioden aan te maken onder Instellingen → Tijdregistratie.",
+    "noEditablePeriods": "Alle urenstaten zijn ingediend of goedgekeurd, dus er is geen dag om tijd aan toe te voegen. Vraag een goedkeurder om een staat te heropenen, of een beheerder om een periode toe te voegen.",
     "prepareFailed": "Er is een fout opgetreden bij het voorbereiden van de tijdregistratie. Probeer het opnieuw."
   }
 }
