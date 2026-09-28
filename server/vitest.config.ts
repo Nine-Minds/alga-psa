@@ -1,6 +1,7 @@
 import { coverageConfigDefaults, defineConfig } from 'vitest/config';
 import fs from 'node:fs';
 import path from 'path';
+import { environmentProjects, resolveEnvironmentPartition } from '../scripts/lib/jsdom-test-globs.mjs';
 
 fs.mkdirSync(path.resolve(__dirname, './coverage/.tmp'), { recursive: true });
 
@@ -8,6 +9,50 @@ fs.mkdirSync(path.resolve(__dirname, './coverage/.tmp'), { recursive: true });
 // Default local runs to UTC so results match CI; set TZ explicitly to
 // exercise another zone.
 process.env.TZ = process.env.TZ || 'UTC';
+
+// Vitest only forwards a whitelist of CLI options into project configs, and
+// `poolOptions` is not on it — so `--poolOptions.forks.singleFork=false` stops
+// reaching the workers the moment a lane declares projects (the jsdom/node
+// split below). The shard runner's fresh-fork-per-file guarantee therefore
+// travels in the environment instead, where every project can read it.
+const singleFork = process.env.VITEST_RECYCLE_FORKS !== '1';
+
+const SERVER_UNIT_INCLUDE = [
+  '../ee/temporal-workflows/src/__tests__/integration/**/*.test.ts',
+  'src/**/*.{test,spec}.?(c|m)[jt]s?(x)',
+  'migrations/__tests__/**/*.{test,spec}.?(c|m)[jt]s?(x)',
+  '../packages/**/*.{test,spec}.?(c|m)[jt]s?(x)',
+  // shared/ carries ~120 test files (inbound email, billing schedule,
+  // workflow actions) that gated nothing before this line: the CI job
+  // passed ../shared as a CLI filter, but filters only narrow the include
+  // set, so they silently matched zero files.
+  '../shared/**/*.{test,spec}.?(c|m)[jt]s?(x)',
+  '../ee/packages/workflows/src/actions/**/*.{test,spec}.?(c|m)[jt]s?(x)'
+];
+
+// The visual golden suite launches Chromium + Postgres and depends on
+// machine-local fonts; it is a manual template-review tool, never part of
+// an unscoped run. Opt in with RUN_VISUAL=1 (see src/test/visual/README.md).
+const SERVER_UNIT_EXCLUDE = [
+  '**/node_modules/**',
+  ...(process.env.RUN_VISUAL ? [] : ['**/src/test/visual/**']),
+  // *.db.test.* suites (shared/workflow businessOperations.*) recreate a
+  // live Postgres database and mutate DB_* env for the whole fork — they
+  // are integration tests by naming convention. The CI unit-coverage job
+  // opts out (it runs without a database, same reason src/test/integration
+  // isn't in it); local full runs with a DB still include them.
+  // Both patterns needed: `**` never crosses the literal `..` segment
+  // (dot-directory), so the bare pattern misses ../shared and ../packages.
+  ...(process.env.SKIP_DB_TESTS === '1'
+    ? ['**/*.db.test.?(c|m)[jt]s?(x)', '../**/*.db.test.?(c|m)[jt]s?(x)']
+    : []),
+];
+
+// Two projects that tile a lane's file set, resolved with the same globber and
+// options vitest itself uses so their union is the lane exactly.
+export function makeEnvironmentProjects({ include, exclude }: { include: string[]; exclude: string[] }) {
+  return environmentProjects(resolveEnvironmentPartition({ include, exclude, cwd: __dirname }));
+}
 
 export default defineConfig({
   // The repo's tsconfig sets `jsx: "preserve"` (Next.js/SWC compiles JSX with
@@ -26,35 +71,9 @@ export default defineConfig({
     environment: 'node',
     // This repo keeps a large number of tests under workspace packages (e.g. ../packages/*).
     // Include them explicitly because Vitest's default include globs do not match paths outside the config root.
-    include: [
-      '../ee/temporal-workflows/src/__tests__/integration/**/*.test.ts',
-      'src/**/*.{test,spec}.?(c|m)[jt]s?(x)',
-      'migrations/__tests__/**/*.{test,spec}.?(c|m)[jt]s?(x)',
-      '../packages/**/*.{test,spec}.?(c|m)[jt]s?(x)',
-      // shared/ carries ~120 test files (inbound email, billing schedule,
-      // workflow actions) that gated nothing before this line: the CI job
-      // passed ../shared as a CLI filter, but filters only narrow the include
-      // set, so they silently matched zero files.
-      '../shared/**/*.{test,spec}.?(c|m)[jt]s?(x)',
-      '../ee/packages/workflows/src/actions/**/*.{test,spec}.?(c|m)[jt]s?(x)'
-    ],
-    // The visual golden suite launches Chromium + Postgres and depends on
-    // machine-local fonts; it is a manual template-review tool, never part of
-    // an unscoped run. Opt in with RUN_VISUAL=1 (see src/test/visual/README.md).
-    exclude: [
-      '**/node_modules/**',
-      ...(process.env.RUN_VISUAL ? [] : ['**/src/test/visual/**']),
-      // *.db.test.* suites (shared/workflow businessOperations.*) recreate a
-      // live Postgres database and mutate DB_* env for the whole fork — they
-      // are integration tests by naming convention. The CI unit-coverage job
-      // opts out (it runs without a database, same reason src/test/integration
-      // isn't in it); local full runs with a DB still include them.
-      // Both patterns needed: `**` never crosses the literal `..` segment
-      // (dot-directory), so the bare pattern misses ../shared and ../packages.
-      ...(process.env.SKIP_DB_TESTS === '1'
-        ? ['**/*.db.test.?(c|m)[jt]s?(x)', '../**/*.db.test.?(c|m)[jt]s?(x)']
-        : []),
-    ],
+    include: SERVER_UNIT_INCLUDE,
+    exclude: SERVER_UNIT_EXCLUDE,
+    projects: makeEnvironmentProjects({ include: SERVER_UNIT_INCLUDE, exclude: SERVER_UNIT_EXCLUDE }),
     setupFiles: [path.resolve(__dirname, './src/test/setup.ts')],
     globalSetup: [path.resolve(__dirname, './vitest.globalSetup.js')],
     isolate: true,
@@ -73,10 +92,10 @@ export default defineConfig({
     pool: 'forks',
     poolOptions: {
       threads: {
-        singleThread: true
+        singleThread: singleFork
       },
       forks: {
-        singleFork: true
+        singleFork
       }
     },
     logHeapUsage: true,

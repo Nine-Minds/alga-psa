@@ -29,7 +29,12 @@ export function runServerUnitShard({ root, index, total, workers, env = process.
   };
   // Remove stale evidence even if the next process cannot start.
   for (const target of Object.values(paths)) writeFileSync(target, 'null\n');
-  const runEnv = { ...env, SERVER_UNIT_SHARD_FILES: paths.shardFiles, TEST_PROGRESS_PATH: paths.progress };
+  // VITEST_RECYCLE_FORKS carries the same intent as the CLI override below.
+  // Vitest forwards only a whitelist of CLI options into project configs and
+  // poolOptions is not on it, so once the shard config declares its jsdom/node
+  // projects the flag alone would silently stop recycling forks per file.
+  const runEnv = { ...env, SERVER_UNIT_SHARD_FILES: paths.shardFiles, TEST_PROGRESS_PATH: paths.progress,
+    VITEST_RECYCLE_FORKS: '1' };
   const vitest = args => spawnSync(process.execPath, [path.join(server, 'node_modules/vitest/vitest.mjs'), ...args],
     { cwd: server, env: runEnv, stdio: 'inherit' });
   const shardArgs = ['--config', 'vitest.server-unit-shard.config.ts'];
