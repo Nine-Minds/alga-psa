@@ -13,7 +13,7 @@ import type {
   TaggedEntityType,
 } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
-import { resolveUnitOfMeasure, withUnitCode } from '@alga-psa/shared/billingClients/unitOfMeasure';
+import { resolveUnitOfMeasure, withUnitCode } from '@alga-psa/core/unitOfMeasure';
 import { prepareQuoteTermsForDb } from '../../../../lib/quoteTerms';
 import { SharedNumberingService } from '../../../../services/numberingService';
 

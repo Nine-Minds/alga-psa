@@ -11,7 +11,7 @@ import type {
 import { tenantDb } from "@alga-psa/db";
 import { toISODate, toPlainDate } from "@alga-psa/core";
 import { getClientBillingCycleAnchor } from "@alga-psa/shared/billingClients/billingSchedule";
-import { resolveUnitOfMeasure } from "@alga-psa/shared/billingClients/unitOfMeasure";
+import { resolveUnitOfMeasure } from "@alga-psa/core/unitOfMeasure";
 import { assumptionKey } from "./syntheticActivity";
 
 const midnight = (value: string): string =>

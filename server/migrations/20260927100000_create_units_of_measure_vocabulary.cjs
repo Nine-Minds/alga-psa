@@ -1,4 +1,4 @@
-// Exact seed projection of shared/billingClients/unitOfMeasure.ts.
+// Exact seed projection of packages/core/src/lib/unitOfMeasure.ts.
 const units = [
   ['each', 'C62', 'unitOfMeasure.labels.each', 'count'], ['piece', 'H87', 'unitOfMeasure.labels.piece', 'count'],
   ['box', 'BX', 'unitOfMeasure.labels.box', 'count'], ['seat', 'C62', 'unitOfMeasure.labels.seat', 'count'],

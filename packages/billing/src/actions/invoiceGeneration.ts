@@ -53,7 +53,7 @@ import { ISO8601String } from '@alga-psa/types';
 import { TaxService } from '../services/taxService';
 import { ITaxCalculationResult } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
-import { resolveUnitOfMeasure } from '@alga-psa/shared/billingClients/unitOfMeasure';
+import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 import { auditLog } from '@alga-psa/db';
 import { getClientDocumentLogoUrl } from '@alga-psa/formatting/avatarUtils';
 import { calculateAndDistributeTax, claimRecurringServicePeriodsForSelectionInputs, getClientDetails, persistInvoiceCharges, updateInvoiceTotalsAndRecordTransaction, validateClientBillingEmail } from '../services/invoiceService';

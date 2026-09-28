@@ -6,7 +6,7 @@
 
 import type { Knex } from "knex";
 import { v4 as uuidv4 } from "uuid";
-import { resolveUnitOfMeasure } from "@alga-psa/shared/billingClients/unitOfMeasure";
+import { resolveUnitOfMeasure } from "@alga-psa/core/unitOfMeasure";
 import { Temporal } from "@js-temporal/polyfill";
 import type {
   ContractScenario,

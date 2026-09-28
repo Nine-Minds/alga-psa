@@ -13,7 +13,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { format } from 'date-fns';
-import { resolveUnitOfMeasure } from '@alga-psa/shared/billingClients/unitOfMeasure';
+import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 import { WizardProgress } from '@alga-psa/ui/components/onboarding/WizardProgress';
 import {
   createAppointmentRequest,

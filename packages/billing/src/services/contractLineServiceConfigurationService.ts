@@ -1,5 +1,5 @@
 
-import { resolveUnitOfMeasure } from '@alga-psa/shared/billingClients/unitOfMeasure';
+import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 import { resolveUsageMeasurementRevision, setUsageMeasurementModeInTransaction } from '../lib/billing/usageMeasurementTransitions';
 import { lockTenantBilling } from '../lib/billing/billingMutationLock';
 import { resolveNextUnbilledSeatBoundary, resolveEffectiveSeatPricing, scheduleSeatRevisionInTransaction } from '../lib/billing/seatRevisions';

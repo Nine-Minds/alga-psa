@@ -22,6 +22,10 @@ export default defineConfig({
         find: /^@alga-psa\/core\/i18n\/countryDateFormat$/,
         replacement: path.resolve(__dirname, '../core/src/lib/i18n/countryDateFormat.ts'),
       },
+      {
+        find: /^@alga-psa\/core\/unitOfMeasure$/,
+        replacement: path.resolve(__dirname, '../core/src/lib/unitOfMeasure.ts'),
+      },
     ],
   },
 });

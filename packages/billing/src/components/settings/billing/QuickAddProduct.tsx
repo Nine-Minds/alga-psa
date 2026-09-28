@@ -1,7 +1,7 @@
 'use client';
 
 
-import { resolveUnitOfMeasure } from '@alga-psa/shared/billingClients/unitOfMeasure';
+import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';

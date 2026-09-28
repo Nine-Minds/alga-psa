@@ -8,7 +8,8 @@
  * never derived from the code alone when a label is present.
  *
  * This module is pure (no DB access) because the web picker and the mobile app
- * import it. Tenant custom-unit registration lives in `tenantUnitsOfMeasure.ts`.
+ * import it. Tenant custom-unit registration lives in
+ * `shared/billingClients/tenantUnitsOfMeasure.ts`.
  */
 export type UnitKind = 'time' | 'count' | 'volume' | 'mass' | 'length' | 'other';
 export interface UnitOfMeasure {
@@ -61,7 +62,7 @@ for (const unit of unitOfMeasureVocabulary) if (!byCode.has(unit.code)) byCode.s
  * Known free-text variants → vocabulary key. Used by the write path, the
  * resolver, and (mirrored as SQL) the backfill migration
  * server/migrations/20260927110000_add_unit_codes_and_backfill.cjs — keep the
- * two in sync; `unitOfMeasure.test.ts` asserts parity.
+ * two in sync; `unitCodesBackfillMigration.parity.test.ts` (server) asserts parity.
  */
 export const UNIT_LABEL_VARIANTS: Readonly<Record<string, string>> = {
   each: 'each', ea: 'each', 'each.': 'each', unit: 'each', units: 'each', one: 'each',

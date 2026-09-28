@@ -7,7 +7,7 @@ import { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { getCurrencySymbol } from '@alga-psa/core';
-import { resolveUnitOfMeasure } from '@alga-psa/shared/billingClients/unitOfMeasure';
+import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { actionError, type ActionMessageError } from '@alga-psa/ui/lib/errorHandling';
 import {

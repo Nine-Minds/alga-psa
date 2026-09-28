@@ -1,7 +1,7 @@
 
 'use server'
 
-import { resolveUnitOfMeasure } from '@alga-psa/shared/billingClients/unitOfMeasure';
+import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 // server/src/lib/actions/contractLinePresetActions.ts
 import { v4 as uuidv4 } from 'uuid';
 import ContractLinePreset from '../models/contractLinePreset';

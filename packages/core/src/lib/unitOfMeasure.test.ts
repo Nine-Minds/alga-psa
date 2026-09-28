@@ -1,16 +1,9 @@
-import { createRequire } from 'node:module';
-import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
-  UNIT_LABEL_VARIANTS,
   defaultUnitCodeForKind,
-  knownUnitCodeForLabel,
   resolveUnitOfMeasure,
   withUnitCode,
-} from '../../billingClients/unitOfMeasure';
-
-const require = createRequire(import.meta.url);
-const backfill = require(path.resolve(__dirname, '../../../server/migrations/20260927110000_add_unit_codes_and_backfill.cjs'));
+} from './unitOfMeasure';
 
 describe('unit of measure resolution', () => {
   it('prefers catalog over config and defaults to C62', () => {
@@ -43,10 +36,5 @@ describe('unit of measure resolution', () => {
     expect(withUnitCode({ unit_of_measure: 'Widgets', unit_code: null }).unit_code).toBe('C62');
     expect(withUnitCode({ unit_of_measure: 'GB', unit_code: '4L' }).unit_code).toBe('4L');
     expect(withUnitCode({ base_rate: 1 } as { base_rate: number; unit_of_measure?: string })).toEqual({ base_rate: 1 });
-  });
-
-  it('backfill migration normalizes exactly the variants the app recognizes', () => {
-    const appMap = Object.fromEntries(Object.keys(UNIT_LABEL_VARIANTS).map((label) => [label, knownUnitCodeForLabel(label)]));
-    expect(backfill.KNOWN_UNIT_LABELS).toEqual(appMap);
   });
 });

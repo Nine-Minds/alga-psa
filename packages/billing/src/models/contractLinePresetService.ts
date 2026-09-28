@@ -1,6 +1,6 @@
 // server/src/lib/models/contractLinePresetService.ts
 import { Knex } from 'knex';
-import { withUnitCode } from '@alga-psa/shared/billingClients/unitOfMeasure';
+import { withUnitCode } from '@alga-psa/core/unitOfMeasure';
 import type { IContractLinePresetService } from '@alga-psa/types';
 import { requireTenantId, tenantDb } from '@alga-psa/db';
 

@@ -1,7 +1,7 @@
 'use server';
 
 
-import { resolveUnitOfMeasure, withUnitCode } from '@alga-psa/shared/billingClients/unitOfMeasure';
+import { resolveUnitOfMeasure, withUnitCode } from '@alga-psa/core/unitOfMeasure';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';

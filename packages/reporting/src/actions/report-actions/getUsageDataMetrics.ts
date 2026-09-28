@@ -6,7 +6,7 @@ import { withAuth } from '@alga-psa/auth';
 import type { IUsageRecord } from '@alga-psa/types';
 import { Knex } from 'knex'; // Import Knex type
 import { reportingActionErrorFrom, type ReportingActionError } from './reportingActionErrors';
-import { resolveUnitOfMeasure } from '@alga-psa/shared/billingClients/unitOfMeasure';
+import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 
 // Define the schema for the input parameters
 const InputSchema = z.object({

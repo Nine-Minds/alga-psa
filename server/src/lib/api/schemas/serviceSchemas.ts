@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { uuidSchema } from './common';
-import { isUnitOfMeasureCode } from '@alga-psa/shared/billingClients/unitOfMeasure';
+import { isUnitOfMeasureCode } from '@alga-psa/core/unitOfMeasure';
 
 const billingMethodSchema = z.enum(['fixed', 'hourly', 'usage']);
 

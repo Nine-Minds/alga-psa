@@ -7,7 +7,7 @@ import {
   knownUnitCodeForLabel,
   labelForUnitCode,
   type UnitDefaultKind,
-} from './unitOfMeasure';
+} from '@alga-psa/core/unitOfMeasure';
 
 /**
  * Tenant custom units of measure (`tenant_units_of_measure`, distributed by

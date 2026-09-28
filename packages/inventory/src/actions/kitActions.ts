@@ -20,7 +20,7 @@ import {
   resolveCatalogUnitForUpdate,
   type TenantUnitSelection,
 } from '@alga-psa/shared/billingClients/tenantUnitsOfMeasure';
-import { unitOfMeasureVocabulary } from '@alga-psa/shared/billingClients/unitOfMeasure';
+import { unitOfMeasureVocabulary } from '@alga-psa/core/unitOfMeasure';
 
 /** Kits default to the "Kit" business label (Rec 20 C62). */
 const KIT_UNIT = unitOfMeasureVocabulary.find((unit) => unit.key === 'kit')!;

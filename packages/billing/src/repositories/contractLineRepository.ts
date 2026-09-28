@@ -1,5 +1,5 @@
 import { Knex } from 'knex';
-import { withUnitCode } from '@alga-psa/shared/billingClients/unitOfMeasure';
+import { withUnitCode } from '@alga-psa/core/unitOfMeasure';
 import { v4 as uuidv4 } from 'uuid';
 
 import { tenantDb } from '@alga-psa/db';

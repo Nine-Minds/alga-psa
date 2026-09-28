@@ -1,5 +1,5 @@
 
-import { resolveUnitOfMeasure } from '@alga-psa/shared/billingClients/unitOfMeasure';
+import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 /**
  * EE contract simulation orchestrator: prices a ContractScenario over its
  * horizon through the shared pure billing compute layer.

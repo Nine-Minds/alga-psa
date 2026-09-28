@@ -20,7 +20,7 @@ import type {
 } from '../../services/accountingSync/qboItemImportService';
 import { getServiceTypesForSelection } from '../../actions/serviceActions';
 import { listTenantUnitsOfMeasure, registerTenantUnitOfMeasure } from '@alga-psa/billing/actions/unitOfMeasureActions';
-import { labelForUnitCode } from '@alga-psa/shared/billingClients/unitOfMeasure';
+import { labelForUnitCode } from '@alga-psa/core/unitOfMeasure';
 
 /**
  * Optional wizard step: bulk import of QBO Products & Services into the

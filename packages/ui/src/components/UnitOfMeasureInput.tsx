@@ -9,7 +9,7 @@ import {
   knownUnitCodeForLabel,
   unitOfMeasureVocabulary,
   type UnitOfMeasure,
-} from '@alga-psa/shared/billingClients/unitOfMeasure';
+} from '@alga-psa/core/unitOfMeasure';
 
 export interface UnitSelection { code: string; label: string }
 interface UnitOfMeasureInputProps {

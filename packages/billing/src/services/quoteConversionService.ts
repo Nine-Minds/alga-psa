@@ -10,7 +10,7 @@ import type {
   QuoteConversionPreviewItem,
 } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
-import { resolveUnitOfMeasure } from '@alga-psa/shared/billingClients/unitOfMeasure';
+import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 import { v4 as uuidv4 } from 'uuid';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import { allocateQuoteDiscounts } from './quoteDiscountAllocation';

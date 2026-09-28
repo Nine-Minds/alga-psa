@@ -3,7 +3,7 @@ import type { IQuoteItem } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
 import { recalculateQuoteFinancials } from '../services/quoteCalculationService';
 import { resolveTenantUnitCodeForLabel } from '@alga-psa/shared/billingClients/tenantUnitsOfMeasure';
-import { knownUnitCodeForLabel } from '@alga-psa/shared/billingClients/unitOfMeasure';
+import { knownUnitCodeForLabel } from '@alga-psa/core/unitOfMeasure';
 
 function ensureIntegerField(value: unknown, fieldName: string): void {
   if (value !== undefined && value !== null && !Number.isInteger(Number(value))) {

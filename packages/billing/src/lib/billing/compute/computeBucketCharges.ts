@@ -12,7 +12,7 @@ import type {
   ChargeProfileAssignments,
 } from "./types";
 import { resolveChargeProfileFor } from "../billingProfileResolution";
-import { DEFAULT_UNIT_CODE, HOUR_UNIT_CODE, resolveUnitOfMeasure } from "@alga-psa/shared/billingClients/unitOfMeasure";
+import { DEFAULT_UNIT_CODE, HOUR_UNIT_CODE, resolveUnitOfMeasure } from "@alga-psa/core/unitOfMeasure";
 
 /**
  * A persisted bucket_usage row, or its in-memory simulator equivalent.

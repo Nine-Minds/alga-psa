@@ -6,8 +6,8 @@ const targets = [
   ['quote_items', 'unit_of_measure'],
 ];
 // Known free-text variants → Rec 20 code. Mirror of UNIT_LABEL_VARIANTS in
-// shared/billingClients/unitOfMeasure.ts (migrations cannot import TS);
-// shared/__tests__/billingClients/unitOfMeasure.test.ts asserts parity.
+// packages/core/src/lib/unitOfMeasure.ts (migrations cannot import TS);
+// server/src/test/unit/billing/unitCodesBackfillMigration.parity.test.ts asserts parity.
 const KNOWN_UNIT_LABELS = {
   each: 'C62', ea: 'C62', 'each.': 'C62', unit: 'C62', units: 'C62', one: 'C62',
   piece: 'H87', pieces: 'H87', pc: 'H87', pcs: 'H87',

@@ -5,7 +5,7 @@ import type { ApiClient } from "../../../api";
 import { createProduct, listServiceTypes, type ServiceTypeItem } from "../../../api/materials";
 import { useTheme } from "../../../ui/ThemeContext";
 import { PrimaryButton, TextInput } from "../../../ui/components";
-import { unitOfMeasureVocabulary } from "@alga-psa/shared/billingClients/unitOfMeasure";
+import { unitOfMeasureVocabulary } from "@alga-psa/core/unitOfMeasure";
 
 /** Prefer a product-ish service type as the default pick. */
 export function defaultServiceType(types: ServiceTypeItem[]): ServiceTypeItem | null {

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { isUnitOfMeasureCode } from '@alga-psa/shared/billingClients/unitOfMeasure';
+import { isUnitOfMeasureCode } from '@alga-psa/core/unitOfMeasure';
 import type { QuoteStatus } from '@alga-psa/types';
 
 export const quoteStatusSchema = z.enum([

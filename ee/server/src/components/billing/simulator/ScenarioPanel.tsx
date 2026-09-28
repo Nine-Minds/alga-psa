@@ -5,7 +5,7 @@ import { ChevronRight } from "lucide-react";
 import { Button } from "@alga-psa/ui/components/Button";
 import { DatePicker } from "@alga-psa/ui/components/DatePicker";
 import { UnitOfMeasureInput } from "@alga-psa/ui/components/UnitOfMeasureInput";
-import { labelForUnitCode } from "@alga-psa/shared/billingClients/unitOfMeasure";
+import { labelForUnitCode } from "@alga-psa/core/unitOfMeasure";
 import { dateFromString, dateToString } from "@alga-psa/ui/lib/dateInput";
 import { cn } from "@alga-psa/ui/lib/utils";
 import { useFormatters, useTranslation } from "@alga-psa/ui/lib/i18n/client";

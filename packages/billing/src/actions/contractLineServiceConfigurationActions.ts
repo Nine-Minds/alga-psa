@@ -1,7 +1,7 @@
 'use server';
 
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import { resolveUnitOfMeasure } from '@alga-psa/shared/billingClients/unitOfMeasure';
+import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 import { withTransaction } from '@alga-psa/db';
 import { upsertBucketOverlayInTransaction } from './bucketOverlayActions';
 import { ContractLineServiceConfigurationService } from '../services/contractLineServiceConfigurationService';
