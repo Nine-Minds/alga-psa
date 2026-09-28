@@ -141,7 +141,9 @@
       "hiding": "Escondido...",
       "hide": "Esconder",
       "dismiss": "Dispensar {{title}}",
-      "restoring": "Restaurando..."
+      "restoring": "Restaurando...",
+      "hideSection": "Ocultar secção",
+      "hidingSection": "A ocultar secção…"
     },
     "hidden": {
       "title": "Cartões de configuração ocultos ({{count}})",
@@ -210,7 +212,14 @@
     },
     "errors": {
       "dismissFailed": "Falha ao dispensar a etapa de onboarding.",
-      "restoreFailed": "Falha ao restaurar a etapa de onboarding."
+      "restoreFailed": "Falha ao restaurar a etapa de onboarding.",
+      "dismissSectionFailed": "Não foi possível ocultar a secção de integração.",
+      "restoreSectionFailed": "Não foi possível restaurar a secção de integração."
+    },
+    "preferences": {
+      "title": "Preferências do painel",
+      "description": "A secção de integração concluída está oculta no seu painel.",
+      "restoreSection": "Restaurar secção de integração"
     }
   },
   "mspDashboard": "Painel MSP"

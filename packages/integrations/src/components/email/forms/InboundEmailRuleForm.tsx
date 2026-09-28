@@ -33,6 +33,7 @@ type ConditionOperator = 'equals' | 'contains' | 'starts_with' | 'ends_with' | '
 type ActionType = 'skip' | 'extract_assign_client' | 'set_destination' | 'ai_classify';
 type ExtractionType = 'between' | 'after' | 'before' | 'regex';
 type OnNoMatch = 'proceed' | 'fallback_destination' | 'skip';
+type MatchTarget = 'client_name' | 'contact_email' | 'asset_name';
 
 interface ConditionRow {
   field: ConditionField;
@@ -61,6 +62,7 @@ function readExtractionState(rule?: InboundEmailRuleRecord | null) {
     marker: typeof extraction?.marker === 'string' ? extraction.marker : '',
     pattern: typeof extraction?.pattern === 'string' ? extraction.pattern : '',
     occurrence: (extraction?.occurrence === 'last' ? 'last' : 'first') as 'first' | 'last',
+    matchTargets: (Array.isArray(config?.match_by) ? config.match_by : ['client_name']) as MatchTarget[],
   };
 }
 
@@ -83,6 +85,7 @@ export function InboundEmailRuleForm({ rule, onSuccess, onCancel }: InboundEmail
   const [extractionMarker, setExtractionMarker] = useState(initialExtraction.marker);
   const [extractionPattern, setExtractionPattern] = useState(initialExtraction.pattern);
   const [extractionOccurrence, setExtractionOccurrence] = useState<'first' | 'last'>(initialExtraction.occurrence);
+  const [matchTargets, setMatchTargets] = useState<MatchTarget[]>(initialExtraction.matchTargets);
 
   const [destinationDefaultsId, setDestinationDefaultsId] = useState<string>(
     rule?.action_type === 'set_destination'
@@ -249,7 +252,7 @@ export function InboundEmailRuleForm({ rule, onSuccess, onCancel }: InboundEmail
             : extractionType === 'before'
               ? { type: 'before', marker: extractionMarker, occurrence: extractionOccurrence }
               : { type: 'regex', pattern: extractionPattern };
-      action_config = { source: extractionSource, extraction };
+      action_config = { source: extractionSource, extraction, match_by: matchTargets };
     } else if (actionType === 'set_destination') {
       action_config = { inbound_ticket_defaults_id: destinationDefaultsId };
     } else if (actionType === 'ai_classify') {
@@ -278,6 +281,10 @@ export function InboundEmailRuleForm({ rule, onSuccess, onCancel }: InboundEmail
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
+    if (actionType === 'extract_assign_client' && matchTargets.length === 0) {
+      setError(t('inboundRules.form.matchTargetRequired', { defaultValue: 'Select at least one match target.' }));
+      return;
+    }
     setSaving(true);
     try {
       const payload = buildRulePayload();
@@ -330,6 +337,7 @@ export function InboundEmailRuleForm({ rule, onSuccess, onCancel }: InboundEmail
   const showAliasQuickAdd = Boolean(
     testTrace &&
       testTrace.conditionsMatched &&
+      matchTargets.includes('client_name') &&
       typeof testTrace.extractedValue === 'string' &&
       testTrace.extractedValue.trim() &&
       !testTrace.clientMatch
@@ -616,7 +624,7 @@ export function InboundEmailRuleForm({ rule, onSuccess, onCancel }: InboundEmail
             {extractionType === 'regex' && (
               <div>
                 <Label htmlFor="rule-extraction-pattern">
-                  {t('inboundRules.form.pattern', { defaultValue: 'Pattern (capture group 1 is the client name)' })}
+                  {t('inboundRules.form.pattern', { defaultValue: 'Pattern (capture group 1 is the value to match)' })}
                 </Label>
                 <Input
                   id="rule-extraction-pattern"
@@ -627,12 +635,29 @@ export function InboundEmailRuleForm({ rule, onSuccess, onCancel }: InboundEmail
                 />
               </div>
             )}
-            <p className="text-xs text-muted-foreground">
-              {t('inboundRules.form.matchHint', {
-                defaultValue:
-                  'The extracted text is matched against client names and client aliases (case-insensitive).',
-              })}
-            </p>
+            <div>
+              <Label>{t('inboundRules.form.matchTargets', { defaultValue: 'Match extracted value against' })}</Label>
+              <div className="mt-2 flex flex-wrap gap-4">
+                {([
+                  ['client_name', t('inboundRules.form.matchClientName', { defaultValue: 'Client name or alias' })],
+                  ['contact_email', t('inboundRules.form.matchContactEmail', { defaultValue: 'Contact email' })],
+                  ['asset_name', t('inboundRules.form.matchAssetName', { defaultValue: 'Device (asset) name' })],
+                ] as Array<[MatchTarget, string]>).map(([target, label]) => (
+                  <label key={target} className="flex items-center gap-2 text-sm">
+                    <Checkbox id={`rule-match-${target}`} checked={matchTargets.includes(target)} onChange={(event) => {
+                      const checked = (event.target as HTMLInputElement).checked;
+                      setMatchTargets((current) => checked
+                        ? [...current, target]
+                        : current.length > 1 ? current.filter((item) => item !== target) : current);
+                    }} />
+                    {label}
+                  </label>
+                ))}
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {t('inboundRules.form.matchHint', { defaultValue: 'The extracted value is checked against the selected targets. Contact email matching accepts an address in display-name format.' })}
+              </p>
+            </div>
           </div>
         )}
 
@@ -823,7 +848,11 @@ export function InboundEmailRuleForm({ rule, onSuccess, onCancel }: InboundEmail
                         source:
                           testTrace.clientMatch.matchedBy === 'alias'
                             ? t('inboundRules.tester.alias', { defaultValue: 'alias' })
-                            : t('inboundRules.tester.clientName', { defaultValue: 'client name' }),
+                            : testTrace.clientMatch.matchedBy === 'contact_email'
+                              ? t('inboundRules.tester.contactEmail', { defaultValue: 'contact email' })
+                              : testTrace.clientMatch.matchedBy === 'asset_name'
+                                ? t('inboundRules.tester.deviceName', { defaultValue: 'device name' })
+                                : t('inboundRules.tester.clientName', { defaultValue: 'client name' }),
                       })}
                     </Badge>
                   ) : (
@@ -833,6 +862,17 @@ export function InboundEmailRuleForm({ rule, onSuccess, onCancel }: InboundEmail
                   )}
                 </div>
               )}
+              {(testTrace.clientMatchAmbiguity ?? []).map((item: any, index: number) => (
+                <Alert key={`${item.target}-${index}`}>
+                  <AlertDescription>{t('inboundRules.tester.ambiguous', {
+                    defaultValue: '{{target}} matches at {{count}} clients — not assigned',
+                    target: item.target === 'asset_name'
+                      ? t('inboundRules.tester.deviceName', { defaultValue: 'Device name' })
+                      : t('inboundRules.tester.contactEmail', { defaultValue: 'Contact email' }),
+                    count: item.clientCount,
+                  })}</AlertDescription>
+                </Alert>
+              ))}
               <p className="font-medium">{describeOutcome(testOutcome)}</p>
 
               {showAliasQuickAdd && (

@@ -110,7 +110,9 @@
       "hiding": "Nascondimento...",
       "hide": "Nascondi",
       "dismiss": "Nascondi {{title}}",
-      "restoring": "Ripristino..."
+      "restoring": "Ripristino...",
+      "hideSection": "Nascondi sezione",
+      "hidingSection": "Sezione in fase di occultamento…"
     },
     "hidden": {
       "title": "Schede di configurazione nascoste ({{count}})",
@@ -179,7 +181,14 @@
     },
     "errors": {
       "dismissFailed": "Impossibile nascondere il passaggio di onboarding.",
-      "restoreFailed": "Impossibile ripristinare il passaggio di onboarding."
+      "restoreFailed": "Impossibile ripristinare il passaggio di onboarding.",
+      "dismissSectionFailed": "Impossibile nascondere la sezione di configurazione.",
+      "restoreSectionFailed": "Impossibile ripristinare la sezione di configurazione."
+    },
+    "preferences": {
+      "title": "Preferenze della dashboard",
+      "description": "La sezione di configurazione completata è nascosta dalla dashboard.",
+      "restoreSection": "Ripristina la sezione di configurazione"
     }
   },
   "greeting": {

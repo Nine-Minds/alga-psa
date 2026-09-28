@@ -50,6 +50,7 @@ function corsPreflightResponse(origin: string | null): NextResponse {
 // =============================================================================
 const protectedPrefix = '/msp';
 const clientPortalPrefix = '/client-portal';
+const publicPagePaths = new Set(['/payment-methods/setup-complete']);
 
 export interface ClientPortalThemeRequestContext {
   isClientPortal: boolean;
@@ -140,6 +141,9 @@ const apiKeySkipPaths = [
   '/api/integrations/entra/',
   // AI chat endpoints are session-authenticated (MSP UI)
   '/api/chat/',
+  // Smart ticket search stream (MSP Tickets page): session-authenticated in-route
+  // via getCurrentUser + ticket:read, then streams SSE.
+  '/api/smart-search/',
   // AMP migration workspace uploads (MSP UI): session-authenticated in-route
   // via getCurrentUser + import_export permission checks.
   '/api/migrations/',
@@ -208,6 +212,9 @@ const exactApiKeySkipPaths = [
 
 export function shouldSkipApiKeyAuth(pathname: string): boolean {
   return pathname === '/api/ticket-comment-attachments/download' ||
+    // Client portal document handlers authenticate the portal session and run
+    // the shared tenant/client visibility resolver before serving content.
+    /^\/api\/client-portal\/documents\/[^/]+\/(?:file|export)$/.test(pathname) ||
     exactApiKeySkipPaths.includes(pathname) ||
     apiKeySkipPaths.some((path) => pathname.startsWith(path)) ||
     (pathname.startsWith('/api/tickets/') && pathname.endsWith('/live-token')) ||
@@ -424,6 +431,11 @@ const _middleware = auth((request) => {
 
   // Skip auth pages to prevent redirect loops
   const isAuthPage = pathname.startsWith('/auth/');
+
+  // Public Stripe Checkout return page verifies its opaque session context itself.
+  if (publicPagePaths.has(pathname)) {
+    return applyCorsHeaders(response, origin);
+  }
 
   // Redirect vanity domains to canonical for client portal signin (before auth check)
   if (pathname === '/auth/client-portal/signin') {

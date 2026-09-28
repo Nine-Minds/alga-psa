@@ -17,8 +17,9 @@ import {
   hasMspPermission,
   isClientPortalUser,
 } from '../lib/authHelpers';
-import { getClientLogoUrlAsync, getClientLogoUrlsBatchAsync } from '../lib/documentsHelpers';
-import { uploadEntityImage, deleteEntityImage } from '@alga-psa/storage';
+import { getClientLogoUrlAsync, getClientLogoUrlsBatchAsync, getClientWideLogoUrlAsync } from '../lib/documentsHelpers';
+import { uploadEntityImage, deleteEntityImage, recropEntityLogo, parseLogoCrop } from '@alga-psa/storage';
+import type { LogoCropRect } from '@alga-psa/storage';
 import { Knex } from 'knex';
 import { createTag, findTagsByEntityId } from '@alga-psa/tags/actions/tagActions';
 import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
@@ -41,10 +42,12 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { applyClientListIndexedSearchFilter } from '../lib/listSearchSql';
+import { CLIENT_SINCE_FORMAT_MESSAGE, toClientSinceDate, withClientSinceDateString } from '../lib/clientSince';
 import { normalizeClientType } from '../lib/normalizeClientType';
 import { clientCoreFieldsSchema, normalizePhone, parseSubmittedFields } from '@alga-psa/validation';
 import { isStructuralFailure, type StructuralResult } from '../lib/structuralResult';
 import { resolveTenantDefaultCountry } from '@alga-psa/tenancy/lib/tenantDefaultCountry';
+import { mergeClientWebsiteUpdate } from '../lib/clientWebsiteUpdate';
 
 const CLIENT_PORTAL_MUTABLE_CLIENT_PROPERTIES = new Set([
   'website',
@@ -324,41 +327,18 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
       }
       permittedUpdateData = structural.data;
 
-      // Handle properties separately
-      if (permittedUpdateData.properties) {
-        const currentProperties = currentClient.properties || {};
-        const newProperties = permittedUpdateData.properties;
-
-        updateObject.properties = { ...currentProperties, ...newProperties };
-
-        // Sync website field with url if website is being updated
-        if ('website' in newProperties) {
-          updateObject.url = newProperties.website || '';
-        }
-      }
-
-      // Handle url field to sync with properties.website
-      if (permittedUpdateData.url !== undefined) {
-        updateObject.url = permittedUpdateData.url;
-
-        // Update properties.website to match url
-        if (!updateObject.properties) {
-          updateObject.properties = {
-            ...(currentClient.properties || {}),
-            website: permittedUpdateData.url
-          };
-        } else {
-          updateObject.properties = {
-            ...updateObject.properties,
-            website: permittedUpdateData.url
-          };
-        }
-      }
+      // Preserve partial property updates and only synchronize website copies
+      // when url or properties.website was explicitly provided.
+      Object.assign(updateObject, mergeClientWebsiteUpdate(
+        currentClient.url,
+        currentClient.properties,
+        permittedUpdateData
+      ));
 
       // Handle all other fields
       Object.entries(permittedUpdateData).forEach(([key, value]) => {
         // Exclude properties, url, tax_region, account_manager_id, logoUrl (computed field), location fields, and partition keys (tenant, client_id)
-        const excludedFields = ['properties', 'url', 'tax_region', 'account_manager_id', 'logoUrl', 'tenant', 'client_id', 'phone', 'email', 'address', 'location_email', 'location_phone', 'location_address', 'address_line1', 'address_line2', 'city', 'state_province', 'postal_code', 'country_name'];
+        const excludedFields = ['properties', 'url', 'tax_region', 'account_manager_id', 'logoUrl', 'logoWideUrl', 'tenant', 'client_id', 'phone', 'email', 'address', 'location_email', 'location_phone', 'location_address', 'address_line1', 'address_line2', 'city', 'state_province', 'postal_code', 'country_name'];
         if (!excludedFields.includes(key)) {
           // Always include the field in the update, setting null for undefined/empty values
           updateObject[key] = (value === undefined || value === '') ? null : value;
@@ -375,6 +355,17 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
 
       if (permittedUpdateData.hasOwnProperty('account_manager_id')) {
           updateObject.account_manager_id = permittedUpdateData.account_manager_id === '' ? null : permittedUpdateData.account_manager_id;
+      }
+
+      // client_since is a DATE. Forms round-trip whatever the driver handed
+      // them — including a local-midnight Date — and sending that back would
+      // let the database session timezone cast it to the previous day.
+      if (permittedUpdateData.hasOwnProperty('client_since')) {
+        const clientSince = toClientSinceDate(permittedUpdateData.client_since);
+        if (clientSince === undefined) {
+          throw new ClientStructuralError(`${CLIENT_SINCE_FORMAT_MESSAGE}.`);
+        }
+        updateObject.client_since = clientSince;
       }
 
       console.log('Final updateObject being sent to database:', JSON.stringify(updateObject, null, 2));
@@ -399,9 +390,16 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
 
     // Email suffix functionality removed for security
 
-    // Add logoUrl to the updated client data
-    const logoUrl = await getClientLogoUrlAsync(clientId, tenant);
-    const updatedClientWithLogo = { ...updateResult.after, logoUrl } as IClientWithLocation;
+    // Add logo URLs to the updated client data
+    const [logoUrl, logoWideUrl] = await Promise.all([
+      getClientLogoUrlAsync(clientId, tenant),
+      getClientWideLogoUrlAsync(clientId, tenant),
+    ]);
+    const updatedClientWithLogo = withClientSinceDateString({
+      ...updateResult.after,
+      logoUrl,
+      logoWideUrl,
+    }) as IClientWithLocation;
 
     const occurredAt = updateResult.occurredAt ?? updatedClientWithLogo.updated_at ?? new Date().toISOString();
     const actor = maybeUserActor(user);
@@ -637,7 +635,7 @@ export const createClient = withAuth(async (user, { tenant }, client: Omit<IClie
       idempotencyKey: `client_created:${createdClient.client_id}`,
     });
 
-    return { success: true, data: createdClient };
+    return { success: true, data: withClientSinceDateString(createdClient) };
   } catch (error: any) {
     console.error('Error creating client:', error);
 
@@ -728,6 +726,8 @@ function buildDefaultClientLocationSubquery(trx: Knex.Transaction, tenant: strin
       'tenant',
       'client_id',
       'phone',
+      'phone_extension',
+      'country_code',
       'email',
       'address_line1',
       'address_line2',
@@ -834,6 +834,8 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
           'tc.is_default',
           trx.raw(`CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN CONCAT(u.first_name, ' ', u.last_name) ELSE NULL END as account_manager_full_name`),
           'cl.phone as location_phone',
+          'cl.phone_extension as location_phone_extension',
+          'cl.country_code as location_country_code',
           'cl.email as location_email',
           'cl.address_line1',
           'cl.address_line2',
@@ -1015,6 +1017,8 @@ export const getClientsWithBillingCycleRangePaginated = withAuth(async (
           'tc.is_default',
           trx.raw(`CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN CONCAT(u.first_name, ' ', u.last_name) ELSE NULL END as account_manager_full_name`),
           'cl.phone as location_phone',
+          'cl.phone_extension as location_phone_extension',
+          'cl.country_code as location_country_code',
           'cl.email as location_email',
           'cl.address_line1',
           'cl.address_line2',
@@ -1434,6 +1438,7 @@ export const exportClientsToCSV = withAuth(async (user, { tenant }, clients: ICl
         client_type: client.client_type || 'company',
         is_inactive: client.is_inactive ? 'true' : 'false',
         notes: client.notes || '',
+        client_since: toClientSinceDate(client.client_since) || '',
         tags: tagNames,
         // Location fields
         location_name: location.location_name || '',
@@ -1455,6 +1460,7 @@ export const exportClientsToCSV = withAuth(async (user, { tenant }, clients: ICl
     'client_type',
     'is_inactive',
     'notes',
+    'client_since',
     'tags',
     'location_name',
     'email',
@@ -1479,6 +1485,7 @@ export async function generateClientCSVTemplate(): Promise<string> {
       client_type: 'company',
       is_inactive: 'false',
       notes: 'Specializes in unbirthday party supplies and premium tea blends',
+      client_since: '2015-06-01',
       tags: 'Tea, Party Planning, Whimsical',
       location_name: 'The Tea Party Table',
       email: 'hatter@teaparty.wonderland',
@@ -1499,6 +1506,7 @@ export async function generateClientCSVTemplate(): Promise<string> {
     'client_type',
     'is_inactive',
     'notes',
+    'client_since',
     'tags',
     'location_name',
     'email',
@@ -1769,6 +1777,14 @@ export const importClientsFromCSV = withAuth(async (
         clientData.phone_number = normalizedRow.phone_no;
       }
 
+      // Bulk migration is how tenure actually arrives, so a date the source
+      // exported in another shape fails this row by itself rather than landing
+      // in the column as garbage or vanishing silently.
+      const clientSince = toClientSinceDate(clientData.client_since);
+      if (clientSince === undefined) {
+        throw new Error(CLIENT_SINCE_FORMAT_MESSAGE);
+      }
+
       let savedClient: IClient | undefined;
       let created = false;
       let skipped = false;
@@ -1812,6 +1828,11 @@ export const importClientsFromCSV = withAuth(async (
           }
           if (clientData.account_manager_id !== undefined) {
             updateData.account_manager_id = clientData.account_manager_id === '' ? null : clientData.account_manager_id;
+          }
+          // Mapped-but-empty clears the date back to the created_at fallback;
+          // an unmapped column leaves whatever is already stored alone.
+          if (clientData.client_since !== undefined) {
+            updateData.client_since = clientSince;
           }
 
           [savedClient] = await tenantScopedTable(trx, 'clients', tenant)
@@ -1882,6 +1903,7 @@ export const importClientsFromCSV = withAuth(async (
             tax_id_number: clientData.tax_id_number || '',
             tax_exemption_certificate: clientData.tax_exemption_certificate || '',
             notes: clientData.notes || '',
+            client_since: clientSince,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           };
@@ -1964,12 +1986,22 @@ export const importClientsFromCSV = withAuth(async (
   return results;
 });
 
+// Paths that render a client logo somewhere; refreshed after every logo change.
+const revalidateClientLogoPaths = (clientId: string) => {
+  revalidatePath(`/client-portal/client-settings`);
+  revalidatePath(`/clients/${clientId}`);
+  revalidatePath(`/msp/clients/${clientId}`);
+  revalidatePath(`/msp/clients`);
+  revalidatePath(`/settings/general`);
+  revalidatePath('/'); // Main dashboard that might show client info
+};
+
 export const uploadClientLogo = withAuth(async (
   user,
   { tenant },
   clientId: string,
   formData: FormData
-): Promise<{ success: boolean; message?: string; logoUrl?: string | null }> => {
+): Promise<{ success: boolean; message?: string; imageUrl?: string | null; wideImageUrl?: string | null }> => {
   const file = formData.get('logo') as File;
   if (!file) {
     return { success: false, message: 'No logo file provided' };
@@ -1979,7 +2011,16 @@ export const uploadClientLogo = withAuth(async (
     return { success: false, message: 'Permission denied: Cannot update client logo' };
   }
 
+  let crop: LogoCropRect | null;
   try {
+    crop = parseLogoCrop(formData.get('crop'));
+  } catch (error) {
+    return { success: false, message: error instanceof Error ? error.message : 'Invalid logo crop' };
+  }
+
+  try {
+    // A wordmark arrives with the square zone to show in avatars; the full
+    // image is kept as the 'wide' variant for the client page and invoices.
     const result = await uploadEntityImage(
       'client',
       clientId,
@@ -1987,26 +2028,66 @@ export const uploadClientLogo = withAuth(async (
       user.user_id,
       tenant,
       undefined,
-      true
+      true,
+      'default',
+      { crop: crop ?? undefined, sourceVariant: 'wide' }
     );
 
     if (!result.success) {
       return { success: false, message: result.message };
     }
 
-    // Invalidate cache for relevant paths - be more comprehensive
-    revalidatePath(`/client-portal/client-settings`);
-    revalidatePath(`/clients/${clientId}`);
-    revalidatePath(`/msp/clients/${clientId}`);
-    revalidatePath(`/msp/clients`);
-    revalidatePath(`/settings/general`);
-    revalidatePath('/'); // Main dashboard that might show client info
+    revalidateClientLogoPaths(clientId);
 
     console.log(`[uploadClientLogo] Upload process finished successfully for client ${clientId}. Returning URL: ${result.imageUrl}`);
-    return { success: true, logoUrl: result.imageUrl };
+    return { success: true, imageUrl: result.imageUrl, wideImageUrl: result.sourceImageUrl ?? null };
   } catch (error) {
     console.error('[uploadClientLogo] Error during upload process:', error);
     const message = await clientActionMessageFrom(error, 'Failed to upload client logo');
+    return { success: false, message };
+  }
+});
+
+/**
+ * Cuts a new square mark from the stored wide logo, so the zone shown in
+ * avatars can be adjusted without uploading the file again.
+ */
+export const recropClientLogo = withAuth(async (
+  user,
+  { tenant },
+  clientId: string,
+  crop: LogoCropRect
+): Promise<{ success: boolean; message?: string; imageUrl?: string | null }> => {
+  if (!await hasMspOrClientPortalOwnClientPermission(user, tenant, clientId, 'client', 'update')) {
+    return { success: false, message: 'Permission denied: Cannot update client logo' };
+  }
+
+  let validCrop: LogoCropRect | null;
+  try {
+    validCrop = parseLogoCrop(crop);
+  } catch (error) {
+    return { success: false, message: error instanceof Error ? error.message : 'Invalid logo crop' };
+  }
+  if (!validCrop) {
+    return { success: false, message: 'No crop provided' };
+  }
+
+  try {
+    const result = await recropEntityLogo('client', clientId, user.user_id, tenant, {
+      sourceVariant: 'wide',
+      targetVariant: 'default',
+      crop: validCrop,
+    });
+
+    if (!result.success) {
+      return { success: false, message: result.message };
+    }
+
+    revalidateClientLogoPaths(clientId);
+    return { success: true, imageUrl: result.imageUrl };
+  } catch (error) {
+    console.error('[recropClientLogo] Error during recrop:', error);
+    const message = await clientActionMessageFrom(error, 'Failed to update client logo');
     return { success: false, message };
   }
 });
@@ -2022,25 +2103,20 @@ export const deleteClientLogo = withAuth(async (
 
   try {
     console.log(`[deleteClientLogo] Starting deletion process for client ${clientId}, tenant: ${tenant}`);
-    const result = await deleteEntityImage(
-      'client',
-      clientId,
-      user.user_id,
-      tenant
-    );
+    // The mark and the wordmark it was cut from go together.
+    const result = await deleteEntityImage('client', clientId, user.user_id, tenant);
     console.log(`[deleteClientLogo] deleteEntityImage result:`, result);
 
     if (!result.success) {
       return { success: false, message: result.message };
     }
 
-    // Invalidate cache for relevant paths - be more comprehensive
-    revalidatePath(`/client-portal/client-settings`);
-    revalidatePath(`/clients/${clientId}`);
-    revalidatePath(`/msp/clients/${clientId}`);
-    revalidatePath(`/msp/clients`);
-    revalidatePath(`/settings/general`);
-    revalidatePath('/'); // Main dashboard that might show client info
+    const wideResult = await deleteEntityImage('client', clientId, user.user_id, tenant, undefined, 'wide');
+    if (!wideResult.success) {
+      return { success: false, message: wideResult.message };
+    }
+
+    revalidateClientLogoPaths(clientId);
 
     console.log(`[deleteClientLogo] Deletion process finished successfully for client ${clientId}.`);
     return { success: true };

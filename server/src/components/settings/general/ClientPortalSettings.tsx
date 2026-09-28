@@ -30,7 +30,8 @@ import { Input } from '@alga-psa/ui/components/Input';
 import EntityImageUpload from '@alga-psa/ui/components/EntityImageUpload';
 import ColorPicker from '@alga-psa/ui/components/ColorPicker';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
-import { deleteTenantLogo, uploadTenantLogo } from '@alga-psa/tenancy/actions/tenant-actions/tenantLogoActions';
+import { deleteTenantLogo, recropTenantLogo, uploadTenantLogo } from '@alga-psa/tenancy/actions/tenant-actions/tenantLogoActions';
+import type { LogoCropRect } from '@alga-psa/types';
 import { getCurrentUser } from '@alga-psa/user-composition/actions/userQueryActions';
 import { getTenantThemeAction } from '@alga-psa/tenancy/actions/tenant-actions/tenantThemeActions';
 import { customThemePresetFor, type CustomThemeTokens } from '@alga-psa/tenancy/lib/customTheme';
@@ -386,6 +387,21 @@ const ClientPortalSettings = () => {
       return result;
     };
 
+  // Re-cuts a square mark from the matching wide logo (light from wide, dark from wide-dark).
+  const handleLogoRecrop = (variant: EntityLogoVariant) =>
+    async (entityId: string, crop: LogoCropRect) => {
+      const result = await recropTenantLogo(entityId, variant, crop);
+      if (result.success) {
+        await refreshBranding();
+      }
+      return result;
+    };
+
+  const markCropHelp = t('clientPortal.branding.cropHelp', {
+    defaultValue:
+      'Drag and zoom to choose the part shown in the portal side panel and every circular frame. Your wide logo is not changed.',
+  });
+
   const squareWarning = t('clientPortal.branding.warnings.expectSquare', {
     defaultValue:
       'That image is much wider than it is tall. This slot fills square spaces — the wide logo slot is probably the one you want.',
@@ -568,8 +584,12 @@ const ClientPortalSettings = () => {
                     entityId={tenantId}
                     entityName={clientName || 'Client Portal'}
                     imageUrl={logoUrl}
+                    wideImageUrl={logoWideUrl || null}
                     uploadAction={handleLogoUpload('default')}
                     deleteAction={handleLogoDelete('default')}
+                    recropAction={handleLogoRecrop('default')}
+                    cropWideToSquare
+                    cropHelpText={markCropHelp}
                     onImageChange={(newLogoUrl) => {
                       setLogoUrl(newLogoUrl || '');
                     }}
@@ -595,8 +615,12 @@ const ClientPortalSettings = () => {
                     entityId={tenantId}
                     entityName={clientName || 'Client Portal'}
                     imageUrl={logoDarkUrl}
+                    wideImageUrl={logoWideDarkUrl || null}
                     uploadAction={handleLogoUpload('dark')}
                     deleteAction={handleLogoDelete('dark')}
+                    recropAction={handleLogoRecrop('dark')}
+                    cropWideToSquare
+                    cropHelpText={markCropHelp}
                     onImageChange={(newLogoUrl) => {
                       setLogoDarkUrl(newLogoUrl || '');
                     }}

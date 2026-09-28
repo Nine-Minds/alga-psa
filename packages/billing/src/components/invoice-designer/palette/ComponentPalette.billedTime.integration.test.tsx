@@ -5,9 +5,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DesignerShell } from '../DesignerShell';
 // Keep the real palette and insertion handler; canvas drawing is checked through
 // its resolver below and the live browser/PDF acceptance.
-const releaseFlag = vi.hoisted(() => ({ enabled: true }));
 vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
-  useFeatureFlag: () => ({ enabled: releaseFlag.enabled, loading: false, error: null }),
+  useFeatureFlag: () => ({ enabled: true, loading: false, error: null }),
 }));
 
 vi.mock('../canvas/DesignCanvas', () => ({ DesignCanvas: () => <div /> }));
@@ -21,7 +20,7 @@ import { renderEvaluatedTemplateAst } from '../../../lib/invoice-template-ast/re
 import { resolveCanvasCollection, resolveCanvasRowScope } from '../preview/previewBindings';
 import { resolveCollectionDescriptor } from '../../../lib/invoice-template-ast/collectionDescriptors';
 
-afterEach(() => { releaseFlag.enabled = true; cleanup(); useInvoiceDesignerStore.getState().resetWorkspace(); });
+afterEach(() => { cleanup(); useInvoiceDesignerStore.getState().resetWorkspace(); });
 
 describe('visual billed-time detail presets', () => {
   it.each([false, true])('creates editable supporting detail from a clean layout (grouped: %s)', async (grouped) => {
@@ -50,14 +49,3 @@ describe('visual billed-time detail presets', () => {
   });
 });
 
-it('hides billed-time presets with the release flag off while preserving the saved layout', () => {
-  const original = getStandardTemplateAstByCode('standard-invoice-by-ticket')!;
-  act(() => useInvoiceDesignerStore.getState().loadWorkspace(importTemplateAstToWorkspace(original)));
-  const before = useInvoiceDesignerStore.getState().exportWorkspace();
-  releaseFlag.enabled = false;
-  render(<DesignerShell />);
-  fireEvent.click(screen.getByRole('button', { name: 'PRESETS' }));
-  expect(screen.queryByRole('button', { name: 'Add Billed-time detail by ticket' })).toBeNull();
-  expect(screen.queryByRole('button', { name: 'Add Billed-time entry detail' })).toBeNull();
-  expect(useInvoiceDesignerStore.getState().exportWorkspace()).toEqual(before);
-});

@@ -82,10 +82,30 @@ import {
   MapPin,
   CircleDot,
 } from 'lucide-react';
+import { useListViews } from '@alga-psa/list-views/hooks';
+import { ListViewPicker } from '@alga-psa/list-views/components';
+import {
+  assetColumnsFromView,
+  assetColumnsToView,
+  createAssetListViewAdapter,
+  type AssetListLiveState,
+} from '../lib/assetListViewAdapter';
 
 interface AssetDashboardClientProps {
   initialAssets: AssetListResponse;
 }
+
+/** The column chooser's starting selection, in display order. */
+const DEFAULT_VISIBLE_ASSET_COLUMNS = [
+  'select',
+  'name',
+  'agent',
+  'patching',
+  'coverage',
+  'client_name',
+  'location',
+  'actions',
+] as const satisfies readonly ColumnKey[];
 
 type ColumnKey =
   | 'select'
@@ -165,16 +185,8 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
   const [clientsLoading, setClientsLoading] = useState(false);
   const [agentStatusFilters, setAgentStatusFilters] = useState<string[]>([]);
   const [rmmManagedFilter, setRmmManagedFilter] = useState<string[]>([]);
-  const [visibleColumnIds, setVisibleColumnIds] = useState<ColumnKey[]>([
-    'select',
-    'name',
-    'agent',
-    'patching',
-    'coverage',
-    'client_name',
-    'location',
-    'actions'
-  ]);
+  const [visibleColumnIds, setVisibleColumnIds] = useState<ColumnKey[]>(() => [...DEFAULT_VISIBLE_ASSET_COLUMNS]);
+  const [columnSizing, setColumnSizing] = useState<Record<string, number> | undefined>(undefined);
   const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([]);
   const [isBulkStatusOpen, setIsBulkStatusOpen] = useState(false);
   const [isBulkLocationOpen, setIsBulkLocationOpen] = useState(false);
@@ -1110,6 +1122,68 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     return visibleColumnIds.map((key) => columnLibrary[key]);
   }, [visibleColumnIds, columnLibrary]);
 
+  // ── Named list views ──────────────────────────────────────────────────────
+  const allColumnIds = useMemo(() => Object.keys(columnLibrary) as ColumnKey[], [columnLibrary]);
+
+  const listViewLive = useMemo<AssetListLiveState>(() => ({
+    filters: {
+      statuses: statusFilters,
+      types: typeFilters,
+      clientIds: clientFilters,
+      agentStatuses: agentStatusFilters,
+      rmmManaged: rmmManagedFilter,
+    },
+    sort: { by: sortBy, direction: sortDirection },
+    pageSize,
+    columnSizing,
+    ...assetColumnsToView(visibleColumnIds, allColumnIds),
+  }), [
+    statusFilters,
+    typeFilters,
+    clientFilters,
+    agentStatusFilters,
+    rmmManagedFilter,
+    sortBy,
+    sortDirection,
+    pageSize,
+    columnSizing,
+    visibleColumnIds,
+    allColumnIds,
+  ]);
+
+  const assetListViewAdapter = useMemo(() => createAssetListViewAdapter({
+    defaultPageSize: 10,
+    defaultColumns: assetColumnsToView(DEFAULT_VISIBLE_ASSET_COLUMNS, allColumnIds),
+    knownClientIds: clients.length > 0 ? new Set(clients.map((client) => client.client_id)) : undefined,
+  }), [allColumnIds, clients]);
+
+  const handleListViewApply = useCallback((next: AssetListLiveState) => {
+    // A view replaces the whole filter set; search text is not part of it.
+    setSearchTerm('');
+    setStatusFilters(next.filters.statuses ?? []);
+    setTypeFilters(next.filters.types ?? []);
+    setClientFilters(next.filters.clientIds ?? []);
+    setAgentStatusFilters(next.filters.agentStatuses ?? []);
+    setRmmManagedFilter(next.filters.rmmManaged ?? []);
+    setSortBy(next.sort.by);
+    setSortDirection(next.sort.direction);
+    setPageSize(next.pageSize);
+    setCurrentPage(1);
+    setColumnSizing(next.columnSizing);
+    setVisibleColumnIds(assetColumnsFromView(
+      next.columnVisibility,
+      next.columnOrder,
+      allColumnIds,
+      DEFAULT_VISIBLE_ASSET_COLUMNS,
+    ));
+  }, [allColumnIds]);
+
+  const listViews = useListViews({
+    adapter: assetListViewAdapter,
+    live: listViewLive,
+    onApply: handleListViewApply,
+  });
+
   const printColumns = useMemo(() => (
     createPrintColumnsFromColumnDefinitions(Object.values(columnLibrary), {
       excludeColumnKeys: ['select', 'actions'],
@@ -1222,6 +1296,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                   >
                   {t('assetDashboardClient.filters.reset', { defaultValue: 'Reset' })}
                   </Button>
+                  <ListViewPicker id="assets-view-picker" controller={listViews} />
                 </div>
               <div className="flex flex-wrap items-center gap-2">
                 <DropdownMenu>
@@ -1528,6 +1603,8 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                 sortBy={sortBy}
                 sortDirection={sortDirection}
                 onSortChange={handleTableSortChange}
+                columnSizing={columnSizing}
+                onColumnSizingChange={setColumnSizing}
               />
             </ShortcutActiveRegion>
             <div className="app-print-root app-print-only">

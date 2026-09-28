@@ -47,6 +47,8 @@ import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { TFunction } from 'i18next';
 import { ServiceRequestCard } from '../../client-portal/request-services/ServiceRequestCard';
 import { ServiceRequestIconPicker } from './ServiceRequestIconPicker';
+import { AnswerMappingSection } from './AnswerMappingSection';
+import { SubmissionMappingPanel } from './SubmissionMappingPanel';
 import { SERVICE_REQUEST_ICON_OPTIONS } from '../../../lib/service-requests/iconCatalog';
 import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
@@ -1883,6 +1885,16 @@ export default function ServiceRequestDefinitionEditorPage() {
         <FieldRow label={t('editor.execution.fields.visibilityProvider')} value={data.execution.visibilityProvider} />
       </Card>
 
+      <AnswerMappingSection
+        definitionId={data.definitionId}
+        questions={getSchemaFields(data.form.schema).map((field) => ({
+          key: field.key,
+          label: field.label || field.key,
+        }))}
+        t={t}
+        formatDate={formatDate}
+      />
+
       <Card id="service-request-editor-publish" className="p-4 space-y-3">
         <h2 className="text-lg font-semibold">{t('editor.publishSection.title')}</h2>
         <FieldRow label={t('editor.publishSection.currentDraftState')} value={draftLifecycleLabel ?? '-'} />
@@ -2003,6 +2015,24 @@ export default function ServiceRequestDefinitionEditorPage() {
             <FieldRow
               label={t('editor.submissions.executionError')}
               value={selectedSubmissionDetail.execution_error_summary ?? '-'}
+            />
+            <SubmissionMappingPanel
+              definitionId={definitionId}
+              submissionId={selectedSubmissionDetail.submission_id}
+              questionLabel={(key) => {
+                if (!key) return t('editor.submissions.mapping.emptyValue');
+                const field = getSchemaFields(data.form.schema).find((candidate) => candidate.key === key);
+                return field?.label || t('editor.answerMapping.unknownQuestion', { key });
+              }}
+              t={t}
+              formatDate={formatDate}
+              onApplied={async () => {
+                const detail = await getServiceRequestDefinitionSubmissionDetailAction(
+                  definitionId,
+                  selectedSubmissionDetail.submission_id
+                );
+                setSelectedSubmissionDetail(detail as DefinitionSubmissionDetail | null);
+              }}
             />
             <div className="pt-2">
               <div className="text-sm font-semibold">{t('editor.submissions.historyTitle')}</div>

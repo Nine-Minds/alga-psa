@@ -171,6 +171,11 @@ const ACTIVE_PERMISSIONS = [
 
   { resource: 'job', action: 'delete', msp: true, client: false, description: 'Clear job monitoring history', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },
 
+  // Named list views. Owners always manage their own views; these gate
+  // publishing to everyone and administering other users' shared views.
+  { resource: 'list_view', action: 'manage', msp: true, client: false, description: "Edit or delete other users' shared list views", products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
+  { resource: 'list_view', action: 'share', msp: true, client: false, description: 'Publish list views shared with every user of the list', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin', 'msp:Dispatcher', 'msp:Manager'] } },
+
   { resource: 'marketing', action: 'manage', msp: true, client: false, description: 'Manage marketing campaigns, content, posts, sequences, and forms', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
   { resource: 'marketing', action: 'read', msp: true, client: false, description: 'View marketing campaigns, content, posts, and sequences', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
 

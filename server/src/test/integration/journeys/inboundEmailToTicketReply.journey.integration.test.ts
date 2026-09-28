@@ -519,12 +519,24 @@ describe('journey: inbound email → ticket → threaded reply → agent reply o
     // Threaded under the agent's outbound comment, via the send log's thread linkage.
     expect(thirdComment.parent_comment_id).toBe(agentCommentId);
 
-    // Through-line invariant: one conversation, one ticket, four comments.
+    // Through-line invariant: four conversation comments and one internal
+    // source-archive failure per inbound email (this fixture has no Google credentials).
     const finalTickets = await tenantTable(db, tenantId, 'tickets')
       .where({ tenant: tenantId, client_id: clientId });
     expect(finalTickets).toHaveLength(1);
     const finalComments = await tenantTable(db, tenantId, 'comments')
       .where({ tenant: tenantId, ticket_id: ticketId });
-    expect(finalComments).toHaveLength(4);
+    expect(finalComments).toHaveLength(7);
+    expect(finalComments.filter(comment => !comment.is_internal)).toHaveLength(4);
+    const trails = finalComments.filter(comment => comment.is_internal);
+    expect(trails).toHaveLength(3);
+    expect(new Set(trails.map(comment => comment.metadata.inboundAttachmentTrail.emailId)).size).toBe(3);
+    for (const trail of trails) {
+      expect(trail).toMatchObject({ is_system_generated: true, user_id: null, contact_id: null });
+      expect(trail.metadata.inboundAttachmentTrail.files).toEqual([expect.objectContaining({
+        contentType: 'message/rfc822', status: 'failed',
+        reason: `Google provider config not found for provider ${providerId}`,
+      })]);
+    }
   }, HOOK_TIMEOUT);
 });

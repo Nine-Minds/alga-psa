@@ -21,6 +21,16 @@ describe('TicketService ticket comments contact authorship contract', () => {
     expect(source).toContain('author_contact_id: comment.author_contact_id || comment.contact_id || null');
   });
 
+  it('names authors whose user row has partial or missing names instead of returning null', () => {
+    const source = readTicketServiceSource();
+
+    expect(source).toContain("scopedDb.tenantJoin(commentsQuery, 'contacts as uc', 'u.contact_id', 'uc.contact_name_id', { type: 'left' });");
+    expect(source).toContain("NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), '')");
+    expect(source).toContain("NULLIF(TRIM(uc.full_name), '')");
+    expect(source).toContain("NULLIF(TRIM(u.email), '')");
+    expect(source).toContain('created_by_name: comment.created_by_name || comment.author_contact_name || inboundSenderLabel(comment.metadata)');
+  });
+
   it('T034: contact-authored ticket comment payload parses without response validation errors', () => {
     const payload = {
       comment_id: '11111111-1111-1111-1111-111111111111',

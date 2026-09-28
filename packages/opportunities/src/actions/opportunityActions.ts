@@ -253,6 +253,12 @@ export const deleteOpportunity = withAuth(async (user, { tenant }, opportunityId
     await db.table('opportunity_suggestions').where({ created_opportunity_id: opportunityId }).update({ created_opportunity_id: null });
     await db.table('opportunity_qbr_triggers').where({ created_opportunity_id: opportunityId }).update({ created_opportunity_id: null });
 
+    // Drop only the link: the documents themselves are library rows that may
+    // be filed against the client or a quote as well.
+    await db.table('document_associations')
+      .where({ entity_type: 'opportunity', entity_id: opportunityId })
+      .delete();
+
     if (!await OpportunityModel.delete(trx, tenant, opportunityId)) throw new Error('Open opportunity not found');
   });
 });

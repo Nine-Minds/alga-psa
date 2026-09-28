@@ -6,7 +6,9 @@ export default {
   ...base,
   test: {
     ...base.test,
+    globalSetup: ['./src/test-utils/time-skipping-server.global-setup.ts'],
     include: [
+      'src/test-utils/time-skipping-server.test.ts',
       'src/__tests__/e2e/email-only.e2e.test.ts',
       'src/workflows/__tests__/production-index.engine.test.ts',
       'src/workflows/__tests__/email-definition.engine.test.ts',
@@ -19,6 +21,8 @@ export default {
       'src/workflows/__tests__/sla-ticket-workflow.test.ts',
       'src/workflows/__tests__/sla-ticket-workflow.integration.test.ts',
       'src/workflows/__tests__/managed-email-domain-workflow.test.ts',
+      'src/workflows/__tests__/invoice-autopay-workflow.test.ts',
+      'src/workflows/__tests__/autopay-reconcile-workflow.test.ts',
       'src/workflows/portal-domains/__tests__/registration.workflow.integration.test.ts',
     ],
     coverage: { provider: 'v8', enabled: false },

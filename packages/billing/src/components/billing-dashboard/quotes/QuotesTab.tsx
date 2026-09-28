@@ -11,6 +11,8 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import ClientNameCell from '@alga-psa/ui/components/ClientNameCell';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { buildSenderOptions, DEFAULT_SENDER_SELECTION, senderIdForSend } from '@alga-psa/email/senderSelection';
+import { listSelectableSenders } from '@alga-psa/email/senderActions';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -263,7 +265,7 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
             </div>
           )}
 
-          <DataTable
+          <DataTable id="quotes-table"
             key={tableKey}
             data={filteredQuotes}
             columns={columns}
@@ -310,6 +312,9 @@ const QuotesTab: React.FC = () => {
   const [isSending, setIsSending] = useState(false);
   const [sendAdditionalEmails, setSendAdditionalEmails] = useState('');
   const [sendMessage, setSendMessage] = useState('');
+  const [quoteSenders, setQuoteSenders] = useState<Array<{ sender_id: string; email_address: string }>>([]);
+  const [quoteEffectiveSenderAddress, setQuoteEffectiveSenderAddress] = useState('');
+  const [quoteSenderId, setQuoteSenderId] = useState(DEFAULT_SENDER_SELECTION);
   const selectedQuoteId = searchParams?.get('quoteId');
   const selectedMode = searchParams?.get('mode');
   const requestedSubtab = searchParams?.get('subtab');
@@ -327,9 +332,21 @@ const QuotesTab: React.FC = () => {
     void loadData();
   }, []);
 
-  const loadData = async () => {
+  useEffect(() => {
+    if (!sendDialogState.isOpen) return;
+    void listSelectableSenders({ mailClass: 'sales' }).then((result) => {
+      setQuoteSenders(result.senders);
+      setQuoteEffectiveSenderAddress(result.effectiveSenderAddress);
+      setQuoteSenderId(DEFAULT_SENDER_SELECTION);
+    }).catch((reason) => setError(reason instanceof Error ? reason.message : 'Could not load sender addresses.'));
+  }, [sendDialogState.isOpen]);
+
+  const loadData = async (options?: { background?: boolean }) => {
+    const isBackground = options?.background === true;
     try {
-      setIsLoading(true);
+      if (!isBackground) {
+        setIsLoading(true);
+      }
       const [quotesResult, templatesResult] = await Promise.all([
         listQuotes({ is_template: false, pageSize: 200 }),
         getQuoteDocumentTemplates(),
@@ -352,7 +369,9 @@ const QuotesTab: React.FC = () => {
           : t('quotesTab.errors.load', { defaultValue: 'Failed to load quotes' }),
       );
     } finally {
-      setIsLoading(false);
+      if (!isBackground) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -420,6 +439,7 @@ const QuotesTab: React.FC = () => {
       const result = await sendQuote(quoteId, {
         email_addresses: parsedEmails.length > 0 ? parsedEmails : undefined,
         message: sendMessage.trim() || undefined,
+        senderId: senderIdForSend(quoteSenderId),
       });
       if (isReturnedActionError(result)) {
         setError(getErrorMessage(result));
@@ -598,6 +618,7 @@ const QuotesTab: React.FC = () => {
             router.push(`/msp/billing?tab=quotes&quoteId=${savedQuoteId}&mode=edit`);
           }
         }}
+        onQuoteStatusChanged={() => loadData({ background: true })}
       />
     );
   }
@@ -739,6 +760,17 @@ const QuotesTab: React.FC = () => {
             })}
           </DialogDescription>
           <div className="space-y-3 py-2">
+            {quoteSenders.length > 1 && (
+              <div className="space-y-1">
+                <label htmlFor="send-quote-sender" className="text-sm font-medium">{t('quotesTab.dialogs.send.from', { defaultValue: 'From' })}</label>
+                <CustomSelect
+                  id="send-quote-sender"
+                  value={quoteSenderId}
+                  onValueChange={setQuoteSenderId}
+                  options={buildSenderOptions(quoteSenders, quoteEffectiveSenderAddress, t('quoteForm.dialogs.send.useDefault', { defaultValue: 'Use default' }))}
+                />
+              </div>
+            )}
             <label className="flex flex-col gap-1 text-sm font-medium">
               {t('quotesTab.dialogs.send.additionalRecipients', {
                 defaultValue: 'Additional recipients (comma-separated)',

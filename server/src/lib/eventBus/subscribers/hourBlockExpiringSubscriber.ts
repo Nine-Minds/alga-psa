@@ -161,6 +161,7 @@ async function handleHourBlockExpiringEvent(event: unknown): Promise<void> {
 
         for (const contact of contacts) {
           await notificationService.sendNotification({
+            mailClass: 'billing',
             tenant: tenantId,
             userId: contact.user_id,
             subtypeId: subtype.id,

@@ -1,5 +1,4 @@
 import { isBilledTimeCollection } from '../../utils/billedTimeUi';
-import { useFeatureFlag } from '@alga-psa/ui/hooks/useFeatureFlag';
 import { humanizeCollectionBindingLabel } from '../../../../lib/invoice-template-ast/collectionDescriptors';
 import React, { useCallback, useMemo } from 'react';
 import type { TFunction } from 'i18next';
@@ -84,7 +83,6 @@ const getUniqueStrings = (values: Array<string | undefined | null>): string[] =>
 
 export const TableEditorWidget: React.FC<Props> = ({ node }) => {
   const { t } = useTranslation('msp/invoicing');
-  const { enabled: releaseV16Enabled } = useFeatureFlag('release-v1-6-feature');
   const setNodeProp = useInvoiceDesignerStore((state) => state.setNodeProp);
   const unsetNodeProp = useInvoiceDesignerStore((state) => state.unsetNodeProp);
   const nodes = useInvoiceDesignerStore((state) => state.nodes);
@@ -198,7 +196,6 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
     }
 
     return options
-      .filter(option => releaseV16Enabled || option.value === sourceBindingId || !isBilledTimeCollection(option.value))
       .filter((option, index, array) => array.findIndex((candidate) => candidate.value === option.value) === index)
       .sort((left, right) => left.label.localeCompare(right.label));
   }, [
@@ -213,7 +210,6 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
     t,
     transforms,
     collectionAst,
-    releaseV16Enabled,
   ]);
 
   const bindingKeySuggestions = useMemo(() => {

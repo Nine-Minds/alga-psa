@@ -99,6 +99,18 @@ vi.mock('@alga-psa/workflows/runtime/core', () => ({
 }));
 
 vi.mock('@alga-psa/workflows/persistence', () => ({
+  listPublishedWorkflowDefinitions: async (knex: unknown, tenantId: string) => {
+    const workflows = (await workflowDefinitionListMock(knex, tenantId)) as any[];
+    const results = await Promise.all(
+      workflows
+        .filter((workflow) => workflow.status === 'published')
+        .map(async (workflow) => {
+          const [latestVersion] = (await workflowDefinitionVersionListByWorkflowMock(knex, workflow.workflow_id)) as any[];
+          return latestVersion ? { workflow, latestVersion, definition: latestVersion.definition_json ?? null } : null;
+        })
+    );
+    return results.filter((result) => result !== null);
+  },
   WorkflowDefinitionModelV2: {
     list: (...args: unknown[]) => workflowDefinitionListMock(...args)
   },

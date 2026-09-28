@@ -8,12 +8,11 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from '@alga-psa/user-composition/actions';
-import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
 import {
   PlatformReportAuditService,
   AuditEventType,
 } from '@ee/lib/platformReports';
+import { assertMasterTenantAccess } from '@ee/lib/auth/masterTenantAccess';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -21,49 +20,12 @@ export const dynamic = 'force-dynamic';
 const MASTER_BILLING_TENANT_ID = process.env.MASTER_BILLING_TENANT_ID;
 
 /**
- * Verify the caller has access to audit logs.
- * Supports both API key auth and session auth.
- */
-async function assertMasterTenantAccess(request: NextRequest): Promise<string> {
-  if (!MASTER_BILLING_TENANT_ID) {
-    throw new Error('MASTER_BILLING_TENANT_ID not configured on server');
-  }
-
-  // API KEY AUTH
-  const apiKey = request.headers.get('x-api-key');
-
-  if (apiKey) {
-    const keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
-    if (keyRecord) {
-      if (keyRecord.tenant === MASTER_BILLING_TENANT_ID) {
-        return MASTER_BILLING_TENANT_ID; // Auth OK
-      }
-      throw new Error('Access denied: API key not authorized for audit logs');
-    }
-    console.warn('[platform-reports/audit] Invalid API key');
-  }
-
-  // SESSION AUTH
-  const user = await getCurrentUser();
-
-  if (!user) {
-    throw new Error('Authentication required');
-  }
-
-  if (user.tenant !== MASTER_BILLING_TENANT_ID) {
-    throw new Error('Access denied: Audit logs require master tenant access');
-  }
-
-  return MASTER_BILLING_TENANT_ID;
-}
-
-/**
  * GET /api/v1/platform-reports/audit
  * List audit logs with optional filtering
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
-    const masterTenantId = await assertMasterTenantAccess(request);
+    const { tenantId: masterTenantId } = await assertMasterTenantAccess(request);
 
     const auditService = new PlatformReportAuditService(masterTenantId);
 

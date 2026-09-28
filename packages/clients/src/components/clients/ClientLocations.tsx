@@ -17,6 +17,7 @@ import CountryPicker from '@alga-psa/ui/components/CountryPicker';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { PhoneInput } from '@alga-psa/ui/components/PhoneInput';
+import { PhoneText } from '@alga-psa/ui/components/PhoneText';
 import { Label } from '@alga-psa/ui/components/Label';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
@@ -209,7 +210,7 @@ const LocationCard: React.FC<LocationCardProps> = ({ location, onEdit, onDelete,
                 helperText={t('clients.locations.card.phoneHelper', 'Phone number for this location')}
               >
                 <div className="mt-1">
-                  {`${t('clients.locations.card.phoneLabel', 'Phone')}: ${location.phone}`}
+                  <><span>{t('clients.locations.card.phoneLabel', 'Phone')}: </span><PhoneText value={location.phone} extension={location.phone_extension} defaultCountry={location.country_code} /></>
                 </div>
               </LocationDetailField>
             )}

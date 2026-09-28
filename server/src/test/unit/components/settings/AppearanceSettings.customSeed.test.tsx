@@ -45,6 +45,7 @@ vi.mock('@alga-psa/tenancy/actions/tenant-actions/tenantBrandingActions', () => 
 vi.mock('@alga-psa/tenancy/actions/tenant-actions/tenantLogoActions', () => ({
   uploadTenantLogo: vi.fn(),
   deleteTenantLogo: vi.fn(),
+  recropTenantLogo: vi.fn(),
 }));
 vi.mock('@alga-psa/user-composition/actions/userQueryActions', () => ({
   getCurrentUser: vi.fn(async () => ({ user_id: 'user-1', tenant: 'tenant-1' })),

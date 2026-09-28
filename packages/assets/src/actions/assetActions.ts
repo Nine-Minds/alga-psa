@@ -63,9 +63,11 @@ import { advanceMaintenanceDate } from '../lib/maintenanceRecurrence';
 import { localizeActionError, withAuth, hasPermission } from '@alga-psa/auth';
 import { toCalendarDateString, toISOTimestamp, toPlainDate } from '@alga-psa/core';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { resolveEffectiveTimeZone } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/db';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { emitDateDomainEventOnce, toTenantLocalDate } from '@alga-psa/event-bus/workflow/dateDomainEvents';
 import {
     buildAssetAssignedPayload,
     buildAssetCreatedPayload,
@@ -85,16 +87,12 @@ import {
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
 import { listAvailableAssetFactsForAsset } from '../lib/assetFactsService';
-import { getAssetTypeBySlug } from '../lib/assetTypeRegistry';
 import {
-    EXTENSION_TABLE_BY_ASSET_TYPE,
-    attributeValidationError,
-    invalidAssetTypeError,
-    isBuiltinAssetTypeSlug,
-    isTypedAssetWriteError,
-    validateAttributesAgainstSchema,
+  EXTENSION_TABLE_BY_ASSET_TYPE,
+  attributeValidationError,
+  isTypedAssetWriteError,
 } from '../lib/assetTypeAttributes';
-import type { AssetTypeRegistryEntry } from '@alga-psa/types';
+import { resolveWritableAssetType, resolveAttributeSchemaForWrite, validateAttributesForWrite, attributesMergeExpression, serializeAttributesForInsert } from '../lib/assetAttributeWrites';
 import {
     assetActionErrorFrom,
     type AssetActionError,
@@ -596,23 +594,6 @@ async function getExtensionData(knex: Knex, tenant: string, asset_id: string, as
     }
 }
 
-// F310: asset_type must be one of the six built-ins or a tenant registry slug.
-// Returns the registry entry when (and only when) the slug is a custom type.
-async function resolveWritableAssetType(
-    knex: Knex,
-    tenant: string,
-    assetType: string
-): Promise<AssetTypeRegistryEntry | null> {
-    if (isBuiltinAssetTypeSlug(assetType)) {
-        return null;
-    }
-    const entry = await getAssetTypeBySlug(knex, tenant, assetType);
-    if (!entry) {
-        throw invalidAssetTypeError(assetType);
-    }
-    return entry.is_builtin ? null : entry;
-}
-
 // Helper function to insert/update extension table data.
 // Trusts upstream Zod validation (createAssetSchema / updateAssetSchema in the action layer).
 async function upsertExtensionData(
@@ -884,15 +865,9 @@ export async function createAssetInTransaction(
             // F310: built-in slug or registered custom slug only; custom types
             // get their attributes payload validated against fields_schema.
             const customTypeEntry = await resolveWritableAssetType(trx, tenant, validatedData.asset_type);
-            if (customTypeEntry) {
-                const issues = validateAttributesAgainstSchema(
-                    customTypeEntry.fields_schema,
-                    validatedData.attributes ?? {},
-                    { requireAll: options?.requireCustomAttributes !== false }
-                );
-                if (issues.length > 0) {
-                    throw attributeValidationError(issues);
-                }
+            const issues = validateAttributesForWrite(customTypeEntry, validatedData.attributes, 'create', options);
+            if (issues.length > 0) {
+                throw attributeValidationError(issues);
             }
 
             const now = new Date().toISOString();
@@ -926,7 +901,7 @@ export async function createAssetInTransaction(
                     warranty_end_date: validatedData.warranty_end_date
                 }),
                 ...(validatedData.attributes && {
-                    attributes: JSON.stringify(validatedData.attributes)
+                    attributes: serializeAttributesForInsert(validatedData.attributes)
                 })
             };
 
@@ -1022,8 +997,10 @@ export async function createAssetRecord(
             });
 
             if (warranty) {
-                await publishWorkflowEvent({
-                    eventType: 'ASSET_WARRANTY_EXPIRING',
+                const warrantyDate = toTenantLocalDate(warranty.expiresAt, await resolveEffectiveTimeZone(knex, tenant));
+                await emitDateDomainEventOnce(knex, tenant, {
+                    eventType: 'ASSET_WARRANTY_EXPIRING', entityId: created.asset_id,
+                    cycleKey: warrantyDate, occursOn: warrantyDate,
                     payload: buildAssetWarrantyExpiringPayload({
                         assetId: created.asset_id,
                         clientId: created.client_id || undefined,
@@ -1143,26 +1120,16 @@ export async function updateAssetRecord(
             // and validate a provided attributes payload against the (next)
             // custom type's fields_schema. Merge semantics: omitted keys keep
             // their stored values, so required presence is not re-enforced.
-            let customTypeEntry: AssetTypeRegistryEntry | null = null;
-            if (typeof baseCandidate.asset_type === 'string') {
-                customTypeEntry = await resolveWritableAssetType(trx, tenant, baseCandidate.asset_type);
-            } else if (
-                attributesPayload !== undefined &&
-                typeof asset.asset_type === 'string' &&
-                !isBuiltinAssetTypeSlug(asset.asset_type)
-            ) {
-                customTypeEntry = await getAssetTypeBySlug(trx, tenant, asset.asset_type);
-            }
-
-            if (attributesPayload !== undefined && customTypeEntry) {
-                const issues = validateAttributesAgainstSchema(
-                    customTypeEntry.fields_schema,
-                    attributesPayload,
-                    { requireAll: false }
-                );
-                if (issues.length > 0) {
-                    throw attributeValidationError(issues);
-                }
+            const customTypeEntry = await resolveAttributeSchemaForWrite(trx, tenant, {
+                nextAssetType: typeof baseCandidate.asset_type === 'string' ? baseCandidate.asset_type : undefined,
+                storedAssetType: asset.asset_type,
+                attributesProvided: attributesPayload !== undefined,
+            });
+            const attributeIssues = attributesPayload !== undefined
+                ? validateAttributesForWrite(customTypeEntry, attributesPayload, 'merge')
+                : [];
+            if (attributeIssues.length > 0) {
+                throw attributeValidationError(attributeIssues);
             }
 
             const locationIdWasProvided = Object.prototype.hasOwnProperty.call(baseCandidate, 'location_id');
@@ -1201,10 +1168,7 @@ export async function updateAssetRecord(
             if (attributesPayload !== undefined) {
                 // jsonb merge (not replace) so sibling namespaces like
                 // hudu_fields survive partial attribute writes.
-                baseUpdateData.attributes = trx.raw(
-                    `coalesce(attributes, '{}'::jsonb) || ?::jsonb`,
-                    JSON.stringify(attributesPayload)
-                );
+                baseUpdateData.attributes = attributesMergeExpression(trx, attributesPayload);
             }
 
             if (Object.keys(baseUpdateData).length > 0) {
@@ -1314,8 +1278,10 @@ export async function updateAssetRecord(
         });
 
         if (warranty) {
-            await publishWorkflowEvent({
-                eventType: 'ASSET_WARRANTY_EXPIRING',
+            const warrantyDate = toTenantLocalDate(warranty.expiresAt, await resolveEffectiveTimeZone(knex, tenant));
+            await emitDateDomainEventOnce(knex, tenant, {
+                eventType: 'ASSET_WARRANTY_EXPIRING', entityId: asset_id,
+                cycleKey: warrantyDate, occursOn: warrantyDate,
                 payload: buildAssetWarrantyExpiringPayload({
                     assetId: asset_id,
                     clientId: newClientId || previousClientId,
