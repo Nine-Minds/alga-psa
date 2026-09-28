@@ -342,12 +342,17 @@ export type TenantLogoInfo = Record<EntityLogoVariant, TenantLogoSlotInfo>;
 /**
  * File name and crop source behind each logo slot. Branding only stores the
  * URLs, which say nothing about which file an admin uploaded or what a mark can
- * be re-cut from.
+ * be re-cut from. Serves the MSP settings screens only, so portal users — who
+ * never manage these slots — get nothing.
  */
 export const getTenantLogoInfoAction = withAuth(async (
   user: IUserWithRoles,
   { tenant }: AuthContext,
-): Promise<TenantLogoInfo> => {
+): Promise<TenantLogoInfo | null> => {
+  if (user.user_type !== 'internal') {
+    return null;
+  }
+
   const knex = await getConnection(tenant);
   const settingsRecord = await tenantSettingsQuery(knex, tenant).first();
   const branding = settingsRecord?.settings?.branding || {};

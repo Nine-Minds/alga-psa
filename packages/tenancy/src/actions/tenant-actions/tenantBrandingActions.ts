@@ -59,6 +59,18 @@ const tenantSettingsQuery = (knex: Knex, tenant: string) =>
   tenantDb(knex, tenant).table('tenant_settings');
 
 /**
+ * Which image each square mark is re-cut from is bookkeeping for the settings
+ * screens, not branding — and it names a document, so it stays out of a payload
+ * the portal and the sign-in page also read.
+ */
+const withoutMarkProvenance = (branding: TenantBranding): TenantBranding => {
+  const rest = { ...branding } as TenantBranding & Record<string, unknown>;
+  delete rest.logoMarkSource;
+  delete rest.logoDarkMarkSource;
+  return rest;
+};
+
+/**
  * Update tenant's branding settings
  */
 export const updateTenantBrandingAction = withAuth(async (user: IUserWithRoles, { tenant }: AuthContext, branding: TenantBranding) => {
@@ -169,7 +181,7 @@ export const getTenantBrandingAction = withOptionalAuth(async (user: IUserWithRo
   }
 
   return scopeBrandingToEdition({
-    ...tenantSettings.settings.branding,
+    ...withoutMarkProvenance(tenantSettings.settings.branding),
     supportEmail: tenantSettings.settings.supportEmail ?? '',
     supportPhone: tenantSettings.settings.supportPhone ?? '',
   }, isEnterprise);
@@ -189,7 +201,7 @@ export async function getTenantBrandingByIdAction(tenantId: string): Promise<Ten
   }
 
   return scopeBrandingToEdition({
-    ...tenantSettings.settings.branding,
+    ...withoutMarkProvenance(tenantSettings.settings.branding),
     supportEmail: tenantSettings.settings.supportEmail ?? '',
     supportPhone: tenantSettings.settings.supportPhone ?? '',
   }, isEnterprise);

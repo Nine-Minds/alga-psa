@@ -62,6 +62,22 @@ describe('tenant branding actions tenant-scoped query contract', () => {
     expect(brandingSource).toContain('const logoDarkMarkSource = existingSettings.branding?.logoDarkMarkSource');
   });
 
+  it('keeps the mark provenance out of the branding both portals read', () => {
+    const brandingSource = readFileSync(resolve(__dirname, 'tenantBrandingActions.ts'), 'utf8');
+    // Both read paths — the authenticated one and the public by-id one — go
+    // through the same strip, so the document id never reaches a browser.
+    const stripped = brandingSource.match(/\.\.\.withoutMarkProvenance\(tenantSettings\.settings\.branding\)/g);
+    expect(stripped).toHaveLength(2);
+    expect(brandingSource).not.toContain('...tenantSettings.settings.branding,');
+  });
+
+  it('serves the logo slot details to internal users only', () => {
+    const logoSource = readFileSync(resolve(__dirname, 'tenantLogoActions.ts'), 'utf8');
+    const infoAction = logoSource.slice(logoSource.indexOf('export const getTenantLogoInfoAction'));
+    expect(infoAction).toContain("Promise<TenantLogoInfo | null>");
+    expect(infoAction.slice(0, infoAction.indexOf('getConnection'))).toContain("user.user_type !== 'internal'");
+  });
+
   it('uses structural tenant scoping for tenant settings branding roots', () => {
     for (const file of files) {
       const source = readFileSync(resolve(__dirname, file), 'utf8');
