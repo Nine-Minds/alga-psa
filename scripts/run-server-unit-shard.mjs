@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { normalizeTestFile } from './lib/test-execution-evidence.mjs';
@@ -30,6 +30,19 @@ export function runServerUnitShard({ root, index, total, workers, env = process.
   };
   // Remove stale evidence even if the next process cannot start.
   for (const target of Object.values(paths)) writeFileSync(target, 'null\n');
+  // Published only when this shard actually retried something, so the weekly
+  // report downloads flake reports instead of one empty artifact per shard per
+  // run. A rerun must not resurrect the previous attempt's flakes.
+  const flakyUpload = path.join(root, 'test-results/server-unit-flaky');
+  rmSync(flakyUpload, { recursive: true, force: true });
+  const publishFlaky = () => {
+    try {
+      const document = JSON.parse(readFileSync(paths.flaky, 'utf8'));
+      if (!document?.tests?.length) return;
+      mkdirSync(flakyUpload, { recursive: true });
+      writeFileSync(path.join(flakyUpload, 'flaky-tests.json'), JSON.stringify(document, null, 2) + '\n');
+    } catch { /* Reporting a flake never fails the shard. */ }
+  };
   const runEnv = { ...env, SERVER_UNIT_SHARD_FILES: paths.shardFiles, TEST_PROGRESS_PATH: paths.progress,
     FLAKY_TESTS_PATH: paths.flaky, SERVER_UNIT_SHARD_INDEX: String(index), SERVER_UNIT_SHARD_TOTAL: String(total) };
   const vitest = args => spawnSync(process.execPath, [path.join(server, 'node_modules/vitest/vitest.mjs'), ...args],
@@ -69,6 +82,7 @@ export function runServerUnitShard({ root, index, total, workers, env = process.
       '--reporter=default', '--reporter=json', '--reporter=blob', `--reporter=${path.join(root, 'scripts/lib/vitest-progress-reporter.mjs')}`,
       `--reporter=${path.join(root, 'scripts/lib/vitest-flaky-reporter.mjs')}`,
       `--outputFile.json=${paths.results}`, `--outputFile.blob=${paths.blob}`]);
+    publishFlaky();
     phase = 'Execution verification';
     let after;
     let sourceError;

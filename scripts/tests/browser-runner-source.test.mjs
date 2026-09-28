@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -40,6 +40,9 @@ test('browser command rejects dirty source before or during otherwise passing ex
     git(['init', '-q']); git(['add', '.']);
     git(['-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', 'commit', '-qm', 'fixture']);
     const evidenceFile = name => JSON.parse(readFileSync(path.join(root, `e2e-tests/execution-evidence/${name}.json`), 'utf8'));
+    // Uploaded only when something retried, so the weekly report never spends a
+    // download on a run with nothing to report.
+    const uploaded = path.join(root, 'e2e-tests/execution-evidence/flaky/flaky-tests.json');
     for (const mode of ['clean', 'before', 'during']) {
       writeFileSync(path.join(root, 'app.txt'), mode === 'before' ? 'already changed' : 'original');
       const run = spawnSync(process.execPath, ['e2e-tests/run.mjs'], { cwd: root, encoding: 'utf8', timeout: 10000,
@@ -48,8 +51,9 @@ test('browser command rejects dirty source before or during otherwise passing ex
       assert.equal(run.status, mode === 'clean' ? 0 : 1, `${mode}: ${run.stderr}`);
       assert.equal(evidence.status, mode === 'clean' ? 'passed' : 'failed');
       assert.equal(evidence.counts.passed, 1);
-      // Every run publishes the flaky artifact, empty when nothing was retried.
+      // Every run writes the document; nothing is published when it is empty.
       assert.deepEqual(evidenceFile('flaky-tests').tests, []);
+      assert.equal(existsSync(uploaded), false, mode);
     }
     // A retry-only pass still fails the gate, and is the evidence the weekly
     // flaky report reads out of the red job.
@@ -64,5 +68,15 @@ test('browser command rejects dirty source before or during otherwise passing ex
       job: 'production-browser (enterprise)', edition: 'enterprise', revision: null, runId: '77', runAttempt: 2, tests: undefined });
     assert.deepEqual(flaky.tests, [{ testId: 'e2e-tests/tests/journey.spec.ts > persists result [ee]',
       file: 'e2e-tests/tests/journey.spec.ts', name: 'persists result', project: 'ee', retryCount: 1 }]);
+    // The uploaded copy is the same document, and living under the ignored
+    // evidence directory is what keeps the clean-source gate from tripping.
+    assert.deepEqual(JSON.parse(readFileSync(uploaded, 'utf8')), flaky);
+    assert.equal(evidenceFile('evidence').workingTreeDirty, false);
+    // A rerun that retries nothing must not leave the previous flake published.
+    writeFileSync(path.join(root, 'app.txt'), 'original');
+    const rerun = spawnSync(process.execPath, ['e2e-tests/run.mjs'], { cwd: root, encoding: 'utf8', timeout: 10000,
+      env: { ...process.env, MUTATE_SOURCE: '0', RETRY_ONLY: '0' } });
+    assert.equal(rerun.status, 0, rerun.stderr);
+    assert.equal(existsSync(uploaded), false);
   } finally { rmSync(root, { recursive: true, force: true }); }
 });

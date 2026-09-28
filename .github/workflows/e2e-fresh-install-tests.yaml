@@ -972,15 +972,17 @@ jobs:
 
       # A retry-only pass still fails the strict gate above, so this upload must
       # survive the red job that publishes it. Reporting flakes is never itself a
-      # gate: a run that died before the runner wrote the file (an aborted
-      # install, a killed job) warns instead of adding a second failure.
+      # gate. The runner fills this directory only when something retried, so a
+      # run with no flake (or one that died before the runner wrote anything)
+      # publishes nothing and the weekly report spends no API budget on it; the
+      # always-written document rides along in the diagnostics artifact above.
       - name: Upload browser flaky-test evidence
         if: always() && steps.wait_for_setup.outputs.status == 'success' && !env.ACT
         uses: actions/upload-artifact@v4
         with:
           name: flaky-tests-browser-${{ matrix.edition }}
-          path: e2e-tests/execution-evidence/flaky-tests.json
-          if-no-files-found: warn
+          path: e2e-tests/execution-evidence/flaky/
+          if-no-files-found: ignore
           retention-days: 30
 
       - name: Record browser journey readiness

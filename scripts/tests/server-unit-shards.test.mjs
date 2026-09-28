@@ -83,6 +83,11 @@ test('server unit shards partition, reunite and verify as one full-selection bun
       ? [{ testId: 'src/test/unit/recovers.test.ts > recovers on retry', file: 'src/test/unit/recovers.test.ts',
         name: 'recovers on retry', retryCount: 1 }]
       : []);
+    // Only the shard that retried publishes the upload copy the weekly report
+    // downloads, and shard 2 must not inherit shard 1's.
+    const uploaded = path.join(root, 'test-results/server-unit-flaky/flaky-tests.json');
+    assert.equal(existsSync(uploaded), index === 1);
+    if (index === 1) assert.deepEqual(JSON.parse(readFileSync(uploaded, 'utf8')), flaky);
     cpSync(path.join(root, 'test-results/server-coverage'), path.join(shards, `server-unit-shard-${index}`), { recursive: true });
   }
   // A dirty checkout must be refused before any file is collected.

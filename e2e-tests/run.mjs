@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -15,6 +15,9 @@ const output = path.join(cwd, 'execution-evidence');
 mkdirSync(output, { recursive: true });
 const files = Object.fromEntries(['collected', 'results', 'discovery', 'evidence', 'metrics', 'flaky-tests'].map(name => [name, path.join(output, `${name}.json`)]));
 for (const file of Object.values(files)) writeFileSync(file, 'null\n');
+// A rerun in the same workspace must not resurrect the previous run's flakes.
+const flakyUpload = path.join(output, 'flaky');
+rmSync(flakyUpload, { recursive: true, force: true });
 const save = (file, data) => writeFileSync(file, JSON.stringify(data, null, 2) + '\n');
 let before;
 let evidence;
@@ -71,16 +74,24 @@ save(files.metrics, browserTestMetrics({ collected: readReport(files.collected),
   artifactManifest: process.env.E2E_ARTIFACT_MANIFEST ? readReport(process.env.E2E_ARTIFACT_MANIFEST) : null,
   artifactManifestRequired: Boolean(process.env.E2E_ARTIFACT_MANIFEST),
   runId: process.env.GITHUB_RUN_ID, runAttempt: Number(process.env.GITHUB_RUN_ATTEMPT) }));
-// Always written, so every run yields the flaky artifact the weekly report reads.
+// Always written next to the rest of the evidence, so a green run still shows
+// the reporter ran. Only a run that actually retried gets the upload copy the
+// weekly report downloads: an empty artifact from every run would spend that
+// job's whole GitHub API budget reading nothing.
 let flaky = [];
 try { flaky = flakyPlaywrightTests(readReport(files.results), root); } catch { flaky = []; }
 const edition = readReport(files.collected)?.config?.metadata?.edition ?? null;
 const runAttempt = Number(process.env.GITHUB_RUN_ATTEMPT);
-save(files['flaky-tests'], {
+const flakyDocument = {
   schemaVersion: 1, suite: 'production-browser', job: `production-browser (${edition ?? 'unknown'})`,
   edition, revision: before?.revision ?? null, runId: process.env.GITHUB_RUN_ID ?? null,
   runAttempt: Number.isSafeInteger(runAttempt) && runAttempt > 0 ? runAttempt : null,
   tests: flaky.map(({ testId, file, name, projectName, retryCount }) => ({ testId, file, name, project: projectName, retryCount })),
-});
+};
+save(files['flaky-tests'], flakyDocument);
+if (flakyDocument.tests.length) {
+  mkdirSync(flakyUpload, { recursive: true });
+  save(path.join(flakyUpload, 'flaky-tests.json'), flakyDocument);
+}
 for (const failure of evidence.failures) console.error(failure);
 process.exit(evidence.status === 'passed' ? 0 : 1);
