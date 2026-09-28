@@ -38,7 +38,23 @@ export const JSDOM_EXTRA_FILES = [
 // Escape hatch for suites the glob claims but that genuinely need node (fetch,
 // Buffer, structuredClone and friends differ under jsdom). Repository-relative.
 // Prefer fixing the test; a pin is a standing exception, not a resting place.
-export const NODE_PINNED_FILES = [];
+//
+// All eight below read their subject's source with
+// `readFileSync(new URL('./Component.tsx', import.meta.url))`. Under jsdom
+// `import.meta.url` resolves against the environment's http base, so the URL
+// stops being a file: URL and readFileSync throws "The URL must be of scheme
+// file". They sit under a components/ directory and read JSX, but they never
+// render anything.
+export const NODE_PINNED_FILES = [
+  'packages/billing/src/components/accounting/accountingSyncTranslations.test.ts',
+  'packages/billing/src/components/billing-dashboard/contracts/ContractWizard.renewalFields.test.ts',
+  'packages/billing/src/components/billing-dashboard/contracts/wizard-steps/ContractBasicsStep.renewalCards.test.ts',
+  'packages/billing/src/components/billing-dashboard/contracts/wizard-steps/ReviewContractStep.renewalPreview.test.ts',
+  'packages/clients/src/components/clients/ClientDetails.huduDocumentsSection.wiring.test.ts',
+  'packages/clients/src/components/clients/ClientDetails.inboundDestination.wiring.test.ts',
+  'packages/clients/src/components/clients/ClientDetails.pulseRefresh.wiring.test.ts',
+  'packages/clients/src/components/contacts/ContactDetails.inboundDestination.wiring.test.ts',
+];
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const matchesGlob = picomatch(JSDOM_TEST_GLOBS);
