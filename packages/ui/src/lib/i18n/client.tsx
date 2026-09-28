@@ -443,3 +443,18 @@ export function useFormatters() {
     },
   }), [locale, dateFormat]);
 }
+
+/**
+ * Translate outside a React tree (server-action launchers, imperative toasts).
+ *
+ * Uses the same module-level i18next instance the hooks do, and relies on the
+ * caller's `defaultValue` until the namespace is loaded, so it is safe to call
+ * before the provider mounts. Prefer `useTranslation` inside components.
+ */
+export function translate(
+  namespace: string,
+  key: string,
+  options?: Record<string, unknown>,
+): string {
+  return i18next.t(key, { ns: namespace, ...(options ?? {}) }) as string;
+}

@@ -484,7 +484,8 @@
       "onlyDraftRemovable": "Usunąć można tylko robocze arkusze czasu pracy.",
       "removeEntriesFirst": "Usuń wpisy czasu przed usunięciem tego arkusza czasu pracy.",
       "onlyApprovedReopenable": "Ponownie otworzyć można tylko zatwierdzone arkusze czasu pracy.",
-      "invoicedCannotReopen": "Ten arkusz czasu pracy zawiera rozliczony czas i nie można go ponownie otworzyć."
+      "invoicedCannotReopen": "Ten arkusz czasu pracy zawiera rozliczony czas i nie można go ponownie otworzyć.",
+      "notEditable": "Ten arkusz czasu jest zablokowany. Wybierz arkusz roboczy lub arkusz z poproszonymi zmianami."
     },
     "timeEntry": {
       "notFoundRefresh": "Nie znaleziono wpisu czasu. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
@@ -510,5 +511,33 @@
       "missingField": "Brakuje wymaganego pola ustawienia okresu.",
       "missingFieldNamed": "Brakuje wymaganego pola ustawienia okresu: {{field}}."
     }
+  },
+  "workItemEntry": {
+    "sheetStatus": {
+      "DRAFT": "Wersja robocza",
+      "SUBMITTED": "Przesłano",
+      "APPROVED": "Zatwierdzono",
+      "CHANGES_REQUESTED": "Poproszono o zmiany",
+      "UNKNOWN": "Nieznany"
+    },
+    "sheetHint": "Arkusz czasu: {{range}} · {{status}}",
+    "defaultMoved": {
+      "supplied": "Czasy z timera przypadają na dzień, który nie przyjmuje nowego czasu, więc wpis rozpoczyna się {{date}} o 08:00.",
+      "todayLocked": "Dzisiejszy arkusz czasu ma status „{{status}}”, więc wpis rozpoczyna się {{date}}, w najbliższym dniu, który przyjmuje czas.",
+      "todayUncovered": "Żaden okres nie obejmuje dzisiejszego dnia, więc wpis rozpoczyna się {{date}}, w najbliższym dniu, który przyjmuje czas."
+    },
+    "save": {
+      "noPeriod": "Żaden okres nie obejmuje dnia {{date}}. Wybierz dzień w obrębie okresu.",
+      "sheetLocked": "Arkusz czasu dla dnia {{date}} ma status „{{status}}”. Wybierz dzień z arkusza roboczego lub arkusza z poproszonymi zmianami."
+    }
+  },
+  "launch": {
+    "noUser": "Nie można załadować bieżącego użytkownika do wpisu czasu.",
+    "entryNotFound": "Nie znaleziono wpisu czasu.",
+    "entryMissingSheet": "Ten wpis czasu nie jest powiązany z arkuszem czasu i nie można go tu edytować.",
+    "entryMissingPeriod": "W arkuszu czasu tego wpisu brakuje okresu i nie można go otworzyć.",
+    "noPeriods": "Nie skonfigurowano jeszcze okresów czasu, więc nie można rejestrować czasu. Poproś administratora o utworzenie okresów czasu w Ustawienia → Ewidencja czasu.",
+    "noEditablePeriods": "Wszystkie arkusze czasu są przesłane lub zatwierdzone, więc nie ma dnia, do którego można dodać czas. Poproś osobę zatwierdzającą o ponowne otwarcie arkusza lub administratora o dodanie okresu.",
+    "prepareFailed": "Wystąpił błąd podczas przygotowywania wpisu czasu. Spróbuj ponownie."
   }
 }
