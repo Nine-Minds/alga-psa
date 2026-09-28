@@ -137,7 +137,9 @@ function toRecurringWindowDate(value: string): string {
  * aborts the whole transaction if a row was concurrently claimed by another
  * invoice), making the created invoice the window's single owner.
  *
- * Explicitly omitted, unreported usage remains due for a later invoice.
+ * Explicitly omitted unreported usage and charges excluded by billing-profile
+ * scope remain due for a later invoice. Included zero-charge periods are still
+ * swept so legitimate zero-value billing remains complete.
  * Swept rows keep `invoice_charge_detail_id` NULL — honestly recording that
  * no charge line backs them — while `lifecycle_state='billed'` + `invoice_id`
  * removes them from due-work listings and arms the duplicate guard.
@@ -150,6 +152,8 @@ export async function claimRecurringServicePeriodsForSelectionInputs(params: {
   linkedAt: string;
   /** Unreported usage deliberately omitted from this invoice remains due. */
   omittedUsagePeriods?: Pick<IUsageServicePeriodStatus, 'client_contract_line_id' | 'service_period_start' | 'service_period_end'>[];
+  /** Charges excluded by billing-profile scope must leave their obligations due. */
+  excludedServicePeriodRecordIds?: string[];
 }): Promise<void> {
   const { tx, tenant, invoiceId, selectorInputs, linkedAt } = params;
   // Usage diagnoses expose inclusive ends; recurring period storage uses
@@ -163,6 +167,7 @@ export async function claimRecurringServicePeriodsForSelectionInputs(params: {
   const storedDate = (value: string | Date) => value instanceof Date
     ? value.toISOString().slice(0, 10)
     : toRecurringWindowDate(value);
+  const excludedRecordIds = new Set(params.excludedServicePeriodRecordIds ?? []);
 
   for (const selectorInput of selectorInputs) {
     const executionWindow = selectorInput.executionWindow;
@@ -225,6 +230,9 @@ export async function claimRecurringServicePeriodsForSelectionInputs(params: {
       }
       if (row.invoice_id === invoiceId) {
         continue; // Already linked through one of this invoice's charges.
+      }
+      if (excludedRecordIds.has(row.record_id)) {
+        continue; // Its charge belongs on another profile's invoice.
       }
       if (row.invoice_id) {
         throw new Error(
@@ -448,11 +456,17 @@ export async function getClientDetails(knex: Knex, tenant: string, clientId: str
  *
  * Returns null when no candidate carries a valid email.
  */
-export async function getClientBillingEmail(knex: Knex, tenant: string, clientId: string): Promise<string | null> {
+export async function getClientBillingEmail(
+  knex: Knex,
+  tenant: string,
+  clientId: string,
+  billingProfileId?: string | null,
+): Promise<string | null> {
   const recipient = await resolveInvoiceBillingRecipient({
     knexOrTrx: knex,
     tenantId: tenant,
     clientId,
+    billingProfileId,
   });
 
   return recipient.recipientEmail || null;
@@ -470,8 +484,17 @@ export interface ValidationResult {
  * This is required for online payments via Stripe.
  * Returns a validation result instead of throwing an error.
  */
-export async function validateClientBillingEmail(knex: Knex, tenant: string, clientId: string, clientName: string): Promise<ValidationResult> {
-  const billingEmail = await getClientBillingEmail(knex, tenant, clientId);
+export async function validateClientBillingEmail(
+  knex: Knex,
+  tenant: string,
+  clientId: string,
+  clientName: string,
+  billingProfileId?: string | null,
+): Promise<ValidationResult> {
+  // A segmented client may hold its billing address on the profile alone, so
+  // the gate has to ask about the profile this invoice bills — otherwise a
+  // profile with a perfectly good AP inbox is refused an invoice.
+  const billingEmail = await getClientBillingEmail(knex, tenant, clientId, billingProfileId);
   if (!billingEmail) {
     return {
       valid: false,

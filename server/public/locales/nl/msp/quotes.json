@@ -107,7 +107,9 @@
         "message": "Bericht",
         "messageOptional": "Bericht (optioneel)",
         "messagePlaceholder": "Voeg een persoonlijke noot toe voor de ontvanger...",
-        "title": "Offerte verzenden"
+        "title": "Offerte verzenden",
+        "from": "Van",
+        "useDefault": "Standaardafzender gebruiken"
       }
     },
     "errors": {
@@ -212,7 +214,9 @@
         "description": "Hierdoor wordt de offerte per e-mail naar de factureringscontacten van de klant verzonden en wordt de status ervan gewijzigd in \"Verzonden\".",
         "title": "Offerte naar klant sturen",
         "additionalEmails": "Extra ontvangers",
-        "message": "Bericht"
+        "message": "Bericht",
+        "from": "Van",
+        "useDefault": "Standaardafzender gebruiken"
       }
     },
     "errorActions": {

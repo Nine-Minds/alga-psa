@@ -150,6 +150,17 @@ function parseImportNumber(numStr: string | undefined): number | null {
   return isNaN(parsed) ? null : parsed;
 }
 
+/**
+ * Parse a CSV hours value into the whole minutes stored in
+ * project_tasks.estimated_hours (BIGINT minutes, same convention as TaskForm).
+ * Returns null for the values the validator already flags as "will be skipped".
+ */
+function parseImportHoursToMinutes(hoursStr: string | undefined): number | null {
+  const hours = parseImportNumber(hoursStr);
+  if (hours === null || hours < 0) return null;
+  return Math.round(hours * 60);
+}
+
 type ImportStatusMappingRow = IProjectStatusMapping & {
   phase_id?: string | null;
   status_name?: string;
@@ -299,7 +310,7 @@ export async function groupRowsIntoPhases(
       description: row.task_description?.trim() || null,
       assigned_to: primaryAgentId,
       additional_agent_ids: additionalAgentIds,
-      estimated_hours: parseImportNumber(row.estimated_hours),
+      estimated_hours: parseImportHoursToMinutes(row.estimated_hours),
       actual_hours: null,
       due_date: parseImportDate(row.due_date),
       priority_id: priorityLookup[priorityName] || null,
@@ -1033,62 +1044,81 @@ export const importPhasesAndTasks = withAuth(async (
     const { generateKeyBetween } = await import('fractional-indexing');
 
     for (const groupedPhase of groupedPhases) {
-      try {
-        let phase: IProjectPhase;
-        const existingPhase = existingPhaseMap.get(groupedPhase.phase_name.toLowerCase());
+      let phase: IProjectPhase;
+      const existingPhase = existingPhaseMap.get(groupedPhase.phase_name.toLowerCase());
 
-        if (existingPhase) {
-          // Use existing phase
-          phase = existingPhase;
-        } else {
-          // Create new phase
-          const phases = await ProjectModel.getPhases(trx, tenant, projectId);
-          const nextOrderNumber = phases.length + 1;
+      if (existingPhase) {
+        // Use existing phase
+        phase = existingPhase;
+      } else {
+        try {
+          // Savepoint per phase: a failed phase rolls back alone instead of
+          // poisoning the shared transaction and taking every later row with it.
+          phase = await trx.transaction(async (phaseTrx) => {
+            const phases = await ProjectModel.getPhases(phaseTrx, tenant, projectId);
+            const nextOrderNumber = phases.length + 1;
 
-          // Generate WBS code
-          const phaseNumbers = phases
-            .map((p): number => {
-              const parts = p.wbs_code.split('.');
-              return parseInt(parts[parts.length - 1]);
-            })
-            .filter(num => !isNaN(num));
-          const maxPhaseNumber = phaseNumbers.length > 0 ? Math.max(...phaseNumbers) : 0;
-          const newWbsCode = `${project.wbs_code}.${maxPhaseNumber + 1}`;
+            // Generate WBS code
+            const phaseNumbers = phases
+              .map((p): number => {
+                const parts = p.wbs_code.split('.');
+                return parseInt(parts[parts.length - 1]);
+              })
+              .filter(num => !isNaN(num));
+            const maxPhaseNumber = phaseNumbers.length > 0 ? Math.max(...phaseNumbers) : 0;
+            const newWbsCode = `${project.wbs_code}.${maxPhaseNumber + 1}`;
 
-          // Generate order key
-          let orderKey: string;
-          if (phases.length === 0) {
-            orderKey = generateKeyBetween(null, null);
-          } else {
-            const sortedPhases = [...phases].sort((a, b) => {
-              if (a.order_key && b.order_key) {
-                return a.order_key < b.order_key ? -1 : a.order_key > b.order_key ? 1 : 0;
-              }
-              return 0;
+            // Generate order key
+            let orderKey: string;
+            if (phases.length === 0) {
+              orderKey = generateKeyBetween(null, null);
+            } else {
+              const sortedPhases = [...phases].sort((a, b) => {
+                if (a.order_key && b.order_key) {
+                  return a.order_key < b.order_key ? -1 : a.order_key > b.order_key ? 1 : 0;
+                }
+                return 0;
+              });
+              const lastPhase = sortedPhases[sortedPhases.length - 1];
+              orderKey = generateKeyBetween(lastPhase.order_key || null, null);
+            }
+
+            return ProjectModel.addPhase(phaseTrx, tenant, {
+              project_id: projectId,
+              phase_name: groupedPhase.phase_name,
+              description: groupedPhase.description,
+              start_date: null,
+              end_date: null,
+              status: 'pending',
+              order_number: nextOrderNumber,
+              wbs_code: newWbsCode,
+              order_key: orderKey,
             });
-            const lastPhase = sortedPhases[sortedPhases.length - 1];
-            orderKey = generateKeyBetween(lastPhase.order_key || null, null);
-          }
-
-          phase = await ProjectModel.addPhase(trx, tenant, {
-            project_id: projectId,
-            phase_name: groupedPhase.phase_name,
-            description: groupedPhase.description,
-            start_date: null,
-            end_date: null,
-            status: 'pending',
-            order_number: nextOrderNumber,
-            wbs_code: newWbsCode,
-            order_key: orderKey,
           });
 
+          // Counted only once the savepoint resolved, so the reported totals
+          // always match what is actually persisted.
           phasesCreated++;
           existingPhaseMap.set(groupedPhase.phase_name.toLowerCase(), phase);
+        } catch (phaseError) {
+          const errorMessage = phaseError instanceof Error ? phaseError.message : 'Unknown error';
+          const rowNumbers = groupedPhase.tasks
+            .map(t => t.csvRowNumber)
+            .filter((n): n is number => typeof n === 'number');
+          const rowRef = rowNumbers.length > 0 ? ` (rows ${rowNumbers.join(', ')})` : '';
+          errors.push(`Failed to process phase "${groupedPhase.phase_name}"${rowRef}: ${errorMessage}`);
+          continue;
         }
+      }
 
-        // Create tasks for this phase
-        for (const taskData of groupedPhase.tasks) {
-          try {
+      const phaseId = phase.phase_id;
+
+      // Create tasks for this phase
+      for (const taskData of groupedPhase.tasks) {
+        try {
+          // Savepoint per task row: only the failing row is rolled back, and its
+          // workflow events are published last so a rolled-back row emits none.
+          await trx.transaction(async (taskTrx) => {
             // Determine the status mapping ID for this task
             let taskStatusMappingId: string;
             if (taskData.status_mapping_id) {
@@ -1109,7 +1139,7 @@ export const importPhasesAndTasks = withAuth(async (
               taskStatusMappingId = fallbackForPhase(groupedPhase.phase_name);
             }
 
-            const newTask = await ProjectTaskModel.addTask(trx, tenant, phase.phase_id, {
+            const newTask = await ProjectTaskModel.addTask(taskTrx, tenant, phaseId, {
               task_name: taskData.task_name,
               description: taskData.description,
               description_rich_text: null,
@@ -1130,7 +1160,7 @@ export const importPhasesAndTasks = withAuth(async (
                 text_color: null,
                 isNew: true,
               }));
-              await createTagsForEntityWithTransaction(trx, tenant, newTask.task_id, 'project_task', pendingTags);
+              await createTagsForEntityWithTransaction(taskTrx, tenant, newTask.task_id, 'project_task', pendingTags);
             }
 
             // Add additional agents as task resources (only if primary agent is assigned)
@@ -1141,7 +1171,10 @@ export const importPhasesAndTasks = withAuth(async (
               );
               for (const additionalAgentId of uniqueAdditionalAgents) {
                 try {
-                  await ProjectTaskModel.addTaskResource(trx, tenant, newTask.task_id, additionalAgentId);
+                  // Nested savepoint: a rejected resource stays non-fatal for the row.
+                  await taskTrx.transaction((resourceTrx) =>
+                    ProjectTaskModel.addTaskResource(resourceTrx, tenant, newTask.task_id, additionalAgentId)
+                  );
                 } catch (resourceError) {
                   console.error(`Failed to add additional agent ${additionalAgentId}:`, resourceError);
                 }
@@ -1154,7 +1187,7 @@ export const importPhasesAndTasks = withAuth(async (
               occurredAt,
               actor: { actorType: 'USER' as const, actorUserId: user.user_id },
             };
-            const statusInfo = await resolveProjectStatusInfo(trx, tenant, newTask.project_status_mapping_id);
+            const statusInfo = await resolveProjectStatusInfo(taskTrx, tenant, newTask.project_status_mapping_id);
 
             await publishWorkflowEvent({
               eventType: 'PROJECT_TASK_CREATED',
@@ -1185,21 +1218,14 @@ export const importPhasesAndTasks = withAuth(async (
                 }),
               });
             }
+          });
 
-            tasksCreated++;
-          } catch (taskError) {
-            const errorMessage = taskError instanceof Error ? taskError.message : 'Unknown error';
-            const rowRef = taskData.csvRowNumber ? ` (row ${taskData.csvRowNumber})` : '';
-            errors.push(`Failed to create task "${taskData.task_name}"${rowRef}: ${errorMessage}`);
-          }
+          tasksCreated++;
+        } catch (taskError) {
+          const errorMessage = taskError instanceof Error ? taskError.message : 'Unknown error';
+          const rowRef = taskData.csvRowNumber ? ` (row ${taskData.csvRowNumber})` : '';
+          errors.push(`Failed to create task "${taskData.task_name}"${rowRef}: ${errorMessage}`);
         }
-      } catch (phaseError) {
-        const errorMessage = phaseError instanceof Error ? phaseError.message : 'Unknown error';
-        const rowNumbers = groupedPhase.tasks
-          .map(t => t.csvRowNumber)
-          .filter((n): n is number => typeof n === 'number');
-        const rowRef = rowNumbers.length > 0 ? ` (rows ${rowNumbers.join(', ')})` : '';
-        errors.push(`Failed to process phase "${groupedPhase.phase_name}"${rowRef}: ${errorMessage}`);
       }
     }
 

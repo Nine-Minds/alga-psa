@@ -63,7 +63,7 @@ type WorkflowRunRecord = {
   workflow_version: number;
   status: string;
   node_path?: string | null;
-  trigger_type?: 'event' | 'schedule' | 'recurring' | null;
+  trigger_type?: 'event' | 'schedule' | 'recurring' | 'date' | null;
   trigger_metadata_json?: Record<string, unknown> | null;
   event_type?: string | null;
   source_payload_schema_ref?: string | null;

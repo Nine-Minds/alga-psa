@@ -118,6 +118,9 @@
       "renewalHandling": "Gestion des renouvellements"
     },
     "clientAssignment": {
+      "billingProfile": "Profil de facturation",
+      "billingProfileLabel": "Profil de facturation de l'affectation",
+      "billingProfileNone": "Utiliser le profil par défaut du client",
       "clientContractId": "ID du contrat client : {{id}}",
       "creditDrawdownOptOut": "Exclure de la consommation du crédit",
       "empty": "Ce contrat n'est pas encore affecté à un client.",
@@ -399,7 +402,10 @@
       "selectClientFirst": "Sélectionnez d'abord un client",
       "startDateLabel": "Date de début *",
       "useTenantDefaultsDescription": "Appliquer les paramètres de mode de renouvellement et de période de préavis au niveau de l'organisation.",
-      "useTenantDefaultsLabel": "Utiliser les valeurs par défaut de renouvellement du locataire"
+      "useTenantDefaultsLabel": "Utiliser les valeurs par défaut de renouvellement du locataire",
+      "billingProfileLabel": "Profil de facturation",
+      "billingProfileNone": "Utiliser le profil par défaut du client",
+      "billingProfileHint": "Les charges de ce contrat sont facturées à ce profil."
     },
     "po": {
       "amountLabel": "Montant du bon de commande (facultatif)",
@@ -1520,6 +1526,11 @@
       },
       "selectTemplateOptional": "Sélectionnez un modèle (facultatif)",
       "startFromTemplate": "Démarrer à partir d'un modèle"
+    },
+    "billingProfile": {
+      "label": "Profil de facturation",
+      "none": "Utiliser le profil par défaut du client",
+      "hint": "Les charges de ce contrat sont facturées à ce profil, sauf si une ligne le remplace."
     }
   },
   "wizardFixed": {
@@ -1692,6 +1703,7 @@
     },
     "fields": {
       "client": "Client",
+      "billingProfile": "Profil de facturation",
       "contractName": "Nom du contrat",
       "billingFrequency": "Fréquence de facturation",
       "currency": "Devise",
@@ -1700,6 +1712,9 @@
       "renewalMode": "Mode de renouvellement",
       "noticePeriod": "Période de préavis",
       "renewalTerm": "Durée de renouvellement"
+    },
+    "billingProfile": {
+      "clientDefault": "Le profil par défaut du client"
     },
     "fallback": {
       "notSelected": "Non sélectionné",

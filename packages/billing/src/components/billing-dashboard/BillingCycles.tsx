@@ -87,7 +87,7 @@ const BillingCycles: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [pageSize] = useState<number>(10);
+  const [pageSize, setPageSize] = useState<number>(10);
   const [totalCount, setTotalCount] = useState<number>(0);
   const [sortBy, setSortBy] = useState<string>('client_name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -117,7 +117,7 @@ const BillingCycles: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-  }, [currentPage, debouncedSearchTerm, sortBy, sortDirection, appliedDateRange]);
+  }, [currentPage, pageSize, debouncedSearchTerm, sortBy, sortDirection, appliedDateRange]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -474,6 +474,7 @@ const BillingCycles: React.FC = () => {
               pageSize={pageSize}
               totalItems={totalCount}
               onPageChange={handlePageChange}
+              onItemsPerPageChange={(nextPageSize) => { setPageSize(nextPageSize); setCurrentPage(1); }}
               manualSorting={true}
               sortBy={sortBy}
               sortDirection={sortDirection}

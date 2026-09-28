@@ -18,6 +18,14 @@ import {
 } from '@alga-psa/billing/actions/serviceActions';
 import { getDefaultBillingSettings } from '@alga-psa/billing/actions/billingSettingsActions';
 import { getTaxRates } from '@alga-psa/billing/actions/taxRateActions';
+import { getTenantTaxSettings } from '@alga-psa/billing/actions/taxSettingsActions';
+import {
+  INHERIT_TAX_RATE_VALUE,
+  NON_TAXABLE_VALUE,
+  fromTaxRateSelectionValue,
+  toTaxRateCreateField,
+  toTaxRateSelectionValue,
+} from './catalogTaxSelection';
 import {
   getProductInventorySettings,
   enableInventory,
@@ -92,6 +100,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
   }, []);
 
   const [taxRates, setTaxRates] = useState<ITaxRate[]>([]);
+  const [defaultTaxRateLabel, setDefaultTaxRateLabel] = useState<string | null>(null);
   const [isLoadingTaxRates, setIsLoadingTaxRates] = useState(true);
 
   const [categories, setCategories] = useState<IServiceCategory[]>([]);
@@ -382,6 +391,17 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
       fetchServiceTypes().catch((e) => console.error('[QuickAddProduct] Failed to fetch service types:', e));
       fetchTaxRates().catch((e) => console.error('[QuickAddProduct] Failed to fetch tax rates:', e));
       fetchCategories().catch((e) => console.error('[QuickAddProduct] Failed to fetch categories:', e));
+      getTenantTaxSettings()
+        .then((settings) => {
+          if (isActionMessageError(settings) || isActionPermissionError(settings)) return;
+          const rate = settings?.default_tax_rate;
+          setDefaultTaxRateLabel(
+            rate
+              ? `${rate.description || rate.region_code} — ${Number(rate.tax_percentage).toFixed(2)}%`
+              : null
+          );
+        })
+        .catch(() => {});
     }
   }, [isOpen]);
 
@@ -492,7 +512,9 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
           unit_of_measure: formProduct.unit_of_measure!.trim(),
           description: formProduct.description ?? null,
           category_id: formProduct.category_id ?? null,
-          tax_rate_id: formProduct.tax_rate_id ?? null,
+          // Create mode: omitted inherits the tenant default; explicit null is
+          // non-taxable; a saved edit value is unaffected (update path above).
+          ...toTaxRateCreateField(formProduct.tax_rate_id),
           item_kind: 'product',
           is_active: formProduct.is_active ?? true,
           sku: formProduct.sku ?? null,
@@ -891,16 +913,40 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
               {t('quickAddProduct.fields.taxRate.label', { defaultValue: 'Tax Rate' })}
             </label>
             <CustomSelect
-              value={formProduct.tax_rate_id || ''}
+              value={toTaxRateSelectionValue(formProduct.tax_rate_id)}
               placeholder={
                 isLoadingTaxRates
                   ? t('quickAddProduct.fields.taxRate.loading', { defaultValue: 'Loading...' })
                   : t('quickAddProduct.fields.taxRate.placeholder', { defaultValue: 'Non-Taxable' })
               }
-              onValueChange={(v) => setFormProduct({ ...formProduct, tax_rate_id: v || null })}
-              options={taxRates.map((r) => ({ value: r.tax_rate_id, label: formatTaxRateLabel(r) }))}
+              onValueChange={(v) => setFormProduct({
+                ...formProduct,
+                tax_rate_id: fromTaxRateSelectionValue(v),
+              })}
+              options={[
+                ...(isEditMode
+                  ? []
+                  : [
+                      {
+                        value: INHERIT_TAX_RATE_VALUE,
+                        label: defaultTaxRateLabel
+                          ? t('quickAddProduct.fields.taxRate.inheritNamed', {
+                              defaultValue: 'Use tenant default ({{rate}})',
+                              rate: defaultTaxRateLabel,
+                            })
+                          : t('quickAddProduct.fields.taxRate.inherit', {
+                              defaultValue: 'Use tenant default',
+                            }),
+                      },
+                    ]),
+                {
+                  value: NON_TAXABLE_VALUE,
+                  label: t('quickAddProduct.fields.taxRate.nonTaxable', { defaultValue: 'Non-taxable' }),
+                },
+                ...taxRates.map((r) => ({ value: r.tax_rate_id, label: formatTaxRateLabel(r) })),
+              ]}
               disabled={isLoadingTaxRates}
-              allowClear={true}
+              allowClear={false}
             />
           </div>
 

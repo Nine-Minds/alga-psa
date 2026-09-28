@@ -113,7 +113,12 @@
           "title": "Quote Details"
         }
       },
-      "title": "Billing"
+      "title": "Billing",
+      "paymentMethods": {
+        "setupComplete": {
+          "title": "Card Setup"
+        }
+      }
     },
     "clientSettings": {
       "description": "Manage your company settings and configurations",
@@ -613,6 +618,11 @@
     },
     "tab": {
       "title": "Teams"
+    }
+  },
+  "paymentMethods": {
+    "setupComplete": {
+      "title": "Card Setup"
     }
   }
 }

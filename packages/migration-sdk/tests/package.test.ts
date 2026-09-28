@@ -189,6 +189,22 @@ describe('AMP validator attacks', () => {
     ).toBe(true);
   });
 
+  it('rejects invalid and duplicate custom field values', () => {
+    const path = nextPath();
+    const rows = sampleEntityRows();
+    new AmpPackageBuilder(path).write(sampleManifest(), {
+      ...rows,
+      custom_field_values: [
+        { package_record_id: 'cf-1', entity_type: 'assets', entity_package_record_id: String((rows.assets![0] as any).package_record_id), field_name: 'RAM', value_json: 'not-json' },
+        { package_record_id: 'cf-2', entity_type: 'assets', entity_package_record_id: String((rows.assets![0] as any).package_record_id), field_name: 'RAM', value_json: '"16"' },
+        { package_record_id: 'cf-3', entity_type: 'assets', entity_package_record_id: String((rows.assets![0] as any).package_record_id), field_name: 'Nested', value_json: `${'{"a":'.repeat(AMP_LIMITS.extensionJsonDepth + 2)}1${'}'.repeat(AMP_LIMITS.extensionJsonDepth + 2)}` },
+      ],
+    });
+    const result = validateAmpPackage(path);
+    expect(result.valid).toBe(false);
+    expect(result.diagnostics.filter((diagnostic) => diagnostic.code === 'AMP_INVALID_VALUE').length).toBeGreaterThanOrEqual(3);
+  });
+
   it('rejects deeply nested extension_json', () => {
     const rows = sampleEntityRows();
     const nested = `${'{"a":'.repeat(AMP_LIMITS.extensionJsonDepth + 2)}1${'}'.repeat(AMP_LIMITS.extensionJsonDepth + 2)}`;

@@ -17,6 +17,9 @@ const actionMocks = vi.hoisted(() => ({
 const getQuoteDocumentTemplatesMock = vi.hoisted(() => vi.fn());
 const navigationMocks = vi.hoisted(() => ({ searchParams: 'subtab=sent' }));
 const quoteFormPropsMock = vi.hoisted(() => ({ current: null as null | Record<string, unknown> }));
+const customTabsPropsMock = vi.hoisted(() => ({
+  current: null as null | { tabs: Array<{ id: string; label: string }> },
+}));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
@@ -44,14 +47,20 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
     formatDate: (value: string) => value,
   }),
   useTranslation: () => ({
-    t: (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key,
+    t: (key: string, options?: { defaultValue?: string; count?: number }) => {
+      const template = options?.defaultValue ?? key;
+      return options?.count === undefined
+        ? template
+        : template.replace('{{count}}', String(options.count));
+    },
   }),
 }));
 
 vi.mock('@alga-psa/ui/components/CustomTabs', () => ({
-  CustomTabs: ({ tabs, defaultTab }: { tabs: Array<{ id: string; content: React.ReactNode }>; defaultTab: string }) => (
-    <div>{tabs.find((tab) => tab.id === defaultTab)?.content}</div>
-  ),
+  CustomTabs: ({ tabs, defaultTab }: { tabs: Array<{ id: string; label: string; content: React.ReactNode }>; defaultTab: string }) => {
+    customTabsPropsMock.current = { tabs };
+    return <div>{tabs.find((tab) => tab.id === defaultTab)?.content}</div>;
+  },
 }));
 
 vi.mock('@alga-psa/ui/components/DataTable', () => ({
@@ -118,11 +127,28 @@ const sentQuote = {
   total_amount: 10000,
 };
 
+const draftQuote = {
+  ...sentQuote,
+  quote_id: 'quote-draft-1',
+  display_quote_number: 'Q-1000',
+  status: 'draft',
+  title: 'Draft quote',
+};
+
+const createDeferred = <T,>() => {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+};
+
 describe('QuotesTab sent quote actions', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     navigationMocks.searchParams = 'subtab=sent';
     quoteFormPropsMock.current = null;
+    customTabsPropsMock.current = null;
     actionMocks.listQuotes.mockResolvedValue({ data: [sentQuote] });
     getQuoteDocumentTemplatesMock.mockResolvedValue([]);
     actionMocks.resendQuote.mockResolvedValue({});
@@ -161,5 +187,47 @@ describe('QuotesTab sent quote actions', () => {
       quoteId: 'new',
       initialContext: { sourceTemplateId: 'tmpl-123' },
     });
+  });
+
+  it('T002: a detail-view status change refreshes the list in the background without a loading flash', async () => {
+    navigationMocks.searchParams = 'tab=quotes&quoteId=quote-draft-1&mode=detail';
+    const refreshDeferred = createDeferred<{ data: unknown[] }>();
+    actionMocks.listQuotes
+      .mockResolvedValueOnce({ data: [draftQuote] })
+      .mockReturnValueOnce(refreshDeferred.promise);
+
+    const view = render(<QuotesTab />);
+
+    // Initial load mounts the detail form; the list is not rendered yet.
+    await waitFor(() => expect(quoteFormPropsMock.current).not.toBeNull());
+    expect(actionMocks.listQuotes).toHaveBeenCalledTimes(1);
+
+    const onQuoteStatusChanged = quoteFormPropsMock.current?.onQuoteStatusChanged as
+      | (() => Promise<void>)
+      | undefined;
+    expect(typeof onQuoteStatusChanged).toBe('function');
+
+    const refresh = onQuoteStatusChanged!();
+    await waitFor(() => expect(actionMocks.listQuotes).toHaveBeenCalledTimes(2));
+
+    // While the background fetch is in flight the detail form stays mounted and
+    // the list-level loading card must not replace it.
+    expect(quoteFormPropsMock.current).not.toBeNull();
+    expect(screen.queryByText('Loading quotes...')).toBeNull();
+
+    refreshDeferred.resolve({ data: [sentQuote] });
+    await refresh;
+
+    // Simulate returning to the list: only searchParams change, so the mounted
+    // component keeps its refreshed snapshot and must show current membership
+    // and counts.
+    navigationMocks.searchParams = 'tab=quotes&subtab=active';
+    view.rerender(<QuotesTab />);
+
+    await waitFor(() => expect(screen.getByText('No quotes in this category.')).toBeTruthy());
+    expect(customTabsPropsMock.current?.tabs.find((tab) => tab.id === 'active')?.label).toBe('Active (0)');
+    await waitFor(() =>
+      expect(customTabsPropsMock.current?.tabs.find((tab) => tab.id === 'sent')?.label).toBe('Sent (1)'),
+    );
   });
 });

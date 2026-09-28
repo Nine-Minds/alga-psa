@@ -124,7 +124,8 @@
       "taskType": "Typ",
       "actions": "Akcje"
     },
-    "unknownUser": "Nieznany"
+    "unknownUser": "Nieznany",
+    "searchSmart": "Szukaj projektów, zadań i komentarzy… Enter dla inteligentnego wyszukiwania"
   },
   "quickAdd": {
     "title": "Dodaj nowy projekt",
@@ -1899,5 +1900,29 @@
       "loadRecipient": "Nie udało się załadować informacji o odbiorcy",
       "sendFailed": "Nie udało się wysłać aktualizacji statusu"
     }
+  },
+  "smartSearch": {
+    "run": "Inteligentne wyszukiwanie",
+    "runTitle": "Oceń przefiltrowane projekty względem tego zapytania",
+    "relevanceColumn": "Dopasowanie",
+    "relevance": "{{percent}}% trafności",
+    "strong": "Silne dopasowania",
+    "possible": "Możliwe dopasowania",
+    "unlikely": "Mało prawdopodobne dopasowania",
+    "emptyBucketRunning": "Jeszcze brak",
+    "emptyBucket": "Brak",
+    "scoring": "Oceniono {{scored}} z {{total}} projektów",
+    "summary": "Oceniono {{total}} projektów · {{strong}} silnych · {{possible}} możliwych",
+    "cancelled": "Wyszukiwanie anulowano po {{scored}} z {{total}} projektów",
+    "errorTitle": "Inteligentne wyszukiwanie zatrzymane",
+    "starting": "Uruchamianie inteligentnego wyszukiwania…",
+    "rerun": "Filtry się zmieniły. Uruchom ponownie",
+    "retry": "Ponów",
+    "cancel": "Anuluj",
+    "exit": "Wróć do listy",
+    "notConfigured": "Inteligentne wyszukiwanie nie jest skonfigurowane na tym serwerze",
+    "failedCount": "Nie udało się ocenić {{count}} projektów",
+    "unscored": "Nieocenione",
+    "addOnRequired": "Inteligentne wyszukiwanie wymaga dodatku Asystent AI"
   }
 }

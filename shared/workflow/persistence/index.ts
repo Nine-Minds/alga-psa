@@ -26,3 +26,4 @@ export { default as WorkflowRunLogModelV2 } from './workflowRunLogModelV2';
 export { default as WorkflowTaskModel } from './workflowTaskModel';
 export type { TaskDetails } from './taskInboxInterfaces';
 export { WorkflowTaskStatus } from './workflowTaskStatus';
+export { listPublishedWorkflowDefinitions } from './publishedWorkflowLookup';

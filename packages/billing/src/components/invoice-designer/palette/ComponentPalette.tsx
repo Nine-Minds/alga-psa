@@ -1,5 +1,4 @@
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Invoice designer palette uses shared expression-authoring utilities to enumerate available template fields */
-import { useFeatureFlag } from '@alga-psa/ui/hooks/useFeatureFlag';
 import React, { useMemo, useState } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { type SharedExpressionPathOption } from '@alga-psa/workflows/expression-authoring';
@@ -178,7 +177,6 @@ export const ComponentPalette: React.FC<PaletteProps> = ({
   onInsertTemplateVariable,
 }) => {
   const { t } = useTranslation('msp/invoicing');
-  const { enabled: releaseV16Enabled } = useFeatureFlag('release-v1-6-feature');
   const nodes = useInvoiceDesignerStore((state) => state.nodes);
   const documentKind = useMemo(() => resolveDesignerDocumentKind(nodes), [nodes]);
   const [activeTab, setActiveTab] = useState<'blocks' | 'presets' | 'fields' | 'outline'>('blocks');
@@ -204,11 +202,10 @@ export const ComponentPalette: React.FC<PaletteProps> = ({
 
   const filteredPresets = useMemo(() => {
     return LAYOUT_PRESETS.filter((preset) =>
-      (releaseV16Enabled || !['billed-time-by-ticket', 'billed-time-entries'].includes(preset.id)) &&
       (!preset.documentKind || preset.documentKind === documentKind) &&
       `${preset.label} ${preset.description}`.toLowerCase().includes(normalizedQuery)
     );
-  }, [normalizedQuery, documentKind, releaseV16Enabled]);
+  }, [normalizedQuery, documentKind]);
 
   const templateVariableGroups = useMemo(() => {
     const pathOptions = buildDocumentExpressionPathOptions({

@@ -151,7 +151,8 @@
     "tryAgain": "Try again",
     "backToBilling": "Back to billing",
     "retryFailed": "We still could not start the payment. Please try again in a moment.",
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "offlinePaymentMethod": "This invoice is paid by check or bank transfer, so online payment is not available. Please follow the payment instructions on the invoice."
   },
   "quotes": {
     "pendingQuotes": "Pending Quotes",

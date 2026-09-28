@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Trash, ExternalLink, MoreVertical } from 'lucide-react';
 import { IScheduleEntry } from '@alga-psa/types';
-import { getEventColors } from './utils';
+import { getEventColors, inkClassForFill } from './utils';
 import { Button } from '@alga-psa/ui/components/Button';
+import { useSurfaceIsLight } from '@alga-psa/ui/hooks/useSurfaceIsLight';
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -55,7 +56,11 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
   
   
   const workItemType = event.work_item_type || 'ticket';
-  const { bg, text } = getEventColors(workItemType, isPrimary, isComparison);
+  const { bg, text, fill } = getEventColors(workItemType, isPrimary, isComparison);
+
+  // The chip keeps one fill here, so one reading of it decides the ink.
+  const fillIsLight = useSurfaceIsLight(eventRef, fill ?? undefined);
+  const ink = fill ? inkClassForFill(fillIsLight) : text;
 
   useEffect(() => {
     if (eventRef.current && isComparison) {
@@ -171,7 +176,7 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
   return (
     <div
       ref={eventRef}
-      className={`absolute inset-0 ${compactClasses.text} overflow-hidden rounded-md ${bg} ${text}`}
+      className={`absolute inset-0 ${compactClasses.text} overflow-hidden rounded-md ${bg} ${ink}`}
       onMouseEnter={onMouseEnter}
       onMouseLeave={handleMouseLeave}
       title={tooltipTitle}

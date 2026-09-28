@@ -249,6 +249,7 @@ export type EntraPreflightBucketId =
 
 export type EntraPreflightIdentity = {
   bucket: EntraPreflightBucketId;
+  reason?: 'excluded_by_filter' | 'disabled_upstream';
   entraObjectId: string;
   displayName: string | null;
   email: string | null;
@@ -261,6 +262,9 @@ export type EntraPreflightResponse = {
   clientId: string;
   checkedAt: string;
   totalIdentities: number;
+  excludedByReason: Record<string, number>;
+  unknownFieldCounts: { userType: number; assignedLicenseCount: number };
+  warnings: string[];
   counters: {
     created: number;
     linked: number;
@@ -537,6 +541,35 @@ export const updateEntraFieldSyncConfig = withAuth(async (
     success: true,
     data: normalizedConfig,
   } as const;
+});
+
+export type EntraUserFilterActionConfig = { version: 1; memberUsersOnly: boolean; licensedUsersOnly: boolean; includeGroupIds: string[]; excludeGroupIds: string[]; exclusionPatterns: string[]; deactivateExcludedContacts: boolean; importSharedMailboxes: boolean };
+type EntraManagedTenantUserFilterData = { defaults: EntraUserFilterActionConfig; override: Partial<EntraUserFilterActionConfig> | null; effective: EntraUserFilterActionConfig };
+
+export const getEntraUserFilterDefaults = withAuth(async (user, { tenant }) => {
+  if (!isEnterpriseEdition) return eeUnavailableResult<EntraUserFilterActionConfig>();
+  if (isClientPortalUser(user) || !(await hasPermission(user as any, 'system_settings', 'read'))) return { success: false, error: 'Forbidden' } as const;
+  const result = await callEeRoute<{ config: EntraUserFilterActionConfig }>({ importFn: routes.userFilterDefaultsRoute, method: 'GET' });
+  return result.success ? { success: true, data: (result.data as { config: EntraUserFilterActionConfig }).config } as const : result;
+});
+
+export const updateEntraUserFilterDefaults = withAuth(async (user, { tenant }, config: EntraUserFilterActionConfig) => {
+  if (!isEnterpriseEdition) return eeUnavailableResult<EntraUserFilterActionConfig>();
+  if (isClientPortalUser(user) || !(await hasPermission(user as any, 'system_settings', 'update'))) return { success: false, error: 'Forbidden' } as const;
+  const result = await callEeRoute<{ config: EntraUserFilterActionConfig }>({ importFn: routes.userFilterDefaultsRoute, method: 'POST', body: { config } });
+  return result.success ? { success: true, data: result.data.config } as const : result;
+});
+
+export const getEntraManagedTenantUserFilter = withAuth(async (user, { tenant }, input: { managedTenantId: string }) => {
+  if (!isEnterpriseEdition) return eeUnavailableResult<EntraManagedTenantUserFilterData>();
+  if (isClientPortalUser(user) || !(await hasPermission(user as any, 'system_settings', 'read'))) return { success: false, error: 'Forbidden' } as const;
+  return callEeRoute<EntraManagedTenantUserFilterData>({ importFn: routes.managedUserFilterRoute, method: 'GET', query: { managedTenantId: input.managedTenantId } });
+});
+
+export const updateEntraManagedTenantUserFilter = withAuth(async (user, { tenant }, input: { managedTenantId: string; override: Partial<EntraUserFilterActionConfig> | null }) => {
+  if (!isEnterpriseEdition) return eeUnavailableResult<EntraManagedTenantUserFilterData>();
+  if (isClientPortalUser(user) || !(await hasPermission(user as any, 'system_settings', 'update'))) return { success: false, error: 'Forbidden' } as const;
+  return callEeRoute<EntraManagedTenantUserFilterData>({ importFn: routes.managedUserFilterRoute, method: 'POST', body: input });
 });
 
 export const connectEntraIntegration = withAuth(async (
@@ -1313,6 +1346,8 @@ export const runEntraPreflight = withAuth(async (
     sampleLimit?: number;
     /** Preview these rules instead of the stored ones. */
     fieldSyncConfig?: EntraFieldSyncConfig;
+    /** Preview pending user-import filter rules without saving them. */
+    userFilterConfig?: EntraUserFilterActionConfig;
   }
 ) => {
   if (isClientPortalUser(user)) {
@@ -1336,6 +1371,7 @@ export const runEntraPreflight = withAuth(async (
       clientId: input.clientId,
       sampleLimit: input.sampleLimit,
       fieldSyncConfig: input.fieldSyncConfig,
+      userFilterConfig: input.userFilterConfig,
     },
   });
 });

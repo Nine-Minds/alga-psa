@@ -6,7 +6,7 @@
  * leaves exactly one logo and one footer.
  */
 
-import type { EmailBrandingLogoVariant } from './types';
+import type { EmailBrandingLogoShape, EmailBrandingLogoVariant } from './types';
 
 export const BRAND_LOGO_MARKER = 'data-alga-brand-logo';
 
@@ -16,7 +16,9 @@ export const BRAND_LOGO_MARKER = 'data-alga-brand-logo';
  */
 export const BRAND_LOGO_CIDS = {
   default: 'alga-brand-logo',
+  dark: 'alga-brand-logo-dark',
   wide: 'alga-brand-logo-wide',
+  'wide-dark': 'alga-brand-logo-wide-dark',
 } as const satisfies Record<EmailBrandingLogoVariant, string>;
 
 export function brandLogoCid(variant: EmailBrandingLogoVariant = 'default'): string {
@@ -127,8 +129,22 @@ export function removeBrandLogo(html: string): string {
 
 export interface BrandLogoPreviewUrls {
   logoUrl?: string;
+  logoDarkUrl?: string;
   logoWideUrl?: string;
+  logoWideDarkUrl?: string;
 }
+
+/**
+ * The branding URL each cid falls back through, in the order the send-time pass
+ * walks the uploaded variants: a tenant who never uploaded the dark wordmark
+ * still gets a logo rather than a hole.
+ */
+const PREVIEW_URL_FALLBACKS: Record<EmailBrandingLogoVariant, (keyof BrandLogoPreviewUrls)[]> = {
+  default: ['logoUrl'],
+  dark: ['logoDarkUrl', 'logoUrl'],
+  wide: ['logoWideUrl', 'logoUrl'],
+  'wide-dark': ['logoWideDarkUrl', 'logoWideUrl', 'logoUrl'],
+};
 
 /**
  * Previews render in an iframe that resolves `/api/documents/view/...` against
@@ -143,9 +159,29 @@ export function resolveBrandLogoForPreview(html: string, urls: BrandLogoPreviewU
     const variant = parseBrandLogoVariant(readImgSrc(tag));
     if (!variant) return tag;
 
-    const url = variant === 'wide' ? urls.logoWideUrl || urls.logoUrl : urls.logoUrl;
+    const url = PREVIEW_URL_FALLBACKS[variant].map((key) => urls[key]).find(Boolean);
     return url ? withImgSrc(tag, url) : tag;
   });
+}
+
+/**
+ * The one rule for which logo file a branded template references: the shape the
+ * tenant picked, in the artwork that reads on the header the palette paints.
+ *
+ * Shared by the settings preview, the apply decorator and their tests, so what
+ * a tenant sees in the panel is exactly what lands in tenant_email_templates.
+ * Returns null when nothing usable is uploaded, which the callers read as "no
+ * logo in this template" rather than writing a cid with no bytes behind it.
+ */
+export function pickBrandLogoVariant(
+  shape: EmailBrandingLogoShape,
+  headerIsDark: boolean,
+  uploaded: BrandLogoPreviewUrls,
+): EmailBrandingLogoVariant | null {
+  if (shape === 'wide' && headerIsDark && uploaded.logoWideDarkUrl) return 'wide-dark';
+  if (shape === 'wide' && uploaded.logoWideUrl) return 'wide';
+  if (headerIsDark && uploaded.logoDarkUrl) return 'dark';
+  return uploaded.logoUrl ? 'default' : null;
 }
 
 const ATTRIBUTION = 'Powered by AlgaPSA';

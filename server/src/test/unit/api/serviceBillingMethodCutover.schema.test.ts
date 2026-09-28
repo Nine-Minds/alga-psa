@@ -29,4 +29,19 @@ describe('service billing_method cutover schema', () => {
 
     expect(result.success).toBe(false);
   });
+
+  it('accepts is_active false and preserves it for service updates', () => {
+    const result = updateServiceSchema.safeParse({ is_active: false });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.is_active).toBe(false);
+    }
+  });
+
+  it('rejects non-boolean is_active values on service updates', () => {
+    const result = updateServiceSchema.safeParse({ is_active: 'no' });
+
+    expect(result.success).toBe(false);
+  });
 });

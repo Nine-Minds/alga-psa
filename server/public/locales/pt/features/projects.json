@@ -122,7 +122,8 @@
       "taskType": "Tipo",
       "actions": "Ações"
     },
-    "unknownUser": "Desconhecido"
+    "unknownUser": "Desconhecido",
+    "searchSmart": "Pesquisar projetos, tarefas e comentários… Enter para pesquisa inteligente"
   },
   "quickAdd": {
     "title": "Adicionar novo projeto",
@@ -1871,5 +1872,29 @@
       "loadRecipient": "Não foi possível carregar as informações do destinatário",
       "sendFailed": "Não foi possível enviar a atualização de status"
     }
+  },
+  "smartSearch": {
+    "run": "Pesquisa inteligente",
+    "runTitle": "Pontuar os projetos filtrados em relação a esta consulta",
+    "relevanceColumn": "Correspondência",
+    "relevance": "{{percent}}% relevante",
+    "strong": "Correspondências fortes",
+    "possible": "Correspondências possíveis",
+    "unlikely": "Correspondências improváveis",
+    "emptyBucketRunning": "Nenhuma ainda",
+    "emptyBucket": "Nenhuma",
+    "scoring": "{{scored}} de {{total}} projetos pontuados",
+    "summary": "{{total}} projetos pontuados · {{strong}} fortes · {{possible}} possíveis",
+    "cancelled": "Pesquisa cancelada após {{scored}} de {{total}} projetos",
+    "errorTitle": "A pesquisa inteligente parou",
+    "starting": "A iniciar a pesquisa inteligente…",
+    "rerun": "Os filtros mudaram. Executar novamente",
+    "retry": "Tentar novamente",
+    "cancel": "Cancelar",
+    "exit": "Voltar à lista",
+    "notConfigured": "A pesquisa inteligente não está configurada neste servidor",
+    "failedCount": "Não foi possível pontuar {{count}} projetos",
+    "unscored": "Não pontuados",
+    "addOnRequired": "A pesquisa inteligente requer o complemento Assistente de IA"
   }
 }

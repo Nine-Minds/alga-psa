@@ -957,6 +957,7 @@ export function registerContactActions(): void {
         });
 
         const occurredAt = (after.created_at as string | undefined) ?? new Date().toISOString();
+        // LEVERAGE: pattern contact-create-with-event
         await publishWorkflowDomainEvent({
           eventType: 'CONTACT_CREATED',
           payload: buildContactCreatedPayload({

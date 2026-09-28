@@ -15,6 +15,7 @@
     "contactAccessibility": "Contact {{name}}"
   },
   "detail": {
+    "phoneExtension": "ext.",
     "title": "Contact",
     "loadingContact": "Loading contact…",
     "unableToLoad": "Unable to load contact",

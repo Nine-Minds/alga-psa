@@ -6,6 +6,42 @@ type Connection = Knex | Knex.Transaction;
 
 type CommentPublisher = (event: any, options?: { eventId: string; strict: boolean }) => Promise<void>;
 
+/** Author identity a comment row carries; enough to name the sender of an inbound email. */
+export interface CommentAuthorSource {
+  contact_id?: string | null;
+  user_id?: string | null;
+  metadata?: unknown;
+}
+
+function commentEmailMetadata(metadata: unknown): Record<string, unknown> | null {
+  const parsed = typeof metadata === 'string' ? (() => { try { return JSON.parse(metadata); } catch { return null; } })() : metadata;
+  const email = parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>).email : null;
+  return email && typeof email === 'object' ? email as Record<string, unknown> : null;
+}
+
+/**
+ * The single display rule for a comment's author. Inbound email comments often
+ * match no contact and no user; name the actual sender rather than a placeholder.
+ */
+export async function resolveCommentAuthorDisplay(conn: Connection, tenant: string, comment: CommentAuthorSource): Promise<string> {
+  const db = tenantDb(conn, tenant);
+  if (comment.contact_id) {
+    const contact = await db.table('contacts').select('full_name').where({ contact_name_id: comment.contact_id }).first();
+    if (contact?.full_name) return contact.full_name;
+  }
+  if (comment.user_id) {
+    const user = await db.table('users').select('first_name', 'last_name').where({ user_id: comment.user_id }).first();
+    const name = user ? `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() : '';
+    if (name) return name;
+  }
+  const email = commentEmailMetadata(comment.metadata);
+  for (const key of ['fromName', 'fromAddress', 'matchedAddress'] as const) {
+    const value = email?.[key];
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return 'System';
+}
+
 /** Reuse the scheduled publication outbox columns for immediate comments, including raw transactions. */
 export async function persistCommentPublication(trx: Knex.Transaction, event: any, publish?: CommentPublisher): Promise<void> {
   if (!trx.isTransaction) throw new Error('Comment publication intent requires a transaction');
@@ -29,8 +65,13 @@ export async function dispatchCommentPublication(conn: Connection, tenant: strin
     .whereNull('deleted_at').whereNull('scheduled_publish_dispatched_at').first();
   if (!comment?.scheduled_publish_event_id || !comment.comment_publication_payload) return;
   const payload = comment.comment_publication_payload;
+  // Intents persisted before the producer-side fix can be missing the author
+  // identity the event schema requires. Heal them here from the comment row so
+  // they publish instead of failing validation on every reconcile pass.
+  const author = payload.comment?.author ?? await resolveCommentAuthorDisplay(conn, tenant, comment);
   await publish({ eventType: 'TICKET_COMMENT_ADDED', payload: { ...payload,
-    comment: { ...payload.comment, content: comment.note, isInternal: comment.is_internal },
+    userId: payload.userId ?? comment.user_id ?? comment.ticket_id,
+    comment: { ...payload.comment, content: comment.note, isInternal: comment.is_internal, author },
   } }, { eventId: comment.scheduled_publish_event_id, strict: true });
   await db.table('comments').where({ comment_id: commentId, scheduled_publish_event_id: comment.scheduled_publish_event_id })
     .whereNull('scheduled_publish_dispatched_at').update({ scheduled_publish_dispatched_at: conn.fn.now() });

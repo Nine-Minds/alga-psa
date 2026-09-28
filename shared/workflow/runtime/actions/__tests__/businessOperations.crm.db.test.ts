@@ -547,6 +547,7 @@ describe('crm workflow runtime DB-backed action handlers', () => {
           sendEmail: async () => ({ success: true, messageId: 'msg-test-1' }),
         }),
         getTenantEmailSettings: async () => ({ providerConfigs: [] }),
+        resolveOutboundSenderForTenant: async (_request: { tenantId: string; mailClass: string; senderId?: string }, _settings: unknown, _knex: unknown) => ({ from: { email: 'support@example.test' } }),
       },
       StaticTemplateProcessor: class {
         subject: string;

@@ -31,6 +31,13 @@ export interface IInvoice extends TenantEntity {
   prepayment_description?: string | null;
   /** Snapshot of the purchase order number for this invoice (nullable). */
   po_number?: string | null;
+  /**
+   * The billing profile's effective payment method when the invoice was
+   * generated (`credit_card` | `bank_transfer` | `check`). NULL on invoices
+   * generated before it was recorded. Check and bank transfer suppress the
+   * online "Pay now" link.
+   */
+  payment_method?: string | null;
   /** Client contract assignment that generated this invoice (nullable). */
   client_contract_id?: string | null;
   /** Support ticket this manual invoice was raised from (nullable; quick-invoice-a-ticket). */
@@ -572,12 +579,26 @@ export interface InvoiceViewModel {
   invoice_number: string;
   client_id: string;
   po_number?: string | null;
+  /** Payment-method snapshot key; see IInvoice.payment_method. */
+  payment_method?: string | null;
   client_contract_id?: string | null;
   client: {
+    /**
+     * Who the invoice is billed to: the billing profile's bill-to name when it
+     * carries one, otherwise the client's own name.
+     */
     name: string;
     logo: string;
     address: string;
   };
+  /** The billing profile this invoice bills; NULL for a pre-profile invoice. */
+  billing_profile_id?: string | null;
+  billing_profile_name?: string | null;
+  /**
+   * True only when the client holds more than one billing profile — the one
+   * condition every profile surface renders behind (D6).
+   */
+  client_has_multiple_billing_profiles?: boolean;
   contact: {
     name: string;
     address: string;
