@@ -17,7 +17,7 @@ import { SERVER_MAINTENANCE_JOBS } from './serverMaintenanceJobNames';
 // registered here rather than in @alga-psa/jobs because their handlers need the
 // server's domain graph.
 
-// hudu_integrations is EE-only and must not be named in CE code (NFR7); the
+// The Hudu connection table is EE-only and must not be named in CE code (NFR7); the
 // @enterprise alias resolves to a stub that selects no tenants in CE builds.
 const tenantsWithHuduAutoSync: TenantSelector = async (db) => {
   const mod = await import('@enterprise/lib/integrations/hudu/tenantSync');
