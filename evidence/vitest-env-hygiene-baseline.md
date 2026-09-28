@@ -123,7 +123,7 @@ node)` and `node <- pinned-jsdom (docblock: jsdom)`, each asserting on
 | pinned-jsdom | node | jsdom | `window` is an object | pass | pass |
 
 (a) **A per-file docblock still overrides the project's environment, both
-directions.** This is what lets the ~199 files that sit inside the jsdom globs
+directions.** This is what lets the 49 files that sit inside the jsdom globs
 but pin themselves to `@vitest-environment node` keep running on node, and it is
 why this card removes no docblocks.
 
@@ -157,6 +157,23 @@ Lane collection was checked the same way for every lane this card touched:
 server-colocated 80 files green, workspace-unit 22 files green, and the three
 flat lanes (api-e2e 22, workspace-runtime 2, workspace-db 74) still resolve with
 `projects: undefined` and no duplication.
+
+### The shared rule has to load without `node_modules`
+
+Two CI jobs run these checks straight after `actions/checkout`, with no
+`npm ci`: production-regression's "Repository test inventory" job
+(`verify-react-test-environment.mjs`) and unit-tests' "Skipped-test budget" job
+(`node --test … react-test-environment.test.mjs`). A first cut of
+`scripts/lib/jsdom-test-globs.mjs` imported `picomatch` and `tinyglobby`, which
+failed both jobs with `ERR_MODULE_NOT_FOUND` — every other module in
+`scripts/lib` imports nothing but `node:` builtins for exactly this reason. So
+the rule compiles its own globs (`**/`, `*`, `{a,b}`, `?(a|b)`, `[ab]`) and the
+lane globbing moved to `server/vitest.config.ts`, which only ever runs with
+dependencies installed. The hand-compiled matcher was diffed against `picomatch`
+over all 19,464 tracked files and agrees on every one; the two differ only on
+inputs neither config can produce (dot-directories, `../`-relative paths).
+`scripts/tests/react-test-environment.test.mjs` runs the gate from a copy with
+no `node_modules` so the property cannot rot.
 
 `--reporter=blob` + `vitest run --merge-reports` was replayed end to end through
 the default config, the way `unit-tests.yml` does it: two shard blobs produced
