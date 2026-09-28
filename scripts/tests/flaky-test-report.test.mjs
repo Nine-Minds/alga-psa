@@ -61,6 +61,29 @@ test('clean runs still report, with their empty documents counted', () => {
   assert.match(renderFlakyTestReport(report), /No retry-only pass was recorded in this window\./);
 });
 
+test('a partly inspected window never reads as a clean one', () => {
+  const complete = aggregateFlakyTests([artifact()], { generatedAt,
+    coverage: { runsInspected: 351, complete: true, limits: [] } });
+  assert.deepEqual(complete.coverage, { runsInspected: 351, complete: true, limits: [] });
+  assert.match(renderFlakyTestReport(complete), /Inspected every production-regression run in the window \(351\)\./);
+
+  // Any run or artifact the collector could not read makes an absent test
+  // meaningless, so the summary has to say the window was only partly covered.
+  const partial = aggregateFlakyTests([artifact({ document: browserDocument([]) })], { generatedAt,
+    coverage: { runsInspected: 600, complete: true, limits: ['deadline-exceeded', 'run-limit-reached', 'deadline-exceeded'] } });
+  assert.deepEqual(partial.coverage, { runsInspected: 600, complete: false, limits: ['deadline-exceeded', 'run-limit-reached'] });
+  const markdown = renderFlakyTestReport(partial);
+  assert.match(markdown, /\*\*Partial coverage\*\* — 600 production-regression run\(s\) inspected \(`deadline-exceeded`, `run-limit-reached`\)\./);
+  assert.match(markdown, /not evidence that it is stable/);
+  assert.match(markdown, /No retry-only pass was recorded in this window\./);
+
+  // An unreported or nonsensical coverage claim is never rendered as a promise.
+  assert.equal(aggregateFlakyTests([artifact()], { generatedAt }).coverage, null);
+  assert.equal(renderFlakyTestReport(aggregateFlakyTests([artifact()], { generatedAt })).includes('Inspected every'), false);
+  assert.deepEqual(aggregateFlakyTests([artifact()], { generatedAt, coverage: { runsInspected: -1, complete: 'yes' } }).coverage,
+    { runsInspected: null, complete: false, limits: [] });
+});
+
 test('malformed, foreign and stale artifacts are rejected with local codes only', () => {
   const cases = [
     ['unexpected-artifact-name', { artifactName: 'server-unit-shard-1' }],
@@ -204,7 +227,7 @@ test('the collector reads only flaky artifacts of recent regression runs', async
   assert.equal(aggregateFlakyTests(collected.artifacts, { generatedAt }).summary.flakyTests, 2);
 });
 
-test('an unreachable artifact inventory degrades that run only', async () => {
+test('an unreachable artifact inventory degrades that run only', async (t) => {
   const archives = { 1: zipped(browserDocument()) };
   const { request } = github({
     runs: [{ id: 100, run_attempt: 1, created_at: days(1) }, { id: 102, run_attempt: 1, created_at: days(1) }],
@@ -215,6 +238,18 @@ test('an unreachable artifact inventory degrades that run only', async () => {
     request, now: Date.parse(generatedAt) });
   assert.equal(collected.artifacts.length, 1);
   assert.deepEqual(collected.diagnostics, [{ scope: 'artifacts', runId: '102', code: 'artifact-inventory-unavailable' }]);
+
+  // And the run it could not read is reported as partial coverage, not skipped
+  // quietly: the table below it is no longer the whole week.
+  const root = mkdtempSync(path.join(tmpdir(), 'alga-flaky-partial-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const summary = path.join(root, 'summary.md');
+  writeFileSync(summary, '');
+  await runFlakyTestCollection({ directory: path.join(root, 'out'), request, now: Date.parse(generatedAt),
+    env: { GITHUB_REPOSITORY: 'Nine-Minds/alga-psa', GITHUB_TOKEN: 'github-secret', GITHUB_STEP_SUMMARY: summary } });
+  assert.deepEqual(JSON.parse(readFileSync(path.join(root, 'out/report.json'), 'utf8')).coverage,
+    { runsInspected: 2, complete: false, limits: ['artifact-inventory-unavailable'] });
+  assert.match(readFileSync(summary, 'utf8'), /\*\*Partial coverage\*\* — 2 production-regression run\(s\) inspected \(`artifact-inventory-unavailable`\)\./);
 });
 
 test('configuration and run inventory failures are reported as codes, never as upstream text', async () => {
@@ -252,7 +287,10 @@ test('the CLI writes the report, the diagnostics and the step summary', async (t
   assert.equal(report.scope, 'flaky-test-report');
   assert.equal(report.tests.length, 1);
   assert.deepEqual(JSON.parse(readFileSync(path.join(directory, 'collection.json'), 'utf8')).summary, report.summary);
+  // The collector's own diagnostics decide the coverage claim in the summary.
+  assert.deepEqual(report.coverage, { runsInspected: 1, complete: true, limits: [] });
   assert.match(readFileSync(summary, 'utf8'), /retains balance \[community\] \| production-browser \|/);
+  assert.match(readFileSync(summary, 'utf8'), /Inspected every production-regression run in the window \(1\)\./);
 
   // A failed collection still leaves diagnostics and a visible summary behind.
   mkdirSync(directory, { recursive: true });

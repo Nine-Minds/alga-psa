@@ -26,7 +26,20 @@ function readDocument(document) {
   return null;
 }
 
-export function aggregateFlakyTests(artifacts, { windowDays = 7, generatedAt = new Date().toISOString() } = {}) {
+// How much of the window was actually inspected. An absent flake only means
+// something if the collector got through the whole week, so a capped, timed-out
+// or partly unreadable collection has to say so next to the table.
+function readCoverage(coverage) {
+  if (coverage === null || coverage === undefined) return null;
+  const limits = Array.isArray(coverage.limits) ? coverage.limits.filter(code => text(code, 60)) : [];
+  return {
+    runsInspected: count(coverage.runsInspected, 1_000_000) ? coverage.runsInspected : null,
+    complete: coverage.complete === true && limits.length === 0,
+    limits: [...new Set(limits)].sort().slice(0, 10),
+  };
+}
+
+export function aggregateFlakyTests(artifacts, { windowDays = 7, generatedAt = new Date().toISOString(), coverage = null } = {}) {
   const now = Date.parse(generatedAt);
   if (!Number.isFinite(now)) throw new Error('Invalid report timestamp');
   const since = new Date(now - windowDays * 86_400_000).toISOString();
@@ -68,6 +81,7 @@ export function aggregateFlakyTests(artifacts, { windowDays = 7, generatedAt = n
       || a.suite.localeCompare(b.suite) || a.testId.localeCompare(b.testId));
   return {
     schemaVersion: 1, scope: 'flaky-test-report', generatedAt: new Date(now).toISOString(), windowDays, since,
+    coverage: readCoverage(coverage),
     summary: { artifactsAccepted: accepted.length, artifactsRejected: rejected.length, runsObserved: runs.size,
       flakyTests: ordered.length, occurrences: ordered.reduce((total, row) => total + row.occurrences, 0),
       truncated: ordered.length > LIMITS.rows },
@@ -83,6 +97,14 @@ export function renderFlakyTestReport(report) {
     `${summary.flakyTests} flaky test${summary.flakyTests === 1 ? '' : 's'} across `
     + `${summary.artifactsAccepted} artifact${summary.artifactsAccepted === 1 ? '' : 's'} from ${summary.runsObserved} run${summary.runsObserved === 1 ? '' : 's'}`
     + ` (${summary.artifactsRejected} artifact${summary.artifactsRejected === 1 ? '' : 's'} rejected).`, ''];
+  const runs = report.coverage?.runsInspected;
+  if (report.coverage) {
+    lines.push(report.coverage.complete
+      ? `Inspected every production-regression run in the window (${runs === null ? 'count unavailable' : runs}).`
+      : `**Partial coverage** — ${runs === null ? 'an unknown number of' : runs} production-regression run(s) inspected`
+        + `${report.coverage.limits.length ? ` (${report.coverage.limits.map(code => `\`${cell(code)}\``).join(', ')})` : ''}.`
+        + ' An absent test below is not evidence that it is stable.', '');
+  }
   if (!report.tests.length) {
     lines.push('No retry-only pass was recorded in this window.', '');
   } else {

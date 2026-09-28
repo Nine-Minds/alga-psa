@@ -53,8 +53,13 @@ async function boundedBytes(response, cap) {
 // Read-only: lists recent production-regression runs, then every artifact whose
 // name marks it as flaky evidence. Expired, missing or unreadable artifacts are
 // reported as diagnostics; they never abort the weekly report.
+// The caps must clear a real week: this repository produced 351 regression runs
+// in seven days, one inventory request each. That plus the few flake reports
+// stays well inside the 1,000 requests an hour GITHUB_TOKEN is allowed, and
+// anything the caps do cut is reported as partial coverage rather than read as
+// a clean week.
 export async function collectFlakyArtifacts({ repository, githubToken, request = fetch, now = Date.now(),
-  windowDays = 7, maxRunPages = 3, maxArtifactPages = 3, maxRuns = 200, timeoutMs = 300_000 } = {}) {
+  windowDays = 7, maxRunPages = 6, maxArtifactPages = 3, maxRuns = 600, timeoutMs = 600_000 } = {}) {
   if (typeof repository !== 'string' || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository)) throw new FlakyCollectionError('configuration', 'invalid-repository');
   if (typeof githubToken !== 'string' || !githubToken) throw new FlakyCollectionError('configuration', 'github-token-missing');
   if (!Number.isSafeInteger(windowDays) || windowDays < 1 || windowDays > 90) throw new FlakyCollectionError('configuration', 'invalid-window');
@@ -147,7 +152,11 @@ export async function runFlakyTestCollection({ directory, env = process.env, req
   try {
     const collected = await collectFlakyArtifacts({ repository: env.GITHUB_REPOSITORY, githubToken: env.GITHUB_TOKEN,
       request, now, windowDays });
-    aggregated = aggregateFlakyTests(collected.artifacts, { windowDays, generatedAt: new Date(now).toISOString() });
+    // Every diagnostic is a run or artifact the report could not read, so the
+    // window was not fully covered and the summary must not imply otherwise.
+    aggregated = aggregateFlakyTests(collected.artifacts, { windowDays, generatedAt: new Date(now).toISOString(),
+      coverage: { runsInspected: collected.runsInspected, complete: collected.diagnostics.length === 0,
+        limits: collected.diagnostics.map(entry => entry.code) } });
     diagnostics.status = 'collected';
     diagnostics.runsInspected = collected.runsInspected;
     diagnostics.artifactsDownloaded = collected.artifacts.length;
