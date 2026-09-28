@@ -11,12 +11,12 @@ vi.mock('../../lib/i18n/client', () => ({
 }));
 
 vi.mock('../CustomSelect', () => ({
-  default: ({ options, value, onValueChange, id }: {
+  default: function MockCustomSelect({ options, value, onValueChange, id }: {
     options: Array<{ value: string; label: string | React.ReactElement }>;
     value: string;
     onValueChange: (value: string) => void;
     id: string;
-  }) => {
+  }) {
     const emittedEmptyFor = React.useRef('');
     React.useEffect(() => {
       if (value.startsWith('custom:') && options.some((option) => option.value === value) && emittedEmptyFor.current !== value) {
