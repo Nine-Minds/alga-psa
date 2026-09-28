@@ -748,7 +748,7 @@
       "domainRemovalScheduledWithClear": "Borttagning av domänen har schemalagts och avsändaradressen för ärendemeddelanden har rensats",
       "removeDomainFailed": "Det gick inte att ta bort domänen",
       "testOutboundFailed": "Det gick inte att testa utgående e-post",
-      "senderIdentitiesUpdated": "Avsändaridentiteterna har uppdaterats."
+      "senderSettingsUpdated": "Avsändaridentiteterna har uppdaterats."
     },
     "tabs": {
       "inboundEmail": "Inkommande e-post",
@@ -842,39 +842,6 @@
         "description": "Meddelanden skickas från den valda postlådan via Microsoft Graph och sparas i Skickat.",
         "loadFailed": "Det gick inte att ladda Microsoft 365-postlådor.",
         "saved": "Avsändarpostlådan för utgående e-post har uppdaterats."
-      },
-      "senderIdentities": {
-        "ticket": {
-          "title": "E-postidentitet för ärendemeddelanden",
-          "description": "Svar på ärendemeddelanden måste skickas tillbaka till den här adressen så att de kan matchas och läggas till i ärendet. Använd en ansluten, bevakad inkorg.",
-          "connectedInboxLabel": "Ansluten inkorg",
-          "connectedInboxHelp": "En ansluten inkorg håller kundsvaren i ärendekonversationen.",
-          "customAddressOption": "Använd en annan adress",
-          "addressLabel": "Avsändaradress",
-          "addressPlaceholder": "support@example.com",
-          "addressHelp": "Den här adressen styr vart svar skickas enbart för ärendemeddelanden.",
-          "microsoftAddressHelp": "Microsoft 365 kräver att ärendemeddelanden använder den valda avsändarpostlådan ({{mailbox}}).",
-          "nameLabel": "Avsändarens visningsnamn",
-          "namePlaceholder": "Support",
-          "nameHelp": "Lämna tomt för att använda den anslutna postlådans namn eller ärendetavlans namn."
-        },
-        "notification": {
-          "title": "E-postidentitet för all annan e-post",
-          "description": "Anpassa avsändaridentiteten för portalinbjudningar, lösenordsåterställningar, fakturor, projektuppdateringar och allmänna aviseringar oberoende av ärenderoutningen.",
-          "addressLabel": "Avsändaradress",
-          "addressPlaceholder": "notifications@example.com",
-          "smtpAddressHelp": "Bestäms av avsändaradressen i SMTP-konfigurationen ovan. All e-post som inte gäller ärenden skickas från den.",
-          "lockedAddressHelp": "Den här adressen bestäms av den aktiva hanterade domänen eller den valda Microsoft 365-postlådan.",
-          "nameLabel": "Avsändarens visningsnamn",
-          "namePlaceholder": "Ditt företagsnamn",
-          "nameHelp": "Lämna tomt för att använda {{company}} automatiskt.",
-          "companyFallback": "din klientorganisations namn"
-        },
-        "warningTitle": "Kontrollera svarsroutningen",
-        "errorTitle": "Rätta identiteten för ärendemeddelanden",
-        "clearButton": "Rensa identiteten för ärendemeddelanden",
-        "savingButton": "Sparar…",
-        "saveButton": "Spara avsändaridentiteter"
       }
     },
     "inbound": {
@@ -1032,7 +999,12 @@
       "saving": "Sparar…",
       "startDelimiter": "Startavgränsare",
       "update": "Uppdatera regel",
-      "valuePlaceholder": "Värde"
+      "valuePlaceholder": "Värde",
+      "matchTargets": "Matcha det extraherade värdet mot",
+      "matchClientName": "Kundnamn eller alias",
+      "matchContactEmail": "Kontaktens e-postadress",
+      "matchAssetName": "Enhetsnamn (tillgång)",
+      "matchTargetRequired": "Välj minst ett matchningsmål."
     },
     "header": {
       "description": "Matcha inkommande e-post efter avsändare eller ämne för att hoppa över ovidkommande meddelanden, tilldela rätt kund eller styra till en destination. Reglerna körs i ordning. Den första matchande regeln gäller.",
@@ -1090,7 +1062,10 @@
       "running": "Testar…",
       "subject": "Ämne",
       "title": "Testa den här regeln",
-      "to": "Till"
+      "to": "Till",
+      "contactEmail": "Kontaktens e-postadress",
+      "deviceName": "enhetsnamn",
+      "ambiguous": "{{target}} matchar hos {{count}} kunder — tilldelas inte"
     }
   },
   "errors": {
