@@ -20,8 +20,16 @@ import {
   updateTenantThemeAction,
 } from '@alga-psa/tenancy/actions/tenant-actions/tenantThemeActions';
 import { getTenantBrandingAction } from '@alga-psa/tenancy/actions/tenant-actions/tenantBrandingActions';
-import { deleteTenantLogo, recropTenantLogo, uploadTenantLogo } from '@alga-psa/tenancy/actions/tenant-actions/tenantLogoActions';
-import type { LogoCropRect } from '@alga-psa/types';
+import {
+  deleteTenantLogo,
+  getTenantLogoInfoAction,
+  linkDocumentAsTenantLogo,
+  recropTenantLogo,
+  uploadTenantLogo,
+  type TenantLogoInfo,
+} from '@alga-psa/tenancy/actions/tenant-actions/tenantLogoActions';
+import DocumentSelector from '@alga-psa/documents/components/DocumentSelector';
+import type { IDocument, LogoCropRect } from '@alga-psa/types';
 import { getCurrentUser } from '@alga-psa/user-composition/actions/userQueryActions';
 import {
   DEFAULT_THEME_PAIR_ID,
@@ -85,6 +93,8 @@ const AppearanceSettings = () => {
   const [logoWideUrl, setLogoWideUrl] = useState('');
   const [logoWideDarkUrl, setLogoWideDarkUrl] = useState('');
   const [faviconUrl, setFaviconUrl] = useState('');
+  // File names and crop sources behind each slot; branding only holds the URLs.
+  const [logoInfo, setLogoInfo] = useState<TenantLogoInfo | null>(null);
 
   const isDirty = useMemo(() => {
     if (draft.pairId !== saved.pairId) return true;
@@ -97,6 +107,16 @@ const AppearanceSettings = () => {
 
   useRegisterUnsavedChanges('appearance-theme', isDirty);
 
+  // The names are a convenience next to the previews, so a failure here is
+  // logged and the slots simply stay nameless.
+  const refreshLogoInfo = useCallback(async () => {
+    try {
+      setLogoInfo(await getTenantLogoInfoAction());
+    } catch (error) {
+      console.error('Failed to load tenant logo details', error);
+    }
+  }, []);
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -104,6 +124,7 @@ const AppearanceSettings = () => {
           getTenantThemeAction(),
           getTenantBrandingAction(),
           getCurrentUser(),
+          refreshLogoInfo(),
         ]);
         const persisted = theme.customTheme
           ? { light: theme.customTheme.light, dark: theme.customTheme.dark }
@@ -249,6 +270,7 @@ const AppearanceSettings = () => {
       // The sidebar mark is resolved server-side; refresh so the new logo lands
       // in the rail right away rather than on the next full page load.
       if (result?.success) {
+        await refreshLogoInfo();
         router.refresh();
       }
       return result;
@@ -257,23 +279,69 @@ const AppearanceSettings = () => {
     async (entityId: string) => {
       const result = await deleteTenantLogo(entityId, variant);
       if (result?.success) {
+        await refreshLogoInfo();
         router.refresh();
       }
       return result;
     };
-  // Re-cuts a square mark from the matching wide logo (light from wide, dark from wide-dark).
+  // Re-cuts a square mark from the image it came from: the square upload when
+  // there was one, otherwise the matching wide logo.
   const handleLogoRecrop = (variant: EntityLogoVariant) =>
     async (entityId: string, crop: LogoCropRect) => {
       const result = await recropTenantLogo(entityId, variant, crop);
       if (result?.success) {
+        await refreshLogoInfo();
         router.refresh();
       }
       return result;
     };
-  const markCropHelp = t('appearance.whiteLabel.cropHelp', {
-    defaultValue:
-      'Drag and zoom to choose the part shown in the collapsed side menu and every circular frame. Your wide logo is not changed.',
-  });
+  const handleLogoLink = (variant: EntityLogoVariant) =>
+    async ({ entityId, documentId }: { entityId: string; documentId: string }) => {
+      const result = await linkDocumentAsTenantLogo(entityId, documentId, variant);
+      if (result?.success) {
+        await refreshLogoInfo();
+        router.refresh();
+      }
+      return result;
+    };
+  const renderLogoDocumentSelector = (variant: EntityLogoVariant) =>
+    ({ isOpen, onClose, onSelectDocumentId }: {
+      isOpen: boolean;
+      onClose: () => void;
+      onSelectDocumentId: (documentId: string) => void;
+    }) => (
+      <DocumentSelector
+        id={`tenant-logo-${variant}-document-selector`}
+        isOpen={isOpen}
+        onClose={onClose}
+        singleSelect
+        typeFilter="image"
+        title={t('appearance.whiteLabel.linkDocument.title', { defaultValue: 'Use an uploaded image' })}
+        description={t('appearance.whiteLabel.linkDocument.description', {
+          defaultValue:
+            'Pick an image you have already uploaded to Documents. The document itself is left as it is.',
+        })}
+        onDocumentSelected={async (document: IDocument) => {
+          onSelectDocumentId(document.document_id);
+        }}
+      />
+    );
+
+  /** A mark cut from the wide logo leaves that logo alone — say so only then. */
+  const marksWideSource = (variant: 'default' | 'dark') => {
+    const mark = logoInfo?.[variant];
+    const wide = logoInfo?.[variant === 'dark' ? 'wide-dark' : 'wide'];
+    return !mark?.cropSourceUrl || (!!wide?.url && mark.cropSourceUrl === wide.url);
+  };
+  const markCropHelp = (variant: 'default' | 'dark') => (marksWideSource(variant)
+    ? t('appearance.whiteLabel.cropHelp', {
+        defaultValue:
+          'Drag and zoom to choose the part shown in the collapsed side menu and every circular frame. Your wide logo is not changed.',
+      })
+    : t('appearance.whiteLabel.cropHelpFromSquare', {
+        defaultValue:
+          'Drag and zoom to choose the part shown in the collapsed side menu and every circular frame. Only the mark is changed, so you can adjust it again later.',
+      }));
 
   const squareWarning = t('appearance.whiteLabel.warnings.expectSquare', {
     defaultValue:
@@ -518,11 +586,15 @@ const AppearanceSettings = () => {
                       entityName={clientName || 'AlgaPSA'}
                       imageUrl={logoUrl}
                       wideImageUrl={logoWideUrl || null}
+                      cropSourceUrl={logoInfo?.default.cropSourceUrl ?? null}
+                      imageFileName={logoInfo?.default.fileName ?? null}
                       uploadAction={handleLogoUpload('default')}
                       deleteAction={handleLogoDelete('default')}
                       recropAction={handleLogoRecrop('default')}
+                      linkDocumentAsAvatar={handleLogoLink('default')}
+                      renderDocumentSelector={renderLogoDocumentSelector('default')}
                       cropWideToSquare
-                      cropHelpText={markCropHelp}
+                      cropHelpText={markCropHelp('default')}
                       onImageChange={(next) => setLogoUrl(next || '')}
                       previewShape="square"
                       aspectHint={{ expects: 'square', warning: squareWarning }}
@@ -546,11 +618,15 @@ const AppearanceSettings = () => {
                       entityName={clientName || 'AlgaPSA'}
                       imageUrl={logoDarkUrl}
                       wideImageUrl={logoWideDarkUrl || null}
+                      cropSourceUrl={logoInfo?.dark.cropSourceUrl ?? null}
+                      imageFileName={logoInfo?.dark.fileName ?? null}
                       uploadAction={handleLogoUpload('dark')}
                       deleteAction={handleLogoDelete('dark')}
                       recropAction={handleLogoRecrop('dark')}
+                      linkDocumentAsAvatar={handleLogoLink('dark')}
+                      renderDocumentSelector={renderLogoDocumentSelector('dark')}
                       cropWideToSquare
-                      cropHelpText={markCropHelp}
+                      cropHelpText={markCropHelp('dark')}
                       onImageChange={(next) => setLogoDarkUrl(next || '')}
                       previewShape="square"
                       aspectHint={{ expects: 'square', warning: squareWarning }}
@@ -571,8 +647,11 @@ const AppearanceSettings = () => {
                       entityId={tenantId}
                       entityName={clientName || 'AlgaPSA'}
                       imageUrl={logoWideUrl}
+                      imageFileName={logoInfo?.wide.fileName ?? null}
                       uploadAction={handleLogoUpload('wide')}
                       deleteAction={handleLogoDelete('wide')}
+                      linkDocumentAsAvatar={handleLogoLink('wide')}
+                      renderDocumentSelector={renderLogoDocumentSelector('wide')}
                       onImageChange={(next) => setLogoWideUrl(next || '')}
                       previewShape="rect"
                       aspectHint={{ expects: 'wide', warning: wideWarning }}
@@ -596,8 +675,11 @@ const AppearanceSettings = () => {
                       entityId={tenantId}
                       entityName={clientName || 'AlgaPSA'}
                       imageUrl={logoWideDarkUrl}
+                      imageFileName={logoInfo?.['wide-dark'].fileName ?? null}
                       uploadAction={handleLogoUpload('wide-dark')}
                       deleteAction={handleLogoDelete('wide-dark')}
+                      linkDocumentAsAvatar={handleLogoLink('wide-dark')}
+                      renderDocumentSelector={renderLogoDocumentSelector('wide-dark')}
                       onImageChange={(next) => setLogoWideDarkUrl(next || '')}
                       previewShape="rect"
                       aspectHint={{ expects: 'wide', warning: wideWarning }}
@@ -621,8 +703,11 @@ const AppearanceSettings = () => {
                     entityId={tenantId}
                     entityName={clientName || 'AlgaPSA'}
                     imageUrl={faviconUrl}
+                    imageFileName={logoInfo?.favicon.fileName ?? null}
                     uploadAction={handleLogoUpload('favicon')}
                     deleteAction={handleLogoDelete('favicon')}
+                    linkDocumentAsAvatar={handleLogoLink('favicon')}
+                    renderDocumentSelector={renderLogoDocumentSelector('favicon')}
                     onImageChange={(next) => setFaviconUrl(next || '')}
                     previewShape="rect"
                     accept={FAVICON_ACCEPT}
