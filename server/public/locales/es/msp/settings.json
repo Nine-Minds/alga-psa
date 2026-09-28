@@ -1502,6 +1502,11 @@
       "description": "Suba su logotipo una vez. Sustituye la marca de Alga en el menú lateral MSP, y el portal de clientes usa las mismas imágenes.",
       "logoHelp": "La marca cuadrada se usa dondequiera que el espacio sea cuadrado: el menú lateral contraído y los marcos circulares. Si suelta un logotipo ancho en un espacio cuadrado, elige qué parte se convierte en la marca; una vez subido un logotipo ancho, también puede recortar la marca directamente de él. El logotipo ancho opcional sustituye a la marca y al nombre en el menú lateral expandido, así que suba uno que ya incluya el nombre de su empresa. El menú lateral se adapta a su propio fondo: usa las variantes para fondos oscuros cuando el menú es oscuro y las claras cuando es claro, y recurre a la variante que haya subido.",
       "cropHelp": "Arrastre y haga zoom para elegir la parte que se muestra en el menú lateral contraído y en todos los marcos circulares. Su logotipo ancho no cambia.",
+      "cropHelpFromSquare": "Arrastre y ajuste el zoom para elegir la parte que se muestra en el menú lateral contraído y en todos los marcos circulares. Solo se modifica la marca, por lo que puede volver a ajustarla más adelante.",
+      "linkDocument": {
+        "title": "Usar una imagen subida",
+        "description": "Seleccione una imagen que ya haya subido a Documentos. El documento original se conserva sin cambios."
+      },
       "fields": {
         "mark": "Marca cuadrada",
         "markDark": "Marca cuadrada para fondos oscuros",
