@@ -43,6 +43,18 @@ describe('standard quote template AST definitions', () => {
     );
   });
 
+  it('uses quote title bindings with localized legacy headings as grouped-layout fallbacks', () => {
+    const ast = getStandardQuoteTemplateAstByCode('standard-quote-grouped');
+    expect(collectNodesById(ast?.layout, 'monthly-section-label')[0]?.content).toEqual({
+      type: 'binding', bindingId: 'recurringSectionTitle',
+      fallback: { i18nKey: 'labels.monthlyItems', defaultValue: 'Monthly Items' },
+    });
+    expect(collectNodesById(ast?.layout, 'onetime-section-label')[0]?.content).toEqual({
+      type: 'binding', bindingId: 'onetimeSectionTitle',
+      fallback: { i18nKey: 'labels.oneTimeItems', defaultValue: 'One-time Items' },
+    });
+  });
+
   it('auto-selects the by-location template when the view model has multiple locations', () => {
     expect(autoSelectStandardQuoteTemplateCode({ has_multiple_locations: true })).toBe(
       STANDARD_QUOTE_BY_LOCATION_CODE,

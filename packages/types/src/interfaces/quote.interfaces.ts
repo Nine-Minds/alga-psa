@@ -98,6 +98,8 @@ export interface IQuote extends TenantEntity {
   version: number;
   parent_quote_id?: string | null;
   po_number?: string | null;
+  recurring_section_title?: string | null;
+  onetime_section_title?: string | null;
   subtotal: number;
   discount_total: number;
   tax: number;
@@ -267,6 +269,8 @@ export interface QuoteViewModel {
   status?: QuoteStatus | null;
   version: number;
   po_number?: string | null;
+  recurring_section_title?: string | null;
+  onetime_section_title?: string | null;
   currency_code: string;
   subtotal: number;
   discount_total: number;

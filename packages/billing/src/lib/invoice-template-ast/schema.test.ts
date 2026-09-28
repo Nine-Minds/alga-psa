@@ -67,6 +67,17 @@ describe('templateAstSchema', () => {
     expect(result.success).toBe(true);
   });
 
+  it('accepts a localized fallback on a binding expression', () => {
+    const result = validateTemplateAst({
+      ...createMinimalAst(),
+      layout: { id: 'root', type: 'document', children: [{
+        id: 'monthly-title', type: 'text',
+        content: { type: 'binding', bindingId: 'recurringSectionTitle', fallback: { i18nKey: 'labels.monthlyItems', defaultValue: 'Monthly Items' } },
+      }] },
+    });
+    expect(result.success).toBe(true);
+  });
+
   it('rejects a richText node carrying an unknown property', () => {
     const result = validateTemplateAst({
       ...createMinimalAst(),
