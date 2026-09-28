@@ -202,12 +202,55 @@ independent of this card. Worth its own card.
 The follow-up card should re-run the query above and compare the "failed shard
 jobs carrying one of the three signatures" row against 17 of 112.
 
-## Deferred: `restoreMocks`
+## Deferred: the three vitest config options
 
-The card asked for `restoreMocks` alongside `unstubEnvs`/`unstubGlobals`. It is
-**not** enabled, because it is not a hygiene switch in this repo — it is a
-migration. Measured directly: shard 1 of 4, `restoreMocks: true`, everything else
-as shipped.
+The card asked for `restoreMocks`, `unstubEnvs` and `unstubGlobals` in the
+config. **None of the three is enabled.** The per-test sweep in
+`server/src/test/setup.ts` delivers the cleanup the card wanted;
+the config options do not, for two separate measured reasons.
+
+### `unstubEnvs` / `unstubGlobals` — they break the DB-backed lanes
+
+These options run **before every test**, so a stub established in `beforeAll` is
+already gone when the first test reads it. Measured on vitest 3.2.7 with a
+`beforeAll` that calls `vi.stubEnv('PROBE_VAR', …)`:
+
+| | test 1 reads | test 2 reads |
+| --- | --- | --- |
+| neither option, no sweep | `from-beforeAll` | `from-beforeAll` |
+| `unstubEnvs`/`unstubGlobals` on | `undefined` | `undefined` |
+| per-test `vi.unstubAllEnvs()` only | `from-beforeAll` | `undefined` |
+
+That matters because **the integration lane has no config of its own**:
+`server/package.json`'s `test:integration*` scripts and
+`scripts/run-tier1-integration.mjs` all run `server/vitest.config.ts` with a path
+filter, so every lane that spreads its `test` object inherits these options. The
+DB-backed suites legitimately establish shared state in `beforeAll` — an
+emulator's dynamic port, a collab API key, a hocuspocus URL. With the options on,
+`server/src/test/integration/microsoftCalendarEmulator.integration.test.ts` fails
+**12/12** (`expected 'https://login.microsoftonline.com' to be
+'http://127.0.0.1:…'`); with them off it passes 12/12. Two more were at risk by
+inspection: `collaborativeEditing.integration.test.ts` (`COLLAB_PERSIST_API_KEY`,
+whose route 401s when the key is undefined) and
+`api/userPasswordErrors.integration.test.ts` (`NEXTAUTH_SECRET`).
+
+The options cannot be scoped to the unit lanes — they are config-level and the
+config is shared. The sweep can be, and is: `setup.ts` exempts
+`src/test/{integration,infrastructure,e2e}/`, `__tests__/integration/` and
+`*.integration.*`/`*.db.*` files, leaving those suites exactly as they behaved
+before this card. The unit lanes keep the full guarantee, which is what the card
+asked for ("server unit tests").
+
+This also matters for CI reachability, not just locally:
+`scripts/lib/integration-selection.mjs` classifies `server/vitest.*`,
+`server/src/test/setup.*` and `.github/**` as outside the reliable import graph,
+so a diff touching them forces the **full** integration directory across 4 shards
+— the emulator suite is collected on every run of this branch.
+
+### `restoreMocks` — it is a migration, not a switch
+
+Measured directly: shard 1 of 4, `restoreMocks: true`, everything else as
+shipped.
 
 | | Test files | Tests |
 | --- | --- | --- |
@@ -239,3 +282,19 @@ The 13 suites shard 1 surfaced, as a starting list for that card:
 - server/src/test/unit/contacts/contactEmailLookup.contract.test.ts
 - server/src/test/unit/documentPermissionUtils.test.ts
 - server/src/test/unit/workflowSchemaRegistry.unit.test.ts
+
+## Left for a follow-up
+
+- **Widen the gate to the workspace-unit lane.**
+  `scripts/lib/react-test-environment.mjs` claims the server unit (shard) and
+  colocated lanes. The workspace-unit lane (`services/email-service`,
+  `services/workflow-worker`, `sdk/`, `ee/server/src/lib`) now has the same
+  jsdom/node split, but a React `.test.ts` there is neither claimed by a jsdom
+  glob nor flagged by the gate — it would fail at its first `window` exactly the
+  way this card set out to prevent. The rule already takes a lane predicate;
+  extending it is mostly a decision about which lanes must be React-capable.
+- **`restoreMocks`**, per the 13 suites above.
+- **`unstubEnvs`/`unstubGlobals` for the DB-backed lanes**, if wanted: it needs
+  those suites' `beforeAll` stubs moved to `beforeEach` first, and an
+  integration config separate from `server/vitest.config.ts` to turn the options
+  on without the unit lanes inheriting the opposite trade-off.

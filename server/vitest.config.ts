@@ -78,18 +78,29 @@ export default defineConfig({
     include: SERVER_UNIT_INCLUDE,
     exclude: SERVER_UNIT_EXCLUDE,
     projects: makeEnvironmentProjects({ include: SERVER_UNIT_INCLUDE, exclude: SERVER_UNIT_EXCLUDE }),
-    // A stubbed global or env var outlives its test in this shared fork; let
-    // vitest undo them itself. src/test/setup.ts closes the gaps these two do
-    // not cover.
+    // A stubbed global or env var outlives its test in this shared fork. The
+    // per-test sweep in src/test/setup.ts undoes them; the matching vitest
+    // options are deliberately NOT set here, and neither is `restoreMocks`:
     //
-    // `restoreMocks` is deliberately absent. Measured on shard 1 of 4 it turns
-    // 13 suites red on its own (~50 extrapolated across the four), because they
-    // build their module mocks' vi.fn() implementations once at module scope or
-    // in beforeAll and mockRestore strips the implementation after the first
-    // test. Worth doing; far past this card's 15-file repair cap, so it needs
-    // its own. evidence/vitest-env-hygiene-baseline.md lists the 13.
-    unstubEnvs: true,
-    unstubGlobals: true,
+    // - `unstubEnvs`/`unstubGlobals` run before EVERY test, so a stub
+    //   established in beforeAll is gone by the time the first test reads it
+    //   (measured: with them, a beforeAll stubEnv reads undefined in tests 1
+    //   and 2; without, both read the stub). Every lane that spreads this
+    //   `test` object inherits them — including the DB-backed integration lane,
+    //   which has no config of its own (server/package.json test:integration*
+    //   and scripts/run-tier1-integration.mjs all run this file). Those suites
+    //   legitimately establish shared state in beforeAll: an emulator's dynamic
+    //   port, a collab API key, a hocuspocus URL. Turning the options on made
+    //   microsoftCalendarEmulator.integration fail 12/12. The setup sweep is
+    //   scoped to the unit lanes for the same reason and keeps the guarantee
+    //   the card asked for; these options cannot be scoped that way.
+    // - `restoreMocks`: measured on shard 1 of 4 it turns 13 suites red on its
+    //   own (~50 extrapolated across the four), because they build their module
+    //   mocks' vi.fn() implementations once at module scope or in beforeAll and
+    //   mockRestore strips the implementation after the first test. Worth
+    //   doing; far past this card's 15-file repair cap, so it needs its own.
+    //
+    // evidence/vitest-env-hygiene-baseline.md records both measurements.
     setupFiles: [path.resolve(__dirname, './src/test/setup.ts')],
     globalSetup: [path.resolve(__dirname, './vitest.globalSetup.js')],
     isolate: true,

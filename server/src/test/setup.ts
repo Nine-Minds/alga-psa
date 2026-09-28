@@ -7,7 +7,7 @@ import 'next/dist/server/node-environment-baseline';
 import path from 'node:path';
 import { mkdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { afterAll, afterEach, beforeAll, beforeEach, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, expect, vi } from 'vitest';
 
 // Native require reaches the SAME CJS instance the externalized imports use
 // (a Vite-side dynamic import would load a separate copy whose cleanup list
@@ -23,17 +23,32 @@ const loadRootRtl = (): any | null => {
   }
 };
 
+// This setup file is shared by the unit lanes and the DB-backed ones (the
+// integration/infrastructure/e2e suites have no config of their own — they run
+// server/vitest.config.ts with a path filter). The per-test sweep below is unit
+// hygiene only: those DB-backed suites own their fork and legitimately
+// establish shared state in beforeAll — an emulator's dynamic port, a collab
+// API key, a hocuspocus URL, fake timers — which a per-test unstub would wipe
+// before the second test ever reads it (measured: an unscoped sweep failed
+// microsoftCalendarEmulator.integration 12/12). Exempting them here leaves
+// their behavior exactly as it was before this hook existed.
+const DB_BACKED_SUITE =
+  /(^|\/)(src\/test\/(integration|infrastructure|e2e)|__tests__\/integration)\/|\.(integration|db)\.(test|spec)\.[cm]?[jt]sx?$/;
+const isDbBackedSuite = (): boolean => {
+  const file = expect.getState().testPath;
+  return typeof file === 'string' && DB_BACKED_SUITE.test(file.replace(/\\/g, '/'));
+};
+
 // Whatever a test left running or replaced stops here. Registered BEFORE the
 // render cleanup below because vitest's default hook order is a stack: the
 // last afterEach registered runs first, so unmounting happens while the test's
 // timers and stubs are still in place, and this hook sweeps up afterwards.
-// unstubEnvs/unstubGlobals in vitest.config.ts cover the same ground for files
-// that run under that config; this keeps the guarantee when the setup file is
-// loaded by a package's own vitest target.
 //
 // vi.restoreAllMocks() is deliberately absent — see the note beside
-// `restoreMocks` in server/vitest.config.ts.
+// `restoreMocks` in server/vitest.config.ts, which also explains why the
+// matching unstubEnvs/unstubGlobals options are not set there.
 afterEach(() => {
+  if (isDbBackedSuite()) return;
   vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
