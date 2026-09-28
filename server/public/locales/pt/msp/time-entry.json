@@ -528,11 +528,11 @@
     }
   },
   "launch": {
-    "noUser": "Não foi possível carregar o utilizador atual para o registo de tempo.",
+    "noUser": "Não foi possível carregar o usuário atual para o registro de tempo.",
     "entryNotFound": "Entrada de tempo não encontrada.",
     "entryMissingSheet": "Esta entrada de tempo não está associada a uma folha de horas e não pode ser editada aqui.",
     "entryMissingPeriod": "A folha de horas desta entrada não tem período e não pode ser aberta.",
-    "noPeriods": "Ainda não estão configurados períodos de tempo, pelo que não é possível registar tempo. Peça a um administrador para criar períodos de tempo em Definições → Registo de tempo.",
+    "noPeriods": "Ainda não há períodos de tempo configurados, portanto não é possível registrar tempo. Peça a um administrador para criar períodos de tempo em Configurações → Registro de tempo.",
     "noEditablePeriods": "Todas as folhas de horas estão submetidas ou aprovadas, pelo que não há nenhum dia a que adicionar tempo. Peça a um aprovador que reabra uma folha ou a um administrador que adicione um período.",
     "prepareFailed": "Ocorreu um erro ao preparar a entrada de tempo. Tente novamente."
   }

@@ -528,12 +528,12 @@
     }
   },
   "launch": {
-    "noUser": "Impossibile caricare l'utente corrente per la voce di tempo.",
-    "entryNotFound": "Voce di tempo non trovata.",
-    "entryMissingSheet": "Questa voce di tempo non è collegata a una scheda attività e non può essere modificata qui.",
-    "entryMissingPeriod": "Alla scheda attività di questa voce manca il periodo e non può essere aperta.",
+    "noUser": "Impossibile caricare l'utente corrente per l'inserimento ore.",
+    "entryNotFound": "Inserimento ore non trovato.",
+    "entryMissingSheet": "Questo inserimento ore non è collegato a una scheda attività e non può essere modificato qui.",
+    "entryMissingPeriod": "Alla scheda attività di questo inserimento ore manca il periodo e non può essere aperta.",
     "noPeriods": "Non sono ancora stati configurati periodi di tempo, quindi non è possibile registrare tempo. Chiedi a un amministratore di creare periodi di tempo in Impostazioni → Registrazione tempo.",
     "noEditablePeriods": "Tutte le schede attività sono inviate o approvate, quindi non c’è alcun giorno a cui aggiungere tempo. Chiedi a un approvatore di riaprire una scheda o a un amministratore di aggiungere un periodo.",
-    "prepareFailed": "Si è verificato un errore durante la preparazione della voce di tempo. Riprova."
+    "prepareFailed": "Si è verificato un errore durante la preparazione dell'inserimento ore. Riprova."
   }
 }
