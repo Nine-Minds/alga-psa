@@ -2,7 +2,12 @@ import { Client, Connection, ScheduleOverlapPolicy } from '@temporalio/client';
 import { createLogger, format, transports } from 'winston';
 import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin.js';
-import { TIER_FEATURES, tierHasFeature } from '@alga-psa/types';
+import {
+  LEGACY_PER_TENANT_SCHEDULE_PREFIXES,
+  MAINTENANCE_FANOUT_SCHEDULES,
+  TIER_FEATURES,
+  tierHasFeature,
+} from '@alga-psa/types';
 import { resolveTenantTier } from '@alga-psa/licensing';
 import { seedNinjaOneProactiveRefreshFromStoredCredentials } from '@ee/lib/integrations/ninjaone/proactiveRefresh';
 import {
@@ -20,10 +25,6 @@ import {
   MARKETING_SEND_SEQUENCE_STEPS_JOB,
   type MarketingJobName,
 } from '@alga-psa/marketing/lib/marketingJobContract';
-import {
-  LEGACY_PER_TENANT_SCHEDULE_PREFIXES,
-  MAINTENANCE_FANOUT_SCHEDULES,
-} from './maintenanceFanoutSchedules';
 import * as dotenv from 'dotenv';
 
 dotenv.config();

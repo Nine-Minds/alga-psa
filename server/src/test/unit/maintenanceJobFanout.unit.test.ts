@@ -68,7 +68,7 @@ import {
   listMaintenanceJobNames,
   registerMaintenanceJob,
 } from '@alga-psa/jobs/fanout';
-import { MAINTENANCE_FANOUT_SCHEDULES } from '../../../../ee/temporal-workflows/src/schedules/maintenanceFanoutSchedules';
+import { MAINTENANCE_FANOUT_SCHEDULES } from '@alga-psa/types';
 import { SERVER_MAINTENANCE_JOBS } from '../../lib/jobs/serverMaintenanceJobNames';
 
 describe('runMaintenanceJob', () => {

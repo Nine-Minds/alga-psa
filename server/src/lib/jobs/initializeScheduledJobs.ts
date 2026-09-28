@@ -14,7 +14,7 @@ const isEnterpriseWorkflowEdition = (): boolean =>
  *
  * CE converges its per-tenant pg-boss schedules here. EE/appliance does not:
  * every recurring job there is a global Temporal schedule owned by the worker
- * (ee/temporal-workflows/src/schedules/maintenanceFanoutSchedules.ts), so boot
+ * (packages/types/src/constants/maintenanceFanoutSchedules.ts), so boot
  * time never grows with the tenant count.
  */
 export async function initializeScheduledJobs(): Promise<void> {

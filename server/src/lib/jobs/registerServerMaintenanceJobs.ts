@@ -13,7 +13,7 @@ import { initializeJobRunner } from './initializeJobRunner';
 import { SERVER_MAINTENANCE_JOBS } from './serverMaintenanceJobNames';
 
 // The Temporal worker's maintenance-fanout:<jobName> schedules name these jobs
-// (ee/temporal-workflows/src/schedules/maintenanceFanoutSchedules.ts). They are
+// (packages/types/src/constants/maintenanceFanoutSchedules.ts). They are
 // registered here rather than in @alga-psa/jobs because their handlers need the
 // server's domain graph.
 

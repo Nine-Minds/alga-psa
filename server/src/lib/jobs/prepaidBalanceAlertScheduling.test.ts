@@ -9,7 +9,7 @@ const fanoutSource = readFileSync(resolve(__dirname, '../../../../packages/jobs/
 // setupSchedules applies the schedule policies; the cron catalog lives beside it.
 const temporalSource = [
   readFileSync(resolve(__dirname, '../../../../ee/temporal-workflows/src/schedules/setupSchedules.ts'), 'utf8'),
-  readFileSync(resolve(__dirname, '../../../../ee/temporal-workflows/src/schedules/maintenanceFanoutSchedules.ts'), 'utf8'),
+  readFileSync(resolve(__dirname, '../../../../packages/types/src/constants/maintenanceFanoutSchedules.ts'), 'utf8'),
 ].join('\n');
 
 describe('prepaid-balance-alert-scan scheduling contract', () => {

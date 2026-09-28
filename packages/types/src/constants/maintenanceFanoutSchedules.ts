@@ -1,6 +1,10 @@
-import { CONTRACT_CADENCE_REPLENISHMENT_JOB_NAME } from '@alga-psa/types';
+import { CONTRACT_CADENCE_REPLENISHMENT_JOB_NAME } from './billingJobNames';
 
 /**
+ * Dependency-free like billingJobNames: the Temporal worker's setupSchedules
+ * creates these schedules, and the server suite checks them against the fan-out
+ * registry, so neither side has to import the other.
+ *
  * Every recurring server-side job in EE/appliance, as one global Temporal
  * Schedule each (`maintenance-fanout:<jobName>`). The schedule fires
  * maintenanceJobWorkflow, whose activity publishes MAINTENANCE_JOB_REQUESTED;
