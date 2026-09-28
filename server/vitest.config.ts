@@ -74,10 +74,16 @@ export default defineConfig({
     include: SERVER_UNIT_INCLUDE,
     exclude: SERVER_UNIT_EXCLUDE,
     projects: makeEnvironmentProjects({ include: SERVER_UNIT_INCLUDE, exclude: SERVER_UNIT_EXCLUDE }),
-    // A leaked fake timer, spy or stubbed global outlives its test in this
-    // shared fork; these three make vitest undo them itself, and
-    // src/test/setup.ts closes the gaps they do not cover.
-    restoreMocks: true,
+    // A stubbed global or env var outlives its test in this shared fork; let
+    // vitest undo them itself. src/test/setup.ts closes the gaps these two do
+    // not cover.
+    //
+    // `restoreMocks` is deliberately absent. Measured on shard 1 of 4 it turns
+    // 13 suites red on its own (~50 extrapolated across the four), because they
+    // build their module mocks' vi.fn() implementations once at module scope or
+    // in beforeAll and mockRestore strips the implementation after the first
+    // test. Worth doing; far past this card's 15-file repair cap, so it needs
+    // its own. evidence/vitest-env-hygiene-baseline.md lists the 13.
     unstubEnvs: true,
     unstubGlobals: true,
     setupFiles: [path.resolve(__dirname, './src/test/setup.ts')],

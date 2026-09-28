@@ -105,6 +105,34 @@ glob. The three `.ts` files are named in `JSDOM_EXTRA_FILES`.
 `bc54aa89fb` (the merge-base of this branch). The only per-file mechanism was
 the docblock.
 
+## The two mechanics the design rests on
+
+Both were probed directly, in a throwaway directory with no `node_modules` (a
+plain-object config, so nothing had to resolve), against both installed vitest
+majors — `server/node_modules/vitest` 3.2.7, which every server lane runs, and
+the root `node_modules/vitest` 4.1.11, which the repo is heading towards.
+
+Three files, assigned `jsdom <- plain (no docblock), pinned-node (docblock:
+node)` and `node <- pinned-jsdom (docblock: jsdom)`, each asserting on
+`typeof window`:
+
+| File | Project | Docblock | Asserted | 3.2.7 | 4.1.11 |
+| --- | --- | --- | --- | --- | --- |
+| plain-jsdom | jsdom | — | `window` is an object | pass | pass |
+| pinned-node | jsdom | node | `window` is undefined | pass | pass |
+| pinned-jsdom | node | jsdom | `window` is an object | pass | pass |
+
+(a) **A per-file docblock still overrides the project's environment, both
+directions.** This is what lets the ~199 files that sit inside the jsdom globs
+but pin themselves to `@vitest-environment node` keep running on node, and it is
+why this card removes no docblocks.
+
+(b) **`list --filesOnly --json` yields each file exactly once** when the
+projects' includes tile the set: 3 entries, 3 unique. On the real configs the
+same property is enforced per shard by `scripts/run-server-unit-shard.mjs`, which
+fails the run unless the shard config's collection equals its assigned partition
+byte for byte — a duplicate would break that equality.
+
 ## After this card
 
 The default lane's 3609 files now split 699 jsdom / 2910 node, with the same
@@ -116,3 +144,41 @@ and 4.1.11, both directions).
 
 The follow-up card should re-run the query above and compare the "failed shard
 jobs carrying one of the three signatures" row against 17 of 112.
+
+## Deferred: `restoreMocks`
+
+The card asked for `restoreMocks` alongside `unstubEnvs`/`unstubGlobals`. It is
+**not** enabled, because it is not a hygiene switch in this repo — it is a
+migration. Measured directly: shard 1 of 4, `restoreMocks: true`, everything else
+as shipped.
+
+| | Test files | Tests |
+| --- | --- | --- |
+| shard 1 as shipped | 772 passed | 4498 passed |
+| shard 1 with `restoreMocks: true` | **13 failed**, 759 passed | 62 failed, 4436 passed |
+
+Extrapolated across the four shards that is ~50 suites, against this card's
+15-file repair cap. The cause is uniform: these suites give their module mocks an
+implementation once — `vi.mock('x', () => ({ f: vi.fn(() => y) }))` at module
+scope, or a `beforeAll` that calls `mockImplementation` — and `mockRestore`
+strips the implementation after the first test, so test two onwards sees
+`undefined`. The fix is per-suite (move the implementation into `beforeEach`),
+which is the follow-up card. `vi.restoreAllMocks()` is left out of
+`server/src/test/setup.ts` for the same reason; `vi.useRealTimers()`,
+`vi.unstubAllGlobals()` and `vi.unstubAllEnvs()` are all in.
+
+The 13 suites shard 1 surfaced, as a starting list for that card:
+
+- packages/billing/src/services/accountingSync/exportReadiness.test.ts
+- packages/billing/tests/billingCurrencyActions.defaultCurrencyFallback.test.ts
+- packages/billing/tests/invoiceModification.updateDraftInvoiceProperties.test.ts
+- packages/billing/tests/quote/quoteDetail.test.tsx
+- packages/client-portal/src/components/documents/ClientDocumentsPage.test.tsx
+- packages/documents/src/components/ShareLinkDialog.test.tsx
+- packages/jobs/src/lib/handlers/rmmDeviceSyncHandler.test.ts
+- packages/scheduling/tests/scheduleActions.deleteEntry.teamsRetraction.test.ts
+- server/src/test/unit/app/client-portal/request-services/myRequestDetail.page.test.tsx
+- server/src/test/unit/components/ExperimentalFeaturesSettings.test.tsx
+- server/src/test/unit/contacts/contactEmailLookup.contract.test.ts
+- server/src/test/unit/documentPermissionUtils.test.ts
+- server/src/test/unit/workflowSchemaRegistry.unit.test.ts
