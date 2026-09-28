@@ -6,7 +6,11 @@ const initializeSource = readFileSync(resolve(__dirname, 'initializeScheduledJob
 const jobsIndexSource = readFileSync(resolve(__dirname, 'index.ts'), 'utf8');
 const registerSource = readFileSync(resolve(__dirname, 'registerAllHandlers.ts'), 'utf8');
 const fanoutSource = readFileSync(resolve(__dirname, '../../../../packages/jobs/src/lib/maintenanceJobFanout.ts'), 'utf8');
-const temporalSource = readFileSync(resolve(__dirname, '../../../../ee/temporal-workflows/src/schedules/setupSchedules.ts'), 'utf8');
+// setupSchedules applies the schedule policies; the cron catalog lives beside it.
+const temporalSource = [
+  readFileSync(resolve(__dirname, '../../../../ee/temporal-workflows/src/schedules/setupSchedules.ts'), 'utf8'),
+  readFileSync(resolve(__dirname, '../../../../ee/temporal-workflows/src/schedules/maintenanceFanoutSchedules.ts'), 'utf8'),
+].join('\n');
 
 describe('prepaid-balance-alert-scan scheduling contract', () => {
   it('uses the separate job name and never overloads expiring-credits-notification', () => {

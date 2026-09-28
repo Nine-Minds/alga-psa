@@ -54,7 +54,7 @@ const WORKFLOW_QUOTA_RESUME_BATCH_SIZE = 100;
 // Narrows a tenant job to the tenants that can actually do its work (the
 // integration is configured), so the fan-out does not burn a pooled connection
 // per tenant just to discover there is nothing to do. Returns distinct tenant ids.
-type TenantSelector = (db: TenantDb) => PromiseLike<Array<{ tenant: string }>>;
+export type TenantSelector = (db: TenantDb) => PromiseLike<Array<{ tenant: string }>>;
 
 /**
  * Aggregate outcome a system job may report so partial failures are not
@@ -67,7 +67,7 @@ export type MaintenanceJobExecutionOutcome = {
   failed: number;
 };
 
-type MaintenanceJobDef =
+export type MaintenanceJobDef =
   | { scope: 'tenant'; run: (tenantId: string) => Promise<unknown>; tenants?: TenantSelector; concurrency?: number }
   // System jobs may return anything; a result carrying numeric total/succeeded/
   // failed is treated as an execution outcome, everything else is a single unit.
@@ -180,6 +180,19 @@ export type MaintenanceJobResult = {
   succeeded: number;
   failed: number;
 };
+
+/**
+ * Add a job whose handler cannot live in this package (it needs the server's
+ * domain graph) to the fan-out registry. The server registers these before it
+ * subscribes to MAINTENANCE_JOB_REQUESTED, so the Temporal maintenance schedule
+ * for the job resolves to a known definition. Re-registering replaces the
+ * definition, which keeps dev hot-reload and repeated boots idempotent.
+ */
+export function registerMaintenanceJob(jobName: string, def: MaintenanceJobDef): void {
+  MAINTENANCE_JOBS[jobName] = def;
+}
+
+export const listMaintenanceJobNames = (): string[] => Object.keys(MAINTENANCE_JOBS);
 
 export const isKnownMaintenanceJob = (jobName: string): boolean =>
   Object.prototype.hasOwnProperty.call(MAINTENANCE_JOBS, jobName);

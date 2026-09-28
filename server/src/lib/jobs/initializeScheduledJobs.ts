@@ -1,6 +1,4 @@
-import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, schedulePrepaidBalanceAlertScanJob, scheduleExpiredHourBlocksJob, scheduleExpiringHourBlocksNotificationJob, scheduleQuoteAutoExpirationJob, scheduleReconcileBucketUsageJob, scheduleReconcileHourBlockAllocationsJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupWebhookDeliveriesJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleTeamsMeetingArtifactSubscriptionRenewalJob, scheduleTeamsMeetingSweepJob, scheduleGooglePubSubVerificationJob, scheduleGoogleGmailWatchRenewalJob, scheduleEmailWebhookMaintenanceJob, scheduleRenewalQueueProcessingJob, scheduleDateTriggerScanJob, scheduleSlaTimerJob, scheduleWorkflowQuotaResumeScanJob, scheduleSearchReconcileJob, scheduleAutoCloseTicketsJob, scheduleLowStockNotificationJob, scheduleOpportunityDisciplineJob, scheduleOpportunityWeeklyDigestJob, scheduleOpportunityGeneratorsJob, scheduleMarketingFlipDuePostsJob, scheduleMarketingExpireStaleTargetsJob, scheduleMarketingSendSequenceStepsJob, scheduleProjectDateReadinessJob, scheduleInboundEmailRecoveryJob, scheduleProviderDisconnectRetryJob } from './index';
-import { scheduleAccountingSyncCycleJob } from './handlers/accountingSyncCycleHandler';
-import { scheduleHuduAutoSyncJob } from './handlers/huduAutoSyncHandler';
+import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, schedulePrepaidBalanceAlertScanJob, scheduleExpiredHourBlocksJob, scheduleExpiringHourBlocksNotificationJob, scheduleQuoteAutoExpirationJob, scheduleReconcileBucketUsageJob, scheduleReconcileHourBlockAllocationsJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupWebhookDeliveriesJob, scheduleMicrosoftWebhookRenewalJob, scheduleGooglePubSubVerificationJob, scheduleGoogleGmailWatchRenewalJob, scheduleEmailWebhookMaintenanceJob, scheduleRenewalQueueProcessingJob, scheduleDateTriggerScanJob, scheduleSlaTimerJob, scheduleSearchReconcileJob, scheduleAutoCloseTicketsJob, scheduleLowStockNotificationJob, scheduleOpportunityDisciplineJob, scheduleOpportunityWeeklyDigestJob, scheduleOpportunityGeneratorsJob, scheduleMarketingFlipDuePostsJob, scheduleMarketingExpireStaleTargetsJob, scheduleMarketingSendSequenceStepsJob, scheduleProjectDateReadinessJob, scheduleInboundEmailRecoveryJob, scheduleProviderDisconnectRetryJob } from './index';
 import logger from '@alga-psa/core/logger';
 import { getConnection } from 'server/src/lib/db/db';
 import { tenantDb } from '@alga-psa/db';
@@ -12,15 +10,25 @@ const isEnterpriseWorkflowEdition = (): boolean =>
   || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
 
 /**
- * Initialize all scheduled jobs for the application
- * This function sets up recurring jobs that need to run on a schedule
+ * Initialize all scheduled jobs for the application.
+ *
+ * CE converges its per-tenant pg-boss schedules here. EE/appliance does not:
+ * every recurring job there is a global Temporal schedule owned by the worker
+ * (ee/temporal-workflows/src/schedules/maintenanceFanoutSchedules.ts), so boot
+ * time never grows with the tenant count.
  */
 export async function initializeScheduledJobs(): Promise<void> {
   try {
-    // Initialize the scheduler
+    // Registers the legacy pg-boss handlers, which both editions still need
+    // for immediate jobs (invoice generation, imports, ...).
     await initializeScheduler();
     logger.info('Job scheduler initialized');
-    
+
+    if (isEnterpriseWorkflowEdition()) {
+      logger.info('Skipping server-side recurring schedule convergence (Temporal owns recurring schedules in EE)');
+      return;
+    }
+
     // Get all tenants using root connection
     const knex = await getConnection(null);
     const tenants = await tenantDb(knex, '__scheduled_jobs_tenant_enumeration__')
@@ -163,11 +171,9 @@ export async function initializeScheduledJobs(): Promise<void> {
 
       try { await scheduleDateTriggerScanJob(tenantId, '5 * * * *'); } catch (error) { logger.error(`Failed to schedule workflow date trigger scan for tenant ${tenantId}`, error); }
 
-      // CE keeps the existing per-tenant pg-boss jobs. In EE/appliance the
-      // Temporal worker's three global fan-out schedules are authoritative.
       await scheduleMarketingJobsForTenant({
         tenantId,
-        enterpriseWorkflowEdition: isEnterpriseWorkflowEdition(),
+        enterpriseWorkflowEdition: false,
         dependencies: {
           logger,
           scheduleFlipDuePosts: scheduleMarketingFlipDuePostsJob,
@@ -245,82 +251,21 @@ export async function initializeScheduledJobs(): Promise<void> {
         logger.error(`Failed to schedule search index reconciliation job for tenant ${tenantId}`, error);
       }
 
-      // Schedule the accounting sync cycle (every 15 minutes, EE only; cheap
-      // no-op for tenants without a connected accounting integration)
-      try {
-        const syncJobId = await scheduleAccountingSyncCycleJob(tenantId);
-        if (syncJobId) {
-          logger.info(`Scheduled accounting sync cycle for tenant ${tenantId} with job ID ${syncJobId}`);
-        }
-      } catch (error) {
-        logger.error(`Failed to schedule accounting sync cycle for tenant ${tenantId}`, error);
-      }
-
-      // Converge the Hudu daily auto-sync schedule (EE only; created only for
-      // tenants with an active Hudu connection AND settings.autoSync.enabled)
-      try {
-        const huduJobId = await scheduleHuduAutoSyncJob(tenantId);
-        if (huduJobId) {
-          logger.info(`Scheduled Hudu auto-sync for tenant ${tenantId} with job ID ${huduJobId}`);
-        }
-      } catch (error) {
-        logger.error(`Failed to schedule Hudu auto-sync for tenant ${tenantId}`, error);
-      }
-
       // Schedule Microsoft calendar webhook renewal (every 30 minutes)
-      // Note: In EE, this is handled by Temporal workflows, so we skip pg-boss scheduling
-      if (process.env.EDITION !== 'enterprise') {
-        try {
-          const cron = '*/30 * * * *';
-          const renewalJobId = await scheduleMicrosoftWebhookRenewalJob(tenantId, cron);
-          if (renewalJobId) {
-            logger.info(`Scheduled Microsoft calendar webhook renewal job for tenant ${tenantId} with job ID ${renewalJobId}`);
-          } else {
-            logger.info('Microsoft calendar webhook renewal job already scheduled (singleton active)', {
-              tenantId,
-              cron,
-              returnedJobId: renewalJobId
-            });
-          }
-        } catch (error) {
-          logger.error(`Failed to schedule Microsoft calendar webhook renewal job for tenant ${tenantId}`, error);
+      try {
+        const cron = '*/30 * * * *';
+        const renewalJobId = await scheduleMicrosoftWebhookRenewalJob(tenantId, cron);
+        if (renewalJobId) {
+          logger.info(`Scheduled Microsoft calendar webhook renewal job for tenant ${tenantId} with job ID ${renewalJobId}`);
+        } else {
+          logger.info('Microsoft calendar webhook renewal job already scheduled (singleton active)', {
+            tenantId,
+            cron,
+            returnedJobId: renewalJobId
+          });
         }
-      } else {
-        logger.info(`Skipping pg-boss calendar webhook renewal for tenant ${tenantId} (EE uses Temporal workflows)`);
-      }
-
-      if (isEnterpriseWorkflowEdition()) {
-        try {
-          const cron = '*/30 * * * *';
-          const renewalJobId = await scheduleTeamsMeetingArtifactSubscriptionRenewalJob(tenantId, cron);
-          if (renewalJobId) {
-            logger.info(`Scheduled Teams meeting artifact subscription renewal job for tenant ${tenantId} with job ID ${renewalJobId}`);
-          } else {
-            logger.info('Teams meeting artifact subscription renewal covered by the Temporal fan-out schedule (or singleton already active)', {
-              tenantId,
-              cron,
-              returnedJobId: renewalJobId
-            });
-          }
-        } catch (error) {
-          logger.error(`Failed to schedule Teams meeting artifact subscription renewal job for tenant ${tenantId}`, error);
-        }
-
-        try {
-          const cron = '*/10 * * * *';
-          const sweepJobId = await scheduleTeamsMeetingSweepJob(tenantId, cron);
-          if (sweepJobId) {
-            logger.info(`Scheduled Teams meeting sweep job for tenant ${tenantId} with job ID ${sweepJobId}`);
-          } else {
-            logger.info('Teams meeting sweep covered by the Temporal fan-out schedule (or singleton already active)', {
-              tenantId,
-              cron,
-              returnedJobId: sweepJobId
-            });
-          }
-        } catch (error) {
-          logger.error(`Failed to schedule Teams meeting sweep job for tenant ${tenantId}`, error);
-        }
+      } catch (error) {
+        logger.error(`Failed to schedule Microsoft calendar webhook renewal job for tenant ${tenantId}`, error);
       }
 
       // Schedule Google Pub/Sub subscription verification (hourly)
@@ -472,38 +417,6 @@ export async function initializeScheduledJobs(): Promise<void> {
      logger.error('Failed to schedule webhook delivery cleanup job', error);
    }
 
-   if (process.env.EDITION === 'enterprise') {
-     try {
-       const aiCleanupJobId = await scheduleCleanupAiSessionKeysJob();
-       if (aiCleanupJobId) {
-         logger.info(`Scheduled AI session key cleanup job with ID ${aiCleanupJobId}`);
-       } else {
-         logger.info('AI session key cleanup job already scheduled (singleton active)', {
-           returnedJobId: aiCleanupJobId,
-         });
-       }
-     } catch (error) {
-       logger.error('Failed to schedule AI session key cleanup job', error);
-     }
-   }
-
-   if (isEnterpriseWorkflowEdition()) {
-     try {
-       const cron = '*/5 * * * *';
-       const quotaResumeJobId = await scheduleWorkflowQuotaResumeScanJob(cron);
-       if (quotaResumeJobId) {
-         logger.info(`Scheduled workflow quota resume scan job with ID ${quotaResumeJobId}`);
-       } else {
-         logger.info('Workflow quota resume scan job already scheduled (singleton active)', {
-           cron,
-           returnedJobId: quotaResumeJobId,
-         });
-       }
-     } catch (error) {
-       logger.error('Failed to schedule workflow quota resume scan job', error);
-     }
-   }
-   
    logger.info('All scheduled jobs initialized');
   } catch (error: any) {
     logger.error('Failed to initialize scheduled jobs', error);

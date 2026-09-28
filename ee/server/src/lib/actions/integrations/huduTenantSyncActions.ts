@@ -111,19 +111,6 @@ export const setHuduAutoSync = withHuduAccess(
       const { knex } = await createTenantKnex(tenant);
       await mergeHuduSettings(knex, tenant, { autoSync });
 
-      // Converge the recurring schedule to match the new desired state.
-      try {
-        const { scheduleHuduAutoSyncJob } = await import(
-          'server/src/lib/jobs/handlers/huduAutoSyncHandler'
-        );
-        await scheduleHuduAutoSyncJob(tenant);
-      } catch (error) {
-        logger.warn('[HuduTenantSyncActions] auto-sync schedule converge skipped', {
-          tenant,
-          error: toErrorMessage(error),
-        });
-      }
-
       logger.info('[HuduTenantSyncActions] auto-sync updated', { tenant, enabled: autoSync.enabled });
       return { success: true, data: autoSync };
     } catch (error) {
