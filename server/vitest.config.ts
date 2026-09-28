@@ -1,7 +1,8 @@
 import { coverageConfigDefaults, defineConfig } from 'vitest/config';
 import fs from 'node:fs';
 import path from 'path';
-import { environmentProjects, resolveEnvironmentPartition } from '../scripts/lib/jsdom-test-globs.mjs';
+import { globSync } from 'tinyglobby';
+import { environmentProjects, partitionByEnvironment } from '../scripts/lib/jsdom-test-globs.mjs';
 
 fs.mkdirSync(path.resolve(__dirname, './coverage/.tmp'), { recursive: true });
 
@@ -48,10 +49,13 @@ const SERVER_UNIT_EXCLUDE = [
     : []),
 ];
 
-// Two projects that tile a lane's file set, resolved with the same globber and
-// options vitest itself uses so their union is the lane exactly.
+// Two projects that tile a lane's file set. The file list is resolved here,
+// with the same globber and options vitest itself uses (Vitest#globFiles), so
+// their union is the lane exactly; the jsdom/node rule that splits it lives in
+// scripts/lib, which stays importable without node_modules for the CI gate.
 export function makeEnvironmentProjects({ include, exclude }: { include: string[]; exclude: string[] }) {
-  return environmentProjects(resolveEnvironmentPartition({ include, exclude, cwd: __dirname }));
+  const files = globSync(include, { dot: true, cwd: __dirname, ignore: exclude, expandDirectories: false });
+  return environmentProjects(partitionByEnvironment(files, __dirname));
 }
 
 export default defineConfig({

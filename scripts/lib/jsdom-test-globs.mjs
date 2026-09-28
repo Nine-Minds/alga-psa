@@ -1,31 +1,27 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import picomatch from 'picomatch';
-import { globSync } from 'tinyglobby';
 
 // Single source of truth for which server-lane test files run under jsdom.
 // The vitest configs partition their lanes with it and
 // scripts/verify-react-test-environment.mjs gates new React tests against it,
 // so the rule can never mean two different things in two places.
 //
+// Nothing here may import a package: the gate and its unit tests run in CI jobs
+// that only check out the repository (production-regression's inventory job and
+// unit-tests' skip-budget job), so an import off anything but node: builtins
+// fails them with ERR_MODULE_NOT_FOUND. Callers that do have node_modules —
+// the vitest configs — bring their own globber and hand the file list in.
+//
 // Per-file `@vitest-environment` docblocks still win over whatever project a
 // file lands in (verified on vitest 3.2.7 and 4.1.11, both directions), so the
-// ~200 files that deliberately pin themselves to `node` keep running on node
-// even inside the jsdom project, and the pre-existing jsdom docblocks outside
-// these globs keep working untouched.
+// 49 files that deliberately pin themselves to `node` keep running on node even
+// inside the jsdom project, and the pre-existing jsdom docblocks outside these
+// globs keep working untouched.
 export const JSDOM_TEST_GLOBS = [
   // Anything with JSX in it renders components.
   '**/*.{test,spec}.?(c|m)[jt]sx',
   // Component suites that assert on rendered output without JSX of their own.
   '**/components/**/*.{test,spec}.?(c|m)[jt]s',
-];
-
-// Vitest include globs are relative to the config root (server/), and `**`
-// never crosses the literal `..` segment, so lanes that reach into sibling
-// workspaces need the parent-relative spelling too.
-export const JSDOM_TEST_GLOBS_FROM_SERVER = [
-  ...JSDOM_TEST_GLOBS,
-  ...JSDOM_TEST_GLOBS.map((glob) => `../${glob}`),
 ];
 
 // React suites whose path the globs above cannot express. Repository-relative.
@@ -56,8 +52,45 @@ export const NODE_PINNED_FILES = [
   'packages/clients/src/components/contacts/ContactDetails.inboundDestination.wiring.test.ts',
 ];
 
+// Compiles the glob dialect the patterns above are written in — `**/`, `*`,
+// `{a,b}`, `?(a|b)` and `[ab]` — to a RegExp, so the rule needs no matcher
+// package (see the header). Anything richer belongs in a named extra, not in a
+// cleverer pattern.
+function globToRegExp(glob) {
+  const literal = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  let source = '';
+  for (let index = 0; index < glob.length; index += 1) {
+    const character = glob[index];
+    if (character === '*' && glob[index + 1] === '*') {
+      index += 1;
+      // `**/` spans zero or more directories; a trailing `**` takes the rest.
+      if (glob[index + 1] === '/') { index += 1; source += '(?:[^/]+/)*'; } else source += '.*';
+    } else if (character === '*') {
+      source += '[^/]*';
+    } else if (character === '?' && glob[index + 1] === '(') {
+      const end = glob.indexOf(')', index);
+      source += `(?:${glob.slice(index + 2, end).split('|').map(literal).join('|')})?`;
+      index = end;
+    } else if (character === '{') {
+      const end = glob.indexOf('}', index);
+      source += `(?:${glob.slice(index + 1, end).split(',').map(literal).join('|')})`;
+      index = end;
+    } else if (character === '[') {
+      const end = glob.indexOf(']', index);
+      source += glob.slice(index, end + 1);
+      index = end;
+    } else if (character === '?') {
+      source += '[^/]';
+    } else {
+      source += literal(character);
+    }
+  }
+  return new RegExp(`^${source}$`);
+}
+
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const matchesGlob = picomatch(JSDOM_TEST_GLOBS);
+const globPatterns = JSDOM_TEST_GLOBS.map(globToRegExp);
+const matchesGlob = (file) => globPatterns.some((pattern) => pattern.test(file));
 const extraFiles = new Set(JSDOM_EXTRA_FILES);
 const pinnedFiles = new Set(NODE_PINNED_FILES);
 
@@ -87,16 +120,6 @@ export function partitionByEnvironment(files, cwd = repositoryRoot) {
   const node = [];
   for (const file of files) (matchesJsdomGlob(path.resolve(cwd, file)) ? jsdom : node).push(file);
   return { jsdom: jsdom.sort(), node: node.sort() };
-}
-
-// Resolves a lane's file set exactly the way vitest does — same globber, same
-// options as Vitest#globFiles — and splits it. Vitest cannot intersect two
-// include globs, and a project's `include` is concatenated onto the config it
-// extends rather than replacing it, so each project narrows through `exclude`
-// instead: it drops the other half by explicit path.
-export function resolveEnvironmentPartition({ include, exclude, cwd }) {
-  const files = globSync(include, { dot: true, cwd, ignore: exclude, expandDirectories: false });
-  return partitionByEnvironment(files, cwd);
 }
 
 // The two vitest projects a partition becomes. `extends: true` re-reads the

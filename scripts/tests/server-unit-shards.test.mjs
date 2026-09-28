@@ -26,8 +26,8 @@ test('server unit shards partition, reunite and verify as one full-selection bun
     'server/vitest.server-unit-shard.config.ts',
   ]) cpSync(path.join(repository, file), path.join(root, file));
   symlinkSync(path.join(repository, 'server/node_modules'), path.join(root, 'server/node_modules'), 'dir');
-  // The shard config splits its partition into a jsdom and a node project;
-  // jsdom-test-globs.mjs resolves picomatch/tinyglobby from the repository root.
+  // The shard config splits its partition into a jsdom and a node project; the
+  // config below resolves tinyglobby from the repository root to do it.
   symlinkSync(path.join(repository, 'node_modules'), path.join(root, 'node_modules'), 'dir');
   writeFileSync(path.join(root, '.gitignore'), 'node_modules/\ntest-results/\ncoverage/\nserver/test-results.json\n');
   // Mirrors the real server config's shape: the jsdom/node projects have to be
@@ -35,15 +35,17 @@ test('server unit shards partition, reunite and verify as one full-selection bun
   // project names the producing run used and silently reports zero tests when
   // the replaying config has none of them.
   writeFileSync(path.join(root, 'server/vitest.config.ts'), [
-    "import { environmentProjects, resolveEnvironmentPartition } from '../scripts/lib/jsdom-test-globs.mjs';",
+    "import { globSync } from 'tinyglobby';",
+    "import { environmentProjects, partitionByEnvironment } from '../scripts/lib/jsdom-test-globs.mjs';",
     "const include = ['src/test/unit/**/*.test.ts'];",
     "const exclude = ['**/node_modules/**'];",
+    "const files = globSync(include, { dot: true, cwd: __dirname, ignore: exclude, expandDirectories: false });",
     `export default { test: { ...${JSON.stringify({
       globals: true, environment: 'node', pool: 'forks',
       fileParallelism: false, maxWorkers: 1, isolate: true, poolOptions: { forks: { singleFork: true } },
       coverage: { provider: 'v8', enabled: false, reporter: ['text-summary'], include: ['src/**/*.ts'] },
     })}, include, exclude,`,
-    '  projects: environmentProjects(resolveEnvironmentPartition({ include, exclude, cwd: __dirname })) } };',
+    '  projects: environmentProjects(partitionByEnvironment(files, __dirname)) } };',
   ].join('\n'));
   writeFileSync(path.join(root, 'server/src/lib.ts'), 'export const double = (value: number) => value * 2;\n');
   for (const [index, behavior] of ['creates', 'updates', 'deletes'].entries()) {
