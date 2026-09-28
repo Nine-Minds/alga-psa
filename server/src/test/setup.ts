@@ -268,6 +268,16 @@ global.ResizeObserver = class ResizeObserver {
   disconnect() {}
 };
 
+// jsdom does not implement IntersectionObserver either, and lazy-loading cards
+// (documents' DocumentStorageCard) construct one in a mount effect. Files that
+// stub their own still work: this is the value vi.unstubAllGlobals() restores.
+global.IntersectionObserver = class IntersectionObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+  takeRecords() { return []; }
+} as unknown as typeof globalThis.IntersectionObserver;
+
 // jsdom does not implement scrollIntoView; components (e.g. scheduling's
 // AvailabilitySettings) call it inside requestAnimationFrame on selection
 // changes. Unstubbed, that rAF throws asynchronously AFTER the test settles,
