@@ -2,7 +2,12 @@ import { Client, Connection, ScheduleOverlapPolicy } from '@temporalio/client';
 import { createLogger, format, transports } from 'winston';
 import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin.js';
-import { CONTRACT_CADENCE_REPLENISHMENT_JOB_NAME, TIER_FEATURES, tierHasFeature } from '@alga-psa/types';
+import {
+  LEGACY_PER_TENANT_SCHEDULE_PREFIXES,
+  MAINTENANCE_FANOUT_SCHEDULES,
+  TIER_FEATURES,
+  tierHasFeature,
+} from '@alga-psa/types';
 import { resolveTenantTier } from '@alga-psa/licensing';
 import { seedNinjaOneProactiveRefreshFromStoredCredentials } from '@ee/lib/integrations/ninjaone/proactiveRefresh';
 import {
@@ -249,7 +254,11 @@ async function deleteScheduleIfExists(client: Client, scheduleId: string): Promi
   }
 }
 
-async function deleteLegacyMarketingSchedules(client: Client): Promise<void> {
+async function deleteSchedulesWithPrefixes(
+  client: Client,
+  label: string,
+  prefixes: ReadonlyArray<string>,
+): Promise<void> {
   let scanned = 0;
   let matched = 0;
   let deleted = 0;
@@ -258,7 +267,7 @@ async function deleteLegacyMarketingSchedules(client: Client): Promise<void> {
   for await (const schedule of client.schedule.list()) {
     scanned++;
     const scheduleId = schedule.scheduleId;
-    if (!LEGACY_MARKETING_SCHEDULE_PREFIXES.some((prefix) => scheduleId.startsWith(prefix))) {
+    if (!prefixes.some((prefix) => scheduleId.startsWith(prefix))) {
       continue;
     }
 
@@ -270,7 +279,7 @@ async function deleteLegacyMarketingSchedules(client: Client): Promise<void> {
     }
   }
 
-  logger.info('Legacy marketing schedule cleanup completed', {
+  logger.info(`${label} schedule cleanup completed`, {
     scanned,
     matched,
     deleted,
@@ -483,39 +492,9 @@ export async function setupSchedules() {
     await backfillNinjaOneProactiveSchedules();
 
     // Maintenance jobs that were per-tenant pg-boss crons in CE run on EE as one
-    // global Temporal Schedule each, fanning out across tenants inside the
-    // activity. overlap=SKIP + a short catchup window prevent run pile-up and
+    // global Temporal Schedule each, fanning out across tenants server-side.
+    // overlap=SKIP + a short catchup window prevent run pile-up and
     // post-downtime replay storms; crons keep their original (UTC) cadence.
-    const MAINTENANCE_FANOUT_SCHEDULES: Array<{ jobName: string; cron: string }> = [
-      { jobName: 'expired-credits', cron: '0 1 * * *' },
-      { jobName: 'cleanup-temporary-workflow-forms', cron: '0 2 * * *' },
-      { jobName: 'reconcile-bucket-usage', cron: '0 3 * * *' },
-      { jobName: 'process-renewal-queue', cron: '0 5 * * *' },
-      { jobName: 'date-trigger-scan', cron: '5 * * * *' },
-      { jobName: 'search:reconcile', cron: '0 6 * * *' },
-      { jobName: 'expiring-credits-notification', cron: '0 9 * * *' },
-      { jobName: 'prepaid-balance-alert-scan', cron: '0 9 * * *' },
-      { jobName: 'auto-close-tickets', cron: '*/15 * * * *' },
-      { jobName: 'cleanup-webhook-deliveries', cron: '*/15 * * * *' },
-      { jobName: 'verify-google-calendar-pubsub', cron: '15 * * * *' },
-      { jobName: 'renew-google-gmail-watch', cron: '*/30 * * * *' },
-      { jobName: 'renew-teams-meeting-artifact-subscriptions', cron: '*/30 * * * *' },
-      { jobName: 'renew-telephony-call-subscriptions', cron: '*/30 * * * *' },
-      { jobName: 'sweep-telephony-call-artifacts', cron: '*/10 * * * *' },
-      { jobName: 'reconcile-threecx-call-control', cron: '*/5 * * * *' },
-      { jobName: 'backfill-threecx-cdr', cron: '5 * * * *' },
-      { jobName: 'reconcile-threecx-phonebook', cron: '10 * * * *' },
-      { jobName: 'sweep-teams-online-meetings', cron: '*/10 * * * *' },
-      { jobName: 'cleanup-ai-session-keys', cron: '*/10 * * * *' },
-      { jobName: 'workflow-quota-resume-scan', cron: '*/5 * * * *' },
-      { jobName: 'inbound-email-recovery', cron: '*/1 * * * *' },
-      // Nightly contract-cadence service-period replenishment. Runs on the
-      // durable Temporal schedule for Essentials/Solo/Pro; the handler is
-      // executed server-side via the maintenance subscriber because the worker
-      // cannot load the billing domain graph.
-      { jobName: CONTRACT_CADENCE_REPLENISHMENT_JOB_NAME, cron: '0 4 * * *' },
-    ];
-
     for (const { jobName, cron } of MAINTENANCE_FANOUT_SCHEDULES) {
       await upsertSchedule(client, `maintenance-fanout:${jobName}`, {
         spec: {
@@ -555,8 +534,10 @@ export async function setupSchedules() {
     }
 
     // Cut over only after all global schedules converge. Listing by exact
-    // legacy prefixes cannot match the new marketing-fanout:* IDs.
-    await deleteLegacyMarketingSchedules(client);
+    // legacy prefixes cannot match the new marketing-fanout:* or
+    // maintenance-fanout:* IDs.
+    await deleteSchedulesWithPrefixes(client, 'Legacy marketing', LEGACY_MARKETING_SCHEDULE_PREFIXES);
+    await deleteSchedulesWithPrefixes(client, 'Legacy per-tenant maintenance', LEGACY_PER_TENANT_SCHEDULE_PREFIXES);
 
   } catch (error) {
     logger.error('Failed to connect to Temporal for schedule setup', error);

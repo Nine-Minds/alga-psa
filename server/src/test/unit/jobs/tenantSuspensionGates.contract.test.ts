@@ -71,7 +71,7 @@ describe('tenant suspension chokepoint gates', () => {
   });
 
   it('T023: billing-cycle creation excludes suspended tenants at each run', () => {
-    const source = read('server/src/lib/initializeApp.ts');
+    const source = read('server/src/lib/jobs/tenantPeriodMaintenance.ts');
     expect(source).toMatch(/__billing_cycle_tenant_enumeration__[\s\S]*?\.whereNull\('suspended_at'\)/);
   });
 
