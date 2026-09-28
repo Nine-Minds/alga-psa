@@ -155,6 +155,7 @@ describe('MSP i18n Phase 0 - config', () => {
       'common',
       'msp/core',
       'features/tickets',
+      'msp/time-entry',
     ]);
     expect(ROUTE_NAMESPACES['/msp/settings']).toEqual([
       'common',
@@ -189,6 +190,13 @@ describe('MSP i18n Phase 0 - config', () => {
       ROUTE_NAMESPACES['/msp/tickets']
     );
     expect(getNamespacesForRoute('/unknown/route')).toEqual(['common']);
+  });
+
+  it('preloads time-entry copy for the launcher on nested work-item routes', () => {
+    expect(getNamespacesForRoute('/msp/tickets/ticket-1')).toContain('msp/time-entry');
+    expect(getNamespacesForRoute('/msp/projects/project-1/tasks/task-1')).toContain(
+      'msp/time-entry'
+    );
   });
 
   it('T033-T035/T043: pseudo locales included in config', () => {
