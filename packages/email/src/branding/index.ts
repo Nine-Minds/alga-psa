@@ -19,6 +19,7 @@ export {
   type ClassifiableTemplate,
   type ClassifyTenantTemplateInput,
 } from './classifyTenantTemplate';
+export { addGradientFallback, stripGradientFallback } from './gradientFallback';
 export { suggestEmailPalette, type SuggestEmailPaletteInput } from './suggestEmailPalette';
 export {
   applyBrandLogo,
