@@ -33,11 +33,20 @@ function fakeConn(table: keyof FakeState) {
 
   return {
     where(criteria: Record<string, any>) {
-      const matched = state[table].filter((row) =>
+      let matched = state[table].filter((row) =>
         Object.entries(criteria).every(([column, value]) => (row[column] ?? null) === value)
       );
 
       const builder = {
+        // The only raw predicate here is the case-insensitive country name match.
+        whereRaw(sql: string, bindings: unknown[] = []) {
+          if (!/lower\(name\)\s*=\s*lower\(\?\)/.test(sql)) {
+            throw new Error(`Unexpected raw predicate ${sql}`);
+          }
+          const needle = String(bindings[0] ?? '').toLowerCase();
+          matched = matched.filter((row) => String(row.name ?? '').toLowerCase() === needle);
+          return builder;
+        },
         // Every ordered column in this action is a boolean flag.
         orderBy(column: string, direction: 'asc' | 'desc' = 'asc') {
           matched.sort((left, right) => {
@@ -211,6 +220,23 @@ describe('getClientCountryDefaultsPreview', () => {
         country: null,
         datePattern: 'MM/dd/yyyy',
         hour12: true,
+      }),
+    });
+  });
+
+  it('previews the country the location displays when its code is a legacy alias', async () => {
+    // A location saved as 'UK'/'United Kingdom' renders as United Kingdom, so
+    // the preview must not contradict it with "no country" and US dates.
+    const candidate = state.client_locations.find((row) => row.client_id === 'candidate')!;
+    candidate.country_code = 'UK';
+    candidate.country_name = 'United Kingdom';
+
+    await expect(getClientCountryDefaultsPreview('candidate')).resolves.toEqual({
+      country: { code: 'GB', name: 'United Kingdom', phone_code: '+44' },
+      dateFormat: expect.objectContaining({
+        country: 'GB',
+        datePattern: 'dd/MM/yyyy',
+        hour12: false,
       }),
     });
   });
