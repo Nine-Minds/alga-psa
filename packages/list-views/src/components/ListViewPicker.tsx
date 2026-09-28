@@ -116,7 +116,8 @@ export function ListViewPicker<F>({ id, controller, className }: ListViewPickerP
             )}
           </span>
         </button>
-        <div className="flex shrink-0 items-center opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+        {/* Collapsed (not just transparent) until the row is hovered or focused, so idle rows give the name the full width. Always shown on touch, which has no hover. */}
+        <div className="hidden shrink-0 items-center group-hover:flex group-focus-within:flex [@media(hover:none)]:flex">
           <Button
             id={`${id}-toggle-default-button`}
             data-view-id={view.view_id}
@@ -195,26 +196,29 @@ export function ListViewPicker<F>({ id, controller, className }: ListViewPickerP
     emptyLabel: string,
   ) => (
     <div className="py-1" data-automation-id={`${id}-${section}-section`}>
-      <div className="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-[rgb(var(--color-text-500))]">
-        {title}
-      </div>
-      {all.length > SEARCH_THRESHOLD && (
-        <div className="px-2 pb-1">
-          <Input
-            id={`${id}-${section}-search-input`}
-            value={query}
-            placeholder={t('listViews.searchPlaceholder', 'Search views')}
-            onChange={(event) => setQuery(event.target.value)}
-            className="h-8 text-sm"
-          />
+      {/* Both sections share the popover's one scroll area; the header (and search) pins so a long section never hides which one you're in. */}
+      <div className="sticky top-0 z-10 bg-background dark:bg-[rgb(var(--color-card))]">
+        <div className="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-[rgb(var(--color-text-500))]">
+          {title}
         </div>
-      )}
+        {all.length > SEARCH_THRESHOLD && (
+          <div className="px-2 pb-1">
+            <Input
+              id={`${id}-${section}-search-input`}
+              value={query}
+              placeholder={t('listViews.searchPlaceholder', 'Search views')}
+              onChange={(event) => setQuery(event.target.value)}
+              className="h-8 text-sm"
+            />
+          </div>
+        )}
+      </div>
       {visible.length === 0 ? (
         <p className="px-3 py-1.5 text-sm text-[rgb(var(--color-text-500))]">
           {all.length === 0 ? emptyLabel : t('listViews.noMatches', 'No matching views')}
         </p>
       ) : (
-        <ul className="max-h-60 overflow-y-auto px-1">{visible.map((view) => renderRow(view, section))}</ul>
+        <ul className="px-1">{visible.map((view) => renderRow(view, section))}</ul>
       )}
     </div>
   );

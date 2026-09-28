@@ -18,7 +18,7 @@ const config: Config = {
     // client-portal-composition and reporting were all missing.
     // Monorepo UI sources consumed by the Next.js app. Keep this list explicit to avoid
     // accidentally scanning `node_modules` and to reduce Tailwind's file-watching workload.
-    "../packages/{ui,ui-kit,client-portal,client-portal-composition,clients,tickets,projects,scheduling,surveys,assets,documents,integrations,billing,inventory,auth,workflows,onboarding,opportunities,tags,jobs,notifications,reference-data,reporting,tenancy,users,user-activities,msp-composition,ee,sla}/src/**/*.{jsx,tsx,mdx}",
+    "../packages/{ui,ui-kit,client-portal,client-portal-composition,clients,tickets,projects,scheduling,surveys,assets,documents,integrations,billing,inventory,auth,workflows,onboarding,opportunities,tags,jobs,notifications,reference-data,reporting,tenancy,users,user-activities,msp-composition,ee,sla,list-views}/src/**/*.{jsx,tsx,mdx}",
 
     // A small number of `.ts` files contain Tailwind class strings (not JSX). Include them
     // explicitly rather than enabling a broad `**/*.ts` glob.
