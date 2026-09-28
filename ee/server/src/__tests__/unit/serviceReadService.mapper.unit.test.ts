@@ -30,8 +30,10 @@ describe('serviceReadService mapper', () => {
       'serviceTypeId',
       'serviceTypeName',
       'sku',
-      'unitOfMeasure',
       'unitCode',
+      'unitOfMeasure',
     ])
+    expect(mapped.unitCode).toBe('MON')
+    expect(mapped.unitOfMeasure).toBe('month')
   })
 })
