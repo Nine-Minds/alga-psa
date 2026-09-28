@@ -15,6 +15,7 @@ let isEnterpriseMode = true;
 
 const translations: Record<string, string> = {
   'welcome.title': 'Bienvenue MSP',
+  'welcome.titleBranded': 'Bienvenue au centre {{companyName}} FR',
   'welcome.description': 'Description entreprise FR',
   'welcome.titleCommunity': 'Bon retour FR',
   'welcome.descriptionCommunity': 'Description communaute FR',
@@ -69,7 +70,12 @@ vi.mock('@alga-psa/analytics/client', () => ({
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({
-    t: (key: string, options?: { defaultValue?: string }) => translations[key] ?? options?.defaultValue ?? key,
+    t: (key: string, options?: Record<string, unknown>) => {
+      const template = translations[key] ?? (options?.defaultValue as string | undefined) ?? key;
+      return template.replace(/\{\{(\w+)\}\}/g, (match, name: string) =>
+        options?.[name] === undefined ? match : String(options[name])
+      );
+    },
   }),
 }));
 
@@ -100,6 +106,27 @@ describe('DashboardContainer i18n wiring', () => {
 
     expect(screen.getByText('Bienvenue MSP')).toBeInTheDocument();
     expect(screen.getByText('Description entreprise FR')).toBeInTheDocument();
+  });
+
+  it('names the tenant company in the banner once the opt-in resolved a name', () => {
+    render(<DashboardContainer onboardingSection={<div>Onboarding slot</div>} welcomeCompanyName="Nine Minds" />);
+
+    expect(screen.getByText('Bienvenue au centre Nine Minds FR')).toBeInTheDocument();
+    expect(screen.queryByText('Bienvenue MSP')).toBeNull();
+  });
+
+  it('keeps the stock title when no company name is passed', () => {
+    render(<DashboardContainer onboardingSection={<div>Onboarding slot</div>} welcomeCompanyName={null} />);
+
+    expect(screen.getByText('Bienvenue MSP')).toBeInTheDocument();
+  });
+
+  it('leaves the Community banner alone even when a company name is passed', () => {
+    isEnterpriseMode = false;
+    render(<DashboardContainer welcomeCompanyName="Nine Minds" />);
+
+    expect(screen.getByText('Bon retour FR')).toBeInTheDocument();
+    expect(screen.queryByText('Bienvenue au centre Nine Minds FR')).toBeNull();
   });
 
   it('T072: community welcome banner title and description are translated', () => {

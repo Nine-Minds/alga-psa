@@ -9,6 +9,7 @@
   },
   "welcome": {
     "title": "Bem-vindo ao seu centro de comando MSP",
+    "titleBranded": "Bem-vindo ao centro de comando de {{companyName}}",
     "description": "Acompanhe o progresso do onboarding, configure serviços críticos e mantenha a consistência de cada experiência do cliente.",
     "titleCommunity": "bem vindo de volta",
     "descriptionCommunity": "Acesse tickets, agendamentos, projetos e relatórios no seu painel."
