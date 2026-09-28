@@ -722,7 +722,7 @@
       "scopeContact": "Uniquement leurs propres tickets",
       "scopeClientDescription": "Les membres voient tous les tickets de ce client sur les tableaux sélectionnés.",
       "scopeContactDescription": "Les membres voient uniquement les tickets dont ils sont le contact. Les administrateurs du client voient tous les tickets des tableaux sélectionnés, y compris ceux sans contact.",
-      "assignmentHelp": "Attribuez un groupe pour limiter les tableaux et la visibilité des tickets, ou conservez un accès complet au client.",
+      "assignmentHelp": "Attribuez un groupe pour limiter la visibilité des tableaux et des tickets, ou conservez un accès complet au client.",
       "boardHiddenFromPortal": "Masqué dans le portail client"
     },
     "messages": {
@@ -768,7 +768,7 @@
       "loadError": "Échec du chargement des préférences",
       "saveError": "Échec de l'enregistrement de la préférence",
       "noCategories": "Aucune catégorie de notification disponible",
-      "emailPreferences": "Préférences par e-mail",
+      "emailPreferences": "Préférences e-mail",
       "internalPreferences": "Préférences internes",
       "priority": {
         "high": "Élevée",
