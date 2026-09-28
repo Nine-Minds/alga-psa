@@ -1502,6 +1502,11 @@
       "description": "Upload uw logo één keer. Het vervangt het Alga-merk in het MSP-zijmenu en het klantenportaal gebruikt dezelfde afbeeldingen.",
       "logoHelp": "Het vierkante merkteken wordt gebruikt overal waar de ruimte vierkant is: in het ingeklapte zijmenu en in ronde kaders. Zet een breed logo in een vierkant vak en kies welk deel het beeldmerk wordt; zodra een breed logo is geüpload, kunt u het beeldmerk er ook rechtstreeks uit knippen. Het optionele brede logo vervangt het merkteken en de naam in het uitgeklapte zijmenu, dus upload er een waarin uw bedrijfsnaam al staat. Het zijmenu volgt zijn eigen achtergrond: bij een donker menu de varianten voor donkere achtergronden, bij een licht menu de lichte, en anders de variant die u hebt geüpload.",
       "cropHelp": "Sleep en zoom om het deel te kiezen dat in het ingeklapte zijmenu en in elke ronde omlijsting wordt getoond. Uw brede logo verandert niet.",
+      "cropHelpFromSquare": "Sleep en zoom om het deel te kiezen dat in het ingeklapte zijmenu en in elk rond kader wordt getoond. Alleen het merkteken wordt gewijzigd, dus u kunt het later opnieuw aanpassen.",
+      "linkDocument": {
+        "title": "Een geüploade afbeelding gebruiken",
+        "description": "Kies een afbeelding die u al naar Documenten hebt geüpload. Het document zelf blijft ongewijzigd."
+      },
       "fields": {
         "mark": "Vierkant merkteken",
         "markDark": "Vierkant merkteken voor donkere achtergronden",
