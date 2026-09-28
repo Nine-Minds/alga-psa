@@ -32,8 +32,15 @@ const loadRootRtl = (): any | null => {
 // before the second test ever reads it (measured: an unscoped sweep failed
 // microsoftCalendarEmulator.integration 12/12). Exempting them here leaves
 // their behavior exactly as it was before this hook existed.
+//
+// Matched by DIRECTORY, not by filename. A `.integration.test.tsx` suffix does
+// NOT mean DB-backed here: 44 files in the unit selection use it for in-process
+// component tests (invoice-designer DesignCanvas/DesignerShell, i18n) that are
+// precisely the jsdom suites this sweep exists to clean up. `.db.` is the one
+// reliable filename signal — those suites recreate a live Postgres database
+// (see the SKIP_DB_TESTS note in server/vitest.config.ts).
 const DB_BACKED_SUITE =
-  /(^|\/)(src\/test\/(integration|infrastructure|e2e)|__tests__\/integration)\/|\.(integration|db)\.(test|spec)\.[cm]?[jt]sx?$/;
+  /(^|\/)(src\/test\/(integration|infrastructure|e2e)|__tests__\/integration)\/|\.db\.(test|spec)\.[cm]?[jt]sx?$/;
 const isDbBackedSuite = (): boolean => {
   const file = expect.getState().testPath;
   return typeof file === 'string' && DB_BACKED_SUITE.test(file.replace(/\\/g, '/'));

@@ -237,9 +237,24 @@ whose route 401s when the key is undefined) and
 The options cannot be scoped to the unit lanes — they are config-level and the
 config is shared. The sweep can be, and is: `setup.ts` exempts
 `src/test/{integration,infrastructure,e2e}/`, `__tests__/integration/` and
-`*.integration.*`/`*.db.*` files, leaving those suites exactly as they behaved
-before this card. The unit lanes keep the full guarantee, which is what the card
-asked for ("server unit tests").
+`*.db.*` files, leaving those suites exactly as they behaved before this card.
+The unit lanes keep the full guarantee, which is what the card asked for
+("server unit tests").
+
+The exemption matches on **directory**, not on the `.integration.` filename: 44
+files in the 3,086-file unit selection use that suffix for in-process component
+tests (invoice-designer `DesignCanvas`/`DesignerShell`, i18n) which are exactly
+the jsdom suites the sweep exists to clean up. A filename-based rule silently
+exempted all 44. Measured against the collected selection, the shipped rule
+exempts **0 of 3,086** unit files and all of the DB-backed ones.
+
+A repo-wide scan (every `beforeAll` body containing `vi.stubEnv`, `vi.stubGlobal`
+or `vi.useFakeTimers`) finds 7 files: the 3 integration suites above, 2 in lanes
+with their own config (`ee/server` `__tests__/integration`,
+`ee/temporal-workflows` activities — neither is in the unit selection), and 2
+unit-lane files already handled on this branch
+(`ClientInvoicePreview.servicePeriods.test.tsx`,
+`ticketDocumentsMetadata.test.tsx`), both green in the sharded runs.
 
 This also matters for CI reachability, not just locally:
 `scripts/lib/integration-selection.mjs` classifies `server/vitest.*`,
