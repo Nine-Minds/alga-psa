@@ -149,16 +149,26 @@ export const PSEUDO_LOCALES: ReadonlyArray<SupportedLocale> = ['xx', 'yy'];
  * QA'd, hidden from production language pickers — but they are genuine
  * translations, not QA fills. Promote to a production locale by removing the
  * code from this list once review passes.
+ *
+ * 'sv' sits here because its pack is complete on paper — the glossary audit
+ * reports the same 33012 keys as every shipped locale, with nothing
+ * untranslated and no forbidden terms — but it was authored against the
+ * initial glossary and has not been through native-speaker review. Complete is
+ * not the same as signed off, so it QAs in dev and stays out of production
+ * pickers until a Swedish speaker has read it.
  */
-export const PREVIEW_LOCALES: ReadonlyArray<SupportedLocale> = [];
+export const PREVIEW_LOCALES: ReadonlyArray<SupportedLocale> = ['sv'];
 
 /**
  * Locales whose translation packs are still in progress and should never be
  * offered in any picker, dev or prod. Translations remain on disk so existing
  * users who already selected them keep working, and so we can continue
  * iterating on them, but they won't appear as new selections.
+ *
+ * Empty today: 'sv' was gated here while its pack was partial and moved to
+ * PREVIEW_LOCALES once the audit came back clean.
  */
-export const INCOMPLETE_LOCALES: ReadonlyArray<SupportedLocale> = ['sv'];
+export const INCOMPLETE_LOCALES: ReadonlyArray<SupportedLocale> = [];
 
 /**
  * Filter non-production locales from a list. Use this for any user-facing

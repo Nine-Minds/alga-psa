@@ -30,13 +30,24 @@ describe('filterPseudoLocales', () => {
 
   it('strips incomplete locales in both modes', () => {
     const sample = [...LOCALE_CONFIG.supportedLocales, 'en'] as const;
-    expect(INCOMPLETE_LOCALES).toContain('sv');
     for (const incomplete of INCOMPLETE_LOCALES) {
       vi.stubEnv('NODE_ENV', 'development');
       expect(filterPseudoLocales(sample)).not.toContain(incomplete);
       vi.stubEnv('NODE_ENV', 'production');
       expect(filterPseudoLocales(sample)).not.toContain(incomplete);
     }
+  });
+
+  // sv is translated end-to-end (the glossary audit reports a full key count
+  // with nothing untranslated) but has not had native-speaker review, so it is
+  // QA-able in dev and withheld from production pickers.
+  it('offers Swedish for preview in development only', () => {
+    expect(PREVIEW_LOCALES).toContain('sv');
+    expect(INCOMPLETE_LOCALES).not.toContain('sv');
+    vi.stubEnv('NODE_ENV', 'development');
+    expect(filterPseudoLocales(LOCALE_CONFIG.supportedLocales)).toContain('sv');
+    vi.stubEnv('NODE_ENV', 'production');
+    expect(filterPseudoLocales(LOCALE_CONFIG.supportedLocales)).not.toContain('sv');
   });
 
   it('labels pt as Brazilian Portuguese', () => {
