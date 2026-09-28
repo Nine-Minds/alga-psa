@@ -34,11 +34,15 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           FLAKY_WINDOW_DAYS: ${{ inputs.window_days || '7' }}
+      # The collector writes collection.json even when aggregation fails, so the
+      # normal red path still ships its diagnostics. Only a job killed before
+      # that write leaves the directory absent, and then the failing step above
+      # is the signal; this upload warns rather than piling on a second error.
       - name: Preserve flaky test report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: flaky-test-report-${{ github.run_id }}
           path: test-results/flaky-tests/
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 30

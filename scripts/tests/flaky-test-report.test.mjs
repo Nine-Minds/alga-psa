@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { aggregateFlakyTests, renderFlakyTestReport } from '../lib/flaky-test-report.mjs';
@@ -223,4 +223,8 @@ test('the CLI writes the report, the diagnostics and the step summary', async (t
   const failed = await runFlakyTestCollection({ directory, env: { ...env, GITHUB_REPOSITORY: 'broken' }, request, now: Date.parse(generatedAt) });
   assert.deepEqual(failed.diagnostic, { phase: 'configuration', code: 'invalid-repository' });
   assert.match(readFileSync(summary, 'utf8'), /Collection failed/);
+  // The upload step tolerates a missing directory, so the red path has to leave
+  // its own diagnostics on disk, and must not leave a stale report beside them.
+  assert.deepEqual(JSON.parse(readFileSync(path.join(directory, 'collection.json'), 'utf8')).diagnostic, failed.diagnostic);
+  assert.equal(existsSync(path.join(directory, 'report.json')), false);
 });
