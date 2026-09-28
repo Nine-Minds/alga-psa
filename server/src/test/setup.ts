@@ -41,6 +41,10 @@ const loadRootRtl = (): any | null => {
 // (see the SKIP_DB_TESTS note in server/vitest.config.ts).
 const DB_BACKED_SUITE =
   /(^|\/)(src\/test\/(integration|infrastructure|e2e)|__tests__\/integration)\/|\.db\.(test|spec)\.[cm]?[jt]sx?$/;
+// An unknown path sweeps rather than exempts, deliberately: if testPath ever
+// stops resolving, the DB-backed suites fail loudly (their beforeAll state
+// disappears) instead of the unit lanes quietly losing the cleanup this card
+// exists to add.
 const isDbBackedSuite = (): boolean => {
   const file = expect.getState().testPath;
   return typeof file === 'string' && DB_BACKED_SUITE.test(file.replace(/\\/g, '/'));
