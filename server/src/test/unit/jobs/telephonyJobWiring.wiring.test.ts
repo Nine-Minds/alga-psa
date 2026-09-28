@@ -16,7 +16,11 @@ const read = (relativePath: string): string =>
 const registerHandlersSource = read('server/src/lib/jobs/registerAllHandlers.ts');
 const jobActivitiesSource = read('ee/temporal-workflows/src/activities/job-activities.ts');
 const maintenanceFanoutSource = read('packages/jobs/src/lib/maintenanceJobFanout.ts');
-const setupSchedulesSource = read('ee/temporal-workflows/src/schedules/setupSchedules.ts');
+// setupSchedules applies the schedule policies; the maintenance cron catalog is shared from @alga-psa/types.
+const setupSchedulesSource = [
+  read('ee/temporal-workflows/src/schedules/setupSchedules.ts'),
+  read('packages/types/src/constants/maintenanceFanoutSchedules.ts'),
+].join('\n');
 const middlewareSource = read('server/src/middleware.ts');
 const handlerSource = read('packages/jobs/src/lib/handlers/telephonyCallNotificationHandler.ts');
 const canonicalHandlerSource = read('packages/jobs/src/lib/handlers/telephonyCanonicalCallHandler.ts');

@@ -28,6 +28,9 @@ vi.mock('../../../lib/eventBus/index', () => ({
   }),
 }));
 vi.mock('../../../lib/jobs/dateTriggerWorkflowLauncher', () => ({ configureEditionDateTriggerWorkflowLauncher: (...args: unknown[]) => { registrationOrder.push('configure-launcher'); return configureLauncherMock(...args); } }));
+vi.mock('../../../lib/jobs/registerServerMaintenanceJobs', () => ({
+  registerServerMaintenanceJobs: () => { registrationOrder.push('register-server-jobs'); },
+}));
 vi.mock('../../../lib/jobs/jobHandlerRegistry', () => ({
   executeJobHandler: (...args: unknown[]) => executeJobHandlerMock(...args),
 }));
@@ -56,7 +59,7 @@ describe('maintenanceJobSubscriber', () => {
     // The subscriber registers once per process; capture the handler it hands the bus.
     await registerMaintenanceJobSubscriber();
     expect(subscribedHandler).toBeTypeOf('function');
-    expect(registrationOrder).toEqual(['configure-launcher', 'subscribe']);
+    expect(registrationOrder).toEqual(['configure-launcher', 'register-server-jobs', 'subscribe']);
   });
 
   beforeEach(() => {
@@ -108,5 +111,15 @@ describe('maintenanceJobSubscriber', () => {
     await subscribedHandler!(event('rmm-device-sync', { jobId: 'job-1', data: { tenantId: '11111111-1111-1111-1111-111111111111' } }));
     expect(acquireLockMock).not.toHaveBeenCalled();
     expect(executeJobHandlerMock).toHaveBeenCalledWith('rmm-device-sync', 'job-1', expect.any(Object));
+  });
+
+  it('runs a forwarded tick of a fan-out job for its tenant only', async () => {
+    // Legacy per-tenant schedules (e.g. accounting-sync-cycle:<tenant>) keep
+    // forwarding with a jobId until the worker deletes them; each must stay a
+    // single-tenant run, not an all-tenant fan-out.
+    await subscribedHandler!(event('accounting-sync-cycle', { jobId: 'job-2', data: { tenantId: '11111111-1111-1111-1111-111111111111' } }));
+    expect(runMaintenanceJobMock).not.toHaveBeenCalled();
+    expect(acquireLockMock).not.toHaveBeenCalled();
+    expect(executeJobHandlerMock).toHaveBeenCalledWith('accounting-sync-cycle', 'job-2', expect.any(Object));
   });
 });
