@@ -26,10 +26,12 @@ export function runServerUnitShard({ root, index, total, workers, env = process.
     collectedAll: file('collected-all.json'), shard: file('shard.json'), shardFiles: file('shard-files.json'),
     collected: file('collected.json'), collectedTests: file('collected-tests.json'), results: file('results.json'),
     blob: file('blob.json'), progress: file('progress.jsonl'), evidence: file('evidence.json'),
+    flaky: file('flaky-tests.json'),
   };
   // Remove stale evidence even if the next process cannot start.
   for (const target of Object.values(paths)) writeFileSync(target, 'null\n');
-  const runEnv = { ...env, SERVER_UNIT_SHARD_FILES: paths.shardFiles, TEST_PROGRESS_PATH: paths.progress };
+  const runEnv = { ...env, SERVER_UNIT_SHARD_FILES: paths.shardFiles, TEST_PROGRESS_PATH: paths.progress,
+    FLAKY_TESTS_PATH: paths.flaky, SERVER_UNIT_SHARD_INDEX: String(index), SERVER_UNIT_SHARD_TOTAL: String(total) };
   const vitest = args => spawnSync(process.execPath, [path.join(server, 'node_modules/vitest/vitest.mjs'), ...args],
     { cwd: server, env: runEnv, stdio: 'inherit' });
   const shardArgs = ['--config', 'vitest.server-unit-shard.config.ts'];
@@ -59,9 +61,13 @@ export function runServerUnitShard({ root, index, total, workers, env = process.
     phase = 'Execution';
     // Shards render only the cheap summary; the merge job renders lcov once
     // from the blob coverage maps.
-    const result = vitest(['run', ...shardArgs, ...parallelForks,
+    // --retry=1 on the command line, never in the shared server vitest config:
+    // a fail-then-pass now leaves the shard green and lands in flaky-tests.json
+    // instead of disappearing into a rerun.
+    const result = vitest(['run', ...shardArgs, ...parallelForks, '--retry=1',
       '--coverage.enabled=true', '--coverage.reporter=text-summary',
       '--reporter=default', '--reporter=json', '--reporter=blob', `--reporter=${path.join(root, 'scripts/lib/vitest-progress-reporter.mjs')}`,
+      `--reporter=${path.join(root, 'scripts/lib/vitest-flaky-reporter.mjs')}`,
       `--outputFile.json=${paths.results}`, `--outputFile.blob=${paths.blob}`]);
     phase = 'Execution verification';
     let after;

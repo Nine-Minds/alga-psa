@@ -267,6 +267,16 @@ jobs:
           path: test-results/server-coverage/
           if-no-files-found: error
           retention-days: 7
+      # The shard bundle above expires in a week; the weekly flaky report reads
+      # this one. A collection-phase abort can die before the reporter runs.
+      - name: Retain shard flaky-test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flaky-tests-unit-shard-${{ matrix.shard }}
+          path: test-results/server-coverage/flaky-tests.json
+          if-no-files-found: warn
+          retention-days: 30
 
   server-unit-complete:
     name: Server unit execution complete

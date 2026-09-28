@@ -19,7 +19,7 @@ test('server unit shards partition, reunite and verify as one full-selection bun
     'scripts/run-server-unit-shard.mjs', 'scripts/merge-server-unit-shards.mjs',
     'scripts/verify-server-unit-execution.mjs', 'scripts/verify-server-unit-aggregate.mjs',
     'scripts/lib/test-execution-evidence.mjs', 'scripts/lib/test-sharding.mjs', 'scripts/lib/test-revision.mjs',
-    'scripts/lib/vitest-progress-reporter.mjs', 'scripts/lib/test-discovery.mjs',
+    'scripts/lib/vitest-progress-reporter.mjs', 'scripts/lib/vitest-flaky-reporter.mjs', 'scripts/lib/test-discovery.mjs',
     'scripts/lib/candidate-execution-artifacts.mjs', 'scripts/lib/candidate-execution-gate.mjs',
     'scripts/lib/node-test-execution.mjs', 'scripts/lib/playwright-execution-evidence.mjs',
     'server/vitest.server-unit-shard.config.ts',
@@ -36,6 +36,23 @@ test('server unit shards partition, reunite and verify as one full-selection bun
     writeFileSync(path.join(root, `server/src/test/unit/${behavior}.test.ts`),
       `import { double } from '../../lib';\ntest('${behavior} an item', () => expect(double(${index})).toBe(${index * 2}));\n`);
   }
+  // Fails its first attempt only. The marker lives in gitignored test-results/
+  // so the deliberate flake cannot dirty the fixture checkout. Sorted, this
+  // file falls to shard 1.
+  const marker = JSON.stringify(path.join(root, 'test-results/flaky-marker'));
+  writeFileSync(path.join(root, 'server/src/test/unit/recovers.test.ts'), [
+    "import { existsSync, mkdirSync, writeFileSync } from 'node:fs';",
+    "import path from 'node:path';",
+    "import { double } from '../../lib';",
+    "test('recovers on retry', () => {",
+    `  if (!existsSync(${marker})) {`,
+    `    mkdirSync(path.dirname(${marker}), { recursive: true });`,
+    `    writeFileSync(${marker}, 'attempted');`,
+    "    throw new Error('deliberate first-attempt failure');",
+    '  }',
+    '  expect(double(2)).toBe(4);',
+    '});',
+  ].join('\n') + '\n');
   const git = (...args) => execFileSync('git', args, { cwd: root, stdio: 'pipe', encoding: 'utf8' }).trim();
   git('init'); git('add', '.');
   git('-c', 'user.name=Test fixture', '-c', 'user.email=fixture@example.invalid', '-c', 'commit.gpgsign=false',
@@ -53,9 +70,18 @@ test('server unit shards partition, reunite and verify as one full-selection bun
     const evidence = readJson('test-results/server-coverage/evidence.json');
     assert.equal(evidence.status, 'passed');
     assert.deepEqual(evidence.selection.shard, { index, total: 2 });
-    assert.equal(evidence.selection.allFiles.length, 3);
-    assert.equal(evidence.expectedFiles.length, index === 1 ? 2 : 1);
+    assert.equal(evidence.selection.allFiles.length, 4);
+    assert.equal(evidence.expectedFiles.length, 2);
     assert.ok(existsSync(path.join(root, 'test-results/server-coverage/blob.json')));
+    // The retried file leaves the shard green; flaky-tests.json is the only
+    // record that its first attempt failed.
+    const flaky = readJson('test-results/server-coverage/flaky-tests.json');
+    assert.deepEqual({ ...flaky, tests: undefined }, { schemaVersion: 1, suite: 'server-unit',
+      job: `server-unit shard ${index}/2`, shard: { index, total: 2 }, revision, runId: null, runAttempt: null, tests: undefined });
+    assert.deepEqual(flaky.tests, index === 1
+      ? [{ testId: 'src/test/unit/recovers.test.ts > recovers on retry', file: 'src/test/unit/recovers.test.ts',
+        name: 'recovers on retry', retryCount: 1 }]
+      : []);
     cpSync(path.join(root, 'test-results/server-coverage'), path.join(shards, `server-unit-shard-${index}`), { recursive: true });
   }
   // A dirty checkout must be refused before any file is collected.
@@ -70,10 +96,10 @@ test('server unit shards partition, reunite and verify as one full-selection bun
   assert.equal(merged.status, 0, merged.stdout + merged.stderr);
   const aggregate = readJson('test-results/server-coverage/shard-aggregate.json');
   assert.equal(aggregate.status, 'passed');
-  assert.equal(aggregate.counts.passed, 3);
+  assert.equal(aggregate.counts.passed, 4);
   assert.deepEqual(readdirSync(path.join(root, 'test-results/server-unit-blobs')).sort(), ['blob-1.json', 'blob-2.json']);
-  assert.equal(readJson('test-results/server-coverage/collected.json').length, 3);
-  assert.equal(readJson('test-results/server-coverage/collected-tests.json').length, 3);
+  assert.equal(readJson('test-results/server-coverage/collected.json').length, 4);
+  assert.equal(readJson('test-results/server-coverage/collected-tests.json').length, 4);
   assert.equal(readJson('test-results/server-coverage/source-before.json').revision, revision);
 
   const vitest = path.join(root, 'server/node_modules/vitest/vitest.mjs');
@@ -82,14 +108,14 @@ test('server unit shards partition, reunite and verify as one full-selection bun
   { cwd: path.join(root, 'server'), encoding: 'utf8', timeout: 60000, env });
   assert.equal(replay.status, 0, replay.stdout + replay.stderr);
   const report = readJson('server/test-results.json');
-  assert.equal(report.numTotalTests, 3);
+  assert.equal(report.numTotalTests, 4);
   assert.equal(readJson('server/coverage/coverage-summary.json').total.lines.covered > 0, true);
 
   const verified = node(['scripts/verify-server-unit-execution.mjs'], { SERVER_UNIT_RUN_OUTCOME: 'success' });
   assert.equal(verified.status, 0, verified.stdout + verified.stderr);
   const evidence = readJson('test-results/server-coverage/evidence.json');
   assert.equal(evidence.status, 'passed');
-  assert.equal(evidence.counts.passed, 3);
+  assert.equal(evidence.counts.passed, 4);
   assert.deepEqual(evidence.selection, { mode: 'full', filters: [] });
 
   const gate = node(['scripts/verify-server-unit-aggregate.mjs'], { SERVER_UNIT_JOB_RESULT: 'success', SERVER_UNIT_INPUT_DIR: '.' });
