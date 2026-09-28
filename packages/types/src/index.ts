@@ -16,6 +16,7 @@ export * from './interfaces/job';
 // Core type definitions (from shared/types)
 // Note: Some types (EmailMessage, EmailProviderConfig) in lib/email.ts are for OUTBOUND email
 export * from './lib/attributes';
+export * from './lib/dateOnly';
 export * from './lib/general';
 export * from './lib/tax';
 export * from './lib/temporal';

@@ -134,7 +134,9 @@ test('expensive workflow omission requires both a successful selector and indepe
   assert.equal(evaluate(input).status, 'failed');
 });
 
-test('CLI reads candidate artifacts, fails on missing JSON, and rejects a dirty consumer checkout', async t => {
+// Builds a committed consumer checkout holding passing raw inputs for every
+// requirement, and a runner for the readiness CLI against it.
+async function cliFixture(t, quarantine = { schemaVersion: 1, entries: [] }) {
   const { mkdtempSync, cpSync, mkdirSync, writeFileSync, readFileSync, rmSync } = await import('node:fs');
   const { tmpdir } = await import('node:os');
   const path = await import('node:path');
@@ -147,8 +149,7 @@ test('CLI reads candidate artifacts, fails on missing JSON, and rejects a dirty 
   };
   cpSync(new URL('../lib', import.meta.url), path.join(root, 'scripts/lib'), { recursive: true });
   cpSync(new URL('../verify-production-readiness.mjs', import.meta.url), path.join(root, 'scripts/verify-production-readiness.mjs'));
-  // This fixture exercises full enforcement; quarantine behavior is covered separately.
-  write('scripts/lib/quarantine.json', { schemaVersion: 1, entries: [] });
+  write('scripts/lib/quarantine.json', quarantine);
   write('.gitignore', 'test-results/\n');
   for (const file of [...upgradeBrowserFiles, ...teamsDevelopmentFiles]) write(file, '// Runtime report fixture identity\n');
   const git = args => execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
@@ -223,6 +224,16 @@ test('CLI reads candidate artifacts, fails on missing JSON, and rejects a dirty 
     assert.equal(child.status, output.status === 'passed' ? 0 : 1, child.stderr);
     return output;
   };
+  return { root, write, run, input, revision, filenames, rawBrowser, cleanSource, upgradeDirectory, citusDirectory, citusSchema,
+    teamsDirectory, teamsReport, teamsEvidence, callbackDirectory, callbackReport, callbackRunner };
+}
+
+test('CLI reads candidate artifacts, fails on missing JSON, and rejects a dirty consumer checkout', async t => {
+  const { readFileSync, rmSync } = await import('node:fs');
+  const path = await import('node:path');
+  // This fixture exercises full enforcement; quarantine behavior is covered separately.
+  const { root, write, run, revision, filenames, rawBrowser, upgradeDirectory, citusDirectory, citusSchema,
+    teamsDirectory, teamsReport, teamsEvidence, callbackDirectory, callbackReport, callbackRunner } = await cliFixture(t);
   { const result = run(); assert.equal(result.status, 'passed', result.failures.join('\n')); }
   const containerReport = { ...callbackReport, sourceRevisionOrigin: 'environment', sourceRevisionAfter: null };
   const containerRunner = { ...callbackRunner, runtimeBinding: { imageRevision: revision,
@@ -284,6 +295,31 @@ test('CLI reads candidate artifacts, fails on missing JSON, and rejects a dirty 
   write(filenames[0], original); assert.equal(run().status, 'passed');
   write('uncommitted.md', 'Uncommitted consumer change');
   assert.match(run().failures.join('\n'), /dirty/);
+});
+
+test('CLI reports missing inputs of a quarantined requirement without letting them veto readiness', async t => {
+  const { rmSync } = await import('node:fs');
+  const path = await import('node:path');
+  const expires = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+  const { root, run, teamsDirectory } = await cliFixture(t, { schemaVersion: 1, entries: [{ artifact: 'teams-development-execution',
+    owner: 'integration-owners', reason: 'Tracked development-server limitation', expires }] });
+  // The quarantined lane's setup can fail before its gate runs, so no artifact is uploaded at all.
+  rmSync(path.join(root, teamsDirectory), { recursive: true });
+  const result = run();
+  assert.equal(result.status, 'passed', result.failures.join('\n'));
+  const teams = result.results.find(({ id }) => id === 'teams-development-execution');
+  assert.equal(teams.status, 'quarantined-failing');
+  assert.match(teams.failures.join('\n'), /teams-development-execution: ENOENT/);
+});
+
+test('CLI still fails readiness on missing inputs of an unquarantined requirement', async t => {
+  const { rmSync } = await import('node:fs');
+  const path = await import('node:path');
+  const { root, run, teamsDirectory } = await cliFixture(t);
+  rmSync(path.join(root, teamsDirectory), { recursive: true });
+  const result = run();
+  assert.equal(result.status, 'failed');
+  assert.match(result.failures.join('\n'), /teams-development-execution: ENOENT/);
 });
 
 // F009: a quarantine keeps a mandatory outcome visible without vetoing

@@ -60,6 +60,7 @@ import {
   recurringBillingRunStartedEventPayloadSchema,
 } from './domain/billingEventSchemas';
 import {
+  clientAnniversaryUpcomingEventPayloadSchema,
   clientArchivedEventPayloadSchema,
   clientCreatedEventPayloadSchema,
   clientDeletedEventPayloadSchema,
@@ -355,6 +356,7 @@ export const EVENT_TYPES = [
   'RECURRING_BILLING_RUN_FAILED',
 
   // CRM (domain expansion)
+  'CLIENT_ANNIVERSARY_UPCOMING',
   'CLIENT_CREATED',
   'CLIENT_UPDATED',
   'CLIENT_STATUS_CHANGED',
@@ -1370,6 +1372,7 @@ export const EventPayloadSchemas = {
   RECURRING_BILLING_RUN_FAILED: recurringBillingRunFailedEventPayloadSchema,
 
   // CRM (domain expansion)
+  CLIENT_ANNIVERSARY_UPCOMING: clientAnniversaryUpcomingEventPayloadSchema,
   CLIENT_CREATED: clientCreatedEventPayloadSchema,
   CLIENT_UPDATED: clientUpdatedEventPayloadSchema,
   CLIENT_STATUS_CHANGED: clientStatusChangedEventPayloadSchema,
