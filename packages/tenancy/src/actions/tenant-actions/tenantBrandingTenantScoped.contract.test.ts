@@ -51,6 +51,17 @@ describe('tenant branding actions tenant-scoped query contract', () => {
     expect(source).toContain('branding.faviconUrl ?? existingSettings.branding?.faviconUrl');
   });
 
+  it('records which image each square mark is cut from, and never wipes it', () => {
+    const logoSource = readFileSync(resolve(__dirname, 'tenantLogoActions.ts'), 'utf8');
+    expect(logoSource).toContain("default: 'logoMarkSource'");
+    expect(logoSource).toContain("dark: 'logoDarkMarkSource'");
+    expect(logoSource).toContain("markSource.kind === 'square' ? markSource.documentId : undefined");
+
+    const brandingSource = readFileSync(resolve(__dirname, 'tenantBrandingActions.ts'), 'utf8');
+    expect(brandingSource).toContain('const logoMarkSource = existingSettings.branding?.logoMarkSource');
+    expect(brandingSource).toContain('const logoDarkMarkSource = existingSettings.branding?.logoDarkMarkSource');
+  });
+
   it('uses structural tenant scoping for tenant settings branding roots', () => {
     for (const file of files) {
       const source = readFileSync(resolve(__dirname, file), 'utf8');

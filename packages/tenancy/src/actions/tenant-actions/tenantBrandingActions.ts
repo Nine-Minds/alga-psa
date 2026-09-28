@@ -81,6 +81,10 @@ export const updateTenantBrandingAction = withAuth(async (user: IUserWithRoles, 
   const logoWideUrl = branding.logoWideUrl ?? existingSettings.branding?.logoWideUrl;
   const logoWideDarkUrl = branding.logoWideDarkUrl ?? existingSettings.branding?.logoWideDarkUrl;
   const faviconUrl = branding.faviconUrl ?? existingSettings.branding?.faviconUrl;
+  // Written by the logo actions only (which image each square mark is cut from),
+  // so a branding save from another tab must never drop it.
+  const logoMarkSource = existingSettings.branding?.logoMarkSource;
+  const logoDarkMarkSource = existingSettings.branding?.logoDarkMarkSource;
   const portalSidebarStyle = branding.portalSidebarStyle ?? existingSettings.branding?.portalSidebarStyle;
   const portalSidebarColor = branding.portalSidebarColor ?? existingSettings.branding?.portalSidebarColor;
   const portalFollowsTheme = isEnterprise
@@ -111,6 +115,8 @@ export const updateTenantBrandingAction = withAuth(async (user: IUserWithRoles, 
       logoWideUrl,
       logoWideDarkUrl,
       faviconUrl,
+      logoMarkSource,
+      logoDarkMarkSource,
       primaryColor: branding.primaryColor,
       secondaryColor: branding.secondaryColor,
       clientName: branding.clientName,
