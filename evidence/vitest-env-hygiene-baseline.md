@@ -135,12 +135,51 @@ byte for byte — a duplicate would break that equality.
 
 ## After this card
 
-The default lane's 3609 files now split 699 jsdom / 2910 node, with the same
-3609 collected and no file collected twice. 195 of the 699 previously ran under
-node without a docblock; 455 already had a jsdom docblock; 199 files inside the
-globs carry an explicit `@vitest-environment node` docblock and keep running on
-node, because the docblock still wins over the project (verified on vitest 3.2.7
-and 4.1.11, both directions).
+Measured from `vitest list --filesOnly` on the default lane, `SKIP_DB_TESTS=1`:
+**3609 files collected, 3609 unique** — the two projects tile the lane and no
+file is collected twice.
+
+| | Files |
+| --- | --- |
+| jsdom project | 691 |
+| — no docblock, so genuinely flipped node → jsdom | **187** |
+| — already carried `@vitest-environment jsdom` | 455 |
+| — carry `@vitest-environment node`, still run on node | 49 |
+| node project | 2918 |
+| — carry `@vitest-environment jsdom`, still run on jsdom | 16 |
+| explicit node pins in the rule (source-reading suites) | 8 |
+
+The 187 are the point of the card: they used to run under `environment: 'node'`
+with nothing declaring otherwise. The 49 + 16 are the docblock override doing its
+job in both directions, which is why no docblock was added or removed.
+
+Lane collection was checked the same way for every lane this card touched:
+server-colocated 80 files green, workspace-unit 22 files green, and the three
+flat lanes (api-e2e 22, workspace-runtime 2, workspace-db 74) still resolve with
+`projects: undefined` and no duplication.
+
+`--reporter=blob` + `vitest run --merge-reports` was replayed end to end through
+the default config, the way `unit-tests.yml` does it: two shard blobs produced
+under the shard config, replayed through the default config, both projects'
+files attributed correctly. The project names line up, so the merge job keeps
+working.
+
+### Sharded runs
+
+Four shards, the CI shard count, `VITEST_SEED=20260610`, 4 workers,
+`SKIP_DB_TESTS=1`: **two consecutive all-green runs** (772 + 772 + 771 + 771 =
+3086 files each).
+
+One earlier run lost shard 2 to `packages/emulators/qbo/tests/smoke.test.ts`,
+which is worth recording because it is *not* an environment failure and should
+not be mistaken for one by the follow-up. All nine emulator suites co-scheduled
+in that shard resolve to the **node** project before and after this card, so
+their environment is unchanged. The suite passes in isolation (twice) and the
+error body is `WebSockets...` — the response `@hocuspocus/server` gives a plain
+HTTP request, and `server/src/test/unit/hocuspocus/tenantValidation.test.ts` is
+co-scheduled in the same shard. It is a port/lifecycle interaction between the
+emulator harness and the hocuspocus suite in a recycled fork, pre-existing and
+independent of this card. Worth its own card.
 
 The follow-up card should re-run the query above and compare the "failed shard
 jobs carrying one of the three signatures" row against 17 of 112.
