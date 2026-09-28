@@ -51,6 +51,8 @@ const COPY = {
     textGreeting: 'Dear {{recipient.name}},',
     textIntro: 'Please find attached your invoice from {{company.name}}.',
     textDetailsHeader: 'Invoice Details:',
+    headerMeta: 'From {{company.name}}',
+    textNoteLabel: 'Note',
   },
   fr: {
     headerLabel: 'Facture',
@@ -73,6 +75,8 @@ const COPY = {
     textGreeting: 'Cher/Ch\u00e8re {{recipient.name}},',
     textIntro: 'Veuillez trouver ci-joint votre facture de {{company.name}}.',
     textDetailsHeader: 'D\u00e9tails de la facture :',
+    headerMeta: 'De {{company.name}}',
+    textNoteLabel: 'Note',
   },
   es: {
     headerLabel: 'Factura',
@@ -95,6 +99,8 @@ const COPY = {
     textGreeting: 'Estimado/a {{recipient.name}}:',
     textIntro: 'Adjunto encontrar\u00e1 su factura de {{company.name}}.',
     textDetailsHeader: 'Detalles de la factura:',
+    headerMeta: 'De {{company.name}}',
+    textNoteLabel: 'Nota',
   },
   de: {
     headerLabel: 'Rechnung',
@@ -117,6 +123,8 @@ const COPY = {
     textGreeting: 'Sehr geehrte/r {{recipient.name}},',
     textIntro: 'Anbei finden Sie Ihre Rechnung von {{company.name}}.',
     textDetailsHeader: 'Rechnungsdetails:',
+    headerMeta: 'Von {{company.name}}',
+    textNoteLabel: 'Hinweis',
   },
   nl: {
     headerLabel: 'Factuur',
@@ -139,6 +147,8 @@ const COPY = {
     textGreeting: 'Geachte {{recipient.name}},',
     textIntro: 'Bijgaand vindt u uw factuur van {{company.name}}.',
     textDetailsHeader: 'Factuurgegevens:',
+    headerMeta: 'Van {{company.name}}',
+    textNoteLabel: 'Bericht',
   },
   it: {
     headerLabel: 'Fattura',
@@ -161,6 +171,8 @@ const COPY = {
     textGreeting: 'Gentile {{recipient.name}},',
     textIntro: 'In allegato trova la sua fattura da parte di {{company.name}}.',
     textDetailsHeader: 'Dettagli della fattura:',
+    headerMeta: 'Da {{company.name}}',
+    textNoteLabel: 'Nota',
   },
   pl: {
     headerLabel: 'Faktura',
@@ -183,6 +195,8 @@ const COPY = {
     textGreeting: 'Szanowny/a {{recipient.name}},',
     textIntro: 'W za\u0142\u0105czeniu przesy\u0142amy Pa\u0144stwa faktur\u0119 od {{company.name}}.',
     textDetailsHeader: 'Szczeg\u00f3\u0142y faktury:',
+    headerMeta: 'Od {{company.name}}',
+    textNoteLabel: 'Wiadomość',
   },
 };
 SUBJECTS.pt = 'Fatura {{invoice.number}} de {{company.name}}';
@@ -208,6 +222,8 @@ COPY.pt = {
   textGreeting: 'Olá {{recipient.name}},',
   textIntro: 'Segue em anexo sua fatura de {{company.name}}.',
   textDetailsHeader: 'Detalhes da fatura:',
+  headerMeta: 'De {{company.name}}',
+  textNoteLabel: 'Observação',
 };
 COPY.sv = {
   headerLabel: 'Faktura',
@@ -230,6 +246,8 @@ COPY.sv = {
   textGreeting: 'Hej {{recipient.name}},',
   textIntro: 'Din faktura från {{company.name}} bifogas.',
   textDetailsHeader: 'Fakturauppgifter:',
+  headerMeta: 'Från {{company.name}}',
+  textNoteLabel: 'Meddelande',
 };
 
 /* eslint-enable max-len */
@@ -280,7 +298,7 @@ function buildBodyHtml(c) {
                 <p style="margin:16px 0 0 0;font-size:15px;color:#1f2933;line-height:1.5;">${c.bestRegards}<br><strong>{{company.name}}</strong></p>`;
 }
 
-function buildText(c, lang) {
+function buildText(c) {
   return `${c.textHeader}
 
 ${c.textGreeting}
@@ -294,7 +312,7 @@ ${c.textDetailsHeader}
 - ${c.dueDateLabel}: {{invoice.dueDate}}
 
 {{#if customMessage}}
-${lang === 'sv' ? 'Meddelande' : 'Note'}: {{customMessage}}
+${c.textNoteLabel}: {{customMessage}}
 {{/if}}
 
 {{#if invoice.paymentUrl}}
@@ -323,11 +341,11 @@ function getTemplate() {
         language: lang,
         headerLabel: copy.headerLabel,
         headerTitle: '{{invoice.number}}',
-        headerMeta: lang === 'sv' ? 'Från {{company.name}}' : 'From {{company.name}}',
+        headerMeta: copy.headerMeta,
         bodyHtml: buildBodyHtml(copy),
         footerText: copy.footer,
       }),
-      textContent: buildText(copy, lang),
+      textContent: buildText(copy),
     })),
   };
 }
