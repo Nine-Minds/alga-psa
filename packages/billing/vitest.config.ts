@@ -37,6 +37,9 @@ export default defineConfig({
       // Multi-select bulk actions on the catalog and product lists — listed for
       // the same reason as the suites above.
       'src/components/settings/billing/ServiceCatalogManager.bulkActions.contract.test.tsx',
+      // Server-side search + filters on the Service Catalog list — listed for the
+      // same reason as the suites above.
+      'src/components/settings/billing/ServiceCatalogManager.search.contract.test.tsx',
       'src/components/settings/billing/ProductsManager.bulkActions.contract.test.tsx',
       'src/components/billing-dashboard/quotes/QuoteDocumentTemplateEditor.tenantBranding.test.tsx',
       'src/components/billing-dashboard/quotes/QuoteDocumentTemplateEditor.existingQuote.test.tsx',

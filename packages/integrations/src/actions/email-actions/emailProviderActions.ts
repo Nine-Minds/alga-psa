@@ -36,6 +36,7 @@ import {
   resolveMicrosoftEmailIssuerChoice,
   type MicrosoftEmailIssuerChoice,
 } from '../../lib/microsoftEmailIssuerSelection';
+import { getMicrosoftSenderDeleteBlockMessage } from './microsoftSenderDeleteGuard';
 import { getMicrosoftEmailSetupMetadataInternal } from '../integrations/microsoftActions';
 
 type EmailProviderActionError = ActionMessageError;
@@ -1327,6 +1328,16 @@ export const deleteEmailProvider = withAuth(async (
   providerId: string
 ): Promise<{ success: true } | EmailProviderActionError> => {
   try {
+    const { knex } = await createTenantKnex();
+    const routedSender = await tenantDb(knex, tenant).table('email_sender_addresses')
+      .where({ microsoft_provider_id: providerId }).first('email_address');
+    const senderDeleteBlockMessage = getMicrosoftSenderDeleteBlockMessage(routedSender?.email_address);
+    if (senderDeleteBlockMessage) {
+      return actionError(
+        senderDeleteBlockMessage,
+        'msp/email-providers:errors.provider.senderInUse'
+      );
+    }
     await new EmailProviderService().deleteProvider(providerId, tenant);
     return { success: true };
   } catch (error) {

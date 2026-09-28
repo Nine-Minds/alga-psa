@@ -10,11 +10,21 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
   return {
     ...actual,
     tenantDb: mocks.tenantDb,
+    withTransaction: vi.fn(async (knex: any, callback: (trx: any) => unknown) => callback(knex)),
   };
 });
 
 vi.mock('../../../lib/api/services/ServiceCatalogService', () => ({
   publishServiceCatalogSearchEvent: mocks.publishServiceCatalogSearchEvent,
+}));
+
+// This suite mocks the query layer, so keep the tax resolver out of the way;
+// the real inheritance/override behavior is covered by the DB-backed
+// defaultTaxRateCatalogEntrypoints integration suite.
+vi.mock('@alga-psa/shared/billingClients/defaultTaxRate', () => ({
+  resolveCatalogTaxRateIdForCreate: vi.fn(async () => null),
+  InvalidDefaultTaxRateError: class InvalidDefaultTaxRateError extends Error {},
+  InvalidTaxRateSelectionError: class InvalidTaxRateSelectionError extends Error {},
 }));
 
 import { ProductCatalogService } from '../../../lib/api/services/ProductCatalogService';

@@ -199,6 +199,8 @@
     }
   },
   "tax": {
+    "defaultRate": { "title": "Taxa de imposto predefinida", "tooltip": "Escolha a taxa herdada por novos clientes, produtos e serviços.", "description": "Defina a taxa atribuída a novos clientes e itens do catálogo. Os registos existentes não são alterados.", "loading": "A carregar taxa predefinida...", "empty": "Crie uma taxa ativa antes de escolher uma predefinida.", "invalid": "A taxa configurada já não está ativa ou válida. Escolha outra.", "field": { "label": "Taxa de imposto predefinida" }, "options": { "none": "Sem predefinição do inquilino" }, "help": "Sem taxa predefinida, novos itens ficam isentos e clientes usam a taxa ativa mais antiga, se existir.", "actions": { "save": "Guardar predefinição", "saving": "A guardar..." }, "toast": { "saved": "Taxa predefinida guardada." }, "errors": { "load": "Não foi possível carregar a taxa predefinida.", "save": "Não foi possível guardar a taxa predefinida." } },
+    "backfill": { "title": "Aplicar predefinição ao catálogo existente", "description": "Pré-visualize produtos e serviços sem taxa de imposto.", "warning": "Isto altera a tributação futura e não reescreve faturas emitidas.", "loading": "A carregar pré-visualização...", "empty": "Nenhum produto ou serviço elegível encontrado.", "target": "Taxa de destino: {{rate}}", "count": "{{count}} itens elegíveis", "dialog": { "title": "Aplicar taxa predefinida" }, "actions": { "preview": "Pré-visualizar itens", "apply": "Aplicar selecionados", "applying": "A aplicar..." }, "toast": { "applied": "Taxa predefinida aplicada aos itens selecionados." }, "errors": { "preview": "Não foi possível pré-visualizar o catálogo.", "apply": "Não foi possível aplicar a taxa predefinida." } },
     "taxRegions": {
       "title": "Regiões fiscais",
       "description": "Gerencie regiões fiscais e configurações relacionadas."
@@ -725,7 +727,8 @@
       "allServiceTypes": "Todos os tipos de serviço",
       "serviceTypePlaceholder": "Filtrar por tipo de serviço...",
       "allBillingMethods": "Todos os métodos de cobrança",
-      "billingMethodPlaceholder": "Filtrar por método de faturamento..."
+      "billingMethodPlaceholder": "Filtrar por método de faturamento...",
+      "searchPlaceholder": "Pesquisar serviços por nome, SKU ou descrição..."
     },
     "fields": {
       "serviceName": {
@@ -847,7 +850,9 @@
       "validateDelete": "Falha ao validar a exclusão. Por favor, tente novamente.",
       "delete": "Falha ao excluir o serviço",
       "deactivate": "Falha ao desativar o serviço"
-    }
+    },
+    "emptySearch": "Nenhum serviço corresponde à sua pesquisa.",
+    "clearFilters": "Limpar filtros"
   },
   "products": {
     "title": "Produtos",
@@ -977,7 +982,7 @@
       "taxRate": {
         "label": "Taxa de imposto (opcional)",
         "placeholder": "Selecione a taxa de imposto (opcional)",
-        "loading": "Carregando taxas de imposto..."
+        "loading": "Carregando taxas de imposto...", "inherit": "Usar predefinição do inquilino", "inheritNamed": "Usar predefinição do inquilino ({{rate}})", "nonTaxable": "Não tributável"
       },
       "sku": {
         "label": "SKU",
@@ -1072,7 +1077,7 @@
       "taxRate": {
         "label": "Taxa de imposto",
         "placeholder": "Não Tributável",
-        "loading": "Carregando..."
+        "loading": "Carregando...", "inherit": "Usar predefinição do inquilino", "inheritNamed": "Usar predefinição do inquilino ({{rate}})", "nonTaxable": "Não tributável"
       },
       "active": {
         "label": "Ativo"

@@ -748,7 +748,7 @@
       "domainRemovalScheduledWithClear": "Remoção de domínio agendada e emissão de tickets Do endereço apagado",
       "removeDomainFailed": "Falha ao remover o domínio",
       "testOutboundFailed": "Falha ao testar o e-mail de saída",
-      "senderIdentitiesUpdated": "Identidades dos remetentes atualizadas."
+      "senderSettingsUpdated": "Identidades dos remetentes atualizadas."
     },
     "tabs": {
       "inboundEmail": "E-mail de entrada",
@@ -842,39 +842,6 @@
         "description": "As mensagens são enviadas como a caixa selecionada pelo Microsoft Graph e salvas em Itens Enviados.",
         "loadFailed": "Não foi possível carregar as caixas de correio do Microsoft 365.",
         "saved": "Caixa de correio de envio atualizada."
-      },
-      "senderIdentities": {
-        "ticket": {
-          "title": "Identidade de email dos tickets",
-          "description": "As respostas aos emails de tickets precisam retornar a este endereço para serem associadas e adicionadas ao ticket. Use uma caixa de entrada conectada e monitorada.",
-          "connectedInboxLabel": "Caixa de entrada conectada",
-          "connectedInboxHelp": "Uma caixa de entrada conectada mantém as respostas dos clientes na conversa do ticket.",
-          "customAddressOption": "Usar outro endereço",
-          "addressLabel": "Endereço do remetente",
-          "addressPlaceholder": "support@example.com",
-          "addressHelp": "Este endereço controla somente o roteamento das respostas aos emails de tickets.",
-          "microsoftAddressHelp": "O Microsoft 365 exige que o email dos tickets use a caixa de correio de envio selecionada ({{mailbox}}).",
-          "nameLabel": "Nome de exibição do remetente",
-          "namePlaceholder": "Suporte",
-          "nameHelp": "Deixe em branco para usar o nome da caixa de entrada conectada ou do quadro de tickets."
-        },
-        "notification": {
-          "title": "Identidade de todos os outros emails",
-          "description": "Personalize convites do portal, redefinições de senha, faturas, atualizações de projetos e notificações gerais, independentemente do roteamento de tickets.",
-          "addressLabel": "Endereço do remetente",
-          "addressPlaceholder": "notifications@example.com",
-          "smtpAddressHelp": "Definido pelo endereço do remetente na configuração SMTP acima. Todos os emails que não são de tickets são enviados a partir dele.",
-          "lockedAddressHelp": "Este endereço é determinado pelo domínio gerenciado ativo ou pela caixa de correio selecionada do Microsoft 365.",
-          "nameLabel": "Nome de exibição do remetente",
-          "namePlaceholder": "Nome da sua empresa",
-          "nameHelp": "Deixe em branco para usar {{company}} automaticamente.",
-          "companyFallback": "a empresa do seu tenant"
-        },
-        "warningTitle": "Verifique o roteamento das respostas",
-        "errorTitle": "Corrija a identidade dos tickets",
-        "clearButton": "Limpar identidade dos tickets",
-        "savingButton": "Salvando...",
-        "saveButton": "Salvar identidades dos remetentes"
       }
     },
     "inbound": {

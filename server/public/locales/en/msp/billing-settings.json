@@ -199,6 +199,39 @@
     }
   },
   "tax": {
+    "defaultRate": {
+      "title": "Default tax rate",
+      "tooltip": "Choose the tax rate inherited by new clients, products, and services.",
+      "description": "Set the tax rate assigned to new clients and catalog items. Existing records are unchanged.",
+      "loading": "Loading default tax rate...",
+      "empty": "Create an active tax rate before choosing a default.",
+      "invalid": "The configured default is no longer active or valid. Choose another rate.",
+      "field": { "label": "Default tax rate" },
+      "options": { "none": "No tenant default" },
+      "help": "When unset, new catalog items remain non-taxable and new clients use the oldest active rate when one exists.",
+      "actions": { "save": "Save default", "saving": "Saving..." },
+      "toast": { "saved": "Default tax rate saved." },
+      "errors": {
+        "load": "Failed to load the default tax rate.",
+        "save": "Failed to save the default tax rate."
+      }
+    },
+    "backfill": {
+      "title": "Apply default to existing catalog items",
+      "description": "Preview products and services that currently have no tax rate.",
+      "warning": "This changes future billing taxability and does not rewrite issued invoices.",
+      "loading": "Loading preview...",
+      "empty": "No eligible products or services found.",
+      "target": "Target rate: {{rate}}",
+      "count": "{{count}} eligible item(s)",
+      "dialog": { "title": "Apply default tax rate" },
+      "actions": { "preview": "Preview existing items", "apply": "Apply selected", "applying": "Applying..." },
+      "toast": { "applied": "Default tax rate applied to selected items." },
+      "errors": {
+        "preview": "Failed to preview catalog items.",
+        "apply": "Failed to apply the default tax rate."
+      }
+    },
     "taxRegions": {
       "title": "Tax Regions",
       "description": "Manage tax regions and related settings."
@@ -725,7 +758,8 @@
       "allServiceTypes": "All Service Types",
       "serviceTypePlaceholder": "Filter by service type...",
       "allBillingMethods": "All Billing Methods",
-      "billingMethodPlaceholder": "Filter by billing method..."
+      "billingMethodPlaceholder": "Filter by billing method...",
+      "searchPlaceholder": "Search services by name, SKU, or description..."
     },
     "fields": {
       "serviceName": {
@@ -847,7 +881,9 @@
       "validateDelete": "Failed to validate deletion. Please try again.",
       "delete": "Failed to delete service",
       "deactivate": "Failed to deactivate service"
-    }
+    },
+    "emptySearch": "No services match your search.",
+    "clearFilters": "Clear filters"
   },
   "products": {
     "title": "Products",
@@ -977,7 +1013,10 @@
       "taxRate": {
         "label": "Tax Rate (Optional)",
         "placeholder": "Select Tax Rate (optional)",
-        "loading": "Loading tax rates..."
+        "loading": "Loading tax rates...",
+        "inherit": "Use tenant default",
+        "inheritNamed": "Use tenant default ({{rate}})",
+        "nonTaxable": "Non-taxable"
       },
       "sku": {
         "label": "SKU",
@@ -1072,7 +1111,10 @@
       "taxRate": {
         "label": "Tax Rate",
         "placeholder": "Non-Taxable",
-        "loading": "Loading..."
+        "loading": "Loading...",
+        "inherit": "Use tenant default",
+        "inheritNamed": "Use tenant default ({{rate}})",
+        "nonTaxable": "Non-taxable"
       },
       "active": {
         "label": "Active"

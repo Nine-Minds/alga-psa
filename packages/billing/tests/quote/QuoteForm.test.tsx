@@ -7,6 +7,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const toastMock = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 vi.mock('react-hot-toast', () => ({ toast: toastMock }));
 
+const senderActions = vi.hoisted(() => ({ list: vi.fn(async () => ({ senders: [], effectiveSenderId: null, effectiveSenderAddress: 'provider@example.test', allowOverride: false })) }));
+vi.mock('@alga-psa/email/senderActions', () => ({ listSelectableSenders: senderActions.list }));
+
 const actions = vi.hoisted(() => ({
   addQuoteItem: vi.fn(),
   approveQuote: vi.fn(),
@@ -526,6 +529,12 @@ describe('QuoteForm quote status change callback', () => {
   it('T001/F002: a successful send awaits the parent refresh callback exactly once', async () => {
     actions.getQuote.mockResolvedValue(workflowQuote('draft'));
     actions.sendQuote.mockResolvedValue(workflowQuote('sent'));
+    senderActions.list.mockResolvedValue({
+      senders: [{ sender_id: 'first', email_address: 'first@example.test' }, { sender_id: 'second', email_address: 'second@example.test' }],
+      effectiveSenderId: null,
+      effectiveSenderAddress: 'provider@example.test',
+      allowOverride: true,
+    });
     const deferred = createDeferred<void>();
     const onQuoteStatusChanged = vi.fn(() => deferred.promise);
 
@@ -533,10 +542,14 @@ describe('QuoteForm quote status change callback', () => {
     await screen.findByLabelText('Title');
 
     fireEvent.click(document.getElementById('quote-form-send') as HTMLButtonElement);
+    const senderSelect = await screen.findByLabelText('From') as HTMLSelectElement;
+    expect(senderSelect.value).toBe('__default__');
+    expect(screen.getByRole('option', { name: 'Use default (provider@example.test)' })).not.toBeNull();
     await waitFor(() => expect(document.getElementById('quote-form-send-confirm')).not.toBeNull());
     fireEvent.click(document.getElementById('quote-form-send-confirm') as HTMLButtonElement);
 
     await waitFor(() => expect(actions.sendQuote).toHaveBeenCalledTimes(1));
+    expect(actions.sendQuote).toHaveBeenCalledWith('quote-1', expect.objectContaining({ senderId: undefined, email_addresses: undefined, message: undefined }));
     await waitFor(() => expect(onQuoteStatusChanged).toHaveBeenCalledTimes(1));
 
     // Awaited, not fired-and-forgotten: the workflow stays busy and the send

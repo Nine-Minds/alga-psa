@@ -830,7 +830,17 @@
         }
       },
       "empty": "Nenhum quadro encontrado.",
-      "searchPlaceholder": "Pesquisar quadros…"
+      "searchPlaceholder": "Pesquisar quadros…",
+      "emailSender": {
+        "useDefault": "Usar padrão do chamado",
+        "duplicateRoute": "Esta rota de remetente já existe.",
+        "saveFailed": "Não foi possível salvar o remetente do chamado. Tente novamente.",
+        "label": "Remetente de saída",
+        "inboundWarning": "Este remetente é usado para e-mails enviados sobre tickets. As configurações de e-mail recebido não são alteradas.",
+        "displayName": "Nome de exibição",
+        "save": "Guardar remetente",
+        "saved": "Remetente guardado"
+      }
     },
     "priorities": {
       "title": {
@@ -3476,5 +3486,8 @@
       "nothingToRetry": "Não há registro de domínio personalizado com falha para repetir.",
       "retryOnlyAfterFailure": "A repetição só está disponível após um registro com falha."
     }
+  },
+  "common": {
+    "saving": "A guardar…"
   }
 }

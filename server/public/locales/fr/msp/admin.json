@@ -9,7 +9,8 @@
       "edit": "Modifier",
       "delete": "Supprimer",
       "deleting": "Suppression…",
-      "verify": "Vérifier"
+      "verify": "Vérifier",
+      "cancel": "Annuler"
     },
     "states": {
       "active": "Actif",
@@ -226,7 +227,53 @@
         "companyFallback": "votre entreprise"
       },
       "warningTitle": "Vérifiez le routage des réponses",
-      "errorTitle": "Corrigez l'identité e-mail des tickets"
+      "errorTitle": "Corrigez l'identité e-mail des tickets",
+      "addresses": {
+        "title": "Adresses d’expéditeur",
+        "description": "Créez des adresses nommées pour vos e-mails sortants."
+      },
+      "routing": {
+        "title": "Routage des expéditeurs",
+        "description": "Choisissez l’expéditeur utilisé pour chaque catégorie d’e-mail.",
+        "default": "Par défaut (tous les autres e-mails)",
+        "useDefault": "Utiliser la valeur par défaut",
+        "sender": "Expéditeur",
+        "displayName": "Nom affiché",
+        "boardSummary": "Les expéditeurs des tickets par tableau se gèrent dans les paramètres de chaque tableau.",
+        "ticket": "E-mail de ticket",
+        "project": "E-mail de projet",
+        "billing": "E-mail de facturation",
+        "sales": "E-mail commercial",
+        "scheduling": "E-mail de planification",
+        "survey": "E-mail de sondage",
+        "account": "E-mail de compte",
+        "general": "E-mail général",
+        "noneProviderFrom": "Aucun (utiliser l’expéditeur du fournisseur)",
+        "confirmSmtp": "Je confirme que le relais SMTP accepte cette adresse d’expéditeur.",
+        "inboundReplyWarning": "Les réponses entrantes continuent d’arriver dans la boîte configurée ; modifier cette adresse ne change pas leur acheminement.",
+        "unknownBoard": "Tableau inconnu"
+      },
+      "actions": {
+        "add": "Ajouter",
+        "verify": "Vérifier",
+        "delete": "Supprimer"
+      },
+      "fields": {
+        "address": "Adresse e-mail",
+        "localPart": "Nom de l’adresse",
+        "domain": "Domaine vérifié",
+        "sendThrough": "Envoyer via",
+        "displayName": "Nom affiché",
+        "displayNamePlaceholder": "Équipe Assistance"
+      },
+      "smtpHelp": "Votre relais SMTP doit autoriser cette adresse.",
+      "microsoftHelp": "La boîte connectée doit disposer de l’autorisation Exchange Send As pour cette adresse.",
+      "errors": {
+        "duplicateAddress": "Cette adresse d’expéditeur existe déjà.",
+        "saveFailed": "Impossible d’ajouter l’expéditeur. Vérifiez l’adresse et réessayez.",
+        "duplicateRoute": "Cette route d’expéditeur existe déjà.",
+        "saveRoutingFailed": "Impossible d’enregistrer la route d’expéditeur. Réessayez."
+      }
     }
   },
   "microsoft365": {

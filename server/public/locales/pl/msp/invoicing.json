@@ -1043,7 +1043,9 @@
     "fields": {
       "due": "Termin",
       "additionalMessage": "Dodatkowa wiadomość",
-      "additionalMessagePlaceholder": "Dodaj osobistą notatkę, którą chcesz dołączyć do wiadomości e-mail..."
+      "additionalMessagePlaceholder": "Dodaj osobistą notatkę, którą chcesz dołączyć do wiadomości e-mail...",
+      "from": "Od",
+      "useDefault": "Użyj domyślnego nadawcy"
     },
     "preview": "E-maile będą wysyłane z {{fromEmail}} w imieniu {{companyName}}. Do każdej faktury zostanie dołączony plik PDF.",
     "values": {

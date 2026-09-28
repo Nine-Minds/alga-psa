@@ -834,7 +834,17 @@
         }
       },
       "empty": "Nie znaleziono tablic.",
-      "searchPlaceholder": "Szukaj tablic…"
+      "searchPlaceholder": "Szukaj tablic…",
+      "emailSender": {
+        "useDefault": "Użyj nadawcy domyślnego zgłoszenia",
+        "duplicateRoute": "Ta trasa nadawcy już istnieje.",
+        "saveFailed": "Nie można zapisać nadawcy zgłoszenia. Spróbuj ponownie.",
+        "label": "Nadawca wiadomości wychodzących",
+        "inboundWarning": "Ten nadawca jest używany do wychodzących wiadomości e-mail dotyczących zgłoszeń. Ustawienia poczty przychodzącej pozostają bez zmian.",
+        "displayName": "Nazwa wyświetlana",
+        "save": "Zapisz nadawcę",
+        "saved": "Zapisano nadawcę"
+      }
     },
     "priorities": {
       "title": {
@@ -3506,5 +3516,8 @@
       "nothingToRetry": "Brak nieudanej rejestracji domeny niestandardowej do ponowienia.",
       "retryOnlyAfterFailure": "Ponowienie jest dostępne tylko po nieudanej rejestracji."
     }
+  },
+  "common": {
+    "saving": "Zapisywanie…"
   }
 }

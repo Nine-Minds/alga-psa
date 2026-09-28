@@ -17,6 +17,9 @@ export function useFormatWorkflowRunTrigger(): (
     if (triggerType === 'recurring') {
       return t('trigger.recurringSchedule', { defaultValue: 'Recurring schedule' });
     }
+    if (triggerType === 'date') {
+      return t('trigger.date', { defaultValue: 'Date' });
+    }
     if (triggerType === 'event') {
       return eventType
         ? t('trigger.eventWithType', { defaultValue: 'Event: {{eventType}}', eventType })

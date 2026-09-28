@@ -1001,7 +1001,9 @@
     "fields": {
       "due": "Scadenza",
       "additionalMessage": "Messaggio aggiuntivo",
-      "additionalMessagePlaceholder": "Aggiungi una nota personale da includere nell'e-mail..."
+      "additionalMessagePlaceholder": "Aggiungi una nota personale da includere nell'e-mail...",
+      "from": "Da",
+      "useDefault": "Usa mittente predefinito"
     },
     "preview": "Le e-mail verranno inviate da {{fromEmail}} per conto di {{companyName}}. Ogni fattura verrà allegata in formato PDF.",
     "values": {

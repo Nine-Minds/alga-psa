@@ -830,7 +830,17 @@
         }
       },
       "empty": "No boards found.",
-      "searchPlaceholder": "Search boards…"
+      "searchPlaceholder": "Search boards…",
+      "emailSender": {
+        "label": "Outbound sender",
+        "inboundWarning": "This sender is used for outbound ticket email. Inbound mail settings are unchanged.",
+        "displayName": "Display name",
+        "save": "Save sender",
+        "saved": "Sender saved",
+        "useDefault": "Use ticket default",
+        "duplicateRoute": "That sender route already exists.",
+        "saveFailed": "Could not save sender routing. Please try again."
+      }
     },
     "priorities": {
       "title": {
@@ -3476,5 +3486,8 @@
       "nothingToRetry": "No failed custom domain registration to retry.",
       "retryOnlyAfterFailure": "Retry is only available after a failed registration."
     }
+  },
+  "common": {
+    "saving": "Saving..."
   }
 }

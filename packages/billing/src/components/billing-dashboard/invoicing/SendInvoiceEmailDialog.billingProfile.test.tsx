@@ -33,6 +33,7 @@ vi.mock('@alga-psa/ui/components/Dialog', () => ({
     ) : null,
 }));
 vi.mock('react-hot-toast', () => ({
+  toast: { error: vi.fn(), success: vi.fn(), loading: vi.fn(), dismiss: vi.fn() },
   default: { error: vi.fn(), success: vi.fn(), loading: vi.fn(), dismiss: vi.fn() },
 }));
 vi.mock('react-i18next', () => ({

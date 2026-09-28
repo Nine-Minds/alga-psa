@@ -52,6 +52,8 @@ import {
   newInboundDeliveryOwner,
 } from '@alga-psa/shared/services/email/inboundEmailConsumerDedupe';
 
+type TicketNotificationParams = Omit<SendEmailParams, 'mailClass' | 'boardId'> & { boardId?: string };
+
 /** Stable ledger consumer id for the ticket email subscriber. */
 const INBOUND_OUTBOX_EMAIL_CONSUMER = 'ticket-email';
 
@@ -65,64 +67,6 @@ function getBaseUrl(): string {
 
 function normalizeHost(host: string): string {
   return host.replace(/^https?:\/\//i, '').replace(/\/+$/, '');
-}
-
-async function resolveTicketingFromAddress(
-  knex: Knex,
-  tenantId: string
-): Promise<{ email: string; name?: string } | undefined> {
-  try {
-    const settings = await TenantEmailService.getTenantEmailSettings(tenantId, knex);
-
-    const configuredEmail = typeof settings?.ticketingFromEmail === 'string'
-      ? settings.ticketingFromEmail.trim()
-      : '';
-    const configuredName = typeof settings?.ticketingFromName === 'string'
-      ? settings.ticketingFromName.trim()
-      : '';
-
-    // Nothing ticketing-specific is configured: defer entirely to the default
-    // from-address resolution (and the caller's board-name fallback).
-    if (!configuredEmail && !configuredName) {
-      return undefined;
-    }
-
-    // Resolve the address. Prefer the explicit ticketing From address; when only
-    // a display name is configured, layer it onto the tenant's default sender
-    // address so the name is honored without forcing a custom From address.
-    const email = configuredEmail || TenantEmailService.getDefaultFromAddress(settings).email;
-    if (!email) {
-      return undefined;
-    }
-
-    // Resolve the display name. Prefer the tenant-configured ticketing display
-    // name. When it is blank and an explicit From address is set, fall back to
-    // the inbound provider row matching that mailbox to pick up its optional
-    // sender_display_name override. Falls back to undefined when neither is set;
-    // callers then use board-name fallback for backward compatibility.
-    let name = configuredName;
-    if (!name && configuredEmail) {
-      const provider = await tenantDb(knex, tenantId).table('email_providers')
-        .where({ mailbox: configuredEmail })
-        .first(['sender_display_name']);
-
-      name = typeof provider?.sender_display_name === 'string'
-        ? provider.sender_display_name.trim()
-        : '';
-    }
-
-    return {
-      email,
-      name: name.length > 0 ? name : undefined
-    };
-  } catch (error) {
-    logger.warn('[TicketEmailSubscriber] Failed to resolve ticketing from address', {
-      tenantId,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-
-  return undefined;
 }
 
 type PortalLinkContext = {
@@ -645,6 +589,7 @@ async function sendNotificationIfEnabled(
     // Pass recipientUserId for rate limiting in TenantEmailService
     await sendEventEmail({
       ...params,
+      mailClass: 'ticket',
       recipientUserId,
       notificationSubtypeId: subtype?.id
     });
@@ -1038,8 +983,6 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
       });
     }
 
-    const ticketingFromAddress = await resolveTicketingFromAddress(db, tenantId);
-
     const emailTimeZone = await resolveEffectiveTimeZone(db, tenantId, creatorUserId);
     // Date/time strings are baked into a shared email context reused across all
     // recipients, so the exact per-recipient locale isn't known here. Use the
@@ -1206,7 +1149,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
       safeString(ticket.contact_email) && ticket.contact_name_id ? String(ticket.contact_name_id).trim() : undefined;
     const sentEmails = new Set<string>();
     const sendIfUnique = async (
-      params: SendEmailParams,
+      params: TicketNotificationParams,
       subtypeName: string,
       recipientUserId?: string | null
     ) => {
@@ -1221,7 +1164,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
       }
 
       sentEmails.add(key);
-      await sendNotificationIfEnabled(params, subtypeName, recipientUserId ?? undefined);
+      await sendNotificationIfEnabled({ ...params, mailClass: 'ticket', boardId: params.boardId ?? ticket.board_id }, subtypeName, recipientUserId ?? undefined);
     };
     const activeWatcherEmails = extractActiveWatcherEmails(ticket.attributes);
 
@@ -1236,7 +1179,6 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
         template: 'ticket-created-client',
         context: buildContext(portalUrl),
         replyContext,
-        from: ticketingFromAddress
       }, 'Ticket Created Client');
     }
 
@@ -1250,7 +1192,6 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
         template: 'ticket-created',
         context: buildContext(internalUrl),
         replyContext,
-        from: ticketingFromAddress
       }, 'Ticket Created', ticket.assigned_to);
     }
 
@@ -1267,7 +1208,6 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
           template: isInternalWatcher ? 'ticket-created' : 'ticket-created-client',
           context: buildContext(isInternalWatcher ? internalUrl : portalUrl),
           replyContext,
-          from: ticketingFromAddress
         }, isInternalWatcher ? 'Ticket Created' : 'Ticket Created Client');
       },
       {
@@ -1495,8 +1435,6 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
         url
       }
     });
-
-    const ticketingFromAddress = await resolveTicketingFromAddress(db, tenantId);
     const activeWatcherEmails = extractActiveWatcherEmails(ticket.attributes);
 
     logger.debug('[TicketEmailSubscriber] Accumulator not ready, sending immediately', {
@@ -1505,7 +1443,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
     });
     const sentEmails = new Set<string>();
     const sendIfUnique = async (
-      params: SendEmailParams,
+      params: TicketNotificationParams,
       subtypeName: string,
       recipientUserId?: string | null
     ) => {
@@ -1520,7 +1458,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
       }
 
       sentEmails.add(key);
-      await sendNotificationIfEnabled(params, subtypeName, recipientUserId ?? undefined);
+      await sendNotificationIfEnabled({ ...params, mailClass: 'ticket', boardId: params.boardId ?? ticket.board_id }, subtypeName, recipientUserId ?? undefined);
     };
 
     // Send to primary recipient (contact or client) - external user, no userId
@@ -1543,7 +1481,6 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
           ticketId: ticket.ticket_id || payload.ticketId,
           threadId: ticket.email_metadata?.threadId
         },
-        from: ticketingFromAddress
       }, 'Ticket Updated Client');
     }
 
@@ -1566,7 +1503,6 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
           ticketId: ticket.ticket_id || payload.ticketId,
           threadId: ticket.email_metadata?.threadId
         },
-        from: ticketingFromAddress
       }, 'Ticket Updated', ticket.assigned_to);
     }
 
@@ -1588,7 +1524,6 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
               ticketId: ticket.ticket_id || payload.ticketId,
               threadId: ticket.email_metadata?.threadId
             },
-            from: ticketingFromAddress
           }, 'Ticket Updated', resource.user_id);
         }
       }
@@ -1620,7 +1555,6 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
             ticketId: ticket.ticket_id || payload.ticketId,
             threadId: ticket.email_metadata?.threadId
           },
-          from: ticketingFromAddress
         }, isInternalWatcher ? 'Ticket Updated' : 'Ticket Updated Client');
       },
       {
@@ -1919,8 +1853,6 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
         url,
       },
     });
-
-    const ticketingFromAddress = await resolveTicketingFromAddress(db, tenantId);
     const activeWatcherEmails = extractActiveWatcherEmails(ticket.attributes);
     const primaryEmail = safeString(ticket.contact_email) || safeString(ticket.client_email);
     const primaryContactId =
@@ -1931,7 +1863,7 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
     };
     const sentEmails = new Set<string>();
     const sendIfUnique = async (
-      params: SendEmailParams,
+      params: TicketNotificationParams,
       subtypeName: string,
       recipientUserId?: string | null
     ) => {
@@ -1946,7 +1878,7 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
       }
 
       sentEmails.add(key);
-      await sendNotificationIfEnabled(params, subtypeName, recipientUserId ?? undefined);
+      await sendNotificationIfEnabled({ ...params, mailClass: 'ticket', boardId: params.boardId ?? ticket.board_id }, subtypeName, recipientUserId ?? undefined);
     };
 
     // Build subject line indicating multiple updates if applicable
@@ -1970,7 +1902,6 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
           ticketId: ticket.ticket_id || ticketId,
           threadId: ticket.email_metadata?.threadId
         },
-        from: ticketingFromAddress
       }, 'Ticket Updated Client');
     }
 
@@ -1991,7 +1922,6 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
           ticketId: ticket.ticket_id || ticketId,
           threadId: ticket.email_metadata?.threadId
         },
-        from: ticketingFromAddress
       }, 'Ticket Updated', ticket.assigned_to);
     }
 
@@ -2011,7 +1941,6 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
               ticketId: ticket.ticket_id || ticketId,
               threadId: ticket.email_metadata?.threadId
             },
-            from: ticketingFromAddress
           }, 'Ticket Updated', resource.user_id);
         }
       }
@@ -2042,7 +1971,6 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
             ticketId: ticket.ticket_id || ticketId,
             threadId: ticket.email_metadata?.threadId
           },
-          from: ticketingFromAddress
         }, isInternalWatcher ? 'Ticket Updated' : 'Ticket Updated Client');
       },
       {
@@ -2230,8 +2158,6 @@ async function sendTicketAssignedNotifications(
       ticketId: ticket.ticket_id || payload.ticketId,
       threadId: ticket.email_metadata?.threadId
     };
-
-    const ticketingFromAddress = await resolveTicketingFromAddress(db, tenantId);
     const emailEntityContext = {
       entityType: 'ticket',
       entityId: ticket.ticket_id || payload.ticketId
@@ -2240,7 +2166,7 @@ async function sendTicketAssignedNotifications(
 
     const sentEmails = new Set<string>();
     const sendIfUnique = async (
-      params: SendEmailParams,
+      params: TicketNotificationParams,
       subtypeName: string,
       recipientUserId?: string | null
     ) => {
@@ -2253,9 +2179,8 @@ async function sendTicketAssignedNotifications(
         return;
       }
       sentEmails.add(key);
-      const payloadWithFrom = ticketingFromAddress ? { ...params, from: ticketingFromAddress } : params;
       await sendNotificationIfEnabled(
-        payloadWithFrom,
+        { ...params, mailClass: 'ticket', boardId: params.boardId ?? ticket.board_id },
         subtypeName,
         recipientUserId ?? undefined
       );
@@ -2711,20 +2636,12 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     };
 
     const emailMetadata = ticket.email_metadata || {};
-
-    const ticketingFromAddress = await resolveTicketingFromAddress(db, tenantId);
-    // Prefer the per-provider Sender Display Name when configured; otherwise
-    // fall back to the ticket's board name (existing behavior) and finally
-    // 'Support' so the From-name is always populated.
-    const senderName = ticketingFromAddress?.name || ticket.board_name || 'Support';
-    const fromAddress = ticketingFromAddress
-      ? { email: ticketingFromAddress.email, name: senderName }
-      : undefined;
+    // TenantEmailService applies the board-name From fallback centrally.
     const activeWatcherEmails = extractActiveWatcherEmails(ticket.attributes);
 
     const sentEmails = new Set<string>();
     const sendIfUnique = async (
-      params: SendEmailParams,
+      params: TicketNotificationParams,
       subtypeName: string,
       recipientUserId?: string | null,
     ) => {
@@ -2740,7 +2657,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         return;
       }
       sentEmails.add(key);
-      await sendNotificationIfEnabled(params, subtypeName, recipientUserId ?? undefined);
+      await sendNotificationIfEnabled({ ...params, mailClass: 'ticket', boardId: params.boardId ?? ticket.board_id }, subtypeName, recipientUserId ?? undefined);
     };
 
     // Only notify external contacts (primaryEmail) if the comment is public and from an internal agent.
@@ -2782,7 +2699,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       }
 
       // For client portal users (contacts), pass the clientId so locale resolution respects client preferences
-      const emailParams: SendEmailParams = {
+      const emailParams: TicketNotificationParams = {
         tenantId,
         ...emailEntityContext,
         contactId: primaryContactId,
@@ -2797,7 +2714,6 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         },
         attachments: inlineCommentImageAttachments,
         headers: Object.keys(headers).length > 0 ? headers : undefined,
-        from: fromAddress as any // Cast to satisfy type if needed (SendEmailParams expects EmailAddress)
       };
 
       // Add clientId for locale resolution if we're sending to a contact/client
@@ -2865,7 +2781,6 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
             },
             attachments: inlineCommentImageAttachments,
             headers: Object.keys(headers).length > 0 ? headers : undefined,
-            from: fromAddress as any,
             recipientClientId: child.client_id || undefined
           }, 'Ticket Comment Added (Bundled Child)');
         }
@@ -2901,7 +2816,6 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
               commentId: payload.comment?.id,
               threadId: ticket.email_metadata?.threadId
             },
-            from: fromAddress as any
           }, 'Ticket Comment Added');
         },
         {
@@ -2935,7 +2849,6 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
           threadId: ticket.email_metadata?.threadId
         },
         attachments: inlineCommentImageAttachments,
-        from: fromAddress as any
       }, 'Ticket Comment Added', ticket.assigned_to);
     }
 
@@ -2963,7 +2876,6 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
             threadId: ticket.email_metadata?.threadId
           },
           attachments: inlineCommentImageAttachments,
-          from: fromAddress as any
         }, 'Ticket Comment Added', resource.user_id);
       }
     }
@@ -3154,17 +3066,6 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       }
     };
 
-    const ticketingFromAddress = await resolveTicketingFromAddress(db, tenantId);
-    // Prefer the per-provider Sender Display Name when configured; otherwise
-    // fall back to the ticket's board name (existing behavior) and finally
-    // 'Support' so the From-name is always populated.
-    const fromAddress = ticketingFromAddress
-      ? {
-          email: ticketingFromAddress.email,
-          name: ticketingFromAddress.name || ticket.board_name || 'Support'
-        }
-      : undefined;
-
     // Send to contact email if available, otherwise client email
     const primaryEmail = safeString(ticket.contact_email) || safeString(ticket.client_email);
     const primaryContactId =
@@ -3176,7 +3077,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
     const activeWatcherEmails = extractActiveWatcherEmails(ticket.attributes);
     const sentEmails = new Set<string>();
     const sendIfUnique = async (
-      params: SendEmailParams,
+      params: TicketNotificationParams,
       subtypeName: string,
       recipientUserId?: string | null
     ) => {
@@ -3191,7 +3092,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       }
 
       sentEmails.add(key);
-      await sendNotificationIfEnabled(params, subtypeName, recipientUserId ?? undefined);
+      await sendNotificationIfEnabled({ ...params, mailClass: 'ticket', boardId: params.boardId ?? ticket.board_id }, subtypeName, recipientUserId ?? undefined);
     };
 
     if (!shouldSendContactFacingTicketEmail(suppression)) {
@@ -3219,7 +3120,6 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
           ticketId: ticket.ticket_id || payload.ticketId,
           threadId: ticket.email_metadata?.threadId
         },
-        from: fromAddress
       }, 'Ticket Closed');
     }
 
@@ -3273,7 +3173,6 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
               threadId: childMeta.threadId
             },
             headers: Object.keys(headers).length > 0 ? headers : undefined,
-            from: fromAddress,
             recipientClientId: child.client_id || undefined
           }, 'Ticket Closed (Bundled Child)');
         }
@@ -3299,7 +3198,6 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
           ticketId: ticket.ticket_id || payload.ticketId,
           threadId: ticket.email_metadata?.threadId
         },
-        from: fromAddress
       }, 'Ticket Closed', ticket.assigned_to);
     }
 
@@ -3321,7 +3219,6 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
               ticketId: ticket.ticket_id || payload.ticketId,
               threadId: ticket.email_metadata?.threadId
             },
-            from: fromAddress
           }, 'Ticket Closed', resource.user_id);
         }
       }
@@ -3356,7 +3253,6 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
             ticketId: ticket.ticket_id || payload.ticketId,
             threadId: ticket.email_metadata?.threadId
           },
-          from: fromAddress
         }, 'Ticket Closed');
       },
       {

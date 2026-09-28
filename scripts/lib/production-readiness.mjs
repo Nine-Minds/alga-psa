@@ -34,7 +34,8 @@ export function evaluateProductionReadiness({ revision, changed, jobs, artifacts
   for (const requirement of readinessRequirements) {
     // Inputs the caller could not read belong to their requirement, not to the
     // gate as a whole, so a valid quarantine covers them like any other problem.
-    const problems = [...(inputErrors?.[requirement.artifact] ?? [])];
+    const inputProblems = [...(inputErrors?.[requirement.artifact] ?? [])];
+    const problems = [...inputProblems];
     const verdict = artifacts?.[requirement.artifact];
     if (requirement.conditionalWorkflow && !selection.shouldRun && jobs?.[requirement.job]?.result === 'skipped') {
       results.push({ id: requirement.artifact, status: 'not-applicable', reason: selection.reason, failures: [] });
@@ -92,7 +93,8 @@ export function evaluateProductionReadiness({ revision, changed, jobs, artifacts
       const quarantinedStatus = problems.length ? 'quarantined-failing'
         : notApplicable ? 'quarantined-not-applicable' : 'quarantined-passing';
       results.push({ id: requirement.artifact, status: quarantinedStatus,
-        reason: notApplicable ? verdict.reason : undefined, quarantine: exemption, failures: problems });
+        reason: notApplicable ? verdict.reason : undefined, quarantine: exemption,
+        failures: problems.map(problem => inputProblems.includes(problem) ? `${requirement.artifact}: ${problem}` : problem) });
       continue;
     }
     results.push({ id: requirement.artifact, status: problems.length ? 'failed' : notApplicable ? 'not-applicable' : 'passed', reason: notApplicable ? verdict.reason : undefined, failures: problems });

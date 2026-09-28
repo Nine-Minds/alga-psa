@@ -1001,7 +1001,9 @@
     "fields": {
       "due": "Vervaldatum",
       "additionalMessage": "Aanvullend bericht",
-      "additionalMessagePlaceholder": "Voeg een persoonlijke notitie toe om in de e-mail op te nemen..."
+      "additionalMessagePlaceholder": "Voeg een persoonlijke notitie toe om in de e-mail op te nemen...",
+      "from": "Van",
+      "useDefault": "Standaardafzender gebruiken"
     },
     "preview": "E-mails worden verzonden vanuit {{fromEmail}} namens {{companyName}}. Elke factuur wordt als PDF bijgevoegd.",
     "values": {

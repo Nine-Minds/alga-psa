@@ -43,7 +43,7 @@ describe('event email retry processing leases (Redis)', () => {
 
   it('atomically claims once and recovers a worker interrupted before delivery without losing the payload', async () => {
     await withQueue(async (queue, prefix) => {
-      const params = { tenantId: randomUUID(), to: 'controlled@example.test', template: 'ticket-comment-added', context: {} };
+      const params = { tenantId: randomUUID(), to: 'controlled@example.test', template: 'ticket-comment-added', context: {}, mailClass: 'ticket' as const, boardId: randomUUID(), senderId: randomUUID() };
       await queue.enqueue(params);
       const [id] = await redis.zRange(`${prefix}queue`, 0, -1);
       const claims = await Promise.all([queue.claimForProcessing(id), queue.claimForProcessing(id)]);
