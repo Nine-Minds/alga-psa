@@ -600,7 +600,8 @@
       "adjustMark": "Ajuster le symbole",
       "cropFromWide": "Découper depuis le logo large",
       "recropSuccess": "Symbole mis à jour.",
-      "recropError": "Impossible de mettre à jour le symbole."
+      "recropError": "Impossible de mettre à jour le symbole.",
+      "fileNameLabel": "Fichier stocké"
     },
     "validation": {
       "clientNameRequired": "Le nom de l'entreprise est obligatoire",
