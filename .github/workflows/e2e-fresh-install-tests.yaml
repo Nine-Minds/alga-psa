@@ -970,6 +970,16 @@ jobs:
             ${{ runner.temp }}/browser-artifact-manifest.json
           retention-days: 7
 
+      # A retry-only pass still fails the strict gate above, so this upload must
+      # survive the red job that publishes it.
+      - name: Upload browser flaky-test evidence
+        if: always() && steps.wait_for_setup.outputs.status == 'success' && !env.ACT
+        uses: actions/upload-artifact@v4
+        with:
+          name: flaky-tests-browser-${{ matrix.edition }}
+          path: e2e-tests/execution-evidence/flaky-tests.json
+          retention-days: 30
+
       - name: Record browser journey readiness
         if: always() && steps.wait_for_setup.outputs.status == 'success' && !env.ACT
         continue-on-error: true

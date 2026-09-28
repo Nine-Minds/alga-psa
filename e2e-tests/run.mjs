@@ -4,7 +4,7 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { reconcileDiscovery, repositoryTestFiles } from '../scripts/lib/test-discovery.mjs';
-import { playwrightTests, reconcilePlaywrightExecution } from '../scripts/lib/playwright-execution-evidence.mjs';
+import { flakyPlaywrightTests, playwrightTests, reconcilePlaywrightExecution } from '../scripts/lib/playwright-execution-evidence.mjs';
 import { testRevision } from '../scripts/lib/test-revision.mjs';
 import { browserTestMetrics } from '../scripts/lib/browser-test-metrics.mjs';
 
@@ -13,7 +13,7 @@ const cwd = fileURLToPath(new URL('.', import.meta.url));
 const root = path.resolve(cwd, '..');
 const output = path.join(cwd, 'execution-evidence');
 mkdirSync(output, { recursive: true });
-const files = Object.fromEntries(['collected', 'results', 'discovery', 'evidence', 'metrics'].map(name => [name, path.join(output, `${name}.json`)]));
+const files = Object.fromEntries(['collected', 'results', 'discovery', 'evidence', 'metrics', 'flaky-tests'].map(name => [name, path.join(output, `${name}.json`)]));
 for (const file of Object.values(files)) writeFileSync(file, 'null\n');
 const save = (file, data) => writeFileSync(file, JSON.stringify(data, null, 2) + '\n');
 let before;
@@ -71,5 +71,16 @@ save(files.metrics, browserTestMetrics({ collected: readReport(files.collected),
   artifactManifest: process.env.E2E_ARTIFACT_MANIFEST ? readReport(process.env.E2E_ARTIFACT_MANIFEST) : null,
   artifactManifestRequired: Boolean(process.env.E2E_ARTIFACT_MANIFEST),
   runId: process.env.GITHUB_RUN_ID, runAttempt: Number(process.env.GITHUB_RUN_ATTEMPT) }));
+// Always written, so every run yields the flaky artifact the weekly report reads.
+let flaky = [];
+try { flaky = flakyPlaywrightTests(readReport(files.results), root); } catch { flaky = []; }
+const edition = readReport(files.collected)?.config?.metadata?.edition ?? null;
+const runAttempt = Number(process.env.GITHUB_RUN_ATTEMPT);
+save(files['flaky-tests'], {
+  schemaVersion: 1, suite: 'production-browser', job: `production-browser (${edition ?? 'unknown'})`,
+  edition, revision: before?.revision ?? null, runId: process.env.GITHUB_RUN_ID ?? null,
+  runAttempt: Number.isSafeInteger(runAttempt) && runAttempt > 0 ? runAttempt : null,
+  tests: flaky.map(({ testId, file, name, projectName, retryCount }) => ({ testId, file, name, project: projectName, retryCount })),
+});
 for (const failure of evidence.failures) console.error(failure);
 process.exit(evidence.status === 'passed' ? 0 : 1);
