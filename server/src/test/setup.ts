@@ -23,6 +23,20 @@ const loadRootRtl = (): any | null => {
   }
 };
 
+// Whatever a test left running or replaced stops here. Registered BEFORE the
+// render cleanup below because vitest's default hook order is a stack: the
+// last afterEach registered runs first, so unmounting happens while the test's
+// timers and mocks are still in place, and this hook sweeps up afterwards.
+// restoreMocks/unstubEnvs/unstubGlobals in vitest.config.ts cover the same
+// ground for files that run under that config; this keeps the guarantee when
+// the setup file is loaded by a package's own vitest target.
+afterEach(() => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+});
+
 // @testing-library/react is externalized, so its module-level auto-cleanup
 // afterEach registers only in the first file that imports it per fork
 // (singleFork runs the whole suite in one process). Every later jsdom file

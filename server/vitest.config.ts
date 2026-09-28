@@ -74,6 +74,12 @@ export default defineConfig({
     include: SERVER_UNIT_INCLUDE,
     exclude: SERVER_UNIT_EXCLUDE,
     projects: makeEnvironmentProjects({ include: SERVER_UNIT_INCLUDE, exclude: SERVER_UNIT_EXCLUDE }),
+    // A leaked fake timer, spy or stubbed global outlives its test in this
+    // shared fork; these three make vitest undo them itself, and
+    // src/test/setup.ts closes the gaps they do not cover.
+    restoreMocks: true,
+    unstubEnvs: true,
+    unstubGlobals: true,
     setupFiles: [path.resolve(__dirname, './src/test/setup.ts')],
     globalSetup: [path.resolve(__dirname, './vitest.globalSetup.js')],
     isolate: true,
