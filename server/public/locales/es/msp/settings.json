@@ -10,7 +10,7 @@
     "general": "General",
     "experimentalFeatures": "Funciones experimentales",
     "appearance": "Apariencia",
-    "clientPortal": "Portal del cliente",
+    "clientPortal": "Portal de clientes",
     "users": "Usuarios",
     "teams": "Equipos",
     "language": "Idioma",
@@ -27,7 +27,7 @@
     "extensions": "Extensiones",
     "ticketingSettings": "Configuración de tickets",
     "loadingTicketing": "Cargando configuración de tickets...",
-    "teamManagement": "Gestión de equipos",
+    "teamManagement": "Gestión de equipo",
     "loadingTeam": "Cargando configuración del equipo...",
     "loadingExperimental": "Cargando configuración de funciones experimentales...",
     "loadingInteractions": "Cargando configuración de interacciones...",
@@ -110,7 +110,7 @@
       "aiAssistant": {
         "name": "Asistente de IA",
         "description": "Habilitar la consulta rápida y la barra lateral de chat con tecnología de IA.",
-        "restriction": "Solo disponible para inquilinos autorizados."
+        "restriction": "Solo disponible para el inquilino de facturación principal."
       }
     },
     "actions": {
@@ -137,7 +137,7 @@
     },
     "viewSwitcher": {
       "msp": "MSP",
-      "clientPortal": "Portal del cliente"
+      "clientPortal": "Portal de clientes"
     },
     "license": {
       "usage": "Usuarios MSP: {{used}}{{limit}} licencias utilizadas",
@@ -199,9 +199,9 @@
         "selectClient": "Seleccionar cliente"
       },
       "passwordAlert": {
-        "withPassword": "Al establecer una contraseña, el usuario se crea de inmediato y podrá iniciar sesión enseguida.",
+        "withPassword": "Establecer una contraseña creará el usuario de inmediato. Podrá iniciar sesión de inmediato.",
         "withoutPassword": "No se requiere contraseña; enviaremos una invitación al portal para que el usuario la establezca.",
-        "withoutPasswordMsp": "No se requiere contraseña; enviaremos al usuario una invitación por correo electrónico para que la establezca por su cuenta."
+        "withoutPasswordMsp": "No se requiere contraseña; le enviaremos una invitación por correo electrónico para que la establezca usted mismo."
       },
       "requirePasswordChange": "Requerir cambio de contraseña en el primer inicio de sesión"
     },
@@ -225,9 +225,9 @@
     "loading": "Cargando usuarios...",
     "messages": {
       "success": {
-        "portalInvitationSent": "¡Invitación al portal enviada correctamente!",
+        "portalInvitationSent": "Invitación al portal enviada correctamente.",
         "teamInvitationSent": "¡Invitación enviada correctamente!",
-        "clientPortalUserCreated": "¡Usuario del portal del cliente creado correctamente!",
+        "clientPortalUserCreated": "Usuario del portal del cliente creado correctamente.",
         "copiedVanityLink": "Enlace personalizado de inicio de sesión del portal copiado al portapapeles",
         "copiedCanonicalLink": "Enlace canónico de inicio de sesión del portal copiado al portapapeles",
         "invitationRevoked": "Invitación revocada"
@@ -257,8 +257,8 @@
         "contactNotFound": "Contacto no encontrado.",
         "contactMissingEmailGeneric": "El contacto no tiene dirección de correo electrónico. Agregue una dirección de correo al contacto antes de enviar una invitación.",
         "contactInvalidEmail": "El contacto tiene una dirección de correo electrónico no válida. Actualice el contacto con una dirección válida antes de enviar una invitación.",
-        "invalidEmail": "Ingrese una dirección de correo electrónico válida",
-        "noDefaultClient": "No hay un cliente predeterminado configurado para este inquilino. Configure un cliente predeterminado en Configuración general.",
+        "invalidEmail": "Por favor ingrese una dirección de correo electrónico válida",
+        "noDefaultClient": "No hay un cliente predeterminado configurado para este tenant. Configure un cliente predeterminado en Configuración General.",
         "noDefaultLocation": "El cliente predeterminado debe tener una ubicación predeterminada configurada para enviar invitaciones al portal.",
         "noLocationEmail": "La ubicación del cliente predeterminado debe tener un correo electrónico de contacto configurado.",
         "noBaseUrl": "La URL base no está configurada para las invitaciones al portal.",
@@ -349,7 +349,7 @@
       "success": {
         "passwordChanged": "Contraseña cambiada correctamente",
         "userUpdated": "Usuario actualizado correctamente",
-        "roleAdded": "Rol agregado correctamente",
+        "roleAdded": "Rol añadido correctamente",
         "roleRemoved": "Rol eliminado correctamente"
       },
       "error": {
@@ -562,7 +562,7 @@
         "close": "Cerrar",
         "create": "Crear",
         "update": "Actualizar",
-        "importSelected": "Importar seleccionados",
+        "importSelected": "Importar selección",
         "up": "Subir",
         "down": "Bajar",
         "remove": "Eliminar",
@@ -632,7 +632,7 @@
           "statusName": "Nombre del estado",
           "closed": "Cerrado",
           "default": "Predeterminado",
-          "portalSelectable": "Los usuarios del portal del cliente pueden seleccionar este estado"
+          "portalSelectable": "Los usuarios del portal de clientes pueden seleccionar este estado"
         },
         "inboundReplyReopen": {
           "enabledLabel": "Reabrir tickets cerrados con respuestas entrantes",
@@ -650,8 +650,8 @@
           "help": "Muestra el temporizador en vivo y los intervalos registrados en los tickets de este tablero. La entrada manual de tiempo sigue disponible."
         },
         "clientPortalVisible": {
-          "label": "Visible en el portal del cliente",
-          "help": "Si está desactivado, este tablero y sus tickets se ocultan a todos los usuarios del portal del cliente, independientemente de los grupos de visibilidad."
+          "label": "Visible en el portal de clientes",
+          "help": "Si está desactivado, este tablero y sus tickets se ocultan a todos los usuarios del portal de clientes, independientemente de los grupos de visibilidad."
         },
         "defaultBoard": {
           "label": "Tablero predeterminado para tickets del portal del cliente",
@@ -764,7 +764,7 @@
         "requiredFieldsLabel": "Campos obligatorios al cerrar",
         "requiredFieldsHelp": "Estos campos del ticket deben completarse antes de que el ticket pueda cerrarse.",
         "autoCloseLabel": "Reglas de cierre automático",
-        "autoCloseHelp": "Cierra automáticamente los tickets que permanecen en un estado sin actividad. Se puede enviar un correo de aviso al contacto antes del cierre.",
+        "autoCloseHelp": "Cierre automáticamente los tickets que permanecen en un estado sin actividad. Se puede enviar un correo de aviso al contacto antes del cierre.",
         "addAutoCloseRule": "Agregar regla",
         "triggerStatusLabel": "Cuando el ticket está en estado",
         "triggerStatusPlaceholder": "Seleccionar estado",
@@ -783,7 +783,7 @@
           "autoCloseSuppressionInvalid": "Las notificaciones a agentes y observadores solo pueden omitirse cuando se omiten las notificaciones al cliente."
         },
         "suppressContactNotificationsLabel": "No notificar al cliente",
-        "suppressContactNotificationsHelp": "Omite el correo de aviso, el correo de cierre, la invitación a la encuesta y la notificación del portal del cliente.",
+        "suppressContactNotificationsHelp": "Omite el correo de aviso, el correo de cierre, la invitación a la encuesta y la notificación del portal de clientes.",
         "suppressInternalNotificationsLabel": "Tampoco notificar a agentes y observadores"
       },
       "editor": {
@@ -799,7 +799,7 @@
           "close": "Reglas de cierre",
           "closeHelp": "Requisitos antes de que se pueda cerrar un ticket",
           "automation": "Automatización",
-          "automationHelp": "Cerrar automáticamente los tickets estancados tras un período de inactividad",
+          "automationHelp": "Cerrar automáticamente los tickets inactivos tras un período de inactividad",
           "statuses": "Prioridades y estados",
           "statusesHelp": "Prioridad predeterminada y los estados de ticket de este tablero",
           "display": "Visualización y comportamiento",
@@ -808,7 +808,7 @@
         "saveChanges": "Guardar cambios",
         "unsaved": "Sin guardar",
         "unsavedShort": "Cambios sin guardar",
-        "unsavedBanner": "Tiene cambios sin guardar. Haga clic en \"Guardar cambios\" para aplicarlos.",
+        "unsavedBanner": "Tiene cambios sin guardar. Haga clic en «Guardar cambios» para aplicarlos.",
         "allSaved": "Todos los cambios guardados",
         "reopenBadge": "reabrir",
         "required": "Obligatorio"
@@ -834,7 +834,7 @@
       "emailSender": {
         "useDefault": "Usar valor predeterminado del ticket",
         "duplicateRoute": "Esta ruta de remitente ya existe.",
-        "saveFailed": "No se pudo guardar el enrutamiento del remitente. Inténtelo de nuevo.",
+        "saveFailed": "No se pudo guardar el remitente del ticket. Inténtelo de nuevo.",
         "label": "Remitente saliente",
         "inboundWarning": "Este remitente se usa para los correos salientes de tickets. La configuración del correo entrante no cambia.",
         "displayName": "Nombre para mostrar",
@@ -911,7 +911,7 @@
           "skipped": "{{count}} prioridades omitidas (ya existen)"
         },
         "error": {
-          "orderTaken": "El número de orden {{order}} ya está en uso por \"{{name}}\". Elija un número de orden diferente.",
+          "orderTaken": "El número de orden {{order}} ya está en uso por «{{name}}». Elija un número de orden diferente.",
           "uniqueConstraint": "Este número de orden ya está en uso. Elija un número de orden diferente.",
           "saveFailed": "No se pudo guardar la prioridad",
           "deleteFailed": "No se pudo eliminar la prioridad",
@@ -925,7 +925,7 @@
     },
     "checklistTemplates": {
       "title": "Plantillas de lista de verificación",
-      "alert": "Las plantillas de lista de verificación definen listas reutilizables para tickets. Los elementos de la plantilla se copian en los tickets al aplicarse, por lo que editar una plantilla nunca modifica las listas ya agregadas a los tickets.",
+      "alert": "Las plantillas de lista de verificación definen listas reutilizables para tickets. Los elementos de la plantilla se copian en los tickets al aplicarse, por lo que editar una plantilla nunca modifica las listas ya añadidas a los tickets.",
       "table": {
         "name": "Nombre",
         "description": "Descripción",
@@ -963,7 +963,7 @@
         "active": "Activo",
         "items": {
           "label": "Elementos de la lista de verificación",
-          "help": "Los elementos se agregan a los tickets en este orden cuando se aplica la plantilla.",
+          "help": "Los elementos se añaden a los tickets en este orden cuando se aplica la plantilla.",
           "itemName": "Nombre del elemento",
           "required": "Obligatorio",
           "newItemLabel": "Nuevo elemento",
@@ -983,9 +983,9 @@
       "dialog": {
         "addTemplate": "Agregar plantilla de lista de verificación",
         "editTemplate": "Editar plantilla de lista de verificación",
-        "createFirstHelp": "Cree la plantilla primero y luego agregue elementos de lista de verificación y reglas de aplicación automática.",
+        "createFirstHelp": "Cree la plantilla primero y luego añada elementos de lista de verificación y reglas de aplicación automática.",
         "deleteTitle": "Eliminar plantilla de lista de verificación",
-        "deleteMessage": "¿Está seguro de que desea eliminar \"{{name}}\"? Las listas de verificación ya agregadas a los tickets no se verán afectadas."
+        "deleteMessage": "¿Está seguro de que desea eliminar \"{{name}}\"? Las listas de verificación ya añadidas a los tickets no se verán afectadas."
       },
       "messages": {
         "success": {
@@ -1036,7 +1036,7 @@
       },
       "deleteDialog": {
         "title": "Eliminar sistema externo",
-        "message": "¿Eliminar \"{{label}}\"? Los sistemas que todavía se usan en enlaces no se pueden eliminar."
+        "message": "¿Eliminar \"{{label}}\"? Los sistemas que aún usan los vínculos no se pueden eliminar."
       },
       "messages": {
         "success": {
@@ -1104,7 +1104,7 @@
     },
     "statuses": {
       "title": "Estados de interacción",
-      "alert": "Estados de interacción: haga seguimiento del estado de las interacciones con clientes, como llamadas, correos electrónicos y reuniones.",
+      "alert": "Estados de interacción: rastree el estado de las interacciones con clientes, como llamadas, correos electrónicos y reuniones.",
       "table": {
         "name": "Nombre",
         "status": "Estado",
@@ -1225,7 +1225,7 @@
         "heroGradient": "Controla el degradado del banner de bienvenida del panel del cliente.",
         "sidebarStyle": "Aplica su color primario o secundario al panel lateral del portal del cliente.",
         "sidebarColor": "Cualquier color que desee. El panel usa un tono oscurecido para que el texto claro del panel lateral siga siendo legible.",
-        "followTheme": "Si está activado, el portal del cliente usa el tema elegido en Configuración → Apariencia. Si está desactivado, los colores de abajo lo sustituyen.",
+        "followTheme": "Si está activado, el portal de clientes usa el tema elegido en Configuración → Apariencia. Si está desactivado, los colores de abajo lo sustituyen.",
         "followThemeActive": "Los colores de abajo se conservan, pero no se aplican mientras el portal siga el tema de la organización."
       },
       "cropHelp": "Arrastre y haga zoom para elegir la parte que se muestra en el panel lateral del portal y en todos los marcos circulares. Su logotipo ancho no cambia.",
@@ -1234,7 +1234,7 @@
         "primarySecondary": "Color primario a color secundario"
       },
       "sidebarStyle": {
-        "default": "Predeterminado (gris pizarra oscuro)",
+        "default": "Predeterminado (pizarra oscura)",
         "primary": "Color primario",
         "secondary": "Color secundario",
         "custom": "Color personalizado"
@@ -1256,13 +1256,13 @@
     },
     "dashboardPreview": {
       "title": "Su portal del cliente",
-      "welcome": "¡Bienvenido de nuevo!",
+      "welcome": "Bienvenido de nuevo.",
       "subtitle": "Aquí tiene un resumen de la actividad de su cuenta",
       "openTickets": "Tickets abiertos",
       "activeProjects": "Proyectos activos",
       "invoices": "Facturas",
-      "urgent": "{{count}} urgentes",
-      "nearDeadline": "{{count}} próximos a vencer",
+      "urgent": "{{count}} urgente(s)",
+      "nearDeadline": "{{count}} próximo(s) a vencer",
       "dueThisMonth": "Vencen este mes",
       "recentActivity": "Actividad reciente",
       "ticketUpdated": "El ticket #1234 fue actualizado",
@@ -1289,7 +1289,7 @@
       "workspaceSection": "Espacio de trabajo"
     },
     "signInPreview": {
-      "portalTitle": "Portal del cliente",
+      "portalTitle": "Portal de clientes",
       "welcome": "Bienvenido a su portal del cliente",
       "subtitle": "Administre sus tickets de soporte y manténgase conectado",
       "features": {
@@ -1400,7 +1400,7 @@
   },
   "appearance": {
     "title": "Tema",
-    "description": "Elija el par claro/oscuro que verán todos en esta organización, tanto en la aplicación MSP como en el portal del cliente. Cada persona sigue eligiendo claro, oscuro o sistema por su cuenta.",
+    "description": "Elija el par claro/oscuro que verá todo el mundo en esta organización, tanto en la aplicación MSP como en el portal de clientes. Cada persona sigue eligiendo claro, oscuro o sistema por su cuenta.",
     "pairs": {
       "alga": {
         "label": "Alga",
@@ -1412,11 +1412,11 @@
       },
       "ocean": {
         "label": "Océano",
-        "description": "Superficies azul marino profundo y azul tinta con acentos nítidos de azul rey."
+        "description": "Un panel lateral azul marino con azules fríos sobre superficies nítidas y ligeramente frías."
       },
       "sky": {
         "label": "Cielo",
-        "description": "Azul cielo brillante y cian sobre superficies aireadas con matiz agua."
+        "description": "Un azul más claro y ligero con un secundario índigo."
       },
       "forest": {
         "label": "Bosque",
@@ -1432,7 +1432,7 @@
       },
       "vice": {
         "label": "Vice",
-        "description": "Turquesa, violeta, cian, coral y rosa de neón sobre un púrpura de noche de Miami."
+        "description": "Rosa y cian de neón sobre un púrpura de noche en Miami."
       },
       "highContrast": {
         "label": "Alto contraste",
@@ -1461,7 +1461,7 @@
         "textMuted": "Texto atenuado",
         "border": "Borde",
         "borderStrong": "Borde intenso",
-        "primary": "Color primario",
+        "primary": "Color principal",
         "secondary": "Color secundario",
         "accent": "Color de acento",
         "sidebarBg": "Fondo del panel lateral",
@@ -1499,7 +1499,7 @@
     },
     "whiteLabel": {
       "title": "Marca propia en la aplicación MSP",
-      "description": "Los espacios para el logotipo se comparten con el portal del cliente, pero solo afectan a la aplicación MSP cuando se habilita abajo la personalización de la interfaz MSP.",
+      "description": "Suba su logotipo una vez. Sustituye la marca de Alga en el menú lateral MSP, y el portal de clientes usa las mismas imágenes.",
       "logoHelp": "La marca cuadrada se usa dondequiera que el espacio sea cuadrado: el menú lateral contraído y los marcos circulares. Si suelta un logotipo ancho en un espacio cuadrado, elige qué parte se convierte en la marca; una vez subido un logotipo ancho, también puede recortar la marca directamente de él. El logotipo ancho opcional sustituye a la marca y al nombre en el menú lateral expandido, así que suba uno que ya incluya el nombre de su empresa. El menú lateral se adapta a su propio fondo: usa las variantes para fondos oscuros cuando el menú es oscuro y las claras cuando es claro, y recurre a la variante que haya subido.",
       "cropHelp": "Arrastre y haga zoom para elegir la parte que se muestra en el menú lateral contraído y en todos los marcos circulares. Su logotipo ancho no cambia.",
       "cropHelpFromSquare": "Arrastre y ajuste el zoom para elegir la parte que se muestra en el menú lateral contraído y en todos los marcos circulares. Solo se modifica la marca, por lo que puede volver a ajustarla más adelante.",
@@ -1519,21 +1519,21 @@
         "markDark": "Opcional. Recurre a la marca cuadrada.",
         "wide": "Solo se muestra en el menú lateral expandido, con 32 px de alto. Incluya el nombre de su empresa en la imagen.",
         "wideDark": "Opcional. Se usa mientras el fondo del menú lateral sea oscuro, como ocurre en todos los temas incluidos.",
-        "favicon": "PNG, SVG o ICO. Las imágenes de mapa de bits se redimensionan a 32x32. Se aplica a la aplicación MSP y al portal del cliente de su organización."
+        "favicon": "PNG, SVG o ICO. Las imágenes de mapa de bits se redimensionan a 32x32. Se aplica a la aplicación MSP y al portal de clientes de su organización."
       },
       "warnings": {
         "expectSquare": "Esa imagen es mucho más ancha que alta. El espacio de la marca cuadrada se usa en zonas cuadradas; probablemente busque el espacio del logotipo ancho.",
         "expectWide": "Esa imagen es casi cuadrada. El espacio ancho espera un logotipo apaisado; probablemente busque el espacio de la marca cuadrada."
       },
       "colors": {
-        "label": "Habilitar la personalización de la interfaz MSP",
-        "help": "Desactivado de forma predeterminada. Cuando se habilita y se aplica, la aplicación MSP usa el logotipo compartido, mientras que sus colores siguen proviniendo del tema de la organización de arriba."
+        "label": "Usar sus colores de marca en la aplicación MSP",
+        "help": "Desactivado de forma predeterminada. Cuando está activado, sus colores primario y secundario sustituyen a los acentos del tema para los usuarios MSP, igual que ya ocurre en el portal de clientes."
       }
     },
     "messages": {
-      "loadFailed": "No se pudo cargar la configuración de apariencia",
+      "loadFailed": "No se pudieron cargar los ajustes de apariencia",
       "saved": "Apariencia actualizada",
-      "saveFailed": "No se pudo guardar la configuración de apariencia",
+      "saveFailed": "No se pudieron guardar los ajustes de apariencia",
       "discarded": "Vista previa descartada"
     },
     "unsaved": {
@@ -1542,7 +1542,7 @@
       "discard": "Descartar"
     },
     "upgrade": {
-      "pitch": "Los pares de temas para toda la organización, el editor de paleta personalizada y la marca propia de la aplicación MSP forman parte de la edición Enterprise."
+      "pitch": "Los pares de temas para toda la organización, el editor de paleta personalizada y la marca blanca de la aplicación MSP forman parte de la edición Enterprise."
     }
   },
   "mspLanguage": {
@@ -1588,13 +1588,13 @@
       "message": "Tiene configuración de notificaciones sin guardar. ¿Está seguro de que desea salir? Sus cambios se perderán."
     },
     "tenantDescription": {
-      "email": "Defina la configuración de notificaciones por correo electrónico para todo el inquilino",
-      "internal": "Defina la configuración de notificaciones internas para todo el inquilino"
+      "email": "Configure los ajustes de notificaciones por correo electrónico para todo el inquilino",
+      "internal": "Configure los ajustes de notificaciones internas para todo el inquilino"
     },
     "sections": {
       "globalSettings": {
         "title": "Configuración global",
-        "description": "Defina la configuración global de notificaciones"
+        "description": "Configure los ajustes globales de notificaciones"
       },
       "emailTemplates": {
         "title": "Plantillas de correo electrónico",
@@ -1705,13 +1705,13 @@
         "saved": "Guardada",
         "custom-theme": "De su tema personalizado",
         "theme-pair": "De su tema",
-        "portal-branding": "De la marca de su portal del cliente",
+        "portal-branding": "De la marca de su portal de clientes",
         "default": "Predeterminado de AlgaPSA"
       },
       "fields": {
-        "primary": "Color primario",
+        "primary": "Color principal",
         "secondary": "Color secundario",
-        "singleColor": "Color único (el degradado se deriva del color primario)"
+        "singleColor": "Color único (el degradado se deriva del color principal)"
       },
       "tokens": {
         "dark": "Acento oscuro",
@@ -1794,11 +1794,11 @@
         "dismiss": "Descartar"
       },
       "enterprise": {
-        "useLogo": "Usar mi logotipo en el encabezado del correo electrónico",
-        "logoWide": "Logotipo ancho",
-        "logoDefault": "Logotipo cuadrado",
-        "noLogo": "Cargue un logotipo en Configuración → Portal del cliente → Marca para usarlo aquí.",
-        "showAttribution": "Mostrar \"Powered by AlgaPSA\" en el pie de página"
+        "useLogo": "Usar mi logo en el encabezado del correo electrónico",
+        "logoWide": "Logo ancho",
+        "logoDefault": "Logo cuadrado",
+        "noLogo": "Cargue un logo en Configuración → Portal de clientes → Marca para usarlo aquí.",
+        "showAttribution": "Mostrar «Powered by AlgaPSA» en el pie de página"
       }
     },
     "categoriesUi": {
@@ -1909,7 +1909,7 @@
       "title": "Configuración de períodos de tiempo",
       "description": "Configure los períodos de tiempo de facturación",
       "loading": "Cargando la configuración de períodos de tiempo...",
-      "addNew": "Agregar nueva configuración de período",
+      "addNew": "Añadir nueva configuración de período",
       "help": {
         "title": "Cómo funcionan las configuraciones de período",
         "intro": "Puede definir varias configuraciones activas para crear ciclos de facturación complejos. El día final es el último día incluido en el período.",
@@ -1923,21 +1923,21 @@
       "form": {
         "requiredFields": "Complete los campos obligatorios:",
         "frequency": "Frecuencia *",
-        "frequencyPlaceholder": "Ingrese la frecuencia",
+        "frequencyPlaceholder": "Introduzca la frecuencia",
         "frequencyUnit": "Unidad de frecuencia *",
         "frequencyUnitPlaceholder": "Seleccione la unidad de frecuencia",
         "startDay": "Día inicial *",
         "selectDay": "Seleccione el día",
-        "startDayPlaceholder": "Ingrese el día inicial",
+        "startDayPlaceholder": "Introduzca el día inicial",
         "endDay": "Día final *",
-        "endDayPlaceholder": "Ingrese el día final",
-        "endOfUnit": "Fin de {{unit}}",
+        "endDayPlaceholder": "Introduzca el día final",
+        "endOfUnit": "Fin de: {{unit}}",
         "endOfMonth": "Fin de mes",
         "startMonth": "Mes inicial",
         "endMonth": "Mes final",
         "startDayOfMonth": "Día inicial del mes *",
         "endDayOfMonth": "Día final del mes *",
-        "add": "Agregar configuración de período"
+        "add": "Añadir configuración de período"
       },
       "validation": {
         "frequencyMin": "La frecuencia debe ser al menos 1",
@@ -1949,7 +1949,7 @@
       "errors": {
         "fetch": "No se pudo cargar la configuración de períodos de tiempo",
         "overlap": "Esta configuración de período se solapa con otra configuración activa.",
-        "add": "No se pudo agregar la configuración de período. Revise los valores e inténtelo de nuevo.",
+        "add": "No se pudo añadir la configuración de período. Revise los valores e inténtelo de nuevo.",
         "update": "No se pudo actualizar la configuración de período",
         "delete": "No se pudo eliminar la configuración de período"
       },
@@ -2300,7 +2300,7 @@
   },
   "email": {
     "title": "Configuración de correo electrónico",
-    "description": "Configure proveedores de correo electrónico, dominios y opciones"
+    "description": "Configure proveedores de correo electrónico, dominios y ajustes"
   },
   "extensions": {
     "title": "Gestión de extensiones",
@@ -2394,7 +2394,7 @@
       },
       "viewSwitcher": {
         "msp": "MSP",
-        "clientPortal": "Portal del cliente"
+        "clientPortal": "Portal de clientes"
       },
       "showInactive": "Mostrar usuarios inactivos",
       "fields": {
@@ -2479,7 +2479,7 @@
       "notConfigured": "No configurado"
     },
     "autoLink": {
-      "body": "Cuando está habilitado, los nuevos usuarios MSP agregados pueden iniciar sesión con Google o Microsoft utilizando su correo electrónico de trabajo. No tendrán que vincular su cuenta manualmente.",
+      "body": "Cuando está habilitado, los nuevos usuarios MSP añadidos pueden iniciar sesión con Google o Microsoft utilizando su correo electrónico de trabajo. No tendrán que vincular su cuenta manualmente.",
       "clientBody": "Cuando se habilita, los usuarios coincidentes del portal del cliente se vinculan automáticamente con sus identidades de SSO al iniciar sesión.",
       "clientTitle": "Vincular automáticamente a los usuarios del portal del cliente",
       "clientToggleLabel": "Activar o desactivar la vinculación automática de clientes",
@@ -2673,7 +2673,7 @@
     }
   },
   "integrations": {
-    "betaNotice": "Algunas integraciones aún están en desarrollo. Trabaje en un entorno sandbox durante la evaluación y comparta sus comentarios para ayudarnos a mejorar.",
+    "betaNotice": "Algunas integraciones aún están en desarrollo. Por favor, trabaje en un entorno sandbox al evaluar y comparta sus comentarios para ayudarnos a mejorar.",
     "emptyCategory": "No hay integraciones disponibles en esta categoría.",
     "rmmEnterpriseNote": "Las integraciones RMM están disponibles en Pro.",
     "categoryHeading": "Integraciones de {{label}}",
@@ -2699,13 +2699,13 @@
       },
       "calendar": {
         "label": "Calendario",
-        "description": "La sincronización de calendario exclusiva de Pro para Google y Outlook mantiene alineadas la programación de técnicos y las citas con clientes."
+        "description": "Sincronización de calendario exclusiva de Pro para Google y Outlook mantiene el despacho y las citas con clientes alineados."
       },
       "providers": {
         "label": "Proveedores",
         "description": {
-          "ee": "Configure Google o Microsoft para el inicio de sesión del personal, el correo electrónico, el calendario y otras integraciones.",
-          "oss": "Configure Google o Microsoft para el inicio de sesión del personal, el correo electrónico y otras integraciones."
+          "ee": "Configure credenciales compartidas de proveedores utilizadas por correo electrónico, calendario, MSP SSO y otras integraciones.",
+          "oss": "Configure credenciales compartidas de proveedores utilizadas por correo electrónico, MSP SSO y otras integraciones."
         }
       },
       "identity": {
@@ -2748,13 +2748,13 @@
       "google": {
         "name": "Google",
         "description": {
-          "ee": "Credenciales de OAuth de Google para el inicio de sesión del personal, Gmail y Calendario",
-          "oss": "Credenciales de OAuth de Google para el inicio de sesión del personal y Gmail"
+          "ee": "Credenciales de Google Cloud propiedad del inquilino para Gmail y Calendario",
+          "oss": "Credenciales de Google Cloud propiedad del inquilino para Gmail y flujos de soporte MSP SSO"
         },
-        "cardTitle": "Configuración de Google o Microsoft",
+        "cardTitle": "Credenciales de proveedor",
         "cardDescription": {
-          "ee": "Configure primero Google o Microsoft. Luego conecte las cuentas de buzón y de calendario desde sus pantallas de integración. El inicio de sesión del personal usa las credenciales de OAuth guardadas aquí.",
-          "oss": "Configure primero Google o Microsoft. Luego conecte las cuentas de buzón desde Correo entrante. El inicio de sesión del personal usa las credenciales de OAuth guardadas aquí."
+          "ee": "Configure Google y Microsoft primero, luego conecte cuentas de proveedores desde las pantallas de integración de correo entrante y calendario. El descubrimiento de dominios MSP SSO utiliza estas credenciales de proveedor con asignaciones de dominios de inicio de sesión del inquilino.",
+          "oss": "Configure Google y Microsoft primero, luego conecte cuentas de proveedores desde la pantalla de integración de correo entrante. El descubrimiento de dominios MSP SSO utiliza estas credenciales de proveedor con asignaciones de dominios de inicio de sesión del inquilino."
         }
       },
       "entra": {
@@ -2768,7 +2768,7 @@
       },
       "telephony": {
         "name": "Telefonía",
-        "description": "Registre las llamadas como interacciones, reconozca a quien llama y convierta una llamada en un ticket"
+        "description": "Registra las llamadas como interacciones, reconoce a quien llama y convierte una llamada en un ticket"
       }
     }
   },
@@ -2798,7 +2798,7 @@
       "scheduleRequired": "Seleccione primero un horario",
       "holidayNameRequired": "El nombre del festivo es obligatorio",
       "holidayDateRequired": "La fecha del festivo es obligatoria",
-      "holidayAdded": "Festivo agregado correctamente",
+      "holidayAdded": "Festivo añadido correctamente",
       "holidayDeleted": "Festivo eliminado correctamente"
     },
     "dashboard": {
@@ -2898,7 +2898,7 @@
         "saving": "Guardando...",
         "title": "Configuración de pausa por estado"
       },
-      "retry": "Reintentar"
+      "retry": "Volver a intentar"
     },
     "policyForm": {
       "actions": {
@@ -2930,14 +2930,14 @@
       },
       "loading": "Cargando...",
       "multiSelect": {
-        "deselectAll": "Deseleccionar todo",
-        "deselectAllVisible": "Deseleccionar todos los visibles",
+        "deselectAll": "Anular toda la selección",
+        "deselectAllVisible": "Anular la selección de todos los elementos visibles",
         "noItems": "No hay elementos disponibles",
         "noResults": "No se encontraron resultados",
         "placeholder": "Seleccionar...",
         "searchPlaceholder": "Buscar...",
         "selectAll": "Seleccionar todo",
-        "selectAllVisible": "Seleccionar todos los visibles",
+        "selectAllVisible": "Seleccionar todos los elementos visibles",
         "selectedCount_one": "{{count}} seleccionado",
         "selectedCount_other": "{{count}} seleccionados"
       },
@@ -2972,10 +2972,10 @@
         "noRecipients": "Sin destinatarios",
         "percentLabel": "Umbral (%)",
         "recipientAssignee": "Responsable",
-        "recipientBoardManager": "Responsable del tablero",
-        "recipientBoardManagerShort": "Resp. del tablero",
-        "recipientEscalationManager": "Responsable de escalamiento",
-        "recipientEscalationManagerShort": "Resp. de escalamiento",
+        "recipientBoardManager": "Administrador del tablero",
+        "recipientBoardManagerShort": "Adm. del tablero",
+        "recipientEscalationManager": "Administrador de escalamiento",
+        "recipientEscalationManagerShort": "Adm. de escalamiento",
         "recipientsLabel": "Destinatarios",
         "remove": "Quitar",
         "title": "Umbrales de notificación",
@@ -3112,7 +3112,7 @@
         "namePlaceholder": "p. ej., Firewall",
         "displayOrderLabel": "Orden de visualización",
         "iconLabel": "Icono",
-        "builtinSchemaHint": "El formulario estándar integrado permanece fijo. Estos campos adicionales se definen para cada inquilino."
+        "builtinSchemaHint": "El formulario estándar integrado permanece fijo. Estos campos adicionales se definen para cada tenant."
       },
       "deleteDialog": {
         "title": "Eliminar tipo de activo",
@@ -3218,8 +3218,8 @@
         "add": "Agregar proveedor"
       },
       "hints": {
-        "entraTenantIdRequired": "Ingrese el ID de inquilino de Entra para continuar.",
-        "issuerAndJwksRequired": "Ingrese el emisor y la URL de claves de firma para continuar."
+        "entraTenantIdRequired": "Introduzca el ID de inquilino de Entra para continuar.",
+        "issuerAndJwksRequired": "Introduzca el emisor y la URL de claves de firma para continuar."
       },
       "table": {
         "provider": "Proveedor",
@@ -3243,7 +3243,7 @@
         "roles": "Roles"
       },
       "manualEntry": {
-        "show": "Ingresar identidad manualmente",
+        "show": "Introducir identidad manualmente",
         "hide": "Ocultar entrada manual"
       },
       "actions": {
@@ -3258,7 +3258,7 @@
       },
       "hints": {
         "nameRequired": "Asigne un nombre al agente para continuar.",
-        "connectOrEnterIdentity": "Conecte un proveedor o ingrese una identidad para continuar.",
+        "connectOrEnterIdentity": "Conecte un proveedor o introduzca una identidad para continuar.",
         "chooseProviderAndAgentId": "Elija un proveedor y un ID de agente para continuar."
       },
       "table": {
@@ -3277,7 +3277,7 @@
     "agentId": {
       "unknown": {
         "placeholder": "el identificador del agente",
-        "helper": "Elija un proveedor para saber qué debe ingresar."
+        "helper": "Elija un proveedor para saber qué debe introducir."
       },
       "microsoft": {
         "userHelper": "El ID de objeto de usuario (oid) del agente en Entra.",
@@ -3338,7 +3338,7 @@
       },
       "notFoundRefresh": "No se encontró el equipo. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
       "leadRequired": "Un equipo debe tener un responsable. Seleccione un responsable e inténtelo de nuevo.",
-      "inactiveUser": "Los usuarios inactivos no se pueden agregar a un equipo.",
+      "inactiveUser": "Los usuarios inactivos no se pueden añadir a un equipo.",
       "cannotRemoveLead": "No se puede quitar al responsable del equipo. Asigne primero un nuevo responsable.",
       "invalidValue": "Uno de los valores del equipo seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
       "duplicateMember": "Este usuario ya es miembro del equipo.",
@@ -3370,13 +3370,13 @@
     },
     "escalation": {
       "boardNotFound": "No se encontró el tablero. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
-      "userNotFound": "No se encontró el usuario responsable de escalamiento seleccionado. Actualice la página y elija otro usuario.",
-      "configNotFound": "No se encontró la configuración del responsable de escalamiento. Es posible que ya se haya eliminado.",
-      "recordInvalid": "Uno de los registros del responsable de escalamiento seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
+      "userNotFound": "No se encontró el usuario responsable de escalado seleccionado. Actualice la página y elija otro usuario.",
+      "configNotFound": "No se encontró la configuración del responsable de escalado. Es posible que ya se haya eliminado.",
+      "recordInvalid": "Uno de los registros del responsable de escalado seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
       "referenceMissing": "El tablero o el usuario seleccionado ya no existe. Actualice la página e inténtelo de nuevo.",
-      "duplicate": "Ya hay un responsable de escalamiento configurado para este tablero y nivel.",
-      "missingField": "Falta un campo obligatorio del responsable de escalamiento.",
-      "missingFieldNamed": "Falta un campo obligatorio del responsable de escalamiento: {{field}}."
+      "duplicate": "Ya hay un responsable de escalado configurado para este tablero y nivel.",
+      "missingField": "Falta un campo obligatorio del responsable de escalado.",
+      "missingFieldNamed": "Falta un campo obligatorio del responsable de escalado: {{field}}."
     },
     "status": {
       "notFoundRefresh": "No se encontró el estado. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
@@ -3479,8 +3479,8 @@
       }
     },
     "clientPortalDomain": {
-      "portalUsersNotAllowed": "Los usuarios del portal del cliente no pueden gestionar dominios personalizados.",
-      "noPermission": "No tiene permiso para gestionar la configuración del portal del cliente.",
+      "portalUsersNotAllowed": "Los usuarios del portal de clientes no pueden gestionar dominios personalizados.",
+      "noPermission": "No tiene permiso para gestionar la configuración del portal de clientes.",
       "required": "El dominio es obligatorio.",
       "length": "El dominio debe tener entre 3 y 253 caracteres.",
       "charset": "El dominio solo puede incluir letras, números, guiones y puntos.",
