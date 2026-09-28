@@ -727,7 +727,8 @@
         "enterRatePlaceholder": "Voer tarief in",
         "metadata": "Servicetype: {{type}} | Methode: {{method}}",
         "noCurrencyPrice": "Geen {{currency}}-prijs",
-        "rateDetail": "Tarief: {{symbol}}{{amount}}"
+        "rateDetail": "Tarief: {{symbol}}{{amount}}",
+        "catalogDefaultRateDetail": "Catalogusstandaard: {{symbol}}{{amount}}"
       },
       "unknownService": "Onbekende dienst"
     },

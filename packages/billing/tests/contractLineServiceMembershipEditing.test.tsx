@@ -220,6 +220,27 @@ const availableServices = [
     is_active: true,
     prices: [{ currency_code: 'USD', rate: 25000 }],
   },
+  {
+    service_id: 'fallback-service',
+    service_name: 'Fallback service',
+    service_type_name: 'Support',
+    unit_of_measure: 'item',
+    default_rate: 18000,
+    billing_method: 'fixed',
+    item_kind: 'service',
+    is_active: true,
+  },
+  {
+    service_id: 'product-item',
+    service_name: 'Catalog product',
+    service_type_name: 'Hardware',
+    unit_of_measure: 'item',
+    default_rate: 0,
+    billing_method: 'fixed',
+    item_kind: 'product',
+    sku: 'SKU-1',
+    is_active: true,
+  },
 ];
 
 const renderContractLines = () => render(
@@ -395,6 +416,61 @@ describe('contract line service membership editing', () => {
         },
       }),
     ]));
+  });
+
+  it('T004: resolves the catalog default_rate when no contract-currency price exists', async () => {
+    const onServicesSelected = vi.fn();
+    render(
+      <ServiceSelectionDialog
+        isOpen
+        onClose={vi.fn()}
+        contractLineType="Usage"
+        currencyCode="USD"
+        existingServiceIds={['existing-service']}
+        onServicesSelected={onServicesSelected}
+      />
+    );
+
+    fireEvent.click(await screen.findByText('Fallback service'));
+    fireEvent.click(screen.getByRole('button', { name: 'Add Selected Services' }));
+
+    await waitFor(() => expect(onServicesSelected).toHaveBeenCalledWith([
+      expect.objectContaining({
+        service: expect.objectContaining({ service_id: 'fallback-service' }),
+        customRate: 18000,
+        typeConfig: { base_rate: 18000, unit_of_measure: 'item' },
+      }),
+    ]));
+  });
+
+  it('T004: keeps products out of hourly/usage selectors but exposes them for fixed lines', async () => {
+    for (const contractLineType of ['Hourly', 'Usage'] as const) {
+      const { unmount } = render(
+        <ServiceSelectionDialog
+          isOpen
+          onClose={vi.fn()}
+          contractLineType={contractLineType}
+          currencyCode="USD"
+          existingServiceIds={['existing-service']}
+          onServicesSelected={vi.fn()}
+        />
+      );
+      expect(await screen.findByText('New service')).not.toBeNull();
+      expect(screen.queryByText('Catalog product')).toBeNull();
+      unmount();
+    }
+
+    render(
+      <ServiceSelectionDialog
+        isOpen
+        onClose={vi.fn()}
+        contractLineType="Fixed"
+        currencyCode="USD"
+        existingServiceIds={['existing-service']}
+        onServicesSelected={vi.fn()}
+      />
+    );
+    expect(await screen.findByText('Catalog product')).not.toBeNull();
   });
 });
 

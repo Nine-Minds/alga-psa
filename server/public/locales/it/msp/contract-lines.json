@@ -727,7 +727,8 @@
         "enterRatePlaceholder": "Inserisci la tariffa",
         "metadata": "Tipo di servizio: {{type}} | Metodo: {{method}}",
         "noCurrencyPrice": "Nessun prezzo {{currency}}",
-        "rateDetail": "Tariffa: {{symbol}}{{amount}}"
+        "rateDetail": "Tariffa: {{symbol}}{{amount}}",
+        "catalogDefaultRateDetail": "Valore predefinito del catalogo: {{symbol}}{{amount}}"
       },
       "unknownService": "Servizio sconosciuto"
     },
