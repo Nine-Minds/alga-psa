@@ -70,6 +70,10 @@ describe('filterPseudoLocales', () => {
 });
 
 describe('normalizeLocale', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   // The packs are language-only, so region-tagged values stored by imports and
   // older UIs (a real 'pt_BR' sat in clients.properties.defaultLocale) used to
   // fail a bare isSupportedLocale check and silently do nothing.
@@ -119,9 +123,31 @@ describe('normalizeLocale', () => {
 
   it('lets Accept-Language matching share the same rules', () => {
     expect(getBestMatchingLocale(['pt_BR'])).toBe('pt');
-    expect(getBestMatchingLocale(['sv-SE', 'en'])).toBe('sv');
     expect(getBestMatchingLocale(['en-AU', 'fr-CA'])).toBe('en');
     expect(getBestMatchingLocale(['zh-CN', 'fr-CA'])).toBe('fr');
     expect(getBestMatchingLocale(['zh-CN'])).toBe(LOCALE_CONFIG.defaultLocale);
+  });
+
+  // An Accept-Language header is a guess about the visitor, not a language they
+  // chose, so it must not reach a locale the pickers withhold. Before this, a
+  // production visitor with a Swedish browser and no stored preference was
+  // auto-assigned the very unreviewed pack sv is preview-gated to withhold.
+  it('will not auto-assign a preview locale from Accept-Language in production', () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    expect(getBestMatchingLocale(['sv-SE', 'en'])).toBe('en');
+    expect(getBestMatchingLocale(['sv-SE'])).toBe(LOCALE_CONFIG.defaultLocale);
+    expect(getBestMatchingLocale(['xx'])).toBe(LOCALE_CONFIG.defaultLocale);
+  });
+
+  it('matches a preview locale from Accept-Language in development', () => {
+    vi.stubEnv('NODE_ENV', 'development');
+    expect(getBestMatchingLocale(['sv-SE', 'en'])).toBe('sv');
+  });
+
+  // An explicit choice still reaches a preview locale: the cookie, user, client
+  // and tenant preference paths resolve through normalizeLocale.
+  it('still normalizes an explicitly stored preview locale in production', () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    expect(normalizeLocale('sv-SE')).toBe('sv');
   });
 });

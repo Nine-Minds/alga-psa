@@ -103,14 +103,23 @@ export function normalizeLocale(value: unknown): SupportedLocale | null {
 }
 
 /**
- * Get the best matching locale from a list of preferred locales
+ * Get the best matching locale from a list of preferred locales.
+ *
+ * Only Accept-Language resolution calls this, and a browser header is a guess
+ * about the visitor rather than a language they chose, so it may only land on a
+ * locale we actually offer: the same filter that hides non-production locales
+ * from the pickers applies here. Otherwise a production visitor sending
+ * `Accept-Language: sv-SE` with no stored preference was auto-assigned the very
+ * pack we withhold from the picker pending native review. Explicit selections
+ * still reach those locales — the cookie, user, client and tenant preferences
+ * resolve through normalizeLocale, not through here.
  */
 export function getBestMatchingLocale(
   preferredLocales: readonly string[],
 ): SupportedLocale {
   for (const locale of preferredLocales) {
     const normalized = normalizeLocale(locale);
-    if (normalized) {
+    if (normalized && filterPseudoLocales([normalized]).length > 0) {
       return normalized;
     }
   }
