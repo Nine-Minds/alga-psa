@@ -2,6 +2,13 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { fetchAndSaveFile } from './fetchAndSaveFile';
 
+const readBlob = (blob: Blob) => new Promise<Uint8Array>((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => resolve(new Uint8Array(reader.result as ArrayBuffer));
+  reader.onerror = () => reject(reader.error);
+  reader.readAsArrayBuffer(blob);
+});
+
 describe('fetchAndSaveFile', () => {
   beforeEach(() => {
     // jsdom has no blob URL API. Preserve URL parsing and restore the global after each test.
@@ -30,7 +37,11 @@ describe('fetchAndSaveFile', () => {
     expect(clickedAnchor?.download).toBe('meeting notes.pdf');
     expect(clickedAnchor?.href).toBe('blob:test');
     const downloadedBlob = vi.mocked(URL.createObjectURL).mock.calls[0][0] as Blob;
-    expect(new Uint8Array(await downloadedBlob.arrayBuffer())).toEqual(new Uint8Array([37, 80, 68, 70]));
+    // jsdom's Blob implements only slice/size/type — no arrayBuffer() — and
+    // undici's Response.blob() builds through the global, so the blob the source
+    // hands to createObjectURL is a jsdom Blob. FileReader is the read path
+    // jsdom does implement.
+    expect(await readBlob(downloadedBlob)).toEqual(new Uint8Array([37, 80, 68, 70]));
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:test');
     expect(document.body.contains(clickedAnchor)).toBe(false);
   });
