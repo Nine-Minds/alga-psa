@@ -558,7 +558,8 @@
       "dueDate": "Data de vencimento",
       "statusDisabledMultiBoard": "Os tickets selecionados estão em quadros diferentes",
       "statusResolvingBoards": "Verificando os quadros dos tickets selecionados…",
-      "more": "Mais"
+      "more": "Mais",
+      "bundleNeedsOne": "Selecione pelo menos 1 ticket para agrupar"
     },
     "moveDialogTitle": "Mover tickets selecionados",
     "moveDialogDescription": "Selecione um quadro de destino e status e confirme a movimentação dos tickets selecionados.",
@@ -663,7 +664,19 @@
       "propagationSummary": "{{masters}} ticket(s) selecionado(s) são mestres de pacote em modo de sincronização; esta alteração fechará/reabrirá {{children}} ticket(s) filho(s).",
       "masterSummary": "{{children}} ticket(s) filho(s)",
       "applyToChildren": "Aplicar aos filhos",
-      "mastersOnly": "Somente mestres"
+      "mastersOnly": "Somente mestres",
+      "membersLabel": "Tickets neste pacote",
+      "addTicketSearchPlaceholder": "Pesquisar tickets por número ou título",
+      "addTicketEmpty": "Pesquisar tickets para adicionar",
+      "badgeAdded": "Adicionado",
+      "badgeInBundle": "No pacote #{{number}}",
+      "badgeMaster": "Ticket principal do pacote",
+      "masterTag": "Principal",
+      "removeMember": "Remover",
+      "needMoreTickets": "Adicione pelo menos mais um ticket ao pacote.",
+      "unresolvedSelectedTickets_one": "Não foi possível carregar {{count}} ticket selecionado.",
+      "unresolvedSelectedTickets_other": "Não foi possível carregar {{count}} tickets selecionados.",
+      "badgeClosed": "Fechado"
     },
     "auth": {
       "moveRequired": "Você deve estar logado para mover tickets",

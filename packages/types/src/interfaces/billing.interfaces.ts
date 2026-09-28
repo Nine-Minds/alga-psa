@@ -608,6 +608,8 @@ export interface IBucketUsage extends TenantEntity {
 export interface PaymentMethod extends TenantEntity {
   payment_method_id: string;
   client_id: string;
+  /** The billing profile this saved method belongs to (never shared across profiles). */
+  billing_profile_id: string;
   type: 'credit_card' | 'bank_account';
   last4: string;
   exp_month?: string;
@@ -801,6 +803,8 @@ export interface IDefaultBillingSettings extends TenantEntity {
   enable_credit_expiration: boolean;
   credit_expiration_days: number;
   credit_expiration_notification_days: number[];
+  default_notice_period_days?: number;
+  default_quote_validity_days?: number;
   default_recurring_cadence_owner?: CadenceOwner;
   recurring_cadence_rollout_state?: 'mixed_enabled';
   recurring_cadence_rollout_message?: string;

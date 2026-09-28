@@ -24,7 +24,7 @@ import {
   isMspUser,
 } from '../../lib/authHelpers';
 import type { IBoard } from '@alga-psa/types';
-import { ContactModel, CreateContactInput, UpdateContactInput } from '@alga-psa/shared/models/contactModel';
+import { assertContactIsNotSharedMailbox, ContactModel, CreateContactInput, UpdateContactInput } from '@alga-psa/shared/models/contactModel';
 import { localizeActionError, withAuth } from '@alga-psa/auth';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
@@ -1684,6 +1684,10 @@ export const updateContactPortalAdminStatus = withAuth(async (
         'update',
         'You do not have permission to update client users'
       );
+
+      if (isPortalAdmin) {
+        await assertContactIsNotSharedMailbox(trx, tenant, contactId, 'Shared mailbox contacts cannot be client admins.');
+      }
 
       const updated = await tenantScopedTable(trx, 'contacts', tenant)
         .where({ contact_name_id: contactId })

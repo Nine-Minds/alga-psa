@@ -3,6 +3,8 @@ import { tenantDb } from '@alga-psa/db';
 import type { AmpEntityType } from '@alga-psa/migration-spec';
 import { MigrationLedger } from '../MigrationLedger';
 import type { MigrationJobConfiguration } from '../types';
+import { getAssetTypeBySlug } from '@alga-psa/assets/lib/assetTypeRegistry';
+import type { AssetTypeField } from '@alga-psa/types';
 
 /**
  * Shared state for one application run. Reference resolution goes through the
@@ -11,6 +13,7 @@ import type { MigrationJobConfiguration } from '../types';
  */
 export class ApplierContext {
   private readonly referenceCache = new Map<string, string | null>();
+  private readonly assetTypeFieldCache = new Map<string, AssetTypeField[]>();
 
   constructor(
     readonly tenant: string,
@@ -20,6 +23,15 @@ export class ApplierContext {
     readonly configuration: MigrationJobConfiguration,
     readonly ledger: MigrationLedger
   ) {}
+
+  async assetTypeFields(trx: Knex.Transaction, slug: string): Promise<AssetTypeField[]> {
+    const cached = this.assetTypeFieldCache.get(slug);
+    if (cached) return cached;
+    const type = await getAssetTypeBySlug(trx, this.tenant, slug);
+    const fields = type?.fields_schema ?? [];
+    this.assetTypeFieldCache.set(slug, fields);
+    return fields;
+  }
 
   /**
    * Resolve a package reference to the Alga entity id it was applied as, or

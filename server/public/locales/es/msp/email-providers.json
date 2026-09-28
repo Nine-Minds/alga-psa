@@ -748,7 +748,7 @@
       "domainRemovalScheduledWithClear": "Eliminación de dominio programada y dirección de remitente de tickets eliminada",
       "removeDomainFailed": "Error al eliminar el dominio",
       "testOutboundFailed": "Error al probar el correo saliente",
-      "senderIdentitiesUpdated": "Identidades de remitente actualizadas."
+      "senderSettingsUpdated": "Identidades de remitente actualizadas."
     },
     "tabs": {
       "inboundEmail": "Correo entrante",
@@ -842,39 +842,6 @@
         "description": "Los mensajes se envían como el buzón seleccionado a través de Microsoft Graph y se guardan en Elementos enviados.",
         "loadFailed": "No se pudieron cargar los buzones de Microsoft 365.",
         "saved": "Buzón de envío actualizado."
-      },
-      "senderIdentities": {
-        "ticket": {
-          "title": "Identidad de correo electrónico de tickets",
-          "description": "Las respuestas a los correos electrónicos de tickets deben volver a esta dirección para que se puedan asociar y agregar al ticket. Use una bandeja conectada y supervisada.",
-          "connectedInboxLabel": "Bandeja conectada",
-          "connectedInboxHelp": "Una bandeja conectada mantiene las respuestas del cliente en la conversación del ticket.",
-          "customAddressOption": "Usar otra dirección",
-          "addressLabel": "Dirección del remitente",
-          "addressPlaceholder": "support@example.com",
-          "addressHelp": "Esta dirección controla el enrutamiento de respuestas solo para los correos electrónicos de tickets.",
-          "microsoftAddressHelp": "Microsoft 365 requiere que el correo electrónico de tickets use el buzón de envío seleccionado ({{mailbox}}).",
-          "nameLabel": "Nombre visible del remitente",
-          "namePlaceholder": "Soporte",
-          "nameHelp": "Déjelo en blanco para usar el nombre del buzón conectado o del tablero de tickets."
-        },
-        "notification": {
-          "title": "Identidad para todos los demás correos electrónicos",
-          "description": "Personalice las invitaciones al portal, los restablecimientos de contraseña, las facturas, las actualizaciones de proyectos y las notificaciones generales de forma independiente del enrutamiento de tickets.",
-          "addressLabel": "Dirección del remitente",
-          "addressPlaceholder": "notifications@example.com",
-          "smtpAddressHelp": "Se establece mediante la Dirección de remitente en la configuración SMTP de arriba. Todos los correos que no son de tickets se envían desde ella.",
-          "lockedAddressHelp": "Esta dirección está determinada por el dominio administrado activo o el buzón de Microsoft 365 seleccionado.",
-          "nameLabel": "Nombre visible del remitente",
-          "namePlaceholder": "Nombre de su empresa",
-          "nameHelp": "Déjelo en blanco para usar {{company}} automáticamente.",
-          "companyFallback": "la empresa de su inquilino"
-        },
-        "warningTitle": "Revise el enrutamiento de respuestas",
-        "errorTitle": "Corrija la identidad de tickets",
-        "clearButton": "Borrar identidad de tickets",
-        "savingButton": "Guardando...",
-        "saveButton": "Guardar identidades de remitente"
       }
     },
     "inbound": {
@@ -1032,7 +999,12 @@
       "saving": "Guardando…",
       "startDelimiter": "Delimitador inicial",
       "update": "Actualizar regla",
-      "valuePlaceholder": "Valor"
+      "valuePlaceholder": "Valor",
+      "matchTargets": "Comparar el valor extraído con",
+      "matchClientName": "Nombre o alias del cliente",
+      "matchContactEmail": "Correo del contacto",
+      "matchAssetName": "Nombre del dispositivo (activo)",
+      "matchTargetRequired": "Seleccione al menos un criterio."
     },
     "header": {
       "description": "Haga coincidir el correo entrante por remitente o asunto para omitir ruido, asignar el cliente correcto o enrutar a un destino. Las reglas se ejecutan en orden; la primera coincidencia gana.",
@@ -1090,7 +1062,10 @@
       "running": "Probando…",
       "subject": "Asunto",
       "title": "Probar esta regla",
-      "to": "Para"
+      "to": "Para",
+      "contactEmail": "correo del contacto",
+      "deviceName": "nombre del dispositivo",
+      "ambiguous": "{{target}} coincide en {{count}} clientes; no se asignó"
     }
   },
   "errors": {

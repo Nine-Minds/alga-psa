@@ -1,4 +1,7 @@
 {
+  "phone": {
+    "extension": "ramal"
+  },
   "colorPicker": {
     "invalidHexBackground": "Cor hexadecimal inválida (por exemplo, #FF0000)",
     "invalidHexText": "Cor hexadecimal inválida (por exemplo, #FFFFFF)",

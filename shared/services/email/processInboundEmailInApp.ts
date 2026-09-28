@@ -31,6 +31,7 @@ import {
 import { evaluateInboundEmailRules } from './inboundEmailRules';
 import { normalizeRfc822MessageId } from './inboundEmailIdentity';
 import { withTenantAdminTransaction } from './tenantAdminTransaction';
+import { associateAssetWithTicket } from '../assets/assetTicketAssociation';
 import {
   detectOutboundNotificationLoop,
   type NotificationLoopDetectionResult,
@@ -1712,6 +1713,8 @@ export async function processInboundEmailInApp(
   }
 
   const ruleAssignedClientId = ruleOutcome.kind === 'assign_client' ? ruleOutcome.clientId : null;
+  const ruleAssignedContactIdFromMatch = ruleOutcome.kind === 'assign_client' ? ruleOutcome.contactId ?? null : null;
+  const ruleAssignedAssetId = ruleOutcome.kind === 'assign_client' ? ruleOutcome.assetId ?? null : null;
   const ruleDestinationDefaults =
     ruleOutcome.kind === 'set_destination' || ruleOutcome.kind === 'fallback_destination'
       ? (ruleOutcome.defaults as any)
@@ -1766,9 +1769,9 @@ export async function processInboundEmailInApp(
   );
   let ruleAssignedContactId: string | null = null;
   if (ruleAssignedClientId) {
-    ruleAssignedContactId = senderContactInRuleClient
+    ruleAssignedContactId = ruleAssignedContactIdFromMatch ?? (senderContactInRuleClient
       ? matchedSenderContactId ?? null
-      : await findValidClientPrimaryContactId(ruleAssignedClientId, tenantId);
+      : await findValidClientPrimaryContactId(ruleAssignedClientId, tenantId));
   }
 
   // Rule destination defaults (set_destination / non-match fallback) sit above
@@ -1787,12 +1790,14 @@ export async function processInboundEmailInApp(
       providerId,
       providerDefaults,
       matchedContactId: ruleAssignedClientId
-        ? senderContactInRuleClient
+        ? ruleAssignedContactIdFromMatch ?? (senderContactInRuleClient
           ? matchedSenderContactId ?? null
-          : null
+          : null)
         : matchedSenderContactId ?? null,
       matchedContactClientId: ruleAssignedClientId
-        ? senderContactInRuleClient
+        ? ruleAssignedContactIdFromMatch
+          ? ruleAssignedClientId
+          : senderContactInRuleClient
           ? ruleAssignedClientId
           : null
         : matchedSenderClientId ?? null,
@@ -1966,7 +1971,8 @@ export async function processInboundEmailInApp(
         clientMatchSource,
         ...(autoCreatedContactId ? { autoCreatedContactId } : {}),
         ...(appliedRule
-          ? { appliedRuleId: appliedRule.ruleId, appliedRuleName: appliedRule.ruleName }
+          ? { appliedRuleId: appliedRule.ruleId, appliedRuleName: appliedRule.ruleName,
+              ...(ruleOutcome.kind === 'assign_client' ? { ruleClientMatchedBy: ruleOutcome.matchedBy } : {}) }
           : {}),
       },
       attributes: seededAttributes ?? undefined,
@@ -1974,6 +1980,19 @@ export async function processInboundEmailInApp(
     tenantId,
     ...helperExtraArgs('ticket')
   );
+
+  if (ruleAssignedAssetId) {
+    try {
+      await withTenantAdminTransaction(tenantId, async (trx: any) => {
+        await associateAssetWithTicket(trx, tenantId, ruleAssignedAssetId, ticketResult.ticket_id, new Date().toISOString());
+      });
+    } catch (error) {
+      console.warn('processInboundEmailInApp: failed to associate rule-matched asset with ticket', {
+        tenantId, ticketId: ticketResult.ticket_id, assetId: ruleAssignedAssetId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
 
   const commentId = await createCommentFromEmail(
     {

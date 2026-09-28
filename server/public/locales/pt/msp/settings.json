@@ -830,7 +830,17 @@
         }
       },
       "empty": "Nenhum quadro encontrado.",
-      "searchPlaceholder": "Pesquisar quadros…"
+      "searchPlaceholder": "Pesquisar quadros…",
+      "emailSender": {
+        "useDefault": "Usar padrão do chamado",
+        "duplicateRoute": "Esta rota de remetente já existe.",
+        "saveFailed": "Não foi possível salvar o remetente do chamado. Tente novamente.",
+        "label": "Remetente de saída",
+        "inboundWarning": "Este remetente é usado para e-mails enviados sobre tickets. As configurações de e-mail recebido não são alteradas.",
+        "displayName": "Nome de exibição",
+        "save": "Guardar remetente",
+        "saved": "Remetente guardado"
+      }
     },
     "priorities": {
       "title": {
@@ -1313,7 +1323,7 @@
     },
     "domain": {
       "title": "Domínio Personalizado",
-      "description": "Configure um nome de host de marca para seu portal do cliente. Forneceremos certificados TLS automaticamente assim que o DNS for verificado.",
+      "description": "Configure um nome de host de marca para seu portal do cliente.",
       "currentStatus": "Estado atual",
       "noDomainConfigured": "Nenhum domínio personalizado configurado",
       "defaultStatusMessage": "Nenhum domínio personalizado registrado ainda.",
@@ -1355,7 +1365,8 @@
         "step3": "Obtenha e mantenha o certificado TLS para o domínio no seu proxy.",
         "step4": "Salve o domínio aqui — ele é ativado imediatamente. Configure primeiro o DNS e o seu proxy, pois os links do portal mudam para este domínio imediatamente.",
         "docLinkText": "Guia de configuração e solução de problemas do proxy reverso",
-        "neverSeenWarning": "Nenhuma solicitação chegou a {{domain}} ainda. Verifique se o seu proxy reverso encaminha o cabeçalho Host original."
+        "neverSeenWarning": "Nenhuma solicitação chegou a {{domain}} ainda. Verifique se o seu proxy reverso encaminha o cabeçalho Host original.",
+        "tlsNote": "O TLS termina no seu proxy reverso, que mantém o certificado."
       },
       "badges": {
         "pending_dns": "DNS pendente",
@@ -1380,7 +1391,8 @@
         "refreshFailed": "Falha ao atualizar o status do domínio.",
         "retryFailed": "Falha na nova tentativa.",
         "disableFailed": "Falha ao desativar o domínio personalizado."
-      }
+      },
+      "hostedTlsNote": "Forneceremos certificados TLS automaticamente assim que o DNS for verificado."
     },
     "yourCompanyName": "Nome da sua empresa",
     "brandingPreviewMode": "Modo de tema de visualização da marca",
@@ -2179,6 +2191,18 @@
       "comingSoon": "Os modelos de mapeamento e as importações programadas ficarão aqui. Salve mapeamentos de colunas, compartilhe-os com toda a equipe e configure trabalhos recorrentes."
     },
     "migration": {
+      "customFields": {
+        "required": "obrigatório",
+        "title": "Campos de {{name}}",
+        "mapping": "Mapeamento de campos personalizados",
+        "description": "Associe as colunas CSV preservadas aos campos deste tipo de ativo.",
+        "empty": "Não foram preservadas colunas personalizadas para este tipo de ativo.",
+        "samples_one": "{{sample}} · {{count}} registro",
+        "samples_other": "{{sample}} · {{count}} registros",
+        "noSample": "Sem exemplo",
+        "missingRequired": "Campos obrigatórios não associados: {{fields}}",
+        "duplicate": "Um campo personalizado está associado mais de uma vez. Escolha um destino único para cada origem."
+      },
       "actions": {
         "back": "Voltar para migrações",
         "upload": "Enviar pacote"
@@ -3462,5 +3486,8 @@
       "nothingToRetry": "Não há registro de domínio personalizado com falha para repetir.",
       "retryOnlyAfterFailure": "A repetição só está disponível após um registro com falha."
     }
+  },
+  "common": {
+    "saving": "A guardar…"
   }
 }

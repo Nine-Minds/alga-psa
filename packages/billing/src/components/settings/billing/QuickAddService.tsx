@@ -14,6 +14,14 @@ import { getDefaultBillingSettings } from '@alga-psa/billing/actions/billingSett
 import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core'
 // Import getTaxRates and ITaxRate instead
 import { getTaxRates } from '@alga-psa/billing/actions/taxRateActions'; // Removed getActiveTaxRegions
+import { getTenantTaxSettings } from '@alga-psa/billing/actions/taxSettingsActions';
+import {
+  INHERIT_TAX_RATE_VALUE,
+  NON_TAXABLE_VALUE,
+  fromTaxRateSelectionValue,
+  toTaxRateCreateField,
+  toTaxRateSelectionValue,
+} from './catalogTaxSelection';
 import { ITaxRate } from '@alga-psa/types'; // Removed ITaxRegion
 // Note: getServiceCategories might be removable if categories are fully replaced by service types
 import { getServiceCategories } from '@alga-psa/billing/actions/categoryActions'
@@ -97,6 +105,7 @@ export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceType
   const [categories, setCategories] = useState<IServiceCategory[]>([]) // Keep for now, might be replaced
   // State for tax rates instead of regions
   const [taxRates, setTaxRates] = useState<ITaxRate[]>([]);
+  const [defaultTaxRateLabel, setDefaultTaxRateLabel] = useState<string | null>(null);
   // Renamed states back to focus only on tax rates
   const [isLoadingTaxRates, setIsLoadingTaxRates] = useState(true);
   const [errorTaxRates, setErrorTaxRates] = useState<string | null>(null);
@@ -142,7 +151,7 @@ export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceType
     currency_code: defaultCurrency,
     unit_of_measure: '',
     // is_taxable and region_code removed
-    tax_rate_id: null, // Added
+    tax_rate_id: undefined, // undefined = inherit tenant default; null = non-taxable
     description: '',
     category_id: null, // Added
     sku: '',
@@ -203,9 +212,30 @@ export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceType
        }
     };
 
-    fetchCategories(); // Keep fetching categories for now
-    fetchTaxRates(); // Call fetchTaxRates
-  }, [t]);
+     fetchCategories(); // Keep fetching categories for now
+     fetchTaxRates(); // Call fetchTaxRates
+   }, [t]);
+
+  // Fetch the tenant default separately so a late settings response can label
+  // the inherit option without overwriting a user's explicit tax choice.
+  useEffect(() => {
+    let cancelled = false;
+    getTenantTaxSettings()
+      .then((settings) => {
+        if (cancelled) return;
+        if (isActionMessageError(settings) || isActionPermissionError(settings)) return;
+        const rate = settings?.default_tax_rate;
+        setDefaultTaxRateLabel(
+          rate
+            ? `${rate.description || rate.region_code} — ${Number(rate.tax_percentage).toFixed(2)}%`
+            : null
+        );
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -298,7 +328,9 @@ const baseData = {
   currency_code: primaryPrice.currency_code, // Include currency code
   unit_of_measure: serviceData.unit_of_measure,
   // is_taxable and region_code removed
-  tax_rate_id: serviceData.tax_rate_id || null, // Added tax_rate_id
+  // Inherit (undefined) omits the field so the server resolves the tenant
+  // default; non-taxable is an explicit null; otherwise an explicit rate id.
+  ...toTaxRateCreateField(serviceData.tax_rate_id),
   category_id: serviceData.category_id || null, // Use selected category_id from form
   description: serviceData.description || '', // Include description field
 };
@@ -346,7 +378,7 @@ if (createdService?.service_id) {
         unit_of_measure: '',
         description: '',
         // is_taxable and region_code removed
-        tax_rate_id: null, // Added
+        tax_rate_id: undefined, // Reset to inherit tenant default
         category_id: null, // Reset category
         // Reset optional fields too
         sku: '',
@@ -678,7 +710,7 @@ if (createdService?.service_id) {
               </Label>
               <CustomSelect
                   id="quick-add-service-tax-rate-select"
-                  value={serviceData.tax_rate_id || ''} // Bind to tax_rate_id
+                  value={toTaxRateSelectionValue(serviceData.tax_rate_id)}
                   placeholder={
                     isLoadingTaxRates
                       ? t('quickAddService.fields.taxRate.loading', {
@@ -688,27 +720,45 @@ if (createdService?.service_id) {
                           defaultValue: 'Select Tax Rate (optional)'
                         })
                   }
-                  onValueChange={(value) => setServiceData({ ...serviceData, tax_rate_id: value || null })} // Set null if cleared
-                  // Populate with fetched tax rates, construct label using regionMap
-                  // Use description or region_code directly from the rate object
-                  options={taxRates.map(r => { // r is now correctly typed as ITaxRate
-                    // Construct label using fields directly from ITaxRate
-                    const descriptionPart =
-                      r.description || r.region_code || t('common.notAvailable', { defaultValue: 'N/A' }); // Use description or region_code
-
-                    // Ensure tax_percentage is treated as a number before calling toFixed
-                    const percentageValue = typeof r.tax_percentage === 'string'
-                      ? parseFloat(r.tax_percentage)
-                      : Number(r.tax_percentage);
-                    const percentagePart = !isNaN(percentageValue) ? percentageValue.toFixed(2) : '0.00';
-
-                    return {
-                      value: r.tax_rate_id,
-                      label: `${descriptionPart} - ${percentagePart}%`
-                    };
+                  onValueChange={(value) => setServiceData({
+                    ...serviceData,
+                    tax_rate_id: fromTaxRateSelectionValue(value),
                   })}
+                  options={[
+                    {
+                      value: INHERIT_TAX_RATE_VALUE,
+                      label: defaultTaxRateLabel
+                        ? t('quickAddService.fields.taxRate.inheritNamed', {
+                            defaultValue: 'Use tenant default ({{rate}})',
+                            rate: defaultTaxRateLabel,
+                          })
+                        : t('quickAddService.fields.taxRate.inherit', {
+                            defaultValue: 'Use tenant default',
+                          }),
+                    },
+                    {
+                      value: NON_TAXABLE_VALUE,
+                      label: t('quickAddService.fields.taxRate.nonTaxable', {
+                        defaultValue: 'Non-taxable',
+                      }),
+                    },
+                    ...taxRates.map(r => {
+                      const descriptionPart =
+                        r.description || r.region_code || t('common.notAvailable', { defaultValue: 'N/A' });
+
+                      const percentageValue = typeof r.tax_percentage === 'string'
+                        ? parseFloat(r.tax_percentage)
+                        : Number(r.tax_percentage);
+                      const percentagePart = !isNaN(percentageValue) ? percentageValue.toFixed(2) : '0.00';
+
+                      return {
+                        value: r.tax_rate_id,
+                        label: `${descriptionPart} - ${percentagePart}%`
+                      };
+                    }),
+                  ]}
                   disabled={isLoadingTaxRates}
-                  allowClear={true} // Allow clearing
+                  allowClear={false}
               />
             </div>
 

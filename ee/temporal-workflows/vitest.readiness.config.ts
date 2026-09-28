@@ -7,6 +7,7 @@ export default defineConfig({
   ...base,
   test: {
     ...base.test,
+    globalSetup: [],
     include: [
       'src/__tests__/marketing-worker-registration.test.ts',
       'src/__tests__/worker-registration.test.ts',
@@ -27,6 +28,7 @@ export default defineConfig({
       'src/workflows/__tests__/workflow-runtime-v2-simulator-contract.test.ts',
       'src/activities/__tests__/workflow-runtime-v2-activities.test.ts',
       'src/activities/__tests__/sla-activities.test.ts',
+      'src/activities/__tests__/autopay-activities.test.ts',
       'src/activities/__tests__/marketing-activities.test.ts',
       'src/activities/__tests__/maintenance-fanout-activities.test.ts',
       'src/activities/__tests__/tenant-suspension-activities.test.ts',
@@ -38,6 +40,7 @@ export default defineConfig({
       'src/activities/__tests__/trial-payment-reminder-activities.test.ts',
       'src/activities/__tests__/trial-payment-reminder-email.test.ts',
       'src/activities/__tests__/comment-recovery-forwarding.test.ts',
+      'src/activities/__tests__/migration-apply-forwarding.test.ts',
       'src/activities/__tests__/customer-tracking-activities.test.ts',
       'src/activities/__tests__/email-activities-portal-status.test.ts',
       'src/activities/__tests__/portal-user-operations.test.ts',

@@ -112,3 +112,30 @@ test('HTTP locale rendering and fixture readback join API execution without abso
   assert.equal(isAdditionalWorkspaceTest('server/src/test/e2e/api/clients.e2e.test.ts', 'api-e2e'), true);
   assert.equal(isAdditionalWorkspaceTest('server/src/test/e2e/document-system.playwright.test.ts', 'api-e2e'), false);
 });
+
+
+test('migration forwarding must execute in Temporal readiness', () => {
+  const file = 'ee/temporal-workflows/src/activities/__tests__/migration-apply-forwarding.test.ts';
+  assert.equal(isAdditionalWorkspaceTest(file, 'temporal-readiness'), true);
+  assert.equal(isAdditionalWorkspaceTest(file, 'temporal-engine'), false);
+  assert.equal(isAdditionalWorkspaceTest(file, 'temporal-database'), false);
+  const candidates = [file].filter(candidate => isAdditionalWorkspaceTest(candidate, 'temporal-readiness'));
+  assert.equal(inspect({ candidates, collections: [] }).status, 'failed');
+});
+
+test('invoice auto-pay Temporal suites are assigned to the lanes that execute them', () => {
+  const engine = [
+    'ee/temporal-workflows/src/workflows/__tests__/invoice-autopay-workflow.test.ts',
+    'ee/temporal-workflows/src/workflows/__tests__/autopay-reconcile-workflow.test.ts',
+  ];
+  for (const file of engine) {
+    assert.equal(isAdditionalWorkspaceTest(file, 'temporal-engine'), true);
+    assert.equal(isAdditionalWorkspaceTest(file, 'temporal-readiness'), false);
+  }
+  const activities = 'ee/temporal-workflows/src/activities/__tests__/autopay-activities.test.ts';
+  assert.equal(isAdditionalWorkspaceTest(activities, 'temporal-readiness'), true);
+  assert.equal(isAdditionalWorkspaceTest(activities, 'temporal-engine'), false);
+  for (const file of ['AutopayService', 'invoiceAutopayTemporal']) {
+    assert.equal(isAdditionalWorkspaceTest(`ee/server/src/__tests__/unit/payments/${file}.test.ts`, 'enterprise-unit'), true);
+  }
+});

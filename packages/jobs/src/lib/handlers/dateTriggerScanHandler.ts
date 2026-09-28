@@ -1,0 +1,61 @@
+import { Temporal } from '@js-temporal/polyfill';
+import { createTenantKnex, resolveEffectiveTimeZone } from '@alga-psa/db';
+import logger from '@alga-psa/core/logger';
+import { emitDateDomainEventOnce } from '@alga-psa/event-bus/workflow/dateDomainEvents';
+import { dateTriggerSources } from '../dateTriggers/registry';
+import type { Knex } from 'knex';
+
+export interface DateTriggerScanJobData extends Record<string, unknown> { tenantId: string; now?: string; }
+export type DateWorkflowLauncher = (params: { tenantId: string; today: string; now: Date; timezone: string; knex: import('knex').Knex; sources: typeof dateTriggerSources }) => Promise<void>;
+
+function localDate(timeZone: string, instant: Date): string {
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(instant);
+  const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${value.year}-${value.month}-${value.day}`;
+}
+
+export function createDateTriggerScanHandler(
+  launchDateTriggeredWorkflows?: DateWorkflowLauncher,
+  clock: () => Date = () => new Date(),
+  resolveTimezone: (knex: Knex, tenantId: string) => Promise<string> = resolveEffectiveTimeZone,
+  openTenantDb: (tenantId: string) => Promise<{ knex: Knex }> = createTenantKnex,
+) {
+  return async function dateTriggerScanHandler(data: DateTriggerScanJobData): Promise<void> {
+    if (!data.tenantId) throw new Error('Tenant ID is required for date-trigger-scan');
+    const { knex } = await openTenantDb(data.tenantId);
+    const timezone = await resolveTimezone(knex, data.tenantId);
+    const now = data.now ? new Date(data.now) : clock();
+    if (Number.isNaN(now.getTime())) throw new Error(`Invalid date-trigger-scan clock value: ${data.now}`);
+    const today = localDate(timezone, now);
+    for (const source of dateTriggerSources) {
+      if (!source.domainEvent) continue;
+      const toDate = Temporal.PlainDate.from(today).add({ days: source.domainEvent.windowDays }).toString();
+      const occurrences = await source.findOccurrences(knex, data.tenantId, today, toDate);
+      for (const occurrence of occurrences) {
+        const distance = daysUntil(today, occurrence.occursOn);
+        const eventPayload = source.domainEvent.buildPayload(occurrence, distance);
+        try {
+          await emitDateDomainEventOnce(knex, data.tenantId, {
+            eventType: source.domainEvent.eventType, entityId: occurrence.entityId, cycleKey: occurrence.cycleKey,
+            occursOn: occurrence.occursOn, payload: eventPayload,
+          });
+        } catch (error) {
+          logger.error('Failed to emit date-trigger domain event; the ledger entry can retry on the next scan', {
+            tenantId: data.tenantId,
+            eventType: source.domainEvent.eventType,
+            entityId: occurrence.entityId,
+            error,
+          });
+        }
+      }
+    }
+    await launchDateTriggeredWorkflows?.({ tenantId: data.tenantId, today, now, timezone, knex, sources: dateTriggerSources });
+    logger.info('Completed date-trigger-scan', { tenantId: data.tenantId, today, timezone });
+  };
+}
+
+function daysUntil(from: string, to: string): number {
+  return Temporal.PlainDate.from(from).until(Temporal.PlainDate.from(to), { largestUnit: 'day' }).days;
+}
+
+export const dateTriggerScanHandler = createDateTriggerScanHandler();

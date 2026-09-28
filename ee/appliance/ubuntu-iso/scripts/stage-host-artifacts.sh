@@ -7,7 +7,8 @@ REPO_ROOT="$(cd "$ISO_ROOT/../../.." && pwd)"
 OVERLAY_ROOT="$ISO_ROOT/overlay"
 CONTROL_PLANE_ARGS=()
 CONTROL_PLANE_IMAGE_CONFIGURED=0
-BUILD_CONTROL_PLANE_IMAGE="${ALGA_APPLIANCE_CONTROL_PLANE_BUILD_IMAGE:-1}"
+PREBUILT_CONTROL_PLANE_ARCHIVE=0
+BUILD_CONTROL_PLANE_IMAGE="${ALGA_APPLIANCE_CONTROL_PLANE_BUILD_IMAGE:-}"
 K3S_BINARY="${ALGA_APPLIANCE_K3S_BINARY:-}"
 K3S_VERSION="${ALGA_APPLIANCE_K3S_VERSION:-v1.31.6+k3s1}"
 DOWNLOAD_K3S="${ALGA_APPLIANCE_K3S_DOWNLOAD:-1}"
@@ -20,7 +21,7 @@ Usage:
 Stages host-side artifacts required by the Ubuntu/k3s appliance into an ISO
 overlay tree. By default this stages the traditional appliance files plus the
 Kubernetes-hosted setup control-plane bundle and builds the baked control-plane
-image archive.
+image archive, unless a prebuilt archive is supplied.
 
 Options:
   --repo-root <path>                 Repository root (default: inferred)
@@ -30,6 +31,7 @@ Options:
   --download-k3s                     Download k3s during staging (default)
   --no-download-k3s                  Do not download k3s; requires --k3s-binary for production ISOs
   --build-control-plane-image        Build and save localhost/alga-appliance-control-plane:baked
+                                     (default only when no prebuilt archive is supplied)
   --no-build-control-plane-image     Do not build the control-plane image; use archives already provided/staged
   --allow-missing-control-plane-image Permit staging without a control-plane image archive for tests only
   --help                            Show this help
@@ -56,6 +58,7 @@ while [ "$#" -gt 0 ]; do
     --control-plane-image-archive)
       CONTROL_PLANE_ARGS+=(--image-archive "$2")
       CONTROL_PLANE_IMAGE_CONFIGURED=1
+      PREBUILT_CONTROL_PLANE_ARCHIVE=1
       shift 2
       ;;
     --k3s-binary)
@@ -170,6 +173,16 @@ cat > "$TARGET_BUILD_INFO_DIR/build-info.json" <<EOF
   "buildTimestamp": "$BUILD_TIMESTAMP"
 }
 EOF
+
+# A supplied prebuilt archive replaces the default build; an explicit
+# --build-control-plane-image (or env override) still builds alongside it.
+if [[ -z "$BUILD_CONTROL_PLANE_IMAGE" ]]; then
+  if [[ "$PREBUILT_CONTROL_PLANE_ARCHIVE" -eq 1 ]]; then
+    BUILD_CONTROL_PLANE_IMAGE=0
+  else
+    BUILD_CONTROL_PLANE_IMAGE=1
+  fi
+fi
 
 if [[ "$BUILD_CONTROL_PLANE_IMAGE" == "1" ]]; then
   CONTROL_PLANE_ARGS+=(--build-image)

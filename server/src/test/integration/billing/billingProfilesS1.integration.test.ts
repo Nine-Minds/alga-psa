@@ -23,6 +23,7 @@ const assignmentMigration = require(
 // — otherwise it would be asserting that S1 can be dropped out from under its
 // own dependants, which no rollback ever does.
 const dependentMigrationsNewestFirst = [
+  '20260923100000_create_billing_profile_contacts.cjs',
   '20260818060000_add_billing_profile_to_payments_and_ar.cjs',
   '20260818050000_add_billing_profile_to_cycles_and_invoices.cjs',
   '20260818040000_add_billing_profile_bill_to_and_tax.cjs',

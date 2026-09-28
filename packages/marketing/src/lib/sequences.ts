@@ -437,6 +437,7 @@ async function sendOneEnrollmentStep(
   await emailService.initialize();
   try {
     const result = await emailService.sendEmail({
+      mailClass: 'sales',
       to: contact.email,
       templateProcessor: inlineTemplate(subject, html, text),
       contactId: contact.contact_name_id,

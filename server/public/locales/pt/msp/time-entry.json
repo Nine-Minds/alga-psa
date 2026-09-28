@@ -480,7 +480,8 @@
       "onlyDraftRemovable": "Somente planilhas de horas em rascunho podem ser removidas.",
       "removeEntriesFirst": "Remova os lançamentos de horas antes de remover esta planilha de horas.",
       "onlyApprovedReopenable": "Somente planilhas de horas aprovadas podem ser reabertas.",
-      "invoicedCannotReopen": "Esta planilha de horas contém horas faturadas e não pode ser reaberta."
+      "invoicedCannotReopen": "Esta planilha de horas contém horas faturadas e não pode ser reaberta.",
+      "notEditable": "Esta folha de horas está bloqueada. Escolha uma folha de rascunho ou uma folha com alterações solicitadas."
     },
     "timeEntry": {
       "notFoundRefresh": "Lançamento de horas não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
@@ -506,5 +507,33 @@
       "missingField": "Falta um campo obrigatório da configuração de período.",
       "missingFieldNamed": "Falta um campo obrigatório da configuração de período: {{field}}."
     }
+  },
+  "workItemEntry": {
+    "sheetStatus": {
+      "DRAFT": "Rascunho",
+      "SUBMITTED": "Submetido",
+      "APPROVED": "Aprovado",
+      "CHANGES_REQUESTED": "Alterações solicitadas",
+      "UNKNOWN": "Desconhecido"
+    },
+    "sheetHint": "Folha de horas: {{range}} · {{status}}",
+    "defaultMoved": {
+      "supplied": "As horas do temporizador caem num dia que não aceita tempo novo, pelo que a entrada começa em {{date}} às 08:00.",
+      "todayLocked": "A folha de horas de hoje tem o estado «{{status}}», pelo que a entrada começa em {{date}}, o dia mais próximo que aceita tempo.",
+      "todayUncovered": "Nenhum período abrange o dia de hoje, pelo que a entrada começa em {{date}}, o dia mais próximo que aceita tempo."
+    },
+    "save": {
+      "noPeriod": "Nenhum período abrange {{date}}. Escolha um dia dentro de um período.",
+      "sheetLocked": "A folha de horas de {{date}} tem o estado «{{status}}». Escolha um dia numa folha de rascunho ou numa folha com alterações solicitadas."
+    }
+  },
+  "launch": {
+    "noUser": "Não foi possível carregar o usuário atual para o registro de tempo.",
+    "entryNotFound": "Entrada de tempo não encontrada.",
+    "entryMissingSheet": "Esta entrada de tempo não está associada a uma folha de horas e não pode ser editada aqui.",
+    "entryMissingPeriod": "A folha de horas desta entrada não tem período e não pode ser aberta.",
+    "noPeriods": "Ainda não há períodos de tempo configurados, portanto não é possível registrar tempo. Peça a um administrador para criar períodos de tempo em Configurações → Registro de tempo.",
+    "noEditablePeriods": "Todas as folhas de horas estão submetidas ou aprovadas, pelo que não há nenhum dia a que adicionar tempo. Peça a um aprovador que reabra uma folha ou a um administrador que adicione um período.",
+    "prepareFailed": "Ocorreu um erro ao preparar a entrada de tempo. Tente novamente."
   }
 }

@@ -17,3 +17,8 @@ services:
       EDITION: enterprise
     secrets:
       - credential_encryption_key
+  postgres:
+    # The EE browser stack runs the application, Temporal and both workers
+    # against this disposable database while API fixtures connect directly.
+    # PostgreSQL's default 100 sessions exhausts during the API E2E stage.
+    command: postgres -c password_encryption=md5 -c max_connections=200

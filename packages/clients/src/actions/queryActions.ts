@@ -216,6 +216,8 @@ export const getClientById = withAuth(async (user, { tenant }, clientId: string)
         'c.*',
         'cl.email as location_email',
         'cl.phone as location_phone',
+        'cl.phone_extension as location_phone_extension',
+        'cl.country_code as location_country_code',
         'cl.address_line1 as location_address',
         trx.raw(`CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN CONCAT(u.first_name, ' ', u.last_name) ELSE NULL END as account_manager_full_name`)
       )

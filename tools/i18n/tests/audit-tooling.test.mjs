@@ -52,6 +52,22 @@ for (const locale of ['fr', 'nl']) {
   });
 }
 
+for (const locale of ['pt', 'it']) {
+  test(`${locale} time entry copy passes the locale quality audit`, () => {
+    const { report } = runAudit({
+      locale,
+      namespaceFilter: new Set(['msp/time-entry']),
+      writeReport: false,
+    });
+    assert.equal(report.namespaces.length, 1);
+    const result = report.namespaces[0];
+    assert.ok(result.keyCount > 0);
+    assert.deepEqual(result.structuralErrors, []);
+    assert.deepEqual(result.untranslated, []);
+    assert.deepEqual(result.forbiddenViolations, []);
+  });
+}
+
 for (const locale of ['pt', 'es', 'fr', 'it']) {
   test(`${locale} duration audit accepts unit symbols but rejects English duration prose`, (t) => {
     const root = mkdtempSync(join(tmpdir(), 'schedule-duration-audit-'));

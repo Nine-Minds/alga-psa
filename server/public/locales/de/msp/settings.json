@@ -830,7 +830,17 @@
         }
       },
       "empty": "Keine Boards gefunden.",
-      "searchPlaceholder": "Boards suchen…"
+      "searchPlaceholder": "Boards suchen…",
+      "emailSender": {
+        "useDefault": "Ticket-Standard verwenden",
+        "duplicateRoute": "Diese Absenderroute ist bereits vorhanden.",
+        "saveFailed": "Ticket-Absender konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.",
+        "label": "Absender für ausgehende E-Mails",
+        "inboundWarning": "Dieser Absender wird für ausgehende Ticket-E-Mails verwendet. Die Einstellungen für eingehende E-Mails bleiben unverändert.",
+        "displayName": "Anzeigename",
+        "save": "Absender speichern",
+        "saved": "Absender gespeichert"
+      }
     },
     "priorities": {
       "title": {
@@ -1313,7 +1323,7 @@
     },
     "domain": {
       "title": "Benutzerdefinierte Domain",
-      "description": "Konfigurieren Sie einen markenspezifischen Hostnamen für Ihr Kundenportal. TLS-Zertifikate werden automatisch bereitgestellt, sobald DNS verifiziert ist.",
+      "description": "Konfigurieren Sie einen markenspezifischen Hostnamen für Ihr Kundenportal.",
       "currentStatus": "Aktueller Status",
       "noDomainConfigured": "Keine benutzerdefinierte Domain konfiguriert",
       "defaultStatusMessage": "Noch keine benutzerdefinierte Domain registriert.",
@@ -1355,7 +1365,8 @@
         "step3": "Beschaffen und pflegen Sie das TLS-Zertifikat für die Domain auf Ihrem Proxy.",
         "step4": "Speichern Sie die Domain hier — sie wird sofort aktiviert. Richten Sie zuerst DNS und Ihren Proxy ein, da Portal-Links sofort auf diese Domain umgestellt werden.",
         "docLinkText": "Anleitung zur Reverse-Proxy-Einrichtung und Fehlerbehebung",
-        "neverSeenWarning": "Es haben noch keine Anfragen {{domain}} erreicht. Prüfen Sie, ob Ihr Reverse-Proxy den ursprünglichen Host-Header weiterleitet."
+        "neverSeenWarning": "Es haben noch keine Anfragen {{domain}} erreicht. Prüfen Sie, ob Ihr Reverse-Proxy den ursprünglichen Host-Header weiterleitet.",
+        "tlsNote": "TLS endet an Ihrem Reverse-Proxy, der das Zertifikat verwaltet."
       },
       "badges": {
         "pending_dns": "DNS ausstehend",
@@ -1380,7 +1391,8 @@
         "refreshFailed": "Domain-Status konnte nicht aktualisiert werden.",
         "retryFailed": "Wiederholung fehlgeschlagen.",
         "disableFailed": "Benutzerdefinierte Domain konnte nicht deaktiviert werden."
-      }
+      },
+      "hostedTlsNote": "TLS-Zertifikate werden automatisch bereitgestellt, sobald DNS verifiziert ist."
     },
     "yourCompanyName": "Name Ihres Unternehmens",
     "brandingPreviewMode": "Branding-Vorschau-Themenmodus",
@@ -2179,6 +2191,18 @@
       "comingSoon": "Zuordnungsvorlagen und geplante Importe werden hier verfügbar sein. Speichern Sie Spaltenzuordnungen, teilen Sie sie mit dem Team und konfigurieren Sie wiederkehrende Aufträge."
     },
     "migration": {
+      "customFields": {
+        "required": "erforderlich",
+        "title": "Felder für {{name}}",
+        "mapping": "Zuordnung benutzerdefinierter Felder",
+        "description": "Ordnen Sie beibehaltene CSV-Spalten den Feldern dieses Asset-Typs zu.",
+        "empty": "Für diesen Asset-Typ wurden keine benutzerdefinierten Spalten beibehalten.",
+        "samples_one": "{{sample}} · {{count}} Datensatz",
+        "samples_other": "{{sample}} · {{count}} Datensätze",
+        "noSample": "Kein Beispiel",
+        "missingRequired": "Nicht zugeordnete Pflichtfelder: {{fields}}",
+        "duplicate": "Ein benutzerdefiniertes Feld wurde mehrfach zugeordnet. Wählen Sie für jede Quelle ein eindeutiges Ziel."
+      },
       "actions": {
         "back": "Zurück zu Migrationen",
         "upload": "Paket hochladen"
@@ -3462,5 +3486,8 @@
       "nothingToRetry": "Es gibt keine fehlgeschlagene Registrierung einer eigenen Domain, die wiederholt werden könnte.",
       "retryOnlyAfterFailure": "Ein erneuter Versuch ist nur nach einer fehlgeschlagenen Registrierung möglich."
     }
+  },
+  "common": {
+    "saving": "Wird gespeichert…"
   }
 }

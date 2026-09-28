@@ -20,6 +20,10 @@ interface WeeklyScheduleEventProps {
   onDeleteEvent: (event: IScheduleEntry) => void;
   onResizeStart: (e: React.MouseEvent, event: IScheduleEntry, direction: 'top' | 'bottom') => void;
   technicianMap?: Record<string, { first_name: string; last_name: string }>;
+  /** Whether resize handles and delete are offered; defaults to isPrimary. */
+  canEdit?: boolean;
+  /** Overlay calendar color, drawn as a left stripe. */
+  calendarColor?: string;
 }
 
 const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
@@ -32,8 +36,11 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
   onSelectEvent,
   onDeleteEvent,
   onResizeStart,
-  technicianMap = {}
+  technicianMap = {},
+  canEdit,
+  calendarColor
 }) => {
+  const showEditControls = canEdit ?? isPrimary;
   const { t } = useTranslation('msp/schedule');
   const { formatDate } = useFormatters();
   const eventRef = useRef<HTMLDivElement>(null);
@@ -146,6 +153,7 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
         margin: 0,
         padding: compactClasses.padding,
         border: isComparison ? '1px dashed rgb(var(--color-border-600))' : 'none',
+        borderLeft: calendarColor ? `4px solid ${calendarColor}` : undefined,
         outline: 'none'
       }}
       onMouseEnter={onMouseEnter}
@@ -155,7 +163,7 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
       tabIndex={-1}
     >
       {/* Top resize handle */}
-      {isPrimary && (
+      {showEditControls && (
         <div
           className="absolute top-0 left-0 right-0 h-1 bg-[rgb(var(--color-border-300))] cursor-ns-resize rounded-t resize-handle"
           style={{ zIndex: 150 }}
@@ -167,7 +175,7 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
       )}
       
       {/* Bottom resize handle */}
-      {isPrimary && (
+      {showEditControls && (
         <div
           className="absolute bottom-0 left-0 right-0 h-1 bg-[rgb(var(--color-border-300))] cursor-ns-resize rounded-b resize-handle"
           style={{ zIndex: 150 }}
@@ -179,7 +187,7 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
       )}
 
       <div className="absolute top-2 right-1" style={{ zIndex: 200 }}>
-        {isPrimary && (
+        {showEditControls && (
           <Button
             id={`delete-entry-${event.entry_id}-btn`}
             variant="icon"
