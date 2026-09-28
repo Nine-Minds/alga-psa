@@ -1750,17 +1750,17 @@
       "meter": "Metr"
     },
     "groups": {
-      "time": "Time",
-      "count": "Count",
-      "volume": "Volume",
-      "mass": "Mass",
-      "length": "Length",
-      "other": "Other",
-      "custom": "Custom"
+      "time": "Czas",
+      "count": "Liczba",
+      "volume": "Objętość",
+      "mass": "Masa",
+      "length": "Długość",
+      "other": "Inne",
+      "custom": "Niestandardowa"
     },
-    "customOption": "Custom…",
-    "customPlaceholder": "Name this unit",
-    "register": "Add",
-    "selectPlaceholder": "Select a unit"
+    "customOption": "Niestandardowa…",
+    "customPlaceholder": "Nazwij tę jednostkę",
+    "register": "Dodaj",
+    "selectPlaceholder": "Wybierz jednostkę"
   }
 }

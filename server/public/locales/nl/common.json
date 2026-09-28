@@ -1698,7 +1698,7 @@
       "each": "Stuk",
       "piece": "Artikel",
       "box": "Doos",
-      "seat": "Seat",
+      "seat": "Plek",
       "license": "Licentie",
       "device": "Apparaat",
       "user": "Gebruiker",
@@ -1716,17 +1716,17 @@
       "meter": "Meter"
     },
     "groups": {
-      "time": "Time",
-      "count": "Count",
+      "time": "Tijd",
+      "count": "Aantal",
       "volume": "Volume",
-      "mass": "Mass",
-      "length": "Length",
-      "other": "Other",
-      "custom": "Custom"
+      "mass": "Massa",
+      "length": "Lengte",
+      "other": "Overig",
+      "custom": "Aangepast"
     },
-    "customOption": "Custom…",
-    "customPlaceholder": "Name this unit",
-    "register": "Add",
-    "selectPlaceholder": "Select a unit"
+    "customOption": "Aangepast…",
+    "customPlaceholder": "Geef deze eenheid een naam",
+    "register": "Toevoegen",
+    "selectPlaceholder": "Selecteer een eenheid"
   }
 }

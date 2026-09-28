@@ -1716,17 +1716,17 @@
       "meter": "Metro"
     },
     "groups": {
-      "time": "Time",
-      "count": "Count",
-      "volume": "Volume",
-      "mass": "Mass",
-      "length": "Length",
-      "other": "Other",
-      "custom": "Custom"
+      "time": "Tiempo",
+      "count": "Cantidad",
+      "volume": "Volumen",
+      "mass": "Masa",
+      "length": "Longitud",
+      "other": "Otro",
+      "custom": "Personalizado"
     },
-    "customOption": "Custom…",
-    "customPlaceholder": "Name this unit",
-    "register": "Add",
-    "selectPlaceholder": "Select a unit"
+    "customOption": "Personalizado…",
+    "customPlaceholder": "Asigne un nombre a esta unidad",
+    "register": "Agregar",
+    "selectPlaceholder": "Seleccione una unidad"
   }
 }

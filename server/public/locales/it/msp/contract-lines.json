@@ -455,7 +455,8 @@
         "defaultRatePerUnit": "Tariffa per unità (utilizzata se il prezzo a scaglioni è disattivato).",
         "minimumUsage": "Unità minime fatturabili per periodo.",
         "unitOfMeasure": "ad esempio GB, Utente, Dispositivo."
-      }
+      },
+      "catalogUnitPrecedence": "L’unità del catalogo ha la precedenza sull’unità di questa configurazione di utilizzo."
     }
   },
   "list": {
