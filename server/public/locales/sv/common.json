@@ -1,4 +1,7 @@
 {
+  "phone": {
+    "extension": "ankn."
+  },
   "colorPicker": {
     "invalidHexBackground": "Ogiltig hexadecimal färgkod (t.ex. #FF0000)",
     "invalidHexText": "Ogiltig hexadecimal färgkod (t.ex. #FFFFFF)",

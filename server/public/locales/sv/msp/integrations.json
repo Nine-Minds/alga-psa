@@ -1148,6 +1148,47 @@
           "unmatched": "Utan matchning"
         },
         "title": "Förhandsgranskning av klientorganisationsmappningar"
+      },
+      "userImportFilter": {
+        "title": "Importfilter",
+        "licensed": "Endast licensierade medlemmar",
+        "include": "Inkludera säkerhetsgrupp",
+        "exclude": "Uteslut säkerhetsgrupp",
+        "patterns": "Ytterligare uteslutningsmönster (ett reguljärt uttryck per rad)",
+        "save": "Spara filter",
+        "loading": "Laddar importfilter…",
+        "saved": "Sparat",
+        "invalid": "Ogiltigt reguljärt uttryck: {{pattern}}",
+        "exclusions": "Uteslutningar i importfiltret",
+        "unknown": "Leverantörsdata som filtret behöver är inte tillgängliga. Berörda användare behölls inom omfattningen.",
+        "userType": "Användartyp är inte tillgänglig: {{count}}.",
+        "license": "Licensdata är inte tillgängliga: {{count}}.",
+        "transitive": "Gruppmedlemskap är transitivt med Direct; CIPP kan returnera endast direkta medlemmar.",
+        "defaultsDescription": "De här inställningarna är standard för hanterade klientorganisationer. Hanterade klientorganisationer kan åsidosätta dem.",
+        "memberUsersOnly": "Endast medlemmar",
+        "licensedUsersOnly": "Endast licensierade användare",
+        "patternPlaceholder": "Reguljärt uttryck för uteslutning",
+        "invalidPattern": "Ogiltigt reguljärt uttryck.",
+        "addPattern": "Lägg till mönster",
+        "remove": "Ta bort",
+        "saving": "Sparar…",
+        "saveFailed": "Det gick inte att spara importfiltret.",
+        "broadGroupWarning": "Det här filtret inkluderar eller utesluter en bred grupp, till exempel All Users. Kontrollera effekten innan du sparar.",
+        "deactivateExcludedContacts": "Inaktivera länkade kontakter som utesluts av det här filtret",
+        "importSharedMailboxes": "Importera delade brevlådor",
+        "sharedMailboxReason": "Delad brevlåda",
+        "effectivePatterns": "Gällande mönster: {{patterns}}",
+        "inherited": "Ärvt",
+        "overridden": "Åsidosatt",
+        "preview": "Förhandsgranska",
+        "previewing": "Förhandsgranskar…",
+        "reset": "Återställ",
+        "retry": "Försök igen",
+        "recommendedHint": "Rekommenderas för nya konfigurationer: Endast medlemmar och Endast licensierade användare. Detta är förslag; omarkerade värden speglar den sparade policyn tills du ändrar och sparar dem.",
+        "excludedContactInactive": "Utesluten av importfiltret; den länkade kontakten skulle markeras som inaktiv. Inget raderas.",
+        "recommendedUnsaved": "Rekommenderat – inte sparat",
+        "unsavedChange": "Osparad ändring",
+        "unsavedNotice": "De här filterinställningarna gäller först när du har sparat dem."
       }
     },
     "google": {
@@ -3698,7 +3739,8 @@
         "failedTitle": "Webhook-konfigurationen misslyckades",
         "failedBody": "Automatisk webhook-konfiguration misslyckades. Klicka på Försök igen för att försöka konfigurera på nytt.",
         "configuring": "Konfigurerar…",
-        "retry": "Försök konfigurera igen"
+        "retry": "Försök konfigurera igen",
+        "eventsOutOfDate": "Webhook-händelserna är inte aktuella. Försök konfigurera webhooken igen för att uppdatera dem."
       },
       "disconnectDialog": {
         "title": "Koppla från Stripe",

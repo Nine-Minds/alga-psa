@@ -20,7 +20,8 @@
       "select": "Välj",
       "update": "Uppdatera",
       "uploadCsv": "Ladda upp CSV",
-      "view": "Visa"
+      "view": "Visa",
+      "next": "Nästa"
     },
     "states": {
       "active": "Aktiv",
@@ -308,6 +309,8 @@
     "parentClientPlaceholder": "Ingen överordnad kund",
     "parentClientClear": "Rensa",
     "parentClientLegacy": "Tidigare angivet som text: {{name}}",
+    "mergeClient": "Slå samman",
+    "mergeClientHelp": "Slå samman en annan kund hit som en debiteringsprofil",
     "inboundDomainAutoCreateContacts": "Skapa kontakter för nya avsändare",
     "inboundDomainAutoCreateHelp": "Mappade domäner kan valfritt skapa en kontakt för en betrodd ny avsändare. Domäner måste vara unika för varje kund.",
     "inboundDomainAutoCreateUpdated": "Inställningen för avsändarkontakter har uppdaterats.",
@@ -1303,6 +1306,24 @@
     "loadErrorTitle": "Det gick inte att ladda anteckningarna",
     "loadErrorDescription": "Det gick inte att ladda anteckningarna. Försök igen."
   },
+  "clientAutopay": {
+    "setupLinkTitle": "Länk för kortregistrering",
+    "setupLinkFallback": "Kopiera länken för att dela den med kunden.",
+    "unknownUser": "Okänd användare",
+    "changeCard": "Använd det här kortet för automatisk betalning",
+    "title": "Automatisk betalning · {{profile}}",
+    "active": "Aktiverad",
+    "authorization": "Godkänd av {{user}} den {{date}} ({{source}})",
+    "attestation": "Kunden har godkänt återkommande debiteringar",
+    "enable": "Aktivera automatisk betalning",
+    "disable": "Inaktivera automatisk betalning",
+    "copySetupLink": "Kopiera registreringslänk",
+    "enabled": "Automatisk betalning har aktiverats",
+    "disabled": "Automatisk betalning har inaktiverats",
+    "linkCopied": "Länken för kortregistrering har kopierats",
+    "recentAttempts": "Senaste försöken",
+    "noAttempts": "Inga försök än"
+  },
   "actions": {
     "cancel": "Avbryt",
     "delete": "Radera",
@@ -1695,7 +1716,9 @@
     "archived": "”{{name}}” har arkiverats",
     "deleted": "”{{name}}” har raderats",
     "restored": "”{{name}}” har återställts",
-    "settings": "Debiteringsinställningar"
+    "settings": "Debiteringsinställningar",
+    "mergeHelp": "Har du redan en plats eller enhet registrerad som en egen kund? Slå samman den hit, så blir den en debiteringsprofil här och behåller sina fakturor och sin historik.",
+    "mergeButton": "Slå samman en kund hit"
   },
   "portalBillingProfileAccess": {
     "label": "Debiteringssegment",
@@ -1721,7 +1744,20 @@
     "paymentTerms": "Betalningsvillkor",
     "taxExempt": "Skattebefriad",
     "taxExemptInherited": "Ärvs från kunden ({{value}})",
-    "regionNote": "Skatteregion anges inte här. Den följer platsen där arbetet utfördes – först tjänsten, sedan avtalsradens plats och sist kundens standardinställning."
+    "regionNote": "Skatteregion anges inte här. Den följer platsen där arbetet utfördes – först tjänsten, sedan avtalsradens plats och sist kundens standardinställning.",
+    "inheritFromClient": "Ärv från kunden ({{value}})",
+    "paymentMethod": "Betalningsmetod",
+    "paymentMethodHint": "Fakturor för check eller banköverföring innehåller ingen ”Betala nu”-länk online.",
+    "cardOnFileLabel": "Sparat kort",
+    "cardOnFileHint": "Sparade kort hanteras av kunden i kundportalen.",
+    "noCardOnFile": "Inget sparat kort",
+    "cardType": {
+      "card": "Kort",
+      "bankAccount": "Bankkonto"
+    },
+    "cardExpiry": ", giltigt t.o.m. {{month}}/{{year}}",
+    "legacyPaymentTerms": "”{{value}}” är inte ett känt betalningsvillkor och har aldrig tillämpats. Det rensas när du sparar.",
+    "cardOnFile": "{{type}} som slutar på {{last4}}{{expiry}}"
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Aviseringar om förbetalt saldo",
@@ -1874,7 +1910,84 @@
       "recordNotFound": "Posten eller debiteringsprofilen finns inte längre.",
       "otherClient": "Debiteringsprofilen tillhör en annan kund.",
       "archived": "Debiteringsprofilen är arkiverad.",
-      "selectionNotThisClient": "En av de valda debiteringsprofilerna tillhör inte kunden."
+      "selectionNotThisClient": "En av de valda debiteringsprofilerna tillhör inte kunden.",
+      "invalidPaymentTerms": "Välj ett av de listade betalningsvillkoren.",
+      "invalidPaymentMethod": "Välj en av de listade betalningsmetoderna."
+    },
+    "clientMerge": {
+      "blocked": "Den här sammanslagningen kan inte genomföras.",
+      "signInRequired": "Du måste vara inloggad för att slå samman kunder.",
+      "sourceNotFound": "Kunden som ska slås samman finns inte längre.",
+      "targetNotFound": "Målkunden finns inte längre.",
+      "sameClient": "En kund kan inte slås samman med sig själv.",
+      "sourceAlreadyMerged": "Den här kunden har redan slagits samman med en annan kund.",
+      "targetAlreadyMerged": "Målkunden har själv slagits samman med en annan kund. Slå samman med den i stället.",
+      "sourceIsTenantDefault": "Din egen organisationspost kan inte slås samman med en kund.",
+      "parentLinkCycle": "Den kunden är registrerad som underordnad den du slår samman, så en sammanslagning i den riktningen skulle vända hierarkin upp och ner.",
+      "invalidContractCutover": "Ett av övergångsdatumen ligger utanför avtalets löptid."
+    },
+    "profileContacts": {
+      "duplicateManager": "En debiteringsprofil kan bara ha en ansvarig.",
+      "notThisClient": "En av de valda kontakterna tillhör inte den kund som debiteringsprofilen hör till."
     }
+  },
+  "mergeClients": {
+    "title": "Slå samman en kund med den här",
+    "description": "Kunden du väljer blir en debiteringsprofil hos målkunden. Dess fakturor, debiteringscykler, betalningsmetoder och tillgodohavanden stannar kopplade till profilen; dess ärenden, kontakter, tillgångar och avtal flyttas över. Åtgärden kan inte ångras.",
+    "sourceLabel": "Kund att slå samman",
+    "sourcePlaceholder": "Välj en kund",
+    "targetLabel": "Målkund",
+    "targetPlaceholder": "Välj en kund",
+    "cannotMergeIntoItself": "En kund kan inte slås samman med sig själv",
+    "recordedParent": "”{{source}}” har ”{{parent}}” registrerad som överordnad kund.",
+    "useRecordedParent": "Använd den",
+    "contactsDescription": "Alla kontakter flyttas till målkunden. Välj vilken debiteringsprofil var och en tillhör och ange här vem som är ansvarig för ett segment om du redan vet det. Kryssrutan för ärenden är en separat behörighet: den låter personen se alla ärenden som hör till sin profil i portalen.",
+    "contactColumn": "Kontakt",
+    "profileColumn": "Debiteringsprofil",
+    "managerColumn": "Ansvarig",
+    "seesTicketsColumn": "Ser profilens ärenden",
+    "noContacts": "Kunden har inga kontakter.",
+    "noProfile": "Ingen profil",
+    "contractsDescription": "Att flytta ett avtal med sina ursprungliga datum ändrar ingen debiteringsperiod. En övergång avslutar avtalet hos den gamla kunden och startar en kopia hos målkunden från det datum du väljer.",
+    "noContracts": "Kunden har inga avtal.",
+    "unnamedContract": "Avtal",
+    "openEnded": "löpande",
+    "keepOriginalDates": "Behåll ursprungliga datum",
+    "cutOver": "Gör övergång",
+    "cutoverDate": "Övergångsdatum",
+    "pinGrantsLabel": "Behåll portalanvändarna på sina egna debiteringssegment",
+    "pinGrantsHelp": "En portalanvändare utan begränsning till debiteringssegment ser i dag alla profiler hos sin kund. Efter sammanslagningen skulle det bli alla profiler hos målkunden. Om du lämnar detta påslaget registreras de segment användaren har i dag.",
+    "pinGrantsCount": "{{count}} portalanvändare berörs",
+    "groupRenames": "Synlighetsgrupper har bytt namn för att undvika namnkrock",
+    "previewHeading": "Detta flyttas",
+    "profilesHeading": "Debiteringsprofiler efter sammanslagningen",
+    "confirmLabel": "Skriv ”{{name}}” för att bekräfta",
+    "loadingPreview": "Räknar ut vad som skulle flyttas…",
+    "submit": "Slå samman kund",
+    "merging": "Slår samman…",
+    "merged": "”{{source}}” har slagits samman med ”{{target}}”",
+    "accountingDescription": "De här bokföringsmappningarna pekar fortfarande på den sammanslagna kunden. Vi föreslår att de pekas om till målkunden, men inget ändras förrän du bekräftar det — lämna en rad omarkerad för att koppla om den manuellt senare.",
+    "accountingAlreadyMapped": "Målkunden är redan mappad för den här integreringen, så den här måste kopplas om manuellt.",
+    "accountingApply": "Tillämpa markerade",
+    "accountingSkip": "Hoppa över för nu",
+    "accountingRemapped": "Bokföringsmappningarna har pekats om",
+    "accountingSkipped": "{{count}} mappningar kunde inte pekas om och behöver kopplas om manuellt."
+  },
+  "billingProfileContacts": {
+    "title": "Profilens kontakter",
+    "description": "Personerna som hör till det här debiteringssegmentet. Att ange en ansvarig registrerar vem som driver det; kryssrutan för ärenden är en separat behörighet som låter personen se alla ärenden som hör till den här profilen i kundportalen.",
+    "loading": "Laddar profilens kontakter…",
+    "noContacts": "Kunden har inga kontakter än.",
+    "contact": "Kontakt",
+    "inProfile": "I profilen",
+    "manager": "Ansvarig",
+    "seesTickets": "Ser profilens ärenden",
+    "saved": "Profilens kontakter har sparats"
+  },
+  "contactBillingProfiles": {
+    "label": "Debiteringsprofiler",
+    "manager": "Ansvarig",
+    "seesTickets": "Ser profilens ärenden",
+    "editHint": "Ändra detta på debiteringsprofilen, under kundens debiteringsinställningar."
   }
 }

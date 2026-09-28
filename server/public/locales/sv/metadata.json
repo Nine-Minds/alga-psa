@@ -113,7 +113,12 @@
           "title": "Offertdetaljer"
         }
       },
-      "title": "Debitering"
+      "title": "Debitering",
+      "paymentMethods": {
+        "setupComplete": {
+          "title": "Kortregistrering"
+        }
+      }
     },
     "clientSettings": {
       "description": "Hantera företagets inställningar och konfigurationer",
@@ -613,6 +618,11 @@
     },
     "tab": {
       "title": "Microsoft Teams"
+    }
+  },
+  "paymentMethods": {
+    "setupComplete": {
+      "title": "Kortregistrering"
     }
   }
 }

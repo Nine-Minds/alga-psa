@@ -1,4 +1,10 @@
 {
+  "tabs": {
+    "paymentMethods": "Betalningsmetoder och automatisk betalning"
+  },
+  "invoice": {
+    "autopayWillCharge": "Debiteras {{date}} på {{brand}} •••• {{last4}}"
+  },
   "nav": {
     "dashboard": "Översiktspanel",
     "tickets": "Ärenden",
@@ -436,6 +442,7 @@
       "addPaymentError": "Det gick inte att lägga till betalningsmetoden",
       "removePaymentError": "Det gick inte att ta bort betalningsmetoden",
       "setDefaultError": "Det gick inte att ange standardbetalningsmetod",
+      "methodUpdateError": "Det gick inte att uppdatera betalningsmetoden. Försök igen.",
       "loadingBillingInfo": "Laddar debiteringsinformation…",
       "overviewTitle": "Debiteringsöversikt",
       "paymentMethodsTitle": "Betalningsmetoder",
@@ -454,6 +461,28 @@
         "addPaymentMethod": "Lägg till betalningsmetod",
         "adding": "Lägger till…",
         "view": "Visa"
+      },
+      "cardSetup": {
+        "success": "Kortet har sparats säkert.",
+        "error": "Det gick inte att spara kortet. Försök igen."
+      },
+      "autopay": {
+        "title": "Betalningsmetoder och automatisk betalning",
+        "loading": "Laddar betalningsmetoder…",
+        "profileUnavailable": "Inställningar för betalningsmetod och automatisk betalning är inte tillgängliga för den här debiteringsprofilen.",
+        "cardFallback": "Kort",
+        "enrolled": "Automatisk betalning är aktiverad.",
+        "disable": "Stäng av automatisk betalning",
+        "consent": "Jag godkänner återkommande debiteringar på det här kortet för färdigställda fakturor.",
+        "enable": "Aktivera automatisk betalning",
+        "noCards": "Lägg till ett kort för att aktivera automatisk betalning.",
+        "changeCard": "Använd det här kortet för automatisk betalning"
+      },
+      "publicCardSetup": {
+        "saved": "Kortet har sparats",
+        "failed": "Det gick inte att spara ditt kort",
+        "savedDescription": "Ditt kort är klart för framtida betalningar.",
+        "failedDescription": "Det gick inte att verifiera registreringen. Be din tjänsteleverantör om en ny länk."
       },
       "fields": {
         "cardNumber": "Kortnummer",

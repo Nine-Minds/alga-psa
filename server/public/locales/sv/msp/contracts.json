@@ -118,6 +118,9 @@
       "renewalHandling": "Förnyelsehantering"
     },
     "clientAssignment": {
+      "billingProfile": "Debiteringsprofil",
+      "billingProfileLabel": "Debiteringsprofil för kopplingen",
+      "billingProfileNone": "Använd kundens standardprofil",
       "clientContractId": "Kundavtals-ID: {{id}}",
       "creditDrawdownOptOut": "Undanta från avräkning av tillgodohavande",
       "empty": "Avtalet har inte tilldelats någon kund ännu.",
@@ -399,7 +402,10 @@
       "selectClientFirst": "Välj en kund först",
       "startDateLabel": "Startdatum *",
       "useTenantDefaultsDescription": "Tillämpa organisationens inställningar för förnyelseläge och uppsägningstid.",
-      "useTenantDefaultsLabel": "Använd klientorganisationens standardinställningar för förnyelse"
+      "useTenantDefaultsLabel": "Använd klientorganisationens standardinställningar för förnyelse",
+      "billingProfileLabel": "Debiteringsprofil",
+      "billingProfileNone": "Använd kundens standardprofil",
+      "billingProfileHint": "Debiteringar från det här avtalet faktureras till den här profilen."
     },
     "po": {
       "amountLabel": "Inköpsorderbelopp (valfritt)",
@@ -1520,6 +1526,11 @@
       },
       "selectTemplateOptional": "Välj en mall (valfritt)",
       "startFromTemplate": "Utgå från mall"
+    },
+    "billingProfile": {
+      "label": "Debiteringsprofil",
+      "none": "Använd kundens standardprofil",
+      "hint": "Debiteringar från det här avtalet faktureras till den här profilen om inte en avtalsrad åsidosätter den."
     }
   },
   "wizardFixed": {
@@ -1692,6 +1703,7 @@
     },
     "fields": {
       "client": "Kund",
+      "billingProfile": "Debiteringsprofil",
       "contractName": "Avtalsnamn",
       "billingFrequency": "Debiteringsintervall",
       "currency": "Valuta",
@@ -1700,6 +1712,9 @@
       "renewalMode": "Förnyelseläge",
       "noticePeriod": "Uppsägningstid",
       "renewalTerm": "Förnyelseperiod"
+    },
+    "billingProfile": {
+      "clientDefault": "Kundens standardprofil"
     },
     "fallback": {
       "notSelected": "Inte valt",

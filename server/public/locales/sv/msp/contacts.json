@@ -35,6 +35,7 @@
     "title": "Kontaktsida",
     "description": "Huvudsida för kontakthantering med sökning, filter, listvy och massåtgärder",
     "heading": "Kontakter",
+    "sharedMailbox": "Delad brevlåda",
     "addContact": "+ Lägg till kontakt",
     "actions": "Åtgärder",
     "searchPlaceholder": "Sök bland kontakter, anteckningar och interaktioner",

@@ -9,7 +9,8 @@
       "edit": "Redigera",
       "delete": "Radera",
       "deleting": "Raderar…",
-      "verify": "Verifiera"
+      "verify": "Verifiera",
+      "cancel": "Avbryt"
     },
     "states": {
       "active": "Aktiv",
@@ -226,7 +227,53 @@
         "companyFallback": "din klientorganisations namn"
       },
       "warningTitle": "Kontrollera svarsroutningen",
-      "errorTitle": "Rätta identiteten för ärendemeddelanden"
+      "errorTitle": "Rätta identiteten för ärendemeddelanden",
+      "addresses": {
+        "title": "Avsändaradresser",
+        "description": "Skapa namngivna adresser som kan användas för all utgående e-post."
+      },
+      "routing": {
+        "title": "Avsändarroutning",
+        "description": "Välj vilken avsändare varje e-posttyp använder.",
+        "default": "Standard (all annan e-post)",
+        "useDefault": "Använd standard",
+        "sender": "Avsändare",
+        "displayName": "Visningsnamn",
+        "boardSummary": "Avsändare för ärenden per tavla hanteras i varje tavlas inställningar.",
+        "ticket": "E-post för ärenden",
+        "project": "E-post för projekt",
+        "billing": "E-post för debitering",
+        "sales": "E-post för försäljning",
+        "scheduling": "E-post för resursplanering",
+        "survey": "E-post för enkäter",
+        "account": "E-post för konto",
+        "general": "Allmän e-post",
+        "noneProviderFrom": "Ingen (använd leverantörens avsändaradress)",
+        "confirmSmtp": "Jag bekräftar att SMTP-reläservern accepterar den här avsändaradressen.",
+        "inboundReplyWarning": "Inkommande svar går fortfarande till den konfigurerade inkommande postlådan; att ändra den här avsändaradressen påverkar inte svarsroutningen.",
+        "unknownBoard": "Okänd tavla"
+      },
+      "actions": {
+        "add": "Lägg till avsändare",
+        "verify": "Verifiera",
+        "delete": "Radera"
+      },
+      "fields": {
+        "address": "E-postadress",
+        "localPart": "Adressnamn",
+        "domain": "Verifierad domän",
+        "sendThrough": "Skicka via",
+        "displayName": "Visningsnamn",
+        "displayNamePlaceholder": "Supportteam"
+      },
+      "smtpHelp": "Din SMTP-reläserver måste tillåta den här adressen.",
+      "microsoftHelp": "Den anslutna postlådan behöver behörigheten Send As i Exchange för den här adressen.",
+      "errors": {
+        "duplicateAddress": "Den här avsändaradressen finns redan.",
+        "saveFailed": "Det gick inte att lägga till avsändaren. Kontrollera adressen och försök igen.",
+        "duplicateRoute": "Den avsändarroutningen finns redan.",
+        "saveRoutingFailed": "Det gick inte att spara avsändarroutningen. Försök igen."
+      }
     }
   },
   "microsoft365": {
@@ -253,7 +300,8 @@
     },
     "states": {
       "running": "Kör diagnostik…",
-      "diagnosticsFailed": "Diagnostiken misslyckades"
+      "diagnosticsFailed": "Diagnostiken misslyckades",
+      "callbackDiagnosticsCaptured": "Diagnostik från återanropet samlades in {{timestamp}}."
     },
     "statuses": {
       "pass": "Godkänd",

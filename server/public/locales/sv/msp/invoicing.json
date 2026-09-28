@@ -317,14 +317,16 @@
       "client": "Kund",
       "invoiceNumber": "Fakturanummer",
       "invoiceNumberOptional": "Fakturanummer (valfritt)",
-      "sourceSalesOrder": "Ursprunglig försäljningsorder (valfritt)"
+      "sourceSalesOrder": "Ursprunglig försäljningsorder (valfritt)",
+      "billingProfile": "Debiteringsprofil"
     },
     "placeholders": {
       "selectClient": "Välj kund",
       "invoiceNumberOptional": "Lämna tomt för att skapa automatiskt",
       "sourceSalesOrder": "Välj en levererad eller manuellt fakturerbar försäljningsorder",
       "searchSalesOrders": "Sök försäljningsorder…",
-      "noInvoiceableSalesOrders": "Inga fakturerbara försäljningsorder hittades."
+      "noInvoiceableSalesOrders": "Inga fakturerbara försäljningsorder hittades.",
+      "selectBillingProfile": "Välj en debiteringsprofil"
     },
     "automatedItems": {
       "title": "Automatiserade rader",
@@ -346,7 +348,8 @@
       "clearSalesOrderSource": "Rensa ursprunglig försäljningsorder"
     },
     "labels": {
-      "total": "Totalt"
+      "total": "Totalt",
+      "defaultBillingProfile": "{{name}} (standard)"
     },
     "prepayment": {
       "label": "Detta är en förskottsfaktura (skapar tillgodohavande)",
@@ -384,7 +387,8 @@
       "USAGE_CALCULATION_ERROR": "Förbrukning för {{services}} under tjänsteperioden {{periodStart}} till {{periodEnd}} är registrerad men kunde inte prissättas. Rätta tjänstens prissättning (katalogpris i avtalsvalutan, en anpassad taxa eller prisnivåer) och försök igen. Registrera inte ersättande förbrukning.",
       "SOURCE_ALREADY_BILLED": "Vissa valda poster kan inte längre faktureras (redan fakturerade, inte godkända eller borttagna). Ladda om och försök igen.",
       "SOURCE_NOT_ELIGIBLE": "En vald post hör inte till det här ärendets debiterbara poster eller kan inte längre faktureras. Ladda om och försök igen.",
-      "SOURCE_CURRENCY_MISMATCH": "Vissa valda produkter är prissatta i en annan valuta än kundens faktureringsvaluta och kan därför inte läggas till. Fakturera dem separat i deras egen valuta."
+      "SOURCE_CURRENCY_MISMATCH": "Vissa valda produkter är prissatta i en annan valuta än kundens faktureringsvaluta och kan därför inte läggas till. Fakturera dem separat i deras egen valuta.",
+      "BILLING_PROFILE_NOT_FOUND": "Den valda debiteringsprofilen är inte tillgänglig för kunden. Ladda om och försök igen."
     },
     "warnings": {
       "noBillingEmail": "Den här kunden saknar e-postadress för fakturering. Ange en faktureringskontakt, en e-postadress för kundens fakturering eller en e-postadress för faktureringsplatsen eller standardplatsen innan du skapar fakturan."
@@ -395,6 +399,9 @@
     },
     "salesOrderContext": {
       "summary": "Antal poster klara att fakturera: {{quantity}}. Antal rader: {{lineCount}}. Utkastet kommer att länkas till försäljningsordern."
+    },
+    "hints": {
+      "billingProfile": "Fakturan och dess rader faktureras till den här profilen."
     }
   },
   "quickInvoice": {
@@ -489,7 +496,8 @@
       "finalizedDate": "Fastställelsedatum",
       "status": "Status",
       "actions": "Åtgärder",
-      "quickbooks": "QuickBooks"
+      "quickbooks": "QuickBooks",
+      "autopay": "Automatisk betalning"
     },
     "actions": {
       "downloadPdfs": "Ladda ner PDF-filer",
@@ -521,6 +529,9 @@
         "selectedCount": "Markerade: {{count}}",
         "clear": "Rensa"
       }
+    },
+    "autopay": {
+      "scheduled": "Automatisk betalning {{status}}"
     }
   },
   "recurringServicePeriods": {
@@ -725,7 +736,9 @@
     "title": "Förhandsgranskning av faktura",
     "templatePlaceholder": "Välj fakturamall…",
     "labels": {
-      "standard": " (standardmall)"
+      "standard": " (standardmall)",
+      "billingProfile": "Debiteringsprofil: {{name}}",
+      "billingProfileDefault": "kundens standardprofil"
     },
     "actions": {
       "finalizeInvoice": "Fastställ faktura",
@@ -980,12 +993,17 @@
       "billingEmail": "E-postadress för fakturering",
       "clientEmail": "Kundens e-postadress",
       "noEmailFound": "Ingen e-postadress hittades",
-      "notConfigured": "Ingen e-postadress har konfigurerats för den här kunden."
+      "notConfigured": "Ingen e-postadress har konfigurerats för den här kunden.",
+      "billingProfile": "Debiteringsprofil",
+      "billingProfileNamed": "Debiteringsprofil: {{name}}",
+      "billingProfileDefault": "kundens standardprofil"
     },
     "fields": {
       "due": "Förfaller",
       "additionalMessage": "Ytterligare meddelande",
-      "additionalMessagePlaceholder": "Lägg till en personlig anteckning i e-postmeddelandet…"
+      "additionalMessagePlaceholder": "Lägg till en personlig anteckning i e-postmeddelandet…",
+      "from": "Från",
+      "useDefault": "Använd standardavsändare"
     },
     "preview": "E-postmeddelanden skickas från {{fromEmail}} för {{companyName}}. Varje faktura bifogas som en PDF-fil.",
     "values": {
@@ -2055,6 +2073,13 @@
     "errors": {
       "invoiceNumberRequired": "Fakturanummer krävs.",
       "invoiceDateRequired": "Fakturadatum krävs."
+    },
+    "labels": {
+      "billingProfile": "Debiteringsprofil",
+      "billingProfileDefault": "Kundens standardprofil"
+    },
+    "hints": {
+      "billingProfile": "Fakturan, dess rader och den e-postade kopian följer den här profilen."
     }
   },
   "documentTemplates": {
@@ -2165,7 +2190,8 @@
       "referenceMissing": "Den valda fakturan, kunden, avtalet eller debiteringsposten finns inte längre. Ladda om och försök igen.",
       "duplicate": "En faktura med motstridiga uppgifter finns redan. Ladda om och försök igen.",
       "missingField": "Ett obligatoriskt fakturafält saknas.",
-      "missingFieldNamed": "Ett obligatoriskt fakturafält saknas: {{field}}."
+      "missingFieldNamed": "Ett obligatoriskt fakturafält saknas: {{field}}.",
+      "billingProfileUnavailable": "Den valda debiteringsprofilen är inte tillgänglig för kunden."
     },
     "billingCycle": {
       "notFoundRefresh": "Debiteringscykeln hittades inte. Den kan ha uppdaterats eller raderats. Ladda om och försök igen.",

@@ -830,7 +830,17 @@
         }
       },
       "empty": "Inga tavlor hittades.",
-      "searchPlaceholder": "Sök tavlor…"
+      "searchPlaceholder": "Sök tavlor…",
+      "emailSender": {
+        "label": "Utgående avsändare",
+        "inboundWarning": "Den här avsändaren används för utgående ärendemeddelanden. Inställningarna för inkommande e-post ändras inte.",
+        "displayName": "Visningsnamn",
+        "save": "Spara avsändare",
+        "saved": "Avsändaren har sparats",
+        "useDefault": "Använd standard för ärenden",
+        "duplicateRoute": "Den avsändarroutningen finns redan.",
+        "saveFailed": "Det gick inte att spara avsändarroutningen. Försök igen."
+      }
     },
     "priorities": {
       "title": {
@@ -1355,7 +1365,8 @@
         "step3": "Skaffa och underhåll TLS-certifikatet för domänen på din proxy.",
         "step4": "Spara domänen här — den aktiveras direkt. Konfigurera DNS och din proxy först, eftersom portallänkarna omedelbart byter till denna domän.",
         "docLinkText": "Guide för konfiguration och felsökning av omvänd proxy",
-        "neverSeenWarning": "Inga anrop har nått {{domain}} ännu. Kontrollera att din omvända proxy vidarebefordrar det ursprungliga Host-huvudet."
+        "neverSeenWarning": "Inga anrop har nått {{domain}} ännu. Kontrollera att din omvända proxy vidarebefordrar det ursprungliga Host-huvudet.",
+        "tlsNote": "TLS avslutas i din omvända proxy, som innehar certifikatet."
       },
       "badges": {
         "pending_dns": "Väntar på DNS",
@@ -1380,7 +1391,8 @@
         "refreshFailed": "Det gick inte att uppdatera domänstatusen.",
         "retryFailed": "Det nya försöket misslyckades.",
         "disableFailed": "Det gick inte att inaktivera egen domän."
-      }
+      },
+      "hostedTlsNote": "Vi utfärdar TLS-certifikat automatiskt när DNS har verifierats."
     },
     "yourCompanyName": "Ditt företagsnamn",
     "brandingPreviewMode": "Temaläge för förhandsgranskning av varumärkesprofil",
@@ -2179,6 +2191,18 @@
       "comingSoon": "Här kommer mappningsmallar och schemalagda importer att finnas. Spara kolumnmappningar, dela dem med teamet och konfigurera återkommande bakgrundsjobb."
     },
     "migration": {
+      "customFields": {
+        "required": "obligatoriskt",
+        "title": "Fält för {{name}}",
+        "mapping": "Mappning av anpassade fält",
+        "description": "Mappa bevarade CSV-kolumner till fält på den här tillgångstypen.",
+        "empty": "Inga anpassade kolumner bevarades för den här tillgångstypen.",
+        "samples_one": "{{sample}} · {{count}} post",
+        "samples_other": "{{sample}} · {{count}} poster",
+        "noSample": "Inget exempel",
+        "missingRequired": "Obligatoriska fält är inte mappade: {{fields}}",
+        "duplicate": "Ett anpassat fält är mappat mer än en gång. Välj ett unikt målfält för varje källa."
+      },
       "actions": {
         "back": "Tillbaka till migreringar",
         "upload": "Ladda upp paket"
@@ -3462,5 +3486,8 @@
       "nothingToRetry": "Det finns ingen misslyckad registrering av egen domän att försöka igen med.",
       "retryOnlyAfterFailure": "Nytt försök är endast tillgängligt efter en misslyckad registrering."
     }
+  },
+  "common": {
+    "saving": "Sparar…"
   }
 }

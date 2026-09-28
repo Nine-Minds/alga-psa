@@ -674,7 +674,24 @@
       "workflowStepsListHint": "Dra steg för att ändra ordningen eller flytta dem mellan flöden.",
       "workflowStepsGraphHint": "Panorera och zooma i grafen. Grenar visas som separata banor.",
       "workflowStepsViewAria": "Vy för arbetsflödessteg",
-      "warningsCount": "{{count}} varningar"
+      "warningsCount": "{{count}} varningar",
+      "dateSource": "Datumkälla",
+      "dateSourceAnniversary": "Kundens årsdag",
+      "dateSourceRenewal": "Beslutsdatum för avtalsförnyelse",
+      "dateSourceContractEnd": "Avtalets slutdatum",
+      "dateSourceWarranty": "Tillgångens garantislut",
+      "dateOffset": "Dagar",
+      "dateDirection": "Tidpunkt",
+      "before": "Före",
+      "onDate": "På dagen",
+      "after": "Efter",
+      "daysBefore": "dagar före",
+      "daysAfter": "dagar efter",
+      "localTime": "Lokal tid",
+      "timezoneOptional": "Tidszon (valfritt)",
+      "tenantTimezoneDefault": "klientorganisationens tidszon",
+      "dateTriggerSummary": "Körs {{days}} {{direction}} {{source}} kl. {{time}} ({{timezone}})",
+      "inputDataDatePrefix": "Det här arbetsflödet tar emot nyttolasten som definieras av"
     },
     "stepPanel": {
       "readOnly": "Skrivskyddad åtkomst: stegredigering är inaktiverad.",
@@ -1593,7 +1610,8 @@
     "event": "Händelse",
     "eventWithType": "Händelse: {{eventType}}",
     "oneTimeSchedule": "Engångsschema",
-    "recurringSchedule": "Återkommande schema"
+    "recurringSchedule": "Återkommande schema",
+    "date": "Datum"
   },
   "scheduleStatus": {
     "unknown": "Okänt",
@@ -2201,13 +2219,15 @@
         "event": "Händelsebaserat",
         "schedule": "Engångsschema",
         "recurring": "Återkommande schema",
-        "manual": "Manuell"
+        "manual": "Manuell",
+        "date": "Datumbaserat"
       },
       "triggerLabels": {
         "manual": "Manuell",
         "schedule": "Engångsschema",
         "recurring": "Återkommande schema",
-        "event": "Händelse"
+        "event": "Händelse",
+        "date": "Datum"
       },
       "bulk": {
         "selectedSingular": "{{count}} arbetsflöde markerat",

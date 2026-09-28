@@ -165,6 +165,27 @@
         "loadStatuses": "Det gick inte att läsa in statusarna för förnyelseärenden",
         "save": "Det gick inte att spara inställningarna för automatisering av förnyelser"
       }
+    },
+    "quotes": {
+      "title": "Offerter",
+      "description": "Ange standardgiltighetstid för nya offerter.",
+      "fields": {
+        "validityDays": {
+          "label": "Standardgiltighetstid (dagar)",
+          "help": "Nya offerter är giltiga så här många dagar."
+        }
+      },
+      "actions": {
+        "save": "Spara"
+      },
+      "toast": {
+        "updated": "Offertinställningarna har uppdaterats."
+      },
+      "errors": {
+        "load": "Det gick inte att ladda inställningarna",
+        "save": "Det gick inte att spara inställningarna",
+        "range": "Ange ett heltal från 1 till 365."
+      }
     }
   },
   "quoting": {
@@ -178,6 +199,56 @@
     }
   },
   "tax": {
+    "defaultRate": {
+      "title": "Standardskattesats",
+      "tooltip": "Välj den skattesats som nya kunder, produkter och tjänster ärver.",
+      "description": "Ange skattesatsen som tilldelas nya kunder och katalogposter. Befintliga poster ändras inte.",
+      "loading": "Laddar standardskattesats…",
+      "empty": "Skapa en aktiv skattesats innan du väljer en standard.",
+      "invalid": "Den konfigurerade standarden är inte längre aktiv eller giltig. Välj en annan skattesats.",
+      "field": {
+        "label": "Standardskattesats"
+      },
+      "options": {
+        "none": "Ingen standard för klientorganisationen"
+      },
+      "help": "När ingen standard är angiven förblir nya katalogposter skattefria och nya kunder får den äldsta aktiva skattesatsen om det finns någon.",
+      "actions": {
+        "save": "Spara standard",
+        "saving": "Sparar…"
+      },
+      "toast": {
+        "saved": "Standardskattesatsen har sparats."
+      },
+      "errors": {
+        "load": "Det gick inte att ladda standardskattesatsen.",
+        "save": "Det gick inte att spara standardskattesatsen."
+      }
+    },
+    "backfill": {
+      "title": "Tillämpa standarden på befintliga katalogposter",
+      "description": "Förhandsgranska produkter och tjänster som i dag saknar skattesats.",
+      "warning": "Detta ändrar skatteplikten för framtida debiteringar och skriver inte om utfärdade fakturor.",
+      "loading": "Laddar förhandsgranskning…",
+      "empty": "Inga kvalificerade produkter eller tjänster hittades.",
+      "target": "Målskattesats: {{rate}}",
+      "count": "{{count}} kvalificerade poster",
+      "dialog": {
+        "title": "Tillämpa standardskattesats"
+      },
+      "actions": {
+        "preview": "Förhandsgranska befintliga poster",
+        "apply": "Tillämpa markerade",
+        "applying": "Tillämpar…"
+      },
+      "toast": {
+        "applied": "Standardskattesatsen har tillämpats på de markerade posterna."
+      },
+      "errors": {
+        "preview": "Det gick inte att förhandsgranska katalogposterna.",
+        "apply": "Det gick inte att tillämpa standardskattesatsen."
+      }
+    },
     "taxRegions": {
       "title": "Skatteregioner",
       "description": "Hantera skatteregioner och tillhörande inställningar."
@@ -704,7 +775,8 @@
       "allServiceTypes": "Alla tjänstetyper",
       "serviceTypePlaceholder": "Filtrera efter tjänstetyp…",
       "allBillingMethods": "Alla debiteringsmetoder",
-      "billingMethodPlaceholder": "Filtrera efter debiteringsmetod…"
+      "billingMethodPlaceholder": "Filtrera efter debiteringsmetod…",
+      "searchPlaceholder": "Sök tjänster efter namn, SKU eller beskrivning…"
     },
     "fields": {
       "serviceName": {
@@ -826,7 +898,9 @@
       "validateDelete": "Det gick inte att validera raderingen. Försök igen.",
       "delete": "Det gick inte att radera tjänsten",
       "deactivate": "Det gick inte att inaktivera tjänsten"
-    }
+    },
+    "emptySearch": "Inga tjänster matchar din sökning.",
+    "clearFilters": "Rensa filter"
   },
   "products": {
     "title": "Produkter",
@@ -956,7 +1030,10 @@
       "taxRate": {
         "label": "Skattesats (valfri)",
         "placeholder": "Välj skattesats (valfritt)",
-        "loading": "Laddar skattesatser…"
+        "loading": "Laddar skattesatser…",
+        "inherit": "Använd klientorganisationens standard",
+        "inheritNamed": "Använd klientorganisationens standard ({{rate}})",
+        "nonTaxable": "Skattefri"
       },
       "sku": {
         "label": "SKU",
@@ -1050,7 +1127,10 @@
       "taxRate": {
         "label": "Skattesats",
         "placeholder": "Skattefri",
-        "loading": "Laddar…"
+        "loading": "Laddar…",
+        "inherit": "Använd klientorganisationens standard",
+        "inheritNamed": "Använd klientorganisationens standard ({{rate}})",
+        "nonTaxable": "Skattefri"
       },
       "active": {
         "label": "Aktiv"
@@ -1425,6 +1505,15 @@
       "actions": {
         "save": "Spara inställningar",
         "saving": "Sparar…"
+      },
+      "autopay": {
+        "label": "Tillåt automatisk betalning",
+        "description": "Tillåt debiteringsprofiler att godkänna automatiska kortbetalningar.",
+        "chargeTiming": "Tidpunkt för debitering",
+        "onFinalize": "När fakturan färdigställs",
+        "onDueDate": "På förfallodatumet",
+        "retryDays": "Intervall för nya försök (dagar)",
+        "consentText": "Medgivandetext för automatisk betalning"
       }
     },
     "stripe": {

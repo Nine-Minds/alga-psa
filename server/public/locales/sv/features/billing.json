@@ -151,7 +151,8 @@
     "tryAgain": "Försök igen",
     "backToBilling": "Tillbaka till debitering",
     "retryFailed": "Vi kunde fortfarande inte starta betalningen. Försök igen om en stund.",
-    "loading": "Läser in…"
+    "loading": "Läser in…",
+    "offlinePaymentMethod": "Den här fakturan betalas med check eller banköverföring, så betalning online är inte tillgänglig. Följ betalningsanvisningarna på fakturan."
   },
   "quotes": {
     "pendingQuotes": "Väntande offerter",

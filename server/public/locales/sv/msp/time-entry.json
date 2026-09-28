@@ -480,7 +480,8 @@
       "onlyDraftRemovable": "Endast tidrapporter i utkastform kan tas bort.",
       "removeEntriesFirst": "Ta bort tidposterna innan du tar bort den här tidrapporten.",
       "onlyApprovedReopenable": "Endast godkända tidrapporter kan öppnas igen.",
-      "invoicedCannotReopen": "Den här tidrapporten innehåller fakturerad tid och kan inte öppnas igen."
+      "invoicedCannotReopen": "Den här tidrapporten innehåller fakturerad tid och kan inte öppnas igen.",
+      "notEditable": "Den här tidrapporten är låst. Välj en tidrapport i utkastform eller en där ändringar har begärts."
     },
     "timeEntry": {
       "notFoundRefresh": "Tidposten hittades inte. Den kan ha raderats. Ladda om och försök igen.",
@@ -506,5 +507,33 @@
       "missingField": "Ett obligatoriskt fält för tidsperiodsinställningen saknas.",
       "missingFieldNamed": "Ett obligatoriskt fält för tidsperiodsinställningen saknas: {{field}}."
     }
+  },
+  "workItemEntry": {
+    "sheetStatus": {
+      "DRAFT": "Utkast",
+      "SUBMITTED": "Inskickad",
+      "APPROVED": "Godkänd",
+      "CHANGES_REQUESTED": "Ändringar begärda",
+      "UNKNOWN": "Okänd"
+    },
+    "sheetHint": "Tidrapport: {{range}} · {{status}}",
+    "defaultMoved": {
+      "supplied": "Timerns tider hamnar på en dag som inte kan ta emot ny tid, så posten börjar {{date}} kl. 08.00.",
+      "todayLocked": "Dagens tidrapport är {{status}}, så posten börjar {{date}}, den närmaste dagen som kan ta emot tid.",
+      "todayUncovered": "Ingen tidsperiod täcker i dag, så posten börjar {{date}}, den närmaste dagen som kan ta emot tid."
+    },
+    "save": {
+      "noPeriod": "Ingen tidsperiod täcker {{date}}. Välj en dag inom en tidsperiod.",
+      "sheetLocked": "Tidrapporten för {{date}} är {{status}}. Välj en dag i en tidrapport i utkastform eller en där ändringar har begärts."
+    }
+  },
+  "launch": {
+    "noUser": "Det gick inte att ladda den inloggade användaren för tidregistrering.",
+    "entryNotFound": "Tidposten hittades inte.",
+    "entryMissingSheet": "Den här tidposten hör inte till någon tidrapport och kan därför inte redigeras här.",
+    "entryMissingPeriod": "Tidrapporten för den här posten saknar sin tidsperiod och kan inte öppnas.",
+    "noPeriods": "Inga tidsperioder är uppsatta ännu, så tid kan inte registreras. Be en administratör skapa tidsperioder under Inställningar → Tidregistrering.",
+    "noEditablePeriods": "Alla tidrapporter är inskickade eller godkända, så det finns ingen dag att lägga till tid på. Be en godkännare öppna en tidrapport igen, eller en administratör att lägga till en tidsperiod.",
+    "prepareFailed": "Ett fel uppstod när tidposten förbereddes. Försök igen."
   }
 }

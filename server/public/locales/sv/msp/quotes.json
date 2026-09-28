@@ -107,7 +107,9 @@
         "message": "Meddelande",
         "messageOptional": "Meddelande (valfritt)",
         "messagePlaceholder": "Lägg till ett personligt meddelande till mottagaren…",
-        "title": "Skicka offert"
+        "title": "Skicka offert",
+        "from": "Från",
+        "useDefault": "Använd standardavsändare"
       }
     },
     "errors": {
@@ -212,7 +214,9 @@
         "description": "Offerten skickas via e-post till kundens faktureringskontakter och offertens status ändras till ”Skickad”.",
         "title": "Skicka offert till kund",
         "additionalEmails": "Ytterligare mottagare",
-        "message": "Meddelande"
+        "message": "Meddelande",
+        "from": "Från",
+        "useDefault": "Använd standardavsändare"
       }
     },
     "errorActions": {

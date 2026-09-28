@@ -566,7 +566,8 @@
       "dueDate": "Förfallodatum",
       "statusDisabledMultiBoard": "De markerade ärendena finns på olika tavlor",
       "statusResolvingBoards": "Kontrollerar de markerade ärendenas tavlor…",
-      "more": "Mer"
+      "more": "Mer",
+      "bundleNeedsOne": "Markera minst 1 ärende att gruppera"
     },
     "moveDialogTitle": "Flytta markerade ärenden",
     "moveDialogDescription": "Välj måltavla och målstatus och bekräfta sedan flytten av de markerade ärendena.",
@@ -671,7 +672,19 @@
       "propagationSummary": "{{masters}} markerade ärenden är huvudärenden i synkroniserade grupper. Den här ändringen stänger eller öppnar {{children}} underärenden igen.",
       "masterSummary": "{{children}} underärenden",
       "applyToChildren": "Tillämpa på underärenden",
-      "mastersOnly": "Endast huvudärenden"
+      "mastersOnly": "Endast huvudärenden",
+      "membersLabel": "Ärenden i den här gruppen",
+      "addTicketSearchPlaceholder": "Sök ärenden efter nummer eller titel",
+      "addTicketEmpty": "Sök ärenden att lägga till",
+      "badgeAdded": "Tillagt",
+      "badgeInBundle": "I grupp #{{number}}",
+      "badgeMaster": "Gruppens huvudärende",
+      "masterTag": "Huvudärende",
+      "removeMember": "Ta bort",
+      "needMoreTickets": "Lägg till minst ett ärende till i gruppen.",
+      "unresolvedSelectedTickets_one": "Det gick inte att läsa in {{count}} markerat ärende.",
+      "unresolvedSelectedTickets_other": "Det gick inte att läsa in {{count}} markerade ärenden.",
+      "badgeClosed": "Stängt"
     },
     "auth": {
       "moveRequired": "Du måste vara inloggad för att flytta ärenden",

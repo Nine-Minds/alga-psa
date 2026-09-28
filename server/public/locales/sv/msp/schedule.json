@@ -12,14 +12,28 @@
       "clearAll": "Avmarkera alla",
       "viewWeek": "Visa vecka",
       "compare": "Jämför",
-      "stopComparing": "Sluta jämföra"
+      "stopComparing": "Sluta jämföra",
+      "shareMyCalendar": "Dela min kalender",
+      "newGroupCalendar": "Ny gruppkalender",
+      "manageGroupCalendar": "Hantera kalender"
     },
     "labels": {
-      "inactive": "(Inaktiv)"
+      "inactive": "(Inaktiv)",
+      "archived": "(Arkiverad)"
     },
     "aria": {
       "viewWeek": "Visa vecka för {{name}}",
-      "compare": "Jämför {{name}}"
+      "compare": "Jämför {{name}}",
+      "toggleGroupCalendar": "Visa {{name}}"
+    },
+    "sections": {
+      "myCalendar": "Min kalender",
+      "people": "Personer",
+      "groupCalendars": "Gruppkalendrar"
+    },
+    "empty": {
+      "people": "Ingen har delat en kalender med dig än. Dela din egen så att kollegorna kan se när du är ledig.",
+      "groups": "Gruppkalendrar innehåller delade händelser, till exempel jourschema eller dagar då kontoret är stängt."
     }
   },
   "agentView": {
@@ -90,7 +104,8 @@
         "start": "Start: {{dateTime}}",
         "end": "Slut: {{dateTime}}",
         "multiDay": "(Flera dagar)"
-      }
+      },
+      "busy": "Upptagen"
     },
     "deleteDialog": {
       "title": "Radera schemapost",
@@ -122,6 +137,11 @@
         "title": "Utskriftsalternativ",
         "description": "Välj vilka kolumner som ska ingå när schemat skrivs ut."
       }
+    },
+    "busyDialog": {
+      "title": "Upptagen",
+      "close": "Stäng",
+      "timeRange": "{{start}} – {{end}}"
     }
   },
   "weeklyEvent": {
@@ -591,7 +611,11 @@
       "end": "Slut *",
       "notes": "Anteckningar",
       "technician": "Tekniker",
-      "notesPlaceholder": "Vad teknikern bör veta innan arbetet påbörjas"
+      "notesPlaceholder": "Vad teknikern bör veta innan arbetet påbörjas",
+      "calendarPersonal": "Personlig",
+      "calendarUnavailable": "Gruppkalender",
+      "calendar": "Kalender",
+      "assignedUsersOptional": "Tilldelade användare"
     },
     "actions": {
       "cancel": "Avbryt",
@@ -776,5 +800,58 @@
     "deleteFailed": "Kunde inte radera schemaposten",
     "loadFailed": "Kunde inte läsa in schemaposten",
     "noPermission": "Du behöver behörighet att uppdatera schemat för att schemalägga arbete."
+  },
+  "sharing": {
+    "levels": {
+      "freeBusy": "Ledig/upptagen",
+      "read": "Visa detaljer",
+      "edit": "Redigera",
+      "manage": "Hantera"
+    },
+    "addRecipient": "Lägg till en person eller ett team",
+    "noRecipients": "Inte delad med någon än.",
+    "unknownRecipient": "Okänd mottagare",
+    "removeRecipient": "Ta bort {{name}}",
+    "errors": {
+      "load": "Det gick inte att ladda kalenderdelningen.",
+      "save": "Det gick inte att spara kalenderdelningen."
+    },
+    "shareDialog": {
+      "title": "Dela min kalender",
+      "description": "Ledig/upptagen visar bara när du är upptagen. Visa detaljer visar dina poster, utom de privata. Redigera låter dem dessutom lägga till och ändra poster för dig."
+    },
+    "actions": {
+      "cancel": "Avbryt",
+      "saving": "Sparar…",
+      "save": "Spara"
+    },
+    "settings": {
+      "title": "Kalenderdelning",
+      "description": "Välj vilka kollegor och team som kan se ditt schema och om de kan boka tid för dig."
+    }
+  },
+  "groupCalendars": {
+    "errors": {
+      "load": "Det gick inte att ladda kalendern.",
+      "nameRequired": "Kalendern måste ha ett namn.",
+      "save": "Det gick inte att spara kalendern."
+    },
+    "dialog": {
+      "manageTitle": "Hantera gruppkalender",
+      "createTitle": "Ny gruppkalender"
+    },
+    "actions": {
+      "restore": "Återställ",
+      "archive": "Arkivera",
+      "create": "Skapa kalender"
+    },
+    "fields": {
+      "name": "Namn",
+      "namePlaceholder": "T.ex. Jourschema",
+      "color": "Färg",
+      "description": "Beskrivning (valfritt)",
+      "members": "Medlemmar",
+      "creatorNote": "Du kommer att kunna hantera den här kalendern."
+    }
   }
 }

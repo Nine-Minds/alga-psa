@@ -217,7 +217,19 @@
     "subtitle": "Visa och ladda ner dina delade dokument",
     "searchPlaceholder": "Sök dokument…",
     "showing": "{{count}} dokument",
-    "loadError": "Det gick inte att ladda dokumenten. Försök igen."
+    "loadError": "Det gick inte att ladda dokumenten. Försök igen.",
+    "view": "Visa",
+    "download": "Ladda ner",
+    "downloadPdf": "Ladda ner PDF",
+    "downloadMarkdown": "Ladda ner Markdown",
+    "previewUnavailable": "Förhandsvisning är inte tillgänglig för den här filtypen.",
+    "previewError": "Det gick inte att läsa in förhandsvisningen. Försök igen.",
+    "downloadError": "Det gick inte att ladda ner dokumentet. Försök igen.",
+    "notFound": "Dokumentet är inte längre tillgängligt.",
+    "noContent": "Dokumentet har inget innehåll att exportera.",
+    "accessDenied": "Du har inte åtkomst till det här dokumentet.",
+    "loadingPreview": "Läser in förhandsvisning…",
+    "exportFailed": "PDF-exporten misslyckades. Prova Markdown i stället."
   },
   "kb": {
     "title": "Kunskapsbas",
