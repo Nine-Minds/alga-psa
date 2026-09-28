@@ -26,7 +26,7 @@
     "clientPortalLabel": "Kundenportal",
     "supportCard": {
       "title": "Dringende Hilfe?",
-      "description": "Kontaktiere uns jederzeit."
+      "description": "Wenden Sie sich jederzeit an uns."
     },
     "sections": {
       "workspace": "Arbeitsbereich",
@@ -40,7 +40,7 @@
     "title": "Dashboard",
     "welcome": "Willkommen zurück! Hier ist eine Übersicht über Ihr Konto.",
     "loading": "Dashboard wird geladen...",
-    "error": "Beim Laden des Dashboards ist ein Fehler aufgetreten. Bitte versuche es später erneut.",
+    "error": "Beim Laden des Dashboards ist ein Fehler aufgetreten. Bitte versuchen Sie es später erneut.",
     "metrics": {
       "openTickets": "Offene Support-Tickets",
       "activeProjects": "Laufende Projekte",
@@ -54,7 +54,7 @@
       "noneScheduled": "Keine geplant",
       "deviceStatusHint": "Verwaltete Endpunkte",
       "serviceRequests": "Service-Anfragen",
-      "serviceRequestsHint": "Gesamteinreichungen",
+      "serviceRequestsHint": "Insgesamt eingereicht",
       "openTicketsDescription": "Support-Tickets, an denen wir noch arbeiten.",
       "activeProjectsDescription": "Projekte, die wir aktuell für Ihr Team umsetzen.",
       "serviceRequestsDescription": "Strukturierte Anfragen, die Sie aus dem Katalog eingereicht haben.",
@@ -75,7 +75,7 @@
       "viewAll": "Alle Termine anzeigen →",
       "technician": "Techniker",
       "noUpcomingShort": "Nichts im Kalender",
-      "countLabel": "{{count}} bevorstehend"
+      "countLabel": "{{count}} anstehend"
     },
     "recentActivity": {
       "title": "Neueste Aktivitäten"
@@ -174,7 +174,7 @@
     },
     "resetPassword": "Passwort zurücksetzen",
     "backToSignIn": "Zurück zur Anmeldung",
-    "sendResetLink": "Reset-Link senden",
+    "sendResetLink": "Link zum Zurücksetzen senden",
     "resetLinkSent": "Der Link zum Zurücksetzen wurde an Ihre E-Mail-Adresse gesendet",
     "invalidCredentials": "Ungültige E-Mail oder ungültiges Passwort",
     "loginError": "Bei der Anmeldung ist ein Fehler aufgetreten",
@@ -198,7 +198,7 @@
       "noTokenProvided": "Kein Einladungstoken angegeben",
       "invalidOrExpiredToken": "Ungültiges oder abgelaufenes Einladungstoken",
       "verificationFailed": "Überprüfung des Einladungstokens fehlgeschlagen",
-      "goToPortalSignIn": "Zum Portal-Login",
+      "goToPortalSignIn": "Zur Portal-Anmeldung",
       "accountInformation": "Kontoinformationen",
       "name": "Name:",
       "email": "E-Mail:",
@@ -220,7 +220,7 @@
       "creatingAccount": "Konto wird erstellt...",
       "alreadyHaveAccount": "Haben Sie bereits ein Konto?",
       "signInToPortal": "Im Portal anmelden",
-      "requirementsNotMet": "Bitte stelle sicher, dass alle Passwortanforderungen erfüllt sind",
+      "requirementsNotMet": "Bitte stellen Sie sicher, dass alle Passwortanforderungen erfüllt sind",
       "accountReady": "Konto bereit. Bitte melden Sie sich an.",
       "accountCreatedSuccess": "Konto erfolgreich erstellt. Bitte melden Sie sich an.",
       "welcome": "Willkommen im Kundenportal!",
@@ -230,12 +230,12 @@
         "tokenAndPasswordRequired": "Für die Einrichtung werden ein Token und ein Passwort benötigt.",
         "passwordTooShort": "Das Passwort muss mindestens 8 Zeichen lang sein.",
         "invalidOrExpiredToken": "Dieser Einladungslink ist ungültig oder abgelaufen.",
-        "tenantContextRequired": "Organisationskontext fehlt. Bitte öffne den Einladungslink erneut.",
-        "resetPasswordFailed": "Das Passwort für das bestehende Konto konnte nicht zurückgesetzt werden. Bitte versuche es erneut.",
+        "tenantContextRequired": "Organisationskontext fehlt. Bitte öffnen Sie den Einladungslink erneut.",
+        "resetPasswordFailed": "Das Passwort für das bestehende Konto konnte nicht zurückgesetzt werden. Bitte versuchen Sie es erneut.",
         "createUserFailed": "Ihr Benutzerkonto konnte nicht erstellt werden. Bitte versuchen Sie es erneut.",
-        "setupFailed": "Die Portaleinrichtung konnte nicht abgeschlossen werden. Bitte versuche es erneut.",
+        "setupFailed": "Die Portaleinrichtung konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut.",
         "verificationFailed": "Ihr Einladungstoken konnte nicht überprüft werden. Bitte versuchen Sie es erneut.",
-        "invitationFailed": "Die Einladung konnte nicht gesendet werden. Bitte versuche es erneut.",
+        "invitationFailed": "Die Einladung konnte nicht gesendet werden. Bitte versuchen Sie es erneut.",
         "permissionDeniedInvite": "Sie haben keine Berechtigung, Portal-Einladungen zu versenden.",
         "permissionDeniedCreate": "Sie haben keine Berechtigung, Portal-Benutzerkonten zu erstellen.",
         "emailNotConfigured": "Der E-Mail-Dienst ist nicht konfiguriert. Bitte wenden Sie sich an Ihren Administrator.",
@@ -249,7 +249,7 @@
         "noLocationEmail": "Für den Kundenstandort ist keine Kontakt-E-Mail konfiguriert.",
         "baseUrlNotConfigured": "Die Basis-URL der Anwendung ist nicht konfiguriert.",
         "invitationNotFound": "Einladung nicht gefunden.",
-        "revokeFailed": "Die Einladung konnte nicht widerrufen werden. Bitte versuche es erneut."
+        "revokeFailed": "Die Einladung konnte nicht widerrufen werden. Bitte versuchen Sie es erneut."
       }
     },
     "features": {
@@ -259,7 +259,7 @@
       },
       "trackStatus": {
         "title": "Ticketstatus verfolgen",
-        "description": "Verfolge den Fortschritt in Echtzeit"
+        "description": "Verfolgen Sie den Fortschritt in Echtzeit"
       },
       "ticketHistory": {
         "title": "Ticketverlauf",
@@ -330,19 +330,19 @@
       "subtitle": "Die Lizenzverwaltung ist im MSP-Portal verfügbar",
       "howToPurchaseTitle": "So kaufen Sie zusätzliche Lizenzen:",
       "step1": "Melden Sie sich im MSP-Portal an (wenn Sie Administratorzugriff haben)",
-      "step2": "Navigiere zu Einstellungen → Kontoverwaltung",
-      "step3": "Klicke auf \"Lizenzen hinzufügen\", um weitere Lizenzen zu kaufen",
-      "step4": "Schließe den Checkout-Prozess ab",
+      "step2": "Navigieren Sie zu Einstellungen → Kontoverwaltung",
+      "step3": "Klicken Sie auf \"Lizenzen hinzufügen\", um weitere Lizenzen zu kaufen",
+      "step4": "Schließen Sie den Checkout-Prozess ab",
       "needHelpTitle": "Benötigen Sie Hilfe?",
       "needHelpDescription": "Nur Benutzer mit Berechtigungen für die Kontoverwaltung können Lizenzen kaufen. Wenn Sie keinen Zugriff haben, wenden Sie sich bitte an Ihre AlgaPSA-Administration.",
       "backToDashboard": "Zurück zum Dashboard",
       "goToMSPPortal": "Zum MSP-Portal",
-      "signingOut": "Abmelden..."
+      "signingOut": "Wird abgemeldet..."
     },
     "services": {
       "loadError": "Dienste konnten nicht geladen werden",
-      "loadContractLinesError": "Servicepläne konnten nicht geladen werden",
-      "updateError": "Service konnte nicht aktualisiert werden",
+      "loadContractLinesError": "Vertragslinien der Dienste konnten nicht geladen werden",
+      "updateError": "Dienst konnte nicht aktualisiert werden",
       "loading": "Dienste werden geladen...",
       "activeTitle": "Aktive Dienste",
       "empty": "Keine aktiven Dienste gefunden",
@@ -355,19 +355,19 @@
       },
       "actions": {
         "manage": "Verwalten",
-        "upgrade": "Upgrade",
+        "upgrade": "Höherstufen",
         "downgrade": "Herabstufen"
       },
-      "manageTitle": "Dienst {{service}} verwalten",
+      "manageTitle": "{{service}} verwalten",
       "genericServiceLabel": "Dienst",
       "currentContractLine": "Aktuelle Vertragslinie",
-      "availableContractLines": "Verfügbare Pläne",
+      "availableContractLines": "Verfügbare Vertragslinien",
       "catalog": {
         "title": "Verfügbare Dienste",
         "learnMore": "Mehr erfahren",
         "managedIt": {
           "title": "Managed IT-Support",
-          "description": "Rund-um-die-Uhr IT-Support und Überwachung für Ihr Unternehmen. Enthält proaktive Wartung, Sicherheitsupdates und dedizierten technischen Support.",
+          "description": "IT-Support und Überwachung rund um die Uhr für Ihr Unternehmen. Enthält proaktive Wartung, Sicherheitsupdates und dedizierten technischen Support.",
           "price": "Ab 299 $/Monat"
         },
         "cloudBackup": {
@@ -377,7 +377,7 @@
         },
         "cybersecurity": {
           "title": "Cybersicherheit",
-          "description": "Erweitertes Sicherheitsmonitoring und Bedrohungsprävention. Einschließlich Firewall-Management, Endpunktschutz und regelmäßiger Sicherheitsbewertungen.",
+          "description": "Erweiterte Sicherheitsüberwachung und Bedrohungsprävention. Einschließlich Firewall-Management, Endpunktschutz und regelmäßiger Sicherheitsbewertungen.",
           "price": "Ab 199 $/Monat"
         }
       }
@@ -422,10 +422,10 @@
         "empty": "Keine Abrechnungshistorie verfügbar"
       },
       "validation": {
-        "cardNumber": "Bitte gib eine gültige 16-stellige Kartennummer ein",
-        "expMonth": "Bitte gib einen gültigen Monat ein (01-12)",
-        "expYear": "Bitte gib ein gültiges Jahr ein (2024-2099)",
-        "cvv": "Bitte gib eine gültige Prüfziffer (CVV) ein"
+        "cardNumber": "Bitte geben Sie eine gültige 16-stellige Kartennummer ein",
+        "expMonth": "Bitte geben Sie einen gültigen Monat ein (01-12)",
+        "expYear": "Bitte geben Sie ein gültiges Jahr ein (2024-2099)",
+        "cvv": "Bitte geben Sie eine gültige Prüfziffer (CVV) ein"
       },
       "methodUpdateError": "Diese Zahlungsmethode konnte nicht aktualisiert werden. Bitte versuchen Sie es erneut.",
       "cardSetup": {
@@ -439,7 +439,7 @@
         "cardFallback": "Karte",
         "enrolled": "Die automatische Zahlung ist aktiviert.",
         "disable": "Automatische Zahlung deaktivieren",
-        "consent": "Ich autorisiere wiederkehrende Belastungen dieser Karte für abgeschlossene Rechnungen.",
+        "consent": "Ich autorisiere wiederkehrende Belastungen dieser Karte für finalisierte Rechnungen.",
         "enable": "Automatische Zahlung aktivieren",
         "noCards": "Fügen Sie eine Karte hinzu, um die automatische Zahlung zu aktivieren.",
         "changeCard": "Diese Karte für die automatische Zahlung verwenden"
@@ -584,30 +584,30 @@
       "sizeLimit": "Das Bild darf maximal 2 MB groß sein.",
       "maxSize": "Max. 2 MB (PNG, JPG, GIF)",
       "uploadSuccess": "Erfolgreich hochgeladen.",
-      "uploadError": "Hochladen fehlgeschlagen. Bitte versuche es erneut.",
+      "uploadError": "Hochladen fehlgeschlagen. Bitte versuchen Sie es erneut.",
       "deleteSuccess": "Erfolgreich gelöscht.",
       "deleteError": "Löschen fehlgeschlagen.",
       "deleteConfirm": "Möchten Sie dies wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
-      "linking": "Verknüpfen...",
+      "linking": "Wird verknüpft...",
       "linkDocument": "Dokument verknüpfen",
-      "cropTitle": "Quadratisches Zeichen wählen",
+      "cropTitle": "Quadratische Bildmarke wählen",
       "cropHelp": "Ziehen und zoomen Sie das Logo, um den Ausschnitt für kleine, quadratische Flächen zu wählen. Zoomen Sie heraus, um Platz darum zu lassen. Das vollständige Logo bleibt ebenfalls erhalten.",
       "zoom": "Zoom",
       "zoomOut": "Verkleinern",
       "zoomIn": "Vergrößern",
       "cropPreview": "Vorschau",
       "applyCrop": "Diesen Ausschnitt verwenden",
-      "adjustMark": "Zeichen anpassen",
+      "adjustMark": "Bildmarke anpassen",
       "cropFromWide": "Aus breitem Logo ausschneiden",
-      "recropSuccess": "Zeichen aktualisiert.",
-      "recropError": "Das Zeichen konnte nicht aktualisiert werden.",
+      "recropSuccess": "Bildmarke aktualisiert.",
+      "recropError": "Die Bildmarke konnte nicht aktualisiert werden.",
       "fileNameLabel": "Gespeicherte Datei"
     },
     "validation": {
-      "clientNameRequired": "Firmenname ist erforderlich",
+      "clientNameRequired": "Unternehmensname ist erforderlich",
       "emailRequired": "E-Mail ist erforderlich",
-      "emailInvalid": "Bitte gib eine gültige E-Mail-Adresse ein",
-      "phoneInvalid": "Bitte gib eine gültige Telefonnummer ein",
+      "emailInvalid": "Bitte geben Sie eine gültige E-Mail-Adresse ein",
+      "phoneInvalid": "Bitte geben Sie eine gültige Telefonnummer ein",
       "addressInvalid": "Adresse darf nicht leer sein, falls angegeben"
     }
   },
@@ -685,7 +685,7 @@
     },
     "visibilityGroups": {
       "title": "Sichtbarkeitsgruppen",
-      "description": "Verwalten Sie, auf welche Ticket-Boards jeder Portal-Kontakt zugreifen kann.",
+      "description": "Verwalten Sie, auf welche Ticket-Boards jeder Kundenportal-Kontakt zugreifen kann.",
       "nameLabel": "Name",
       "descriptionLabel": "Beschreibung",
       "boardLabel": "Boards",
@@ -709,7 +709,7 @@
       "saveError": "Sichtbarkeitsgruppe konnte nicht gespeichert werden",
       "updateSuccess": "Sichtbarkeitsgruppe aktualisiert",
       "createSuccess": "Sichtbarkeitsgruppe erstellt",
-      "assignmentsTitle": "Kontozuordnungen",
+      "assignmentsTitle": "Kontaktzuordnungen",
       "assignmentsDescription": "Weisen Sie jedem Kontakt eine Sichtbarkeitsgruppe zu oder behalten Sie vollen Zugriff.",
       "noContacts": "Keine Kontakte vorhanden.",
       "assignmentLabel": "Zugewiesene Gruppe",
@@ -721,8 +721,8 @@
       "scopeClient": "Alle Tickets dieses Kunden",
       "scopeContact": "Nur eigene Tickets",
       "scopeClientDescription": "Mitglieder sehen alle Tickets dieses Kunden auf den ausgewählten Boards.",
-      "scopeContactDescription": "Mitglieder sehen nur Tickets, bei denen sie als Kontakt eingetragen sind. Kundenadministratoren sehen alle Tickets auf den ausgewählten Boards, auch ohne Kontakt.",
-      "assignmentHelp": "Weisen Sie eine Gruppe zu, um Boards und Tickets einzuschränken, oder behalten Sie den vollständigen Kundenzugriff.",
+      "scopeContactDescription": "Mitglieder sehen nur Tickets, bei denen sie als Kontakt eingetragen sind. Kundenadministratoren sehen alle Tickets auf den ausgewählten Boards, auch Tickets ohne Kontakt.",
+      "assignmentHelp": "Weisen Sie eine Gruppe zu, um Boards und die Ticketsichtbarkeit einzuschränken, oder behalten Sie den vollständigen Kundenzugriff.",
       "boardHiddenFromPortal": "Im Kundenportal ausgeblendet"
     },
     "messages": {
@@ -768,8 +768,8 @@
       "loadError": "Einstellungen konnten nicht geladen werden",
       "saveError": "Einstellung konnte nicht gespeichert werden",
       "noCategories": "Keine Benachrichtigungskategorien verfügbar",
-      "emailPreferences": "E-Mail",
-      "internalPreferences": "Intern",
+      "emailPreferences": "E-Mail-Einstellungen",
+      "internalPreferences": "Interne Einstellungen",
       "priority": {
         "high": "Hoch",
         "normal": "Normal",
@@ -818,7 +818,7 @@
     "pageTitle": "Meine Geräte",
     "loading": "Geräte werden geladen…",
     "statusOkTitle": "Alle Geräte aktiv",
-    "statusOkBody": "{{count}} Geräte melden sich",
+    "statusOkBody": "{{count}} Geräte melden sich zurück",
     "empty": {
       "title": "Noch keine Geräte",
       "body": "Vom Anbieter verwaltete Geräte erscheinen hier."
@@ -826,7 +826,7 @@
     "types": {
       "workstation": "Arbeitsplätze",
       "server": "Server",
-      "mobile": "Mobil",
+      "mobile": "Mobilgeräte",
       "printer": "Drucker",
       "network": "Netzwerk",
       "unknown": "Sonstiges"
@@ -909,7 +909,7 @@
       "usage": "Nutzung",
       "hoursUsed": "{{hours}} Stunden genutzt",
       "hoursTotal": "{{hours}} Stunden insgesamt",
-      "rolloverHours": "Enthält {{hours}} Übertragsstunden"
+      "rolloverHours": "Enthält {{hours}} übertragene Stunden"
     },
     "bucketHistory": {
       "title": "Nutzungsverlauf",
@@ -941,7 +941,7 @@
         "thankYouForInvoice": "Vielen Dank für Ihre Zahlung der Rechnung Nr. {{invoiceNumber}}."
       },
       "servicePeriod": {
-        "title": "Übersicht der Dienstzeiträume",
+        "title": "Übersicht der Leistungszeiträume",
         "description": "Diese Übersicht basiert auf den wiederkehrenden Detailzeiträumen der Rechnung und nicht allein auf den Abrechnungsdaten im Rechnungskopf."
       },
       "pending": {
@@ -989,8 +989,8 @@
       "userNotLinkedToClient": "Ihr Portal-Benutzer ist mit keinem Kundenkonto verknüpft. Wenden Sie sich an den Support, falls dies weiterhin auftritt.",
       "contactNotLinkedToClient": "Ihr Kontakt ist mit keinem Kundenkonto verknüpft. Wenden Sie sich an den Support, falls dies weiterhin auftritt.",
       "clientNotFound": "Kundenkonto nicht gefunden. Es wurde möglicherweise gelöscht oder Sie haben keinen Zugriff mehr darauf.",
-      "serviceNotFound": "Service nicht gefunden oder nicht mehr aktiv. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
-      "serviceUpgradeUnavailable": "Das Höherstufen von Services ist vorübergehend nicht verfügbar. Wenden Sie sich an den Support, um Ihren Tarif zu ändern."
+      "serviceNotFound": "Dienst nicht gefunden oder nicht mehr aktiv. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "serviceUpgradeUnavailable": "Das Höherstufen von Diensten ist vorübergehend nicht verfügbar. Wenden Sie sich an den Support, um Ihren Tarif zu ändern."
     },
     "records": {
       "invalid": "Einer der ausgewählten Datensätze ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
@@ -1011,7 +1011,7 @@
       "quoteStaleAccept": "Das Angebot ist nicht mehr verfügbar. Aktualisieren Sie das Angebot, bevor Sie es annehmen.",
       "quoteStaleReject": "Das Angebot ist nicht mehr verfügbar. Aktualisieren Sie das Angebot, bevor Sie es ablehnen.",
       "invoiceNotFound": "Rechnung nicht gefunden oder Zugriff verweigert",
-      "jobNotFound": "Auftrag nicht gefunden",
+      "jobNotFound": "Job nicht gefunden",
       "quoteInvalidState": "Das Angebot befindet sich nicht in einem gültigen Status für diese Aktion",
       "rejectionCommentRequired": "Ein Ablehnungskommentar ist erforderlich",
       "emailSendFailed": "Der E-Mail-Versand konnte nicht gestartet werden"
