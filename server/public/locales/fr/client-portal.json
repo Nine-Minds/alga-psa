@@ -38,7 +38,7 @@
   },
   "dashboard": {
     "title": "Tableau de bord",
-    "welcome": "Content de vous revoir ! Voici un aperçu de votre compte.",
+    "welcome": "Ravi de vous revoir ! Voici un aperçu de votre compte.",
     "loading": "Chargement du tableau de bord...",
     "error": "Une erreur est survenue lors du chargement du tableau de bord. Veuillez réessayer plus tard.",
     "metrics": {
@@ -48,18 +48,18 @@
       "activeAssets": "Actifs en service",
       "upcomingVisits": "Visites à venir",
       "activeDevices": "Appareils actifs",
-      "openTicketsHint": "Support actif",
+      "openTicketsHint": "Assistance en cours",
       "activeProjectsHint": "En cours",
-      "nextLabel": "Prochain : {{when}}",
-      "noneScheduled": "Aucun prévu",
-      "deviceStatusHint": "Points de terminaison gérés",
+      "nextLabel": "Prochaine visite : {{when}}",
+      "noneScheduled": "Aucune visite prévue",
+      "deviceStatusHint": "Appareils gérés",
       "serviceRequests": "Demandes de service",
-      "serviceRequestsHint": "Total des soumissions",
-      "openTicketsDescription": "Tickets de support sur lesquels nous travaillons encore.",
+      "serviceRequestsHint": "Total des demandes envoyées",
+      "openTicketsDescription": "Tickets d'assistance sur lesquels nous travaillons encore.",
       "activeProjectsDescription": "Projets que nous menons pour votre équipe.",
       "serviceRequestsDescription": "Demandes structurées que vous avez envoyées depuis le catalogue.",
       "upcomingVisitsDescription": "Rendez-vous planifiés avec nos techniciens.",
-      "activeDevicesDescription": "Équipements que nous gérons et surveillons actuellement."
+      "activeDevicesDescription": "Appareils que nous gérons et surveillons actuellement."
     },
     "quickActions": {
       "title": "Actions rapides",
@@ -81,8 +81,8 @@
       "title": "Activité récente"
     },
     "viewAll": "Voir tous les {{item}} →",
-    "welcomeBack": "Bon retour",
-    "heroSubtitle": "Voici un aperçu de votre activité d'assistance IT. Notre équipe est à votre disposition.",
+    "welcomeBack": "Ravi de vous revoir",
+    "heroSubtitle": "Voici un aperçu de votre activité d'assistance informatique. Notre équipe est à votre disposition pour vous aider à rester productif.",
     "greeting": {
       "morning": "Bonjour",
       "afternoon": "Bon après-midi",
@@ -98,7 +98,7 @@
       "status": "Statut",
       "priority": "Priorité",
       "updated": "Mis à jour",
-      "empty": "Aucun ticket actif — génial !",
+      "empty": "Aucun ticket actif — parfait !",
       "countLabel": "{{count}} affichés"
     },
     "activity": {
@@ -123,7 +123,7 @@
           "_default": "Demande de service : {{name}}",
           "pending": "Demande de service envoyée : {{name}}",
           "succeeded": "Demande de service traitée : {{name}}",
-          "failed": "Demande de service échouée : {{name}}"
+          "failed": "Échec de la demande de service : {{name}}"
         },
         "appointment": {
           "_default": "Rendez-vous : {{name}}",
@@ -170,13 +170,13 @@
       "emailPlaceholder": "Entrez votre e-mail",
       "sendResetButton": "Envoyer le lien de réinitialisation",
       "backToLogin": "← Retour à la connexion",
-      "resetLinkSent": "Si un compte existe avec cet email, un lien de réinitialisation du mot de passe a été envoyé."
+      "resetLinkSent": "Si un compte existe avec cette adresse e-mail, un lien de réinitialisation du mot de passe a été envoyé."
     },
     "resetPassword": "Réinitialiser le mot de passe",
     "backToSignIn": "Retour à la connexion",
     "sendResetLink": "Envoyer le lien de réinitialisation",
     "resetLinkSent": "Le lien de réinitialisation a été envoyé à votre adresse e-mail",
-    "invalidCredentials": "Adresse e-mail ou mot de passe invalide",
+    "invalidCredentials": "Adresse e-mail ou mot de passe incorrect",
     "loginError": "Une erreur est survenue lors de la connexion",
     "sessionExpired": "Votre session a expiré. Veuillez vous reconnecter.",
     "welcomeTitle": "Bienvenue sur votre portail client",
@@ -255,10 +255,10 @@
     "features": {
       "submitTickets": {
         "title": "Soumettre des tickets d'assistance",
-        "description": "Créez et gérez vos demandes de support"
+        "description": "Créez et gérez vos demandes d'assistance"
       },
       "trackStatus": {
-        "title": "Suivre l'état des tickets",
+        "title": "Suivre le statut des tickets",
         "description": "Surveillez la progression en temps réel"
       },
       "ticketHistory": {
@@ -331,7 +331,7 @@
       "howToPurchaseTitle": "Comment acheter des licences supplémentaires :",
       "step1": "Connectez-vous au portail MSP (si vous disposez d'un accès administrateur)",
       "step2": "Accédez à Paramètres → Gestion du compte",
-      "step3": "Cliquez sur \"Ajouter des licences\" pour acheter des licences supplémentaires",
+      "step3": "Cliquez sur « Ajouter des licences » pour acheter des licences supplémentaires",
       "step4": "Terminez le processus de paiement",
       "needHelpTitle": "Besoin d'aide ?",
       "needHelpDescription": "Seuls les utilisateurs disposant des autorisations de gestion du compte peuvent acheter des licences. Si vous n'y avez pas accès, veuillez contacter votre administrateur AlgaPSA.",
@@ -341,7 +341,7 @@
     },
     "services": {
       "loadError": "Échec du chargement des services",
-      "loadContractLinesError": "Échec du chargement des plans de service",
+      "loadContractLinesError": "Échec du chargement des lignes de contrat de service",
       "updateError": "Échec de la mise à jour du service",
       "loading": "Chargement des services...",
       "activeTitle": "Services actifs",
@@ -350,7 +350,7 @@
         "service": "Service",
         "description": "Description",
         "status": "Statut",
-        "currentContractLine": "Ligne contractuelle actuelle",
+        "currentContractLine": "Ligne de contrat actuelle",
         "nextBilling": "Prochaine facturation"
       },
       "actions": {
@@ -360,14 +360,14 @@
       },
       "manageTitle": "Gérer {{service}}",
       "genericServiceLabel": "Service",
-      "currentContractLine": "Ligne contractuelle actuelle",
-      "availableContractLines": "Plans disponibles",
+      "currentContractLine": "Ligne de contrat actuelle",
+      "availableContractLines": "Lignes de contrat disponibles",
       "catalog": {
         "title": "Services disponibles",
         "learnMore": "En savoir plus",
         "managedIt": {
           "title": "Support informatique géré",
-          "description": "Support et surveillance informatiques 24h/24 pour votre entreprise. Inclut maintenance proactive, mises à jour de sécurité et support technique dédié.",
+          "description": "Support et surveillance informatiques 24h/24 et 7j/7 pour votre entreprise. Inclut la maintenance proactive, les mises à jour de sécurité et un support technique dédié.",
           "price": "À partir de 299 $/mois"
         },
         "cloudBackup": {
@@ -377,7 +377,7 @@
         },
         "cybersecurity": {
           "title": "Cybersécurité",
-          "description": "Surveillance de sécurité avancée et prévention des menaces. Inclut gestion du pare-feu, protection des endpoints et évaluations de sécurité régulières.",
+          "description": "Surveillance de sécurité avancée et prévention des menaces. Inclut la gestion du pare-feu, la protection des terminaux et des évaluations de sécurité régulières.",
           "price": "À partir de 199 $/mois"
         }
       }
@@ -389,8 +389,8 @@
       "setDefaultError": "Échec de la définition du moyen de paiement par défaut",
       "loadingBillingInfo": "Chargement des informations de facturation...",
       "overviewTitle": "Vue d’ensemble de la facturation",
-      "paymentMethodsTitle": "Méthodes de paiement",
-      "noPaymentMethods": "Aucune méthode de paiement enregistrée",
+      "paymentMethodsTitle": "Moyens de paiement",
+      "noPaymentMethods": "Aucun moyen de paiement enregistré",
       "billingCycleTitle": "Cycle de facturation",
       "noBillingCycle": "Aucun cycle de facturation trouvé",
       "recentInvoicesTitle": "Factures récentes",
@@ -402,7 +402,7 @@
       "actions": {
         "setDefault": "Définir par défaut",
         "remove": "Retirer",
-        "addPaymentMethod": "Ajouter une méthode de paiement",
+        "addPaymentMethod": "Ajouter un moyen de paiement",
         "adding": "Ajout en cours...",
         "view": "Afficher"
       },
@@ -411,7 +411,7 @@
         "expiryMonth": "Mois",
         "expiryYear": "Année",
         "cvv": "CVV",
-        "setAsDefault": "Définir comme méthode de paiement par défaut",
+        "setAsDefault": "Définir comme moyen de paiement par défaut",
         "billingProfile": "Paie pour"
       },
       "history": {
@@ -462,7 +462,7 @@
       "suffix": "pour commencer."
     },
     "downloadKey": "Télécharger la clé",
-    "validFrom": "Valide à partir du",
+    "validFrom": "Valable à partir du",
     "expires": "Expire le",
     "expiringSoon": "Expire bientôt",
     "renewal": "Renouvellement",
@@ -480,8 +480,8 @@
       "airgapAnnual": "Isolée du réseau (annuelle)"
     },
     "statuses": {
-      "active": "En vigueur",
-      "inactive": "Désactivée",
+      "active": "Active",
+      "inactive": "Inactive",
       "expired": "Expirée",
       "terminated": "Résiliée"
     }
@@ -545,7 +545,7 @@
       "invoices": "Notifications de factures",
       "announcements": "Annonces système",
       "emailPreferences": "E-mail",
-      "internalPreferences": "Internes"
+      "internalPreferences": "Interne"
     },
     "actions": {
       "save": "Enregistrer les modifications",
@@ -588,7 +588,7 @@
       "deleteSuccess": "Suppression réussie.",
       "deleteError": "Échec de la suppression.",
       "deleteConfirm": "Voulez-vous vraiment supprimer ceci ? Cette action est irréversible.",
-      "linking": "Liaison...",
+      "linking": "Association...",
       "linkDocument": "Associer un document",
       "cropTitle": "Choisir le symbole carré",
       "cropHelp": "Faites glisser le logo et zoomez pour choisir la partie affichée dans les petits espaces carrés. Dézoomez pour laisser de l'espace autour. Le logo complet est également conservé.",
@@ -598,14 +598,14 @@
       "cropPreview": "Aperçu",
       "applyCrop": "Utiliser ce cadrage",
       "adjustMark": "Ajuster le symbole",
-      "cropFromWide": "Découper depuis le logo large",
+      "cropFromWide": "Recadrer depuis le logo large",
       "recropSuccess": "Symbole mis à jour.",
       "recropError": "Impossible de mettre à jour le symbole.",
       "fileNameLabel": "Fichier stocké"
     },
     "validation": {
       "clientNameRequired": "Le nom de l'entreprise est obligatoire",
-      "emailRequired": "L'e-mail est obligatoire",
+      "emailRequired": "L'adresse e-mail est obligatoire",
       "emailInvalid": "Veuillez saisir une adresse e-mail valide",
       "phoneInvalid": "Veuillez saisir un numéro de téléphone valide",
       "addressInvalid": "L'adresse ne peut pas être vide si elle est fournie"
@@ -613,7 +613,7 @@
   },
   "clientSettings": {
     "title": "Paramètres de l'entreprise",
-    "details": "Informations sur l'entreprise",
+    "details": "Détails de l'entreprise",
     "billing": "Informations de facturation",
     "description": "Gérez les paramètres et configurations de votre entreprise.",
     "tabs": {
@@ -633,7 +633,7 @@
       "industry": "Secteur d'activité",
       "companySize": "Taille de l'entreprise",
       "company_size": "Taille de l'entreprise",
-      "annualRevenue": "Revenu annuel",
+      "annualRevenue": "Chiffre d'affaires annuel",
       "size": "Taille de l'entreprise",
       "taxId": "Numéro fiscal",
       "billingAddress": "Adresse de facturation",
@@ -694,7 +694,7 @@
       "empty": "Aucun groupe de visibilité pour le moment.",
       "loading": "Chargement des groupes…",
       "boardCount": "tableaux",
-      "assignmentCount": "contacts attribués",
+      "assignmentCount": "contacts affectés",
       "edit": "Modifier",
       "delete": "Supprimer",
       "deleteDialogTitle": "Supprimer le groupe de visibilité",
@@ -722,8 +722,8 @@
       "scopeContact": "Uniquement leurs propres tickets",
       "scopeClientDescription": "Les membres voient tous les tickets de ce client sur les tableaux sélectionnés.",
       "scopeContactDescription": "Les membres voient uniquement les tickets dont ils sont le contact. Les administrateurs du client voient tous les tickets des tableaux sélectionnés, y compris ceux sans contact.",
-      "assignmentHelp": "Attribuez un groupe pour limiter les tableaux et les tickets, ou conservez un accès complet au client.",
-      "boardHiddenFromPortal": "Masqué du portail client"
+      "assignmentHelp": "Attribuez un groupe pour limiter les tableaux et la visibilité des tickets, ou conservez un accès complet au client.",
+      "boardHiddenFromPortal": "Masqué dans le portail client"
     },
     "messages": {
       "saveChanges": "Enregistrer les modifications",
@@ -768,8 +768,8 @@
       "loadError": "Échec du chargement des préférences",
       "saveError": "Échec de l'enregistrement de la préférence",
       "noCategories": "Aucune catégorie de notification disponible",
-      "emailPreferences": "E-mail",
-      "internalPreferences": "Internes",
+      "emailPreferences": "Préférences par e-mail",
+      "internalPreferences": "Préférences internes",
       "priority": {
         "high": "Élevée",
         "normal": "Normale",
@@ -785,7 +785,7 @@
       "system": "Système"
     },
     "needsAttention": "Requiert votre attention ({{count}})",
-    "lowPriority": "Priorité basse ({{count}})",
+    "lowPriority": "Priorité faible ({{count}})",
     "filters": {
       "title": "Filtrer les notifications",
       "description": "Sélectionnez des critères pour filtrer les activités de notification.",
@@ -794,11 +794,11 @@
       "showRead": "Afficher les notifications lues",
       "categoryLabel": "Catégorie",
       "allCategories": "Toutes les catégories",
-      "categoryPlaceholder": "Sélectionnez une catégorie...",
+      "categoryPlaceholder": "Sélectionner une catégorie...",
       "dateRangeLabel": "Plage de dates",
       "priorityLabel": "Priorité",
       "allPriorities": "Toutes les priorités",
-      "priorityPlaceholder": "Sélectionnez une priorité...",
+      "priorityPlaceholder": "Sélectionner une priorité...",
       "reset": "Réinitialiser",
       "cancel": "Annuler",
       "apply": "Appliquer les filtres"
@@ -817,7 +817,7 @@
   "devices": {
     "pageTitle": "Mes appareils",
     "loading": "Chargement des appareils…",
-    "statusOkTitle": "Tous les appareils actifs",
+    "statusOkTitle": "Tous les appareils sont actifs",
     "statusOkBody": "{{count}} appareils en service",
     "empty": {
       "title": "Aucun appareil pour l'instant",
@@ -831,7 +831,7 @@
       "network": "Réseau",
       "unknown": "Autres"
     },
-    "statusWarnTitle": "Certains appareils inactifs",
+    "statusWarnTitle": "Certains appareils sont inactifs",
     "statusWarnBody": "{{active}} actifs · {{inactive}} inactifs",
     "status": {
       "active": "Actif",
