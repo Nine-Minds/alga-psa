@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { aggregateFlakyTests, renderFlakyTestReport } from '../lib/flaky-test-report.mjs';
 import { collectFlakyArtifacts, FlakyCollectionError, readFlakyDocumentZip, runFlakyTestCollection } from '../collect-flaky-tests.mjs';
+import { flakyPlaywrightTests } from '../lib/playwright-execution-evidence.mjs';
 
 const generatedAt = '2026-09-28T12:00:00.000Z';
 const days = count => new Date(Date.parse(generatedAt) - count * 86_400_000).toISOString();
@@ -89,6 +90,41 @@ test('malformed, foreign and stale artifacts are rejected with local codes only'
   }
   assert.throws(() => aggregateFlakyTests([], { generatedAt: 'never' }), /Invalid report timestamp/);
   assert.equal(aggregateFlakyTests(null, { generatedAt }).summary.flakyTests, 0);
+});
+
+// The hand-written fixtures above would keep passing if a producer renamed a
+// field: the aggregator would reject the document and the weekly report would
+// read as "no flakes" instead of failing. This pins the real browser producer
+// and e2e-tests/run.mjs's mapping of it against the validator.
+test('the real browser producer output survives aggregation unrejected', () => {
+  const data = { config: { rootDir: '/repo/e2e-tests/tests' }, errors: [],
+    suites: [{ title: 'invoice.spec.ts', file: 'invoice.spec.ts', specs: [], suites: [{
+      title: 'invoice', specs: [{ title: 'retains balance', file: 'invoice.spec.ts', tests: [{
+        projectId: 'ce', projectName: 'community', expectedStatus: 'passed', status: 'flaky',
+        results: [{ status: 'failed', retry: 0, errors: [] }, { status: 'passed', retry: 1, errors: [] }],
+      }] }],
+    }] }],
+    stats: { expected: 0, unexpected: 0, skipped: 0, flaky: 1 } };
+  const flaky = flakyPlaywrightTests(data, '/repo');
+  assert.equal(flaky.length, 1);
+  const document = { schemaVersion: 1, suite: 'production-browser', job: 'production-browser (community)',
+    edition: 'community', revision: 'a'.repeat(40), runId: '100', runAttempt: 1,
+    // Mirrors e2e-tests/run.mjs exactly.
+    tests: flaky.map(({ testId, file, name, projectName, retryCount }) => ({ testId, file, name, project: projectName, retryCount })) };
+  const report = aggregateFlakyTests([artifact({ document })], { generatedAt });
+  assert.deepEqual(report.rejected, []);
+  assert.deepEqual(report.tests.map(row => row.testId),
+    ['e2e-tests/tests/invoice.spec.ts > invoice > retains balance [community]']);
+});
+
+// The same contract for the unit lane: these keys are what
+// scripts/lib/vitest-flaky-reporter.mjs writes per recorded test.
+test('the real unit reporter entry shape survives aggregation unrejected', () => {
+  const document = unitDocument([{ testId: 'recovers.test.js > recovers after one retry',
+    file: 'recovers.test.js', name: 'recovers after one retry', retryCount: 1 }]);
+  const report = aggregateFlakyTests([artifact({ artifactName: 'flaky-tests-unit-shard-3', document })], { generatedAt });
+  assert.deepEqual(report.rejected, []);
+  assert.deepEqual(report.tests.map(row => row.testId), ['recovers.test.js > recovers after one retry']);
 });
 
 function zip(entries) {
