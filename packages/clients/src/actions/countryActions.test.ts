@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const createTenantKnexMock = vi.hoisted(() => vi.fn());
-const tenantDbMock = vi.hoisted(() => vi.fn((conn: any) => ({
+// Mirrors tenantDb(conn, tenant) so assertions can read the tenant argument.
+const tenantDbMock = vi.hoisted(() => vi.fn((conn: any, _tenant?: string | null) => ({
   table: (table: string) => conn(table),
 })));
 
