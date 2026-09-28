@@ -11,6 +11,7 @@ const { TEMPLATES: projectTemplates } = require('./utils/templates/internal/proj
 const { TEMPLATES: invoiceTemplates } = require('./utils/templates/internal/invoices.cjs');
 const { TEMPLATES: systemTemplates } = require('./utils/templates/internal/system.cjs');
 const { TEMPLATES: appointmentTemplates } = require('./utils/templates/internal/appointments.cjs');
+const { TEMPLATES: calendarShareGrantedTemplate } = require('./utils/templates/internal/calendarShareGranted.cjs');
 const { TEMPLATES: slaTemplates } = require('./utils/templates/internal/sla.cjs');
 const { TEMPLATES: inventoryTemplates } = require('./utils/templates/internal/inventory.cjs');
 const { TEMPLATES: opportunityTemplates } = require('./utils/templates/internal/opportunities.cjs');
@@ -24,6 +25,7 @@ const ALL_TEMPLATES = [
   ...invoiceTemplates,
   ...systemTemplates,
   ...appointmentTemplates,
+  calendarShareGrantedTemplate,
   ...slaTemplates,
   ...inventoryTemplates,
   ...opportunityTemplates,
