@@ -185,7 +185,8 @@ working.
 
 Four shards, the CI shard count, `VITEST_SEED=20260610`, 4 workers,
 `SKIP_DB_TESTS=1`: **two consecutive all-green runs** (772 + 772 + 771 + 771 =
-3086 files each).
+3086 files each, 17,606 tests, 0 failed, the same 6 platform skips). Re-run end
+to end after the matcher stopped using picomatch, with the same result.
 
 One earlier run lost shard 2 to `packages/emulators/qbo/tests/smoke.test.ts`,
 which is worth recording because it is *not* an environment failure and should
