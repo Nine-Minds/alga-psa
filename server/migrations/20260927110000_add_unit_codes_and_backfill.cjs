@@ -30,8 +30,14 @@ const KNOWN_UNIT_LABELS = {
   meter: 'MTR', meters: 'MTR', metre: 'MTR', metres: 'MTR',
 };
 const quote = (value) => `'${value.replace(/'/g, "''")}'`;
-const known = `CASE lower(trim({label}))\n  ${Object.entries(KNOWN_UNIT_LABELS)
-  .map(([label, code]) => `WHEN ${quote(label)} THEN ${quote(code)}`)
+const labelsByCode = Object.entries(KNOWN_UNIT_LABELS).reduce((acc, [label, code]) => {
+  (acc[code] ??= []).push(quote(label));
+  return acc;
+}, {});
+// Searched CASE, not `CASE expr WHEN ...`: Citus deparses the simple form's
+// implicit comparison incorrectly when routing to shards ("text = boolean").
+const known = `CASE\n  ${Object.entries(labelsByCode)
+  .map(([code, labels]) => `WHEN lower(trim({label})) IN (${labels.join(', ')}) THEN ${quote(code)}`)
   .join('\n  ')}\n  ELSE NULL END`;
 const hasColumn = (knex, table, column) => knex.schema.hasColumn(table, column);
 

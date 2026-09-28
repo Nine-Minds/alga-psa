@@ -32,6 +32,14 @@ beforeAll(async () => {
       table.uuid('tenant').notNullable(); table.uuid('config_id').notNullable();
       table.text('unit_of_measure'); table.primary(['tenant', 'config_id']);
     });
+    // Production shape on Citus: the backfill runs against tenant-distributed tables.
+    if (process.env.TEST_DB_BACKEND === 'citus') {
+      await knex.raw('CREATE TABLE IF NOT EXISTS tenants (tenant uuid PRIMARY KEY)');
+      await knex.raw("SELECT create_distributed_table('tenants', 'tenant')");
+      for (const table of ['service_catalog', 'contract_line_service_usage_config']) {
+        await knex.raw("SELECT create_distributed_table(?, 'tenant', colocate_with => 'tenants')", [table]);
+      }
+    }
     const tenant = ${JSON.stringify(tenant)};
     await knex('service_catalog').insert([
       { tenant, service_id: '${randomUUID()}', unit_of_measure: 'EA' },
@@ -46,7 +54,7 @@ beforeAll(async () => {
       { tenant, config_id: '${randomUUID()}', unit_of_measure: 'Hrs' },
     ]);
   };
-  exports.down = async knex => { await knex.schema.dropTableIfExists('contract_line_service_usage_config'); await knex.schema.dropTableIfExists('service_catalog'); };
+  exports.down = async knex => { await knex.schema.dropTableIfExists('contract_line_service_usage_config'); await knex.schema.dropTableIfExists('service_catalog'); await knex.schema.dropTableIfExists('tenants'); };
 `);
   for (const name of ['20260927100000_create_units_of_measure_vocabulary.cjs', '20260927110000_add_unit_codes_and_backfill.cjs']) {
     fs.writeFileSync(path.join(scratchMigrationsDir, name), `module.exports = require(${JSON.stringify(path.join(MIGRATIONS_DIR, name))});\n`);
