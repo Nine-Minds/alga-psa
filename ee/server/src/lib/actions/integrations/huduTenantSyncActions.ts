@@ -109,6 +109,8 @@ export const setHuduAutoSync = withHuduAccess(
       };
 
       const { knex } = await createTenantKnex(tenant);
+      // No schedule to converge: the global maintenance-fanout:hudu-auto-sync
+      // Temporal schedule selects tenants from this setting on each run.
       await mergeHuduSettings(knex, tenant, { autoSync });
 
       logger.info('[HuduTenantSyncActions] auto-sync updated', { tenant, enabled: autoSync.enabled });
