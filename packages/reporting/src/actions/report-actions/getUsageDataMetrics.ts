@@ -6,6 +6,7 @@ import { withAuth } from '@alga-psa/auth';
 import type { IUsageRecord } from '@alga-psa/types';
 import { Knex } from 'knex'; // Import Knex type
 import { reportingActionErrorFrom, type ReportingActionError } from './reportingActionErrors';
+import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 
 // Define the schema for the input parameters
 const InputSchema = z.object({
@@ -63,9 +64,11 @@ export const getUsageDataMetrics = withAuth(async (
           'ut.service_id',
           'sc.service_name',
           'sc.unit_of_measure',
+          'sc.unit_code',
+          'sc.billing_method',
           trx.raw('SUM(ut.quantity) as total_quantity')
         )
-        .groupBy('ut.service_id', 'sc.service_name', 'sc.unit_of_measure')
+        .groupBy('ut.service_id', 'sc.service_name', 'sc.unit_of_measure', 'sc.unit_code', 'sc.billing_method')
         .orderBy('sc.service_name');
 
       const rawResults: any[] = await query;
@@ -74,7 +77,7 @@ export const getUsageDataMetrics = withAuth(async (
       return rawResults.map(row => ({
         service_id: row.service_id,
         service_name: row.service_name,
-        unit_of_measure: row.unit_of_measure,
+        unit_of_measure: resolveUnitOfMeasure({ catalog: { code: row.unit_code, label: row.unit_of_measure }, fallback: row.billing_method === 'hourly' ? 'HUR' : 'C62' }).label,
         total_quantity: typeof row.total_quantity === 'string' ? parseFloat(row.total_quantity) : row.total_quantity,
       }));
     });

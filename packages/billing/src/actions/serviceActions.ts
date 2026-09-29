@@ -197,7 +197,7 @@ export interface CatalogPickerSearchOptions {
 
 export type CatalogPickerItem = Pick<
   IService,
-  'service_id' | 'service_name' | 'billing_method' | 'unit_of_measure' | 'item_kind' | 'sku' | 'description'
+  'service_id' | 'service_name' | 'billing_method' | 'unit_of_measure' | 'unit_code' | 'item_kind' | 'sku' | 'description'
 > & {
   default_rate: number;
   /** Rate from service_prices for the requested currency (null when no currency-specific price exists). */

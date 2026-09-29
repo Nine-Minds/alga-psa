@@ -19,7 +19,7 @@ const LANGS = {
     subject: '{{platformName}} - Access Request',
     html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
+          <h2 style="background-color:#8A4DEA;background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
             {{platformName}}
           </h2>
           <div style="padding: 40px 30px;">
@@ -80,7 +80,7 @@ This is an automated message. Please do not reply to this email.`,
     subject: '{{platformName}} - Demande d\'acc\u00e8s',
     html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
+          <h2 style="background-color:#8A4DEA;background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
             {{platformName}}
           </h2>
           <div style="padding: 40px 30px;">
@@ -152,7 +152,7 @@ Ceci est un message automatis\u00e9. Veuillez ne pas r\u00e9pondre \u00e0 cet e-
     subject: '{{platformName}} - Solicitud de acceso',
     html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
+          <h2 style="background-color:#8A4DEA;background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
             {{platformName}}
           </h2>
           <div style="padding: 40px 30px;">
@@ -224,7 +224,7 @@ Este es un mensaje autom\u00e1tico. No responda a este correo electr\u00f3nico.`
     subject: '{{platformName}} - Zugriffsanfrage',
     html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
+          <h2 style="background-color:#8A4DEA;background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
             {{platformName}}
           </h2>
           <div style="padding: 40px 30px;">
@@ -296,7 +296,7 @@ Dies ist eine automatisierte Nachricht. Bitte antworten Sie nicht auf diese E-Ma
     subject: '{{platformName}} - Toegangsverzoek',
     html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
+          <h2 style="background-color:#8A4DEA;background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
             {{platformName}}
           </h2>
           <div style="padding: 40px 30px;">
@@ -368,7 +368,7 @@ Dit is een geautomatiseerd bericht. Reageer alstublieft niet op deze e-mail.`,
     subject: '{{platformName}} - Richiesta di accesso',
     html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
+          <h2 style="background-color:#8A4DEA;background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
             {{platformName}}
           </h2>
           <div style="padding: 40px 30px;">
@@ -440,7 +440,7 @@ Questo \u00e8 un messaggio automatico. Non rispondere a questa email.`,
     subject: '{{platformName}} - Pro\u015bba o dost\u0119p',
     html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
+          <h2 style="background-color:#8A4DEA;background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
             {{platformName}}
           </h2>
           <div style="padding: 40px 30px;">
@@ -513,7 +513,7 @@ LANGS.pt = {
   subject: '{{platformName}} - Solicitação de acesso',
   html: `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;">
-          <div style="background: linear-gradient(135deg, #8A4DEA, #40CFF9); padding: 30px; text-align: center;">
+          <div style="background-color:#8A4DEA;background: linear-gradient(135deg, #8A4DEA, #40CFF9); padding: 30px; text-align: center;">
             <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">{{platformName}}</h1>
           </div>
           <h2 style="color: #111827; font-size: 24px; margin: 30px 30px 0;">

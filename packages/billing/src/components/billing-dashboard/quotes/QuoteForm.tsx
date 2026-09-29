@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'react-hot-toast';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Card, Box } from '@radix-ui/themes';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
@@ -590,6 +591,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
             quantity: item.quantity,
             unit_price: item.unit_price,
             unit_of_measure: item.unit_of_measure ?? null,
+            unit_code: item.unit_code ?? null,
             phase: item.phase ?? null,
             is_optional: item.is_optional,
             is_selected: item.is_selected,
@@ -948,6 +950,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
     return Boolean((quote?.quote_items || []).some((item) => item.is_recurring && !item.is_discount && (!item.is_optional || item.is_selected !== false)));
   }, [quote]);
   const canConvertToInvoice = useMemo(() => {
+    if (quote?.converted_invoice_id) return false;
     const oneTimeItems = (quote?.quote_items || []).filter((item) => !item.is_recurring && (!item.is_optional || item.is_selected !== false));
     return oneTimeItems.some((item) => !item.is_discount);
   }, [quote]);
@@ -955,7 +958,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   const canConvertToSalesOrder = useMemo(
     () =>
       Boolean(
-        (quote?.quote_items || []).some(
+        !quote?.converted_invoice_id && (quote?.quote_items || []).some(
           (item) =>
             item.service_item_kind === 'product' &&
             !item.is_recurring &&
@@ -1009,12 +1012,12 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
         const result = await convertQuoteToInvoice(quote.quote_id);
         if (isActionMessageError(result) || isActionPermissionError(result)) throw new Error(getErrorMessage(result));
         setQuote(result.quote);
-        setNotice(
-          t('quoteForm.notices.createdDraftInvoice', {
-            defaultValue: 'Created draft invoice {{name}}.',
-            name: result.invoice.invoice_number,
-          }),
-        );
+        const message = t('quoteForm.notices.createdDraftInvoice', {
+          defaultValue: 'Created draft invoice {{name}}.',
+          name: result.invoice.invoice_number,
+        });
+        setNotice(message);
+        toast.success(message);
       } else if (mode === 'sales_order') {
         const result = await convertQuoteToSalesOrder(quote.quote_id);
         if (isActionMessageError(result) || isActionPermissionError(result)) throw new Error(getErrorMessage(result));
@@ -1029,11 +1032,11 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
       setIsConversionDialogOpen(false);
       setConversionPreview(null);
     } catch (conversionError) {
-      setError(
-        conversionError instanceof Error
-          ? conversionError.message
-          : t('quoteForm.errors.convert', { defaultValue: 'Failed to convert quote' }),
-      );
+      const message = conversionError instanceof Error
+        ? conversionError.message
+        : t('quoteForm.errors.convert', { defaultValue: 'Failed to convert quote' });
+      setError(message);
+      toast.error(message);
     } finally {
       setIsWorking(false);
     }
@@ -1405,6 +1408,21 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
           <Alert>
             <AlertTitle>{t('quoteForm.banners.convertedTitle', { defaultValue: 'Quote Converted' })}</AlertTitle>
             <AlertDescription>{t('quoteForm.banners.convertedDescription', { defaultValue: 'This quote has been converted to a contract and/or invoice.' })}</AlertDescription>
+          </Alert>
+        )}
+
+        {quote?.converted_invoice_id && (
+          <Alert>
+            <AlertTitle>{t('quoteForm.noticeTitle', { defaultValue: 'Quote' })}</AlertTitle>
+            <AlertDescription>
+              <a
+                id="quote-form-open-converted-invoice"
+                className="text-primary-600 underline"
+                href={`/msp/billing?tab=invoicing&subtab=drafts&invoiceId=${quote.converted_invoice_id}`}
+              >
+                {t('quoteDetail.actions.openConvertedInvoice', { defaultValue: 'Open Converted Invoice' })}
+              </a>
+            </AlertDescription>
           </Alert>
         )}
 
@@ -1980,7 +1998,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                 {t('quoteConversion.actions.contract', { defaultValue: 'Create Draft Contract' })}
               </Button>
             )}
-            {conversionPreview && conversionPreview.invoice_items.length > 0 && (
+            {conversionPreview && !quote?.converted_invoice_id && conversionPreview.invoice_items.length > 0 && (
               <Button
                 id="quote-form-conversion-invoice"
                 // Secondary while it competes with the sales-order path: both

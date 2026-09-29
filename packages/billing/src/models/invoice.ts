@@ -796,6 +796,8 @@ const Invoice = {
           'ic.description as name',
           'ic.description',
           'ic.is_discount',
+          'ic.unit_code',
+          'ic.unit_label',
           knexOrTrx.raw('CAST(ic.quantity AS DOUBLE PRECISION) as quantity'),
           knexOrTrx.raw('CAST(ic.unit_price AS BIGINT) as unit_price'),
           knexOrTrx.raw('CAST(ic.total_price AS BIGINT) as total_price'),

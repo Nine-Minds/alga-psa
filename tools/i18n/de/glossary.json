@@ -2618,7 +2618,11 @@
       "• Malware/Virus",
       "• Server",
       "• VPN",
-      "TeamViewer"
+      "TeamViewer",
+      "Gigabyte",
+      "Terabyte",
+      "Liter",
+      "Meter"
     ],
     "caseInsensitive": [
       "api",

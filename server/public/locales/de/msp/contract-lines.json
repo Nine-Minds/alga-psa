@@ -455,7 +455,8 @@
         "defaultRatePerUnit": "Preis pro Einheit (wird verwendet, wenn die gestaffelte Preisgestaltung deaktiviert ist).",
         "minimumUsage": "Mindestens abrechnungsfähige Einheiten pro Zeitraum.",
         "unitOfMeasure": "z. B. GB, Benutzer, Gerät."
-      }
+      },
+      "catalogUnitPrecedence": "Die Katalogeinheit hat Vorrang vor der Einheit in dieser Nutzungskonfiguration."
     }
   },
   "list": {

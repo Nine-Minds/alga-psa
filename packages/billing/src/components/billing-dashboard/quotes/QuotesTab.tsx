@@ -328,9 +328,14 @@ const QuotesTab: React.FC = () => {
     ? (requestedSubtab as QuoteSubTab)
     : 'active';
 
+  const isQuoteFormOpen = selectedQuoteId === 'new'
+    || Boolean(selectedQuoteId && (selectedMode === 'edit' || selectedMode === 'detail'));
+
   useEffect(() => {
-    void loadData();
-  }, []);
+    if (!isQuoteFormOpen) {
+      void loadData();
+    }
+  }, [isQuoteFormOpen]);
 
   useEffect(() => {
     if (!sendDialogState.isOpen) return;
@@ -575,23 +580,7 @@ const QuotesTab: React.FC = () => {
     return counts;
   }, [quotes]);
 
-  if (isLoading) {
-    return (
-      <Card size="2">
-        <Box p="4">
-          <LoadingIndicator
-            className="py-12 text-muted-foreground"
-            layout="stacked"
-            spinnerProps={{ size: 'md' }}
-            text={t('quotesTab.loading', { defaultValue: 'Loading quotes...' })}
-            textClassName="text-muted-foreground"
-          />
-        </Box>
-      </Card>
-    );
-  }
-
-  if (selectedQuoteId === 'new' || (selectedQuoteId && (selectedMode === 'edit' || selectedMode === 'detail'))) {
+  if (isQuoteFormOpen) {
     return (
       <QuoteForm
         quoteId={selectedQuoteId}
@@ -609,17 +598,37 @@ const QuotesTab: React.FC = () => {
             ? router.push('/msp/billing?tab=quote-business-templates')
             : router.push('/msp/billing?tab=quotes')}
         onSaved={(savedQuoteId) => {
-          void loadData();
+          // Reload the list when it is shown again. Starting server actions here
+          // can interrupt this navigation and remount a blank new-quote form.
           if (opportunityId) {
             router.push(`/msp/opportunities/${opportunityId}`);
           } else if (isTemplateParam) {
             router.push('/msp/billing?tab=quote-business-templates');
           } else {
-            router.push(`/msp/billing?tab=quotes&quoteId=${savedQuoteId}&mode=edit`);
+            // LEVERAGE: friction query-navigation — server actions can discard a
+            // concurrent router navigation even when only client-side query state changes.
+            // Next synchronizes useSearchParams with the native history API.
+            window.history.pushState(null, '', `/msp/billing?tab=quotes&quoteId=${savedQuoteId}&mode=edit`);
           }
         }}
         onQuoteStatusChanged={() => loadData({ background: true })}
       />
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <Card size="2">
+        <Box p="4">
+          <LoadingIndicator
+            className="py-12 text-muted-foreground"
+            layout="stacked"
+            spinnerProps={{ size: 'md' }}
+            text={t('quotesTab.loading', { defaultValue: 'Loading quotes...' })}
+            textClassName="text-muted-foreground"
+          />
+        </Box>
+      </Card>
     );
   }
 

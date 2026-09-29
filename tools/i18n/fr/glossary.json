@@ -2240,7 +2240,8 @@
       "—",
       "{{count}} h",
       "{{hours}} h {{minutes}} min",
-      "TeamViewer"
+      "TeamViewer",
+      "Volume"
     ],
     "caseInsensitive": [
       "api",

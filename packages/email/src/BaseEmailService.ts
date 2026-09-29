@@ -9,6 +9,7 @@ import {
 } from '@alga-psa/types';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { publishWorkflowEvent, type WorkflowActor } from '@alga-psa/event-bus/publishers';
+import { addGradientFallback } from './branding/gradientFallback';
 import { embedBrandLogo } from './inlineBrandLogo';
 import { SupportedLocale } from './lib/localeConfig';
 import type { Knex } from 'knex';
@@ -585,8 +586,10 @@ export abstract class BaseEmailService {
       const effectiveEntityType = params.entityType ?? (effectiveTicketId ? 'ticket' : undefined);
       const effectiveEntityId = params.entityId ?? effectiveTicketId;
 
-      // Every tenant email path lands here after its template is rendered, so
-      // this is where the branded header logo becomes an inline attachment.
+      // Every email path lands here after its template is rendered, so this is
+      // where gradient surfaces get the flat color the Outlooks fall back to,
+      // and where the branded header logo becomes an inline attachment.
+      html = addGradientFallback(html);
       let attachments = params.attachments;
       if (params.tenantId && params.tenantId !== 'system') {
         const embedded = await embedBrandLogo(html, {
