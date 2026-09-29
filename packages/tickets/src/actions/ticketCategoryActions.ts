@@ -3,7 +3,7 @@
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { ITicketCategory, DeletionDependency, DeletionValidationResult } from '@alga-psa/types';
 import type { Knex } from 'knex';
-import { withAuth } from '@alga-psa/auth';
+import { hasPermission, withAuth } from '@alga-psa/auth';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import {
@@ -25,12 +25,23 @@ const EXPECTED_CATEGORY_MESSAGES = [
   'Ticket category not found',
   'Board not found',
   'Category not found',
+  'Source and target boards must be different',
+  'Category selection is required',
+  'Cannot copy subcategories without their parent categories',
+  'Ticket categories can only be copied between boards with the same category type',
+  'Permission denied: Cannot update ticket settings',
 ];
 
 function categoryActionErrorFrom(error: unknown): CategoryActionError | null {
   if (error instanceof Error) {
     if (isAuthorizationThrow(error)) {
       return permissionError(error.message);
+    }
+    if (error.message === 'Ticket categories can only be copied between boards with the same category type') {
+      return actionError(
+        error.message,
+        'features/tickets:settings.categories.copyBoardTypeMismatch',
+      );
     }
     if (EXPECTED_CATEGORY_MESSAGES.some((message) => error.message.startsWith(message))) {
       return actionError(error.message);
@@ -171,6 +182,98 @@ export const createTicketCategory = withAuth(async (user, { tenant }, categoryNa
       return expected;
     }
     console.error('Error creating ticket category:', error);
+    throw error;
+  }
+});
+
+export interface CopyTicketCategoriesResult {
+  created: number;
+  skipped: number;
+  conflicts: number;
+}
+
+export const copyTicketCategoriesToBoard = withAuth(async (user, { tenant }, sourceBoardId: string, targetBoardId: string, categoryIds: string[]): Promise<CopyTicketCategoriesResult | CategoryActionError> => {
+  try {
+    if (!sourceBoardId || !targetBoardId) throw new Error('Board ID is required');
+    if (sourceBoardId === targetBoardId) throw new Error('Source and target boards must be different');
+    if (!Array.isArray(categoryIds) || categoryIds.length === 0) throw new Error('Category selection is required');
+
+    const { knex: db } = await createTenantKnex();
+    const { result, events } = await withTransaction(db, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(user, 'ticket_settings', 'update', trx)) {
+        throw new Error('Permission denied: Cannot update ticket settings');
+      }
+      const boards = await tenantScopedTable<{ board_id: string; category_type?: string | null }>(trx, 'boards', tenant)
+        .whereIn('board_id', [sourceBoardId, targetBoardId]).select('board_id', 'category_type');
+      if (boards.length !== 2) throw new Error('Board not found');
+      const sourceBoard = boards.find(board => board.board_id === sourceBoardId);
+      const targetBoard = boards.find(board => board.board_id === targetBoardId);
+      const sourceCategories = await tenantScopedTable<ITicketCategory>(trx, 'categories', tenant)
+        .where({ board_id: sourceBoardId }).select('*').orderBy('display_order').orderBy('category_name');
+      const selected = sourceCategories.filter(category => categoryIds.includes(category.category_id));
+      if (selected.length !== new Set(categoryIds).size) throw new Error('Category not found');
+      const selectedIds = new Set(selected.map(category => category.category_id));
+      if (selected.some(category => category.parent_category && !selectedIds.has(category.parent_category))) {
+        throw new Error('Cannot copy subcategories without their parent categories');
+      }
+      if ((sourceBoard?.category_type === 'itil') !== (targetBoard?.category_type === 'itil')) {
+        throw new Error('Ticket categories can only be copied between boards with the same category type');
+      }
+
+      const targetCategories = await tenantScopedTable<ITicketCategory>(trx, 'categories', tenant)
+        .where({ board_id: targetBoardId }).select('*');
+      const mappedIds = new Map<string, string>();
+      let created = 0;
+      let skipped = 0;
+      let conflicts = 0;
+      const events: Array<{ category: ITicketCategory }> = [];
+      const ordered = [...selected.filter(category => !category.parent_category), ...selected.filter(category => category.parent_category)];
+      for (const category of ordered) {
+        const targetParent = category.parent_category ? mappedIds.get(category.parent_category) : undefined;
+        // Category creation enforces exact name uniqueness within a board, regardless
+        // of parent. Match that rule and map collisions to the existing target ID.
+        const normalizedName = category.category_name.trim();
+        const existing = targetCategories.find(target => target.category_name.trim() === normalizedName);
+        if (existing) {
+          mappedIds.set(category.category_id, existing.category_id);
+          skipped++;
+          if ((existing.parent_category ?? undefined) !== targetParent) conflicts++;
+          continue;
+        }
+        const [copy] = await tenantScopedTable<ITicketCategory>(trx, 'categories', tenant).insert({
+          tenant,
+          board_id: targetBoardId,
+          parent_category: targetParent,
+          category_name: normalizedName,
+          display_order: category.display_order,
+          created_by: user.user_id,
+          is_from_itil_standard: category.is_from_itil_standard ?? false,
+        }).returning('*');
+        targetCategories.push(copy);
+        mappedIds.set(category.category_id, copy.category_id);
+        created++;
+        events.push({ category: copy });
+      }
+      return { result: { created, skipped, conflicts }, events };
+    });
+    for (const { category } of events) {
+      await publishEvent({
+        eventType: 'CATEGORY_CREATED',
+        payload: {
+          tenantId: tenant,
+          categoryId: category.category_id,
+          boardId: category.board_id ?? null,
+          userId: user.user_id,
+          changes: { after: category },
+          timestamp: new Date().toISOString(),
+        },
+      });
+    }
+    return result;
+  } catch (error) {
+    const expected = categoryActionErrorFrom(error);
+    if (expected) return expected;
+    console.error('Error copying ticket categories:', error);
     throw error;
   }
 });

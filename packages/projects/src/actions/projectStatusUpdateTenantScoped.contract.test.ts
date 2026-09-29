@@ -63,7 +63,7 @@ describe('project status update tenant-scoped query contract', () => {
 
   it('returns typed action errors instead of throwing at the boundary', () => {
     expect(source).toContain("'projects:errors.statusUpdate.noRecipient'");
-    expect(source).toContain("'projects:errors.statusUpdate.emailNotConfigured'");
+    expect(source).toContain("'projects:errors.statusUpdate.templateMissing'");
     expect(source).toContain("'projects:errors.statusUpdate.sendFailed'");
     expect(source).toContain("permissionError('Permission denied: Cannot read project', 'projects:errors.permissions.readProject')");
   });

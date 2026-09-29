@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import type { CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
 import type { TemplateAst } from '@alga-psa/types';
 import type { TemplateEvaluationResult } from './evaluator';
 import { renderEvaluatedTemplateAst } from './react-renderer';
@@ -31,6 +32,13 @@ export interface TemplateHtmlDocumentOptions {
    * customized template) are unaffected.
    */
   locale?: string;
+  /**
+   * The recipient country's date shape. Separate from the locale on purpose:
+   * the country writes the digits (order, separator, 12/24h clock) and the
+   * locale only names the months and weekdays, so a UK client of a US MSP reads
+   * 30/09/2026 whatever language the document speaks.
+   */
+  dateFormat?: CountryDateFormat;
 }
 
 // ---------------------------------------------------------------------------
@@ -95,7 +103,11 @@ export const renderTemplateAstHtmlDocument = async (
   options: TemplateHtmlDocumentOptions = {}
 ): Promise<string> => {
   const { ast: localizedAst, locale, t } = await localizeTemplateAstForLocale(ast, options.locale);
-  const { html, css } = await renderEvaluatedTemplateAst(localizedAst, evaluation, { locale, t });
+  const { html, css } = await renderEvaluatedTemplateAst(localizedAst, evaluation, {
+    locale,
+    dateFormat: options.dateFormat,
+    t,
+  });
   const title = escapeHtml(options.title ?? 'Invoice');
   const additionalCss = options.additionalCss ?? '';
   const bodyClassName = options.bodyClassName ? ` class="${escapeHtml(options.bodyClassName)}"` : '';

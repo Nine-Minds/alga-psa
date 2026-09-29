@@ -113,8 +113,8 @@ export class WorkflowTaskSyncExceptionService implements SyncExceptionService {
   }
 
   /** Open exception count for the health panel. */
-  async countOpen(): Promise<number> {
-    const row = await this.scopedDb().table('workflow_tasks')
+  async countOpen(targetRealm?: string): Promise<number> {
+    const query = this.scopedDb().table('workflow_tasks')
       .where({ task_definition_type: 'system' })
       .whereIn('system_task_definition_task_type', [
         'accounting_sync_drift',
@@ -123,7 +123,11 @@ export class WorkflowTaskSyncExceptionService implements SyncExceptionService {
         'accounting_sync_customer_unlinked',
         'accounting_connection_expired'
       ])
-      .whereIn('status', OPEN_STATUSES)
+      .whereIn('status', OPEN_STATUSES);
+    if (targetRealm) {
+      query.whereRaw("context_data->>'realm' = ?", [targetRealm]);
+    }
+    const row = await query
       .count<{ count: string }[]>('* as count')
       .first();
 

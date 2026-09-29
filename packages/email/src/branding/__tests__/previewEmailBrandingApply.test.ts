@@ -260,7 +260,7 @@ describe('previewEmailBrandingApply', () => {
       name: 'ticket-created',
       language: 'en',
       decorate: (html) => decorateBrandedHtml(html, {
-        logo: { url: 'https://cdn.example.com/logo.png', alt: 'Acme MSP' },
+        logo: { variant: 'default', alt: 'Acme MSP' },
         hideAttribution: true,
       }),
     })!;
@@ -281,7 +281,7 @@ describe('previewEmailBrandingApply', () => {
 
 describe('preview matches what an apply writes', () => {
   const decorate = (html: string) => decorateBrandedHtml(html, {
-    logo: { url: 'https://cdn.example.com/logo-wide.png', alt: 'Acme MSP' },
+    logo: { variant: 'wide', alt: 'Acme MSP' },
   });
 
   const plannedFor = (tenantRows: any[], name: string, language: string) => {

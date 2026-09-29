@@ -7,7 +7,6 @@ import path from 'path';
 import { execSync } from 'child_process';
 import fs from 'node:fs';
 import { applyPlaywrightDatabaseEnv, PLAYWRIGHT_DB_CONFIG } from './src/__tests__/integration/utils/playwrightDatabaseConfig';
-import os from 'node:os';
 
 async function waitForHttpOk(url: string, timeoutMs: number): Promise<void> {
   const deadline = Date.now() + timeoutMs;
@@ -125,28 +124,16 @@ async function globalSetup() {
     console.log('⏳ Waiting for MinIO to be ready...');
     await waitForHttpOk('http://localhost:9002/minio/health/ready', 60_000);
 
-    // Create test bucket
-    // Use the dedicated mc image (minio/minio does not reliably ship mc).
-    // Note: minio/mc does not include a shell; its entrypoint is `mc`.
-    // Also: alias config does not persist across containers unless we share the config dir.
-    const mcConfigDir = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-playwright-mc-'));
+    // Create test bucket with the bitnami mc image (quay.io/minio/mc is no longer
+    // publicly pullable). Its entrypoint execs "$@", so run both mc commands in one
+    // shell instead of sharing an alias config dir across containers.
     execSync(
       [
         'docker run --rm',
         '--network alga-psa-playwright-test',
-        `-v "${mcConfigDir}:/root/.mc"`,
-        'quay.io/minio/mc:latest',
-        'alias set local http://minio-test:9000 minioadmin minioadmin',
-      ].join(' '),
-      { cwd: projectRoot, stdio: 'inherit' }
-    );
-    execSync(
-      [
-        'docker run --rm',
-        '--network alga-psa-playwright-test',
-        `-v "${mcConfigDir}:/root/.mc"`,
-        'quay.io/minio/mc:latest',
-        'mb local/alga-test --ignore-existing',
+        '--entrypoint /bin/sh',
+        'bitnamilegacy/minio-client:2025.4.16',
+        '-c "mc alias set local http://minio-test:9000 minioadmin minioadmin && mc mb local/alga-test --ignore-existing"',
       ].join(' '),
       { cwd: projectRoot, stdio: 'inherit' }
     );

@@ -148,6 +148,14 @@ const ColorPicker = ({
     setIsOpen(false);
   };
 
+  const handleDiscardDraft = () => {
+    setBackgroundColor(currentBackgroundColor || '');
+    setTextColor(currentTextColor || '');
+    setBackgroundError('');
+    setTextError('');
+    setIsOpen(false);
+  };
+
   const handleReset = () => {
     onSave(null, null);
     setBackgroundColor('');
@@ -165,7 +173,16 @@ const ColorPicker = ({
   };
 
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
+    <Popover
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) {
+          handleDiscardDraft();
+          return;
+        }
+        setIsOpen(open);
+      }}
+    >
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent
         className="w-80 p-4 bg-[rgb(var(--color-border-50))] border border-[rgb(var(--color-border-200))] rounded-lg shadow-lg z-50"
@@ -242,6 +259,13 @@ const ColorPicker = ({
                   id="background-color"
                   value={backgroundColor}
                   onChange={(e) => handleBackgroundChange(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleSave();
+                    }
+                  }}
                   placeholder="#FF0000"
                   className="flex-1"
                 />
@@ -268,6 +292,13 @@ const ColorPicker = ({
                     id="text-color"
                     value={textColor}
                     onChange={(e) => handleTextChange(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleSave();
+                      }
+                    }}
                     placeholder="#FFFFFF"
                     className="flex-1"
                   />
@@ -322,6 +353,7 @@ const ColorPicker = ({
           <div className="flex justify-between pt-2">
             <Button
               id="color-picker-reset"
+              type="button"
               variant="outline"
               size="sm"
               onClick={handleReset}
@@ -331,14 +363,16 @@ const ColorPicker = ({
             <div className="space-x-2">
               <Button
                 id="color-picker-cancel"
+                type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => setIsOpen(false)}
+                onClick={handleDiscardDraft}
               >
                 {t('actions.cancel', 'Cancel')}
               </Button>
               <Button
                 id="color-picker-save"
+                type="button"
                 size="sm"
                 onClick={handleSave}
                 disabled={!!backgroundError || !!textError}

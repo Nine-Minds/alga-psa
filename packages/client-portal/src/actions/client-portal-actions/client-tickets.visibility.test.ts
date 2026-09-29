@@ -89,6 +89,7 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
 
 vi.mock('@alga-psa/tickets/actions/ticketBundleUtils', () => ({
   maybeReopenBundleMasterFromChildReply: vi.fn(),
+  revertBundlePropagationForChild: vi.fn(),
 }));
 
 vi.mock('@alga-psa/tickets/lib/liveUpdates', () => ({
@@ -236,7 +237,7 @@ describe('client portal ticket visibility enforcement', () => {
     expect(applyTicketVisibilityFilterMock).toHaveBeenCalledWith(
       ticketsBuilder,
       expect.objectContaining({ visibleBoardIds: ['board-1'] }),
-      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id' }
+      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id' }
     );
   });
 
@@ -284,7 +285,7 @@ describe('client portal ticket visibility enforcement', () => {
     expect(applyTicketVisibilityFilterMock).toHaveBeenCalledWith(
       ticketsBuilder,
       expect.objectContaining({ visibleBoardIds: null }),
-      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id' }
+      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id' }
     );
   });
 
@@ -371,7 +372,7 @@ describe('client portal ticket visibility enforcement', () => {
     expect(applyTicketVisibilityFilterMock).toHaveBeenCalledWith(
       expect.any(Object),
       expect.objectContaining({ visibleBoardIds: ['board-1'] }),
-      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id' }
+      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id' }
     );
   });
 
@@ -714,6 +715,16 @@ describe('client portal ticket visibility enforcement', () => {
           return {
             where: vi.fn().mockReturnValue({
               first: vi.fn().mockResolvedValue({ status_id: 'status-1' }),
+            }),
+          };
+        }
+
+        // The creating contact belongs to no billing profile, so the ticket is
+        // left for the model's location → client-default chain to attribute.
+        if (table === 'billing_profile_contacts as bpc') {
+          return {
+            where: vi.fn().mockReturnValue({
+              select: vi.fn().mockResolvedValue([]),
             }),
           };
         }

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   CUSTOM_THEME_PRESETS,
   DEFAULT_CUSTOM_THEME,
+  LIGHT_GROUND_FLOOR,
   contrastRatio,
   customThemePresetFor,
   describeContrastIssue,
@@ -17,6 +18,24 @@ const clone = () => ({
   light: { ...DEFAULT_CUSTOM_THEME.light },
   dark: { ...DEFAULT_CUSTOM_THEME.dark },
 });
+
+/** The generated light block of a theme, tokens and all. */
+const lightBlockOf = (theme: { light: typeof DEFAULT_CUSTOM_THEME.light; dark: typeof DEFAULT_CUSTOM_THEME.dark }) => {
+  const css = generateCustomThemeStyles(theme);
+  const start = css.indexOf('html.light[data-theme-pair="custom"]');
+  return css.slice(start, css.indexOf('}', start));
+};
+
+/** One generated token, back as the hex the presets are written in. */
+const tokenHex = (block: string, name: string): string => {
+  const match = new RegExp(`--color-${name}: (\\d+ \\d+ \\d+);`).exec(block);
+  return `#${match![1].split(' ').map((channel) => Number(channel).toString(16).padStart(2, '0')).join('')}`;
+};
+
+const brightness = (hex: string) => hexToRgbTuple(hex)!.reduce((sum, channel) => sum + channel, 0);
+
+/** The ramp rounds to whole channels, so a clamped value can land a hair low. */
+const ROUNDING_SLACK = 3;
 
 describe('theme pairs', () => {
   it('recognizes exactly the shipped ids plus custom', () => {
@@ -184,6 +203,57 @@ describe('custom theme presets', () => {
       };
 
       expect(value('border-100'), pairId).toBeLessThanOrEqual(value('card'));
+    });
+  });
+
+  // The light mirror of the rule above. Shade-100 is what --color-app-ground
+  // points at in light mode, so the whole shell paints it: an ink-black border
+  // (High contrast) used to interpolate it down to #888888 under white cards,
+  // and every ink rung tuned for a light ground lost its contrast there.
+  it('generates light CSS whose ground stays a step under the card', () => {
+    const failures: string[] = [];
+    Object.entries(CUSTOM_THEME_PRESETS).forEach(([pairId, preset]) => {
+      const light = lightBlockOf(preset);
+      const ground = tokenHex(light, 'border-100');
+      const card = tokenHex(light, 'card');
+
+      if (brightness(ground) < brightness(card) * LIGHT_GROUND_FLOOR - ROUNDING_SLACK) {
+        failures.push(`${pairId}: ground ${ground} is too dark under card ${card}`);
+      }
+      // text-600 is the resting ink of body chrome (tab names among them), so it
+      // owes the ground full AA. text-500 is the muted rung — it interpolates
+      // straight through the tenant's own textMuted, which the save-time checks
+      // only hold to 3:1 — so that is what it is held to here.
+      ([['text-500', 3], ['text-600', 4.5]] as const).forEach(([rung, required]) => {
+        const ratio = contrastRatio(tokenHex(light, rung), ground);
+        if (ratio < required) {
+          failures.push(`${pairId}: ${rung} on the ground = ${ratio.toFixed(2)}:1, needs ${required}`);
+        }
+      });
+    });
+
+    expect(failures, `light grounds below the floor:\n${failures.join('\n')}`).toEqual([]);
+  });
+
+  // The floor is a floor, not a filter: every shipped preset already clears it,
+  // so the clamp must not drift a single one of their grounds.
+  it('leaves every shipped preset ground byte-identical', () => {
+    const grounds = Object.fromEntries(
+      Object.entries(CUSTOM_THEME_PRESETS)
+        .map(([pairId, preset]) => [pairId, tokenHex(lightBlockOf(preset), 'border-100')]),
+    );
+
+    expect(grounds).toEqual({
+      alga: '#edf1f6',
+      slate: '#edeef1',
+      ocean: '#dfe4eb',
+      sky: '#d8f0fc',
+      forest: '#e4ede6',
+      sunset: '#f2e9dc',
+      cappuccino: '#f1e8dd',
+      vice: '#f8e5f1',
+      // The one the clamp moves: mix(#ffffff, #111111) was a mid-grey.
+      'high-contrast': '#e0e0e0',
     });
   });
 

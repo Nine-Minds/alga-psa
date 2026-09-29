@@ -28,6 +28,12 @@ export function timeSheetActionErrorFrom(error: unknown): TimeSheetActionError |
     if (message.includes('Time sheet not found') || message.includes('Time sheet with id')) {
       return actionError('Time sheet not found. It may have been deleted. Please refresh and try again.', 'msp/time-entry:errors.timeSheet.notFoundRefresh');
     }
+    if (message.includes('Time sheet is not editable') || message.includes('Original time sheet is not editable')) {
+      return actionError(
+        'This time sheet is locked. Choose a draft sheet or a sheet with changes requested.',
+        'msp/time-entry:errors.timeSheet.notEditable',
+      );
+    }
     if (message.includes('not in a submitted state')) {
       return actionError('Only submitted time sheets can be approved.', 'msp/time-entry:errors.timeSheet.onlySubmittedApprovable');
     }

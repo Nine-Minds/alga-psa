@@ -41,7 +41,12 @@
           "title": "Offertegegevens"
         }
       },
-      "title": "Facturatie"
+      "title": "Facturatie",
+      "paymentMethods": {
+        "setupComplete": {
+          "title": "Kaart instellen"
+        }
+      }
     },
     "clientSettings": {
       "description": "Beheer uw bedrijfsinstellingen en configuraties",
@@ -613,6 +618,11 @@
       "layout": {
         "title": "Privacybeleid"
       }
+    }
+  },
+  "paymentMethods": {
+    "setupComplete": {
+      "title": "Kaart instellen"
     }
   }
 }

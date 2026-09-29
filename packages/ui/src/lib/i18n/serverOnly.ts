@@ -18,6 +18,7 @@ import {
 import { tenantDb } from '@alga-psa/db';
 import { getConnection } from '@alga-psa/db/tenant';
 import { formatDateValue } from './formatDateValue';
+import type { CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
 
 /**
  * Resolve the absolute path to the locales directory.
@@ -421,17 +422,21 @@ export async function getTenantAvailableLocales(
 }
 
 /**
- * Format a date according to the locale.
+ * Format a date for the locale, in the country's shape.
  *
- * Date-only strings are calendar dates and must not shift through the server
- * host's timezone; see formatDateValue.
+ * `dateFormat` carries digit order, separator and clock; callers that have
+ * resolved the tenant's (or client's) country pass it, and everything else gets
+ * the fixed system default rather than the language's own order. Date-only
+ * strings are calendar dates and must not shift through the server host's
+ * timezone; see formatDateValue.
  */
 export function formatDate(
   date: Date | string,
   locale: SupportedLocale,
   options?: Intl.DateTimeFormatOptions,
+  dateFormat?: CountryDateFormat,
 ): string {
-  return formatDateValue(date, locale, options);
+  return formatDateValue(date, locale, options, dateFormat);
 }
 
 /**

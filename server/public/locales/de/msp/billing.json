@@ -390,7 +390,8 @@
       "execute": "Ausführen",
       "createBatch": "Stapel erstellen",
       "creating": "Erstellen...",
-      "cancelBatch": "Stapel stornieren"
+      "cancelBatch": "Stapel stornieren",
+      "retry": "Erneut versuchen"
     },
     "states": {
       "loadingBatches": "Stapel werden geladen...",
@@ -417,7 +418,12 @@
         "invoiceStatuses": "Komma-getrennt (optional), z.B. abgeschlossen, veröffentlicht",
         "notes": "Optionale Notizen"
       },
-      "defaultRealmLabel": "{{realmId}} (Standard)"
+      "defaultRealmLabel": "{{realmId}} (Standard)",
+      "loadingConnections": "Buchhaltungsverbindungen werden geladen...",
+      "connectionLoadError": "Buchhaltungsverbindungen konnten nicht geladen werden. Prüfen Sie Ihre Verbindungseinstellungen und versuchen Sie es erneut.",
+      "ambiguousRealm": "Ihre gespeicherte Standard-Buchhaltungsorganisation wird von mehr als einer Verbindung verwendet. Wählen Sie eine Verbindung, um fortzufahren.",
+      "noXeroConnection": "Es ist keine Xero-Verbindung verfügbar. Verbinden Sie Xero in den Buchhaltungseinstellungen, um zu exportieren.",
+      "noQboConnection": "Es ist keine QuickBooks Online-Verbindung verfügbar. Verbinden Sie sie in den Buchhaltungseinstellungen, um zu exportieren."
     },
     "detailDialog": {
       "title": "Buchhaltungsexportstapel",
@@ -441,7 +447,8 @@
       "createError": "Exportstapel konnte nicht erstellt werden",
       "executeError": "Batch konnte nicht ausgeführt werden",
       "cancelled": "Stapel storniert",
-      "cancelError": "Batch konnte nicht storniert werden"
+      "cancelError": "Batch konnte nicht storniert werden",
+      "realmRequired": "Wählen Sie ein verbundenes Buchhaltungsunternehmen, bevor Sie den Export erstellen."
     },
     "status": {
       "pending": "Ausstehend",

@@ -67,4 +67,17 @@ export interface IComment extends TenantEntity {
   scheduled_response_dispatched_at?: string | null;
   /** Structured references to external records attached to this comment. */
   external_links?: IExternalEntityLink[];
+  /**
+   * Read-time provenance from `ticket_bundle_mirrors`; never written by
+   * callers. Present only on comments loaded through a conversation loader
+   * that joins the mirrors table. The client-portal loader deliberately omits
+   * `master_ticket_id` / `master_ticket_number` so a bundle that spans clients
+   * never leaks the master's identity.
+   */
+  bundle_mirror_source?: {
+    source_comment_id: string;
+    /** MSP loader only; the portal omits master identity on purpose. */
+    master_ticket_id?: string | null;
+    master_ticket_number?: string | null;
+  } | null;
 }

@@ -25,6 +25,7 @@ type UserModelState = {
     client_id: string;
     portal_visibility_group_id: string | null;
     is_client_admin: boolean;
+    contact_kind?: 'person' | 'shared_mailbox';
   }>;
   roles: Array<{
     role_id: string;
@@ -147,6 +148,14 @@ function createUserModelTrx(state: UserModelState) {
       };
     }
 
+    // Onboarding creates no billing-profile ticket grants, so a freshly
+    // provisioned contact-scoped user still sees only their own tickets.
+    if (table === 'client_billing_profiles' || table === 'billing_profile_contacts') {
+      return {
+        where: () => ({ select: async () => [] }),
+      };
+    }
+
     if (table === 'client_portal_visibility_group_boards as cvgb') {
       return {
         join: () => ({
@@ -262,6 +271,9 @@ describe('portal user creation preserves client portal visibility assignments', 
       clientId: 'client-a',
       visibilityGroupId: 'group-1',
       visibleBoardIds: ['board-1'],
+      // A brand-new portal user holds no billing-profile ticket grants.
+      grantedTicketProfileIds: [],
+      defaultBillingProfileId: null,
     });
   });
 
@@ -290,5 +302,27 @@ describe('portal user creation preserves client portal visibility assignments', 
     expect(visibility.visibleBoardIds).toBeNull();
     expect(visibility.ticketScope).toBe('client');
     expect(visibility.effectiveTicketScope).toBe('client');
+  });
+
+  it('rejects client portal user creation for shared mailbox contacts', async () => {
+    state.contacts.push({
+      tenant: 'tenant-1',
+      contact_name_id: 'contact-shared',
+      client_id: 'client-a',
+      portal_visibility_group_id: null,
+      is_client_admin: false,
+      contact_kind: 'shared_mailbox',
+    });
+
+    const result = await createPortalUserInDBWithTrx(trx, {
+      email: 'shared@example.com', password: 'Password123!', contactId: 'contact-shared',
+      clientId: 'client-a', tenantId: 'tenant-1', roleId: 'role-user',
+    });
+
+    expect(result).toMatchObject({
+      success: false,
+      error: 'Shared mailbox contacts cannot have a client portal user.',
+    });
+    expect(state.users).toHaveLength(0);
   });
 });

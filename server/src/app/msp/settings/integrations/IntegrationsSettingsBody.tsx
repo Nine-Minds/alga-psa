@@ -18,7 +18,8 @@ export default function IntegrationsSettingsBody(): React.JSX.Element {
       <IntegrationsSettingsPage
         canUseEntraSync={canUseEntraSync}
         canUseCipp={canUseCipp}
-        qboSyncHealthSlot={<QboSyncHealthPanel />}
+        qboSyncHealthSlot={<QboSyncHealthPanel adapterType="quickbooks_online" />}
+        xeroSyncHealthSlot={<QboSyncHealthPanel adapterType="xero" />}
         qboOnboardingSlot={<QboOnboardingWizardEntry />}
       />
     </>

@@ -8,6 +8,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { ArrowLeft, Info, Layers, BarChart2, Calendar, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 
+import { TaxCapReadout } from './TaxCapFields';
 import { ITaxRate } from '@alga-psa/types';
 import { TaxComponentEditor } from '../settings/tax/TaxComponentEditor';
 import { TaxThresholdEditor } from '../settings/tax/TaxThresholdEditor';
@@ -157,6 +158,12 @@ export function TaxRateDetailPanel({ taxRate, onBack, isReadOnly = false }: TaxR
                 </div>
               </div>
 
+              <div className="space-y-2">
+                <p className="text-sm font-medium">{t('taxRates.cap.title')}</p>
+                <TaxCapReadout rate={taxRate} />
+                <p className="text-sm text-muted-foreground">{t('taxRates.cap.currency')}: {taxRate.currency_code || t('taxRates.cap.universal')}</p>
+                <p className="max-w-prose text-sm text-muted-foreground">{t('taxRates.cap.scope')}</p>
+              </div>
               {/* Tax Precedence Info */}
               <Alert variant="info" showIcon>
                 <AlertDescription>
@@ -195,6 +202,7 @@ export function TaxRateDetailPanel({ taxRate, onBack, isReadOnly = false }: TaxR
           </TabsContent>
 
           <TabsContent value="components" className="mt-6">
+            {isComposite && <p className="mb-4 text-sm">{t('taxRates.cap.composite')}</p>}
             {!isComposite ? (
               <Alert variant="info" showIcon={false}>
                 <AlertCircle className="h-4 w-4 absolute left-4 top-4" />

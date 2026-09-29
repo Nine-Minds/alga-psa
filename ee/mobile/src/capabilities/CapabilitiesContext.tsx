@@ -1,7 +1,18 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Platform } from "react-native";
 import { createApiClient } from "../api";
-import { EMPTY_FEATURE_CAPABILITIES, getMyCapabilities, type FeatureCapabilities } from "../api/capabilities";
+import {
+  EMPTY_FEATURE_CAPABILITIES,
+  getMyCapabilities,
+  type DateFormatCapability,
+  type FeatureCapabilities,
+} from "../api/capabilities";
+import {
+  getDateTimeLocale,
+  setDateTimeLocale,
+  SYSTEM_DATE_FORMAT,
+  type DateTimeFormatShape,
+} from "../ui/formatters/dateTime";
 import { useAuth } from "../auth/AuthContext";
 import { useAppResume } from "../hooks/useAppResume";
 import { logger } from "../logging/logger";
@@ -17,6 +28,26 @@ export type CapabilitiesContextValue = {
 };
 
 const CapabilitiesContext = createContext<CapabilitiesContextValue | null>(null);
+
+/**
+ * Hand the server's resolved shape to the date formatters.
+ *
+ * Anything missing or malformed — an older server with no `formatting` field,
+ * a failed fetch — applies the fixed system default rather than the device
+ * locale, which is the coupling this replaces.
+ */
+function applyServerDateFormat(formatting?: DateFormatCapability | null): void {
+  const shape: DateTimeFormatShape | null =
+    formatting && Array.isArray(formatting.order) && formatting.order.length === 3
+      ? {
+          order: formatting.order,
+          separator: typeof formatting.separator === "string" ? formatting.separator : "/",
+          hour12: formatting.hour12 !== false,
+        }
+      : null;
+
+  setDateTimeLocale(getDateTimeLocale(), shape ?? SYSTEM_DATE_FORMAT);
+}
 
 export function useCapabilities(): CapabilitiesContextValue {
   const value = useContext(CapabilitiesContext);
@@ -52,6 +83,7 @@ export function CapabilitiesProvider({ children }: { children: ReactNode }) {
           opportunities: result.data.data?.features?.opportunities === true,
           opportunitiesCreate: result.data.data?.features?.opportunitiesCreate === true,
         });
+        applyServerDateFormat(result.data.data?.formatting);
         // Older servers send no theme block; the app keeps the Alga pair.
         const themeBlock = result.data.data?.theme;
         const parsedTheme = parseMobileTheme(themeBlock);
@@ -65,6 +97,7 @@ export function CapabilitiesProvider({ children }: { children: ReactNode }) {
         // Older servers have no endpoint (404) — every feature stays off.
         // The theme is left alone: a flaky network should not repaint the app.
         setFeatures(EMPTY_FEATURE_CAPABILITIES);
+        applyServerDateFormat(null);
         if (result.error.kind !== "http" && result.error.kind !== "network") {
           logger.warn("capabilities.fetch_failed", { kind: result.error.kind });
         }
@@ -78,6 +111,7 @@ export function CapabilitiesProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!signedIn) {
       setFeatures(EMPTY_FEATURE_CAPABILITIES);
+      applyServerDateFormat(null);
       setTheme(null);
       setLoaded(false);
       return;

@@ -1,6 +1,5 @@
 'use client';
 
-import { useFeatureFlag } from '@alga-psa/ui/hooks/useFeatureFlag';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -92,7 +91,6 @@ const ContractLineCard: React.FC<{
   reportPeriodCountLabel,
   onStartLegacyTransition,
 }) => {
-  const { enabled: releaseV16Enabled } = useFeatureFlag('release-v1-6-feature');
   return (
     <div className="border border-[rgb(var(--color-border-200))] rounded-lg overflow-hidden">
       <button
@@ -203,32 +201,28 @@ const ContractLineCard: React.FC<{
                             {/* Explicit, prospective transitions only: these
                                 open a review dialog and write nothing until the
                                 operator confirms there. */}
-                            {releaseV16Enabled && (
-                              <>
-                                <button
-                                  type="button"
-                                  id={`usage-set-up-recurring-seats-${service.service_id}`}
-                                  className="not-italic underline decoration-dotted underline-offset-2 hover:text-[rgb(var(--color-text-700))]"
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    onStartLegacyTransition('recurring_seats', service, line);
-                                  }}
-                                >
-                                  {setUpRecurringSeatsLabel}
-                                </button>
-                                <button
-                                  type="button"
-                                  id={`usage-report-period-count-${service.service_id}`}
-                                  className="not-italic underline decoration-dotted underline-offset-2 hover:text-[rgb(var(--color-text-700))]"
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    onStartLegacyTransition('period_count', service, line);
-                                  }}
-                                >
-                                  {reportPeriodCountLabel}
-                                </button>
-                              </>
-                            )}
+                            <button
+                              type="button"
+                              id={`usage-set-up-recurring-seats-${service.service_id}`}
+                              className="not-italic underline decoration-dotted underline-offset-2 hover:text-[rgb(var(--color-text-700))]"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                onStartLegacyTransition('recurring_seats', service, line);
+                              }}
+                            >
+                              {setUpRecurringSeatsLabel}
+                            </button>
+                            <button
+                              type="button"
+                              id={`usage-report-period-count-${service.service_id}`}
+                              className="not-italic underline decoration-dotted underline-offset-2 hover:text-[rgb(var(--color-text-700))]"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                onStartLegacyTransition('period_count', service, line);
+                              }}
+                            >
+                              {reportPeriodCountLabel}
+                            </button>
                           </span>
                         )}
                     </>

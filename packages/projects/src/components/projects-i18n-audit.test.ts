@@ -207,6 +207,30 @@ describe('T010: /msp/projects list page i18n coverage', () => {
     expect(getLeaf(pseudo, 'title')).toMatch(pseudoPattern('xx'));
   });
 
+  it('Projects.tsx wires the smart search affordance through features/projects translations', () => {
+    const source = read('./Projects.tsx');
+    expect(source).toContain("projectListT('searchSmart', 'Search projects, tasks, and comments… Enter for smart search')");
+    expect(source).toContain("t('smartSearch.run', 'Smart search')");
+    expect(source).toContain("t('smartSearch.runTitle', 'Score the filtered projects against this query')");
+    expect(getLeaf(pseudo, 'projectList.searchSmart')).toMatch(pseudoPattern('xx'));
+    // The shared results panel reads these from the page's namespace.
+    for (const key of [
+      'smartSearch.run',
+      'smartSearch.strong',
+      'smartSearch.possible',
+      'smartSearch.unlikely',
+      'smartSearch.scoring',
+      'smartSearch.cancel',
+      'smartSearch.exit',
+      'smartSearch.rerun',
+      'smartSearch.unscored',
+      'smartSearch.notConfigured',
+      'smartSearch.addOnRequired',
+    ]) {
+      expect(getLeaf(pseudo, key), key).toMatch(pseudoPattern('xx'));
+    }
+  });
+
   it('DeadlineFilter.tsx wires keys backed by xx pseudo-locale', () => {
     const source = read('./DeadlineFilter.tsx');
     expect(source).toContain("useTranslation");

@@ -52,7 +52,7 @@ async function startServices() {
     // Workflow actions resolve email integrations through a runtime registry.
     // The API server registers this during app bootstrap; the worker must do the same.
     registerWorkflowEmailProvider({
-      TenantEmailService: TenantEmailService as any,
+      TenantEmailService: Object.assign(TenantEmailService, { resolveOutboundSenderForTenant: TenantEmailService.resolveOutboundSenderForTenant }) as any,
       StaticTemplateProcessor: StaticTemplateProcessor as any,
       EmailProviderManager: EmailProviderManager as any,
     });

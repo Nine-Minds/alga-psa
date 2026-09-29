@@ -1,4 +1,7 @@
 {
+  "phone": {
+    "extension": "ext."
+  },
   "colorPicker": {
     "invalidHexBackground": "Invalid hex color (e.g., #FF0000)",
     "invalidHexText": "Invalid hex color (e.g., #FFFFFF)",
@@ -1599,7 +1602,10 @@
     "defaultClosedHelp": "A closed status cannot be the default for new items."
   },
   "callLink": {
-    "teamsCall": "Call in Microsoft Teams"
+    "teamsCall": "Call in Microsoft Teams",
+    "threecxCall": "Call via 3CX",
+    "threecxDialing": "Dialing from your 3CX extension",
+    "threecxFailed": "The PBX could not place the call"
   },
   "editor": {
     "attachFiles": "Attach files",
@@ -1616,5 +1622,111 @@
     "disabledByAdmin": "Disabled by administrator",
     "mixed": "Partially enabled",
     "empty": "No email notification categories available."
+  },
+  "listViews": {
+    "defaultView": "Default view",
+    "unsavedChanges": "This view has unsaved changes",
+    "searchPlaceholder": "Search views",
+    "noMatches": "No matching views",
+    "sections": {
+      "mine": "My views",
+      "mineEmpty": "No private views yet",
+      "shared": "Shared views",
+      "sharedEmpty": "No shared views yet"
+    },
+    "labels": {
+      "myDefault": "My default",
+      "sharedByYou": "Shared by you"
+    },
+    "visibility": {
+      "private": "Private",
+      "shared": "Shared"
+    },
+    "actions": {
+      "delete": "Delete",
+      "manage": "Manage",
+      "setDefault": "Set as my default",
+      "clearDefault": "Clear my default",
+      "copyLink": "Copy link",
+      "saveChanges": "Save changes",
+      "saveChangesTo": "Save changes to \"{{name}}\"",
+      "saveAsNew": "Save as new view…",
+      "discardChanges": "Discard changes"
+    },
+    "dialog": {
+      "createTitle": "Save as new view",
+      "manageTitle": "Manage view",
+      "nameLabel": "Name",
+      "nameInvalid": "Enter a name of 1 to {{max}} characters.",
+      "visibilityLabel": "Who can see it",
+      "privateHint": "Only you can see this view.",
+      "sharedHint": "Everyone who can open this list can see and apply it.",
+      "sharedDisabledHint": "You do not have permission to share views."
+    },
+    "deleteDialog": {
+      "title": "Delete view",
+      "message": "Delete \"{{name}}\"?",
+      "messageShared": "Delete \"{{name}}\"? It is shared, so it will disappear for everyone who uses it."
+    },
+    "toasts": {
+      "saved": "Saved \"{{name}}\"",
+      "updated": "Updated \"{{name}}\"",
+      "deleted": "View deleted",
+      "defaultSet": "Default view set",
+      "defaultCleared": "Default view cleared",
+      "linkCopied": "Link copied",
+      "droppedReferences": "Some items in \"{{name}}\" no longer exist and were skipped: {{fields}}"
+    },
+    "errors": {
+      "notFound": "This view is private or no longer exists.",
+      "unknownList": "Unknown list.",
+      "invalidName": "A view name must be between 1 and 100 characters.",
+      "duplicateName": "You already have a view named \"{{name}}\" on this list.",
+      "invalidSettings": "The view could not be saved: {{detail}}",
+      "invalidVisibility": "Visibility must be private or shared.",
+      "cannotShare": "You do not have permission to share views.",
+      "cannotEdit": "You do not have permission to change this view.",
+      "cannotReadList": "You do not have permission to view this list.",
+      "saveFailed": "The view could not be saved.",
+      "deleteFailed": "The view could not be deleted.",
+      "defaultFailed": "Your default view could not be changed.",
+      "copyFailed": "The link could not be copied."
+    }
+  },
+  "unitOfMeasure": {
+    "labels": {
+      "each": "Each",
+      "piece": "Piece",
+      "box": "Box",
+      "seat": "Seat",
+      "license": "License",
+      "device": "Device",
+      "user": "User",
+      "kit": "Kit",
+      "hour": "Hour",
+      "day": "Day",
+      "week": "Week",
+      "month": "Month",
+      "year": "Year",
+      "minute": "Minute",
+      "gigabyte": "Gigabyte",
+      "terabyte": "Terabyte",
+      "liter": "Liter",
+      "kilogram": "Kilogram",
+      "meter": "Meter"
+    },
+    "groups": {
+      "time": "Time",
+      "count": "Count",
+      "volume": "Volume",
+      "mass": "Mass",
+      "length": "Length",
+      "other": "Other",
+      "custom": "Custom"
+    },
+    "customOption": "Custom…",
+    "customPlaceholder": "Name this unit",
+    "register": "Add",
+    "selectPlaceholder": "Select a unit"
   }
 }

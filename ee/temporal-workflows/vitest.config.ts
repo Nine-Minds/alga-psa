@@ -28,6 +28,7 @@ export default defineConfig({
     exclude: [...configDefaults.exclude, 'src/__tests__/integration/**'],
     environment: 'node',
     setupFiles: ['./src/test-utils/setup.ts'],
+    globalSetup: ['./src/test-utils/time-skipping-server.global-setup.ts'],
     testTimeout: 120000, // 2 minutes for E2E tests
     hookTimeout: 60000, // 1 minute for setup/teardown
     pool: 'forks', // Required for Temporal tests
@@ -68,6 +69,12 @@ export default defineConfig({
       { find: /^@ee\/(.*)$/, replacement: `${path.resolve(__dirname, '../server/src')}/$1` },
       { find: /^@alga-psa\/shared$/, replacement: path.resolve(__dirname, '../../shared') },
       { find: /^@alga-psa\/shared\/(.*)$/, replacement: `${path.resolve(__dirname, '../../shared')}/$1` },
+      // Shared quote-terms normalization (imported transitively via the workflow
+      // runtime) resolves its formatting dependency here. The package.json
+      // exports point at dist/, which is not built in test environments, so map
+      // it to source like the other workspace packages below.
+      { find: /^@alga-psa\/formatting$/, replacement: path.resolve(__dirname, '../../packages/formatting/src/index.ts') },
+      { find: /^@alga-psa\/formatting\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/formatting/src')}/$1` },
       // Workspace packages resolved from source — their package.json entries
       // point at dist/, which is not built in test environments.
       { find: /^@alga-psa\/jobs$/, replacement: path.resolve(__dirname, '../../packages/jobs/src/index.ts') },

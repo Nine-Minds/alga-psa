@@ -12,14 +12,28 @@
       "clearAll": "Alles wissen",
       "viewWeek": "Week bekijken",
       "compare": "Vergelijken",
-      "stopComparing": "Stop met vergelijken"
+      "stopComparing": "Stop met vergelijken",
+      "shareMyCalendar": "Mijn agenda delen",
+      "newGroupCalendar": "Nieuwe groepsagenda",
+      "manageGroupCalendar": "Agenda beheren"
     },
     "labels": {
-      "inactive": "(Inactief)"
+      "inactive": "(Inactief)",
+      "archived": "(Gearchiveerd)"
     },
     "aria": {
       "viewWeek": "Week bekijken voor {{name}}",
-      "compare": "Vergelijk {{name}}"
+      "compare": "Vergelijk {{name}}",
+      "toggleGroupCalendar": "{{name}} tonen"
+    },
+    "sections": {
+      "myCalendar": "Mijn agenda",
+      "people": "Personen",
+      "groupCalendars": "Groepsagenda's"
+    },
+    "empty": {
+      "people": "Nog niemand heeft een agenda met u gedeeld. Deel de uwe zodat collega's zien wanneer u vrij bent.",
+      "groups": "Groepsagenda's bevatten gedeelde afspraken, zoals piketdiensten of kantoorsluitingen."
     }
   },
   "agentView": {
@@ -90,7 +104,8 @@
         "start": "Begin: {{dateTime}}",
         "end": "Einde: {{dateTime}}",
         "multiDay": "(Meerdaags)"
-      }
+      },
+      "busy": "Bezet"
     },
     "deleteDialog": {
       "title": "Schema-item verwijderen",
@@ -122,6 +137,11 @@
         "title": "Afdrukopties",
         "description": "Kies welke kolommen worden opgenomen bij het afdrukken van de planning."
       }
+    },
+    "busyDialog": {
+      "title": "Bezet",
+      "close": "Sluiten",
+      "timeRange": "{{start}} – {{end}}"
     }
   },
   "weeklyEvent": {
@@ -591,7 +611,11 @@
       "end": "Einde *",
       "notes": "Opmerkingen",
       "technician": "Technicus",
-      "notesPlaceholder": "Alles wat de technicus moet weten voordat hij begint"
+      "notesPlaceholder": "Alles wat de technicus moet weten voordat hij begint",
+      "calendarPersonal": "Persoonlijk",
+      "calendarUnavailable": "Groepsagenda",
+      "calendar": "Agenda",
+      "assignedUsersOptional": "Toegewezen gebruikers"
     },
     "actions": {
       "cancel": "Annuleren",
@@ -776,5 +800,58 @@
     "deleteFailed": "Agenda-item kon niet worden verwijderd",
     "loadFailed": "Agenda-item kon niet worden geladen",
     "noPermission": "U heeft de agenda-bijwerkrechten nodig om werk in te plannen."
+  },
+  "sharing": {
+    "levels": {
+      "freeBusy": "Vrij/bezet",
+      "read": "Details bekijken",
+      "edit": "Bewerken",
+      "manage": "Beheren"
+    },
+    "addRecipient": "Persoon of team toevoegen",
+    "noRecipients": "Nog met niemand gedeeld.",
+    "unknownRecipient": "Onbekende ontvanger",
+    "removeRecipient": "{{name}} verwijderen",
+    "errors": {
+      "load": "Agendadeling kon niet worden geladen.",
+      "save": "Agendadeling kon niet worden opgeslagen."
+    },
+    "shareDialog": {
+      "title": "Mijn agenda delen",
+      "description": "Vrij/bezet toont alleen wanneer u bezet bent. Details bekijken toont uw items, behalve privé-items. Bewerken laat hen ook items voor u toevoegen en wijzigen."
+    },
+    "actions": {
+      "cancel": "Annuleren",
+      "saving": "Opslaan...",
+      "save": "Opslaan"
+    },
+    "settings": {
+      "title": "Agenda delen",
+      "description": "Kies welke collega's en teams uw planning kunnen zien en of zij tijd voor u mogen boeken."
+    }
+  },
+  "groupCalendars": {
+    "errors": {
+      "load": "Agenda kon niet worden geladen.",
+      "nameRequired": "Agendanaam is verplicht.",
+      "save": "Agenda kon niet worden opgeslagen."
+    },
+    "dialog": {
+      "manageTitle": "Groepsagenda beheren",
+      "createTitle": "Nieuwe groepsagenda"
+    },
+    "actions": {
+      "restore": "Herstellen",
+      "archive": "Archiveren",
+      "create": "Agenda maken"
+    },
+    "fields": {
+      "name": "Naam",
+      "namePlaceholder": "bijv. Piketrooster",
+      "color": "Kleur",
+      "description": "Beschrijving (optioneel)",
+      "members": "Leden",
+      "creatorNote": "U kunt deze agenda beheren."
+    }
   }
 }

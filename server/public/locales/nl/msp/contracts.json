@@ -118,6 +118,9 @@
       "renewalHandling": "Verlengingsafhandeling"
     },
     "clientAssignment": {
+      "billingProfile": "Factureringsprofiel",
+      "billingProfileLabel": "Factureringsprofiel van de toewijzing",
+      "billingProfileNone": "Het standaardprofiel van de klant gebruiken",
       "clientContractId": "Klantcontract-ID: {{id}}",
       "creditDrawdownOptOut": "Uitsluiten van kredietopname",
       "empty": "Dit contract is nog niet aan een klant toegewezen.",
@@ -399,7 +402,10 @@
       "selectClientFirst": "Selecteer eerst een klant",
       "startDateLabel": "Startdatum *",
       "useTenantDefaultsDescription": "Pas de verlengingsmodus en opzegtermijninstellingen op organisatieniveau toe.",
-      "useTenantDefaultsLabel": "Standaardverlengingswaarden tenant gebruiken"
+      "useTenantDefaultsLabel": "Standaardverlengingswaarden tenant gebruiken",
+      "billingProfileLabel": "Facturatieprofiel",
+      "billingProfileNone": "Standaardprofiel van de klant gebruiken",
+      "billingProfileHint": "Kosten uit dit contract worden aan dit profiel toegerekend."
     },
     "po": {
       "amountLabel": "PO-bedrag (optioneel)",
@@ -1520,6 +1526,11 @@
       },
       "selectTemplateOptional": "Selecteer een sjabloon (optioneel)",
       "startFromTemplate": "Starten vanaf sjabloon"
+    },
+    "billingProfile": {
+      "label": "Facturatieprofiel",
+      "none": "Standaardprofiel van de klant gebruiken",
+      "hint": "Kosten uit dit contract worden aan dit profiel toegerekend, tenzij een regel dit overschrijft."
     }
   },
   "wizardFixed": {
@@ -1692,6 +1703,7 @@
     },
     "fields": {
       "client": "Klant",
+      "billingProfile": "Factureringsprofiel",
       "contractName": "Contractnaam",
       "billingFrequency": "Factureerfrequentie",
       "currency": "Valuta",
@@ -1700,6 +1712,9 @@
       "renewalMode": "Verlengingsmodus",
       "noticePeriod": "Opzegtermijn",
       "renewalTerm": "Verlengingstermijn"
+    },
+    "billingProfile": {
+      "clientDefault": "Het standaardprofiel van de klant"
     },
     "fallback": {
       "notSelected": "Niet geselecteerd",

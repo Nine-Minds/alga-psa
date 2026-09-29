@@ -12,6 +12,7 @@ import { Session } from 'next-auth';
 import type { ISO8601String, IRecurringDueSelectionInput, IUsageServicePeriodStatus } from '@alga-psa/types';
 import { getClientDefaultTaxRegionCode } from '@alga-psa/shared/billingClients';
 import { POST_DROP_RECURRING_OBLIGATION_TYPES } from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
+import { DEFAULT_UNIT_CODE, HOUR_UNIT_CODE, resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
 import { resolveChargeProfile } from '../lib/billing/billingProfileResolution';
 import { resolveInvoiceBillingRecipient } from './invoiceBillingRecipientService';
@@ -137,7 +138,9 @@ function toRecurringWindowDate(value: string): string {
  * aborts the whole transaction if a row was concurrently claimed by another
  * invoice), making the created invoice the window's single owner.
  *
- * Explicitly omitted, unreported usage remains due for a later invoice.
+ * Explicitly omitted unreported usage and charges excluded by billing-profile
+ * scope remain due for a later invoice. Included zero-charge periods are still
+ * swept so legitimate zero-value billing remains complete.
  * Swept rows keep `invoice_charge_detail_id` NULL — honestly recording that
  * no charge line backs them — while `lifecycle_state='billed'` + `invoice_id`
  * removes them from due-work listings and arms the duplicate guard.
@@ -150,6 +153,8 @@ export async function claimRecurringServicePeriodsForSelectionInputs(params: {
   linkedAt: string;
   /** Unreported usage deliberately omitted from this invoice remains due. */
   omittedUsagePeriods?: Pick<IUsageServicePeriodStatus, 'client_contract_line_id' | 'service_period_start' | 'service_period_end'>[];
+  /** Charges excluded by billing-profile scope must leave their obligations due. */
+  excludedServicePeriodRecordIds?: string[];
 }): Promise<void> {
   const { tx, tenant, invoiceId, selectorInputs, linkedAt } = params;
   // Usage diagnoses expose inclusive ends; recurring period storage uses
@@ -163,6 +168,7 @@ export async function claimRecurringServicePeriodsForSelectionInputs(params: {
   const storedDate = (value: string | Date) => value instanceof Date
     ? value.toISOString().slice(0, 10)
     : toRecurringWindowDate(value);
+  const excludedRecordIds = new Set(params.excludedServicePeriodRecordIds ?? []);
 
   for (const selectorInput of selectorInputs) {
     const executionWindow = selectorInput.executionWindow;
@@ -225,6 +231,9 @@ export async function claimRecurringServicePeriodsForSelectionInputs(params: {
       }
       if (row.invoice_id === invoiceId) {
         continue; // Already linked through one of this invoice's charges.
+      }
+      if (excludedRecordIds.has(row.record_id)) {
+        continue; // Its charge belongs on another profile's invoice.
       }
       if (row.invoice_id) {
         throw new Error(
@@ -448,11 +457,17 @@ export async function getClientDetails(knex: Knex, tenant: string, clientId: str
  *
  * Returns null when no candidate carries a valid email.
  */
-export async function getClientBillingEmail(knex: Knex, tenant: string, clientId: string): Promise<string | null> {
+export async function getClientBillingEmail(
+  knex: Knex,
+  tenant: string,
+  clientId: string,
+  billingProfileId?: string | null,
+): Promise<string | null> {
   const recipient = await resolveInvoiceBillingRecipient({
     knexOrTrx: knex,
     tenantId: tenant,
     clientId,
+    billingProfileId,
   });
 
   return recipient.recipientEmail || null;
@@ -470,8 +485,17 @@ export interface ValidationResult {
  * This is required for online payments via Stripe.
  * Returns a validation result instead of throwing an error.
  */
-export async function validateClientBillingEmail(knex: Knex, tenant: string, clientId: string, clientName: string): Promise<ValidationResult> {
-  const billingEmail = await getClientBillingEmail(knex, tenant, clientId);
+export async function validateClientBillingEmail(
+  knex: Knex,
+  tenant: string,
+  clientId: string,
+  clientName: string,
+  billingProfileId?: string | null,
+): Promise<ValidationResult> {
+  // A segmented client may hold its billing address on the profile alone, so
+  // the gate has to ask about the profile this invoice bills — otherwise a
+  // profile with a perfectly good AP inbox is refused an invoice.
+  const billingEmail = await getClientBillingEmail(knex, tenant, clientId, billingProfileId);
   if (!billingEmail) {
     return {
       valid: false,
@@ -484,8 +508,22 @@ export async function validateClientBillingEmail(knex: Knex, tenant: string, cli
   return { valid: true };
 }
 
+/** Unit snapshot for a manual line: its catalog service's unit, else what the caller sent, else Each. */
+function manualChargeUnit(
+  service: { unit_code?: string | null; unit_of_measure?: string | null } | null | undefined,
+  item: { unit_code?: string | null; unit_label?: string | null },
+): { unit_code: string; unit_label: string } {
+  const resolved = resolveUnitOfMeasure({
+    catalog: service ? { code: service.unit_code, label: service.unit_of_measure } : null,
+    config: { code: item.unit_code, label: item.unit_label },
+  });
+  return { unit_code: resolved.code, unit_label: resolved.label };
+}
+
 // Renamed interface for clarity within manual context
 interface ManualInvoiceItemInput extends NetAmountItem {
+  unit_code?: string | null;
+  unit_label?: string | null;
   service_id?: string; // Optional for manual items
   description: string;
   is_taxable?: boolean; // Still needed for purely manual items without a service
@@ -841,6 +879,7 @@ export async function persistManualInvoiceCharges(
       item_id: uuidv4(),
       invoice_id: invoiceId,
       service_id: requestItem.service_id || null,
+      ...manualChargeUnit(service, requestItem),
       description: requestItem.description,
       quantity: requestItem.quantity,
       unit_price: Math.round(requestItem.rate), // Store the actual rate
@@ -946,6 +985,7 @@ export async function persistManualInvoiceCharges(
       item_id: uuidv4(),
       invoice_id: invoiceId,
       service_id: requestItem.service_id || null,
+      ...manualChargeUnit(service, requestItem),
       description: requestItem.description,
       quantity: requestItem.quantity,
       // Unit price for percentage discount is tricky, maybe store percentage? Or keep 0?
@@ -1067,6 +1107,8 @@ async function persistFixedInvoiceCharges(
                   invoice_id: invoiceId,
                   service_id: null,
                   description: `Fixed Plan: ${charge.serviceName}`,
+                  unit_code: charge.unit_code,
+                  unit_label: charge.unit_label,
                   quantity: 1,
                   // base_rate is already in cents from billingEngine, no conversion needed
                   unit_price: Math.round(charge.base_rate),
@@ -1105,6 +1147,8 @@ async function persistFixedInvoiceCharges(
         // contract_line_id: charge.planId ?? null, // Removed - planId not part of IFixedPriceCharge
         // client_contract_line_id could be added here if needed for the DB schema, but invoice_charges doesn't have it.
         description: charge.serviceName, // Use the name from the charge
+        unit_code: charge.unit_code,
+        unit_label: charge.unit_label,
         quantity: charge.quantity,
         unit_price: charge.rate, // The custom rate
         net_amount: netAmount,
@@ -1244,6 +1288,8 @@ async function persistFixedInvoiceCharges(
       invoice_id: invoiceId,
       service_id: null,
       description: planInfo.invoice_line_description || planInfo.contract_line_name || 'Fixed Plan Charge',
+      unit_code: planEntry.details[0]?.unit_code ?? null,
+      unit_label: planEntry.details[0]?.unit_label ?? null,
       quantity: 1,
       unit_price: planNetTotal,
       net_amount: planNetTotal,
@@ -1373,6 +1419,32 @@ export async function persistInvoiceCharges(
   let otherSubtotal = 0;
   const now = Temporal.Now.instant().toString();
 
+  // Snapshot the resolved unit onto every generated charge (catalog first,
+  // usage config second — D4). Charges the engine already resolved (bucket
+  // overage) keep their unit. Batched reads avoid one catalog query per line.
+  type UnitRow = { unit_code: string | null; unit_of_measure: string | null };
+  const unresolved = billingCharges.filter((charge) => !charge.unit_code);
+  const serviceIds = [...new Set(unresolved.map((charge) => charge.serviceId).filter((id): id is string => Boolean(id)))];
+  const configIds = [...new Set(unresolved.map((charge) => charge.config_id).filter((id): id is string => Boolean(id)))];
+  const catalogRows: Array<UnitRow & { service_id: string }> = serviceIds.length
+    ? await tenantScopedTable(tx, tenant, 'service_catalog').whereIn('service_id', serviceIds).select('service_id', 'unit_code', 'unit_of_measure')
+    : [];
+  const configRows: Array<UnitRow & { config_id: string }> = configIds.length
+    ? await tenantScopedTable(tx, tenant, 'contract_line_service_usage_config').whereIn('config_id', configIds).select('config_id', 'unit_code', 'unit_of_measure')
+    : [];
+  const catalogById = new Map(catalogRows.map((row) => [row.service_id, row]));
+  const configById = new Map(configRows.map((row) => [row.config_id, row]));
+  const unitSource = (row?: UnitRow) => (row ? { code: row.unit_code, label: row.unit_of_measure } : null);
+  for (const charge of unresolved) {
+    const resolved = resolveUnitOfMeasure({
+      catalog: unitSource(charge.serviceId ? catalogById.get(charge.serviceId) : undefined),
+      config: unitSource(charge.config_id ? configById.get(charge.config_id) : undefined),
+      fallback: charge.type === 'time' ? HOUR_UNIT_CODE : DEFAULT_UNIT_CODE,
+    });
+    charge.unit_code = resolved.code;
+    charge.unit_label = resolved.label;
+  }
+
   // One line period may produce fixed charges, multiple hourly/usage items,
   // and bucket overage. Persist every detail, but claim the period once across
   // all charge families on this invoice. A prior invoice still fails the DB
@@ -1415,7 +1487,7 @@ export async function persistInvoiceCharges(
         : charge.type === 'license'
           ? `License: ${charge.serviceName}`
           : charge.type === 'hour_block'
-            ? `Prepaid hour block (${charge.serviceName}) — ${(charge as IHourBlockCharge).hoursUsed.toFixed(1)} hrs consumed, ${(charge as IHourBlockCharge).hoursRemaining.toFixed(1)} hrs remaining`
+            ? `Prepaid hour block (${charge.serviceName}) — ${(charge as IHourBlockCharge).hoursUsed.toFixed(1)} ${resolveUnitOfMeasure({ fallback: 'HUR' }).shortLabel} consumed, ${(charge as IHourBlockCharge).hoursRemaining.toFixed(1)} ${resolveUnitOfMeasure({ fallback: 'HUR' }).shortLabel} remaining`
             : charge.serviceName;
     const invoiceItem = {
       item_id: uuidv4(),
@@ -1427,6 +1499,8 @@ export async function persistInvoiceCharges(
       // Use client_contract_line_id if the schema requires it
       // client_contract_line_id: charge.client_contract_line_id ?? null,
       description,
+      unit_code: charge.unit_code,
+      unit_label: charge.unit_label,
       billing_charge_type: charge.type,
       quantity:
         charge.type === 'hour_block'

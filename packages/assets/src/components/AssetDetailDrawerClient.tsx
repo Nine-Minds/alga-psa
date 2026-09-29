@@ -1,10 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import Drawer from '@alga-psa/ui/components/Drawer';
+import { PhoneText } from '@alga-psa/ui/components/PhoneText';
 import { useClientDrawer } from '@alga-psa/ui';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@alga-psa/ui/components/Tabs';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -35,6 +36,7 @@ import { CustomTypeDetailsPanel } from './panels/CustomTypeDetailsPanel';
 import CreateTicketFromAssetButton from './CreateTicketFromAssetButton';
 import DeleteAssetButton from './DeleteAssetButton';
 import { RemoteAccessButton } from './RemoteAccessButton';
+import { hasRemoteAccessLinks } from '../actions/remoteAccessLinkActions';
 import { AssetAlertsSection } from './AssetAlertsSection';
 import { AssetPatchStatusSection } from './AssetPatchStatusSection';
 import { AssetTimeline } from './AssetTimeline';
@@ -98,6 +100,8 @@ export function AssetDetailDrawerClient({
   const router = useRouter();
   const clientDrawer = useClientDrawer();
   const desiredTab = activeTab;
+  const [hasTemplateLinks, setHasTemplateLinks] = useState(false);
+  useEffect(() => { void hasRemoteAccessLinks().then((result) => setHasTemplateLinks(result === true)).catch(() => setHasTemplateLinks(false)); }, []);
 
   const tabLabels = useMemo(() => ({
     [ASSET_DRAWER_TABS.OVERVIEW]: t('assetDetailDrawer.tabs.overview', { defaultValue: 'Overview' }),
@@ -196,6 +200,7 @@ export function AssetDetailDrawerClient({
           onClientClick: asset.client_id && clientDrawer
             ? () => clientDrawer.openClientDrawer(asset.client_id)
             : undefined,
+          hasTemplateLinks,
         });
       case ASSET_DRAWER_TABS.MAINTENANCE:
         return renderMaintenanceTab({
@@ -288,9 +293,10 @@ type OverviewTabProps = {
   defaultBoardId?: string;
   t: TranslationFn;
   onClientClick?: () => void;
+  hasTemplateLinks: boolean;
 };
 
-function renderOverviewTab({ asset, maintenanceReport, history, router, statusBadge, onClose, defaultBoardId, t, onClientClick }: OverviewTabProps) {
+function renderOverviewTab({ asset, maintenanceReport, history, router, statusBadge, onClose, defaultBoardId, t, onClientClick, hasTemplateLinks }: OverviewTabProps) {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -329,9 +335,7 @@ function renderOverviewTab({ asset, maintenanceReport, history, router, statusBa
             <FileText className="h-4 w-4" />
             {t('assetDetailDrawer.actions.openAssetRecord', { defaultValue: 'Open asset record' })}
           </Button>
-          {asset.rmm_provider && asset.rmm_device_id && (
-            <RemoteAccessButton asset={asset} variant="default" size="sm" />
-          )}
+          <RemoteAccessButton asset={asset} variant="default" size="sm" hasTemplateLinks={hasTemplateLinks} surface="asset-drawer" />
           <CreateTicketFromAssetButton asset={asset} defaultBoardId={defaultBoardId} variant="default" size="sm" />
           <DeleteAssetButton
             assetId={asset.asset_id}
@@ -657,7 +661,7 @@ function InfoGrid({
 
 type InfoRowProps = {
   label: string;
-  value: string | number;
+  value: ReactNode;
 };
 
 function InfoRow({ label, value }: InfoRowProps) {
@@ -740,7 +744,7 @@ function renderTypeSpecificConfiguration(asset: Asset, t: TranslationFn) {
               <ConfigurationRow label={t('assetDetailDrawer.typeDetails.os', { defaultValue: 'OS' })} value={`${asset.mobile_device.os_type} ${asset.mobile_device.os_version}`} />
               <ConfigurationRow label={t('assetDetailDrawer.typeDetails.model', { defaultValue: 'Model' })} value={asset.mobile_device.model} />
               <ConfigurationRow label={t('assetDetailDrawer.typeDetails.imei', { defaultValue: 'IMEI' })} value={asset.mobile_device.imei || t('assetDetailDrawer.typeDetails.notProvided', { defaultValue: 'Not provided' })} />
-              <ConfigurationRow label={t('assetDetailDrawer.typeDetails.phoneNumber', { defaultValue: 'Phone number' })} value={asset.mobile_device.phone_number || t('assetDetailDrawer.typeDetails.notProvided', { defaultValue: 'Not provided' })} />
+              <ConfigurationRow label={t('assetDetailDrawer.typeDetails.phoneNumber', { defaultValue: 'Phone number' })} value={<PhoneText value={asset.mobile_device.phone_number} fallback={t('assetDetailDrawer.typeDetails.notProvided', { defaultValue: 'Not provided' })} />} />
               <ConfigurationRow label={t('assetDetailDrawer.typeDetails.carrier', { defaultValue: 'Carrier' })} value={asset.mobile_device.carrier || t('assetDetailDrawer.typeDetails.notProvided', { defaultValue: 'Not provided' })} />
               <ConfigurationRow label={t('assetDetailDrawer.typeDetails.lastCheckIn', { defaultValue: 'Last check-in' })} value={asset.mobile_device.last_check_in ? formatRelative(asset.mobile_device.last_check_in, t) : t('assetDetailDrawer.typeDetails.notReported', { defaultValue: 'Not reported' })} />
             </div>

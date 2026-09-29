@@ -11,6 +11,18 @@ function tenantScopedTable(conn: Knex | Knex.Transaction, tenant: string, table:
   return tenantDb(conn, tenant).table(table) as Knex.QueryBuilder<any, any>;
 }
 
+/**
+ * clients.client_since is a DATE and the driver builds it at the server's
+ * midnight; the client drawer edits it, so hand the calendar date over as
+ * 'yyyy-MM-dd' instead of a Date the browser would read a day early.
+ */
+function withClientSinceDateString<T extends Record<string, any>>(row: T): T {
+  const value = row.client_since;
+  if (!(value instanceof Date)) return row;
+  const pad = (part: number) => String(part).padStart(2, '0');
+  return { ...row, client_since: `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}` };
+}
+
 export const getAllClientsForAssets = withAuth(async (
   _user,
   { tenant },
@@ -37,7 +49,7 @@ export const getAllClientsForAssets = withAuth(async (
 
   // Batch-resolve logo URLs once (no N+1) so the assets table can show real logos.
   const logoUrlsMap = await getClientLogoUrlsBatch(clients.map((c) => c.client_id), tenant);
-  return clients.map((c) => ({ ...c, logoUrl: logoUrlsMap.get(c.client_id) ?? null }));
+  return clients.map((c) => withClientSinceDateString({ ...c, logoUrl: logoUrlsMap.get(c.client_id) ?? null }));
 });
 
 export const getClientByIdForAssets = withAuth(async (
@@ -63,7 +75,7 @@ export const getClientByIdForAssets = withAuth(async (
   // Resolve the uploaded logo so the client drawer/detail view shows the real
   // logo (matching the assets table), not just initials.
   const logoUrl = await getClientLogoUrl(clientId, tenant);
-  return { ...client, logoUrl };
+  return withClientSinceDateString({ ...client, logoUrl });
 });
 
 export const getClientLocationsForAssets = withAuth(async (

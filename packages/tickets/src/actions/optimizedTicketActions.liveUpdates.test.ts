@@ -129,6 +129,74 @@ vi.mock('../lib/validateTicketClosure', () => ({
 
 vi.mock('./ticketBundleUtils', () => ({
   maybeReopenBundleMasterFromChildReply: vi.fn(async () => undefined),
+  revertBundlePropagationForChild: vi.fn(async () => undefined),
+  previewBundleStatusPropagation: vi.fn(async () => ({
+    mode: 'sync_updates',
+    masterTicketId: '',
+    newStatusId: '',
+    crossesBoundary: null,
+    affectedChildren: [],
+    unaffectedChildren: [],
+  })),
+  // Non-boundary propagation is the legacy mirror-to-all-children path; mirror
+  // it here so the live-update fan-out assertions keep exercising the shared
+  // registry contract without a real database.
+  propagateBundleMasterStatus: vi.fn(
+    async (
+      trx: any,
+      ctx: { tenant: string; user: { user_id: string } },
+      masterId: string,
+      updateData: Record<string, unknown>,
+    ) => {
+      const { registerAfterCommit } = await import('@alga-psa/db');
+      const { publishTicketUpdate, diffTicketFields } = await import('../lib/liveUpdates');
+
+      const propagateFields: Record<string, unknown> = {};
+      for (const key of ['status_id', 'assigned_to', 'priority_id', 'closed_by', 'closed_at']) {
+        if (Object.prototype.hasOwnProperty.call(updateData, key)) {
+          propagateFields[key] = updateData[key];
+        }
+      }
+      if (Object.keys(propagateFields).length === 0) {
+        return { propagated: false, action: null, affectedChildIds: [] };
+      }
+
+      const childRows = await trx('tickets')
+        .where({ master_ticket_id: masterId })
+        .select(['ticket_id', 'status_id', 'assigned_to', 'priority_id', 'closed_at', 'closed_by']);
+
+      const childPublishes = childRows
+        .map((child: Record<string, unknown>) => ({
+          ticketId: child.ticket_id as string,
+          updatedFields: diffTicketFields(child, propagateFields),
+        }))
+        .filter((publish: { updatedFields: string[] }) => publish.updatedFields.length > 0);
+
+      const propagate = { ...propagateFields, updated_by: ctx.user.user_id, updated_at: new Date().toISOString() };
+      await trx('tickets').where({ master_ticket_id: masterId }).update(propagate);
+
+      for (const publish of childPublishes) {
+        registerAfterCommit(
+          trx,
+          () =>
+            publishTicketUpdate({
+              tenantId: ctx.tenant,
+              ticketId: publish.ticketId,
+              updatedFields: publish.updatedFields,
+              updatedBy: { userId: ctx.user.user_id, displayName: 'Test User' },
+              updatedAt: propagate.updated_at as string,
+            }),
+          `ticket-live-update ticket=${publish.ticketId}`,
+        );
+      }
+
+      return {
+        propagated: false,
+        action: null,
+        affectedChildIds: childRows.map((child: Record<string, unknown>) => child.ticket_id as string),
+      };
+    },
+  ),
 }));
 
 import {

@@ -86,12 +86,75 @@ describe("CreateProductModal", () => {
         data: {
           service_name: "HP 26A Toner",
           custom_service_type_id: "t2",
-          unit_of_measure: "each",
+          unit_of_measure: "Each",
+          unit_code: "C62",
           sku: "HP-26A",
           barcode: "0194850925894",
         },
       }),
     );
     expect(onCreated).toHaveBeenCalledWith("svc-new", "HP 26A Toner");
+  });
+
+  it("sends the chosen unit's label and code, keeping labels that share a code distinct", async () => {
+    let tree!: ReactTestRenderer;
+    await act(async () => {
+      tree = create(
+        <CreateProductModal
+          visible
+          client={apiClient}
+          apiKey="key"
+          barcode="0194850925894"
+          onClose={vi.fn()}
+          onCreated={vi.fn()}
+        />,
+      );
+    });
+
+    act(() => byLabel(tree, "inventory-create-product-unit-license")[0].props.onPress());
+
+    // License shares C62 with Each/Seat/Device/User/Kit; only License is checked.
+    const checked = tree.root
+      .findAll((node) => typeof node.type === "string" && node.props.accessibilityRole === "radio")
+      .filter((node) => node.props.accessibilityState?.checked)
+      .map((node) => node.props.accessibilityLabel);
+    expect(checked).toEqual(["inventory-create-product-unit-license"]);
+
+    act(() => byLabel(tree, "inventory-create-product-name")[0].props.onChangeText("Office 365 E3"));
+    await act(async () => byLabel(tree, "inventory-create-product-submit")[0].props.onPress());
+
+    expect(mockCreateProduct).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        data: expect.objectContaining({ unit_of_measure: "License", unit_code: "C62" }),
+      }),
+    );
+  });
+
+  it("sends a unit's own Rec 20 code when it is not C62", async () => {
+    let tree!: ReactTestRenderer;
+    await act(async () => {
+      tree = create(
+        <CreateProductModal
+          visible
+          client={apiClient}
+          apiKey="key"
+          barcode="0194850925894"
+          onClose={vi.fn()}
+          onCreated={vi.fn()}
+        />,
+      );
+    });
+
+    act(() => byLabel(tree, "inventory-create-product-unit-box")[0].props.onPress());
+    act(() => byLabel(tree, "inventory-create-product-name")[0].props.onChangeText("Paper"));
+    await act(async () => byLabel(tree, "inventory-create-product-submit")[0].props.onPress());
+
+    expect(mockCreateProduct).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        data: expect.objectContaining({ unit_of_measure: "Box", unit_code: "BX" }),
+      }),
+    );
   });
 });

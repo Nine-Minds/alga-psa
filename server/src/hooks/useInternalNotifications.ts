@@ -16,24 +16,28 @@ import {
 } from '@alga-psa/notifications/actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
-// Construct Hocuspocus URL based on current domain
-// In production, use wss://{current-domain}/hocuspocus
-// In development, use ws://localhost:1234
-const getHocuspocusUrl = () => {
+// Choose the Hocuspocus URL from the build environment, never the hostname, so
+// a dev server reached over a LAN/tailnet address still targets the configured
+// local Hocuspocus instance instead of deriving a same-origin URL.
+// Development: NEXT_PUBLIC_HOCUSPOCUS_URL, defaulting to ws://localhost:1234.
+// Production: NEXT_PUBLIC_HOCUSPOCUS_URL, otherwise ws(s)://{host}/hocuspocus.
+export const getHocuspocusUrl = () => {
+  const configuredUrl = process.env.NEXT_PUBLIC_HOCUSPOCUS_URL;
+
+  if (process.env.NODE_ENV !== 'production') {
+    return configuredUrl || 'ws://localhost:1234';
+  }
+
+  if (configuredUrl) {
+    return configuredUrl;
+  }
+
   if (typeof window === 'undefined') {
-    return 'ws://localhost:1234'; // SSR fallback
+    return 'ws://localhost:1234'; // SSR fallback; only used client-side in effects
   }
 
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const host = window.location.host;
-
-  // In production (not localhost), use /hocuspocus path on same domain
-  if (!host.includes('localhost')) {
-    return `${protocol}//${host}/hocuspocus`;
-  }
-
-  // In development, use local hocuspocus server
-  return process.env.NEXT_PUBLIC_HOCUSPOCUS_URL || 'ws://localhost:1234';
+  return `${protocol}//${window.location.host}/hocuspocus`;
 };
 
 const HOCUSPOCUS_URL = getHocuspocusUrl();

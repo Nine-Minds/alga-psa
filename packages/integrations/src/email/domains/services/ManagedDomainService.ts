@@ -336,6 +336,14 @@ export class ManagedDomainService {
   async deleteDomain(domain: string): Promise<void> {
     const provider = await this.getProvider();
 
+    const normalizedDomain = domain.trim().toLowerCase();
+    const senderRows = await tenantDb(this.knex, this.tenantId).table('email_sender_addresses')
+      .select('email_address')
+      .whereRaw('lower(split_part(email_address, ?, 2)) = ?', ['@', normalizedDomain]);
+    if (senderRows.length) {
+      throw new Error(`Cannot delete ${normalizedDomain} while sender addresses use it: ${senderRows.map((row: { email_address: string }) => row.email_address).join(', ')}`);
+    }
+
     const existing = await tenantDb(this.knex, this.tenantId).table(EMAIL_DOMAINS_TABLE)
       .where({ domain_name: domain })
       .first();

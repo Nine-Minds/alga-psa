@@ -914,13 +914,46 @@ need explicit reconciliation. Likewise a passing job becomes a merge gate only
 when its check is registered in the effective repository rules.
 
 
-The full unit coverage CI command overrides `poolOptions.forks.singleFork=false`
-with `maxWorkers=1`. Files still run serially, but each gets a fresh process. This
-avoids carrying worker state across thousands of files; the ordinary database
-runners retain their existing process configuration. The real-Vitest check in
-`scripts/tests/vitest-worker-isolation.test.mjs` verifies the override with worker
-PIDs. Inspect `module-queued` without `module-started` in the progress journal as
-an import/setup stall, not a completed test or an assertion timeout.
+## Full server unit suite shards
+
+CI runs the full server unit suite with coverage as four shard jobs plus one
+merge job (`server-unit` and `server-unit-complete` in
+`.github/workflows/unit-tests.yml`). `scripts/run-server-unit-shard.mjs` collects
+the complete inventory, takes the shard's modulo partition with
+`scripts/lib/test-sharding.mjs`, proves `server/vitest.server-unit-shard.config.ts`
+selects exactly that partition, collects its test registrations, and runs it with
+`fileParallelism=true` and a fresh fork per file. Each file gets its own process,
+so worker state never carries across files; the processes run in parallel because
+recycling them serially spent about forty minutes on spawn gaps for ten minutes
+of assertions.
+
+Ask for that recycling with **`VITEST_RECYCLE_FORKS=1`, not
+`--poolOptions.forks.singleFork=false`**. Vitest forwards only a whitelist of CLI
+options into project configs and `poolOptions` is not on it, so ever since
+`server/vitest.config.ts` grew its jsdom/node projects the CLI form is accepted
+and ignored — the run silently serializes into one fork. The config reads the
+environment variable instead, which every project inherits. The real-Vitest check
+in `scripts/tests/vitest-worker-isolation.test.mjs` pins both halves with worker
+PIDs: the CLI form reuses one process under projects, the env switch recycles. Inspect `module-queued` without `module-started` in a shard's progress
+journal as an import/setup stall, not a completed test or an assertion timeout.
+
+Each shard uploads `server-unit-shard-<n>` with its collection manifests, JSON
+report, progress journal, evidence and a Vitest blob report carrying its coverage
+map. `scripts/merge-server-unit-shards.mjs` re-verifies every partition against
+its raw report, requires the partitions to tile the shared inventory exactly, and
+lays the merged manifests out where the single full run left them; `vitest run
+--merge-reports` then replays the blobs into one JSON report and one lcov report.
+`server-unit-execution` and `server-unit-aggregate` keep their previous layout,
+with `shard-aggregate.json` recording the partition verdict.
+`scripts/tests/server-unit-shards.test.mjs` drives the whole sequence over an
+isolated fixture repository.
+
+To reproduce one shard locally from the repository root on a clean checkout:
+
+```sh
+GITHUB_SHA=$(git rev-parse HEAD) SERVER_UNIT_SHARD_INDEX=2 SERVER_UNIT_SHARD_TOTAL=4 \
+  SKIP_DB_TESTS=1 DB_USER_ADMIN= DB_PASSWORD_ADMIN= node scripts/run-server-unit-shard.mjs
+```
 
 ### Financial state-model regression
 

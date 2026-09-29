@@ -37,6 +37,7 @@ import {
   type EntraClientFilter,
 } from './entraClientHealth';
 import { RelativeTime } from './RelativeTime';
+import { ManagedTenantUserFilterPanel } from './ManagedTenantUserFilterPanel';
 
 interface EntraClientsTabProps {
   mappings: EntraConfirmedMapping[];
@@ -493,13 +494,13 @@ export function EntraClientsTab({
               );
             }
 
-            return preview ? (
+            return <div><ManagedTenantUserFilterPanel mapping={mapping} onSaved={() => void runPreview(mapping)} />{preview ? (
               <ContactPreflightReport
                 report={preview}
                 onRecheck={() => void runPreview(mapping)}
                 rechecking={busy}
               />
-            ) : null;
+            ) : null}</div>;
           }}
         />
       )}

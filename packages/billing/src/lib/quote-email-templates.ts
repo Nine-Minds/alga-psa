@@ -10,7 +10,7 @@ interface QuoteEmailTemplateInput {
   locale?: string;
 }
 
-export const formatQuoteDate = (value?: string | null): string => {
+export const formatQuoteDate = (value?: string | null, locale?: string): string => {
   if (!value) {
     return 'N/A';
   }
@@ -20,7 +20,10 @@ export const formatQuoteDate = (value?: string | null): string => {
     return 'N/A';
   }
 
-  return date.toLocaleDateString('en-US', {
+  // A NAMED month is the one date shape the language still owns: its order is
+  // that language's grammar, so Intl stays in charge here. The country rule
+  // governs numeric dates, which this is not.
+  return date.toLocaleDateString(locale || 'en', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -36,7 +39,7 @@ export function buildQuoteSentEmailTemplate({
 }: QuoteEmailTemplateInput): { subject: string; html: string; text: string } {
   const quoteNumber = quote.quote_number ?? quote.quote_id;
   const formattedAmount = formatCurrency((quote.total_amount ?? 0) / 100, locale ?? 'en', quote.currency_code || 'USD');
-  const validUntil = formatQuoteDate(quote.valid_until ?? null);
+  const validUntil = formatQuoteDate(quote.valid_until ?? null, locale);
   const trimmedMessage = customMessage?.trim();
   const resolvedPortalLink = portalLink?.trim();
   const subject = `Quote ${quoteNumber} from ${companyName}`;
@@ -82,7 +85,7 @@ export function buildQuoteReminderEmailTemplate({
 }: QuoteEmailTemplateInput): { subject: string; html: string; text: string } {
   const quoteNumber = quote.quote_number ?? quote.quote_id;
   const formattedAmount = formatCurrency((quote.total_amount ?? 0) / 100, locale ?? 'en', quote.currency_code || 'USD');
-  const validUntil = formatQuoteDate(quote.valid_until ?? null);
+  const validUntil = formatQuoteDate(quote.valid_until ?? null, locale);
   const trimmedMessage = customMessage?.trim();
   const resolvedPortalLink = portalLink?.trim();
   const subject = `Reminder: Quote ${quoteNumber} expires on ${validUntil}`;
@@ -118,7 +121,7 @@ export function buildQuoteAcceptedConfirmationEmailTemplate({
 }: QuoteEmailTemplateInput): { subject: string; html: string; text: string } {
   const quoteNumber = quote.quote_number ?? quote.quote_id;
   const formattedAmount = formatCurrency((quote.total_amount ?? 0) / 100, locale ?? 'en', quote.currency_code || 'USD');
-  const acceptedAt = formatQuoteDate(quote.accepted_at ?? null);
+  const acceptedAt = formatQuoteDate(quote.accepted_at ?? null, locale);
   const trimmedMessage = customMessage?.trim();
   const resolvedPortalLink = portalLink?.trim();
   const subject = `Quote ${quoteNumber} was accepted`;

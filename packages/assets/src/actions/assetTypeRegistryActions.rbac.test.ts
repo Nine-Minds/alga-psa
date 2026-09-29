@@ -177,8 +177,15 @@ describe('asset type registry action RBAC (T307)', () => {
     });
 
     const listed = await getAssetTypes();
-    expect(listed).toHaveLength(1);
-    expect(listed[0]).toMatchObject({ slug: 'workstation', is_builtin: true });
+    expect(Array.isArray(listed)).toBe(true);
+    expect(listed).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        type_id: 'builtin_1',
+        slug: 'workstation',
+        fields_schema: [],
+        is_builtin: true,
+      }),
+    ]));
 
     const single = await getAssetType('workstation');
     expect(single?.slug).toBe('workstation');

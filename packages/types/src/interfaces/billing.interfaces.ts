@@ -190,6 +190,8 @@ export interface IRecurringChargeDetailPeriod {
   billingTiming?: 'arrears' | 'advance' | null;
 }
 export interface IBillingCharge extends TenantEntity {
+  unit_code?: string | null;
+  unit_label?: string | null;
   type: ChargeType;
   serviceId?: string;
   config_id?: string;
@@ -434,6 +436,7 @@ export interface IService extends TenantEntity {
   default_rate: number; // Convenience field: primary rate (typically first/USD price)
   category_id: string | null;
   unit_of_measure: string;
+  unit_code?: string | null;
   item_kind?: 'service' | 'product'; // Catalog kind (Products are a filtered subset)
   is_active?: boolean;
   sku?: string | null;
@@ -564,6 +567,7 @@ export interface IContractLinePresetService extends TenantEntity {
   quantity?: number;
   custom_rate?: number | null;
   unit_of_measure?: string;
+  unit_code?: string | null;
   // Bucket overlay fields - recommended bucket configuration
   bucket_total_minutes?: number;
   bucket_overage_rate?: number;
@@ -608,6 +612,8 @@ export interface IBucketUsage extends TenantEntity {
 export interface PaymentMethod extends TenantEntity {
   payment_method_id: string;
   client_id: string;
+  /** The billing profile this saved method belongs to (never shared across profiles). */
+  billing_profile_id: string;
   type: 'credit_card' | 'bank_account';
   last4: string;
   exp_month?: string;
@@ -780,8 +786,11 @@ export interface ITaxRate extends TenantEntity {
   is_active?: boolean;
   conditions?: Record<string, any>;
   name?: string;
-  /** Maximum tax per calculation, in the smallest currency unit. Null means uncapped. */
+  /** Safe integer tax cap in rate-currency minor units; null is uncapped, zero is intentional.
+   * Applied per rate contribution/per period segment, not to component-based composite totals. */
   cap_amount?: number | null;
+  /** Explicit invoice currency, or null for a universal rate. */
+  currency_code?: string | null;
 }
 
 export interface IClientTaxRate extends TenantEntity {
@@ -798,6 +807,8 @@ export interface IDefaultBillingSettings extends TenantEntity {
   enable_credit_expiration: boolean;
   credit_expiration_days: number;
   credit_expiration_notification_days: number[];
+  default_notice_period_days?: number;
+  default_quote_validity_days?: number;
   default_recurring_cadence_owner?: CadenceOwner;
   recurring_cadence_rollout_state?: 'mixed_enabled';
   recurring_cadence_rollout_message?: string;

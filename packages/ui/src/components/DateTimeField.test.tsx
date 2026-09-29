@@ -3,14 +3,18 @@
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { countryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
 import { DateTimeField } from './DateTimeField';
+import { DateFormatProvider } from '../lib/dateFormat/useDateFormat';
 import {
   buildTimeOptions,
+  getDatePlaceholder,
   isTypableDateText,
   isTypableTimeText,
   parseDateInput,
   parseTimeInput,
 } from '../lib/dateTimeInput';
+import { format as formatDateFns } from 'date-fns';
 
 /**
  * The family's contract, in the order it was argued for: you can type, the
@@ -54,10 +58,13 @@ describe('typing', () => {
     expect(onChange).toHaveBeenCalledWith('14:37');
   });
 
-  it('parses a date in the locale field order, including back-dated years', () => {
-    mockLocale = 'de';
+  it('parses a date in the country field order, including back-dated years', () => {
     const onChange = vi.fn();
-    render(<DateTimeField variant="date" value={new Date(2026, 7, 13)} onChange={onChange} />);
+    render(
+      <DateFormatProvider countryCode="DE">
+        <DateTimeField variant="date" value={new Date(2026, 7, 13)} onChange={onChange} />
+      </DateFormatProvider>
+    );
 
     const [input] = fields();
     fireEvent.change(input, { target: { value: '1.3.2019' } });
@@ -94,9 +101,12 @@ describe('typing', () => {
   });
 
   it('keeps the previous value when the text does not parse', () => {
-    mockLocale = 'de';
     const onChange = vi.fn();
-    render(<DateTimeField variant="date" value={new Date(2026, 7, 13)} onChange={onChange} />);
+    render(
+      <DateFormatProvider countryCode="DE">
+        <DateTimeField variant="date" value={new Date(2026, 7, 13)} onChange={onChange} />
+      </DateFormatProvider>
+    );
 
     const [input] = fields();
     fireEvent.change(input, { target: { value: '31.02.2026' } });
@@ -135,7 +145,7 @@ describe('the rail', () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
-  it('reads on a 12-hour dial where the locale does', () => {
+  it('reads on a 12-hour dial where the country does', () => {
     render(<DateTimeField variant="time" value="14:35" onChange={() => {}} timeFormat="12h" />);
 
     fireEvent.focus(fields()[0]);
@@ -172,6 +182,37 @@ describe('the rail', () => {
 });
 
 describe('the exit contract', () => {
+  it('commits a typed datetime on Enter and closes without submitting the enclosing form', () => {
+    const onChange = vi.fn();
+    const onSubmit = vi.fn((event: React.FormEvent) => event.preventDefault());
+    render(
+      <form onSubmit={onSubmit}>
+        <DateTimeField
+          variant="datetime"
+          value={new Date(2026, 8, 17, 12, 0)}
+          onChange={onChange}
+          timeFormat="12h"
+        />
+        <button type="submit">Save entry</button>
+      </form>
+    );
+
+    const [, timeInput] = fields();
+    fireEvent.focus(timeInput);
+    fireEvent.change(timeInput, { target: { value: '12:30 PM' } });
+    expect(timeInput.getAttribute('aria-expanded')).toBe('true');
+
+    // Prevent the Enter default action as well as closing the panel: the
+    // schedule entry should only submit when its Save button is clicked.
+    expect(fireEvent.keyDown(timeInput, { key: 'Enter' })).toBe(false);
+    expect(onChange).toHaveBeenCalledExactlyOnceWith(new Date(2026, 8, 17, 12, 30));
+    expect(timeInput.getAttribute('aria-expanded')).toBe('false');
+    expect(screen.queryAllByRole('option')).toHaveLength(0);
+    expect(onSubmit).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Save entry' }));
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
+
   it('keeps the panel for the time half after a day is picked, then closes on the time', () => {
     const onChange = vi.fn();
     render(
@@ -219,6 +260,80 @@ describe('the exit contract', () => {
 
     expect(screen.getByText('Pick a day to save and close')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Close' })).toBeTruthy();
+  });
+});
+
+describe('ruled-out days', () => {
+  // Aug 17–23 2026 is off limits; everything else in range is fine.
+  const lockedWeek = (day: Date) => day >= new Date(2026, 7, 17) && day <= new Date(2026, 7, 23);
+
+  it('refuses a typed day the caller has ruled out and keeps the previous value', () => {
+    const onChange = vi.fn();
+    render(
+      <DateFormatProvider countryCode="DE">
+        <DateTimeField variant="date" value={new Date(2026, 7, 13)} onChange={onChange} isDateDisabled={lockedWeek} />
+      </DateFormatProvider>
+    );
+
+    const [input] = fields();
+    fireEvent.change(input, { target: { value: '18.08.2026' } });
+    fireEvent.blur(input);
+
+    expect(onChange).not.toHaveBeenCalled();
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    // A real date that is merely unavailable is not described as "not a date".
+    expect(screen.getByRole('status').textContent).toMatch(/^That day can’t be chosen/);
+  });
+
+  it('still commits a typed day the rule allows', () => {
+    const onChange = vi.fn();
+    render(
+      <DateFormatProvider countryCode="DE">
+        <DateTimeField variant="date" value={new Date(2026, 7, 13)} onChange={onChange} isDateDisabled={lockedWeek} />
+      </DateFormatProvider>
+    );
+
+    const [input] = fields();
+    fireEvent.change(input, { target: { value: '25.08.2026' } });
+    fireEvent.blur(input);
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange.mock.calls[0][0]).toEqual(new Date(2026, 7, 25));
+  });
+
+  it('disables ruled-out days in the calendar and ignores clicks on them', () => {
+    const onChange = vi.fn();
+    render(<DateTimeField variant="date" value={new Date(2026, 7, 13)} onChange={onChange} isDateDisabled={lockedWeek} />);
+
+    fireEvent.focus(fields()[0]);
+    const dayButton = (day: number) =>
+      screen.getAllByRole('button').find((button) => button.textContent === String(day) && button.closest('[role="grid"]'))!;
+
+    expect((dayButton(18) as HTMLButtonElement).disabled).toBe(true);
+    expect((dayButton(12) as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(dayButton(18));
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('follows typed text to a ruled-out day without marking it selected', () => {
+    render(<DateTimeField variant="date" value={new Date(2026, 7, 13)} onChange={() => {}} isDateDisabled={lockedWeek} />);
+
+    const [input] = fields();
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: '08/18/2026' } });
+
+    const day = (n: number) =>
+      screen.getAllByRole('button').find((button) => button.textContent === String(n) && button.closest('[role="grid"]'))!;
+    expect(day(18).closest('[aria-selected="true"]')).toBeNull();
+    expect(day(13).closest('[aria-selected="true"]')).not.toBeNull();
+  });
+
+  it('disables the Today shortcut when today is ruled out', () => {
+    render(<DateTimeField variant="date" value={new Date(2026, 7, 13)} onChange={() => {}} isDateDisabled={() => true} />);
+
+    fireEvent.focus(fields()[0]);
+
+    expect((screen.getByRole('button', { name: 'Today' }) as HTMLButtonElement).disabled).toBe(true);
   });
 });
 
@@ -292,6 +407,23 @@ describe('keyboard', () => {
 });
 
 describe('parsing rules', () => {
+  // What the field prints must be what the field will take back. A display
+  // pattern and a parse order derived from different sources is how a date
+  // silently moves on a blur.
+  it('round-trips display -> parse in every country shape we ship', () => {
+    const date = new Date(2026, 7, 13);
+
+    for (const country of ['US', 'AU', 'GB', 'DE', 'CA', 'BR', 'NL', 'SE', 'HU', 'XX']) {
+      const shape = countryDateFormat(country);
+      const printed = formatDateFns(date, shape.datePattern);
+      expect(parseDateInput(printed, shape)).toEqual(date);
+      // The placeholder promises the same order the parser reads.
+      expect(getDatePlaceholder(shape)).toBe(
+        shape.datePattern.replace('MM', 'mm').replace('dd', 'dd')
+      );
+    }
+  });
+
   it('takes the shortcuts the timesheet already knew, and refuses nonsense', () => {
     expect(parseTimeInput('930p')).toBe('21:30');
     expect(parseTimeInput('9a')).toBe('09:00');
@@ -300,18 +432,21 @@ describe('parsing rules', () => {
     expect(parseTimeInput('25:00')).toBeNull();
   });
 
-  it('reads dates in the locale order, with relative words and offsets', () => {
+  it('reads dates in the country order, with relative words and offsets', () => {
     const today = new Date(2026, 7, 13);
 
-    expect(parseDateInput('13/8', 'it', { today })).toEqual(new Date(2026, 7, 13));
-    expect(parseDateInput('13/08/26', 'it', { today })).toEqual(new Date(2026, 7, 13));
-    expect(parseDateInput('130826', 'it', { today })).toEqual(new Date(2026, 7, 13));
-    expect(parseDateInput('08/13/2026', 'en', { today })).toEqual(new Date(2026, 7, 13));
-    // Pasted ISO reads as ISO in every locale, never as 2026 months.
-    expect(parseDateInput('2026-08-13', 'it', { today })).toEqual(new Date(2026, 7, 13));
-    expect(parseDateInput('yesterday', 'en', { today })).toEqual(new Date(2026, 7, 12));
-    expect(parseDateInput('+7', 'en', { today })).toEqual(new Date(2026, 7, 20));
-    expect(parseDateInput('31/02/2026', 'it', { today })).toBeNull();
+    const IT = countryDateFormat('IT');
+    const US = countryDateFormat('US');
+
+    expect(parseDateInput('13/8', IT, { today })).toEqual(new Date(2026, 7, 13));
+    expect(parseDateInput('13/08/26', IT, { today })).toEqual(new Date(2026, 7, 13));
+    expect(parseDateInput('130826', IT, { today })).toEqual(new Date(2026, 7, 13));
+    expect(parseDateInput('08/13/2026', US, { today })).toEqual(new Date(2026, 7, 13));
+    // Pasted ISO reads as ISO in every country, never as 2026 months.
+    expect(parseDateInput('2026-08-13', IT, { today })).toEqual(new Date(2026, 7, 13));
+    expect(parseDateInput('yesterday', US, { today })).toEqual(new Date(2026, 7, 12));
+    expect(parseDateInput('+7', US, { today })).toEqual(new Date(2026, 7, 20));
+    expect(parseDateInput('31/02/2026', IT, { today })).toBeNull();
   });
 
   it('lets only characters a valid entry could hold be typed', () => {

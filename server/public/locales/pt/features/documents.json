@@ -217,7 +217,19 @@
     "subtitle": "Visualize e baixe seus documentos compartilhados",
     "searchPlaceholder": "Pesquisar documentos...",
     "showing": "Documentos {{count}}",
-    "loadError": "Falha ao carregar documentos. Por favor, tente novamente."
+    "loadError": "Falha ao carregar documentos. Por favor, tente novamente.",
+    "view": "Visualizar",
+    "download": "Baixar",
+    "downloadPdf": "Baixar PDF",
+    "downloadMarkdown": "Baixar Markdown",
+    "previewUnavailable": "A pré-visualização não está disponível para este tipo de arquivo.",
+    "previewError": "Não foi possível carregar a pré-visualização. Tente novamente.",
+    "downloadError": "Não foi possível transferir este documento. Tente novamente.",
+    "notFound": "Este documento já não está disponível.",
+    "noContent": "Este documento não tem conteúdo para exportar.",
+    "accessDenied": "Não tem acesso a este documento.",
+    "loadingPreview": "Carregando pré-visualização…",
+    "exportFailed": "Falha na exportação do PDF. Tente usar Markdown."
   },
   "kb": {
     "title": "Base de conhecimento",

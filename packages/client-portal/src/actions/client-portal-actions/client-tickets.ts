@@ -31,7 +31,7 @@ import {
   TICKET_ACTIVITY_SOURCE,
   writeTicketActivity,
 } from '@shared/lib/ticketActivity';
-import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
+import { maybeReopenBundleMasterFromChildReply, revertBundlePropagationForChild } from '@alga-psa/tickets/actions/ticketBundleUtils';
 import {
   applyTicketVisibilityFilter,
   getTicketOrigin,
@@ -164,7 +164,7 @@ async function resolveVisibleTicket(
       't.client_id': visibility.clientId
     })
     .modify((queryBuilder: Knex.QueryBuilder) => {
-      applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id' });
+      applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id' });
     })
     .first();
 
@@ -267,7 +267,7 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
         't.client_id': visibility.clientId
       });
 
-      applyTicketVisibilityFilter(query, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id' });
+      applyTicketVisibilityFilter(query, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id' });
 
     // Filter by status
     if (parsedStatusFilter.kind === 'all') {
@@ -352,7 +352,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
           't.client_id': visibility.clientId
         })
         .modify((ticketQuery: Knex.QueryBuilder) => {
-          applyTicketVisibilityFilter(ticketQuery, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id' });
+          applyTicketVisibilityFilter(ticketQuery, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id' });
         })
         .first();
 
@@ -433,8 +433,12 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       // in buildTicketThreadTabState).
       const conversationsQuery = scopedDb.table('comments');
       scopedDb.tenantJoin(conversationsQuery, 'comment_threads as ct', 'comments.thread_id', 'ct.thread_id', { type: 'left' });
+      // Read-time bundle provenance. Only the source comment id is selected:
+      // a bundle can span clients, so the portal must never learn (or be able
+      // to follow a link to) the master ticket.
+      scopedDb.tenantJoin(conversationsQuery, 'ticket_bundle_mirrors as bm', 'comments.comment_id', 'bm.child_comment_id', { type: 'left' });
       conversationsQuery
-        .select('comments.*')
+        .select('comments.*', 'bm.source_comment_id as bundle_mirror_source_comment_id')
         .where({
           'comments.ticket_id': ticketId,
           'comments.is_internal': false,
@@ -547,13 +551,23 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
 
     const { entered_by_user_type, ...ticketWithoutCreatorType } = result.ticket as any;
 
+    const conversationsWithProvenance = (result.conversations as Array<Record<string, any>>).map((comment) => {
+      const { bundle_mirror_source_comment_id, ...commentRow } = comment;
+      return {
+        ...commentRow,
+        bundle_mirror_source: bundle_mirror_source_comment_id
+          ? { source_comment_id: bundle_mirror_source_comment_id }
+          : null,
+      };
+    });
+
     return {
       ...ticketWithoutCreatorType,
       ticket_origin: getTicketOrigin(result.ticket as any),
       entered_at: result.ticket.entered_at instanceof Date ? result.ticket.entered_at.toISOString() : result.ticket.entered_at,
       updated_at: result.ticket.updated_at instanceof Date ? result.ticket.updated_at.toISOString() : result.ticket.updated_at,
       closed_at: result.ticket.closed_at instanceof Date ? result.ticket.closed_at.toISOString() : result.ticket.closed_at,
-      conversations: result.conversations,
+      conversations: conversationsWithProvenance,
       documents: result.documents,
       // Linked assets joined from asset_associations; the type is broadened on
       // the consumer side via a small augmentation since ITicketWithDetails
@@ -989,6 +1003,15 @@ export const updateTicketStatus = withAuth(async (
           updated_by: userId
         });
 
+      // A bundled child reopened from the portal has left the "closed by
+      // master" state. Revert its active propagation row in the same
+      // transaction so the ledger agrees with tickets.is_closed and a later
+      // master close cannot collide with a stale row on the per-child unique
+      // index. No-op when the child holds no active row.
+      if (isReopening && ticket.master_ticket_id) {
+        await revertBundlePropagationForChild(trx, tenant, ticketId, userId);
+      }
+
       const statusChanges = {
         status_id: {
           old: oldStatusId,
@@ -1178,7 +1201,7 @@ export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticket
           client_id: visibility.clientId
         })
         .modify((queryBuilder: Knex.QueryBuilder) => {
-          applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id' });
+          applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id', billingProfileColumn: 'tickets.billing_profile_id' });
         })
         .first();
 
@@ -1313,6 +1336,28 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
         throw expectedClientTicketActionError('No default status configured for tickets');
       }
 
+      // A contact associated with exactly one billing profile is working on
+      // behalf of that segment, so the ticket is attributed to it. Two or more
+      // associations is genuinely ambiguous — the model's location → client
+      // default chain answers it instead of this guessing.
+      const contactProfileQuery = tenantDb(trx, tenant).table('billing_profile_contacts as bpc');
+      tenantDb(trx, tenant).tenantJoin(
+        contactProfileQuery,
+        'client_billing_profiles as p',
+        'p.billing_profile_id',
+        'bpc.billing_profile_id',
+      );
+      const contactProfiles = await contactProfileQuery
+        .where({
+          'bpc.contact_name_id': visibility.contactId,
+          'p.client_id': visibility.clientId,
+          'p.is_active': true,
+        })
+        .select('bpc.billing_profile_id');
+      const contactBillingProfileId = contactProfiles.length === 1
+        ? (contactProfiles[0].billing_profile_id as string)
+        : undefined;
+
       // Convert to TicketModel input format
       const createTicketInput: CreateTicketInput = {
         title: validatedData.title,
@@ -1320,6 +1365,7 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
         priority_id: validatedData.priority_id,
         client_id: visibility.clientId,
         contact_id: visibility.contactId, // Maps to contact_name_id in database
+        billing_profile_id: contactBillingProfileId,
         entered_by: userId,
         source: 'client_portal',
         ticket_origin: TICKET_ORIGINS.CLIENT_PORTAL,

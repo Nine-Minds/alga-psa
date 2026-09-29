@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Trash, ExternalLink, MoreVertical } from 'lucide-react';
 import { IScheduleEntry, DeletionValidationResult } from '@alga-psa/types';
-import { getEventColors } from './utils';
+import { getEventColors, hoverInkClassForFill, inkClassForFill } from './utils';
 import { ENTRY_OWNED_WORK_ITEM_TYPES } from '../../lib/entryOwnedWorkItems';
+import { useSurfaceIsLight } from '@alga-psa/ui/hooks/useSurfaceIsLight';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { Button } from '@alga-psa/ui/components/Button';
 import {
@@ -54,7 +55,15 @@ const ScheduleEvent: React.FC<ScheduleEventProps> = ({
   const eventRef = useRef<HTMLDivElement>(null);
   const isPrimary = true;
   const isComparison = false;
-  const { bg, hover, text } = getEventColors(event.work_item_type, isPrimary, isComparison);
+  const { bg, hover, text, fill, hoverFill } = getEventColors(event.work_item_type, isPrimary, isComparison);
+
+  // Ink follows the fill the chip is painted with, base and hover alike, so it
+  // stays readable in every theme pair instead of tracking the mode.
+  const fillIsLight = useSurfaceIsLight(eventRef, fill ?? undefined);
+  const hoverFillIsLight = useSurfaceIsLight(eventRef, hoverFill ?? undefined);
+  const ink = fill
+    ? `${inkClassForFill(fillIsLight)} ${hoverInkClassForFill(hoverFillIsLight)}`
+    : text;
 
   // Use the compact event hook for duration-based styling
   // Lock the compact state during resize to prevent layout shifts
@@ -155,7 +164,7 @@ const ScheduleEvent: React.FC<ScheduleEventProps> = ({
     <div>
       <div
         ref={eventRef}
-        className={`${bg} ${text} p-1 shadow-md rounded absolute
+        className={`${bg} ${ink} p-1 shadow-md rounded absolute
         ${!isResizing ? hover : ''}
         ${isDragging ? 'opacity-70 shadow-lg' : ''}
         ${isResizing ? 'cursor-ew-resize pointer-events-none' : 'cursor-move'}`}

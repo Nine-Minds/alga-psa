@@ -2255,6 +2255,20 @@ export const publishWorkflowDefinitionAction = withAuth(async (user, { tenant },
 
   // Publish-time inference: for inferred mode, prefer the trigger event's schemaRef as the workflow payload contract.
   const schemaRegistry = getSchemaRegistry();
+  const dateSourcePayloadSchemaRefs: Record<string, string> = {
+    'client.anniversary': 'payload.ClientAnniversary.v1',
+    'contract.renewal_decision': 'payload.ContractRenewalDate.v1',
+    'contract.end': 'payload.ContractEndDate.v1',
+    'asset.warranty_end': 'payload.AssetWarrantyEnd.v1',
+  };
+  const dateTrigger = (definition as any)?.trigger;
+  if (dateTrigger?.type === 'date' && dateSourcePayloadSchemaRefs[dateTrigger.source] !== definition.payloadSchemaRef) {
+    return {
+      ok: false,
+      errors: [{ severity: 'error', stepPath: 'root.payloadSchemaRef', code: 'DATE_TRIGGER_SCHEMA_MISMATCH', message: 'Date trigger payload schema must match its selected source.' }],
+      warnings: [],
+    };
+  }
   const payloadSchemaMode = typeof (workflow as any)?.payload_schema_mode === 'string' ? String((workflow as any).payload_schema_mode) : 'pinned';
   const payloadSchemaProvenance = payloadSchemaMode === 'pinned' ? 'pinned' : 'inferred';
   if (isWorkflowTimeTrigger((definition as any)?.trigger)) {

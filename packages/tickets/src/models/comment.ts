@@ -15,11 +15,44 @@ function tenantScopedTable<Row extends object = Record<string, unknown>>(
 const Comment = {
   getAllbyTicketId: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, ticket_id: string): Promise<IComment[]> => {
     try {
-      const comments = await tenantScopedTable<IComment>(knexOrTrx, 'comments', tenant)
-        .select('comments.*')
+      // Read-time bundle provenance lives here, in the shared read layer, so
+      // every MSP path that lists a ticket's comments — the initial
+      // consolidated load and every refresh (remote update, post add/edit/
+      // delete) — returns the same shape. A comment is a mirror when
+      // ticket_bundle_mirrors points at it; the mirror's source comment
+      // carries the master ticket so the chip can name and link it. All joins
+      // are tenant-co-located via tenantJoin.
+      const commentsQuery = tenantScopedTable<IComment>(knexOrTrx, 'comments', tenant).select(
+        'comments.*',
+        'bm.source_comment_id as bundle_mirror_source_comment_id',
+        'mt.ticket_id as bundle_source_ticket_id',
+        'mt.ticket_number as bundle_source_ticket_number'
+      );
+      const scopedConn = tenantDb(knexOrTrx, tenant);
+      scopedConn.tenantJoin(commentsQuery, 'ticket_bundle_mirrors as bm', 'comments.comment_id', 'bm.child_comment_id', { type: 'left' });
+      scopedConn.tenantJoin(commentsQuery, 'comments as src', 'bm.source_comment_id', 'src.comment_id', { type: 'left', rootTenantColumn: 'comments.tenant' });
+      scopedConn.tenantJoin(commentsQuery, 'tickets as mt', 'src.ticket_id', 'mt.ticket_id', { type: 'left', rootTenantColumn: 'comments.tenant' });
+
+      const comments = await commentsQuery
         .where('comments.ticket_id', ticket_id)
         .orderBy('comments.created_at', 'asc');
-      return comments;
+
+      return (comments as Array<Record<string, unknown>>).map((comment) => {
+        const sourceCommentId = comment.bundle_mirror_source_comment_id as string | null | undefined;
+        const masterTicketId = (comment.bundle_source_ticket_id as string | null) ?? null;
+        const masterTicketNumber = (comment.bundle_source_ticket_number as string | null) ?? null;
+        delete comment.bundle_mirror_source_comment_id;
+        delete comment.bundle_source_ticket_id;
+        delete comment.bundle_source_ticket_number;
+        comment.bundle_mirror_source = sourceCommentId
+          ? {
+              source_comment_id: sourceCommentId,
+              master_ticket_id: masterTicketId,
+              master_ticket_number: masterTicketNumber,
+            }
+          : null;
+        return comment as unknown as IComment;
+      });
     } catch (error) {
       console.error('Error getting all comments:', error);
       throw error;
@@ -222,6 +255,9 @@ const Comment = {
         ...comment,
         updated_at: new Date().toISOString(),
       };
+      // bundle_mirror_source is read-time provenance from ticket_bundle_mirrors,
+      // not a comments column; strip it so a smuggled payload can never be written.
+      delete (updateData as { bundle_mirror_source?: unknown }).bundle_mirror_source;
 
       logger.info('Updating comment with data:', {
         ...updateData,

@@ -144,6 +144,32 @@ describe('ResendEmailProvider payload construction', () => {
     ]);
   });
 
+  it('sends the brand logo as a content-id attachment the HTML can reference', async () => {
+    const { provider, client } = await initializedProvider();
+    const content = Buffer.from('logo-bytes');
+
+    await provider.sendEmail(
+      baseMessage({
+        html: '<img data-alga-brand-logo src="cid:alga-brand-logo-wide"/>',
+        attachments: [{
+          filename: 'logo.png',
+          content,
+          contentType: 'image/png',
+          cid: 'alga-brand-logo-wide',
+        }]
+      })
+    );
+
+    expect(client.post.mock.calls[0][1].attachments).toEqual([
+      {
+        filename: 'logo.png',
+        content: content.toString('base64'),
+        content_type: 'image/png',
+        content_id: 'alga-brand-logo-wide'
+      }
+    ]);
+  });
+
   it('converts the tags record into Resend name/value pairs and forwards headers', async () => {
     const { provider, client } = await initializedProvider();
 

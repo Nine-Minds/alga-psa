@@ -31,6 +31,7 @@ const HUNTRESS_INCIDENT_POLL_JOB = 'huntress-incident-poll';
 const RMM_DEVICE_SYNC_JOB = 'rmm-device-sync';
 const ACCOUNTING_SYNC_CYCLE_JOB = 'accounting-sync-cycle';
 const HUDU_AUTO_SYNC_JOB = 'hudu-auto-sync';
+const MIGRATION_APPLY_JOB = 'migration_apply';
 const PUBLISH_SCHEDULED_COMMENT_JOB = 'publish-scheduled-comment';
 const RECOVER_COMMENT_PUBLICATIONS_JOB = 'recover-comment-publications';
 const SYSTEM_TENANT_ID = '00000000-0000-0000-0000-000000000000';
@@ -146,6 +147,9 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
   registerJobHandlerForActivities(RMM_DEVICE_SYNC_JOB, forwardJobToServer(RMM_DEVICE_SYNC_JOB));
   registerJobHandlerForActivities(ACCOUNTING_SYNC_CYCLE_JOB, forwardJobToServer(ACCOUNTING_SYNC_CYCLE_JOB));
   registerJobHandlerForActivities(HUDU_AUTO_SYNC_JOB, forwardJobToServer(HUDU_AUTO_SYNC_JOB));
+  // AMP apply uses server-bound migration appliers and the tenant database
+  // connection, so Temporal forwards it to the server's registered handler.
+  registerJobHandlerForActivities(MIGRATION_APPLY_JOB, forwardJobToServer(MIGRATION_APPLY_JOB, { strict: true }));
   // Teams meeting Graph cleanup (cancel/decline): the handler imports
   // src-consumed vertical packages (@alga-psa/clients + EE Teams lib), so the
   // worker forwards it to the server like the polling jobs above. The
@@ -168,6 +172,29 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
   registerJobHandlerForActivities(
     'process-telephony-call-notification',
     forwardJobToServer('process-telephony-call-notification'),
+  );
+  // 3CX call journaling, enqueued by the app's /api/telephony/3cx/[tenantSlug]/
+  // report-call route with an already-canonical record. The handler reaches the
+  // telephony core and the EE 3CX/Teams libs (src-consumed), so it executes
+  // server-side via the event bus like the Teams call notification above.
+  registerJobHandlerForActivities(
+    'process-telephony-canonical-call',
+    forwardJobToServer('process-telephony-canonical-call'),
+  );
+  // 3CX chat journaling (report-chat route), incoming-call events from the
+  // Call Control consumer, and single-contact phonebook pushes all run
+  // server-side for the same src-consumed-package reason.
+  registerJobHandlerForActivities(
+    'process-threecx-chat',
+    forwardJobToServer('process-threecx-chat'),
+  );
+  registerJobHandlerForActivities(
+    'process-threecx-call-event',
+    forwardJobToServer('process-threecx-call-event'),
+  );
+  registerJobHandlerForActivities(
+    'sync-threecx-phonebook-contact',
+    forwardJobToServer('sync-threecx-phonebook-contact'),
   );
   // Invoice bundling/delivery, enqueued from billing UI actions via the shared
   // enqueueImmediateJob seam. The handlers live server-side (StorageService,

@@ -122,7 +122,8 @@
       "taskType": "Type",
       "actions": "Actions"
     },
-    "unknownUser": "Unknown"
+    "unknownUser": "Unknown",
+    "searchSmart": "Search projects, tasks, and comments… Enter for smart search"
   },
   "quickAdd": {
     "title": "Add New Project",
@@ -1871,5 +1872,29 @@
       "loadRecipient": "Failed to load recipient information",
       "sendFailed": "Failed to send the status update"
     }
+  },
+  "smartSearch": {
+    "run": "Smart search",
+    "runTitle": "Score the filtered projects against this query",
+    "relevanceColumn": "Match",
+    "relevance": "{{percent}}% relevant",
+    "strong": "Strong matches",
+    "possible": "Possible matches",
+    "unlikely": "Unlikely matches",
+    "emptyBucketRunning": "None yet",
+    "emptyBucket": "None",
+    "scoring": "Scored {{scored}} of {{total}} projects",
+    "summary": "Scored {{total}} projects · {{strong}} strong · {{possible}} possible",
+    "cancelled": "Search cancelled after {{scored}} of {{total}} projects",
+    "errorTitle": "Smart search stopped",
+    "starting": "Starting smart search…",
+    "rerun": "Filters changed. Run again",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "exit": "Back to list",
+    "notConfigured": "Smart search is not configured on this server",
+    "failedCount": "{{count}} projects could not be scored",
+    "unscored": "Could not be scored",
+    "addOnRequired": "Smart search requires the AI Assistant add-on"
   }
 }

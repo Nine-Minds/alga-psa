@@ -20,6 +20,11 @@ const listedScheduleIds = [
   `${MARKETING_SEND_SEQUENCE_STEPS_JOB}:tenant-missing`,
   'marketing-fanout:flip-due-posts',
   'unrelated:schedule',
+  'opportunity-discipline:tenant-1',
+  'accounting-sync-cycle:tenant-2',
+  'recover-comment-publications:tenant-1',
+  'maintenance-fanout:opportunity-discipline',
+  'maintenance-fanout:accounting-sync-cycle',
 ];
 
 vi.mock('@temporalio/client', () => ({
@@ -103,6 +108,24 @@ describe('setupSchedules marketing fan-out cutover', () => {
 
     await setupSchedules();
 
+    expect(scheduleCreateMock.mock.calls.map(([input]) => input).find(({ scheduleId }) => scheduleId === 'maintenance-fanout:date-trigger-scan')).toEqual(expect.objectContaining({
+      scheduleId: 'maintenance-fanout:date-trigger-scan',
+      spec: { cronExpressions: ['5 * * * *'] },
+      action: expect.objectContaining({
+        workflowType: expect.any(Function),
+        args: [{ jobName: 'date-trigger-scan' }],
+        taskQueue: 'tenant-workflows',
+      }),
+    }));
+
+    const autopaySchedule = scheduleCreateMock.mock.calls
+      .map(([input]) => input)
+      .find(({ scheduleId }) => scheduleId === 'autopay-reconcile');
+    expect(autopaySchedule).toEqual(expect.objectContaining({
+      scheduleId: 'autopay-reconcile',
+      spec: { cronExpressions: ['0 * * * *'] },
+      action: expect.objectContaining({ workflowType: 'autopayReconcileWorkflow', args: [], taskQueue: 'tenant-workflows' }),
+    }));
     const marketingCreates = scheduleCreateMock.mock.calls
       .map(([input]) => input)
       .filter(({ scheduleId }) => scheduleId.startsWith('marketing-fanout:'));
@@ -179,5 +202,27 @@ describe('setupSchedules marketing fan-out cutover', () => {
     expect(scheduleDeleteMock).toHaveBeenCalledWith(
       `${MARKETING_SEND_SEQUENCE_STEPS_JOB}:tenant-missing`,
     );
+  });
+
+  it('replaces server-upserted per-tenant schedules with global fan-outs, deleting them only afterwards', async () => {
+    const { setupSchedules } = await import('../setupSchedules');
+
+    await setupSchedules();
+
+    const deleted = scheduleDeleteMock.mock.calls.map(([scheduleId]) => scheduleId as string);
+    expect(deleted).toEqual(expect.arrayContaining([
+      'opportunity-discipline:tenant-1',
+      'accounting-sync-cycle:tenant-2',
+      'recover-comment-publications:tenant-1',
+    ]));
+    expect(deleted.filter((scheduleId) => scheduleId.startsWith('maintenance-fanout:'))).toEqual([]);
+    expect(deleted).not.toContain('unrelated:schedule');
+
+    const firstLegacyDelete = events.indexOf('delete:opportunity-discipline:tenant-1');
+    for (const jobName of ['opportunity-discipline', 'accounting-sync-cycle', 'recover-comment-publications']) {
+      const upsert = events.indexOf(`upsert:maintenance-fanout:${jobName}`);
+      expect(upsert).toBeGreaterThan(-1);
+      expect(upsert).toBeLessThan(firstLegacyDelete);
+    }
   });
 });

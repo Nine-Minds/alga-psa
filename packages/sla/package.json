@@ -31,6 +31,11 @@
       "import": "./dist/services/index.js",
       "require": "./dist/services/index.js"
     },
+    "./utils/holidayUtils": {
+      "types": "./dist/utils/holidayUtils.d.ts",
+      "import": "./dist/utils/holidayUtils.js",
+      "require": "./dist/utils/holidayUtils.js"
+    },
     "./services/escalationService": {
       "types": "./dist/services/escalationService.d.ts",
       "import": "./dist/services/escalationService.js",

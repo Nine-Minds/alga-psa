@@ -125,22 +125,22 @@ describe('getHierarchicalLocaleAction', () => {
     await expect(getHierarchicalLocale(internalUser(), { tenant: TENANT })).resolves.toBe('fr');
   });
 
-  it('preserves the en-AU regional variant from a user preference', async () => {
+  it('normalises a saved en-AU user preference to its language', async () => {
     setFixtures({
       user_preferences: [
         { user_id: 'user-1', setting_name: 'locale', tenant: TENANT, setting_value: '"en-AU"' },
       ],
     });
 
-    await expect(getHierarchicalLocale(internalUser(), { tenant: TENANT })).resolves.toBe('en-AU');
+    await expect(getHierarchicalLocale(internalUser(), { tenant: TENANT })).resolves.toBe('en');
   });
 
-  it('preserves the en-AU regional variant as the org default', async () => {
+  it('normalises a saved en-AU org default to its language', async () => {
     setFixtures({
       tenant_settings: [{ tenant: TENANT, settings: { defaultLocale: 'en-AU' } }],
     });
 
-    await expect(getHierarchicalLocale(internalUser(), { tenant: TENANT })).resolves.toBe('en-AU');
+    await expect(getHierarchicalLocale(internalUser(), { tenant: TENANT })).resolves.toBe('en');
   });
 
   it('ignores unsupported user preferences and falls through to the org default', async () => {
@@ -175,7 +175,7 @@ describe('getHierarchicalLocaleAction', () => {
     await expect(getHierarchicalLocale(clientUser(), { tenant: TENANT })).resolves.toBe('de');
   });
 
-  it('preserves the en-AU regional variant as a client default for portal users', async () => {
+  it('normalises a saved en-AU client default to its language for portal users', async () => {
     setFixtures({
       ...clientChainFixtures({ defaultLocale: 'en-AU' }),
       tenant_settings: [
@@ -183,7 +183,7 @@ describe('getHierarchicalLocaleAction', () => {
       ],
     });
 
-    await expect(getHierarchicalLocale(clientUser(), { tenant: TENANT })).resolves.toBe('en-AU');
+    await expect(getHierarchicalLocale(clientUser(), { tenant: TENANT })).resolves.toBe('en');
   });
 
   it('falls back to the client-portal default when the client has none', async () => {

@@ -59,6 +59,34 @@
     "deleteEntity": {
       "fallback": "dit belastingtarief",
       "withRegion": "{{regionName}} belastingtarief"
+    },
+    "cap": {
+      "title": "Belastingplafond",
+      "label": "Belastingplafond ({{currencyCode}})",
+      "currency": "Valuta van het tarief",
+      "universal": "Alle factuurvaluta’s",
+      "optional": "Optioneel",
+      "noCap": "Geen plafond",
+      "clear": "Belastingplafond wissen",
+      "hint": "Maximale belasting van dit tarief per berekening. Laat leeg voor geen plafond. Voer 0 in om geen belasting te berekenen bij berekeningen die dit plafond gebruiken.",
+      "scopeTitle": "Hoe belastingplafonds werken",
+      "scope": "Een regionale berekening begrenst de bijdrage van elk tarief vóór het optellen, niet het regionale totaal. Berekeningen over een periode passen het plafond toe op elk tarief in elk datumsegment; meerdere segmenten kunnen samen het plafond overschrijden. Een factuur kan meerdere berekeningen bevatten. Dit is geen limiet per factuur, klant, project of gehele periode. Projectfactureringslimieten beperken factureerbare bedragen; belastingplafonds beperken de berekende belasting. Externe belastingaanbieders gebruiken hun eigen configuratie.",
+      "applicability": "Dit tarief geldt alleen voor facturen in {{currencyCode}}. Het wordt niet meer geselecteerd voor andere valuta’s.",
+      "composite": "Dit plafond geldt wanneer dit tarief bijdraagt aan een regionale berekening. Berekeningen op basis van componenten passen dit plafond niet toe.",
+      "legacy": "Valuta niet opgegeven · {{amount}} kleinste valuta-eenheden",
+      "legacyHelp": "Dit opgeslagen plafond geldt momenteel in de kleinste eenheden van elke factuurvaluta. Kies een valuta en bevestig het opgeslagen bedrag of voer een nieuw plafond in. Andere wijzigingen behouden de waarde; u kunt deze ook wissen zonder een valuta te kiezen.",
+      "resolve": "Opgeslagen bedrag in kleinste eenheden van {{currencyCode}} gebruiken",
+      "reenter": "Voer het plafond opnieuw in de nieuwe valuta in voordat u opslaat.",
+      "example": "Voorbeeld: {{amount}}; zonder scheidingstekens voor duizendtallen.",
+      "errors": {
+        "negative": "Voer een belastingplafond van nul of meer in.",
+        "precision": "Het plafond heeft meer decimalen dan deze valuta toestaat.",
+        "invalid": "Voer een bedrag in met het decimaalteken uit het voorbeeld, zonder tekens, scheidingstekens voor duizendtallen of valutasymbolen.",
+        "overflow": "Het plafond overschrijdt het maximaal ondersteunde bedrag.",
+        "currency": "Kies een ondersteunde valuta voordat u een belastingplafond instelt.",
+        "reenter": "Voer het plafond opnieuw in de nieuwe valuta in voordat u opslaat."
+      },
+      "compositeIndicator": "Alleen regionale berekeningen"
     }
   },
   "taxRateDetail": {

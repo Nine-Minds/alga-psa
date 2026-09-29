@@ -76,6 +76,7 @@ vi.mock('@alga-psa/formatting/blocknoteUtils', () => ({
 
 vi.mock('@alga-psa/tickets/actions/ticketBundleUtils', () => ({
   maybeReopenBundleMasterFromChildReply: vi.fn(),
+  revertBundlePropagationForChild: vi.fn(),
 }));
 
 vi.mock('@alga-psa/tickets/lib/liveUpdates', () => ({
@@ -154,6 +155,16 @@ function createClientPortalTrx(overrides: {
                 return 1;
               }),
             };
+          }),
+        };
+      }
+
+      // The creating contact belongs to no billing profile here, so ticket
+      // creation leaves attribution to the location → client-default chain.
+      if (table === 'billing_profile_contacts as bpc') {
+        return {
+          where: vi.fn().mockReturnValue({
+            select: vi.fn().mockResolvedValue([]),
           }),
         };
       }

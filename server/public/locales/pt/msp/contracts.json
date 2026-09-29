@@ -118,6 +118,9 @@
       "renewalHandling": "Tratamento de renovação"
     },
     "clientAssignment": {
+      "billingProfile": "Perfil de faturamento",
+      "billingProfileLabel": "Perfil de faturamento da atribuição",
+      "billingProfileNone": "Usar o perfil padrão do cliente",
       "clientContractId": "ID do contrato do cliente: {{id}}",
       "creditDrawdownOptOut": "Excluir do consumo de crédito",
       "empty": "Este contrato ainda não está atribuído a um cliente.",
@@ -399,7 +402,10 @@
       "selectClientFirst": "Selecione um cliente primeiro",
       "startDateLabel": "Data de início *",
       "useTenantDefaultsDescription": "Aplique o modo de renovação no nível da organização e as configurações do período de aviso prévio.",
-      "useTenantDefaultsLabel": "Usar padrões de renovação de locatário"
+      "useTenantDefaultsLabel": "Usar padrões de renovação de locatário",
+      "billingProfileLabel": "Perfil de faturação",
+      "billingProfileNone": "Utilizar o perfil predefinido do cliente",
+      "billingProfileHint": "Os encargos deste contrato são faturados neste perfil."
     },
     "po": {
       "amountLabel": "Valor do pedido de compra (opcional)",
@@ -1520,6 +1526,11 @@
       },
       "selectTemplateOptional": "Selecione um modelo (opcional)",
       "startFromTemplate": "Começar a partir do modelo"
+    },
+    "billingProfile": {
+      "label": "Perfil de faturação",
+      "none": "Utilizar o perfil predefinido do cliente",
+      "hint": "Os encargos deste contrato são faturados neste perfil, salvo se uma linha o substituir."
     }
   },
   "wizardFixed": {
@@ -1692,6 +1703,7 @@
     },
     "fields": {
       "client": "Cliente",
+      "billingProfile": "Perfil de faturamento",
       "contractName": "Nome do contrato",
       "billingFrequency": "Frequência de cobrança",
       "currency": "Moeda",
@@ -1700,6 +1712,9 @@
       "renewalMode": "Modo de renovação",
       "noticePeriod": "Período de aviso prévio",
       "renewalTerm": "Prazo de renovação"
+    },
+    "billingProfile": {
+      "clientDefault": "O perfil padrão do cliente"
     },
     "fallback": {
       "notSelected": "Não selecionado",

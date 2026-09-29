@@ -79,6 +79,7 @@ import {
   updateTicketInTransaction,
   type UpdateTicketInTransactionOptions,
 } from './optimizedTicketActions';
+import { revertBundlePropagationForChild } from './ticketBundleUtils';
 import {
   buildTicketResolutionSlaStageCompletionEvent,
   buildTicketResolutionSlaStageEnteredEvent,
@@ -140,6 +141,14 @@ export type TicketNotificationSuppressionOptions = Pick<
   UpdateTicketInTransactionOptions,
   'suppressContactNotifications' | 'suppressInternalNotifications'
 >;
+
+export type TicketBulkStatusOptions = TicketNotificationSuppressionOptions & {
+  /**
+   * Sync-mode bundle master boundary changes require an explicit choice:
+   * true propagates to affected children, false changes masters only.
+   */
+  propagateToChildren?: boolean;
+};
 
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
@@ -1035,6 +1044,15 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
           .update({ closed_at: null, closed_by: null });
         updatedTicket.closed_at = null;
         updatedTicket.closed_by = null;
+      }
+
+      // A bundled child reopened through this update path has left the "closed
+      // by master" state. Revert its active propagation row in the same
+      // transaction so the ledger agrees with tickets.is_closed and a later
+      // master close cannot collide with a stale row on the per-child unique
+      // index. No-op when the child holds no active row.
+      if (currentTicket.master_ticket_id && oldStatus?.is_closed && !newStatus?.is_closed) {
+        await revertBundlePropagationForChild(trx, tenant, id, user.user_id);
       }
 
       // Auto-apply checklist templates when the ticket's targeting attributes
@@ -2051,7 +2069,7 @@ export const bulkUpdateTicketStatus = withAuth(async (
   { tenant },
   ticketIds: string[],
   statusId: string,
-  options: TicketNotificationSuppressionOptions = {},
+  options: TicketBulkStatusOptions = {},
 ): Promise<{
   updatedIds: string[];
   failed: Array<{ ticketId: string; message: string; closeRuleFailures?: CloseRuleFailure[] }>;

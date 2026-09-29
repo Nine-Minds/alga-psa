@@ -123,7 +123,7 @@ export function computeRecurringQuantityCharges(
           timing.servicePeriodEnd,
           effectiveTaxRegion,
           true,
-          clientContractLine.currency_code || "USD",
+          contractCurrency,
           resolvedProfile?.billingProfileId ?? null,
         );
         taxRate = taxResult.taxRate;
