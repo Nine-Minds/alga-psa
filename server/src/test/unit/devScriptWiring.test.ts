@@ -17,6 +17,7 @@ describe('development launch wiring', () => {
 
     expect(pkg.scripts.dev).toContain('dev-server.ts');
     expect(pkg.scripts.dev).not.toContain('next:dev');
+    expect(pkg.scripts.dev).toContain('NEXT_DIST_DIR=.next-dev');
   });
 
   it('routes dev:turbo through the custom dev entrypoint too', () => {
@@ -26,6 +27,7 @@ describe('development launch wiring', () => {
 
     expect(pkg.scripts['dev:turbo']).toContain('dev-server.ts');
     expect(pkg.scripts['dev:turbo']).not.toContain('next:dev');
+    expect(pkg.scripts['dev:turbo']).toContain('NEXT_DIST_DIR=.next-dev');
   });
 
   it('wires the real upgrade handler with HMR delegation in the dev entrypoint', () => {
