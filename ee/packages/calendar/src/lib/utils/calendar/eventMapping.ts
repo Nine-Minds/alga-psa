@@ -102,8 +102,7 @@ function appendCalendarMarker(notes: string, calendarName?: string): string {
   if (!calendarName) return notes;
   const marker = calendarMarker(calendarName);
   // Idempotence also protects callers that pass previously mapped notes.
-  const stripped = stripCalendarMarker(notes) || '';
-  return providerBody(stripped, marker);
+  return providerBody(notes, marker);
 }
 
 function providerBody(notes: string, marker: string): string {
@@ -123,20 +122,44 @@ function escapeHtml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-function stripCalendarMarker(notes?: string): string | undefined {
-  if (!notes) return notes;
-  // Remove only a complete final marker line or the paragraph our Graph mapper
-  // appends. Never match across HTML tags or consume adjacent user content.
-  const html = notes.match(/\r?\n<p>\[Alga calendar: (?:[^<>]|&(?:amp|lt|gt);)*\]<\/p>(?=\s*(?:<\/body>|<\/html>|$))/i);
-  if (html) return notes.slice(0, html.index) + notes.slice(html.index! + html[0].length);
-  return notes.replace(/(?:\r?\n)\[Alga calendar: [^\]\r\n]+\]$/, '');
+function stripCalendarMarker(notes?: string, calendarName?: string): string | undefined {
+  if (notes === undefined || calendarName === undefined) return notes;
+  const marker = `[Alga calendar: ${calendarName}]`;
+  const escapedTextMarker = marker.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const candidates = new Set([marker, escapedTextMarker]);
+
+  // Provider HTML normalizes line breaks to paragraphs. Match one paragraph at
+  // a time so marker text cannot consume adjacent user-content elements.
+  const paragraphPattern = /<p(?:\s[^>]*)?>([^<>]*)<\/p>/gi;
+  let match: RegExpExecArray | null;
+  let lastParagraph: RegExpExecArray | null = null;
+  while ((match = paragraphPattern.exec(notes)) !== null) lastParagraph = match;
+  if (lastParagraph && /^\s*(?:<\/body>\s*)?(?:<\/html>\s*)?$/i.test(notes.slice(lastParagraph.index + lastParagraph[0].length))) {
+    const paragraphText = lastParagraph[1]
+      .replace(/&amp;/gi, '&').replace(/&lt;/gi, '<').replace(/&gt;/gi, '>')
+      .replace(/&quot;/gi, '"').replace(/&#39;|&apos;/gi, "'").trim();
+    if (candidates.has(paragraphText)) {
+      const before = notes.slice(0, lastParagraph.index).replace(/\r?\n[ \t]*$/, '');
+      const after = notes.slice(lastParagraph.index + lastParagraph[0].length);
+      const remaining = `${before}${after}`;
+      return /^\s*(?:<html(?:\s[^>]*)?>\s*)?(?:<body(?:\s[^>]*)?>\s*)?(?:<\/body>\s*)?(?:<\/html>\s*)?$/i.test(remaining) ? '' : remaining;
+    }
+  }
+
+  const linePattern = /(?:^|\r?\n)([^\r\n]*)$/;
+  const lastLine = notes.match(linePattern);
+  if (lastLine && candidates.has(lastLine[1].trim())) {
+    return notes.slice(0, lastLine.index).replace(/\r?\n$/, '') || '';
+  }
+  return notes;
 }
 
 export async function mapExternalEventToScheduleEntry(
   event: ExternalCalendarEvent,
   tenant: string,
   provider: 'google' | 'microsoft',
-  userEmails?: Map<string, string>
+  userEmails?: Map<string, string>,
+  owningCalendarName?: string
 ): Promise<Partial<IScheduleEntry>> {
   if (!userEmails && event.attendees && event.attendees.length > 0) {
     const emails = event.attendees.map((attendee) => attendee.email);
@@ -234,7 +257,7 @@ export async function mapExternalEventToScheduleEntry(
     ...(algaEntryId ? { entry_id: algaEntryId } : {}),
     tenant,
     title: event.title,
-    notes: stripCalendarMarker(event.description),
+    notes: stripCalendarMarker(event.description, owningCalendarName ?? (provider === 'microsoft' ? event.categories?.find(category => category.startsWith('Alga calendar: '))?.slice('Alga calendar: '.length) : undefined)),
     scheduled_start: startDate,
     scheduled_end: endDate,
     is_all_day: !!event.start.date && !event.start.dateTime && !!event.end.date && !event.end.dateTime,

@@ -99,13 +99,13 @@ describe('shared-calendar provider sync access', () => {
     return entry.entry_id;
   }
 
-  async function seedProviderAndMapping(entryId: string, userId: string, externalId = `external-${uuidv4()}`, providerKey = providerId) {
+  async function seedProviderAndMapping(entryId: string, userId: string, externalId = `external-${uuidv4()}`, providerKey = providerId, providerType: 'google' | 'microsoft' = 'google') {
     const provider = {
       id: providerKey,
       tenant,
       user_id: userId,
-      provider_type: 'google',
-      provider_name: 'Test Google',
+      provider_type: providerType,
+      provider_name: providerType === 'google' ? 'Test Google' : 'Test Outlook',
       calendar_id: 'primary',
       is_active: true,
       sync_direction: 'bidirectional',
@@ -116,8 +116,8 @@ describe('shared-calendar provider sync access', () => {
       id: providerKey,
       tenant,
       user_id: userId,
-      provider_type: 'google',
-      provider_name: 'Test Google',
+      provider_type: providerType,
+      provider_name: providerType === 'google' ? 'Test Google' : 'Test Outlook',
       calendar_id: 'primary',
       is_active: true,
       sync_direction: 'bidirectional',
@@ -261,6 +261,47 @@ describe('shared-calendar provider sync access', () => {
     currentEvent = pushedEvent;
     expect(await service.syncExternalEventToSchedule(externalId, providerId)).toMatchObject({ success: true, skipped: true });
     expect(adapter.updateEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ['google', 'marker-only'],
+    ['microsoft', 'marker-only'],
+    ['microsoft', 'category-only'],
+  ] as const)('does not re-push %s %s metadata for a read-only member', async (providerType, metadataKind) => {
+    const entryId = await seedGroupEntry([member, otherAssignee], { readMember: true });
+    const externalId = await seedProviderAndMapping(entryId, member, `metadata-${providerType}-${metadataKind}`, providerId, providerType);
+    const description = metadataKind === 'category-only'
+      ? '<html><body><p>Alga notes</p></body></html>'
+      : providerType === 'microsoft'
+        ? '<html><body><p>Alga notes</p><p>[Alga calendar: Sync access test]</p></body></html>'
+        : 'Alga notes\n[Alga calendar: Sync access test]';
+    const externalEvent = {
+      id: externalId,
+      title: 'Alga title',
+      description,
+      ...(providerType === 'microsoft' && metadataKind === 'category-only' ? { categories: ['Alga calendar: Sync access test'] } : {}),
+      status: 'confirmed',
+      updated: '2026-08-02T00:00:00.000Z',
+      start: { dateTime: '2026-09-01T10:00:00Z' },
+      end: { dateTime: '2026-09-01T11:00:00Z' },
+    };
+    const adapter = {
+      connect: vi.fn(async () => {}),
+      getEvent: vi.fn(async () => externalEvent),
+      updateEvent: vi.fn(async () => externalEvent),
+      createEvent: vi.fn(async () => externalEvent),
+      deleteEvent: vi.fn(async () => {}),
+    };
+    (service as any).createAdapter = async () => adapter;
+    fixture.forceReadOnly = true;
+
+    expect(await service.syncExternalEventToSchedule(externalId, providerId)).toMatchObject({ success: true, skipped: true });
+    const row = await scoped('schedule_entries').where({ entry_id: entryId }).first();
+    expect(row.title).toBe('Alga title');
+    expect(row.notes).toBe('Alga notes');
+    expect(adapter.updateEvent).not.toHaveBeenCalled();
+    expect(fixture.published).toEqual([]);
+    expect(await scoped('calendar_event_mappings').where({ schedule_entry_id: entryId }).first()).toMatchObject({ sync_status: 'synced' });
   });
 
   it('applies an inbound edit when the provider user has group-calendar edit access', async () => {

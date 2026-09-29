@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { CalendarProviderConfig } from '@alga-psa/types';
 import { MicrosoftCalendarAdapter } from './MicrosoftCalendarAdapter';
+import { MicrosoftCalendarAdapter as EnterpriseMicrosoftCalendarAdapter } from '../../../../../../ee/packages/calendar/src/lib/services/calendar/providers/MicrosoftCalendarAdapter';
+import { MicrosoftCalendarAdapter as LegacyMicrosoftCalendarAdapter } from '../../../../../../server/src/services/calendar/providers/MicrosoftCalendarAdapter';
 
 const config: CalendarProviderConfig = {
   id: 'provider', tenant: 'tenant', user_id: 'user', name: 'Outlook',
@@ -10,6 +12,22 @@ const config: CalendarProviderConfig = {
 };
 
 describe('MicrosoftCalendarAdapter shared calendar categories', () => {
+  it.each([
+    ['workspace', MicrosoftCalendarAdapter],
+    ['enterprise', EnterpriseMicrosoftCalendarAdapter],
+    ['server', LegacyMicrosoftCalendarAdapter],
+  ] as const)('%s creates the mailbox master category with a supported Graph color', async (_name, Adapter) => {
+    const adapter = new Adapter(config) as any;
+    adapter.httpClient = {
+      get: vi.fn().mockResolvedValue({ data: { value: [] } }),
+      post: vi.fn().mockResolvedValue({ data: { displayName: 'Alga calendar: On-call' } }),
+    };
+    await adapter.ensureMasterCategories(['Alga calendar: On-call']);
+    expect(adapter.httpClient.post).toHaveBeenCalledWith('/me/outlook/masterCategories', {
+      displayName: 'Alga calendar: On-call', color: 'preset0',
+    });
+  });
+
   it('continues event updates with a reconnect warning when category consent is missing', async () => {
     const adapter = new MicrosoftCalendarAdapter(config) as any;
     adapter.ensureValidToken = vi.fn().mockResolvedValue(undefined);

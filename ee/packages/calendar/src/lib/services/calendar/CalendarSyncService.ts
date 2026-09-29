@@ -42,8 +42,6 @@ function isProviderEventGone(error: any): boolean {
  */
 function comparableNotes(notes: string | null | undefined): string {
   return (notes ?? '')
-    .replace(/\r?\n<p>\[Alga calendar: (?:[^<>]|&(?:amp|lt|gt);)*\]<\/p>(?=\s*(?:<\/body>|<\/html>|$))/i, '')
-    .replace(/(?:\r?\n)\[Alga calendar: [^\]\r\n]+\]$/, '')
     .replace(/<[^>]*>/g, ' ')
     .replace(/&nbsp;/g, ' ')
     .replace(/\s+/g, ' ')
@@ -360,7 +358,10 @@ export class CalendarSyncService {
           }
 
           // Convert external event to schedule entry format
-          const entryData = await mapExternalEventToScheduleEntry(externalEvent, tenant, provider.provider_type);
+          const owningCalendar = existingEntry.calendar_id
+            ? await tenantDb(trx, tenant).table('calendars').where({ calendar_id: existingEntry.calendar_id, calendar_type: 'group' }).first()
+            : null;
+          const entryData = await mapExternalEventToScheduleEntry(externalEvent, tenant, provider.provider_type, undefined, owningCalendar?.name);
 
           // Merge with existing entry, but preserve assigned_user_ids from Alga
           // External calendars often don't include the correct attendees, so we keep

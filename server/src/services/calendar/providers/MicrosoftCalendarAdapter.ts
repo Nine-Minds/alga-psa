@@ -136,12 +136,13 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
       // Always use 'common' for multi-tenant Azure AD apps
       const tokenUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/token`;
 
+      // Omit scope on refresh: this preserves each refresh token's granted scopes.
+      // Older connections can still sync event bodies and get a category-specific reconnect warning.
       const params = new URLSearchParams({
         client_id: clientId,
         client_secret: clientSecret,
         refresh_token: this.refreshToken,
-        grant_type: 'refresh_token',
-        scope: 'https://graph.microsoft.com/Calendars.ReadWrite offline_access'
+        grant_type: 'refresh_token'
       });
 
       const response = await axios.post(tokenUrl, params.toString(), {
@@ -221,6 +222,7 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
       await this.ensureValidToken();
 
       const calendarBase = this.getCalendarBasePath();
+      if (event.categories?.length) event.categories = await this.ensureMasterCategories(event.categories);
       const eventData: any = {
         subject: event.title,
         body: {
@@ -234,7 +236,8 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
         } : undefined,
         isAllDay: !event.start.dateTime && !!event.start.date,
         showAs: event.status === 'cancelled' ? 'free' : 'busy',
-        sensitivity: event.visibility === 'private' ? 'private' : 'normal'
+        sensitivity: event.visibility === 'private' ? 'private' : 'normal',
+        categories: event.categories
       };
 
       // Add attendees if provided
@@ -304,6 +307,14 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
 
       const calendarBase = this.getCalendarBasePath();
       const updateData: any = {};
+      if (Object.prototype.hasOwnProperty.call(event, 'categories')) {
+        const desiredCategories = event.categories?.length
+          ? await this.ensureMasterCategories(event.categories)
+          : [];
+        const current = await this.httpClient.get(`${calendarBase}/events/${eventId}`, { params: { $select: 'categories' } });
+        const unrelated = (current.data.categories || []).filter((category: string) => !/^Alga calendar: /i.test(category));
+        updateData.categories = [...new Set([...unrelated, ...desiredCategories])];
+      }
 
       if (event.title !== undefined) updateData.subject = event.title;
       if (event.description !== undefined) {
@@ -720,6 +731,32 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
     }
   }
 
+  private async ensureMasterCategories(categories: string[]): Promise<string[]> {
+    const available: string[] = [];
+    for (const displayName of categories) {
+      try {
+        const response = await this.httpClient.get('/me/outlook/masterCategories', {
+          params: { '$filter': `displayName eq '${displayName.replace(/'/g, "''")}'` }
+        });
+        if ((response.data.value || []).some((category: any) => category.displayName?.toLowerCase() === displayName.toLowerCase())) {
+          available.push(displayName);
+          continue;
+        }
+        await this.httpClient.post('/me/outlook/masterCategories', { displayName, color: 'preset0' });
+        available.push(displayName);
+      } catch (error: any) {
+        const status = error?.response?.status;
+        const code = error?.response?.data?.error?.code;
+        if (status === 403 && ['ErrorAccessDenied', 'Authorization_RequestDenied'].includes(code)) {
+          console.warn(`[MicrosoftCalendarAdapter] Outlook category consent is missing. Reconnect the Microsoft calendar with MailboxSettings.ReadWrite permission to enable the ${displayName} category.`);
+          continue;
+        }
+        throw error;
+      }
+    }
+    return available;
+  }
+
   /**
    * Map Microsoft Calendar event to ExternalCalendarEvent format
    */
@@ -740,6 +777,7 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
       provider: 'microsoft',
       title: event.subject || '',
       description: event.body?.content || '',
+      categories: event.categories || [],
       start: {
         dateTime: event.start?.dateTime,
         date: event.start?.date,

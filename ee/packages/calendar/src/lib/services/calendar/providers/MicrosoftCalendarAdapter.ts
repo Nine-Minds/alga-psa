@@ -134,12 +134,13 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
       // Always use 'common' for multi-tenant Azure AD apps
       const tokenUrl = getMicrosoftTokenUrl('common');
 
+      // Omit scope on refresh: this preserves each refresh token's granted scopes.
+      // Older connections can still sync event bodies and get a category-specific reconnect warning.
       const params = new URLSearchParams({
         client_id: clientId,
         client_secret: clientSecret,
         refresh_token: this.refreshToken,
-        grant_type: 'refresh_token',
-        scope: 'https://graph.microsoft.com/Calendars.ReadWrite offline_access'
+        grant_type: 'refresh_token'
       });
 
       const response = await axios.post(tokenUrl, params.toString(), {
@@ -738,13 +739,13 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
           params: { '$filter': `displayName eq '${displayName.replace(/'/g, "''")}'` }
         });
         if ((response.data.value || []).some((category: any) => category.displayName?.toLowerCase() === displayName.toLowerCase())) { available.push(displayName); continue; }
-        await this.httpClient.post('/me/outlook/masterCategories', { displayName, color: 'auto' });
+        await this.httpClient.post('/me/outlook/masterCategories', { displayName, color: 'preset0' });
         available.push(displayName);
       } catch (error: any) {
         const status = error?.response?.status;
         const code = error?.response?.data?.error?.code;
         if (status === 403 && ['ErrorAccessDenied', 'Authorization_RequestDenied'].includes(code)) {
-          console.warn(`[MicrosoftCalendarAdapter] Outlook category consent is missing. Reconnect the Microsoft calendar with master category permissions to enable the ${displayName} category.`);
+          console.warn(`[MicrosoftCalendarAdapter] Outlook category consent is missing. Reconnect the Microsoft calendar with MailboxSettings.ReadWrite permission to enable the ${displayName} category.`);
           continue;
         }
         throw error;
