@@ -10,6 +10,13 @@ function readRepoFile(relativePath: string): string {
   return fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
 }
 
+function getPath(input: unknown, dottedPath: string): unknown {
+  return dottedPath.split('.').reduce<unknown>((value, key) => {
+    if (value === null || typeof value !== 'object') return undefined;
+    return (value as Record<string, unknown>)[key];
+  }, input);
+}
+
 describe('ticket external links UI contract', () => {
   it('T120: the section is mounted in both ticket layouts', () => {
     const entry = readRepoFile('packages/tickets/src/components/ticket/TicketDetails.tsx');
@@ -99,6 +106,28 @@ describe('ticket external links UI contract', () => {
     expect(portalLinks).toContain("entity_type: 'ticket', portal_visible: true");
     expect(portalLinks).toContain(".select('system', 'external_id', 'realm', 'url')");
     expect(portalLinks).not.toContain(".select('*')");
+  });
+
+  it('ships the portal-sharing copy in every locale', () => {
+    const localeRoot = path.join(repoRoot, 'server/public/locales');
+    const locales = fs.readdirSync(localeRoot, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name);
+    const keyPaths = [
+      'externalLinks.actions.openRecord',
+      'externalLinks.errors.invalidVisibility',
+      'externalLinks.visibility.label',
+      'externalLinks.visibility.internal',
+      'externalLinks.visibility.shared',
+      'externalLinks.visibility.help',
+    ];
+
+    for (const locale of locales) {
+      const messages = JSON.parse(readRepoFile(`server/public/locales/${locale}/features/tickets.json`));
+      for (const keyPath of keyPaths) {
+        expect(getPath(messages, keyPath), `${locale}.${keyPath}`).toBeTruthy();
+      }
+    }
   });
 
   it('T125: the External systems settings tab is registered', () => {
