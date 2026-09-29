@@ -4,9 +4,8 @@ import { logger, registerFeatureFlagChecker, registerJobEnqueuer, registerSchedu
 import { validateEnv } from 'server/src/config/envConfig';
 import { validateRequiredConfiguration, validateDatabaseConnectivity, validateSecretUniqueness } from 'server/src/config/criticalEnvValidation';
 import { config } from 'dotenv';
-import User from '@alga-psa/db/models/user';
 import { tenantDb } from '@alga-psa/db';
-import { hashPassword, generateSecurePassword } from 'server/src/utils/encryption/encryption';
+import { provisionDevelopmentLogin } from './devLoginProvisioning';
 import { JobScheduler, IJobScheduler } from 'server/src/lib/jobs/jobScheduler';
 import { JobService } from 'server/src/services/job.service';
 import { InvoiceZipJobHandler } from 'server/src/lib/jobs/handlers/invoiceZipHandler';
@@ -746,13 +745,12 @@ async function initializeJobScheduler(storageService: StorageService) {
 
 // Helper function to setup development environment
 async function setupDevelopmentEnvironment() {
-  let newPassword;
-  const glinda = await User.findUserByEmail("glinda@emeraldcity.oz");
-  if (glinda) {
-    newPassword = generateSecurePassword();
-    const hashedPassword = await hashPassword(newPassword);
-    await User.updatePassword(glinda.user_id, glinda.tenant, hashedPassword);
-  } else {
+  if (process.env.NODE_ENV !== 'development') {
+    return;
+  }
+
+  const credentials = await provisionDevelopmentLogin();
+  if (!credentials) {
     logger.info('Glinda not found. Skipping password update.');
   }
 
@@ -772,12 +770,12 @@ async function setupDevelopmentEnvironment() {
     }
   }
 
-  if (glinda && newPassword) {
+  if (credentials) {
     logger.info('*************************************************************');
     logger.info(`********                                             ********`);
-    logger.info(`******** User Email is -> [ ${glinda.email} ]  ********`);
+    logger.info(`******** User Email is -> [ ${credentials.email} ]  ********`);
     logger.info(`********                                             ********`);
-    logger.info(`********       Password is -> [ ${newPassword} ]   ********`);
+    logger.info(`********       Password is -> [ ${credentials.password} ]   ********`);
     logger.info(`********                                             ********`);
     logger.info('*************************************************************');
   }

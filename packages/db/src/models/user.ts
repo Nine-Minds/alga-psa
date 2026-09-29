@@ -325,7 +325,10 @@ const User = {
   updatePassword: async (user_id: string, tenant: string, hashed_password: string): Promise<void> => {
     const db = await getAdminConnection();
     try {
-      await tenantDb(db, tenant).table<IUser>('users').where({ user_id }).update({ hashed_password });
+      const updated = await tenantDb(db, tenant).table<IUser>('users').where({ user_id }).update({ hashed_password });
+      if (updated !== 1) {
+        throw new Error(`Expected to update one password row for user ${user_id} in tenant ${tenant}; updated ${updated}`);
+      }
       logger.system(`Password updated for user ${user_id} in tenant ${tenant}`);
     } catch (error) {
       logger.error(`Error updating password for user ${user_id} in tenant ${tenant}:`, error);
