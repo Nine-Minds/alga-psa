@@ -2111,7 +2111,8 @@
       "serviceLabel": "Usługa:",
       "invoiceWindowLabel": "Okno fakturowania:",
       "unitRateLabel": "Stawka jednostkowa:",
-      "unitRateFromCatalog": "Cena katalogowa w walucie klienta"
+      "unitRateFromCatalog": "Cena katalogowa w walucie klienta",
+      "unitRateNeutral": "{{rate}} w walucie klienta"
     },
     "hourly": {
       "minimumBillableTimeLabel": "Minimalny czas podlegający rozliczeniu:",

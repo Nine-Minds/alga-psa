@@ -2107,7 +2107,8 @@
       "serviceLabel": "Service :",
       "invoiceWindowLabel": "Fenêtre de facturation :",
       "unitRateLabel": "Tarif unitaire :",
-      "unitRateFromCatalog": "Prix du catalogue dans la devise du client"
+      "unitRateFromCatalog": "Prix du catalogue dans la devise du client",
+      "unitRateNeutral": "{{rate}} dans la devise du client"
     },
     "hourly": {
       "minimumBillableTimeLabel": "Temps minimum facturable :",

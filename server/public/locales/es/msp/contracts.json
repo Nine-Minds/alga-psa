@@ -2107,7 +2107,8 @@
       "serviceLabel": "Servicio:",
       "invoiceWindowLabel": "Ventana de facturación:",
       "unitRateLabel": "Tarifa unitaria:",
-      "unitRateFromCatalog": "Precio de catálogo en la moneda del cliente"
+      "unitRateFromCatalog": "Precio de catálogo en la moneda del cliente",
+      "unitRateNeutral": "{{rate}} en la moneda del cliente"
     },
     "hourly": {
       "minimumBillableTimeLabel": "Tiempo mínimo facturable:",

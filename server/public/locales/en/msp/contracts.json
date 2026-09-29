@@ -2107,7 +2107,8 @@
       "serviceLabel": "Service:",
       "invoiceWindowLabel": "Invoice window:",
       "unitRateLabel": "Unit rate:",
-      "unitRateFromCatalog": "Catalog price in the client's currency"
+      "unitRateFromCatalog": "Catalog price in the client's currency",
+      "unitRateNeutral": "{{rate}} in the client's currency"
     },
     "hourly": {
       "minimumBillableTimeLabel": "Minimum billable time:",

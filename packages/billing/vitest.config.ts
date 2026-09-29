@@ -68,6 +68,10 @@ export default defineConfig({
       'src/lib/invoice-template-ast/fieldFormatting.country.test.ts',
       'src/lib/invoice-template-ast/react-renderer.country.test.tsx',
       'src/services/pdfGenerationService.renderCountry.test.ts',
+      // Per-seat unit-rate rendering on the template detail page and the
+      // currency-neutral template review step — listed for the same reason as above.
+      'src/components/billing-dashboard/contracts/ContractTemplateDetail.unitRate.test.tsx',
+      'src/components/billing-dashboard/contracts/template-wizard/steps/TemplateReviewContractStep.unitRate.test.tsx',
     ],
     testTimeout: 20000,
     // Match testTimeout. The default hookTimeout is 10s, so a beforeAll doing

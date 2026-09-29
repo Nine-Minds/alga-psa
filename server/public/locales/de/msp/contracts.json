@@ -2107,7 +2107,8 @@
       "serviceLabel": "Dienst:",
       "invoiceWindowLabel": "Rechnungsfenster:",
       "unitRateLabel": "Stückpreis:",
-      "unitRateFromCatalog": "Katalogpreis in der Währung des Kunden"
+      "unitRateFromCatalog": "Katalogpreis in der Währung des Kunden",
+      "unitRateNeutral": "{{rate}} in der Währung des Kunden"
     },
     "hourly": {
       "minimumBillableTimeLabel": "Minimale abrechenbare Zeit:",

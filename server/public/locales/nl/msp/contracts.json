@@ -2107,7 +2107,8 @@
       "serviceLabel": "Service:",
       "invoiceWindowLabel": "Factuurvenster:",
       "unitRateLabel": "Eenheidstarief:",
-      "unitRateFromCatalog": "Catalogusprijs in de valuta van de klant"
+      "unitRateFromCatalog": "Catalogusprijs in de valuta van de klant",
+      "unitRateNeutral": "{{rate}} in de valuta van de klant"
     },
     "hourly": {
       "minimumBillableTimeLabel": "Minimum factureerbare tijd:",

@@ -177,6 +177,25 @@ const formatDate = (value?: string | Date | null): string => {
   }
 };
 
+/**
+ * Formats a template money amount (minor units) in the template's currency, or
+ * "Not set" when absent. Shared by the detail view and the services manager so
+ * both render rates identically.
+ */
+const formatTemplateMinorUnits = (
+  money: (minorUnits: number, currencyOverride?: string) => string,
+  currencyCode: string,
+  t: (key: string, options?: Record<string, unknown>) => string,
+  minorUnits?: number | null,
+): string => {
+  if (minorUnits === null || minorUnits === undefined) {
+    return t("templateDetail.composition.notSet", {
+      defaultValue: "Not set",
+    });
+  }
+  return money(Math.round(Number(minorUnits)), currencyCode);
+};
+
 const humanize = (value?: string | null): string => {
   if (!value) {
     return "";
@@ -229,6 +248,8 @@ const ContractTemplateDetail: React.FC = () => {
   const { money } = useCurrencyFormat();
   const { t } = useTranslation("msp/contracts");
   const billingFrequencyOptions = useBillingFrequencyOptions();
+  const formatCurrency = (minorUnits?: number | null) =>
+    formatTemplateMinorUnits(money, contract?.currency_code ?? "USD", t, minorUnits);
   const router = useRouter();
   const searchParams = useSearchParams();
   const contractId = searchParams?.get("contractId") ?? undefined;
@@ -2015,19 +2036,15 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
   contractLines,
   onServicesChanged,
 }) => {
+  const { money } = useCurrencyFormat();
   const { t } = useTranslation("msp/contracts");
   const [editingLine, setEditingLine] = useState<TemplateContractLine | null>(
     null,
   );
 
-  const formatCurrency = (minorUnits?: number | null) => {
-    if (minorUnits === null || minorUnits === undefined) {
-      return t("templateDetail.composition.notSet", {
-        defaultValue: "Not set",
-      });
-    }
-    return money(Math.round(Number(minorUnits)), currencyCode);
-  };
+  // LEVERAGE: pattern template-minor-unit-formatter — parent and manager each bind money/t/currency around one shared helper
+  const formatCurrency = (minorUnits?: number | null) =>
+    formatTemplateMinorUnits(money, currencyCode, t, minorUnits);
 
   const handleSaveRate = async (
     contractLineId: string,
