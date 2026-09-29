@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   computeDaysUntilDate,
   computeEvergreenDecisionDueDate,
@@ -9,12 +9,14 @@ import {
 } from '../../../shared/billingClients/clientContracts';
 
 describe('client contract effective renewal settings normalization', () => {
-  beforeAll(() => {
+  // Per test, not per file: the shared setup returns real timers after every
+  // test so a frozen clock cannot leak into the next one.
+  beforeEach(() => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
   });
 
-  afterAll(() => {
+  afterEach(() => {
     vi.useRealTimers();
   });
 

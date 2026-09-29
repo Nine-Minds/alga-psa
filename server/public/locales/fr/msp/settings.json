@@ -58,8 +58,22 @@
     },
     "clients": {
       "title": "Votre entreprise",
-      "help": "Le client marqué comme votre entreprise correspond à votre propre organisation. Son nom, son adresse et son logo apparaissent sur les factures, les devis et les communications adressées aux clients.",
+      "help": "Le client marqué comme votre entreprise correspond à votre propre organisation. Son nom, son adresse et son logo apparaissent sur les factures, les devis et les communications adressées aux clients, et le pays de son emplacement définit votre format de date ainsi que le pays présélectionné dans les nouvelles fiches.",
       "currentDefault": "Votre entreprise est actuellement {{name}}.",
+      "defaults": {
+        "title": "Ce que votre entreprise détermine",
+        "intro": "Le pays de l'emplacement de {{name}} détermine ceci pour toute l'application MSP :",
+        "country": "Les nouveaux clients, contacts et emplacements présélectionnent {{country}}.",
+        "countryMissing": "Les nouveaux clients, contacts et emplacements ne présélectionnent aucun pays.",
+        "phoneCode": "Les numéros de téléphone commencent par l'indicatif {{code}}.",
+        "phoneCodeMissing": "Les numéros de téléphone commencent sans indicatif.",
+        "dateFormat": "Les dates s'écrivent {{pattern}} — {{example}} — avec une horloge de {{clock}}.",
+        "clock12": "12 heures",
+        "clock24": "24 heures",
+        "noCountry": "Aucun pays n'est renseigné sur l'emplacement de {{name}} : les trois reviennent donc au format {{pattern}} par défaut. Ajoutez à {{name}} un emplacement avec un pays pour les modifier — il n'existe pas de réglage distinct pour le format de date.",
+        "portalNote": "Dans le portail client, les dates suivent le format du client lui-même, issu du pays de son emplacement et non du vôtre.",
+        "changeIntro": "Passer à {{name}} modifie aussi ces valeurs par défaut :"
+      },
       "yourCompanyBadge": "Votre entreprise",
       "table": {
         "name": "Nom",
@@ -97,6 +111,18 @@
         "setDefaultClient": "Échec de la définition du client par défaut",
         "loadClients": "Échec du chargement des clients"
       }
+    }
+  },
+  "dashboardWelcome": {
+    "label": "Utiliser le nom de votre entreprise dans le message d'accueil",
+    "help": "Désactivé par défaut : le tableau de bord MSP affiche « Bienvenue dans votre centre de commande MSP ». Une fois activé, il affiche le nom du client marqué comme votre entreprise. Ce réglage est enregistré immédiatement et séparément.",
+    "noCompany": "Aucun client n'est encore marqué comme votre entreprise. Choisissez-en un dans Paramètres → Général pour que son nom puisse apparaître ici.",
+    "previewLabel": "Votre équipe verra :",
+    "preview": "Bienvenue dans le centre de commande de {{companyName}}",
+    "previewDefault": "Bienvenue dans votre centre de commande MSP",
+    "messages": {
+      "saved": "Message d'accueil mis à jour",
+      "saveFailed": "Impossible de mettre à jour le message d'accueil"
     }
   },
   "experimentalFeatures": {
@@ -1229,6 +1255,7 @@
         "followThemeActive": "Les couleurs ci-dessous sont conservées mais ne sont pas appliquées tant que le portail suit le thème de l’organisation."
       },
       "cropHelp": "Faites glisser et zoomez pour choisir la partie affichée dans le panneau latéral du portail et dans tous les cadres ronds. Votre logo large n'est pas modifié.",
+      "cropHelpFromSquare": "Faites glisser et zoomez pour choisir la partie affichée dans le panneau latéral du portail et dans tous les cadres ronds. Seule la marque carrée est modifiée, vous pouvez donc l’ajuster à nouveau plus tard.",
       "heroGradient": {
         "primaryShades": "Couleur principale vers une nuance principale",
         "primarySecondary": "Couleur principale vers couleur secondaire"
@@ -1502,6 +1529,11 @@
       "description": "Téléversez votre logo une seule fois. Il remplace la marque Alga dans le menu latéral MSP, et le portail client utilise les mêmes images.",
       "logoHelp": "La marque carrée est utilisée partout où l’espace est carré : le menu latéral réduit et les cadres circulaires. Déposez un logo large dans un emplacement carré et choisissez la partie qui devient le symbole ; une fois un logo large importé, vous pouvez aussi découper le symbole directement à partir de celui-ci. Le logo large facultatif remplace la marque et le nom dans le menu latéral déployé : téléversez-en donc un qui contient déjà le nom de votre entreprise. Le menu latéral s’adapte à son propre arrière-plan : les variantes pour arrière-plans sombres sur un menu sombre, les claires sur un menu clair, et à défaut la variante que vous avez téléversée.",
       "cropHelp": "Faites glisser et zoomez pour choisir la partie affichée dans le menu latéral replié et dans tous les cadres ronds. Votre logo large n'est pas modifié.",
+      "cropHelpFromSquare": "Faites glisser et zoomez pour choisir la partie affichée dans le menu latéral réduit et dans tous les cadres circulaires. Seule la marque carrée est modifiée, vous pouvez donc l’ajuster à nouveau plus tard.",
+      "linkDocument": {
+        "title": "Utiliser une image téléversée",
+        "description": "Sélectionnez une image que vous avez déjà téléversée dans Documents. Le document lui-même reste inchangé."
+      },
       "fields": {
         "mark": "Marque carrée",
         "markDark": "Marque carrée pour arrière-plans sombres",

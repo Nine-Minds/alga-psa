@@ -600,7 +600,8 @@
       "adjustMark": "Beeldmerk aanpassen",
       "cropFromWide": "Uitsnijden uit breed logo",
       "recropSuccess": "Beeldmerk bijgewerkt.",
-      "recropError": "Het beeldmerk kon niet worden bijgewerkt."
+      "recropError": "Het beeldmerk kon niet worden bijgewerkt.",
+      "fileNameLabel": "Opgeslagen bestand"
     },
     "validation": {
       "clientNameRequired": "Bedrijfsnaam is verplicht",
