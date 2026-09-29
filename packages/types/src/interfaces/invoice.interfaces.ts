@@ -381,7 +381,10 @@ export type RecurringInvoiceFailureCode =
   | 'TIME_APPROVAL_REQUIRED'
   | 'USAGE_RECORDS_MISSING'
   | 'USAGE_CALCULATION_ERROR'
-  | 'USAGE_PERIOD_TOTAL_STALE';
+  | 'USAGE_PERIOD_TOTAL_STALE'
+  | 'RECURRING_PERIODS_NOT_MATERIALIZED'
+  | 'NO_ACTIVE_CONTRACT_LINES'
+  | 'NOTHING_TO_BILL';
 
 /**
  * The previewed period-total identity a caller passes back to generation so
