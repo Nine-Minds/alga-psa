@@ -1404,7 +1404,10 @@
       "selectClientBeforeDraft": "Selecteer een klant voordat u opslaat als concept",
       "selectProductForEachLine": "Selecteer een product voor elke productregel",
       "startDateRequired": "Startdatum is verplicht",
-      "unsupportedRecurringAuthoringCombination": "Niet-ondersteunde combinatie voor terugkerend maken voor {{lineType}}-services: contractverjaardagscadans ondersteunt momenteel {{supportedFrequencies}} factureerfrequenties. {{billingFrequency}} wordt nog niet ondersteund. Gebruik een van de ondersteunde frequenties of factureer in plaats daarvan op het klantfactureerschema."
+      "unsupportedRecurringAuthoringCombination": "Niet-ondersteunde combinatie voor terugkerend maken voor {{lineType}}-services: contractverjaardagscadans ondersteunt momenteel {{supportedFrequencies}} factureerfrequenties. {{billingFrequency}} wordt nog niet ondersteund. Gebruik een van de ondersteunde frequenties of factureer in plaats daarvan op het klantfactureerschema.",
+      "recurringUnitRateRequired": "Voer een eenheidstarief in voor elke terugkerende dienst.",
+      "recurringQuantityWholeNumber": "De terugkerende hoeveelheid moet een geheel getal zijn.",
+      "fixedQuantityInvalid": "De hoeveelheid moet nul of hoger zijn."
     },
     "nav": {
       "back": "Terug",
@@ -1551,7 +1554,8 @@
     "baseRate": {
       "hint": "Totaal terugkerend tarief voor alle vaste services samen.",
       "label": "Terugkerend basistarief",
-      "placeholder": "0.00"
+      "placeholder": "0.00",
+      "hintWithUnits": "Totale terugkerende vergoeding voor de bundeldiensten. Terugkerende plaatsen/eenheden worden apart gefactureerd als hoeveelheid × eenheidstarief en maken geen deel uit van dit tarief."
     },
     "description": "Configureer services die per factureercyclus tegen een vast tarief worden gefactureerd. U kunt nog steeds tijd registreren, maar de facturatie is gebaseerd op dit vaste bedrag.",
     "emptyState": "Nog geen services met vaste vergoeding toegevoegd. Klik hierboven op “Service toevoegen” of op “Overslaan” om verder te gaan.",
@@ -1568,12 +1572,15 @@
         "invoiceWindow": "Factuurvenster:",
         "recurringRate": "Terugkerend tarief:",
         "service": "Service:",
-        "services": "Services:"
+        "services": "Services:",
+        "recurringUnits": "Terugkerende plaatsen/eenheden:",
+        "recurringTotal": "Totaal per periode:"
       },
       "materializedPeriods": {
         "tooltip": "Een voorbeeld van de volgende serviceperioden en de factureringsvensters die op basis van de huidige instellingen zouden worden gegenereerd. Hiermee kunt u de cadans controleren voordat u opslaat — de daadwerkelijke facturen worden later door de factureringsrun geproduceerd."
       },
-      "title": "Terugkerend voorbeeld vóór opslaan"
+      "title": "Terugkerend voorbeeld vóór opslaan",
+      "unitRow": "{{serviceName}}: {{quantity}} × {{rate}} = {{amount}}"
     },
     "proration": {
       "label": "Aanpassen voor gedeeltelijke perioden",
@@ -1584,7 +1591,10 @@
       "label": "Services",
       "quantityLabel": "Hoeveelheid",
       "selectServicePlaceholder": "Selecteer een service",
-      "serviceItemLabel": "Service {{index}}"
+      "serviceItemLabel": "Service {{index}}",
+      "recurringQuantityLabel": "Terugkerende hoeveelheid",
+      "allocationQuantityLabel": "Toewijzingshoeveelheid",
+      "noCurrencyPrice": "Geen prijs in {{currency}} in de catalogus. Voer een eenheidstarief in."
     }
   },
   "wizardProducts": {
@@ -1777,7 +1787,8 @@
         "other": "{{count}} diensten"
       },
       "monthlyBaseRate": "Maandelijks basistarief:",
-      "partialPeriodAdjustment": "Aanpassing gedeeltelijke periode:"
+      "partialPeriodAdjustment": "Aanpassing gedeeltelijke periode:",
+      "recurringUnitRow": "{{serviceName}}: {{quantity}} × {{rate}} = {{amount}}"
     },
     "recurring": {
       "cadenceOwner": {

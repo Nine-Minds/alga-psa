@@ -1404,7 +1404,10 @@
       "selectClientBeforeDraft": "Select a client before saving as draft",
       "selectProductForEachLine": "Please select a product for each product line",
       "startDateRequired": "Start date is required",
-      "unsupportedRecurringAuthoringCombination": "Unsupported recurring authoring combination for {{lineType}} services: contract anniversary cadence currently supports {{supportedFrequencies}} billing frequencies. {{billingFrequency}} is not supported yet. Use one of the supported frequencies or invoice on the client billing schedule instead."
+      "unsupportedRecurringAuthoringCombination": "Unsupported recurring authoring combination for {{lineType}} services: contract anniversary cadence currently supports {{supportedFrequencies}} billing frequencies. {{billingFrequency}} is not supported yet. Use one of the supported frequencies or invoice on the client billing schedule instead.",
+      "recurringUnitRateRequired": "Enter a unit rate for each recurring service.",
+      "recurringQuantityWholeNumber": "Recurring quantity must be a whole number.",
+      "fixedQuantityInvalid": "Quantity must be zero or greater."
     },
     "nav": {
       "back": "Back",
@@ -1551,7 +1554,8 @@
     "baseRate": {
       "hint": "Total recurring fee for all fixed services combined.",
       "label": "Recurring Base Rate",
-      "placeholder": "0.00"
+      "placeholder": "0.00",
+      "hintWithUnits": "Total recurring fee for the bundle services. Recurring seats/units bill quantity × unit rate separately and are not part of this rate."
     },
     "description": "Configure services that are billed at a fixed rate each billing cycle. You can still track time, but billing is based on this flat amount.",
     "emptyState": "No fixed fee services added yet. Click “Add Service” above or “Skip” to move on.",
@@ -1568,12 +1572,15 @@
         "invoiceWindow": "Invoice window:",
         "recurringRate": "Recurring Rate:",
         "service": "Service:",
-        "services": "Services:"
+        "services": "Services:",
+        "recurringUnits": "Recurring seats/units:",
+        "recurringTotal": "Total per period:"
       },
       "materializedPeriods": {
         "tooltip": "A preview of the next few service periods and the invoice windows that would be generated for them based on the current settings. These help you sanity-check the cadence before saving — actual invoices are produced later by the billing run."
       },
-      "title": "Recurring Preview Before Save"
+      "title": "Recurring Preview Before Save",
+      "unitRow": "{{serviceName}}: {{quantity}} × {{rate}} = {{amount}}"
     },
     "proration": {
       "label": "Adjust for Partial Periods",
@@ -1584,7 +1591,10 @@
       "label": "Services",
       "quantityLabel": "Quantity",
       "selectServicePlaceholder": "Select a service",
-      "serviceItemLabel": "Service {{index}}"
+      "serviceItemLabel": "Service {{index}}",
+      "recurringQuantityLabel": "Recurring quantity",
+      "allocationQuantityLabel": "Allocation quantity",
+      "noCurrencyPrice": "No {{currency}} price in the catalog. Enter a unit rate."
     }
   },
   "wizardProducts": {
@@ -1777,7 +1787,8 @@
         "other": "{{count}} services"
       },
       "monthlyBaseRate": "Monthly Base Rate:",
-      "partialPeriodAdjustment": "Partial-Period Adjustment:"
+      "partialPeriodAdjustment": "Partial-Period Adjustment:",
+      "recurringUnitRow": "{{serviceName}}: {{quantity}} × {{rate}} = {{amount}}"
     },
     "recurring": {
       "cadenceOwner": {

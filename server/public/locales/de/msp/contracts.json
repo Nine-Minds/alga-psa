@@ -1404,7 +1404,10 @@
       "selectClientBeforeDraft": "Wählen Sie einen Kunden aus, bevor Sie als Entwurf speichern",
       "selectProductForEachLine": "Bitte wählen Sie für jede Produktlinie ein Produkt aus",
       "startDateRequired": "Startdatum ist erforderlich",
-      "unsupportedRecurringAuthoringCombination": "Nicht unterstützte Kombination für wiederkehrende Erstellung bei {{lineType}}-Services: Der Vertragsjubiläumsrhythmus unterstützt derzeit {{supportedFrequencies}} Abrechnungsfrequenzen. {{billingFrequency}} wird noch nicht unterstützt. Verwenden Sie eine der unterstützten Frequenzen oder rechnen Sie stattdessen nach dem Kundenabrechnungsplan ab."
+      "unsupportedRecurringAuthoringCombination": "Nicht unterstützte Kombination für wiederkehrende Erstellung bei {{lineType}}-Services: Der Vertragsjubiläumsrhythmus unterstützt derzeit {{supportedFrequencies}} Abrechnungsfrequenzen. {{billingFrequency}} wird noch nicht unterstützt. Verwenden Sie eine der unterstützten Frequenzen oder rechnen Sie stattdessen nach dem Kundenabrechnungsplan ab.",
+      "recurringUnitRateRequired": "Geben Sie für jeden wiederkehrenden Service einen Stückpreis ein.",
+      "recurringQuantityWholeNumber": "Die wiederkehrende Menge muss eine ganze Zahl sein.",
+      "fixedQuantityInvalid": "Die Menge muss null oder größer sein."
     },
     "nav": {
       "back": "Zurück",
@@ -1551,7 +1554,8 @@
     "baseRate": {
       "hint": "Gesamte wiederkehrende Gebühr für alle festen Services zusammen.",
       "label": "Wiederkehrender Grundtarif",
-      "placeholder": "0.00"
+      "placeholder": "0.00",
+      "hintWithUnits": "Wiederkehrende Gesamtgebühr für die Paketleistungen. Wiederkehrende Plätze/Einheiten werden separat als Menge × Stückpreis abgerechnet und sind nicht Teil dieses Preises."
     },
     "description": "Konfigurieren Sie Services, die in jedem Abrechnungszyklus zu einem festen Tarif abgerechnet werden. Sie können weiterhin Zeiten erfassen, aber die Abrechnung basiert auf diesem Pauschalbetrag.",
     "emptyState": "Noch keine Festgebühren-Services hinzugefügt. Klicken Sie oben auf „Service hinzufügen“ oder „Überspringen“, um fortzufahren.",
@@ -1568,12 +1572,15 @@
         "invoiceWindow": "Rechnungsfenster:",
         "recurringRate": "Wiederkehrender Tarif:",
         "service": "Dienst:",
-        "services": "Dienste:"
+        "services": "Dienste:",
+        "recurringUnits": "Wiederkehrende Plätze/Einheiten:",
+        "recurringTotal": "Gesamt pro Zeitraum:"
       },
       "materializedPeriods": {
         "tooltip": "Eine Vorschau der nächsten Servicezeiträume und der Rechnungsfenster, die auf Grundlage der aktuellen Einstellungen für sie erzeugt würden. Damit lässt sich die Kadenz vor dem Speichern überprüfen – die tatsächlichen Rechnungen werden später vom Abrechnungslauf erstellt."
       },
-      "title": "Wiederkehrende Vorschau vor dem Speichern"
+      "title": "Wiederkehrende Vorschau vor dem Speichern",
+      "unitRow": "{{serviceName}}: {{quantity}} × {{rate}} = {{amount}}"
     },
     "proration": {
       "label": "Für Teilperioden anpassen",
@@ -1584,7 +1591,10 @@
       "label": "Dienste",
       "quantityLabel": "Menge",
       "selectServicePlaceholder": "Service auswählen",
-      "serviceItemLabel": "Dienst {{index}}"
+      "serviceItemLabel": "Dienst {{index}}",
+      "recurringQuantityLabel": "Wiederkehrende Menge",
+      "allocationQuantityLabel": "Zuordnungsmenge",
+      "noCurrencyPrice": "Kein Preis in {{currency}} im Katalog. Geben Sie einen Stückpreis ein."
     }
   },
   "wizardProducts": {
@@ -1777,7 +1787,8 @@
         "other": "{{count}} Services"
       },
       "monthlyBaseRate": "Monatlicher Grundtarif:",
-      "partialPeriodAdjustment": "Teilperiodenanpassung:"
+      "partialPeriodAdjustment": "Teilperiodenanpassung:",
+      "recurringUnitRow": "{{serviceName}}: {{quantity}} × {{rate}} = {{amount}}"
     },
     "recurring": {
       "cadenceOwner": {

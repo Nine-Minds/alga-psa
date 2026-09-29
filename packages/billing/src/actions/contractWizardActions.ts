@@ -32,7 +32,14 @@ import {
 
 import { ensureTemplateLineSnapshot, fetchDetailedContractLines } from '../repositories/contractLineRepository';
 import {
+  allocateBundleBaseRate,
+  getFixedServiceBasisIssue,
+  hasBundleFixedService,
+  isUnitFixedService,
+} from '../lib/fixedServiceBasis';
+import {
   CadenceOwner,
+  FixedPricingBasis,
   IContractLineServiceBucketConfig,
   IContractLineServiceFixedConfig,
   IContractLineServiceHourlyConfig,
@@ -51,12 +58,42 @@ import {
 
 export type { ContractWizardActionError } from './contractWizardActionErrors';
 
+/**
+ * Reject fixed-service inputs that cannot be stored faithfully. A unit-priced
+ * member without a whole quantity >= 0 and an explicit unit rate would
+ * otherwise silently fall back to bundle or bill nothing.
+ */
+function assertFixedServiceBasisInputs(
+  services: Array<{ service_id: string; service_name?: string; pricing_basis?: FixedPricingBasis | string | null; quantity?: number | null; unit_rate?: number | null }>,
+): void {
+  for (const service of services) {
+    if (service.pricing_basis != null && service.pricing_basis !== 'bundle' && service.pricing_basis !== 'unit') {
+      throw new Error('Choose bundle or recurring unit pricing.');
+    }
+    const issue = getFixedServiceBasisIssue(service);
+    const label = service.service_name ? `"${service.service_name}"` : service.service_id;
+    if (issue === 'quantity_invalid') {
+      throw new Error(`Quantity for ${label} must be zero or greater.`);
+    }
+    if (issue === 'unit_quantity_not_whole') {
+      throw new Error(`Recurring quantity for ${label} must be a whole number.`);
+    }
+    if (issue === 'unit_rate_required') {
+      throw new Error(`Enter a unit rate for recurring service ${label}.`);
+    }
+  }
+}
+
 // ---------------------- Template wizard types ----------------------
 
 type TemplateFixedServiceInput = {
   service_id: string;
   service_name?: string;
   quantity?: number;
+  /** Absent means 'bundle' (the historical fixed-fee semantics). */
+  pricing_basis?: FixedPricingBasis;
+  /** Unit rate in minor units. Only meaningful (and required) for 'unit'. */
+  unit_rate?: number | null;
 };
 
 type TemplateProductServiceInput = {
@@ -111,7 +148,12 @@ type TemplateOption = {
 type ClientFixedServiceInput = {
   service_id: string;
   service_name?: string;
+  /** Allocation quantity for 'bundle'; recurring seats/units (>= 0) for 'unit'. */
   quantity: number;
+  /** Absent means 'bundle' (the historical fixed-fee semantics). */
+  pricing_basis?: FixedPricingBasis;
+  /** Unit rate in minor units of the contract currency. Required for 'unit'. */
+  unit_rate?: number | null;
   bucket_overlay?: BucketOverlayInput | null;
 };
 
@@ -845,6 +887,13 @@ export const createClientContractFromWizard = withAuth(async (
     }
     const endDate = normalizeDateOnly(submission.end_date) ?? null;
 
+    // Reject unstorable per-seat rows before anything is written.
+    assertFixedServiceBasisInputs(
+      (Array.isArray(submission.fixed_services) ? submission.fixed_services : []).filter(
+        (service) => service?.service_id,
+      ),
+    );
+
     const now = new Date();
     const nowIso = now.toISOString();
 
@@ -1054,8 +1103,15 @@ export const createClientContractFromWizard = withAuth(async (
       // Fixed services: if a fixed_base_rate is specified for the line, all services in that line
       // are covered by the flat fee and don't need individual currency pricing.
       // Otherwise, check for individual custom_rate on each service.
+      // Unit-priced services carry their own explicit unit rate (validated
+      // above), so they never depend on the base rate or a currency price.
+      filteredFixedServices.forEach(s => {
+        if (isUnitFixedService(s)) {
+          servicesWithCustomRates.add(s.service_id);
+        }
+      });
       if (submission.fixed_base_rate !== undefined && submission.fixed_base_rate > 0) {
-        // All fixed services are covered by the overall fixed base rate
+        // Every bundle service is covered by the overall fixed base rate
         filteredFixedServices.forEach(s => {
           servicesWithCustomRates.add(s.service_id);
         });
@@ -1214,11 +1270,19 @@ export const createClientContractFromWizard = withAuth(async (
         primaryContractLineId = planId;
       }
 
-      const totalQuantity = filteredFixedServices.reduce((sum, svc) => sum + (svc.quantity ?? 1), 0) || filteredFixedServices.length;
-      let allocated = 0;
+      // The line base rate is the bundle total and covers ONLY bundle members.
+      // Unit members bill quantity × unit rate on their own, so they take no
+      // share of it (a share would double-bill every seat).
+      const lineHasBundleMember = hasBundleFixedService(filteredFixedServices);
+      const bundleLineBaseRate = lineHasBundleMember ? (submission.fixed_base_rate ?? null) : null;
+      const bundleShares = bundleLineBaseRate
+        ? allocateBundleBaseRate(filteredFixedServices, bundleLineBaseRate)
+        : null;
 
       for (const [index, service] of filteredFixedServices.entries()) {
-        const quantity = service.quantity ?? 1;
+        const isUnit = isUnitFixedService(service);
+        // A unit quantity of zero is a stored zero — never defaulted to 1.
+        const quantity = isUnit ? Number(service.quantity) : (service.quantity ?? 1);
 
         await tenantDb(trx, tenant).table('contract_line_services').insert({
           tenant,
@@ -1226,21 +1290,36 @@ export const createClientContractFromWizard = withAuth(async (
           service_id: service.service_id,
         });
 
+        if (isUnit) {
+          // Same creation path as CreateCustomContractLineDialog: the unit rate
+          // is the member's own explicit (custom) fixed base_rate, and later
+          // quantity/rate edits are routed through the revision service.
+          await planServiceConfigService.createConfiguration(
+            {
+              contract_line_id: planId,
+              service_id: service.service_id,
+              configuration_type: 'Fixed',
+              quantity,
+              tenant,
+              custom_rate: undefined,
+            },
+            {
+              pricing_basis: 'unit',
+              base_rate: service.unit_rate as number,
+              rate_provenance: 'custom',
+            },
+          );
+          continue;
+        }
+
         // The operator's explicit rate is a snapshot (`custom`); absent one the
         // member is left rate-less (`inherited`) so a later catalog change
         // reaches it. Snapshotting the catalog here would shadow it forever.
         let serviceBaseRate: number | null = null;
         let serviceBaseProvenance: 'custom' | 'inherited' = 'inherited';
-        if (submission.fixed_base_rate) {
+        if (bundleShares) {
           serviceBaseProvenance = 'custom';
-          const share = quantity / totalQuantity;
-          const provisionalValue = submission.fixed_base_rate * share;
-          if (index === filteredFixedServices.length - 1) {
-            serviceBaseRate = submission.fixed_base_rate - allocated;
-          } else {
-            serviceBaseRate = Math.round(provisionalValue);
-            allocated = Math.round(allocated + serviceBaseRate);
-          }
+          serviceBaseRate = bundleShares[index];
         } else {
           // A configured fixed-mode default is a chosen rate for this service,
           // and the rate resolver does not read that table — so it must be
@@ -1275,7 +1354,8 @@ export const createClientContractFromWizard = withAuth(async (
         contract_line_id: planId,
         // No operator rate means "follow the catalog" (null + inherited), not a
         // stored zero that would shadow it forever. Already in cents when set.
-        base_rate: submission.fixed_base_rate ?? null,
+        // A line of only unit members has no bundle total at all.
+        base_rate: bundleLineBaseRate,
         enable_proration: recurringAuthoringPolicy.enableProration,
         billing_cycle_alignment: recurringAuthoringPolicy.billingCycleAlignment,
         tenant,
@@ -1898,6 +1978,8 @@ export type DraftContractWizardData = {
     service_id: string;
     service_name?: string;
     quantity: number;
+    pricing_basis: FixedPricingBasis;
+    unit_rate?: number | null;
     bucket_overlay?: BucketOverlayInput | null;
   }>;
   product_services: Array<{
@@ -2024,7 +2106,7 @@ export const getDraftContractForResume = withAuth(async (
     const servicesWithConfig = servicesByLineId.get(line.contract_line_id) ?? [];
 
     if (line.contract_line_type === 'Fixed') {
-      servicesWithConfig.forEach(({ service, configuration, bucketConfig }) => {
+      servicesWithConfig.forEach(({ service, configuration, typeConfig, bucketConfig }) => {
         const quantity =
           configuration?.quantity != null ? Number(configuration.quantity) : 1;
 
@@ -2043,8 +2125,16 @@ export const getDraftContractForResume = withAuth(async (
           return;
         }
 
+        // Reload the stored basis and unit rate: a draft that resumed without
+        // them would silently demote a per-seat service to an allocation.
+        const fixedTypeConfig = configuration?.configuration_type === 'Fixed'
+          ? (typeConfig as IContractLineServiceFixedConfig | null)
+          : null;
+        const isUnit = fixedTypeConfig?.pricing_basis === 'unit';
         fixedServices.push({
           ...baseEntry,
+          pricing_basis: isUnit ? 'unit' : 'bundle',
+          unit_rate: isUnit && fixedTypeConfig?.base_rate != null ? Math.round(Number(fixedTypeConfig.base_rate)) : undefined,
           bucket_overlay:
             bucketConfig && isBucketConfig(bucketConfig)
               ? {

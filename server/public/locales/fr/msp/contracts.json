@@ -1404,7 +1404,10 @@
       "selectClientBeforeDraft": "Sélectionnez un client avant d'enregistrer en brouillon",
       "selectProductForEachLine": "Veuillez sélectionner un produit pour chaque ligne de produit",
       "startDateRequired": "La date de début est requise",
-      "unsupportedRecurringAuthoringCombination": "Combinaison de création récurrente non prise en charge pour les services {{lineType}} : la cadence d'anniversaire du contrat prend actuellement en charge les fréquences de facturation {{supportedFrequencies}}. {{billingFrequency}} n'est pas encore pris en charge. Utilisez l'une des fréquences prises en charge ou facturez selon le calendrier de facturation client à la place."
+      "unsupportedRecurringAuthoringCombination": "Combinaison de création récurrente non prise en charge pour les services {{lineType}} : la cadence d'anniversaire du contrat prend actuellement en charge les fréquences de facturation {{supportedFrequencies}}. {{billingFrequency}} n'est pas encore pris en charge. Utilisez l'une des fréquences prises en charge ou facturez selon le calendrier de facturation client à la place.",
+      "recurringUnitRateRequired": "Saisissez un tarif unitaire pour chaque service récurrent.",
+      "recurringQuantityWholeNumber": "La quantité récurrente doit être un nombre entier.",
+      "fixedQuantityInvalid": "La quantité doit être supérieure ou égale à zéro."
     },
     "nav": {
       "back": "Retour",
@@ -1551,7 +1554,8 @@
     "baseRate": {
       "hint": "Frais récurrents totaux pour tous les services fixes combinés.",
       "label": "Tarif de base récurrent",
-      "placeholder": "0.00"
+      "placeholder": "0.00",
+      "hintWithUnits": "Frais récurrents totaux pour les services du forfait. Les postes/unités récurrents sont facturés séparément (quantité × tarif unitaire) et ne font pas partie de ce tarif."
     },
     "description": "Configurez les services facturés à un tarif fixe à chaque cycle de facturation. Vous pouvez toujours suivre le temps, mais la facturation est basée sur ce montant fixe.",
     "emptyState": "Aucun service à frais fixes ajouté pour le moment. Cliquez sur « Ajouter un service » ci-dessus ou « Passer » pour continuer.",
@@ -1568,12 +1572,15 @@
         "invoiceWindow": "Fenêtre de facturation :",
         "recurringRate": "Tarif récurrent :",
         "service": "Service :",
-        "services": "Services :"
+        "services": "Services :",
+        "recurringUnits": "Postes/unités récurrents :",
+        "recurringTotal": "Total par période :"
       },
       "materializedPeriods": {
         "tooltip": "Aperçu des prochaines périodes de service et des fenêtres de facturation qui seraient générées pour elles selon les paramètres actuels. Ces données permettent de vérifier la cadence avant l'enregistrement — les factures réelles sont produites plus tard lors de l'exécution de facturation."
       },
-      "title": "Aperçu récurrent avant enregistrement"
+      "title": "Aperçu récurrent avant enregistrement",
+      "unitRow": "{{serviceName}} : {{quantity}} × {{rate}} = {{amount}}"
     },
     "proration": {
       "label": "Ajuster pour les périodes partielles",
@@ -1584,7 +1591,10 @@
       "label": "Services",
       "quantityLabel": "Quantité",
       "selectServicePlaceholder": "Sélectionnez un service",
-      "serviceItemLabel": "Service {{index}}"
+      "serviceItemLabel": "Service {{index}}",
+      "recurringQuantityLabel": "Quantité récurrente",
+      "allocationQuantityLabel": "Quantité d’allocation",
+      "noCurrencyPrice": "Aucun prix en {{currency}} dans le catalogue. Saisissez un tarif unitaire."
     }
   },
   "wizardProducts": {
@@ -1777,7 +1787,8 @@
         "other": "{{count}} services"
       },
       "monthlyBaseRate": "Tarif de base mensuel :",
-      "partialPeriodAdjustment": "Ajustement de période partielle :"
+      "partialPeriodAdjustment": "Ajustement de période partielle :",
+      "recurringUnitRow": "{{serviceName}} : {{quantity}} × {{rate}} = {{amount}}"
     },
     "recurring": {
       "cadenceOwner": {

@@ -8,7 +8,7 @@ import React, {
   useTransition,
 } from "react";
 import dynamic from "next/dynamic";
-import type { ContractDraftSimulationInput } from "@alga-psa/types";
+import type { ContractDraftSimulationInput, FixedPricingBasis } from "@alga-psa/types";
 import { Dialog } from "@alga-psa/ui/components/Dialog";
 import { WizardProgress } from "@alga-psa/ui/components/onboarding/WizardProgress";
 import { WizardNavigation } from "@alga-psa/ui/components/onboarding/WizardNavigation";
@@ -39,6 +39,10 @@ import {
   getUnsupportedRecurringAuthoringCombinationMessage,
 } from "@shared/billingClients/recurringAuthoringValidation";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
+import {
+  getFixedServiceBasisIssue,
+  hasBundleFixedService,
+} from "../../../lib/fixedServiceBasis";
 
 const REQUIRED_STEPS = [0, 5];
 const MIN_NOTICE_PERIOD_DAYS = 0;
@@ -161,7 +165,12 @@ export interface ContractWizardData {
   fixed_services: Array<{
     service_id: string;
     service_name?: string;
+    /** Allocation quantity for 'bundle'; recurring seats/units (whole number >= 0) for 'unit'. */
     quantity: number;
+    /** 'bundle' (default) shares the line base rate; 'unit' bills quantity × unit_rate. */
+    pricing_basis: FixedPricingBasis;
+    /** Unit rate in minor units of the contract currency. Only used when pricing_basis is 'unit'. */
+    unit_rate?: number | null;
     bucket_overlay?: BucketOverlayInput | null;
   }>;
   product_services: Array<{
@@ -452,7 +461,12 @@ export function ContractWizard({
       cadence_owner: snapshot.cadence_owner ?? prev.cadence_owner,
       billing_timing: snapshot.billing_timing ?? prev.billing_timing,
       // currency_code is inherited from client, not from template (templates are currency-neutral)
-      fixed_services: snapshot.fixed_services ?? [],
+      fixed_services: (snapshot.fixed_services ?? []).map((service) => ({
+        ...service,
+        quantity: service.quantity,
+        pricing_basis: service.pricing_basis === "unit" ? "unit" : "bundle",
+        unit_rate: service.pricing_basis === "unit" ? (service.unit_rate ?? null) : undefined,
+      })),
       product_services: snapshot.product_services ?? [],
       fixed_base_rate: snapshot.fixed_base_rate,
       enable_proration: snapshot.enable_proration ?? prev.enable_proration,
@@ -745,8 +759,34 @@ export function ContractWizard({
         }
         return true;
       case 1:
+        {
+          const basisIssue = wizardData.fixed_services
+            .filter((service) => service.service_id)
+            .map((service) => getFixedServiceBasisIssue(service))
+            .find((issue) => issue !== null);
+          if (basisIssue) {
+            const message =
+              basisIssue === "unit_rate_required"
+                ? t("wizard.validation.recurringUnitRateRequired", {
+                    defaultValue: "Enter a unit rate for each recurring service.",
+                  })
+                : basisIssue === "unit_quantity_not_whole"
+                  ? t("wizard.validation.recurringQuantityWholeNumber", {
+                      defaultValue: "Recurring quantity must be a whole number.",
+                    })
+                  : t("wizard.validation.fixedQuantityInvalid", {
+                      defaultValue: "Quantity must be zero or greater.",
+                    });
+            setErrors((prev) => ({ ...prev, [stepIndex]: message }));
+            return false;
+          }
+        }
+        // The line base rate is the bundle total: it is required only when an
+        // allocation (bundle) member exists. Per-unit services bill quantity ×
+        // unit rate and carry no share of it.
         if (
           wizardData.fixed_services.length > 0 &&
+          hasBundleFixedService(wizardData.fixed_services) &&
           !wizardData.fixed_base_rate
         ) {
           setErrors((prev) => ({

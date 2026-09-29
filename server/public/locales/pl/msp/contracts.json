@@ -1404,7 +1404,10 @@
       "selectClientBeforeDraft": "Wybierz klienta przed zapisaniem jako wersja robocza",
       "selectProductForEachLine": "Wybierz produkt dla każdej linii produktowej",
       "startDateRequired": "Data rozpoczęcia jest wymagana",
-      "unsupportedRecurringAuthoringCombination": "Nieobsługiwana kombinacja tworzenia cyklu dla usług {{lineType}}: rytm rocznicy umowy obsługuje obecnie częstotliwości rozliczeń {{supportedFrequencies}}. {{billingFrequency}} nie jest jeszcze obsługiwana. Użyj jednej z obsługiwanych częstotliwości lub fakturuj według harmonogramu rozliczeń klienta."
+      "unsupportedRecurringAuthoringCombination": "Nieobsługiwana kombinacja tworzenia cyklu dla usług {{lineType}}: rytm rocznicy umowy obsługuje obecnie częstotliwości rozliczeń {{supportedFrequencies}}. {{billingFrequency}} nie jest jeszcze obsługiwana. Użyj jednej z obsługiwanych częstotliwości lub fakturuj według harmonogramu rozliczeń klienta.",
+      "recurringUnitRateRequired": "Podaj stawkę jednostkową dla każdej usługi cyklicznej.",
+      "recurringQuantityWholeNumber": "Ilość cykliczna musi być liczbą całkowitą.",
+      "fixedQuantityInvalid": "Ilość musi wynosić zero lub więcej."
     },
     "nav": {
       "back": "Wstecz",
@@ -1555,7 +1558,8 @@
     "baseRate": {
       "hint": "Łączna opłata cykliczna dla wszystkich usług o stałej cenie razem.",
       "label": "Cykliczna stawka bazowa",
-      "placeholder": "0.00"
+      "placeholder": "0.00",
+      "hintWithUnits": "Łączna opłata cykliczna za usługi pakietu. Cykliczne stanowiska/jednostki są rozliczane osobno jako ilość × stawka jednostkowa i nie wchodzą w skład tej stawki."
     },
     "description": "Skonfiguruj usługi rozliczane stałą stawką w każdym cyklu rozliczeniowym. Nadal możesz rejestrować czas, ale rozliczenie opiera się na tej stałej kwocie.",
     "emptyState": "Nie dodano jeszcze żadnych usług z opłatą stałą. Kliknij „Dodaj usługę” powyżej lub „Pomiń”, aby przejść dalej.",
@@ -1572,12 +1576,15 @@
         "invoiceWindow": "Okno fakturowania:",
         "recurringRate": "Stawka cykliczna:",
         "service": "Usługa:",
-        "services": "Usługi:"
+        "services": "Usługi:",
+        "recurringUnits": "Cykliczne stanowiska/jednostki:",
+        "recurringTotal": "Suma za okres:"
       },
       "materializedPeriods": {
         "tooltip": "Podgląd kilku następnych okresów świadczenia usług i okien fakturowania, które zostałyby wygenerowane dla nich w oparciu o bieżące ustawienia. Pomaga zweryfikować cykl przed zapisaniem — rzeczywiste faktury są generowane później podczas uruchomienia rozliczeń."
       },
-      "title": "Podgląd cyklu przed zapisaniem"
+      "title": "Podgląd cyklu przed zapisaniem",
+      "unitRow": "{{serviceName}}: {{quantity}} × {{rate}} = {{amount}}"
     },
     "proration": {
       "label": "Dostosuj do okresów częściowych",
@@ -1588,7 +1595,10 @@
       "label": "Usługi",
       "quantityLabel": "Ilość",
       "selectServicePlaceholder": "Wybierz usługę",
-      "serviceItemLabel": "Usługa {{index}}"
+      "serviceItemLabel": "Usługa {{index}}",
+      "recurringQuantityLabel": "Ilość cykliczna",
+      "allocationQuantityLabel": "Ilość alokacji",
+      "noCurrencyPrice": "Brak ceny w walucie {{currency}} w katalogu. Podaj stawkę jednostkową."
     }
   },
   "wizardProducts": {
@@ -1781,7 +1791,8 @@
         "other": "Liczba usług: {{count}}"
       },
       "monthlyBaseRate": "Miesięczna stawka bazowa:",
-      "partialPeriodAdjustment": "Korekta okresu częściowego:"
+      "partialPeriodAdjustment": "Korekta okresu częściowego:",
+      "recurringUnitRow": "{{serviceName}}: {{quantity}} × {{rate}} = {{amount}}"
     },
     "recurring": {
       "cadenceOwner": {
