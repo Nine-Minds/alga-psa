@@ -206,6 +206,19 @@ jobs:
           path: test-results/integration/
           retention-days: 30
 
+      # The runner fills this directory only when a test passed on retry, so a
+      # clean shard publishes nothing and the weekly report spends no API budget
+      # reading empty documents; the always-written journal rides along in the
+      # diagnostics artifact above.
+      - name: Retain integration flaky-test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flaky-tests-integration-shard-${{ matrix.shard }}
+          path: test-results/integration-flaky/
+          if-no-files-found: ignore
+          retention-days: 30
+
   integration-execution-complete:
     name: Integration execution complete
     needs: [check-changes, integration-tests]
@@ -380,6 +393,17 @@ jobs:
           path: test-results/infrastructure/
           if-no-files-found: error
           retention-days: 7
+
+      # Published only when this shard retried something. The shard bundle above
+      # expires in a week; the weekly flaky report reads this one.
+      - name: Retain infrastructure flaky-test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flaky-tests-infrastructure-shard-${{ matrix.shard }}
+          path: test-results/infrastructure-flaky/
+          if-no-files-found: ignore
+          retention-days: 30
 
   infrastructure-complete:
     name: Infrastructure execution complete
