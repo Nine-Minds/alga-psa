@@ -64,7 +64,7 @@ it('isolates worktree routes while matching publishers and same-route replicas s
 
     // A publisher and subscriber using route B still agree, and A's replicas
     // continue to compete in their own event-processors group.
-    await busB.publish({ ...event, payload: { ...event.payload, entryId: randomUUID() } }, { channel, strict: true });
+    await busB.publish({ ...event, payload: { ...event.payload, entryId: randomUUID() } }, { channel, eventId, strict: true });
     await expect.poll(() => deliveries.b, { timeout: 5000 }).toBe(1);
     expect(deliveries.a1 + deliveries.a2).toBe(1);
     const groupsA = await control.xInfoGroups(`${prefixA}event-stream:${channel}:SCHEDULE_ENTRY_CREATED`);
@@ -78,7 +78,8 @@ it('isolates worktree routes while matching publishers and same-route replicas s
     if (control.isOpen) {
       const keys = await control.keys(`${prefixA}*`);
       keys.push(...await control.keys(`${prefixB}*`));
-      keys.push(`processed_events:${tenantId}:${channel}`, `processed_event_handlers:${tenantId}:${channel}`);
+      keys.push(`${prefixA}processed_events:${tenantId}:${channel}`, `${prefixA}processed_event_handlers:${tenantId}:${channel}`);
+      keys.push(`${prefixB}processed_events:${tenantId}:${channel}`, `${prefixB}processed_event_handlers:${tenantId}:${channel}`);
       if (keys.length) await control.del(keys);
       await control.quit();
     }

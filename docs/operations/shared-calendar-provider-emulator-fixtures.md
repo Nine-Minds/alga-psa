@@ -89,11 +89,15 @@ loopback; use the repository Graph emulator only on the development host.
 4. Assign smoke entries to Glinda. Do not use Scarecrow/Tinman for this run: their
    original credentials were preserved, not verified against these new emulators.
    Endpoint overrides are process-wide; their real-provider usability is unclaimed.
-5. Run all five flows from the smoke plan. Inspect automatic provider delivery and
-   mappings after UI saves. The runner's direct adapter calls are prerequisites,
-   not evidence of UI-to-provider delivery. Google events can be inspected/edited
-   through its authenticated Calendar API; Graph state is available at
-   `/control/msgraph/state/calendar-events` on port 18483.
+5. Run the five flows with the exact stimuli and expected outcomes in
+   [shared calendar delivery acceptance](shared-calendar-delivery-acceptance-handoff.md):
+   group delivery; inbound note preservation/no marker-only rejection loop;
+   group rename on the next update; archive and restore; and personal plus
+   calendar-less controls. Inspect automatic provider delivery and mappings
+   after UI saves. Direct adapter calls and the automatic-delivery harness are
+   service/emulator evidence, not evidence of UI-to-provider delivery. Google
+   events can be inspected/edited through its authenticated Calendar API; Graph
+   state is available at `/control/msgraph/state/calendar-events` on port 18483.
 6. Stop the foreground runner with SIGINT/SIGTERM. It disables only the two
    journaled fixture providers and saves emulator state. A forced kill cannot
    perform this cleanup; disable those exact fixture IDs before leaving the app
@@ -114,6 +118,9 @@ Google token refresh, encrypted-at-rest checks, both providers' event operations
 body marker preservation, Outlook categories, and unchanged existing rows/mappings.
 The app stayed stopped; all five authenticated Schedule flows (group delivery,
 inbound/no-repush, rename, archive, personal/calendar-less) remain **unpassed**.
+See [shared calendar delivery acceptance](shared-calendar-delivery-acceptance-handoff.md)
+for concrete flow steps, expected outcomes, routing ledger migration notes, and
+the current service/emulator versus UI evidence boundary.
 No applicable approved task-specific design was found in `docs/plans` history.
 
 Checks on this takeover: 64 focused tests passed (46 Graph calendar contracts,

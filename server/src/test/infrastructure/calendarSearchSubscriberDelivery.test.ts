@@ -86,7 +86,7 @@ it('delivers one schedule event to actual calendar and search registrations even
     await bus.close();
     if (control.isOpen) {
       const keys = await control.keys(`${prefix}*`);
-      keys.push(`processed_events:${state.tenant}:${channel}`, `processed_event_handlers:${state.tenant}:${channel}`);
+      keys.push(`${prefix}processed_events:${state.tenant}:${channel}`, `${prefix}processed_event_handlers:${state.tenant}:${channel}`);
       await control.del(keys);
       await control.quit();
     }

@@ -10,17 +10,22 @@ that worktree's ignored `server/.env.local`, for example:
 REDIS_PREFIX=alga-psa-feature-my-branch:
 ```
 
-`REDIS_PREFIX` is already applied by both `packages/event-bus` and the legacy
-server EventBus to individual event stream names. The `REDIS_EVENT_STREAM_PREFIX`
-and `REDIS_EVENT_CONSUMER_GROUP` settings must also agree within the environment.
+`REDIS_PREFIX` is applied by `packages/event-bus` to individual event stream
+names and to both `processed_events` and `processed_event_handlers` idempotency
+sets. The legacy `server/src/lib/eventBus/index.ts` re-exports this package
+implementation, so it has the same routing boundary. The
+`REDIS_EVENT_STREAM_PREFIX` and `REDIS_EVENT_CONSUMER_GROUP` settings must also
+agree within the environment.
 Keep the consumer group name shared between replicas of one environment: they
 compete to process a logical event once. A unique consumer name per process
 does not isolate separate worktrees that share a stream and group.
 
 The workflow stream remains `workflow:events:global`, independent of
-`REDIS_PREFIX`; this preserves the current workflow consumer contract. This
-namespace change isolates the individual event streams used by subscribers
-such as calendar sync.
+`REDIS_PREFIX`; this preserves the current workflow consumer contract. The
+prefix isolates individual event streams and their idempotency sets used by
+subscribers such as calendar sync. Old unprefixed idempotency sets are left in
+place to expire under their existing TTL; changing prefixes starts a fresh
+idempotency namespace and can permit a fresh delivery on the new route.
 
 ## Activation and pending events
 

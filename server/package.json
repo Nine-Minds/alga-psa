@@ -57,7 +57,8 @@
     "rollback-tenant": "tsx scripts/rollback-tenant.ts",
     "migrate:ee": "node scripts/run-ee-migrations.js",
     "migrate:ee:down": "node scripts/run-ee-migrations.js down",
-    "migrate:ee:status": "node scripts/run-ee-migrations.js status"
+    "migrate:ee:status": "node scripts/run-ee-migrations.js status",
+    "test:calendar-routing": "vitest run --config vitest.redis.config.ts src/test/infrastructure/eventBusWorktreeNamespace.test.ts src/test/infrastructure/calendarSearchSubscriberDelivery.test.ts src/test/integration/calendar/automaticCalendarDelivery.integration.test.ts --coverage.enabled=false"
   },
   "nx": {
     "targets": {
