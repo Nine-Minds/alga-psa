@@ -1,5 +1,7 @@
 'use client'
 
+
+import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -1461,7 +1463,7 @@ export function ContractDialog({
                                                 <Input
                                                   id={`unit-measure-${preset.preset_id}-${service.service_id}`}
                                                   type="text"
-                                                  value={service.unit_of_measure || 'unit'}
+                                                  value={service.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label}
                                                   disabled
                                                   className="h-9 text-sm mt-1 bg-muted"
                                                 />

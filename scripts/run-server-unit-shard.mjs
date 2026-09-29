@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { applyFlakyPolicy, resetFlakyPublication } from './lib/flaky-policy.mjs';
 import { normalizeTestFile } from './lib/test-execution-evidence.mjs';
 import { partitionTestFiles } from './lib/test-sharding.mjs';
 import { testRevision } from './lib/test-revision.mjs';
@@ -26,15 +27,21 @@ export function runServerUnitShard({ root, index, total, workers, env = process.
     collectedAll: file('collected-all.json'), shard: file('shard.json'), shardFiles: file('shard-files.json'),
     collected: file('collected.json'), collectedTests: file('collected-tests.json'), results: file('results.json'),
     blob: file('blob.json'), progress: file('progress.jsonl'), evidence: file('evidence.json'),
+    flaky: file('flaky-tests.json'),
   };
   // Remove stale evidence even if the next process cannot start.
   for (const target of Object.values(paths)) writeFileSync(target, 'null\n');
+  const flakyUpload = path.join(root, 'test-results/server-unit-flaky');
+  resetFlakyPublication(flakyUpload);
   // VITEST_RECYCLE_FORKS carries the same intent as the CLI override below.
   // Vitest forwards only a whitelist of CLI options into project configs and
   // poolOptions is not on it, so once the shard config declares its jsdom/node
   // projects the flag alone would silently stop recycling forks per file.
   const runEnv = { ...env, SERVER_UNIT_SHARD_FILES: paths.shardFiles, TEST_PROGRESS_PATH: paths.progress,
-    VITEST_RECYCLE_FORKS: '1' };
+    VITEST_RECYCLE_FORKS: '1',
+    FLAKY_TESTS_PATH: paths.flaky, FLAKY_SUITE: 'server-unit', FLAKY_JOB: `server-unit shard ${index}/${total}`,
+    FLAKY_SHARD_INDEX: String(index), FLAKY_SHARD_TOTAL: String(total),
+    SERVER_UNIT_SHARD_INDEX: String(index), SERVER_UNIT_SHARD_TOTAL: String(total) };
   const vitest = args => spawnSync(process.execPath, [path.join(server, 'node_modules/vitest/vitest.mjs'), ...args],
     { cwd: server, env: runEnv, stdio: 'inherit' });
   const shardArgs = ['--config', 'vitest.server-unit-shard.config.ts'];
@@ -64,17 +71,24 @@ export function runServerUnitShard({ root, index, total, workers, env = process.
     phase = 'Execution';
     // Shards render only the cheap summary; the merge job renders lcov once
     // from the blob coverage maps.
-    const result = vitest(['run', ...shardArgs, ...parallelForks,
+    // --retry=1 on the command line, never in the shared server vitest config:
+    // a fail-then-pass now leaves the shard green and lands in flaky-tests.json
+    // instead of disappearing into a rerun.
+    const result = vitest(['run', ...shardArgs, ...parallelForks, '--retry=1',
       '--coverage.enabled=true', '--coverage.reporter=text-summary',
       '--reporter=default', '--reporter=json', '--reporter=blob', `--reporter=${path.join(root, 'scripts/lib/vitest-progress-reporter.mjs')}`,
+      `--reporter=${path.join(root, 'scripts/lib/vitest-flaky-reporter.mjs')}`,
       `--outputFile.json=${paths.results}`, `--outputFile.blob=${paths.blob}`]);
+    // A retry-only pass warns on a pull request and fails everywhere else, so
+    // the shard's own evidence carries the verdict instead of a green log line.
+    const flaky = applyFlakyPolicy({ documentPath: paths.flaky, directory: flakyUpload, eventName: env.GITHUB_EVENT_NAME });
     phase = 'Execution verification';
     let after;
     let sourceError;
     try { after = testRevision(root); } catch (error) { sourceError = error.message; }
     evidence = verifyServerUnitExecution({ root, revision: before.revision, candidateRevision: env.GITHUB_SHA,
       outcome: result.status === 0 ? 'success' : 'failure', sourceAfter: after, sourceError, sourceDirty: after?.dirty,
-      reportPath: paths.results, shard: { index, total, allFiles } });
+      reportPath: paths.results, shard: { index, total, allFiles }, extraFailures: flaky.failures });
   } catch (error) {
     evidence = fail(error.message);
     writeFileSync(paths.evidence, JSON.stringify(evidence, null, 2) + '\n');

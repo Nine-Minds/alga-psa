@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { uuidSchema } from './common';
+import { isUnitOfMeasureCode } from '@alga-psa/core/unitOfMeasure';
 
 const billingMethodSchema = z.enum(['usage']);
 
@@ -36,7 +37,8 @@ const productShape = {
   billing_method: billingMethodSchema.optional().default('usage'),
   default_rate: defaultRateSchema.optional().default(0),
   currency_code: currencyCodeSchema.optional(),
-  unit_of_measure: z.string().min(1, 'Unit of measure is required').max(128),
+  unit_of_measure: z.string().trim().min(1).max(128).optional(),
+  unit_code: z.string().refine(isUnitOfMeasureCode, 'Unknown unit of measure code').optional(),
   category_id: nullableUuidSchema.optional(),
   tax_rate_id: nullableUuidSchema.optional(),
   description: descriptionSchema.optional(),

@@ -58,8 +58,22 @@
     },
     "clients": {
       "title": "Uw bedrijf",
-      "help": "De klant die als uw bedrijf is gemarkeerd, is uw eigen organisatie. De naam, het adres en het logo van deze klant verschijnen op facturen, offertes en communicatie naar klanten.",
+      "help": "De klant die als uw bedrijf is gemarkeerd, is uw eigen organisatie. De naam, het adres en het logo van deze klant verschijnen op facturen, offertes en communicatie naar klanten, en het land van de locatie bepaalt uw datumnotatie en het land dat in nieuwe records wordt voorgeselecteerd.",
       "currentDefault": "Uw bedrijf is momenteel {{name}}.",
+      "defaults": {
+        "title": "Wat uw bedrijf bepaalt",
+        "intro": "Het land van de locatie van {{name}} bepaalt het volgende voor de hele MSP-app:",
+        "country": "Nieuwe klanten, contacten en locaties selecteren {{country}} vooraf.",
+        "countryMissing": "Nieuwe klanten, contacten en locaties selecteren geen land vooraf.",
+        "phoneCode": "Telefoonnummers beginnen met landnummer {{code}}.",
+        "phoneCodeMissing": "Telefoonnummers beginnen zonder landnummer.",
+        "dateFormat": "Datums worden geschreven als {{pattern}} — {{example}} — met een {{clock}}-klok.",
+        "clock12": "12-uurs",
+        "clock24": "24-uurs",
+        "noCountry": "{{name}} heeft geen land op de locatie, dus alle drie vallen terug op de standaard {{pattern}}. Voeg aan {{name}} een locatie met een land toe om ze te wijzigen — er is geen aparte instelling voor de datumnotatie.",
+        "portalNote": "In het klantenportaal staan datums in de notatie van de klant zelf, afgeleid van het land van diens locatie en niet van de uwe.",
+        "changeIntro": "Overschakelen naar {{name}} wijzigt ook deze standaardwaarden:"
+      },
       "yourCompanyBadge": "Uw bedrijf",
       "table": {
         "name": "Naam",
@@ -97,6 +111,18 @@
         "setDefaultClient": "Kan standaardklant niet instellen",
         "loadClients": "Kan klanten niet laden"
       }
+    }
+  },
+  "dashboardWelcome": {
+    "label": "Bedrijfsnaam gebruiken in de welkomsttekst van het dashboard",
+    "help": "Standaard uit: het MSP-dashboard toont „Welkom in uw MSP-commandocentrum”. Zet dit aan en het toont de naam van de klant die als uw bedrijf is gemarkeerd. Deze schakelaar wordt direct en afzonderlijk opgeslagen.",
+    "noCompany": "Er is nog geen klant als uw bedrijf gemarkeerd. Kies er een bij Instellingen → Algemeen zodat de naam hier kan verschijnen.",
+    "previewLabel": "Uw team ziet:",
+    "preview": "Welkom in het commandocentrum van {{companyName}}",
+    "previewDefault": "Welkom in uw MSP-commandocentrum",
+    "messages": {
+      "saved": "Welkomsttekst van dashboard bijgewerkt",
+      "saveFailed": "Kan de welkomsttekst van het dashboard niet bijwerken"
     }
   },
   "experimentalFeatures": {

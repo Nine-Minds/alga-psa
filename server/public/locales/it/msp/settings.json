@@ -58,8 +58,22 @@
     },
     "clients": {
       "title": "La tua azienda",
-      "help": "Il cliente contrassegnato come la tua azienda rappresenta la tua organizzazione. Nome, indirizzo e logo di questo cliente compaiono su fatture, preventivi e comunicazioni ai clienti.",
+      "help": "Il cliente contrassegnato come la tua azienda rappresenta la tua organizzazione. Nome, indirizzo e logo di questo cliente compaiono su fatture, preventivi e comunicazioni ai clienti, e il Paese della sua sede determina il formato delle date e il Paese preselezionato nei nuovi record.",
       "currentDefault": "Attualmente la tua azienda è {{name}}.",
+      "defaults": {
+        "title": "Cosa determina la tua azienda",
+        "intro": "Il Paese della sede di {{name}} determina quanto segue per tutta la app MSP:",
+        "country": "Nuovi clienti, contatti e sedi preselezionano {{country}}.",
+        "countryMissing": "Nuovi clienti, contatti e sedi non preselezionano alcun Paese.",
+        "phoneCode": "I numeri di telefono iniziano con il prefisso {{code}}.",
+        "phoneCodeMissing": "I numeri di telefono iniziano senza prefisso.",
+        "dateFormat": "Le date si scrivono {{pattern}} — {{example}} — con orologio a {{clock}}.",
+        "clock12": "12 ore",
+        "clock24": "24 ore",
+        "noCountry": "{{name}} non ha un Paese nella sede, quindi tutti e tre tornano al valore predefinito {{pattern}}. Aggiungi a {{name}} una sede con un Paese per modificarli: non esiste un'impostazione separata per il formato della data.",
+        "portalNote": "Nel portale clienti le date seguono il formato del cliente stesso, ricavato dal Paese della sua sede e non dalla tua.",
+        "changeIntro": "Passare a {{name}} modifica anche questi valori predefiniti:"
+      },
       "yourCompanyBadge": "La tua azienda",
       "table": {
         "name": "Nome",
@@ -97,6 +111,18 @@
         "setDefaultClient": "Impossibile impostare il cliente predefinito",
         "loadClients": "Impossibile caricare i clienti"
       }
+    }
+  },
+  "dashboardWelcome": {
+    "label": "Usa il nome della tua azienda nel benvenuto della dashboard",
+    "help": "Disattivato per impostazione predefinita: la dashboard MSP mostra «Benvenuto nel tuo centro di comando MSP». Attivandolo compare il nome del cliente contrassegnato come la tua azienda. Questo interruttore viene salvato subito e in modo indipendente.",
+    "noCompany": "Nessun cliente è ancora contrassegnato come la tua azienda. Scegline uno in Impostazioni → Generali perché il suo nome possa comparire qui.",
+    "previewLabel": "Il tuo team vedrà:",
+    "preview": "Benvenuto nel centro di comando di {{companyName}}",
+    "previewDefault": "Benvenuto nel tuo centro di comando MSP",
+    "messages": {
+      "saved": "Benvenuto della dashboard aggiornato",
+      "saveFailed": "Impossibile aggiornare il benvenuto della dashboard"
     }
   },
   "experimentalFeatures": {

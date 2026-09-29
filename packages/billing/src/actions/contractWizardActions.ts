@@ -1,5 +1,7 @@
 'use server';
 
+
+import { resolveUnitOfMeasure, withUnitCode } from '@alga-psa/core/unitOfMeasure';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -772,7 +774,7 @@ export const createContractTemplateFromWizard = withAuth(async (
         await tenantDb(trx, tenant).table('contract_template_line_service_usage_config').insert({
           tenant,
           config_id: configId,
-          unit_of_measure: service.unit_of_measure || 'unit',
+          ...withUnitCode({ unit_of_measure: service.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label }),
           enable_tiered_pricing: false,
           minimum_usage: 0,
           base_rate: normalizedUnitRate ?? null,
@@ -1437,7 +1439,7 @@ export const createClientContractFromWizard = withAuth(async (
         });
 
         await planServiceConfigService.upsertPlanServiceUsageConfiguration(usagePlanId, service.service_id, {
-          unit_of_measure: service.unit_of_measure || 'unit',
+          unit_of_measure: service.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label,
           unit_rate: normalizedUnitRate,
           enable_tiered_pricing: false,
         });
@@ -1854,8 +1856,7 @@ export const getContractTemplateSnapshotForClientWizard = withAuth(async (
           unit_rate: unitRateCents,
           unit_of_measure:
             usageConfig?.unit_of_measure ||
-            service.unit_of_measure ||
-            'unit',
+            service.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label,
           bucket_overlay:
             bucketConfig && isBucketConfig(bucketConfig)
               ? {
@@ -2134,8 +2135,7 @@ export const getDraftContractForResume = withAuth(async (
           unit_rate: unitRateCents,
           unit_of_measure:
             usageConfig?.unit_of_measure ||
-            service.unit_of_measure ||
-            'unit',
+            service.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label,
           bucket_overlay:
             bucketConfig && isBucketConfig(bucketConfig)
               ? {

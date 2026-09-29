@@ -115,6 +115,7 @@ function catalogProductQuery(trx: Knex.Transaction, tenant: string): Knex.QueryB
       'sc.sku',
       'sc.barcode',
       'sc.unit_of_measure',
+      'sc.unit_code',
       // Left-join NULLs are coalesced in toProduct (null -> false).
       'pis.is_serialized',
       'pis.track_stock',
@@ -142,6 +143,7 @@ function hydratedUnitQuery(trx: Knex.Transaction, tenant: string): Knex.QueryBui
       'sc.sku',
       'sc.barcode',
       'sc.unit_of_measure',
+      'sc.unit_code',
       'pis.is_serialized',
       'loc.name as location_name',
       'c.client_name',
@@ -157,6 +159,7 @@ function toProduct(row: any): InventoryProduct {
     is_serialized: Boolean(row.is_serialized),
     track_stock: row.track_stock === undefined ? true : Boolean(row.track_stock),
     unit_of_measure: row.unit_of_measure ?? null,
+    unit_code: row.unit_code ?? null,
   };
 }
 

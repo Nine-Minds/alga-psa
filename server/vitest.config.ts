@@ -249,6 +249,7 @@ export default defineConfig({
       { find: /^@alga-psa\/licensing\/actions\/(.*)$/, replacement: path.resolve(__dirname, '../packages/licensing/src/actions/$1') },
       { find: /^@alga-psa\/licensing\/(.*)$/, replacement: path.resolve(__dirname, '../packages/licensing/src/$1') },
       { find: /^@alga-psa\/auth$/, replacement: path.resolve(__dirname, '../packages/auth/src/index.ts') },
+      { find: /^@alga-psa\/auth\/components\/(.*)$/, replacement: path.resolve(__dirname, '../packages/auth/src/components/$1') },
       { find: /^@alga-psa\/auth\/actions\/(.*)$/, replacement: path.resolve(__dirname, '../packages/auth/src/actions/$1') },
       { find: /^@alga-psa\/auth\/sso\/entry$/, replacement: path.resolve(__dirname, '../packages/auth/src/components/SsoProviderButtons.tsx') },
       { find: /^@alga-psa\/auth\/session$/, replacement: path.resolve(__dirname, '../packages/auth/src/lib/session.ts') },

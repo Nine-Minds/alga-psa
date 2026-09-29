@@ -5,6 +5,7 @@ import {
   stripColorLiterals,
 } from './applyEmailPalette';
 import { removeBrandLogo, stripBrandAttribution } from './brandAssets';
+import { stripGradientFallback } from './gradientFallback';
 import { STOCK_EMAIL_PALETTE } from './stockPalette';
 import type {
   EmailPaletteTokens,
@@ -29,9 +30,12 @@ export interface ClassifyTenantTemplateInput {
  * The Enterprise brand assets are ours to add and remove, so a row is still
  * recognizably ours whether or not it currently carries our logo and the
  * attribution line. Normalizing both sides is what lets a tenant turn the
- * attribution back on and have the footer restored.
+ * attribution back on and have the footer restored. The flat gradient fallback
+ * is ours too: rows written before the layout carried it must still read as
+ * branded against the corrected system templates.
  */
-const withoutBrandAssets = (html: string): string => stripBrandAttribution(removeBrandLogo(html));
+const withoutBrandAssets = (html: string): string =>
+  stripGradientFallback(stripBrandAttribution(removeBrandLogo(html)));
 
 /**
  * Decides whether a tenant row is untouched, something the branding tool wrote,

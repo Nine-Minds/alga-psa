@@ -1,5 +1,7 @@
 'use client';
 
+
+import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -162,7 +164,7 @@ export function ServiceSelectionDialog({
           : contractLineType === 'Usage'
             ? {
                 base_rate: resolvedRate,
-                unit_of_measure: selectedService.unit_of_measure || 'unit',
+                unit_of_measure: selectedService.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label,
               }
             : { base_rate: resolvedRate };
 

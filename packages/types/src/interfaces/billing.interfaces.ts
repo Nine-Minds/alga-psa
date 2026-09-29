@@ -190,6 +190,8 @@ export interface IRecurringChargeDetailPeriod {
   billingTiming?: 'arrears' | 'advance' | null;
 }
 export interface IBillingCharge extends TenantEntity {
+  unit_code?: string | null;
+  unit_label?: string | null;
   type: ChargeType;
   serviceId?: string;
   config_id?: string;
@@ -434,6 +436,7 @@ export interface IService extends TenantEntity {
   default_rate: number; // Convenience field: primary rate (typically first/USD price)
   category_id: string | null;
   unit_of_measure: string;
+  unit_code?: string | null;
   item_kind?: 'service' | 'product'; // Catalog kind (Products are a filtered subset)
   is_active?: boolean;
   sku?: string | null;
@@ -564,6 +567,7 @@ export interface IContractLinePresetService extends TenantEntity {
   quantity?: number;
   custom_rate?: number | null;
   unit_of_measure?: string;
+  unit_code?: string | null;
   // Bucket overlay fields - recommended bucket configuration
   bucket_total_minutes?: number;
   bucket_overage_rate?: number;

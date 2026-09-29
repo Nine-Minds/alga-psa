@@ -333,6 +333,29 @@ const User = {
     }
   },
 
+  updatePasswordIfUnchanged: async (
+    user_id: string,
+    tenant: string,
+    expectedHash: string | null,
+    hashed_password: string
+  ): Promise<boolean> => {
+    const db = await getAdminConnection();
+    const query = tenantDb(db, tenant).table<IUser>('users').where({ user_id });
+    if (expectedHash === null) query.whereNull('hashed_password');
+    else query.where('hashed_password', expectedHash);
+    const updated = await query.update({ hashed_password });
+    return updated > 0;
+  },
+
+  getPasswordHash: async (user_id: string, tenant: string): Promise<string | null> => {
+    const db = await getAdminConnection();
+    const user = await tenantDb(db, tenant).table<IUser>('users')
+      .select('hashed_password')
+      .where({ user_id })
+      .first();
+    return user?.hashed_password ?? null;
+  },
+
   verifyPassword: async (user_id: string, password: string): Promise<boolean> => {
     const db = await getAdminConnection();
     try {

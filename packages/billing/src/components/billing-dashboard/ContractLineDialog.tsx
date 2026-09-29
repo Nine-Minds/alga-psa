@@ -1,10 +1,14 @@
 'use client'
 
+
+import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
+import { UnitOfMeasureInput } from '@alga-psa/ui/components/UnitOfMeasureInput';
+import { listTenantUnitsOfMeasure, registerTenantUnitOfMeasure } from '@alga-psa/billing/actions/unitOfMeasureActions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -927,7 +931,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
     const handleAddUsageService = () => {
       setUsageServices([
         ...usageServices,
-        { service_id: '', service_name: '', unit_rate: undefined, unit_of_measure: 'unit' },
+        { service_id: '', service_name: '', unit_rate: undefined, unit_of_measure: '' },
       ]);
       markDirty();
     };
@@ -948,7 +952,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
         service_id: item.service_id,
         service_name: item.service_name || '',
         unit_rate: item.default_rate || undefined,
-        unit_of_measure: item.unit_of_measure || 'unit'
+        unit_of_measure: item.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label
       };
       setUsageServices(newServices);
 
@@ -1076,14 +1080,12 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                     <Label htmlFor={`unit-measure-${index}`} className="text-sm">
                       {t('dialog.usage.unitOfMeasureLabel', { defaultValue: 'Unit of Measure' })}
                     </Label>
-                    <Input
+                    <UnitOfMeasureInput
                       id={`unit-measure-${index}`}
-                      type="text"
-                      value={service.unit_of_measure || t('dialog.usage.defaultUnit', { defaultValue: 'unit' })}
-                      onChange={(e) => handleUnitChange(index, e.target.value)}
-                      placeholder={t('dialog.usage.unitOfMeasurePlaceholder', {
-                        defaultValue: 'e.g., GB, API call, user',
-                      })}
+                      value={service.unit_of_measure}
+                      onChange={(unit: string) => handleUnitChange(index, unit)}
+                      loadCustomUnits={listTenantUnitsOfMeasure}
+                      registerCustomUnit={registerTenantUnitOfMeasure}
                     />
                     <p className="text-xs text-muted-foreground">
                       {t('dialog.usage.unitOfMeasureHelp', {
