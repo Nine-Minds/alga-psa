@@ -78,6 +78,47 @@ describe('REST TeamService mutations (alga-2026-0002379 Bug B)', () => {
     expect(await memberIds()).toEqual([lead]);
   });
 
+  describe('team lead guard', () => {
+    const LEAD_MESSAGE = 'Cannot remove the team lead. Please assign a new team lead first.';
+    const managerId = async () =>
+      ((await table('teams').where({ team_id: teamId }).first()) as any).manager_id;
+
+    it('removeMember rejects removing the lead and changes nothing', async () => {
+      const err = await service.removeMember(teamId, lead, context()).catch((e) => e);
+      expect(err.message).toBe(LEAD_MESSAGE);
+      expect(err.statusCode).toBe(400);
+      expect(await memberIds()).toEqual([lead, memberA, memberB].sort());
+      expect(await managerId()).toBe(lead);
+    });
+
+    it('removeTeamMember (the DELETE /members/{userId} path) rejects removing the lead', async () => {
+      const err = await service.removeTeamMember(teamId, lead, context()).catch((e) => e);
+      expect(err.message).toBe(LEAD_MESSAGE);
+      expect(err.statusCode).toBe(400);
+      expect(await memberIds()).toEqual([lead, memberA, memberB].sort());
+      expect(await managerId()).toBe(lead);
+    });
+
+    it('removeTeamMember still removes a non-lead member', async () => {
+      await service.removeTeamMember(teamId, memberA, context());
+      expect(await memberIds()).toEqual([lead, memberB].sort());
+    });
+
+    it('removeMembers rejects a batch containing the lead and deletes nothing', async () => {
+      const err = await service.removeMembers(teamId, [lead, memberA], context()).catch((e) => e);
+      expect(err.message).toBe(LEAD_MESSAGE);
+      expect(err.statusCode).toBe(400);
+      expect(await memberIds()).toEqual([lead, memberA, memberB].sort());
+      expect(await managerId()).toBe(lead);
+    });
+
+    it('allows removing the previous lead once a new lead is assigned', async () => {
+      await service.update(teamId, { manager_id: memberA } as any, context());
+      await service.removeMember(teamId, lead, context());
+      expect(await memberIds()).toEqual([memberA, memberB].sort());
+    });
+  });
+
   it('clears the lead with manager_id: null', async () => {
     await service.update(teamId, { manager_id: null } as any, context());
     expect(((await table('teams').where({ team_id: teamId }).first()) as any).manager_id).toBeNull();

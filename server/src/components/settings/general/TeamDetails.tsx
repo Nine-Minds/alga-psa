@@ -342,7 +342,7 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
     },
     {
       title: '',
-      dataIndex: 'user_id',
+      dataIndex: 'actions',
       width: '80px',
       sortable: false,
       render: (_value: unknown, member: ITeamMember) => (

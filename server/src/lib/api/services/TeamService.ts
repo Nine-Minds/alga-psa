@@ -590,6 +590,11 @@ export class TeamService extends BaseService<ITeam> {
         throw new NotFoundError('Team not found or permission denied');
       }
 
+      // The team lead must be reassigned before they can be removed (same rule as the UI actions)
+      if (team.manager_id && team.manager_id === userId) {
+        throw new ValidationError('Cannot remove the team lead. Please assign a new team lead first.');
+      }
+
       // Check if user is a member
       const existingMember = await tenantDb(trx, context.tenant).table('team_members')
         .where({ team_id: teamId, user_id: userId })
@@ -683,6 +688,11 @@ export class TeamService extends BaseService<ITeam> {
       
       if (!team) {
         throw new NotFoundError('Team not found or permission denied');
+      }
+
+      // The team lead must be reassigned before they can be removed (same rule as the UI actions)
+      if (team.manager_id && userIds.includes(team.manager_id)) {
+        throw new ValidationError('Cannot remove the team lead. Please assign a new team lead first.');
       }
 
       // Remove members
@@ -1739,6 +1749,11 @@ export class TeamService extends BaseService<ITeam> {
       
       if (!team) {
         throw new NotFoundError('Team not found or permission denied');
+      }
+
+      // The team lead must be reassigned before they can be removed (same rule as the UI actions)
+      if (team.manager_id && team.manager_id === userId) {
+        throw new ValidationError('Cannot remove the team lead. Please assign a new team lead first.');
       }
 
       // Remove member

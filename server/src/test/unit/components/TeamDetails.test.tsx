@@ -100,4 +100,27 @@ describe('TeamDetails saving', () => {
     await waitFor(() => expect(document.getElementById('team-details-error-alert')).not.toBeNull());
     expect(document.getElementById('team-details-error-alert')).toHaveTextContent('teams.messages.error.saveChanges');
   });
+
+  it('renders a Remove button per member (real DataTable) and saves the removal without touching the lead', async () => {
+    vi.mocked(saveTeamChanges).mockResolvedValue({
+      ...TEAM,
+      members: TEAM.members.filter(m => m.user_id !== 'user-b'),
+    } as any);
+    await renderLoaded();
+
+    const removeButton = await waitFor(() => {
+      const el = document.getElementById('remove-member-user-b-btn');
+      expect(el).not.toBeNull();
+      return el as HTMLElement;
+    });
+    fireEvent.click(removeButton);
+    fireEvent.click(document.getElementById('save-team-changes-btn') as HTMLElement);
+
+    await waitFor(() => expect(saveTeamChanges).toHaveBeenCalledTimes(1));
+    expect(saveTeamChanges).toHaveBeenCalledWith('team-1', {
+      managerId: undefined,
+      removeUserIds: ['user-b'],
+      addUserIds: [],
+    });
+  });
 });
