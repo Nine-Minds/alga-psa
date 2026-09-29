@@ -59,7 +59,11 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { parseTicketRichTextContent, serializeTicketRichTextContent } from '../lib/ticketRichText';
+import {
+  extractTicketRichTextPlainText,
+  parseTicketRichTextContent,
+  serializeTicketRichTextContent,
+} from '../lib/ticketRichText';
 import { resolveDocumentViewUrl } from '../lib/documentViewUrl';
 import { removeTicketRichTextImageUrls, replaceTicketRichTextImageUrls } from '../lib/ticketRichTextImages';
 import { useQuickAddRichTextUploadSession } from './useQuickAddRichTextUploadSession';
@@ -744,6 +748,16 @@ export function QuickAddTicket({
     descriptionUploadSession.requestDiscard();
   };
 
+  // Typed-but-unsent text: a title or description that differs from what the dialog
+  // opened with. Staged clipboard images already have their own discard confirmation
+  // in requestDiscard, so they are not counted here (that would ask twice).
+  const hasUnsavedDraftText =
+    open &&
+    descriptionUploadSession.stagedClipboardImages.length === 0 &&
+    (title.trim() !== (prefilledTitle || '').trim() ||
+      extractTicketRichTextPlainText(descriptionContent).trim() !==
+        extractTicketRichTextPlainText(prefilledDescription || '').trim());
+
 
   const validateForm = () => {
     const validationErrors: string[] = [];
@@ -1117,6 +1131,7 @@ export function QuickAddTicket({
         id={`${id}-dialog`}
         isOpen={open}
         onClose={handleClose}
+        hasUnsavedChanges={hasUnsavedDraftText}
         className="w-full max-w-2xl max-h-[90vh]"
         title={t('quickAdd.dialogTitle', 'Quick Add Ticket')}
         footer={footer}

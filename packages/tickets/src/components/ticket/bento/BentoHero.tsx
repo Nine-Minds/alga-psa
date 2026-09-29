@@ -31,6 +31,7 @@ import { useTicketRichTextUploadSession } from '../useTicketRichTextUploadSessio
 import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { getTicketCategoriesByBoard, type BoardCategoryData } from '../../../actions/ticketCategoryActions';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
+import { useRegisterDismissGuard } from '@alga-psa/ui/components/DismissGuard';
 import { usePageSaveShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
@@ -376,6 +377,12 @@ export function BentoHero({
   // The title reflects its pending override while a save is in flight, so the
   // draft (re)opens on whatever is currently shown, not the stale persisted one.
   const displayedTitle = displayValue('title') ?? '';
+
+  // A description or title being edited holds typed text: tell the surrounding
+  // Drawer/Dialog so Escape / overlay click / X ask before throwing it away.
+  useRegisterDismissGuard(
+    hasDescriptionContentChanged || (isEditingTitle && titleDraft.trim() !== displayedTitle.trim()),
+  );
   useEffect(() => {
     if (!isEditingTitle) setTitleDraft(displayedTitle);
   }, [displayedTitle, isEditingTitle]);

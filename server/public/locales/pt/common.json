@@ -1607,6 +1607,12 @@
     "threecxDialing": "Discando a partir do seu ramal 3CX",
     "threecxFailed": "O PBX não conseguiu fazer a chamada"
   },
+  "unsavedChangesGuard": {
+    "title": "Descartar alterações não guardadas?",
+    "message": "Tem alterações não guardadas que serão perdidas se fechar isto. Deseja descartá-las?",
+    "discard": "Descartar alterações",
+    "keepEditing": "Continuar a editar"
+  },
   "editor": {
     "attachFiles": "Anexar arquivos",
     "uploadingFiles": "Carregando arquivos…",

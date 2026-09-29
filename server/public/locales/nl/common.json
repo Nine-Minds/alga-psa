@@ -1607,6 +1607,12 @@
     "threecxDialing": "Bellen vanaf uw 3CX-toestel",
     "threecxFailed": "De PBX kon de oproep niet plaatsen"
   },
+  "unsavedChangesGuard": {
+    "title": "Niet-opgeslagen wijzigingen negeren?",
+    "message": "U heeft niet-opgeslagen wijzigingen die verloren gaan als u dit sluit. Wilt u ze negeren?",
+    "discard": "Wijzigingen negeren",
+    "keepEditing": "Verder bewerken"
+  },
   "editor": {
     "attachFiles": "Bestanden bijvoegen",
     "uploadingFiles": "Bestanden uploaden…",

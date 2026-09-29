@@ -1607,6 +1607,12 @@
     "threecxDialing": "Numérotation depuis votre extension 3CX",
     "threecxFailed": "Le PBX n'a pas pu passer l'appel"
   },
+  "unsavedChangesGuard": {
+    "title": "Abandonner les modifications non enregistrées ?",
+    "message": "Vous avez des modifications non enregistrées qui seront perdues si vous fermez ceci. Voulez-vous les abandonner ?",
+    "discard": "Abandonner les modifications",
+    "keepEditing": "Continuer la modification"
+  },
   "editor": {
     "attachFiles": "Joindre des fichiers",
     "uploadingFiles": "Envoi des fichiers…",

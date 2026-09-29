@@ -1607,6 +1607,12 @@
     "threecxDialing": "Dialing from your 3CX extension",
     "threecxFailed": "The PBX could not place the call"
   },
+  "unsavedChangesGuard": {
+    "title": "Discard unsaved changes?",
+    "message": "You have unsaved changes that will be lost if you close this. Do you want to discard them?",
+    "discard": "Discard changes",
+    "keepEditing": "Keep editing"
+  },
   "editor": {
     "attachFiles": "Attach files",
     "uploadingFiles": "Uploading files…",
