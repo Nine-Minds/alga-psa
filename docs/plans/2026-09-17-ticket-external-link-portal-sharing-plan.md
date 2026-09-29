@@ -50,3 +50,14 @@ Verification:
 - `NODE_OPTIONS=--max-old-space-size=16384 npx tsc --noEmit --project tsconfig.json --incremental --tsBuildInfoFile /tmp/share-portal-typecheck-fix.tsbuildinfo` in `server` — passed.
 - `npx eslint packages/client-portal/src/components/tickets/PortalTicketExternalLinks.tsx` — passed.
 - Live dev server (`:3688`, same worktree): the External links container and the details panel both compute `border-radius: 24px` and `padding: 24px` with matching border and background in light and dark. Updated [light](2026-09-17-ticket-external-link-sharing-evidence/portal-shared-link.png) and [dark](2026-09-17-ticket-external-link-sharing-evidence/portal-shared-link-dark.png) portal screenshots show the section beside the ticket details, Comments, and Documents sections.
+
+### Evidence correction, 2026-09-29
+
+A first capture showed `External Reference · PRIVATE-ISSUE` as the shared link, contradicting the documented baseline. The `ticket_audit_logs` trail establishes this as fixture drift, not an isolation failure:
+
+- `2026-09-29T19:50:51Z` — the reviewer account (Glinda Good) set `portal_visible = true` on the private `PRIVATE-ISSUE` Mirror.
+- `2026-09-29T20:02:37Z` — the review MSP account set `portal_visible = false` on the shared `Vendor case 1042` Reference.
+- The portal rendered exactly the rows flagged `portal_visible = true`, so the capture correctly showed the private row and its URL. The SQL still filtered on `portal_visible`; nothing private leaked from a hidden row.
+- `2026-09-29T20:09:32Z`/`20:09:38Z` — visibility was restored; `20:13:43Z` added a temporary `REVIEW-PRIVATE` row.
+
+The seeded ticket was restored to the documented baseline: `PRIVATE-ISSUE` private Mirror at `https://private.example.com/INTERNAL_ONLY_DESTINATION`, `Vendor case 1042` shared Reference at `https://github.com/settings/profile`, and the temporary `REVIEW-PRIVATE` row removed. A fresh authenticated customer response contains `Vendor case 1042` and `https://github.com/settings/profile` and contains none of `PRIVATE-ISSUE`, `INTERNAL_ONLY_DESTINATION`, or `REVIEW-PRIVATE`. The light and dark screenshots were recaptured against this restored baseline and show only the shared vendor link.
