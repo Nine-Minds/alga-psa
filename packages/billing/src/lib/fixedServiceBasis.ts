@@ -66,13 +66,20 @@ export function fixedServicesRecurringTotalCents(
  * members keep the historical rule of a positive allocation quantity being
  * optional (defaults to 1), but never negative or non-finite.
  */
-export function getFixedServiceBasisIssue(service: FixedServiceBasisFields): FixedServiceBasisIssue | null {
+export function getFixedServiceBasisIssue(
+  service: FixedServiceBasisFields,
+  options: { requireUnitRate?: boolean } = {},
+): FixedServiceBasisIssue | null {
+  // Templates are currency-neutral: their unit rate is an optional default and
+  // an empty one follows the catalog price in the contract's currency.
+  const requireUnitRate = options.requireUnitRate ?? true;
   if (isUnitFixedService(service)) {
     const quantity = service.quantity;
     if (quantity == null || !Number.isFinite(quantity) || quantity < 0) return 'quantity_invalid';
     if (!Number.isInteger(quantity)) return 'unit_quantity_not_whole';
     const rate = service.unit_rate;
-    if (rate == null || !Number.isSafeInteger(rate) || rate < 0) return 'unit_rate_required';
+    if (rate == null) return requireUnitRate ? 'unit_rate_required' : null;
+    if (!Number.isSafeInteger(rate) || rate < 0) return 'unit_rate_required';
     return null;
   }
   if (service.quantity != null && (!Number.isFinite(service.quantity) || service.quantity < 0)) {

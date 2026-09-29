@@ -1178,7 +1178,10 @@
       "serviceFallback": "Usługa",
       "title": "Skład szablonu",
       "unitLabel": "Jednostka:",
-      "usageBasedPlans": "Plany według zużycia"
+      "usageBasedPlans": "Plany według zużycia",
+      "recurringQuantityLabel": "Ilość cykliczna:",
+      "unitRateLabel": "Stawka jednostkowa:",
+      "unitRateFromCatalog": "Cena katalogowa w walucie klienta"
     },
     "editBasicsTitle": "Edytuj podstawy szablonu",
     "editGuidanceTitle": "Edytuj wskazówki szablonu",
@@ -1903,7 +1906,8 @@
           "hourly": "Godzinowa",
           "usage": "Zużycie"
         }
-      }
+      },
+      "recurringQuantityInvalid": "Ilość cykliczna dla „{{serviceName}}” musi być liczbą całkowitą równą zero lub większą, a każda stawka jednostkowa musi być prawidłową kwotą."
     }
   },
   "templateBasics": {
@@ -1953,7 +1957,8 @@
       "adjustPartialPeriods": "Dostosuj do okresów częściowych",
       "services": "Usługi",
       "serviceNumber": "Usługa {{index}}",
-      "quantityOptional": "Ilość (opcjonalnie)"
+      "quantityOptional": "Ilość (opcjonalnie)",
+      "recurringQuantity": "Ilość cykliczna"
     },
     "placeholders": {
       "billingTiming": "Wybierz termin rozliczeń",
@@ -1961,7 +1966,9 @@
     },
     "help": {
       "adjustPartialPeriods": "Użyj tego, gdy umowy utworzone z szablonu powinny skalować opłatę cykliczną, jeśli usługa rozpoczyna się lub kończy wewnątrz okresu.",
-      "quantity": "Sugerowana ilość przy tworzeniu umów"
+      "quantity": "Sugerowana ilość przy tworzeniu umów",
+      "recurringQuantity": "Początkowa liczba stanowisk/jednostek. Można ją zmienić podczas tworzenia umowy z tego szablonu.",
+      "unitRateOptional": "Opcjonalne. Pozostaw stawkę jednostkową pustą, aby przy tworzeniu umowy użyć ceny katalogowej tej usługi w walucie klienta."
     },
     "preview": {
       "unknownService": "Nieznana usługa",
@@ -2083,7 +2090,8 @@
       "quantity": "Ilość:",
       "bucket": "Pakiet:",
       "enabled": "Włączone",
-      "disabled": "Wyłączone"
+      "disabled": "Wyłączone",
+      "recurringQuantity": "Ilość cykliczna:"
     },
     "fixed": {
       "cadenceOwnerLabel": "Właściciel rytmu:",
@@ -2098,7 +2106,9 @@
       },
       "partialPeriodLabel": "Korekta okresu częściowego:",
       "serviceLabel": "Usługa:",
-      "invoiceWindowLabel": "Okno fakturowania:"
+      "invoiceWindowLabel": "Okno fakturowania:",
+      "unitRateLabel": "Stawka jednostkowa:",
+      "unitRateFromCatalog": "Cena katalogowa w walucie klienta"
     },
     "hourly": {
       "minimumBillableTimeLabel": "Minimalny czas podlegający rozliczeniu:",
@@ -2128,7 +2138,8 @@
     },
     "selectedHeading": "Wybrane usługi {{type}} ({{count}})",
     "labels": {
-      "qty": "Ilość:"
+      "qty": "Ilość:",
+      "recurringUnits": "Cykliczne stanowiska/jednostki"
     },
     "removeDialog": {
       "title": "Usuń preset linii kontraktowej",

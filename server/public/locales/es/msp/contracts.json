@@ -1178,7 +1178,10 @@
       "serviceFallback": "Servicio",
       "title": "Composición de la plantilla",
       "unitLabel": "Unidad:",
-      "usageBasedPlans": "Planes basados en uso"
+      "usageBasedPlans": "Planes basados en uso",
+      "recurringQuantityLabel": "Cantidad recurrente:",
+      "unitRateLabel": "Tarifa unitaria:",
+      "unitRateFromCatalog": "Precio de catálogo en la moneda del cliente"
     },
     "editBasicsTitle": "Editar información básica de la plantilla",
     "editGuidanceTitle": "Editar orientación de la plantilla",
@@ -1899,7 +1902,8 @@
           "hourly": "Por hora",
           "usage": "Uso"
         }
-      }
+      },
+      "recurringQuantityInvalid": "La cantidad recurrente de «{{serviceName}}» debe ser un número entero de cero o más, y cualquier tarifa unitaria debe ser un importe válido."
     }
   },
   "templateBasics": {
@@ -1949,7 +1953,8 @@
       "adjustPartialPeriods": "Ajustar por períodos parciales",
       "services": "Servicios",
       "serviceNumber": "Servicio {{index}}",
-      "quantityOptional": "Cantidad (opcional)"
+      "quantityOptional": "Cantidad (opcional)",
+      "recurringQuantity": "Cantidad recurrente"
     },
     "placeholders": {
       "billingTiming": "Seleccione el momento de facturación",
@@ -1957,7 +1962,9 @@
     },
     "help": {
       "adjustPartialPeriods": "Use esta opción cuando los contratos creados a partir de la plantilla deban escalar la tarifa recurrente si el servicio comienza o termina dentro de un período.",
-      "quantity": "Cantidad sugerida al crear contratos"
+      "quantity": "Cantidad sugerida al crear contratos",
+      "recurringQuantity": "Número inicial de puestos/unidades. Se puede ajustar al crear un contrato a partir de esta plantilla.",
+      "unitRateOptional": "Opcional. Deje la tarifa unitaria vacía para usar el precio de catálogo de este servicio en la moneda del cliente al crear un contrato."
     },
     "preview": {
       "unknownService": "Servicio desconocido",
@@ -2079,7 +2086,8 @@
       "quantity": "Cantidad:",
       "bucket": "Bloque:",
       "enabled": "Habilitado",
-      "disabled": "Deshabilitado"
+      "disabled": "Deshabilitado",
+      "recurringQuantity": "Cantidad recurrente:"
     },
     "fixed": {
       "cadenceOwnerLabel": "Propietario de la cadencia:",
@@ -2094,7 +2102,9 @@
       },
       "partialPeriodLabel": "Ajuste por período parcial:",
       "serviceLabel": "Servicio:",
-      "invoiceWindowLabel": "Ventana de facturación:"
+      "invoiceWindowLabel": "Ventana de facturación:",
+      "unitRateLabel": "Tarifa unitaria:",
+      "unitRateFromCatalog": "Precio de catálogo en la moneda del cliente"
     },
     "hourly": {
       "minimumBillableTimeLabel": "Tiempo mínimo facturable:",
@@ -2124,7 +2134,8 @@
     },
     "selectedHeading": "Servicios seleccionados de {{type}} ({{count}})",
     "labels": {
-      "qty": "Cant.:"
+      "qty": "Cant.:",
+      "recurringUnits": "Puestos/unidades recurrentes"
     },
     "removeDialog": {
       "title": "Quitar preajuste de línea de contrato",

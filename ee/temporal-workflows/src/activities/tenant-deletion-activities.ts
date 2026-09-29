@@ -340,6 +340,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'contract_template_line_defaults',
   'contract_template_line_bucket_services', 'contract_template_line_buckets',
   'contract_template_line_fixed_config', 'contract_template_line_service_bucket_config',
+  'contract_template_line_service_fixed_config',
   'contract_template_line_service_hourly_config',
   'contract_template_line_service_usage_config',
   'contract_template_line_service_configuration',

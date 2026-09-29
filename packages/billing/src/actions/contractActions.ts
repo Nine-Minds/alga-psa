@@ -1100,6 +1100,18 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
 
         const configMap = new Map<string, any>((configs as any[]).map((c: any) => [c.service_id, c]));
 
+        // Per-seat services carry their basis (and an optional default unit
+        // rate) in the template fixed-config row; bundle services have none.
+        const templateConfigIds = (configs as any[]).map((c: any) => c.config_id).filter(Boolean);
+        const templateFixedRows = templateConfigIds.length > 0
+          ? await tenantScopedTable(knex, tenant, 'contract_template_line_service_fixed_config')
+              .whereIn('config_id', templateConfigIds)
+              .select(['config_id', 'pricing_basis', 'base_rate'])
+          : [];
+        const templateFixedByConfig = new Map<string, any>(
+          (templateFixedRows as any[]).map((row: any) => [row.config_id, row]),
+        );
+
         contractLines.push({
           contract_line_id: line.contract_line_id,
           contract_line_name: line.contract_line_name,
@@ -1109,6 +1121,8 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
           display_order: line.display_order ?? 0,
           services: (services as any[]).map((svc: any) => {
             const config = configMap.get(svc.service_id);
+            const templateFixed = templateFixedByConfig.get(config?.config_id);
+            const isUnitTemplateService = templateFixed?.pricing_basis === 'unit';
             return {
               service_id: svc.service_id,
               service_name: svc.service_name || 'Unknown Service',
@@ -1122,13 +1136,16 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
                   ? (config?.quantity ?? svc.quantity ?? null)
                   : null,
               unit_of_measure: null,
-              // Template lines do not carry the explicit basis/mode columns;
-              // they resolve to legacy semantics until a contract line is
-              // authored from them.
+              // Template lines carry a pricing basis only for per-seat fixed
+              // services; everything else resolves to legacy semantics until a
+              // contract line is authored from them. A null unit rate means
+              // the contract will use the catalog price in its own currency.
               config_id: config?.config_id ?? null,
-              pricing_basis: null,
+              pricing_basis: isUnitTemplateService ? 'unit' : null,
               measurement_mode: null,
-              unit_rate: null
+              unit_rate: isUnitTemplateService && templateFixed?.base_rate != null
+                ? Number(templateFixed.base_rate)
+                : null
             };
           })
         });
@@ -1309,22 +1326,25 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
       totalEstimatedMonthlyValue = contractValues.get(contractId)?.monthlyValueCents ?? 0;
     } else if (hasFixedServices) {
       // Templates have no contract rows for the shared valuation; keep the
-      // template-line normalization.
+      // template-line normalization. Per-seat members add quantity × default
+      // unit rate when the template states one (an empty rate follows the
+      // catalog in the contract currency, so it cannot be valued here).
+      const toMonthly = (amount: number, frequency: string | undefined) => {
+        if (frequency === 'weekly') return amount * 4.33;
+        if (frequency === 'quarterly') return amount / 3;
+        if (frequency === 'semi-annually' || frequency === 'semi_annually') return amount / 6;
+        if (frequency === 'annually') return amount / 12;
+        return amount;
+      };
       totalEstimatedMonthlyValue = contractLines
-        .filter(line => line.contract_line_type === 'Fixed' && line.base_rate !== null)
+        .filter(line => line.contract_line_type === 'Fixed')
         .reduce((acc, line) => {
-          let monthlyRate = line.base_rate!;
-          // Normalize to monthly
-          if (line.billing_frequency === 'weekly') {
-            monthlyRate = monthlyRate * 4.33;
-          } else if (line.billing_frequency === 'quarterly') {
-            monthlyRate = monthlyRate / 3;
-          } else if (line.billing_frequency === 'semi-annually' || line.billing_frequency === 'semi_annually') {
-            monthlyRate = monthlyRate / 6;
-          } else if (line.billing_frequency === 'annually') {
-            monthlyRate = monthlyRate / 12;
-          }
-          return acc + monthlyRate;
+          const unitAmount = line.services.reduce((sum, service) => {
+            if (service.pricing_basis !== 'unit' || service.unit_rate == null) return sum;
+            return sum + Math.ceil(Number(service.quantity ?? 0) * Math.ceil(service.unit_rate));
+          }, 0);
+          const bundleAmount = line.base_rate !== null ? line.base_rate : 0;
+          return acc + toMonthly(bundleAmount + unitAmount, line.billing_frequency);
         }, 0);
     }
 

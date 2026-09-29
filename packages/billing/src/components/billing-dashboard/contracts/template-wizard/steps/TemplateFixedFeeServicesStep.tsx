@@ -14,6 +14,8 @@ import { TemplateWizardData } from '../TemplateWizard';
 import { TemplateServicePreviewSection } from '../TemplateServicePreviewSection';
 import { getRecurringAuthoringPreview } from '../../recurringAuthoringPreview';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { FixedServiceConfigPanel } from '../../../service-configurations/FixedServiceConfigPanel';
+import { isUnitFixedService } from '../../../../../lib/fixedServiceBasis';
 
 interface TemplateFixedFeeServicesStepProps {
   data: TemplateWizardData;
@@ -76,7 +78,7 @@ export function TemplateFixedFeeServicesStep({
     updateData({
       fixed_services: [
         ...data.fixed_services,
-        { service_id: '', service_name: '', quantity: 1 },
+        { service_id: '', service_name: '', quantity: 1, pricing_basis: 'bundle', unit_rate: undefined },
       ],
     });
   };
@@ -102,12 +104,35 @@ export function TemplateFixedFeeServicesStep({
     updateData({ fixed_services: next });
   };
 
+  const handleConfigurationChange = (
+    index: number,
+    updates: { pricing_basis?: 'bundle' | 'unit' | null; base_rate?: number | null },
+  ) => {
+    const next = [...data.fixed_services];
+    const current = next[index];
+    const pricingBasis: 'bundle' | 'unit' =
+      updates.pricing_basis === 'unit' ? 'unit' : updates.pricing_basis === 'bundle' ? 'bundle' : (current.pricing_basis ?? 'bundle');
+    // Switching to a bundle allocation drops the unit rate; an allocation
+    // keeps its historical minimum of 1.
+    const switchedToBundle = updates.pricing_basis === 'bundle' && current.pricing_basis === 'unit';
+    next[index] = {
+      ...current,
+      pricing_basis: pricingBasis,
+      unit_rate: pricingBasis === 'unit'
+        ? (updates.base_rate !== undefined ? updates.base_rate : current.unit_rate)
+        : undefined,
+      quantity: switchedToBundle ? Math.max(1, current.quantity ?? 1) : current.quantity,
+    };
+    updateData({ fixed_services: next });
+  };
+
   // Build preview services list
   const previewServices = React.useMemo(() => {
     const items: Array<{
       id: string;
       name: string;
       quantity?: number;
+      recurringUnits?: boolean;
       serviceId: string;
     }> = [];
 
@@ -120,6 +145,7 @@ export function TemplateFixedFeeServicesStep({
             service.service_name ||
             t('templateFixed.preview.unknownService', { defaultValue: 'Unknown Service' }),
           quantity: service.quantity ?? 1,
+          recurringUnits: isUnitFixedService(service),
           serviceId: service.service_id,
         });
       }
@@ -319,26 +345,60 @@ export function TemplateFixedFeeServicesStep({
 
                 <div className="space-y-2">
                   <Label htmlFor={`template-fixed-quantity-${index}`} className="text-sm">
-                    {t('templateFixed.fields.quantityOptional', {
-                      defaultValue: 'Quantity (Optional)',
-                    })}
+                    {isUnitFixedService(service)
+                      ? t('templateFixed.fields.recurringQuantity', {
+                          defaultValue: 'Recurring quantity',
+                        })
+                      : t('templateFixed.fields.quantityOptional', {
+                          defaultValue: 'Quantity (Optional)',
+                        })}
                   </Label>
                   <Input
                     id={`template-fixed-quantity-${index}`}
                     type="number"
-                    min="1"
-                    value={service.quantity ?? 1}
+                    min={isUnitFixedService(service) ? '0' : '1'}
+                    step="1"
+                    value={service.quantity ?? (isUnitFixedService(service) ? 0 : 1)}
                     onChange={(event) =>
-                      handleQuantityChange(index, Math.max(1, Number(event.target.value) || 1))
+                      handleQuantityChange(
+                        index,
+                        isUnitFixedService(service)
+                          ? Math.max(0, Math.floor(Number(event.target.value) || 0))
+                          : Math.max(1, Number(event.target.value) || 1)
+                      )
                     }
                     className="w-24"
                   />
                   <p className="text-xs text-[rgb(var(--color-text-400))]">
-                    {t('templateFixed.help.quantity', {
-                      defaultValue: 'Suggested quantity when creating contracts',
-                    })}
+                    {isUnitFixedService(service)
+                      ? t('templateFixed.help.recurringQuantity', {
+                          defaultValue:
+                            'Starting seat/unit count. It can be adjusted when a contract is created from this template.',
+                        })
+                      : t('templateFixed.help.quantity', {
+                          defaultValue: 'Suggested quantity when creating contracts',
+                        })}
                   </p>
                 </div>
+
+                <FixedServiceConfigPanel
+                  idPrefix={`template-fixed-${index}-`}
+                  configuration={{ pricing_basis: service.pricing_basis ?? 'bundle', base_rate: service.unit_rate }}
+                  quantity={service.quantity ?? 1}
+                  planFixedConfig={{ enable_proration: data.enable_proration }}
+                  onConfigurationChange={(updates) => handleConfigurationChange(index, updates)}
+                  onPlanFixedConfigChange={() => undefined}
+                  hideProration
+                />
+
+                {isUnitFixedService(service) && (
+                  <p className="text-xs text-[rgb(var(--color-text-400))]" id={`template-fixed-unit-rate-help-${index}`}>
+                    {t('templateFixed.help.unitRateOptional', {
+                      defaultValue:
+                        "Optional. Leave the unit rate empty to use this service's catalog price in the client's currency when a contract is created.",
+                    })}
+                  </p>
+                )}
               </div>
 
               <Button

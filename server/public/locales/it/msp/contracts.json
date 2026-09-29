@@ -1178,7 +1178,10 @@
       "serviceFallback": "Servizio",
       "title": "Composizione del modello",
       "unitLabel": "Unità:",
-      "usageBasedPlans": "Piani basati su utilizzo"
+      "usageBasedPlans": "Piani basati su utilizzo",
+      "recurringQuantityLabel": "Quantità ricorrente:",
+      "unitRateLabel": "Tariffa unitaria:",
+      "unitRateFromCatalog": "Prezzo di catalogo nella valuta del cliente"
     },
     "editBasicsTitle": "Modifica nozioni di base del modello",
     "editGuidanceTitle": "Modifica indicazioni del modello",
@@ -1899,7 +1902,8 @@
           "hourly": "Orario",
           "usage": "Utilizzo"
         }
-      }
+      },
+      "recurringQuantityInvalid": "La quantità ricorrente di «{{serviceName}}» deve essere un numero intero pari o superiore a zero e qualsiasi tariffa unitaria deve essere un importo valido."
     }
   },
   "templateBasics": {
@@ -1949,7 +1953,8 @@
       "adjustPartialPeriods": "Adegua per periodi parziali",
       "services": "Servizi",
       "serviceNumber": "Servizio {{index}}",
-      "quantityOptional": "Quantità (opzionale)"
+      "quantityOptional": "Quantità (opzionale)",
+      "recurringQuantity": "Quantità ricorrente"
     },
     "placeholders": {
       "billingTiming": "Seleziona tempistiche di fatturazione",
@@ -1957,7 +1962,9 @@
     },
     "help": {
       "adjustPartialPeriods": "Utilizza questa opzione quando i contratti creati dal modello devono adeguare la tariffa ricorrente se il servizio inizia o termina all'interno di un periodo.",
-      "quantity": "Quantità suggerita durante la creazione dei contratti"
+      "quantity": "Quantità suggerita durante la creazione dei contratti",
+      "recurringQuantity": "Numero iniziale di postazioni/unità. Può essere modificato quando si crea un contratto da questo modello.",
+      "unitRateOptional": "Facoltativo. Lascia vuota la tariffa unitaria per usare il prezzo di catalogo di questo servizio nella valuta del cliente quando viene creato un contratto."
     },
     "preview": {
       "unknownService": "Servizio sconosciuto",
@@ -2079,7 +2086,8 @@
       "quantity": "Quantità:",
       "bucket": "Pacchetto:",
       "enabled": "Abilitato",
-      "disabled": "Disabilitato"
+      "disabled": "Disabilitato",
+      "recurringQuantity": "Quantità ricorrente:"
     },
     "fixed": {
       "cadenceOwnerLabel": "Proprietario della cadenza:",
@@ -2094,7 +2102,9 @@
       },
       "partialPeriodLabel": "Adeguamento periodo parziale:",
       "serviceLabel": "Servizio:",
-      "invoiceWindowLabel": "Finestra di fatturazione:"
+      "invoiceWindowLabel": "Finestra di fatturazione:",
+      "unitRateLabel": "Tariffa unitaria:",
+      "unitRateFromCatalog": "Prezzo di catalogo nella valuta del cliente"
     },
     "hourly": {
       "minimumBillableTimeLabel": "Tempo minimo fatturabile:",
@@ -2124,7 +2134,8 @@
     },
     "selectedHeading": "Servizi {{type}} selezionati ({{count}})",
     "labels": {
-      "qty": "Qtà:"
+      "qty": "Qtà:",
+      "recurringUnits": "Postazioni/unità ricorrenti"
     },
     "removeDialog": {
       "title": "Rimuovi preimpostazione della linea contrattuale",

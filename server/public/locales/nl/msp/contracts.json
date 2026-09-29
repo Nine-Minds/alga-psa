@@ -1178,7 +1178,10 @@
       "serviceFallback": "Service",
       "title": "Sjabloonsamenstelling",
       "unitLabel": "Eenheid:",
-      "usageBasedPlans": "Verbruiksplannen"
+      "usageBasedPlans": "Verbruiksplannen",
+      "recurringQuantityLabel": "Terugkerende hoeveelheid:",
+      "unitRateLabel": "Eenheidstarief:",
+      "unitRateFromCatalog": "Catalogusprijs in de valuta van de klant"
     },
     "editBasicsTitle": "Sjabloonbasis bewerken",
     "editGuidanceTitle": "Sjabloonrichtlijnen bewerken",
@@ -1899,7 +1902,8 @@
           "hourly": "Per uur",
           "usage": "Verbruik"
         }
-      }
+      },
+      "recurringQuantityInvalid": "De terugkerende hoeveelheid voor \"{{serviceName}}\" moet een geheel getal van nul of meer zijn en een eventueel eenheidstarief moet een geldig bedrag zijn."
     }
   },
   "templateBasics": {
@@ -1949,7 +1953,8 @@
       "adjustPartialPeriods": "Aanpassen voor gedeeltelijke perioden",
       "services": "Services",
       "serviceNumber": "Service {{index}}",
-      "quantityOptional": "Hoeveelheid (optioneel)"
+      "quantityOptional": "Hoeveelheid (optioneel)",
+      "recurringQuantity": "Terugkerende hoeveelheid"
     },
     "placeholders": {
       "billingTiming": "Selecteer facturatietiming",
@@ -1957,7 +1962,9 @@
     },
     "help": {
       "adjustPartialPeriods": "Gebruik dit wanneer contracten die op basis van het sjabloon worden aangemaakt, het terugkerende tarief moeten schalen als de service binnen een periode begint of eindigt.",
-      "quantity": "Voorgestelde hoeveelheid bij het aanmaken van contracten"
+      "quantity": "Voorgestelde hoeveelheid bij het aanmaken van contracten",
+      "recurringQuantity": "Beginaantal seats/eenheden. Dit kan worden aangepast wanneer er een contract van deze sjabloon wordt gemaakt.",
+      "unitRateOptional": "Optioneel. Laat het eenheidstarief leeg om bij het aanmaken van een contract de catalogusprijs van deze service in de valuta van de klant te gebruiken."
     },
     "preview": {
       "unknownService": "Onbekende service",
@@ -2079,7 +2086,8 @@
       "quantity": "Hoeveelheid:",
       "bucket": "Bundel:",
       "enabled": "Ingeschakeld",
-      "disabled": "Uitgeschakeld"
+      "disabled": "Uitgeschakeld",
+      "recurringQuantity": "Terugkerende hoeveelheid:"
     },
     "fixed": {
       "cadenceOwnerLabel": "Cadanseigenaar:",
@@ -2094,7 +2102,9 @@
       },
       "partialPeriodLabel": "Aanpassing gedeeltelijke periode:",
       "serviceLabel": "Service:",
-      "invoiceWindowLabel": "Factuurvenster:"
+      "invoiceWindowLabel": "Factuurvenster:",
+      "unitRateLabel": "Eenheidstarief:",
+      "unitRateFromCatalog": "Catalogusprijs in de valuta van de klant"
     },
     "hourly": {
       "minimumBillableTimeLabel": "Minimum factureerbare tijd:",
@@ -2124,7 +2134,8 @@
     },
     "selectedHeading": "Geselecteerde {{type}}-services ({{count}})",
     "labels": {
-      "qty": "Aantal:"
+      "qty": "Aantal:",
+      "recurringUnits": "Terugkerende seats/eenheden"
     },
     "removeDialog": {
       "title": "Contractregelpreset verwijderen",

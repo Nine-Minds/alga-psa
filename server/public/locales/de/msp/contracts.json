@@ -1178,7 +1178,10 @@
       "serviceFallback": "Dienst",
       "title": "Vorlagenzusammensetzung",
       "unitLabel": "Einheit:",
-      "usageBasedPlans": "Nutzungsbasierte Pläne"
+      "usageBasedPlans": "Nutzungsbasierte Pläne",
+      "recurringQuantityLabel": "Wiederkehrende Menge:",
+      "unitRateLabel": "Stückpreis:",
+      "unitRateFromCatalog": "Katalogpreis in der Währung des Kunden"
     },
     "editBasicsTitle": "Vorlagengrundlagen bearbeiten",
     "editGuidanceTitle": "Vorlagenhinweise bearbeiten",
@@ -1899,7 +1902,8 @@
           "hourly": "Stundenbasiert",
           "usage": "Nutzung"
         }
-      }
+      },
+      "recurringQuantityInvalid": "Die wiederkehrende Menge für „{{serviceName}}“ muss eine ganze Zahl ab null sein, und ein Stückpreis muss ein gültiger Betrag sein."
     }
   },
   "templateBasics": {
@@ -1949,7 +1953,8 @@
       "adjustPartialPeriods": "Für Teilperioden anpassen",
       "services": "Dienste",
       "serviceNumber": "Dienst {{index}}",
-      "quantityOptional": "Menge (optional)"
+      "quantityOptional": "Menge (optional)",
+      "recurringQuantity": "Wiederkehrende Menge"
     },
     "placeholders": {
       "billingTiming": "Abrechnungszeitpunkt auswählen",
@@ -1957,7 +1962,9 @@
     },
     "help": {
       "adjustPartialPeriods": "Verwenden Sie dies, wenn aus der Vorlage erstellte Verträge die wiederkehrende Gebühr skalieren sollen, falls der Service innerhalb einer Periode beginnt oder endet.",
-      "quantity": "Vorgeschlagene Menge beim Erstellen von Verträgen"
+      "quantity": "Vorgeschlagene Menge beim Erstellen von Verträgen",
+      "recurringQuantity": "Anfängliche Anzahl an Plätzen/Einheiten. Sie kann angepasst werden, wenn aus dieser Vorlage ein Vertrag erstellt wird.",
+      "unitRateOptional": "Optional. Lassen Sie den Stückpreis leer, um beim Erstellen eines Vertrags den Katalogpreis dieses Services in der Währung des Kunden zu verwenden."
     },
     "preview": {
       "unknownService": "Unbekannter Service",
@@ -2079,7 +2086,8 @@
       "quantity": "Menge:",
       "bucket": "Kontingent:",
       "enabled": "Aktiviert",
-      "disabled": "Deaktiviert"
+      "disabled": "Deaktiviert",
+      "recurringQuantity": "Wiederkehrende Menge:"
     },
     "fixed": {
       "cadenceOwnerLabel": "Rhythmus-Eigentümer:",
@@ -2094,7 +2102,9 @@
       },
       "partialPeriodLabel": "Teilperiodenanpassung:",
       "serviceLabel": "Dienst:",
-      "invoiceWindowLabel": "Rechnungsfenster:"
+      "invoiceWindowLabel": "Rechnungsfenster:",
+      "unitRateLabel": "Stückpreis:",
+      "unitRateFromCatalog": "Katalogpreis in der Währung des Kunden"
     },
     "hourly": {
       "minimumBillableTimeLabel": "Minimale abrechenbare Zeit:",
@@ -2124,7 +2134,8 @@
     },
     "selectedHeading": "Ausgewählte {{type}}-Services ({{count}})",
     "labels": {
-      "qty": "Menge:"
+      "qty": "Menge:",
+      "recurringUnits": "Wiederkehrende Plätze/Einheiten"
     },
     "removeDialog": {
       "title": "Vertragslinien-Vorlagenbaustein entfernen",

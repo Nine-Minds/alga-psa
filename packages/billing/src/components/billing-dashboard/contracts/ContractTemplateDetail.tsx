@@ -111,6 +111,10 @@ type TemplateLineService = {
   minimum_billable_time?: number | null;
   round_up_to_nearest?: number | null;
   quantity?: number | null;
+  /** 'unit' = per-seat service billed quantity × unit rate; otherwise a bundle allocation. */
+  pricing_basis?: "unit" | "bundle" | null;
+  /** Default unit rate in minor units; null follows the catalog price in the contract currency. */
+  unit_rate?: number | null;
 };
 
 type TemplateSummary = {
@@ -453,6 +457,12 @@ const ContractTemplateDetail: React.FC = () => {
                 typeConfig.unit_of_measure ?? base.unit_of_measure;
             } else if (configuration.configuration_type === "Fixed") {
               base.quantity = configuration.quantity ?? base.quantity;
+              const fixedTypeConfig = typeConfig as { pricing_basis?: string | null; base_rate?: number | string | null } | null;
+              if (fixedTypeConfig?.pricing_basis === "unit") {
+                base.pricing_basis = "unit";
+                base.unit_rate =
+                  fixedTypeConfig.base_rate != null ? Number(fixedTypeConfig.base_rate) : null;
+              }
             }
 
             if (configuration.custom_rate != null) {
@@ -1857,12 +1867,33 @@ const ContractTemplateDetail: React.FC = () => {
                                 {service.quantity != null &&
                                   service.configuration.configuration_type !== "Usage" && (
                                   <span>
-                                    {t(
-                                      "templateDetail.composition.quantityLabel",
-                                      { defaultValue: "Quantity:" },
-                                    )}{" "}
+                                    {service.pricing_basis === "unit"
+                                      ? t(
+                                          "templateDetail.composition.recurringQuantityLabel",
+                                          { defaultValue: "Recurring quantity:" },
+                                        )
+                                      : t(
+                                          "templateDetail.composition.quantityLabel",
+                                          { defaultValue: "Quantity:" },
+                                        )}{" "}
                                     <span className="font-medium">
                                       {service.quantity}
+                                    </span>
+                                  </span>
+                                )}
+                                {service.pricing_basis === "unit" && (
+                                  <span>
+                                    {t(
+                                      "templateDetail.composition.unitRateLabel",
+                                      { defaultValue: "Unit rate:" },
+                                    )}{" "}
+                                    <span className="font-medium">
+                                      {service.unit_rate != null
+                                        ? formatCurrency(service.unit_rate)
+                                        : t(
+                                            "templateDetail.composition.unitRateFromCatalog",
+                                            { defaultValue: "Catalog price in the client's currency" },
+                                          )}
                                     </span>
                                   </span>
                                 )}

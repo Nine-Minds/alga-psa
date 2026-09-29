@@ -18,6 +18,7 @@ import { getRecurringAuthoringPreview } from '../recurringAuthoringPreview';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useFormatBillingFrequency } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
+import { getServiceCatalogRatesForCurrency } from '@alga-psa/billing/actions/serviceActions';
 import { FixedServiceConfigPanel } from '../../service-configurations/FixedServiceConfigPanel';
 import {
   fixedServicesRecurringTotalCents,
@@ -44,6 +45,39 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
       setBaseRateInput((data.fixed_base_rate / 100).toFixed(2));
     }
   }, [data.fixed_base_rate]);
+
+  // A per-seat service that arrives without a unit rate (from a template,
+  // which is currency-neutral, or a resumed draft) follows the catalog price in
+  // the contract currency until the operator overrides it.
+  const unitServicesMissingRate = data.fixed_services
+    .filter((service) => isUnitFixedService(service) && service.service_id && service.unit_rate == null)
+    .map((service) => service.service_id);
+  const missingRateKey = Array.from(new Set(unitServicesMissingRate)).sort().join(',');
+
+  useEffect(() => {
+    if (!missingRateKey || !data.currency_code) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const rates = await getServiceCatalogRatesForCurrency(missingRateKey.split(','), data.currency_code);
+        if (cancelled) return;
+        setCatalogRates((prev) => ({ ...prev, ...rates }));
+        updateData({
+          fixed_services: data.fixed_services.map((service) =>
+            isUnitFixedService(service) && service.service_id && service.unit_rate == null && rates[service.service_id] != null
+              ? { ...service, unit_rate: rates[service.service_id] as number }
+              : service
+          ),
+        });
+      } catch (error) {
+        console.error('Failed to load catalog prices for recurring services', error);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [missingRateKey, data.currency_code]);
 
   const handleAddService = () => {
     updateData({
