@@ -40,6 +40,7 @@ describe('development login provisioning', () => {
   const originalNextAuthSecret = process.env.NEXTAUTH_SECRET;
 
   beforeEach(() => {
+    account.user_id = 'glinda-user';
     account.hashed_password = 'previous-hash';
     updatePassword.mockClear();
     findByEmailAndType.mockClear();
