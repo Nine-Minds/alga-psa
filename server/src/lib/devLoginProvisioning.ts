@@ -12,9 +12,15 @@ const DEV_LOGIN_EMAIL = 'glinda@emeraldcity.oz';
  * to initialize silently invalidated credentials printed by earlier servers.
  */
 async function getDevelopmentPassword(tenant: string, userId: string): Promise<string> {
-  const key = await getSecret('credential_encryption_key', 'CREDENTIAL_ENCRYPTION_KEY');
-  if (key.length < 32) {
-    throw new Error('Development login requires a shared credential encryption key of at least 32 characters');
+  // The authentication secret is already required by password verification and
+  // is shared by every app process. Keep older development configurations
+  // working when the optional credential-encryption secret is absent/short.
+  const credentialKey = await getSecret('credential_encryption_key', 'CREDENTIAL_ENCRYPTION_KEY');
+  const key = credentialKey.length >= 32
+    ? credentialKey
+    : await getSecret('nextauth_secret', 'NEXTAUTH_SECRET');
+  if (!key) {
+    throw new Error('Development login requires the configured authentication secret');
   }
 
   return createHmac('sha256', key)

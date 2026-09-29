@@ -28,6 +28,9 @@ export interface CalendarProviderVendorConfig {
   accessToken?: string;
   refreshToken?: string;
   tokenExpiresAt?: string;
+  /** Optional per-provider endpoints for isolated OAuth/API emulator fixtures. */
+  apiRoot?: string;
+  tokenEndpoint?: string;
   redirectUri?: string;
   syncToken?: string;
   deltaLink?: string;

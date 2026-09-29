@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { account, updatePassword, findByEmailAndType, findByEmailTenantAndType } = vi.hoisted(() => {
+const { account, updatePassword, findByEmailAndType, findByEmailTenantAndType, getSecret } = vi.hoisted(() => {
   const account = {
     user_id: 'glinda-user',
     tenant: 'emerald-tenant',
@@ -15,6 +15,9 @@ const { account, updatePassword, findByEmailAndType, findByEmailTenantAndType } 
     }),
     findByEmailAndType: vi.fn(async () => account),
     findByEmailTenantAndType: vi.fn(async () => account),
+    getSecret: vi.fn(async (name: string) => name === 'credential_encryption_key'
+      ? 'shared-development-key-with-at-least-thirty-two-characters'
+      : 'unit-test-nextauth-secret'),
   };
 });
 
@@ -27,7 +30,7 @@ vi.mock('@alga-psa/db/models/user', () => ({
 }));
 
 vi.mock('server/src/lib/utils/getSecret', () => ({
-  getSecret: vi.fn(async () => 'shared-development-key-with-at-least-thirty-two-characters'),
+  getSecret,
 }));
 
 import { verifyPassword } from 'server/src/utils/encryption/encryption';
@@ -41,6 +44,10 @@ describe('development login provisioning', () => {
     updatePassword.mockClear();
     findByEmailAndType.mockClear();
     findByEmailTenantAndType.mockClear();
+    getSecret.mockReset();
+    getSecret.mockImplementation(async (name: string) => name === 'credential_encryption_key'
+      ? 'shared-development-key-with-at-least-thirty-two-characters'
+      : 'unit-test-nextauth-secret');
     process.env.NEXTAUTH_SECRET = 'unit-test-nextauth-secret';
   });
 
@@ -65,5 +72,25 @@ describe('development login provisioning', () => {
       'internal',
     );
     expect(updatePassword).toHaveBeenCalledWith('glinda-user', 'emerald-tenant', expect.any(String));
+  });
+
+  it('falls back to the shared authentication secret when the optional encryption key is missing', async () => {
+    getSecret.mockImplementation(async (name: string) => name === 'credential_encryption_key' ? '' : 'unit-test-nextauth-secret');
+    const first = await provisionDevelopmentLogin();
+    const second = await provisionDevelopmentLogin();
+    expect(first?.password).toBe(second?.password);
+    expect(await verifyPassword(first!.password, account.hashed_password)).toBe(true);
+  });
+
+  it('rejects provisioning when persisted verification fails', async () => {
+    findByEmailTenantAndType.mockResolvedValueOnce({ ...account, hashed_password: 'wrong-persisted-hash' } as any);
+    await expect(provisionDevelopmentLogin()).rejects.toThrow('Development login password was not persisted');
+  });
+
+  it('derives separate credentials for distinct account identities', async () => {
+    const first = await provisionDevelopmentLogin();
+    account.user_id = 'another-user';
+    const otherIdentity = await provisionDevelopmentLogin();
+    expect(otherIdentity?.password).not.toBe(first?.password);
   });
 });
