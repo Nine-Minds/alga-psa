@@ -398,7 +398,8 @@
       "placeholders": {
         "teamName": "Wprowadź nazwę zespołu",
         "selectTeamLead": "Wybierz lidera zespołu",
-        "selectUserToAdd": "Wybierz użytkownika do dodania"
+        "selectUserToAdd": "Wybierz użytkownika do dodania",
+        "noTeamLead": "Nieprzypisany"
       },
       "alert": {
         "unsavedChanges": "Mają Państwo niezapisane zmiany"
@@ -433,7 +434,8 @@
         "createFailed": "Nie udało się utworzyć zespołu: {{error}}",
         "deleteFailed": "Nie udało się usunąć zespołu",
         "updateName": "Nie udało się zaktualizować nazwy zespołu",
-        "saveChanges": "Nie udało się zapisać zmian. Spróbuj ponownie."
+        "saveChanges": "Nie udało się zapisać zmian. Spróbuj ponownie.",
+        "validateDeleteFailed": "Nie udało się sprawdzić, czy ten zespół można usunąć. Spróbuj ponownie."
       }
     }
   },

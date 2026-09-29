@@ -92,9 +92,13 @@ describe('deletion configs', () => {
     });
   });
 
-  it('T024: team config uses table team_members', () => {
-    const memberDep = DELETION_CONFIGS.team.dependencies.find((dep) => dep.type === 'member');
-    expect(memberDep?.table).toBe('team_members');
+  it('T024: team config blocks on work items assigned to the team, not on its own members', () => {
+    const tables = DELETION_CONFIGS.team.dependencies.map((dep) => dep.table);
+    expect(tables).toEqual(['tickets', 'project_tasks', 'project_template_tasks']);
+    // team_members / calendar_shares / boards.default_assigned_team_id are owned
+    // by the team and handled by deleteTeam, so they must not block deletion.
+    expect(tables).not.toContain('team_members');
+    expect(tables).not.toContain('boards');
   });
 
   it('T025: user config uses table schedule_entry_assignees', () => {

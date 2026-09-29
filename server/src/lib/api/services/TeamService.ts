@@ -4,6 +4,7 @@
  */
 
 import { Knex } from 'knex';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { v4 as uuid4 } from 'uuid';
 import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
 import { ITeam, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
@@ -41,7 +42,6 @@ import {
 import { ListOptions } from '../controllers/types';
 // Removed user actions import - will query users directly
 // TeamModel removed - functionality implemented directly in service
-import { publishEvent } from 'server/src/lib/eventBus/publishers';
 import { 
   generateResourceLinks, 
   generateComprehensiveLinks,
@@ -400,11 +400,6 @@ export class TeamService extends BaseService<ITeam> {
           await tenantDb(trx, context.tenant).table('team_members').insert(memberInserts);
         }
   
-        // Publish team created event
-        await publishEvent({
-        eventType: 'PLACEHOLDER',
-        payload: {}
-      });
   
         // Return the created team
         return team as ITeam;
@@ -478,12 +473,6 @@ export class TeamService extends BaseService<ITeam> {
         .where('team_id', id)
         .update(updateData);
 
-      // Publish team updated event
-      await publishEvent({
-        eventType: 'PLACEHOLDER',
-        payload: {}
-      });
-
       // Return updated team
       const updatedTeam = await tenantDb(trx, context.tenant).table('teams')
         .where('team_id', id)
@@ -499,32 +488,29 @@ export class TeamService extends BaseService<ITeam> {
   async delete(id: string, context: ServiceContext): Promise<void> {
     const { knex } = await this.getKnex();
 
-    return withTransaction(knex, async (trx) => {
-      // Check team exists
-      const team = await tenantDb(trx, context.tenant).table('teams')
-        .where('team_id', id)
-        .first();
-      
-      if (!team) {
-        throw new NotFoundError('Team not found or permission denied');
-      }
+    const team = await tenantDb(knex, context.tenant).table('teams')
+      .where('team_id', id)
+      .first();
 
-      // Delete team members first (only table that exists)
-      await tenantDb(trx, context.tenant).table('team_members')
-        .where('team_id', id)
-        .del();
+    if (!team) {
+      throw new NotFoundError('Team not found or permission denied');
+    }
 
-      // Delete the team
-      await tenantDb(trx, context.tenant).table('teams')
-        .where('team_id', id)
-        .del();
-
-      // Publish team deleted event
-      await publishEvent({
-        eventType: 'PLACEHOLDER',
-        payload: {}
-      });
+    // Same rules as the settings UI (deleteTeam): work items assigned to the team
+    // block deletion; membership rows, calendar shares and board default-team
+    // settings are the team's own and are removed / cleared with it.
+    // LEVERAGE: pattern team-delete-references — packages/teams deleteTeam action repeats this body
+    const result = await deleteEntityWithValidation('team', id, knex, context.tenant, async (trx, tenant) => {
+      const scoped = tenantDb(trx, tenant);
+      await scoped.table('calendar_shares').where({ grantee_type: 'team', grantee_id: id }).del();
+      await scoped.table('boards').where({ default_assigned_team_id: id }).update({ default_assigned_team_id: null });
+      await scoped.table('team_members').where('team_id', id).del();
+      await scoped.table('teams').where('team_id', id).del();
     });
+
+    if (!result.deleted) {
+      throw new ConflictError(result.message ?? 'Team cannot be deleted', { dependencies: result.dependencies });
+    }
   }
 
   // ============================================================================
@@ -581,14 +567,7 @@ export class TeamService extends BaseService<ITeam> {
       await tenantDb(trx, context.tenant).table('team_members').insert({
         team_id: teamId,
         user_id: userId,
-        tenant: context.tenant,
-        joined_at: new Date()
-      });
-
-      // Publish member added event
-      await publishEvent({
-        eventType: 'PLACEHOLDER',
-        payload: {}
+        tenant: context.tenant
       });
 
       return this.getById(teamId, context) as Promise<ITeam>;
@@ -624,17 +603,6 @@ export class TeamService extends BaseService<ITeam> {
       await tenantDb(trx, context.tenant).table('team_members')
         .where({ team_id: teamId, user_id: userId })
         .del();
-
-      // Remove any specific task assignments
-      await tenantDb(trx, context.tenant).table('task_assignments')
-        .where({ team_id: teamId, user_id: userId })
-        .del();
-
-      // Publish member removed event
-      await publishEvent({
-        eventType: 'PLACEHOLDER',
-        payload: {}
-      });
 
       return this.getById(teamId, context) as Promise<ITeam>;
     });
@@ -692,17 +660,10 @@ export class TeamService extends BaseService<ITeam> {
       const memberInserts = userIds.map(userId => ({
         team_id: teamId,
         user_id: userId,
-        tenant: context.tenant,
-        joined_at: new Date()
+        tenant: context.tenant
       }));
 
       await tenantDb(trx, context.tenant).table('team_members').insert(memberInserts);
-
-      // Publish bulk members added event
-      await publishEvent({
-        eventType: 'PLACEHOLDER',
-        payload: {}
-      });
 
       return this.getById(teamId, context) as Promise<ITeam>;
     });
@@ -729,18 +690,6 @@ export class TeamService extends BaseService<ITeam> {
         .whereIn('user_id', userIds)
         .where('team_id', teamId)
         .del();
-
-      // Remove any specific task assignments
-      await tenantDb(trx, context.tenant).table('task_assignments')
-        .whereIn('user_id', userIds)
-        .where('team_id', teamId)
-        .del();
-
-      // Publish bulk members removed event
-      await publishEvent({
-        eventType: 'PLACEHOLDER',
-        payload: {}
-      });
 
       return this.getById(teamId, context) as Promise<ITeam>;
     });
@@ -793,12 +742,6 @@ export class TeamService extends BaseService<ITeam> {
           created_at: new Date()
         });
       }
-
-      // Publish manager assigned event
-      await publishEvent({
-        eventType: 'PLACEHOLDER',
-        payload: {}
-      });
 
       // Fetch updated team using the transaction to ensure we see the changes
       const updatedTeam = await tenantDb(trx, context.tenant).table('teams')
@@ -909,11 +852,6 @@ export class TeamService extends BaseService<ITeam> {
           updated_at: new Date()
         });
 
-      // Publish hierarchy created event
-      await publishEvent({
-        eventType: 'PLACEHOLDER',
-        payload: {}
-      });
     });
   }
 
@@ -927,11 +865,6 @@ export class TeamService extends BaseService<ITeam> {
       .where('child_team_id', childTeamId)
       .del();
 
-    // Publish hierarchy removed event
-    await publishEvent({
-        eventType: 'PLACEHOLDER',
-        payload: {}
-      });
   }
 
   // ============================================================================
@@ -973,11 +906,6 @@ export class TeamService extends BaseService<ITeam> {
         tenant: context.tenant
       });
 
-      // Publish permission granted event
-      await publishEvent({
-        eventType: 'PLACEHOLDER',
-        payload: {}
-      });
     });
   }
 
@@ -1003,11 +931,6 @@ export class TeamService extends BaseService<ITeam> {
         revoked_by: context.userId
       });
 
-    // Publish permission revoked event
-    await publishEvent({
-        eventType: 'PLACEHOLDER',
-        payload: {}
-      });
   }
 
   /**
@@ -1085,11 +1008,6 @@ export class TeamService extends BaseService<ITeam> {
         tenant: context.tenant
       });
 
-      // Publish assignment event
-      await publishEvent({
-        eventType: 'PLACEHOLDER',
-        payload: {}
-      });
     });
   }
 

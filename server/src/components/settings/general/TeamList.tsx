@@ -12,6 +12,7 @@ import { DeleteEntityDialog } from '@alga-psa/ui';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
@@ -117,7 +118,7 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onSelectTeam }) => {
       setDeleteValidation({
         canDelete: false,
         code: 'VALIDATION_FAILED',
-        message: 'Failed to validate team deletion.',
+        message: t('teams.messages.error.validateDeleteFailed'),
         dependencies: [],
         alternatives: []
       });
@@ -147,7 +148,7 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onSelectTeam }) => {
       setError(null);
       resetDeleteState();
     } catch (err: unknown) {
-      setError(t('teams.messages.error.deleteFailed'));
+      setError(err instanceof Error && err.message ? err.message : t('teams.messages.error.deleteFailed'));
       console.error('Error deleting team:', err);
     } finally {
       setIsDeleteProcessing(false);
@@ -156,7 +157,11 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onSelectTeam }) => {
 
   return (
     <Card className="p-4 min-w-0">
-      {error && <p className="text-accent-500 mb-4 break-words">{error}</p>}
+      {error && (
+        <Alert variant="destructive" id="team-list-error-alert" className="mb-4">
+          <AlertDescription className="break-words">{error}</AlertDescription>
+        </Alert>
+      )}
       {!showAddForm ? (
         <Button
           id="add-new-team-btn"

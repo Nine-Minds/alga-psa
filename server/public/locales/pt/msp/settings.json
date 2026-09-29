@@ -396,7 +396,8 @@
       "placeholders": {
         "teamName": "Digite o nome da equipe",
         "selectTeamLead": "Selecione um líder de equipe",
-        "selectUserToAdd": "Selecione um usuário para adicionar"
+        "selectUserToAdd": "Selecione um usuário para adicionar",
+        "noTeamLead": "Não atribuído"
       },
       "alert": {
         "unsavedChanges": "Você tem alterações não salvas"
@@ -429,7 +430,8 @@
         "createFailed": "Falha ao criar equipe: {{error}}",
         "deleteFailed": "Falha ao excluir equipe",
         "updateName": "Falha ao atualizar o nome da equipe",
-        "saveChanges": "Falha ao salvar as alterações. Por favor, tente novamente."
+        "saveChanges": "Falha ao salvar as alterações. Por favor, tente novamente.",
+        "validateDeleteFailed": "Não foi possível verificar se esta equipa pode ser eliminada. Tente novamente."
       }
     }
   },

@@ -396,7 +396,8 @@
       "placeholders": {
         "teamName": "Enter team name",
         "selectTeamLead": "Select a team lead",
-        "selectUserToAdd": "Select a user to add"
+        "selectUserToAdd": "Select a user to add",
+        "noTeamLead": "Not assigned"
       },
       "alert": {
         "unsavedChanges": "You have unsaved changes"
@@ -429,7 +430,8 @@
         "createFailed": "Failed to create team: {{error}}",
         "deleteFailed": "Failed to delete team",
         "updateName": "Failed to update team name",
-        "saveChanges": "Failed to save changes. Please try again."
+        "saveChanges": "Failed to save changes. Please try again.",
+        "validateDeleteFailed": "Could not check whether this team can be deleted. Try again."
       }
     }
   },

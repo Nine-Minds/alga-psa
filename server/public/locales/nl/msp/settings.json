@@ -396,7 +396,8 @@
       "placeholders": {
         "teamName": "Teamnaam invoeren",
         "selectTeamLead": "Selecteer een teamleider",
-        "selectUserToAdd": "Selecteer een gebruiker om toe te voegen"
+        "selectUserToAdd": "Selecteer een gebruiker om toe te voegen",
+        "noTeamLead": "Niet toegewezen"
       },
       "alert": {
         "unsavedChanges": "U heeft niet-opgeslagen wijzigingen"
@@ -429,7 +430,8 @@
         "createFailed": "Kan team niet aanmaken: {{error}}",
         "deleteFailed": "Kan team niet verwijderen",
         "updateName": "Kan teamnaam niet bijwerken",
-        "saveChanges": "Kan wijzigingen niet opslaan. Probeer het opnieuw."
+        "saveChanges": "Kan wijzigingen niet opslaan. Probeer het opnieuw.",
+        "validateDeleteFailed": "Kon niet controleren of dit team kan worden verwijderd. Probeer het opnieuw."
       }
     }
   },
