@@ -141,6 +141,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # devServerStartup.integration.test.ts exercises real browser hydration.
+      # Install on every shard: suite selection can move it between shards.
+      - name: Install Chromium for integration browser assertions
+        run: npx --no-install playwright install --with-deps chromium
+
       - name: Install PDF comparison tools
         run: sudo apt-get update && sudo apt-get install -y poppler-utils
 

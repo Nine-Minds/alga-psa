@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 
 /**
  * The tenant-discovery page logged, on every load:
@@ -48,7 +48,8 @@ vi.mock('i18next', () => {
 
 vi.mock('i18next-http-backend', () => ({ default: {} }));
 vi.mock('react-i18next', () => ({
-  initReactI18next: {},
+  // The client registers its singleton before rendering, including on the server.
+  initReactI18next: { type: '3rdParty', init: vi.fn() },
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
@@ -62,22 +63,30 @@ function Child() {
 describe('I18nProvider namespace readiness', () => {
   beforeEach(() => {
     renderOrder.length = 0;
-    loadNamespaces.mockClear();
+    loadNamespaces.mockReset();
     hasResourceBundle.mockReturnValue(false);
   });
 
   afterEach(cleanup);
 
   it('loads the route namespaces before rendering children', async () => {
+    let finishLoading!: () => void;
+    loadNamespaces.mockReturnValueOnce(new Promise<void>((resolve) => {
+      finishLoading = resolve;
+    }));
+
     render(
       <I18nProvider initialLocale="fr" namespaces={['common', 'client-portal']}>
         <Child />
       </I18nProvider>
     );
 
-    await waitFor(() => expect(screen.queryByTestId('child')).not.toBeNull());
+    await waitFor(() => expect(loadNamespaces).toHaveBeenCalledWith(['common', 'client-portal']));
+    expect(screen.queryByTestId('child')).toBeNull();
+    expect(renderOrder).not.toContain('child-render');
 
-    expect(loadNamespaces).toHaveBeenCalledWith(['common', 'client-portal']);
+    await act(async () => finishLoading());
+    await waitFor(() => expect(screen.queryByTestId('child')).not.toBeNull());
 
     const firstChildRender = renderOrder.indexOf('child-render');
     const namespaceLoad = renderOrder.findIndex((entry) => entry.startsWith('load:'));
