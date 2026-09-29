@@ -1138,7 +1138,7 @@
     "composition": {
       "addContractLinesBeforeManaging": "Add contract lines to this template before managing services.",
       "additionalPlans": "Additional Plans",
-      "bucketSummary": "Bucket: {{minutes}} min • Overage ${{overage}}",
+      "bucketSummary": "Bucket: {{minutes}} min • Overage {{overage}}",
       "closeManager": "Close Manager",
       "editRate": "Edit Rate",
       "fixedFeeBundles": "Fixed Fee Bundles",

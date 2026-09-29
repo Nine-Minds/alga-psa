@@ -1919,13 +1919,22 @@ const ContractTemplateDetail: React.FC = () => {
                                       "templateDetail.composition.bucketSummary",
                                       {
                                         defaultValue:
-                                          "Bucket: {{minutes}} min • Overage ${{overage}}",
+                                          "Bucket: {{minutes}} min • Overage {{overage}}",
                                         minutes:
                                           service.bucket_overlay
                                             .total_minutes ?? 0,
-                                        overage:
-                                          service.bucket_overlay.overage_rate ??
-                                          0,
+                                        // overage_rate is stored in minor units (cents);
+                                        // a missing rate renders as a zero amount.
+                                        overage: money(
+                                          Math.round(
+                                            Number(
+                                              service.bucket_overlay
+                                                .overage_rate ?? 0,
+                                            ),
+                                          ),
+                                          contract.currency_code ??
+                                            defaultCurrency,
+                                        ),
                                       },
                                     )}
                                   </span>

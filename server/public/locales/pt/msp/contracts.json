@@ -1138,7 +1138,7 @@
     "composition": {
       "addContractLinesBeforeManaging": "Adicione linhas de contrato a este modelo antes de gerenciar serviços.",
       "additionalPlans": "Planos Adicionais",
-      "bucketSummary": "Intervalo: {{minutes}} min • Excedente de ${{overage}}",
+      "bucketSummary": "Intervalo: {{minutes}} min • Excedente de {{overage}}",
       "closeManager": "Fechar gerente",
       "editRate": "Editar taxa",
       "fixedFeeBundles": "Pacotes de taxas fixas",

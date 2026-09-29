@@ -1138,7 +1138,7 @@
     "composition": {
       "addContractLinesBeforeManaging": "〖Ȧḓḓ ƈȯƞŧřȧƈŧ ŀīƞḗş ŧȯ ŧħīş ŧḗḿƥŀȧŧḗ ƀḗƒȯřḗ ḿȧƞȧɠīƞɠ şḗřṽīƈḗş. ·························〗",
       "additionalPlans": "〖Ȧḓḓīŧīȯƞȧŀ Ƥŀȧƞş ·······〗",
-      "bucketSummary": "〖Ɓŭƈķḗŧ: {{minutes}} ḿīƞ • Ȯṽḗřȧɠḗ ${{overage}} ···················〗",
+      "bucketSummary": "〖Ɓŭƈķḗŧ: {{minutes}} ḿīƞ • Ȯṽḗřȧɠḗ {{overage}} ··················〗",
       "closeManager": "〖Ƈŀȯşḗ Ḿȧƞȧɠḗř ······〗",
       "editRate": "〖Ḗḓīŧ Řȧŧḗ ····〗",
       "fixedFeeBundles": "〖Ƒīẋḗḓ Ƒḗḗ Ɓŭƞḓŀḗş ·······〗",
