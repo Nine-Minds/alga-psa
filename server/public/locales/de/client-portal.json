@@ -600,7 +600,8 @@
       "adjustMark": "Zeichen anpassen",
       "cropFromWide": "Aus breitem Logo ausschneiden",
       "recropSuccess": "Zeichen aktualisiert.",
-      "recropError": "Das Zeichen konnte nicht aktualisiert werden."
+      "recropError": "Das Zeichen konnte nicht aktualisiert werden.",
+      "fileNameLabel": "Gespeicherte Datei"
     },
     "validation": {
       "clientNameRequired": "Firmenname ist erforderlich",

@@ -655,7 +655,8 @@
       "adjustMark": "⟦Ȧḓĵŭşŧ ḿȧřķ⟧",
       "cropFromWide": "⟦Ƈřȯƥ ƒřȯḿ ẇīḓḗ ŀȯɠȯ⟧",
       "recropSuccess": "⟦Ḿȧřķ ŭƥḓȧŧḗḓ.⟧",
-      "recropError": "⟦Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ŧħḗ ḿȧřķ.⟧"
+      "recropError": "⟦Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ŧħḗ ḿȧřķ.⟧",
+      "fileNameLabel": "⟦Şŧȯřḗḓ ƒīŀḗ⟧"
     },
     "validation": {
       "clientNameRequired": "⟦Ƈŀīḗƞŧ ƞȧḿḗ īş řḗʠŭīřḗḓ⟧",

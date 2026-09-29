@@ -146,6 +146,15 @@ jobs:
         env:
           INVENTORY_JOBS: ${{ toJSON(needs) }}
           TIER1_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+      # A React test that no jsdom glob claims runs under environment: 'node'
+      # and dies on its first `window`. Checked here, beside the inventory,
+      # because both answer "is this test wired up the way it claims to be".
+      - name: Require every React test to reach a browser environment
+        if: always()
+        # Write into the directory the step below uploads; the default path
+        # (test-results/react-test-environment.json) is outside it and is lost
+        # with the runner.
+        run: node scripts/verify-react-test-environment.mjs test-results/repository-inventory/react-test-environment.json
       - name: Preserve repository inventory
         if: always()
         uses: actions/upload-artifact@v4

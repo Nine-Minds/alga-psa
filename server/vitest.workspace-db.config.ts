@@ -12,6 +12,10 @@ export default defineConfig({
       path.resolve(__dirname, 'vitest.globalSetup.js'),
       path.resolve(__dirname, 'test-utils/workspaceDbGlobalSetup.ts'),
     ],
+    // The DB lane keeps the per-file docblocks it has always run on; drop the
+    // server lane's inherited jsdom/node projects so this include list is the
+    // one vitest resolves.
+    projects: undefined,
     include: [
       'src/{app,components,lib,services}/**/*.{db,integration}.{test,spec}.?(c|m)[jt]s?(x)',
       'migrations/__tests__/**/*.{test,spec}.?(c|m)[jt]s?(x)',

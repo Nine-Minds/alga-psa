@@ -2,6 +2,22 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { fetchAndSaveFile } from './fetchAndSaveFile';
 
+// Depending on module load order, `fetch`/`Response` (Node's undici) can hand
+// back either Node's own Blob (has arrayBuffer()) or jsdom's Blob (no
+// arrayBuffer(), but readable via FileReader). Detect capability at runtime
+// instead of assuming a fixed realm, so this doesn't flake with test order.
+const readBlob = (blob: Blob): Promise<Uint8Array> => {
+  if (typeof (blob as { arrayBuffer?: () => Promise<ArrayBuffer> }).arrayBuffer === 'function') {
+    return blob.arrayBuffer().then((buffer) => new Uint8Array(buffer));
+  }
+  return new Promise<Uint8Array>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(new Uint8Array(reader.result as ArrayBuffer));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsArrayBuffer(blob);
+  });
+};
+
 describe('fetchAndSaveFile', () => {
   beforeEach(() => {
     // jsdom has no blob URL API. Preserve URL parsing and restore the global after each test.
@@ -30,7 +46,7 @@ describe('fetchAndSaveFile', () => {
     expect(clickedAnchor?.download).toBe('meeting notes.pdf');
     expect(clickedAnchor?.href).toBe('blob:test');
     const downloadedBlob = vi.mocked(URL.createObjectURL).mock.calls[0][0] as Blob;
-    expect(new Uint8Array(await downloadedBlob.arrayBuffer())).toEqual(new Uint8Array([37, 80, 68, 70]));
+    expect(await readBlob(downloadedBlob)).toEqual(new Uint8Array([37, 80, 68, 70]));
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:test');
     expect(document.body.contains(clickedAnchor)).toBe(false);
   });

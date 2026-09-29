@@ -600,7 +600,8 @@
       "adjustMark": "Regola simbolo",
       "cropFromWide": "Ritaglia dal logo largo",
       "recropSuccess": "Simbolo aggiornato.",
-      "recropError": "Impossibile aggiornare il simbolo."
+      "recropError": "Impossibile aggiornare il simbolo.",
+      "fileNameLabel": "File memorizzato"
     },
     "validation": {
       "clientNameRequired": "Il nome dell'azienda è obbligatorio",

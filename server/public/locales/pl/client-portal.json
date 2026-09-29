@@ -602,7 +602,8 @@
       "adjustMark": "Dostosuj znak",
       "cropFromWide": "Wycinij z szerokiego logo",
       "recropSuccess": "Znak zaktualizowany.",
-      "recropError": "Nie udało się zaktualizować znaku."
+      "recropError": "Nie udało się zaktualizować znaku.",
+      "fileNameLabel": "Zapisany plik"
     },
     "validation": {
       "clientNameRequired": "Nazwa klienta jest wymagana",
