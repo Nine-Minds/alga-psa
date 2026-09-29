@@ -5,9 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/component
 import { BucketOverlayInput, TemplateWizardData } from '../TemplateWizard';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { getRecurringAuthoringPreview } from '../../recurringAuthoringPreview';
-import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useFormatBillingFrequency } from '@alga-psa/billing/hooks/useBillingEnumOptions';
-import { useCurrencyFormat } from '@alga-psa/ui/lib';
+import { useTemplateNeutralRate } from '../../templateNeutralRate';
 
 interface TemplateReviewContractStepProps {
   data: TemplateWizardData;
@@ -19,20 +19,9 @@ export function TemplateReviewContractStep({
 }: TemplateReviewContractStepProps) {
   const { t } = useTranslation('msp/contracts');
   const formatBillingFrequency = useFormatBillingFrequency();
-  const { fractionDigits } = useCurrencyFormat();
-  const { formatNumber } = useFormatters();
 
-  // Templates are currency-neutral, so a default unit rate is shown as a plain
-  // number (minor units scaled by the authoring currency's fraction digits, the
-  // same scale the rate input uses) with no currency symbol. The note that it
-  // applies in the contract currency is part of the translated string.
-  const formatNeutralRate = (minorUnits: number): string => {
-    const digits = fractionDigits();
-    return formatNumber(Number(minorUnits) / 10 ** digits, {
-      minimumFractionDigits: digits,
-      maximumFractionDigits: digits,
-    });
-  };
+  // Templates are currency-neutral: rates render as a plain number (see useTemplateNeutralRate).
+  const formatNeutralRate = useTemplateNeutralRate();
 
   const recurringPreview = getRecurringAuthoringPreview({
     cadenceOwner: data.cadence_owner,

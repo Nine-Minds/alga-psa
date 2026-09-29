@@ -3,7 +3,7 @@
  */
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -61,7 +61,11 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
       return base.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(fallback[name] ?? ''));
     },
   }),
-  useFormatters: () => ({ locale: 'en-US' }),
+  useFormatters: () => ({
+    locale: 'en-US',
+    formatNumber: (value: number, options?: Intl.NumberFormatOptions) =>
+      new Intl.NumberFormat('en-US', options).format(value),
+  }),
 }));
 
 vi.mock('../contract-lines/GenericContractLineServicesList', () => ({ default: () => null }));
@@ -75,15 +79,26 @@ import ContractTemplateDetail from './ContractTemplateDetail';
 // ──────────────────────────────────────────────────────────────────────────────
 const SERVICE_ID = 'service-seat-1';
 
-function primeTemplate(opts: { unitRate: number | null; currency?: string }) {
+// Templates are currency-neutral. The real loader (getContractById ->
+// mapTemplateToContract in contractActions.ts) always returns a template-mapped
+// contract with currency_code 'USD' and is_template true, so that is the only
+// shape this test may feed the component.
+const CURRENCY_MARKERS = /[$€£¥]|USD|EUR|GBP|JPY/;
+
+function primeTemplate(opts: { unitRate: number | null; lineRate?: number | null }) {
   getContractByIdMock.mockResolvedValue({
+    tenant: 'tenant-1',
     contract_id: 'template-1',
     contract_name: 'Seat Template',
-    contract_description: null,
+    contract_description: undefined,
     billing_frequency: 'monthly',
-    currency_code: opts.currency ?? 'USD',
+    currency_code: 'USD',
+    is_active: true,
+    status: 'published',
     is_template: true,
-    template_metadata: null,
+    template_metadata: undefined,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z',
   });
   getContractSummaryMock.mockResolvedValue({
     contractLineCount: 1,
@@ -98,7 +113,7 @@ function primeTemplate(opts: { unitRate: number | null; currency?: string }) {
       contract_line_type: 'Fixed',
       billing_frequency: 'monthly',
       billing_timing: 'arrears',
-      rate: null,
+      rate: opts.lineRate ?? null,
     },
   ]);
   getContractAssignmentsMock.mockResolvedValue([]);
@@ -125,7 +140,7 @@ function renderDetail() {
   );
 }
 
-describe('ContractTemplateDetail per-seat unit rate', () => {
+describe('ContractTemplateDetail per-seat unit rate (currency-neutral)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -134,7 +149,7 @@ describe('ContractTemplateDetail per-seat unit rate', () => {
     cleanup();
   });
 
-  it('renders the formatted unit rate and quantity × rate = amount for a unit service', async () => {
+  it('renders the unit rate and quantity × rate = amount as plain numbers with no currency symbol', async () => {
     primeTemplate({ unitRate: 25000 });
 
     renderDetail();
@@ -142,19 +157,14 @@ describe('ContractTemplateDetail per-seat unit rate', () => {
     const amount = await screen.findByTestId(`template-recurring-amount-${SERVICE_ID}`);
     expect(screen.queryByText(/formatCurrency is not defined/i)).not.toBeInTheDocument();
     expect(screen.queryByText('Failed to load contract template')).not.toBeInTheDocument();
-    expect(screen.getByText('Unit rate:').parentElement).toHaveTextContent('Unit rate: $250.00');
-    expect(amount).toHaveTextContent('Recurring amount: 2 × $250.00 = $500.00');
+
+    const unitRateRow = screen.getByText('Unit rate:').parentElement as HTMLElement;
+    expect(unitRateRow).toHaveTextContent("Unit rate: 250.00 in the client's currency");
+    expect(unitRateRow.textContent).not.toMatch(CURRENCY_MARKERS);
+
+    expect(amount).toHaveTextContent("Recurring amount: 2 × 250.00 = 500.00 in the client's currency");
+    expect(amount.textContent).not.toMatch(CURRENCY_MARKERS);
     expect(within(amount).getByText(/2 ×/)).toBeInTheDocument();
-  });
-
-  it('formats the rate in the template currency rather than assuming USD', async () => {
-    primeTemplate({ unitRate: 25000, currency: 'EUR' });
-
-    renderDetail();
-
-    const amount = await screen.findByTestId(`template-recurring-amount-${SERVICE_ID}`);
-    expect(amount).toHaveTextContent('2 × €250.00 = €500.00');
-    expect(screen.getByText('Unit rate:').parentElement).not.toHaveTextContent('$');
   });
 
   it('shows catalog-price text and no amount block when the unit rate is null', async () => {
@@ -162,7 +172,35 @@ describe('ContractTemplateDetail per-seat unit rate', () => {
 
     renderDetail();
 
-    expect(await screen.findByText("Catalog price in the client's currency")).toBeInTheDocument();
+    const catalog = await screen.findByText("Catalog price in the client's currency");
+    expect(catalog).toBeInTheDocument();
+    expect((screen.getByText('Unit rate:').parentElement as HTMLElement).textContent).not.toMatch(
+      CURRENCY_MARKERS,
+    );
     expect(screen.queryByTestId(`template-recurring-amount-${SERVICE_ID}`)).not.toBeInTheDocument();
+  });
+
+  it('renders the fixed-fee base rate in the services manager neutrally, and "Not set" when absent', async () => {
+    primeTemplate({ unitRate: 25000, lineRate: 10000 });
+
+    renderDetail();
+
+    await screen.findByTestId(`template-recurring-amount-${SERVICE_ID}`);
+    fireEvent.click(screen.getByRole('button', { name: 'Manage Services' }));
+
+    const badge = (await screen.findByText(/Fixed Fee Rate:/)) as HTMLElement;
+    expect(badge).toHaveTextContent("Fixed Fee Rate: 100.00 in the client's currency");
+    expect(badge.textContent).not.toMatch(CURRENCY_MARKERS);
+  });
+
+  it('shows "Not set" for a fixed-fee base rate that has no value', async () => {
+    primeTemplate({ unitRate: 25000, lineRate: null });
+
+    renderDetail();
+
+    await screen.findByTestId(`template-recurring-amount-${SERVICE_ID}`);
+    fireEvent.click(screen.getByRole('button', { name: 'Manage Services' }));
+
+    expect(await screen.findByText(/Fixed Fee Rate:/)).toHaveTextContent('Fixed Fee Rate: Not set');
   });
 });
