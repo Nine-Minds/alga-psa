@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { applyFlakyPolicy, resetFlakyPublication } from './lib/flaky-policy.mjs';
 import { normalizeTestFile } from './lib/test-execution-evidence.mjs';
 import { partitionTestFiles } from './lib/test-sharding.mjs';
 import { testRevision } from './lib/test-revision.mjs';
@@ -30,21 +31,12 @@ export function runServerUnitShard({ root, index, total, workers, env = process.
   };
   // Remove stale evidence even if the next process cannot start.
   for (const target of Object.values(paths)) writeFileSync(target, 'null\n');
-  // Published only when this shard actually retried something, so the weekly
-  // report downloads flake reports instead of one empty artifact per shard per
-  // run. A rerun must not resurrect the previous attempt's flakes.
   const flakyUpload = path.join(root, 'test-results/server-unit-flaky');
-  rmSync(flakyUpload, { recursive: true, force: true });
-  const publishFlaky = () => {
-    try {
-      const document = JSON.parse(readFileSync(paths.flaky, 'utf8'));
-      if (!document?.tests?.length) return;
-      mkdirSync(flakyUpload, { recursive: true });
-      writeFileSync(path.join(flakyUpload, 'flaky-tests.json'), JSON.stringify(document, null, 2) + '\n');
-    } catch { /* Reporting a flake never fails the shard. */ }
-  };
+  resetFlakyPublication(flakyUpload);
   const runEnv = { ...env, SERVER_UNIT_SHARD_FILES: paths.shardFiles, TEST_PROGRESS_PATH: paths.progress,
-    FLAKY_TESTS_PATH: paths.flaky, SERVER_UNIT_SHARD_INDEX: String(index), SERVER_UNIT_SHARD_TOTAL: String(total) };
+    FLAKY_TESTS_PATH: paths.flaky, FLAKY_SUITE: 'server-unit', FLAKY_JOB: `server-unit shard ${index}/${total}`,
+    FLAKY_SHARD_INDEX: String(index), FLAKY_SHARD_TOTAL: String(total),
+    SERVER_UNIT_SHARD_INDEX: String(index), SERVER_UNIT_SHARD_TOTAL: String(total) };
   const vitest = args => spawnSync(process.execPath, [path.join(server, 'node_modules/vitest/vitest.mjs'), ...args],
     { cwd: server, env: runEnv, stdio: 'inherit' });
   const shardArgs = ['--config', 'vitest.server-unit-shard.config.ts'];
@@ -82,14 +74,16 @@ export function runServerUnitShard({ root, index, total, workers, env = process.
       '--reporter=default', '--reporter=json', '--reporter=blob', `--reporter=${path.join(root, 'scripts/lib/vitest-progress-reporter.mjs')}`,
       `--reporter=${path.join(root, 'scripts/lib/vitest-flaky-reporter.mjs')}`,
       `--outputFile.json=${paths.results}`, `--outputFile.blob=${paths.blob}`]);
-    publishFlaky();
+    // A retry-only pass warns on a pull request and fails everywhere else, so
+    // the shard's own evidence carries the verdict instead of a green log line.
+    const flaky = applyFlakyPolicy({ documentPath: paths.flaky, directory: flakyUpload, eventName: env.GITHUB_EVENT_NAME });
     phase = 'Execution verification';
     let after;
     let sourceError;
     try { after = testRevision(root); } catch (error) { sourceError = error.message; }
     evidence = verifyServerUnitExecution({ root, revision: before.revision, candidateRevision: env.GITHUB_SHA,
       outcome: result.status === 0 ? 'success' : 'failure', sourceAfter: after, sourceError, sourceDirty: after?.dirty,
-      reportPath: paths.results, shard: { index, total, allFiles } });
+      reportPath: paths.results, shard: { index, total, allFiles }, extraFailures: flaky.failures });
   } catch (error) {
     evidence = fail(error.message);
     writeFileSync(paths.evidence, JSON.stringify(evidence, null, 2) + '\n');

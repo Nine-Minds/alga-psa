@@ -19,7 +19,8 @@ test('server unit shards partition, reunite and verify as one full-selection bun
     'scripts/run-server-unit-shard.mjs', 'scripts/merge-server-unit-shards.mjs',
     'scripts/verify-server-unit-execution.mjs', 'scripts/verify-server-unit-aggregate.mjs',
     'scripts/lib/test-execution-evidence.mjs', 'scripts/lib/test-sharding.mjs', 'scripts/lib/test-revision.mjs',
-    'scripts/lib/vitest-progress-reporter.mjs', 'scripts/lib/vitest-flaky-reporter.mjs', 'scripts/lib/test-discovery.mjs',
+    'scripts/lib/vitest-progress-reporter.mjs', 'scripts/lib/vitest-flaky-reporter.mjs',
+    'scripts/lib/flaky-policy.mjs', 'scripts/lib/test-discovery.mjs',
     'scripts/lib/candidate-execution-artifacts.mjs', 'scripts/lib/candidate-execution-gate.mjs',
     'scripts/lib/node-test-execution.mjs', 'scripts/lib/playwright-execution-evidence.mjs',
     'server/vitest.server-unit-shard.config.ts',
@@ -58,7 +59,10 @@ test('server unit shards partition, reunite and verify as one full-selection bun
   git('-c', 'user.name=Test fixture', '-c', 'user.email=fixture@example.invalid', '-c', 'commit.gpgsign=false',
     '-c', 'core.hooksPath=/dev/null', 'commit', '-m', 'Create isolated shard fixture');
   const revision = git('rev-parse', 'HEAD');
+  // The flaky policy reads the event, so it is pinned rather than inherited from
+  // whatever run is executing this test.
   const env = { ...process.env, CI: '1', GITHUB_SHA: revision, GITHUB_RUN_ID: '', GITHUB_RUN_ATTEMPT: '',
+    GITHUB_EVENT_NAME: 'pull_request', GITHUB_HEAD_REF: 'feature/flakes', GITHUB_REF_NAME: '',
     SKIP_DB_TESTS: '1', DB_USER_ADMIN: '', DB_PASSWORD_ADMIN: '',
     SERVER_UNIT_SHARD_TOTAL: '2', SERVER_UNIT_WORKERS: '2' };
   const node = (args, extra = {}, timeout = 60000) => spawnSync(process.execPath, args, { cwd: root, encoding: 'utf8', timeout, env: { ...env, ...extra } });
@@ -74,11 +78,14 @@ test('server unit shards partition, reunite and verify as one full-selection bun
     assert.equal(evidence.selection.allFiles.length, 4);
     assert.equal(evidence.expectedFiles.length, 2);
     assert.ok(existsSync(path.join(root, 'test-results/server-coverage/blob.json')));
-    // The retried file leaves the shard green; flaky-tests.json is the only
-    // record that its first attempt failed.
+    // On a pull request the retried file leaves the shard green with a warning
+    // naming it; flaky-tests.json is the only record its first attempt failed.
     const flaky = readJson('test-results/server-coverage/flaky-tests.json');
     assert.deepEqual({ ...flaky, tests: undefined }, { schemaVersion: 1, suite: 'server-unit',
-      job: `server-unit shard ${index}/2`, shard: { index, total: 2 }, revision, runId: null, runAttempt: null, tests: undefined });
+      job: `server-unit shard ${index}/2`, shard: { index, total: 2 }, revision, runId: null, runAttempt: null,
+      eventName: 'pull_request', branch: 'feature/flakes', tests: undefined });
+    assert.equal(/::warning::Flaky test passed only on retry: src\/test\/unit\/recovers\.test\.ts > recovers on retry/
+      .test(result.stderr), index === 1, result.stderr);
     assert.deepEqual(flaky.tests, index === 1
       ? [{ testId: 'src/test/unit/recovers.test.ts > recovers on retry', file: 'src/test/unit/recovers.test.ts',
         name: 'recovers on retry', retryCount: 1 }]
@@ -90,6 +97,19 @@ test('server unit shards partition, reunite and verify as one full-selection bun
     if (index === 1) assert.deepEqual(JSON.parse(readFileSync(uploaded, 'utf8')), flaky);
     cpSync(path.join(root, 'test-results/server-coverage'), path.join(shards, `server-unit-shard-${index}`), { recursive: true });
   }
+  // The same retry-only pass on a push to main fails the shard's own execution
+  // verification instead of warning (PRD.md:99, flaky-retry-policy.md).
+  rmSync(path.join(root, 'test-results/flaky-marker'));
+  const onPush = node(['scripts/run-server-unit-shard.mjs'],
+    { SERVER_UNIT_SHARD_INDEX: '1', GITHUB_EVENT_NAME: 'push', GITHUB_HEAD_REF: '', GITHUB_REF_NAME: 'main' });
+  assert.equal(onPush.status, 1, onPush.stdout + onPush.stderr);
+  const pushed = readJson('test-results/server-coverage/evidence.json');
+  assert.equal(pushed.status, 'failed');
+  assert.deepEqual(pushed.failures, ['retry-only pass on push run: src/test/unit/recovers.test.ts > recovers on retry']);
+  const pushedFlaky = readJson('test-results/server-coverage/flaky-tests.json');
+  assert.deepEqual([pushedFlaky.eventName, pushedFlaky.branch], ['push', 'main']);
+  assert.equal(existsSync(path.join(root, 'test-results/server-unit-flaky/flaky-tests.json')), true);
+
   // A dirty checkout must be refused before any file is collected.
   writeFileSync(path.join(root, 'stray.txt'), 'stray');
   const dirty = node(['scripts/run-server-unit-shard.mjs'], { SERVER_UNIT_SHARD_INDEX: '1' });
