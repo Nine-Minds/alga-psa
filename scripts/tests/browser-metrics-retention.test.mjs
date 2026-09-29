@@ -227,23 +227,31 @@ test('the retention workflow schedules itself, serializes runs and defaults disp
   assert.equal(workflow.on.workflow_dispatch.inputs.dry_run.default, true);
   assert.equal(workflow.concurrency.group, 'browser-metrics-retention');
   assert.equal(workflow.concurrency['cancel-in-progress'], false);
-  assert.equal(workflow.permissions.issues, 'write');
+  // CI health is tracked in the test-metrics sheet, never as GitHub issues.
+  assert.equal(workflow.permissions.issues, undefined);
   const steps = workflow.jobs.retain.steps;
   const retain = steps.find(step => step.run?.includes('scripts/browser-metrics-retention.mjs'));
   assert.match(retain.env.RETENTION_MODE, /inputs\.dry_run.*--dry-run.*--apply/s);
   assert.equal(retain.env.GOOGLE_SA_KEY, '${{ secrets.TEST_METRICS_GOOGLE_SA_KEY }}');
-  assert.equal(steps.at(-1).if, 'failure()');
-  assert.match(steps.at(-1).run, /gh issue edit/);
+  const notice = steps.at(-1);
+  assert.equal(notice.if, 'failure()');
+  assert.match(notice.run, /scripts\/record-workflow-health\.mjs/);
+  assert.doesNotMatch(notice.run, /gh issue/);
+  assert.equal(notice.env.WORKFLOW_HEALTH_CONCLUSION, '${{ job.status }}');
+  assert.equal(notice.env.GOOGLE_SA_KEY, '${{ secrets.TEST_METRICS_GOOGLE_SA_KEY }}');
 });
 
-test('reconciliation reports its own failure streak as a single notice', () => {
+test('reconciliation records its failures in the workflow_health tab, with its diagnostics attached', () => {
   const workflow = yaml.load(readFileSync('.github/workflows/reconcile-browser-metrics.yml', 'utf8'));
-  assert.equal(workflow.permissions.issues, 'write');
-  const alert = workflow.jobs.reconcile.steps.at(-1);
-  assert.equal(alert.if, 'failure()');
-  assert.match(alert.run, /gh issue list/);
-  assert.match(alert.run, /gh issue edit/);
-  assert.match(alert.run, /gh issue create/);
+  assert.equal(workflow.permissions.issues, undefined);
+  const notice = workflow.jobs.reconcile.steps.at(-1);
+  assert.equal(notice.if, 'failure()');
+  assert.match(notice.run, /scripts\/record-workflow-health\.mjs/);
+  assert.match(notice.run, /browser-metric-collection\.json/);
+  assert.match(notice.run, /browser-metric-reconciliation\.json/);
+  assert.doesNotMatch(notice.run, /gh issue/);
+  assert.equal(notice.env.GOOGLE_SA_KEY, '${{ secrets.TEST_METRICS_GOOGLE_SA_KEY }}');
+  assert.equal(notice.env.TEST_METRICS_SHEET_ID, '${{ vars.TEST_METRICS_SHEET_ID }}');
 });
 
 test('the documented retention window is the one the code enforces', () => {
