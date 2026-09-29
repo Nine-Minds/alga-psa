@@ -162,6 +162,48 @@ cancellations, stale attempts and conflicting identities. It does not write
 to the workbook. A recorder step succeeding without configured credentials
 can still leave a missing export; the report does not assume a network error.
 
+Collection writes `browser-metric-collection.json` alongside the reconciliation
+report. A failed collection remains a failed workflow, but retains its phase and
+error code in the artifact, job summary and log. HTTP failures include the status;
+a `sheet-row-limit-exceeded` failure includes the allocated grid row count and
+configured limit (currently 200,000, bounding the index scan only). Empty
+allocated rows count toward that limit, and reaching it means retention stopped
+running rather than that history grew normally.
+Diagnostics omit credentials, response bodies and upstream exception messages.
+The collection status `collected` means evidence was fetched; only the subsequent
+reconciliation decides whether the browser exports are complete.
+
+To investigate a collection failure, inspect this diagnostic first. After landing
+a diagnostic fix on the default branch, rerun the failed automatic reconciliation
+while its source artifacts are retained. The existing one-argument collector
+command also prints the new diagnostics, so historical workflow attempts can be
+replayed; their older upload step may still expect only the reconciliation report.
+
+In manual mode the revision is supplied by the operator. For PRs, the collector checks
+that it is a two-parent merge containing the run's recorded head commit.
+Historical run responses can contain the PR's current head/base metadata, so
+those mutable fields cannot validate an older run's merge base. The parent
+relationship is not independent proof of which tree the runner checked out;
+use the original attempt-bound execution/build artifacts for that purpose.
+
+The report distinguishes the browser export outcome from the overall browser
+job outcome, which also includes later upgrade and Teams phases. An observed
+metrics pass is not independent release or deployment verification. Empty or
+incomplete journey identities cannot satisfy export completeness.
+
+For an already collected JSON snapshot, run
+`node scripts/reconcile-browser-metric-executions.mjs input.json report.json`.
+Non-green results retain their report and exit unsuccessfully. The automatic
+trigger requires this workflow and its scripts on the default branch; its live
+credentialed execution has not yet been verified. Scorecard publication and
+detection of workflows that were never created remain rollout work. This
+observed-run report does not by itself close those requirements.
+
+Validate these formulas and old readers with synthetic success, failure,
+cancelled, missing, and retry-only cases in an approved isolated copy before
+changing live charts. Existing A:P column positions retain their meanings;
+widen formula ranges without reordering them.
+
 ### Index-filtered reads and `browser_readiness` retention
 
 Reconciliation only ever looks at rows whose `run_url` names the run being
@@ -218,48 +260,6 @@ Both workflows end with an `if: failure()` step that opens a single titled GitHu
 issue and updates it in place on later failures, so a streak is one notice rather
 than one per run. This workflow had failed 175 times in a row before anyone
 noticed, because a `workflow_run` failure shows up nowhere a reviewer looks.
-
-Collection writes `browser-metric-collection.json` alongside the reconciliation
-report. A failed collection remains a failed workflow, but retains its phase and
-error code in the artifact, job summary and log. HTTP failures include the status;
-a `sheet-row-limit-exceeded` failure includes the allocated grid row count and
-configured limit (currently 200,000, bounding the index scan only). Empty
-allocated rows count toward that limit, and reaching it means retention stopped
-running rather than that history grew normally.
-Diagnostics omit credentials, response bodies and upstream exception messages.
-The collection status `collected` means evidence was fetched; only the subsequent
-reconciliation decides whether the browser exports are complete.
-
-To investigate a collection failure, inspect this diagnostic first. After landing
-a diagnostic fix on the default branch, rerun the failed automatic reconciliation
-while its source artifacts are retained. The existing one-argument collector
-command also prints the new diagnostics, so historical workflow attempts can be
-replayed; their older upload step may still expect only the reconciliation report.
-
-In manual mode the revision is supplied by the operator. For PRs, the collector checks
-that it is a two-parent merge containing the run's recorded head commit.
-Historical run responses can contain the PR's current head/base metadata, so
-those mutable fields cannot validate an older run's merge base. The parent
-relationship is not independent proof of which tree the runner checked out;
-use the original attempt-bound execution/build artifacts for that purpose.
-
-The report distinguishes the browser export outcome from the overall browser
-job outcome, which also includes later upgrade and Teams phases. An observed
-metrics pass is not independent release or deployment verification. Empty or
-incomplete journey identities cannot satisfy export completeness.
-
-For an already collected JSON snapshot, run
-`node scripts/reconcile-browser-metric-executions.mjs input.json report.json`.
-Non-green results retain their report and exit unsuccessfully. The automatic
-trigger requires this workflow and its scripts on the default branch; its live
-credentialed execution has not yet been verified. Scorecard publication and
-detection of workflows that were never created remain rollout work. This
-observed-run report does not by itself close those requirements.
-
-Validate these formulas and old readers with synthetic success, failure,
-cancelled, missing, and retry-only cases in an approved isolated copy before
-changing live charts. Existing A:P column positions retain their meanings;
-widen formula ranges without reordering them.
 
 Coverage percentages are only comparable while `coverage.include` in
 `server/vitest.config.ts` stays the same; widening or narrowing it changes
