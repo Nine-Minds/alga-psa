@@ -129,6 +129,13 @@ export interface FixedChargeComputeInputs {
   /** Loaded by the caller when planServices is empty; null otherwise. */
   fallbackService: FixedFallbackServiceRow | null;
   /**
+   * True when planServices is empty because every member of the line is a
+   * product/license, which bills through its own charge family. Such a line is
+   * not "unpriceable" or "without services" — it just has nothing to bill as a
+   * fixed fee — so the blockers must not fire for it.
+   */
+  hasProductMembers?: boolean;
+  /**
    * Fixed charges have no per-occurrence source record — there is only the
    * contract line and its recurring periods — so they stop at the contract
    * step of the resolution chain (F026, documented via F070).
@@ -144,8 +151,20 @@ export interface FixedChargeComputeInputs {
  */
 export const FIXED_LINE_RATE_UNRESOLVED = "FIXED_LINE_RATE_UNRESOLVED" as const;
 
+/**
+ * Coded reason a fixed line HAS a rate but nothing to bill it on: it has no
+ * member services and no fallback service could be found. Distinct from
+ * FIXED_LINE_RATE_UNRESOLVED (no rate at all), so its message must never say
+ * "has no rate".
+ */
+export const FIXED_LINE_NO_SERVICES = "FIXED_LINE_NO_SERVICES" as const;
+
+export type FixedChargeBlockerCode =
+  | typeof FIXED_LINE_RATE_UNRESOLVED
+  | typeof FIXED_LINE_NO_SERVICES;
+
 export interface FixedChargeBlocker {
-  code: typeof FIXED_LINE_RATE_UNRESOLVED;
+  code: FixedChargeBlockerCode;
   /** Plain-English reason, e.g. "Fixed fee line Essentials has no rate". */
   message: string;
   /** The contract_lines id (also the id charges carry as client_contract_line_id). */
@@ -498,6 +517,7 @@ export function computeFixedCharges(
     customRateSource,
     planServices,
     fallbackService,
+    hasProductMembers = false,
     billingProfile,
   } = inputs;
   const resolvedProfile = resolveChargeProfileFor(billingProfile);
@@ -517,20 +537,34 @@ export function computeFixedCharges(
   const blockers: FixedChargeBlocker[] = [];
 
   const isFixedFeePlan = contractLineDetails?.contract_line_type === "Fixed";
-  const unresolvedRateBlocker = (): FixedChargeBlocker => {
+  const lineBlocker = (
+    code: FixedChargeBlockerCode,
+    describe: (contractLineName: string) => string,
+  ): FixedChargeBlocker => {
     const contractLineName =
       clientContractLine.contract_line_name ||
       clientContractLine.contract_line_id ||
       clientContractLine.client_contract_line_id;
     return {
-      code: FIXED_LINE_RATE_UNRESOLVED,
-      message: `Fixed fee line ${contractLineName} has no rate`,
+      code,
+      message: describe(contractLineName),
       contractLineId:
         clientContractLine.contract_line_id ??
         clientContractLine.client_contract_line_id,
       contractLineName,
     };
   };
+  const unresolvedRateBlocker = (): FixedChargeBlocker =>
+    lineBlocker(
+      FIXED_LINE_RATE_UNRESOLVED,
+      (name) => `Fixed fee line ${name} has no rate`,
+    );
+  const noServicesBlocker = (): FixedChargeBlocker =>
+    lineBlocker(
+      FIXED_LINE_NO_SERVICES,
+      (name) =>
+        `Fixed fee line ${name} has a rate but no service to bill it on`,
+    );
 
   // --- Plan-level fixed config (base rate and proration) ---
   const planLevelBaseRate = resolveFixedPlanLevelBaseRate({
@@ -576,6 +610,7 @@ export function computeFixedCharges(
   // their own unit rates, so a missing plan-level rate only blocks lines that
   // have nothing else to price with. Mixed lines are checked against their
   // bundle members below.
+  const billsThroughProductFamily = planServices.length === 0 && hasProductMembers;
   if (
     isFixedFeePlan &&
     (planLevelBaseRate === null || Number.isNaN(planLevelBaseRate)) &&
@@ -585,7 +620,9 @@ export function computeFixedCharges(
       charges: [],
       explanations: [],
       advanceGuard: null,
-      blockers: [unresolvedRateBlocker()],
+      ...(billsThroughProductFamily
+        ? {}
+        : { blockers: [unresolvedRateBlocker()] }),
     };
   }
 
@@ -745,6 +782,21 @@ export function computeFixedCharges(
       : planLevelBaseRateCents;
 
     if (!fallbackService?.service_id || !fallbackService?.config_id) {
+      // A positive rate with nothing to bill it on must not vanish silently
+      // (Estimated monthly still counts custom_rate). A rate of 0 bills
+      // nothing by design and keeps the quiet return.
+      if (
+        !billsThroughProductFamily &&
+        Number.isFinite(baseRateInCents) &&
+        baseRateInCents > 0
+      ) {
+        return {
+          charges: [],
+          explanations: [],
+          advanceGuard: null,
+          blockers: [noServicesBlocker()],
+        };
+      }
       return { charges: [], explanations: [], advanceGuard: null };
     }
 

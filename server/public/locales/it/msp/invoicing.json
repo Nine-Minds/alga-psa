@@ -386,6 +386,7 @@
       "USAGE_PERIOD_TOTAL_STALE": "L'anteprima non è aggiornata: {{details}}. Riesegui l'anteprima per vedere i valori attuali, poi genera di nuovo.",
       "USAGE_CALCULATION_ERROR": "L'utilizzo di {{services}} nel periodo di servizio dal {{periodStart}} al {{periodEnd}} è registrato ma non è stato possibile prezzarlo. Correggi i prezzi del servizio (prezzo di listino nella valuta del contratto, una tariffa personalizzata o scaglioni tariffari) e riprova. Non registrare utilizzo sostitutivo.",
       "FIXED_LINE_RATE_UNRESOLVED": "La linea a tariffa fissa {{lines}} non ha una tariffa. Imposta una tariffa sulla linea di contratto (o un prezzo per i suoi servizi nella valuta del contratto) e riprova.",
+      "FIXED_LINE_NO_SERVICES": "La riga a tariffa fissa {{lines}} ha una tariffa ma nessun servizio su cui fatturarla. Aggiungi un servizio alla riga del contratto e riprova.",
       "SOURCE_ALREADY_BILLED": "Alcuni elementi selezionati non sono più fatturabili (già fatturati, non approvati o rimossi). Aggiorna e riprova.",
       "SOURCE_NOT_ELIGIBLE": "Un elemento selezionato non appartiene a questo ticket o non è più idoneo. Aggiorna e riprova.",
       "SOURCE_CURRENCY_MISMATCH": "Alcuni prodotti selezionati sono prezzati in una valuta diversa da quella di fatturazione di questo cliente e non possono essere aggiunti. Fatturali separatamente nella loro valuta.",

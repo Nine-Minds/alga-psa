@@ -404,6 +404,7 @@
       "USAGE_PERIOD_TOTAL_STALE": "Podgląd jest nieaktualny: {{details}}. Uruchom podgląd ponownie, aby zobaczyć aktualne wartości, a następnie wygeneruj fakturę jeszcze raz.",
       "USAGE_CALCULATION_ERROR": "Użycie dla {{services}} w okresie rozliczeniowym od {{periodStart}} do {{periodEnd}} zostało zarejestrowane, ale nie udało się go wycenić. Popraw ceny usługi (cena katalogowa w walucie umowy, stawka indywidualna lub progi stawek) i spróbuj ponownie. Nie rejestruj użycia zastępczego.",
       "FIXED_LINE_RATE_UNRESOLVED": "Pozycja umowy ze stałą opłatą {{lines}} nie ma stawki. Ustaw stawkę dla pozycji umowy (lub cenę jej usług w walucie umowy) i spróbuj ponownie.",
+      "FIXED_LINE_NO_SERVICES": "Pozycja o stałej opłacie {{lines}} ma stawkę, ale brak usługi, na której można ją rozliczyć. Dodaj usługę do pozycji umowy i spróbuj ponownie.",
       "SOURCE_ALREADY_BILLED": "Niektóre wybrane pozycje nie są już rozliczalne (już rozliczone, niezatwierdzone lub usunięte). Odśwież i spróbuj ponownie.",
       "SOURCE_NOT_ELIGIBLE": "Wybrana pozycja nie należy do tego zgłoszenia lub nie jest już kwalifikowalna. Odśwież i spróbuj ponownie.",
       "SOURCE_CURRENCY_MISMATCH": "Niektóre wybrane produkty są wycenione w innej walucie niż waluta fakturowania tego klienta, więc nie można ich dodać. Rozlicz je osobno w ich własnej walucie.",

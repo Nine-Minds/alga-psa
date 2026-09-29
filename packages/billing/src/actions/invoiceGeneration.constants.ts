@@ -64,3 +64,11 @@ export const USAGE_CALCULATION_ERROR_MESSAGE_KEY =
  */
 export const FIXED_LINE_RATE_UNRESOLVED_MESSAGE_KEY =
   'msp/invoicing:manualInvoices.errors.FIXED_LINE_RATE_UNRESOLVED';
+
+/**
+ * Namespaced message key for a fixed-fee contract line that has a rate but no
+ * service to bill it on (`FIXED_LINE_NO_SERVICES`). Distinct from a missing
+ * rate: the fix is to add a service to the line, not to set a rate.
+ */
+export const FIXED_LINE_NO_SERVICES_MESSAGE_KEY =
+  'msp/invoicing:manualInvoices.errors.FIXED_LINE_NO_SERVICES';

@@ -92,6 +92,7 @@ import {
   USAGE_PERIOD_TOTAL_STALE_MESSAGE_KEY,
   USAGE_CALCULATION_ERROR_MESSAGE_KEY,
   FIXED_LINE_RATE_UNRESOLVED_MESSAGE_KEY,
+  FIXED_LINE_NO_SERVICES_MESSAGE_KEY,
 } from './invoiceGeneration.constants';
 import {
   ManualInvoiceError,
@@ -775,27 +776,37 @@ function buildUsageCalculationError(
 }
 
 /**
- * Builds the coded `FIXED_LINE_RATE_UNRESOLVED` failure for fixed-fee contract
- * lines the engine could not price. Preview and generation both refuse with it:
- * an unpriceable fixed line must never produce a silently short (or "Nothing to
- * bill") invoice. The engine's blockers are the single source of truth.
+ * Builds the coded failure for fixed-fee contract lines the engine could not
+ * price: `FIXED_LINE_RATE_UNRESOLVED` (no rate) or `FIXED_LINE_NO_SERVICES`
+ * (a rate, but no service to bill it on). Preview and generation both refuse
+ * with it: an unpriceable fixed line must never produce a silently short (or
+ * "Nothing to bill") invoice. The engine's blockers are the single source of
+ * truth. When both kinds are present the missing-rate failure is reported
+ * first; the other surfaces once it is fixed.
  */
-function buildFixedLineRateUnresolvedError(
+function buildFixedLineBlockerError(
   blockers: IFixedLineBlocker[],
 ): ManualInvoiceError {
+  const code = blockers.some((blocker) => blocker.code === 'FIXED_LINE_RATE_UNRESOLVED')
+    ? 'FIXED_LINE_RATE_UNRESOLVED'
+    : 'FIXED_LINE_NO_SERVICES';
   const lines = Array.from(
-    new Map(blockers.map((blocker) => [blocker.contractLineId, blocker])).values(),
+    new Map(
+      blockers
+        .filter((blocker) => blocker.code === code)
+        .map((blocker) => [blocker.contractLineId, blocker]),
+    ).values(),
   );
   const lineNames = lines.map((blocker) => blocker.contractLineName);
-  return new ManualInvoiceError(
-    'FIXED_LINE_RATE_UNRESOLVED',
-    `Fixed fee line ${lineNames.join(', ')} has no rate. Set a rate on the contract line (or a price for its services in the contract currency), then try again.`,
-    {
-      lines: lineNames.join(', '),
-      lineIds: lines.map((blocker) => blocker.contractLineId).join(','),
-      count: String(lines.length),
-    },
-  );
+  const message =
+    code === 'FIXED_LINE_RATE_UNRESOLVED'
+      ? `Fixed fee line ${lineNames.join(', ')} has no rate. Set a rate on the contract line (or a price for its services in the contract currency), then try again.`
+      : `Fixed fee line ${lineNames.join(', ')} has a rate but no service to bill it on. Add a service to the contract line, then try again.`;
+  return new ManualInvoiceError(code, message, {
+    lines: lineNames.join(', '),
+    lineIds: lines.map((blocker) => blocker.contractLineId).join(','),
+    count: String(lines.length),
+  });
 }
 
 export type { IExpectedUsagePeriodTotal } from '../lib/billing/usagePeriodTotalIdentity';
@@ -950,7 +961,8 @@ function previewInvoiceErrorInfo(error: unknown): {
     (error.code === 'NO_BILLING_EMAIL' ||
       error.code === 'USAGE_RECORDS_MISSING' ||
       error.code === 'USAGE_CALCULATION_ERROR' ||
-      error.code === 'FIXED_LINE_RATE_UNRESOLVED')
+      error.code === 'FIXED_LINE_RATE_UNRESOLVED' ||
+      error.code === 'FIXED_LINE_NO_SERVICES')
   ) {
     return {
       message: error.message,
@@ -1006,6 +1018,8 @@ function manualInvoiceErrorMessageKey(
       return USAGE_CALCULATION_ERROR_MESSAGE_KEY;
     case 'FIXED_LINE_RATE_UNRESOLVED':
       return FIXED_LINE_RATE_UNRESOLVED_MESSAGE_KEY;
+    case 'FIXED_LINE_NO_SERVICES':
+      return FIXED_LINE_NO_SERVICES_MESSAGE_KEY;
     default:
       return undefined;
   }
@@ -2256,7 +2270,7 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
     // An unpriceable fixed line is named even when other charges exist: the
     // preview must not present a short invoice as the full amount due.
     throw withRecurringWindowErrorContext(
-      buildFixedLineRateUnresolvedError(billingResult.fixedLineBlockers),
+      buildFixedLineBlockerError(billingResult.fixedLineBlockers),
       canonicalSelection,
     );
   }
@@ -3432,7 +3446,7 @@ async function generateInvoiceForLockedSelectionInputs(params: Parameters<typeof
     // Never finalize (and mark the period fulfilled) with an unpriceable
     // fixed line silently missing from the invoice.
     throw withRecurringWindowErrorContext(
-      buildFixedLineRateUnresolvedError(billingResult.fixedLineBlockers),
+      buildFixedLineBlockerError(billingResult.fixedLineBlockers),
       normalizedSelectorInput,
     );
   }

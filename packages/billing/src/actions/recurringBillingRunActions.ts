@@ -28,6 +28,7 @@ import {
   USAGE_PERIOD_TOTAL_STALE_MESSAGE_KEY,
   USAGE_CALCULATION_ERROR_MESSAGE_KEY,
   FIXED_LINE_RATE_UNRESOLVED_MESSAGE_KEY,
+  FIXED_LINE_NO_SERVICES_MESSAGE_KEY,
 } from './invoiceGeneration.constants';
 import {
   buildRecurringRunSelectionIdentity,
@@ -138,6 +139,12 @@ function handledRecurringFailureFromActionError(error: RecurringBillingRunAction
   if (error.messageKey === FIXED_LINE_RATE_UNRESOLVED_MESSAGE_KEY) {
     return {
       code: 'FIXED_LINE_RATE_UNRESOLVED',
+      params: error.messageParams as Record<string, string> | undefined,
+    };
+  }
+  if (error.messageKey === FIXED_LINE_NO_SERVICES_MESSAGE_KEY) {
+    return {
+      code: 'FIXED_LINE_NO_SERVICES',
       params: error.messageParams as Record<string, string> | undefined,
     };
   }

@@ -597,6 +597,59 @@ describe('fixed-fee line with $0 catalog services and no contract-currency price
       expect(invoiceCount).toHaveLength(0);
     }, HOOK_TIMEOUT);
 
+    it('refuses a fixed line that has a rate but no service to bill it on, without saying "no rate"', async () => {
+      setupCommonMocks({ tenantId, userId: authRef.userId, permissionCheck: () => true });
+      const { clientId, cycleId } = await createBillableClient('No Services Client', 'USD');
+      const contractId = await createAssignedContract(clientId, 'No Services Contract', 'USD');
+
+      // A positive line rate but no member service at all: estimated monthly
+      // counts the rate, so the invoice must not silently drop it.
+      const FEE = 90000;
+      const templateLineId = uuidv4();
+      const templateId = uuidv4();
+      await table('contract_templates').insert({
+        tenant: tenantId,
+        template_id: templateId,
+        template_name: `NoServices ${templateId.slice(0, 6)}`,
+      });
+      await table('contract_template_lines').insert({
+        tenant: tenantId,
+        template_line_id: templateLineId,
+        template_id: templateId,
+        template_line_name: 'No Services Fixed line',
+        billing_frequency: 'monthly',
+        line_type: 'Fixed',
+        custom_rate: FEE,
+        display_order: 0,
+      });
+      const mapping = await addContractLine(db as any, tenantId, contractId, templateLineId);
+      await syncPeriods(mapping.contract_line_id as string);
+      expect(await estimatedMonthlyCents(contractId)).toBe(FEE);
+
+      const { result, fixed } = await fixedChargesFor(clientId, cycleId);
+      expect(fixed).toHaveLength(0);
+      expect(result.fixedLineBlockers).toEqual([
+        expect.objectContaining({
+          code: 'FIXED_LINE_NO_SERVICES',
+          contractLineId: mapping.contract_line_id,
+          contractLineName: 'No Services Fixed line',
+        }),
+      ]);
+
+      const preview = (await previewInvoice(cycleId)) as any;
+      expect(preview.success).toBe(false);
+      expect(preview.code).toBe('FIXED_LINE_NO_SERVICES');
+      expect(String(preview.error)).toContain('No Services Fixed line');
+      expect(String(preview.error)).not.toContain('has no rate');
+      expect(String(preview.error)).not.toBe('Nothing to bill');
+
+      const generation = await generateInvoice(cycleId).catch((error: unknown) => error);
+      const generationText = JSON.stringify(generation instanceof Error ? { message: generation.message } : generation);
+      expect(generationText).toContain('No Services Fixed line');
+      const invoices = await table('invoices').where({ client_id: clientId });
+      expect(invoices).toHaveLength(0);
+    }, HOOK_TIMEOUT);
+
     it('does not block a legitimate $0 fixed rate', async () => {
       setupCommonMocks({ tenantId, userId: authRef.userId, permissionCheck: () => true });
       const { fixture, clientId, cycleId } = await createBillableClient('Zero Rate Client', 'USD');

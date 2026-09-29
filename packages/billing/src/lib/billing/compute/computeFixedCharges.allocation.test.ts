@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { IClientContractLine } from "@alga-psa/types";
 import {
+  FIXED_LINE_NO_SERVICES,
   FIXED_LINE_RATE_UNRESOLVED,
   allocateFixedFeeWithoutCatalogPrice,
   computeFixedCharges,
@@ -306,6 +307,69 @@ describe("computeFixedCharges — unresolved rate versus zero rate", () => {
       FIXED_LINE_RATE_UNRESOLVED,
     ]);
     expect(totals(result)).toEqual([3000]);
+  });
+});
+
+describe("computeFixedCharges — rate but no service to bill it on", () => {
+  it.each(["USD", "EUR"])(
+    "returns a coded blocker, not [], when a positive rate has no services and no fallback service (%s)",
+    (currency) => {
+      const result = computeFixedCharges(inputs(currency, 90000, []), NO_TAX_PORTS);
+
+      expect(result.charges).toEqual([]);
+      expect(result.blockers).toEqual([
+        {
+          code: FIXED_LINE_NO_SERVICES,
+          message: "Fixed fee line Essentials has a rate but no service to bill it on",
+          contractLineId: "cl-1",
+          contractLineName: "Essentials",
+        },
+      ]);
+      // Distinct from a missing rate: the message must not claim "no rate".
+      expect(result.blockers?.[0].message).not.toContain("has no rate");
+    },
+  );
+
+  it("keeps current behaviour for a rate of 0 (quiet) and null (missing-rate blocker)", () => {
+    const zero = computeFixedCharges(inputs("USD", 0, []), NO_TAX_PORTS);
+    expect(zero.charges).toEqual([]);
+    expect(zero.blockers).toBeUndefined();
+
+    const missing = computeFixedCharges(inputs("USD", null, []), NO_TAX_PORTS);
+    expect(missing.charges).toEqual([]);
+    expect(missing.blockers?.map((blocker) => blocker.code)).toEqual([
+      FIXED_LINE_RATE_UNRESOLVED,
+    ]);
+  });
+
+  it("does not block a product/license-only line: its members bill through the product family", () => {
+    // Positive rate, and a missing rate: neither is a fixed-fee problem when
+    // every member is a product/license.
+    for (const rate of [90000, null]) {
+      const result = computeFixedCharges(
+        inputs("USD", rate, [], { hasProductMembers: true }),
+        NO_TAX_PORTS,
+      );
+      expect(result.charges).toEqual([]);
+      expect(result.blockers).toBeUndefined();
+    }
+  });
+
+  it("still bills the full rate on the fallback service when one exists", () => {
+    const result = computeFixedCharges(
+      inputs("USD", 90000, [], {
+        fallbackService: {
+          service_id: "fallback",
+          config_id: "cfg-fallback",
+          service_name: "Fallback",
+          tax_rate_id: null,
+        } as FixedChargeComputeInputs["fallbackService"],
+      }),
+      NO_TAX_PORTS,
+    );
+
+    expect(result.blockers).toBeUndefined();
+    expect(totals(result)).toEqual([90000]);
   });
 });
 

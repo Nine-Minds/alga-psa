@@ -120,6 +120,8 @@ export type ResolvedContractBillingChargeFacts =
         taxRateId: string | null;
         configurationId: string;
       } | null;
+      /** Every member is a product/license billed by its own charge family. */
+      hasProductMembers?: boolean;
     })
   | (ContractChargeFactsBase & {
       kind: "hourly";
