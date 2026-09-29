@@ -33,11 +33,13 @@ for (const runner of runners) {
       });
       describe('stable suite', () => { test('always passes', () => expect(2 + 2).toBe(4)); });
     `);
-    const run = (args = []) => spawnSync(process.execPath,
+    const run = (args = [], extra = {}) => spawnSync(process.execPath,
       [fileURLToPath(new URL(runner, import.meta.url)), 'run', ...args],
       { cwd: root, encoding: 'utf8', timeout: 45000, env: { ...process.env, FLAKY_TESTS_PATH: output,
         GITHUB_SHA: 'f'.repeat(40), GITHUB_RUN_ID: '4242', GITHUB_RUN_ATTEMPT: '2',
-        SERVER_UNIT_SHARD_INDEX: '3', SERVER_UNIT_SHARD_TOTAL: '4' } });
+        GITHUB_EVENT_NAME: 'pull_request', GITHUB_HEAD_REF: 'feature/flakes', GITHUB_REF_NAME: '3456/merge',
+        FLAKY_SUITE: 'server-unit', FLAKY_JOB: 'server-unit shard 3/4',
+        FLAKY_SHARD_INDEX: '3', FLAKY_SHARD_TOTAL: '4', ...extra } });
     const document = () => JSON.parse(readFileSync(output, 'utf8'));
 
     const retried = run(['--retry=1']);
@@ -45,9 +47,21 @@ for (const runner of runners) {
     const recorded = document();
     assert.deepEqual({ ...recorded, tests: undefined }, { schemaVersion: 1, suite: 'server-unit',
       job: 'server-unit shard 3/4', shard: { index: 3, total: 4 }, revision: 'f'.repeat(40),
-      runId: '4242', runAttempt: 2, tests: undefined });
+      runId: '4242', runAttempt: 2, eventName: 'pull_request', branch: 'feature/flakes', tests: undefined });
     assert.deepEqual(recorded.tests, [{ testId: 'recovers.test.js > recovers after one retry',
       file: 'recovers.test.js', name: 'recovers after one retry', retryCount: 1 }]);
+
+    // The lane identity is a parameter now, not the server-unit env vars, so the
+    // integration and infrastructure runners reuse the same reporter. A push run
+    // has no head ref, so the branch comes from the ref name.
+    rmSync(marker);
+    const other = run(['--retry=1'], { FLAKY_SUITE: 'infrastructure', FLAKY_JOB: '', FLAKY_SHARD_INDEX: '2',
+      FLAKY_SHARD_TOTAL: '3', GITHUB_EVENT_NAME: 'push', GITHUB_HEAD_REF: '', GITHUB_REF_NAME: 'main' });
+    assert.equal(other.status, 0, other.stdout + other.stderr);
+    assert.deepEqual({ ...document(), tests: undefined }, { schemaVersion: 1, suite: 'infrastructure',
+      job: 'infrastructure shard 2/3', shard: { index: 2, total: 3 }, revision: 'f'.repeat(40),
+      runId: '4242', runAttempt: 2, eventName: 'push', branch: 'main', tests: undefined });
+    assert.deepEqual(document().tests.map(entry => entry.testId), ['recovers.test.js > recovers after one retry']);
 
     // The same suite without a retry leaves an empty document behind, never a
     // stale one from the previous run.
