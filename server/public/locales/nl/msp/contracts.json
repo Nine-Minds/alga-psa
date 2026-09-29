@@ -325,7 +325,8 @@
       "serviceCountOther": "{{count}} diensten",
       "previouslyConfiguredQuantity": "Eerder geconfigureerde hoeveelheid: {{count}} — niet gebruikt voor facturatie",
       "billedOnPeriodCount": "Gefactureerd op het per periode opgegeven aantal",
-      "recurringSeats": "{{count}} × {{rate}} (terugkerende plaatsen)",
+      "recurringSeats": "{{count}} × {{rate}} = {{amount}} (terugkerende plaatsen)",
+      "recurringSeatsCatalogRate": "{{count}} × catalogusprijs (terugkerende plaatsen)",
       "bundleAllocation": "Verdeling van de bundelprijs — geen factureerbare plaatsen",
       "setUpRecurringSeats": "Terugkerende plaatsen instellen",
       "reportPeriodCount": "Periodeaantal doorgeven"
@@ -1181,7 +1182,9 @@
       "usageBasedPlans": "Verbruiksplannen",
       "recurringQuantityLabel": "Terugkerende hoeveelheid:",
       "unitRateLabel": "Eenheidstarief:",
-      "unitRateFromCatalog": "Catalogusprijs in de valuta van de klant"
+      "unitRateFromCatalog": "Catalogusprijs in de valuta van de klant",
+      "unitAmountLabel": "Terugkerend bedrag:",
+      "unitAmountValue": "{{count}} × {{rate}} = {{amount}}"
     },
     "editBasicsTitle": "Sjabloonbasis bewerken",
     "editGuidanceTitle": "Sjabloonrichtlijnen bewerken",

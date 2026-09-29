@@ -325,7 +325,8 @@
       "serviceCountOther": "{{count}} servicios",
       "previouslyConfiguredQuantity": "Cantidad configurada previamente: {{count}} — no se utiliza para la facturación",
       "billedOnPeriodCount": "Facturado según la cantidad informada en cada periodo",
-      "recurringSeats": "{{count}} × {{rate}} (puestos recurrentes)",
+      "recurringSeats": "{{count}} × {{rate}} = {{amount}} (puestos recurrentes)",
+      "recurringSeatsCatalogRate": "{{count}} × precio de catálogo (puestos recurrentes)",
       "bundleAllocation": "Reparto del precio del paquete — no son puestos facturables",
       "setUpRecurringSeats": "Configurar puestos recurrentes",
       "reportPeriodCount": "Informar una cantidad del periodo"
@@ -1181,7 +1182,9 @@
       "usageBasedPlans": "Planes basados en uso",
       "recurringQuantityLabel": "Cantidad recurrente:",
       "unitRateLabel": "Tarifa unitaria:",
-      "unitRateFromCatalog": "Precio de catálogo en la moneda del cliente"
+      "unitRateFromCatalog": "Precio de catálogo en la moneda del cliente",
+      "unitAmountLabel": "Importe recurrente:",
+      "unitAmountValue": "{{count}} × {{rate}} = {{amount}}"
     },
     "editBasicsTitle": "Editar información básica de la plantilla",
     "editGuidanceTitle": "Editar orientación de la plantilla",

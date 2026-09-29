@@ -65,6 +65,7 @@ import { listContractSimulationClients } from "@alga-psa/billing/actions/contrac
 import GenericPlanServicesList from "../contract-lines/GenericContractLineServicesList";
 import { ContractLineEditDialog } from "./ContractLineEditDialog";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
+import { unitFixedServiceAmountCents } from "../../../lib/fixedServiceBasis";
 import {
   getErrorMessage,
   isActionMessageError,
@@ -1894,6 +1895,29 @@ const ContractTemplateDetail: React.FC = () => {
                                             "templateDetail.composition.unitRateFromCatalog",
                                             { defaultValue: "Catalog price in the client's currency" },
                                           )}
+                                    </span>
+                                  </span>
+                                )}
+                                {service.pricing_basis === "unit" &&
+                                  service.quantity != null &&
+                                  service.unit_rate != null && (
+                                  <span data-testid={`template-recurring-amount-${service.service_id}`}>
+                                    {t(
+                                      "templateDetail.composition.unitAmountLabel",
+                                      { defaultValue: "Recurring amount:" },
+                                    )}{" "}
+                                    <span className="font-medium">
+                                      {t(
+                                        "templateDetail.composition.unitAmountValue",
+                                        {
+                                          count: service.quantity,
+                                          rate: formatCurrency(service.unit_rate),
+                                          amount: formatCurrency(
+                                            unitFixedServiceAmountCents(service.quantity, service.unit_rate),
+                                          ),
+                                          defaultValue: "{{count}} × {{rate}} = {{amount}}",
+                                        },
+                                      )}
                                     </span>
                                   </span>
                                 )}

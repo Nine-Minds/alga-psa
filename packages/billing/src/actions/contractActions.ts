@@ -19,6 +19,7 @@ import {
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { deriveClientContractStatus } from '@alga-psa/shared/billingClients';
 import { getContractMonthlyFixedValuesByContract } from '@alga-psa/shared/billingClients/contractMonthlyValue';
+import { resolveMemberRate, type ServicePriceRateRow } from '@alga-psa/shared/billingClients/resolveFixedLineRate';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 
@@ -1178,7 +1179,8 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
             's.service_name',
             's.billing_method',
             's.unit_of_measure',
-            's.item_kind'
+            's.item_kind',
+            's.default_rate'
           ]);
 
         // Get service configurations for rates
@@ -1265,6 +1267,54 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
           }
         }
 
+        // A unit service with no stored unit rate (or a catalog-policy
+        // revision) follows the catalog price in the contract currency. Resolve
+        // it with the same shared chain the invoice and the monthly valuation
+        // use, so the row reads quantity x rate = amount and cannot show a
+        // blank or stale rate for what the client is actually billed.
+        const catalogRateByConfig = new Map<string, number | null>();
+        const inheritingUnitConfigs = (configs as any[]).filter((config: any) => {
+          const fixed = fixedSemanticsMap.get(config.config_id);
+          const unitValued = fixed?.pricing_basis === 'unit' || effectiveUnitConfigIds.has(config.config_id);
+          if (!unitValued) return false;
+          return catalogPolicyConfigIds.has(config.config_id)
+            || (fixed?.base_rate == null && config.custom_rate == null);
+        });
+        if (inheritingUnitConfigs.length > 0) {
+          const inheritingServiceIds = inheritingUnitConfigs.map((config: any) => config.service_id);
+          const catalogPrices = (await tenantScopedTable(knex, tenant, 'service_prices')
+            .whereIn('service_id', inheritingServiceIds)
+            .select('price_id', 'service_id', 'currency_code', 'rate', 'effective_date', 'created_at')) as ServicePriceRateRow[];
+          const defaultRateByService = new Map<string, number | null>(
+            (services as any[]).map((svc: any) => [svc.service_id, svc.default_rate ?? null]),
+          );
+          const tenantSettings = await tenantScopedTable(knex, tenant, 'default_billing_settings')
+            .select('default_currency_code')
+            .first();
+          for (const config of inheritingUnitConfigs) {
+            const resolved = resolveMemberRate(
+              {
+                period: { start: asOf, end: asOf },
+                currency: currencyCode,
+                revisions: [],
+                catalogPrices,
+                tenantDefaultCurrency: (tenantSettings as any)?.default_currency_code ?? 'USD',
+              },
+              {
+                service_id: config.service_id,
+                config_id: config.config_id,
+                configuration_quantity: config.quantity,
+                configuration_custom_rate: null,
+                service_base_rate: null,
+                default_rate: defaultRateByService.get(config.service_id) ?? null,
+                pricing_basis: 'unit',
+                item_kind: itemKindByService.get(config.service_id) ?? null,
+              },
+            );
+            catalogRateByConfig.set(config.config_id, resolved.rateCents);
+          }
+        }
+
         contractLines.push({
           contract_line_id: line.contract_line_id,
           contract_line_name: line.contract_line_name,
@@ -1296,11 +1346,13 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
               measurement_mode: usageSemanticsMap.get(config?.config_id)?.measurement_mode ?? null,
               // A catalog-policy revision inherits the catalog price; do not
               // fall back to a stale configuration custom_rate.
-              unit_rate: isUnitValued && !isCatalogPolicy
-                ? (semantics?.base_rate != null
-                    ? Number(semantics.base_rate)
-                    : (config?.custom_rate != null ? Number(config.custom_rate) : null))
-                : null
+              unit_rate: !isUnitValued
+                ? null
+                : catalogRateByConfig.has(config?.config_id)
+                  ? catalogRateByConfig.get(config?.config_id) ?? null
+                  : (semantics?.base_rate != null
+                      ? Number(semantics.base_rate)
+                      : (config?.custom_rate != null ? Number(config.custom_rate) : null))
             };
           })
         });

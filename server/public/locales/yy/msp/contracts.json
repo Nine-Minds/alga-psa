@@ -325,7 +325,8 @@
       "serviceCountOther": "〖{{count}} şḗřṽīƈḗş ········〗",
       "previouslyConfiguredQuantity": "〖Ƥřḗṽīȯŭşŀẏ ƈȯƞƒīɠŭřḗḓ ʠŭȧƞŧīŧẏ: {{count}} — ƞȯŧ ŭşḗḓ ƒȯř ƀīŀŀīƞɠ ··························〗",
       "billedOnPeriodCount": "〖Ɓīŀŀḗḓ ȯƞ ŧħḗ ƈȯŭƞŧ řḗƥȯřŧḗḓ ƒȯř ḗȧƈħ ƥḗřīȯḓ ··················〗",
-      "recurringSeats": "〖{{count}} × {{rate}} (řḗƈŭřřīƞɠ şḗȧŧş) ················〗",
+      "recurringSeats": "〖{{count}} × {{rate}} = {{amount}} (řḗƈŭřřīƞɠ şḗȧŧş) ················〗",
+      "recurringSeatsCatalogRate": "〖{{count}} × ƈȧŧȧŀǿɠ ƥřīƈḗ (řḗƈŭřřīƞɠ şḗȧŧş) ·······〗",
       "bundleAllocation": "〖Ȧŀŀȯƈȧŧīȯƞ ȯƒ ŧħḗ ƀŭƞḓŀḗ ƥřīƈḗ — ƞȯŧ ƀīŀŀȧƀŀḗ şḗȧŧş ·····················〗",
       "setUpRecurringSeats": "〖Şḗŧ ŭƥ řḗƈŭřřīƞɠ şḗȧŧş ·········〗",
       "reportPeriodCount": "〖Řḗƥȯřŧ ȧ ƥḗřīȯḓ ƈȯŭƞŧ ·········〗"
@@ -1181,7 +1182,9 @@
       "usageBasedPlans": "〖Ŭşȧɠḗ-Ɓȧşḗḓ Ƥŀȧƞş ·······〗",
       "recurringQuantityLabel": "〖Řḗƈŭřřīƞɠ ʠŭȧƞŧīŧẏ: ········〗",
       "unitRateLabel": "〖Ŭƞīŧ řȧŧḗ: ····〗",
-      "unitRateFromCatalog": "〖Ƈȧŧȧŀȯɠ ƥřīƈḗ īƞ ŧħḗ ƈŀīḗƞŧ'ş ƈŭřřḗƞƈẏ ················〗"
+      "unitRateFromCatalog": "〖Ƈȧŧȧŀȯɠ ƥřīƈḗ īƞ ŧħḗ ƈŀīḗƞŧ'ş ƈŭřřḗƞƈẏ ················〗",
+      "unitAmountLabel": "〖Řḗƈŭřřīƞɠ ȧḿǿŭƞŧ: ····〗",
+      "unitAmountValue": "{{count}} × {{rate}} = {{amount}}"
     },
     "editBasicsTitle": "〖Ḗḓīŧ Ŧḗḿƥŀȧŧḗ Ɓȧşīƈş ········〗",
     "editGuidanceTitle": "〖Ḗḓīŧ Ŧḗḿƥŀȧŧḗ Ɠŭīḓȧƞƈḗ ·········〗",

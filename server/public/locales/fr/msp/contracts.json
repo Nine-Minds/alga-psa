@@ -325,7 +325,8 @@
       "serviceCountOther": "{{count}} services",
       "previouslyConfiguredQuantity": "Quantité configurée précédemment : {{count}} — non utilisée pour la facturation",
       "billedOnPeriodCount": "Facturé selon le décompte déclaré pour chaque période",
-      "recurringSeats": "{{count}} × {{rate}} (postes récurrents)",
+      "recurringSeats": "{{count}} × {{rate}} = {{amount}} (postes récurrents)",
+      "recurringSeatsCatalogRate": "{{count}} × prix du catalogue (postes récurrents)",
       "bundleAllocation": "Répartition du prix forfaitaire — ce ne sont pas des postes facturables",
       "setUpRecurringSeats": "Configurer des postes récurrents",
       "reportPeriodCount": "Déclarer un décompte de période"
@@ -1181,7 +1182,9 @@
       "usageBasedPlans": "Forfaits à l'usage",
       "recurringQuantityLabel": "Quantité récurrente :",
       "unitRateLabel": "Tarif unitaire :",
-      "unitRateFromCatalog": "Prix du catalogue dans la devise du client"
+      "unitRateFromCatalog": "Prix du catalogue dans la devise du client",
+      "unitAmountLabel": "Montant récurrent :",
+      "unitAmountValue": "{{count}} × {{rate}} = {{amount}}"
     },
     "editBasicsTitle": "Modifier les informations de base du modèle",
     "editGuidanceTitle": "Modifier les conseils du modèle",

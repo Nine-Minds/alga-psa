@@ -325,7 +325,8 @@
       "serviceCountOther": "{{count}} services",
       "previouslyConfiguredQuantity": "Previously configured quantity: {{count}} — not used for billing",
       "billedOnPeriodCount": "Billed on the count reported for each period",
-      "recurringSeats": "{{count}} × {{rate}} (recurring seats)",
+      "recurringSeats": "{{count}} × {{rate}} = {{amount}} (recurring seats)",
+      "recurringSeatsCatalogRate": "{{count}} × catalog price (recurring seats)",
       "bundleAllocation": "Allocation of the bundle price — not billable seats",
       "setUpRecurringSeats": "Set up recurring seats",
       "reportPeriodCount": "Report a period count"
@@ -1181,7 +1182,9 @@
       "usageBasedPlans": "Usage-Based Plans",
       "recurringQuantityLabel": "Recurring quantity:",
       "unitRateLabel": "Unit rate:",
-      "unitRateFromCatalog": "Catalog price in the client's currency"
+      "unitRateFromCatalog": "Catalog price in the client's currency",
+      "unitAmountLabel": "Recurring amount:",
+      "unitAmountValue": "{{count}} × {{rate}} = {{amount}}"
     },
     "editBasicsTitle": "Edit Template Basics",
     "editGuidanceTitle": "Edit Template Guidance",

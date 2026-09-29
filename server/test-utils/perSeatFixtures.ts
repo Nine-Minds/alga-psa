@@ -30,15 +30,18 @@ export function dateOnly(value: unknown): string | null {
   return null;
 }
 
+/**
+ * Every call creates a fresh tenant, so each test file owns its rows and no
+ * file can see (or be broken by) another file's - or a previous run's -
+ * clients, cycles, invoices or tenant-wide settings.
+ */
 export async function ensureFixtureTenant(connection: Knex): Promise<string> {
   const scoped = () =>
     tenantDb(connection, '__test_tenant_fixture__').unscoped('tenants', 'test fixture creates and removes tenant rows');
-  const existing = await scoped().first<{ tenant: string }>('tenant');
-  if (existing?.tenant) return existing.tenant;
   const newTenantId = uuidv4();
   await scoped().insert({
     tenant: newTenantId,
-    client_name: 'Per-seat Integration Tenant',
+    client_name: `Per-seat Integration Tenant ${newTenantId.slice(0, 8)}`,
     email: 'perseat@test.co',
     created_at: connection.fn.now(),
     updated_at: connection.fn.now(),

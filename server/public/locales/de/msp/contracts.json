@@ -325,7 +325,8 @@
       "serviceCountOther": "{{count}} Services",
       "previouslyConfiguredQuantity": "Zuvor konfigurierte Menge: {{count}} — wird nicht für die Abrechnung verwendet",
       "billedOnPeriodCount": "Abrechnung nach der je Zeitraum gemeldeten Menge",
-      "recurringSeats": "{{count}} × {{rate}} (wiederkehrende Plätze)",
+      "recurringSeats": "{{count}} × {{rate}} = {{amount}} (wiederkehrende Plätze)",
+      "recurringSeatsCatalogRate": "{{count}} × Katalogpreis (wiederkehrende Plätze)",
       "bundleAllocation": "Verteilung des Paketpreises — keine abrechenbaren Plätze",
       "setUpRecurringSeats": "Wiederkehrende Plätze einrichten",
       "reportPeriodCount": "Menge für den Zeitraum melden"
@@ -1181,7 +1182,9 @@
       "usageBasedPlans": "Nutzungsbasierte Pläne",
       "recurringQuantityLabel": "Wiederkehrende Menge:",
       "unitRateLabel": "Stückpreis:",
-      "unitRateFromCatalog": "Katalogpreis in der Währung des Kunden"
+      "unitRateFromCatalog": "Katalogpreis in der Währung des Kunden",
+      "unitAmountLabel": "Wiederkehrender Betrag:",
+      "unitAmountValue": "{{count}} × {{rate}} = {{amount}}"
     },
     "editBasicsTitle": "Vorlagengrundlagen bearbeiten",
     "editGuidanceTitle": "Vorlagenhinweise bearbeiten",

@@ -28,6 +28,7 @@ let getContractTemplateSnapshotForClientWizard: typeof import('@alga-psa/billing
 let getServiceCatalogRatesForCurrency: typeof import('@alga-psa/billing/actions/serviceActions').getServiceCatalogRatesForCurrency;
 let sharedCloneTemplateContractLine: typeof import('@alga-psa/shared/billingClients/templateClone').cloneTemplateContractLine;
 let billingCloneTemplateContractLine: typeof import('@alga-psa/billing/lib/billing/utils/templateClone').cloneTemplateContractLine;
+let getContractOverview: typeof import('@alga-psa/billing/actions/contractActions').getContractOverview;
 let addContractLine: typeof import('@alga-psa/billing/repositories/contractLineRepository').addContractLine;
 
 vi.mock('server/src/lib/db', async () => {
@@ -181,6 +182,7 @@ describe('contract templates: per-seat recurring services', () => {
     ({ cloneTemplateContractLine: sharedCloneTemplateContractLine } = await import('@alga-psa/shared/billingClients/templateClone'));
     ({ cloneTemplateContractLine: billingCloneTemplateContractLine } = await import('@alga-psa/billing/lib/billing/utils/templateClone'));
     ({ addContractLine } = await import('@alga-psa/billing/repositories/contractLineRepository'));
+    ({ getContractOverview } = await import('@alga-psa/billing/actions/contractActions'));
   }, HOOK_TIMEOUT);
 
   afterAll(async () => {
@@ -204,6 +206,23 @@ describe('contract templates: per-seat recurring services', () => {
     expect(endpoint.base_rate).toBeNull();
     expect(Number(location.quantity)).toBe(2);
     expect(Number(location.base_rate)).toBe(20000);
+  }, HOOK_TIMEOUT);
+
+  it('the template overview reads each seat service as quantity x unit rate; a catalog-following rate has no fixed amount', async () => {
+    const catalog = await seatCatalog();
+    const template = await createTemplate(templatePackage(catalog));
+
+    const overview: any = await getContractOverview(template.contract_id);
+    expect(overview, JSON.stringify(overview)).not.toHaveProperty('error');
+    const services = new Map<string, any>(overview.contractLines.flatMap((line: any) => line.services).map((svc: any) => [svc.service_id, svc]));
+    expect(services.get(catalog.user.serviceId)).toMatchObject({ pricing_basis: 'unit', quantity: 20, unit_rate: 10000 });
+    expect(services.get(catalog.location.serviceId)).toMatchObject({ pricing_basis: 'unit', quantity: 2, unit_rate: 20000 });
+    // A template is currency-neutral: no stored rate means "catalog price in the
+    // contract's currency", which a template cannot price, so it is left out of
+    // the total rather than valued at a guess.
+    expect(services.get(catalog.endpoint.serviceId)).toMatchObject({ pricing_basis: 'unit', quantity: 30, unit_rate: null });
+    // 20 x $100 + 2 x $200 (the 30 catalog-priced endpoints are excluded).
+    expect(overview.totalEstimatedMonthlyValue).toBe(200000 + 40000);
   }, HOOK_TIMEOUT);
 
   it('round-trips through the snapshot; a contract created from it adjusts a quantity and bills the unit rates', async () => {

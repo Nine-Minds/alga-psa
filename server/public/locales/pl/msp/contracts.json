@@ -325,7 +325,8 @@
       "serviceCountOther": "Liczba usług: {{count}}",
       "previouslyConfiguredQuantity": "Wcześniej skonfigurowana ilość: {{count}} — nieużywana do rozliczeń",
       "billedOnPeriodCount": "Fakturowane według liczby zgłoszonej dla każdego okresu",
-      "recurringSeats": "{{count}} × {{rate}} (cykliczne stanowiska)",
+      "recurringSeats": "{{count}} × {{rate}} = {{amount}} (cykliczne stanowiska)",
+      "recurringSeatsCatalogRate": "{{count}} × cena katalogowa (cykliczne stanowiska)",
       "bundleAllocation": "Podział ceny pakietu — to nie są fakturowane stanowiska",
       "setUpRecurringSeats": "Skonfiguruj cykliczne stanowiska",
       "reportPeriodCount": "Zgłoś liczbę dla okresu"
@@ -1181,7 +1182,9 @@
       "usageBasedPlans": "Plany według zużycia",
       "recurringQuantityLabel": "Ilość cykliczna:",
       "unitRateLabel": "Stawka jednostkowa:",
-      "unitRateFromCatalog": "Cena katalogowa w walucie klienta"
+      "unitRateFromCatalog": "Cena katalogowa w walucie klienta",
+      "unitAmountLabel": "Kwota cykliczna:",
+      "unitAmountValue": "{{count}} × {{rate}} = {{amount}}"
     },
     "editBasicsTitle": "Edytuj podstawy szablonu",
     "editGuidanceTitle": "Edytuj wskazówki szablonu",
