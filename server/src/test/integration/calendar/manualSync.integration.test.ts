@@ -282,7 +282,7 @@ describe('Manual calendar sync integration', () => {
     context.userId = testUserId;
     context.secondUserId = secondUserId;
 
-    await db.migrate.latest();
+    await db.migrate.latest({ directory: process.env.TEST_MIGRATIONS_DIR || 'migrations' });
 
     context.scheduleEntryColumns = await schemaTable(db, 'schedule_entries').columnInfo();
 

@@ -5,6 +5,10 @@ import { createTestDbConnection } from '../../../../test-utils/dbConfig.ts';
 import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
 import { tenantDb } from '@alga-psa/db';
 import { CalendarSyncService } from '@alga-psa/ee-calendar/lib/services/calendar/CalendarSyncService';
+import { CalendarProviderService } from '@alga-psa/ee-calendar/lib/services/calendar/CalendarProviderService';
+import { syncCalendarProviderImpl } from '@alga-psa/ee-calendar/lib/actions/integrations/calendarActions';
+import { GoogleCalendarAdapter } from '@alga-psa/ee-calendar/lib/services/calendar/providers/GoogleCalendarAdapter';
+import { MicrosoftCalendarAdapter } from '@alga-psa/ee-calendar/lib/services/calendar/providers/MicrosoftCalendarAdapter';
 
 const fixture = vi.hoisted(() => ({
   db: null as Knex | null,
@@ -81,7 +85,7 @@ describe('shared-calendar provider sync access', () => {
       is_archived: !!opts.archived,
       created_at: new Date(),
       updated_at: new Date(),
-    });
+    }).onConflict(['tenant', 'calendar_id']).ignore();
     if (opts.readMember) {
       await scoped('calendar_shares').insert({
         tenant,
@@ -104,33 +108,8 @@ describe('shared-calendar provider sync access', () => {
     return entry.entry_id;
   }
 
-  async function seedProviderAndMapping(entryId: string, userId: string, externalId = `external-${uuidv4()}`, providerKey = providerId, providerType: 'google' | 'microsoft' = 'google') {
-    const provider = {
-      id: providerKey,
-      tenant,
-      user_id: userId,
-      provider_type: providerType,
-      provider_name: providerType === 'google' ? 'Test Google' : 'Test Outlook',
-      calendar_id: 'primary',
-      is_active: true,
-      sync_direction: 'bidirectional',
-      provider_config: { accessToken: 'test', refreshToken: 'test' },
-    };
-    fixture.providers.set(providerKey, provider);
-    await scoped('calendar_providers').insert({
-      id: providerKey,
-      tenant,
-      user_id: userId,
-      provider_type: providerType,
-      provider_name: providerType === 'google' ? 'Test Google' : 'Test Outlook',
-      calendar_id: 'primary',
-      is_active: true,
-      sync_direction: 'bidirectional',
-      status: 'connected',
-      vendor_config: {},
-      created_at: new Date(),
-      updated_at: new Date(),
-    });
+  async function seedProviderAndMapping(entryId: string, userId: string, externalId = `external-${uuidv4()}`, providerKey = providerId, providerType: 'google' | 'microsoft' = 'google', syncDirection: 'bidirectional' | 'to_external' | 'from_external' = 'bidirectional') {
+    await seedProvider(userId, providerKey, providerType, syncDirection);
     await scoped('calendar_event_mappings').insert({
       id: uuidv4(),
       tenant,
@@ -151,6 +130,35 @@ describe('shared-calendar provider sync access', () => {
     return externalId;
   }
 
+  async function seedProvider(userId: string, providerKey = providerId, providerType: 'google' | 'microsoft' = 'google', syncDirection: 'bidirectional' | 'to_external' | 'from_external' = 'bidirectional') {
+    const provider = {
+      id: providerKey,
+      tenant,
+      user_id: userId,
+      provider_type: providerType,
+      provider_name: providerType === 'google' ? 'Test Google' : 'Test Outlook',
+      calendar_id: 'primary',
+      is_active: true,
+      sync_direction: syncDirection,
+      provider_config: { accessToken: 'test', refreshToken: 'test' },
+    };
+    fixture.providers.set(providerKey, provider);
+    await scoped('calendar_providers').insert({
+      id: providerKey,
+      tenant,
+      user_id: userId,
+      provider_type: providerType,
+      provider_name: providerType === 'google' ? 'Test Google' : 'Test Outlook',
+      calendar_id: 'primary',
+      is_active: true,
+      sync_direction: syncDirection,
+      status: 'connected',
+      vendor_config: {},
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
+  }
+
   beforeAll(async () => {
     db = await createTestDbConnection({ recreate: false });
     fixture.db = db;
@@ -167,6 +175,7 @@ describe('shared-calendar provider sync access', () => {
 
   beforeEach(async () => {
     fixture.trx = await db.transaction();
+    fixture.providers.clear();
     fixture.canViewAll = false;
     fixture.forceReadOnly = false;
     fixture.failAccessResolution = false;
@@ -176,6 +185,7 @@ describe('shared-calendar provider sync access', () => {
   afterEach(async () => {
     await fixture.trx?.rollback().catch(() => undefined);
     fixture.trx = null;
+    vi.restoreAllMocks();
   });
 
   afterAll(async () => {
@@ -468,6 +478,7 @@ describe('shared-calendar provider sync access', () => {
       }),
       updateEvent: vi.fn(),
     };
+    await seedProvider(member, providerId);
     (service as any).createAdapter = async () => adapter;
 
     expect(await service.syncScheduleEntryToExternal(entry.entry_id, providerId)).toMatchObject({
@@ -522,6 +533,7 @@ describe('shared-calendar provider sync access', () => {
   it.each(['google', 'microsoft'] as const)(
     'keeps eligible read-only shared multi-assignee %s exports', async (providerType) => {
       const entryId = await seedGroupEntry([otherAssignee, secondOtherAssignee], { readMember: true });
+      await seedProvider(member, providerId, providerType);
       const payloads: any[] = [];
       const adapter = {
         connect: vi.fn(async () => {}),
@@ -532,7 +544,83 @@ describe('shared-calendar provider sync access', () => {
 
       expect(await service.syncScheduleEntryToExternal(entryId, providerId, true)).toMatchObject({ success: true });
       expect(adapter.createEvent).toHaveBeenCalledTimes(1);
-      expect(payloads[0]).toMatchObject({ title: 'Alga title', description: 'Alga notes' });
+      const expectedDescription = providerType === 'microsoft'
+        ? 'Alga notes\n<p>[Alga calendar: Sync access test]</p>'
+        : 'Alga notes\n[Alga calendar: Sync access test]';
+      expect(payloads[0].description).toBe(expectedDescription);
+      expect(payloads[0].title).toBe('Alga title');
+      expect(payloads[0].title).not.toMatch(/^\[Alga calendar:/);
+      if (providerType === 'microsoft') {
+        expect(payloads[0].categories).toEqual(['Alga calendar: Sync access test']);
+      } else {
+        expect(payloads[0].categories).toBeUndefined();
+      }
+    }
+  );
+
+  it.each(['google', 'microsoft'] as const)(
+    'blocks role-free Sync Now writes through the real outbound guard for %s, including inaccessible group creates and calendar-less mapped updates', async (providerType) => {
+      const groupMappedId = await seedGroupEntry([otherAssignee], { readMember: true });
+      const groupNewId = await seedGroupEntry([otherAssignee]);
+      const calendarlessMapped = await ScheduleEntry.create(fixture.trx!, tenant, {
+        title: 'Mapped calendar-less secret', notes: 'Mapped secret notes',
+        scheduled_start: new Date(Date.now() + 60 * 60 * 1000), scheduled_end: new Date(Date.now() + 2 * 60 * 60 * 1000),
+        status: 'scheduled', work_item_type: 'ad_hoc',
+      } as any, { assignedUserIds: [otherAssignee] });
+      const calendarlessNew = await ScheduleEntry.create(fixture.trx!, tenant, {
+        title: 'New calendar-less secret', notes: 'New secret notes',
+        scheduled_start: new Date(Date.now() + 3 * 60 * 60 * 1000), scheduled_end: new Date(Date.now() + 4 * 60 * 60 * 1000),
+        status: 'scheduled', work_item_type: 'ad_hoc',
+      } as any, { assignedUserIds: [otherAssignee] });
+      // The service-level helpers create entries outside Sync Now's rolling window;
+      // put the two group cases inside it as well.
+      const inWindowStart = new Date(Date.now() + 5 * 60 * 60 * 1000);
+      const inWindowEnd = new Date(Date.now() + 6 * 60 * 60 * 1000);
+      await scoped('schedule_entries').whereIn('entry_id', [groupMappedId, groupNewId]).update({ scheduled_start: inWindowStart, scheduled_end: inWindowEnd });
+
+      const mappedGroupExternalId = await seedProviderAndMapping(groupMappedId, member, `sync-now-group-${providerType}`, providerId, providerType, 'to_external');
+      const personalExternalId = `sync-now-personal-${providerType}`;
+      await scoped('calendar_event_mappings').insert({
+        id: uuidv4(), tenant, calendar_provider_id: providerId,
+        schedule_entry_id: calendarlessMapped.entry_id,
+        external_event_id: personalExternalId,
+        sync_status: 'synced', sync_direction: 'to_external',
+        last_synced_at: new Date(), alga_last_modified: calendarlessMapped.updated_at,
+        external_last_modified: new Date('2026-08-01T00:00:00Z'), created_at: new Date(), updated_at: new Date(),
+      });
+      await scoped('calendar_shares').where({ calendar_id: groupCalendarId, grantee_id: member }).del();
+
+      const providerWrites: any[] = [];
+      const adapter = {
+        connect: vi.fn(async () => {}),
+        updateEvent: vi.fn(async (id: string, payload: any) => { providerWrites.push(['update', id, payload]); return { id, updated: new Date().toISOString() }; }),
+        createEvent: vi.fn(async (payload: any) => { providerWrites.push(['create', payload]); return { id: `new-${providerType}`, updated: new Date().toISOString() }; }),
+      };
+      const getProvider = vi.spyOn(CalendarProviderService.prototype, 'getProvider').mockImplementation(async (id: string) => fixture.providers.get(id) ?? null);
+      const updateProviderStatus = vi.spyOn(CalendarProviderService.prototype, 'updateProviderStatus').mockResolvedValue();
+      const createAdapter = vi.spyOn(CalendarSyncService.prototype as any, 'createAdapter').mockResolvedValue(adapter);
+      const syncSpy = vi.spyOn(CalendarSyncService.prototype, 'syncScheduleEntryToExternal');
+      const googleConnect = vi.spyOn(GoogleCalendarAdapter.prototype, 'connect').mockResolvedValue();
+      const microsoftConnect = vi.spyOn(MicrosoftCalendarAdapter.prototype, 'connect').mockResolvedValue();
+
+      expect(await scoped('user_roles').where({ user_id: member })).toHaveLength(0);
+      expect(await syncCalendarProviderImpl({ user_id: member }, { tenant }, providerId)).toMatchObject({ success: true, started: true });
+      await vi.waitFor(() => {
+        expect(syncSpy).toHaveBeenCalledTimes(4);
+        expect(updateProviderStatus).toHaveBeenCalled();
+      });
+      expect(syncSpy).toHaveBeenCalledWith(groupMappedId, providerId, true);
+      expect(syncSpy).toHaveBeenCalledWith(calendarlessMapped.entry_id, providerId, true);
+      expect(syncSpy).toHaveBeenCalledWith(groupNewId, providerId, true);
+      expect(syncSpy).toHaveBeenCalledWith(calendarlessNew.entry_id, providerId, true);
+      expect(providerWrites).toEqual([]);
+      expect(adapter.updateEvent).not.toHaveBeenCalledWith(mappedGroupExternalId, expect.anything());
+      expect(adapter.updateEvent).not.toHaveBeenCalledWith(personalExternalId, expect.anything());
+
+      syncSpy.mockRestore();
+      createAdapter.mockRestore();
+      updateProviderStatus.mockRestore();
+      getProvider.mockRestore();
     }
   );
 
