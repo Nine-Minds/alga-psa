@@ -84,7 +84,10 @@ export class CalendarSyncService {
       const existingMapping = await this.getMappingByScheduleEntry(entryId, calendarProviderId, tenant);
 
       const result = await withTransaction(knex, async (trx) => {
-        const externalEvent = await mapScheduleEntryToExternalEvent(entry, provider.provider_type);
+        const groupCalendar = entry.calendar_id
+          ? await tenantDb(trx, tenant).table('calendars').where({ calendar_id: entry.calendar_id, calendar_type: 'group' }).first()
+          : null;
+        const externalEvent = await mapScheduleEntryToExternalEvent(entry, provider.provider_type, undefined, groupCalendar?.name);
 
         if (existingMapping) {
           const updatedEvent = await this.updateProviderEventIfPresent(adapter, existingMapping.external_event_id, externalEvent);

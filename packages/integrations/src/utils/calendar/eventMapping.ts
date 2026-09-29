@@ -13,7 +13,8 @@ import { parseCalendarDateTime } from '@alga-psa/core';
 export async function mapScheduleEntryToExternalEvent(
   entry: IScheduleEntry,
   provider: 'google' | 'microsoft',
-  userEmails?: Map<string, string> // Map of user_id -> email
+  userEmails?: Map<string, string>, // Map of user_id -> email
+  owningCalendarName?: string
 ): Promise<ExternalCalendarEvent> {
   // Fetch user emails if not provided
   if (!userEmails && entry.assigned_user_ids.length > 0 && entry.tenant) {
@@ -73,7 +74,7 @@ export async function mapScheduleEntryToExternalEvent(
   const status = entry.status === 'cancelled' ? 'cancelled' as const :
                  entry.status === 'tentative' ? 'tentative' as const :
                  'confirmed' as const;
-  const description = await buildScheduleEntryDescription(entry);
+  const description = appendCalendarMarker(await buildScheduleEntryDescription(entry), owningCalendarName);
 
   // Build event object
   const event: ExternalCalendarEvent = {
@@ -81,6 +82,7 @@ export async function mapScheduleEntryToExternalEvent(
     provider,
     title: entry.title,
     description,
+    categories: provider === 'microsoft' && owningCalendarName ? [`Alga calendar: ${owningCalendarName}`] : undefined,
     start: isAllDay ? {
       date: formatDateOnly(startDate),
       timeZone: 'UTC'
@@ -103,6 +105,28 @@ export async function mapScheduleEntryToExternalEvent(
   };
 
   return event;
+}
+
+function appendCalendarMarker(notes: string, calendarName?: string): string {
+  if (!calendarName) return notes;
+  const base = stripCalendarMarker(notes) || '';
+  const marker = `[Alga calendar: ${calendarName}]`;
+  if (/<(?:p|div|br|html|body)\b/i.test(base)) {
+    const escaped = marker.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const content = base;
+    const paragraph = `<p>${escaped}</p>`;
+    if (/<\/body>/i.test(content)) return content.replace(/<\/body>/i, `\n${paragraph}</body>`);
+    if (/<\/html>/i.test(content)) return content.replace(/<\/html>/i, `\n${paragraph}</html>`);
+    return `${content}${content ? '\n' : ''}${paragraph}`;
+  }
+  return `${base}${base ? '\n' : ''}${marker}`;
+}
+
+function stripCalendarMarker(notes?: string): string | undefined {
+  if (!notes) return notes;
+  const html = notes.match(/\r?\n<p>\[Alga calendar: (?:[^<>]|&(?:amp|lt|gt);)*\]<\/p>(?=\s*(?:<\/body>|<\/html>|$))/i);
+  if (html) return notes.slice(0, html.index) + notes.slice(html.index! + html[0].length);
+  return notes.replace(/(?:\r?\n)\[Alga calendar: [^\]\r\n]+\]$/, '');
 }
 
 /**
@@ -213,7 +237,7 @@ export async function mapExternalEventToScheduleEntry(
     ...(algaEntryId ? { entry_id: algaEntryId } : {}),
     tenant,
     title: event.title,
-    notes: event.description,
+    notes: stripCalendarMarker(event.description),
     scheduled_start: startDate,
     scheduled_end: endDate,
     is_all_day: !!event.start.date && !event.start.dateTime && !!event.end.date && !event.end.dateTime,

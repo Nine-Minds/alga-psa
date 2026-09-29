@@ -15,7 +15,8 @@ import { convertRecurrencePatternToRRULE } from './recurrenceConverter';
 export async function mapScheduleEntryToExternalEvent(
   entry: IScheduleEntry,
   provider: 'google' | 'microsoft',
-  userEmails?: Map<string, string>
+  userEmails?: Map<string, string>,
+  owningCalendarName?: string
 ): Promise<ExternalCalendarEvent> {
   if (!userEmails && entry.assigned_user_ids.length > 0 && entry.tenant) {
     userEmails = await fetchUserEmails(entry.assigned_user_ids, entry.tenant);
@@ -73,7 +74,8 @@ export async function mapScheduleEntryToExternalEvent(
     id: '',
     provider,
     title: entry.title,
-    description: entry.notes || '',
+    description: appendCalendarMarker(entry.notes || '', owningCalendarName),
+    categories: provider === 'microsoft' && owningCalendarName ? [`Alga calendar: ${owningCalendarName}`] : undefined,
     start: isAllDay
       ? { date: formatDateOnly(startDate), timeZone: 'UTC' }
       : {
@@ -92,6 +94,42 @@ export async function mapScheduleEntryToExternalEvent(
     recurrence,
     extendedProperties,
   };
+}
+
+const calendarMarker = (name: string) => `[Alga calendar: ${name}]`;
+
+function appendCalendarMarker(notes: string, calendarName?: string): string {
+  if (!calendarName) return notes;
+  const marker = calendarMarker(calendarName);
+  // Idempotence also protects callers that pass previously mapped notes.
+  const stripped = stripCalendarMarker(notes) || '';
+  return providerBody(stripped, marker);
+}
+
+function providerBody(notes: string, marker: string): string {
+  // Microsoft Graph body content is HTML; keep user HTML intact and append a
+  // standalone paragraph. Google event descriptions are plain text.
+  if (/<(?:p|div|br|html|body)\b/i.test(notes)) {
+    const content = notes;
+    const paragraph = `<p>${escapeHtml(marker)}</p>`;
+    if (/<\/body>/i.test(content)) return content.replace(/<\/body>/i, `\n${paragraph}</body>`);
+    if (/<\/html>/i.test(content)) return content.replace(/<\/html>/i, `\n${paragraph}</html>`);
+    return `${content}${content ? '\n' : ''}${paragraph}`;
+  }
+  return `${notes}${notes ? '\n' : ''}${marker}`;
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function stripCalendarMarker(notes?: string): string | undefined {
+  if (!notes) return notes;
+  // Remove only a complete final marker line or the paragraph our Graph mapper
+  // appends. Never match across HTML tags or consume adjacent user content.
+  const html = notes.match(/\r?\n<p>\[Alga calendar: (?:[^<>]|&(?:amp|lt|gt);)*\]<\/p>(?=\s*(?:<\/body>|<\/html>|$))/i);
+  if (html) return notes.slice(0, html.index) + notes.slice(html.index! + html[0].length);
+  return notes.replace(/(?:\r?\n)\[Alga calendar: [^\]\r\n]+\]$/, '');
 }
 
 export async function mapExternalEventToScheduleEntry(
@@ -196,7 +234,7 @@ export async function mapExternalEventToScheduleEntry(
     ...(algaEntryId ? { entry_id: algaEntryId } : {}),
     tenant,
     title: event.title,
-    notes: event.description,
+    notes: stripCalendarMarker(event.description),
     scheduled_start: startDate,
     scheduled_end: endDate,
     is_all_day: !!event.start.date && !event.start.dateTime && !!event.end.date && !event.end.dateTime,

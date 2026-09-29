@@ -42,6 +42,8 @@ function isProviderEventGone(error: any): boolean {
  */
 function comparableNotes(notes: string | null | undefined): string {
   return (notes ?? '')
+    .replace(/\r?\n<p>\[Alga calendar: (?:[^<>]|&(?:amp|lt|gt);)*\]<\/p>(?=\s*(?:<\/body>|<\/html>|$))/i, '')
+    .replace(/(?:\r?\n)\[Alga calendar: [^\]\r\n]+\]$/, '')
     .replace(/<[^>]*>/g, ' ')
     .replace(/&nbsp;/g, ' ')
     .replace(/\s+/g, ' ')
@@ -129,7 +131,10 @@ export class CalendarSyncService {
       const existingMapping = await this.getMappingByScheduleEntry(entryId, calendarProviderId, tenant);
 
       const result = await withTransaction(knex, async (trx) => {
-        const externalEvent = await mapScheduleEntryToExternalEvent(entry, provider.provider_type);
+        const groupCalendar = entry.calendar_id
+          ? await tenantDb(trx, tenant).table('calendars').where({ calendar_id: entry.calendar_id, calendar_type: 'group' }).first()
+          : null;
+        const externalEvent = await mapScheduleEntryToExternalEvent(entry, provider.provider_type, undefined, groupCalendar?.name);
 
         if (existingMapping) {
           const updatedEvent = await this.updateProviderEventIfPresent(adapter, existingMapping.external_event_id, externalEvent);
@@ -354,15 +359,48 @@ export class CalendarSyncService {
             };
           }
 
+          // Convert external event to schedule entry format
+          const entryData = await mapExternalEventToScheduleEntry(externalEvent, tenant, provider.provider_type);
+
+          // Merge with existing entry, but preserve assigned_user_ids from Alga
+          // External calendars often don't include the correct attendees, so we keep
+          // the original assignment unless the external event explicitly has attendees
+          // that map to valid Alga users
+          const shouldPreserveAssignees =
+            existingEntry.assigned_user_ids.length > 0 &&
+            (entryData.assigned_user_ids?.length === 0 ||
+             !externalEvent.attendees ||
+             externalEvent.attendees.length === 0);
+
+          console.log('[CalendarSyncService] Merging external event with existing entry', {
+            entryId: existingEntry.entry_id,
+            existingAssignees: existingEntry.assigned_user_ids,
+            externalAttendees: externalEvent.attendees?.map(a => a.email) || [],
+            mappedAssignees: entryData.assigned_user_ids,
+            shouldPreserveAssignees
+          });
+
+          const mergedEntry = {
+            ...existingEntry,
+            ...entryData,
+            entry_id: existingEntry.entry_id, // Preserve entry ID
+            // Preserve existing assignees if external event doesn't have valid attendees
+            assigned_user_ids: shouldPreserveAssignees
+              ? existingEntry.assigned_user_ids
+              : ((entryData.assigned_user_ids?.length ?? 0) > 0 ? entryData.assigned_user_ids! : existingEntry.assigned_user_ids)
+          };
+
           const providerAccess = await this.resolveProviderUserAccess(trx, tenant, provider.user_id);
           if (!providerAccess) return { success: true, skipped: true, reason: 'Provider has no user' };
-          const decision = evaluateEntryAccess(existingEntry, providerAccess);
-          if (!decision.canEdit) {
-            // Push after this transaction commits so the outbound mapping timestamp is authoritative.
-            rePushEntryId = existingEntry.entry_id;
-            return { success: true, skipped: true, reason: 'Provider user cannot edit this entry' };
+          const canEdit = evaluateEntryAccess(existingEntry, providerAccess).canEdit;
+          if (!changesSyncedFields(existingEntry, mergedEntry)) {
+            await tenantDb(trx, tenant).table('calendar_event_mappings').where('id', existingMapping.id).update({
+              sync_status: 'synced', last_synced_at: new Date().toISOString(),
+              external_last_modified: externalEvent.updated, sync_error_message: null, updated_at: new Date().toISOString()
+            });
+            if (!canEdit) return { success: true, skipped: true, reason: 'Only Alga calendar metadata changed' };
+            return { success: true, skipped: true, reason: 'No synced fields changed' };
           }
-
           // Check for conflicts
           const conflict = await this.detectConflict(existingEntry, externalEvent, existingMapping);
           if (conflict && !force) {
@@ -401,36 +439,10 @@ export class CalendarSyncService {
             };
           }
 
-          // Convert external event to schedule entry format
-          const entryData = await mapExternalEventToScheduleEntry(externalEvent, tenant, provider.provider_type);
-
-          // Merge with existing entry, but preserve assigned_user_ids from Alga
-          // External calendars often don't include the correct attendees, so we keep
-          // the original assignment unless the external event explicitly has attendees
-          // that map to valid Alga users
-          const shouldPreserveAssignees =
-            existingEntry.assigned_user_ids.length > 0 &&
-            (entryData.assigned_user_ids?.length === 0 ||
-             !externalEvent.attendees ||
-             externalEvent.attendees.length === 0);
-
-          console.log('[CalendarSyncService] Merging external event with existing entry', {
-            entryId: existingEntry.entry_id,
-            existingAssignees: existingEntry.assigned_user_ids,
-            externalAttendees: externalEvent.attendees?.map(a => a.email) || [],
-            mappedAssignees: entryData.assigned_user_ids,
-            shouldPreserveAssignees
-          });
-
-          const mergedEntry = {
-            ...existingEntry,
-            ...entryData,
-            entry_id: existingEntry.entry_id, // Preserve entry ID
-            // Preserve existing assignees if external event doesn't have valid attendees
-            assigned_user_ids: shouldPreserveAssignees
-              ? existingEntry.assigned_user_ids
-              : ((entryData.assigned_user_ids?.length ?? 0) > 0 ? entryData.assigned_user_ids! : existingEntry.assigned_user_ids)
-          };
+          if (!canEdit) {
+            rePushEntryId = existingEntry.entry_id;
+            return { success: true, skipped: true, reason: 'Provider user cannot edit this entry' };
+          }
 
           // Update schedule entry
           const updatedEntry = await ScheduleEntry.update(
