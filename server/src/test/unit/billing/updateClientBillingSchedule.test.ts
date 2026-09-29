@@ -244,7 +244,7 @@ describe('updateClientBillingSchedule', () => {
     const responses = {
       'clients:select:first': { client_id: 'client-1', billing_cycle: 'monthly' },
       'client_billing_cycles as cbc:select:first': { period_end_date: '2026-01-10T00:00:00Z' },
-      // Per-line billed-boundary ledger (no billed rows): a many-select, not first().
+      // Per-contract billed-boundary ledger (no billed rows): a many-select, not first().
       'recurring_service_periods as rsp:select:many': [],
       'client_contracts as cc:select:many': [
         {
@@ -368,7 +368,7 @@ describe('updateClientBillingSchedule', () => {
     const responses = {
       'clients:select:first': { client_id: 'client-1', billing_cycle: 'monthly' },
       'client_billing_cycles as cbc:select:first': null,
-      // Per-line billed-boundary ledger (no billed rows): a many-select, not first().
+      // Per-contract billed-boundary ledger (no billed rows): a many-select, not first().
       'recurring_service_periods as rsp:select:many': [],
       'client_contracts as cc:select:many': [
         {

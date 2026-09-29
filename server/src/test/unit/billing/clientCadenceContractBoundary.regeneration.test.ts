@@ -1,10 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
- * alga-2026-0002499: a client-cadence line that starts mid-cycle must get its
- * first partial service period even when a *sibling* contract of the same
- * client is already billed in advance through the current cycle. The
- * "already billed" boundary protects each line's own history only.
+ * alga-2026-0002499: the client-cadence "already billed" boundary is scoped to
+ * the CONTRACT (assignment) a line belongs to:
+ *  - a NEW contract starting mid-cycle keeps its first partial period even when
+ *    a different contract of the client is already billed through the cycle;
+ *  - a line ADDED to an already-billed contract starts after that contract's
+ *    ledger (never back at the years-old assignment start), regardless of which
+ *    line of the contract carries the history (F029, T019/T020 of the
+ *    contract-quantity-and-usage-semantics plan).
  *
  * DB-free: `tenantDb` is replaced with a tiny in-memory interpreter that
  * evaluates the where-clauses the regeneration issues against fixture rows.
@@ -16,8 +20,8 @@ type Predicate = (row: Row) => boolean;
 
 const fixtures: {
   obligations: Row[];
-  // recurring_service_periods rows, pre-joined with `owner_client_id`
-  // (the contract owner that the real query reaches via contract_lines/contracts).
+  // recurring_service_periods rows, pre-joined with `owner_client_id` and
+  // `contract_id` (reached in the real query via contract_lines/contracts).
   periods: Row[];
   inserted: Row[];
 } = { obligations: [], periods: [], inserted: [] };
@@ -148,6 +152,8 @@ const TENANT = 'tenant-1';
 const CLIENT = 'client-1';
 const ANCHOR = { dayOfMonth: 1, monthOfYear: null, dayOfWeek: null, referenceDate: null };
 
+const CONTRACT_A = 'contract-a';
+const CONTRACT_B = 'contract-b';
 const LINE_A = 'line-a-advance-billed';
 const LINE_B = 'line-b-new';
 
@@ -182,13 +188,20 @@ function billedPeriodRow(overrides: Row): Row {
     created_at: '2026-02-01T00:00:00.000Z',
     updated_at: '2026-03-01T00:00:00.000Z',
     owner_client_id: CLIENT,
+    contract_id: CONTRACT_A,
     ...overrides,
   };
 }
 
-function obligation(lineId: string, timing: 'advance' | 'arrears', startDate: string): Row {
+function obligation(
+  lineId: string,
+  timing: 'advance' | 'arrears',
+  startDate: string,
+  contractId: string = CONTRACT_A,
+): Row {
   return {
     contract_line_id: lineId,
+    contract_id: contractId,
     start_date: startDate,
     end_date: null,
     contract_line_type: 'fixed',
@@ -213,7 +226,7 @@ const insertedFor = (lineId: string) =>
     .filter((row) => row.obligation_id === lineId)
     .sort((a, b) => String(a.service_period_start).localeCompare(String(b.service_period_start)));
 
-describe('client-cadence regeneration boundary is scoped to the line (alga-2026-0002499)', () => {
+describe('client-cadence regeneration boundary is scoped to the contract (alga-2026-0002499)', () => {
   beforeEach(() => {
     fixtures.obligations = [];
     fixtures.periods = [];
@@ -228,11 +241,11 @@ describe('client-cadence regeneration boundary is scoped to the line (alga-2026-
     vi.useRealTimers();
   });
 
-  it('advance line B starting mid-cycle gets its partial first period (activity window 03-15 -> 04-01) even though sibling line A is billed through the cycle end', async () => {
+  it('advance line on NEW contract B starting mid-cycle gets its partial first period (activity window 03-15 -> 04-01) even though contract A is billed through the cycle end', async () => {
     fixtures.periods = [billedPeriodRow({ obligation_id: LINE_A, due_position: 'advance' })];
     fixtures.obligations = [
       obligation(LINE_A, 'advance', '2026-03-01'),
-      obligation(LINE_B, 'advance', '2026-03-15'),
+      obligation(LINE_B, 'advance', '2026-03-15', CONTRACT_B),
     ];
 
     await regenerate();
@@ -278,11 +291,11 @@ describe('client-cadence regeneration boundary is scoped to the line (alga-2026-
     expect(coverage.coverageRatio).toBeCloseTo(17 / 31, 10);
   });
 
-  it('arrears line B starting mid-cycle gets its first partial period, invoiced on the next cycle', async () => {
+  it('arrears line on NEW contract B starting mid-cycle gets its first partial period, invoiced on the next cycle', async () => {
     fixtures.periods = [billedPeriodRow({ obligation_id: LINE_A, due_position: 'advance' })];
     fixtures.obligations = [
       obligation(LINE_A, 'advance', '2026-03-01'),
-      obligation(LINE_B, 'arrears', '2026-03-15'),
+      obligation(LINE_B, 'arrears', '2026-03-15', CONTRACT_B),
     ];
 
     await regenerate();
@@ -314,9 +327,31 @@ describe('client-cadence regeneration boundary is scoped to the line (alga-2026-
     expect(rows[0]).toMatchObject({ service_period_start: '2026-04-01' });
   });
 
-  it("a sibling's billing history does not move a line that has its own history", async () => {
-    // Line A (own history through 04-01) and line C (own history through 03-01 only,
-    // e.g. an arrears line whose March period is not yet invoiced).
+  it.each(['advance', 'arrears'] as const)(
+    'a %s line ADDED to already-billed contract A starts at A\'s boundary, not at A\'s assignment start',
+    async (timing) => {
+      // Contract A was assigned in 2024 and is billed through 04-01. A line added
+      // today has no history of its own and inherits the 2024 assignment start:
+      // it must not materialize (and bill) every period back to 2024.
+      fixtures.periods = [billedPeriodRow({ obligation_id: LINE_A, due_position: 'advance' })];
+      fixtures.obligations = [
+        obligation(LINE_A, 'advance', '2024-01-01'),
+        obligation('line-a2-added', timing, '2024-01-01'),
+      ];
+
+      await regenerate();
+
+      const rows = insertedFor('line-a2-added');
+      expect(rows.length).toBeGreaterThan(0);
+      expect(rows[0]).toMatchObject({ service_period_start: '2026-04-01', service_period_end: '2026-05-01' });
+      expect(rows.every((row) => String(row.service_period_start) >= '2026-04-01')).toBe(true);
+    },
+  );
+
+  it("any line's history in a contract limits every line of that contract, and only that contract", async () => {
+    // Contract A: line A billed through 04-01, sibling line C only through 03-01.
+    // Contract B: fresh line D on its own assignment. C starts at A's boundary
+    // (04-01, contract-scoped); D is unaffected by contract A.
     fixtures.periods = [
       billedPeriodRow({ obligation_id: LINE_A, due_position: 'advance' }),
       billedPeriodRow({
@@ -332,13 +367,13 @@ describe('client-cadence regeneration boundary is scoped to the line (alga-2026-
     fixtures.obligations = [
       obligation(LINE_A, 'advance', '2026-01-01'),
       obligation('line-c-arrears', 'arrears', '2026-01-01'),
+      obligation('line-d-other-contract', 'arrears', '2026-03-01', CONTRACT_B),
     ];
 
     await regenerate();
 
-    expect(insertedFor(LINE_A)[0]).toMatchObject({ service_period_start: '2026-04-01' });
-    // C's own boundary is 03-01, so its unbilled March period is still generated.
-    expect(insertedFor('line-c-arrears')[0]).toMatchObject({
+    expect(insertedFor('line-c-arrears')[0]).toMatchObject({ service_period_start: '2026-04-01' });
+    expect(insertedFor('line-d-other-contract')[0]).toMatchObject({
       service_period_start: '2026-03-01',
       service_period_end: '2026-04-01',
     });

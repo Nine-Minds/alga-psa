@@ -43,7 +43,7 @@ import {
 } from '@alga-psa/shared/billingClients';
 
 import {
-  loadClientCadenceLineBilledBoundaries,
+  loadClientCadenceContractBilledBoundaries,
   resolveClientCadenceObligationStart,
 } from '@alga-psa/shared/billingClients/clientCadenceScheduleRegeneration';
 import { clipRecurringCandidatesToObligationBounds } from '@alga-psa/shared/billingClients/clipRecurringCandidatesToObligationBounds';
@@ -829,12 +829,16 @@ async function repairScheduleMaterialization(input: {
   }
 
   const billingSchedule = await getClientBillingCycleAnchor(trx, tenant, context.client_id);
-  // The line's own billed history only: sibling lines' invoices must not
-  // suppress this line's first period (same rule as regeneration and gap discovery).
-  const billedBoundaryEnd = (await loadClientCadenceLineBilledBoundaries(trx, {
-    tenant,
-    clientId: context.client_id,
-  })).get(context.contract_line_id) ?? null;
+  // The line's CONTRACT boundary: a line added to an already-billed contract
+  // starts after that contract's ledger, while another contract's invoices do
+  // not suppress a new contract's first period (same rule as regeneration and
+  // gap discovery).
+  const billedBoundaryEnd = context.contract_id
+    ? (await loadClientCadenceContractBilledBoundaries(trx, {
+        tenant,
+        clientId: context.client_id,
+      })).get(context.contract_id) ?? null
+    : null;
   const obligationStart =
     normalizeUtcMidnightDateValue(context.assignment_start_date)
     ?? ensureUtcMidnightIsoDate(repairedAt);
