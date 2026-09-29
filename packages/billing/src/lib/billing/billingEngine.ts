@@ -2049,10 +2049,29 @@ export class BillingEngine {
       canonical,
     );
 
-    const usageStatusField =
-      usageServicePeriodStatuses.length > 0
+    // Coded, unpriceable fixed lines travel with the result (like usage
+    // statuses) so preview and generation refuse instead of billing short.
+    const fixedLineBlockers = (canonical.diagnostics ?? []).flatMap(
+      (diagnostic) =>
+        diagnostic.code === "FIXED_LINE_RATE_UNRESOLVED" &&
+        diagnostic.contractLineId
+          ? [
+              {
+                code: "FIXED_LINE_RATE_UNRESOLVED" as const,
+                message: diagnostic.message,
+                contractLineId: diagnostic.contractLineId,
+                contractLineName:
+                  diagnostic.contractLineName ?? diagnostic.contractLineId,
+              },
+            ]
+          : [],
+    );
+    const usageStatusField = {
+      ...(usageServicePeriodStatuses.length > 0
         ? { usageServicePeriodStatuses }
-        : {};
+        : {}),
+      ...(fixedLineBlockers.length > 0 ? { fixedLineBlockers } : {}),
+    };
 
     return projectBillingContext
       ? {

@@ -14,7 +14,8 @@ export type ChargeComputeMarker =
   | 'overtime'
   | 'rate_tier'
   | 'pricing_schedule_override'
-  | 'fmv_allocation';
+  | 'fmv_allocation'
+  | 'fixed_fee_allocation_fallback';
 
 export interface ChargeExplanationInput {
   label: string;

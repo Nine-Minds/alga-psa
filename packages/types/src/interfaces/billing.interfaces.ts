@@ -315,6 +315,21 @@ export interface IBillingResult extends TenantEntity {
    * record and from calculation errors.
    */
   usageServicePeriodStatuses?: IUsageServicePeriodStatus[];
+  /**
+   * Fixed-fee contract lines whose rate could not be resolved. A line listed
+   * here is NOT billed by this result, and previewing/generating from it must
+   * be refused with the coded FIXED_LINE_RATE_UNRESOLVED reason — never
+   * shortened silently. A line whose rate legitimately resolves to zero is not
+   * listed.
+   */
+  fixedLineBlockers?: IFixedLineBlocker[];
+}
+
+export interface IFixedLineBlocker {
+  code: 'FIXED_LINE_RATE_UNRESOLVED';
+  message: string;
+  contractLineId: string;
+  contractLineName: string;
 }
 
 export interface IClientContractLine extends TenantEntity {
