@@ -649,7 +649,8 @@
       "adjustMark": "Ajustar marca",
       "cropFromWide": "Recortar do logotipo largo",
       "recropSuccess": "Marca atualizada.",
-      "recropError": "Não foi possível atualizar a marca."
+      "recropError": "Não foi possível atualizar a marca.",
+      "fileNameLabel": "Arquivo armazenado"
     },
     "validation": {
       "clientNameRequired": "O nome do cliente é obrigatório",
